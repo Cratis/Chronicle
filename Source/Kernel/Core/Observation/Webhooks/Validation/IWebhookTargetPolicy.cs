@@ -12,6 +12,15 @@ namespace Cratis.Chronicle.Observation.Webhooks.Validation;
 public interface IWebhookTargetPolicy
 {
     /// <summary>
+    /// Checks operator approval of the managed identity, scope and receiver host in every validation mode.
+    /// </summary>
+    /// <param name="authorization">The requested identity and scope.</param>
+    /// <param name="url">The receiver URL.</param>
+    /// <param name="eventStore">The event store, or null for global host policy.</param>
+    /// <returns>The approval decision and a safe reason.</returns>
+    WebhookTargetValidation CheckManagedIdentity(Concepts.Security.ManagedIdentityAuthorization authorization, string url, EventStoreName? eventStore = null);
+
+    /// <summary>
     /// Evaluates a target and its current DNS answers without contacting the receiver.
     /// </summary>
     /// <param name="url">The target URL.</param>

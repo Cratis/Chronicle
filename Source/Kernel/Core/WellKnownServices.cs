@@ -24,6 +24,11 @@ public static class WellKnownServices
     public const string Users = "Users";
 
     /// <summary>
+    /// The name of the administrator management service.
+    /// </summary>
+    public const string Administrators = "Administrators";
+
+    /// <summary>
     /// The name of the Applications security service.
     /// </summary>
     public const string Applications = "Applications";
@@ -92,6 +97,11 @@ public static class WellKnownServices
     /// The name of the ReadModelExplorer service - reading a read model instance and the history behind it.
     /// </summary>
     public const string ReadModelExplorer = "ReadModelExplorer";
+
+    /// <summary>
+    /// The name of the structured composite-key read service.
+    /// </summary>
+    public const string ReadModelLookups = "ReadModelLookups";
 
     /// <summary>
     /// The name of the ProjectionEditor service - the projection-editing surface the Workbench drives.

@@ -71,7 +71,7 @@ public partial class HandleEventsForObserver(
     EventSequenceNumber _lastHandled = EventSequenceNumber.Unavailable;
     EventSequenceNumber _lastDurableCheckpoint = EventSequenceNumber.Unavailable;
     JobStepCheckpointDebounce _durableCheckpoints = new(1);
-    IReadOnlyDictionary<SiloAddress, Guid[]>? _windows;
+    IReadOnlyDictionary<SiloAddress, Guid[]>? _bulkWindowPin;
     Exception? _checkpointFailure;
     ReplayHandledEventsPage? _replayReports;
     HashSet<Key> _bucketFailedPartitions = [];
@@ -80,6 +80,19 @@ public partial class HandleEventsForObserver(
     /// Gets or sets how long to wait before a handling attempt that timed out is made again. Exposed for testing.
     /// </summary>
     internal TimeSpan TransientRetryDelay { get; set; } = TransientTimeouts.DefaultRetryDelay;
+
+    /// <summary>
+    /// Gets or sets the most events one subscriber call may carry. Exposed for testing.
+    /// </summary>
+    internal int MaxEventsPerBatch { get; set; } = BoundedEventCursor.DefaultMaximumEventsPerBatch;
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// A collapsing projection writes to documents shared by several partitions that the read model watermark cannot
+    /// guard, so a redelivered slice may be applied twice. Checkpointing after every slice keeps that window to the
+    /// slice in flight. Partitioned subscribers keep the configured checkpoint interval.
+    /// </remarks>
+    protected override bool CheckpointAfterEveryBatch => _subscription.IsCollapsingProjection;
 
     bool DeliversPages { get; set; }
 
@@ -239,13 +252,26 @@ public partial class HandleEventsForObserver(
                 return ClosedResult();
             }
 
-            using var events = await eventSequenceStorage.GetRange(
-                currentState.LastSuccessfullyHandledEventSequenceNumber == EventSequenceNumber.Unavailable
-                    ? currentState.StartEventSequenceNumber
-                    : currentState.LastSuccessfullyHandledEventSequenceNumber.Next(),
-                currentState.EndEventSequenceNumber,
-                eventTypes: eventTypesToRead,
-                cancellationToken: cancellationToken);
+            // A storage batch can hold thousands of events; a client or webhook subscriber gets them a bounded call
+            // at a time, so its timeout guards a known amount of work and every answered call is checkpointed.
+            var maxEventsPerCall = await configurationProvider.GetMaxEventsPerSubscriberCallForObserver(currentState.ObserverKey, _subscription.SubscriberType);
+            var storageEvents = Storage.EventSequences.BoundedEventCursor.Over(
+                await eventSequenceStorage.GetRange(
+                    currentState.LastSuccessfullyHandledEventSequenceNumber == EventSequenceNumber.Unavailable
+                        ? currentState.StartEventSequenceNumber
+                        : currentState.LastSuccessfullyHandledEventSequenceNumber.Next(),
+                    currentState.EndEventSequenceNumber,
+                    eventTypes: eventTypesToRead,
+                    cancellationToken: cancellationToken),
+                maxEventsPerCall);
+
+            // Replay pages are sized by the read model batch size and keep the storage batches whole. Every other
+            // delivery is sliced, so one subscriber call never carries a whole storage batch.
+            var maximumEventsPerCall = _subscription.SubscriberType.IsAssignableTo(typeof(IUnpartitionedObserverSubscriber))
+                ? Math.Min(MaxEventsPerBatch, ObserverSubscriberExtensions.MaximumEventsPerUnpartitionedCall)
+                : MaxEventsPerBatch;
+            var deliversPages = DeliversPages && _subscription.SubscriberType.IsAssignableTo(typeof(IObserverPageSubscriber));
+            using var events = new BoundedEventCursor(storageEvents, deliversPages ? int.MaxValue : maximumEventsPerCall);
 
             // A failed partition belongs to the retry job working on it. Reading the set once, before the walk,
             // keeps this step from asking the observer per batch; a partition that starts failing while the walk
@@ -444,7 +470,7 @@ public partial class HandleEventsForObserver(
         }
     }
 
-    static AppendedEvent[] SetObservationStateIfSpecified(EventObservationState eventObservationState, IEventCursor events)
+    static AppendedEvent[] SetObservationStateIfSpecified(EventObservationState eventObservationState, BoundedEventCursor events)
     {
         if (eventObservationState != EventObservationState.None)
         {
@@ -543,7 +569,7 @@ public partial class HandleEventsForObserver(
     {
         if (start)
         {
-            _windows = null;
+            _bulkWindowPin = null;
             _checkpointFailure = null;
             _lastHandled = State.LastSuccessfullyHandledEventSequenceNumber;
             _durableCheckpoints.Persisted();
@@ -558,7 +584,8 @@ public partial class HandleEventsForObserver(
         return new(
             _lastHandled,
             new(_subscription.ObserverKey, ObserverType.Projection),
-            State.EventObservationState == EventObservationState.Replay);
+            State.EventObservationState == EventObservationState.Replay,
+            start);
     }
 
     /// <summary>
@@ -586,18 +613,20 @@ public partial class HandleEventsForObserver(
     /// <param name="capture">The <see cref="FlushCapture"/> the windows were confirmed for.</param>
     /// <param name="windows">The windows confirmed per silo.</param>
     /// <returns>The last confirmed durable event sequence number.</returns>
-    /// <exception cref="BulkWindowLost">A window confirmed earlier is no longer present on its silo.</exception>
+    /// <exception cref="BulkWindowLost">The windows no longer match the range-start pin on a silo.</exception>
     async Task<EventSequenceNumber> CommitFlush(FlushCapture capture, IReadOnlyDictionary<SiloAddress, Guid[]> windows)
     {
         try
         {
-            if (_windows is not null && _windows.Any(previous =>
-                previous.Value.Length > 0 && (!windows.TryGetValue(previous.Key, out var current) || previous.Value.Except(current).Any())))
+            if (capture.Start)
+            {
+                // Only the range-start flush sets the pin, including silos with no open window.
+                _bulkWindowPin = windows.ToDictionary(_ => _.Key, _ => _.Value.ToArray());
+            }
+            else if (!MatchesBulkWindowPin(windows))
             {
                 throw new BulkWindowLost();
             }
-
-            _windows = windows;
             var handled = capture.Handled;
             if (handled.IsActualValue && handled != State.LastSuccessfullyHandledEventSequenceNumber)
             {
@@ -1045,5 +1074,14 @@ public partial class HandleEventsForObserver(
         return eventTypes.Length != 0 ? eventTypes : (await _observer.GetEventTypes()).ToArray();
     }
 
-    sealed record FlushCapture(EventSequenceNumber Handled, ObserverDetails Observer, bool IsReplay);
+    /// <summary>
+    /// Checks every silo against the range-start pin; a missing silo or pin means no window.
+    /// </summary>
+    /// <param name="windows">The windows confirmed per silo.</param>
+    /// <returns>Whether every silo still has exactly its pinned windows.</returns>
+    bool MatchesBulkWindowPin(IReadOnlyDictionary<SiloAddress, Guid[]> windows) =>
+        (_bulkWindowPin?.Keys ?? []).Union(windows.Keys).All(silo =>
+            (_bulkWindowPin?.GetValueOrDefault(silo) ?? []).ToHashSet().SetEquals(windows.GetValueOrDefault(silo) ?? []));
+
+    sealed record FlushCapture(EventSequenceNumber Handled, ObserverDetails Observer, bool IsReplay, bool Start);
 }

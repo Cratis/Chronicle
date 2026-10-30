@@ -17,6 +17,7 @@ internal class CompleteStreamScopeValidator : CommandValidator<CompleteStreamSco
     public CompleteStreamScopeValidator()
     {
         RuleFor(command => command.EventStore).NotEmpty().WithMessage("Event store name is required.");
+        RuleFor(command => command.EventStore).NotSystemEventStore();
         RuleFor(command => command.Namespace).NotEmpty().WithMessage("Namespace name is required.");
         RuleFor(command => command.EventSequenceId).NotEmpty().WithMessage("Event sequence identifier is required.");
     }

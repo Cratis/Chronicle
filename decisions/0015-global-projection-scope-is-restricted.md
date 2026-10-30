@@ -85,3 +85,31 @@ This is a bounded patch-level restriction for built-in declarations, statistics 
 ### Future global materialization
 
 Future support uses decisions 0014/0016/0017, never a second fixed-name owner. Require explicit contributor membership and namespace incarnations, committed coverage for each input, deterministic conflict semantics and provider exclusion. Disjoint ownership, proven commutative operations or a durably ordered aggregate input can establish determinism; a contributor vector alone cannot. Failed steps and unknown obligations block publication. Do not build a global stream speculatively or lift the restriction merely because generation bindings exist.
+
+## Refused replay release
+
+Persisted full and partition jobs can encounter this restriction during preparation, recovery, resume, or
+completion. They fail terminally without touching the sink. Refusal is **not** replay completion: the observer's
+last-handled and next-event positions must remain unchanged, and no failed partition is resolved.
+
+The observer exposes explicit refusal-release operations. Full release clears the replay flag and superseded
+partition replay/catch-up markers, resets skip-detection ownership, persists state, and routes from the retained
+cursor unless quarantined. Catch-up markers are cleared because full replay supersedes that partition work and
+routing itself clears them before re-evaluating outstanding work. Retired, removed, and non-replaying observers
+are unchanged. Partition replay captures `NextEventSequenceNumber` synchronously with setting its marker,
+before awaiting persistence and job admission, and stores that lower bound as `HeldBackFrom` in the durable
+job request. Events below it were already delivered or belong to existing failure/catch-up work; live delivery
+cannot reach the partition from that bound onward while it is marked replaying. Other partitions can advance
+the shared cursor during the replay, so refusal must never use the later observer-wide cursor. Partition release
+removes its marker, claims no completed skip coverage, and probes catch-up **including** the captured bound.
+Failed partitions remain owned by failure recovery, and quarantined observers stay quarantined.
+
+Legacy job requests deserialize a missing bound as `Unavailable`. This is a real upgrade case: the scope
+pipeline landed in `1831dae72e` (released in v19.7.0), whose partition replay path admitted Global/Both jobs
+without a scope guard; `git log -S GlobalProjectionReplay.EnsureSupported` places the partition admission guard
+in `71d58a7fa9` (present in v19.101.3). Already-persisted jobs can therefore lack a safe handover position.
+For them, refusal preserves progress, durably records a failed and quarantined partition with a clear diagnostic,
+and releases the replay marker only after the failure is saved. Existing failure positions/history are kept;
+new failures have an explicitly unknown position. No catch-up or automatic retry may redeliver onto the
+unchanged sink. An operator must reconcile the sink and establish a safe recovery position before clearing
+partition quarantine; neither zero nor the shared cursor is an acceptable guessed lower bound.

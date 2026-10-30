@@ -32,8 +32,6 @@ public class and_the_read_models_equal_live_handling(context context) : Given<co
         public (string Id, EventSequenceNumber LastHandledEventSequenceNumber, ulong HandledEventCount)[] LiveObservers;
         public (string Id, EventSequenceNumber LastHandledEventSequenceNumber, ulong HandledEventCount)[] ReplayedObservers;
 
-        public bool StorageKeepsHandledCounts => ChronicleFixture.Options.StorageProvider == ChronicleStorageProvider.MongoDB;
-
         public override IEnumerable<Type> EventTypes =>
         [
             typeof(ModuleAdded), typeof(FeatureAddedToModule), typeof(SliceAddedToFeature), typeof(EventAddedToSlice),
@@ -156,9 +154,6 @@ public class and_the_read_models_equal_live_handling(context context) : Given<co
     [Fact]
     void should_preserve_the_handled_counts()
     {
-        // The SQL providers do not persist observer-level handled counts yet (#5299), so they always read back as zero.
-        if (!Context.StorageKeepsHandledCounts) return;
-
         foreach (var live in Context.LiveObservers)
         {
             live.HandledEventCount.ShouldBeGreaterThan(0UL);

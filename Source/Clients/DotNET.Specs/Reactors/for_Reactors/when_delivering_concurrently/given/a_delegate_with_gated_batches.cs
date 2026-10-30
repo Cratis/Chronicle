@@ -47,9 +47,10 @@ public class a_delegate_with_gated_batches : for_Reactors.given.all_dependencies
         await _reactors.Register(
             "concurrent",
             builder => builder.WithEventType(new EventType("orders", 1)),
-            async (@event, _) =>
+            async (@event, cancellationToken) =>
             {
                 var name = Name(@event.Context.EventSourceId.Value, @event.Context.SequenceNumber.Value);
+                OnHandling(name, cancellationToken);
                 _log.Enqueue($"{name}:start");
                 StartedFor(name).TrySetResult();
                 try
@@ -75,6 +76,10 @@ public class a_delegate_with_gated_batches : for_Reactors.given.all_dependencies
     }
 
     protected virtual void OnResult(ReactorResult result)
+    {
+    }
+
+    protected virtual void OnHandling(string name, CancellationToken cancellationToken)
     {
     }
 

@@ -17,6 +17,10 @@ public static class ObserverStateConverters
         new()
         {
             Id = state.Identifier,
+            Owner = state.Owner,
+            PartitionClaims = state.PartitionClaims,
+            ObserverWideClaim = state.ObserverWideClaim,
+            OwnershipRevision = state.OwnershipRevision,
             TypeSetControl = state.TypeSetControl,
             Initialization = state.Initialization,
             DeliveryFences = state.DeliveryFences,
@@ -24,6 +28,7 @@ public static class ObserverStateConverters
             AlertRevision = state.AlertRevision,
             AlertDisposition = state.AlertDisposition,
             QuarantineEpisodeId = state.QuarantineEpisodeId,
+            WebhookProbe = state.WebhookProbe,
             LastHandledEventSequenceNumber = state.LastHandledEventSequenceNumber,
             NextEventSequenceNumber = state.NextEventSequenceNumber,
             TailEventSequenceNumber = state.TailEventSequenceNumber,
@@ -57,6 +62,10 @@ public static class ObserverStateConverters
             state.IsReplaying,
             state.SubscribesToAllEvents)
         {
+            Owner = state.Owner,
+            PartitionClaims = state.PartitionClaims,
+            ObserverWideClaim = state.ObserverWideClaim,
+            OwnershipRevision = state.OwnershipRevision,
             TypeSetControl = state.TypeSetControl,
             Initialization = state.Initialization,
             DeliveryFences = state.DeliveryFences,
@@ -64,6 +73,7 @@ public static class ObserverStateConverters
             AlertRevision = state.AlertRevision,
             AlertDisposition = state.AlertDisposition,
             QuarantineEpisodeId = state.QuarantineEpisodeId,
+            WebhookProbe = state.WebhookProbe,
             NextEventSequenceNumber = state.NextEventSequenceNumber,
             TailEventSequenceNumber = state.TailEventSequenceNumber,
             InFlightPartitions = state.InFlightPartitions.ToHashSet(),
@@ -90,6 +100,10 @@ public static class ObserverStateConverters
             state.IsReplaying,
             state.SubscribesToAllEvents)
         {
+            Owner = state.Owner,
+            PartitionClaims = state.PartitionClaims,
+            ObserverWideClaim = state.ObserverWideClaim,
+            OwnershipRevision = state.OwnershipRevision,
             TypeSetControl = state.TypeSetControl,
             Initialization = state.Initialization,
             DeliveryFences = state.DeliveryFences,
@@ -97,6 +111,7 @@ public static class ObserverStateConverters
             AlertRevision = state.AlertRevision,
             AlertDisposition = state.AlertDisposition,
             QuarantineEpisodeId = state.QuarantineEpisodeId,
+            WebhookProbe = state.WebhookProbe,
             NextEventSequenceNumber = state.NextEventSequenceNumber,
             TailEventSequenceNumber = state.TailEventSequenceNumber,
             InFlightPartitions = state.InFlightPartitions.ToHashSet(),

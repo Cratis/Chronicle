@@ -27,6 +27,11 @@ public record UpdateReadModelDefinition(
     IEnumerable<string> Indexes)
 {
     /// <summary>
+    /// Gets the complete ordered index definitions, when available.
+    /// </summary>
+    public IEnumerable<Contracts.ReadModels.IndexDefinition>? IndexDefinitions { get; init; }
+
+    /// <summary>
     /// Handles the command by updating the read model definition.
     /// </summary>
     /// <param name="readModels">The <see cref="IReadModelsService"/> to update through.</param>
@@ -35,6 +40,7 @@ public record UpdateReadModelDefinition(
         readModels.UpdateDefinition(new()
         {
             EventStore = EventStore,
+            ReplaceIndexes = IndexDefinitions is not null,
             ReadModel = new()
             {
                 Type = new()
@@ -44,7 +50,13 @@ public record UpdateReadModelDefinition(
                 },
                 ContainerName = ContainerName,
                 Schema = Schema,
-                Indexes = [.. Indexes.Select(index => new Contracts.ReadModels.IndexDefinition { PropertyPath = index })]
+                Indexes = IndexDefinitions is null
+                    ? [.. Indexes.Select(index => new Contracts.ReadModels.IndexDefinition { PropertyPath = index })]
+                    : [.. IndexDefinitions.Select(index => new Contracts.ReadModels.IndexDefinition
+                    {
+                        PropertyPath = index.PropertyPath,
+                        Properties = index.Properties is { Count: > 0 } ? index.Properties : [new() { Path = index.PropertyPath }]
+                    })]
             }
         });
 }

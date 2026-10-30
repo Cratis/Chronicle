@@ -8,6 +8,7 @@ using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Storage;
+using Cratis.Monads;
 using Cratis.Orleans.Jobs;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -49,6 +50,8 @@ public class ReplayObserver(
     /// </remarks>
     internal const int ActiveStepWindow = 16;
 
+    bool _refusalNotificationScheduled;
+
     /// <summary>
     /// Initializes an ordered replay job for callers using the original constructor.
     /// </summary>
@@ -89,9 +92,43 @@ public class ReplayObserver(
     /// </remarks>
     protected override bool StartStepsInBackground => true;
 
+    /// <summary>
+    /// Gets a value indicating whether an abandoned replay releases the observer at its retained cursor.
+    /// </summary>
+    /// <remarks>
+    /// An abandoned replay keeps the read model as it was before the replay, so the observer must continue from where
+    /// that read model is, not from where the replay got to.
+    /// </remarks>
+    bool ReleasesAbandonedReplayAtRetainedCursor => Request.ObserverType != ObserverType.Reactor;
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// Recovery of a running job can bypass CanResume and go straight to finalization. Check before the base
+    /// implementation writes progress or dispatches anything; a scope refusal is terminal, not a resumable stop.
+    /// </remarks>
+    public new async Task<Result<ResumeJobSuccess, ResumeJobError>> Resume()
+    {
+        if (State.Request is null)
+        {
+            return await base.Resume();
+        }
+
+        try
+        {
+            await EnsureReplaySupported();
+        }
+        catch (GlobalProjectionReplayNotSupported)
+        {
+            return Result.Failed<ResumeJobSuccess, ResumeJobError>(CannotResumeJobError.JobCannotBeResumed);
+        }
+
+        return await base.Resume();
+    }
+
     /// <inheritdoc/>
     protected override async Task<IImmutableList<JobStepDetails>> PrepareSteps(ReplayObserverRequest request)
     {
+        await EnsureReplaySupported(request);
         var observer = GrainFactory.GetGrain<IObserver>(request.ObserverKey);
         State.ReplayStartedAt = DateTimeOffset.UtcNow;
         State.FailedPartitionKeys = (await observer.GetFailedPartitionKeys()).Distinct().ToList();
@@ -167,6 +204,7 @@ public class ReplayObserver(
     /// <inheritdoc/>
     protected override async Task OnBeforeStartingJobSteps()
     {
+        await EnsureReplaySupported();
         await DeleteAllOtherJobsForObserver();
         await replayStateServiceClient.BeginReplayFor(State.ObserverDetails);
     }
@@ -187,6 +225,7 @@ public class ReplayObserver(
             return false;
         }
 
+        await EnsureReplaySupported();
         var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
         if (!await observer.IsSubscribed())
         {
@@ -218,6 +257,7 @@ public class ReplayObserver(
     /// <exception cref="ObserverDidNotEnterReplay">The observer did not enter replay with this job.</exception>
     protected override async Task OnBeforeResumingJobSteps()
     {
+        await EnsureReplaySupported();
         var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
         var observerState = await observer.GetState();
         if (observerState.RunningState != ObserverRunningState.Replaying)
@@ -280,7 +320,9 @@ public class ReplayObserver(
     /// <inheritdoc/>
     protected override async Task OnFailedToPrepare()
     {
+        await EnsureReplaySupported();
         using var scope = logger.BeginJobScope(JobId, JobKey);
+        var release = ReleasesAbandonedReplayAtRetainedCursor;
         try
         {
             await FinalizeOrAbandon(promote: false);
@@ -293,17 +335,27 @@ public class ReplayObserver(
         var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
 
         // Preparing failed; never report a successful replay. Avoid waiting on Replay()'s own turn.
-        CompletionNotification = NotifyObserverOfCompletion(observer, false, new Dictionary<Key, EventSequenceNumber>(), [], EventSequenceNumber.Unavailable);
+        CompletionNotification = release
+            ? NotifyObserverOfRefusal(observer)
+            : NotifyObserverOfCompletion(observer, false, new Dictionary<Key, EventSequenceNumber>(), [], EventSequenceNumber.Unavailable);
     }
 
     /// <inheritdoc/>
     protected override async Task OnAllStepsCompleted()
     {
+        await EnsureReplaySupported();
         using var scope = logger.BeginJobScope(JobId, JobKey);
         var finalized = true;
+        var release = !AllStepsCompletedSuccessfully && ReleasesAbandonedReplayAtRetainedCursor;
         try
         {
             finalized = await FinalizeOrAbandon(promote: AllStepsCompletedSuccessfully);
+        }
+        catch (ReplayAbandoned exception)
+        {
+            logger.ReplayAbandonedAfterFailedFlush(exception);
+            finalized = false;
+            release = true;
         }
         catch (Exception exception)
         {
@@ -353,7 +405,9 @@ public class ReplayObserver(
 
         // Do not await from job.Start's turn: Replay() on the observer may still be waiting on us.
         // The notification is kept and retried rather than dropped, so a failed one is not silently lost.
-        CompletionNotification = NotifyObserverOfCompletion(observer, canResolve, coveredPartitions, eventTypes, State.LastHandledEventSequenceNumber);
+        CompletionNotification = release
+            ? NotifyObserverOfRefusal(observer)
+            : NotifyObserverOfCompletion(observer, canResolve, coveredPartitions, eventTypes, State.LastHandledEventSequenceNumber);
     }
 
     /// <inheritdoc/>
@@ -363,17 +417,16 @@ public class ReplayObserver(
     /// Ends the replay on every silo, promoting what it rebuilt only when that is safe.
     /// </summary>
     /// <remarks>
-    /// A reducer's replay rebuilds each partition in its own step. If any step failed or stopped, its documents in the
-    /// replay container are partial or missing, and promoting the container would replace complete documents with them.
-    /// The replay is abandoned instead and the read model keeps the state it had before the replay started; the failed
-    /// partitions are recorded on the observer and a later replay starts over. A projection's replay is a single ordered
-    /// step whose failed partitions are recorded and retried after promotion, so it is always finalized as before.
+    /// If any step failed or stopped, what the replay rebuilt is partial or missing, and promoting it would replace
+    /// complete data with it. The replay is abandoned instead and the read model keeps the state it had before the
+    /// replay started. A reactor's replay rebuilds nothing and is always ended as before.
     /// </remarks>
     /// <param name="promote">Whether every step completed successfully.</param>
     /// <returns>True if the replay was finalized; false if it was abandoned.</returns>
     async Task<bool> FinalizeOrAbandon(bool promote)
     {
-        if (!promote && Request.ObserverType == ObserverType.Reducer)
+        await EnsureReplaySupported();
+        if (!promote && Request.ObserverType != ObserverType.Reactor)
         {
             logger.AbandoningReplay(Request.ObserverKey.ObserverId);
             await replayStateServiceClient.AbandonReplayFor(State.ObserverDetails);
@@ -384,20 +437,20 @@ public class ReplayObserver(
         return true;
     }
 
-    async Task NotifyObserverOfCompletion(IObserver observer, bool canResolve, IReadOnlyDictionary<Key, EventSequenceNumber> coveredPartitions, EventType[] eventTypes, EventSequenceNumber lastHandledEventSequenceNumber)
+    Task NotifyObserverOfRefusal(IObserver observer) => NotifyObserverWithRetry(observer.ReleaseRefusedReplay);
+
+    Task NotifyObserverOfCompletion(IObserver observer, bool canResolve, IReadOnlyDictionary<Key, EventSequenceNumber> coveredPartitions, EventType[] eventTypes, EventSequenceNumber lastHandledEventSequenceNumber) =>
+        NotifyObserverWithRetry(() => canResolve
+            ? observer.ReplayedSuccessfullySince(lastHandledEventSequenceNumber, coveredPartitions, eventTypes, State.ReplayStartedAt)
+            : observer.Replayed(lastHandledEventSequenceNumber));
+
+    async Task NotifyObserverWithRetry(Func<Task> notify)
     {
         for (var attempt = 1; ; attempt++)
         {
             try
             {
-                if (canResolve)
-                {
-                    await observer.ReplayedSuccessfullySince(lastHandledEventSequenceNumber, coveredPartitions, eventTypes, State.ReplayStartedAt);
-                }
-                else
-                {
-                    await observer.Replayed(lastHandledEventSequenceNumber);
-                }
+                await notify();
 
                 return;
             }
@@ -424,5 +477,28 @@ public class ReplayObserver(
 
         var deleteAllOtherJobsForObserver = jobs.Where(job => job.Id != State.Id).Select(job => jobsManager.Delete(job.Id));
         await Task.WhenAll(deleteAllOtherJobsForObserver);
+    }
+
+    async Task EnsureReplaySupported(ReplayObserverRequest? request = null)
+    {
+        request ??= Request;
+        try
+        {
+            await GlobalProjectionReplay.EnsureSupported(storage, request.ObserverKey, request.ObserverType, State, WriteStateAsync);
+        }
+        catch (GlobalProjectionReplayNotSupported)
+        {
+            if (!_refusalNotificationScheduled)
+            {
+                _refusalNotificationScheduled = true;
+                var observer = GrainFactory.GetGrain<IObserver>(request.ObserverKey);
+
+                // Refusal is not completion: it must not replace the observer's retained cursor.
+                // Do not await the observer from Start: its replay turn may still be waiting for this job.
+                CompletionNotification = NotifyObserverOfRefusal(observer);
+            }
+
+            throw;
+        }
     }
 }

@@ -91,8 +91,11 @@ internal static partial class EventSequenceLogMessages
     [LoggerMessage(LogLevel.Error, "Failed enqueueing {Count} durably appended events for live delivery in event sequence {EventSequenceId} for event store {EventStore} on namespace {Namespace}. Spilling the queues to catch-up")]
     internal static partial void FailedEnqueueingAppendedEvents(this ILogger<EventSequence> logger, EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId, int count, Exception exception);
 
-    [LoggerMessage(LogLevel.Critical, "Failed spilling the appended-events queues to catch-up in event sequence {EventSequenceId} for event store {EventStore} on namespace {Namespace}. Observers recover on their next watchdog run")]
-    internal static partial void FailedSpillingAppendedEventsQueuesToCatchup(this ILogger<EventSequence> logger, EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId, Exception exception);
+    [LoggerMessage(LogLevel.Error, "Failed spilling the appended-events queues to catch-up in event sequence {EventSequenceId} for event store {EventStore} on namespace {Namespace} (attempt {Attempt}). Retrying in {RetryDelay}")]
+    internal static partial void FailedSpillingAppendedEventsQueuesToCatchup(this ILogger<EventSequence> logger, EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId, int attempt, TimeSpan retryDelay, Exception exception);
+
+    [LoggerMessage(LogLevel.Information, "Spilled the appended-events queues to catch-up in event sequence {EventSequenceId} for event store {EventStore} on namespace {Namespace} after {FailedAttempts} failed attempt(s)")]
+    internal static partial void RecoveredSpillingAppendedEventsQueuesToCatchup(this ILogger<EventSequence> logger, EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId, int failedAttempts);
 
     [LoggerMessage(LogLevel.Warning, "Event type '{EventType}' has no declared visibility, as it was registered by a client that predates public event types. Allowing append to event sequence {EventSequenceId} for event store '{EventStore}' on namespace {Namespace} - upgrade the client to have visibility enforced")]
     internal static partial void EventTypeVisibilityNotSpecified(this ILogger<EventSequence> logger, EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId, EventType eventType);

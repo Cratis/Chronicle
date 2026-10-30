@@ -22,7 +22,8 @@ public class and_webhook_authorization_types_are_discovered : Specification
             typeof(WebhookAdded),
             typeof(BasicAuthorizationSetForWebhook),
             typeof(BearerTokenAuthorizationSetForWebhook),
-            typeof(OAuthAuthorizationSetForWebhook)]);
+            typeof(OAuthAuthorizationSetForWebhook),
+            typeof(ManagedIdentityAuthorizationSetForWebhook)]);
         var storage = Substitute.For<IStorage>();
         _eventTypesStorage = Substitute.For<IEventTypesStorage>();
         storage.GetEventStore("non-system-store").EventTypes.Returns(_eventTypesStorage);
@@ -35,6 +36,8 @@ public class and_webhook_authorization_types_are_discovered : Specification
     [Fact] async Task should_register_the_basic_authorization_schema() => await ShouldRegister(typeof(BasicAuthorizationSetForWebhook));
     [Fact] async Task should_register_the_bearer_authorization_schema() => await ShouldRegister(typeof(BearerTokenAuthorizationSetForWebhook));
     [Fact] async Task should_register_the_oauth_authorization_schema() => await ShouldRegister(typeof(OAuthAuthorizationSetForWebhook));
+
+    [Fact] async Task should_register_the_managed_identity_authorization_schema() => await ShouldRegister(typeof(ManagedIdentityAuthorizationSetForWebhook));
 
     async Task ShouldRegister(Type type) => await _eventTypesStorage.Received(1).Register(
         type.GetEventType(),

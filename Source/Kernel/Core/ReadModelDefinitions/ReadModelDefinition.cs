@@ -29,6 +29,11 @@ public record ReadModelDefinition(
     IEnumerable<string> Indexes)
 {
     /// <summary>
+    /// Gets the complete ordered index definitions.
+    /// </summary>
+    public IEnumerable<IndexDefinition>? IndexDefinitions { get; init; }
+
+    /// <summary>
     /// Get all read model definitions.
     /// </summary>
     /// <param name="readModels"><see cref="IReadModels"/> for working with read models.</param>
@@ -49,6 +54,9 @@ public record ReadModelDefinition(
             (ReadModelOwner)(int)rm.Owner,
             (ReadModelSource)(int)rm.Source,
             rm.Schema,
-            rm.Indexes.Select(i => i.PropertyPath)));
+            rm.Indexes.Select(i => i.PropertyPath))
+        {
+            IndexDefinitions = rm.Indexes
+        });
     }
 }

@@ -163,12 +163,18 @@ public class a_projection_with_initial_values : Specification
             new Dictionary<EventType, RemovedWithDefinition> { [_removed] = new(WellKnownExpressions.EventSourceId, null) },
             new Dictionary<EventType, RemovedWithJoinDefinition>());
 
-    protected static AppendedEvent Event(EventType type, ulong number) => new(
-        EventContext.EmptyWithEventSourceId("key") with { EventType = type, SequenceNumber = number },
+    protected static AppendedEvent Event(EventType type, ulong number, string eventSourceId = "key") => new(
+        EventContext.EmptyWithEventSourceId(eventSourceId) with { EventType = type, SequenceNumber = number },
         new { child = "child-1", value = 99 }.AsExpandoObject());
 
     protected async Task<ExpandoObject> Fold(params AppendedEvent[] events) =>
         (await FoldOnto(SingleReadModelProjectionState.Empty, events)).Model;
+
+    protected static IDictionary<string, object?> WithoutBookkeeping(ExpandoObject state) =>
+        Properties(state).Where(_ => !_.Key.StartsWith("__")).ToDictionary(_ => _.Key, _ => _.Value);
+
+    protected async Task<ExpandoObject> Process(params AppendedEvent[] events) =>
+        (await _grain.Process(EventStoreNamespaceName.Default, events)).Single();
 
     protected Task<SingleReadModelProjectionState> FoldOnto(SingleReadModelProjectionState state, params AppendedEvent[] events) =>
         _grain.FoldForSingleReadModel(EventStoreNamespaceName.Default, state, events);

@@ -1,8 +1,13 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Concurrent;
+using Cratis.Arc.EntityFrameworkCore.Concepts;
+using Cratis.Chronicle.Diagnostics;
+using Cratis.Chronicle.Storage.Sql.Diagnostics;
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
+using Microsoft.EntityFrameworkCore;
 using Npgsql;
 
 namespace Cratis.Chronicle.Storage.Sql.Sinks;
@@ -13,7 +18,26 @@ namespace Cratis.Chronicle.Storage.Sql.Sinks;
 public sealed class PostgreSqlFixture : IAsyncLifetime
 {
     const int Port = 5432;
+    readonly ConcurrentDictionary<Type, Lazy<Task<string>>> _templates = new();
+#pragma warning disable CA2213 // DisposeAsync disposes the container through Timings.Run, which the analyzer cannot follow.
     IContainer _container;
+#pragma warning restore CA2213
+    NpgsqlDataSource _adminDataSource;
+    SqlCommandTimings? _commandTimings;
+
+    internal IntegrationTimings Timings { get; } = new(nameof(PostgreSqlFixture), "sql-specs", "postgresql");
+
+    internal T Track<T>(T context)
+        where T : DbContext
+    {
+        if (!IntegrationTimings.Enabled) return context;
+        if (_commandTimings is null)
+        {
+            _commandTimings = new(Timings);
+            _commandTimings.Start();
+        }
+        return _commandTimings.Track(context);
+    }
 
     /// <summary>
     /// Gets the connection string for the container.
@@ -27,14 +51,28 @@ public sealed class PostgreSqlFixture : IAsyncLifetime
     public async Task<string> CreateDatabase()
     {
         var name = $"spec_{Guid.NewGuid():N}";
-        await Execute($"CREATE DATABASE \"{name}\"");
+        await Timings.Run("sql-database-create", () => Execute($"CREATE DATABASE \"{name}\""));
         return new NpgsqlConnectionStringBuilder(ConnectionString) { Database = name }.ToString();
     }
 
     /// <summary>
-    /// Drops a database created by <see cref="CreateDatabase"/>, closing any connection still open to it.
+    /// Creates an isolated database from a template migrated once for the context type.
     /// </summary>
-    /// <param name="connectionString">The connection string <see cref="CreateDatabase"/> returned.</param>
+    /// <typeparam name="TContext">The context type, constructed with its typed database options.</typeparam>
+    /// <returns>The connection string for the new database.</returns>
+    public async Task<string> CreateMigratedDatabase<TContext>()
+        where TContext : DbContext
+    {
+        var template = await _templates.GetOrAdd(typeof(TContext), static (_, fixture) => new Lazy<Task<string>>(fixture.MigrateTemplate<TContext>), this).Value;
+        var name = $"spec_{Guid.NewGuid():N}";
+        await Timings.Run("sql-template-clone", () => Execute($"CREATE DATABASE \"{name}\" TEMPLATE \"{template}\""));
+        return new NpgsqlConnectionStringBuilder(ConnectionString) { Database = name }.ToString();
+    }
+
+    /// <summary>
+    /// Drops a specification database, closing any connection still open to it.
+    /// </summary>
+    /// <param name="connectionString">The connection string returned when the database was created.</param>
     /// <returns>Awaitable task.</returns>
     public async Task DropDatabase(string connectionString)
     {
@@ -44,34 +82,74 @@ public sealed class PostgreSqlFixture : IAsyncLifetime
         }
 
         var name = new NpgsqlConnectionStringBuilder(connectionString).Database;
-        await Execute($"DROP DATABASE IF EXISTS \"{name}\" WITH (FORCE)");
+        await Timings.Run("sql-database-drop", () => Execute($"DROP DATABASE IF EXISTS \"{name}\" WITH (FORCE)"));
     }
 
     /// <inheritdoc/>
-    public async Task InitializeAsync()
+    public async ValueTask InitializeAsync()
     {
+        // The isolated test container is disposable; durability is not part of these contracts.
         _container = new ContainerBuilder("postgres:16-alpine")
             .WithEnvironment("POSTGRES_PASSWORD", "postgres")
             .WithEnvironment("POSTGRES_DB", "chronicle")
+            .WithCommand("postgres", "-c", "fsync=off", "-c", "synchronous_commit=off", "-c", "full_page_writes=off", "-c", "max_connections=200")
+            .WithTmpfsMount("/var/lib/postgresql/data")
             .WithPortBinding(Port, assignRandomHostPort: true)
             .WithWaitStrategy(Wait.ForUnixContainer().UntilCommandIsCompleted("pg_isready", "-h", "127.0.0.1", "-U", "postgres", "-d", "chronicle"))
             .Build();
-        await _container.StartAsync();
+        await Timings.Run("sql-container-start", () => _container.StartAsync());
+        _adminDataSource = NpgsqlDataSource.Create(ConnectionString);
     }
 
     /// <inheritdoc/>
-    public async Task DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
-        if (_container is not null)
+        try
         {
-            await _container.DisposeAsync();
+            if (_adminDataSource is not null)
+            {
+                await _adminDataSource.DisposeAsync();
+            }
         }
+        finally
+        {
+            try
+            {
+                if (_container is not null)
+                {
+                    await Timings.Run("sql-container-disposal", () => _container.DisposeAsync().AsTask());
+                }
+            }
+            finally
+            {
+                _commandTimings?.Dispose();
+                Timings.Complete();
+            }
+        }
+    }
+
+    async Task<string> MigrateTemplate<TContext>()
+        where TContext : DbContext
+    {
+        var connectionString = await CreateDatabase();
+        var options = new DbContextOptionsBuilder<TContext>()
+            .UseNpgsql(connectionString)
+            .AddConceptAsSupport().WithoutServiceProviderCaching()
+            .Options;
+        await using (var context = Timings.Measure("ef-context-construction", () => Track((TContext)Activator.CreateInstance(typeof(TContext), options)!)))
+        {
+            await Timings.Run("ef-migration", () => context.Database.MigrateAsync());
+        }
+
+        // Closing the context returns its connection to the pool; PostgreSQL cannot copy an open template.
+        await using var connection = new NpgsqlConnection(connectionString);
+        NpgsqlConnection.ClearPool(connection);
+        return new NpgsqlConnectionStringBuilder(connectionString).Database!;
     }
 
     async Task Execute(string sql)
     {
-        await using var dataSource = NpgsqlDataSource.Create(ConnectionString);
-        await using var command = dataSource.CreateCommand(sql);
+        await using var command = _adminDataSource.CreateCommand(sql);
         await command.ExecuteNonQueryAsync();
     }
 }

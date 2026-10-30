@@ -43,7 +43,11 @@ the same way (`compliance.encryption.migrateFromDefaultStorage` becomes
 | Cratis__Chronicle__Storage__ConnectionDetails | Storage connection string |
 | Cratis__Chronicle__Storage__Schema | SQL schema for Chronicle's tables |
 | Cratis__Chronicle__Storage__CreateIfMissing | Whether Chronicle creates missing databases and schemas |
-| Cratis__Chronicle__Observers__SubscriberTimeout | Seconds an observer waits for its subscriber to answer (0 = indefinitely) |
+| Cratis__Chronicle__Storage__PostgreSqlPooling__MaxPoolSize | Maximum PostgreSQL connections per database pool (default 20; connection string values take precedence) |
+| Cratis__Chronicle__Storage__PostgreSqlPooling__ConnectionIdleLifetimeSeconds | PostgreSQL idle connection lifetime above the minimum pool size, in seconds (default 15) |
+| Cratis__Chronicle__Storage__PostgreSqlPooling__ConnectionPruningIntervalSeconds | PostgreSQL idle pruning sample interval in seconds (default 5) |
+| Cratis__Chronicle__Observers__SubscriberTimeout | Seconds an observer waits for its subscriber to answer (0 = indefinitely during catch-up and replay; live waits remain bounded by the Orleans response timeout) |
+| Cratis__Chronicle__Observers__LiveDeliveryBudget | Maximum events delivered inline in a live call (default 100); larger batches are deferred to partition catch-up (0 or less disables the limit) |
 | Cratis__Chronicle__Observers__MaxConcurrentPartitions | Upper bound on parallel job steps, applied together with `Jobs__MaxParallelSteps` (does not limit live event delivery) |
 | Cratis__Chronicle__Observers__MaxRetryAttempts | Maximum retry attempts for observers |
 | Cratis__Chronicle__Observers__BackoffDelay | Initial observer backoff delay in seconds |
@@ -69,6 +73,9 @@ the same way (`compliance.encryption.migrateFromDefaultStorage` becomes
 | Cratis__Chronicle__Clustering__AdvertisedIP | IP address this node advertises to the cluster |
 | Cratis__Chronicle__Clustering__DefunctSiloCleanupPeriod | Membership cleanup interval for MongoDB and Sql (default `01:00:00`; `00:00:00` disables) |
 | Cratis__Chronicle__Clustering__DefunctSiloExpiration | Age at which defunct membership entries are removed (default `03:00:00`) |
+| Cratis__Chronicle__Clustering__SingleWriterLease__Enabled | Single-writer protection for Localhost persistent storage (unset: automatic; `false`: opt out) |
+| Cratis__Chronicle__Clustering__SingleWriterLease__Ttl | Lease lifetime, minimum `00:00:05` (default `00:00:30`) |
+| Cratis__Chronicle__Clustering__SingleWriterLease__AcquireTimeout | Maximum startup wait; zero attempts once (default `00:02:00`) |
 | Cratis__Chronicle__Tls__Enabled | Use TLS on the Chronicle port (default `true`); `false` requires a private h2c backend behind an HTTPS proxy |
 | Cratis__Chronicle__ForwardedHeaders__KnownProxies__0 | Trusted immediate proxy IP (index upward for more than one); see [Trusted reverse proxies](tls.md#trusted-reverse-proxies) |
 | Cratis__Chronicle__ForwardedHeaders__KnownNetworks__0 | Trusted immediate proxy CIDR (index upward for more than one) |

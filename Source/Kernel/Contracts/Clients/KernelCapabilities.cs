@@ -37,4 +37,9 @@ public static class KernelCapabilities
     /// The kernel settles keyed appends against durable idempotency identities through the AppendOnce and AppendManyOnce operations.
     /// </summary>
     public const string IdempotentAppends = "idempotent-appends";
+
+    /// <summary>
+    /// The kernel supports structured composite-key reads of materialized read models.
+    /// </summary>
+    public const string CompositeKeyLookups = "composite-key-lookups";
 }

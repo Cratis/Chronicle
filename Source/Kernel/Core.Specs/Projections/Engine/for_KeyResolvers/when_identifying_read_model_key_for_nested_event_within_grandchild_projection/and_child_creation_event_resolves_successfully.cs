@@ -3,7 +3,6 @@
 
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
-using Cratis.Monads;
 
 namespace Cratis.Chronicle.Projections.Engine.for_KeyResolvers.when_identifying_read_model_key_for_nested_event_within_grandchild_projection;
 
@@ -27,10 +26,8 @@ public class and_child_creation_event_resolves_successfully : given.a_three_leve
             .Returns(cursor);
 
         // Inner resolution chain: finding FeatureAdded for FeatureKey and ModuleAdded for RootKey.
-        Storage.TryGetLastInstanceOfAny(FeatureKey, Arg.Any<IEnumerable<EventTypeId>>())
-            .Returns(new Option<AppendedEvent>(FeatureAddedEvent));
-        Storage.TryGetLastInstanceOfAny(RootKey, Arg.Any<IEnumerable<EventTypeId>>())
-            .Returns(new Option<AppendedEvent>(ModuleAddedEvent));
+        Storage.WithParentHistory(FeatureKey, FeatureAddedEvent);
+        Storage.WithParentHistory(RootKey, ModuleAddedEvent);
     }
 
     async Task Because()

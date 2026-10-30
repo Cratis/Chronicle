@@ -32,10 +32,14 @@ public class ProjectionCatchupHandler(
         });
 
     /// <inheritdoc/>
+    /// <remarks>
+    /// A running catch-up is resumed whenever its observer subscribes again, while its steps keep writing. Beginning a new
+    /// window here discarded the writes they had queued (#5340), so resuming joins the open window instead.
+    /// </remarks>
     public Task<Result<ICanHandleCatchupForObserver.Error>> ResumeCatchupFor(ObserverDetails observerDetails) =>
         DoWork(observerDetails, async pipeline =>
         {
-            await pipeline.BeginBulk();
+            await pipeline.ResumeBulk();
             return Result<ICanHandleCatchupForObserver.Error>.Success();
         });
 

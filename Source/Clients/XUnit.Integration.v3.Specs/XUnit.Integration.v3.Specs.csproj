@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <TargetFrameworks></TargetFrameworks>
+        <OutputType>Exe</OutputType>
+        <AssemblyName>Cratis.Chronicle.XUnit.Integration.v3.Specs</AssemblyName>
+        <RootNamespace>Cratis.Chronicle.XUnit.Integration</RootNamespace>
+        <IsTestProject>true</IsTestProject>
+        <IsPackable>false</IsPackable>
+        <!-- CRSPECEXP01: see XUnit.Integration.v3.csproj. xUnit1051: cancellation-token propagation is not adopted in the linked v2 specs. -->
+        <NoWarn>$(NoWarn);CRSPECEXP01;xUnit1051</NoWarn>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../XUnit.Integration.v3/XUnit.Integration.v3.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <!-- The shared harness specs run once, in XUnit.Integration.Specs; only their test host context is reused here. -->
+        <Compile Include="../XUnit.Integration.Specs/for_ChronicleClientFixture/given/*.cs" LinkBase="for_ChronicleClientFixture/given" />
+        <!-- xunit.v3.mtp-off, Cratis.Specifications.XUnit.v3, Microsoft.NET.Test.Sdk, xunit.runner.visualstudio and NSubstitute come from Source/Directory.Build.props. -->
+    </ItemGroup>
+
+    <ItemGroup>
+        <Using Include="NSubstitute" />
+        <Using Include="Cratis.Specifications" />
+        <Using Include="Xunit" />
+    </ItemGroup>
+</Project>

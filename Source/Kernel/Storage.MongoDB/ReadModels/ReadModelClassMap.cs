@@ -3,6 +3,7 @@
 
 using Cratis.Arc.MongoDB;
 using Cratis.Chronicle.Concepts.ReadModels;
+using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Projections;
@@ -20,5 +21,6 @@ public class ReadModelClassMap : IBsonClassMapFor<ReadModel>
         classMap.MapProperty(_ => _.ObserverType).SetDefaultValue(ReadModelObserverType.NotSet);
         classMap.MapProperty(_ => _.ObserverIdentifier).SetDefaultValue(ReadModelObserverIdentifier.Unspecified);
         classMap.MapProperty(_ => _.Indexes).SetDefaultValue(Array.Empty<string>());
+        classMap.MapProperty(_ => _.IndexDefinitions).SetDefaultValue(new BsonArray());
     }
 }

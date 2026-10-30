@@ -23,6 +23,7 @@ namespace Cratis.Chronicle.Observation;
 /// storage directly to un-wedge an observer whose partitions cannot make progress on their own.
 /// </remarks>
 [Command]
+[Cratis.Arc.Authorization.Authorize(Policy = Security.WellKnownAuthorizationPolicies.AdministratorOperations)]
 [BelongsTo(WellKnownServices.Observers)]
 public record ClearFailedPartitions(string EventStore, string Namespace, string ObserverId, string EventSequenceId)
 {

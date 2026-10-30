@@ -5,6 +5,7 @@ using System.Collections.Immutable;
 using System.Text.Json;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Storage;
+using Cratis.Monads;
 using Cratis.Orleans.Jobs;
 using Microsoft.Extensions.Logging;
 
@@ -23,9 +24,41 @@ public class ReplayObserverPartition(
     JsonSerializerOptions jsonSerializerOptions,
     ILogger<ReplayObserverPartition> logger) : Job<ReplayObserverPartitionRequest, JobStateWithLastHandledEvent>, IReplayObserverPartition
 {
+    bool _refusalNotificationScheduled;
+
+    /// <summary>
+    /// Gets the retained notification releasing an observer after a refused partition replay.
+    /// </summary>
+    internal Task CompletionNotification { get; private set; } = Task.CompletedTask;
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// Recovery of a running job can bypass CanResume and go straight to finalization. Check before the base
+    /// implementation writes progress or dispatches anything; a scope refusal is terminal, not a resumable stop.
+    /// </remarks>
+    public new async Task<Result<ResumeJobSuccess, ResumeJobError>> Resume()
+    {
+        if (State.Request is null)
+        {
+            return await base.Resume();
+        }
+
+        try
+        {
+            await EnsureReplaySupported();
+        }
+        catch (GlobalProjectionReplayNotSupported)
+        {
+            return Result.Failed<ResumeJobSuccess, ResumeJobError>(CannotResumeJobError.JobCannotBeResumed);
+        }
+
+        return await base.Resume();
+    }
+
     /// <inheritdoc/>
     protected override async Task OnBeforeStartingJobSteps()
     {
+        await EnsureReplaySupported();
         await replayStateServiceClient.BeginReplayPartitionFor(State.ObserverDetails, Request.Key);
     }
 
@@ -35,12 +68,27 @@ public class ReplayObserverPartition(
     /// globally scoped must not continue writing into the shared sink. The replay itself is not begun again, so
     /// reactors and reducers are not told twice that their partition replay started.
     /// </remarks>
-    protected override Task OnBeforeResumingJobSteps() =>
-        GlobalProjectionReplay.EnsureSupported(storage, Request.ObserverKey, Request.ObserverType);
+    protected override Task OnBeforeResumingJobSteps() => EnsureReplaySupported();
+
+    /// <inheritdoc/>
+    protected override async Task<bool> CanResume()
+    {
+        if (State.Request is null)
+        {
+            return false;
+        }
+
+        await EnsureReplaySupported();
+        return await base.CanResume();
+    }
+
+    /// <inheritdoc/>
+    protected override Task OnFailedToPrepare() => EnsureReplaySupported();
 
     /// <inheritdoc/>
     protected override async Task OnAllStepsCompleted()
     {
+        await EnsureReplaySupported();
         using var scope = logger.BeginJobScope(JobId, JobKey);
         var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
         if (State is { HandledAllEvents: false, LastHandledEventSequenceNumber.IsActualValue: true })
@@ -62,7 +110,10 @@ public class ReplayObserverPartition(
 
         // A selected-type replay cannot prove that it handled the event which failed for this partition.
         var replayedEventTypes = State.HandledAllEvents && Request.ReplaysAllEventTypes ? Request.EventTypes.ToArray() : [];
-        await observer.PartitionReplayed(Request.Key, State.LastHandledEventSequenceNumber, lastScanned, replayedEventTypes);
+        lastScanned = ScannedBelowHeldBackDeliveryWhenNothingWasRead(lastScanned, replayedEventTypes);
+
+        var (handled, scanned) = await CoverageHeldBelowLiveDelivery(observer, State.LastHandledEventSequenceNumber, lastScanned);
+        await observer.PartitionReplayed(Request.Key, handled, scanned, replayedEventTypes);
     }
 
     /// <inheritdoc/>
@@ -81,9 +132,10 @@ public class ReplayObserverPartition(
     }
 
     /// <inheritdoc/>
-    protected override Task<IImmutableList<JobStepDetails>> PrepareSteps(ReplayObserverPartitionRequest request)
+    protected override async Task<IImmutableList<JobStepDetails>> PrepareSteps(ReplayObserverPartitionRequest request)
     {
-        var steps = new[]
+        await EnsureReplaySupported(request);
+        return new[]
         {
             CreateStep<IHandleEventsForPartition>(
                 new HandleEventsForPartitionArguments(
@@ -98,7 +150,97 @@ public class ReplayObserverPartition(
                     ReaderScope = request.ReaderScope
                 })
         }.ToImmutableList();
-
-        return Task.FromResult<IImmutableList<JobStepDetails>>(steps);
     }
+
+    static EventSequenceNumber FurthestOf(EventSequenceNumber lastHandled, EventSequenceNumber lastScanned)
+    {
+        if (!lastScanned.IsActualValue)
+        {
+            return lastHandled;
+        }
+
+        return !lastHandled.IsActualValue || lastScanned > lastHandled ? lastScanned : lastHandled;
+    }
+
+    /// <summary>
+    /// An empty replay that did not prove every event type replayed must catch up from where live delivery was held
+    /// back, not from First or from nowhere, so the events held back while it ran are still delivered.
+    /// </summary>
+    /// <param name="lastScanned">The last scanned position the replay can vouch for.</param>
+    /// <param name="replayedEventTypes">The event types the replay proved it replayed.</param>
+    /// <returns>The scanned position to report.</returns>
+    EventSequenceNumber ScannedBelowHeldBackDeliveryWhenNothingWasRead(EventSequenceNumber lastScanned, EventType[] replayedEventTypes)
+    {
+        var readNothing = !FurthestOf(State.LastHandledEventSequenceNumber, lastScanned).IsActualValue;
+        var heldBackAfterFirst = Request.HeldBackFrom.IsActualValue && Request.HeldBackFrom > EventSequenceNumber.First;
+        return readNothing && replayedEventTypes.Length == 0 && heldBackAfterFirst ? Request.HeldBackFrom - 1UL : lastScanned;
+    }
+
+    async Task<(EventSequenceNumber Handled, EventSequenceNumber Scanned)> CoverageHeldBelowLiveDelivery(IObserver observer, EventSequenceNumber lastHandled, EventSequenceNumber lastScanned)
+    {
+        if (Request.ReplaysAllEventTypes)
+        {
+            return (lastHandled, lastScanned);
+        }
+
+        if (!Request.HeldBackFrom.IsActualValue)
+        {
+            return await CoverageForLegacyReplay(observer, lastHandled, lastScanned);
+        }
+
+        var reach = FurthestOf(lastHandled, lastScanned);
+        if (!reach.IsActualValue || reach < Request.HeldBackFrom)
+        {
+            return (lastHandled, lastScanned);
+        }
+
+        if (Request.HeldBackFrom == EventSequenceNumber.First)
+        {
+            return (EventSequenceNumber.Unavailable, EventSequenceNumber.Unavailable);
+        }
+
+        var below = Request.HeldBackFrom - 1UL;
+        return (lastHandled.IsActualValue && lastHandled < Request.HeldBackFrom ? lastHandled : below, below);
+    }
+
+    async Task<(EventSequenceNumber Handled, EventSequenceNumber Scanned)> CoverageForLegacyReplay(IObserver observer, EventSequenceNumber lastHandled, EventSequenceNumber lastScanned)
+    {
+        try
+        {
+            var observedEventTypes = await observer.GetEventTypes();
+            return observedEventTypes.All(observed => Request.EventTypes.Any(selected => selected.Id == observed.Id))
+                ? (lastHandled, lastScanned)
+                : (EventSequenceNumber.Unavailable, EventSequenceNumber.Unavailable);
+        }
+        catch (Exception)
+        {
+            // Without a known held-back position or proof of full coverage, catch-up must start at First.
+            return (EventSequenceNumber.Unavailable, EventSequenceNumber.Unavailable);
+        }
+    }
+
+    async Task EnsureReplaySupported(ReplayObserverPartitionRequest? request = null)
+    {
+        request ??= Request;
+        try
+        {
+            await GlobalProjectionReplay.EnsureSupported(storage, request.ObserverKey, request.ObserverType, State, WriteStateAsync);
+        }
+        catch (GlobalProjectionReplayNotSupported)
+        {
+            if (!_refusalNotificationScheduled)
+            {
+                _refusalNotificationScheduled = true;
+
+                // Release the held partition without advancing its watermark or resolving its failures.
+                // Retain rather than await: the observer can still be waiting for this job's Start turn.
+                CompletionNotification = NotifyObserverOfRefusal(request);
+            }
+
+            throw;
+        }
+    }
+
+    async Task NotifyObserverOfRefusal(ReplayObserverPartitionRequest request) => await GrainFactory.GetGrain<IObserver>(request.ObserverKey)
+        .ReleaseRefusedPartitionReplay(request.Key, request.HeldBackFrom);
 }

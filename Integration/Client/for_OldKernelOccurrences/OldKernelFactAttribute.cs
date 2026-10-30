@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace Cratis.Chronicle.Integration.for_OldKernelOccurrences;
 
 /// <summary>
@@ -15,7 +17,12 @@ public sealed class OldKernelFactAttribute : FactAttribute
     /// <summary>
     /// Initializes a new instance of the <see cref="OldKernelFactAttribute"/> class.
     /// </summary>
-    public OldKernelFactAttribute()
+    /// <param name="sourceFilePath">The source file the fact is declared in, supplied by the compiler.</param>
+    /// <param name="sourceLineNumber">The line the fact is declared on, supplied by the compiler.</param>
+    public OldKernelFactAttribute(
+        [CallerFilePath] string? sourceFilePath = null,
+        [CallerLineNumber] int sourceLineNumber = -1)
+        : base(sourceFilePath, sourceLineNumber)
     {
         if (!OldKernelFixture.Enabled)
         {

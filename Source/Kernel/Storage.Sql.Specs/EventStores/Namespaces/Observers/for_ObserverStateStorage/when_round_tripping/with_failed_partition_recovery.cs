@@ -19,6 +19,8 @@ public class with_failed_partition_recovery : given.an_observer_state_storage
             ObserverId = "observer",
             Partition = "partition",
             IsQuarantined = true,
+            WebhookDisposition = WebhookFailureDisposition.Gone,
+            WebhookRecoveryId = Guid.Parse("d41d0b25-f1e7-4da1-97eb-e64d3fa6b104"),
             AttemptsBeforeBudgetReset = 1,
             Attempts =
             [
@@ -33,7 +35,7 @@ public class with_failed_partition_recovery : given.an_observer_state_storage
 
     async Task Because()
     {
-        await _storage.Save(new() { Identifier = "observer", FailedPartitions = [_partition] });
+        await _storage.Save(new() { Identifier = "observer", FailedPartitions = [_partition] }, Concepts.EventSequences.EventSequenceId.Log);
         _restored = (await _storage.Get("observer")).FailedPartitions.Single();
     }
 
@@ -44,4 +46,5 @@ public class with_failed_partition_recovery : given.an_observer_state_storage
     [Fact] void should_keep_the_attempts_before_the_budget_reset() => _restored.AttemptsBeforeBudgetReset.ShouldEqual(1);
     [Fact] void should_not_change_the_retry_budget() => _restored.AttemptsInCurrentBudget.ShouldEqual(1);
     [Fact] void should_keep_quarantine() => _restored.IsQuarantined.ShouldBeTrue();
+    [Fact] void should_keep_explicit_webhook_policy() => _restored.WebhookDisposition.ShouldEqual(WebhookFailureDisposition.Gone);
 }

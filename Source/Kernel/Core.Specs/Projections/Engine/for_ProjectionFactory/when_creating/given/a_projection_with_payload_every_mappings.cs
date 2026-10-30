@@ -7,10 +7,10 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Dynamic;
+using Cratis.Chronicle.Projections.Engine.for_KeyResolvers;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.Sinks;
-using Cratis.Monads;
 
 namespace Cratis.Chronicle.Projections.Engine.for_ProjectionFactory.when_creating.given;
 
@@ -39,14 +39,14 @@ public class a_projection_with_payload_every_mappings : a_child_collection_proje
         _definition.From[_valueChanged] = new(new Dictionary<PropertyPath, string>(), PropertyExpression.NotSet, null);
         _definition.From[_unrelated] = new(new Dictionary<PropertyPath, string>(), PropertyExpression.NotSet, null);
         _definition.Children["notes"].From[_childUpdated] = new(new Dictionary<PropertyPath, string>(), "noteId", "parentId");
-        var parent = new AppendedEvent(EventContext.EmptyWithEventSourceId("parent") with { EventType = _valueChanged }, new ExpandoObject());
-        _eventSequenceStorage.TryGetLastInstanceOfAny("parent", Arg.Any<IEnumerable<EventTypeId>>()).Returns(new Option<AppendedEvent>(parent));
+        var parent = new AppendedEvent(EventContext.EmptyWithEventSourceId("parent") with { EventType = _valueChanged, SequenceNumber = 0 }, new ExpandoObject());
+        _eventSequenceStorage.WithParentHistory("parent", parent);
     }
 
     protected async Task Project(EventType eventType, ExpandoObject content)
     {
         _projection = await _factory.Create(_eventStore, _namespace, _definition, _readModel, []);
-        _incoming = new(EventContext.EmptyWithEventSourceId("parent") with { EventType = eventType }, content);
+        _incoming = new(EventContext.EmptyWithEventSourceId("parent") with { EventType = eventType, SequenceNumber = 1 }, content);
         var keyResult = await _projection.GetKeyResolverFor(eventType)(_eventSequenceStorage, NullSink.Instance, _incoming);
         var key = (keyResult as ResolvedKey)!.Key;
         _changeset = new(new ObjectComparer(), _incoming, new { id = "parent", lastValue = "kept", count = 0L, notes = new[] { new { id = 42 } } }.AsExpandoObject());

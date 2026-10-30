@@ -2,6 +2,8 @@
   href: ./index.md
 - name: Integration Tests
   href: ./integration-tests.md
+- name: Interpreting Integration Timings
+  href: ./integration-timings.md
 - name: Issue Labels
   href: ./issue-labels.md
 - name: PrimeUI License

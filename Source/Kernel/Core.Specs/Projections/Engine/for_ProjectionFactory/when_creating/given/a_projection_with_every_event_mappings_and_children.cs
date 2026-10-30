@@ -7,10 +7,10 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Dynamic;
+using Cratis.Chronicle.Projections.Engine.for_KeyResolvers;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.Sinks;
-using Cratis.Monads;
 
 namespace Cratis.Chronicle.Projections.Engine.for_ProjectionFactory.when_creating.given;
 
@@ -71,8 +71,7 @@ public class a_projection_with_every_event_mappings_and_children : a_child_colle
         var parentEvent = new AppendedEvent(
             EventContext.EmptyWithEventSourceId("parent") with { EventType = _noteUpdated, SequenceNumber = 1 },
             new { parentId = "parent", noteId = 42 }.AsExpandoObject());
-        _eventSequenceStorage.TryGetLastInstanceOfAny("42", Arg.Is<IEnumerable<EventTypeId>>(_ => _.Contains(_noteUpdated.Id)))
-            .Returns(new Option<AppendedEvent>(parentEvent));
+        _eventSequenceStorage.WithParentHistory("42", parentEvent);
         var keyResult = await _projection.GetKeyResolverFor(incoming.Context.EventType)(_eventSequenceStorage, NullSink.Instance, incoming);
         _key = (keyResult as ResolvedKey)!.Key;
         var state = new

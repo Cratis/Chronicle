@@ -10,7 +10,6 @@ using Cratis.Chronicle.Dynamic;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.Sinks;
-using Cratis.Monads;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Cratis.Chronicle.Projections.Engine.for_KeyResolvers.when_identifying_read_model_key_for_nested_event_within_grandchild_projection.given;
@@ -105,8 +104,7 @@ public class a_three_level_hierarchy : Specification
 
         // The parent event lookup fails because FeatureAdded events have FeatureKey as event source,
         // not SliceKey. This is the trigger for TryResolveViaChildCreationEvent.
-        Storage.TryGetLastInstanceOfAny(SliceKey, Arg.Any<IEnumerable<EventTypeId>>())
-            .Returns(Option<AppendedEvent>.None());
+        Storage.WithParentHistory(SliceKey);
     }
 
     protected static AppendedEvent CreateEvent(ulong sequenceNumber, EventType eventType, EventSourceId eventSourceId, ExpandoObject content) =>

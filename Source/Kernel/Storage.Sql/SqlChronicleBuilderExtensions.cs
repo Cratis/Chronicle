@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Compliance;
+using Cratis.Chronicle.Storage.SingleWriter;
 using Cratis.Chronicle.Storage.Sinks;
 using Cratis.Chronicle.Storage.Sql;
 using Cratis.Chronicle.Storage.Sql.Cluster;
@@ -35,6 +36,7 @@ public static class SqlChronicleBuilderExtensions
         SqlSchemaServices.Add(builder.Services, options);
         builder.Services.AddSingleton<ReplayingTables>();
         builder.Services.AddSingleton<IClusterStorage, ClusterStorage>();
+        builder.Services.AddSingleton<ISingleWriterLeaseStorage, SqlSingleWriterLeaseStorage>();
         builder.Services.AddSingleton<EncryptionKeyStorage>();
         builder.Services.AddSingleton<IEncryptionKeyStorage>(sp => new CacheEncryptionKeyStorage(sp.GetRequiredService<EncryptionKeyStorage>()));
 
@@ -47,6 +49,7 @@ public static class SqlChronicleBuilderExtensions
         builder.Services.AddSingleton<ISystemStorage, SqlStorage>();
         builder.Services.AddSingleton<IStorage, Storage.Storage>();
         builder.Services.AddSingleton<IStorageErrorClassifier, SqlStorageErrorClassifier>();
+        builder.Services.AddSingleton<Cratis.Chronicle.Storage.Generations.Bindings.IMaterializationBindingStorage, Cratis.Chronicle.Storage.Sql.Generations.SqlMaterializationBindingStorage>();
 
         // The Cratis.Orleans job system storage: jobs DbContext options resolved per event store and
         // namespace onto the same database the namespace's own DbContext uses.
@@ -81,10 +84,12 @@ public static class SqlChronicleBuilderExtensions
             return;
         }
 
+        var connectionString = SqlConnectionStrings.WithPooling(storage.ConnectionDetails, storage.PostgreSqlPooling);
+
         // Connects the way the storage does, through the resolved identity, rather than with the raw connection details.
         builder.Services.AddHealthChecks().Add(new HealthCheckRegistration(
             name,
-            sp => new SqlConnectionHealthCheck(storage.ConnectionDetails, SqlConnectionResolution.From(sp, storage).PrepareRuntimeConnection),
+            sp => new SqlConnectionHealthCheck(connectionString, SqlConnectionResolution.From(sp, storage).PrepareRuntimeConnection),
             failureStatus: null,
             tags: null,
             timeout: TimeSpan.FromSeconds(3)));

@@ -60,7 +60,10 @@ public class ReadModelDefinitionsStorage(
             definition.ObserverIdentifier,
             definition.Sink,
             definition.Schemas.ToDictionary(_ => _.Key.ToString(), _ => BsonDocument.Parse(_.Value.ToJson())),
-            definition.Indexes.Select(_ => _.PropertyPath.Path).ToArray());
+            definition.Indexes.Select(index => index.Properties[0].Path.Path).ToArray())
+        {
+            IndexDefinitions = ReadModelIndexesBson.Serialize(definition.Indexes)
+        };
         return Collection.ReplaceOneAsync(rm => rm.Id == readModel.Id, readModel, new ReplaceOptions { IsUpsert = true });
     }
 
@@ -82,6 +85,6 @@ public class ReadModelDefinitionsStorage(
             readModel.ObserverIdentifier,
             readModel.Sink,
             schemas,
-            readModel.Indexes.Select(path => new IndexDefinition(path)).ToArray());
+            readModel.IndexDefinitions.Count > 0 ? ReadModelIndexesBson.Deserialize(readModel.IndexDefinitions) : readModel.Indexes.Select(path => new IndexDefinition(path)).ToArray());
     }
 }

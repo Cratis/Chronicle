@@ -14,6 +14,7 @@
         <InternalsVisibleTo Include="Cratis.Chronicle.Integration" />
         <InternalsVisibleTo Include="Cratis.Chronicle.Kernel.Integration" />
         <InternalsVisibleTo Include="Cratis.Chronicle.XUnit.Integration.Specs" />
+        <InternalsVisibleTo Include="Cratis.Chronicle.XUnit.Integration.v3.Specs" />
     </ItemGroup>
 
     <ItemGroup>
@@ -82,6 +83,9 @@
         <PackageReference Include="JsonCons.JmesPath" />
         <PackageReference Include="Microsoft.AspNetCore.DataProtection" />
         <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
+        <!-- Preserve the kernel's Roslyn alignment in consumers: Orleans otherwise selects Workspaces.Common
+             5.0.0, which requires Common exactly 5.0.0 and conflicts with the kernel's CSharp dependency. -->
+        <PackageReference Update="Microsoft.CodeAnalysis.Workspaces.Common" PrivateAssets="none" />
         <PackageReference Include="Microsoft.Extensions.Http.Resilience" />
         <PackageReference Include="Microsoft.Extensions.Resilience" />
         <PackageReference Include="Microsoft.Extensions.Telemetry.Abstractions" />

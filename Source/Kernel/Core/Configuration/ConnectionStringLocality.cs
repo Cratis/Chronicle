@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Data.Common;
+
 namespace Cratis.Chronicle.Configuration;
 
 /// <summary>
@@ -44,6 +46,11 @@ public static class ConnectionStringLocality
 
     static IEnumerable<string> ExtractHosts(string connectionString)
     {
+        if (!connectionString.Contains("://", StringComparison.Ordinal) && connectionString.Contains('='))
+        {
+            return ExtractSqlHosts(connectionString);
+        }
+
         var authority = connectionString;
 
         var schemeIndex = authority.IndexOf("://", StringComparison.Ordinal);
@@ -70,6 +77,32 @@ public static class ConnectionStringLocality
             .Where(host => host.Length > 0);
     }
 
+    static IEnumerable<string> ExtractSqlHosts(string connectionString)
+    {
+        var builder = new DbConnectionStringBuilder();
+        try
+        {
+            builder.ConnectionString = connectionString;
+        }
+        catch (ArgumentException)
+        {
+            return [];
+        }
+
+        foreach (var key in new[] { "Host", "Server", "Data Source", "Address", "Addr", "Network Address" })
+        {
+            if (!builder.TryGetValue(key, out var value)) continue;
+            var host = value.ToString() ?? string.Empty;
+            if (host.StartsWith("tcp:", StringComparison.OrdinalIgnoreCase)) host = host[4..];
+            if (host.Equals("(local)", StringComparison.OrdinalIgnoreCase) || host.Equals(".", StringComparison.Ordinal) || host.StartsWith("(localdb)", StringComparison.OrdinalIgnoreCase)) return [];
+            return host.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Where(part => !int.TryParse(part, out _))
+                .Select(part => HostOf(part.Split('\\')[0]));
+        }
+
+        return [];
+    }
+
     static string HostOf(string hostAndPort)
     {
         if (hostAndPort.StartsWith('['))
@@ -78,6 +111,7 @@ public static class ConnectionStringLocality
             return end > 0 ? hostAndPort[1..end] : hostAndPort;
         }
 
+        if (System.Net.IPAddress.TryParse(hostAndPort, out _)) return hostAndPort;
         var portIndex = hostAndPort.IndexOf(':');
         return portIndex >= 0 ? hostAndPort[..portIndex] : hostAndPort;
     }

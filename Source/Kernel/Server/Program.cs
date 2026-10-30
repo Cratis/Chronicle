@@ -8,8 +8,10 @@ using Cratis.Arc.MongoDB;
 using Cratis.Chronicle.Clients;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Diagnostics.OpenTelemetry;
+using Cratis.Chronicle.Observation.Webhooks;
 using Cratis.Chronicle.Server;
 using Cratis.Chronicle.Server.Authentication;
+using Cratis.Chronicle.Server.Observation.Webhooks;
 using Cratis.Chronicle.Setup;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Security;
@@ -115,11 +117,13 @@ if (chronicleOptions.Storage.SchemaMode == SchemaMode.Verify && !SchemaCommandRu
 
 ClusteringStorageValidation.Validate(chronicleOptions);
 KernelStartupDiagnostics.ReportIdentityProviderCertificate(chronicleOptions, logger);
+KernelStartupDiagnostics.ReportSubscriberTimeout(chronicleOptions, logger);
 ForwardedHeadersTrust.Configure(builder.Services, chronicleOptions);
 var isSqlStorage = string.Equals(chronicleOptions.Storage.Type, StorageType.Sqlite, StringComparison.OrdinalIgnoreCase)
     || string.Equals(chronicleOptions.Storage.Type, StorageType.MsSql, StringComparison.OrdinalIgnoreCase)
     || string.Equals(chronicleOptions.Storage.Type, StorageType.PostgreSql, StringComparison.OrdinalIgnoreCase);
 var isInMemoryStorage = string.Equals(chronicleOptions.Storage.Type, StorageType.InMemory, StringComparison.OrdinalIgnoreCase);
+var localhostGuard = LocalhostClusteringGuard.Decide(chronicleOptions);
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddHealthChecks().AddCheck<StartupHealthCheck>("startup");
 
@@ -142,8 +146,13 @@ KernelListeners.Configure(chronicleOptions, certificate, logger, (port, protocol
     listeners.Add((port, protocols, listenerCertificate)));
 logger.ServerListening(chronicleOptions.Port);
 
+// Bind the listener ports before the host is built: building and starting it opens outgoing connections
+// (MongoDB among them), and one of those can be given a listener port as its ephemeral source port. (#5399)
+using var reservedListenSockets = ReservedListenSockets.Reserve(listeners.Select(_ => _.Port));
+
 builder.Services.AddOptions<SocketTransportOptions>().Configure<IHostApplicationLifetime>((options, lifetime) =>
-    options.CreateBoundListenSocket = endpoint => ResilientListenSocket.Bind(endpoint, chronicleOptions.BindTimeout, logger, lifetime.ApplicationStopping));
+    options.CreateBoundListenSocket = endpoint => reservedListenSockets.Take(endpoint)
+        ?? ResilientListenSocket.Bind(endpoint, chronicleOptions.BindTimeout, logger, lifetime.ApplicationStopping));
 
 builder.WebHost.UseKestrel(options =>
 {
@@ -222,7 +231,11 @@ hostBuilder
         }
         else
         {
-            if (!isSqlStorage && !isInMemoryStorage && ConnectionStringLocality.IsNonLocal(chronicleOptions.Storage.ConnectionDetails))
+            if (localhostGuard == LocalhostClusteringGuardAction.Lease)
+            {
+                _.AddSingleWriterLease();
+            }
+            else if (localhostGuard == LocalhostClusteringGuardAction.Warn)
             {
                 logger.LocalhostClusteringAgainstSharedStorage();
             }
@@ -272,6 +285,9 @@ hostBuilder
           .AddSelfBindings()
           .AddGrpcServices()
           .AddSingleton(BinderConfiguration.Default);
+
+       // Override Core's unavailable-provider fallback after convention binding.
+       services.AddSingleton<IManagedIdentityTokens, AzureIdentityManagedIdentityTokens>();
 
        // Lets an HTTP storage connection resolver authenticate with Microsoft Entra ID (AzureCredential).
        // Inert unless storage.connectionResolution configures that authentication type.

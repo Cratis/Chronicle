@@ -31,5 +31,10 @@ public enum AuthorizationType
     /// <summary>
     /// OAuth client credentials authorization.
     /// </summary>
-    OAuth = 3
+    OAuth = 3,
+
+    /// <summary>
+    /// Managed or workload identity authorization.
+    /// </summary>
+    ManagedIdentity = 4
 }

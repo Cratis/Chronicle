@@ -11,6 +11,7 @@ using Cratis.Chronicle.Storage.Sinks;
 
 namespace Cratis.Chronicle.ReadModels.for_ReadModelReplayManagerStorageProvider.when_writing_state;
 
+[PerFactSpecificationLifecycle]
 public class and_there_are_removed_occurrences : Specification
 {
     ReadModelReplayManagerStorageProvider _provider;

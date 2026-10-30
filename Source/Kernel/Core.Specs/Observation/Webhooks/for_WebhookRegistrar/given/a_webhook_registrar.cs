@@ -6,6 +6,8 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Identities;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Namespaces;
+using Cratis.Chronicle.Observation.Webhooks.Validation;
 using Cratis.Chronicle.Security;
 using Cratis.Chronicle.Storage;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -26,13 +28,19 @@ public class a_webhook_registrar : Specification
     void Establish()
     {
         _grainFactory = Substitute.For<IGrainFactory>();
+        var namespaces = Substitute.For<INamespaces>();
+        namespaces.GetAll().Returns([]);
+        _grainFactory.GetGrain<INamespaces>(Arg.Any<string>()).Returns(namespaces);
         _storage = Substitute.For<IStorage>();
         _webhookDefinitionComparer = Substitute.For<IWebhookDefinitionComparer>();
         _encryption = Substitute.For<IEncryption>();
         _oauthClient = Substitute.For<IOAuthClient>();
         _webhookMediator = Substitute.For<IWebhookMediator>();
-        _registrar = new WebhookRegistrar(_grainFactory, _webhookDefinitionComparer, _encryption, _oauthClient, _webhookMediator, Options.Create(new ChronicleOptions()), _storage, NullLogger<WebhookRegistrar>.Instance);
+        _registrar = CreateRegistrar();
     }
+
+    protected WebhookRegistrar CreateRegistrar(IWebhookTargetPolicy? policy = null) =>
+        new(_grainFactory, _webhookDefinitionComparer, _encryption, _oauthClient, _webhookMediator, Options.Create(new ChronicleOptions()), _storage, NullLogger<WebhookRegistrar>.Instance, policy);
 
     protected static IEventSequence AnEventSequenceThatAppendsSuccessfully()
     {

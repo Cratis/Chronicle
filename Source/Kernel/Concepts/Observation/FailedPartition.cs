@@ -14,6 +14,16 @@ public class FailedPartition
     List<FailedPartitionAttempt> _attempts = [];
 
     /// <summary>
+    /// Gets or sets the explicit webhook receiver policy, absent on legacy failures.
+    /// </summary>
+    public WebhookFailureDisposition? WebhookDisposition { get; set; }
+
+    /// <summary>
+    /// Gets or sets the last automatic recovery that reset this episode's budget.
+    /// </summary>
+    public Guid? WebhookRecoveryId { get; set; }
+
+    /// <summary>
     /// Unique identifier of the failed partition.
     /// </summary>
     public FailedPartitionId Id { get; set; } = FailedPartitionId.New();

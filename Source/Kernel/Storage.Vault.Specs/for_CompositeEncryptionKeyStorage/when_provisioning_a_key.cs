@@ -20,7 +20,7 @@ public class when_provisioning_a_key(context ctx) : IClassFixture<context>
         public EncryptionKey? MirroredToTheDefaultStorage;
         public bool VaultHasASecondRevision;
 
-        public override async Task InitializeAsync()
+        public override async ValueTask InitializeAsync()
         {
             await base.InitializeAsync();
             First = new EncryptionKey([1, 2, 3], [4, 5, 6]);

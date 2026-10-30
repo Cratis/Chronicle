@@ -10,7 +10,6 @@ using Cratis.Chronicle.Dynamic;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.Sinks;
-using Cratis.Monads;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Cratis.Chronicle.Projections.Engine.for_KeyResolvers;
@@ -57,7 +56,7 @@ public class when_identifying_read_model_key_from_parent_hierarchy_with_one_leve
                 "2f005aaf-2f4e-4a47-92ea-63687ef74bd4",
                 EventStreamType.All,
                 EventStreamId.Default,
-                0,
+                2,
                 DateTimeOffset.UtcNow,
                 "123b8935-a1a4-410d-aace-e340d48f0aa0",
                 "41f18595-4748-4b01-88f7-4c0d0907aa90",
@@ -89,7 +88,7 @@ public class when_identifying_read_model_key_from_parent_hierarchy_with_one_leve
         _storage = Substitute.For<IEventSequenceStorage>();
         _sink = Substitute.For<ISink>();
 
-        _storage.TryGetLastInstanceOfAny(ParentKey, Arg.Is<IEnumerable<EventTypeId>>(x => x.Contains(_rootEventType.Id))).Returns(new Option<AppendedEvent>(_rootEvent));
+        _storage.WithParentHistory(ParentKey, _rootEvent);
         _rootProjection.GetKeyResolverFor(_rootEventType).Returns(_ => (_, __, ___) => Task.FromResult(KeyResolverResult.Resolved(new Key(ParentKey, ArrayIndexers.NoIndexers))));
     }
 

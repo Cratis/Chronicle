@@ -6,7 +6,6 @@ using System.Dynamic;
 using System.Globalization;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
-using System.Text;
 using System.Text.Json;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
@@ -32,9 +31,9 @@ namespace Cratis.Chronicle.Storage.InMemory.Sinks;
 /// </remarks>
 /// <param name="readModel">The target <see cref="ReadModelDefinition"/>.</param>
 /// <param name="typeFormats">The <see cref="ITypeFormats"/> for resolving actual types from JSON schema.</param>
-public class InMemorySink(
+public partial class InMemorySink(
     ReadModelDefinition readModel,
-    ITypeFormats typeFormats) : ISink, IDisposable
+    ITypeFormats typeFormats) : ISink, ISinkCompositeKeyLookup, IDisposable
 {
     readonly Dictionary<object, ExpandoObject> _collection = [];
     readonly Dictionary<object, ExpandoObject> _rewindCollection = [];
@@ -69,6 +68,7 @@ public class InMemorySink(
     /// </summary>
     /// <param name="key">The <see cref="Key"/> to resolve.</param>
     /// <returns>The value the document for <paramref name="key"/> is stored under in <see cref="Collection"/>.</returns>
+    /// <exception cref="ReadModelKeyHasNoValue">The key has no value.</exception>
     /// <remarks>
     /// Two <see cref="Key"/> instances addressing the same document — a concept and its underlying primitive,
     /// say — resolve to the same value here. Callers that keep per-document state beside the sink must derive
@@ -76,24 +76,14 @@ public class InMemorySink(
     /// </remarks>
     public object GetKeyValue(Key key)
     {
+        if (key.Value is null)
+        {
+            throw new ReadModelKeyHasNoValue(readModel.Identifier);
+        }
+
         if (key.Value is ExpandoObject expandoKey)
         {
-            // Each part is length-prefixed so that a separator inside a value cannot make two
-            // different composite keys produce the same storage key.
-            var stringBuilder = new StringBuilder();
-            foreach (var (_, value) in expandoKey.GetKeyValuePairs().OrderBy(_ => _.Key, StringComparer.Ordinal))
-            {
-                if (value is null)
-                {
-                    stringBuilder.Append('~');
-                    continue;
-                }
-
-                var part = value.ToString() ?? string.Empty;
-                stringBuilder.Append(part.Length).Append(':').Append(part);
-            }
-
-            return stringBuilder.ToString();
+            return CompositeKeyEncoding.Encode(expandoKey);
         }
 
         if (_keyTargetType is not null)
@@ -148,6 +138,13 @@ public class InMemorySink(
         {
             return Task.FromResult(_collection.GetValueOrDefault(keyValue));
         }
+    }
+
+    /// <inheritdoc/>
+    public async Task<CompositeKeyLookupResult> FindByCompositeKey(Key key)
+    {
+        var instance = await FindInPrimaryOrDefault(key);
+        return instance is null ? CompositeKeyLookupResult.NotFound : CompositeKeyLookupResult.Found(instance);
     }
 
     /// <inheritdoc/>
@@ -207,16 +204,7 @@ public class InMemorySink(
 
         if (changeset.HasBeenRemoved())
         {
-            bool removedFromPrimary;
-            lock (_collectionLock)
-            {
-                Collection.Remove(keyValue);
-                LastHandledEventSequenceNumbers.Remove(keyValue);
-                removedFromPrimary = !_isReplaying;
-            }
-
-            NotifyChanged(keyValue, removedFromPrimary);
-            return Task.FromResult<IEnumerable<FailedPartition>>([]);
+            return ApplyRemoval(keyValue, eventSequenceNumber, mode);
         }
 
         var childJoins = ApplyChildJoins(changeset, eventSequenceNumber);
@@ -258,9 +246,7 @@ public class InMemorySink(
         bool wroteToPrimary;
         lock (_collectionLock)
         {
-            if (mode == SinkWriteMode.OnlyWhenAdvancingWatermark &&
-                eventSequenceNumber.IsActualValue &&
-                !AdvancesWatermark(keyValue, eventSequenceNumber))
+            if (IsRejectedWatermarkWrite(keyValue, eventSequenceNumber, mode))
             {
                 return Task.FromResult<IEnumerable<FailedPartition>>([]);
             }
@@ -445,24 +431,32 @@ public class InMemorySink(
     public Task EnsureIndexes() => Task.CompletedTask;
 
     /// <inheritdoc/>
-    public Task<ReadModelInstances> GetInstances(ReadModelContainerName? occurrence = null, int skip = 0, int take = 50)
+    public Task<ReadModelInstances> GetInstances(ReadModelContainerName? occurrence = null, int skip = 0, int take = 50) =>
+        GetInstances(occurrence, skip, take, ReadModelInstanceVisibility.InitializedOnly);
+
+    /// <inheritdoc/>
+    public Task<ReadModelInstances> GetInstances(ReadModelContainerName? occurrence, int skip, int take, ReadModelInstanceVisibility visibility)
     {
-        var (instances, totalCount) = SnapshotInstances(skip, take);
+        var (instances, totalCount) = SnapshotInstances(skip, take, visibility);
         return Task.FromResult(new ReadModelInstances(instances, totalCount));
     }
 
     /// <inheritdoc/>
-    public IObservable<IEnumerable<ExpandoObject>> ObserveInstances(ReadModelContainerName? occurrence = null, int skip = 0, int take = 50)
+    public IObservable<IEnumerable<ExpandoObject>> ObserveInstances(ReadModelContainerName? occurrence = null, int skip = 0, int take = 50) =>
+        ObserveInstances(occurrence, skip, take, ReadModelInstanceVisibility.InitializedOnly);
+
+    /// <inheritdoc/>
+    public IObservable<IEnumerable<ExpandoObject>> ObserveInstances(ReadModelContainerName? occurrence, int skip, int take, ReadModelInstanceVisibility visibility)
     {
         // For in-memory sink, return an observable that emits whenever the collection changes
         return Observable.Create<IEnumerable<ExpandoObject>>(observer =>
         {
             // Emit initial state
-            observer.OnNext(SnapshotInstances(skip, take).Instances);
+            observer.OnNext(SnapshotInstances(skip, take, visibility).Instances);
 
             // Subscribe to changes on _changeSubject and emit updated instances
             return _changeSubject.Subscribe(
-                _ => observer.OnNext(SnapshotInstances(skip, take).Instances),
+                _ => observer.OnNext(SnapshotInstances(skip, take, visibility).Instances),
                 observer.OnError,
                 observer.OnCompleted);
         });
@@ -492,7 +486,7 @@ public class InMemorySink(
         }
     }
 
-    (IReadOnlyList<ExpandoObject> Instances, int TotalCount) SnapshotInstances(int skip, int take)
+    (IReadOnlyList<ExpandoObject> Instances, int TotalCount) SnapshotInstances(int skip, int take, ReadModelInstanceVisibility visibility)
     {
         static string KeyOrderValue(object key)
         {
@@ -510,10 +504,12 @@ public class InMemorySink(
         // collection, and the primary one keeps the previous state until the replay ends and promotes it.
         lock (_collectionLock)
         {
-            var collection = _collection;
-            var instances = collection.OrderBy(entry => KeyOrderValue(entry.Key), StringComparer.Ordinal)
+            var visible = _collection.Where(entry =>
+                visibility == ReadModelInstanceVisibility.IncludeUninitialized ||
+                !((IDictionary<string, object?>)entry.Value).TryGetValue(WellKnownProperties.ReadModelInstanceInitialized, out var initialized) || initialized is not false).ToArray();
+            var instances = visible.OrderBy(entry => KeyOrderValue(entry.Key), StringComparer.Ordinal)
                 .Skip(skip).Take(take).Select(entry => entry.Value).ToArray();
-            return (instances, collection.Count);
+            return (instances, visible.Length);
         }
     }
 

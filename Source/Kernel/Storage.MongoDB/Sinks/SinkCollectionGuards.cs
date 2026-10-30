@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.Projections.Generations;
+using Cratis.Chronicle.Storage.Generations.Bindings;
 using Cratis.Chronicle.Storage.Sinks;
 using MongoDB.Bson;
 
@@ -17,6 +19,31 @@ namespace Cratis.Chronicle.Storage.MongoDB.Sinks;
 /// </remarks>
 public static class SinkCollectionGuards
 {
+    /// <summary>Refuses operations that could destroy a claimed generation.</summary>
+    /// <param name="operation">The collection operation.</param>
+    /// <param name="collection">The physical collection being mutated.</param>
+    /// <param name="ownPrimary">The sink's own physical container.</param>
+    /// <param name="claims">Every generation claiming this container.</param>
+    /// <exception cref="SinkCollectionOperationRefused">A generation protects the container.</exception>
+    public static void ThrowIfGenerationProtected(SinkCollectionOperation operation, string collection, string ownPrimary, IReadOnlyCollection<GenerationContainerClaim> claims)
+    {
+        foreach (var claim in claims.Where(claim => claim.Destination.Value == collection))
+        {
+            var protectedState = claim.State is MaterializationGenerationState.Building or MaterializationGenerationState.Following or MaterializationGenerationState.Active or MaterializationGenerationState.Retired;
+            var refused = operation switch
+            {
+                SinkCollectionOperation.Drop or SinkCollectionOperation.Rename => protectedState,
+                SinkCollectionOperation.Clear => protectedState && (claim.State != MaterializationGenerationState.Building || collection != ownPrimary),
+                SinkCollectionOperation.CreateIndexes => claim.State == MaterializationGenerationState.Building && collection != ownPrimary,
+                _ => false
+            };
+            if (refused)
+            {
+                throw new SinkCollectionOperationRefused(operation, collection, $"generation {claim.Generation.Value} is {claim.State}");
+            }
+        }
+    }
+
     /// <summary>
     /// Throw unless the collection about to be cleared is the one the sink writes to in its current phase.
     /// </summary>

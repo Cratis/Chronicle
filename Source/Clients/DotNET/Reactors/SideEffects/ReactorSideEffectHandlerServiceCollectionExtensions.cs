@@ -1,7 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle;
 using Cratis.Chronicle.Reactors.SideEffects;
+using Cratis.Types;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Microsoft.Extensions.DependencyInjection;
@@ -46,6 +48,8 @@ internal static class ReactorSideEffectHandlerServiceCollectionExtensions
         {
             services.TryAddSingleton(type);
         }
+        services.TryAddScoped<IInstancesOf<IReactorSideEffectHandler>>(serviceProvider =>
+            new InstancesOf<IReactorSideEffectHandler>(TypeUniverse.For(serviceProvider), serviceProvider));
         services.AddScoped<ReactorSideEffectHandlers>();
         services.AddScoped<IReactorSideEffectHandlers>(serviceProvider =>
             serviceProvider.GetRequiredService<ReactorSideEffectHandlers>());

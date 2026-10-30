@@ -55,6 +55,16 @@ public interface IWebhookDefinitionBuilder
         throw new NotSupportedException("This builder does not support OAuth.");
 
     /// <summary>
+    /// Uses managed identity authentication for the receiver's scope.
+    /// </summary>
+    /// <param name="scope">The required scope.</param>
+    /// <param name="clientId">The optional client identifier, or null for the system-assigned identity.</param>
+    /// <returns>The builder continuation.</returns>
+    /// <exception cref="NotSupportedException">The builder does not support managed identity.</exception>
+    IWebhookDefinitionBuilder WithManagedIdentity(string scope, string? clientId = null) =>
+        throw new NotSupportedException("This builder does not support managed identity.");
+
+    /// <summary>
     /// Adds a header to the webhook requests.
     /// </summary>
     /// <param name="key">The header key.</param>

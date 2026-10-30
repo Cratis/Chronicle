@@ -50,6 +50,8 @@ public static class InMemoryChronicleBuilderExtensions
             services.AddSingleton<IEncryptionKeyStorage, EncryptionKeyStorage>();
             services.AddSingleton<IStorage, Cratis.Chronicle.Storage.InMemory.Storage>();
             services.AddSingleton<IStorageErrorClassifier, InMemoryStorageErrorClassifier>();
+            services.AddSingleton<Cratis.Chronicle.Storage.Generations.Bindings.IMaterializationBindingStorage, Cratis.Chronicle.Storage.InMemory.Generations.Bindings.InMemoryMaterializationBindingStorage>();
+            services.AddGenerationCatalog();
             services.AddCratisOrleansInMemoryJobsStorage();
         });
 

@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Storage.Generations.Bindings;
+
 namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing;
 
 /// <summary>
@@ -14,5 +16,5 @@ public record FenceToken(string MaterializationKey, ulong Generation, long Epoch
     /// <summary>
     /// Gets the identifier of the gate record guarding the materialization generation.
     /// </summary>
-    public string GateId => $"{MaterializationKey}#{Generation}";
+    public string GateId => GenerationGateId.Format(MaterializationKey, Generation);
 }

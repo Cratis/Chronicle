@@ -84,8 +84,7 @@ public class when_identifying_read_model_key_from_parent_hierarchy_using_sink_lo
 
         // Parent event is NOT found by EventSourceId (returns empty)
         // This forces the code to use sink lookup
-        _storage.TryGetLastInstanceOfAny(ParentKey, Arg.Any<IEnumerable<EventTypeId>>())
-            .Returns(Option<AppendedEvent>.None());
+        _storage.WithParentHistory(ParentKey);
 
         // The child is not in the sink yet — the direct child-key lookup misses and the
         // resolution falls through to the parent-key strategies under test.

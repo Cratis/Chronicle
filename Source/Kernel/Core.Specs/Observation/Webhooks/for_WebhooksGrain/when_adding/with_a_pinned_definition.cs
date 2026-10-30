@@ -24,6 +24,6 @@ public class with_a_pinned_definition : given.a_webhooks_manager_grain
     }
 
     async Task Because() => await _grain.Add(_definition);
-    [Fact] async Task should_subscribe_with_the_pinned_policy() => await _observer.Received(1).SubscribeWithGenerationDelivery<IWebhookObserverSubscriber>(ObserverType.External, Arg.Is<IEnumerable<EventType>>(_ => _.Single() == new EventType("customer", 3)), Arg.Any<SiloAddress>(), EventGenerationDelivery.Pinned, EventGenerationDelivery.Pinned);
+    [Fact] async Task should_subscribe_with_the_pinned_policy() => await _observer.Received(1).SubscribeWithGenerationDelivery<IWebhookObserverSubscriber>(ObserverType.External, Arg.Is<IEnumerable<EventType>>(_ => _.Single() == new EventType("customer", 3)), Arg.Any<SiloAddress>(), EventGenerationDelivery.Pinned, EventGenerationDelivery.Pinned, reactivateRetired: true, automatic: false);
     [Fact] void should_persist_the_policy() => _stateStorage.State.Webhooks.Single().GenerationDelivery.ShouldEqual(EventGenerationDelivery.Pinned);
 }

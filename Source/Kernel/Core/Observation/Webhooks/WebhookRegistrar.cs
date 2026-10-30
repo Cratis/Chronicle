@@ -7,10 +7,12 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences.Concurrency;
 using Cratis.Chronicle.Concepts.Identities;
 using Cratis.Chronicle.Concepts.Keys;
+using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.Webhooks;
 using Cratis.Chronicle.Concepts.Security;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Observation.Webhooks.Validation;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Security;
@@ -32,6 +34,7 @@ namespace Cratis.Chronicle.Observation.Webhooks;
 /// <param name="options"><see cref="IOptions{ChronicleOptions}"/> for configuration.</param>
 /// <param name="storage">Storage for validating registered event generations.</param>
 /// <param name="logger">The logger for probe failures, not exposed to callers.</param>
+/// <param name="targetPolicy">The operator approval policy. Without it managed identity registrations are refused.</param>
 /// <remarks>
 /// Registering a webhook is a diff, not a write: the definition is compared with what is stored and only what
 /// actually changed becomes an event. Testing lives here too, because a validator has to ask the same questions
@@ -45,7 +48,8 @@ public sealed class WebhookRegistrar(
     IWebhookMediator webhookMediator,
     IOptions<ChronicleOptions> options,
     IStorage storage,
-    ILogger<WebhookRegistrar> logger)
+    ILogger<WebhookRegistrar> logger,
+    IWebhookTargetPolicy? targetPolicy = null)
 {
     const string WebhookTestPartitionKey = "test";
     readonly TimeSpan _webhookTestTimeout = TimeSpan.FromSeconds(options.Value.Webhooks.TestTimeoutSeconds);
@@ -57,6 +61,7 @@ public sealed class WebhookRegistrar(
     /// <param name="webhooks">The webhook definitions to add or update.</param>
     /// <returns>Awaitable task.</returns>
     /// <exception cref="WebhookRegistrationFailed">Thrown when an event recording the registration could not be appended.</exception>
+    /// <exception cref="ManagedIdentityWebhookNotAllowed">The requested managed identity, scope or receiver is not approved.</exception>
     /// <exception cref="ObserverPinsMultipleGenerationsOfEventType">The webhook pins multiple generations of one type.</exception>
     /// <exception cref="EventTypeGenerationNotRegisteredForObserver">A pinned generation is not registered.</exception>
     internal async Task Add(EventStoreName eventStore, IEnumerable<WebhookDefinition> webhooks)
@@ -64,7 +69,9 @@ public sealed class WebhookRegistrar(
         webhooks = webhooks.ToArray();
 
         // Validate the entire request before appending any registration changes.
+        ValidateManagedIdentities(eventStore, webhooks);
         await ValidatePins(eventStore, webhooks);
+        await ValidateTransportOwnership(eventStore, webhooks);
 
         var eventSequence = grainFactory.GetSystemEventSequence(eventStore);
         var webhooksManager = grainFactory.GetGrain<Chronicle.Observation.Webhooks.IWebhooks>(eventStore);
@@ -248,6 +255,46 @@ public sealed class WebhookRegistrar(
         };
     }
 
+    void ValidateManagedIdentities(EventStoreName eventStore, IEnumerable<WebhookDefinition> webhooks)
+    {
+        foreach (var webhook in webhooks)
+        {
+            var target = webhook.ToChronicle().Target;
+            if (target.Authorization.IsT4 && targetPolicy?.CheckManagedIdentity(target.Authorization.AsT4, target.Url, eventStore).IsAllowed != true)
+            {
+                throw new ManagedIdentityWebhookNotAllowed();
+            }
+        }
+    }
+
+    async Task ValidateTransportOwnership(EventStoreName eventStore, IEnumerable<WebhookDefinition> webhooks)
+    {
+        var namespaces = await grainFactory.GetGrain<INamespaces>(eventStore).GetAll();
+        foreach (var webhook in webhooks.Where(_ => _.IsActive && !_.IsInactive))
+        {
+            foreach (var @namespace in namespaces)
+            {
+                var key = new ObserverKey(webhook.Identifier, eventStore, @namespace, webhook.EventSequenceId);
+                if (await IsServedByConnectedClient(key))
+                {
+                    throw new ObserverServedByAnotherTransport(key);
+                }
+            }
+        }
+    }
+
+    async Task<bool> IsServedByConnectedClient(ObserverKey key)
+    {
+        var subscription = await grainFactory.GetGrain<IObserver>(key).GetSubscription();
+        if (subscription.IsServedByConnectedClient)
+        {
+            return true;
+        }
+
+        var owningSubscription = await ObserverTransportSubscriptions.OnOtherSequence(storage, grainFactory, key);
+        return owningSubscription?.IsServedByConnectedClient == true;
+    }
+
     async Task ValidatePins(EventStoreName eventStore, IEnumerable<WebhookDefinition> webhooks)
     {
         foreach (var webhook in webhooks.Where(_ => _.GenerationDelivery == Contracts.Observation.EventGenerationDelivery.Pinned))
@@ -302,7 +349,8 @@ public sealed class WebhookRegistrar(
                 oauth.Authority,
                 oauth.ClientId,
                 new ClientSecret(encryption.Encrypt(oauth.ClientSecret.Value))) { Scope = oauth.Scope },
-            none => WebhookAuthorization.None);
+            none => WebhookAuthorization.None,
+            managedIdentity => (WebhookAuthorization)managedIdentity);
 
         var encryptedTarget = new Concepts.Observation.Webhooks.WebhookTarget(
             definition.Target.Url,
@@ -318,7 +366,8 @@ public sealed class WebhookRegistrar(
             basic => Append(eventSequence, webhookId, new BasicAuthorizationSetForWebhook(basic.Username, basic.Password)),
             bearer => Append(eventSequence, webhookId, new BearerTokenAuthorizationSetForWebhook(bearer.Token)),
             oauth => AppendOAuth(eventSequence, webhookId, oauth),
-            none => Task.CompletedTask);
+            none => Task.CompletedTask,
+            managedIdentity => Append(eventSequence, webhookId, new ManagedIdentityAuthorizationSetForWebhook(managedIdentity.ClientId, managedIdentity.Scope)));
     }
 
     async Task AppendOAuth(IEventSequence sequence, string webhookId, OAuthAuthorization oauth)

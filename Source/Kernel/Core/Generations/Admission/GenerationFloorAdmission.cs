@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Projections.Generations.Enablement;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Generations;
@@ -15,10 +14,13 @@ public sealed class GenerationFloorAdmission(IStorage storage) : IGenerationFloo
     /// <inheritdoc/>
     public async Task Admit(CancellationToken cancellationToken)
     {
-        var stores = await storage.GetEventStores().WaitAsync(cancellationToken);
-        foreach (var store in stores.Append(EventStoreName.System).Distinct())
+        var floors = await storage.ReadGenerationFloors().WaitAsync(cancellationToken);
+        foreach (var pair in floors)
         {
-            await storage.GetEventStore(store).EnsureAdmitted(GenerationBinarySupport.Current).WaitAsync(cancellationToken);
+            if (!GenerationBinarySupport.Current.Satisfies(pair.Value))
+            {
+                throw new KernelBelowGenerationFloor(pair.Key, pair.Value, GenerationBinarySupport.Current);
+            }
         }
     }
 }

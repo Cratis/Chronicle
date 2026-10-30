@@ -13,7 +13,7 @@ public class and_the_failure_is_not_transient : given.a_namespace_subscription
     async Task Because()
     {
         await _onNamespaceAdded(_added);
-        _error = await Catch.Exception(() => _silo.TimerRegistry.FireAllAsync());
+        _error = await Catch.Exception(_silo.TimerRegistry.FireAllAsync);
     }
 
     [Fact] void should_not_retry() => _capture.Received(1).Subscribe(_added.EventStore, _added.Namespace);

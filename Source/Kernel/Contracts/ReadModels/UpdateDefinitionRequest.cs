@@ -20,4 +20,10 @@ public class UpdateDefinitionRequest
     /// </summary>
     [ProtoMember(2, IsRequired = true)]
     public ReadModelDefinition ReadModel { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the incoming indexes replace the complete set, including an empty set.
+    /// </summary>
+    [ProtoMember(3)]
+    public bool ReplaceIndexes { get; set; }
 }

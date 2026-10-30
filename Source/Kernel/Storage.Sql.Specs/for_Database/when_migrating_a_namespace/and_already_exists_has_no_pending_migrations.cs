@@ -2,8 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reflection;
-using Cratis.Arc.EntityFrameworkCore;
-using Cratis.Arc.EntityFrameworkCore.Concepts;
 using Cratis.Chronicle.Storage.Sql.Connections;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces;
 using Cratis.Chronicle.Storage.Sql.Sinks;
@@ -28,12 +26,7 @@ public class and_already_exists_has_no_pending_migrations(PostgreSqlFixture fixt
 
     async Task Because()
     {
-        var builder = new DbContextOptionsBuilder<NamespaceDbContext>();
-        builder.UseDatabaseFromConnectionString(_connection);
-
-        // Build the options the way Database.BuildOptions does, so this context shares the kernel's EF configuration.
-        builder
-            .AddConceptAsSupport().WithoutServiceProviderCaching()
+        var builder = new DbContextOptionsBuilder<NamespaceDbContext>(SpecDbContextOptions.Kernel<NamespaceDbContext>(_connection))
             .AddInterceptors(_failure);
         await using var context = new NamespaceDbContext(builder.Options);
 

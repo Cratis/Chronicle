@@ -55,6 +55,13 @@ public sealed class ObserverHandledCountsStorage : IObserverHandledCountsStorage
                 : ImmutableDictionary<EventTypeId, EventCount>.Empty);
 
     /// <inheritdoc/>
+    public Task SetForRecovery(ObserverId observerId, Key partition, IReadOnlyDictionary<EventTypeId, EventCount> countsPerEventType)
+    {
+        _counts[(observerId, partition.ToString())] = new(countsPerEventType);
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
     public Task RemoveFor(ObserverId observerId, Key partition)
     {
         _counts.TryRemove((observerId, partition.ToString()), out _);

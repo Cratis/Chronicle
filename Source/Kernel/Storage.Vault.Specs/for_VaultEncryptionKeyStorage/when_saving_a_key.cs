@@ -17,7 +17,7 @@ public class when_saving_a_key(context ctx) : IClassFixture<context>
         public bool HasKey;
         public EncryptionKey RetrievedKey;
 
-        public override async Task InitializeAsync()
+        public override async ValueTask InitializeAsync()
         {
             await base.InitializeAsync();
             Identifier = Guid.NewGuid().ToString();

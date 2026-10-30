@@ -22,13 +22,12 @@ public class and_child_is_not_yet_in_sink : given.a_flat_child_projection_with_k
         Sink.TryFindRootKeyByChildValue(Arg.Any<PropertyPath>(), ChildKey)
             .Returns(Option<Key>.None());
 
-        Storage.TryGetLastInstanceOfAny(BoardKey, Arg.Is<IEnumerable<EventTypeId>>(x => x.Contains(RootCreatedEventType.Id)))
-            .Returns(new Option<AppendedEvent>(RootCreatedEvent));
+        Storage.WithParentHistory(BoardKey, RootCreatedEvent);
     }
 
     async Task Because() => _result = await CreateResolverUnderTest()(Storage, Sink, ChildAddedEvent);
 
     [Fact] void should_resolve_to_the_board_key() => (_result as ResolvedKey).Key.Value.ShouldEqual(BoardKey);
     [Fact] void should_have_array_indexer_for_the_child() => (_result as ResolvedKey).Key.ArrayIndexers.All.Single(_ => _.ArrayProperty == "children").Identifier.ShouldEqual(ChildKey);
-    [Fact] void should_look_up_the_parent_event_in_the_event_sequence() => Storage.Received(1).TryGetLastInstanceOfAny(BoardKey, Arg.Is<IEnumerable<EventTypeId>>(x => x.Contains(RootCreatedEventType.Id)));
+    [Fact] void should_look_up_the_parent_event_in_the_event_sequence() => Storage.Received(1).GetInstancesOfAnyInRange(Arg.Is<IEnumerable<EventSourceId>>(ids => ids.Contains((EventSourceId)BoardKey)), Arg.Is<IEnumerable<EventTypeId>>(types => types.Contains(RootCreatedEventType.Id)), ChildAddedEvent.Context.SequenceNumber, ChildAddedEvent.Context.SequenceNumber - 1);
 }

@@ -20,7 +20,7 @@ namespace Cratis.Chronicle.Observation;
 /// deliberately not part of this grain contract - state transitions are driven from within the observer
 /// implementation, never across a grain reference.
 /// </remarks>
-[Version(2)]
+[Version(4)]
 public interface IObserver : IGrainWithStringKey
 {
     /// <summary>
@@ -396,6 +396,22 @@ public interface IObserver : IGrainWithStringKey
     Task Replayed(EventSequenceNumber lastHandledEventSequenceNumber);
 
     /// <summary>
+    /// Releases a refused full replay without changing progress or resolving failed partitions.
+    /// </summary>
+    /// <remarks>Leaves retired, removed and non-replaying observers unchanged; quarantined observers remain quarantined.</remarks>
+    /// <returns>Awaitable task.</returns>
+    Task ReleaseRefusedReplay();
+
+    /// <summary>
+    /// Releases a refused partition replay and probes catch-up from its persisted live-delivery lower bound.
+    /// </summary>
+    /// <param name="partition">The partition whose replay was refused.</param>
+    /// <param name="heldBackFrom">The first held-back position, or unavailable for a legacy job requiring operator recovery.</param>
+    /// <remarks>Does not advance progress or resolve failed partitions. Unknown bounds quarantine the partition; retired, removed and non-replaying partitions are unchanged.</remarks>
+    /// <returns>Awaitable task.</returns>
+    Task ReleaseRefusedPartitionReplay(Key partition, EventSequenceNumber heldBackFrom);
+
+    /// <summary>
     /// Complete a replay, resolving only failures already present when it began.
     /// </summary>
     /// <param name="lastHandledEventSequenceNumber">The last event handled by the replay.</param>
@@ -435,8 +451,8 @@ public interface IObserver : IGrainWithStringKey
     /// </summary>
     /// <param name="partition">The partition being replayed.</param>
     /// <param name="lastHandledEventSequenceNumber">The last event sequence number handled by the replay, or <see cref="EventSequenceNumber.Unavailable"/> when it handled nothing.</param>
-    /// <param name="lastScannedEventSequenceNumber">The event sequence number of the last event the replay read for the partition, handled or excluded by the observer's filters, or <see cref="EventSequenceNumber.Unavailable"/> when the replay did not complete.</param>
-    /// <param name="replayedEventTypes">The event types included in the replay, or empty when the replay cannot prove it handled the partition's failed event.</param>
+    /// <param name="lastScannedEventSequenceNumber">The event sequence number of the last event the replay read for the partition, handled or excluded by the observer's filters. Stopped or selected-type replays that read nothing report HeldBackFrom - 1 when known, or <see cref="EventSequenceNumber.Unavailable"/> when no boundary is available.</param>
+    /// <param name="replayedEventTypes">The event types included in the replay, or empty when the replay cannot prove it handled the partition's failed event. Non-empty only proves a complete all-type replay. When no read or held-back boundary is known (legacy jobs or HeldBackFrom at <see cref="EventSequenceNumber.First"/>), catch-up falls back to the partition's start.</param>
     /// <returns>Awaitable task.</returns>
     Task PartitionReplayed(Key partition, EventSequenceNumber lastHandledEventSequenceNumber, EventSequenceNumber lastScannedEventSequenceNumber, EventType[] replayedEventTypes);
 

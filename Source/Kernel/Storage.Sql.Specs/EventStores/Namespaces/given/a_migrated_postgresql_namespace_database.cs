@@ -1,10 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Arc.EntityFrameworkCore.Concepts;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Storage.Sql.Sinks;
-using Microsoft.EntityFrameworkCore;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.given;
 
@@ -22,12 +20,7 @@ public abstract class a_migrated_postgresql_namespace_database(PostgreSqlFixture
 
     async Task Establish()
     {
-        _connectionString = await fixture.CreateDatabase();
-
-        await using (var migrationContext = CreateContext())
-        {
-            await migrationContext.Database.MigrateAsync();
-        }
+        _connectionString = await fixture.CreateMigratedDatabase<NamespaceDbContext>();
 
         _database = Substitute.For<IDatabase>();
         _database.Namespace(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>())
@@ -36,13 +29,6 @@ public abstract class a_migrated_postgresql_namespace_database(PostgreSqlFixture
 
     Task Destroy() => fixture.DropDatabase(_connectionString);
 
-    NamespaceDbContext CreateContext()
-    {
-        var options = new DbContextOptionsBuilder<NamespaceDbContext>()
-            .UseNpgsql(_connectionString)
-            .AddConceptAsSupport().WithoutServiceProviderCaching()
-            .Options;
-
-        return new NamespaceDbContext(options);
-    }
+    NamespaceDbContext CreateContext() =>
+        fixture.Timings.Measure("ef-context-construction", () => fixture.Track(new NamespaceDbContext(SpecDbContextOptions.Kernel<NamespaceDbContext>(_connectionString))));
 }

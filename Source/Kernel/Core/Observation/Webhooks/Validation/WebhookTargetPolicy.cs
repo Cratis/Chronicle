@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Net;
+using System.Net.Sockets;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Configuration;
 using Cratis.DependencyInjection;
@@ -44,6 +45,31 @@ public class WebhookTargetPolicy(
     /// <inheritdoc/>
     public Task<WebhookTargetValidation> EvaluateForDelivery(string url, EventStoreName? eventStore = null, CancellationToken cancellationToken = default) =>
         EvaluateTarget(url, eventStore, cancellationToken);
+
+    /// <inheritdoc/>
+    public WebhookTargetValidation CheckManagedIdentity(Concepts.Security.ManagedIdentityAuthorization authorization, string url, EventStoreName? eventStore = null)
+    {
+        var identity = _options.ManagedIdentity;
+        if (string.IsNullOrWhiteSpace(authorization.Scope.Value) || !identity.AllowedScopes.Contains(authorization.Scope.Value, StringComparer.OrdinalIgnoreCase))
+        {
+            return new(false, "Managed identity scope is not in Webhooks:ManagedIdentity:AllowedScopes.");
+        }
+
+        var clientAllowed = string.IsNullOrEmpty(authorization.ClientId.Value)
+            ? identity.AllowSystemAssigned
+            : identity.AllowedClientIds.Contains(authorization.ClientId.Value, StringComparer.Ordinal);
+        if (!clientAllowed)
+        {
+            return new(false, "Managed identity client id is not approved by Webhooks:ManagedIdentity.");
+        }
+
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var target) || !IsExplicitlyAllowed(target, eventStore))
+        {
+            return new(false, "Managed identity webhook target host must be in the host allow-list in every validation mode.");
+        }
+
+        return WebhookTargetValidation.Allowed;
+    }
 
     /// <inheritdoc/>
     public WebhookTargetValidation CheckAuthority(Uri target, EventStoreName? eventStore)
@@ -98,6 +124,9 @@ public class WebhookTargetPolicy(
         return host.Length > suffix.Length && host.EndsWith(suffix, StringComparison.OrdinalIgnoreCase);
     }
 
+    static bool IsTransientDnsFailure(SocketError error) => error is
+        SocketError.TryAgain or SocketError.TimedOut or SocketError.NoRecovery or SocketError.NetworkDown or SocketError.NetworkUnreachable;
+
     async Task<WebhookTargetValidation> EvaluateTarget(string url, EventStoreName? eventStore, CancellationToken cancellationToken)
     {
         if (!Uri.TryCreate(url, UriKind.Absolute, out var target))
@@ -113,9 +142,11 @@ public class WebhookTargetPolicy(
         {
             addresses = await resolver.Resolve(target.DnsSafeHost, cancellationToken);
         }
-        catch (System.Net.Sockets.SocketException)
+        catch (SocketException exception)
         {
-            return Decision("Webhook target host could not be resolved.");
+            return IsTransientDnsFailure(exception.SocketErrorCode)
+                ? Decision("Webhook target host resolution is temporarily unavailable. Please retry.") with { IsIndeterminate = true }
+                : Decision("Webhook target host could not be resolved.");
         }
 
         var resolved = CheckAddresses(target, addresses, eventStore);

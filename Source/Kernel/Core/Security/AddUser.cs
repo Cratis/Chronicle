@@ -18,6 +18,7 @@ namespace Cratis.Chronicle.Security;
 /// <param name="Email">The email address.</param>
 /// <param name="Password">The plain-text password to be hashed and stored.</param>
 [Command]
+[Cratis.Arc.Authorization.Authorize(Policy = WellKnownAuthorizationPolicies.AdministratorOperations)]
 [BelongsTo(WellKnownServices.Users)]
 public record AddUser(UserId UserId, Username Username, UserEmail Email, Password Password)
 {

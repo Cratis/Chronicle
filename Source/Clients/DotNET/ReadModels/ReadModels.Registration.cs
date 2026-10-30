@@ -53,7 +53,7 @@ public partial class ReadModels
                     TypeId = GetSinkTypeIdFor(readModel.ReadModelType)
                 },
                 Schema = schemaGenerator.GenerateForReadModel(readModel.ReadModelType).ToJson(),
-                Indexes = GetIndexesForType(readModel.ReadModelType, string.Empty),
+                Indexes = GetIndexesForType(readModel.ReadModelType),
                 ObserverType = observerType,
                 ObserverIdentifier = observerIdentifier
             };

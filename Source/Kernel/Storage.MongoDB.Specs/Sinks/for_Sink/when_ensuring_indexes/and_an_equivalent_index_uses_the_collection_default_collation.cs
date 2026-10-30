@@ -20,7 +20,7 @@ public class and_an_equivalent_index_uses_the_collection_default_collation : giv
 
     [Fact] void should_not_create_the_index() =>
         _indexManager.DidNotReceive().CreateOneAsync(
-            Arg.Any<CreateIndexModel<BsonDocument>>(),
+            Arg.Is<CreateIndexModel<BsonDocument>>(model => model.Options.Name != "chronicle_idx___initialized"),
             Arg.Any<CreateOneIndexOptions>(),
             Arg.Any<CancellationToken>());
     [Fact] void should_read_the_options_for_the_target_collection() =>

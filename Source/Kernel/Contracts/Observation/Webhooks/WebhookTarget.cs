@@ -28,4 +28,10 @@ public class WebhookTarget
     /// </summary>
     [ProtoMember(3, IsRequired = true)]
     public IDictionary<string, string> Headers { get; set; } = new Dictionary<string, string>();
+
+    /// <summary>
+    /// Gets or sets managed identity authorization, which takes precedence over <see cref="Authorization"/>.
+    /// </summary>
+    [ProtoMember(4)]
+    public ManagedIdentityAuthorization? ManagedIdentity { get; set; }
 }

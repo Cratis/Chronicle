@@ -40,8 +40,8 @@ public abstract class Specification<TChronicleFixture>(TChronicleFixture fixture
 
     Task OnDestroy() => InvokeMethod("Destroy");
 
-    Task InvokeMethod(string name) =>
-        (typeof(SpecificationMethods<,>).MakeGenericType(GetType(), typeof(Specification)).GetMethod(name, BindingFlags.Static | BindingFlags.Public)!.Invoke(null, [this]) as Task)!;
+    Task InvokeMethod(string name) => Timings.Run(name, () =>
+        (typeof(SpecificationMethods<,>).MakeGenericType(GetType(), typeof(Specification)).GetMethod(name, BindingFlags.Static | BindingFlags.Public)!.Invoke(null, [this]) as Task)!);
 }
 
 /// <summary>
@@ -75,6 +75,6 @@ public abstract class Specification<TChronicleFixture, TFactory, TStartup>(TChro
 
     Task OnDestroy() => InvokeMethod("Destroy");
 
-    Task InvokeMethod(string name) =>
-        (typeof(SpecificationMethods<,>).MakeGenericType(GetType(), typeof(Specification)).GetMethod(name, BindingFlags.Static | BindingFlags.Public)!.Invoke(null, [this]) as Task)!;
+    Task InvokeMethod(string name) => Timings.Run(name, () =>
+        (typeof(SpecificationMethods<,>).MakeGenericType(GetType(), typeof(Specification)).GetMethod(name, BindingFlags.Static | BindingFlags.Public)!.Invoke(null, [this]) as Task)!);
 }

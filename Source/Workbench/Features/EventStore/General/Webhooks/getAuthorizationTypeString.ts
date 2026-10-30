@@ -14,6 +14,8 @@ export const getAuthorizationTypeString = (authorizationType: AuthorizationType)
             return strings.eventStore.general.webhooks.authTypes.bearer;
         case AuthorizationType.OAuth:
             return strings.eventStore.general.webhooks.authTypes.oauth;
+        case AuthorizationType.managedIdentity:
+            return strings.eventStore.general.webhooks.authTypes.managedIdentity;
         default:
             return strings.eventStore.general.webhooks.authTypes.none;
     }

@@ -10,6 +10,9 @@ namespace Cratis.Chronicle.Projections.Engine;
 /// </summary>
 internal static partial class ProjectionFactoryLogMessages
 {
+    [LoggerMessage(LogLevel.Warning, "Projection '{ProjectionId}' has an unsupported root join key expression '{KeyExpression}'; using the raw event source id to avoid read model key coercion")]
+    internal static partial void UnsupportedRootJoinKey(this ILogger<ProjectionFactory> logger, string projectionId, string keyExpression);
+
     [LoggerMessage(LogLevel.Debug, "GetEventTypeWithKeyResolver: eventType={EventType}, hasParent={HasParent}, parentKey={ParentKey}, projectionHasParent={ProjectionHasParent}, parentIdentifiedByProperty={ParentIdentifiedByProperty}")]
     internal static partial void GetEventTypeWithKeyResolverStart(this ILogger<ProjectionFactory> logger, string eventType, bool hasParent, string? parentKey, bool projectionHasParent, string parentIdentifiedByProperty);
 

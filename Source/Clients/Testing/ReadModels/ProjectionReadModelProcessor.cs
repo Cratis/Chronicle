@@ -33,7 +33,7 @@ namespace Cratis.Chronicle.Testing.ReadModels;
 /// <summary>
 /// Processes events through a projection engine to produce a read model instance for testing.
 /// </summary>
-internal static class ProjectionReadModelProcessor
+internal static partial class ProjectionReadModelProcessor
 {
     /// <summary>
     /// The options a materialized read model is deserialized with.
@@ -123,7 +123,7 @@ internal static class ProjectionReadModelProcessor
         TReadModel? initialState = null,
         bool strictEventSubscription = false,
         IReadOnlyList<ReadModelEvent>? seededEvents = null,
-        IReadOnlyDictionary<EventSourceId, TReadModel>? seededInstances = null)
+        IEnumerable<(object Key, TReadModel Instance)>? seededInstances = null)
         where TReadModel : class
     {
         var readModelType = context.ReadModelType;
@@ -181,15 +181,15 @@ internal static class ProjectionReadModelProcessor
 
         using var inMemorySink = new InMemorySink(kernelReadModelDefinition, _typeFormats);
         var seededKeys = new HashSet<object>();
-        foreach (var (key, instance) in seededInstances ?? new Dictionary<EventSourceId, TReadModel>())
+        foreach (var (key, instance) in seededInstances ?? [])
         {
-            var stateKey = inMemorySink.GetKeyValue(new KernelKey(key.Value, ArrayIndexers.NoIndexers));
+            var stateKey = inMemorySink.GetKeyValue(new KernelKey(key, ArrayIndexers.NoIndexers));
             statesByKey[stateKey] = CreateSeedStateFromInitialState(instance, schema);
             inMemorySink.Collection[stateKey] = CreateSeedStateFromInitialState(instance, schema);
             seededKeys.Add(stateKey);
         }
 
-        // Process events, retrying deferred root and child keys after all seeded events have been processed.
+        // Retry deferred keys at each releasing event, before later seeded key changes can participate.
         var deferredEvents = new Queue<KernelAppendedEvent>();
         var deferredChildren = new List<(KernelProjectionEngine::IProjection Child, KernelAppendedEvent Event)>();
         foreach (var @event in appendedEvents)
@@ -201,60 +201,33 @@ internal static class ProjectionReadModelProcessor
             {
                 explicitInitialStateIsPresent = false;
             }
-        }
 
-        // Retry deferred events once; if still deferred, throw a descriptive exception.
-        foreach (var @event in new List<KernelAppendedEvent>(deferredEvents))
-        {
-            var keyResolver = engineProjection.GetKeyResolverFor(@event.Context.EventType);
-            var keyResult = await keyResolver(inMemoryEventSequenceStorage, inMemorySink, @event);
-
-            if (keyResult is KernelProjectionEngine::DeferredKey)
+            if (eventKey is not null)
             {
-                throw new InvalidOperationException(
-                    $"Could not resolve parent key for event '{@event.Context.EventType.Id}' (EventSourceId '{@event.Context.EventSourceId}'). " +
-                    "Ensure the parent event is included in the scenario and appended before the child event.");
-            }
-
-            var key = (keyResult as KernelProjectionEngine::ResolvedKey)!.Key;
-            rootKey ??= key;
-
-            if (await ApplyResolvedEvent(engineProjection, inMemoryEventSequenceStorage, inMemorySink, @event, key, statesByKey, CreateSeedState, deferredChildren))
-            {
-                explicitInitialStateIsPresent = false;
-            }
-
-            PreserveSeededIdentifiers(inMemorySink, statesByKey, seededKeys, readModelType);
-        }
-
-        // Retry only the deferred child branches. A resolved child can materialize the parent of another
-        // deferred child, so keep going until a pass makes no progress. Never replay the root mappings.
-        var resolvedAny = true;
-        while (resolvedAny && deferredChildren.Count > 0)
-        {
-            resolvedAny = false;
-            foreach (var (child, @event) in deferredChildren.ToArray())
-            {
-                var keyResult = await child.GetKeyResolverFor(@event.Context.EventType)(inMemoryEventSequenceStorage, inMemorySink, @event);
-                if (keyResult is KernelProjectionEngine::DeferredKey)
-                {
-                    continue;
-                }
-
-                deferredChildren.Remove((child, @event));
-                if (keyResult is not KernelProjectionEngine::ResolvedKey resolvedKey)
-                {
-                    continue;
-                }
-
-                resolvedAny = true;
-                if (await ApplyResolvedEvent(child, inMemoryEventSequenceStorage, inMemorySink, @event, resolvedKey.Key, statesByKey, CreateSeedState, deferredChildren))
+                var (releasedKey, removed) = await ReleaseDeferredEvents(
+                    engineProjection,
+                    inMemoryEventSequenceStorage,
+                    inMemorySink,
+                    @event,
+                    statesByKey,
+                    CreateSeedState,
+                    deferredEvents,
+                    deferredChildren,
+                    () => PreserveSeededIdentifiers(inMemorySink, statesByKey, seededKeys, readModelType));
+                rootKey ??= releasedKey;
+                if (removed)
                 {
                     explicitInitialStateIsPresent = false;
                 }
-
-                PreserveSeededIdentifiers(inMemorySink, statesByKey, seededKeys, readModelType);
             }
+        }
+
+        if (deferredEvents.Count > 0)
+        {
+            var @event = deferredEvents.Peek();
+            throw new InvalidOperationException(
+                $"Could not resolve parent key for event '{@event.Context.EventType.Id}' (EventSourceId '{@event.Context.EventSourceId}'). " +
+                "Ensure the parent event is included in the scenario and appended before the child event.");
         }
 
         if (deferredChildren.Count > 0)
@@ -309,6 +282,30 @@ internal static class ProjectionReadModelProcessor
     internal static InMemorySink CreateSink(Type readModelType, IJsonSchemaGenerator schemaGenerator) =>
         new(BuildKernelReadModelDefinition(readModelType, schemaGenerator.GenerateForReadModel(readModelType)), _typeFormats);
 
+    /// <summary>
+    /// Creates a projection factory that uses the same resolvers as projection folding.
+    /// </summary>
+    /// <param name="storage">The storage the factory reads from.</param>
+    /// <returns>The <see cref="KernelProjectionEngine::ProjectionFactory"/>.</returns>
+    internal static KernelProjectionEngine::ProjectionFactory CreateProjectionFactory(Storage.IStorage storage) =>
+        new(
+            _readModelPropertyExpressionResolvers,
+            _eventValueProviderExpressionResolvers,
+            _keyExpressionResolvers,
+            _expandoObjectConverter,
+            _keyResolvers,
+            storage,
+            FrameworkNullLoggerFactory.Instance.CreateLogger<KernelProjectionEngine::ProjectionFactory>());
+
+    /// <summary>
+    /// Gets the identifier schema used by native projection folding.
+    /// </summary>
+    /// <param name="readModelType">The model type.</param>
+    /// <param name="schemaGenerator">The fold's schema generator.</param>
+    /// <returns>The native schema.</returns>
+    internal static JsonSchema GetReadModelSchema(Type readModelType, IJsonSchemaGenerator schemaGenerator) =>
+        BuildKernelReadModelDefinition(readModelType, schemaGenerator.GenerateForReadModel(readModelType)).GetSchemaForLatestGeneration();
+
     static void PreserveSeededIdentifiers(InMemorySink sink, Dictionary<object, ExpandoObject> statesByKey, HashSet<object> seededKeys, Type readModelType)
     {
         var identifier = IdentifierProperty.Find(readModelType);
@@ -353,7 +350,10 @@ internal static class ProjectionReadModelProcessor
                 continue;
             }
 
-            instances[new EventSourceId(keyValue.ToString()!)] = instance;
+            var key = keyValue is IComparable comparable
+                ? EventSourceId<IComparable>.ConvertToString(comparable)
+                : keyValue.ToString()!;
+            instances[new EventSourceId(key)] = instance;
         }
 
         return instances;
@@ -448,16 +448,6 @@ internal static class ProjectionReadModelProcessor
         return initialState;
     }
 
-    static KernelProjectionEngine::ProjectionFactory CreateProjectionFactory(Storage.IStorage storage) =>
-        new(
-            _readModelPropertyExpressionResolvers,
-            _eventValueProviderExpressionResolvers,
-            _keyExpressionResolvers,
-            _expandoObjectConverter,
-            _keyResolvers,
-            storage,
-            FrameworkNullLoggerFactory.Instance.CreateLogger<KernelProjectionEngine::ProjectionFactory>());
-
     static async Task<(KernelKey? Key, bool Removed)> ProcessSingleEvent(
         KernelProjectionEngine::IProjection projection,
         KernelConceptsNs::Projections.Definitions.ProjectionDefinition kernelProjectionDefinition,
@@ -490,10 +480,10 @@ internal static class ProjectionReadModelProcessor
 
         KernelProjectionEngine::KeyResolverResult keyResult;
 
-        // A root-level [Join] source enriches an existing root document; resolve it ourselves so the in-memory
-        // sink doesn't materialize a phantom keyed by the join source's own id (see JoinKeyResolver). A null
+        // A root-level [Join] source enriches an existing root document; use the kernel resolver and skip
+        // unmatched roots so the in-memory sink doesn't materialize a phantom (see JoinKeyResolver). A null
         // root means the row doesn't exist yet — skip; ResolveJoin backfills when the FROM event arrives.
-        var (isRootJoinSource, resolvedRootKey) = await JoinKeyResolver.TryResolveRootJoinKey(projection, kernelProjectionDefinition, sink, @event);
+        var (isRootJoinSource, resolvedRootKey, joinKey) = await JoinKeyResolver.TryResolveRootJoinKey(projection, kernelProjectionDefinition, eventSequenceStorage, sink, @event);
         if (isRootJoinSource)
         {
             if (resolvedRootKey is null)
@@ -501,9 +491,9 @@ internal static class ProjectionReadModelProcessor
                 return (null, false);
             }
 
-            // The resolved root key identifies the row, but the join still matches on the source event's id.
+            // The resolved root key identifies the row; the join matches on the value resolved from its key expression.
             // Preserve both, just as ForJoin does in the production ResolveKey step.
-            keyResult = KernelProjectionEngine::KeyResolverResult.Resolved(resolvedRootKey, @event.Context.EventSourceId.Value);
+            keyResult = KernelProjectionEngine::KeyResolverResult.Resolved(resolvedRootKey, joinKey);
         }
         else
         {

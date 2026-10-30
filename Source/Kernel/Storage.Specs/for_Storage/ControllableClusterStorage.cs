@@ -23,6 +23,8 @@ public sealed class ControllableClusterStorage : IClusterStorage, IDisposable
 
     public IEnumerable<IEventStoreStorage> CreatedStorages => _createdStorages;
 
+    public IEnumerable<EventStoreName> SavedEventStores => _saved.Keys;
+
     public void Provide(IEventStoreStorage storage) => _available.Enqueue(storage);
 
     public bool WaitForFirstCaller() => _firstCallerArrived.Wait(_timeout);
@@ -36,6 +38,9 @@ public sealed class ControllableClusterStorage : IClusterStorage, IDisposable
 
         return Task.FromResult<IEnumerable<EventStoreName>>([.. _saved.Keys]);
     }
+
+    public Task<IReadOnlyDictionary<EventStoreName, Concepts.Projections.Generations.Enablement.GenerationFloor>> ReadGenerationFloors() =>
+        throw new NotSupportedException("This spec fake does not provide generation floors.");
 
     public ISubject<IEnumerable<EventStoreName>> ObserveEventStores() => new Subject<IEnumerable<EventStoreName>>();
 

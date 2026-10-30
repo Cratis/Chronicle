@@ -20,6 +20,8 @@ message AddWebhookRequest {
    bool IsActive = 15;
    EventGenerationDelivery GenerationDelivery = 16;
    string OAuthScope = 17;
+   string ManagedIdentityClientId = 18;
+   string ManagedIdentityScope = 19;
 }
 message AddWebhooksRequest {
    string EventStore = 1;
@@ -30,6 +32,7 @@ enum AuthorizationType {
    Basic = 1;
    Bearer = 2;
    OAuth = 3;
+   ManagedIdentity = 4;
 }
 message BasicAuthorization {
    string Username = 1;
@@ -57,6 +60,10 @@ message EventType {
 }
 message GetWebhooksRequest {
    string EventStore = 1;
+}
+message ManagedIdentityAuthorization {
+   string ClientId = 1;
+   string Scope = 2;
 }
 message OAuthAuthorization {
    string Authority = 1;
@@ -126,6 +133,7 @@ message WebhookTarget {
    string Url = 1;
    OneOf_BasicAuthorization_BearerTokenAuthorization_OAuthAuthorization Authorization = 2;
    map<string,string> Headers = 3;
+   ManagedIdentityAuthorization ManagedIdentity = 4;
 }
 service Webhooks {
    rpc AddWebhook (AddWebhookRequest) returns (CommandResult);

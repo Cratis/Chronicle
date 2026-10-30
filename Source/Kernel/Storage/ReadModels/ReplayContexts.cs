@@ -45,6 +45,9 @@ public class ReplayContexts(IReplayContextsStorage storage) : IReplayContexts
     }
 
     /// <inheritdoc/>
+    public Task<IReadOnlyList<ReplayContext>> GetAll() => storage.GetAll();
+
+    /// <inheritdoc/>
     public Task Evict(ReadModelIdentifier readModel)
     {
         // The cache is consulted before storage, so a context left in it outlives the replay it belongs to.

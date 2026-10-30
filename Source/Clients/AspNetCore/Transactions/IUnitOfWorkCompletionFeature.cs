@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.AspNetCore.Transactions;
 /// <summary>Allows an action to ask the request middleware to complete its unit of work before writing a response.</summary>
 public interface IUnitOfWorkCompletionFeature
 {
-    /// <summary>Commits the request unit using the middleware's ownership capability.</summary>
+    /// <summary>Commits the request unit using the middleware's ownership capability. A repeated call returns quietly without committing again.</summary>
     /// <returns>The completed unit, whose outcome and decision conflicts can be inspected.</returns>
     Task<IUnitOfWork> CommitAsync();
 }

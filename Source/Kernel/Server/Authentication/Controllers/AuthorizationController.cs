@@ -174,6 +174,7 @@ public class AuthorizationController(
 
             identity.AddClaim(OpenIddictConstants.Claims.Subject, user.Id.ToString());
             identity.AddClaim(OpenIddictConstants.Claims.Name, user.Username);
+            identity.SetClaim(ChronicleClaimTypes.Principal, ChronicleClaimTypes.User);
 
             identity.SetScopes(request.GetScopes());
             identity.SetChronicleAudience();
@@ -234,6 +235,7 @@ public class AuthorizationController(
                 nameType: OpenIddictConstants.Claims.Name,
                 roleType: OpenIddictConstants.Claims.Role);
 
+            identity.SetClaim(ChronicleClaimTypes.Principal, ChronicleClaimTypes.User);
             identity.SetScopes(request.GetScopes());
             identity.SetChronicleAudience();
             identity.SetDestinations(GetDestinations);

@@ -3,6 +3,8 @@
 
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Observation.Jobs;
+using Cratis.Monads;
+using Cratis.Orleans.Jobs;
 using Moq;
 
 namespace Cratis.Chronicle.Observation.for_Observer.when_receiving_reminder;
@@ -17,6 +19,11 @@ public class and_the_partition_key_matches_the_alert_reminder : given.an_observe
         _alertReminder = await _observer.GetReminder(Observer.AlertReminderName);
         await _observer.PartitionFailed(Observer.AlertReminderName, 12UL, ["Failure"], "Stack");
         _retryName = Observer.PartitionReminderName(_failedPartitionsState.Partitions.Single().Id);
+
+        // A started retry job drives the partition, so the retry reminder is not re-armed.
+        _jobsManager
+            .Start<IRetryFailedPartition, RetryFailedPartitionRequest>(Arg.Any<RetryFailedPartitionRequest>())
+            .Returns(Task.FromResult(Result<JobId, StartJobError>.Success(JobId.New())));
     }
 
     async Task Because() => await _observer.ReceiveReminder(_retryName, default);

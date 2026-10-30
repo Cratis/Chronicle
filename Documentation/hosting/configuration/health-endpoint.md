@@ -61,6 +61,16 @@ The endpoint path is the shared `healthCheckEndpoint` (default `/health`), so wi
 - **`health.exclusive` true** — the dedicated port answers only the health endpoint and its `/live` and `/ready` subpaths; every other path returns 404 on that port. Off by default, so enabling it never changes an existing deployment silently.
 - **`health.port` equal to the main port** — treated as not set, since a second listener cannot bind the port the main listener already owns.
 
+## Single-writer lease readiness
+
+With `Localhost` clustering on persistent storage, the default single-writer lease registers the
+`single-writer-lease` health check (tagged `ready`). It is healthy only while this process holds the
+lease. Losing ownership or reaching TTL/2 without a confirmed renewal makes it unhealthy and initiates
+shutdown. It is not registered for `MongoDB` clustering, `InMemory` storage or an explicitly disabled lease.
+
+A node still waiting for acquisition has not completed silo startup and is not ready. The lease does not
+bind an early health listener or advertise a ready standby. See [Clustering](clustering.md#single-writer-lease).
+
 ## Restricting the dedicated port to health only
 
 The dedicated port is an additional listener on the same application rather than a separate, health-only server. By default the other HTTP/1.1 endpoints (Workbench, REST API, OAuth) are therefore reachable on it too, so the default posture is to treat it as an internal, cluster-local probe port and not expose it publicly, especially with TLS disabled.

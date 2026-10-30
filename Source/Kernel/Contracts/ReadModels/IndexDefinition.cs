@@ -17,4 +17,10 @@ public class IndexDefinition
     /// </remarks>
     [ProtoMember(1)]
     public string PropertyPath { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the ordered index properties. An empty list denotes the legacy property path.
+    /// </summary>
+    [ProtoMember(2)]
+    public IList<IndexProperty> Properties { get; set; } = [];
 }

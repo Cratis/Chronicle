@@ -236,11 +236,27 @@ Chronicle supports horizontal scaling through Orleans clustering:
 4. **Shared Storage**: All instances must connect to the same storage. MongoDB, PostgreSQL and SQL Server support more than one node; with SQLite, run a single instance (see [Clustering](configuration/clustering.md))
 
 > [!WARNING]
-> Every multi-node deployment **must** set the clustering type to `MongoDB` or `Sql` to match its storage. The default is `Localhost`,
-> which is single-node membership. Two containers left on the default that share one database do **not**
-> join as one cluster - each forms its own isolated single-node cluster over the same data, a split-brain
-> topology reported by no error at startup. The server logs a warning when it detects localhost clustering
-> against non-local storage, but it does not refuse to start.
+> Every multi-node deployment **must** set the clustering type to `MongoDB` or `Sql` to match its storage.
+> The default `Localhost` mode permits only one active node per kernel storage. The single-writer lease
+> enforces this by default, including on SQL storage. A replacement waits for the old holder to stop or
+> expire; it does not process concurrently. Disabling the lease removes that protection.
+
+For a single-active-node deployment, configure stop-before-start replacement. In Kubernetes use
+`strategy: Recreate`, or `RollingUpdate` with `maxSurge: 0` and `maxUnavailable: 1`. The default one-replica
+rolling update (`maxSurge: 1`, `maxUnavailable: 0`) cannot converge: the new node waits for the lease while
+the platform waits for it to become ready before stopping the old holder.
+
+**Azure Container Apps single-revision deployments and Cloud Run have the same readiness deadlock.**
+They wait for the replacement to be ready before retiring the active revision. There is currently no
+supported zero-downtime handover for Localhost mode on those platforms. Explicitly stop the old revision
+before starting its replacement (accepting downtime), or use `MongoDB` or `Sql` clustering for multiple active nodes.
+Do not disable the lease to bypass this rollout failure. A ready-while-waiting standby and early health
+binding are separate follow-up work, not implemented by this lease.
+
+A lost renewal for half the TTL causes Critical logging and process shutdown with a nonzero exit code;
+a stuck shutdown is force-terminated before another holder can acquire the lease. Configure the restart
+policy to restart failed processes and allow the acquisition timeout to cover the previous holder's TTL.
+See [Single-writer lease](configuration/clustering.md#single-writer-lease) for settings and clock caveats.
 
 Set the clustering type explicitly on every node, and give every node the same cluster and service id:
 

@@ -14,4 +14,10 @@ namespace Cratis.Chronicle.Webhooks;
 public record WebhookTarget(
     WebhookTargetUrl Url,
     OneOf.OneOf<BasicAuthorization, BearerTokenAuthorization, OAuthAuthorization, OneOf.Types.None> Authorization,
-    IReadOnlyDictionary<string, string> Headers);
+    IReadOnlyDictionary<string, string> Headers)
+{
+    /// <summary>
+    /// Gets managed identity authorization, which takes precedence over <see cref="Authorization"/>.
+    /// </summary>
+    public ManagedIdentityAuthorization? ManagedIdentity { get; init; }
+}

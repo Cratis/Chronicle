@@ -14,6 +14,7 @@ public class a_page_subscriber : a_subscriber_with_a_cached_pipeline
 {
     protected AppendedEvent[] _events;
     protected readonly List<EventSequenceNumber> _handled = [];
+    protected bool _hasChanges = true;
 
     void Establish()
     {
@@ -28,9 +29,13 @@ public class a_page_subscriber : a_subscriber_with_a_cached_pipeline
             var @event = call.Arg<AppendedEvent>();
             _handled.Add(@event.Context.SequenceNumber);
             var changeset = Substitute.For<IChangeset<AppendedEvent, ExpandoObject>>();
-            changeset.HasChanges.Returns(true);
+            changeset.HasChanges.Returns(_hasChanges);
+            changeset.HasBeenRemoved().Returns(@event.Context.SequenceNumber == (EventSequenceNumber)3UL);
             changeset.CurrentState.Returns(new ExpandoObject());
-            return new ProjectionEventContext(@event.Context.EventSourceId, @event, changeset, ProjectionOperationType.From, false);
+            return new ProjectionEventContext(@event.Context.EventSourceId, @event, changeset, ProjectionOperationType.From, false)
+            {
+                IsNewInstance = @event.Context.SequenceNumber == (EventSequenceNumber)1UL
+            };
         });
     }
 }

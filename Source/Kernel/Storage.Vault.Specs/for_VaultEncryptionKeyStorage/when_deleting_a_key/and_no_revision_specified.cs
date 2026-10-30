@@ -15,7 +15,7 @@ public class and_no_revision_specified(context ctx) : IClassFixture<context>
         public EncryptionKeyIdentifier Identifier;
         public bool HasKeyAfterDelete;
 
-        public override async Task InitializeAsync()
+        public override async ValueTask InitializeAsync()
         {
             await base.InitializeAsync();
             Identifier = Guid.NewGuid().ToString();

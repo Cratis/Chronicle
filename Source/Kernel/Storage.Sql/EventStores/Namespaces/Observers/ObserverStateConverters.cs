@@ -20,6 +20,10 @@ public static class ObserverStateConverters
         new()
         {
             Id = definition.Identifier,
+            Owner = definition.Owner?.Value,
+            PartitionClaims = definition.PartitionClaims is null ? null : JsonSerializer.Serialize(definition.PartitionClaims, ObserverStateJson.Options),
+            ObserverWideClaim = definition.ObserverWideClaim is null ? null : JsonSerializer.Serialize(definition.ObserverWideClaim, ObserverStateJson.Options),
+            OwnershipRevision = definition.OwnershipRevision?.Value,
             TypeSetControl = ObserverTypeSetControlJson.Serialize(definition.TypeSetControl),
             DeliveryFences = definition.DeliveryFences is null ? null : JsonSerializer.Serialize(definition.DeliveryFences, ObserverStateJson.Options),
             Initialization = definition.Initialization is null ? null : JsonSerializer.Serialize(definition.Initialization, ObserverStateJson.Options),
@@ -27,6 +31,7 @@ public static class ObserverStateConverters
             AlertRevision = definition.AlertRevision,
             AlertDisposition = definition.AlertDisposition,
             QuarantineEpisodeId = definition.QuarantineEpisodeId,
+            WebhookProbe = definition.WebhookProbe is null ? null : JsonSerializer.Serialize(definition.WebhookProbe, ObserverStateJson.Options),
             LastHandledEventSequenceNumber = definition.LastHandledEventSequenceNumber,
             NextEventSequenceNumber = definition.NextEventSequenceNumber,
             TailEventSequenceNumber = definition.TailEventSequenceNumber,
@@ -49,6 +54,8 @@ public static class ObserverStateConverters
                 fp.IsResolved)
             {
                 IsQuarantined = fp.IsQuarantined,
+                WebhookDisposition = fp.WebhookDisposition,
+                WebhookRecoveryId = fp.WebhookRecoveryId,
                 AttemptsBeforeBudgetReset = fp.AttemptsBeforeBudgetReset,
                 RecoveryCursor = fp.RecoveryCursor,
                 RecoveryOwner = fp.RecoveryOwner,
@@ -56,7 +63,9 @@ public static class ObserverStateConverters
             }).ToList(),
             FailedPartitionCount = definition.FailedPartitionCount,
             IsReplaying = definition.IsReplaying,
-            SubscribesToAllEvents = definition.SubscribesToAllEvents
+            SubscribesToAllEvents = definition.SubscribesToAllEvents,
+            HandledEventCount = definition.HandledEventCount.Value,
+            HandledEventCountPerEventType = definition.HandledEventCountPerEventType.ToDictionary(kvp => kvp.Key.Value, kvp => kvp.Value.Value)
         };
 
     /// <summary>
@@ -87,6 +96,8 @@ public static class ObserverStateConverters
                 }),
                 IsResolved = fp.IsResolved,
                 IsQuarantined = fp.IsQuarantined,
+                WebhookDisposition = fp.WebhookDisposition,
+                WebhookRecoveryId = fp.WebhookRecoveryId,
                 AttemptsBeforeBudgetReset = fp.AttemptsBeforeBudgetReset,
                 RecoveryCursor = fp.RecoveryCursor,
                 RecoveryOwner = fp.RecoveryOwner,
@@ -96,6 +107,10 @@ public static class ObserverStateConverters
             state.IsReplaying,
             state.SubscribesToAllEvents)
         {
+            Owner = state.Owner is null ? null : new Concepts.EventSequences.EventSequenceId(state.Owner),
+            PartitionClaims = state.PartitionClaims is null ? null : JsonSerializer.Deserialize<Observation.PartitionClaim[]>(state.PartitionClaims, ObserverStateJson.Options),
+            ObserverWideClaim = state.ObserverWideClaim is null ? null : JsonSerializer.Deserialize<Observation.ObserverWideClaim>(state.ObserverWideClaim, ObserverStateJson.Options),
+            OwnershipRevision = state.OwnershipRevision is null ? null : new Observation.OwnershipRevision(state.OwnershipRevision.Value),
             TypeSetControl = ObserverTypeSetControlJson.Deserialize(state.TypeSetControl),
             DeliveryFences = state.DeliveryFences is null ? null : JsonSerializer.Deserialize<Observation.DeliveryFenceState[]>(state.DeliveryFences, ObserverStateJson.Options),
             Initialization = state.Initialization is null ? null : JsonSerializer.Deserialize<Observation.ObserverInitialization>(state.Initialization, ObserverStateJson.Options),
@@ -103,7 +118,10 @@ public static class ObserverStateConverters
             AlertRevision = state.AlertRevision,
             AlertDisposition = state.AlertDisposition,
             QuarantineEpisodeId = state.QuarantineEpisodeId,
+            WebhookProbe = state.WebhookProbe is null ? null : JsonSerializer.Deserialize<Observation.WebhookProbeState>(state.WebhookProbe, ObserverStateJson.Options),
             NextEventSequenceNumber = state.NextEventSequenceNumber,
-            TailEventSequenceNumber = state.TailEventSequenceNumber
+            TailEventSequenceNumber = state.TailEventSequenceNumber,
+            HandledEventCount = state.HandledEventCount,
+            HandledEventCountPerEventType = state.HandledEventCountPerEventType?.ToDictionary(kvp => (Concepts.Events.EventTypeId)kvp.Key, kvp => (Concepts.Events.EventCount)kvp.Value) ?? new Dictionary<Concepts.Events.EventTypeId, Concepts.Events.EventCount>()
         };
 }

@@ -3,6 +3,9 @@
         <AssemblyName>Cratis.Chronicle.Storage.Sql.Specs</AssemblyName>
         <RootNamespace>Cratis.Chronicle.Storage.Sql</RootNamespace>
         <IsTestProject>true</IsTestProject>
+        <OutputType>Exe</OutputType>
+        <CratisSpecificationsSharedLifecycle>false</CratisSpecificationsSharedLifecycle>
+        <CratisSpecificationsReadableNames>false</CratisSpecificationsReadableNames>
         <IsPackable>false</IsPackable>
         <!-- Microsoft.Data.SqlClient cannot connect in globalization-invariant mode. -->
         <InvariantGlobalization>false</InvariantGlobalization>

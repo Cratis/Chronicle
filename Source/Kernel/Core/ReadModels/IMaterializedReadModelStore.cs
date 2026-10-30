@@ -5,6 +5,7 @@ using System.Dynamic;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.ReadModels;
+using Cratis.Chronicle.Storage.Sinks;
 
 namespace Cratis.Chronicle.ReadModels;
 
@@ -34,6 +35,20 @@ public interface IMaterializedReadModelStore
     /// <param name="key">The <see cref="Key"/> of the instance.</param>
     /// <returns>The released instance, or null when the store holds no instance for the key.</returns>
     Task<ExpandoObject?> FindByKey(
+        EventStoreName eventStore,
+        EventStoreNamespaceName eventStoreNamespace,
+        ReadModelDefinition definition,
+        Key key);
+
+    /// <summary>
+    /// Finds a materialized instance by normalized composite-key parts, without replaying it.
+    /// </summary>
+    /// <param name="eventStore">The event store the read model belongs to.</param>
+    /// <param name="eventStoreNamespace">The namespace the read model belongs to.</param>
+    /// <param name="definition">The read model definition.</param>
+    /// <param name="key">The normalized structured key.</param>
+    /// <returns>The lookup result, with compliance released only when found.</returns>
+    Task<CompositeKeyLookupResult> FindByCompositeKey(
         EventStoreName eventStore,
         EventStoreNamespaceName eventStoreNamespace,
         ReadModelDefinition definition,

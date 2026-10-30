@@ -9,6 +9,16 @@ namespace Cratis.Chronicle.Storage.Sql;
 public static class WellKnownTableNames
 {
     /// <summary>
+    /// The separately stored administrator privileges.
+    /// </summary>
+    public const string Administrators = "Administrators";
+
+    /// <summary>
+    /// The kernel single-writer lease.
+    /// </summary>
+    public const string SingleWriterLeases = "SingleWriterLeases";
+
+    /// <summary>
     /// The Orleans membership table versions.
     /// </summary>
     public const string MembershipVersions = "MembershipVersions";

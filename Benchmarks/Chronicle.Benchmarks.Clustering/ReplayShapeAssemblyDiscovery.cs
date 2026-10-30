@@ -18,7 +18,8 @@ internal sealed class ReplayShapeAssemblyDiscovery(Assembly assembly, bool inclu
 
     /// <inheritdoc/>
     public IEnumerable<Type> DefinedTypes => assembly.DefinedTypes.Select(type => type.AsType())
-        .Where(type => includeReplayShape || !type.Name.StartsWith("ReplayShape", StringComparison.Ordinal));
+        .Where(type => type != typeof(RebuildBaselineModel) && type != typeof(RebuildBaselineTwin) && type != typeof(RebuildBaselineChild) &&
+            (includeReplayShape || !type.Name.StartsWith("ReplayShape", StringComparison.Ordinal)));
 
     /// <inheritdoc/>
     public void Initialize()

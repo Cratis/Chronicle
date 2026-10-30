@@ -37,7 +37,7 @@ public class a_partition_replay_job : Specification
             (Key)"some-partition",
             0UL,
             100UL,
-            [new EventType("some-event", EventTypeGeneration.First)]) { ReplaysAllEventTypes = true };
+            [new EventType("some-event", EventTypeGeneration.First)]) { ReplaysAllEventTypes = true, HeldBackFrom = 45UL };
 
         _replayStateServiceClient = Substitute.For<IObserverServiceClient>();
         _observer = Substitute.For<IObserver>();

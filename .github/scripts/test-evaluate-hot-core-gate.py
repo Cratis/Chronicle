@@ -16,6 +16,8 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
+import integration_lane_exclusions as exclusions
+
 SCRIPT = Path(__file__).with_name("evaluate-hot-core-gate.py")
 spec = importlib.util.spec_from_file_location("evaluate_hot_core_gate", SCRIPT)
 gate = importlib.util.module_from_spec(spec)
@@ -111,6 +113,25 @@ class GateDecisions(unittest.TestCase):
         self.assertTrue(ok)
         self.assertIn(GREEN["html_url"], message)
         self.assertIn(SHA, message)
+
+    def test_excluded_lane_is_reported_not_treated_as_missing_evidence(self):
+        reason = ("Reactors miss acknowledged events: https://github.com/Cratis/Chronicle/issues/5300 "
+                  "and https://github.com/Cratis/Chronicle/issues/5350")
+        with patch.dict(exclusions.EXCLUDED_LANES,
+                        {"RollingUpgrade": reason}, clear=True):
+            for env in (ENV, dict(ENV, DISPATCH="true", BUILD="success", MATRIX="success")):
+                with self.subTest(env=env), patch.dict(os.environ, env, clear=True), \
+                        patch.object(gate, "evidence_runs", return_value=[GREEN]):
+                    ok, message = gate.gate(arguments())
+                self.assertTrue(ok)
+                self.assertIn("Skipped integration lane RollingUpgrade (explicitly excluded)", message)
+                self.assertIn(reason, message)
+            # A declaration is not evidence and cannot waive any failed/missing matrix.
+            for env in (ENV, dict(ENV, DISPATCH="true", BUILD="success", MATRIX="failure")):
+                with self.subTest(env=env), patch.dict(os.environ, env, clear=True), \
+                        patch.object(gate, "evidence_runs", return_value=[]):
+                    ok, _ = gate.gate(arguments())
+                self.assertFalse(ok)
 
     def test_no_evidence_without_label_fails_with_request_and_sha(self):
         with patch.dict(os.environ, ENV, clear=True), patch.object(gate, "evidence_runs", return_value=[]):

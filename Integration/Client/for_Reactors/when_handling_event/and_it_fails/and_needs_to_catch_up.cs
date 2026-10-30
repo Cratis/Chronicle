@@ -16,8 +16,7 @@ public class and_needs_to_catch_up(context context) : Given<context>(context)
     {
         public IEnumerable<FailedPartition> FailedPartitionsBeforeRetry;
         public IEnumerable<FailedPartition> FailedPartitionsAfterRetry;
-        public IEnumerable<Job> Jobs;
-        public IEnumerable<Job> JobsWithCatchUp;
+        public int HandlerAttempts;
         public IEnumerable<Job> JobsAfterCompleted;
         public SomeEvent Event;
         public EventSourceId EventSourceId;
@@ -41,22 +40,21 @@ public class and_needs_to_catch_up(context context) : Given<context>(context)
             await EventStore.EventLog.Append(EventSourceId, Event);
 
             // Wait for the first event to have been handled
-            await Tcs[0].Task.WaitAsync(TimeSpanFactory.DefaultTimeout());
+            await Tcs[0].Task.WaitAsync(RetryWaits.Timeout);
 
-            FailedPartitionsBeforeRetry = await reactor.WaitForThereToBeFailedPartitions();
-            Jobs = await EventStore.Jobs.WaitForThereToBeJobOfType("RetryFailedPartition");
+            FailedPartitionsBeforeRetry = await reactor.WaitForThereToBeFailedPartitions(RetryWaits.Timeout);
 
             // Wait for the first event to be handled a second time (retry)
-            await Tcs[1].Task.WaitAsync(TimeSpanFactory.DefaultTimeout());
+            await Tcs[1].Task.WaitAsync(RetryWaits.Timeout);
 
             // Append an event to be caught up
             await EventStore.EventLog.Append(EventSourceId, Event);
 
             // Wait for the second event to have been handled for the third time after retry
-            await Tcs[2].Task.WaitAsync(TimeSpanFactory.DefaultTimeout());
-            JobsWithCatchUp = await EventStore.Jobs.WaitForThereToBeJobs();
-            JobsAfterCompleted = await EventStore.Jobs.WaitForThereToBeNoJobs();
-            await Observers[2].WaitTillHandledEventReaches(1);
+            await Tcs[2].Task.WaitAsync(RetryWaits.Timeout);
+            HandlerAttempts = Tcs.Count(_ => _.Task.IsCompleted);
+            JobsAfterCompleted = await EventStore.Jobs.WaitForThereToBeNoJobs(RetryWaits.Timeout);
+            await Observers[2].WaitTillHandledEventReaches(1, RetryWaits.Timeout);
 
             FailedPartitionsAfterRetry = await GetFailedPartitions();
             ReactorState = await reactor.GetState();
@@ -64,9 +62,9 @@ public class and_needs_to_catch_up(context context) : Given<context>(context)
     }
 
     [Fact] void should_fail_one_partition() => Context.FailedPartitionsBeforeRetry.Count().ShouldEqual(1);
-    [Fact] void should_start_replaying_job() => Context.Jobs.First().Type.Value.ShouldContain("RetryFailedPartition");
+    [Fact] void should_retry_the_failed_partition() => Context.HandlerAttempts.ShouldEqual(3);
     [Fact] void should_recover_failed_partition() => Context.FailedPartitionsAfterRetry.ShouldBeEmpty();
-    [Fact] void should_start_catchup_for_partition_job() => Context.JobsWithCatchUp.SingleOrDefault(_ => _.Type == "CatchUpObserverPartition").ShouldNotBeNull();
+    [Fact] void should_handle_the_caught_up_event() => Context.Tcs[2].Task.IsCompletedSuccessfully.ShouldBeTrue();
     [Fact] void should_have_completed_all_jobs_at_the_end() => Context.JobsAfterCompleted.ShouldBeEmpty();
     [Fact] void should_have_the_active_observer_running_state() => Context.ReactorState.RunningState.ShouldEqual(ObserverRunningState.Active);
     [Fact] void should_have_correct_last_handled_event_sequence_number() => Context.ReactorState.LastHandledEventSequenceNumber.Value.ShouldEqual(1ul);

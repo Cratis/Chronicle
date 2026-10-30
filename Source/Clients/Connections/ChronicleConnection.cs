@@ -39,7 +39,7 @@ namespace Cratis.Chronicle.Connections;
 /// <summary>
 /// Represents an implementation of <see cref="IChronicleConnection"/>.
 /// </summary>
-public sealed class ChronicleConnection : IChronicleConnection, IChronicleServicesAccessor, IGetServicesAsynchronously, IKernelCapabilities
+public sealed class ChronicleConnection : IChronicleConnection, IChronicleServicesAccessor, IGetServicesAsynchronously, IKernelCapabilities, IConnectionKeepAlive
 {
     readonly ChronicleConnectionString _connectionString;
     readonly int _connectTimeout;
@@ -114,10 +114,15 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         ILoadBalancerStrategy? loadBalancerStrategy = null,
         TimeProvider? timeProvider = null)
     {
+        if (connectionString.DisableTls && connectionString.AuthenticationMode == AuthenticationMode.ClientCredentials)
+        {
+            throw new ClientCredentialsRequireTls();
+        }
+
         _timeProvider = timeProvider ?? TimeProvider.System;
         _skipTlsValidation = skipTlsValidation;
         _skipCompatibilityCheck = skipCompatibilityCheck;
-        _skipKeepAlive = skipKeepAlive;
+        _skipKeepAlive = skipKeepAlive || connectionString.SkipKeepAlive;
         _connectionString = connectionString;
         _connectTimeout = connectTimeout;
         _maxReceiveMessageSize = maxReceiveMessageSize;
@@ -131,7 +136,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         _certificatePassword = certificatePassword;
         _tokenProvider = tokenProvider ?? new NoOpTokenProvider();
         _serverAddressResolver = serverAddressResolver ?? new ChronicleServerAddressResolver();
-        _loadBalancerStrategy = loadBalancerStrategy ?? LoadBalancerStrategies.Create(connectionString.LoadBalancer, skipTlsValidation);
+        _loadBalancerStrategy = loadBalancerStrategy ?? LoadBalancerStrategies.Create(connectionString.LoadBalancer, skipTlsValidation, connectionString.DisableTls);
         _watchDog = new ConnectionWatchdog(
             tasks,
             OnSessionDropped,
@@ -164,6 +169,9 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     /// first configured address when no connection has been established yet.
     /// </summary>
     public ChronicleServerAddress CurrentServerAddress => _currentServerAddress ?? _connectionString.ServerAddress;
+
+    /// <inheritdoc/>
+    bool IConnectionKeepAlive.IsSkipped => _skipKeepAlive;
 
     /// <inheritdoc/>
     IServices IChronicleServicesAccessor.Services
@@ -362,6 +370,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
             callInvoker.CreateGrpcService<IConnectionService>(clientFactory),
             callInvoker.CreateGrpcService<IEventSources>(clientFactory))
         {
+            Administrators = callInvoker.CreateGrpcService<Contracts.Security.IAdministrators>(clientFactory),
             Occurrences = callInvoker.CreateGrpcService<Contracts.Occurrences.IOccurrences>(clientFactory)
         };
 
@@ -561,7 +570,9 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
             httpHandler.SslOptions.RemoteCertificateValidationCallback =
                 CertificateLoader.CreateServerCertificateValidationCallback(_skipTlsValidation, certificate?.GetCertHashString());
 
-            var address = $"https://{serverAddress.Host}:{serverAddress.Port}";
+            // With TLS disabled the server speaks HTTP/2 without TLS (h2c); an http:// address makes the gRPC channel
+            // use HTTP/2 with prior knowledge.
+            var address = $"{(_connectionString.DisableTls ? Uri.UriSchemeHttp : Uri.UriSchemeHttps)}://{serverAddress.Host}:{serverAddress.Port}";
 
             var channel = GrpcChannel.ForAddress(
                 address,

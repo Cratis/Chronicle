@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Arc.Commands;
+using Cratis.Chronicle.Sequences;
 using Cratis.Chronicle.Storage;
 using FluentValidation;
 
@@ -19,6 +20,7 @@ internal class StopCaptureValidator : CommandValidator<StopCapture>
     public StopCaptureValidator(IStorage storage)
     {
         RuleFor(_ => _.EventStore).NotEmpty().WithMessage("Event store name is required.");
+        RuleFor(_ => _.EventStore).NotSystemEventStore();
         RuleFor(_ => _.CaptureId).NotEmpty().WithMessage("Capture identifier is required.");
 
         // A capture's existence is scoped to its event store, so this is a command-level check rather than a

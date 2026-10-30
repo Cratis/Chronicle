@@ -5,6 +5,7 @@ using System.Collections.Concurrent;
 using System.Reactive.Subjects;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Storage.Sinks;
+using Cratis.Reactive;
 using Cratis.Types;
 
 namespace Cratis.Chronicle.Storage;
@@ -26,21 +27,30 @@ public class Storage(
     public ISystemStorage System => systemStorage;
 
     /// <inheritdoc/>
-    public Task<IEnumerable<EventStoreName>> GetEventStores() => clusterStorage.GetEventStores();
+    public Task<IReadOnlyDictionary<EventStoreName, Concepts.Projections.Generations.Enablement.GenerationFloor>> ReadGenerationFloors() =>
+        clusterStorage.ReadGenerationFloors();
+
+    /// <inheritdoc/>
+    public async Task<IEnumerable<EventStoreName>> GetEventStores() => (await clusterStorage.GetEventStores()).Where(IsListed);
 
     /// <inheritdoc/>
     public async Task<bool> HasEventStore(EventStoreName eventStore)
     {
-        var eventStores = await clusterStorage.GetEventStores();
+        var eventStores = await GetEventStores();
         return eventStores.Any(es => es == eventStore);
     }
 
     /// <inheritdoc/>
-    public ISubject<IEnumerable<EventStoreName>> ObserveEventStores() => clusterStorage.ObserveEventStores();
+    public ISubject<IEnumerable<EventStoreName>> ObserveEventStores() =>
+        new TransformingSubject<IEnumerable<EventStoreName>, IEnumerable<EventStoreName>>(
+            clusterStorage.ObserveEventStores(),
+            names => names.Where(IsListed));
 
     /// <inheritdoc/>
     public IEventStoreStorage GetEventStore(EventStoreName eventStore)
     {
+        ThrowIfEventStoreNameIsInvalid(eventStore);
+
         if (_eventStores.TryGetValue(eventStore, out var existing))
         {
             return existing;
@@ -67,4 +77,19 @@ public class Storage(
 
     /// <inheritdoc/>
     public void Clear() => _eventStores.Clear();
+
+    static bool IsListed(EventStoreName name) => !string.IsNullOrWhiteSpace(name?.Value) && name != EventStoreName.NotSet;
+
+    static void ThrowIfEventStoreNameIsInvalid(EventStoreName eventStore)
+    {
+        if (eventStore is null || string.IsNullOrWhiteSpace(eventStore.Value))
+        {
+            throw new InvalidEventStoreName(eventStore!, "EventStoreName cannot be null, empty or whitespace.");
+        }
+
+        if (eventStore == EventStoreName.NotSet)
+        {
+            throw new InvalidEventStoreName(eventStore, "EventStoreName cannot be '[NotSet]'. It must be properly configured.");
+        }
+    }
 }

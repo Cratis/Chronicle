@@ -16,6 +16,9 @@ public sealed class ReplayContexts : IReplayContexts
     readonly ConcurrentDictionary<ReadModelIdentifier, ReplayContext> _contexts = new();
 
     /// <inheritdoc/>
+    public Task<IReadOnlyList<ReplayContext>> GetAll() => Task.FromResult<IReadOnlyList<ReplayContext>>([.. _contexts.Values]);
+
+    /// <inheritdoc/>
     public Task<ReplayContext> Establish(ReadModelType type, ReadModelContainerName containerName)
     {
         var replayStarted = DateTimeOffset.UtcNow;

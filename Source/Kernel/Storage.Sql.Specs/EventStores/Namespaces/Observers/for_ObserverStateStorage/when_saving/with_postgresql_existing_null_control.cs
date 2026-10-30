@@ -1,11 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Arc.EntityFrameworkCore;
-using Cratis.Arc.EntityFrameworkCore.Concepts;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Storage.Sql.Sinks;
-using Microsoft.EntityFrameworkCore;
 
 using KernelObserverState = Cratis.Chronicle.Storage.Observation.ObserverState;
 
@@ -20,22 +17,18 @@ public class with_postgresql_existing_null_control(PostgreSqlFixture fixture) : 
 
     async Task Establish()
     {
-        _connectionString = await fixture.CreateDatabase();
-        await using (var context = CreateContext())
-        {
-            await context.Database.MigrateAsync();
-        }
+        _connectionString = await fixture.CreateMigratedDatabase<NamespaceDbContext>();
 
         var database = Substitute.For<IDatabase>();
         database.Namespace(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>())
             .Returns(_ => Task.FromResult(new DbContextScope<NamespaceDbContext>(CreateContext(), () => { })));
         _storage = new(EventStoreName.System, EventStoreNamespaceName.Default, database);
-        await _storage.Save(new() { Identifier = "observer", NextEventSequenceNumber = new(10), LastHandledEventSequenceNumber = new(9), TailEventSequenceNumber = new(20) });
+        await _storage.Save(new() { Identifier = "observer", NextEventSequenceNumber = new(10), LastHandledEventSequenceNumber = new(9), TailEventSequenceNumber = new(20) }, Concepts.EventSequences.EventSequenceId.Log);
     }
 
     async Task Because()
     {
-        await _storage.Save(new() { Identifier = "observer", NextEventSequenceNumber = new(123), LastHandledEventSequenceNumber = new(122), TailEventSequenceNumber = new(200) });
+        await _storage.Save(new() { Identifier = "observer", NextEventSequenceNumber = new(123), LastHandledEventSequenceNumber = new(122), TailEventSequenceNumber = new(200) }, Concepts.EventSequences.EventSequenceId.Log);
         _saved = await _storage.Get("observer");
     }
 
@@ -47,10 +40,5 @@ public class with_postgresql_existing_null_control(PostgreSqlFixture fixture) : 
 
     async Task Destroy() => await fixture.DropDatabase(_connectionString);
 
-    NamespaceDbContext CreateContext()
-    {
-        var builder = new DbContextOptionsBuilder<NamespaceDbContext>();
-        builder.UseDatabaseFromConnectionString(_connectionString).AddConceptAsSupport().WithoutServiceProviderCaching();
-        return new(builder.Options);
-    }
+    NamespaceDbContext CreateContext() => new(SpecDbContextOptions.Kernel<NamespaceDbContext>(_connectionString));
 }

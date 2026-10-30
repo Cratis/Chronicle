@@ -19,7 +19,6 @@ using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.Compliance;
 using Cratis.Chronicle.Storage.Sinks;
 using Microsoft.Extensions.Logging.Abstractions;
-using Xunit.Abstractions;
 
 namespace Cratis.Chronicle.ReadModels.for_ReadModelsCompliance.when_checking_invariants.given;
 

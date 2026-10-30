@@ -17,6 +17,7 @@ public class but_not_second_time(context context) : Given<context>(context)
     {
         public IEnumerable<FailedPartition> FailedPartitionsBeforeRetry;
         public IEnumerable<FailedPartition> FailedPartitionsAfterRetry;
+        public int HandlerAttempts;
         public SomeEvent Event;
         public EventSourceId EventSourceId;
         public ReactorState ReactorState;
@@ -36,14 +37,15 @@ public class but_not_second_time(context context) : Given<context>(context)
             await EventStore.EventLog.Append(EventSourceId, Event);
 
             // Wait for the first event to have been handled
-            await Tcs[0].Task.WaitAsync(TimeSpanFactory.DefaultTimeout());
+            await Tcs[0].Task.WaitAsync(RetryWaits.Timeout);
 
-            FailedPartitionsBeforeRetry = await reactor.WaitForThereToBeFailedPartitions();
+            FailedPartitionsBeforeRetry = await reactor.WaitForThereToBeFailedPartitions(RetryWaits.Timeout);
 
             // Wait for the retry to complete (second handler succeeds)
-            await Tcs[1].Task.WaitAsync(TimeSpanFactory.DefaultTimeout());
-            await EventStore.Jobs.WaitForThereToBeNoJobs();
-            await Observers[1].WaitTillHandledEventReaches(1);
+            await Tcs[1].Task.WaitAsync(RetryWaits.Timeout);
+            HandlerAttempts = Tcs.Count(_ => _.Task.IsCompleted);
+            await EventStore.Jobs.WaitForThereToBeNoJobs(RetryWaits.Timeout);
+            await Observers[1].WaitTillHandledEventReaches(1, RetryWaits.Timeout);
 
             FailedPartitionsAfterRetry = await GetFailedPartitions();
             ReactorState = await reactor.GetState();
@@ -51,6 +53,7 @@ public class but_not_second_time(context context) : Given<context>(context)
     }
 
     [Fact] void should_fail_one_partition() => Context.FailedPartitionsBeforeRetry.Count().ShouldEqual(1);
+    [Fact] void should_retry_the_failed_partition() => Context.HandlerAttempts.ShouldEqual(2);
     [Fact] void should_recover_failed_partition() => Context.FailedPartitionsAfterRetry.ShouldBeEmpty();
     [Fact] void should_have_the_active_observer_running_state() => Context.ReactorState.RunningState.ShouldEqual(ObserverRunningState.Active);
     [Fact] void should_have_correct_last_handled_event_sequence_number() => Context.ReactorState.LastHandledEventSequenceNumber.Value.ShouldEqual(0ul);

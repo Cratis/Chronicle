@@ -19,6 +19,27 @@ public class ObserverState
     public required ObserverId Id { get; set; }
 
     /// <summary>
+    /// Gets or sets the owning event sequence, or null for legacy, unowned state.
+    /// </summary>
+    [ConcurrencyCheck]
+    public string? Owner { get; set; }
+
+    /// <summary>
+    /// Gets or sets the serialized shadow partition claims, absent on legacy rows.
+    /// </summary>
+    public string? PartitionClaims { get; set; }
+
+    /// <summary>
+    /// Gets or sets the serialized shadow observer-wide claim, absent on legacy rows.
+    /// </summary>
+    public string? ObserverWideClaim { get; set; }
+
+    /// <summary>
+    /// Gets or sets the shadow ownership revision, absent on legacy rows.
+    /// </summary>
+    public ulong? OwnershipRevision { get; set; }
+
+    /// <summary>
     /// Gets or sets the serialized type-set control, or null before initialization.
     /// </summary>
     [ConcurrencyCheck]
@@ -53,6 +74,9 @@ public class ObserverState
     /// Gets or sets the current quarantine episode identity.
     /// </summary>
     public Guid? QuarantineEpisodeId { get; set; }
+
+    /// <summary>Gets or sets serialized optional webhook probe coordination.</summary>
+    public string? WebhookProbe { get; set; }
 
     /// <summary>
     /// Gets or sets the sequence number of the last event the observer handled.
@@ -113,4 +137,15 @@ public class ObserverState
     /// Gets or sets a value indicating whether the observer subscribes to all event types.
     /// </summary>
     public bool SubscribesToAllEvents { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of events handled by the observer.
+    /// </summary>
+    public ulong HandledEventCount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of events handled per event type, or null for legacy rows.
+    /// </summary>
+    [Json]
+    public IDictionary<string, ulong>? HandledEventCountPerEventType { get; set; } = new Dictionary<string, ulong>();
 }

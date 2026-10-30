@@ -12,6 +12,13 @@ namespace Cratis.Chronicle.Storage.ReadModels;
 public interface IReplayContextsStorage
 {
     /// <summary>
+    /// Reads all durable legacy replay contexts without changing them.
+    /// </summary>
+    /// <returns>The current replay contexts.</returns>
+    /// <exception cref="NotSupportedException">The provider has not implemented this optional capability.</exception>
+    Task<IReadOnlyList<ReplayContext>> GetAll() => throw new NotSupportedException("The provider does not support legacy replay inventory.");
+
+    /// <summary>
     /// Save a replay context.
     /// </summary>
     /// <param name="context">The <see cref="ReplayContext"/> to save.</param>

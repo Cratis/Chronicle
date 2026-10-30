@@ -71,14 +71,11 @@ public class WebhookMediator(IWebhookHttpClientFactory webhookHttpClientFactory,
             var authority = new Uri(webhookTarget.Url).GetLeftPart(UriPartial.Authority);
             WebhookDeliveryMetrics.CircuitRejected(authority);
             (logger ?? NullLogger<WebhookMediator>.Instance).TargetUnavailable(authority, now + delay);
-            return new(EventSequenceNumber.Unavailable, error, new(Guid.NewGuid(), PartitionDeferralReason.CircuitOpen, now, now + delay, batch.FirstOrDefault()?.Context.SequenceNumber ?? EventSequenceNumber.First));
+            return new(EventSequenceNumber.Unavailable, WebhookDeliveryErrors.SafeError(webhookTarget, error), new(Guid.NewGuid(), PartitionDeferralReason.CircuitOpen, now, now + delay, batch.FirstOrDefault()?.Context.SequenceNumber ?? EventSequenceNumber.First));
         }
         catch (Exception error)
         {
-            var rejection = FindTargetRejection(error);
-            return rejection is not null
-                ? new(EventSequenceNumber.Unavailable, rejection) { FailurePolicy = WebhookDeliveryFailurePolicy.PauseObserver }
-                : new(EventSequenceNumber.Unavailable, error);
+            return WebhookDeliveryErrors.FromException(webhookTarget, error, FindTargetRejection(error));
         }
     }
 
@@ -120,7 +117,7 @@ public class WebhookMediator(IWebhookHttpClientFactory webhookHttpClientFactory,
 
     WebhookDeliveryResult DeliveryRejected(HttpResponseMessage response, WebhookTarget target, AppendedEvent[] batch)
     {
-        var error = new WebhookDeliveryFailed(target.Url, response.StatusCode, response.ReasonPhrase);
+        var error = WebhookDeliveryErrors.ForResponse(target, response);
         var authority = new Uri(target.Url).GetLeftPart(UriPartial.Authority);
         var deliveryLogger = logger ?? NullLogger<WebhookMediator>.Instance;
         if ((response.StatusCode is HttpStatusCode.TooManyRequests or HttpStatusCode.ServiceUnavailable) && GetRetryAfter(response, options?.Value.Webhooks.MaximumRetryAfterSeconds ?? 24 * 60 * 60) is { } until)

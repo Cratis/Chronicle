@@ -96,6 +96,16 @@ public class ReadModelDbContext(
     /// <returns>Awaitable task.</returns>
     internal Task EnsureReplayPromotions() => migrator.EnsureReplayPromotions(this);
 
+    /// <summary>
+    /// Clears stale migration state for this table and restores shadows after an old-kernel promotion.
+    /// </summary>
+    /// <returns>An awaitable task.</returns>
+    internal Task RepairShadowColumns()
+    {
+        migrator.ClearMigrationCache($"{Database.GetConnectionString()}:{TableName}");
+        return EnsureTableExists();
+    }
+
     /// <inheritdoc/>
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {

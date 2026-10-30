@@ -17,6 +17,9 @@ public sealed class Storage(EventStoreStorages eventStoreStorages, ISystemStorag
     public ISystemStorage System { get; } = system;
 
     /// <inheritdoc/>
+    public Task<IReadOnlyDictionary<EventStoreName, Concepts.Projections.Generations.Enablement.GenerationFloor>> ReadGenerationFloors() => eventStoreStorages.ReadGenerationFloors();
+
+    /// <inheritdoc/>
     public Task<IEnumerable<EventStoreName>> GetEventStores() => Task.FromResult(eventStoreStorages.Names);
 
     /// <inheritdoc/>

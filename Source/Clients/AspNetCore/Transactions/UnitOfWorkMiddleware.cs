@@ -1,12 +1,15 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Events.Constraints;
+using System.Text.Json;
 using Cratis.Chronicle.Transactions;
 using Cratis.Execution;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Cratis.Chronicle.AspNetCore.Transactions;
 
@@ -35,10 +38,19 @@ public class UnitOfWorkMiddleware(RequestDelegate next, ILogger<UnitOfWorkMiddle
         var unitOfWork = unitOfWorkManager.Begin(correlationId);
         var owner = (unitOfWork as UnitOfWork)?.ClaimDecisionReadCommitOwnership();
         var previousFeature = context.Features.Get<IUnitOfWorkCompletionFeature>();
-        context.Features.Set<IUnitOfWorkCompletionFeature>(new UnitOfWorkCompletionFeature(unitOfWork, owner));
+        var previousOwnership = context.Features.Get<IUnitOfWorkCompletionOwnershipFeature>();
+        var feature = new UnitOfWorkCompletionFeature(unitOfWork, owner);
+        context.Features.Set<IUnitOfWorkCompletionFeature>(feature);
+        context.Features.Set<IUnitOfWorkCompletionOwnershipFeature>(feature);
         try
         {
             await next(context);
+
+            if (feature.CurrentClaim is { } claim)
+            {
+                await EnsureClaimCompleted(claim);
+                return;
+            }
 
             // Handle unit of work completion and constraint violations
             if (!unitOfWork.IsCompleted)
@@ -51,29 +63,24 @@ public class UnitOfWorkMiddleware(RequestDelegate next, ILogger<UnitOfWorkMiddle
                 {
                     await unitOfWork.Commit();
                 }
+
+                if (!unitOfWork.IsSuccess)
+                {
+                    await ReportFailure(context, unitOfWork);
+                }
             }
-            else
+            else if (!feature.HasCompleted)
             {
                 logger.AlreadyCompletedManually(unitOfWork.CorrelationId);
-            }
-
-            if (!unitOfWork.IsSuccess)
-            {
-                // Try to add model errors if this is an MVC context
-                var actionContext = context.Features.Get<ActionContext>();
-                if (actionContext is not null)
-                {
-                    foreach (var violation in unitOfWork.GetConstraintViolations())
-                    {
-                        var memberName = violation.Details.TryGetValue(WellKnownConstraintDetailKeys.PropertyName, out var propertyName) ? propertyName : string.Empty;
-                        actionContext.ModelState.AddModelError(memberName, violation.Message);
-                    }
-                }
             }
         }
         catch
         {
-            if (!unitOfWork.IsCompleted)
+            if (feature.CurrentClaim is { } failedClaim)
+            {
+                await EnsureClaimCompleted(failedClaim);
+            }
+            else if (!unitOfWork.IsCompleted)
             {
                 if (owner is not null)
                 {
@@ -104,6 +111,53 @@ public class UnitOfWorkMiddleware(RequestDelegate next, ILogger<UnitOfWorkMiddle
         finally
         {
             context.Features.Set(previousFeature);
+            context.Features.Set(previousOwnership);
         }
+    }
+
+    async Task EnsureClaimCompleted(IUnitOfWorkCompletionClaim claim)
+    {
+        if (claim.Result is not null) return;
+        if (claim.UnitOfWork.IsCompleted)
+        {
+            // The owner completed the unit directly, not through the claim. Record the outcome; nothing is rolled back.
+            await claim.Commit();
+            return;
+        }
+
+        // The claim owner never completed the unit. Never commit behind its back.
+        logger.ClaimedButNotCompleted(claim.UnitOfWork.CorrelationId);
+        await claim.Rollback();
+    }
+
+    async Task ReportFailure(HttpContext context, IUnitOfWork unitOfWork)
+    {
+        var concurrencyViolations = unitOfWork.GetConcurrencyViolations().ToArray();
+        var decisionConflicts = unitOfWork.GetDecisionConflicts().ToArray();
+        var constraintViolations = unitOfWork.GetConstraintViolations().ToArray();
+        var appendErrors = unitOfWork.GetAppendErrors().ToArray();
+        logger.CommitFailedAfterResponse(
+            unitOfWork.CorrelationId,
+            context.Response.HasStarted,
+            concurrencyViolations.Length,
+            decisionConflicts.Length,
+            constraintViolations.Length,
+            appendErrors.Length);
+
+        var options = context.RequestServices?.GetService<IOptions<ChronicleAspNetCoreOptions>>()?.Value;
+        if (options?.UnitOfWork.ReportFailuresBeforeResponseStarts != true || context.Response.HasStarted) return;
+
+        var (status, title) = (concurrencyViolations.Length + decisionConflicts.Length, constraintViolations.Length) switch
+        {
+            (> 0, _) => (StatusCodes.Status409Conflict, "The request conflicts with a concurrent change."),
+            (_, > 0) => (StatusCodes.Status400BadRequest, "The request violates a constraint."),
+            _ => (StatusCodes.Status500InternalServerError, "The request could not be committed.")
+        };
+        var problem = new ProblemDetails { Status = status, Title = title };
+        problem.Extensions["correlationId"] = unitOfWork.CorrelationId.ToString();
+        context.Response.Clear();
+        context.Response.StatusCode = status;
+        context.Response.ContentType = "application/problem+json";
+        await context.Response.WriteAsync(JsonSerializer.Serialize(problem));
     }
 }

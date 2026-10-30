@@ -35,5 +35,11 @@ public enum SinkWriteMode
     /// there, so the write is guarded and correctly does nothing.
     /// </para>
     /// </remarks>
-    OnlyWhenAdvancingWatermark = 1
+    OnlyWhenAdvancingWatermark = 1,
+
+    /// <summary>
+    /// Insert a missing instance; otherwise apply changes only when the incoming sequence number
+    /// is beyond the stored watermark, including when writes are buffered in a bulk window.
+    /// </summary>
+    GuardedUpsert = 2
 }

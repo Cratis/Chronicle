@@ -17,7 +17,7 @@ public class and_notification_reenters : given.a_contributed_unit
     async Task Because()
     {
         _enrollmentError = Catch.Exception(() => Stage());
-        _commitError = await Catch.Exception(() => _unitOfWork.Commit());
+        _commitError = await Catch.Exception(_unitOfWork.Commit);
     }
 
     [Fact] void should_refuse_mutation_from_notification() => _enrollmentError.ShouldBeOfExactType<UnitOfWorkMutatedDuringEnrollment>();
