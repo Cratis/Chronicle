@@ -12,6 +12,8 @@
   href: storage-connection-resolution.md
 - name: SQL Schema Operations
   href: sql-schema-operations.md
+- name: MongoDB Index Operations
+  href: mongodb-index-operations.md
 - name: Compliance Storage
   href: compliance-storage.md
 - name: Clustering

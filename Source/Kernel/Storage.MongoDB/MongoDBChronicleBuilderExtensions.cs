@@ -6,6 +6,7 @@ using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Compliance;
 using Cratis.Chronicle.Storage.MongoDB;
+using Cratis.Chronicle.Storage.MongoDB.Schema;
 using Cratis.Chronicle.Storage.MongoDB.Sinks;
 using Cratis.Chronicle.Storage.SingleWriter;
 using Cratis.Compliance.MongoDB;
@@ -40,7 +41,13 @@ public static class MongoDBChronicleBuilderExtensions
     public static IChronicleBuilder WithMongoDB(this IChronicleBuilder builder, ChronicleOptions options)
     {
         builder.WithMongoDB(options.Storage.ConnectionDetails, WellKnownDatabaseNames.Chronicle, options.Clustering.Type == ClusteringType.MongoDB, options.Storage.DatabaseNamePrefix);
-        builder.ConfigureServices(services => services.AddStorageConnectionResolution(WellKnownConnectionStorage.MongoDB, options.Storage.ConnectionResolution));
+        builder.ConfigureServices(services =>
+        {
+            services.AddStorageConnectionResolution(WellKnownConnectionStorage.MongoDB, options.Storage.ConnectionResolution);
+            services.AddSingleton<MongoDBIndexProvisioner>();
+            services.AddSingleton<IMongoDBIndexProvisioner>(provider => provider.GetRequiredService<MongoDBIndexProvisioner>());
+        });
+        builder.SiloBuilder.AddStartupTask<VerifyMongoDBIndexes>(ServiceLifecycleStage.First);
         return builder;
     }
 

@@ -2,10 +2,15 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Diagnostics;
+using Cratis.Arc;
+using Cratis.Arc.MongoDB;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Storage;
+using Cratis.Chronicle.Storage.MongoDB.Events.Constraints;
+using Cratis.Chronicle.Storage.MongoDB.Schema;
 using Cratis.Chronicle.Storage.Sql.Schema;
 using Microsoft.Extensions.Options;
+using MongoDB.Bson.Serialization;
 
 namespace Cratis.Chronicle.Server;
 
@@ -28,8 +33,9 @@ internal static class SchemaCommandRunner
     /// <param name="command">The parsed command.</param>
     /// <param name="options">The Chronicle options.</param>
     /// <param name="action">The configured action.</param>
+    /// <param name="configuration">The host configuration, which the MongoDB client setup binds its options from.</param>
     /// <returns>The process exit code.</returns>
-    internal static async Task<int> Run(SchemaCommand command, ChronicleOptions options, SchemaAction action)
+    internal static async Task<int> Run(SchemaCommand command, ChronicleOptions options, SchemaAction action, IConfiguration configuration)
     {
         using var logging = LoggerFactory.Create(builder => builder.AddConsole());
         var logger = logging.CreateLogger("Chronicle.Schema");
@@ -38,11 +44,13 @@ internal static class SchemaCommandRunner
         var exit = 0;
         try
         {
-            var services = new ServiceCollection();
-            services.AddLogging(builder => builder.AddConsole());
-            ConfigureServices(options, services);
-            await using var provider = services.BuildServiceProvider();
-            if (!IsSql(options.Storage.Type))
+            await using var provider = BuildServices(options, configuration, builder => builder.AddConsole());
+            if (string.Equals(options.Storage.Type, StorageType.MongoDB, StringComparison.OrdinalIgnoreCase))
+            {
+                var provisioner = provider.GetRequiredService<IMongoDBIndexProvisioner>();
+                exit = await RunMongoAction(provisioner, command, action);
+            }
+            else if (!IsSql(options.Storage.Type))
             {
                 SchemaProvisionerLogging.NoVersionedSchema(logger, options.Storage.Type);
             }
@@ -74,12 +82,50 @@ internal static class SchemaCommandRunner
     internal static int ExitCode(Exception exception, SchemaAction action) =>
         SchemaExitCode.For(exception, action == SchemaAction.VerifyAndExit);
 
-    static void ConfigureServices(ChronicleOptions options, IServiceCollection services)
+    /// <summary>
+    /// Dispatches a MongoDB schema action and maps an incomplete index report to exit two.
+    /// </summary>
+    /// <param name="provisioner">The index provisioner.</param>
+    /// <param name="command">The parsed command and scopes.</param>
+    /// <param name="action">The configured action.</param>
+    /// <returns>The process exit code.</returns>
+    internal static async Task<int> RunMongoAction(IMongoDBIndexProvisioner provisioner, SchemaCommand command, SchemaAction action)
     {
+        var report = action == SchemaAction.VerifyAndExit
+            ? await provisioner.Verify(command.Scope.EventStores, command.Scope.Namespaces)
+            : await provisioner.Migrate(command.Scope.EventStores, command.Scope.Namespaces);
+        return report.IsCurrent ? 0 : 2;
+    }
+
+    /// <summary>
+    /// Builds the services a schema action resolves, without a web host.
+    /// </summary>
+    /// <param name="options">The Chronicle options.</param>
+    /// <param name="configuration">The host configuration.</param>
+    /// <param name="configureLogging">Configures the logging providers.</param>
+    /// <returns>The service provider.</returns>
+    internal static ServiceProvider BuildServices(ChronicleOptions options, IConfiguration configuration, Action<ILoggingBuilder> configureLogging)
+    {
+        var services = new ServiceCollection();
+        services.AddLogging(configureLogging);
+        ConfigureServices(options, configuration, services);
+        return services.BuildServiceProvider();
+    }
+
+    static void ConfigureServices(ChronicleOptions options, IConfiguration configuration, IServiceCollection services)
+    {
+        services.AddSingleton(configuration);
         services.AddSingleton<IOptions<ChronicleOptions>>(Options.Create(options));
         if (IsSql(options.Storage.Type))
         {
             SqlSchemaServices.Add(services, options);
+        }
+        else if (string.Equals(options.Storage.Type, StorageType.MongoDB, StringComparison.OrdinalIgnoreCase))
+        {
+            services.AddCratisArcCore();
+            services.AddCratisMongoDB(configureMongoDB: mongo => mongo.WithCamelCaseNamingPolicy());
+            BsonSerializer.RegisterSerializationProvider(new ConstraintDefinitionSerializationProvider());
+            MongoDBSchemaServices.Add(services, options);
         }
     }
 }
