@@ -22,8 +22,8 @@ public class with_invalid_derived_functions : given.a_model_bound_projection_bui
     [Fact] void should_reject_unknown_parameter_functions() => _parameterError.ShouldBeOfExactType<InvalidPropertyForType>();
     [Fact] void should_reject_incompatible_property_receivers() => _propertyError.ShouldBeOfExactType<InvalidPropertyForType>();
     [Fact] void should_reject_nonterminal_from_every_functions() => _fromEveryError.ShouldBeOfExactType<InvalidPropertyForType>();
-    [Fact] void should_report_the_original_context_type() => _fromEveryError!.Message.ShouldContain(typeof(EventContext).FullName);
-    [Fact] void should_report_the_original_context_path() => _fromEveryError!.Message.ShouldContain("Occurred.Week.Day");
+    [Fact] void should_report_the_original_context_type() => _fromEveryError.Message.ShouldContain(typeof(EventContext).FullName);
+    [Fact] void should_report_the_original_context_path() => _fromEveryError.Message.ShouldContain("Occurred.Week.Day");
 
     record UnknownFunction([Key] Guid Id, [SetFromContext<DebitAccountOpened>("Occurred.Unknown")] int Week);
 

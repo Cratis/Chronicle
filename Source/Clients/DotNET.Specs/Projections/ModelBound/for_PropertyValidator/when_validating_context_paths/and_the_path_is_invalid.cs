@@ -15,6 +15,6 @@ public class and_the_path_is_invalid : Specification
     void Because() => _results = _paths.ToDictionary(path => path, path => Catch.Exception(() => PropertyValidator.ValidateContextPropertyPath<EventContext>(path)));
 
     [Fact] void should_reject_every_invalid_path() => _results.Values.ShouldEachConformTo(error => error is InvalidPropertyForType);
-    [Fact] void should_include_the_original_path() => _results.ShouldEachConformTo(result => result.Value!.Message.Contains(result.Key));
-    [Fact] void should_include_the_root_type() => _results.Values.ShouldEachConformTo(error => error!.Message.Contains(typeof(EventContext).FullName!));
+    [Fact] void should_include_the_original_path() => _results.ShouldEachConformTo(result => result.Value.Message.Contains(result.Key));
+    [Fact] void should_include_the_root_type() => _results.Values.ShouldEachConformTo(error => error.Message.Contains(typeof(EventContext).FullName));
 }
