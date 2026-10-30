@@ -9,4 +9,5 @@ public class and_a_write_concern_error_occurs : given.an_ordered_bulk_write
     async Task Because() => await Flush();
     [Fact] void should_not_resend_operations_with_an_unknown_outcome() => Sent((0, 1000)).ShouldBeTrue();
     [Fact] void should_report_every_partition_as_uncertain() => Failed(Enumerable.Range(0, OperationCount).ToArray()).ShouldBeTrue();
+    [Fact] void should_mark_every_partition_outcome_unknown() => _failedPartitions.All(_ => _.OutcomeUnknown).ShouldBeTrue();
 }

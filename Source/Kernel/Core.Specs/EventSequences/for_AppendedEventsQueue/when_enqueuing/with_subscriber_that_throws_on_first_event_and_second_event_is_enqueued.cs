@@ -23,7 +23,8 @@ public class with_subscriber_that_throws_on_first_event_and_second_event_is_enqu
             Context = EventContext.Empty with
             {
                 EventType = _eventType,
-                EventSourceId = _firstPartition
+                EventSourceId = _firstPartition,
+                SequenceNumber = 0UL
             }
         };
         _secondEvent = AppendedEvent.Empty() with
@@ -43,10 +44,14 @@ public class with_subscriber_that_throws_on_first_event_and_second_event_is_enqu
 
     async Task Because()
     {
-        await _queue.Enqueue([_firstEvent]);
-        await _queue.Enqueue([_secondEvent]);
+        // Both partitions share one dispatch, independently of enqueue coalescing timing.
+        await _queue.Enqueue([_firstEvent, _secondEvent]);
         await _queue.AwaitQueueDepletion();
     }
 
-    [Fact] void should_still_process_the_second_event() => _handledEventsPerPartition.ContainsKey(_secondPartition).ShouldBeTrue();
+    [Fact] void should_attempt_the_first_event() =>
+        _observer.Received(1).Handle(Arg.Is<Key>(key => key == (Key)_firstPartition), Arg.Any<IEnumerable<AppendedEvent>>());
+
+    [Fact] void should_not_deliver_the_second_event_live_past_the_hole() => _handledEventsPerPartition.ContainsKey(_secondPartition).ShouldBeFalse();
+    [Fact] void should_recover_the_gap_through_catch_up() => _observer.Received(1).CatchUp();
 }

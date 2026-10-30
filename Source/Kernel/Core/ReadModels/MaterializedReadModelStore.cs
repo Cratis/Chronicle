@@ -46,11 +46,32 @@ public class MaterializedReadModelStore(
             return null;
         }
 
+        if (binding.Visibility == ReadModelInstanceVisibility.InitializedOnly && ReadModelInitialization.IsUninitialized(instance))
+        {
+            return null;
+        }
+
         return await compliance.Release(
             eventStore,
             eventStoreNamespace,
             definition.GetSchemaForLatestGeneration(),
             instance);
+    }
+
+    /// <inheritdoc/>
+    public async Task<CompositeKeyLookupResult> FindByCompositeKey(
+        EventStoreName eventStore,
+        EventStoreNamespaceName eventStoreNamespace,
+        ReadModelDefinition definition,
+        Key key)
+    {
+        if (!IsMaterialized(definition)) return CompositeKeyLookupResult.NotSupported;
+        var binding = await readBindings.Resolve(eventStore, eventStoreNamespace, definition);
+        if (binding.Sink is not ISinkCompositeKeyLookup lookup) return CompositeKeyLookupResult.NotSupported;
+        var result = await lookup.FindByCompositeKey(key);
+        if (result.Outcome != CompositeKeyLookupOutcome.Found) return result;
+        var instance = await compliance.Release(eventStore, eventStoreNamespace, definition.GetSchemaForLatestGeneration(), result.Instance!);
+        return result with { Instance = instance };
     }
 
     /// <inheritdoc/>
@@ -66,7 +87,7 @@ public class MaterializedReadModelStore(
 
         while (true)
         {
-            var page = await binding.Sink.GetInstances(binding.Occurrence, skip: skip, take: PageSize);
+            var page = await binding.GetInstances(skip, PageSize);
             var pageInstances = page.Instances.ToList();
             if (pageInstances.Count == 0)
             {

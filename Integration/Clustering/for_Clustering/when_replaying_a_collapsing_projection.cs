@@ -34,7 +34,7 @@ public class when_replaying_a_collapsing_projection(context _context)
         public int SubscriberActivations { get; private set; }
         public int SilosHostingSubscriber { get; private set; }
 
-        public async Task InitializeAsync()
+        public async ValueTask InitializeAsync()
         {
             var eventStore = fixture.ClientEventStore;
             var handler = eventStore.Projections.GetHandlerFor<CollapsingProjection>();
@@ -63,7 +63,7 @@ public class when_replaying_a_collapsing_projection(context _context)
             SilosHostingSubscriber = subscriberActivations.Select(_ => _.SiloAddress).Distinct().Count();
         }
 
-        public Task DisposeAsync() => Task.CompletedTask;
+        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
 
         static async Task<int> GetCount(IEventStore eventStore)
         {

@@ -17,6 +17,7 @@ internal class AppendManyForEventSourcesValidator : CommandValidator<AppendManyF
     public AppendManyForEventSourcesValidator()
     {
         RuleFor(_ => _.EventStore).RequiredEventStore();
+        RuleFor(_ => _.EventStore).NotSystemEventStore();
         RuleFor(_ => _.Namespace).RequiredNamespace();
         RuleFor(_ => _.EventSequenceId).RequiredEventSequence();
 

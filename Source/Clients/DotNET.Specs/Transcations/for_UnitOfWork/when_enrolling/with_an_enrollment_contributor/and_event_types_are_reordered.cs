@@ -25,5 +25,5 @@ public class and_event_types_are_reordered : given.a_contributed_unit
         await _unitOfWork.Commit();
     }
 
-    [Fact] void should_compare_the_filter_as_a_set() => _concurrencyScopesAppended[_source].EventTypes.ShouldContainOnly(_supplied.EventTypes!);
+    [Fact] void should_compare_the_filter_as_a_set() => _concurrencyScopesAppended[_source].EventTypes.ShouldContainOnly(_supplied.EventTypes);
 }

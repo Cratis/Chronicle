@@ -14,12 +14,12 @@ public sealed class MongoMaterializationBindingStorageHarness : IMaterialization
     MongoClient _client;
     public string ConnectionString { get; init; }
     public IGenerationGateWrites GateWrites { get; init; } = new MongoDBGenerationGateWrites();
-    public IMaterializationBindingStorage Create()
+    public IMaterializationBindingStorage Create(TimeProvider? timeProvider = null)
     {
         _client = new(ConnectionString);
         var database = Substitute.For<IDatabase>();
         database.GetReadModelDatabase(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>()).Returns(call => Database(call.ArgAt<EventStoreName>(0), call.ArgAt<EventStoreNamespaceName>(1)));
-        return new MongoDBMaterializationBindingStorage(database, GateWrites);
+        return new MongoDBMaterializationBindingStorage(database, GateWrites, timeProvider);
     }
     public IMongoDatabase Database(EventStoreName store, EventStoreNamespaceName ns)
     {

@@ -3,6 +3,8 @@
 
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Cratis.Chronicle.Storage.Sql;
 
@@ -16,6 +18,8 @@ namespace Cratis.Chronicle.Storage.Sql;
 /// in dependency injection, which <c language="csharp">DbSet.Observe()</c> requires to build its listener. Instead this
 /// polls the supplied query on an interval and re-emits only when the result actually changes, giving
 /// subscribers automatic updates without a manual refresh while honoring the per-store connection.
+/// Failed polls are logged, metered and retried with capped exponential backoff, never delivered as
+/// <c language="csharp">OnError</c> to the subscriber.
 /// </remarks>
 public static class LiveQuery
 {
@@ -23,6 +27,11 @@ public static class LiveQuery
     /// The default interval between polls of the underlying database.
     /// </summary>
     public static readonly TimeSpan DefaultPollingInterval = TimeSpan.FromSeconds(2);
+
+    /// <summary>
+    /// The longest delay between retries of a failing poll, unless the polling interval itself is longer.
+    /// </summary>
+    internal static readonly TimeSpan MaximumRetryDelay = TimeSpan.FromSeconds(30);
 
     /// <summary>
     /// Creates an <see cref="ISubject{T}"/> that emits the current result of <paramref name="query"/> on
@@ -34,7 +43,8 @@ public static class LiveQuery
     /// <returns>
     /// An <see cref="ISubject{T}"/> delivering the initial snapshot and subsequent changes. The subject is
     /// read-only — its observer side is inert because the database is the source of truth; nothing pushes
-    /// into it. Polling stops when the subscriber unsubscribes.
+    /// into it. Failed polls are logged, metered and retried with backoff, never delivered as
+    /// <c language="csharp">OnError</c>. Polling stops when the subscriber unsubscribes.
     /// </returns>
     public static ISubject<IEnumerable<TResult>> Observe<TResult>(Func<Task<IEnumerable<TResult>>> query, TimeSpan? pollingInterval = null) =>
         Observe(query, pollingInterval, EqualityComparer<TResult>.Default);
@@ -46,32 +56,122 @@ public static class LiveQuery
     /// <param name="pollingInterval">The interval between polls.</param>
     /// <param name="comparer">The item equality comparer.</param>
     /// <typeparam name="TResult">The type of each item.</typeparam>
-    /// <returns>A subject whose subscriptions stop polling when disposed.</returns>
+    /// <returns>
+    /// A subject whose subscriptions stop polling when disposed. Failed polls are logged, metered and
+    /// retried with backoff, never delivered as <c language="csharp">OnError</c>.
+    /// </returns>
     public static ISubject<IEnumerable<TResult>> Observe<TResult>(
         Func<Task<IEnumerable<TResult>>> query,
         TimeSpan? pollingInterval,
-        IEqualityComparer<TResult>? comparer)
+        IEqualityComparer<TResult>? comparer) =>
+        Observe(query, pollingInterval ?? DefaultPollingInterval, comparer, "unnamed", NullLogger.Instance, TimeProvider.System);
+
+    /// <summary>
+    /// Observes a query for a SQL storage, using the database's polling interval and live-query logger.
+    /// </summary>
+    /// <param name="query">Reads the current state.</param>
+    /// <param name="database">The database whose polling interval and live-query logger to use.</param>
+    /// <param name="name">The bounded query name used in logs and metrics.</param>
+    /// <param name="comparer">The item equality comparer, or null for the default.</param>
+    /// <typeparam name="TResult">The type of each item.</typeparam>
+    /// <returns>A subject whose subscriptions stop polling when disposed.</returns>
+    internal static ISubject<IEnumerable<TResult>> Observe<TResult>(
+        Func<Task<IEnumerable<TResult>>> query,
+        IDatabase database,
+        string name,
+        IEqualityComparer<TResult>? comparer = null) =>
+        Observe(query, database.LiveQueryPollingInterval, comparer, name, database is Database sql ? sql.LiveQueryLogger : NullLogger.Instance, TimeProvider.System);
+
+    /// <summary>
+    /// Observes a query, retrying failed polls with capped exponential backoff instead of faulting the subscription.
+    /// </summary>
+    /// <param name="query">Reads the current state.</param>
+    /// <param name="pollingInterval">The interval between successful polls, and the first retry delay.</param>
+    /// <param name="comparer">The item equality comparer, or null for the default.</param>
+    /// <param name="name">The bounded query name used in logs and metrics.</param>
+    /// <param name="logger">The logger for poll failures and recovery.</param>
+    /// <param name="timeProvider">The time provider used for delays.</param>
+    /// <typeparam name="TResult">The type of each item.</typeparam>
+    /// <returns>A subject whose subscriptions stop polling when disposed.</returns>
+    internal static ISubject<IEnumerable<TResult>> Observe<TResult>(
+        Func<Task<IEnumerable<TResult>>> query,
+        TimeSpan pollingInterval,
+        IEqualityComparer<TResult>? comparer,
+        string name,
+        ILogger logger,
+        TimeProvider timeProvider)
     {
-        var interval = pollingInterval ?? DefaultPollingInterval;
         comparer ??= EqualityComparer<TResult>.Default;
 
         var observable = Observable.Create<IEnumerable<TResult>>(async (observer, cancellationToken) =>
         {
             IReadOnlyCollection<TResult>? previous = null;
+            var failures = 0;
             while (!cancellationToken.IsCancellationRequested)
             {
-                var current = (await query()).ToArray();
+                TResult[] current;
+                try
+                {
+                    current = (await query()).ToArray();
+                }
+                catch (Exception) when (cancellationToken.IsCancellationRequested)
+                {
+                    return;
+                }
+                catch (Exception error)
+                {
+                    failures++;
+                    var delay = RetryDelayAfter(failures, pollingInterval);
+                    SqlStorageTelemetry.LiveQueryPollFailed(name, error);
+                    logger.LiveQueryPollFailed(error, name, failures, delay);
+                    if (!await Wait(delay, timeProvider, cancellationToken))
+                    {
+                        return;
+                    }
+
+                    continue;
+                }
+
+                if (failures > 0)
+                {
+                    logger.LiveQueryRecovered(name, failures);
+                    failures = 0;
+                }
+
                 if (previous is null || !current.SequenceEqual(previous, comparer))
                 {
                     observer.OnNext(current);
                     previous = current;
                 }
 
-                await Task.Delay(interval, cancellationToken);
+                if (!await Wait(pollingInterval, timeProvider, cancellationToken))
+                {
+                    return;
+                }
             }
         });
 
         return new ReadOnlyObservableSubject<IEnumerable<TResult>>(observable);
+    }
+
+    static TimeSpan RetryDelayAfter(int failures, TimeSpan interval)
+    {
+        var maximum = interval > MaximumRetryDelay ? interval : MaximumRetryDelay;
+        var multiplier = 1L << Math.Min(failures - 1, 16);
+        return interval.Ticks > maximum.Ticks / multiplier ? maximum : TimeSpan.FromTicks(interval.Ticks * multiplier);
+    }
+
+    static async Task<bool> Wait(TimeSpan delay, TimeProvider timeProvider, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await Task.Delay(delay, timeProvider, cancellationToken);
+            return true;
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            return false;
+        }
     }
 
     /// <summary>

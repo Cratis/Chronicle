@@ -19,6 +19,11 @@ public class UniqueConstraintValidator(
     /// <inheritdoc/>
     public IConstraintDefinition Definition => definition;
 
+    /// <summary>
+    /// Gets whether the storage can apply the index changes of several events in one operation, through <see cref="ApplyIndexChanges"/>.
+    /// </summary>
+    internal bool CanApplyIndexChangesTogether => storage is IUniqueConstraintsBatchStorage;
+
     /// <inheritdoc/>
     public bool CanValidate(ConstraintValidationContext context) =>
         definition.EventDefinitions.Any(_ => _.EventTypeId == context.EventTypeId);
@@ -37,7 +42,9 @@ public class UniqueConstraintValidator(
 
         var value = propertiesWithValues.GetValue(definition.IgnoreCasing);
         var scopeKey = definition.Scope.BuildScopeKey(context.EventSourceType, context.EventStreamType, context.EventStreamId);
-        var (isAllowed, sequenceNumber) = await storage.IsAllowed(context.EventSourceId, definition, value, scopeKey);
+        var (isAllowed, sequenceNumber) = context.BatchClaims?.TryGetPersistedAnswer(definition.Name, scopeKey, value, context.EventSourceId, out var answer) == true
+            ? answer
+            : await storage.IsAllowed(context.EventSourceId, definition, value, scopeKey);
 
         // The persisted index does not yet reflect events earlier in the same batch, so also reconcile against
         // the in-batch claims to catch two events in one batch claiming the same value for different sources.
@@ -68,4 +75,48 @@ public class UniqueConstraintValidator(
                         new() { { WellKnownConstraintDetailKeys.PropertyName, pv.Property }, { WellKnownConstraintDetailKeys.PropertyValue, pv.Value } })).ToImmutableList()
             };
     }
+
+    /// <summary>
+    /// Reads the persisted index for every claim in a batch at once, so validating each event does not read it again.
+    /// </summary>
+    /// <param name="contexts">The <see cref="ConstraintValidationContext">contexts</see> of the events in the batch.</param>
+    /// <param name="batchClaims">The <see cref="ConstraintBatchClaims"/> of the batch, which keeps the answers.</param>
+    /// <returns>Awaitable task.</returns>
+    /// <remarks>
+    /// Nothing writes the index while a batch is validated - the index is written after the batch is appended - so
+    /// reading it once up front answers exactly what reading it per event would.
+    /// </remarks>
+    internal async Task ReadPersistedClaims(IEnumerable<ConstraintValidationContext> contexts, ConstraintBatchClaims batchClaims)
+    {
+        if (storage is not IUniqueConstraintsBatchStorage batchStorage) return;
+
+        var claims = contexts
+            .Where(CanValidate)
+            .Select(context => (Context: context, Properties: definition.GetPropertiesAndValues(context).ToList()))
+            .Where(_ => _.Properties.Count > 0)
+            .Select(_ => (
+                ScopeKey: definition.Scope.BuildScopeKey(_.Context.EventSourceType, _.Context.EventStreamType, _.Context.EventStreamId),
+                Claim: new UniqueConstraintClaim(_.Context.EventSourceId, _.Properties.GetValue(definition.IgnoreCasing))))
+            .Distinct()
+            .GroupBy(_ => _.ScopeKey);
+
+        foreach (var scope in claims)
+        {
+            UniqueConstraintClaim[] inScope = [.. scope.Select(_ => _.Claim)];
+            var answers = await batchStorage.IsAllowedMany(inScope, definition, scope.Key);
+            for (var index = 0; index < inScope.Length; index++)
+            {
+                batchClaims.RecordPersistedAnswer(definition.Name, scope.Key, inScope[index].Value, inScope[index].EventSourceId, answers[index]);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Applies the index changes of several appended events in one storage operation.
+    /// </summary>
+    /// <param name="changes">The <see cref="UniqueConstraintIndexChange">changes</see>, in append order.</param>
+    /// <param name="cancellationToken">Cancellation of the write.</param>
+    /// <returns>The positions of the claims refused because another event source holds the value.</returns>
+    internal Task<IReadOnlyCollection<int>> ApplyIndexChanges(IReadOnlyList<UniqueConstraintIndexChange> changes, CancellationToken cancellationToken) =>
+        ((IUniqueConstraintsBatchStorage)storage).ApplyChanges(definition, changes, cancellationToken);
 }

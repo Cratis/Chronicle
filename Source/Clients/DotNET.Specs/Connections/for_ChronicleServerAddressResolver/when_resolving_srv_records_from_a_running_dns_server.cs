@@ -12,7 +12,7 @@ public class when_resolving_srv_records_from_a_running_dns_server(context ctx) :
     {
         public IReadOnlyList<ChronicleServerAddress> Result = default!;
 
-        public async Task InitializeAsync()
+        public async ValueTask InitializeAsync()
         {
             // The default resolver builds its own LookupClient targeting the srvNameServer, so this
             // exercises the full chronicle+srv resolution path end to end - exactly what a client does.
@@ -22,7 +22,7 @@ public class when_resolving_srv_records_from_a_running_dns_server(context ctx) :
             Result = await new ChronicleServerAddressResolver().Resolve(connectionString);
         }
 
-        public Task DisposeAsync() => Task.CompletedTask;
+        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
     }
 
     [Fact] void should_discover_both_cluster_nodes() => ctx.Result.Count.ShouldEqual(2);

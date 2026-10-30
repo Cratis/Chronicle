@@ -130,6 +130,12 @@ public class ChronicleConnectionString
     public bool SkipTlsValidation => _builder.SkipTlsValidation;
 
     /// <summary>
+    /// Gets whether the client connects without TLS.
+    /// </summary>
+    /// <remarks>See <see cref="ChronicleConnectionStringBuilder.DisableTls"/>.</remarks>
+    public bool DisableTls => _builder.DisableTls;
+
+    /// <summary>
     /// Gets whether to skip the server compatibility check on connect.
     /// </summary>
     /// <remarks>
@@ -137,6 +143,15 @@ public class ChronicleConnectionString
     /// it exists.
     /// </remarks>
     public bool SkipCompatibilityCheck => _builder.SkipCompatibilityCheck;
+
+    /// <summary>
+    /// Gets whether the keep-alive connection is skipped on connect.
+    /// </summary>
+    /// <remarks>
+    /// See <see cref="ChronicleConnectionStringBuilder.SkipKeepAlive"/> for what this does and why
+    /// it exists.
+    /// </remarks>
+    public bool SkipKeepAlive => _builder.SkipKeepAlive;
 
     /// <summary>
     /// Gets the path to the certificate file for TLS.

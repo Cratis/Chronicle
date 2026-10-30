@@ -38,4 +38,7 @@ internal static partial class ProjectionLogging
 
     [LoggerMessage(LogLevel.Warning, "Projecting for '{Identifier}' in namespace '{Namespace}' failed - discarding its projection engine so the next projection starts from a fresh one")]
     internal static partial void DiscardingFailedProjectionEngine(this ILogger<Projection> logger, ProjectionId identifier, EventStoreNamespaceName @namespace, Exception exception);
+
+    [LoggerMessage(LogLevel.Warning, "Projection '{Identifier}' in namespace '{Namespace}' changed its definition but its observer did not re-subscribe with the new event types in time - recommending a replay instead of replaying automatically")]
+    internal static partial void ObserverNeverResubscribed(this ILogger<Projection> logger, ProjectionId identifier, EventStoreNamespaceName @namespace);
 }

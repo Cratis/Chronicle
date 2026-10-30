@@ -31,5 +31,10 @@ public enum MaterializationPublicationResult
     /// <summary>
     /// ReceiptConflict.
     /// </summary>
-    ReceiptConflict = 4
+    ReceiptConflict = 4,
+
+    /// <summary>
+    /// The candidate is not retired with an open rollback window.
+    /// </summary>
+    CandidateNotRestorable = 5
 }

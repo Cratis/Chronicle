@@ -17,9 +17,12 @@ using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.UniqueConstraints;
 using Cratis.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 #if DEVELOPMENT
 using System.Collections.Frozen;
+using Cratis.Chronicle.Diagnostics;
 using Microsoft.Data.SqlClient;
 using Microsoft.Data.Sqlite;
 using Npgsql;
@@ -81,9 +84,12 @@ public partial class Database(IServiceProvider serviceProvider, IOptions<Chronic
     }.ToFrozenSet(StringComparer.OrdinalIgnoreCase);
 #endif
 
+    readonly Lazy<ILogger> _liveQueryLogger = new(() => (serviceProvider.GetService<ILoggerFactory>() ?? NullLoggerFactory.Instance).CreateLogger(typeof(LiveQuery).FullName!));
     readonly SqlConnectionResolution _resolution = SqlConnectionResolution.From(serviceProvider, options.Value.Storage);
     readonly DatabaseNameResolver _databaseNames = new(
-        SqlConnectionStrings.WithSchema(options.Value.Storage.ConnectionDetails, options.Value.Storage.Schema),
+        SqlConnectionStrings.WithPooling(
+            SqlConnectionStrings.WithSchema(options.Value.Storage.ConnectionDetails, options.Value.Storage.Schema),
+            options.Value.Storage.PostgreSqlPooling),
         SqlConnectionResolution.From(serviceProvider, options.Value.Storage).PrepareRawConnection);
 
     readonly System.Collections.Concurrent.ConcurrentDictionary<DatabaseMigrationLock, long> _migrationGenerations = new();
@@ -107,6 +113,11 @@ public partial class Database(IServiceProvider serviceProvider, IOptions<Chronic
     /// Gets whether runtime schema operations are read-only.
     /// </summary>
     internal bool VerifySchema => options.Value.Storage.SchemaMode == SchemaMode.Verify;
+
+    /// <summary>
+    /// Gets the logger for live-query polling diagnostics.
+    /// </summary>
+    internal ILogger LiveQueryLogger => _liveQueryLogger.Value;
 
     bool CanCreateSchema => options.Value.Storage.CreateIfMissing && !VerifySchema;
 
@@ -206,7 +217,7 @@ public partial class Database(IServiceProvider serviceProvider, IOptions<Chronic
 
         var schema = _resolution.SchemaFor(resolved);
         var target = new SqlTarget(
-            SqlConnectionStrings.WithSchema(connectionString, schema),
+            SqlConnectionStrings.WithPooling(SqlConnectionStrings.WithSchema(connectionString, schema), options.Value.Storage.PostgreSqlPooling),
             schema,
             _resolution.IsConfigured ? _resolution.RequestFor(identity, ConnectionPurpose.Runtime) : null);
         return OptionsFor(_jobsOptions, $"jobs:{eventStore}:{@namespace}", target);
@@ -275,6 +286,284 @@ public partial class Database(IServiceProvider serviceProvider, IOptions<Chronic
     /// <inheritdoc/>
     public async Task Wipe()
     {
+        var timings = new IntegrationTimings(GetType().FullName!, Environment.GetEnvironmentVariable("CHRONICLE_RUNTIME_MODE") ?? "unavailable", options.Value.Storage.Type);
+        try
+        {
+            await timings.Run("sql-wipe-total", WipeCore);
+        }
+        finally
+        {
+            timings.Complete();
+        }
+    }
+
+#endif
+
+    /// <summary>
+    /// Binds a namespace before it is published to consumers, without changing IDatabase.
+    /// </summary>
+    /// <param name="eventStore">The event store.</param>
+    /// <param name="namespace">The namespace.</param>
+    /// <returns>The binding operation.</returns>
+    internal async Task BindNamespace(EventStoreName eventStore, EventStoreNamespaceName @namespace)
+    {
+        var target = await Target(new(DatabaseKind.Namespace, eventStore.Value, @namespace.Value), ConnectionPurpose.Schema);
+        await using var context = new NamespaceDbContext(BuildOptions<NamespaceDbContext>(target));
+        await EnsureDatabaseExists(context, target);
+    }
+
+#if DEVELOPMENT
+    static string ExtractSqliteDataSource(string connectionString)
+    {
+        var builder = new DbConnectionStringBuilder { ConnectionString = connectionString };
+        if (builder.TryGetValue("Data Source", out var value) || builder.TryGetValue("Filename", out value))
+        {
+            return value?.ToString() ?? string.Empty;
+        }
+
+        return string.Empty;
+    }
+
+    static string PreservedNamesForSql() =>
+        string.Join(", ", _preservedTables.Select(t => $"'{t}'"));
+
+    static async Task DropAllSqliteTables(string filePath, bool isClusterFile = false)
+    {
+        if (!File.Exists(filePath))
+        {
+            return;
+        }
+
+        using var timing = IntegrationTimings.BeginCurrent("sql-wipe-target-sqlite");
+        timing?.Target();
+        timing?.Failure();
+        await using var conn = new SqliteConnection($"Data Source={filePath};Pooling=False");
+        try
+        {
+            await conn.OpenAsync();
+        }
+        catch (SqliteException)
+        {
+            // File is unreadable as a SQLite database — skip it; the next migration will
+            // re-create whatever schema it needs.
+            return;
+        }
+
+        // Schema and history must disappear together, even if a DROP fails halfway through.
+        await using var transaction = (SqliteTransaction)await conn.BeginTransactionAsync();
+        var tables = new List<string>();
+        await using (var listCmd = conn.CreateCommand())
+        {
+            listCmd.Transaction = transaction;
+            listCmd.CommandText = "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name = '__EFMigrationsHistory'";
+            await using var reader = await listCmd.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+            {
+                tables.Add(reader.GetString(0));
+            }
+        }
+
+        var keepFloor = false;
+        if (tables.Contains("GenerationFloor", StringComparer.Ordinal))
+        {
+            await using var floor = conn.CreateCommand();
+            floor.Transaction = transaction;
+            floor.CommandText = "SELECT COUNT(*) FROM GenerationFloor";
+            keepFloor = Convert.ToInt64(await floor.ExecuteScalarAsync(), System.Globalization.CultureInfo.InvariantCulture) > 0;
+        }
+
+        // The single-writer lease is cluster state held by the running kernel; deleting it makes the kernel fence itself.
+        // Keep the table and its migration-history row so the next migration does not try to create it again.
+        var keepLease = isClusterFile && tables.Contains(WellKnownTableNames.SingleWriterLeases, StringComparer.Ordinal);
+        if (keepLease && !keepFloor && tables.Contains("__EFMigrationsHistory", StringComparer.Ordinal))
+        {
+            await using var history = conn.CreateCommand();
+            history.Transaction = transaction;
+            history.CommandText = "DELETE FROM \"__EFMigrationsHistory\" WHERE \"MigrationId\" <> $lease";
+            history.Parameters.AddWithValue("$lease", SingleWriterLeaseMigrationId);
+            await history.ExecuteNonQueryAsync();
+        }
+
+        timing?.TablesObserved();
+        foreach (var table in tables.Where(_ =>
+            (!keepFloor || (_ != "GenerationFloor" && _ != "GenerationFloorHistory" && _ != "__EFMigrationsHistory"))
+            && (!keepLease || (_ != WellKnownTableNames.SingleWriterLeases && _ != "__EFMigrationsHistory"))))
+        {
+            await using var dropCmd = conn.CreateCommand();
+            dropCmd.Transaction = transaction;
+#pragma warning disable CA2100 // Table names come from sqlite_master in this same file — there is no user input.
+            dropCmd.CommandText = $"{(keepFloor ? "DELETE FROM" : "DROP TABLE IF EXISTS")} \"{table.Replace("\"", "\"\"", StringComparison.Ordinal)}\"";
+#pragma warning restore CA2100
+            await dropCmd.ExecuteNonQueryAsync();
+            timing?.Table();
+        }
+
+        await transaction.CommitAsync();
+        timing?.Success();
+    }
+
+    static async Task WipeAllPostgreSqlDatabases(string clusterConnectionString, IEnumerable<string> boundDatabases)
+    {
+        var builder = new NpgsqlConnectionStringBuilder(clusterConnectionString);
+        var clusterDb = builder.Database;
+        if (string.IsNullOrEmpty(clusterDb))
+        {
+            return;
+        }
+
+        // Switch to the maintenance database so we can enumerate sibling databases that share
+        // the cluster prefix (the per-event-store and per-namespace databases created at runtime).
+        builder.Database = "postgres";
+        await using var maintenanceConn = new NpgsqlConnection(builder.ConnectionString);
+        try
+        {
+            await maintenanceConn.OpenAsync();
+        }
+        catch (NpgsqlException)
+        {
+            // Server unreachable on the first wipe — nothing to do.
+            return;
+        }
+
+        var databasesToWipe = new HashSet<string>(boundDatabases, StringComparer.Ordinal) { clusterDb };
+#pragma warning disable CA2100
+        await using (var listCmd = new NpgsqlCommand("SELECT datname FROM pg_database WHERE datname LIKE @prefix || '+%' AND datname <> @cluster", maintenanceConn))
+#pragma warning restore CA2100
+        {
+            listCmd.Parameters.AddWithValue("prefix", clusterDb);
+            listCmd.Parameters.AddWithValue("cluster", clusterDb);
+            await using var reader = await listCmd.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+            {
+                databasesToWipe.Add(reader.GetString(0));
+            }
+        }
+
+        await maintenanceConn.CloseAsync();
+
+        foreach (var database in databasesToWipe)
+        {
+            builder.Database = database;
+            await TruncateAllPostgreSqlTables(builder.ConnectionString);
+        }
+    }
+
+    static async Task TruncateAllPostgreSqlTables(string connectionString)
+    {
+        using var timing = IntegrationTimings.BeginCurrent("sql-wipe-target-postgresql");
+        timing?.Target();
+        timing?.Failure();
+        await using var conn = new NpgsqlConnection(connectionString);
+        try
+        {
+            await conn.OpenAsync();
+        }
+        catch (NpgsqlException)
+        {
+            // Database may not exist yet on the first wipe — nothing to truncate.
+            return;
+        }
+
+        var preserved = PreservedNamesForSql();
+        var sql =
+            "DO $$ DECLARE r RECORD; " +
+            "BEGIN " +
+            "    FOR r IN (SELECT tablename FROM pg_tables " +
+            $"              WHERE schemaname = 'public' AND tablename NOT IN ({preserved})) LOOP " +
+            "        EXECUTE 'TRUNCATE TABLE \"' || r.tablename || '\" CASCADE'; " +
+            "    END LOOP; " +
+            "END $$;";
+#pragma warning disable CA2100 // Preserved-table names are compile-time constants from WellKnownTableNames.
+        await using var cmd = new NpgsqlCommand(sql, conn);
+#pragma warning restore CA2100
+        await cmd.ExecuteNonQueryAsync();
+        timing?.Success();
+    }
+
+    static async Task WipeAllMsSqlDatabases(string clusterConnectionString, IEnumerable<string> boundDatabases)
+    {
+        var builder = new SqlConnectionStringBuilder(clusterConnectionString);
+        var clusterDb = builder.InitialCatalog;
+        if (string.IsNullOrEmpty(clusterDb))
+        {
+            return;
+        }
+
+        builder.InitialCatalog = "master";
+        await using var maintenanceConn = new SqlConnection(builder.ConnectionString);
+        try
+        {
+            await maintenanceConn.OpenAsync();
+        }
+        catch (SqlException)
+        {
+            return;
+        }
+
+        var databasesToWipe = new HashSet<string>(boundDatabases, StringComparer.Ordinal) { clusterDb };
+#pragma warning disable CA2100
+        await using (var listCmd = new SqlCommand("SELECT name FROM sys.databases WHERE name LIKE @prefix + '+%' AND name <> @cluster", maintenanceConn))
+#pragma warning restore CA2100
+        {
+            listCmd.Parameters.AddWithValue("@prefix", clusterDb);
+            listCmd.Parameters.AddWithValue("@cluster", clusterDb);
+            await using var reader = await listCmd.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+            {
+                databasesToWipe.Add(reader.GetString(0));
+            }
+        }
+
+        await maintenanceConn.CloseAsync();
+
+        foreach (var database in databasesToWipe)
+        {
+            builder.InitialCatalog = database;
+            await TruncateAllMsSqlTables(builder.ConnectionString);
+        }
+    }
+
+    static async Task TruncateAllMsSqlTables(string connectionString)
+    {
+        using var timing = IntegrationTimings.BeginCurrent("sql-wipe-target-mssql");
+        timing?.Target();
+        timing?.Failure();
+        await using var conn = new SqlConnection(connectionString);
+        try
+        {
+            await conn.OpenAsync();
+        }
+        catch (SqlException)
+        {
+            return;
+        }
+
+        var preserved = PreservedNamesForSql();
+        var sql =
+            "DECLARE @sql NVARCHAR(MAX) = N''; " +
+            "SELECT @sql += N'ALTER TABLE [' + s.name + N'].[' + t.name + N'] NOCHECK CONSTRAINT ALL;' + CHAR(13) " +
+            "    FROM sys.tables t INNER JOIN sys.schemas s ON t.schema_id = s.schema_id " +
+            $"    WHERE t.name NOT IN ({preserved}); " +
+            "SELECT @sql += N'DELETE FROM [' + s.name + N'].[' + t.name + N'];' + CHAR(13) " +
+            "    FROM sys.tables t INNER JOIN sys.schemas s ON t.schema_id = s.schema_id " +
+            $"    WHERE t.name NOT IN ({preserved}); " +
+            "SELECT @sql += N'ALTER TABLE [' + s.name + N'].[' + t.name + N'] WITH CHECK CHECK CONSTRAINT ALL;' + CHAR(13) " +
+            "    FROM sys.tables t INNER JOIN sys.schemas s ON t.schema_id = s.schema_id " +
+            $"    WHERE t.name NOT IN ({preserved}); " +
+            "EXEC sp_executesql @sql;";
+#pragma warning disable CA2100 // Preserved-table names are compile-time constants from WellKnownTableNames.
+        await using var cmd = new SqlCommand(sql, conn);
+#pragma warning restore CA2100
+        await cmd.ExecuteNonQueryAsync();
+        timing?.Success();
+    }
+#endif
+
+    static bool IsAlreadyExistsException(Exception? ex) => SchemaObjectAlreadyExists.Is(ex);
+
+#if DEVELOPMENT
+    async Task WipeCore()
+    {
         if (options.Value.Clustering.Type == ClusteringType.Sql)
         {
             throw new SqlClusteringPreventsKernelStateReset();
@@ -340,257 +629,6 @@ public partial class Database(IServiceProvider serviceProvider, IOptions<Chronic
         serviceProvider.GetService<Cratis.Orleans.Storage.IJobsStorage>()?.Reset();
     }
 
-#endif
-
-    /// <summary>
-    /// Binds a namespace before it is published to consumers, without changing IDatabase.
-    /// </summary>
-    /// <param name="eventStore">The event store.</param>
-    /// <param name="namespace">The namespace.</param>
-    /// <returns>The binding operation.</returns>
-    internal async Task BindNamespace(EventStoreName eventStore, EventStoreNamespaceName @namespace)
-    {
-        var target = await Target(new(DatabaseKind.Namespace, eventStore.Value, @namespace.Value), ConnectionPurpose.Schema);
-        await using var context = new NamespaceDbContext(BuildOptions<NamespaceDbContext>(target));
-        await EnsureDatabaseExists(context, target);
-    }
-
-#if DEVELOPMENT
-    static string ExtractSqliteDataSource(string connectionString)
-    {
-        var builder = new DbConnectionStringBuilder { ConnectionString = connectionString };
-        if (builder.TryGetValue("Data Source", out var value) || builder.TryGetValue("Filename", out value))
-        {
-            return value?.ToString() ?? string.Empty;
-        }
-
-        return string.Empty;
-    }
-
-    static string PreservedNamesForSql() =>
-        string.Join(", ", _preservedTables.Select(t => $"'{t}'"));
-
-    static async Task DropAllSqliteTables(string filePath, bool isClusterFile = false)
-    {
-        if (!File.Exists(filePath))
-        {
-            return;
-        }
-
-        await using var conn = new SqliteConnection($"Data Source={filePath};Pooling=False");
-        try
-        {
-            await conn.OpenAsync();
-        }
-        catch (SqliteException)
-        {
-            // File is unreadable as a SQLite database — skip it; the next migration will
-            // re-create whatever schema it needs.
-            return;
-        }
-
-        // Schema and history must disappear together, even if a DROP fails halfway through.
-        await using var transaction = (SqliteTransaction)await conn.BeginTransactionAsync();
-        var tables = new List<string>();
-        await using (var listCmd = conn.CreateCommand())
-        {
-            listCmd.Transaction = transaction;
-            listCmd.CommandText = "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name = '__EFMigrationsHistory'";
-            await using var reader = await listCmd.ExecuteReaderAsync();
-            while (await reader.ReadAsync())
-            {
-                tables.Add(reader.GetString(0));
-            }
-        }
-
-        var keepFloor = false;
-        if (tables.Contains("GenerationFloor", StringComparer.Ordinal))
-        {
-            await using var floor = conn.CreateCommand();
-            floor.Transaction = transaction;
-            floor.CommandText = "SELECT COUNT(*) FROM GenerationFloor";
-            keepFloor = Convert.ToInt64(await floor.ExecuteScalarAsync(), System.Globalization.CultureInfo.InvariantCulture) > 0;
-        }
-
-        // The single-writer lease is cluster state held by the running kernel; deleting it makes the kernel fence itself.
-        // Keep the table and its migration-history row so the next migration does not try to create it again.
-        var keepLease = isClusterFile && tables.Contains(WellKnownTableNames.SingleWriterLeases, StringComparer.Ordinal);
-        if (keepLease && !keepFloor && tables.Contains("__EFMigrationsHistory", StringComparer.Ordinal))
-        {
-            await using var history = conn.CreateCommand();
-            history.Transaction = transaction;
-            history.CommandText = "DELETE FROM \"__EFMigrationsHistory\" WHERE \"MigrationId\" <> $lease";
-            history.Parameters.AddWithValue("$lease", SingleWriterLeaseMigrationId);
-            await history.ExecuteNonQueryAsync();
-        }
-
-        foreach (var table in tables.Where(_ =>
-            (!keepFloor || (_ != "GenerationFloor" && _ != "GenerationFloorHistory" && _ != "__EFMigrationsHistory"))
-            && (!keepLease || (_ != WellKnownTableNames.SingleWriterLeases && _ != "__EFMigrationsHistory"))))
-        {
-            await using var dropCmd = conn.CreateCommand();
-            dropCmd.Transaction = transaction;
-#pragma warning disable CA2100 // Table names come from sqlite_master in this same file — there is no user input.
-            dropCmd.CommandText = $"{(keepFloor ? "DELETE FROM" : "DROP TABLE IF EXISTS")} \"{table.Replace("\"", "\"\"", StringComparison.Ordinal)}\"";
-#pragma warning restore CA2100
-            await dropCmd.ExecuteNonQueryAsync();
-        }
-
-        await transaction.CommitAsync();
-    }
-
-    static async Task WipeAllPostgreSqlDatabases(string clusterConnectionString, IEnumerable<string> boundDatabases)
-    {
-        var builder = new NpgsqlConnectionStringBuilder(clusterConnectionString);
-        var clusterDb = builder.Database;
-        if (string.IsNullOrEmpty(clusterDb))
-        {
-            return;
-        }
-
-        // Switch to the maintenance database so we can enumerate sibling databases that share
-        // the cluster prefix (the per-event-store and per-namespace databases created at runtime).
-        builder.Database = "postgres";
-        await using var maintenanceConn = new NpgsqlConnection(builder.ConnectionString);
-        try
-        {
-            await maintenanceConn.OpenAsync();
-        }
-        catch (NpgsqlException)
-        {
-            // Server unreachable on the first wipe — nothing to do.
-            return;
-        }
-
-        var databasesToWipe = new HashSet<string>(boundDatabases, StringComparer.Ordinal) { clusterDb };
-#pragma warning disable CA2100
-        await using (var listCmd = new NpgsqlCommand("SELECT datname FROM pg_database WHERE datname LIKE @prefix || '+%' AND datname <> @cluster", maintenanceConn))
-#pragma warning restore CA2100
-        {
-            listCmd.Parameters.AddWithValue("prefix", clusterDb);
-            listCmd.Parameters.AddWithValue("cluster", clusterDb);
-            await using var reader = await listCmd.ExecuteReaderAsync();
-            while (await reader.ReadAsync())
-            {
-                databasesToWipe.Add(reader.GetString(0));
-            }
-        }
-
-        await maintenanceConn.CloseAsync();
-
-        foreach (var database in databasesToWipe)
-        {
-            builder.Database = database;
-            await TruncateAllPostgreSqlTables(builder.ConnectionString);
-        }
-    }
-
-    static async Task TruncateAllPostgreSqlTables(string connectionString)
-    {
-        await using var conn = new NpgsqlConnection(connectionString);
-        try
-        {
-            await conn.OpenAsync();
-        }
-        catch (NpgsqlException)
-        {
-            // Database may not exist yet on the first wipe — nothing to truncate.
-            return;
-        }
-
-        var preserved = PreservedNamesForSql();
-        var sql =
-            "DO $$ DECLARE r RECORD; " +
-            "BEGIN " +
-            "    FOR r IN (SELECT tablename FROM pg_tables " +
-            $"              WHERE schemaname = 'public' AND tablename NOT IN ({preserved})) LOOP " +
-            "        EXECUTE 'TRUNCATE TABLE \"' || r.tablename || '\" CASCADE'; " +
-            "    END LOOP; " +
-            "END $$;";
-#pragma warning disable CA2100 // Preserved-table names are compile-time constants from WellKnownTableNames.
-        await using var cmd = new NpgsqlCommand(sql, conn);
-#pragma warning restore CA2100
-        await cmd.ExecuteNonQueryAsync();
-    }
-
-    static async Task WipeAllMsSqlDatabases(string clusterConnectionString, IEnumerable<string> boundDatabases)
-    {
-        var builder = new SqlConnectionStringBuilder(clusterConnectionString);
-        var clusterDb = builder.InitialCatalog;
-        if (string.IsNullOrEmpty(clusterDb))
-        {
-            return;
-        }
-
-        builder.InitialCatalog = "master";
-        await using var maintenanceConn = new SqlConnection(builder.ConnectionString);
-        try
-        {
-            await maintenanceConn.OpenAsync();
-        }
-        catch (SqlException)
-        {
-            return;
-        }
-
-        var databasesToWipe = new HashSet<string>(boundDatabases, StringComparer.Ordinal) { clusterDb };
-#pragma warning disable CA2100
-        await using (var listCmd = new SqlCommand("SELECT name FROM sys.databases WHERE name LIKE @prefix + '+%' AND name <> @cluster", maintenanceConn))
-#pragma warning restore CA2100
-        {
-            listCmd.Parameters.AddWithValue("@prefix", clusterDb);
-            listCmd.Parameters.AddWithValue("@cluster", clusterDb);
-            await using var reader = await listCmd.ExecuteReaderAsync();
-            while (await reader.ReadAsync())
-            {
-                databasesToWipe.Add(reader.GetString(0));
-            }
-        }
-
-        await maintenanceConn.CloseAsync();
-
-        foreach (var database in databasesToWipe)
-        {
-            builder.InitialCatalog = database;
-            await TruncateAllMsSqlTables(builder.ConnectionString);
-        }
-    }
-
-    static async Task TruncateAllMsSqlTables(string connectionString)
-    {
-        await using var conn = new SqlConnection(connectionString);
-        try
-        {
-            await conn.OpenAsync();
-        }
-        catch (SqlException)
-        {
-            return;
-        }
-
-        var preserved = PreservedNamesForSql();
-        var sql =
-            "DECLARE @sql NVARCHAR(MAX) = N''; " +
-            "SELECT @sql += N'ALTER TABLE [' + s.name + N'].[' + t.name + N'] NOCHECK CONSTRAINT ALL;' + CHAR(13) " +
-            "    FROM sys.tables t INNER JOIN sys.schemas s ON t.schema_id = s.schema_id " +
-            $"    WHERE t.name NOT IN ({preserved}); " +
-            "SELECT @sql += N'DELETE FROM [' + s.name + N'].[' + t.name + N'];' + CHAR(13) " +
-            "    FROM sys.tables t INNER JOIN sys.schemas s ON t.schema_id = s.schema_id " +
-            $"    WHERE t.name NOT IN ({preserved}); " +
-            "SELECT @sql += N'ALTER TABLE [' + s.name + N'].[' + t.name + N'] WITH CHECK CHECK CONSTRAINT ALL;' + CHAR(13) " +
-            "    FROM sys.tables t INNER JOIN sys.schemas s ON t.schema_id = s.schema_id " +
-            $"    WHERE t.name NOT IN ({preserved}); " +
-            "EXEC sp_executesql @sql;";
-#pragma warning disable CA2100 // Preserved-table names are compile-time constants from WellKnownTableNames.
-        await using var cmd = new SqlCommand(sql, conn);
-#pragma warning restore CA2100
-        await cmd.ExecuteNonQueryAsync();
-    }
-#endif
-
-    static bool IsAlreadyExistsException(Exception? ex) => SchemaObjectAlreadyExists.Is(ex);
-
-#if DEVELOPMENT
     async Task<string[]> BoundDatabases()
     {
         await using var scope = await Cluster();

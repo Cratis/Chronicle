@@ -21,6 +21,7 @@ using EventType = Cratis.Chronicle.Events.EventType;
 
 namespace Cratis.Chronicle.ReadModels.for_DecisionReads;
 
+[PerFactSpecificationLifecycle]
 public class when_reading_reducers : given.a_decision_reader
 {
     static readonly AsyncLocal<Action?> _callback = new();
@@ -106,6 +107,24 @@ public class when_reading_reducers : given.a_decision_reader
         Context = new() { EventSourceId = "source", EventType = new() { Id = "added", Generation = generation }, SequenceNumber = position },
         Content = JsonSerializer.Serialize(new { Amount = amount })
     };
+
+    [Fact]
+    public async Task should_carry_the_mutation_epoch_of_the_unfiltered_boundary_on_the_scope()
+    {
+        _sequences.TailSequenceNumber(Arg.Any<TailSequenceNumberRequest>(), Arg.Any<CallContext>())
+            .Returns(call => QueryResult<EventSequenceTailResponse>.Success(Guid.NewGuid(),
+                new() { SequenceNumber = call.Arg<TailSequenceNumberRequest>().EventSourceId is null ? _boundary : _probe, MutationEpoch = call.Arg<TailSequenceNumberRequest>().IncludeMutationEpoch ? 6UL : null }));
+        var read = await _reader.GetDetached<Counter>("source");
+        ((IDecisionRead)read).Scope.MutationEpoch.ShouldEqual(6UL);
+        await _sequences.Received(1).TailSequenceNumber(Arg.Is<TailSequenceNumberRequest>(request => request.IncludeMutationEpoch), Arg.Any<CallContext>());
+    }
+
+    [Fact]
+    public async Task should_not_carry_an_epoch_from_a_kernel_that_reports_none()
+    {
+        var read = await _reader.GetDetached<Counter>("source");
+        ((IDecisionRead)read).Scope.MutationEpoch.ShouldBeNull();
+    }
 
     [Fact]
     public async Task should_replay_all_history_from_null_not_the_sink_and_enroll_before_return()

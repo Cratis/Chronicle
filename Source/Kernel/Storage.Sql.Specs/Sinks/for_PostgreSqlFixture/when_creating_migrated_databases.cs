@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Arc.EntityFrameworkCore.Concepts;
 using Cratis.Chronicle.Storage.Sql.EventStores;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces;
 using Microsoft.EntityFrameworkCore;
@@ -49,8 +48,7 @@ public class when_creating_migrated_databases(PostgreSqlFixture fixture) : Speci
 
         var eventStoreDatabase = await fixture.CreateMigratedDatabase<EventStoreDbContext>();
         _databases.Add(eventStoreDatabase);
-        await using var eventStore = new EventStoreDbContext(new DbContextOptionsBuilder<EventStoreDbContext>()
-            .UseNpgsql(eventStoreDatabase).AddConceptAsSupport().WithoutServiceProviderCaching().Options);
+        await using var eventStore = new EventStoreDbContext(SpecDbContextOptions.Kernel<EventStoreDbContext>(eventStoreDatabase));
         _eventStoreMigrations = (await eventStore.Database.GetAppliedMigrationsAsync()).ToArray();
         _eventStoreHasPendingMigrations = (await eventStore.Database.GetPendingMigrationsAsync()).Any();
     }
@@ -72,6 +70,5 @@ public class when_creating_migrated_databases(PostgreSqlFixture fixture) : Speci
         }
     }
 
-    static NamespaceDbContext NamespaceContext(string connectionString) => new(new DbContextOptionsBuilder<NamespaceDbContext>()
-        .UseNpgsql(connectionString).AddConceptAsSupport().WithoutServiceProviderCaching().Options);
+    static NamespaceDbContext NamespaceContext(string connectionString) => new(SpecDbContextOptions.Kernel<NamespaceDbContext>(connectionString));
 }

@@ -54,6 +54,7 @@ public class when_serializing_an_instance_with_a_composite_key : Specification
     void Destroy() => _harness.Dispose();
 
     [Fact] void should_be_readable_by_the_client() => _error.ShouldBeNull();
+    [Fact] void should_return_the_key() => _readModel!.Id.ShouldEqual(new CompositeKey("6f1c2c43-6c8c-4b3c-9d1c-3a7b4f0e2a11", 0UL));
     [Fact] void should_keep_the_projected_properties() => _readModel!.Name.ShouldEqual("composite");
 
     record CompositeKey(string First, ulong Second);

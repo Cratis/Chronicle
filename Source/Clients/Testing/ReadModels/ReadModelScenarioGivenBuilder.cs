@@ -32,4 +32,12 @@ public class ReadModelScenarioGivenBuilder<TReadModel>(ReadModelScenario<TReadMo
     /// <returns>A <see cref="ReadModelSourceGivenBuilder{TReadModel}"/> to continue the fluent chain.</returns>
     public ReadModelSourceGivenBuilder<TReadModel> ForEventSourceId(EventSourceId eventSourceId) =>
         new(scenario, eventSourceId);
+
+    /// <summary>
+    /// Selects a root composite seed by its exact mapped, canonical part names.
+    /// </summary>
+    /// <param name="keyParts">The mapped scalar parts, using ordinal case-sensitive names.</param>
+    /// <returns>A builder for registering the starting read model.</returns>
+    public ReadModelKeyGivenBuilder<TReadModel> ForKey(IReadOnlyDictionary<string, object?> keyParts) =>
+        new(scenario, keyParts);
 }

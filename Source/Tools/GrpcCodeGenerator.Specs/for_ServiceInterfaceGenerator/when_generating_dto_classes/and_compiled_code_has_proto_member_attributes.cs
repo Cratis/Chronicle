@@ -20,8 +20,10 @@ public class and_compiled_code_has_proto_member_attributes : given.a_generated_s
     {
         var code = _generator.Generate(_serviceDefinition, _outputDir);
 
-        // Force ProtoBuf assemblies into the AppDomain so they appear in the loaded assembly list
-        // used to build Roslyn MetadataReferences below — they may not be loaded yet at this point.
+        // Force ProtoBuf and Contracts assemblies into the AppDomain so they appear in the loaded assembly list
+        // used to build Roslyn MetadataReferences below — they may not be loaded yet at this point, depending on
+        // which specs ran before this one in the process.
+        _ = typeof(Cratis.Chronicle.Contracts.Commands.CommandResult).Assembly;
         _ = typeof(ProtoBuf.ProtoContractAttribute).Assembly;
         _ = typeof(ProtoBuf.Grpc.CallContext).Assembly;
         _ = typeof(ProtoBuf.Grpc.Configuration.ServiceAttribute).Assembly;

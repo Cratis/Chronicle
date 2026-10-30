@@ -25,7 +25,7 @@ public class when_replaying_a_hierarchy_built_from_many_event_sources(context _c
         public IReadOnlyList<HierarchyModule?> AfterCatchUp { get; private set; } = [];
         public IReadOnlyList<HierarchyModule?> AfterReplay { get; private set; } = [];
 
-        public async Task InitializeAsync()
+        public async ValueTask InitializeAsync()
         {
             var eventStore = fixture.ClientEventStore;
             var projectionId = eventStore.Projections.GetProjectionIdForModel<HierarchyModule>();
@@ -43,7 +43,7 @@ public class when_replaying_a_hierarchy_built_from_many_event_sources(context _c
             AfterReplay = await ReadAll(eventStore, modules);
         }
 
-        public Task DisposeAsync() => Task.CompletedTask;
+        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
 
         static async Task<IReadOnlyList<HierarchyModule?>> ReadAll(IEventStore eventStore, IEnumerable<Guid> modules)
         {

@@ -116,7 +116,11 @@ internal static class ReadProtectionMerge
         var exact = Distinct(items.Where(_ => _.Kind is ReadProtectionContributionKind.Explicit or ReadProtectionContributionKind.Aggregate));
         ValidateExact(label, exact, reads.Length != 0);
         if (reads.Length == 0) return (exact.Count != 0 ? exact.Select(_ => _.Scope) : legacy).Select(ReadProtectionPredicate.Normalize);
+        return WithEpoch(ResolveReads(label, items, exact, reads), EarliestReadEpoch(reads));
+    }
 
+    static List<ConcurrencyScope> ResolveReads(EventSourceId label, IReadOnlyList<ReadProtectionContribution> items, IReadOnlyList<ReadProtectionContribution> exact, ReadProtectionContribution[] reads)
+    {
         var aggregate = items.FirstOrDefault(_ => _.Kind == ReadProtectionContributionKind.Aggregate);
         if (aggregate is not null) throw new ReadAndAggregateOnSameSource(label, reads[0].Description, aggregate.Description);
         if (items.Any(_ => _.Kind == ReadProtectionContributionKind.CustomRouting)) throw new ReadProtectionRequiresTheDefaultConcurrencyStrategy(label);
@@ -148,7 +152,8 @@ internal static class ReadProtectionMerge
         var exact = Distinct(items.Where(_ => _.Kind is ReadProtectionContributionKind.Explicit or ReadProtectionContributionKind.Aggregate));
         if (exact.Count != 0)
         {
-            foreach (var scope in exact.Select(_ => _.Scope)) AddCondition(label, scope, items, scopes, conditions);
+            var readEpoch = EarliestReadEpoch(items.Where(_ => _.Kind == ReadProtectionContributionKind.ProtectedRead));
+            foreach (var scope in WithEpoch(exact.Select(_ => _.Scope), readEpoch)) AddCondition(label, scope, items, scopes, conditions);
             return;
         }
 
@@ -161,7 +166,8 @@ internal static class ReadProtectionMerge
         var routing = items.Where(_ => _.Kind == ReadProtectionContributionKind.DeclaredRouting && _.Scope.EventSourceId is not null).ToArray();
         var readScope = Coalesce(reads.Select(_ => _.Scope)).Aggregate((first, second) => ReadProtectionPredicate.Merge(first, second) with
         {
-            SequenceNumber = ReadProtectionPredicate.Earliest(first.SequenceNumber, second.SequenceNumber)
+            SequenceNumber = ReadProtectionPredicate.Earliest(first.SequenceNumber, second.SequenceNumber),
+            MutationEpoch = ReadProtectionPredicate.EarliestEpoch(first.MutationEpoch, second.MutationEpoch)
         });
         var guard = routing.Select(_ => _.Scope).Aggregate(readScope, ReadProtectionPredicate.Merge);
         Describe(label, guard, [.. reads, .. routing], scopes, conditions);
@@ -178,14 +184,37 @@ internal static class ReadProtectionMerge
         }
     }
 
+    static ulong? EarliestReadEpoch(IEnumerable<ReadProtectionContribution> reads) =>
+        reads.Aggregate((ulong?)null, (epoch, read) => ReadProtectionPredicate.EarliestEpoch(epoch, read.Scope.MutationEpoch));
+
+    /// <summary>
+    /// Carries the read's mutation epoch over to every scope returned for the label. An explicit or aggregate scope that
+    /// covers a protected read replaces the read's own scope; without this the covering scope would silently lose the guard.
+    /// </summary>
+    /// <param name="scopes">The scopes resolved for the label.</param>
+    /// <param name="epoch">The earliest mutation epoch among the label's protected reads, if any.</param>
+    /// <returns>The scopes carrying the earliest epoch.</returns>
+    static IEnumerable<ConcurrencyScope> WithEpoch(IEnumerable<ConcurrencyScope> scopes, ulong? epoch) =>
+        epoch is null ? scopes : scopes.Select(_ => _ with { MutationEpoch = ReadProtectionPredicate.EarliestEpoch(_.MutationEpoch, epoch) });
+
     static List<ConcurrencyScope> Coalesce(IEnumerable<ConcurrencyScope> scopes)
     {
         var result = new List<ConcurrencyScope>();
         foreach (var scope in scopes)
         {
             var index = result.FindIndex(_ => DefinitionConcurrencyScopeResolver.SamePredicate(_, scope));
-            if (index < 0) result.Add(scope);
-            else result[index] = result[index] with { SequenceNumber = ReadProtectionPredicate.Earliest(result[index].SequenceNumber, scope.SequenceNumber) };
+            if (index < 0)
+            {
+                result.Add(scope);
+            }
+            else
+            {
+                result[index] = result[index] with
+                {
+                    SequenceNumber = ReadProtectionPredicate.Earliest(result[index].SequenceNumber, scope.SequenceNumber),
+                    MutationEpoch = ReadProtectionPredicate.EarliestEpoch(result[index].MutationEpoch, scope.MutationEpoch)
+                };
+            }
         }
         return result;
     }

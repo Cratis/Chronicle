@@ -32,7 +32,7 @@ public class and_marker_facets_conflict : given.a_catalog
         ];
     }
 
-    void Because() => _errors = _declarations.Select(_ => Catch.Exception(() => _.CreateSnapshot().ApplyTo(_discovered))).ToArray();
+    void Because() => _errors = _declarations.Select(_ => Catch.Exception(() => _.CreateSnapshot().ApplyTo(_discovered))!).ToArray();
 
     [Fact] void should_reject_marker_identity_conflicts() => _errors[0].ShouldBeOfExactType<ConflictingArtifactDeclaration>();
     [Fact] void should_reject_marker_generation_conflicts() => _errors[1].ShouldBeOfExactType<ConflictingArtifactDeclaration>();

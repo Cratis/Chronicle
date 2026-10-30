@@ -27,12 +27,12 @@ export const ClosedStreams = () => {
                 queryArguments={queryArgs}
                 emptyMessage={labels.empty}>
                 <DataPage.Columns>
-                    <Column field='eventSourceId' header={labels.columns.eventSourceId} />
-                    <Column field='eventSourceType' header={labels.columns.eventSourceType} />
+                    <Column<ClosedStream> field='eventSourceId' header={labels.columns.eventSourceId} body={item => item.eventSourceId ?? <span title={labels.unspecifiedDimension}>{labels.anyEventSource}</span>} />
+                    <Column<ClosedStream> field='eventSourceType' header={labels.columns.eventSourceType} body={item => item.eventSourceType ?? <span title={labels.unspecifiedDimension}>{labels.anyEventSourceType}</span>} />
                     <Column field='eventStreamType' header={labels.columns.eventStreamType} />
                     <Column field='eventStreamId' header={labels.columns.eventStreamId} />
                     <Column<ClosedStream> field='origin' header={labels.columns.origin} body={item => item.origin === ClosedStreamOrigin.completeStream ? labels.origins.manual : labels.origins.event} />
-                    <Column field='closedBy' header={labels.columns.closedBy} />
+                    <Column<ClosedStream> field='closedBy' header={labels.columns.closedBy} body={item => item.closedBy ?? (item.origin === ClosedStreamOrigin.completeStream ? labels.closedManually : labels.noClosingConstraint)} />
                     <Column<ClosedStream> field='sequenceNumber' header={labels.columns.sequenceNumber} body={item => item.sequenceNumber.toString()} />
                     <Column<ClosedStream> field='closedAt' header={labels.columns.closedAt} body={item => item.closedAt?.toLocaleString() ?? ''} />
                 </DataPage.Columns>

@@ -1,8 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Xunit.Abstractions;
-
 namespace Cratis.Chronicle.ReadModels.for_ReadModelsCompliance.when_checking_invariants;
 
 public class and_preserving_compatibility(ITestOutputHelper output)

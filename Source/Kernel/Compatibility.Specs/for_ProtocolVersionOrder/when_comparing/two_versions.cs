@@ -33,4 +33,10 @@ public class two_versions : Specification
     [Fact]
     void should_treat_an_unparsable_component_as_zero() =>
         ProtocolVersionOrder.Compare("abc.def.ghi", "1.0.0").ShouldBeLessThan(0);
+
+    [Fact] void should_order_a_prerelease_below_a_release_with_the_same_core() => ProtocolVersionOrder.Compare("19.110.1-beta.3", "19.110.1").ShouldBeLessThan(0);
+    [Fact] void should_compare_prerelease_cores_numerically() => ProtocolVersionOrder.Compare("19.110.1-beta.3", "19.110.0").ShouldBeGreaterThan(0);
+    [Fact] void should_ignore_build_metadata() => ProtocolVersionOrder.Compare("19.110.1+abc", "19.110.1").ShouldEqual(0);
+    [Fact] void should_not_order_prerelease_identifiers() => ProtocolVersionOrder.Compare("19.110.1-beta.3", "19.110.1-alpha.1").ShouldEqual(0);
+    [Fact] void should_ignore_a_hyphen_in_build_metadata() => ProtocolVersionOrder.Compare("19.110.1+abc-def", "19.110.1").ShouldEqual(0);
 }

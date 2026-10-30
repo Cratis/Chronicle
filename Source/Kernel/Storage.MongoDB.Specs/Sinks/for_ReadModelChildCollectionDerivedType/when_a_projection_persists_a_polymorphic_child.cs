@@ -36,7 +36,7 @@ public class when_a_projection_persists_a_polymorphic_child(when_a_projection_pe
 
         public BsonDocument? StoredChild { get; private set; }
 
-        public async Task InitializeAsync()
+        public async ValueTask InitializeAsync()
         {
             var schema = await JsonSchema.FromJsonAsync(
                 """
@@ -110,11 +110,18 @@ public class when_a_projection_persists_a_polymorphic_child(when_a_projection_pe
             StoredChild = storedDocument["actors"].AsBsonArray[0].AsBsonDocument;
         }
 
-        public async Task DisposeAsync()
+        public async ValueTask DisposeAsync()
         {
-            if (_databaseName is not null)
+            try
             {
-                await _client.DropDatabaseAsync(_databaseName);
+                if (_databaseName is not null)
+                {
+                    await _client.DropDatabaseAsync(_databaseName);
+                }
+            }
+            finally
+            {
+                _client?.Dispose();
             }
         }
     }

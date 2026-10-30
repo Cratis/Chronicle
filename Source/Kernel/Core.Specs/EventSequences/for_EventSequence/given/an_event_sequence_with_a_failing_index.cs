@@ -23,6 +23,16 @@ public class an_event_sequence_with_a_failing_index : an_event_sequence
         await _eventSequence.RefreshConstraints();
     }
 
+    protected void UseDeterministicRetryClock()
+    {
+        var clock = new RepairClock();
+        _eventSequence.ConstraintIndexTimeProvider = clock;
+        clock.TimerCreated = due =>
+        {
+            if (due.TotalMilliseconds is 100 or 400) clock.Advance(due);
+        };
+    }
+
     protected class FailingValidator(IConstraintDefinition definition, Func<EventSequenceNumber, Task> update) : IConstraintValidator, IHaveUpdateConstraintIndex
     {
         public IConstraintDefinition Definition => definition;

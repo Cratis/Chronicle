@@ -16,7 +16,7 @@ public class when_publishing : Specification
     {
         var storage = new SqlMaterializationBindingStorage();
         var key = new MaterializationKey(StoreIncarnation.Unspecified, "ns", "projection", SinkTypeId.None, SinkConfigurationId.None);
-        _error = Catch.Exception(() => storage.TryPublish("store", key, MaterializationGeneration.First, ServingEpoch.Initial, new(2), new(Guid.NewGuid())).GetAwaiter().GetResult());
+        _error = Catch.Exception(() => storage.TryPublish("store", key, MaterializationGeneration.First, ServingEpoch.Initial, new(2), TimeSpan.FromHours(1), new(Guid.NewGuid())).GetAwaiter().GetResult());
     }
     [Fact] void should_refuse_without_io() => _error.ShouldBeOfExactType<MaterializationBindingsNotSupported>();
 }

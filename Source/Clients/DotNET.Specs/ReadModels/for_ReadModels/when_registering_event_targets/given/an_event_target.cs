@@ -45,5 +45,5 @@ public abstract class an_event_target<TTarget> : for_ReadModels.given.all_depend
         service.When(_ => _.RegisterMany(Arg.Any<RegisterManyRequest>())).Do(_ => _request = _.Arg<RegisterManyRequest>());
     }
 
-    protected async Task Exercise() => _exception = await Catch.Exception(() => _readModels.Register());
+    protected async Task Exercise() => _exception = await Catch.Exception(_readModels.Register);
 }

@@ -18,7 +18,7 @@ public class and_the_observer_does_not_enter_replay : given.a_replay_observer_jo
         _observer.Replay().Returns(JobId.NotSet);
     }
 
-    async Task Because() => _error = await Catch.Exception(() => _job.ResumeForTesting());
+    async Task Because() => _error = await Catch.Exception(_job.ResumeForTesting);
 
     [Fact] void should_fail_to_resume() => _error.ShouldBeOfExactType<ObserverDidNotEnterReplay>();
     [Fact] async Task should_not_switch_the_sinks_into_replay() => await _replayServiceClient.DidNotReceive().ResumeReplayFor(Arg.Any<ObserverDetails>());
