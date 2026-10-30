@@ -49,27 +49,45 @@ public class a_pinned_projection_grain : Specification
         dynamic content = new ExpandoObject();
         content.name = "released";
         _released = AppendedEvent.EmptyWithEventType(_pin) with { Content = (ExpandoObject)content };
-        var key = new Key("the-key", ArrayIndexers.NoIndexers);
 
-        _projection = Substitute.For<EngineProjection>();
-        _projection.GenerationDelivery.Returns(Delivery);
-        _projection.EventTypes.Returns([_pin]);
-        _projection.ReleaseEvent(_pin, Arg.Any<AppendedEvent>()).Returns(_released);
-        _projection.ChildProjections.Returns([]);
-        _projection.Accepts(Arg.Any<EventType>()).Returns(true);
-        _projection.GetOperationTypeFor(Arg.Any<EventType>()).Returns(ProjectionOperationType.From);
-        _projection.GetKeyResolverFor(Arg.Any<EventType>()).Returns(new KeyResolver((_, _, @event) =>
+        _projection = CreateEngineProjection(new Key("the-key", ArrayIndexers.NoIndexers));
+        RegisterServices(silo);
+
+        _definition = CreateDefinition();
+        var stateStorage = Substitute.For<IStorage<ProjectionDefinition>>();
+        stateStorage.State = _definition;
+        silo.Options.StorageFactory = _ => stateStorage;
+        _grain = await silo.CreateGrainAsync<Projection>(new ProjectionKey("the-projection", "the-event-store").ToString());
+    }
+
+    protected Task<SingleReadModelProjectionState> Fold() =>
+        _grain.FoldForSingleReadModel(EventStoreNamespaceName.Default, SingleReadModelProjectionState.Empty, [_stored]);
+
+    EngineProjection CreateEngineProjection(Key key)
+    {
+        var projection = Substitute.For<EngineProjection>();
+        projection.GenerationDelivery.Returns(Delivery);
+        projection.EventTypes.Returns([_pin]);
+        projection.ReleaseEvent(_pin, Arg.Any<AppendedEvent>()).Returns(_released);
+        projection.ChildProjections.Returns([]);
+        projection.Accepts(Arg.Any<EventType>()).Returns(true);
+        projection.GetOperationTypeFor(Arg.Any<EventType>()).Returns(ProjectionOperationType.From);
+        projection.GetKeyResolverFor(Arg.Any<EventType>()).Returns(new KeyResolver((_, _, @event) =>
         {
             _resolved = @event;
             return Task.FromResult<KeyResolverResult>(new ResolvedKey(key));
         }));
-        _projection.InitialModelState.Returns(new ExpandoObject());
+        projection.InitialModelState.Returns(new ExpandoObject());
         var schema = new JsonSchema();
         schema.Properties["id"] = new JsonSchemaProperty("id", new JsonObject { ["type"] = "string" }, schema);
-        _projection.TargetReadModelSchema.Returns(schema);
-        _projection.When(_ => _.OnNext(Arg.Any<ProjectionEventContext>()))
+        projection.TargetReadModelSchema.Returns(schema);
+        projection.When(_ => _.OnNext(Arg.Any<ProjectionEventContext>()))
             .Do(call => _projected = call.Arg<ProjectionEventContext>());
+        return projection;
+    }
 
+    void RegisterServices(TestKitSilo silo)
+    {
         var factory = Substitute.For<IProjectionFactory>();
         factory.Create(
             Arg.Any<EventStoreName>(),
@@ -97,8 +115,10 @@ public class a_pinned_projection_grain : Specification
         var readModel = Substitute.For<IReadModel>();
         readModel.GetDefinition().Returns(Task.FromResult<ReadModelDefinition>(null!));
         silo.AddProbe(_ => readModel);
+    }
 
-        _definition = new ProjectionDefinition(
+    ProjectionDefinition CreateDefinition() =>
+        new(
             ProjectionOwner.Client,
             EventSequenceId.Log,
             "the-projection",
@@ -116,12 +136,4 @@ public class a_pinned_projection_grain : Specification
         {
             GenerationDelivery = Delivery
         };
-        var stateStorage = Substitute.For<IStorage<ProjectionDefinition>>();
-        stateStorage.State = _definition;
-        silo.Options.StorageFactory = _ => stateStorage;
-        _grain = await silo.CreateGrainAsync<Projection>(new ProjectionKey("the-projection", "the-event-store").ToString());
-    }
-
-    protected Task<SingleReadModelProjectionState> Fold() =>
-        _grain.FoldForSingleReadModel(EventStoreNamespaceName.Default, SingleReadModelProjectionState.Empty, [_stored]);
 }
