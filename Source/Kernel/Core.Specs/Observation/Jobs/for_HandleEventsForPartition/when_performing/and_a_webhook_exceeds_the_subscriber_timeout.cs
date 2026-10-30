@@ -42,6 +42,12 @@ public class and_a_webhook_exceeds_the_subscriber_timeout : given.a_performing_j
 
     [Fact] void should_cancel_and_drain_the_delivery() => _cancelled.ShouldBeTrue();
     [Fact] void should_not_retry_immediately() => _calls.ShouldEqual(1);
-    [Fact] void should_not_report_a_partition_failure() => _observer.DidNotReceive().PartitionFailed(
-        Arg.Any<Key>(), Arg.Any<EventSequenceNumber>(), Arg.Any<IEnumerable<string>>(), Arg.Any<string>(), Arg.Any<FailureKind>());
+    [Fact] void should_report_the_timeout_to_the_observer() => _observer.Received(1).PartitionFailed("some-partition", 42UL, Arg.Any<IEnumerable<string>>(), Arg.Any<string>(), FailureKind.Timeout, null, null, WebhookDeliveryFailurePolicy.Retry);
+
+    [Fact]
+    void should_not_ask_the_job_to_run_the_step_again()
+    {
+        _result.TryGetResult(out var result).ShouldBeTrue();
+        TransientTimeouts.TryGetTransientFailure(result, new System.Text.Json.JsonSerializerOptions(), out _).ShouldBeFalse();
+    }
 }

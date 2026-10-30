@@ -22,7 +22,7 @@ public class a_subscriber_whose_sink_write_fails : for_ReducerObserverSubscriber
         _silo.AddProbe(_ => _observer);
 
         // The client reduces the batch, then the sink reports the failures - as the reducer pipeline does.
-        _firstPipeline.Reduce(Arg.Any<ReducerContext>(), Arg.Any<ReducerDelegate>()).Returns(async callInfo =>
+        _firstPipeline.Reduce(Arg.Any<ReducerContext>(), Arg.Any<ReducerDelegate>()).Returns<Task<Concepts.ReadModels.ReadModelChangeNotification?>>(async callInfo =>
         {
             await callInfo.Arg<ReducerDelegate>()([], null);
             throw new ReducerSinkWriteFailed(FailedPartitions);

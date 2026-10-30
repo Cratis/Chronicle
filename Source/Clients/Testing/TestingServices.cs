@@ -35,6 +35,7 @@ using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Testing.Compliance;
 using Cratis.Chronicle.Transactions;
 using Cratis.Traces;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using KernelApplicationsService = KernelGrpc::Cratis.Chronicle.Services.Security.Applications;
@@ -61,9 +62,11 @@ using KernelOccurrencesService = KernelGrpc::Cratis.Chronicle.Services.Occurrenc
 using KernelPatternMatcher = KernelCore::Cratis.Chronicle.Patterns.PatternMatcher;
 using KernelPatternsService = KernelGrpc::Cratis.Chronicle.Services.Patterns.Patterns;
 using KernelProjectionChangesetMediator = KernelCore::Cratis.Chronicle.Projections.ProjectionChangesetMediator;
+using KernelProjectionsManager = KernelCore::Cratis.Chronicle.Projections.Engine.ProjectionsManager;
 using KernelProjectionsService = KernelGrpc::Cratis.Chronicle.Services.Projections.Projections;
 using KernelReactorMediator = KernelCore::Cratis.Chronicle.Observation.Reactors.Clients.ReactorMediator;
 using KernelReactorsService = KernelGrpc::Cratis.Chronicle.Services.Observation.Reactors.Reactors;
+using KernelReadModelInstanceVisibilities = KernelCore::Cratis.Chronicle.ReadModels.ReadModelInstanceVisibilities;
 using KernelReadModelReadBindings = KernelCore::Cratis.Chronicle.ReadModels.ReadModelReadBindings;
 using KernelReadModelsService = KernelGrpc::Cratis.Chronicle.Services.ReadModels.ReadModels;
 using KernelRecommendationsService = KernelGrpc::Cratis.Chronicle.Services.Recommendations.Recommendations;
@@ -170,7 +173,9 @@ internal sealed class TestingServices : IServices
         _observers = new(() => new ObserversForTesting(new KernelObserversService(
             grainFactory,
             storage,
-            new KernelObserverRemover(grainFactory, storage, NullLogger<KernelObserverRemover>.Instance))));
+            new KernelObserverRemover(grainFactory, storage, NullLogger<KernelObserverRemover>.Instance),
+            new InProcessAuthorizationService(),
+            new HttpContextAccessor())));
 
         _failedPartitions = new(() => new KernelFailedPartitionsService(storage));
 
@@ -294,7 +299,7 @@ internal sealed class TestingServices : IServices
         _eventStores = new(() =>
             new KernelEventStoresService(commandPipeline.Value, grainFactory, storage, NullLogger<KernelEventStoresService>.Instance));
 
-        var readBindings = new KernelReadModelReadBindings(storage);
+        var readBindings = CreateReadBindings(storage, grainFactory);
         _readModels = new(() =>
             new KernelReadModelsService(
                 grainFactory,
@@ -404,6 +409,12 @@ internal sealed class TestingServices : IServices
 
     /// <inheritdoc/>
     public Contracts.Clients.IConnectionService Connections => throw new NotSupportedException("Connections is not supported in test scenarios.");
+
+    static KernelReadModelReadBindings CreateReadBindings(IStorage storage, IGrainFactory grainFactory) =>
+        new(
+            storage,
+            new KernelReadModelInstanceVisibilities(
+                new KernelProjectionsManager(Cratis.Chronicle.Testing.ReadModels.ProjectionReadModelProcessor.CreateProjectionFactory(storage), storage, grainFactory)));
 
     static KernelWebhookRegistrar CreateWebhookRegistrar(IGrainFactory grainFactory, IStorage storage, JsonSerializerOptions jsonSerializerOptions) =>
         new(

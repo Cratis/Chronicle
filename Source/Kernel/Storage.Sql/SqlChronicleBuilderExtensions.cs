@@ -84,10 +84,12 @@ public static class SqlChronicleBuilderExtensions
             return;
         }
 
+        var connectionString = SqlConnectionStrings.WithPooling(storage.ConnectionDetails, storage.PostgreSqlPooling);
+
         // Connects the way the storage does, through the resolved identity, rather than with the raw connection details.
         builder.Services.AddHealthChecks().Add(new HealthCheckRegistration(
             name,
-            sp => new SqlConnectionHealthCheck(storage.ConnectionDetails, SqlConnectionResolution.From(sp, storage).PrepareRuntimeConnection),
+            sp => new SqlConnectionHealthCheck(connectionString, SqlConnectionResolution.From(sp, storage).PrepareRuntimeConnection),
             failureStatus: null,
             tags: null,
             timeout: TimeSpan.FromSeconds(3)));

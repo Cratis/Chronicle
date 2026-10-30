@@ -1,8 +1,0 @@
-projection Doc => DocReadModel
-  from EventProcessed
-    key ProcessingKey {
-      EventId = eventId
-      SequenceNumber = $eventContext.sequenceNumber
-      CorrelationId = $eventContext.correlationId
-    }
-    ProcessedAt = $eventContext.occurred

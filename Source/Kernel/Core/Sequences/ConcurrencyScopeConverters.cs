@@ -24,7 +24,8 @@ internal static class ConcurrencyScopeConverters
             scope.EventStreamId,
             scope.EventSourceType,
             scope.EventTypes?.Select(_ => _.ToApi()),
-            scope.ExpectsNoMatchingEvent);
+            scope.ExpectsNoMatchingEvent,
+            scope.MutationEpoch);
 
     /// <summary>
     /// Converts a contract <see cref="Contracts.Sequences.EventSourceConcurrencyScope"/> to an
@@ -53,7 +54,10 @@ internal static class ConcurrencyScopeConverters
             ToMaybeConcept<Concepts.Events.EventStreamType>(scope.EventStreamType, value => value),
             ToMaybeConcept<Concepts.Events.EventStreamId>(scope.EventStreamId, value => value),
             ToMaybeConcept<Concepts.Events.EventSourceType>(scope.EventSourceType, value => value),
-            scope.EventTypes?.Select(_ => _.ToChronicle()));
+            scope.EventTypes?.Select(_ => _.ToChronicle()))
+        {
+            MutationEpoch = scope.MutationEpoch is { } epoch ? new Concepts.EventSequences.EventSequenceMutationEpoch(epoch) : null
+        };
 
     /// <summary>
     /// Converts a collection of <see cref="EventSourceConcurrencyScope"/> to a
@@ -87,7 +91,7 @@ internal static class ConcurrencyScopeConverters
     /// <param name="scope">The predicate.</param>
     /// <returns>The predicate and explicit absence expectation.</returns>
     internal static ConcurrencyScope ToApi(this Concepts.EventSequences.Concurrency.ConcurrencyScope scope) =>
-        new(scope.ExpectsNoMatchingEvent ? Concepts.Events.EventSequenceNumber.Unavailable.Value : scope.SequenceNumber.Value, scope.EventSourceId, scope.EventStreamType?.Value, scope.EventStreamId?.Value, scope.EventSourceType?.Value, scope.EventTypes?.Select(_ => new EventType(_.Id, _.Generation, _.Tombstone)), scope.ExpectsNoMatchingEvent);
+        new(scope.ExpectsNoMatchingEvent ? Concepts.Events.EventSequenceNumber.Unavailable.Value : scope.SequenceNumber.Value, scope.EventSourceId, scope.EventStreamType?.Value, scope.EventStreamId?.Value, scope.EventSourceType?.Value, scope.EventTypes?.Select(_ => new EventType(_.Id, _.Generation, _.Tombstone)), scope.ExpectsNoMatchingEvent, scope.MutationEpoch?.Value);
 
     static bool IsNoCheck(Concepts.EventSequences.Concurrency.ConcurrencyScope scope) => scope == Concepts.EventSequences.Concurrency.ConcurrencyScope.None;
 

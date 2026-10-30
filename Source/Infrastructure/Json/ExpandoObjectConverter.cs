@@ -122,7 +122,9 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
     }
 
     static bool HasProtectedValueMetadata(JsonSchema schema) =>
-        schema.GetComplianceMetadata().Any() || schema.GetSecurityMetadata().Any();
+        schema.GetComplianceMetadata().Any() || schema.GetSecurityMetadata().Any() ||
+        (schema.Reference is { } reference &&
+            (reference.GetComplianceMetadata().Any() || reference.GetSecurityMetadata().Any()));
 
     JsonNode? ConvertToJsonNode(object? value, JsonSchema schemaProperty)
     {

@@ -17,6 +17,7 @@ public class a_read_binding_resolver : Specification
     protected ISinks _sinks;
     protected ISink _sink;
     protected ReadModelDefinition _definition;
+    protected IReadModelInstanceVisibilities _visibilities;
     protected ReadModelReadBindings _resolver;
     protected ReadModelReadBinding _binding;
 
@@ -42,6 +43,8 @@ public class a_read_binding_resolver : Specification
         storage.GetEventStore(EventStore).Returns(eventStoreStorage);
         eventStoreStorage.GetNamespace(Namespace).Returns(namespaceStorage);
         namespaceStorage.Sinks.Returns(_sinks);
-        _resolver = new(storage);
+        _visibilities = Substitute.For<IReadModelInstanceVisibilities>();
+        _visibilities.GetFor(EventStore, Namespace, _definition).Returns(ReadModelInstanceVisibility.InitializedOnly);
+        _resolver = new(storage, _visibilities);
     }
 }

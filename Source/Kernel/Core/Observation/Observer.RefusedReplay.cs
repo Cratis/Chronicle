@@ -75,8 +75,16 @@ public partial class Observer
         {
             var alreadyFailed = Failures.TryGet(partition, out var existing);
             var position = alreadyFailed ? existing!.LastAttempt.SequenceNumber : EventSequenceNumber.Unavailable;
-            logger.PartitionFailed(partition, position, [reason], string.Empty);
-            failures.State.RegisterAttempt(partition, position, [reason], string.Empty);
+            var failure = failures.State.RegisterAttempt(partition, position, [reason], string.Empty);
+            if (alreadyFailed)
+            {
+                logger.PartitionFailedAgain(partition, position, failure.AttemptsInCurrentBudget);
+            }
+            else
+            {
+                logger.PartitionFailed(partition, position, FailureKindCode(FailureKind.Unknown));
+            }
+            logger.PartitionFailureDetails(partition, [reason], string.Empty);
             failures.State.Quarantine(partition);
             if (!alreadyFailed)
             {

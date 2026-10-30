@@ -5,12 +5,16 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Concepts.Observation.Reducers;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Observation.Reducers.Clients;
 
 internal static partial class ReducerLogMessages
 {
+    [LoggerMessage(LogLevel.Information, "Client subscription for reducer '{ReducerId}' is waiting for the webhook to leave")]
+    internal static partial void WaitingForWebhook(this ILogger<Reducer> logger, ReducerId reducerId);
+
     [LoggerMessage(LogLevel.Debug, "Starting client reducer {observerId} for event store {EventStore} on sequence {EventSequenceId} for namespace {@namespace}")]
     internal static partial void Starting(this ILogger<Reducer> logger, EventStoreName eventStore, ObserverId observerId, EventSequenceId eventSequenceId, EventStoreNamespaceName @namespace);
 

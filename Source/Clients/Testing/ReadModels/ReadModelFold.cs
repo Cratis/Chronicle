@@ -67,6 +67,11 @@ internal sealed class ReadModelFold<TReadModel>
     public bool StrictEventSubscription { get; init; }
 
     /// <summary>
+    /// Gets starting state indexed by native composite keys.
+    /// </summary>
+    public IReadOnlyCollection<NamedReadModelSeed<TReadModel>> NamedSeededInstances { get; init; } = [];
+
+    /// <summary>
     /// Processes input through the selected handler.
     /// </summary>
     /// <param name="events">The routed events.</param>
@@ -127,7 +132,8 @@ internal sealed class ReadModelFold<TReadModel>
                 InitialState,
                 StrictEventSubscription,
                 seededEvents: eventsList,
-                seededInstances: SeededInstances);
+                seededInstances: SeededInstances.Select(seed => ((object)seed.Key.Value, seed.Value))
+                    .Concat(NamedSeededInstances.Select(seed => ((object)seed.Key, seed.Instance))));
         }
 
         throw new NoReadModelHandlerFound(ReadModelType);

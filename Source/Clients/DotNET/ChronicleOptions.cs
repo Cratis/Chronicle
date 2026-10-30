@@ -1,8 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
 using Cratis.Chronicle.Connections;
+using Cratis.Chronicle.Diagnostics;
 using Cratis.Chronicle.Discovery;
 using Cratis.Chronicle.EventSequences.Concurrency;
 using Cratis.Chronicle.Observation;
@@ -33,7 +35,7 @@ public class ChronicleOptions(
     JsonSerializerOptions? jsonSerializerOptions = null,
     ConcurrencyOptions? concurrencyOptions = null,
     bool autoDiscoverAndRegister = true,
-    int connectTimeout = 5)
+    int connectTimeout = 5) : IValidatableObject
 {
     /// <summary>
     /// The default program identifier used when none is configured.
@@ -59,6 +61,11 @@ public class ChronicleOptions(
     /// Gets the <see cref="ChronicleConnectionString"/> to use.
     /// </summary>
     public ChronicleConnectionString ConnectionString { get; set; } = connectionString;
+
+    /// <summary>
+    /// Gets or sets the client telemetry configuration.
+    /// </summary>
+    public ChronicleTelemetryOptions Telemetry { get; set; } = new();
 
     /// <summary>
     /// Gets or sets the logical lifecycle identity shared by instances of one rollout.
@@ -432,5 +439,17 @@ public class ChronicleOptions(
         ProgramIdentifier = programIdentifier;
         Serverless.ReceiverUrl = receiverUrl;
         return UseShortLivedProcess(RegistrationMode.AtDeployment);
+    }
+
+    /// <inheritdoc/>
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        if (Telemetry.EventSourceIdTracing == EventSourceIdTracing.Hashed &&
+            (string.IsNullOrEmpty(Telemetry.EventSourceIdHashKey) || Telemetry.EventSourceIdHashKey.Length < IdentifierHasher.MinimumKeyLength))
+        {
+            yield return new ValidationResult(
+                "Telemetry:EventSourceIdHashKey must be at least 32 characters when Hashed is used",
+                [$"{nameof(Telemetry)}.{nameof(Telemetry.EventSourceIdHashKey)}"]);
+        }
     }
 }

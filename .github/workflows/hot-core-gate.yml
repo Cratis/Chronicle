@@ -65,7 +65,8 @@ jobs:
 
           python3 .github/scripts/detect-hot-core-changes.py --base "$BASE_SHA" --head "$HEAD_SHA"
 
-  # Manual dispatch retains its original full hot-core matrix; ordinary pushes do not build it.
+  # Manual dispatch retains its all-provider hot-core matrix; ordinary pushes do not build it.
+  # integration.yml applies reviewed lane exclusions visibly; the gate also reports their reasons.
   build:
     needs: [detect]
     if: needs.detect.outputs.touched == 'true' && github.event_name == 'workflow_dispatch'
@@ -120,6 +121,9 @@ jobs:
           dotnet nuget add source --name github --username cratis --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text https://nuget.pkg.github.com/cratis/index.json
 
       # The integration shards run `--no-build` against this DEVELOPMENT-symbol build.
+      - name: Stamp the build version
+        run: python3 .github/scripts/derive-build-version.py >> "$GITHUB_ENV"
+
       - name: Build with DEVELOPMENT symbol
         run: dotnet build --configuration Release -p:EnableDevelopmentSymbol=true -p:DisableProxyGenerator=true -p:DisableDockerBuild=true
 

@@ -46,6 +46,11 @@ public class MaterializedReadModelStore(
             return null;
         }
 
+        if (binding.Visibility == ReadModelInstanceVisibility.InitializedOnly && ReadModelInitialization.IsUninitialized(instance))
+        {
+            return null;
+        }
+
         return await compliance.Release(
             eventStore,
             eventStoreNamespace,
@@ -82,7 +87,7 @@ public class MaterializedReadModelStore(
 
         while (true)
         {
-            var page = await binding.Sink.GetInstances(binding.Occurrence, skip: skip, take: PageSize);
+            var page = await binding.GetInstances(skip, PageSize);
             var pageInstances = page.Instances.ToList();
             if (pageInstances.Count == 0)
             {

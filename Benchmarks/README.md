@@ -102,6 +102,27 @@ projection and replay results.
 Both observer benchmarks refuse to run unless their observer is actually subscribed — an unsubscribed
 observer would let the window close on the append alone and quietly report a meaningless number.
 
+### LargeBatchAppendBenchmark
+
+`LargeBatchAppendBenchmark` measures one large `AppendMany` against a single in-process silo — the
+batch shape behind [Cratis/Chronicle.Elixir#188](https://github.com/Cratis/Chronicle.Elixir/issues/188),
+where a single append of about 6000 events outlived the client's call deadline. Each batch size (100,
+1000, 6000) is measured four ways:
+
+| Method | What the batch carries |
+|---|---|
+| `AppendManyForOneEventSource` | Every event for one event source; the baseline |
+| `AppendManyForManyEventSources` | One event source per ten events |
+| `AppendManyWithUniqueConstraint` | As above, for an event type with a `[Unique]` property |
+| `AppendManyWithPersonalData` | As above, for an event type with a `[PII]` property, so every event source is a new subject needing an encryption key |
+
+The reported mean is for the whole batch. Every invocation appends to fresh event sources, and a batch
+that does not append every event fails the benchmark rather than reporting the time of the failure.
+
+```shell
+dotnet run -c Release --project Benchmarks/Chronicle.Benchmarks.Clustering -- --filter '*LargeBatchAppend*'
+```
+
 ```bash
 dotnet run -c Release --project Chronicle.Benchmarks.Clustering -- --filter '*'
 ```

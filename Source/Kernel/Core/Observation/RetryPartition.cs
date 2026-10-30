@@ -18,6 +18,7 @@ namespace Cratis.Chronicle.Observation;
 /// <param name="EventSequenceId">The identifier of the event sequence; uses the stored observer sequence when empty, or the event log if unavailable.</param>
 /// <param name="Partition">The partition identifier to retry.</param>
 [Command]
+[Cratis.Arc.Authorization.Authorize(Policy = Security.WellKnownAuthorizationPolicies.AdministratorOperations)]
 [BelongsTo(WellKnownServices.Observers)]
 public record RetryPartition(string EventStore, string Namespace, string ObserverId, string EventSequenceId, string Partition)
 {

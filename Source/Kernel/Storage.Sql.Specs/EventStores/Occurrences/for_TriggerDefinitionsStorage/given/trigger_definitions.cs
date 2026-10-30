@@ -46,10 +46,14 @@ public class trigger_definitions : Specification, IDisposable
 
     EventStoreDbContext CreateContext()
     {
+        if (_provider == "PostgreSQL")
+        {
+            return new(SpecDbContextOptions.Kernel<EventStoreDbContext>(_connectionString));
+        }
+
         var builder = new DbContextOptionsBuilder<EventStoreDbContext>();
         switch (_provider)
         {
-            case "PostgreSQL": builder.UseNpgsql(_connectionString); break;
             case "SQLServer": builder.UseSqlServer(_connectionString); break;
             default: builder.UseSqlite(_connectionString); break;
         }

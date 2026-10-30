@@ -52,10 +52,13 @@ public class SetInitialState(ISink sink, ILogger<SetInitialState> logger) : ICan
         // When the sink has no instance for the key yet, this event creates the read model instance.
         context.IsNewInstance = initialState is null;
 
+        // A child-only root has no root event to wait for. Its children are its content, not placeholders
+        // for a future root creation. Roots with their own clauses keep the explicit initialization boundary.
+        var createsInstance = context.CreatesInstance || ProjectionInitialization.CanInitializeFromChildren(projection, context);
         var needsInitialState = false;
         if (initialState is null)
         {
-            if (!context.CreatesInstance)
+            if (!createsInstance)
             {
                 initialState = new ExpandoObject();
                 ((IDictionary<string, object?>)initialState)[WellKnownProperties.ReadModelInstanceInitialized] = false;
@@ -77,7 +80,7 @@ public class SetInitialState(ISink sink, ILogger<SetInitialState> logger) : ICan
             // stays that way until an event the root handles arrives. A sink that does not store the flag reports nothing
             // about it, so every existing instance is initialized by the next event, as it always was.
             var storedAsNotInitialized = IsStoredAsNotInitialized(initialState);
-            if (storedAsNotInitialized && !context.CreatesInstance)
+            if (storedAsNotInitialized && !createsInstance)
             {
                 context.Changeset.InitialState = initialState;
                 return context with { NeedsInitialState = false };

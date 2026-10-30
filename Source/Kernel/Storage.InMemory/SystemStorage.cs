@@ -21,6 +21,9 @@ public sealed class SystemStorage : ISystemStorage
     public IUserStorage Users { get; } = new UserStorage();
 
     /// <inheritdoc/>
+    public IAdministratorStorage Administrators { get; } = new AdministratorStorage();
+
+    /// <inheritdoc/>
     public IApplicationStorage Applications { get; } = new ApplicationStorage();
 
     /// <inheritdoc/>

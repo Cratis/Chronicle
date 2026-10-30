@@ -26,4 +26,16 @@ public class ReleaseResponse
     /// </summary>
     [ProtoMember(3)]
     public string Error { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the property paths whose protected values could not be released. Never contains values.
+    /// </summary>
+    [ProtoMember(4)]
+    public IList<string> FailedProperties { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets a value indicating whether strict release was requested.
+    /// </summary>
+    [ProtoMember(5)]
+    public bool Strict { get; set; }
 }

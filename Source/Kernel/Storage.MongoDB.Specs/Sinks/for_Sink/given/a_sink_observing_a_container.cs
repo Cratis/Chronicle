@@ -4,6 +4,7 @@
 using System.Dynamic;
 using Cratis.Chronicle.Schemas;
 using MongoDB.Bson;
+using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Sinks.for_Sink.given;
@@ -22,6 +23,7 @@ public class a_sink_observing_a_container : a_sink_with_indexes
     protected Action? _duringListCollections;
     protected RecordingLogger _logger;
     protected int _listCollectionsCalls;
+    protected List<BsonDocument> _listCollectionsFilters = [];
     protected BsonDocument[] _documents = [];
     protected List<IEnumerable<ExpandoObject>> _pages = [];
 
@@ -34,9 +36,10 @@ public class a_sink_observing_a_container : a_sink_with_indexes
 
         _collections.PromotingCollectionName.Returns(PromotingName);
         _database.ListCollectionsAsync(Arg.Any<ListCollectionsOptions>(), Arg.Any<CancellationToken>())
-            .Returns(_ =>
+            .Returns(callInfo =>
             {
                 _listCollectionsCalls++;
+                _listCollectionsFilters.Add(callInfo.Arg<ListCollectionsOptions>().Filter.Render(new RenderArgs<BsonDocument>(BsonSerializer.SerializerRegistry.GetSerializer<BsonDocument>(), BsonSerializer.SerializerRegistry)).AsBsonDocument);
                 _duringListCollections?.Invoke();
                 return Task.FromResult(CursorOf(ListedCollections()));
             });

@@ -2,8 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Arc.Connections;
-using Cratis.Arc.EntityFrameworkCore;
-using Cratis.Arc.EntityFrameworkCore.Concepts;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Json;
@@ -100,9 +98,8 @@ public class PostgreSqlSinkHarness : ISqlSinkHarness
     /// <returns>A <see cref="DbContextScope{TDbContext}"/> for the container.</returns>
     async Task<DbContextScope<ReadModelDbContext>> OpenTable(string containerName)
     {
-        var builder = new DbContextOptionsBuilder<ReadModelDbContext>();
-        builder.UseDatabaseFromConnectionString(ConnectionString);
-        var options = builder.AddConceptAsSupport().WithoutServiceProviderCaching().AddInterceptors(Interceptors).Options;
+        var options = new DbContextOptionsBuilder<ReadModelDbContext>(SpecDbContextOptions.Kernel<ReadModelDbContext>(ConnectionString))
+            .AddInterceptors(Interceptors).Options;
 
         var fixture = Fixture!;
 #pragma warning disable CA2000 // Disposed by the sink through the returned scope.

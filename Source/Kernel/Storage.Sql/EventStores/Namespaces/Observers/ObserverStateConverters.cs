@@ -21,6 +21,9 @@ public static class ObserverStateConverters
         {
             Id = definition.Identifier,
             Owner = definition.Owner?.Value,
+            PartitionClaims = definition.PartitionClaims is null ? null : JsonSerializer.Serialize(definition.PartitionClaims, ObserverStateJson.Options),
+            ObserverWideClaim = definition.ObserverWideClaim is null ? null : JsonSerializer.Serialize(definition.ObserverWideClaim, ObserverStateJson.Options),
+            OwnershipRevision = definition.OwnershipRevision?.Value,
             TypeSetControl = ObserverTypeSetControlJson.Serialize(definition.TypeSetControl),
             DeliveryFences = definition.DeliveryFences is null ? null : JsonSerializer.Serialize(definition.DeliveryFences, ObserverStateJson.Options),
             Initialization = definition.Initialization is null ? null : JsonSerializer.Serialize(definition.Initialization, ObserverStateJson.Options),
@@ -105,6 +108,9 @@ public static class ObserverStateConverters
             state.SubscribesToAllEvents)
         {
             Owner = state.Owner is null ? null : new Concepts.EventSequences.EventSequenceId(state.Owner),
+            PartitionClaims = state.PartitionClaims is null ? null : JsonSerializer.Deserialize<Observation.PartitionClaim[]>(state.PartitionClaims, ObserverStateJson.Options),
+            ObserverWideClaim = state.ObserverWideClaim is null ? null : JsonSerializer.Deserialize<Observation.ObserverWideClaim>(state.ObserverWideClaim, ObserverStateJson.Options),
+            OwnershipRevision = state.OwnershipRevision is null ? null : new Observation.OwnershipRevision(state.OwnershipRevision.Value),
             TypeSetControl = ObserverTypeSetControlJson.Deserialize(state.TypeSetControl),
             DeliveryFences = state.DeliveryFences is null ? null : JsonSerializer.Deserialize<Observation.DeliveryFenceState[]>(state.DeliveryFences, ObserverStateJson.Options),
             Initialization = state.Initialization is null ? null : JsonSerializer.Deserialize<Observation.ObserverInitialization>(state.Initialization, ObserverStateJson.Options),

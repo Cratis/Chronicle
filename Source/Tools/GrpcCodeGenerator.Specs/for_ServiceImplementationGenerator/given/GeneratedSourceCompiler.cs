@@ -40,7 +40,6 @@ public static class GeneratedSourceCompiler
         [
             CSharpSyntaxTree.ParseText(GlobalUsings, parseOptions),
             CSharpSyntaxTree.ParseText(ExecutorStubs.Source, parseOptions),
-            CSharpSyntaxTree.ParseText("namespace Microsoft.AspNetCore.Authorization { public sealed class AllowAnonymousAttribute : System.Attribute { } }", parseOptions),
             .. sources.Select(source => CSharpSyntaxTree.ParseText(source, parseOptions))
         ];
 
@@ -73,6 +72,10 @@ public static class GeneratedSourceCompiler
         _ = typeof(Microsoft.Extensions.Logging.ILogger<>).Assembly;
         _ = typeof(System.Reactive.Linq.Observable).Assembly;
         _ = typeof(System.Linq.Expressions.Expression).Assembly;
+
+        // Generated transport methods carry [AllowAnonymous] and [Authorize(Policy = ...)], so compile against the
+        // real ASP.NET Core authorization attributes rather than stubs.
+        _ = typeof(Microsoft.AspNetCore.Authorization.AuthorizeAttribute).Assembly;
 
         // Cratis.Reactive, which the observable queries complete through, lives in Fundamentals - the same
         // assembly the fixture's concepts derive from.

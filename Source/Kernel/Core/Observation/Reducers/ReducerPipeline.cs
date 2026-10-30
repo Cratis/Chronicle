@@ -6,6 +6,7 @@ using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.ReadModels;
+using Cratis.Chronicle.Json;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
@@ -27,6 +28,7 @@ namespace Cratis.Chronicle.Observation.Reducers;
 /// <param name="eventStore">The <see cref="EventStoreName"/> this pipeline belongs to.</param>
 /// <param name="eventStoreNamespace">The <see cref="EventStoreNamespaceName"/> this pipeline belongs to.</param>
 /// <param name="guardWritesOnWatermark">Whether a write may be made conditional on advancing the read model's watermark.</param>
+/// <param name="expandoObjectConverter">The converter used to serialize committed state for watchers.</param>
 public class ReducerPipeline(
     ReadModelDefinition readModel,
     ISink sink,
@@ -34,8 +36,11 @@ public class ReducerPipeline(
     IReadModelsCompliance readModelsCompliance,
     EventStoreName eventStore,
     EventStoreNamespaceName eventStoreNamespace,
-    bool guardWritesOnWatermark = true) : IReducerPipeline
+    bool guardWritesOnWatermark = true,
+    IExpandoObjectConverter? expandoObjectConverter = null) : IReducerPipeline
 {
+    readonly IExpandoObjectConverter _expandoObjectConverter = expandoObjectConverter ?? new ExpandoObjectConverter(new TypeFormats());
+
     /// <inheritdoc/>
     public ReadModelDefinition ReadModel { get; } = readModel;
 
@@ -55,7 +60,7 @@ public class ReducerPipeline(
     public Task<IEnumerable<FailedPartition>> EndBulk() => Sink.EndBulk();
 
     /// <inheritdoc/>
-    public async Task Reduce(ReducerContext context, ReducerDelegate reducer)
+    public async Task<ReadModelChangeNotification?> Reduce(ReducerContext context, ReducerDelegate reducer)
     {
         var schema = ReadModel.GetTargetSchema();
         var storedInitial = await Sink.FindOrDefault(context.Key);
@@ -74,13 +79,14 @@ public class ReducerPipeline(
 
         var result = await reducer(context.Events, initial);
 
-        if (result.ObserverResult.State != ObserverSubscriberState.Ok) return;
+        if (result.ObserverResult.State != ObserverSubscriberState.Ok) return null;
 
         var identifier = context.Events.First().Context.ResolveComplianceIdentifier(context.Key);
 
         // Sinks apply encrypted differences to the stored snapshot, not the released schema-only state.
         // In-memory sinks also need its subject metadata when the subject itself has not changed.
         var changeset = new Changeset<AppendedEvent, ExpandoObject>(objectComparer, context.Events.First(), storedInitial ?? new ExpandoObject());
+        var storedState = storedInitial;
         if (result.ReadModelState is null)
         {
             if (initial is not null)
@@ -96,6 +102,8 @@ public class ReducerPipeline(
                 schema,
                 identifier,
                 result.ReadModelState);
+
+            storedState = encryptedState;
 
             // Reducer results are rebuilt from the schema and do not carry sink bookkeeping.
             // Compare a copy so removing those fields cannot mutate a sink's cached instance.
@@ -122,31 +130,50 @@ public class ReducerPipeline(
             }
         }
 
-        if (changeset.HasChanges)
-        {
-            // A reducer read model is always keyed by event source id, so its per-document event stream is
-            // monotonic and a redelivered batch can be recognized by the sequence number it carries. The batch
-            // that creates the instance is written unconditionally — there is no document to compare against,
-            // and a guarded write never inserts.
-            //
-            // The guard recognizes a redelivered batch by its LAST sequence number, so it neutralizes a redelivery
-            // whose batches reproduce the original boundaries. A resume that re-cuts them does not: the step
-            // restarts the cursor at the checkpoint's successor, and the driver's first page is a fixed document
-            // count while later pages are size-limited, so resumed pages routinely straddle the watermark and the
-            // already-applied prefix of such a batch is folded twice. Comparing against the last sequence number
-            // rather than the first is the deliberate choice there: it double-counts a straddling batch instead of
-            // dropping the part of it that is genuinely new. Closing the gap needs a per-document applied-range
-            // ledger, which is a separate design.
-            var mode = guardWritesOnWatermark && initial is not null
-                ? SinkWriteMode.OnlyWhenAdvancingWatermark
-                : SinkWriteMode.Always;
-            var failedPartitions = await Sink.ApplyChanges(context.Key, changeset, context.Events.Last().Context.SequenceNumber, mode);
+        if (!changeset.HasChanges) return null;
 
-            var failures = failedPartitions.ToArray();
-            if (failures.Length > 0)
-            {
-                throw new ReducerSinkWriteFailed(failures);
-            }
+        // A reducer read model is always keyed by event source id, so its per-document event stream is
+        // monotonic and a redelivered batch can be recognized by the sequence number it carries. The batch
+        // that creates the instance is written unconditionally — there is no document to compare against,
+        // and a guarded write never inserts.
+        //
+        // The guard recognizes a redelivered batch by its LAST sequence number, so it neutralizes a redelivery
+        // whose batches reproduce the original boundaries. A resume that re-cuts them does not: the step
+        // restarts the cursor at the checkpoint's successor, and the driver's first page is a fixed document
+        // count while later pages are size-limited, so resumed pages routinely straddle the watermark and the
+        // already-applied prefix of such a batch is folded twice. Comparing against the last sequence number
+        // rather than the first is the deliberate choice there: it double-counts a straddling batch instead of
+        // dropping the part of it that is genuinely new. Closing the gap needs a per-document applied-range
+        // ledger, which is a separate design.
+        var mode = guardWritesOnWatermark && initial is not null
+            ? SinkWriteMode.OnlyWhenAdvancingWatermark
+            : SinkWriteMode.Always;
+        var failedPartitions = await Sink.ApplyChanges(context.Key, changeset, context.Events.Last().Context.SequenceNumber, mode);
+
+        var failures = failedPartitions.ToArray();
+        if (failures.Length > 0)
+        {
+            throw new ReducerSinkWriteFailed(failures);
         }
+
+        return CreateNotification(context, result.ReadModelState, initial, storedState);
+    }
+
+    ReadModelChangeNotification CreateNotification(ReducerContext context, ExpandoObject? result, ExpandoObject? initial, ExpandoObject? storedState)
+    {
+        var schema = ReadModel.GetTargetSchema();
+        var changeType = (result, initial) switch
+        {
+            (null, _) => ReadModelChangeType.Removed,
+            (_, null) => ReadModelChangeType.Added,
+            _ => ReadModelChangeType.Modified
+        };
+        var model = _expandoObjectConverter.ToJsonObject(storedState ?? new ExpandoObject(), schema);
+        ReadModelSubjects.CopyToJson(storedState ?? new ExpandoObject(), model);
+        var last = context.Events.Last().Context;
+        return new ReadModelChangeNotification(
+            context.Key.ToString(),
+            model,
+            new ReadModelChangeContext(changeType, last.SequenceNumber, last.Occurred, last.CorrelationId));
     }
 }

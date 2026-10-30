@@ -5,6 +5,7 @@ using System.Collections.Concurrent;
 using System.Dynamic;
 using System.Reactive.Linq;
 using System.Runtime.ExceptionServices;
+using System.Text.RegularExpressions;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
@@ -779,11 +780,13 @@ public partial class Sink(
             collections.AbandonReplay();
         }
 
+        BulkWindowChange change;
         lock (_bulkLock)
         {
-            OpenBulkWindow(isReplay);
+            change = OpenBulkWindow(isReplay);
         }
 
+        LogBulkWindowReplacement(change, isReplay);
         ClearBulkState();
         return Task.CompletedTask;
     }
@@ -799,6 +802,7 @@ public partial class Sink(
             collections.AbandonReplay();
         }
 
+        BulkWindowChange change;
         lock (_bulkLock)
         {
             // Preserve queued writes only when they belong to the collection this mode will flush to.
@@ -808,22 +812,40 @@ public partial class Sink(
                 return Task.CompletedTask;
             }
 
-            OpenBulkWindow(isReplay);
+            change = OpenBulkWindow(isReplay);
         }
 
+        LogBulkWindowReplacement(change, isReplay);
         ClearBulkState();
         return Task.CompletedTask;
     }
 
-    void OpenBulkWindow(bool isReplay)
+    BulkWindowChange OpenBulkWindow(bool isReplay)
     {
+        var change = new BulkWindowChange(_bulkWindowId, new(Guid.NewGuid()), _bulkOperations.Count, _inFlight.Count);
         _isBulkMode = true;
-        _bulkWindowId = new(Guid.NewGuid());
+        _bulkWindowId = change.Current;
         _bulkWindowIsReplay = isReplay;
         _bulkWindowHasFailedWrites = false;
         _inFlight.Clear();
         ClearBulkOperations();
+        return change;
     }
+
+    void LogBulkWindowReplacement(BulkWindowChange change, bool isReplay)
+    {
+        if (change.Previous is null)
+        {
+            return;
+        }
+
+        if (change.QueuedOperationCount > 0 || change.InFlightBatchCount > 0)
+        {
+            logger.OpenBulkWindowReplaced(readModel.Identifier, change.Previous.Value, change.Current.Value, isReplay ? "replay" : "catch-up", change.QueuedOperationCount, change.InFlightBatchCount);
+        }
+    }
+
+    sealed record BulkWindowChange(BulkWindowId? Previous, BulkWindowId Current, int QueuedOperationCount, int InFlightBatchCount);
 
     /// <inheritdoc/>
     public async Task<BulkFlushResult> FlushBulk()
@@ -840,7 +862,9 @@ public partial class Sink(
             // Never confirm a window that was replaced or closed while its writes were draining.
             if (windowId != _bulkWindowId)
             {
-                throw new BulkWindowLost();
+                throw new BulkWindowLost(_bulkWindowId is null
+                    ? $"window '{windowId?.Value.ToString() ?? "none"}' was closed while its writes were draining"
+                    : $"window '{windowId?.Value.ToString() ?? "none"}' was replaced by window '{_bulkWindowId.Value}' while its writes were draining");
             }
 
             var failures = TakeBulkFailures(drain.Batches);
@@ -1137,7 +1161,11 @@ public partial class Sink(
         var existingIndexes = await cursor.ToListAsync();
         var collation = new Lazy<Task<BsonValue>>(() => GetCollectionCollation(collection));
 
-        foreach (var indexDefinition in readModel.Indexes)
+        var initializedIndex = new IndexDefinition(WellKnownProperties.ReadModelInstanceInitialized);
+        var indexes = readModel.Indexes.Any(index => index.Signature == initializedIndex.Signature)
+            ? readModel.Indexes
+            : readModel.Indexes.Append(initializedIndex);
+        foreach (var indexDefinition in indexes)
         {
             ReadModelIndexKeys.Validate(indexDefinition, readModel.GetSchemaForLatestGeneration());
             var indexName = ReadModelIndexKeys.Name(indexDefinition);
@@ -1174,14 +1202,23 @@ public partial class Sink(
     }
 
     /// <inheritdoc/>
-    public async Task<ReadModelInstances> GetInstances(ReadModelContainerName? occurrence = null, int skip = 0, int take = 50)
+    public Task<ReadModelInstances> GetInstances(ReadModelContainerName? occurrence = null, int skip = 0, int take = 50) =>
+        GetInstances(occurrence, skip, take, ReadModelInstanceVisibility.InitializedOnly);
+
+    /// <inheritdoc/>
+    public async Task<ReadModelInstances> GetInstances(ReadModelContainerName? occurrence, int skip, int take, ReadModelInstanceVisibility visibility)
     {
         // Resolved exactly like ObserveInstances, so the count and the page of an observed response come from the same collection.
-        var collection = collections.GetCollection(occurrence ?? readModel.ContainerName);
-        var totalCount = await collection.CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty);
-        var instances = await ReadPage(collection, skip, take, CancellationToken.None);
+        string containerName = occurrence ?? readModel.ContainerName;
+        var collection = collections.GetCollection(containerName);
+        var totalCount = await collection.CountDocumentsAsync(VisibleInstancesFilter(visibility));
+        var instances = await ReadPage(new(collection, containerName, occurrence is null, skip, take, visibility), CancellationToken.None);
         return new ReadModelInstances(instances, totalCount);
     }
+
+    /// <inheritdoc/>
+    public IObservable<IEnumerable<ExpandoObject>> ObserveInstances(ReadModelContainerName? occurrence = null, int skip = 0, int take = 50) =>
+        ObserveInstances(occurrence, skip, take, ReadModelInstanceVisibility.InitializedOnly);
 
     /// <inheritdoc/>
     /// <remarks>
@@ -1213,7 +1250,7 @@ public partial class Sink(
     /// a crash left the primary collection absent as well, the next write recreates it and observation resumes.
     /// </para>
     /// </remarks>
-    public IObservable<IEnumerable<ExpandoObject>> ObserveInstances(ReadModelContainerName? occurrence = null, int skip = 0, int take = 50)
+    public IObservable<IEnumerable<ExpandoObject>> ObserveInstances(ReadModelContainerName? occurrence, int skip, int take, ReadModelInstanceVisibility visibility)
     {
         string containerName = occurrence ?? readModel.ContainerName;
         var collection = collections.GetCollection(containerName);
@@ -1222,17 +1259,18 @@ public partial class Sink(
             .Observe(
                 collection.Database,
                 containerName,
-                cancellationToken => ReadObservedPage(new(collection, containerName, isPrimary, skip, take), cancellationToken))
+                cancellationToken => ReadObservedPage(new(collection, containerName, isPrimary, skip, take, visibility), cancellationToken))
             .Where(page => page is not null)
             .Select(page => page!);
     }
 
     async Task<IEnumerable<ExpandoObject>?> ReadObservedPage(PageRequest request, CancellationToken cancellationToken)
     {
-        var (collection, containerName, isPrimary, skip, take) = request;
-        if (!isPrimary)
+        var collection = request.Collection;
+        var containerName = request.ContainerName;
+        if (!request.IsPrimary)
         {
-            return await ReadPage(collection, skip, take, cancellationToken);
+            return await ReadPage(request, cancellationToken);
         }
 
         var before = await GetCollectionState(collection.Database, containerName, cancellationToken);
@@ -1241,7 +1279,7 @@ public partial class Sink(
             return null;
         }
 
-        var page = await ReadPage(collection, skip, take, cancellationToken);
+        var page = await ReadPage(request, cancellationToken);
         if (page.Any())
         {
             return page;
@@ -1251,13 +1289,20 @@ public partial class Sink(
         return after.IsPromotionInProgress || after.PrimaryExists != before.PrimaryExists || after.PrimaryId != before.PrimaryId ? null : page;
     }
 
+    /// <summary>
+    /// Builds the listCollections filter matching either name. Deliberately not an operator document such as
+    /// $in: MongoDB Atlas shared and Flex tiers only accept a plain string or a regular expression for the
+    /// name filter and fail any other shape with "can't get regex from filter doc not a regex".
+    /// </summary>
+    /// <param name="names">The collection names to match exactly.</param>
+    /// <returns>The filter document.</returns>
+    static BsonDocument CollectionNameFilter(params string[] names) =>
+        new("name", new BsonRegularExpression($"^({string.Join('|', names.Select(Regex.Escape))})$"));
+
     async Task<CollectionState> GetCollectionState(IMongoDatabase database, string containerName, CancellationToken cancellationToken)
     {
         var promotingName = collections.PromotingCollectionName;
-        var options = new ListCollectionsOptions
-        {
-            Filter = new BsonDocument("name", new BsonDocument("$in", new BsonArray { containerName, promotingName }))
-        };
+        var options = new ListCollectionsOptions { Filter = CollectionNameFilter(containerName, promotingName) };
         using var cursor = await database.ListCollectionsAsync(options, cancellationToken);
         var listed = await cursor.ToListAsync(cancellationToken);
         var primary = listed.FirstOrDefault(collection => collection["name"] == containerName);
@@ -1266,13 +1311,24 @@ public partial class Sink(
         return new CollectionState(promotingExists, primary is not null, primaryId);
     }
 
-    async Task<IEnumerable<ExpandoObject>> ReadPage(IMongoCollection<BsonDocument> collection, int skip, int take, CancellationToken cancellationToken)
+    /// <summary>
+    /// Selects visible roots using the marker index. Missing, null and non-Boolean scalars stay visible;
+    /// Boolean false and arrays containing it (which kernel writers never store) are hidden.
+    /// </summary>
+    /// <param name="visibility">The <see cref="ReadModelInstanceVisibility"/>; <see cref="ReadModelInstanceVisibility.IncludeUninitialized"/> applies no marker filter.</param>
+    /// <returns>The visible-root filter.</returns>
+    static FilterDefinition<BsonDocument> VisibleInstancesFilter(ReadModelInstanceVisibility visibility) =>
+        visibility == ReadModelInstanceVisibility.IncludeUninitialized
+            ? FilterDefinition<BsonDocument>.Empty
+            : new BsonDocument(WellKnownProperties.ReadModelInstanceInitialized, new BsonDocument("$ne", false));
+
+    async Task<IEnumerable<ExpandoObject>> ReadPage(PageRequest request, CancellationToken cancellationToken)
     {
-        var documents = await collection
-            .Find(FilterDefinition<BsonDocument>.Empty)
+        var documents = await request.Collection
+            .Find(VisibleInstancesFilter(request.Visibility))
             .Sort(Builders<BsonDocument>.Sort.Ascending("_id"))
-            .Skip(skip)
-            .Limit(take)
+            .Skip(request.Skip)
+            .Limit(request.Take)
             .ToListAsync(cancellationToken);
 
         var schema = readModel.GetSchemaForLatestGeneration();
@@ -1640,13 +1696,13 @@ public partial class Sink(
             catch (MongoBulkWriteException ex)
             {
                 var reasons = ReportBulkWriteErrors(ex, remainingIndexes, batch.Metadata);
-                AddFailedPartitions(remainingIndexes, batch.Metadata, batch.FailedPartitions, reasons);
+                AddFailedPartitions(remainingIndexes, batch.Metadata, batch.FailedPartitions, reasons, ex.WriteConcernError is not null);
                 break;
             }
         }
 
         return batch.FailedPartitions
-            .Select(partition => new FailedPartition(partition.Key, partition.Value.SequenceNumber) { Reason = partition.Value.Reason })
+            .Select(partition => new FailedPartition(partition.Key, partition.Value.SequenceNumber) { Reason = partition.Value.Reason, OutcomeUnknown = partition.Value.OutcomeUnknown })
             .ToArray();
     }
 
@@ -1675,7 +1731,7 @@ public partial class Sink(
 
         if (!CanResumeAfter(exception, remaining))
         {
-            AddFailedPartitions(remainingIndexes, batch.Metadata, batch.FailedPartitions, reasons);
+            AddFailedPartitions(remainingIndexes, batch.Metadata, batch.FailedPartitions, reasons, exception.WriteConcernError is not null);
             return null;
         }
 
@@ -1724,21 +1780,33 @@ public partial class Sink(
     static void AddFailedPartitions(
         IEnumerable<int> indexes,
         Dictionary<int, (Key ReadModelKey, Key EventSourceId, EventSequenceNumber SequenceNumber)> metadata,
-        Dictionary<Key, (EventSequenceNumber SequenceNumber, string Reason)> failedPartitions,
-        BulkWriteFailureReasons reasons)
+        Dictionary<Key, (EventSequenceNumber SequenceNumber, string Reason, bool OutcomeUnknown)> failedPartitions,
+        BulkWriteFailureReasons reasons,
+        bool outcomeUnknown = false)
     {
         foreach (var index in indexes)
         {
-            if (metadata.TryGetValue(index, out var operationMetadata) && IsEarliestFailure(operationMetadata, failedPartitions))
+            if (!metadata.TryGetValue(index, out var operationMetadata))
             {
-                failedPartitions[operationMetadata.EventSourceId] = (operationMetadata.SequenceNumber, reasons.For(index));
+                continue;
+            }
+
+            var hasExisting = failedPartitions.TryGetValue(operationMetadata.EventSourceId, out var existing);
+            var unknown = outcomeUnknown || (hasExisting && existing.OutcomeUnknown);
+            if (IsEarliestFailure(operationMetadata, failedPartitions))
+            {
+                failedPartitions[operationMetadata.EventSourceId] = (operationMetadata.SequenceNumber, reasons.For(index), unknown);
+            }
+            else if (unknown && hasExisting)
+            {
+                failedPartitions[operationMetadata.EventSourceId] = existing with { OutcomeUnknown = true };
             }
         }
     }
 
     static bool IsEarliestFailure(
         (Key ReadModelKey, Key EventSourceId, EventSequenceNumber SequenceNumber) operationMetadata,
-        Dictionary<Key, (EventSequenceNumber SequenceNumber, string Reason)> failedPartitions) =>
+        Dictionary<Key, (EventSequenceNumber SequenceNumber, string Reason, bool OutcomeUnknown)> failedPartitions) =>
         !failedPartitions.TryGetValue(operationMetadata.EventSourceId, out var earliest) ||
         operationMetadata.SequenceNumber.Value < earliest.SequenceNumber.Value;
 
@@ -1963,7 +2031,7 @@ public partial class Sink(
         FilterDefinition<BsonDocument> Filter,
         bool IsUpsert);
 
-    sealed record PageRequest(IMongoCollection<BsonDocument> Collection, string ContainerName, bool IsPrimary, int Skip, int Take);
+    sealed record PageRequest(IMongoCollection<BsonDocument> Collection, string ContainerName, bool IsPrimary, int Skip, int Take, ReadModelInstanceVisibility Visibility);
 
     sealed record BulkBatch(
         List<WriteModel<BsonDocument>> Operations,
@@ -1972,7 +2040,7 @@ public partial class Sink(
         Task[] Predecessors,
         IReadOnlySet<WriteModel<BsonDocument>> GuardedUpserts)
     {
-        public Dictionary<Key, (EventSequenceNumber SequenceNumber, string Reason)> FailedPartitions { get; } = [];
+        public Dictionary<Key, (EventSequenceNumber SequenceNumber, string Reason, bool OutcomeUnknown)> FailedPartitions { get; } = [];
         public TaskCompletionSource Completion { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public bool HasOutcome { get; set; }
     }

@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Arc.Commands;
+using Cratis.Chronicle.Sequences;
 using FluentValidation;
 
 namespace Cratis.Chronicle.ExternalServices;
@@ -17,6 +18,7 @@ internal class AddExternalServicesValidator : CommandValidator<AddExternalServic
     public AddExternalServicesValidator()
     {
         RuleFor(_ => _.EventStore).NotEmpty().WithMessage("Event store name is required.");
+        RuleFor(_ => _.EventStore).NotSystemEventStore();
         RuleFor(_ => _.ExternalServices).NotEmpty().WithMessage("At least one external service is required.");
         RuleForEach(_ => _.ExternalServices).ChildRules(service =>
             service.RuleFor(_ => _.Name).NotEmpty().WithMessage("External service name is required."));

@@ -12,5 +12,7 @@
   href: erasing-a-subject.mdx
 - name: The encryption key lifecycle
   href: key-lifecycle.mdx
+- name: Key erasure guarantees per store
+  href: key-store-erasure-guarantees.md
 - name: Compliance in Arc applications
   href: arc.md

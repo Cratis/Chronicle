@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Arc.Commands;
+using Cratis.Chronicle.Sequences;
 using FluentValidation;
 
 namespace Cratis.Chronicle.Identities;
@@ -17,6 +18,7 @@ internal class RenameIdentityValidator : CommandValidator<RenameIdentity>
     public RenameIdentityValidator()
     {
         RuleFor(_ => _.EventStore).NotEmpty().WithMessage("Event store name is required.");
+        RuleFor(_ => _.EventStore).NotSystemEventStore();
         RuleFor(_ => _.Namespace).NotEmpty().WithMessage("Namespace name is required.");
         RuleFor(_ => _.Subject).NotEmpty().WithMessage("Subject is required.");
         RuleFor(_ => _.Name).NotEmpty().WithMessage("Name is required.");

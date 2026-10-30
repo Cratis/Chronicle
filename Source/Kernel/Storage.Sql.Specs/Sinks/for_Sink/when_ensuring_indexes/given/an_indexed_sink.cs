@@ -76,7 +76,7 @@ public abstract class an_indexed_sink : Specification
 
     async Task<IndexRow[]> Indexes(string table)
     {
-        var options = new DbContextOptionsBuilder<DbContext>().UseDatabaseFromConnectionString(_harness.ConnectionString).Options;
+        var options = SpecDbContextOptions.ForConnection<DbContext>(_harness.ConnectionString);
         await using var context = new DbContext(options);
         var query = context.Database.GetDatabaseType() switch
         {
@@ -84,7 +84,7 @@ public abstract class an_indexed_sink : Specification
             DatabaseType.SqlServer => context.Database.SqlQuery<IndexRow>($"SELECT i.name AS [Name], CASE WHEN c.is_computed=1 THEN '<expression>' ELSE c.name END AS [Column] FROM sys.indexes i JOIN sys.index_columns ic ON ic.object_id = i.object_id AND ic.index_id = i.index_id JOIN sys.columns c ON c.object_id = ic.object_id AND c.column_id = ic.column_id WHERE i.object_id = OBJECT_ID({table}) AND ic.key_ordinal = 1 AND i.is_primary_key = 0"),
             _ => context.Database.SqlQuery<IndexRow>($"SELECT i.name AS Name, COALESCE(c.name, '<expression>') AS \"Column\" FROM pragma_index_list({table}) i JOIN pragma_index_info(i.name) c ON c.seqno=0 WHERE i.origin = 'c'")
         };
-        return await query.ToArrayAsync();
+        return (await query.ToArrayAsync()).Where(index => !index.Name.StartsWith("chronicle_imx_", StringComparison.Ordinal)).ToArray();
     }
 
     void Destroy() => _harness.Dispose();

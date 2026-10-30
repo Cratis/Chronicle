@@ -4,6 +4,7 @@
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Contracts.Observation.Reactors;
+using Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Observation;
@@ -201,6 +202,7 @@ internal sealed class ReactorDispatcher(
 
         void FailedToHandleEvent(ReactorInvocationResult invocationResult, EventTypeId eventTypeId)
         {
+            span?.Activity?.RecordFailure("handling");
             var failureDetails = invocationResult.GetFailureDetails();
             exceptionMessages = failureDetails.Messages.ToArray();
             exceptionStackTrace = failureDetails.StackTrace;
@@ -221,6 +223,7 @@ internal sealed class ReactorDispatcher(
 
         void LogErrorWhileHandlingEvent(Exception ex, EventTypeId eventTypeId)
         {
+            span?.Activity?.RecordFailure(ex);
             if (ex.IsInterruptedByShutdown(cancellationToken))
             {
                 logger.HandlingEventInterruptedByShutdown(ex, eventTypeId, handler.Id);
@@ -241,6 +244,7 @@ internal sealed class ReactorDispatcher(
 
         void FailedActivatingReactor(Exception ex)
         {
+            span?.Activity?.RecordFailure(ex);
             exceptionMessages = ex.GetAllMessages();
             exceptionStackTrace = ex.StackTrace ?? string.Empty;
             state = ObservationState.Failed;

@@ -212,6 +212,7 @@ public partial class Observer(
         _writeCoalescingInterval = TimeSpan.FromSeconds(Math.Max(config.WriteCoalescingInterval, 0));
         RegisterWatchdog(config.WatchdogInterval);
         _webhookProbe = State.WebhookProbe;
+        RestoreShadowClaims();
         await InitializeAlertState();
         if (!KeyOwnsDefinition)
         {
@@ -228,6 +229,11 @@ public partial class Observer(
             {
                 await base.OnDeactivateAsync(reason, cancellationToken);
                 return;
+            }
+
+            using (logger.BeginObserverScope(_observerId, _observerKey))
+            {
+                logger.Deactivating(reason.ReasonCode, reason.Description);
             }
 
             await DrainWebhookProbe();
@@ -479,6 +485,7 @@ public partial class Observer(
             observerDefinition,
             _eventSequence,
             storage,
+            CurrentPartitionHoldsVersion,
             loggerFactory.CreateLogger<Routing>()),
 
         new Replay(
@@ -512,6 +519,11 @@ public partial class Observer(
     /// <inheritdoc/>
     public async Task Unsubscribe()
     {
+        using (logger.BeginObserverScope(_observerId, _observerKey))
+        {
+            logger.Unsubscribed();
+        }
+
         await CancelWebhookProbe();
         SupersedeRecoveryAfterQuarantine();
         _subscription = ObserverSubscription.Unsubscribed;
@@ -533,12 +545,14 @@ public partial class Observer(
                 .ToArray();
             if (remaining.Length == _subscription.Targets.Count)
             {
+                LogClientDisconnected(connectionId, "not a current target, dropping any superseded registration");
                 DropSupersededRegistration(connectionId);
                 return;
             }
 
             if (remaining.Length > 0)
             {
+                LogClientDisconnected(connectionId, "removing it from the fan-out targets");
                 _subscription = _subscription with
                 {
                     SiloAddress = remaining[0].SiloAddress,
@@ -548,6 +562,7 @@ public partial class Observer(
                 return;
             }
 
+            LogClientDisconnected(connectionId, "last target, promoting a superseded registration or unsubscribing");
             await PromoteSupersededRegistrationOrUnsubscribe();
             return;
         }
@@ -556,10 +571,12 @@ public partial class Observer(
             _subscription.Arguments is ConnectedClient connectedClient &&
             connectedClient.ConnectionId != connectionId)
         {
+            LogClientDisconnected(connectionId, "not the subscribed client, dropping any superseded registration");
             DropSupersededRegistration(connectionId);
             return;
         }
 
+        LogClientDisconnected(connectionId, "unsubscribing");
         await Unsubscribe();
     }
 
@@ -746,6 +763,7 @@ public partial class Observer(
 
             // A state-machine OnEnter can return an earlier record after awaiting a job callback. Preserve the
             // source-owned metadata advanced by that callback, and serialize writes from AlwaysInterleave methods.
+            var shadowClaims = ShadowClaimsSnapshot();
             State = State with
             {
                 AlertLifecycleId = _alertLifecycleId,
@@ -753,7 +771,10 @@ public partial class Observer(
                 AlertDisposition = _alertDisposition,
                 QuarantineEpisodeId = _quarantineEpisodeId,
                 WebhookProbe = _webhookProbe,
-                DeliveryFences = DeliveryFenceSnapshot()
+                DeliveryFences = DeliveryFenceSnapshot(),
+                PartitionClaims = shadowClaims.Claims,
+                ObserverWideClaim = shadowClaims.Wide,
+                OwnershipRevision = shadowClaims.Revision
             };
             var revision = _alertRevision;
             try
@@ -916,6 +937,7 @@ public partial class Observer(
         // Ordinary Subscribe keeps its explicit-registration semantics, including throwing when sealed.
         if (IsAdditiveSubscriptionBlocked(additive)) return;
         ThrowIfSealed();
+        await ThrowIfServedByAnotherTransport(typeof(TObserverSubscriber), subscriberArgs);
         if (recovering && !await NeedsSubscriptionRecovery(eventTypes)) return;
 
         // Only a subscription that may end quarantine supersedes recovery owed by an earlier clearance.

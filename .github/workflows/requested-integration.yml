@@ -117,4 +117,5 @@ jobs:
             exit 1
           fi
 
-          echo "This PR changes the hot core, and the single full out-of-process matrix passed."
+          # integration.yml reports reviewed exclusions and skips their jobs explicitly; all other lanes must pass.
+          echo "This PR changes the hot core, and the out-of-process matrix passed with any declared lane exclusions reported in discovery's summary."

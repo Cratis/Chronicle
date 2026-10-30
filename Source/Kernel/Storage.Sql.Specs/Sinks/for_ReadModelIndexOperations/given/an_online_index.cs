@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Data.Common;
-using Cratis.Arc.EntityFrameworkCore;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.Schemas;
@@ -35,8 +34,7 @@ public abstract class an_online_index : Specification
 
     protected async Task BuildAndDrop()
     {
-        var builder = new DbContextOptionsBuilder<ReadModelDbContext>();
-        builder.UseDatabaseFromConnectionString(_harness.ConnectionString);
+        var builder = new DbContextOptionsBuilder<ReadModelDbContext>(SpecDbContextOptions.ForConnection<ReadModelDbContext>(_harness.ConnectionString));
         var options = builder.AddInterceptors(_commands).Options;
         var migrator = new ReadModelMigrator(new TableMigrator<ReadModelDbContext>(Substitute.For<ILogger<TableMigrator<ReadModelDbContext>>>()), Substitute.For<ILogger<ReadModelMigrator>>());
         var columns = ProjectedColumns.ForSchema(await JsonSchema.FromJsonAsync("""{"type":"object","properties":{"id":{"type":"string"},"value":{"type":"integer"}}}"""));
@@ -60,7 +58,8 @@ public abstract class an_online_index : Specification
 
         public override ValueTask<InterceptionResult<int>> NonQueryExecutingAsync(DbCommand command, CommandEventData eventData, InterceptionResult<int> result, CancellationToken cancellationToken = default)
         {
-            if (command.CommandText.StartsWith("CREATE INDEX", StringComparison.Ordinal) || command.CommandText.StartsWith("DROP INDEX", StringComparison.Ordinal))
+            if ((command.CommandText.StartsWith("CREATE INDEX", StringComparison.Ordinal) || command.CommandText.StartsWith("DROP INDEX", StringComparison.Ordinal)) &&
+                !command.CommandText.Contains("chronicle_imx_", StringComparison.Ordinal))
             {
                 Sql.Add(command.CommandText);
                 TransactionalIndex |= command.Transaction is not null;

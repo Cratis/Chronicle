@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Arc.Commands;
+using Cratis.Chronicle.Sequences;
 using FluentValidation;
 
 namespace Cratis.Chronicle.Seeding;
@@ -17,6 +18,7 @@ internal class AddSeedEntryValidator : CommandValidator<AddSeedEntry>
     public AddSeedEntryValidator()
     {
         RuleFor(_ => _.EventStore).NotEmpty().WithMessage("Event store name is required.");
+        RuleFor(_ => _.EventStore).NotSystemEventStore();
         RuleFor(_ => _.Namespace).NotEmpty().WithMessage("Namespace name is required.");
         RuleFor(_ => _.EventSourceId).NotEmpty().WithMessage("Event source identifier is required.");
         RuleFor(_ => _.EventTypeId).NotEmpty().WithMessage("Event type identifier is required.");

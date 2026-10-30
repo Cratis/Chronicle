@@ -1,0 +1,44 @@
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+using System.Collections.Immutable;
+using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Observation.Jobs;
+using Cratis.Orleans.Jobs;
+using Cratis.Orleans.Storage.Jobs;
+
+namespace Cratis.Chronicle.Observation.for_Observer.when_watchdog_runs;
+
+/// <summary>
+/// A replay job being removed is still draining and still reports back, so the watchdog does not rescue the replay (#5378).
+/// </summary>
+public class and_observer_is_replaying_with_a_replay_job_being_removed : given.an_observer_with_client_owned_subscription
+{
+    void Establish()
+    {
+        _connectedClientsGrain.IsConnected(_connectedClient.ConnectionId).Returns(Task.FromResult(true));
+
+        _stateStorage.State = _stateStorage.State with { IsReplaying = true };
+
+        // Status is what IsPreparingOrRunning reads; StatusChanges alone leaves the job looking not-started, which
+        // would send the watchdog down the job-missing branch this spec exists to stay off.
+        var runningJob = new JobState
+        {
+            Id = JobId.New(),
+            Request = new ReplayObserverRequest(_observerKey, ObserverType.Reactor, []),
+            Status = JobStatus.Removing,
+            StatusChanges = [new JobStatusChanged { Status = JobStatus.Removing, Occurred = DateTimeOffset.UtcNow }]
+        };
+
+        _jobsManager
+            .GetJobs(Arg.Any<JobQuery>())
+            .Returns(Task.FromResult<IImmutableList<JobState>>(ImmutableList<JobState>.Empty.Add(runningJob)));
+    }
+
+    async Task Because() => await _observer.RunWatchdogAsync();
+
+    [Fact] void should_remain_in_replaying_state() => _stateStorage.State.IsReplaying.ShouldBeTrue();
+
+    [Fact] void should_leave_the_draining_replay_job_alone() => _jobsManager.DidNotReceive()
+        .Start<IReplayObserver, ReplayObserverRequest>(Arg.Any<ReplayObserverRequest>());
+}

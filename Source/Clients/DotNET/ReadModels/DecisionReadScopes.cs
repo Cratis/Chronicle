@@ -48,7 +48,8 @@ internal static class DecisionReadScopes
             EventTypes = types,
             EventStreamType = sameStream ? first.EventStreamType : null,
             EventStreamId = sameStream ? first.EventStreamId : null,
-            EventSourceType = first.EventSourceType == second.EventSourceType ? first.EventSourceType : null
+            EventSourceType = first.EventSourceType == second.EventSourceType ? first.EventSourceType : null,
+            MutationEpoch = ReadProtectionPredicate.EarliestEpoch(first.MutationEpoch, second.MutationEpoch)
         };
     }
 

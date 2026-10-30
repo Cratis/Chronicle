@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.EventSequences.Concurrency;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Monads;
@@ -14,7 +15,11 @@ namespace Cratis.Chronicle.EventSequences.Concurrency;
 /// </summary>
 /// <param name="eventSequenceStorage">The <see cref="IEventSequenceStorage"/>.</param>
 /// <param name="logger">The logger.</param>
-public class ConcurrencyValidator(IEventSequenceStorage eventSequenceStorage, ILogger<ConcurrencyValidator> logger) : IConcurrencyValidator
+/// <param name="currentMutationEpoch">The <see cref="EventSequenceMutationEpoch"/> the event sequence is at right now.</param>
+public class ConcurrencyValidator(
+    IEventSequenceStorage eventSequenceStorage,
+    ILogger<ConcurrencyValidator> logger,
+    EventSequenceMutationEpoch currentMutationEpoch) : IConcurrencyValidator
 {
     /// <inheritdoc/>
     public async ValueTask<Option<ConcurrencyViolation>> Validate(EventSourceId eventSourceId, ConcurrencyScope scope)
@@ -23,6 +28,12 @@ public class ConcurrencyValidator(IEventSequenceStorage eventSequenceStorage, IL
         {
             LogIfIncomplete(eventSourceId, scope);
             return Option<ConcurrencyViolation>.None();
+        }
+
+        if (scope.MutationEpoch is { } expectedEpoch && (expectedEpoch.IsMutating || expectedEpoch != currentMutationEpoch))
+        {
+            logger.HistoryMutatedAfterRead(eventSourceId, expectedEpoch, currentMutationEpoch);
+            return new ConcurrencyViolation(eventSourceId, scope.SequenceNumber, scope.SequenceNumber);
         }
 
         var tailSequenceNumber = await eventSequenceStorage.GetTailSequenceNumber(

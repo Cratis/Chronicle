@@ -9,6 +9,7 @@ using Cratis.Types;
 using Microsoft.Extensions.Logging;
 using Orleans.Placement;
 using Orleans.Providers;
+using Orleans.Runtime.Placement;
 
 namespace Cratis.Chronicle.Patching;
 
@@ -40,8 +41,7 @@ public class PatchManager(
         var knownVersion = KernelVersion.IsKnown(_kernelVersion);
         if (knownVersion && KernelVersion.IsKnown(caller) && _kernelVersion < caller)
         {
-            DeactivateOnIdle();
-            return PatchOutcome.Relocate;
+            return RelocateToCaller();
         }
 
         if (!knownVersion)
@@ -94,6 +94,20 @@ public class PatchManager(
         var skippedCount = candidatePatches.Count - patchesToApply.Count;
 
         return (patchesToApply, skippedCount);
+    }
+
+    PatchOutcome RelocateToCaller()
+    {
+        if (PatchManagerRelocation.CallerSilo() is { } callerSilo)
+        {
+            RequestContext.Set(IPlacementDirector.PlacementHintKey, callerSilo);
+            this.MigrateOnIdle();
+        }
+        else
+        {
+            DeactivateOnIdle();
+        }
+        return PatchOutcome.Relocate;
     }
 
     async Task ApplyPendingPatches()

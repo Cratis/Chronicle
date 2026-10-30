@@ -19,6 +19,7 @@ public class when_two_silos_bootstrap_the_administrator : Specification
 {
     IUserStorage _users;
     IEventSequence _eventLog;
+    Security.IAdministratorRoster _roster;
     AuthenticationService _first;
     AuthenticationService _second;
     List<EventSourceId> _attemptedUserIds;
@@ -58,6 +59,8 @@ public class when_two_silos_bootstrap_the_administrator : Specification
 
         var grainFactory = Substitute.For<IGrainFactory>();
         grainFactory.GetGrain<IEventSequence>(Arg.Any<string>()).Returns(_eventLog);
+        _roster = Substitute.For<Security.IAdministratorRoster>();
+        grainFactory.GetGrain<Security.IAdministratorRoster>(Concepts.Security.AdministratorRoster.Key).Returns(_roster);
         var serializer = Substitute.For<IEventSerializer>();
         serializer.Serialize(Arg.Any<object>()).Returns(new JsonObject());
         var options = Options.Create(new Configuration.ChronicleOptions());
@@ -83,6 +86,7 @@ public class when_two_silos_bootstrap_the_administrator : Specification
         await Task.WhenAll(_first.EnsureDefaultAdminUser(), _second.EnsureDefaultAdminUser());
     }
 
+    [Fact] void should_grant_bootstrap_privilege_only_from_the_successful_creation() => _roster.Received(1).Grant(UserId.InitialAdministrator, GrantReason.Bootstrap, Arg.Any<string>());
     [Fact] void should_use_one_deterministic_user_id() => _attemptedUserIds.Distinct().ShouldContainOnly([(EventSourceId)UserId.InitialAdministrator]);
     [Fact] void should_attempt_the_same_event_source_from_both_silos() => _attemptedUserIds.Count.ShouldEqual(2);
 }

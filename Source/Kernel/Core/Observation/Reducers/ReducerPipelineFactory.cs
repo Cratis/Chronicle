@@ -5,6 +5,7 @@ using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Observation.Reducers;
 using Cratis.Chronicle.Configuration;
+using Cratis.Chronicle.Json;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Storage;
 using Microsoft.Extensions.Options;
@@ -19,12 +20,14 @@ namespace Cratis.Chronicle.Observation.Reducers;
 /// <param name="objectComparer"><see cref="IObjectComparer"/> for comparing objects.</param>
 /// <param name="readModelsCompliance">The <see cref="IReadModelsCompliance"/> for encrypting and decrypting compliance and security fields.</param>
 /// <param name="options">The <see cref="ChronicleOptions"/> holding the read model write configuration.</param>
+/// <param name="expandoObjectConverter">The converter used to serialize committed state for watchers.</param>
 public class ReducerPipelineFactory(
     IGrainFactory grainFactory,
     IStorage storage,
     IObjectComparer objectComparer,
     IReadModelsCompliance readModelsCompliance,
-    IOptions<ChronicleOptions> options) : IReducerPipelineFactory
+    IOptions<ChronicleOptions> options,
+    IExpandoObjectConverter? expandoObjectConverter = null) : IReducerPipelineFactory
 {
     /// <inheritdoc/>
     public async Task<IReducerPipeline> Create(
@@ -43,6 +46,7 @@ public class ReducerPipelineFactory(
             readModelsCompliance,
             eventStore,
             @namespace,
-            options.Value.ReadModels.GuardSinkWritesOnWatermark);
+            options.Value.ReadModels.GuardSinkWritesOnWatermark,
+            expandoObjectConverter);
     }
 }

@@ -40,7 +40,7 @@ public class and_nested_integers_exceed_int64_on_postgresql(PostgreSqlFixture fi
         await _sink.IndexBuildCompletion.WaitAsync(TimeSpan.FromSeconds(30));
         _logger.Errors.ShouldBeEmpty();
         _logger.Warnings.ShouldBeEmpty();
-        _context = new(new DbContextOptionsBuilder().UseDatabaseFromConnectionString(_harness.ConnectionString).Options);
+        _context = new(SpecDbContextOptions.Kernel<DbContext>(_harness.ConnectionString));
         var name = ReadModelIndexPlan.Resolve(definition.Indexes.First(), schema, ProjectedColumns.ForSchema(schema), DatabaseType.PostgreSql)!.Name(DatabaseType.PostgreSql, Table);
         var rateName = ReadModelIndexPlan.Resolve(definition.Indexes.Last(), schema, ProjectedColumns.ForSchema(schema), DatabaseType.PostgreSql)!.Name(DatabaseType.PostgreSql, Table);
         (await _context.Database.SqlQuery<int>($"SELECT COUNT(*)::int AS \"Value\" FROM pg_indexes WHERE schemaname=current_schema() AND tablename={Table} AND (indexname={name} OR indexname={rateName})").SingleAsync()).ShouldEqual(2);

@@ -66,6 +66,7 @@ public partial class EventStore : IEventStore
     readonly IReactorSideEffectHandlers _reactorSideEffectHandlers;
     readonly ILogger<EventStore> _logger;
     readonly IActivitySource<EventSequence> _activitySource;
+    readonly ChronicleTelemetryOptions _telemetry;
     readonly ConcurrentDictionary<EventSequenceId, IEventSequence> _sequences = new();
     readonly Projections.Projections _projections;
     readonly RegistrationRetryOptions _registrationRetry;
@@ -135,6 +136,7 @@ public partial class EventStore : IEventStore
         IOptions<ChronicleOptions> options,
         ILoggerFactory loggerFactory)
     {
+        _telemetry = options.Value.Telemetry;
         _logger = loggerFactory.CreateLogger<EventStore>();
         _registrationRetry = options.Value.RegistrationRetry;
         _registrationBackoff = new RegistrationBackoff(_registrationRetry.InitialDelay, _registrationRetry.MaximumDelay);
@@ -215,7 +217,8 @@ public partial class EventStore : IEventStore
             identityProvider,
             jsonSerializerOptions,
             reactorSideEffectHandlers,
-            EventSources);
+            EventSources,
+            _telemetry);
         _sequences[EventLog.Id] = EventLog;
 
         Jobs = new Jobs.Jobs(this);
@@ -517,7 +520,8 @@ public partial class EventStore : IEventStore
                 state._jsonSerializerOptions,
                 state._activitySource,
                 state._reactorSideEffectHandlers,
-                state.EventSources),
+                state.EventSources,
+                state._telemetry),
             this);
 
     /// <inheritdoc/>

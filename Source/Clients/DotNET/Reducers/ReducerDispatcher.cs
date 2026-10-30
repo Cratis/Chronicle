@@ -4,6 +4,7 @@
 using System.Text.Json;
 using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Contracts.Observation.Reducers;
+using Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Identities;
@@ -108,6 +109,7 @@ internal sealed class ReducerDispatcher(
             }
             else
             {
+                span?.Activity?.RecordFailure(reduceResult.ExceptionType ?? "reducer_error");
                 exceptionMessages = reduceResult.ErrorMessages;
                 exceptionStackTrace = reduceResult.StackTrace;
                 state = ObservationState.Failed;
@@ -120,6 +122,7 @@ internal sealed class ReducerDispatcher(
         }
         catch (Exception ex)
         {
+            span?.Activity?.RecordFailure(ex);
             logger.ErrorWhileHandlingEvents(ex, appendedEvents[0].Context.SequenceNumber, appendedEvents[^1].Context.SequenceNumber, handler.Id);
             exceptionMessages = ex.GetAllMessages();
             exceptionStackTrace = ex.StackTrace ?? string.Empty;
