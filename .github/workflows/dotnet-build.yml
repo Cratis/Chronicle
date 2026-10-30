@@ -97,7 +97,11 @@ jobs:
     if: needs.already-ran.outputs.skip != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 120
-    permissions: {contents: read, packages: write}
+    # The repository's default token is read-only. Non-PR runs push the development image
+    # the integration shards pull, so this job asks for package write access explicitly.
+    permissions:
+      contents: read
+      packages: write
     outputs:
       chronicle-image: ${{ steps.export-image.outputs.image }}
 
