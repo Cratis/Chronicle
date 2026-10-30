@@ -6,6 +6,8 @@ using System.Text.Json;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
+using Cratis.Chronicle.Concepts.EventTypes;
+using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Json;
@@ -86,12 +88,15 @@ internal static class ReadModelSnapshotReader
         foreach (var (correlationId, events) in groups)
         {
             state = await history.Projection.ProcessForSingleReadModel(@namespace, state, events);
+            var displayedEvents = history.UsesPinnedDelivery
+                ? await eventCompliance.Release(events, history.EventTypeSchemas)
+                : events.ToArray();
 
             snapshots.Add(new ReadModelSnapshot(
                 events[0].Context.Occurred,
                 correlationId,
                 Serialize(state, history.ReadModelDefinition, expandoObjectConverter, jsonSerializerOptions),
-                events.Select(appendedEvent => new Event(
+                displayedEvents.Select(appendedEvent => new Event(
                     appendedEvent.Context.ToApi(),
                     JsonSerializer.Serialize(appendedEvent.Content, jsonSerializerOptions)))));
         }
@@ -100,7 +105,7 @@ internal static class ReadModelSnapshotReader
     }
 
     /// <summary>
-    /// Reads the events that shaped one read model instance, decrypted and in order.
+    /// Reads the events that shaped one read model instance, ready for the projection's release policy.
     /// </summary>
     /// <param name="projectionId">The projection that produces the read model.</param>
     /// <param name="eventStore">The event store the read model lives in.</param>
@@ -158,12 +163,15 @@ internal static class ReadModelSnapshotReader
             allEvents = [.. await projection.GetEventsForKey(@namespace, readModelKey, allEvents)];
         }
 
-        // Decrypt the stored events before projecting and returning them - both the projected read
-        // model and the events it carries must be released so no PII leaves encrypted.
         var eventTypeSchemas = await storage.GetEventStore(eventStore).EventTypes.GetFor(allEvents.Select(_ => _.Context.EventType).Distinct());
-        var releasedEvents = await eventCompliance.Release(allEvents, eventTypeSchemas.ToDictionary(_ => _.Type));
+        var schemas = eventTypeSchemas.ToDictionary(_ => _.Type);
+        var usesPinnedDelivery = !definition.SubscribesToAllEvents && definition.GenerationDelivery == EventGenerationDelivery.Pinned;
 
-        return new(projection, readModelDefinition, [.. releasedEvents.OrderBy(_ => _.Context.SequenceNumber)]);
+        // Pinned projection inputs stay protected: generation release selects or re-derives content before
+        // decrypting it. Decrypt their stored-history display separately, never feeding it back to the projection.
+        var projectionEvents = usesPinnedDelivery ? allEvents.ToArray() : await eventCompliance.Release(allEvents, schemas);
+
+        return new(projection, readModelDefinition, [.. projectionEvents.OrderBy(_ => _.Context.SequenceNumber)], usesPinnedDelivery, schemas);
     }
 
     /// <summary>
@@ -190,9 +198,13 @@ internal static class ReadModelSnapshotReader
     /// </summary>
     /// <param name="Projection">The projection that produces the read model.</param>
     /// <param name="ReadModelDefinition">The read model's definition, for serializing against its schema.</param>
-    /// <param name="Events">The events that shaped the instance, oldest first and decrypted.</param>
+    /// <param name="Events">The events that shaped the instance, oldest first, protected for pinned delivery.</param>
+    /// <param name="UsesPinnedDelivery">Whether generation release owns decryption of projection inputs.</param>
+    /// <param name="EventTypeSchemas">Schemas for releasing stored events for display.</param>
     record ProjectedReadModelHistory(
         IProjection Projection,
         Concepts.ReadModels.ReadModelDefinition ReadModelDefinition,
-        IReadOnlyList<AppendedEvent> Events);
+        IReadOnlyList<AppendedEvent> Events,
+        bool UsesPinnedDelivery,
+        IDictionary<Concepts.Events.EventType, EventTypeSchema> EventTypeSchemas);
 }

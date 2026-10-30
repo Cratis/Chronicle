@@ -91,17 +91,18 @@ public partial class EventSequenceStorage
         var merged = JsonSerializer.Serialize(content);
         var mergedHashes = JsonSerializer.Serialize(hashes);
         var mergedProvenance = JsonSerializer.Serialize(provenance);
+        var revisedGeneration = observed.RevisedGeneration?.Value;
 
         // Two explicit branches for the revisions predicate, since NULL never equals NULL in SQL.
         var rows = tokenRevisions is null
             ? await scope.DbContext.Events
-                .Where(_ => _.SequenceNumber == number && _.Type == type && _.Content == tokenContent && _.ContentHashes == tokenHashes && _.Revisions == null)
+                .Where(_ => _.SequenceNumber == number && _.Type == type && _.Content == tokenContent && _.ContentHashes == tokenHashes && _.Revisions == null && _.RevisedGeneration == revisedGeneration)
                 .ExecuteUpdateAsync(setters => setters
                     .SetProperty(_ => _.Content, merged)
                     .SetProperty(_ => _.ContentHashes, mergedHashes)
                     .SetProperty(_ => _.DerivedGenerations, mergedProvenance))
             : await scope.DbContext.Events
-                .Where(_ => _.SequenceNumber == number && _.Type == type && _.Content == tokenContent && _.ContentHashes == tokenHashes && _.Revisions == tokenRevisions)
+                .Where(_ => _.SequenceNumber == number && _.Type == type && _.Content == tokenContent && _.ContentHashes == tokenHashes && _.Revisions == tokenRevisions && _.RevisedGeneration == revisedGeneration)
                 .ExecuteUpdateAsync(setters => setters
                     .SetProperty(_ => _.Content, merged)
                     .SetProperty(_ => _.ContentHashes, mergedHashes)
