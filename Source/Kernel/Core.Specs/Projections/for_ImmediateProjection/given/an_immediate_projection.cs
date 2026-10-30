@@ -16,6 +16,7 @@ using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.EventSequences;
+using Cratis.Chronicle.Storage.Sinks;
 using Microsoft.Extensions.Logging;
 using Orleans.Core;
 using Orleans.TestKit;
@@ -37,6 +38,7 @@ public class an_immediate_projection : Specification
     protected IEventSequenceStorage _eventSequenceStorage;
     protected IExpandoObjectConverter _expandoObjectConverter;
     protected ILogger<ImmediateProjection> _logger;
+    protected IReadModelInstanceVisibilities _visibilities;
 
     protected virtual ImmediateProjectionStreamScope? StreamScope => null;
     protected virtual ProjectionSessionId? SessionId => null;
@@ -51,6 +53,8 @@ public class an_immediate_projection : Specification
         _eventSequenceStorage = Substitute.For<IEventSequenceStorage>();
         _expandoObjectConverter = Substitute.For<IExpandoObjectConverter>();
         _expandoObjectConverter.ToExpandoObject(Arg.Any<JsonObject>(), Arg.Any<JsonSchema>()).Returns(_ => new ExpandoObject());
+        _visibilities = Substitute.For<IReadModelInstanceVisibilities>();
+        _visibilities.GetFor(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<ReadModelDefinition>()).Returns(ReadModelInstanceVisibility.InitializedOnly);
         _logger = Substitute.For<ILogger<ImmediateProjection>>();
         _logger.IsEnabled(Arg.Any<LogLevel>()).Returns(true);
 
@@ -66,6 +70,7 @@ public class an_immediate_projection : Specification
 
         _silo.AddService(storage);
         _silo.AddService(_expandoObjectConverter);
+        _silo.AddService(_visibilities);
         _silo.AddService(_logger);
         _silo.AddProbe(_ => _projection);
         _silo.AddProbe(_ => _readModel);

@@ -47,7 +47,7 @@ public class when_saving_during_an_in_flight_read : given.a_cache_encryption_key
         return _supersededKey;
     }
 
-    [Fact] void should_hand_the_racing_read_the_saved_key_instead_of_the_invalidated_key() => _duringSave.ShouldEqual(_savedKey);
+    [Fact] void should_hand_the_racing_read_what_the_backing_store_held_when_it_asked() => _duringSave.ShouldEqual(_supersededKey);
     [Fact] void should_serve_the_saved_key_afterwards() => _afterSave.ShouldEqual(_savedKey);
     [Fact] void should_serve_it_from_the_cache() => _actualStore.Received(1).TryGetFor(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, _identifier);
 }

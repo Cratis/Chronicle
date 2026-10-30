@@ -221,7 +221,7 @@ public class Projection(
         var identifierPropertyName = !schemaProperties.ContainsKey("_id") && schemaProperties.ContainsKey("id") ? "id" : "_id";
 
         var sink = await ProjectInMemory(projection, eventSequenceStorage, events);
-        return [.. sink.ReadModels.Where(readModel => !ReadModelInitialization.IsUninitialized(readModel.State)).Select(readModel => WithIdentifier(readModel, identifierPropertyName))];
+        return [.. sink.ReadModels.Where(readModel => ProjectionInitialization.IsChildOnly(projection) || !ReadModelInitialization.IsUninitialized(readModel.State)).Select(readModel => WithIdentifier(readModel, identifierPropertyName))];
     }
 
     static bool SuppressesDirectRootUpdate(Change[] changes) =>
@@ -415,7 +415,9 @@ public class Projection(
         var model = InMemoryChanges.Apply(context.Key, changeset.Changes, state.Model);
         ((IDictionary<string, object?>)model)[_identifierPropertyName] = context.Key.Value.ToString();
         ReadModelSubjects.TrackChanges(model, changeset.Changes, context.Event);
-        return new(model, true, state.IsInitialized || CreatesInstance(projection, context));
+        var isInitialized = state.IsInitialized || CreatesInstance(projection, context) ||
+            ProjectionInitialization.CanInitializeFromChildren(projection, context);
+        return new(model, true, isInitialized);
     }
 
     async Task<IEnumerable<ExpandoObject>> Project(EventStoreNamespaceName eventStoreNamespace, IEnumerable<AppendedEvent> events)
@@ -427,7 +429,7 @@ public class Projection(
         var sink = await ProjectInMemory(projection, eventSequenceStorage, events);
 
         // Set the last handled event sequence number to mirror what the sink writes
-        return [.. sink.ReadModels.Where(readModel => !ReadModelInitialization.IsUninitialized(readModel.State)).Select(readModel =>
+        return [.. sink.ReadModels.Where(readModel => ProjectionInitialization.IsChildOnly(projection) || !ReadModelInitialization.IsUninitialized(readModel.State)).Select(readModel =>
         {
             var state = WithIdentifier(readModel, _identifierPropertyName);
             ((IDictionary<string, object?>)state)[WellKnownProperties.LastHandledEventSequenceNumber] = (ulong)readModel.LastHandledEventSequenceNumber;

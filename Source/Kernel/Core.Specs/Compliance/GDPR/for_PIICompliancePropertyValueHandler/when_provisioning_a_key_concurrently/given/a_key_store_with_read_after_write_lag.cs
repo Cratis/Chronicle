@@ -55,9 +55,6 @@ public class a_key_store_with_read_after_write_lag : Specification
             return result;
         }
 
-        public Task<EncryptionKeyErasure?> GetErasureForRelease(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier) =>
-            _primary.GetErasureForRelease(eventStore, eventStoreNamespace, identifier);
-
         public Task<bool> HasFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKeyRevision? revision = null) =>
             _secondary.HasFor(eventStore, eventStoreNamespace, identifier, revision);
 

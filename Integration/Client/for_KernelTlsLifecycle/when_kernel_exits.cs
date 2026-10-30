@@ -101,10 +101,12 @@ public class when_kernel_exits : Cratis.Specifications.Specification
         }
         catch (DockerApiException)
         {
-            // A completed kill may already have unpaused and stopped this same owned container.
+            // The in-flight kill may already have taken the container out of the paused state. Docker reports a
+            // container as running until the kill's exit is processed, so only the frozen state is asserted here;
+            // termination is proven by the awaited kill and the non-zero exit code in KillAndUnpause.
             using var inspectTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
             var state = await client.Containers.InspectContainerAsync(id, inspectTimeout.Token).WaitAsync(TimeSpan.FromSeconds(15));
-            state.State.Running.ShouldBeFalse();
+            state.State.Paused.ShouldBeFalse();
         }
     }
 

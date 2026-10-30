@@ -29,10 +29,6 @@ public class two_key_stores : Specification
     protected static IEncryptionKeyStorage AnUnreachableStore()
     {
         var store = Substitute.For<IEncryptionKeyStorage>();
-        store.GetErasureForRelease(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<EncryptionKeyIdentifier>())
-            .Returns(Task.FromException<EncryptionKeyErasure?>(new StoreUnreachable()));
-        store.TryGetLatestFor(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<EncryptionKeyIdentifier>())
-            .Returns(Task.FromException<EncryptionKeyAtRevision?>(new StoreUnreachable()));
         store.TryGetFor(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<EncryptionKeyIdentifier>(), Arg.Any<EncryptionKeyRevision?>()).ThrowsAsync(new StoreUnreachable());
         store.GetFor(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<EncryptionKeyIdentifier>(), Arg.Any<EncryptionKeyRevision?>()).ThrowsAsync(new StoreUnreachable());
         store.HasFor(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<EncryptionKeyIdentifier>(), Arg.Any<EncryptionKeyRevision?>()).ThrowsAsync(new StoreUnreachable());

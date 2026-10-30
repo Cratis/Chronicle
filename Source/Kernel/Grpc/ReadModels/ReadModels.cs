@@ -131,14 +131,9 @@ internal sealed class ReadModels(
         var definition = await readModel.GetKnownDefinition(request.ReadModel);
         var occurrence = string.IsNullOrEmpty(request.Occurrence) ? null : (ReadModelContainerName)request.Occurrence;
         var binding = await readBindings.Resolve(request.EventStore, request.Namespace, definition, occurrence);
-        var sink = binding.Sink;
-        occurrence = binding.Occurrence;
         var skip = Math.Max(0, request.Page * request.PageSize);
 
-        var (instances, totalCount) = await sink.GetInstances(
-            occurrence,
-            skip,
-            request.PageSize);
+        var (instances, totalCount) = await binding.GetInstances(skip, request.PageSize);
 
         var schema = definition.GetSchemaForLatestGeneration();
         var releasedInstances = await complianceHelper.Release(

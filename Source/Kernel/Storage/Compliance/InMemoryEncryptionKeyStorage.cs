@@ -18,10 +18,6 @@ public class InMemoryEncryptionKeyStorage : IEncryptionKeyStorage
     readonly Lock _lock = new();
 
     /// <inheritdoc/>
-    public Task<EncryptionKeyErasure?> GetErasureForRelease(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier) =>
-        GetErasureFor(eventStore, eventStoreNamespace, identifier);
-
-    /// <inheritdoc/>
     public Task SaveFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKey key, EncryptionKeyRevision? revision = null)
     {
         lock (_lock)

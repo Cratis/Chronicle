@@ -431,24 +431,32 @@ public partial class InMemorySink(
     public Task EnsureIndexes() => Task.CompletedTask;
 
     /// <inheritdoc/>
-    public Task<ReadModelInstances> GetInstances(ReadModelContainerName? occurrence = null, int skip = 0, int take = 50)
+    public Task<ReadModelInstances> GetInstances(ReadModelContainerName? occurrence = null, int skip = 0, int take = 50) =>
+        GetInstances(occurrence, skip, take, ReadModelInstanceVisibility.InitializedOnly);
+
+    /// <inheritdoc/>
+    public Task<ReadModelInstances> GetInstances(ReadModelContainerName? occurrence, int skip, int take, ReadModelInstanceVisibility visibility)
     {
-        var (instances, totalCount) = SnapshotInstances(skip, take);
+        var (instances, totalCount) = SnapshotInstances(skip, take, visibility);
         return Task.FromResult(new ReadModelInstances(instances, totalCount));
     }
 
     /// <inheritdoc/>
-    public IObservable<IEnumerable<ExpandoObject>> ObserveInstances(ReadModelContainerName? occurrence = null, int skip = 0, int take = 50)
+    public IObservable<IEnumerable<ExpandoObject>> ObserveInstances(ReadModelContainerName? occurrence = null, int skip = 0, int take = 50) =>
+        ObserveInstances(occurrence, skip, take, ReadModelInstanceVisibility.InitializedOnly);
+
+    /// <inheritdoc/>
+    public IObservable<IEnumerable<ExpandoObject>> ObserveInstances(ReadModelContainerName? occurrence, int skip, int take, ReadModelInstanceVisibility visibility)
     {
         // For in-memory sink, return an observable that emits whenever the collection changes
         return Observable.Create<IEnumerable<ExpandoObject>>(observer =>
         {
             // Emit initial state
-            observer.OnNext(SnapshotInstances(skip, take).Instances);
+            observer.OnNext(SnapshotInstances(skip, take, visibility).Instances);
 
             // Subscribe to changes on _changeSubject and emit updated instances
             return _changeSubject.Subscribe(
-                _ => observer.OnNext(SnapshotInstances(skip, take).Instances),
+                _ => observer.OnNext(SnapshotInstances(skip, take, visibility).Instances),
                 observer.OnError,
                 observer.OnCompleted);
         });
@@ -478,7 +486,7 @@ public partial class InMemorySink(
         }
     }
 
-    (IReadOnlyList<ExpandoObject> Instances, int TotalCount) SnapshotInstances(int skip, int take)
+    (IReadOnlyList<ExpandoObject> Instances, int TotalCount) SnapshotInstances(int skip, int take, ReadModelInstanceVisibility visibility)
     {
         static string KeyOrderValue(object key)
         {
@@ -497,6 +505,7 @@ public partial class InMemorySink(
         lock (_collectionLock)
         {
             var visible = _collection.Where(entry =>
+                visibility == ReadModelInstanceVisibility.IncludeUninitialized ||
                 !((IDictionary<string, object?>)entry.Value).TryGetValue(WellKnownProperties.ReadModelInstanceInitialized, out var initialized) || initialized is not false).ToArray();
             var instances = visible.OrderBy(entry => KeyOrderValue(entry.Key), StringComparer.Ordinal)
                 .Skip(skip).Take(take).Select(entry => entry.Value).ToArray();

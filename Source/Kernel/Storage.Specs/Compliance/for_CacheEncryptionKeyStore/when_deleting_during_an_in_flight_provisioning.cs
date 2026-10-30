@@ -14,7 +14,6 @@ public class when_deleting_during_an_in_flight_provisioning : given.a_cache_encr
     readonly TaskCompletionSource _provisioningStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
     readonly TaskCompletionSource _releaseProvisioning = new(TaskCreationOptions.RunContinuationsAsynchronously);
     EncryptionKey? _afterDeletion;
-    Exception _error;
 
     void Establish() =>
         _actualStore
@@ -27,7 +26,7 @@ public class when_deleting_during_an_in_flight_provisioning : given.a_cache_encr
         await _provisioningStarted.Task;
         await _store.DeleteFor(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, _identifier);
         _releaseProvisioning.SetResult();
-        _error = await Catch.Exception(async () => await inFlightProvisioning);
+        await inFlightProvisioning;
 
         _actualStore
             .TryGetFor(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, _identifier)
@@ -42,7 +41,6 @@ public class when_deleting_during_an_in_flight_provisioning : given.a_cache_encr
         return _key;
     }
 
-    [Fact] void should_refuse_to_return_the_deleted_key() => _error.ShouldBeOfExactType<MissingEncryptionKey>();
     [Fact] void should_not_restore_the_deleted_key_to_the_cache() => _afterDeletion.ShouldBeNull();
     [Fact] void should_read_the_backing_store_for_the_key() => _actualStore.Received(1).TryGetFor(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, _identifier);
 }

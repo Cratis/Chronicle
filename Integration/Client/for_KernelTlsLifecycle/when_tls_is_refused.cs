@@ -44,8 +44,17 @@ public class when_tls_is_refused : Cratis.Specifications.Specification
         {
             var native = await owner.Issued.Task.WaitAsync(TimeSpan.FromSeconds(10));
             var refusal = await Catch.Exception(async () => await native.WaitAsync(TimeSpan.FromSeconds(15)));
+            Assert.True(refusal is RpcException, $"Expected an RPC refusal; exception types: {ExceptionTypes(refusal)}");
             var rpc = Assert.IsType<RpcException>(refusal);
-            rpc.StatusCode.ShouldEqual(StatusCode.Unavailable);
+
+            // Grpc.Net.Client maps a failure to Unavailable only when a SocketException or IOException is in the chain.
+            // A refused certificate surfaces as HttpRequestException wrapping AuthenticationException, which maps to Internal;
+            // that is deliberate here, because the client's retry policy treats Unavailable as transient.
+            Assert.True(rpc.StatusCode == StatusCode.Internal, $"Expected TLS refusal status Internal; received {rpc.StatusCode}. Exception types: {ExceptionTypes(rpc.Status.DebugException)}");
+            var request = rpc.Status.DebugException;
+            while (request is not (null or HttpRequestException)) request = request.InnerException;
+            var secureConnection = Assert.IsType<HttpRequestException>(request);
+            secureConnection.HttpRequestError.ShouldEqual(HttpRequestError.SecureConnectionError);
             var cause = rpc.Status.DebugException;
             while (cause is not (null or AuthenticationException)) cause = cause.InnerException;
             cause.ShouldNotBeNull();
@@ -60,6 +69,17 @@ public class when_tls_is_refused : Cratis.Specifications.Specification
         await owner.DisposeFixtureAsync();
         await owner.AssertGoneAsync();
         Directory.Exists(owner.MaterialDirectory).ShouldBeFalse();
+    }
+
+    internal static string ExceptionTypes(Exception? exception)
+    {
+        var types = new List<string>();
+        while (exception is not null && types.Count < 8)
+        {
+            types.Add(exception.GetType().FullName ?? exception.GetType().Name);
+            exception = exception.InnerException;
+        }
+        return string.Join(" -> ", types);
     }
 
     /// <summary>
@@ -109,7 +129,7 @@ public class when_tls_is_refused : Cratis.Specifications.Specification
 
         internal async Task AssertGoneAsync()
         {
-            var ids = _createdIds.Concat(_containers.Select(container => container.Id)).Where(id => !string.IsNullOrEmpty(id)).Distinct().ToArray();
+            var ids = _createdIds.Concat(_containers.Select(CreatedId)).Where(id => !string.IsNullOrEmpty(id)).Distinct().ToArray();
             ids.Length.ShouldBeGreaterThan(0);
             foreach (var id in ids) await AssertGone(id);
         }
@@ -145,6 +165,18 @@ public class when_tls_is_refused : Cratis.Specifications.Specification
 
         internal static DockerClient Client() => TestcontainersSettings.OS.DockerEndpointAuthConfig.GetDockerClientBuilder(Guid.NewGuid()).Build();
 
+        static string CreatedId(IContainer container)
+        {
+            try
+            {
+                return container.Id;
+            }
+            catch (InvalidOperationException)
+            {
+                return string.Empty;
+            }
+        }
+
         static async Task AssertGone(string id)
         {
             using var client = Client();
@@ -155,8 +187,12 @@ public class when_tls_is_refused : Cratis.Specifications.Specification
 
         async ValueTask DisposeObserved(IContainer container, Func<ValueTask> realDispose)
         {
-            foreach (var owned in _containers.Where(owned => !string.IsNullOrEmpty(owned.Id))) _createdIds.Add(owned.Id);
-            var id = container.Id;
+            foreach (var owned in _containers)
+            {
+                var ownedId = CreatedId(owned);
+                if (!string.IsNullOrEmpty(ownedId)) _createdIds.Add(ownedId);
+            }
+            var id = CreatedId(container);
             if (Dispose is { } injected)
             {
                 await injected(container, realDispose);

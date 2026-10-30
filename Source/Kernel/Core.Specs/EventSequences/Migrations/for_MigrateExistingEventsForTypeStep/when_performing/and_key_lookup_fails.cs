@@ -13,7 +13,7 @@ public class and_key_lookup_fails : given.protected_events
     void Establish()
     {
         _original = _converter.ToJsonObject(_stored[1][1], _sourceSchema).ToJsonString();
-        _keyAccess.TryGetLatestFor(Store, Namespace, "erased-owner").ThrowsAsync(new MissingEncryptionKey("erased-owner"));
+        _keyAccess.TryGetFor(Store, Namespace, "erased-owner").ThrowsAsync(new MissingEncryptionKey("erased-owner"));
     }
 
     async Task Because() => await Perform();

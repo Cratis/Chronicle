@@ -478,17 +478,25 @@ public partial class Sink : ISink, ICanReconcileIndexes, ISinkCompositeKeyLookup
     }
 
     /// <inheritdoc/>
-    public async Task<ReadModelInstances> GetInstances(ReadModelContainerName? occurrence = null, int skip = 0, int take = 50)
+    public Task<ReadModelInstances> GetInstances(ReadModelContainerName? occurrence = null, int skip = 0, int take = 50) =>
+        GetInstances(occurrence, skip, take, ReadModelInstanceVisibility.InitializedOnly);
+
+    /// <inheritdoc/>
+    public async Task<ReadModelInstances> GetInstances(ReadModelContainerName? occurrence, int skip, int take, ReadModelInstanceVisibility visibility)
     {
         var containerName = QueriedTableNameFor(occurrence);
         await using var scope = await _database.ReadModelTable(_eventStoreName, _namespace, containerName, _columns);
-        var totalCount = await VisibleInstances(scope.DbContext.Entries.AsNoTracking()).CountAsync();
-        var entries = await ReadOrderedPage(scope.DbContext, skip, take);
+        var totalCount = await VisibleInstances(scope.DbContext.Entries.AsNoTracking(), visibility).CountAsync();
+        var entries = await ReadOrderedPage(scope.DbContext, skip, take, visibility);
         return new ReadModelInstances(entries.Select(MaterializeInstance), totalCount);
     }
 
     /// <inheritdoc/>
-    public IObservable<IEnumerable<ExpandoObject>> ObserveInstances(ReadModelContainerName? occurrence = null, int skip = 0, int take = 50)
+    public IObservable<IEnumerable<ExpandoObject>> ObserveInstances(ReadModelContainerName? occurrence = null, int skip = 0, int take = 50) =>
+        ObserveInstances(occurrence, skip, take, ReadModelInstanceVisibility.InitializedOnly);
+
+    /// <inheritdoc/>
+    public IObservable<IEnumerable<ExpandoObject>> ObserveInstances(ReadModelContainerName? occurrence, int skip, int take, ReadModelInstanceVisibility visibility)
     {
         // Watch notifies projection changes, but misses reducer writes, removals, and the replay
         // rename swap. Poll stored state like other SQL live queries to observe all of these changes.
@@ -498,8 +506,8 @@ public partial class Sink : ISink, ICanReconcileIndexes, ISinkCompositeKeyLookup
         {
             var containerName = QueriedTableNameFor(occurrence);
             await using var scope = await _database.ReadModelTable(_eventStoreName, _namespace, containerName, _columns);
-            var totalCount = await VisibleInstances(scope.DbContext.Entries.AsNoTracking()).CountAsync();
-            var entries = (await ReadOrderedPage(scope.DbContext, skip, take)).ToArray();
+            var totalCount = await VisibleInstances(scope.DbContext.Entries.AsNoTracking(), visibility).CountAsync();
+            var entries = (await ReadOrderedPage(scope.DbContext, skip, take, visibility)).ToArray();
             return [new ObservedPage(totalCount, entries)];
         }
 
@@ -522,20 +530,23 @@ public partial class Sink : ISink, ICanReconcileIndexes, ISinkCompositeKeyLookup
     /// </remarks>
     string QueriedTableNameFor(ReadModelContainerName? occurrence) => occurrence?.Value ?? _tableName;
 
-    static IQueryable<DynamicReadModelEntity> VisibleInstances(IQueryable<DynamicReadModelEntity> entries) =>
-        entries.Where(entity => EF.Property<bool>(entity, WellKnownProperties.ReadModelInstanceInitialized));
+    static IQueryable<DynamicReadModelEntity> VisibleInstances(IQueryable<DynamicReadModelEntity> entries, ReadModelInstanceVisibility visibility) =>
+        visibility == ReadModelInstanceVisibility.IncludeUninitialized
+            ? entries
+            : entries.Where(entity => EF.Property<bool>(entity, WellKnownProperties.ReadModelInstanceInitialized));
 
-    async Task<List<DynamicReadModelEntity>> ReadOrderedPage(ReadModelDbContext context, int skip, int take)
+    async Task<List<DynamicReadModelEntity>> ReadOrderedPage(ReadModelDbContext context, int skip, int take, ReadModelInstanceVisibility visibility)
     {
         var key = _columns.First(column => column.IsKey);
-        if (!UsesDecimalSortKey(context, key)) return await OrderByKey(VisibleInstances(context.Entries.AsNoTracking())).Skip(skip).Take(take).ToListAsync();
+        if (!UsesDecimalSortKey(context, key)) return await OrderByKey(VisibleInstances(context.Entries.AsNoTracking(), visibility)).Skip(skip).Take(take).ToListAsync();
         var shadow = SqliteDecimalSortKey.ColumnNameFor(key.Name);
         var helper = context.GetService<ISqlGenerationHelper>();
         var initialized = helper.DelimitIdentifier(WellKnownProperties.ReadModelInstanceInitialized);
 
         // A bare boolean term, like EF's own translation, keeps SQLite on the ordering index; an equality term
         // would select the initialized-marker index and sort every visible row before taking one page.
-        var sql = $"SELECT t.* FROM {helper.DelimitIdentifier(context.TableName)} t WHERE t.{initialized} ORDER BY t.{helper.DelimitIdentifier(shadow)}, t.{helper.DelimitIdentifier(key.Name)} LIMIT {{0}} OFFSET {{1}}";
+        var where = visibility == ReadModelInstanceVisibility.IncludeUninitialized ? string.Empty : $" WHERE t.{initialized}";
+        var sql = $"SELECT t.* FROM {helper.DelimitIdentifier(context.TableName)} t{where} ORDER BY t.{helper.DelimitIdentifier(shadow)}, t.{helper.DelimitIdentifier(key.Name)} LIMIT {{0}} OFFSET {{1}}";
 #pragma warning disable EF1002 // Provider-delimited identifiers only; page limits are parameters.
         return await ShadowColumns.Access(context, shadow, () => context.Entries.FromSqlRaw(sql, take, skip).AsNoTracking().ToListAsync());
 #pragma warning restore EF1002

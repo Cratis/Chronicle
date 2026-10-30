@@ -232,7 +232,9 @@ public class ProjectionObserverSubscriber(
         }
     }
 
-    bool CanNotify(ExpandoObject state) => _definition.IsActive && !ReadModelInitialization.IsUninitialized(state);
+    bool CanNotify(ExpandoObject state) =>
+        _definition.IsActive &&
+        ((_projection is not null && ProjectionInitialization.IsChildOnly(_projection)) || !ReadModelInitialization.IsUninitialized(state));
 
     async Task<(ObserverSubscriberResult Result, ReadModelChangeNotification? Notification)> HandleRun(Key partition, IEnumerable<AppendedEvent> events)
     {

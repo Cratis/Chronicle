@@ -10,6 +10,7 @@ using Cratis.Chronicle.Json;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
+using Cratis.Chronicle.Storage.Sinks;
 using Microsoft.Extensions.Logging;
 using Orleans.Providers;
 
@@ -23,11 +24,13 @@ namespace Cratis.Chronicle.Projections;
 /// </remarks>
 /// <param name="storage"><see cref="IStorage"/> for accessing underlying storage.</param>
 /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> to convert between JSON and ExpandoObject.</param>
+/// <param name="visibilities"><see cref="IReadModelInstanceVisibilities"/> deciding whether roots stored as uninitialized are returned.</param>
 /// <param name="logger">Logger for logging.</param>
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.Projections)]
 public class ImmediateProjection(
     IStorage storage,
     IExpandoObjectConverter expandoObjectConverter,
+    IReadModelInstanceVisibilities visibilities,
     ILogger<ImmediateProjection> logger) : Grain<ProjectionDefinition>, IImmediateProjection, INotifyProjectionDefinitionsChanged
 {
     /// <summary>
@@ -157,7 +160,8 @@ public class ImmediateProjection(
                 lastHandledEventSequenceNumber = events[^1].Context.SequenceNumber;
             }
 
-            if (!HasInitializedModel(state))
+            var visibility = await visibilities.GetFor(_projectionKey.EventStore, _projectionKey.Namespace, _readModelDefinition!);
+            if (!HasInitializedModel(state, visibility))
             {
                 return ProjectionResult.Empty with
                 {
@@ -194,7 +198,8 @@ public class ImmediateProjection(
     /// </summary>
     protected virtual void DeactivateSession() => DeactivateOnIdle();
 
-    static bool HasInitializedModel(SingleReadModelProjectionState state) => state.Exists && state.IsInitialized;
+    static bool HasInitializedModel(SingleReadModelProjectionState state, ReadModelInstanceVisibility visibility) =>
+        state.Exists && (state.IsInitialized || visibility == ReadModelInstanceVisibility.IncludeUninitialized);
 
     SingleReadModelProjectionState GetInitialState()
     {

@@ -36,8 +36,8 @@ namespace Cratis.Chronicle.Storage.Compliance;
 /// <para>
 /// Recording an erasure invalidates exactly like a deletion does, and for the same reason: the fence is written
 /// before the key material is destroyed, so between those two steps the backing store still holds a key this cache
-/// would otherwise keep serving. Erasure state itself is never cached - release and provisioning must read the
-/// backing store because a stale "not erased" is the one answer that must never be given.
+/// would otherwise keep serving. Erasure state itself is never cached - it is read on the provisioning path only,
+/// which happens once per subject, and a stale "not erased" is the one answer that must never be given.
 /// </para>
 /// <para>
 /// This makes the decorator self-sufficient for the store it wraps. It says nothing about caches on other silos -
@@ -90,10 +90,6 @@ public class CacheEncryptionKeyStorage(
     /// <inheritdoc/>
     public void EvictFromCache(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier) =>
         Invalidate(new KeyScope(eventStore, eventStoreNamespace, identifier), revision: null);
-
-    /// <inheritdoc/>
-    public Task<EncryptionKeyErasure?> GetErasureForRelease(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier) =>
-        actualKeyStore.GetErasureForRelease(eventStore, eventStoreNamespace, identifier);
 
     /// <inheritdoc/>
     public Task<EncryptionKeyErasure?> GetErasureFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier) =>
@@ -156,7 +152,7 @@ public class CacheEncryptionKeyStorage(
             }
         }
 
-        return generation == GenerationForRead(scope) ? provisioned : await GetFor(eventStore, eventStoreNamespace, identifier);
+        return provisioned;
     }
 
     /// <inheritdoc/>
@@ -196,7 +192,7 @@ public class CacheEncryptionKeyStorage(
             }
         }
 
-        return generation == GenerationForRead(scope) ? pair : await TryGetLatestFor(eventStore, eventStoreNamespace, identifier);
+        return pair;
     }
 
     /// <inheritdoc/>
@@ -226,8 +222,7 @@ public class CacheEncryptionKeyStorage(
             }
         }
 
-        return generation == GenerationForRead(scope) ? pair :
-            await TryGetLatestFor(eventStore, eventStoreNamespace, identifier) ?? throw new MissingEncryptionKey(identifier);
+        return pair;
     }
 
     /// <inheritdoc/>
@@ -255,18 +250,23 @@ public class CacheEncryptionKeyStorage(
         var key = await actualKeyStore.TryGetFor(eventStore, eventStoreNamespace, identifier, revision);
         lock (_lock)
         {
-            if (generation == GenerationFor(scope) && key is not null)
+            if (generation != GenerationFor(scope))
+            {
+                return key;
+            }
+
+            if (key is not null)
             {
                 _keys[cacheKey] = key;
                 _absentKeys.Remove(cacheKey);
             }
-            else if (generation == GenerationFor(scope))
+            else
             {
                 RememberAbsent(cacheKey);
             }
         }
 
-        return generation == GenerationForRead(scope) ? key : await TryGetFor(eventStore, eventStoreNamespace, identifier, revision);
+        return key;
     }
 
     /// <inheritdoc/>
@@ -314,26 +314,50 @@ public class CacheEncryptionKeyStorage(
     public async Task SaveFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKey key, EncryptionKeyRevision? revision = null)
     {
         var scope = new KeyScope(eventStore, eventStoreNamespace, identifier);
-        long generation;
         lock (_lock)
         {
-            Invalidate(scope, revision);
-            generation = GenerationFor(scope);
-        }
+            // A save mutates the cache exactly like a deletion or an eviction does, so it has to move the generation
+            // too - otherwise a read that captured the previous generation writes the key it found before the save
+            // back over the one just written, and the cache serves the superseded key until something evicts it.
+            // The save's own writes happen below under this same lock, so they are not fenced by their own advance.
+            AdvanceGeneration(scope);
+            _latestPairs.Remove(scope);
 
-        await actualKeyStore.SaveFor(eventStore, eventStoreNamespace, identifier, key, revision);
-        lock (_lock)
-        {
-            if (generation != GenerationFor(scope))
+            var latest = new Key(scope, EncryptionKeyRevision.Latest);
+            _keys.Remove(latest);
+
+            if (revision is not null && revision != EncryptionKeyRevision.Latest)
             {
-                return;
+                var specific = new Key(scope, revision);
+                _keys[specific] = key;
+                _absentKeys.Remove(specific);
             }
 
+            _keys[latest] = key;
+            _absentKeys.Remove(latest);
+        }
+
+        try
+        {
+            await actualKeyStore.SaveFor(eventStore, eventStoreNamespace, identifier, key, revision);
+        }
+        catch
+        {
+            // The backing store can refuse a save outright - an erased subject's key material is refused however it
+            // is offered back. Leaving what it refused in a cache that has no time-to-live would serve the erased
+            // key for the lifetime of the process, from the one place the fence cannot reach. A transient failure
+            // gets the same treatment: a key that was never persisted must not be served as though it had been.
             Invalidate(scope, revision);
-            _keys[new Key(scope, EncryptionKeyRevision.Latest)] = key;
-            if (!IsLatest(revision))
+            throw;
+        }
+        finally
+        {
+            lock (_lock)
             {
-                _keys[new Key(scope, revision!)] = key;
+                // A pair read may have reached storage before the save became durable.
+                AdvanceGeneration(scope);
+                _latestPairs.Remove(scope);
+                _absentKeys.Remove(new Key(scope, EncryptionKeyRevision.Latest));
             }
         }
     }
@@ -376,14 +400,6 @@ public class CacheEncryptionKeyStorage(
         var latest = new Key(scope, EncryptionKeyRevision.Latest);
         _latestPairs[scope] = pair;
         _absentKeys.Remove(latest);
-    }
-
-    long GenerationForRead(KeyScope scope)
-    {
-        lock (_lock)
-        {
-            return GenerationFor(scope);
-        }
     }
 
     long GenerationFor(KeyScope scope) => _generations.GetValueOrDefault(scope);

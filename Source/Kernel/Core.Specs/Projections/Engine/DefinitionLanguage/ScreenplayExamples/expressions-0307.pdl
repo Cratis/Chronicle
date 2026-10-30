@@ -1,0 +1,6 @@
+projection Doc => DocReadModel
+  from DocEvent
+    key OrderLineKey
+      OrderId = orderId
+      LineNumber = lineNumber
+      Sequence = $eventContext.sequenceNumber

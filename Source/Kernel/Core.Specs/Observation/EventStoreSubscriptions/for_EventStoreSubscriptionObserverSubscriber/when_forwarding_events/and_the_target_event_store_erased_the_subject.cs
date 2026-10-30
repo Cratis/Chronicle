@@ -52,10 +52,10 @@ public class and_the_target_event_store_erased_the_subject : Specification
 
         _encryptionKeyStorage = Substitute.For<IEncryptionKeyStorage>();
         _encryptionKeyStorage.HasFor("Lobby", EventStoreNamespaceName.Default, Arg.Any<EncryptionKeyIdentifier>()).Returns(false);
-        _encryptionKeyStorage.GetErasureForRelease("Lobby", EventStoreNamespaceName.Default, Arg.Any<EncryptionKeyIdentifier>())
+        _encryptionKeyStorage.GetErasureFor("Lobby", EventStoreNamespaceName.Default, Arg.Any<EncryptionKeyIdentifier>())
             .Returns(new EncryptionKeyErasure(EncryptionKeyRevision.Initial, ["a-fingerprint"], NewKeyAllowed: false));
-        _encryptionKeyStorage.TryGetLatestFor("Admin", EventStoreNamespaceName.Default, Arg.Any<EncryptionKeyIdentifier>())
-            .Returns(new EncryptionKeyAtRevision(new([1, 2, 3], [4, 5, 6]), EncryptionKeyRevision.Initial));
+        _encryptionKeyStorage.TryGetFor("Admin", EventStoreNamespaceName.Default, Arg.Any<EncryptionKeyIdentifier>())
+            .Returns(new EncryptionKey([1, 2, 3], [4, 5, 6]));
         _silo.AddService(_encryptionKeyStorage);
 
         _inboxSequence = Substitute.For<IEventSequence>();
@@ -118,10 +118,11 @@ public class and_the_target_event_store_erased_the_subject : Specification
 
     [Fact]
     Task should_not_even_read_the_key_from_the_source_event_store() =>
-        _encryptionKeyStorage.DidNotReceive().TryGetLatestFor(
+        _encryptionKeyStorage.DidNotReceive().TryGetFor(
             Arg.Any<EventStoreName>(),
             Arg.Any<EventStoreNamespaceName>(),
-            Arg.Any<EncryptionKeyIdentifier>());
+            Arg.Any<EncryptionKeyIdentifier>(),
+            Arg.Any<EncryptionKeyRevision?>());
 
     [Fact]
     void should_still_forward_the_event() => _result.State.ShouldEqual(ObserverSubscriberState.Ok);

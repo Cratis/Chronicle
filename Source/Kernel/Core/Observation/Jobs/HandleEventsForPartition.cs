@@ -209,7 +209,12 @@ public partial class HandleEventsForPartition(
             _eventTypeSchemas = (await _eventTypes.GetFor(eventTypesToRead))
                 .ToDictionary(_ => _.Type);
 
-            var storageEvents = await OpenDurableRange(currentState, subscription, eventTypesToRead, cancellationToken);
+            // A storage batch can hold thousands of events; a client or webhook subscriber gets them a bounded call
+            // at a time, so its timeout guards a known amount of work and every answered call is checkpointed.
+            var maxEventsPerCall = await configurationProvider.GetMaxEventsPerSubscriberCallForObserver(currentState.ObserverKey, subscription.SubscriberType);
+            var storageEvents = Storage.EventSequences.BoundedEventCursor.Over(
+                await OpenDurableRange(currentState, subscription, eventTypesToRead, cancellationToken),
+                maxEventsPerCall);
             var maximumEventsPerCall = _subscriber is IUnpartitionedObserverSubscriber
                 ? Math.Min(MaxEventsPerBatch, ObserverSubscriberExtensions.MaximumEventsPerUnpartitionedCall)
                 : MaxEventsPerBatch;
