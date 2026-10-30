@@ -56,6 +56,9 @@ public partial class OccurrencesStorage(IMongoDatabase database) : IOccurrencesS
     /// <inheritdoc/>
     public async Task<IEnumerable<Occurrence>> Claim(TriggerId trigger, string worker, DateTimeOffset now, TimeSpan duration, int max, int maxInFlight)
     {
+        // A claim whose reply is lost is not detected here: the commit stands, the occurrence stays Leased
+        // for the unreachable worker, and it is reclaimed through OccurrenceClaimSelection once the lease expires.
+        // The reclaim increments the epoch, so a late completion from the first claim is fenced out.
         await EnsureIndexes();
         await EnsureFence(trigger);
         using var session = await database.Client.StartSessionAsync();

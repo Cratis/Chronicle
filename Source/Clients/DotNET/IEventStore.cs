@@ -85,8 +85,8 @@ public interface IEventStore
     /// <summary>
     /// Gets occurrence effect receipts bound to this store and namespace.
     /// </summary>
-    /// <exception cref="EffectReceiptsNotSupported">This implementation does not support occurrences.</exception>
-    IOccurrences Occurrences => throw new EffectReceiptsNotSupported();
+    /// <exception cref="OccurrencesNotSupported">This implementation does not support occurrences.</exception>
+    IOccurrences Occurrences => throw new OccurrencesNotSupported();
 
     /// <summary>
     /// Gets the <see cref="IReducers"/> for the event store.

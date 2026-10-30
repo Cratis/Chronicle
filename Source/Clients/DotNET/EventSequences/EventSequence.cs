@@ -1418,7 +1418,8 @@ public class EventSequence(
         };
 
         // A duplicate did not append this attempt's events. Never notify local observers as if it did.
-        if (response?.EffectAlreadyRecorded == true) return result;
+        // Its result therefore reports no event types appended in this turn.
+        if (response?.EffectAlreadyRecorded == true) return result with { EventTypes = [], AppendedEventTypes = [] };
 
         var handler = result.AllAlreadyAppended ? null : _appendedEventsRaised;
         if (eventsList.Count > 0 && handler is not null)
