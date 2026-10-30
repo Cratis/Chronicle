@@ -60,7 +60,19 @@ public static class LiveQuery
             IReadOnlyCollection<TResult>? previous = null;
             while (!cancellationToken.IsCancellationRequested)
             {
-                var current = (await query()).ToArray();
+                IEnumerable<TResult> result;
+                try
+                {
+                    result = await query();
+                }
+                catch (Exception error) when (!cancellationToken.IsCancellationRequested && new SqlStorageErrorClassifier().IsTransient(error))
+                {
+                    // Leave the previous snapshot intact and retry on the next poll.
+                    await Task.Delay(interval, cancellationToken);
+                    continue;
+                }
+
+                var current = result.ToArray();
                 if (previous is null || !current.SequenceEqual(previous, comparer))
                 {
                     observer.OnNext(current);

@@ -29,19 +29,36 @@ public class and_a_partition_is_resolved : given.a_failed_partition_storage
 
     async Task Because()
     {
-        var initial = new TaskCompletionSource();
+        var initial = new TaskCompletionSource<bool>();
         var completion = new TaskCompletionSource<IEnumerable<Concepts.Observation.FailedPartition>>();
         _subscription = _storage.ObserveAllFor().Subscribe(partitions =>
         {
-            if (partitions.Any()) initial.TrySetResult();
+            if (partitions.Any()) initial.TrySetResult(true);
             if (initial.Task.IsCompleted && !partitions.Any()) completion.TrySetResult(partitions);
+        },
+        error =>
+        {
+            initial.TrySetException(error);
+            completion.TrySetException(error);
         });
 
-        await initial.Task.WaitAsync(TimeSpan.FromSeconds(30));
+        await WaitFor(initial.Task, "the initial partition was never observed");
         _state.Remove(_partition);
         await _storage.Save(_observerId, _state);
 
-        _received = await completion.Task.WaitAsync(TimeSpan.FromSeconds(30));
+        _received = await WaitFor(completion.Task, "the removal of the resolved partition was never observed");
+    }
+
+    static async Task<T> WaitFor<T>(Task<T> task, string description)
+    {
+        try
+        {
+            return await task.WaitAsync(TimeSpan.FromSeconds(30));
+        }
+        catch (TimeoutException) when (!task.IsCompleted)
+        {
+            throw new TimeoutException($"Timed out after 30 seconds: {description}.");
+        }
     }
 
     [Fact] void should_publish_the_removal() => _received.ShouldBeEmpty();
