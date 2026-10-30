@@ -95,8 +95,13 @@ public class CatchingUpInFlight(
                     var error = startResult?.TryGetError(out var startError) is true ? startError : default;
                     logger.CouldNotStartInFlightCatchUpForPartition(partition, error);
 
-                    // Keep the recovery obligation in flight without a provisional catching-up marker.
-                    state.CatchingUpPartitions.Remove(partition);
+                    // NotAdmitted refuses before persisting or starting the new job (Cratis.Orleans 1.32.1 Job.Start).
+                    // Other errors, including Unknown, may follow dispatched steps; keep their markers as with exceptions.
+                    // TODO(#4496): reconcile durable jobs before retrying ambiguous starts.
+                    if (error == StartJobError.NotAdmitted)
+                    {
+                        state.CatchingUpPartitions.Remove(partition);
+                    }
                     await StateMachine.TransitionTo<QuarantinedObserver>();
                     return state;
                 }
