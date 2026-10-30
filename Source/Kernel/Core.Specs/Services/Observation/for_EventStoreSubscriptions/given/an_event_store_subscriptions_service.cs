@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Storage;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using ContractIEventStoreSubscriptions = Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions.IEventStoreSubscriptions;
 using KernelEventStoreSubscriptions = Cratis.Chronicle.Services.Observation.EventStoreSubscriptions.EventStoreSubscriptions;
@@ -25,6 +26,7 @@ public class an_event_store_subscriptions_service : Specification
         _subject = new KernelEventStoreSubscriptions(
             _grainFactory,
             Substitute.For<IStorage>(),
-            Options.Create(new ChronicleOptions()));
+            Options.Create(new ChronicleOptions()),
+            NullLogger<KernelEventStoreSubscriptions>.Instance);
     }
 }

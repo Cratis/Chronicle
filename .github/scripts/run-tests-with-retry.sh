@@ -98,10 +98,136 @@ record_flaky() {
     echo "Recorded ${#names[@]} flaky test(s) in ${FLAKY_LOG}."
 }
 
+# Pinned VSTest 18.10.1 (87dfd4b, DotnetTestHostManager.cs:307,635) uses
+# the test assembly directory as cwd. This Client leg has default net10.0 Release
+# output; Orleans FileLogger appends relative to that directory, not results/cwd.
+subscription_diagnostic_logs() {
+    printf '%s\n' "$1"/[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9][0-9][0-9].log
+}
+
+collect_subscription_diagnostics() {
+    local root="$1" invocation="$2" output="$3"
+    local LC_ALL=C
+    export LC_ALL
+    local file size identity offset delta index markers total_bytes=0 output_bytes=0 owned_files=0
+    local files=()
+    while IFS= read -r file; do files+=("$file"); done < <(subscription_diagnostic_logs "$root")
+    if (( ${#files[@]} > 32 )); then
+        echo "#5354 diagnostic evidence incomplete: file limit exceeded."
+        return 2
+    fi
+    if ! printf '#5354 invocation %s: partial marker-only evidence; missing markers are incomplete, not proof of success.\n' "$invocation" > "$output"; then return 2; fi
+    for file in "${diagnostic_files[@]}"; do
+        if [[ ! -f "$file" ]]; then
+            echo "#5354 diagnostic evidence incomplete: a snapshotted log disappeared."
+            return 2
+        fi
+    done
+    for file in "${files[@]}"; do
+        [[ -f "$file" ]] || continue
+        [[ ! -L "$file" ]] || return 2
+        if ! identity=$(stat -c '%d:%i:%s' "$file"); then return 2; fi
+        size="${identity##*:}"
+        identity="${identity%:*}"
+        offset=0
+        for ((index=0; index<${#diagnostic_files[@]}; index++)); do
+            if [[ "${diagnostic_files[$index]}" == "$file" ]]; then
+                if [[ "${diagnostic_identities[$index]}" != "$identity" ]]; then
+                    echo "#5354 diagnostic evidence incomplete: a snapshotted log rotated."
+                    return 2
+                fi
+                offset="${diagnostic_sizes[$index]}"
+                break
+            fi
+        done
+        delta=$((size - offset))
+        (( delta == 0 )) && continue
+        total_bytes=$((total_bytes + delta))
+        if (( delta < 0 || delta > 4194304 || total_bytes > 16777216 )); then
+            echo "#5354 diagnostic evidence incomplete: truncated log or byte limit exceeded."
+            return 2
+        fi
+        # GNU dd on the actual ubuntu-latest leg bounds reads even if a writer
+        # appends after the size observation. Raw bytes never reach output/results.
+        if ! markers=$(dd if="$file" bs=65536 iflag=skip_bytes,count_bytes skip="$offset" count="$delta" status=none | awk -F '\t' -v invocation="$invocation" '
+            function fixture() { return $4 ~ /^Cratis[.]Chronicle[.]XUnit[.]Integration[.]ChronicleOrleansFixture([<`]|\])/ }
+            function reset() { return fixture() && $5 ~ /^Fixture kernel reset [0-9a-fA-F-]+ for invocation / }
+            reset() {
+                if (index($5, "for invocation \047" invocation "\047 ") == 0) mixed = 1
+                else owned = 1
+            }
+            {
+                message = $5
+                allowed = reset() && message ~ / (starting before storage wipes|completed both storage wipes)/
+                if ($4 == "Cratis.Chronicle.Observation.EventStoreSubscriptions.EventStoreSubscriptionsManager]") {
+                    allowed = message ~ /^Subscription manager (activated for target |memory read for target )/ ||
+                        message ~ /^Subscription definition (write starting for target |WriteStateAsync completed for target )/
+                }
+                if ($4 == "Cratis.Chronicle.Services.Observation.EventStoreSubscriptions.EventStoreSubscriptions]") {
+                    allowed = message ~ /^Subscription registration [0-9a-fA-F-]+ for target / ||
+                        message ~ /^Existing persisted subscription query completed for target /
+                }
+                if (allowed) {
+                    if (++count > 256) overflow = 1
+                    else lines[count] = $1 "\t" message
+                }
+            }
+            END {
+                if (!owned || mixed || overflow) exit 2
+                for (i = 1; i <= count; i++) print lines[i]
+            }
+        '); then
+            echo "#5354 diagnostic evidence incomplete: no exclusive invocation reset marker, mixed ownership, read failure or marker limit."
+            return 2
+        fi
+        output_bytes=$((output_bytes + ${#markers} + 1))
+        # Reserve space for the bounded invocation header below the 256 KiB cap.
+        if (( output_bytes > 260000 )); then
+            echo "#5354 diagnostic evidence incomplete: output limit exceeded."
+            return 2
+        fi
+        if ! printf '%s\n' "$markers" >> "$output"; then return 2; fi
+        owned_files=$((owned_files + 1))
+    done
+    if (( owned_files == 0 )); then
+        echo "#5354 diagnostic evidence incomplete: no current-invocation marker files."
+        return 2
+    fi
+    echo "#5354 invocation $invocation: marker-only evidence from $owned_files files; not proof of reset success or cross-process correlation."
+    cat "$output"
+}
+
 run() {
     local filter="$1"
     local trx="$2"
-    dotnet test "$PROJECT" \
+    local invocation="$$-$RANDOM-$RANDOM-$RANDOM" diagnostic_root="" file size test_status
+    local diagnostic_files=() diagnostic_sizes=() diagnostic_identities=()
+    # This exact leg is invoked by integration.yml:179. No checkout/home scan.
+    if [[ "$PROJECT" == "Integration/Client/Client.csproj" ]]; then
+        diagnostic_root="$(dirname "$PROJECT")/bin/Release/net10.0"
+        local candidates=()
+        while IFS= read -r file; do candidates+=("$file"); done < <(subscription_diagnostic_logs "$diagnostic_root")
+        if [[ -L Integration || -L Integration/Client || -L Integration/Client/bin || -L Integration/Client/bin/Release || -L "$diagnostic_root" ]]; then
+            echo "#5354 diagnostic evidence incomplete: refusing a symlinked output path."
+            diagnostic_root=""
+        elif (( ${#candidates[@]} > 32 )); then
+            echo "#5354 diagnostic evidence incomplete: snapshot file limit exceeded."
+            diagnostic_root=""
+        else
+            for file in "${candidates[@]}"; do
+                [[ -f "$file" ]] || continue
+                if [[ -L "$file" ]] || ! size=$(stat -c '%d:%i:%s' "$file"); then
+                    echo "#5354 diagnostic evidence incomplete: cannot snapshot log."
+                    diagnostic_root=""
+                    break
+                fi
+                diagnostic_files+=("$file")
+                diagnostic_sizes+=("${size##*:}")
+                diagnostic_identities+=("${size%:*}")
+            done
+        fi
+    fi
+    CHRONICLE_SUBSCRIPTION_DIAGNOSTICS_INVOCATION="$invocation" dotnet test "$PROJECT" \
         --no-restore \
         --filter "$filter" \
         --logger "console;verbosity=normal" \
@@ -109,6 +235,13 @@ run() {
         --results-directory "$RESULTS_DIR" \
         --configuration Release \
         "${EXTRA_ARGS[@]}"
+    test_status=$?
+    if [[ -n "$diagnostic_root" ]]; then
+        if ! collect_subscription_diagnostics "$diagnostic_root" "$invocation" "$RESULTS_DIR/${trx%.trx}-subscription-diagnostics.log"; then
+            echo "#5354 diagnostic evidence incomplete; original test exit status remains $test_status."
+        fi
+    fi
+    return "$test_status"
 }
 
 attempt=1

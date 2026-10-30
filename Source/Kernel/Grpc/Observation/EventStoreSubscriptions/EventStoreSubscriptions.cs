@@ -10,6 +10,7 @@ using Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Observation.EventStoreSubscriptions;
 using Cratis.Chronicle.Storage;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using ProtoBuf.Grpc;
 using ConceptsEventStoreSubscriptionDefinition = Cratis.Chronicle.Concepts.Observation.EventStoreSubscriptions.EventStoreSubscriptionDefinition;
@@ -24,10 +25,12 @@ namespace Cratis.Chronicle.Services.Observation.EventStoreSubscriptions;
 /// <param name="grainFactory"><see cref="IGrainFactory"/> for creating grains.</param>
 /// <param name="storage"><see cref="IStorage"/> for accessing subscription definitions.</param>
 /// <param name="options"><see cref="IOptions{ChronicleOptions}"/> for configuration.</param>
+/// <param name="logger">The logger.</param>
 internal sealed class EventStoreSubscriptions(
     IGrainFactory grainFactory,
     IStorage storage,
-    IOptions<ChronicleOptions> options) : ContractIEventStoreSubscriptions
+    IOptions<ChronicleOptions> options,
+    ILogger<EventStoreSubscriptions> logger) : ContractIEventStoreSubscriptions
 {
     /// <inheritdoc/>
     public async Task Add(AddEventStoreSubscriptions request, CallContext context = default)
@@ -44,6 +47,7 @@ internal sealed class EventStoreSubscriptions(
             }
         }
 
+        var registrationDiagnosticId = Guid.NewGuid();
         var eventSequence = grainFactory.GetSystemEventSequence(request.TargetEventStore);
         var subscriptionsManager = grainFactory.GetGrain<IEventStoreSubscriptionsManager>(request.TargetEventStore);
 
@@ -60,18 +64,25 @@ internal sealed class EventStoreSubscriptions(
             var existingSubscriptions = await subscriptionsManager.GetSubscriptionDefinitions();
             var existing = existingSubscriptions.FirstOrDefault(s => s.Identifier == definition.Identifier);
 
-            if (existing is null || !HasSameDefinition(existing, definition))
+            var hasMatchingDefinition = existing is not null && HasSameDefinition(existing, definition);
+            logger.RegistrationDecision(request.TargetEventStore, definition.SourceEventStore, definition.Identifier, registrationDiagnosticId, existingSubscriptions.TryGetNonEnumeratedCount(out var memoryCount) ? memoryCount : -1, hasMatchingDefinition);
+
+            if (!hasMatchingDefinition)
             {
                 // Reserve the definition in the manager before appending the event so a second
                 // immediate Subscribe() call observes the pending subscription instead of
                 // appending a duplicate EventStoreSubscriptionAdded event.
+                logger.ManagerAddStarting(request.TargetEventStore, definition.Identifier, registrationDiagnosticId);
                 await subscriptionsManager.Add(definition);
+                logger.ManagerAddCompleted(request.TargetEventStore, definition.Identifier, registrationDiagnosticId);
+                logger.SubscriptionAppendStarting(request.TargetEventStore, definition.Identifier, registrationDiagnosticId);
                 await eventSequence.Append(subscription.Identifier, new EventStoreSubscriptionAdded(
                     definition.SourceEventStore,
                     definition.EventTypes)
                 {
                     GenerationDelivery = definition.GenerationDelivery
                 });
+                logger.SubscriptionAppendCompleted(request.TargetEventStore, definition.Identifier, registrationDiagnosticId);
             }
 
             // Existing matching definitions still need to be reactivated after reconnects and server restarts.
@@ -111,6 +122,7 @@ internal sealed class EventStoreSubscriptions(
     public async Task<IEnumerable<ContractEventStoreSubscriptionDefinition>> GetSubscriptions(GetEventStoreSubscriptionsRequest request)
     {
         var definitions = await storage.GetEventStore(request.TargetEventStore).EventStoreSubscriptions.GetAll();
+        logger.PersistedDefinitionsRead(request.TargetEventStore, definitions.TryGetNonEnumeratedCount(out var definitionCount) ? definitionCount : -1);
         return definitions.Select(definition => new ContractEventStoreSubscriptionDefinition
         {
             Identifier = definition.Identifier.Value,

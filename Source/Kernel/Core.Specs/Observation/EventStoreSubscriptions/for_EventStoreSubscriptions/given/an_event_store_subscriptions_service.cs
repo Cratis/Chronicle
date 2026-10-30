@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Storage;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
 namespace Cratis.Chronicle.Observation.EventStoreSubscriptions.for_EventStoreSubscriptions.given;
@@ -17,6 +18,6 @@ public class an_event_store_subscriptions_service : Specification
     {
         _grainFactory = Substitute.For<IGrainFactory>();
         _storage = Substitute.For<IStorage>();
-        _service = new Services.Observation.EventStoreSubscriptions.EventStoreSubscriptions(_grainFactory, _storage, Options.Create(new ChronicleOptions()));
+        _service = new Services.Observation.EventStoreSubscriptions.EventStoreSubscriptions(_grainFactory, _storage, Options.Create(new ChronicleOptions()), NullLogger<Services.Observation.EventStoreSubscriptions.EventStoreSubscriptions>.Instance);
     }
 }
