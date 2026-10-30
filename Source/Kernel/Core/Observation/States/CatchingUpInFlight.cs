@@ -94,6 +94,9 @@ public class CatchingUpInFlight(
                 {
                     var error = startResult?.TryGetError(out var startError) is true ? startError : default;
                     logger.CouldNotStartInFlightCatchUpForPartition(partition, error);
+
+                    // Keep the recovery obligation in flight without a provisional catching-up marker.
+                    state.CatchingUpPartitions.Remove(partition);
                     await StateMachine.TransitionTo<QuarantinedObserver>();
                     return state;
                 }
@@ -104,6 +107,9 @@ public class CatchingUpInFlight(
         catch (Exception ex)
         {
             logger.FailedToCatchUpInFlightPartitions(ex);
+
+            // Start threw, so a durable job may already exist for the in-flight partition; the marker is kept deliberately.
+            // TODO(#4496): reconcile durable jobs before retrying, then roll back markers that no job owns.
             await StateMachine.TransitionTo<QuarantinedObserver>();
             return state;
         }

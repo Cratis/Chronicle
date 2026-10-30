@@ -38,7 +38,9 @@ public class and_job_start_returns_an_error_partway_through : given.a_catching_u
     async Task Because() => _resultingStoredState = await _state.OnEnter(_storedState);
 
     [Fact] void should_stop_starting_jobs_after_the_failure() => _attemptedPartitions.Count.ShouldEqual(2);
-    [Fact] void should_only_record_attempted_partitions_as_catching_up() => _resultingStoredState.CatchingUpPartitions.ShouldContainOnly(_attemptedPartitions);
+    [Fact] void should_keep_catching_up_markers_for_started_partitions_only() => _resultingStoredState.CatchingUpPartitions.ShouldContainOnly(_attemptedPartitions.Take(1));
+    [Fact] void should_not_leave_the_failed_partition_marked_as_catching_up() => _resultingStoredState.CatchingUpPartitions.ShouldNotContain(_attemptedPartitions[1]);
+    [Fact] void should_keep_the_failed_partition_in_flight() => _resultingStoredState.InFlightPartitions.ShouldContain(_attemptedPartitions[1]);
     [Fact] void should_transition_to_quarantined() => _stateMachine.Received(1).TransitionTo<QuarantinedObserver>();
     [Fact] void should_not_transition_to_routing() => _stateMachine.DidNotReceive().TransitionTo<Routing>();
     [Fact] void should_keep_only_markers_still_needing_recovery() => _resultingStoredState.InFlightPartitions.ShouldContainOnly(_storedState.InFlightPartitions.Except(_attemptedPartitions.Take(1)));
