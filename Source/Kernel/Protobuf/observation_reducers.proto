@@ -90,6 +90,7 @@ message ReduceOperationMessage {
    repeated AppendedEvent Events = 3;
    ReplayState ReplayState = 4;
    uint64 DeliveryId = 5;
+   uint64 DeliverWithinMilliseconds = 6;
 }
 message ReducerDefinition {
    string ReducerId = 1;
