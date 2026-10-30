@@ -70,6 +70,7 @@ public partial class Observer(
     TimeProvider? timeProvider = null) : StateMachine<ObserverState>, IObserver, IObserverDevelopmentReset, IRemindable, IDisposable
 {
     readonly TimeProvider _clock = timeProvider ?? TimeProvider.System;
+    ObserverRunningState _settledRunningState;
     readonly HashSet<JobId> _concludedCatchUpJobs = [];
 
     /// <summary>
@@ -193,6 +194,7 @@ public partial class Observer(
         _observerKey = ObserverKey.Parse(this.GetPrimaryKeyString());
         _observerId = _observerKey.ObserverId;
         State = State with { Identifier = _observerId };
+        _settledRunningState = State.RunningState;
         SeedSuspectedSkipOwnership();
 
         _jobsManager = GrainFactory.GetJobsManager(_observerKey.EventStore, _observerKey.Namespace);
@@ -673,7 +675,7 @@ public partial class Observer(
             if (state is BaseObserverState observerState)
             {
                 TrackQuarantineAlertFor(observerState);
-                State = State with { RunningState = observerState.RunningState };
+                (State, _settledRunningState) = ObserverRunningStateChanges.Apply(State, _settledRunningState, observerState.RunningState, _clock.GetUtcNow());
             }
         }
         finally

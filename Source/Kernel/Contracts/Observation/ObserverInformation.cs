@@ -83,4 +83,10 @@ public class ObserverInformation
     [ProtoMember(10, IsRequired = true)]
     [DefaultValue(true)]
     public bool IsReplayable { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets when the running state last changed to its current value; null when unknown.
+    /// </summary>
+    [ProtoMember(13)]
+    public DateTimeOffset? RunningStateChangedAt { get; set; }
 }

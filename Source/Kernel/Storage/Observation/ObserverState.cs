@@ -153,4 +153,9 @@ public record ObserverState(
         get => HandledEventCountPerEventType;
         set => HandledEventCountPerEventType = value;
     }
+
+    /// <summary>
+    /// Gets when the running state last changed to its current value; null when unknown (e.g. state persisted before this was recorded).
+    /// </summary>
+    public DateTimeOffset? RunningStateChangedAt { get; init; }
 }
