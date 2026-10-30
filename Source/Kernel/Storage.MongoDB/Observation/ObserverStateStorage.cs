@@ -90,6 +90,7 @@ public class ObserverStateStorage(IEventStoreNamespaceDatabase namespaceDatabase
             .Set(_ => _.NextEventSequenceNumber, document.NextEventSequenceNumber)
             .Set(_ => _.TailEventSequenceNumber, document.TailEventSequenceNumber)
             .Set(_ => _.RunningState, document.RunningState)
+            .Set(_ => _.RunningStateChangedAt, document.RunningStateChangedAt)
             .Set(_ => _.ReplayingPartitions, document.ReplayingPartitions)
             .Set(_ => _.CatchingUpPartitions, document.CatchingUpPartitions)
             .Set(_ => _.InFlightPartitions, document.InFlightPartitions)

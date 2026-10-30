@@ -21,6 +21,7 @@ public class with_running_state_changed_at : Specification
         _saved = await _storage.Get("observer");
         await _storage.Rename("observer", "renamed");
         _renamed = await _storage.Get("renamed");
+        await _storage.Save(new() { Identifier = "legacy" });
         _legacy = await _storage.Get("legacy");
     }
 

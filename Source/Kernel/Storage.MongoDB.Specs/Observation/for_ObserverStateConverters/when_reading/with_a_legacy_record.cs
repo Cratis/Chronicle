@@ -15,7 +15,7 @@ public class with_a_legacy_record : Specification
 
     void Because()
     {
-        var document = new KernelObserverState().ToMongoDB().ToBsonDocument();
+        var document = new KernelObserverState { Identifier = "observer" }.ToMongoDB().ToBsonDocument();
         document.Remove(BsonClassMap.LookupClassMap(typeof(ObserverState)).GetMemberMap(nameof(ObserverState.RunningStateChangedAt)).ElementName);
         _saved = BsonSerializer.Deserialize<ObserverState>(document).ToKernel();
         _joined = BsonSerializer.Deserialize<ObserverStateWithFailedPartitions>(document).ToKernel();

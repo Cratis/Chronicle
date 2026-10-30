@@ -88,5 +88,5 @@ public class ObserverInformation
     /// Gets or sets when the running state last changed to its current value; null when unknown.
     /// </summary>
     [ProtoMember(13)]
-    public DateTimeOffset? RunningStateChangedAt { get; set; }
+    public SerializableDateTimeOffset? RunningStateChangedAt { get; set; }
 }

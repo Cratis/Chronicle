@@ -11,11 +11,14 @@ public class with_running_state_changed_at : given.an_observer_state_storage
     KernelObserverState _saved;
     KernelObserverState _legacy;
     KernelObserverState _renamed;
+    KernelObserverState _updated;
 
     async Task Because()
     {
         await _storage.Save(new() { Identifier = "observer", RunningStateChangedAt = _timestamp });
         _saved = await _storage.Get("observer");
+        await _storage.Save(_saved with { RunningStateChangedAt = _timestamp.AddHours(1) });
+        _updated = await _storage.Get("observer");
         await _storage.Rename("observer", "renamed");
         _renamed = await _storage.Get("renamed");
         await _storage.Save(new() { Identifier = "legacy" });
@@ -23,6 +26,7 @@ public class with_running_state_changed_at : given.an_observer_state_storage
     }
 
     [Fact] void should_keep_the_timestamp() => _saved.RunningStateChangedAt.ShouldEqual(_timestamp);
-    [Fact] void should_keep_the_timestamp_on_rename() => _renamed.RunningStateChangedAt.ShouldEqual(_timestamp);
+    [Fact] void should_update_an_existing_timestamp() => _updated.RunningStateChangedAt.ShouldEqual(_timestamp.AddHours(1));
+    [Fact] void should_keep_the_timestamp_on_rename() => _renamed.RunningStateChangedAt.ShouldEqual(_updated.RunningStateChangedAt);
     [Fact] void should_leave_the_legacy_timestamp_unknown() => _legacy.RunningStateChangedAt.ShouldBeNull();
 }

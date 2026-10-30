@@ -16,7 +16,7 @@ public class with_running_state_changed_at : Specification
 
     void Because()
     {
-        var bson = new KernelObserverState { RunningStateChangedAt = _timestamp }.ToMongoDB().ToBson();
+        var bson = new KernelObserverState { Identifier = "observer", RunningStateChangedAt = _timestamp }.ToMongoDB().ToBson();
         _saved = BsonSerializer.Deserialize<ObserverState>(bson).ToKernel();
         _joined = BsonSerializer.Deserialize<ObserverStateWithFailedPartitions>(bson).ToKernel();
     }

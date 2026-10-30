@@ -7,38 +7,20 @@ using ProtoBuf.Meta;
 
 namespace Cratis.Chronicle.Contracts.for_observer_information_wire;
 
-public class when_round_tripping_a_running_state_timestamp : Specification
+public class when_round_tripping_a_running_state_timestamp : given.an_observer_information_payload
 {
-    readonly DateTimeOffset _timestamp = new(2026, 1, 2, 3, 4, 5, TimeSpan.Zero);
-    ObserverInformation _present;
-    ObserverInformation _absent;
-    OldObserverInformation _old;
+    readonly DateTimeOffset _timestamp = new(2026, 1, 2, 3, 4, 5, 123, TimeSpan.FromHours(2));
+    ObserverInformation _result;
     string _schema;
 
     void Because()
     {
-        using var payload = new MemoryStream();
-        Serializer.Serialize(payload, new ObserverInformation { Id = "observer", RunningStateChangedAt = _timestamp });
-        payload.Position = 0;
-        _present = Serializer.Deserialize<ObserverInformation>(payload);
-        payload.Position = 0;
-        var oldModel = RuntimeTypeModel.Create();
-        oldModel.Add(typeof(OldObserverInformation), applyDefaultBehaviour: false).Add(1, nameof(OldObserverInformation.Id));
-        _old = oldModel.Deserialize<OldObserverInformation>(payload);
-        using var legacy = new MemoryStream();
-        oldModel.Serialize(legacy, new OldObserverInformation { Id = "legacy" });
-        legacy.Position = 0;
-        _absent = Serializer.Deserialize<ObserverInformation>(legacy);
+        _result = Deserialize<ObserverInformation>(Serialize(CreateInformation(_timestamp)));
         _schema = RuntimeTypeModel.Default.GetSchema(typeof(ObserverInformation), ProtoSyntax.Proto3);
     }
 
-    [Fact] void should_keep_the_timestamp() => _present.RunningStateChangedAt.ShouldEqual(_timestamp);
-    [Fact] void should_leave_an_absent_timestamp_unknown() => _absent.RunningStateChangedAt.ShouldBeNull();
-    [Fact] void should_allow_old_readers_to_ignore_the_timestamp() => _old.Id.ShouldEqual("observer");
-    [Fact] void should_describe_field_thirteen() => _schema.ShouldContain("RunningStateChangedAt = 13;");
-
-    class OldObserverInformation
-    {
-        public string Id { get; set; }
-    }
+    [Fact] void should_keep_the_timestamp() => ((DateTimeOffset?)_result.RunningStateChangedAt).ShouldEqual(_timestamp);
+    [Fact] void should_keep_the_offset() => ((DateTimeOffset)_result.RunningStateChangedAt).Offset.ShouldEqual(_timestamp.Offset);
+    [Fact] void should_use_the_existing_primitive_at_field_thirteen() => _schema.ShouldContain("SerializableDateTimeOffset RunningStateChangedAt = 13;");
+    [Fact] void should_describe_the_primitive_value() => _schema.ShouldContain("string Value = 1;");
 }
