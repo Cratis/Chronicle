@@ -192,7 +192,7 @@ public interface IProjections
     /// </summary>
     /// <typeparam name="TReadModel">Type of read model the projection maintains.</typeparam>
     /// <param name="define">Callback that defines the projection on the <see cref="IProjectionBuilderFor{TReadModel}"/>.</param>
-    /// <param name="id">Optional <see cref="ProjectionId"/>. Defaults to the full name of <typeparamref name="TReadModel"/>, which is also what a model-bound projection for it would be identified by.</param>
+    /// <param name="id">Optional <see cref="ProjectionId"/>. When supplied, takes precedence over <see cref="ProjectionAttribute"/>. Otherwise uses the read model's non-empty attribute ID or its fully qualified type name, just as a model-bound projection does.</param>
     /// <returns>The <see cref="IProjectionHandler"/> for the registered projection.</returns>
     /// <remarks>
     /// <para>
