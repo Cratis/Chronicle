@@ -38,6 +38,7 @@ namespace Orleans.Hosting;
 /// <param name="kernelProjections"><see cref="IKernelProjections"/> for registering the projections the kernel declares for itself.</param>
 /// <param name="grainFactory"><see cref="IGrainFactory"/> for creating grains.</param>
 /// <param name="authenticationService"><see cref="IAuthenticationService"/> for managing authentication.</param>
+/// <param name="storageErrorClassifier"><see cref="IStorageErrorClassifier"/> for recognizing the active storage provider's own transient failures.</param>
 /// <param name="logger">The logger.</param>
 /// <param name="timeProvider">Optional <see cref="TimeProvider"/> the retry backoff waits on; defaults to <see cref="TimeProvider.System"/>.</param>
 /// <param name="generationFloorAdmission">Optional read-only generation admission; defaults to the real storage-backed admission.</param>
@@ -50,6 +51,14 @@ namespace Orleans.Hosting;
 /// instability as a class is what breaks that loop, and is why this does not special-case whichever
 /// call site was unlucky enough to be the one that raced. See <see cref="SiblingSiloInstability"/>
 /// for what counts as instability and what is still allowed to fail on the first attempt.
+/// <para>
+/// Several steps also provision SQL Server/PostgreSQL databases and schemas the first time a store
+/// or namespace is touched, and several kernels can race that provisioning exactly as they can race
+/// a sibling silo. A command timeout or connection failure from that contention is the storage
+/// provider's own transient failure, not cluster instability, so it is recognized through the
+/// registered <see cref="IStorageErrorClassifier"/> instead of being folded into
+/// <see cref="SiblingSiloInstability"/>, which stays provider-agnostic.
+/// </para>
 /// </remarks>
 internal sealed class ChronicleServerStartupTask(
     IStorage storage,
@@ -60,6 +69,7 @@ internal sealed class ChronicleServerStartupTask(
     IKernelProjections kernelProjections,
     IGrainFactory grainFactory,
     IAuthenticationService authenticationService,
+    IStorageErrorClassifier storageErrorClassifier,
     ILogger<ChronicleServerStartupTask> logger,
     TimeProvider? timeProvider = null,
     IGenerationFloorAdmission? generationFloorAdmission = null) : ILifecycleParticipant<ISiloLifecycle>
@@ -238,9 +248,10 @@ internal sealed class ChronicleServerStartupTask(
     /// <param name="cancellationToken">Token for cancelling startup and retry backoff.</param>
     /// <returns>Awaitable task.</returns>
     /// <remarks>
-    /// Only the failures <see cref="SiblingSiloInstability.IsTransient"/> recognizes are retried.
-    /// Anything else - and anything still failing once the budget is spent - propagates, so a
-    /// genuine defect still fails the host on startup rather than being started around.
+    /// Only the failures <see cref="SiblingSiloInstability.IsTransient"/> or the registered
+    /// <see cref="IStorageErrorClassifier"/> recognize are retried. Anything else - and anything
+    /// still failing once the budget is spent - propagates, so a genuine defect still fails the
+    /// host on startup rather than being started around.
     /// </remarks>
     async Task RunStep(string step, Func<Task> action, CancellationToken cancellationToken)
     {
@@ -253,13 +264,13 @@ internal sealed class ChronicleServerStartupTask(
                 await action().WaitAsync(cancellationToken);
                 return;
             }
-            catch (Exception exception) when (SiblingSiloInstability.IsTransient(exception) && attempt < MaxAttempts)
+            catch (Exception exception) when (IsTransient(exception) && attempt < MaxAttempts)
             {
                 logger.RetryingStartupStep(exception, step, attempt, MaxAttempts, delay);
                 await Task.Delay(delay, _timeProvider, cancellationToken);
                 delay += delay;
             }
-            catch (Exception exception) when (SiblingSiloInstability.IsTransient(exception))
+            catch (Exception exception) when (IsTransient(exception))
             {
                 logger.StartupStepExhaustedRetries(exception, step, MaxAttempts);
                 throw;
@@ -271,6 +282,8 @@ internal sealed class ChronicleServerStartupTask(
             }
         }
     }
+
+    bool IsTransient(Exception exception) => SiblingSiloInstability.IsTransient(exception) || storageErrorClassifier.IsTransient(exception);
 
     /// <summary>
     /// Registers the persisted projection definitions for an event store with the local silo.
