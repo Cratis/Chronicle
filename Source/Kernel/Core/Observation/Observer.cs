@@ -96,6 +96,8 @@ public partial class Observer(
     /// </summary>
     bool _subscriptionSetupFailed;
     bool _isQuarantined;
+    // The activation owns this entry time, independently of reloaded progress snapshots.
+    DateTimeOffset? _quarantineRunningStateChangedAt;
     bool _recoverSubscriptionAfterQuarantine;
     bool _retryRecoveryAfterQuarantine;
     int _owedRecoveryAttempts;
@@ -195,6 +197,7 @@ public partial class Observer(
         _observerId = _observerKey.ObserverId;
         State = State with { Identifier = _observerId };
         _settledRunningState = State.RunningState;
+        _quarantineRunningStateChangedAt = State.RunningState == ObserverRunningState.Quarantined ? State.RunningStateChangedAt : null;
         SeedSuspectedSkipOwnership();
 
         _jobsManager = GrainFactory.GetJobsManager(_observerKey.EventStore, _observerKey.Namespace);
@@ -675,7 +678,16 @@ public partial class Observer(
             if (state is BaseObserverState observerState)
             {
                 TrackQuarantineAlertFor(observerState);
+                var wasQuarantined = _settledRunningState == ObserverRunningState.Quarantined;
                 (State, _settledRunningState) = ObserverRunningStateChanges.Apply(State, _settledRunningState, observerState.RunningState, _clock.GetUtcNow());
+                if (_isQuarantined)
+                {
+                    if (!wasQuarantined)
+                    {
+                        _quarantineRunningStateChangedAt = State.RunningStateChangedAt;
+                    }
+                    State = State with { RunningStateChangedAt = _quarantineRunningStateChangedAt };
+                }
             }
         }
         finally
@@ -720,10 +732,10 @@ public partial class Observer(
             if (_removed || CannotWriteState()) return;
 
             // A quarantine owned by this activation outranks whatever running state a reloaded snapshot carried,
-            // so any write while quarantined persists the quarantine rather than a stale active snapshot.
+            // so any write while quarantined persists the quarantine and its entry time rather than a stale active snapshot.
             if (IsQuarantined)
             {
-                State = State with { RunningState = ObserverRunningState.Quarantined };
+                State = State with { RunningState = ObserverRunningState.Quarantined, RunningStateChangedAt = _quarantineRunningStateChangedAt };
             }
 
             // A state-machine OnEnter can return an earlier record after awaiting a job callback. Preserve the
@@ -845,7 +857,7 @@ public partial class Observer(
         State = State with { Identifier = _observerId };
         if (IsQuarantined)
         {
-            State = State with { RunningState = ObserverRunningState.Quarantined };
+            State = State with { RunningState = ObserverRunningState.Quarantined, RunningStateChangedAt = _quarantineRunningStateChangedAt };
         }
 
         // A reload during a transition hook is newer than the snapshot the hook was handed; keep it from being reverted.
