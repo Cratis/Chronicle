@@ -13,7 +13,7 @@ public class and_a_new_value_arrives_before_the_catch_up_completes : given.a_hel
     async Task Because()
     {
         await PassLivenessCheck();
-        _refusalPersisted = _snapshots.Written!.ConstraintIndexCatchUpRefusing?.Contains(_uniqueDefinition.Name) == true;
+        _refusalPersisted = _snapshots.Written.ConstraintIndexCatchUpRefusing?.Contains(_uniqueDefinition.Name) == true;
         _beforeCatchUp = await AppendValue("new-value");
         await CompleteCatchUp();
         _result = await AppendValue("new-value");
@@ -21,7 +21,7 @@ public class and_a_new_value_arrives_before_the_catch_up_completes : given.a_hel
 
     [Fact] void should_persist_a_separate_catch_up_refusal() => _refusalPersisted.ShouldBeTrue();
     [Fact] void should_refuse_even_a_new_value_until_catch_up() => _beforeCatchUp.Errors.ShouldContainOnly(AppendError.ConstraintIndexUnavailable);
-    [Fact] void should_clear_the_catch_up_refusal_after_restoring_history() => _snapshots.Written!.ConstraintIndexCatchUpRefusing.ShouldBeNull();
+    [Fact] void should_clear_the_catch_up_refusal_after_restoring_history() => _snapshots.Written.ConstraintIndexCatchUpRefusing.ShouldBeNull();
     [Fact] void should_admit_the_value_after_catch_up() => _result.IsSuccess.ShouldBeTrue();
     [Fact] async Task should_restore_the_history() => (await Values("source")).ShouldContainOnly(Hash("current"));
 }

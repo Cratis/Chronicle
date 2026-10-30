@@ -17,7 +17,7 @@ public class and_the_worker_hands_over_confirmed_progress : given.a_held_constra
         _result = await AppendValue("new-value");
     }
 
-    [Fact] void should_not_add_a_catch_up_refusal() => _snapshots.Written!.ConstraintIndexCatchUpRefusing.ShouldBeNull();
+    [Fact] void should_not_add_a_catch_up_refusal() => _snapshots.Written.ConstraintIndexCatchUpRefusing.ShouldBeNull();
     [Fact] void should_admit_governed_appends_without_waiting_for_the_timer() => _result.IsSuccess.ShouldBeTrue();
     [Fact] async Task should_preserve_the_workers_claims() => (await Values("source")).ShouldContainOnly(Hash("current"));
 }

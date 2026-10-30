@@ -23,7 +23,8 @@ public class and_the_rebuild_is_held_past_the_report_interval : given.a_held_con
         await PassLivenessCheck();
     }
 
-    [Fact] void should_report_the_live_step_and_held_constraint_once()
+    [Fact]
+    void should_report_the_live_step_and_held_constraint_once()
     {
         var entry = _heldLogger.Entries.Single(item => item.Level == LogLevel.Information).Message;
         entry.ShouldContain("Constraint rebuild");

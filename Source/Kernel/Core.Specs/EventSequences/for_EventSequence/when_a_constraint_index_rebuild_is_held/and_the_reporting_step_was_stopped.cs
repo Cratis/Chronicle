@@ -21,6 +21,6 @@ public class and_the_reporting_step_was_stopped : given.a_held_constraint_index_
     }
 
     [Fact] async Task should_restore_the_history() => (await Values("source")).ShouldContainOnly(Hash("current"));
-    [Fact] void should_finish_the_catch_up() => _snapshots.Written!.ConstraintIndexCatchUpBelow.ShouldBeNull();
+    [Fact] void should_finish_the_catch_up() => _snapshots.Written.ConstraintIndexCatchUpBelow.ShouldBeNull();
     [Fact] void should_admit_governed_appends() => _result.IsSuccess.ShouldBeTrue();
 }

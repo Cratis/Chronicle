@@ -12,7 +12,7 @@ public class and_only_the_parent_job_is_terminal : given.a_held_constraint_index
     {
         _stepStatus = JobStepStatus.Running;
         await HoldRebuild();
-        _namespaceStorage.Jobs.GetJob(_jobId).Returns(Cratis.Monads.Catch<JobState, Cratis.Orleans.Storage.Jobs.JobError>.Success(new() { Status = JobStatus.CompletedWithFailures }));
+        _namespaceStorage.Jobs.GetJob(_jobId).Returns(Monads.Catch<JobState, Orleans.Storage.Jobs.JobError>.Success(new() { Status = JobStatus.CompletedWithFailures }));
     }
 
     async Task Because()

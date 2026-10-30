@@ -16,7 +16,7 @@ public class and_an_unrelated_event_arrives_before_the_catch_up_completes : give
     async Task Because()
     {
         await PassLivenessCheck();
-        _refusingUnique = _snapshots.Written!.ConstraintIndexCatchUpRefusing?.Contains(_uniqueDefinition.Name) == true;
+        _refusingUnique = _snapshots.Written.ConstraintIndexCatchUpRefusing?.Contains(_uniqueDefinition.Name) == true;
         _result = await _eventSequence.Append(
             EventSourceType.Default,
             _eventSourceId,

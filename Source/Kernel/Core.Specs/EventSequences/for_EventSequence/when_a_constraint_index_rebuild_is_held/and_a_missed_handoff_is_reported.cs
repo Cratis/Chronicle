@@ -15,7 +15,8 @@ public class and_a_missed_handoff_is_reported : given.a_held_constraint_index_re
         await Tick();
     }
 
-    [Fact] void should_warn_once_with_the_reason_and_identity()
+    [Fact]
+    void should_warn_once_with_the_reason_and_identity()
     {
         var warning = _heldLogger.Entries.Single(entry => entry.Level == LogLevel.Warning).Message;
         warning.ShouldContain("Releasing constraint rebuild");

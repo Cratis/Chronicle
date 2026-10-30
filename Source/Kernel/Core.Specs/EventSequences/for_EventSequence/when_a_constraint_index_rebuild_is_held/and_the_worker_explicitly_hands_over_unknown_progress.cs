@@ -9,6 +9,6 @@ public class and_the_worker_explicitly_hands_over_unknown_progress : given.a_hel
 
     async Task Because() => await _eventSequence.ConstraintIndexRebuilt(_heldRunId, [_uniqueDefinition.Name], ConstraintIndexRebuildOutcome.ProgressUnknown);
 
-    [Fact] void should_keep_the_existing_explicit_handoff_refusal_lifetime() => _snapshots.Written!.ConstraintIndexCatchUpRefusing.ShouldBeNull();
-    [Fact] void should_preserve_the_existing_conservative_catch_up() => _snapshots.Written!.ConstraintIndexCatchUpBelow.ShouldNotBeNull();
+    [Fact] void should_keep_the_existing_explicit_handoff_refusal_lifetime() => _snapshots.Written.ConstraintIndexCatchUpRefusing.ShouldBeNull();
+    [Fact] void should_preserve_the_existing_conservative_catch_up() => _snapshots.Written.ConstraintIndexCatchUpBelow.ShouldNotBeNull();
 }
