@@ -54,6 +54,12 @@ public class a_manager_recovering_a_retired_observer : Observation.for_Observer.
         _managerSilo.AddService(service);
         _managerSilo.AddService(Substitute.For<ILanguageService>());
         _managerSilo.AddService(Substitute.For<ILocalSiloDetails>());
+        var membership = Substitute.For<IClusterMembershipService>();
+        membership.CurrentSnapshot.Returns(new ClusterMembershipSnapshot(
+            System.Collections.Immutable.ImmutableDictionary<SiloAddress, ClusterMember>.Empty
+                .Add(SiloAddress.Zero, new ClusterMember(SiloAddress.Zero, SiloStatus.Active, "zero")),
+            new MembershipVersion(1)));
+        _managerSilo.AddService(membership);
         _managerSilo.AddService(_storage);
         _eventStoreNamespaceStorage.Observers.GetRetired(Arg.Any<IEnumerable<ObserverId>>())
             .Returns(call => call.Arg<IEnumerable<ObserverId>>()
