@@ -34,11 +34,12 @@ public class and_an_observer_was_lost_with_a_departed_silo : given.a_projections
     }
 
     [Fact] async Task should_check_real_observer_state() => await _observerGrain.Received().IsSubscriptionEstablished();
-    [Fact] async Task should_reconcile_the_subscription() =>
+    [Fact]
+    async Task should_reconcile_the_subscription() =>
         await _observerGrain.Received().ReconcileSubscription<IProjectionObserverSubscriber>(
             ObserverType.Projection,
             Arg.Any<IEnumerable<Concepts.Events.EventType>>(),
             Arg.Any<SiloAddress>(),
             Arg.Any<bool>(),
-            Arg.Any<Concepts.Observation.EventGenerationDelivery>());
+            Arg.Any<EventGenerationDelivery>());
 }

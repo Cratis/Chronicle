@@ -39,13 +39,13 @@ public class a_projections_manager_grain : Specification
     protected Observation.IObserver _observerGrain;
     protected readonly Dictionary<string, Observation.IObserver> _observersByKey = [];
     protected INamespaces _namespaces;
-    protected Cratis.Orleans.Jobs.IJobsManager _jobsManager;
+    protected Orleans.Jobs.IJobsManager _jobsManager;
     protected Recommendations.IRecommendationsManager _recommendationsManager;
-    protected Storage.Observation.IFailedPartitionsStorage _failedPartitionsStorage;
+    protected IFailedPartitionsStorage _failedPartitionsStorage;
     protected Storage.IEventStoreStorage _eventStoreStorage;
     protected ProjectionsManagerState _state;
     protected IStorage<ProjectionsManagerState> _stateStorage;
-    protected Storage.Observation.IObserverStateStorage _observerStates;
+    protected IObserverStateStorage _observerStates;
     protected IEnumerable<ReadModelDefinition> _readModelDefinitions = [];
     protected IClusterMembershipService _clusterMembership;
     protected ClusterMembershipSnapshot _membership;
@@ -78,7 +78,7 @@ public class a_projections_manager_grain : Specification
         _projectionsServiceClient = Substitute.For<IProjectionsServiceClient>();
         _projectionsServiceClient
             .Register(Arg.Any<EventStoreName>(), Arg.Any<IEnumerable<ProjectionDefinition>>())
-            .Returns(Task.FromResult(Cratis.Monads.Result<ProjectionRegistrationError>.Success()));
+            .Returns(Task.FromResult(Monads.Result<ProjectionRegistrationError>.Success()));
         _silo.AddService(_projectionsServiceClient);
 
         _silo.AddService(Substitute.For<ILanguageService>());
@@ -89,7 +89,7 @@ public class a_projections_manager_grain : Specification
         eventStoreStorage.EventTypes.GetLatestForAllEventTypes().Returns([]);
         var namespaceStorage = Substitute.For<Storage.IEventStoreNamespaceStorage>();
         eventStoreStorage.GetNamespace(Arg.Any<EventStoreNamespaceName>()).Returns(namespaceStorage);
-        _failedPartitionsStorage = Substitute.For<Storage.Observation.IFailedPartitionsStorage>();
+        _failedPartitionsStorage = Substitute.For<IFailedPartitionsStorage>();
         namespaceStorage.FailedPartitions.Returns(_failedPartitionsStorage);
         _observerStates = namespaceStorage.Observers;
         _silo.AddService(storage);
@@ -115,10 +115,10 @@ public class a_projections_manager_grain : Specification
         _observerGrain.IsSubscribed().Returns(true);
         _observerGrain.IsSubscriptionEstablished().Returns(true);
         _observerGrain.GetState().Returns(new ObserverState());
-        _silo.AddProbe<Observation.IObserver>(key => _observersByKey.TryGetValue(key.ToString(), out var observer) ? observer : _observerGrain);
+        _silo.AddProbe(key => _observersByKey.TryGetValue(key.ToString(), out var observer) ? observer : _observerGrain);
 
-        _jobsManager = Substitute.For<Cratis.Orleans.Jobs.IJobsManager>();
-        _jobsManager.GetAllJobs().Returns(System.Collections.Immutable.ImmutableList<Cratis.Orleans.Storage.Jobs.JobState>.Empty);
+        _jobsManager = Substitute.For<Orleans.Jobs.IJobsManager>();
+        _jobsManager.GetAllJobs().Returns(ImmutableList<Orleans.Storage.Jobs.JobState>.Empty);
         _silo.AddProbe(_ => _jobsManager);
 
         _recommendationsManager = Substitute.For<Recommendations.IRecommendationsManager>();

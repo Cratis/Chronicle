@@ -50,7 +50,7 @@ public class a_manager_recovering_a_retired_observer : Observation.for_Observer.
         _managerSilo.AddService(factory);
         var service = Substitute.For<IProjectionsServiceClient>();
         service.Register(Arg.Any<EventStoreName>(), Arg.Any<IEnumerable<ProjectionDefinition>>())
-            .Returns(Cratis.Monads.Result<ProjectionRegistrationError>.Success());
+            .Returns(Monads.Result<ProjectionRegistrationError>.Success());
         _managerSilo.AddService(service);
         _managerSilo.AddService(Substitute.For<ILanguageService>());
         _managerSilo.AddService(Substitute.For<ILocalSiloDetails>());
