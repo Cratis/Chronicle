@@ -17,7 +17,8 @@ public class and_the_type_is_not_constrained : a_revisable_sequence
     async Task Because() => await ReviseAt(1, _unconstrained);
 
     [Fact] void should_not_fail() => _error.ShouldBeNull();
-    [Fact] void should_not_write_state() => _snapshots.Snapshots.Count.ShouldEqual(_stateWritesBeforeRevise);
+    [Fact] void should_only_write_the_mutation_epoch_around_the_revision() => _snapshots.Snapshots.Count.ShouldEqual(_stateWritesBeforeRevise + 2);
+    [Fact] void should_not_lower_the_watermark_in_the_written_state() => _snapshots.Written!.ConstraintIndexWatermark.ShouldEqual((EventSequenceNumber)2);
     [Fact] void should_not_lower_the_watermark() => _stateStorage.State.ConstraintIndexWatermark.ShouldEqual((EventSequenceNumber)2);
     [Fact] void should_revise_in_storage() => _storageRevised.ShouldBeTrue();
 }

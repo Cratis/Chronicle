@@ -47,6 +47,7 @@ public class when_clearing_quarantine_after_automatic_reconciliation_with_pendin
         {
             Id = _retryJobId,
             Status = JobStatus.Stopped,
+            StatusChanges = [new JobStatusChanged { Status = JobStatus.StartingSteps, Occurred = DateTimeOffset.UtcNow }],
             Request = new RetryFailedPartitionRequest(_observerKey, ObserverType.External, _failedPartition.Partition, EventSequenceNumber.First, [EventType.Unknown])
         };
 

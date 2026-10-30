@@ -10,6 +10,7 @@ using Cratis.Chronicle.Json;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
+using Cratis.Chronicle.Storage.Sinks;
 using Microsoft.Extensions.Logging;
 using Orleans.Providers;
 
@@ -23,13 +24,32 @@ namespace Cratis.Chronicle.Projections;
 /// </remarks>
 /// <param name="storage"><see cref="IStorage"/> for accessing underlying storage.</param>
 /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> to convert between JSON and ExpandoObject.</param>
+/// <param name="visibilities"><see cref="IReadModelInstanceVisibilities"/> deciding whether roots stored as uninitialized are returned.</param>
 /// <param name="logger">Logger for logging.</param>
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.Projections)]
 public class ImmediateProjection(
     IStorage storage,
     IExpandoObjectConverter expandoObjectConverter,
+    IReadModelInstanceVisibilities visibilities,
     ILogger<ImmediateProjection> logger) : Grain<ProjectionDefinition>, IImmediateProjection, INotifyProjectionDefinitionsChanged
 {
+    /// <summary>
+    /// The maximum lifetime of a session activation without explicit dehydration.
+    /// </summary>
+    internal static readonly TimeSpan SessionLifetime = TimeSpan.FromMinutes(1);
+
+    /// <summary>
+    /// The one-shot, non-keep-alive session expiry timer options.
+    /// </summary>
+    internal static readonly GrainTimerCreationOptions SessionTimerOptions = new()
+    {
+        DueTime = SessionLifetime,
+        Period = Timeout.InfiniteTimeSpan,
+        Interleave = false,
+        KeepAlive = false
+    };
+
+    IGrainTimer? _sessionExpiry;
     IEventSequenceStorage? _eventSequenceStorage;
     ImmediateProjectionKey? _projectionKey;
     ReadModelDefinition? _readModelDefinition;
@@ -46,11 +66,30 @@ public class ImmediateProjection(
 
         _projection = GrainFactory.GetGrain<IProjection>(new ProjectionKey(_projectionKey.ProjectionId, _projectionKey.EventStore));
         await _projection.SubscribeDefinitionsChanged(GetSelfGrainReference());
+        if (_projectionKey.SessionId is not null)
+        {
+            _sessionExpiry = this.RegisterGrainTimer(
+                _ =>
+                {
+                    DeactivateSession();
+                    return Task.CompletedTask;
+                },
+                SessionTimerOptions);
+        }
     }
 
     /// <inheritdoc/>
     public override async Task OnDeactivateAsync(DeactivationReason reason, CancellationToken cancellationToken)
     {
+        _sessionExpiry?.Dispose();
+        _sessionExpiry = null;
+        if (reason.ReasonCode == DeactivationReasonCode.ShuttingDown)
+        {
+            // The projection grain is deactivating with the silo too, so the call could not complete.
+            logger.SkippingDefinitionUnsubscribeDuringShutdown();
+            return;
+        }
+
         if (_projection is not null)
         {
             await _projection.UnsubscribeDefinitionsChanged(GetSelfGrainReference());
@@ -74,12 +113,18 @@ public class ImmediateProjection(
 
         try
         {
+            // The Projection grain is the single, authoritative holder of the definition. The snapshot taken at activation
+            // and the change notifications after it can both miss a registration, so every read resolves the current one.
+            var current = await _projection!.GetDefinition();
+            if (current?.ReadModel is not null)
+            {
+                State = current;
+            }
+
             if (State.ReadModel is null)
             {
-                // A passive projection's definition is set lazily, from the first event of its kind observed
-                // anywhere in the store, rather than eagerly at startup. Before that has happened, this is
-                // indistinguishable from "no matching event for this key yet" - the documented null contract
-                // for a read model that was never created - so it resolves the same way instead of throwing.
+                // Neither this activation nor the Projection grain has a definition: the projection is not registered.
+                // Preserve the documented null contract for a read model that was never created instead of throwing.
                 logger.NoDefinitionSetYet();
                 return ProjectionResult.Empty;
             }
@@ -115,7 +160,8 @@ public class ImmediateProjection(
                 lastHandledEventSequenceNumber = events[^1].Context.SequenceNumber;
             }
 
-            if (!state.Exists)
+            var visibility = await visibilities.GetFor(_projectionKey.EventStore, _projectionKey.Namespace, _readModelDefinition!);
+            if (!HasInitializedModel(state, visibility))
             {
                 return ProjectionResult.Empty with
                 {
@@ -137,7 +183,7 @@ public class ImmediateProjection(
     /// <inheritdoc/>
     public Task Dehydrate()
     {
-        DeactivateOnIdle();
+        DeactivateSession();
         return Task.CompletedTask;
     }
 
@@ -146,6 +192,14 @@ public class ImmediateProjection(
     /// </summary>
     /// <returns>The observer reference for this grain.</returns>
     protected virtual INotifyProjectionDefinitionsChanged GetSelfGrainReference() => this.AsReference<INotifyProjectionDefinitionsChanged>();
+
+    /// <summary>
+    /// Requests deactivation of this session after its current work completes.
+    /// </summary>
+    protected virtual void DeactivateSession() => DeactivateOnIdle();
+
+    static bool HasInitializedModel(SingleReadModelProjectionState state, ReadModelInstanceVisibility visibility) =>
+        state.Exists && (state.IsInitialized || visibility == ReadModelInstanceVisibility.IncludeUninitialized);
 
     SingleReadModelProjectionState GetInitialState()
     {

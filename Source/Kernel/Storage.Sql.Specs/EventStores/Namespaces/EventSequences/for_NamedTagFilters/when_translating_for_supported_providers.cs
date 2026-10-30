@@ -4,9 +4,11 @@
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
+using Cratis.Arc.EntityFrameworkCore;
 using Cratis.Arc.EntityFrameworkCore.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences.for_NamedTagFilters;
 
@@ -30,8 +32,11 @@ public partial class when_translating_for_supported_providers : Specification
     static string Translate(Func<DbContextOptionsBuilder<EventSequenceDbContext>, DbContextOptionsBuilder<EventSequenceDbContext>> configure)
     {
         var builder = configure(new DbContextOptionsBuilder<EventSequenceDbContext>());
-        builder.AddConceptAsSupport().WithoutServiceProviderCaching();
-        using var context = new EventSequenceDbContext(builder.Options, "events", Substitute.For<IEventSequenceMigrator>());
+        var connection = RelationalOptionsExtension.Extract(builder.Options).ConnectionString!;
+        var options = connection.GetDatabaseType() == DatabaseType.PostgreSql
+            ? SpecDbContextOptions.Kernel<EventSequenceDbContext>(connection)
+            : builder.AddConceptAsSupport().WithoutServiceProviderCaching().Options;
+        using var context = new EventSequenceDbContext(options, "events", Substitute.For<IEventSequenceMigrator>());
         return NamedTagFilters.Apply(context.Events, context.NamedTags, "events", [new(new TagName("account"), ["one", "two"])]).ToQueryString();
     }
 

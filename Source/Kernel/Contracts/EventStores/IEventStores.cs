@@ -28,6 +28,22 @@ public interface IEventStores
     [Operation]
     Task<CommandResult> EnsureEventStore(EnsureEventStoreRequest request, CallContext callContext = default);
     /// <summary>
+    /// Executes the RegisterDeployment command.
+    /// </summary>
+    /// <param name = "request">The RegisterDeployment request.</param>
+    /// <param name = "callContext">The gRPC call context.</param>
+    /// <returns>The command result.</returns>
+    [Operation]
+    Task<CommandResult> RegisterDeployment(RegisterDeploymentRequest request, CallContext callContext = default);
+    /// <summary>
+    /// Executes the GetEventStoreDeployment query.
+    /// </summary>
+    /// <param name = "request">The query request parameters.</param>
+    /// <param name = "callContext">The gRPC call context.</param>
+    /// <returns>The query result.</returns>
+    [Operation]
+    Task<QueryResult<EventStoreDeploymentResponse>> GetEventStoreDeployment(GetEventStoreDeploymentRequest request, CallContext callContext = default);
+    /// <summary>
     /// Executes the AllEventStores query.
     /// </summary>
     /// <param name = "callContext">The gRPC call context.</param>
@@ -54,6 +70,63 @@ public class EnsureEventStoreRequest
     /// </summary>
     [ProtoMember(1)]
     public string Name { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// Represents the RegisterDeploymentRequest message.
+/// </summary>
+[ProtoContract]
+public class RegisterDeploymentRequest
+{
+    /// <summary>
+    /// Gets or sets the EventStore.
+    /// </summary>
+    [ProtoMember(1)]
+    public string EventStore { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the Generation.
+    /// </summary>
+    [ProtoMember(2)]
+    public global::System.UInt64 Generation { get; set; } = new();
+
+    /// <summary>
+    /// Gets or sets the Fingerprint.
+    /// </summary>
+    [ProtoMember(3)]
+    public string Fingerprint { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// Represents the EventStoreDeploymentResponse message.
+/// </summary>
+[ProtoContract]
+public class EventStoreDeploymentResponse
+{
+    /// <summary>
+    /// Gets or sets the Generation.
+    /// </summary>
+    [ProtoMember(1)]
+    public global::System.UInt64 Generation { get; set; }
+
+    /// <summary>
+    /// Gets or sets the Fingerprint.
+    /// </summary>
+    [ProtoMember(2)]
+    public string Fingerprint { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// Represents the GetEventStoreDeploymentRequest message.
+/// </summary>
+[ProtoContract]
+public class GetEventStoreDeploymentRequest
+{
+    /// <summary>
+    /// Gets or sets the eventStore.
+    /// </summary>
+    [ProtoMember(1)]
+    public string EventStore { get; set; } = string.Empty;
 }
 
 /// <summary>

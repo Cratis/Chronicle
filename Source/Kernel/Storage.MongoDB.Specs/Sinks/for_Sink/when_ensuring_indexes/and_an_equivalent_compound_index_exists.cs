@@ -21,5 +21,7 @@ public class and_an_equivalent_compound_index_exists : given.a_sink_with_an_exis
 
     [Fact]
     void should_preserve_the_equivalent_index() => _indexManager.DidNotReceive().CreateOneAsync(
-        Arg.Any<CreateIndexModel<BsonDocument>>(), Arg.Any<CreateOneIndexOptions>(), Arg.Any<CancellationToken>());
+        Arg.Is<CreateIndexModel<BsonDocument>>(model => model.Options.Name != "chronicle_idx___initialized"),
+        Arg.Any<CreateOneIndexOptions>(),
+        Arg.Any<CancellationToken>());
 }

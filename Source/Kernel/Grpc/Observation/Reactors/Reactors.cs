@@ -128,11 +128,17 @@ internal sealed class Reactors(
                     registration.ConnectionId,
                     registration.EventStore,
                     registration.Namespace,
-                    (partition, events, tcs) =>
+                    (partition, events, tcs, deliverWithin) =>
                     {
                         var deliveryId = pendingDeliveries.Add(partition, tcs);
                         var eventsToObserve = events.Select(_ => _.ToContract(jsonSerializerOptions)).ToArray();
-                        observer.OnNext(new EventsToObserve { Partition = partition.Value.ToString()!, Events = eventsToObserve, DeliveryId = deliveryId });
+                        observer.OnNext(new EventsToObserve
+                        {
+                            Partition = partition.Value.ToString()!,
+                            Events = eventsToObserve,
+                            DeliveryId = deliveryId,
+                            DeliverWithinMilliseconds = DeliveryDeadlines.ToMilliseconds(deliverWithin)
+                        });
                     });
 
                 reactorMediator.SubscribeReplayNotifications(

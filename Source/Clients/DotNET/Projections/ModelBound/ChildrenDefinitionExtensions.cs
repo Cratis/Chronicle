@@ -197,8 +197,6 @@ static class ChildrenDefinitionExtensions
 
         if (childType is not null)
         {
-            AddDerivedTypeDiscriminatorMapping(childrenDef.From, getOrCreateEventType, eventType, childType);
-
             // For records, process constructor parameters to pick up attributes
             // (childType is resolved to the concrete DerivedType implementation when unambiguous,
             // above, so [SetFrom]/[SetValue]/[SetFromContext] declared on it are discovered here too)
@@ -465,6 +463,8 @@ static class ChildrenDefinitionExtensions
             {
                 processMember(childProperty, definition, childClassLevelFromEvents, false, childType, childrenDef);
             }
+
+            AddDerivedTypeDiscriminatorMapping(childrenDef.From, childType);
         }
 
         return childrenDef;
@@ -762,13 +762,9 @@ static class ChildrenDefinitionExtensions
     /// persisted without its discriminator and cannot be resolved back to its concrete type on read.
     /// </summary>
     /// <param name="targetFrom">The From dictionary for the children definition to add the mapping to.</param>
-    /// <param name="getOrCreateEventType">Function to get or create a cached EventType instance.</param>
-    /// <param name="eventType">The event type creating the child.</param>
     /// <param name="childType">The resolved item type of the children collection.</param>
     static void AddDerivedTypeDiscriminatorMapping(
         IDictionary<EventType, FromDefinition> targetFrom,
-        Func<Type, EventType> getOrCreateEventType,
-        Type eventType,
         Type childType)
     {
         var derivedTypeAttribute = childType.GetCustomAttribute<DerivedTypeAttribute>();
@@ -777,7 +773,10 @@ static class ChildrenDefinitionExtensions
             return;
         }
 
-        targetFrom.AddSetValueMapping(getOrCreateEventType, eventType, DerivedTypeJsonConverter<object>.DerivedTypeIdProperty, derivedTypeAttribute.Identifier);
+        foreach (var fromDefinition in targetFrom.Values)
+        {
+            fromDefinition.Properties.TryAdd(DerivedTypeJsonConverter<object>.DerivedTypeIdProperty, $"{WellKnownExpressions.Value}({derivedTypeAttribute.Identifier})");
+        }
     }
 
     static Type? GetChildType(Type propertyType)

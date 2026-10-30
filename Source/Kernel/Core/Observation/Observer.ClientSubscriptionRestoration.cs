@@ -25,6 +25,11 @@ public partial class Observer
     {
         // The subscription and the superseded registrations live for the activation only. A client this activation
         // already knows about - as a target or as a registration a later one replaced - has nothing to restore.
+        if (_subscription.IsServedByWebhook)
+        {
+            logger.ClientSubscriptionWaitingForWebhook(_observerKey);
+            return;
+        }
         if (IsKnownClient(connectedClient.ConnectionId) || CannotReconcileSubscription()) return;
 
         // A namespace removed while its client is still running must not be brought back by restoring an observer in it.

@@ -9,7 +9,11 @@ namespace Cratis.Chronicle.Patching;
 /// <summary>
 /// Defines the patch manager grain.
 /// </summary>
-[Version(1)]
+/// <remarks>
+/// Raised without a new method so an older activation rejects this release's calls and Orleans
+/// re-places the grain on a silo at least this new.
+/// </remarks>
+[Version(2)]
 public interface IPatchManager : IGrainWithIntegerKey
 {
     /// <summary>

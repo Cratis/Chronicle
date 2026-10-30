@@ -3,6 +3,7 @@
 
 using Cratis.Arc.Commands;
 using Cratis.Chronicle.Contracts.ReadModels;
+using Cratis.Chronicle.Sequences;
 using FluentValidation;
 
 namespace Cratis.Chronicle.ProjectionEditor;
@@ -21,6 +22,8 @@ internal class SaveProjectionWithInferredReadModelValidator : CommandValidator<S
     public SaveProjectionWithInferredReadModelValidator(IReadModels readModels)
     {
         _readModels = readModels;
+
+        RuleFor(_ => _.EventStore).NotSystemEventStore();
 
         RuleFor(_ => _.ReadModelDisplayName)
             .NotEmpty()

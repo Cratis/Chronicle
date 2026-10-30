@@ -21,6 +21,7 @@ internal class RedactForEventSourceValidator : CommandValidator<RedactForEventSo
     public RedactForEventSourceValidator()
     {
         RuleFor(_ => _.EventStore).NotEmpty().WithMessage("Event store name is required.");
+        RuleFor(_ => _.EventStore).NotSystemEventStore();
         RuleFor(_ => _.Namespace).NotEmpty().WithMessage("Namespace name is required.");
         RuleFor(_ => _.EventSequenceId).NotEmpty().WithMessage("Event sequence identifier is required.");
         RuleFor(_ => _.EventSourceId).NotEmpty().WithMessage("Event source identifier is required.");

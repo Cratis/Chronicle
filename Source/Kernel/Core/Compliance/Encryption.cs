@@ -32,14 +32,13 @@ public class Encryption : IEncryption
     static readonly byte[] _envelopeMagic = "CENV"u8.ToArray();
     static readonly RSAEncryptionPadding _keyWrapPadding = RSAEncryptionPadding.OaepSHA256;
 
+    /// <summary>
+    /// Shared by every instance: a key pair depends on nothing but the key size, and one reserve bounds the work.
+    /// </summary>
+    static readonly EncryptionKeyReserve _reserve = new(GenerateKeyPair, Environment.ProcessorCount);
+
     /// <inheritdoc/>
-    public EncryptionKey GenerateKey()
-    {
-        using var rsa = RSA.Create(KeySize);
-        var privateKey = rsa.ExportRSAPrivateKey();
-        var publicKey = rsa.ExportRSAPublicKey();
-        return new(publicKey, privateKey);
-    }
+    public EncryptionKey GenerateKey() => _reserve.Take();
 
     /// <inheritdoc/>
     public byte[] Encrypt(byte[] bytes, EncryptionKey key)
@@ -204,5 +203,13 @@ public class Encryption : IEncryption
         ciphertext = span[offset..].ToArray();
 
         return true;
+    }
+
+    static EncryptionKey GenerateKeyPair()
+    {
+        using var rsa = RSA.Create(KeySize);
+        var privateKey = rsa.ExportRSAPrivateKey();
+        var publicKey = rsa.ExportRSAPublicKey();
+        return new(publicKey, privateKey);
     }
 }

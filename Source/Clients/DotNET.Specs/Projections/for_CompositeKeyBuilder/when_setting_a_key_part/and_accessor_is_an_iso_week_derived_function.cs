@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.Projections.for_CompositeKeyBuilder.when_setting_a_ke
 
 public class and_accessor_is_an_iso_week_derived_function : Specification
 {
-    public record KeyType(int Year, int Week);
+    public record KeyType(int WeekYear, int Week);
     public record SomeEvent(string Name);
 
     string _result;
@@ -16,11 +16,11 @@ public class and_accessor_is_an_iso_week_derived_function : Specification
     void Because()
     {
         var builder = new CompositeKeyBuilder<KeyType, SomeEvent>(new DefaultNamingPolicy());
-        builder.Set(x => x.Year).ToEventContextProperty(c => c.Occurred.Year);
+        builder.Set(x => x.WeekYear).ToEventContextProperty(c => c.Occurred.WeekYear());
         builder.Set(x => x.Week).ToEventContextProperty(c => c.Occurred.Week());
         _result = builder.Build();
     }
 
-    [Fact] void should_build_a_composite_key_with_the_year_and_the_iso_week() =>
-        _result.ShouldEqual($"{Cratis.Chronicle.WellKnownExpressions.Composite}(Year={Cratis.Chronicle.WellKnownExpressions.EventContext}(Occurred.Year),Week={Cratis.Chronicle.WellKnownExpressions.EventContext}(Occurred.Week))");
+    [Fact] void should_build_a_composite_key_with_the_week_year_and_the_iso_week() =>
+        _result.ShouldEqual($"{Cratis.Chronicle.WellKnownExpressions.Composite}(WeekYear={Cratis.Chronicle.WellKnownExpressions.EventContext}(Occurred.WeekYear),Week={Cratis.Chronicle.WellKnownExpressions.EventContext}(Occurred.Week))");
 }

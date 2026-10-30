@@ -33,6 +33,16 @@ The corresponding key and read model:
 
 <ChronicleClientTabs snippet="projections/declarative/composite-keys/audit-model" />
 
+## ISO week keys
+
+Pair `Occurred.Week` with `Occurred.WeekYear`, not the calendar `Occurred.Year`. ISO weeks can start in the previous calendar year or end in the next one. For example, December 30, 2024 is week 1 of week-year 2025, while January 1, 2021 is week 53 of week-year 2020. Using the calendar year would merge January 1 and December 30, 2024 into the same weekly key.
+
+In .NET, use the `Week()` and `WeekYear()` extension methods from `Cratis.Chronicle.Properties`:
+
+<ChronicleClientTabs snippet="projections/declarative/composite-keys/iso-week" />
+
+Model-bound context mappings accept the same paths: `[SetFromContext<WeeklyActivityRecorded>("Occurred.WeekYear")]` and `[SetFromContext<WeeklyActivityRecorded>("Occurred.Week")]`. The `Year` property still returns the calendar year.
+
 ## Composite keys in child collections
 
 Composite keys work with child collections too:

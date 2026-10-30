@@ -24,6 +24,7 @@ public class a_dispatching_subscriber : a_subscriber_with_a_cached_pipeline
         {
             await call.Arg<ReducerDelegate>()([], null);
             _sinkReached = true;
+            return null;
         });
     }
 }
