@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
 namespace Cratis.Chronicle.Security;
@@ -8,7 +9,15 @@ namespace Cratis.Chronicle.Security;
 /// <summary>
 /// Defers the framework key-ring warmup until the silo can route grain calls.
 /// </summary>
+/// <remarks>
+/// Marked with <see cref="IgnoreConventionAttribute"/> so convention binding does not self-bind it. Its
+/// constructor takes the plain framework <see cref="IHostedService"/> it wraps, which convention binding
+/// would resolve as "whichever hosted service happens to be registered last" rather than the intended
+/// Data Protection warmup - <see cref="ChronicleDataProtection.DeferChronicleDataProtectionWarmup"/> is the
+/// only place that may construct one, with the exact instance to wrap.
+/// </remarks>
 /// <param name="warmup">The framework hosted service.</param>
+[IgnoreConvention]
 public sealed class DataProtectionKeyRingWarmup(IHostedService warmup) : IHostedLifecycleService
 {
     bool _deferredToSilo;
