@@ -204,7 +204,7 @@ internal sealed class TestingEventStore : IDisposable
         return _grains.GetOrAdd(
             new EventSequenceId(parsed.EventSequenceId.Value),
             static (id, root) => new Lazy<KernelSequences::IEventSequence>(() =>
-                SerializedEventSequence.Create(InProcessEventSequence.Create(root.Storage, new(id.Value), new(root.Name.Value), new(root.Namespace.Value), root.Compliance)
+                SerializedEventSequence.Create(InProcessEventSequence.Create(root.Storage, new(id.Value), new(root.Name.Value), new(root.Namespace.Value), root.Compliance, root.Time)
                     .GetAwaiter().GetResult())),
             this).Value;
     }
