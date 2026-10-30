@@ -1,8 +1,0 @@
-- name: Overview
-  href: index.md
-- name: C# usage
-  href: dotnet-client.mdx
-- name: Explicit registration
-  href: explicit-registration.mdx
-- name: Generation validation
-  href: validation.mdx

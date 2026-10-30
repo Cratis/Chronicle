@@ -1,1 +1,0 @@
-../../.cratis/ai/prompts/new-feature.prompt.md

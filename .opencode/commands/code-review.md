@@ -1,1 +1,0 @@
-../../.cratis/ai/prompts/code-review.prompt.md

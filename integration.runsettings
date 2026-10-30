@@ -1,5 +1,0 @@
-<RunSettings>
-  <RunConfiguration>
-    <TestCaseFilter>(FullyQualifiedName~Cratis.Chronicle.InProcess.Integration|FullyQualifiedName~Cratis.Chronicle.Integration.Api|FullyQualifiedName~Cratis.Chronicle.MongoDB.Integration)</TestCaseFilter>
-  </RunConfiguration>
-</RunSettings>

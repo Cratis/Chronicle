@@ -1,1 +1,0 @@
-../../.cratis/ai/agents/spec-writer.md

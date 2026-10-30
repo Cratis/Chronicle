@@ -1,1 +1,0 @@
-../../.cratis/ai/prompts/add-projection.prompt.md

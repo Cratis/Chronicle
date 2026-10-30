@@ -1,8 +1,0 @@
-- name: Triggers and handlers
-  href: triggers-and-handlers.mdx
-- name: Lifecycle triggers
-  href: lifecycle.mdx
-- name: Effect receipts
-  href: effect-receipts.mdx
-- name: Testing
-  href: testing.mdx

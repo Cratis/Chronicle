@@ -1,1 +1,0 @@
-../../.cratis/ai/prompts/add-reactor.prompt.md

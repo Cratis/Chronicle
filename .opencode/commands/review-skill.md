@@ -1,1 +1,0 @@
-../../.cratis/ai/prompts/review-skill.prompt.md
