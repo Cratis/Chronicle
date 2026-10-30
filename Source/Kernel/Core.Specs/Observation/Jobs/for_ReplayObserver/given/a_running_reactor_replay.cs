@@ -59,13 +59,16 @@ public class a_running_reactor_replay : a_replay_observer_job
         return (await _job.Resume()).IsSuccess;
     }
 
-    async Task Establish()
+    protected override void ConfigureSilo()
     {
         _silo.AddService(Options.Create(new JobsOptions { MaxStepAttempts = 3, StepRetryBackoff = TimeSpan.Zero }));
-        var jobsStorage = Substitute.For<IJobsStorage>();
-        jobsStorage.GetFor(Arg.Any<string>(), Arg.Any<string>()).Returns(new JobsStorage(_jobStorage, _jobStepStorage));
+        var jobsStorage = Substitute.For<Cratis.Orleans.Storage.IJobsStorage>();
+        jobsStorage.GetFor(Arg.Any<string>(), Arg.Any<string>()).Returns(new Cratis.Orleans.Storage.JobsStorage(_jobStorage, _jobStepStorage));
         _silo.AddService(jobsStorage);
-        _job = await _silo.CreateGrainAsync<TestableReplayObserver>(_jobId, _jobKey);
+    }
+
+    async Task Establish()
+    {
         _observer.GetFailedPartitionKeys().Returns([]);
         var jobsManager = Substitute.For<IJobsManager>();
         jobsManager.GetAllJobs().Returns(Task.FromResult<IImmutableList<JobState>>(ImmutableList<JobState>.Empty));
