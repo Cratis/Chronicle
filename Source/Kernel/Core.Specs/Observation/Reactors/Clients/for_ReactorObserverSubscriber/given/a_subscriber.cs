@@ -22,7 +22,7 @@ public class a_subscriber : Specification
     void Establish()
     {
         _mediator = Substitute.For<IReactorMediator>();
-        _mediator.When(mediator => mediator.OnNext(Arg.Any<ReactorId>(), Arg.Any<ConnectionId>(), Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<Key>(), Arg.Any<IEnumerable<AppendedEvent>>(), Arg.Any<TaskCompletionSource<ObserverSubscriberResult>>()))
+        _mediator.When(mediator => mediator.OnNext(Arg.Any<ReactorId>(), Arg.Any<ConnectionId>(), Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<Key>(), Arg.Any<IEnumerable<AppendedEvent>>(), Arg.Any<TaskCompletionSource<ObserverSubscriberResult>>(), Arg.Any<TimeSpan?>()))
             .Do(call => _completion = call.Arg<TaskCompletionSource<ObserverSubscriberResult>>());
         _subscriber = new(_mediator, NullLogger<ReactorObserverSubscriber>.Instance, _clock);
         _context = new ObserverSubscriberContext(new ConnectedClient { ConnectionId = "A" }).WithDeadlines(TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(300), _clock);

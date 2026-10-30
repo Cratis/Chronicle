@@ -117,6 +117,7 @@ if (chronicleOptions.Storage.SchemaMode == SchemaMode.Verify && !SchemaCommandRu
 
 ClusteringStorageValidation.Validate(chronicleOptions);
 KernelStartupDiagnostics.ReportIdentityProviderCertificate(chronicleOptions, logger);
+KernelStartupDiagnostics.ReportSubscriberTimeout(chronicleOptions, logger);
 ForwardedHeadersTrust.Configure(builder.Services, chronicleOptions);
 var isSqlStorage = string.Equals(chronicleOptions.Storage.Type, StorageType.Sqlite, StringComparison.OrdinalIgnoreCase)
     || string.Equals(chronicleOptions.Storage.Type, StorageType.MsSql, StringComparison.OrdinalIgnoreCase)

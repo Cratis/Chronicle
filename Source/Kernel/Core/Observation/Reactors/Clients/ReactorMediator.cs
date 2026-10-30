@@ -50,11 +50,12 @@ public class ReactorMediator : IReactorMediator
         EventStoreNamespaceName @namespace,
         Key partition,
         IEnumerable<AppendedEvent> events,
-        TaskCompletionSource<ObserverSubscriberResult> taskCompletionSource)
+        TaskCompletionSource<ObserverSubscriberResult> taskCompletionSource,
+        TimeSpan? deliverWithin = null)
     {
         if (_observers.TryGetValue(new(reactorId, connectionId, eventStore, @namespace), out var observable))
         {
-            observable(partition, events, taskCompletionSource);
+            observable(partition, events, taskCompletionSource, deliverWithin);
         }
         else
         {

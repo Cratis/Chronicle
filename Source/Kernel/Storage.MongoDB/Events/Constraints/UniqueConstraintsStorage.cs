@@ -20,10 +20,10 @@ namespace Cratis.Chronicle.Storage.MongoDB.Events.Constraints;
 /// <param name="eventStoreNamespaceDatabase"><see cref="IEventStoreNamespaceDatabase"/> for the storage.</param>
 /// <param name="eventSequenceId"><see cref="EventSequenceId"/> for the storage.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
-public class UniqueConstraintsStorage(
+public partial class UniqueConstraintsStorage(
     IEventStoreNamespaceDatabase eventStoreNamespaceDatabase,
     EventSequenceId eventSequenceId,
-    ILogger<UniqueConstraintsStorage> logger) : IUniqueConstraintsStorage
+    ILogger<UniqueConstraintsStorage> logger) : IUniqueConstraintsBatchStorage
 {
     const string ValueIndexName = "value";
     const string SubjectIndexName = "subject";

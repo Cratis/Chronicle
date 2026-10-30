@@ -17,6 +17,23 @@ namespace Cratis.Chronicle.EventSequences;
 
 public partial class EventSequence
 {
+    /// <summary>
+    /// Reads, in one go per constraint, what the persisted indexes say about every value the batch claims.
+    /// </summary>
+    /// <param name="contexts">The <see cref="ConstraintValidationContext">contexts</see> of the prepared events.</param>
+    /// <param name="batchClaims">The <see cref="ConstraintBatchClaims"/> keeping the answers for validation.</param>
+    /// <returns>Awaitable task.</returns>
+    static async Task ReadPersistedConstraintClaims(List<ConstraintValidationContext> contexts, ConstraintBatchClaims batchClaims)
+    {
+        // A single event gains nothing from reading ahead; it validates against storage directly.
+        if (contexts.Count < 2) return;
+
+        foreach (var validator in contexts.SelectMany(context => context.Validators).OfType<UniqueConstraintValidator>().Distinct())
+        {
+            await validator.ReadPersistedClaims(contexts, batchClaims);
+        }
+    }
+
     async Task<AppendManyResult> AppendManyValidated(
         IEnumerable<EventToAppend> events,
         CorrelationId correlationId,
@@ -105,6 +122,9 @@ public partial class EventSequence
         ConstraintBatchClaims batchClaims,
         List<ProtectedValueUse>?[]? keyUses = null)
     {
+        // Prepare every event first, then read the constraint indexes for the whole batch at once, then validate the
+        // constraints of each event in order - the order is what lets earlier events' claims in the batch be seen by
+        // later ones. Validating each event against storage on its own costs one round trip per event and constraint.
         var validated = new List<(EventToAppend Event, Result<(ExpandoObject CompliantEvent, JsonObject CompliantContent, ConstraintValidationContext ConstraintValidationContext), AppendResult> Result)>();
         foreach (var (eventToAppend, index) in events.Select((@event, index) => (@event, index)))
         {
@@ -116,8 +136,17 @@ public partial class EventSequence
             }
 
             var e = eventToAppend with { EventSourceType = resolvedEventSourceType.AsT0 };
-            var result = await GetValidAndCompliantEvent(e.EventSourceType, e.EventSourceId, e.eventStreamType, e.eventStreamId, e.EventType, e.Content, correlationId, e.Subject, batchClaims, keyUses?[index]);
+            var result = await PrepareCompliantEvent(e.EventSourceType, e.EventSourceId, e.eventStreamType, e.eventStreamId, e.EventType, e.Content, correlationId, e.Subject, batchClaims, keyUses?[index]);
             validated.Add((e, result));
+        }
+
+        await ReadPersistedConstraintClaims(validated.Where(_ => _.Result.IsSuccess).Select(_ => _.Result.AsT0.ConstraintValidationContext).ToList(), batchClaims);
+
+        for (var index = 0; index < validated.Count; index++)
+        {
+            var (e, prepared) = validated[index];
+            if (!prepared.IsSuccess) continue;
+            validated[index] = (e, await ValidateConstraints(prepared.AsT0, e.EventSourceType, e.EventSourceId, e.eventStreamId, e.EventType, correlationId));
         }
 
         return validated;
