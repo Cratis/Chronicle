@@ -24,7 +24,7 @@ applies-to:
 <!-- markdownlint-disable-next-line MD025 -->
 # Deliver observer events to HTTP receivers through one versioned envelope, ordered per partition, identified by a deterministic delivery id, signed with Standard Webhooks, and bracketed by awaited replay boundaries
 
-Accepted on 2026-10-25 by Einar ([verdict](https://github.com/Cratis/Chronicle/pull/5398#issuecomment-6394945714)). The verdict decides four points: Ed25519 by default with HMAC opt-in and a key id header, a reserved fencing field, an envelope of per-partition batches, and one canonical per-event dedup key. It leaves one point explicitly open: how replay interacts with deduplication ([Q5](#q5-delivery-identity-across-replays)). Every other question keeps its recommended answer. See [Questions and the decider's verdict](#questions-and-the-deciders-verdict).
+Accepted on 2026-10-25 by Einar ([verdict](https://github.com/Cratis/Chronicle/pull/5398#issuecomment-6394945714)). The verdict decides four points: Ed25519 by default with HMAC opt-in and a key id header, a reserved fencing field, an envelope of per-partition batches, and one canonical per-event dedup key. Amended on 2026-10-30 ([amendment](#amendment-http-delivery-v1-is-live-only)): HTTP delivery v1 is live-only, which settles [Q5](#q5-delivery-identity-across-replays) for v1. Every other question keeps its recommended answer. See [Questions and the decider's verdict](#questions-and-the-deciders-verdict).
 
 This record settles the wire contract between the kernel and an HTTP receiver: what a request looks like, in which order and how often it arrives, how the receiver proves the kernel sent it, and how replays reach it. It is the design input for [#5115](https://github.com/Cratis/Chronicle/issues/5115), and the contract that [#5116](https://github.com/Cratis/Chronicle/issues/5116) (envelope, ordering, replay), [#5117](https://github.com/Cratis/Chronicle/issues/5117) (signatures) and the receivers in [#5119](https://github.com/Cratis/Chronicle/issues/5119), [#5120](https://github.com/Cratis/Chronicle/issues/5120) and [#5121](https://github.com/Cratis/Chronicle/issues/5121) build on, all under the serverless epic [#5104](https://github.com/Cratis/Chronicle/issues/5104).
 
@@ -138,9 +138,9 @@ Why unknown data kinds are not ignored: this is the one part of the envelope tha
 
 ### Idempotency, acknowledgement and retries
 
-- `webhook-id` is a deterministic hash of (event store, namespace, observer id, event sequence id, kind and, for each batch, partition, first sequence number, last sequence number). The same request on retry carries the same id. Whether the hash also includes a replay epoch, so that a replay is not deduplicated against the original delivery, is open ([Q5](#q5-delivery-identity-across-replays)).
+- `webhook-id` is a deterministic hash of (event store, namespace, observer id, event sequence id, kind and, for each batch, partition, first sequence number, last sequence number). The same request on retry carries the same id. The hash has no replay component in v1, because v1 delivers no replays ([amendment](#amendment-http-delivery-v1-is-live-only)).
 - Each event has one canonical, deterministic dedup key (event store, namespace, observer id, event sequence id, sequence number) with one fixed encoding, shared with the broker sinks and separate from the partition or ordering key ([Q21](#q21-canonical-per-event-identity)). Receivers deduplicate side effects per event on it, not per request, because a partial acknowledgement or a halved batch changes batch boundaries. Reactor side-effect appends are keyed `{observerId}:{sourceSequenceNumber}` once the client exposes keyed appends (epic decision 1; [decision 0012](0012-keyed-appends-travel-on-their-own-rpcs.md)).
-- **Open, not decided ([Q5](#q5-delivery-identity-across-replays)):** the proposal before the decider kept two receipt kinds apart. A persistent once-only side-effect receipt (an email sent, a payment made) is keyed without the replay epoch and survives replays, so a replay does not repeat an external effect. A replay-scoped rebuild receipt (reducer or projection-like state) includes the replay epoch, so a replay rebuilds state instead of being suppressed; the spike for [#5104](https://github.com/Cratis/Chronicle/issues/5104) reported a ledger suppressing all replayed effects. Which kind applies is the receiver's choice per effect, and the `Replay` flag and `replayEpoch` let it decide.
+- Replay receipts do not apply in v1 ([amendment](#amendment-http-delivery-v1-is-live-only)). A persistent side-effect receipt is keyed on the per-event dedup key. A rebuild receipt scoped to a replay epoch is for a later record that enables replay over HTTP.
 - `2xx` with an empty body or `204` acknowledges the whole batch. `200` with a JSON result `{results: [{partition, state, lastSuccessfulObservation, exceptionMessages, exceptionStackTrace, readModelState}]}` has one entry per batch of the request and acknowledges each partition up to its `lastSuccessfulObservation`, failing from the next event. v1 requests have one batch, so one entry. The kernel ignores unknown fields in that result. The kernel reads no response body today (`WebhookMediator.cs` L59-L65), so this is a requirement on the new result parser.
 - `413` halves the batch instead of pausing the observer; a single event over the size limit parks the partition with reason `PayloadTooLarge`. Batches are bounded by an event count and a byte size (proposed 100 events and 4 MiB).
 - `429`, and `503` with `Retry-After`, defer the partition that got the answer today (`WebhookMediator.cs` L123-L127). Platforms throttle per function, not per partition: a Lambda function URL answers `429` when the function exceeds its reserved concurrency ([function URLs](https://docs.aws.amazon.com/lambda/latest/dg/urls-configuration.html)), and the CloudEvents webhook specification requires the sender to "refrain from sending further requests until the indicated time" ([spec](https://github.com/cloudevents/spec/blob/main/cloudevents/http-webhook.md)). Decided by [Q17](#q17-target-wide-back-off) as recommended: such an answer makes the whole target authority back off, not one partition.
@@ -156,15 +156,16 @@ Why unknown data kinds are not ignored: this is the one part of the envelope tha
 - The existing transport authentication modes stay available and combine with signing: Basic, Bearer, OAuth client credentials, managed identity and static headers (for example a platform function key). `None` without a signature requires an explicit `AllowUnauthenticated` setting and logs a startup warning ([#5117](https://github.com/Cratis/Chronicle/issues/5117)).
 - Signing is opt-in for generic webhooks, which keep today's body.
 - The existing target rules stay part of the contract: HTTPS outside development, cloud metadata addresses only through an explicit allow-list (`Source/Kernel/Core/Observation/Webhooks/Validation/WebhookTargetPolicy.cs` L76-L87), and no redirects (`Source/Kernel/Core/Setup/WebhookHttpClientExtensions.cs` L78).
-- Key custody (scope, storage under the kernel's `IEncryption`, rotation, distribution of the public key) is either decided here as proposed by [#5117](https://github.com/Cratis/Chronicle/issues/5117) (one key per event store, rotated through the CLI, returned by registration and exposed by a kernel `GET`) or split into its own record ([Q1](#q1-one-record-or-a-split), [Q9](#q9-signing-key-scope-and-rotation)).
+- Key custody (scope, storage under the kernel's `IEncryption`, rotation, distribution of the public key) is decided in [decision 0021](0021-delivery-signing-key-custody.md) ([Q1](#q1-one-record-or-a-split), [Q9](#q9-signing-key-scope-and-rotation)).
 
 ### Replay, catch-up and redaction
 
+- In v1 the kernel delivers no replay over HTTP ([amendment](#amendment-http-delivery-v1-is-live-only)). The bullets below on `replay-started`, `replay-ended` and the replay epoch describe the contract a later version sends; v1 sends none of it.
 - Before the first replayed partition the kernel sends `replay-started` and waits for a `2xx`; a non-`2xx` backs off and retries instead of dispatching. After the last partition it sends `replay-ended`. Both carry the replay epoch.
 - The replay epoch is a replay-operation identifier persisted with the replay job or context when the replay is scheduled (no replay counter exists on the observer state today). It is reused unchanged by retries and when the replay resumes, never reallocated. A whole-observer replay and a partition replay have separate lifecycles and separate epochs; a partition's delivery reads the epoch of the replay operation it belongs to, not an observer-wide mutable value, so another partition starting a replay does not change an unrelated partition's `webhook-id`. Whether concurrent replays of the same partition are possible is unknown and must be settled before implementation.
 - An observer-level `replay-ended` is a control delivery parked on its own; its failure follows the retry and park policy but must not quarantine partitions or stop live delivery.
 - Replayed events keep the `Replay` observation flag. Catch-up after downtime is not a replay: it is delivered as ordinary `events` deliveries with no boundary.
-- A redaction is delivered as an ordinary event of the redaction type, as today. Revised events are delivered from the revision, migrated to the pinned generation, per [decision 0002](0002-event-generation-preservation-and-delivery.md). Content is sent in plaintext after compliance release over HTTPS (epic decision 6); encrypted or redacted delivery is [#5132](https://github.com/Cratis/Chronicle/issues/5132).
+- A redaction is delivered as an ordinary event of the redaction type, as today. Revised events are delivered from the revision, migrated to the pinned generation, per [decision 0002](0002-event-generation-preservation-and-delivery.md), as live events only; v1 does not re-push earlier events. Content is sent in plaintext after compliance release over HTTPS (epic decision 6); encrypted or redacted delivery is [#5132](https://github.com/Cratis/Chronicle/issues/5132).
 
 ## Options considered
 
@@ -187,7 +188,7 @@ Why unknown data kinds are not ignored: this is the one part of the envelope tha
 - **A random id per attempt.** Easy, but useless for deduplication: every retry looks new.
 - **The stream's `DeliveryId`.** A stream-local counter that resets with the stream; zero means legacy. Not stable across retries, kernels or transports. Rejected.
 - **A deterministic hash without a replay component**, as written in [#5117](https://github.com/Cratis/Chronicle/issues/5117). Stable across retries, but a replay of the same range produces the same id as the original delivery, so a receiver deduplicating on `webhook-id` drops the replay. Rejected.
-- **A deterministic hash including a replay epoch.** Proposed before the verdict; not decided. The decider left how replay interacts with deduplication open ([Q5](#q5-delivery-identity-across-replays)).
+- **A deterministic hash including a replay epoch.** Needed only when replay is delivered. Deferred with replay ([amendment](#amendment-http-delivery-v1-is-live-only)).
 
 ### Acknowledgement
 
@@ -314,16 +315,49 @@ Webhook observers and HTTP reactors share the transport (`WebhookMediator.cs`), 
 
 Within this major, webhooks keep today's body ([Q3](#q3-generic-webhooks)). At the next major, one HTTP target concept with a `format` setting is proposed: `chronicle-v1` (default), `legacy` (deprecated), and later `cloudevents`. That leaves one delivery path, one classification table and one place for capability negotiation (see the open point on unknown kinds under [Envelope](#envelope)).
 
+## Amendment: HTTP delivery v1 is live-only
+
+Decided on 2026-10-30 by woksin (Q-146). HTTP delivery v1 delivers live events only. The kernel does not deliver replays or resets over HTTP.
+
+**In v1, over HTTP:**
+
+- Initial catch-up after the observer is first subscribed, catch-up after downtime and retries of a failed delivery are delivered. They are ordinary `events` deliveries with no boundary, and a retry carries the same `webhook-id`.
+- An observer that serves HTTP is not replayable. Replaying it, rewinding a partition and any definition-change replay are not started for it; a request to do so is rejected or recorded as a recommendation, never delivered.
+- The kernel sends no `replay-started` or `replay-ended` request. The kinds stay in the contract so that a later version can send them without a new contract version.
+- Revised events and redactions are delivered only as the live events they are today. The kernel does not re-push earlier events when they are revised or redacted.
+
+**Why.** Deduplication by `webhook-id` or by the per-event dedup key suppresses a replay, and a replay epoch in the id is not settled ([Q5](#q5-delivery-identity-across-replays)). A replay also races with live delivery and with an abandoned request that is still running, and the fencing token that would order them depends on the partition-claim epoch of [decision 0018](0018-partition-ownership-protocol.md), which is not enforced yet. Live delivery needs neither.
+
+**Consequences.**
+
+- `webhook-id` keeps the formula in [Idempotency, acknowledgement and retries](#idempotency-acknowledgement-and-retries) with no replay component. A later record that enables replay over HTTP decides the epoch, the receipts and the fencing check together, and changes `webhook-id` only for replay deliveries.
+- The `Replay` observation flag and `replayEpoch` stay reserved in the envelope. A v1 receiver can ignore them.
+- A reducer or reactor on HTTP cannot be rebuilt from the event log. A receiver that needs a rebuild uses a stream observer, or re-reads state from its own store.
+- Webhook observers must honour the replayability setting before an HTTP reactor or reducer ships. Today they ignore it.
+
+**Alternatives considered.**
+
+- *Fencing first.* Land the partition-claim epoch of decision 0018, then ship replay with a receiver-checked fencing token. Correct, and the recommended path for replay, but it puts a hot-core kernel change in front of every serverless use that only needs live delivery. Deferred, not rejected.
+- *Replay with known gaps.* Ship replay with the epoch in `webhook-id` and document that an abandoned request or a concurrent replay can overlap, and that revised and redacted events are not re-pushed. It gives rebuilds earlier, at the price of a contract whose `webhook-id` and receipt rules ([Q5](#q5-delivery-identity-across-replays), reversibility: no) are fixed before the overlap is understood. Rejected for v1.
+
+### Receiver responsibilities
+
+- Delivery is at least once. Make every effect idempotent, and commit the effect and its dedup receipt in one transaction. A receipt written before the effect loses the effect on a crash; one written after it repeats the effect.
+- Deduplication prevents repeated effects. It does not make receiver state correct. After a timeout the kernel can retry while the first execution is still running, so two executions of the same event can overlap. Take a per-partition lock, or check the order of `sequenceNumber` in the same transaction.
+- Deduplicate per event on the canonical key ([Q21](#q21-canonical-per-event-identity)), not per request: batch boundaries change on a partial acknowledgement or a halved batch.
+- Redactions are not pushed. A redaction event reaches the receiver only as a live event. Data the receiver already stored is not corrected by the kernel, so removing or redacting it is the receiver's responsibility. Encrypted or redacted delivery is [#5132](https://github.com/Cratis/Chronicle/issues/5132). This record makes no compliance claim.
+- Verify the signature on every request, take the event store and namespace from the signed body and not from the route, and take the public key from configuration. A proxy that strips identity headers does not authenticate the body; see [decision 0021](0021-delivery-signing-key-custody.md).
+
 ## Questions and the decider's verdict
 
 Each question below keeps the recommendation it was put with. The verdict covers only the points marked in the table; every other question is decided as recommended. Where the verdict differs from a recommendation, the Decision section and the affected sections above follow the verdict.
 
 | Question | Status | Note |
 | --- | --- | --- |
-| Q1 | Decided as recommended | Key custody splits into a follow-up record. |
+| Q1 | Decided as recommended | Key custody splits into a follow-up record. Key custody is decided in decision 0021. |
 | Q2 | Decided differently | Pinned public shape as recommended; the body carries a list of per-partition batches. |
 | Q3, Q4 | Decided as recommended | |
-| Q5 | Still open | How replay interacts with deduplication. The per-event dedup key itself is decided under Q21. |
+| Q5 | Settled for v1 by the amendment | HTTP delivery v1 is live-only, so no replay epoch or replay receipt applies. The per-event dedup key is decided under Q21. |
 | Q6 | Decided as recommended | The result carries one entry per batch. |
 | Q7 | Decided as recommended | |
 | Q8 | Decided by the verdict | Ed25519 by default, HMAC opt-in; mandatory signing and the verifier code as recommended. |
@@ -353,7 +387,7 @@ Is the ordering unit (observer, namespace, partition), and are the defaults 8 pa
 
 ### Q5. Delivery identity across replays
 
-**Still open:** the decider left how replay interacts with deduplication to be decided explicitly. Until then this record does not say whether `webhook-id` changes for a replay, whether a replay epoch enters any identity, or which receipts a replay suppresses. The proposal put to the decider follows. Must a replay of a range carry a different `webhook-id` than the original delivery (adding a persisted replay-operation epoch to the hash), and is the per-event deduplication key (event store, namespace, observer id, event sequence id, sequence number) the documented receiver guidance, with once-only side-effect receipts kept across replays and rebuild receipts scoped to the replay epoch? **Recommendation:** yes to both. This changes the formula written in [#5117](https://github.com/Cratis/Chronicle/issues/5117).
+**Settled for v1:** HTTP delivery v1 is live-only ([amendment](#amendment-http-delivery-v1-is-live-only)). The question stays open for the record that enables replay over HTTP. The proposal put to the decider follows. Must a replay of a range carry a different `webhook-id` than the original delivery (adding a persisted replay-operation epoch to the hash), and is the per-event deduplication key (event store, namespace, observer id, event sequence id, sequence number) the documented receiver guidance, with once-only side-effect receipts kept across replays and rebuild receipts scoped to the replay epoch? **Recommendation:** yes to both. This changes the formula written in [#5117](https://github.com/Cratis/Chronicle/issues/5117).
 
 ### Q6. Partial acknowledgement and payload limits
 
@@ -381,7 +415,7 @@ Do Basic, Bearer, OAuth, managed identity and static headers remain available fo
 
 ### Q11. Replay boundaries
 
-Awaited `replay-started` and `replay-ended` per observer replay: are per-partition boundaries (for partition replays) also part of v1? What does the kernel do when `replay-ended` keeps failing? **Recommendation:** observer-level boundaries in v1; partition replays carry the `Replay` flag and the replay epoch only; a failing `replay-ended` follows the normal retry and park policy without blocking live delivery.
+Awaited `replay-started` and `replay-ended` per observer replay: are per-partition boundaries (for partition replays) also part of v1? What does the kernel do when `replay-ended` keeps failing? **Recommendation:** observer-level boundaries in v1; partition replays carry the `Replay` flag and the replay epoch only; a failing `replay-ended` follows the normal retry and park policy without blocking live delivery. **Amended:** v1 sends no replay boundary over HTTP.
 
 ### Q12. Catch-up and redaction semantics
 
@@ -409,7 +443,7 @@ Adding a field or a `kind` is not a version change; changing a meaning is.
 | Q2 envelope fields | Adding yes; removing or renaming no |
 | Q3 generic default | Yes, at a major release |
 | Q4 ordering unit and caps | Caps yes; narrowing the ordering unit no |
-| Q5 `webhook-id` and dedupe key | No |
+| Q5 `webhook-id` and dedupe key | No; replay delivery is not in v1 |
 | Q6 meaning of `200` with a result | No; limits and halving yes |
 | Q7 retry and park | Yes |
 | Q8 mandatory signing, algorithms | Adding algorithms yes; dropping signing or an algorithm no |
@@ -471,6 +505,6 @@ Without the event sequence id, two event sequences of one store with the same se
 - Which Ed25519 library the kernel and receiver use, and whether it runs on the Azure Functions isolated worker and on Lambda with SnapStart (including any native binaries), is not verified.
 - Which timeout governs an HTTP reactor or reducer is not settled: the webhook request timeout defaults to 60 seconds (`Source/Kernel/Core/Configuration/Webhooks.cs` L67) while [#5118](https://github.com/Cratis/Chronicle/issues/5118) proposes `Serverless:Delivery:Timeout` of 30 seconds.
 - RFC 9110 allows a `413` with `Retry-After` for a temporary condition; halving ignores it. Whether to honor `Retry-After` on `413` is not decided.
-- Behavior with several receiver instances during a replay, and live deliveries interleaved with a replay, were not measured.
-- Whether concurrent replays of one partition (whole-observer and partition replay) can overlap, and how a replay epoch relates to them, is not verified.
+- For the record that enables replay: behavior with several receiver instances during a replay, and live deliveries interleaved with a replay, were not measured.
+- For the record that enables replay: whether concurrent replays of one partition (whole-observer and partition replay) can overlap, and how a replay epoch relates to them, is not verified.
 - Whether the observation flag is `Initial` on every catch-up path is not verified from code.
