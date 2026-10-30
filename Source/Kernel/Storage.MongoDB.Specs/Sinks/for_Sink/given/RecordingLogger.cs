@@ -22,6 +22,11 @@ public sealed class RecordingLogger : ILogger<Sink>
     /// </summary>
     public IReadOnlyList<LogEntry> Entries => _entries;
 
+    /// <summary>
+    /// Gets the warning entries captured, in the order they were logged.
+    /// </summary>
+    public IEnumerable<LogEntry> Warnings => _entries.Where(_ => _.Level == LogLevel.Warning);
+
     /// <inheritdoc/>
     public IDisposable? BeginScope<TState>(TState state)
         where TState : notnull => null;

@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.EventSequences;
 using Microsoft.Extensions.Logging;
 namespace Cratis.Chronicle.EventSequences.Concurrency;
 
@@ -13,6 +14,9 @@ internal static partial class ConcurrencyValidatorLogging
 {
     [LoggerMessage(LogLevel.Debug, "Skipping the concurrency check for event source '{EventSourceId}' - the append declared a concurrency scope that carries no expected sequence number, so there is nothing to compare against and the append proceeds unchecked")]
     internal static partial void SkippingIncompleteConcurrencyScope(this ILogger<ConcurrencyValidator> logger, EventSourceId eventSourceId);
+
+    [LoggerMessage(LogLevel.Information, "History of the event sequence was mutated after the read for event source '{EventSourceId}': expected epoch {Expected}, current {Current}")]
+    internal static partial void HistoryMutatedAfterRead(this ILogger<ConcurrencyValidator> logger, EventSourceId eventSourceId, EventSequenceMutationEpoch expected, EventSequenceMutationEpoch current);
 
     [LoggerMessage(LogLevel.Warning, "Could not read the first conflicting event for the concurrency violation on event source '{EventSourceId}' - the violation is reported without it")]
     internal static partial void CouldNotReadConflictingEvent(this ILogger<ConcurrencyValidator> logger, EventSourceId eventSourceId, Exception exception);

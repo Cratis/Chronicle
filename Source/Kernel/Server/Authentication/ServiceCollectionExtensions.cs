@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Arc.Authorization;
+using Cratis.Chronicle.Security;
 using Cratis.Chronicle.Server.Authentication.OpenIddict;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.MongoDB.Security;
@@ -13,6 +15,7 @@ using Microsoft.AspNetCore.DataProtection.KeyManagement;
 using Microsoft.AspNetCore.DataProtection.Repositories;
 using Microsoft.AspNetCore.Identity;
 using OpenIddict.Validation.AspNetCore;
+using User = Cratis.Chronicle.Storage.Security.User;
 
 namespace Cratis.Chronicle.Server.Authentication;
 
@@ -73,12 +76,17 @@ public static class ServiceCollectionExtensions
         // authenticate them against, so the token authority, the identity stack and the schemes are all skipped
         // and the fallback policy lets every request through. Data Protection above stays either way - webhook
         // secret encryption depends on it and has nothing to do with authentication.
+        services.AddAdministratorAuthorizationHandlers();
+
         if (!chronicleOptions.Authentication.Enabled)
         {
             services.AddAuthorizationBuilder()
                 .SetFallbackPolicy(new AuthorizationPolicyBuilder()
                     .RequireAssertion(_ => true)
-                    .Build());
+                    .Build())
+                .AddAdministratorPolicies();
+            services.AddArcAnonymousAspNetAuthorizationPolicy(WellKnownAuthorizationPolicies.Administrator);
+            services.AddArcAnonymousAspNetAuthorizationPolicy(WellKnownAuthorizationPolicies.AdministratorOperations);
 
             return services;
         }
@@ -104,6 +112,7 @@ public static class ServiceCollectionExtensions
             })
             .AddUserStore<UserStore>()
             .AddSignInManager()
+            .AddClaimsPrincipalFactory<ChronicleUserClaimsPrincipalFactory>()
             .AddDefaultTokenProviders()
             .AddApiEndpoints();
 
@@ -168,6 +177,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IClaimsTransformation, ChronicleClaimsTransformation>();
 
         services.AddAuthorizationBuilder()
+            .AddAdministratorPolicies("MultiScheme", IdentityConstants.BearerScheme)
 
             // Require authentication for all endpoints except those with [AllowAnonymous]
             // This applies zero-trust security across all gRPC services and HTTP endpoints
@@ -177,4 +187,24 @@ public static class ServiceCollectionExtensions
 
         return services;
     }
+
+    static void AddAdministratorAuthorizationHandlers(this IServiceCollection services)
+    {
+        services.AddChronicleAdministratorAuthorization();
+        services.AddHostedService<AdministratorPolicyStartupWarning>();
+    }
+
+    static AuthorizationBuilder AddAdministratorPolicies(this AuthorizationBuilder builder, params string[] authenticationSchemes) => builder
+        .AddPolicy(WellKnownAuthorizationPolicies.Administrator, policy => AdministratorPolicy(policy, authenticationSchemes).AddRequirements(new AdministratorRequirement()))
+        .AddPolicy(WellKnownAuthorizationPolicies.AdministratorOperations, policy => AdministratorPolicy(policy, authenticationSchemes).AddRequirements(new SystemStoreOperationRequirement()));
+
+    /// <summary>
+    /// Shapes an administrator policy. With authentication disabled there are no schemes and the handlers decide alone;
+    /// with it enabled, the policy authenticates through the fallback policy's schemes and requires an authenticated caller.
+    /// </summary>
+    /// <param name="policy">The policy being built.</param>
+    /// <param name="authenticationSchemes">The authentication schemes, empty when authentication is disabled.</param>
+    /// <returns>The policy builder.</returns>
+    static AuthorizationPolicyBuilder AdministratorPolicy(AuthorizationPolicyBuilder policy, string[] authenticationSchemes) =>
+        authenticationSchemes.Length == 0 ? policy : policy.AddAuthenticationSchemes(authenticationSchemes).RequireAuthenticatedUser();
 }

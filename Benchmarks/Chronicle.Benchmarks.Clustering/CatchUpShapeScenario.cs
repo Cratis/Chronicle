@@ -33,7 +33,7 @@ internal static class CatchUpShapeScenario
         await dataset.SeedBacklog(fixture).WaitAsync(timeout);
         var tail = (await fixture.EventStore1.EventLog.GetTailSequenceNumber().WaitAsync(timeout)).Value;
         if (tail <= marker) throw new InvalidOperationException("Seeding did not create a backlog beyond the marker.");
-        await observer.VerifyBehind(marker).WaitAsync(timeout);
+        var backlog = await observer.VerifyBehind(marker, tail).WaitAsync(timeout);
 
         observer.PrintSubscription(settings.ObserverType);
         var allocationsBefore = GC.GetTotalAllocatedBytes(true);
@@ -70,7 +70,10 @@ internal static class CatchUpShapeScenario
             MarkerSequenceNumber = marker,
             TailSequenceNumber = tail,
             ElapsedMilliseconds = stopwatch.Elapsed.TotalMilliseconds,
-            EventsPerSecond = settings.Events / stopwatch.Elapsed.TotalSeconds,
+            EventsPerSecond = backlog.Remaining / stopwatch.Elapsed.TotalSeconds,
+            SubscribedAtReconnect = backlog.Subscribed,
+            LastHandledAtReconnect = backlog.LastHandled,
+            BacklogAtReconnect = backlog.Remaining,
             AllocatedBytes = allocatedBytes,
             Gen0Collections = gcCollections[0],
             Gen1Collections = gcCollections[1],

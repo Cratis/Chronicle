@@ -146,7 +146,13 @@ class [GrainType("migrateexistingeventsfortype")] Cratis.Chronicle.EventSequence
 
 class [GrainType("migrateexistingeventsfortypestep")] Cratis.Chronicle.EventSequences.Migrations.MigrateExistingEventsForTypeStep
 
+class [GrainType("eventstoredeploymentregistry")] Cratis.Chronicle.EventStores.EventStoreDeploymentRegistry
+
 class [GrainType("eventstoreinitializer")] Cratis.Chronicle.EventStores.EventStoreInitializer
+
+interface [GrainInterfaceType("Cratis.Chronicle.EventStores.IEventStoreDeploymentRegistry")] Cratis.Chronicle.EventStores.IEventStoreDeploymentRegistry [Version(0)]
+  CADCFD8A: Get() -> Task<Cratis.Chronicle.EventStores.DeploymentState>
+  34F7B19D: Register(Cratis.Chronicle.Concepts.Registrations.DeploymentGeneration, Cratis.Chronicle.Concepts.Registrations.ArtifactFingerprint) -> Task<Cratis.Chronicle.EventStores.DeploymentDecision>
 
 interface [GrainInterfaceType("Cratis.Chronicle.EventStores.IEventStoreInitializer")] Cratis.Chronicle.EventStores.IEventStoreInitializer [Version(0)]
   D2DD4ADD: Ensure() -> Task
@@ -206,7 +212,7 @@ interface [GrainInterfaceType("Cratis.Chronicle.Observation.EventStoreSubscripti
 interface [GrainInterfaceType("Cratis.Chronicle.Observation.IDrainableObserverSubscriber")] Cratis.Chronicle.Observation.IDrainableObserverSubscriber [Version(0)]
   99F6A550: Drain() -> Task
 
-interface [GrainInterfaceType("Cratis.Chronicle.Observation.IObserver")] Cratis.Chronicle.Observation.IObserver [Version(3)]
+interface [GrainInterfaceType("Cratis.Chronicle.Observation.IObserver")] Cratis.Chronicle.Observation.IObserver [Version(4)]
   FF1D5EC7: CanResumeFailedPartition(Cratis.Chronicle.Concepts.Keys.Key, Cratis.Chronicle.Concepts.Observation.FailedPartitionId?, System.Guid?) -> Task<bool>
   906EECAF: CatchUp() -> Task
   DD5E028F: CaughtUp(Cratis.Chronicle.Concepts.Events.EventSequenceNumber, Cratis.Chronicle.Concepts.Events.EventSequenceNumber) -> Task
@@ -422,7 +428,7 @@ class [GrainType("lifecycleoccurrences")] Cratis.Chronicle.Occurrences.Lifecycle
 
 class [GrainType("occurrencequeue")] Cratis.Chronicle.Occurrences.OccurrenceQueue
 
-interface [GrainInterfaceType("Cratis.Chronicle.Patching.IPatchManager")] Cratis.Chronicle.Patching.IPatchManager [Version(1)]
+interface [GrainInterfaceType("Cratis.Chronicle.Patching.IPatchManager")] Cratis.Chronicle.Patching.IPatchManager [Version(2)]
   3D9CA6B5: ApplyPatches() -> Task
   925D5620: ApplyPatchesFor(Cratis.Chronicle.Concepts.System.SemanticVersion) -> Task<Cratis.Chronicle.Patching.PatchOutcome>
 
@@ -559,7 +565,17 @@ class [GrainType("recommendation`1")] Cratis.Chronicle.Recommendations.Recommend
 
 class [GrainType("recommendationsmanager")] Cratis.Chronicle.Recommendations.RecommendationsManager
 
+class [GrainType("administratorroster")] Cratis.Chronicle.Security.AdministratorRoster
+
 class [GrainType("dataprotectionkeys")] Cratis.Chronicle.Security.DataProtectionKeys
+
+interface [GrainInterfaceType("Cratis.Chronicle.Security.IAdministratorRoster")] Cratis.Chronicle.Security.IAdministratorRoster [Version(1)]
+  A8E1B54E: EnsureAdministratorPrivilege() -> Task
+  077AF54B: GetActiveAdministrators() -> Task<System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Security.UserId>>
+  EAC34F72: Grant(Cratis.Chronicle.Concepts.Security.UserId, Cratis.Chronicle.Concepts.Security.GrantReason, string) -> Task
+  4A5AA294: IsActiveAdministrator(Cratis.Chronicle.Concepts.Security.UserId) -> Task<bool>
+  D253AABF: RemoveUser(Cratis.Chronicle.Concepts.Security.UserId) -> Task<bool>
+  ED841CF5: Revoke(Cratis.Chronicle.Concepts.Security.UserId, string) -> Task<bool>
 
 interface [GrainInterfaceType("Cratis.Chronicle.Security.IDataProtectionKeys")] Cratis.Chronicle.Security.IDataProtectionKeys [Version(0)]
   3D4FDEB9: GetAllKeys() -> Task<System.Collections.Generic.IEnumerable<string>>

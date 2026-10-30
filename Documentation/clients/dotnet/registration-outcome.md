@@ -49,6 +49,7 @@ foreach (var failed in outcome.Failures)
 | `Failure` | What stopped `RegisterAll` itself, or `null` when it finished |
 | `IsSuccess` | Registration ran, finished, and every declared artifact registered |
 | `Failures` | Only the artifacts that did not register |
+| `Fingerprint` | The prepared artifact fingerprint from `RegisterDefinitions`; `NotSet` after `RegisterAll` |
 
 `RegistrationOutcome.NotRun` is the value before registration has finished.
 

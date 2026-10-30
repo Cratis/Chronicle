@@ -44,7 +44,10 @@ public static class DerivedPropertyFunctions
     {
         ["Week"] = new(
             "Week",
-            value => System.Globalization.ISOWeek.GetWeekOfYear(ToDateTimeOffset(value).DateTime))
+            value => ToDateTimeOffset(value).Week()),
+        ["WeekYear"] = new(
+            "WeekYear",
+            value => ToDateTimeOffset(value).WeekYear())
     };
 
     /// <summary>

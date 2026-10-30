@@ -1,8 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
 using Cratis.Chronicle.Connections;
+using Cratis.Chronicle.Diagnostics;
 using Cratis.Chronicle.Discovery;
 using Cratis.Chronicle.EventSequences.Concurrency;
 using Cratis.Chronicle.Observation;
@@ -32,7 +34,7 @@ public class ChronicleOptions(
     JsonSerializerOptions? jsonSerializerOptions = null,
     ConcurrencyOptions? concurrencyOptions = null,
     bool autoDiscoverAndRegister = true,
-    int connectTimeout = 5)
+    int connectTimeout = 5) : IValidatableObject
 {
     ReactorOptions _reactors = new();
     ReducerOptions _reducers = new();
@@ -53,6 +55,11 @@ public class ChronicleOptions(
     /// Gets the <see cref="ChronicleConnectionString"/> to use.
     /// </summary>
     public ChronicleConnectionString ConnectionString { get; set; } = connectionString;
+
+    /// <summary>
+    /// Gets or sets the client telemetry configuration.
+    /// </summary>
+    public ChronicleTelemetryOptions Telemetry { get; set; } = new();
 
     /// <summary>
     /// Gets or sets the logical lifecycle identity shared by instances of one rollout.
@@ -166,6 +173,12 @@ public class ChronicleOptions(
     /// as <see cref="ObjectDisposedException"/> on <c language="csharp">Grpc.Net.Client.GrpcChannel</c>.
     /// </para>
     /// <para>
+    /// A client that skips keep-alive does not register client-hosted observers (reactors, reducers, read model
+    /// reactors and occurrences), as the kernel has no live connection to deliver events on. Registering a reactor
+    /// or reducer explicitly fails with <see cref="ClientObserversRequireKeepAlive"/>. See
+    /// <see cref="UseShortLivedProcess"/> for a preset suited to short-lived processes.
+    /// </para>
+    /// <para>
     /// Set this to <see langword="true"/> when the client will issue at most a handful of RPCs
     /// before being disposed, or when the longest RPC the client will issue can exceed five
     /// seconds of server-side processing. With keep-alive skipped the lifecycle is marked
@@ -174,6 +187,17 @@ public class ChronicleOptions(
     /// </para>
     /// </remarks>
     public bool SkipKeepAlive { get; set; }
+
+    /// <summary>
+    /// Gets or sets how the client registers its artifacts with the kernel when it connects.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="RegistrationMode.Inline"/> (the default) registers everything that is discovered.
+    /// <see cref="RegistrationMode.EventTypesOnly"/> ensures the event store exists and registers the event types only.
+    /// <see cref="RegistrationMode.AtDeployment"/> registers nothing, because another process of the application did.
+    /// Only has an effect when <see cref="AutoDiscoverAndRegister"/> is enabled.
+    /// </remarks>
+    public RegistrationMode RegistrationMode { get; set; } = RegistrationMode.Inline;
 
     /// <summary>
     /// Gets or sets a value indicating whether to skip the server compatibility check on connect.
@@ -316,4 +340,58 @@ public class ChronicleOptions(
     /// connection string and other options as needed.
     /// </remarks>
     public static ChronicleOptions FromDevelopmentConnectionString() => FromConnectionString(ChronicleConnectionString.Development);
+
+    /// <summary>
+    /// Create a <see cref="ChronicleOptions"/> for a short-lived process, such as a command line tool, function or job.
+    /// </summary>
+    /// <param name="connectionString">Connection string to create from.</param>
+    /// <param name="registration">The <see cref="RegistrationMode"/> to use. Defaults to <see cref="RegistrationMode.Inline"/>.</param>
+    /// <returns>A new <see cref="ChronicleOptions"/>.</returns>
+    /// <remarks>
+    /// See <see cref="UseShortLivedProcess"/> for what this configures.
+    /// </remarks>
+    public static ChronicleOptions ForShortLivedProcess(string connectionString, RegistrationMode registration = RegistrationMode.Inline) =>
+        ForShortLivedProcess(new ChronicleConnectionString(connectionString), registration);
+
+    /// <summary>
+    /// Create a <see cref="ChronicleOptions"/> for a short-lived process, such as a command line tool, function or job.
+    /// </summary>
+    /// <param name="connectionString"><see cref="ChronicleConnectionString"/> to create from.</param>
+    /// <param name="registration">The <see cref="RegistrationMode"/> to use. Defaults to <see cref="RegistrationMode.Inline"/>.</param>
+    /// <returns>A new <see cref="ChronicleOptions"/>.</returns>
+    /// <remarks>
+    /// See <see cref="UseShortLivedProcess"/> for what this configures.
+    /// </remarks>
+    public static ChronicleOptions ForShortLivedProcess(ChronicleConnectionString connectionString, RegistrationMode registration = RegistrationMode.Inline) =>
+        FromConnectionString(connectionString).UseShortLivedProcess(registration);
+
+    /// <summary>
+    /// Configure the options for a short-lived process, such as a command line tool, function or job.
+    /// </summary>
+    /// <param name="registration">The <see cref="RegistrationMode"/> to use. Defaults to <see cref="RegistrationMode.Inline"/>.</param>
+    /// <returns>The same <see cref="ChronicleOptions"/> for chaining.</returns>
+    /// <remarks>
+    /// Sets <see cref="SkipKeepAlive"/> and <see cref="RegistrationMode"/>. The client then opens no keep-alive
+    /// stream or watchdog and registers no client-hosted observers (reactors, reducers, read model reactors and
+    /// occurrences), but can still append and read. <see cref="AutoDiscoverAndRegister"/> and
+    /// <see cref="SkipCompatibilityCheck"/> are left untouched.
+    /// </remarks>
+    public ChronicleOptions UseShortLivedProcess(RegistrationMode registration = RegistrationMode.Inline)
+    {
+        SkipKeepAlive = true;
+        RegistrationMode = registration;
+        return this;
+    }
+
+    /// <inheritdoc/>
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        if (Telemetry.EventSourceIdTracing == EventSourceIdTracing.Hashed &&
+            (string.IsNullOrEmpty(Telemetry.EventSourceIdHashKey) || Telemetry.EventSourceIdHashKey.Length < IdentifierHasher.MinimumKeyLength))
+        {
+            yield return new ValidationResult(
+                "Telemetry:EventSourceIdHashKey must be at least 32 characters when Hashed is used",
+                [$"{nameof(Telemetry)}.{nameof(Telemetry.EventSourceIdHashKey)}"]);
+        }
+    }
 }

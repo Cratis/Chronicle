@@ -12,6 +12,9 @@ namespace Cratis.Chronicle.Observation.Webhooks;
 /// </summary>
 internal static partial class WebhooksLogging
 {
+    [LoggerMessage(LogLevel.Information, "Webhook '{Identifier}' in namespace '{Namespace}' is waiting for the connected client to leave")]
+    internal static partial void WaitingForConnectedClient(this ILogger<Webhooks> logger, WebhookId identifier, EventStoreNamespaceName @namespace);
+
     [LoggerMessage(LogLevel.Debug, "Setting definition for webhook '{Identifier}'")]
     internal static partial void SettingDefinition(this ILogger<Webhooks> logger, WebhookId identifier);
 

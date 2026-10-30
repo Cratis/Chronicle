@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using System.Diagnostics;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
@@ -96,7 +97,12 @@ public partial class Observer
 
         try
         {
-            await HandleEventsForPartition(partition, events);
+            await HandleEventsForPartition(partition, events, span?.Activity);
+        }
+        catch (Exception ex)
+        {
+            span?.Activity?.RecordFailure(ex);
+            throw;
         }
         finally
         {
@@ -183,6 +189,15 @@ public partial class Observer
         };
     }
 
+    static string FailureKindCode(FailureKind kind) => kind switch
+    {
+        FailureKind.Handling => "handling",
+        FailureKind.Timeout => "timeout",
+        FailureKind.Disconnected => "disconnected",
+        FailureKind.WaitingForHandler => "waiting_for_handler",
+        _ => "unknown"
+    };
+
     void MergeHandledCounts(Key partition, IReadOnlyDictionary<EventTypeId, EventCount> countsPerEventType)
     {
         if (countsPerEventType.Count > 0)
@@ -237,6 +252,8 @@ public partial class Observer
                 _pendingHandledCounts.Clear();
                 return;
             }
+
+            if (await RelinquishOwnershipIfMoved()) return;
 
             _handledEventsReports.ForgetQuietSteps();
             var pending = _pendingHandledCounts;
@@ -313,6 +330,8 @@ public partial class Observer
         await _alertMutationLock.WaitAsync();
         try
         {
+            if (await RelinquishOwnershipIfMoved()) return;
+
             var reminders = _pendingRetryReminders;
             _pendingRetryReminders = [];
             _failureStateWritePending = false;
@@ -377,7 +396,7 @@ public partial class Observer
         }
     }
 
-    async Task HandleEventsForPartition(Key partition, IEnumerable<AppendedEvent> events)
+    async Task HandleEventsForPartition(Key partition, IEnumerable<AppendedEvent> events, Activity? activity)
     {
         var observedTailEventSequenceNumber = events.Last().Context.SequenceNumber;
 
@@ -442,6 +461,7 @@ public partial class Observer
 
         var failed = false;
         var failureKind = FailureKind.Unknown;
+        Exception? failureException = null;
         var failurePolicy = WebhookDeliveryFailurePolicy.Retry;
         var exceptionMessages = Enumerable.Empty<string>();
         var exceptionStackTrace = string.Empty;
@@ -449,6 +469,11 @@ public partial class Observer
 
         var eventsToHandle = events.Where(_ => _.Context.SequenceNumber >= tailEventSequenceNumber).ToArray();
         NoteDiscardedEvents(partition, events, tailEventSequenceNumber);
+        if (await ExceedsLiveBudget(eventsToHandle.Length) && await HandOverLargeLiveBatchToCatchUp(partition, eventsToHandle))
+        {
+            return;
+        }
+
         var numEventsSuccessfullyHandled = EventCount.Zero;
         var stateChanged = false;
         IReadOnlyDictionary<EventTypeId, EventCount> handledCountsPerEventType = ImmutableDictionary<EventTypeId, EventCount>.Empty;
@@ -462,6 +487,7 @@ public partial class Observer
             State = State with { InFlightPartitions = inFlightPartitions };
             RecordedHandlingState();
             await WriteStateAsync();
+            if (!_observerExists) return;
 
             using (new WriteSuspension(this))
             {
@@ -471,7 +497,7 @@ public partial class Observer
                     tailEventSequenceNumber = firstEvent.Context.SequenceNumber;
                     var decryptedEvents = await DecryptEvents(eventsToHandle);
 
-                    var subscriberTimeout = await configurationProvider.GetSubscriberTimeoutForObserver(_observerKey);
+                    var subscriberTimeout = GetLiveSubscriberTimeout(await configurationProvider.GetSubscriberTimeoutForObserver(_observerKey));
                     var hold = await GetClientDeliveryHold();
 
                     ObserverSubscriberResult result;
@@ -562,6 +588,7 @@ public partial class Observer
                 {
                     failed = true;
                     failureKind = ex.ToFailureKind();
+                    failureException = ex;
                     exceptionMessages = ex.GetAllMessages().ToArray();
                     exceptionStackTrace = ex.StackTrace ?? string.Empty;
                 }
@@ -578,28 +605,35 @@ public partial class Observer
                 State = State with { InFlightPartitions = remainingInFlight };
                 RecordedHandlingState();
 
-                if (failed)
-                {
-                    await RecordPartitionFailure(partition, tailEventSequenceNumber, exceptionMessages, exceptionStackTrace, failureKind, null, null, new(failurePolicy, deliveryFence));
-                }
-                else
-                {
-                    _metrics?.SuccessfulObservation();
-                }
+                await RecordHandlingOutcome();
 
                 if (stateChanged)
                 {
                     await WriteStateAsync();
                 }
 
-                if (handledCountsPerEventType.Count > 0)
+                if (_observerExists && handledCountsPerEventType.Count > 0)
                 {
                     await GetObserverHandledCountsStorage().Increment(_observerId, partition, handledCountsPerEventType);
                 }
             }
             catch (Exception ex)
             {
+                activity?.RecordFailure(ex);
                 logger.ObserverFailedForUnknownReasonsAfterHandlingEvents(ex);
+            }
+
+            Task RecordHandlingOutcome()
+            {
+                if (!failed)
+                {
+                    _metrics?.SuccessfulObservation();
+                    return Task.CompletedTask;
+                }
+
+                if (failureException is not null) activity?.RecordFailure(failureException);
+                else activity?.RecordFailure(FailureKindCode(failureKind));
+                return RecordPartitionFailure(partition, tailEventSequenceNumber, exceptionMessages, exceptionStackTrace, failureKind, null, null, new(failurePolicy, deliveryFence));
             }
         }
     }

@@ -4,11 +4,17 @@
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Events.Constraints;
 using Cratis.Chronicle.Events.Constraints;
+using Cratis.Chronicle.Storage.Events.Constraints;
 
 namespace Cratis.Chronicle.EventSequences;
 
 public partial class EventSequence
 {
+    /// <summary>
+    /// The number of unique constraint changes written in one storage operation.
+    /// </summary>
+    const int ConstraintIndexBatchSize = 1000;
+
     static bool CanUpdateConstraintIndex(IConstraintValidator validator, ConstraintValidationContext context) => validator switch
     {
         // A no-op must not consume a write deadline or become pending when another constraint
@@ -21,6 +27,7 @@ public partial class EventSequence
     async Task UpdateConstraintIndexes(IEnumerable<(ConstraintValidationContext Context, EventSequenceNumber SequenceNumber)> contexts)
     {
         using var budget = new CancellationTokenSource(TimeSpan.FromSeconds(2), ConstraintIndexTimeProvider);
+        var batches = new ConstraintIndexBatches();
         foreach (var (context, number) in contexts)
         {
             ExcludeLiveConstraintKeys(context, number);
@@ -28,6 +35,11 @@ public partial class EventSequence
             if (number > _constraintIndexPosition) MarkConstraintIndexGap(_constraintIndexPosition);
             foreach (var (validator, updater) in updates.Where(update => CanUpdateConstraintIndex(update.Validator, context) && !_pendingConstraintIndexes.ContainsKey(update.Validator.Definition.Name)))
             {
+                // Unique constraint changes are collected and written together after the loop, one write per
+                // constraint rather than one per event. Each constraint has an index of its own, so writing it
+                // after the others changes nothing they see.
+                if (batches.TryAdd(validator, updater, number)) continue;
+
                 var name = validator.Definition.Name;
                 var outcome = await AttemptConstraintIndexUpdate(updater, number, name, budget.Token);
                 if (outcome is ConstraintIndexUpdateOutcome.Failed or ConstraintIndexUpdateOutcome.Abandoned or ConstraintIndexUpdateOutcome.NotAttempted)
@@ -37,11 +49,52 @@ public partial class EventSequence
             }
             if (number >= _constraintIndexPosition) _constraintIndexPosition = number.Next();
         }
+        await ApplyConstraintIndexBatches(batches, budget.Token);
         UpdateConstraintIndexWatermark();
     }
 
-    async Task<ConstraintIndexUpdateOutcome> AttemptConstraintIndexUpdate(
+    /// <summary>
+    /// Writes the collected unique constraint changes, one write per constraint and chunk.
+    /// </summary>
+    /// <param name="batches">The collected <see cref="ConstraintIndexBatches"/>.</param>
+    /// <param name="cancellationToken">The deadline of the turn.</param>
+    /// <returns>Awaitable task.</returns>
+    /// <remarks>
+    /// A chunk that cannot be written leaves the constraint pending from its first event, exactly as a failed single
+    /// update does, and the chunks after it are left to the repair that follows. Every chunk before it is written.
+    /// </remarks>
+    async Task ApplyConstraintIndexBatches(ConstraintIndexBatches batches, CancellationToken cancellationToken)
+    {
+        foreach (var (validator, changes) in batches.Batches)
+        {
+            var name = validator.Definition.Name;
+            foreach (var chunk in changes.Chunk(ConstraintIndexBatchSize))
+            {
+                IReadOnlyCollection<int> refused = [];
+                var outcome = await AttemptConstraintIndexWrite(async token => refused = await validator.ApplyIndexChanges(chunk, token), chunk[0].SequenceNumber, name, cancellationToken);
+                if (outcome is ConstraintIndexUpdateOutcome.Failed or ConstraintIndexUpdateOutcome.Abandoned or ConstraintIndexUpdateOutcome.NotAttempted)
+                {
+                    MarkConstraintIndexPending(name, chunk[0].SequenceNumber);
+                    break;
+                }
+
+                foreach (var index in refused)
+                {
+                    ObserveConstraintIndexUpdate(ConstraintIndexUpdateOutcome.Settled, new DuplicateUniqueConstraintValue(name, chunk[index].EventSourceId), name, chunk[index].SequenceNumber);
+                }
+            }
+        }
+    }
+
+    Task<ConstraintIndexUpdateOutcome> AttemptConstraintIndexUpdate(
         IUpdateConstraintIndex updater,
+        EventSequenceNumber number,
+        Concepts.Events.Constraints.ConstraintName name,
+        CancellationToken cancellationToken) =>
+        AttemptConstraintIndexWrite(token => updater.Update(number, token), number, name, cancellationToken);
+
+    async Task<ConstraintIndexUpdateOutcome> AttemptConstraintIndexWrite(
+        Func<CancellationToken, Task> write,
         EventSequenceNumber number,
         Concepts.Events.Constraints.ConstraintName name,
         CancellationToken cancellationToken)
@@ -50,7 +103,7 @@ public partial class EventSequence
         for (var attempt = 0; attempt < 3 && !cancellationToken.IsCancellationRequested; attempt++)
         {
             if (attempt > 0 && !await WaitBeforeConstraintIndexRetry(attempt, cancellationToken)) return ConstraintIndexUpdateOutcome.NotAttempted;
-            (outcome, var error) = await ConstraintIndexUpdateAttempt.Run(token => updater.Update(number, token), cancellationToken, ConstraintIndexTimeProvider);
+            (outcome, var error) = await ConstraintIndexUpdateAttempt.Run(write, cancellationToken, ConstraintIndexTimeProvider);
             ObserveConstraintIndexUpdate(outcome, error, name, number);
             if (outcome is not (ConstraintIndexUpdateOutcome.Failed or ConstraintIndexUpdateOutcome.Abandoned)) break;
         }

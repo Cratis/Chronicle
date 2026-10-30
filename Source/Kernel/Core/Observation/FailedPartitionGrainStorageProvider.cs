@@ -35,6 +35,10 @@ public class FailedPartitionGrainStorageProvider(IStorage storage) : IGrainStora
         var actualGrainState = (grainState as IGrainState<FailedPartitions>)!;
         var observerKey = ObserverKey.Parse(grainId.Key.ToString()!);
 
+        // Failed partitions are stored by observer identifier alone. An activation addressed on another event sequence
+        // than the definition's must never overwrite the failed partitions of the real observer.
+        await storage.ThrowIfKeyDoesNotOwnStoredDefinition(observerKey);
+
         var failedPartitions = storage.GetEventStore(observerKey.EventStore).GetNamespace(observerKey.Namespace).FailedPartitions;
         foreach (var failedPartition in actualGrainState.State!.Partitions)
         {

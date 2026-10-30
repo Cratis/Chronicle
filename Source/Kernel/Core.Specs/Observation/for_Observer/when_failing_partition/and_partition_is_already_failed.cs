@@ -5,6 +5,7 @@ using Cratis.Chronicle.Alerts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
+using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Observation.for_Observer.when_failing_partition;
 
@@ -16,7 +17,10 @@ public class and_partition_is_already_failed : given.an_observer
     const string SecondStackTrace = "Second: This is the stack trace";
     const string SecondMessage = "Second: Something went wrong";
 
+    readonly given.RecordingObserverLogger _logger = new();
     FailedPartition _failedPartition;
+
+    protected override ILogger<Observer> CreateLogger() => _logger;
 
     void Establish()
     {
@@ -26,6 +30,9 @@ public class and_partition_is_already_failed : given.an_observer
 
     async Task Because() => await _observer.PartitionFailed(EventSourceId, 44UL, [SecondMessage], SecondStackTrace);
 
+    [Fact] void should_not_log_a_warning() => _logger.Warnings.ShouldBeEmpty();
+    [Fact] void should_log_the_repeated_failure_at_debug() => _logger.Debugs.Any(_ => _.Contains("failed again", StringComparison.Ordinal)).ShouldBeTrue();
+    [Fact] void should_log_the_details_at_debug() => _logger.Debugs.Any(_ => _.Contains(SecondMessage, StringComparison.Ordinal) && _.Contains(SecondStackTrace, StringComparison.Ordinal)).ShouldBeTrue();
     [Fact] async Task should_not_report_an_unchanged_failure_episode() => await _observerAlerts.DidNotReceive().Reconcile(Arg.Any<ObserverAlertSnapshot>());
     [Fact] void should_have_only_one_failed_partition() => _failedPartitionsState.Partitions.Count().ShouldEqual(1);
     [Fact] void should_keep_failed_partition_count() => _stateStorage.State.FailedPartitionCount.ShouldEqual((FailedPartitionCount)1);

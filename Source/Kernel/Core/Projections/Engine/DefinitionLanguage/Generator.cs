@@ -129,31 +129,21 @@ public class Generator : IGenerator
         return $"literal \"{innerValue}\"";
     }
 
-    void GenerateEveryBlock(StringBuilder sb, FromEveryDefinition every, int indent, bool isChildContext = false)
+    void GenerateEveryBlock(StringBuilder sb, FromEveryDefinition every, int indent)
     {
-        sb.AppendLine($"{Indent(indent)}every");
+        GenerateAllEventMappings(sb, "every", every, indent);
 
-        // NoAutoMap directive - only output if disabled (since enabled is now the default)
-        if (every.AutoMap == AutoMap.Disabled)
-        {
-            sb.AppendLine($"{Indent(indent + 1)}no automap");
-        }
-
-        foreach (var kv in every.Properties)
-        {
-            GeneratePropertyMapping(sb, kv.Key, kv.Value, indent + 1);
-        }
-
-        // Only output 'exclude children' for top-level every blocks, not for child every blocks
-        if (!isChildContext && !every.IncludeChildren)
+        if (!every.IncludeChildren)
         {
             sb.AppendLine($"{Indent(indent + 1)}exclude children");
         }
     }
 
-    void GenerateAllBlock(StringBuilder sb, FromEveryDefinition all, int indent)
+    void GenerateAllBlock(StringBuilder sb, FromEveryDefinition all, int indent) => GenerateAllEventMappings(sb, "all", all, indent);
+
+    void GenerateAllEventMappings(StringBuilder sb, string keyword, FromEveryDefinition all, int indent)
     {
-        sb.AppendLine($"{Indent(indent)}all");
+        sb.AppendLine($"{Indent(indent)}{keyword}");
 
         // NoAutoMap directive - only output if disabled (since enabled is now the default)
         if (all.AutoMap == AutoMap.Disabled)
@@ -294,7 +284,7 @@ public class Generator : IGenerator
         // FromEvery for children
         if (children.All.Properties.Count > 0)
         {
-            GenerateEveryBlock(sb, children.All, indent + 1, isChildContext: true);
+            GenerateEveryBlock(sb, children.All, indent + 1);
         }
 
         // Child on event blocks

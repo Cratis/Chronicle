@@ -22,6 +22,9 @@ internal static partial class EventStoreLogMessages
     [LoggerMessage(LogLevel.Warning, "Registering all artifacts failed again on background attempt {Attempt}. Waiting {Delay} before trying again")]
     internal static partial void RetryingRegisterAllArtifactsInBackground(this ILogger logger, Exception exception, int attempt, TimeSpan delay);
 
+    [LoggerMessage(LogLevel.Information, "Keep-alive is skipped; {Count} client-hosted observers were discovered and will not be registered")]
+    internal static partial void ClientObserversNotRegistered(this ILogger logger, int count);
+
     [LoggerMessage(LogLevel.Information, "Registering all artifacts succeeded after {Attempt} background attempt(s)")]
     internal static partial void BackgroundRegistrationRetrySucceeded(this ILogger logger, int attempt);
 }

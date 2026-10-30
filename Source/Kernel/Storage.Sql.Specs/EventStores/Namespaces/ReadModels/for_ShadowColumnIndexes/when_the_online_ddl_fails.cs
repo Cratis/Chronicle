@@ -61,7 +61,8 @@ public class when_the_online_ddl_fails : for_ReadModelMigrator.given.a_read_mode
 
         public override async ValueTask<InterceptionResult<int>> NonQueryExecutingAsync(DbCommand command, CommandEventData eventData, InterceptionResult<int> result, CancellationToken cancellationToken = default)
         {
-            if (command.CommandText.StartsWith("CREATE INDEX", StringComparison.Ordinal) && ++Builds == 1)
+            if (command.CommandText.StartsWith("CREATE INDEX", StringComparison.Ordinal) &&
+                !command.CommandText.Contains("__initialized", StringComparison.Ordinal) && ++Builds == 1)
             {
                 Timeout = command.CommandTimeout;
                 Cancellable = cancellationToken.CanBeCanceled;

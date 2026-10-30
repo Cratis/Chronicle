@@ -137,6 +137,19 @@ public class ReducerReplayHandler(
     }
 
     /// <inheritdoc/>
+    public async Task<BulkFlushResult> FlushFor(ObserverDetails observerDetails)
+    {
+        if (!CanHandle(observerDetails)) return new(null, []);
+        var readModel = await ReadModelFor(observerDetails);
+        if (readModel is null) return new(null, []);
+
+        var sink = await SinkFor(observerDetails, readModel);
+        var result = await sink.FlushBulk();
+        await ProjectionBulkFailures.Record(grainFactory, observerDetails, result.FailedPartitions);
+        return result;
+    }
+
+    /// <inheritdoc/>
     public async Task<Result<ICanHandleReplayForObserver.Error>> AbandonReplayFor(ObserverDetails observerDetails)
     {
         var result = await DoWorkOnSink(
