@@ -12,6 +12,8 @@ namespace Cratis.Chronicle.Integration.SqlClustering.RollingUpgrade.ObserverStor
 /// </summary>
 public sealed class ReleasedSqlKernelFixture : IAsyncDisposable
 {
+    static readonly TimeSpan _readinessTimeout = TimeSpan.FromMinutes(3);
+
     readonly INetwork _network = new NetworkBuilder().Build();
     readonly IContainer _kernel;
     readonly ReleasedSqlObserverReadyWait _ready;
@@ -25,12 +27,16 @@ public sealed class ReleasedSqlKernelFixture : IAsyncDisposable
         _ready = new(Database);
         _kernel = new ContainerBuilder("cratis/chronicle:19.106.2-development-slim")
             .WithNetwork(_network)
-            .WithEnvironment("CHRONICLE_HEALTH_PORT", "8080")
             .WithEnvironment("Cratis__Chronicle__Storage__Type", "PostgreSql")
             .WithEnvironment("Cratis__Chronicle__Storage__ConnectionDetails", Database.KernelConnection)
             .WithEnvironment("Cratis__Chronicle__Clustering__Type", "Sql")
-            .WithPortBinding(8080, true)
-            .WithWaitStrategy(Wait.ForUnixContainer().AddCustomWaitStrategy(new HttpsHealthWait(8080)).AddCustomWaitStrategy(_ready))
+
+            // The released kernel predates the dedicated health port: it serves /health over HTTPS on 35000 only.
+            // Every wait is bounded so a readiness mismatch fails the spec instead of hanging the test host.
+            .WithPortBinding(35000, true)
+            .WithWaitStrategy(Wait.ForUnixContainer()
+                .AddCustomWaitStrategy(new HttpsHealthWait(35000), options => options.WithTimeout(_readinessTimeout))
+                .AddCustomWaitStrategy(_ready, options => options.WithTimeout(_readinessTimeout)))
             .Build();
     }
 
