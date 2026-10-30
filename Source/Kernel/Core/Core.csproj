@@ -123,6 +123,7 @@
         <PackageReference Include="Microsoft.Orleans.Streaming" />
         <PackageReference Include="Microsoft.Orleans.Serialization.SystemTextJson" />
         <PackageReference Include="JsonCons.JmesPath" />
+        <PackageReference Include="Cratis.OpenTelemetry" />
         <PackageReference Include="OpenTelemetry" />
         <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
         <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />

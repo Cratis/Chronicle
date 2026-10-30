@@ -22,6 +22,7 @@
     <!-- Cratis -->
     <!-- Cratis.Orleans 1.27.4 requires at least 7.26.1; a lower pin fails restore with NU1605. -->
     <PackageVersion Include="Cratis.Fundamentals" Version="7.27.0" />
+    <PackageVersion Include="Cratis.OpenTelemetry" Version="7.29.0" />
     <PackageVersion Include="Cratis.Metrics.Roslyn" Version="7.27.0" />
     <!-- Keep the Arc runtime packages aligned; Chronicle.Testing declares Arc dependencies for its embedded kernel. -->
     <PackageVersion Include="Cratis.Arc" Version="22.143.0" />

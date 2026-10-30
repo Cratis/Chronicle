@@ -81,10 +81,14 @@ the same way (`compliance.encryption.migrateFromDefaultStorage` becomes
 | Cratis__Chronicle__EncryptionCertificate__CertificatePassword | Encryption certificate password |
 | Cratis__Chronicle__EncryptionCertificate__Previous__0__CertificatePath | Path to a certificate that was active before, kept for decryption only during a [rotation](../encryption-certificate.md#rotating-the-certificate). Index upwards for more than one |
 | Cratis__Chronicle__EncryptionCertificate__Previous__0__CertificatePassword | Password for that certificate |
-| OTEL_EXPORTER_OTLP_ENDPOINT | OTLP receiver endpoint for telemetry export |
+| OTEL_EXPORTER_OTLP_ENDPOINT | OTLP receiver endpoint; enables export when configured |
+| OTEL_EXPORTER_OTLP_TRACES_ENDPOINT | Trace endpoint; overrides the common endpoint for traces |
+| OTEL_EXPORTER_OTLP_METRICS_ENDPOINT | Metric endpoint; overrides the common endpoint for metrics |
+| OTEL_EXPORTER_OTLP_LOGS_ENDPOINT | Log endpoint; overrides the common endpoint for logs |
 | OTEL_EXPORTER_OTLP_PROTOCOL | OTLP export protocol (`grpc` or `http/protobuf`) |
 | OTEL_EXPORTER_OTLP_HEADERS | Additional headers for the OTLP exporter |
-| OTEL_SERVICE_NAME | Service name reported to the telemetry backend |
+| OTEL_SERVICE_NAME | Service name; takes precedence over resource attributes, with `Chronicle` as fallback |
+| OTEL_RESOURCE_ATTRIBUTES | Resource attributes, including `service.name` and `service.instance.id`; supplied identity is preserved |
 
 ## Port Configuration
 

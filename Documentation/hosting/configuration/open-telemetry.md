@@ -1,19 +1,19 @@
 ---
-description: Chronicle exports OpenTelemetry signals over OTLP, configured with standard environment variables, for example to the Aspire Dashboard or Prometheus.
+description: Configure Chronicle telemetry collection, resource identity, and optional OTLP export with standard OpenTelemetry environment variables.
 ---
 # Open Telemetry
 
-Chronicle exports telemetry signals through the [OpenTelemetry Protocol (OTLP)](https://opentelemetry.io/docs/specs/otlp/). Telemetry is always enabled and configured via standard OpenTelemetry environment variables.
+Chronicle uses the shared `Cratis.OpenTelemetry` setup to collect telemetry. Export through the [OpenTelemetry Protocol (OTLP)](https://opentelemetry.io/docs/specs/otlp/) is opt-in: configure a receiver endpoint to send signals to a backend. Without an endpoint, instrumentation remains active and no OTLP exporters are created.
 
 ## Signals
 
-Chronicle exports the following signals:
+Chronicle collects the following signals:
 
 | Signal | Description |
 | --- | --- |
 | Metrics | Application and infrastructure metrics (event sequences, observers, .NET runtime) |
 | Traces | Distributed traces for Chronicle operations (gRPC, HTTP, Orleans) |
-| Logs | Structured application logs |
+| Logs | Structured application logs, including formatted messages and scopes |
 
 ## Configuration
 
@@ -24,9 +24,21 @@ Telemetry is configured using standard OpenTelemetry environment variables:
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | none | OTLP receiver endpoint (e.g. `http://localhost:4317`) |
 | `OTEL_EXPORTER_OTLP_PROTOCOL` | `grpc` | Export protocol: `grpc` or `http/protobuf` |
 | `OTEL_EXPORTER_OTLP_HEADERS` | none | Additional headers (e.g. API keys for cloud backends) |
-| `OTEL_SERVICE_NAME` | `Chronicle` | Service name reported to the telemetry backend |
+| `OTEL_SERVICE_NAME` | `Chronicle` fallback | Service name; takes precedence over `service.name` in resource attributes |
+| `OTEL_RESOURCE_ATTRIBUTES` | none | Comma-separated resource attributes, including `service.name` and `service.instance.id` |
+| `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` | none | Trace endpoint; overrides the common endpoint for traces |
+| `OTEL_EXPORTER_OTLP_METRICS_ENDPOINT` | none | Metric endpoint; overrides the common endpoint for metrics |
+| `OTEL_EXPORTER_OTLP_LOGS_ENDPOINT` | none | Log endpoint; overrides the common endpoint for logs |
 
-When `OTEL_EXPORTER_OTLP_ENDPOINT` is not set, Chronicle does not export telemetry but the instrumentation is still active.
+Each signal exports only when its endpoint or the common `OTEL_EXPORTER_OTLP_ENDPOINT` is configured. Standard OTEL keys can also be supplied through host configuration; environment variables take precedence.
+
+Chronicle preserves deployment-provided resource identity. `Chronicle` is used only when neither `OTEL_SERVICE_NAME` nor `service.name` in `OTEL_RESOURCE_ATTRIBUTES` names the service. A `service.instance.id` supplied in resource attributes is not replaced with a generated identifier.
+
+Log export includes both the formatted message and logging scopes, including observer context. No additional `Logging__OpenTelemetry__IncludeFormattedMessage` or scope setting is required.
+
+### Hosting API
+
+Custom kernel hosts use `AddOpenTelemetry().WithCratis(configuration, TelemetryConfiguration.Configure)`. `WithCratis` comes from `Cratis.OpenTelemetry`; `TelemetryConfiguration` comes from `Cratis.Chronicle.Diagnostics.OpenTelemetry` and adds Chronicle instrumentation and fallback defaults. The former `AddChronicleTelemetry` extension is obsolete and delegates to this shared setup.
 
 ## Local development with .NET Aspire Dashboard
 

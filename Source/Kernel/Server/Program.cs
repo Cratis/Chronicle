@@ -18,6 +18,7 @@ using Cratis.Chronicle.Storage.Security;
 using Cratis.Chronicle.Storage.Sql.Schema;
 using Cratis.Chronicle.Workbench;
 using Cratis.DependencyInjection;
+using Cratis.OpenTelemetry;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
@@ -273,10 +274,10 @@ hostBuilder
    .ConfigureServices((context, services) =>
    {
        services.AddCodeFirstGrpcReflection();
+       services.AddOpenTelemetry().WithCratis(context.Configuration, TelemetryConfiguration.Configure);
 
        services
           .AddBindingsByConvention()
-          .AddChronicleTelemetry(context.Configuration)
           .AddSelfBindings()
           .AddGrpcServices()
           .AddSingleton(BinderConfiguration.Default);
