@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Diagnostics.CodeAnalysis;
+
 namespace Cratis.Chronicle.Observation;
 
 /// <summary>
@@ -14,6 +16,7 @@ namespace Cratis.Chronicle.Observation;
 /// </remarks>
 /// <param name="delivery">The <see cref="ObserverDelivery"/> to use for the observer.</param>
 [AttributeUsage(AttributeTargets.Class, AllowMultiple = false, Inherited = false)]
+[Experimental("CHRX0001", UrlFormat = "https://www.cratis.io/docs/chronicle/clients/dotnet/serverless-mode")]
 public sealed class DeliveryAttribute(ObserverDelivery delivery) : Attribute
 {
     /// <summary>

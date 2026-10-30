@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.ComponentModel.DataAnnotations;
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Diagnostics;
@@ -211,6 +212,7 @@ public class ChronicleOptions(
     /// <remarks>
     /// Bound from <c language="json">Cratis:Chronicle:Serverless</c>. See <see cref="UseServerless"/> for a preset.
     /// </remarks>
+    [Experimental("CHRX0001", UrlFormat = "https://www.cratis.io/docs/chronicle/clients/dotnet/serverless-mode")]
     public ChronicleServerlessOptions Serverless { get; set; } = new();
 
     /// <summary>
@@ -389,6 +391,7 @@ public class ChronicleOptions(
     /// <remarks>
     /// See <see cref="UseServerless"/> for what this configures.
     /// </remarks>
+    [Experimental("CHRX0001", UrlFormat = "https://www.cratis.io/docs/chronicle/clients/dotnet/serverless-mode")]
     public static ChronicleOptions ForServerless(string connectionString, string programIdentifier, Uri? receiverUrl = null) =>
         ForServerless(new ChronicleConnectionString(connectionString), programIdentifier, receiverUrl);
 
@@ -402,6 +405,7 @@ public class ChronicleOptions(
     /// <remarks>
     /// See <see cref="UseServerless"/> for what this configures.
     /// </remarks>
+    [Experimental("CHRX0001", UrlFormat = "https://www.cratis.io/docs/chronicle/clients/dotnet/serverless-mode")]
     public static ChronicleOptions ForServerless(ChronicleConnectionString connectionString, string programIdentifier, Uri? receiverUrl = null) =>
         FromConnectionString(connectionString).UseServerless(programIdentifier, receiverUrl);
 
@@ -433,6 +437,7 @@ public class ChronicleOptions(
     /// Turns serverless mode on, sets <see cref="ProgramIdentifier"/> and the receiver URL, and applies the
     /// short-lived process behavior with registration at deployment.
     /// </remarks>
+    [Experimental("CHRX0001", UrlFormat = "https://www.cratis.io/docs/chronicle/clients/dotnet/serverless-mode")]
     public ChronicleOptions UseServerless(string programIdentifier, Uri? receiverUrl = null)
     {
         Serverless.Mode = ServerlessMode.Serverless;

@@ -4,7 +4,7 @@
         <RootNamespace>Cratis.Chronicle</RootNamespace>
         <IsTestProject>true</IsTestProject>
         <IsPackable>false</IsPackable>
-        <NoWarn>$(NoWarn);MA0182</NoWarn>
+        <NoWarn>$(NoWarn);MA0182;CHRX0001</NoWarn>
     </PropertyGroup>
 
     <ItemGroup>

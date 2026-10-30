@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Diagnostics.CodeAnalysis;
 using Cratis.Chronicle.Observation;
 
 namespace Cratis.Chronicle.Serverless;
@@ -12,6 +13,7 @@ namespace Cratis.Chronicle.Serverless;
 /// Bound from <c language="json">Cratis:Chronicle:Serverless</c>. Receiver runtime settings, such as the timestamp tolerance, the
 /// delivery limits and the signing algorithm, are added to this type when the receiver is introduced.
 /// </remarks>
+[Experimental("CHRX0001", UrlFormat = "https://www.cratis.io/docs/chronicle/clients/dotnet/serverless-mode")]
 public class ChronicleServerlessOptions
 {
     /// <summary>

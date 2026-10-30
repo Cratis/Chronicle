@@ -5,9 +5,21 @@ description: Run the .NET client in a function or another scaled-to-zero host wi
 
 A function that scales to zero cannot hold a keep-alive stream or open observer streams. Serverless mode is one switch that configures the client for that kind of host, on top of the [short-lived process](./short-lived-processes.md) behavior.
 
-:::caution
+:::caution[Preview]
+The serverless surface is experimental. Using it reports the compiler diagnostic `CHRX0001`, which you acknowledge by suppressing it in your project. See [Compatibility](#compatibility).
+
 HTTP delivery is not available yet. In this version serverless mode suits functions that append and read events. An observer that resolves to HTTP delivery fails at startup with `HttpDeliveryNotAvailable`, so a reactor or reducer does not run in a serverless client until a later version adds the receiver.
 :::
+
+## Compatibility
+
+The serverless surface is experimental and marked with `[Experimental("CHRX0001")]`: the options (`ChronicleOptions.Serverless`, `UseServerless`, `ForServerless`), the serverless settings types, `DeliveryAttribute`, `ObserverDelivery`, `HttpDeliveryNotAvailable` and `InvalidServerlessConfiguration`.
+
+- It may change in a minor release until HTTP delivery ships.
+- Changes to it are listed in the release notes.
+- With serverless mode off, which is the default, the client is covered by the normal compatibility rules.
+
+HTTP delivery in its first version is live-only: it delivers new events, catch-up and retries, and does not replay. See [decision 0020](https://github.com/Cratis/Chronicle/blob/main/decisions/0020-kernel-http-delivery-contract.md).
 
 ## What the switch does
 
