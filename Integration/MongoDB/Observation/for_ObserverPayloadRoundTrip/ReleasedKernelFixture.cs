@@ -17,6 +17,8 @@ public sealed class ReleasedKernelFixture : IAsyncDisposable
     internal const string StorageTypeKey = "Cratis__Chronicle__Storage__Type";
     internal const string StorageConnectionKey = "Cratis__Chronicle__Storage__ConnectionDetails";
 
+    static readonly TimeSpan _readinessTimeout = TimeSpan.FromMinutes(3);
+
     readonly INetwork _network = new NetworkBuilder().Build();
     readonly IContainer _mongoDB;
     readonly IContainer _kernel;
@@ -44,11 +46,15 @@ public sealed class ReleasedKernelFixture : IAsyncDisposable
         _ready = new(() => Client);
         _kernel = new ContainerBuilder("cratis/chronicle:19.106.2-development-slim@sha256:3dcf0cf274200619809573faa16395195364568a1162d9c210e815b5ba5a9643")
             .WithNetwork(_network)
-            .WithEnvironment("CHRONICLE_HEALTH_PORT", "8080")
             .WithEnvironment(StorageTypeKey, "MongoDB")
             .WithEnvironment(StorageConnectionKey, "mongodb://chronicle-test:chronicle-test@mongodb:27017/?authSource=admin")
-            .WithPortBinding(8080, true)
-            .WithWaitStrategy(Wait.ForUnixContainer().AddCustomWaitStrategy(new HttpsHealthWait(8080)).AddCustomWaitStrategy(_ready))
+
+            // The released kernel predates the dedicated health port: it serves /health over HTTPS on 35000 only.
+            // Every wait is bounded so a readiness mismatch fails the spec instead of hanging the test host.
+            .WithPortBinding(35000, true)
+            .WithWaitStrategy(Wait.ForUnixContainer()
+                .AddCustomWaitStrategy(new HttpsHealthWait(35000), options => options.WithTimeout(_readinessTimeout))
+                .AddCustomWaitStrategy(_ready, options => options.WithTimeout(_readinessTimeout)))
             .Build();
     }
 
