@@ -18,10 +18,10 @@ public class when_a_constraint_is_violated : Specification
     async Task Because()
     {
         await _harness.Run();
-        _result = (ObjectResult)_harness.Result!;
+        _result = (ObjectResult)_harness.Result;
     }
 
     [Fact] void should_return_bad_request() => _result.StatusCode.ShouldEqual(400);
-    [Fact] void should_include_validation_errors() => ((ValidationProblemDetails)_result.Value!).Errors["unique-name"].Single().ShouldEqual("Already used");
-    [Fact] void should_include_the_correlation_id() => ((ProblemDetails)_result.Value!).Extensions["correlationId"].ShouldEqual(_harness.Request.CorrelationId.ToString());
+    [Fact] void should_include_validation_errors() => ((ValidationProblemDetails)_result.Value).Errors["unique-name"].Single().ShouldEqual("Already used");
+    [Fact] void should_include_the_correlation_id() => ((ProblemDetails)_result.Value).Extensions["correlationId"].ShouldEqual(_harness.Request.CorrelationId.ToString());
 }

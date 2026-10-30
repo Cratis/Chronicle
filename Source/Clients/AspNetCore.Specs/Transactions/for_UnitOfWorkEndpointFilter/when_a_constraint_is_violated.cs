@@ -16,7 +16,7 @@ public class when_a_constraint_is_violated : Specification
         [new ConstraintViolation("event", 0, ConstraintType.Unique, "unique-name", "Already used", new())]));
     async Task Because() => await _harness.Run();
 
-    [Fact] void should_return_bad_request() => ((ProblemHttpResult)_harness.Result!).StatusCode.ShouldEqual(400);
-    [Fact] void should_include_the_validation_errors() => ((HttpValidationProblemDetails)((ProblemHttpResult)_harness.Result!).ProblemDetails).Errors["unique-name"].Single().ShouldEqual("Already used");
-    [Fact] void should_include_the_correlation_id() => ((ProblemHttpResult)_harness.Result!).ProblemDetails.Extensions["correlationId"].ShouldEqual(_harness.Request.CorrelationId.ToString());
+    [Fact] void should_return_bad_request() => ((ProblemHttpResult)_harness.Result).StatusCode.ShouldEqual(400);
+    [Fact] void should_include_the_validation_errors() => ((HttpValidationProblemDetails)((ProblemHttpResult)_harness.Result).ProblemDetails).Errors["unique-name"].Single().ShouldEqual("Already used");
+    [Fact] void should_include_the_correlation_id() => ((ProblemHttpResult)_harness.Result).ProblemDetails.Extensions["correlationId"].ShouldEqual(_harness.Request.CorrelationId.ToString());
 }

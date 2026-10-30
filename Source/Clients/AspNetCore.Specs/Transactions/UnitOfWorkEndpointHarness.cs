@@ -32,12 +32,12 @@ internal sealed class UnitOfWorkEndpointHarness : IEndpointConventionBuilder
         Request.AddEvent();
         if (RemoveOwnership) http.Features.Set<IUnitOfWorkCompletionOwnershipFeature>(null);
         if (CompleteFirst) await Request.Unit.Commit();
-        if (ClaimFirst) ExistingClaim = http.Features.Get<IUnitOfWorkCompletionOwnershipFeature>()!.Claim();
+        if (ClaimFirst) ExistingClaim = http.Features.Get<IUnitOfWorkCompletionOwnershipFeature>().Claim();
         this.WithUnitOfWork();
         var factoryContext = new EndpointFilterFactoryContext
         {
             ApplicationServices = new ServiceCollection().BuildServiceProvider(),
-            MethodInfo = typeof(object).GetMethod(nameof(ToString))!
+            MethodInfo = typeof(object).GetMethod(nameof(ToString))
         };
         var pipeline = _builder.FilterFactories.Single()(factoryContext, _ =>
         {

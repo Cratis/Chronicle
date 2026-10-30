@@ -14,6 +14,6 @@ public class when_commit_conflicts : Specification
     void Establish() => _harness.Request.AppendReturns(AppendManyResult.Failed(_harness.Request.CorrelationId, [new ConcurrencyViolation("source", 4, 5)]));
     async Task Because() => await _harness.Run();
 
-    [Fact] void should_return_conflict() => ((ProblemHttpResult)_harness.Result!).StatusCode.ShouldEqual(409);
-    [Fact] void should_include_the_correlation_id() => ((ProblemHttpResult)_harness.Result!).ProblemDetails.Extensions["correlationId"].ShouldEqual(_harness.Request.CorrelationId.ToString());
+    [Fact] void should_return_conflict() => ((ProblemHttpResult)_harness.Result).StatusCode.ShouldEqual(409);
+    [Fact] void should_include_the_correlation_id() => ((ProblemHttpResult)_harness.Result).ProblemDetails.Extensions["correlationId"].ShouldEqual(_harness.Request.CorrelationId.ToString());
 }

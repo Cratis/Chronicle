@@ -40,7 +40,7 @@ internal sealed class UnitOfWorkMvcHarness
     {
         Options.UnitOfWork.ReportFailuresBeforeResponseStarts = true;
         using var services = new ServiceCollection().AddUnitOfWork()
-            .AddSingleton<IOptions<ChronicleAspNetCoreOptions>>(Microsoft.Extensions.Options.Options.Create(Options))
+            .AddSingleton(Microsoft.Extensions.Options.Options.Create(Options))
             .BuildServiceProvider();
         _filters = services.GetRequiredService<IOptions<MvcOptions>>().Value.Filters;
         _action = _filters.OfType<IAsyncActionFilter>().Single();
@@ -53,7 +53,7 @@ internal sealed class UnitOfWorkMvcHarness
     {
         if (AddEvents) Request.AddEvent();
         if (RemoveOwnership) http.Features.Set<IUnitOfWorkCompletionOwnershipFeature>(null);
-        if (ClaimFirst) ExistingClaim = http.Features.Get<IUnitOfWorkCompletionOwnershipFeature>()!.Claim();
+        if (ClaimFirst) ExistingClaim = http.Features.Get<IUnitOfWorkCompletionOwnershipFeature>().Claim();
         if (CompleteFirst) await Request.Unit.Commit();
         var context = new ActionContext(http, new RouteData(), new ActionDescriptor());
         var controller = new object();

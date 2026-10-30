@@ -22,11 +22,11 @@ public class when_commit_conflicts : Specification
     async Task Because()
     {
         await _harness.Run();
-        _result = (ObjectResult)_harness.Result!;
+        _result = (ObjectResult)_harness.Result;
     }
 
     [Fact] void should_prefer_conflict_over_constraint_violations() => _result.StatusCode.ShouldEqual(409);
     [Fact] void should_return_problem_json() => _result.ContentTypes.Single().ShouldEqual("application/problem+json");
-    [Fact] void should_include_the_correlation_id() => ((ProblemDetails)_result.Value!).Extensions["correlationId"].ShouldEqual(_harness.Request.CorrelationId.ToString());
+    [Fact] void should_include_the_correlation_id() => ((ProblemDetails)_result.Value).Extensions["correlationId"].ShouldEqual(_harness.Request.CorrelationId.ToString());
     [Fact] void should_complete_before_the_result_runs() => _harness.CompletedBeforeResult.ShouldBeTrue();
 }

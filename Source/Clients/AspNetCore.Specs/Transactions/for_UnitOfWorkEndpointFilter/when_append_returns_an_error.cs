@@ -13,5 +13,5 @@ public class when_append_returns_an_error : Specification
     void Establish() => _harness.Request.AppendReturns(AppendManyResult.Failed(_harness.Request.CorrelationId, [new AppendError("append failed")]));
     async Task Because() => await _harness.Run();
 
-    [Fact] void should_return_internal_server_error() => ((ProblemHttpResult)_harness.Result!).StatusCode.ShouldEqual(500);
+    [Fact] void should_return_internal_server_error() => ((ProblemHttpResult)_harness.Result).StatusCode.ShouldEqual(500);
 }

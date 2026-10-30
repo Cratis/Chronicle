@@ -12,6 +12,6 @@ public class when_commit_has_an_unknown_outcome : Specification
     void Establish() => _harness.Request.AppendThrows(new InvalidOperationException("append failed"));
     async Task Because() => await _harness.Run();
 
-    [Fact] void should_return_internal_server_error() => ((ProblemHttpResult)_harness.Result!).StatusCode.ShouldEqual(500);
+    [Fact] void should_return_internal_server_error() => ((ProblemHttpResult)_harness.Result).StatusCode.ShouldEqual(500);
     [Fact] void should_not_retry_the_append() => _harness.Request.AppendCalls.ShouldEqual(1);
 }
