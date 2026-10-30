@@ -14,6 +14,7 @@ namespace Cratis.Chronicle.Jobs;
 /// <param name="Namespace">The namespace the job belongs to.</param>
 /// <param name="JobId">The unique identifier of the job to stop.</param>
 [Command]
+[Cratis.Arc.Authorization.Authorize(Policy = Security.WellKnownAuthorizationPolicies.AdministratorOperations)]
 [BelongsTo(WellKnownServices.Jobs)]
 public record StopJob(EventStoreName EventStore, EventStoreNamespaceName Namespace, Cratis.Orleans.Jobs.JobId JobId)
 {

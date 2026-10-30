@@ -25,7 +25,7 @@ public class and_a_postgresql_index_is_invalid(PostgreSqlFixture fixture) : Spec
         var schema = await JsonSchema.FromJsonAsync("""{"type":"object","properties":{"id":{"type":"string"},"current":{"type":"integer"}}}""");
         var definition = new ReadModelDefinition("repair", "index_repair", "Repair", ReadModelOwner.Client, ReadModelSource.Code, ReadModelObserverType.Projection, "repair", SinkDefinition.None, new Dictionary<ReadModelGeneration, JsonSchema> { [ReadModelGeneration.First] = schema }, [new IndexDefinition("current")]);
         await _harness.CreateSink(definition).EnsureIndexes();
-        var options = new DbContextOptionsBuilder<ReadModelDbContext>().UseNpgsql(_harness.ConnectionString).Options;
+        var options = SpecDbContextOptions.Kernel<ReadModelDbContext>(_harness.ConnectionString);
         _context = new ReadModelDbContext(options, "index_repair", ProjectedColumns.ForSchema(schema), Substitute.For<IReadModelMigrator>());
         _name = ReadModelIndexNames.For(Cratis.Arc.EntityFrameworkCore.DatabaseType.PostgreSql, "index_repair", "current");
         await _context.Database.ExecuteSqlRawAsync("INSERT INTO index_repair (id, current) VALUES ('one', 1), ('two', 1)");

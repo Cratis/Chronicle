@@ -16,6 +16,7 @@ internal class AppendOnceValidator : CommandValidator<AppendOnce>
     public AppendOnceValidator()
     {
         RuleFor(_ => _.EventStore).RequiredEventStore();
+        RuleFor(_ => _.EventStore).NotSystemEventStore();
         RuleFor(_ => _.Namespace).RequiredNamespace();
         RuleFor(_ => _.EventSequenceId).RequiredEventSequence();
         RuleFor(_ => _.EventSourceId).RequiredEventSource();

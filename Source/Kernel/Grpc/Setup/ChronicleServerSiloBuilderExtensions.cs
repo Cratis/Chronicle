@@ -8,6 +8,7 @@ using Cratis.Chronicle.Alerts;
 using Cratis.Chronicle.Clients;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Contracts;
+using Cratis.Chronicle.Diagnostics;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences.Migrations;
 using Cratis.Chronicle.EventSequences.Placement;
@@ -18,7 +19,9 @@ using Cratis.Chronicle.Observation.Placement;
 using Cratis.Chronicle.Observation.Reactors.Clients;
 using Cratis.Chronicle.Observation.Reducers.Clients;
 using Cratis.Chronicle.ReadModels;
+using Cratis.Chronicle.Releases;
 using Cratis.Chronicle.Schemas;
+using Cratis.Chronicle.Security;
 using Cratis.Chronicle.Servers;
 using Cratis.Chronicle.Services.Events.Constraints;
 using Cratis.Chronicle.Services.Observation;
@@ -32,6 +35,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Orleans.Configuration;
+using Orleans.Metadata;
 using Orleans.Versions.Compatibility;
 using Orleans.Versions.Selector;
 
@@ -68,6 +72,7 @@ public static class ChronicleServerSiloBuilderExtensions
         builder.AddOutgoingGrainCallFilter<CorrelationIdOutgoingCallFilter>();
         builder.AddIncomingGrainCallFilter<UserIdentityIncomingCallFilter>();
         builder.AddOutgoingGrainCallFilter<UserIdentityOutgoingCallFilter>();
+        builder.AddOutgoingGrainCallFilter<MixedReleaseCallDiagnostics>();
         builder.Services.TryAddSingleton<Cratis.Execution.CorrelationIdAccessor>();
         builder.Services.TryAddSingleton<ICorrelationIdAccessor, Cratis.Chronicle.Setup.Execution.CorrelationIdAccessor>();
 
@@ -93,6 +98,7 @@ public static class ChronicleServerSiloBuilderExtensions
                 StepCheckpointFlushInterval = chronicleOptions.Jobs.StepCheckpointFlushInterval
             });
         });
+        AddClusterReleaseSupport(builder.Services);
         builder.Services.TryAddSingleton<ITypeFormats, TypeFormats>();
         builder.Services.TryAddSingleton<Cratis.Chronicle.Services.Clients.OpenConnections>();
         builder.Services.TryAddSingleton<IExpandoObjectConverter, ExpandoObjectConverter>();
@@ -127,6 +133,7 @@ public static class ChronicleServerSiloBuilderExtensions
         builder.Services.AddSingleton<ILifecycleParticipant<ISiloLifecycle>, ChronicleServerStartupTask>();
         builder.Services.AddSingleton<ILifecycleParticipant<ISiloLifecycle>, AlertIncidentsMetricsOwnerKeeper>();
 
+        builder.Services.AddChronicleAdministratorAuthorization();
         builder.Services.AddChronicleMeters();
         var chronicleBuilder = new ChronicleBuilder(builder, builder.Services, builder.Configuration);
         configure?.Invoke(chronicleBuilder);
@@ -215,5 +222,11 @@ public static class ChronicleServerSiloBuilderExtensions
         });
 
         return builder;
+    }
+
+    static void AddClusterReleaseSupport(IServiceCollection services)
+    {
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IGrainInterfacePropertiesProvider, KernelReleaseInterfaceProperties>());
+        services.TryAddSingleton<IClusterReleases, ClusterReleases>();
     }
 }

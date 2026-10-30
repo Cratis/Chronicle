@@ -3,6 +3,10 @@ description: "Where to start contributing to Chronicle: integration tests, issue
 ---
 # Contributing
 
+Building the Workbench frontend requires **Node.js 24.x** (`>=24 <25`). Use Node.js 24 for the TypeScript
+client and documentation verification too, matching CI. The Workbench uses the Yarn version pinned in
+`Source/Workbench/package.json`.
+
 | Topic | Description |
 | ------- | ----------- |
 | [Integration Tests](./integration-tests.md) | How to run and work with integration tests. |

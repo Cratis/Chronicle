@@ -9,6 +9,10 @@ A webhook forwards events Chronicle observes to an external HTTP endpoint — us
 
 <ChronicleClientTabs snippet="webhooks/index/register" />
 
+An observer is served by either a webhook or connected clients, never both transports at once. Disconnect the clients before registering a webhook with the same observer identifier. Registration is refused while a connected client serves that observer in any namespace of the event store; the .NET client logs a warning and returns normally without changing the webhook registration.
+
+A client stream waits while a webhook serves the observer and resumes through subscription recovery after the webhook is removed. Delivery does not switch transports based on registration timing.
+
 If no event types are configured, the webhook forwards the event types the client knows about when it registers the webhook. An event type the client does not have is not forwarded; the list is refreshed the next time the client registers the webhook.
 
 :::caution[Failed deliveries are retried]
