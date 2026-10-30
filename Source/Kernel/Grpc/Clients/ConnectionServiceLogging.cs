@@ -25,4 +25,19 @@ internal static partial class ConnectionServiceLogMessages
 
     [LoggerMessage(LogLevel.Warning, "Could not check that connection {ConnectionId} is still registered. Retrying at the next keep-alive")]
     internal static partial void FailedToKeepClientRegistered(this ILogger<ConnectionService> logger, string connectionId, Exception exception);
+
+    [LoggerMessage(LogLevel.Information, "Connection {ConnectionId} on {Silo} opened in store {StoreId}")]
+    internal static partial void ConnectionOpened(this ILogger<ConnectionService> logger, string connectionId, string silo, Guid storeId);
+
+    [LoggerMessage(LogLevel.Information, "Connection {ConnectionId} on {Silo} closed in store {StoreId}")]
+    internal static partial void ConnectionClosed(this ILogger<ConnectionService> logger, string connectionId, string silo, Guid storeId);
+
+    [LoggerMessage(LogLevel.Information, "Keep-alive from {ConnectionId} on {Silo}: registry knows client {RegistryKnowsClient}, open {Open}, lapsed {Lapsed}, gap {GapMs} ms, restoring {Restoring}, store {StoreId}")]
+    internal static partial void KeepAliveReceived(this ILogger<ConnectionService> logger, string connectionId, string silo, bool registryKnowsClient, bool open, bool lapsed, long gapMs, bool restoring, Guid storeId);
+
+    [LoggerMessage(LogLevel.Information, "Keep-alive from {ConnectionId} on {Silo} failed with {ExceptionType}")]
+    internal static partial void KeepAliveFailed(this ILogger<ConnectionService> logger, string connectionId, string silo, string exceptionType, Exception exception);
+
+    [LoggerMessage(LogLevel.Information, "Connect loop for {ConnectionId} on {Silo} ended: {Reason}")]
+    internal static partial void ConnectLoopEnded(this ILogger<ConnectionService> logger, string connectionId, string silo, string reason);
 }

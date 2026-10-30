@@ -47,7 +47,7 @@ public partial class Observer
             return;
         }
 
-        logger.WatchdogRescuingStrandedObserver(State.NextEventSequenceNumber);
+        logger.WatchdogRescuingStrandedObserver(_observerId, State.NextEventSequenceNumber);
         await TransitionTo<Routing>();
     }
 

@@ -203,8 +203,17 @@ internal static partial class ObserverLogMessages
     [LoggerMessage(LogLevel.Information, "Observer unsubscribed; it is now disconnected and receives no events until a client subscribes again")]
     internal static partial void Unsubscribed(this ILogger<Observer> logger);
 
-    [LoggerMessage(LogLevel.Information, "Observer deactivating ({ReasonCode}: {ReasonDescription})")]
-    internal static partial void Deactivating(this ILogger<Observer> logger, DeactivationReasonCode reasonCode, string reasonDescription);
+    [LoggerMessage(LogLevel.Information, "Observer {ObserverId} deactivating ({ReasonCode}: {ReasonDescription})")]
+    internal static partial void Deactivating(this ILogger<Observer> logger, ObserverId observerId, DeactivationReasonCode reasonCode, string reasonDescription);
+
+    [LoggerMessage(LogLevel.Information, "Observer {ObserverId} activated: RunningState={RunningState}, IsSubscribed={IsSubscribed}")]
+    internal static partial void Activated(this ILogger<Observer> logger, ObserverId observerId, ObserverRunningState runningState, bool isSubscribed);
+
+    [LoggerMessage(LogLevel.Information, "Observer {ObserverId} not restoring client {ConnectionId}: subscription reconciliation vetoed; Removed={Removed}, IsRetired={IsRetired}, KeyOwnsDefinition={KeyOwnsDefinition}, AlertDisposition={AlertDisposition}, RunningState={RunningState}, IsQuarantined={IsQuarantined}, RecoverSubscriptionAfterQuarantine={RecoverSubscriptionAfterQuarantine}, RetryRecoveryAfterQuarantine={RetryRecoveryAfterQuarantine}")]
+    internal static partial void ClientSubscriptionReconciliationVetoed(this ILogger<Observer> logger, ObserverId observerId, ConnectionId connectionId, bool removed, bool isRetired, bool keyOwnsDefinition, AlertDisposition alertDisposition, ObserverRunningState runningState, bool isQuarantined, bool recoverSubscriptionAfterQuarantine, bool retryRecoveryAfterQuarantine);
+
+    [LoggerMessage(LogLevel.Information, "Observer {ObserverId} not restoring client {ConnectionId}: {Reason}")]
+    internal static partial void NotRestoringClientSubscription(this ILogger<Observer> logger, ObserverId observerId, ConnectionId connectionId, string reason);
 
     [LoggerMessage(LogLevel.Information, "Restoring the subscription of client {ConnectionId}, which this observer activation does not know about")]
     internal static partial void RestoringClientSubscription(this ILogger<Observer> logger, ConnectionId connectionId);
@@ -230,8 +239,8 @@ internal static partial class ObserverLogMessages
     [LoggerMessage(LogLevel.Debug, "Watchdog fast-forwarding NextEventSequenceNumber from {NextEventSequenceNumber} to tail {TailEventSequenceNumber} because there are no relevant events in that range.")]
     internal static partial void WatchdogFastForwardingNextEventSequenceNumber(this ILogger<Observer> logger, EventSequenceNumber nextEventSequenceNumber, EventSequenceNumber tailEventSequenceNumber);
 
-    [LoggerMessage(LogLevel.Warning, "Watchdog detected that the observer is behind from {NextEventSequenceNumber} but no longer subscribed on its appended-events queue. Re-routing observer.")]
-    internal static partial void WatchdogRescuingStrandedObserver(this ILogger<Observer> logger, EventSequenceNumber nextEventSequenceNumber);
+    [LoggerMessage(LogLevel.Warning, "Watchdog detected that observer {ObserverId} is behind from {NextEventSequenceNumber} but no longer subscribed on its appended-events queue. Re-routing observer.")]
+    internal static partial void WatchdogRescuingStrandedObserver(this ILogger<Observer> logger, ObserverId observerId, EventSequenceNumber nextEventSequenceNumber);
 
     [LoggerMessage(LogLevel.Warning, "Watchdog detected that the observer is preparing catch-up with no catch-up job to finish the preparation. Clearing the preparation and re-routing observer.")]
     internal static partial void WatchdogRescuingStrandedCatchupPreparation(this ILogger<Observer> logger);

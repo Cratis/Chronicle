@@ -185,6 +185,7 @@ public partial class Observer(
         await ReconcilePartitionDeferrals();
         RememberHandledEventsReportsForTheResponseTimeout();
         ScheduleAlertReport();
+        logger.Activated(_observerId, State.RunningState, _subscription.IsSubscribed);
     }
 
     /// <inheritdoc/>
@@ -232,7 +233,7 @@ public partial class Observer(
 
             using (logger.BeginObserverScope(_observerId, _observerKey))
             {
-                logger.Deactivating(reason.ReasonCode, reason.Description);
+                logger.Deactivating(_observerId, reason.ReasonCode, reason.Description);
             }
 
             await DrainWebhookProbe();

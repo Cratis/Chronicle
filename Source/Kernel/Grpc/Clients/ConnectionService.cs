@@ -37,18 +37,7 @@ internal sealed class ConnectionService(
     static readonly Lazy<string> _schemaDefinition = new(GenerateSchema);
     static readonly Lazy<WireContract> _wireContract = new(() => WireContractReader.Read(Contracts.WireContractDescriptorSet.Bytes));
     readonly TimeSpan _keepAliveInterval = TimeSpan.FromSeconds(options.Value.ConnectedClients.KeepAliveIntervalSeconds);
-
-    /// <summary>
-    /// The longest gap between responses from a client that cannot have got it dropped as stale.
-    /// </summary>
-    /// <remarks>
-    /// The registry drops a client whose last response is older than the stale threshold when it checks. A response
-    /// reaches the registry a moment after it reaches this service, so a gap within one keep-alive of the threshold is
-    /// already treated as one that may have got the client dropped.
-    /// </remarks>
-    readonly TimeSpan _lapse = TimeSpan.FromSeconds(Math.Max(
-        options.Value.ConnectedClients.StaleThresholdSeconds - options.Value.ConnectedClients.KeepAliveIntervalSeconds,
-        options.Value.ConnectedClients.KeepAliveIntervalSeconds));
+    readonly TimeSpan _lapse = KeepAliveLapse.From(options.Value.ConnectedClients);
 
     /// <inheritdoc/>
     public IObservable<ConnectionKeepAlive> Connect(
@@ -67,7 +56,9 @@ internal sealed class ConnectionService(
             {
                 await Register(connectedClients, request);
                 openConnections.Opened(request, DateTimeOffset.UtcNow);
+                logger.ConnectionOpened(request.ConnectionId, localSiloDetails.SiloAddress.ToParsableString(), openConnections.StoreId);
 
+                var exitReason = "cancelled";
                 try
                 {
                     // The session is established the moment the client is registered, and the first keep-alive is
@@ -94,6 +85,7 @@ internal sealed class ConnectionService(
                         }
                         else if (openConnections.HasLapsed(request.ConnectionId))
                         {
+                            exitReason = "lapsed";
                             subject.OnCompleted();
                             break;
                         }
@@ -106,10 +98,13 @@ internal sealed class ConnectionService(
                 }
                 catch (Exception ex)
                 {
+                    exitReason = $"exception {ex.GetType().Name}";
                     logger.FailureDuringKeepAlive(request.ConnectionId, ex);
                 }
 
+                logger.ConnectLoopEnded(request.ConnectionId, localSiloDetails.SiloAddress.ToParsableString(), exitReason);
                 openConnections.Closed(request.ConnectionId);
+                logger.ConnectionClosed(request.ConnectionId, localSiloDetails.SiloAddress.ToParsableString(), openConnections.StoreId);
                 await connectedClients.OnClientDisconnected(request.ConnectionId, "Client disconnected");
             },
             context.CancellationToken);
@@ -132,10 +127,19 @@ internal sealed class ConnectionService(
             var connectedClients = grainFactory.GetConnectedClients(localSiloDetails.SiloAddress);
             var registryKnowsClient = await connectedClients.OnClientPing(keepAlive.ConnectionId);
 
-            if (openConnections.Responded(keepAlive.ConnectionId, registryKnowsClient, respondedAt, _lapse, out var request))
+            var restoring = openConnections.Responded(keepAlive.ConnectionId, registryKnowsClient, respondedAt, _lapse, out var request);
+            var state = openConnections.Describe(keepAlive.ConnectionId, respondedAt);
+            logger.KeepAliveReceived(keepAlive.ConnectionId, localSiloDetails.SiloAddress.ToParsableString(), registryKnowsClient, state.Open, state.Lapsed, state.GapMs, restoring, openConnections.StoreId);
+
+            if (restoring)
             {
-                await Restore(connectedClients, request);
+                await Restore(connectedClients, request!);
             }
+        }
+        catch (Exception ex)
+        {
+            logger.KeepAliveFailed(keepAlive.ConnectionId, localSiloDetails.SiloAddress.ToParsableString(), ex.GetType().Name, ex);
+            throw;
         }
         finally
         {

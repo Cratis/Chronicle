@@ -8,6 +8,7 @@ using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Reactors;
 using Grpc.Core;
+using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Integration.SqlClustering;
 
@@ -32,6 +33,9 @@ public sealed partial class ClusterLoad(int transitions = 1, TimeProvider? timeP
     readonly CancellationTokenSource _stop = new();
     readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
     readonly string _source = Guid.NewGuid().ToString();
+    readonly ILoggerFactory _clientLoggerFactory = LoggerFactory.Create(builder => builder
+        .AddFilter((category, level) => category?.StartsWith("Cratis.Chronicle.Connections", StringComparison.Ordinal) == true && level >= LogLevel.Information)
+        .AddSimpleConsole(options => options.TimestampFormat = "yyyy-MM-dd HH:mm:ss.fff zzz "));
     ChronicleClient _client = null!;
     IEventStore _store = null!;
     IReactorHandler _reactor = null!;
@@ -51,7 +55,7 @@ public sealed partial class ClusterLoad(int transitions = 1, TimeProvider? timeP
     {
         var options = new ChronicleOptions(cluster.ConnectionString) { ConnectTimeout = 30 };
         options.ExplicitArtifacts.RegisterEventType<ClusterEventAppended>();
-        _client = new(options);
+        _client = new(options, loggerFactory: _clientLoggerFactory);
 
         // Automatic registration is what re-registers the reactor after the client reconnects to another node, the
         // way an application does; a manually registered store stays unregistered once its node goes away.
@@ -127,6 +131,7 @@ public sealed partial class ClusterLoad(int transitions = 1, TimeProvider? timeP
         finally
         {
             _client?.Dispose();
+            _clientLoggerFactory.Dispose();
             _stop.Dispose();
         }
     }

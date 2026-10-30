@@ -37,10 +37,22 @@ public partial class ConnectedClients(
     IGrainTimer? _reviseConnectedClientsTimer;
 
     /// <inheritdoc/>
-    public override Task OnActivateAsync(CancellationToken cancellationToken)
+    public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
+        // A registry that is activated again - for instance after a directory failure - knows no client, while the
+        // connections open on this silo are still there. Put back the ones that are still live.
+        var localConnections = ServiceProvider.GetService<ILocalClientConnections>();
+        var localSiloDetails = ServiceProvider.GetService<ILocalSiloDetails>();
+        if (localConnections is not null && localSiloDetails is not null)
+        {
+            var keyedForThisSilo = this.GetPrimaryKeyString() == localSiloDetails.SiloAddress.ToParsableString();
+            var live = localConnections.GetLive(DateTimeOffset.UtcNow, KeepAliveLapse.From(options.Value.ConnectedClients));
+            await SeedLiveConnections(live, keyedForThisSilo);
+            logger.LocalConnectionStoreRead(RuntimeIdentity, this.GetPrimaryKeyString(), localConnections.StoreId, keyedForThisSilo, _clients.Count);
+        }
+
         _reviseConnectedClientsTimer = this.RegisterGrainTimer(ReviseConnectedClients, new() { DueTime = TimeSpan.Zero, Period = _reviseConnectedClientsPeriod });
-        return Task.CompletedTask;
+        logger.Activated(RuntimeIdentity);
     }
 
     /// <inheritdoc/>
@@ -75,6 +87,7 @@ public partial class ConnectedClients(
         }
 
         meter.ConnectedClients(_clients.Count);
+        logger.ClientConnectedOnSilo(RuntimeIdentity, connectionId, _clients.Count);
 
         return Task.CompletedTask;
     }
@@ -109,6 +122,7 @@ public partial class ConnectedClients(
         _clients.Remove(connectionId);
 
         meter.ConnectedClients(_clients.Count);
+        logger.ClientDisconnectedOnSilo(RuntimeIdentity, connectionId, reason, _clients.Count);
 
         // Expiry is best effort and must not hold up connection bookkeeping. Leases also expire
         // by kernel time, so a failed scope only delays redelivery until its lease deadline.
@@ -155,6 +169,36 @@ public partial class ConnectedClients(
     {
         var entry = _clients.GetValueOrDefault(connectionId) ?? throw new ClientIsNotConnected(connectionId);
         return Task.FromResult(entry.Client);
+    }
+
+    /// <summary>
+    /// Registers the live connections open on the silo this registry is keyed for, skipping the ones already known.
+    /// </summary>
+    /// <param name="connections">The <see cref="LiveClientConnection"/>s that are open and responding on the local silo.</param>
+    /// <param name="keyedForThisSilo">Whether this registry is the one for the local silo. A registry placed here as a fallback for a dead silo is not.</param>
+    /// <returns>Awaitable task.</returns>
+    internal async Task SeedLiveConnections(IEnumerable<LiveClientConnection> connections, bool keyedForThisSilo)
+    {
+        if (!keyedForThisSilo)
+        {
+            return;
+        }
+
+        var count = 0;
+        foreach (var connection in connections.Where(connection => !_clients.ContainsKey(connection.ConnectionId)))
+        {
+            await OnClientRestored(
+                connection.ConnectionId,
+                connection.Version,
+                connection.IsRunningWithDebugger,
+                connection.ProcessId,
+                connection.ProcessPath,
+                connection.MachineName,
+                connection.ClientType);
+            count++;
+        }
+
+        logger.SeededLiveConnections(RuntimeIdentity, count);
     }
 
     static ConnectionEntry CreateEntry(

@@ -30,12 +30,41 @@ public partial class Observer
             logger.ClientSubscriptionWaitingForWebhook(_observerKey);
             return;
         }
-        if (IsKnownClient(connectedClient.ConnectionId) || CannotReconcileSubscription()) return;
+        if (IsKnownClient(connectedClient.ConnectionId))
+        {
+            logger.NotRestoringClientSubscription(_observerId, connectedClient.ConnectionId, "the client is already known to this activation");
+            return;
+        }
+
+        if (CannotReconcileSubscription())
+        {
+            logger.ClientSubscriptionReconciliationVetoed(
+                _observerId,
+                connectedClient.ConnectionId,
+                _removed,
+                IsRetired,
+                KeyOwnsDefinition,
+                State.AlertDisposition,
+                State.RunningState,
+                IsQuarantined,
+                _recoverSubscriptionAfterQuarantine,
+                _retryRecoveryAfterQuarantine);
+            return;
+        }
 
         // A namespace removed while its client is still running must not be brought back by restoring an observer in it.
         var namespaces = await storage.GetEventStore(_observerKey.EventStore).Namespaces.GetAll();
-        if (!namespaces.Any(@namespace => @namespace.Name == _observerKey.Namespace)) return;
-        if (IsKnownClient(connectedClient.ConnectionId)) return;
+        if (!namespaces.Any(@namespace => @namespace.Name == _observerKey.Namespace))
+        {
+            logger.NotRestoringClientSubscription(_observerId, connectedClient.ConnectionId, "the namespace no longer exists");
+            return;
+        }
+
+        if (IsKnownClient(connectedClient.ConnectionId))
+        {
+            logger.NotRestoringClientSubscription(_observerId, connectedClient.ConnectionId, "the client became known while checking namespaces");
+            return;
+        }
 
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
         logger.RestoringClientSubscription(connectedClient.ConnectionId);

@@ -10,6 +10,21 @@ namespace Cratis.Chronicle.Clients;
 /// </summary>
 internal static partial class ConnectedClientsLogMessages
 {
+    [LoggerMessage(LogLevel.Information, "ConnectedClients activated on silo {Silo}")]
+    internal static partial void Activated(this ILogger<ConnectedClients> logger, string silo);
+
+    [LoggerMessage(LogLevel.Information, "Registry on {Silo} keyed for {RegistryKey} read live connections from store {StoreId}: keyed for this silo {KeyedForThisSilo}, {Count} clients registered after reseed")]
+    internal static partial void LocalConnectionStoreRead(this ILogger<ConnectedClients> logger, string silo, string registryKey, Guid storeId, bool keyedForThisSilo, int count);
+
+    [LoggerMessage(LogLevel.Information, "Registry on {Silo} seeded {Count} live connections open on this silo after activation")]
+    internal static partial void SeededLiveConnections(this ILogger<ConnectedClients> logger, string silo, int count);
+
+    [LoggerMessage(LogLevel.Information, "ConnectedClients on silo {Silo}: client {ConnectionId} connected, {Count} clients registered")]
+    internal static partial void ClientConnectedOnSilo(this ILogger<ConnectedClients> logger, string silo, string connectionId, int count);
+
+    [LoggerMessage(LogLevel.Information, "ConnectedClients on silo {Silo}: client {ConnectionId} disconnected ({Reason}), {Count} clients registered")]
+    internal static partial void ClientDisconnectedOnSilo(this ILogger<ConnectedClients> logger, string silo, string connectionId, string reason, int count);
+
     [LoggerMessage(LogLevel.Debug, "Connected client with connection identifier '{ConnectionId}'.")]
     internal static partial void ClientConnected(this ILogger<ConnectedClients> logger, string connectionId);
 

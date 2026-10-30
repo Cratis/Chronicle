@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.EventSequences;
+using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.Reactors;
 using Microsoft.Extensions.Logging;
 
@@ -11,6 +12,24 @@ namespace Cratis.Chronicle.Observation.Reactors.Clients;
 
 internal static partial class ReactorLogMessages
 {
+    [LoggerMessage(LogLevel.Information, "KeepSubscription for reactor observer {ObserverId} (connection {ConnectionId}, silo {SiloAddress}): restore rejected by another transport; waiting for webhook")]
+    internal static partial void RestoreRejectedByAnotherTransport(this ILogger<Reactor> logger, ObserverId observerId, ConnectionId connectionId, SiloAddress siloAddress);
+
+    [LoggerMessage(LogLevel.Information, "KeepSubscription for reactor observer {ObserverId} (connection {ConnectionId}, silo {SiloAddress}): completed a deferred registration, nothing more to keep")]
+    internal static partial void KeepSubscriptionDeferredRegistration(this ILogger<Reactor> logger, ObserverId observerId, ConnectionId connectionId, SiloAddress siloAddress);
+
+    [LoggerMessage(LogLevel.Information, "KeepSubscription for reactor observer {ObserverId} (connection {ConnectionId}, silo {SiloAddress}): the observer is served by a webhook, returning")]
+    internal static partial void KeepSubscriptionServedByWebhook(this ILogger<Reactor> logger, ObserverId observerId, ConnectionId connectionId, SiloAddress siloAddress);
+
+    [LoggerMessage(LogLevel.Information, "KeepSubscription for reactor observer {ObserverId} (connection {ConnectionId}, silo {SiloAddress}): the observer already knows the client, nothing to restore")]
+    internal static partial void KeepSubscriptionKnowsClient(this ILogger<Reactor> logger, ObserverId observerId, ConnectionId connectionId, SiloAddress siloAddress);
+
+    [LoggerMessage(LogLevel.Information, "KeepSubscription for reactor observer {ObserverId} (connection {ConnectionId}, silo {SiloAddress}): the client is not connected according to ConnectedClients on this silo, NOT restoring")]
+    internal static partial void KeepSubscriptionClientNotConnected(this ILogger<Reactor> logger, ObserverId observerId, ConnectionId connectionId, SiloAddress siloAddress);
+
+    [LoggerMessage(LogLevel.Information, "KeepSubscription for reactor observer {ObserverId} (connection {ConnectionId}, silo {SiloAddress}): the observer does not know the client and it is connected, restoring its subscription")]
+    internal static partial void RestoringLostSubscription(this ILogger<Reactor> logger, ObserverId observerId, ConnectionId connectionId, SiloAddress siloAddress);
+
     [LoggerMessage(LogLevel.Information, "Client subscription for reactor '{ReactorId}' is waiting for the webhook to leave")]
     internal static partial void WaitingForWebhook(this ILogger<Reactor> logger, ReactorId reactorId);
 

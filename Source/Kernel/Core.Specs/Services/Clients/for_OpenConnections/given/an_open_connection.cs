@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Clients;
 using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Contracts.Clients;
 
@@ -32,6 +33,12 @@ public class an_open_connection : Specification
         _connections.Handled(new ConnectionId(TheConnection), _openedAt + handledAfter);
         return restore;
     }
+
+    private protected IEnumerable<LiveClientConnection> Live(TimeSpan after) => _connections.GetLive(_openedAt + after, _lapse);
+
+    protected void OpenWithDebugger() => _connections.Opened(
+        new ConnectRequest { ConnectionId = TheConnection, ClientVersion = "1.0.0", IsRunningWithDebugger = true },
+        _openedAt);
 
     protected void Close() => _connections.Closed(new ConnectionId(TheConnection));
 }

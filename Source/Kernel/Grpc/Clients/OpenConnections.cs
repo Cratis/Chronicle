@@ -3,6 +3,7 @@
 
 using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
+using Cratis.Chronicle.Clients;
 using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Contracts.Clients;
 
@@ -28,9 +29,12 @@ namespace Cratis.Chronicle.Services.Clients;
 /// Shared by every call on the silo: the connection is opened by one call and the client responds through others.
 /// </para>
 /// </remarks>
-internal sealed class OpenConnections
+internal sealed class OpenConnections : ILocalClientConnections
 {
     readonly ConcurrentDictionary<ConnectionId, OpenConnection> _connections = new();
+
+    /// <inheritdoc/>
+    public Guid StoreId { get; } = Guid.NewGuid();
 
     /// <summary>
     /// Record that a connection was opened and its client registered.
@@ -97,6 +101,45 @@ internal sealed class OpenConnections
         return true;
     }
 
+    /// <inheritdoc/>
+    public IEnumerable<LiveClientConnection> GetLive(DateTimeOffset at, TimeSpan lapse) => LiveConnections(at, lapse);
+
+    /// <summary>
+    /// Gets a snapshot of connections that are still live on this silo.
+    /// </summary>
+    /// <param name="at">The point in time to judge liveness at.</param>
+    /// <param name="lapse">The longest gap between handled responses a live connection can have.</param>
+    /// <returns>The live <see cref="LiveClientConnection"/>s.</returns>
+    public IEnumerable<LiveClientConnection> LiveConnections(DateTimeOffset at, TimeSpan lapse) =>
+        _connections.Values
+            .Where(connection => connection.IsLive(at, lapse))
+            .Select(connection => new LiveClientConnection(
+                connection.Request.ConnectionId,
+                connection.Request.ClientVersion,
+                connection.Request.IsRunningWithDebugger,
+                connection.Request.ProcessId,
+                connection.Request.ProcessPath,
+                connection.Request.MachineName,
+                connection.Request.ClientType))
+            .ToArray();
+
+    /// <summary>
+    /// Describe the state of a connection without changing it.
+    /// </summary>
+    /// <param name="connectionId">The <see cref="ConnectionId"/> of the connection.</param>
+    /// <param name="at">The point in time to measure the gap to.</param>
+    /// <returns>The <see cref="ConnectionState"/> of the connection.</returns>
+    public ConnectionState Describe(ConnectionId connectionId, DateTimeOffset at) =>
+        _connections.TryGetValue(connectionId, out var connection) ? connection.Describe(at) : default;
+
+    /// <summary>
+    /// The state of an open connection, for diagnosis.
+    /// </summary>
+    /// <param name="Open">Whether the connection is open.</param>
+    /// <param name="Lapsed">Whether the connection has lapsed.</param>
+    /// <param name="GapMs">Milliseconds since a response was last handled.</param>
+    internal readonly record struct ConnectionState(bool Open, bool Lapsed, long GapMs);
+
     sealed class OpenConnection(ConnectRequest request, DateTimeOffset openedAt)
     {
         readonly Lock _lock = new();
@@ -113,6 +156,27 @@ internal sealed class OpenConnections
                 {
                     return _lapsed;
                 }
+            }
+        }
+
+        public bool IsLive(DateTimeOffset at, TimeSpan lapse)
+        {
+            if (Request.IsRunningWithDebugger)
+            {
+                return true;
+            }
+
+            lock (_lock)
+            {
+                return !_lapsed && at - _lastHandled < lapse;
+            }
+        }
+
+        public ConnectionState Describe(DateTimeOffset at)
+        {
+            lock (_lock)
+            {
+                return new(true, _lapsed, (long)(at - _lastHandled).TotalMilliseconds);
             }
         }
 

@@ -20,6 +20,7 @@ using Cratis.Chronicle.Observation.Reducers.Clients;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Servers;
+using Cratis.Chronicle.Services.Clients;
 using Cratis.Chronicle.Services.Events.Constraints;
 using Cratis.Chronicle.Services.Observation;
 using Cratis.Chronicle.Setup;
@@ -94,7 +95,7 @@ public static class ChronicleServerSiloBuilderExtensions
             });
         });
         builder.Services.TryAddSingleton<ITypeFormats, TypeFormats>();
-        builder.Services.TryAddSingleton<Cratis.Chronicle.Services.Clients.OpenConnections>();
+        builder.Services.AddLocalClientConnections();
         builder.Services.TryAddSingleton<IExpandoObjectConverter, ExpandoObjectConverter>();
         builder.Services.TryAddSingleton<IEventCompliance, EventCompliance>();
         builder.Services.TryAddSingleton<IReadModelsCompliance, ReadModelsCompliance>();

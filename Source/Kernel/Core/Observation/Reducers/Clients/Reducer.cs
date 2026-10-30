@@ -129,11 +129,13 @@ public class Reducer(
     {
         if (await CompleteDeferredRegistration())
         {
+            logger.KeepSubscriptionDeferredRegistration(_observerKey!.ObserverId, _observerKey.ConnectionId, localSiloDetails.SiloAddress);
             return;
         }
 
         if (!definition.IsActive)
         {
+            logger.KeepSubscriptionNotActive(_observerKey!.ObserverId, _observerKey.ConnectionId, localSiloDetails.SiloAddress);
             return;
         }
 
@@ -141,18 +143,24 @@ public class Reducer(
         _observer ??= GrainFactory.GetGrain<IObserver>(key);
         if (await WaitIfServedByWebhook())
         {
+            logger.KeepSubscriptionServedByWebhook(_observerKey.ObserverId, _observerKey.ConnectionId, localSiloDetails.SiloAddress);
             return;
         }
 
-        if (!await _observer.KnowsClient(_observerKey.ConnectionId))
+        if (await _observer.KnowsClient(_observerKey.ConnectionId))
+        {
+            logger.KeepSubscriptionKnowsClient(_observerKey.ObserverId, _observerKey.ConnectionId, localSiloDetails.SiloAddress);
+        }
+        else
         {
             if (!await _connectedClients!.IsConnected(_observerKey.ConnectionId))
             {
+                logger.KeepSubscriptionClientNotConnected(_observerKey.ObserverId, _observerKey.ConnectionId, localSiloDetails.SiloAddress);
                 return;
             }
 
             var connectedClient = await _connectedClients!.GetConnectedClient(_observerKey.ConnectionId);
-            logger.RestoringLostClientSubscription(_observerKey.ObserverId, _observerKey.ConnectionId);
+            logger.RestoringLostSubscription(_observerKey.ObserverId, _observerKey.ConnectionId, localSiloDetails.SiloAddress);
             try
             {
                 await _observer.RestoreClientSubscription<IReducerObserverSubscriber>(
@@ -165,6 +173,7 @@ public class Reducer(
             }
             catch (ObserverServedByAnotherTransport)
             {
+                logger.RestoreRejectedByAnotherTransport(_observerKey.ObserverId, _observerKey.ConnectionId, localSiloDetails.SiloAddress);
                 WaitForWebhook();
                 return;
             }

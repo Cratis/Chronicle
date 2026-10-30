@@ -70,10 +70,9 @@ public abstract class SqlClusterSpecification(bool postgres, ClusterChange chang
         {
             await _load.StopAndVerify();
         }
-        catch
+        finally
         {
             await _cluster.DumpLogs();
-            throw;
         }
     }
 
