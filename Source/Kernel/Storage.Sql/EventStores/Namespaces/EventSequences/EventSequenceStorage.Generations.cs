@@ -92,6 +92,7 @@ public partial class EventSequenceStorage
         var mergedHashes = JsonSerializer.Serialize(hashes);
         var mergedProvenance = JsonSerializer.Serialize(provenance);
         var revisedGeneration = observed.RevisedGeneration?.Value;
+
         // Two explicit branches for the revisions predicate, since NULL never equals NULL in SQL.
         var rows = tokenRevisions is null
             ? await scope.DbContext.Events
