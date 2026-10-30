@@ -82,10 +82,14 @@ public class an_event_sequence_storage : Specification, IDisposable
 
     protected EventSequenceDbContext CreateContext()
     {
+        if (_provider == "PostgreSQL")
+        {
+            return new EventSequenceDbContext(SpecDbContextOptions.Kernel<EventSequenceDbContext>(_connectionString), _tableName, _migrator);
+        }
+
         var builder = new DbContextOptionsBuilder<EventSequenceDbContext>();
         switch (_provider)
         {
-            case "PostgreSQL": builder.UseNpgsql(_connectionString); break;
             case "SQLServer": builder.UseSqlServer(_connectionString); break;
             default: builder.UseSqlite(_connectionString); break;
         }

@@ -28,7 +28,9 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
     const string AuthKey = "auth";
     const string NoAuthenticationValue = "none";
     const string SkipTlsValidationKey = "skipTlsValidation";
+    const string DisableTlsKey = "disableTls";
     const string SkipCompatibilityCheckKey = "skipCompatibilityCheck";
+    const string SkipKeepAliveKey = "skipKeepAlive";
     const string LoadBalancerKey = "loadBalancer";
     const string SrvNameServerKey = "srvNameServer";
     const string CertificatePathKey = "certificatePath";
@@ -45,6 +47,25 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
     /// Fragments in an option name that mark its value as a credential.
     /// </summary>
     static readonly string[] _sensitiveKeyFragments = ["password", "secret", "token", "key", "credential"];
+
+    static readonly HashSet<string> _keysWithDedicatedRendering =
+    [
+        HostKey,
+        PortKey,
+        ServersKey,
+        UsernameKey,
+        PasswordKey,
+        SchemeKey,
+        ApiKeyKey,
+        SkipTlsValidationKey,
+        DisableTlsKey,
+        SkipCompatibilityCheckKey,
+        SkipKeepAliveKey,
+        LoadBalancerKey,
+        SrvNameServerKey,
+        CertificatePathKey,
+        CertificatePasswordKey
+    ];
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ChronicleConnectionStringBuilder"/> class.
@@ -194,6 +215,13 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
                 throw new AmbiguousAuthenticationMode();
             }
 
+            // Without TLS the development credentials have nowhere to go: Chronicle serves its token endpoint over
+            // TLS only. A cleartext connection with no credentials therefore authenticates with nothing.
+            if (hasNoAuthentication && DisableTls)
+            {
+                return AuthenticationMode.None;
+            }
+
             if (hasClientCredentials || hasNoAuthentication)
             {
                 return AuthenticationMode.ClientCredentials;
@@ -269,6 +297,34 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
     }
 
     /// <summary>
+    /// Gets or sets whether the client connects without TLS, expressed as <c language="csharp">disableTls=true</c> in the
+    /// connection string.
+    /// </summary>
+    /// <remarks>
+    /// For a Chronicle server running with <c language="csharp">tls.enabled=false</c>, typically reached through a
+    /// port-forward or behind a proxy that forwards cleartext HTTP/2 (h2c). The client then speaks HTTP/2 without TLS.
+    /// Chronicle never serves its token endpoint without TLS, so client credentials cannot be exchanged on such a
+    /// connection: use <c language="csharp">auth=none</c> against a server with authentication turned off, or
+    /// <c language="csharp">apiKey=</c> with a token from the server's external authority. A connection string with no
+    /// credentials at all connects without authentication.
+    /// </remarks>
+    public bool DisableTls
+    {
+        get => ContainsKey(DisableTlsKey) && Convert.ToBoolean(this[DisableTlsKey]);
+        set
+        {
+            if (value)
+            {
+                this[DisableTlsKey] = true;
+            }
+            else
+            {
+                Remove(DisableTlsKey);
+            }
+        }
+    }
+
+    /// <summary>
     /// Gets or sets whether to skip the server compatibility check on connect.
     /// </summary>
     /// <remarks>
@@ -286,6 +342,20 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
     {
         get => ContainsKey(SkipCompatibilityCheckKey) && Convert.ToBoolean(this[SkipCompatibilityCheckKey]);
         set => this[SkipCompatibilityCheckKey] = value;
+    }
+
+    /// <summary>
+    /// Gets or sets whether to skip the keep-alive connection on connect.
+    /// </summary>
+    /// <remarks>
+    /// Skipping keep-alive avoids the long-lived keep-alive stream and its watchdog, which suits short-lived
+    /// processes such as command line tools, functions and jobs. A client that skips keep-alive cannot host
+    /// reactors or reducers, as the kernel has no live connection to deliver events on.
+    /// </remarks>
+    public bool SkipKeepAlive
+    {
+        get => ContainsKey(SkipKeepAliveKey) && Convert.ToBoolean(this[SkipKeepAliveKey]);
+        set => this[SkipKeepAliveKey] = value;
     }
 
     /// <summary>
@@ -405,10 +475,17 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
             queryParams.Add("skipTlsValidation=false");
         }
 
+        if (DisableTls)
+        {
+            queryParams.Add("disableTls=true");
+        }
+
         if (SkipCompatibilityCheck)
         {
             queryParams.Add("skipCompatibilityCheck=true");
         }
+
+        AddSkipKeepAlive(queryParams);
 
         if (ContainsKey(LoadBalancerKey))
         {
@@ -434,20 +511,7 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
         foreach (var key in Keys)
         {
             var keyStr = key.ToString();
-            if (keyStr != null &&
-                keyStr != HostKey &&
-                keyStr != PortKey &&
-                keyStr != ServersKey &&
-                keyStr != UsernameKey &&
-                keyStr != PasswordKey &&
-                keyStr != SchemeKey &&
-                keyStr != ApiKeyKey &&
-                keyStr != SkipTlsValidationKey &&
-                keyStr != SkipCompatibilityCheckKey &&
-                keyStr != LoadBalancerKey &&
-                keyStr != SrvNameServerKey &&
-                keyStr != CertificatePathKey &&
-                keyStr != CertificatePasswordKey)
+            if (keyStr != null && !_keysWithDedicatedRendering.Contains(keyStr))
             {
                 queryParams.Add($"{Uri.EscapeDataString(keyStr)}={Uri.EscapeDataString(this[keyStr]?.ToString() ?? string.Empty)}");
             }
@@ -552,6 +616,14 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
         {
             // Fall back to standard key=value parsing
             ConnectionString = connectionString;
+        }
+    }
+
+    void AddSkipKeepAlive(List<string> queryParams)
+    {
+        if (SkipKeepAlive)
+        {
+            queryParams.Add("skipKeepAlive=true");
         }
     }
 

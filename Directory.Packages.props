@@ -113,7 +113,7 @@
     <!-- Testing & Specifications -->
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.11.0" />
     <PackageVersion Include="coverlet.collector" Version="10.1.0" />
-    <PackageVersion Include="Cratis.Specifications" Version="5.0.0" />
+    <PackageVersion Include="Cratis.Specifications" Version="5.1.0" />
     <PackageVersion Include="Cratis.Specifications.XUnit" Version="5.1.0" />
     <PackageVersion Include="Cratis.Specifications.XUnit.v3" Version="5.1.0" />
     <PackageVersion Include="EphemeralMongo" Version="3.2.0" />

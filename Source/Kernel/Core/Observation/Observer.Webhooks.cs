@@ -5,6 +5,7 @@ using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.Webhooks;
 using Cratis.Chronicle.Observation.States;
 using Cratis.Chronicle.Observation.Webhooks;
+using Cratis.Chronicle.Observation.Webhooks.Validation;
 
 namespace Cratis.Chronicle.Observation;
 
@@ -20,7 +21,11 @@ public partial class Observer
         }
 
         var definition = await storage.GetEventStore(_observerKey.EventStore).Webhooks.Get((WebhookId)_observerId.Value);
-        if (!definition.IsActive) return false;
+        if (!definition.IsActive)
+        {
+            _subscriptionSetupFailed = false;
+            return false;
+        }
 
         var validation = await webhookTargetPolicy.EvaluateForDelivery(definition.Target.Url, _observerKey.EventStore);
         var warnings = new List<string>();
@@ -43,7 +48,21 @@ public partial class Observer
             return true;
         }
 
+        return await RejectStoredWebhookTarget(validation);
+    }
+
+    async Task<bool> RejectStoredWebhookTarget(WebhookTargetValidation validation)
+    {
+        if (validation.IsIndeterminate)
+        {
+            if (IsQuarantined) return false;
+            await Unsubscribe();
+            _subscriptionSetupFailed = true;
+            return false;
+        }
+
         logger.StoredWebhookTargetRejected(validation.Reason);
+        _subscriptionSetupFailed = false;
         _isPreparingCatchup = false;
         NotePreparationEnded();
         if (await GetCurrentState() is Disconnected disconnected)

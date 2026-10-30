@@ -1,8 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Security.Claims;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Observation;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 
 using IObserverRemover = Cratis.Chronicle.Observation.IObserverRemover;
 
@@ -18,6 +21,8 @@ public class all_dependencies : Specification
     protected IFailedPartitionsStorage _failedPartitionsStorage;
     protected IGrainFactory _grainFactory;
     protected IObserverRemover _observerRemover;
+    protected IAuthorizationService _authorization;
+    protected IHttpContextAccessor _httpContextAccessor;
     protected Contracts.Observation.IObservers _observers;
 
     void Establish()
@@ -30,6 +35,9 @@ public class all_dependencies : Specification
         _failedPartitionsStorage = Substitute.For<IFailedPartitionsStorage>();
         _grainFactory = Substitute.For<IGrainFactory>();
         _observerRemover = Substitute.For<IObserverRemover>();
+        _authorization = Substitute.For<IAuthorizationService>();
+        _httpContextAccessor = Substitute.For<IHttpContextAccessor>();
+        _authorization.AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<object>(), Arg.Any<string>()).Returns(AuthorizationResult.Success());
 
         _storage.GetEventStore(Arg.Any<Concepts.EventStoreName>()).Returns(_eventStoreStorage);
         _eventStoreStorage.Observers.Returns(_observerDefinitionsStorage);
@@ -37,6 +45,6 @@ public class all_dependencies : Specification
         _namespaceStorage.Observers.Returns(_observerStateStorage);
         _namespaceStorage.FailedPartitions.Returns(_failedPartitionsStorage);
 
-        _observers = new Observers(_grainFactory, _storage, _observerRemover);
+        _observers = new Observers(_grainFactory, _storage, _observerRemover, _authorization, _httpContextAccessor);
     }
 }

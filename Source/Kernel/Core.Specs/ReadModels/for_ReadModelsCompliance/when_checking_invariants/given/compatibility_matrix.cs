@@ -11,6 +11,16 @@ namespace Cratis.Chronicle.ReadModels.for_ReadModelsCompliance.when_checking_inv
 public static class compatibility_matrix
 {
     const string MarkerText = "\"compliance\":[{\"metadataType\":\"PII\",\"details\":\"\"}]";
+    static readonly Dictionary<string, Func<string[], (JsonObject Root, JsonObject Input)>> _resourceFactories = new(StringComparer.Ordinal)
+    {
+        ["resource"] = parts => Resource(parts[1], bool.Parse(parts[2]))
+    };
+    static readonly Dictionary<string, string> _resourceReferences = new(StringComparer.Ordinal)
+    {
+        ["resource_relative"] = "personal",
+        ["anchor_scoped"] = "#Person",
+        ["plain_name_collision"] = "#Person"
+    };
     static readonly string[] _references = ["definitions_scalar", "defs_scalar", "definitions_object", "defs_object", "properties_scalar", "plain_name", "plain_name_collision", "self", "mutual", "recursive_anyOf", "recursive_oneOf", "items_anyOf", "items_oneOf", "whole_anyOf", "whole_oneOf", "whole_allOf_anyOf", "whole_allOf_oneOf", "whole_root_anyOf", "whole_root_oneOf", "unprotected_anyOf", "unprotected_oneOf"];
 
     public static TheoryData<string, bool> Cells
@@ -32,6 +42,8 @@ public static class compatibility_matrix
                 foreach (var kind in new[] { "unprotected", "member", "reference", "composition", "container", "container_undeclared", "unresolved", "duplicate" }) cells.Add($"restoration/{kind}", erased);
                 foreach (var partial in new[] { false, true })
                     foreach (var casing in new[] { false, true }) cells.Add($"subject/{partial}/{casing}", erased);
+                foreach (var resource in new[] { "resource_relative", "anchor_scoped", "plain_name_collision", "pointer" })
+                    foreach (var pii in new[] { false, true }) cells.Add($"resource/{resource}/{pii}", erased);
                 cells.Add("dynamic", erased);
                 cells.Add("legacy_items", erased);
             }
@@ -45,7 +57,13 @@ public static class compatibility_matrix
     public static (JsonSchema Schema, ExpandoObject State) Create(string cell)
     {
         var parts = cell.Split('/');
-        var (root, input) = parts[0] switch
+        var (root, input) = _resourceFactories.TryGetValue(parts[0], out var factory) ? factory(parts) : CreateLegacy(parts);
+        var converter = new ExpandoObjectConverter(new TypeFormats());
+        return (JsonSchema.FromJson(root.ToJsonString()), converter.ToExpandoObject(input, new JsonSchema()));
+    }
+
+    static (JsonObject Root, JsonObject Input) CreateLegacy(string[] parts) =>
+        parts[0] switch
         {
             "reference" => Reference(parts[1], bool.Parse(parts[2])),
             "legacy" => Legacy(parts[1], parts[2], parts[3]),
@@ -61,9 +79,6 @@ public static class compatibility_matrix
                 Parse("""{"type":"object","properties":{"name":{"type":"string","compliance":[{"metadataType":"PII","details":""}]},"headers":{"type":"object","additionalProperties":{"type":"string"}},"count":{"type":"integer","if":{"minimum":0},"then":{"maximum":10}}}}"""),
                 Parse("""{"name":"personal-value","headers":{"X-Correlation-Id":"public-value"},"count":3}"""))
         };
-        var converter = new ExpandoObjectConverter(new TypeFormats());
-        return (JsonSchema.FromJson(root.ToJsonString()), converter.ToExpandoObject(input, new JsonSchema()));
-    }
 
     public static string[] LegacyPaths(string cell)
     {
@@ -76,6 +91,27 @@ public static class compatibility_matrix
             "sibling" => ["guard"],
             _ => []
         };
+    }
+
+    public static (JsonObject Root, JsonObject Input) Resource(string shape, bool pii = true)
+    {
+        var target = Parse("""{"type":"string"}""");
+        if (pii) target["compliance"] = Marker();
+        var reference = _resourceReferences.GetValueOrDefault(shape, "#/$defs/member");
+        if (shape == "resource_relative") target["$id"] = "personal";
+        if (shape == "anchor_scoped") target["$anchor"] = "Person";
+        var root = new JsonObject
+        {
+            ["type"] = "object",
+            ["properties"] = new JsonObject { [shape == "plain_name_collision" ? "person" : "value"] = new JsonObject { ["$ref"] = reference } },
+            ["$defs"] = new JsonObject { ["member"] = target }
+        };
+        if (shape == "plain_name_collision")
+        {
+            root["Person"] = target.DeepClone();
+            root["$defs"]!["foreign"] = Parse("""{"$id":"foreign","$anchor":"Person","type":"string"}""");
+        }
+        return (root, Parse(shape == "plain_name_collision" ? """{"person":"private"}""" : """{"value":"private"}"""));
     }
 
     static (JsonObject Root, JsonObject Input) Reference(string shape, bool pii)

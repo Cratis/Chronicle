@@ -14,7 +14,7 @@ public class and_indexes_already_exist : given.a_sink_with_an_existing_index
 
     [Fact] void should_not_create_the_index() =>
         _indexManager.DidNotReceive().CreateOneAsync(
-            Arg.Any<CreateIndexModel<BsonDocument>>(),
+            Arg.Is<CreateIndexModel<BsonDocument>>(model => model.Options.Name != "chronicle_idx___initialized"),
             Arg.Any<CreateOneIndexOptions>(),
             Arg.Any<CancellationToken>());
     [Fact] void should_not_fetch_the_collection_collation() =>

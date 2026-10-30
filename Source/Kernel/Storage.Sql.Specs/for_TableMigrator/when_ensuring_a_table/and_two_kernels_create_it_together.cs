@@ -3,7 +3,6 @@
 
 using Cratis.Chronicle.Storage.Sql.for_DatabaseSchemaLock.given;
 using Cratis.Chronicle.Storage.Sql.Sinks;
-using Microsoft.EntityFrameworkCore;
 using Npgsql;
 
 namespace Cratis.Chronicle.Storage.Sql.for_TableMigrator.when_ensuring_a_table;
@@ -22,7 +21,7 @@ public class and_two_kernels_create_it_together(PostgreSqlFixture fixture) : giv
         foreach (var kernel in new[] { "first-kernel", "second-kernel" })
         {
             var connectionString = new NpgsqlConnectionStringBuilder(ConnectionString) { ApplicationName = kernel }.ConnectionString;
-            _kernels.Add(new SchemaLockDbContext(new DbContextOptionsBuilder<SchemaLockDbContext>().UseNpgsql(connectionString).Options));
+            _kernels.Add(new SchemaLockDbContext(SpecDbContextOptions.Kernel<SchemaLockDbContext>(connectionString)));
         }
     }
 

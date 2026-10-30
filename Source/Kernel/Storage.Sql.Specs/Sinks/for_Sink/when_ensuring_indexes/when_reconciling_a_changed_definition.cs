@@ -41,7 +41,7 @@ public abstract class when_reconciling_a_changed_definition : Specification
         var changeset = Substitute.For<IChangeset<AppendedEvent, ExpandoObject>>();
         changeset.Changes.Returns([new PropertiesChanged<ExpandoObject>(new ExpandoObject(), [new PropertyDifference("old", null, 1), new PropertyDifference("current", null, 2)])]);
         await original.ApplyChanges(new Key("row", ArrayIndexers.NoIndexers), changeset, 1UL);
-        var options = new DbContextOptionsBuilder<DbContext>().UseDatabaseFromConnectionString(_harness.ConnectionString).Options;
+        var options = SpecDbContextOptions.ForConnection<DbContext>(_harness.ConnectionString);
         await using var context = new DbContext(options);
         var helper = context.GetService<ISqlGenerationHelper>();
 #pragma warning disable EF1002 // Test identifiers are delimited by the provider helper.

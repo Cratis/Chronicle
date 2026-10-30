@@ -10,6 +10,8 @@ using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Patterns;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.Observation;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Cratis.Chronicle.Services.Observation.for_Observers.given;
@@ -65,7 +67,7 @@ public class a_registered_pattern_capture : Cratis.Chronicle.Observation.for_Obs
         _unsubscribedObserver = Substitute.For<IObserver>();
         _unsubscribedObserver.GetSubscription().Returns(ObserverSubscription.Unsubscribed);
         grainFactory.GetGrain<IObserver>(Arg.Any<string>(), Arg.Any<string>()).Returns(_unsubscribedObserver);
-        _completion = new Observers(grainFactory, _storage, Substitute.For<IObserverRemover>());
+        _completion = new Observers(grainFactory, _storage, Substitute.For<IObserverRemover>(), Substitute.For<IAuthorizationService>(), Substitute.For<IHttpContextAccessor>());
         _request = new()
         {
             EventStore = _observerKey.EventStore,

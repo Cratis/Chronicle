@@ -67,7 +67,7 @@ public class when_upgrading_an_old_sqlite_decimal_table : Specification
         _numericKeys = await context.Database.SqlQuery<string>($"SELECT id AS Value FROM old_decimals ORDER BY __order_id,id").ToArrayAsync();
         _after = await context.Database.SqlQuery<string>($"SELECT quote(id)||'|'||quote(amount) AS Value FROM old_decimals ORDER BY id").ToArrayAsync();
         _shadows = await context.Database.SqlQuery<long>($"SELECT count(*) AS Value FROM pragma_table_xinfo('old_decimals') WHERE hidden=2").SingleAsync();
-        _indexes = await context.Database.SqlQuery<long>($"SELECT count(*) AS Value FROM pragma_index_list('old_decimals')").SingleAsync();
+        _indexes = await context.Database.SqlQuery<long>($"SELECT count(*) AS Value FROM pragma_index_list('old_decimals') WHERE substr(name, 1, 14) <> 'chronicle_imx_'").SingleAsync();
         await context.Database.ExecuteSqlRawAsync("UPDATE old_decimals SET added='10.00' WHERE id='2'");
         _addedKey = await context.Database.SqlQuery<string>($"SELECT __order_added AS Value FROM old_decimals WHERE id='2'").SingleAsync();
     }

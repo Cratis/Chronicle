@@ -67,7 +67,11 @@ public class ObserverStateGrainStorageProvider(IStorage storage, ILogger<Observe
         var observerKey = ObserverKey.Parse(grainId.Key.ToString()!);
 
         var observers = storage.GetEventStore(observerKey.EventStore).GetNamespace(observerKey.Namespace).Observers;
-        await observers.Save(actualGrainState.State!);
+        if (!await observers.Save(actualGrainState.State!, observerKey.EventSequenceId))
+        {
+            var stored = await observers.Get(observerKey.ObserverId);
+            throw new ObserverKeyDoesNotMatchDefinition(observerKey, stored.Owner ?? Concepts.EventSequences.EventSequenceId.Unspecified);
+        }
     }
 
     /// <summary>

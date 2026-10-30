@@ -9,11 +9,11 @@ public class with_existing_null_control : given.an_observer_state_storage
 {
     KernelObserverState _saved;
 
-    async Task Establish() => await _storage.Save(new() { Identifier = "observer", NextEventSequenceNumber = new(10), LastHandledEventSequenceNumber = new(9), TailEventSequenceNumber = new(20) });
+    async Task Establish() => await _storage.Save(new() { Identifier = "observer", NextEventSequenceNumber = new(10), LastHandledEventSequenceNumber = new(9), TailEventSequenceNumber = new(20) }, Concepts.EventSequences.EventSequenceId.Log);
 
     async Task Because()
     {
-        await _storage.Save(new() { Identifier = "observer", NextEventSequenceNumber = new(123), LastHandledEventSequenceNumber = new(122), TailEventSequenceNumber = new(200) });
+        await _storage.Save(new() { Identifier = "observer", NextEventSequenceNumber = new(123), LastHandledEventSequenceNumber = new(122), TailEventSequenceNumber = new(200) }, Concepts.EventSequences.EventSequenceId.Log);
         _saved = await _storage.Get("observer");
     }
 

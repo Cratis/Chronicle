@@ -21,6 +21,9 @@ VALIDATION_EXCLUDED_PREFIXES = ("legacy/",)
 
 BODY_SNIPPETS = {
     "get-started/client-flow": "",
+    "hosting/client-tracing/identifier-tracing": """
+        string[] args = [];
+    """,
     "projections/projection-declaration-language/adhoc-querying/inferred-vs-explicit": """
         IProjections projections = default!;
     """,

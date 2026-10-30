@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.EventSequences;
 
 namespace Cratis.Chronicle.Storage.EventSequences;
 
@@ -29,6 +30,11 @@ public class EventSequenceState
     /// Gets or sets the constraints whose catch-up writes currently require append refusal, or null when none do.
     /// </summary>
     public IEnumerable<Concepts.Events.Constraints.ConstraintName>? ConstraintIndexCatchUpRefusing { get; set; }
+
+    /// <summary>
+    /// Gets or sets the mutation epoch that every revision and redaction advances. Odd while a mutation is in flight.
+    /// </summary>
+    public EventSequenceMutationEpoch MutationEpoch { get; set; } = EventSequenceMutationEpoch.Initial;
 
     /// <summary>
     /// Gets or sets the last event sequence number for the last event that was appended.

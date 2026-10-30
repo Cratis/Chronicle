@@ -248,11 +248,11 @@ One caveat on the diagnostic itself: `IAppendResult.ConcurrencyCheckPerformed` i
 
 ## Revisions and redactions are outside append conditions
 
-Append conditions detect matching **appended** events after a boundary. Revisions and redactions rewrite existing history without advancing that append boundary. They are not detected by concurrency scopes, decision reads, read protection or constraints.
+Append conditions detect matching **appended** events after a boundary. Revisions and redactions rewrite existing history without advancing that append boundary. They are not detected by plain concurrency scopes you build yourself or by constraints. [Decision-read guards](../read-models/decision-reads.mdx#limits) additionally carry a mutation epoch that a revision or redaction advances.
 
-For example, a decision reads through position 100 and sees a credit of 100 at position 80. An administrator revises that credit to 0. A withdrawal appended at 101 can still pass its condition: the revision did not append a matching event above 100. A fresh fold can see the revised value, but a decision that already read it has no mutation guard.
+For example, a decision reads through position 100 and sees a credit of 100 at position 80. An administrator revises that credit to 0. A withdrawal appended at 101 can still pass its condition: the revision did not append a matching event above 100. A fresh fold can see the revised value, but a plain scope has no mutation guard.
 
-[Read protection](../read-models/read-protection.mdx#limits) has the same limit. Coordinate history mutations operationally: pause affected command producers, drain in-flight decisions, perform the revision or redaction, then resume with fresh reads. Quiesce affected commands during projection-definition deployments too. Retrying a stale decision or adding more scopes does not close this gap. An atomic mutation-epoch check is not part of the current contract.
+For plain scopes and constraints, coordinate history mutations operationally: pause affected command producers, drain in-flight decisions, perform the revision or redaction, then resume with fresh reads. Quiesce affected commands during projection-definition deployments too. Retrying a stale decision or adding more scopes does not close this gap.
 
 ## Best Practices
 
