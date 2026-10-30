@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Configuration;
+using Cratis.Chronicle.Observation;
 
 namespace Cratis.Chronicle.Server;
 
@@ -20,6 +21,24 @@ internal static class KernelStartupDiagnostics
         if (options.IdentityProvider?.Certificate is not null)
         {
             logger.IdentityProviderCertificateIgnored();
+        }
+    }
+
+    /// <summary>
+    /// Reports a subscriber timeout that the Orleans response timeout on subscriber calls bounds.
+    /// </summary>
+    /// <param name="options">The Chronicle configuration.</param>
+    /// <param name="logger">The kernel logger.</param>
+    internal static void ReportSubscriberTimeout(ChronicleOptions options, ILogger<Kernel> logger)
+    {
+        var subscriberTimeout = options.Observers.SubscriberTimeout;
+        if (subscriberTimeout <= 0)
+        {
+            logger.SubscriberTimeoutIndefiniteIsBounded(ObserverSubscriberResponseTimeout.Ceiling);
+        }
+        else if (TimeSpan.FromSeconds(subscriberTimeout) > ObserverSubscriberResponseTimeout.Ceiling)
+        {
+            logger.SubscriberTimeoutAboveCeiling(subscriberTimeout, ObserverSubscriberResponseTimeout.Ceiling);
         }
     }
 }

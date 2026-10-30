@@ -19,6 +19,7 @@ internal class ReopenStreamScopeValidator : CommandValidator<ReopenStreamScope>
     public ReopenStreamScopeValidator(ICurrentPrincipalAccessor principalAccessor)
     {
         RuleFor(command => command.EventStore).NotEmpty();
+        RuleFor(command => command.EventStore).NotSystemEventStore();
         RuleFor(command => command.Namespace).NotEmpty();
         RuleFor(command => command.EventSequenceId).NotEmpty();
         RuleFor(command => command.Reason).NotEmpty();

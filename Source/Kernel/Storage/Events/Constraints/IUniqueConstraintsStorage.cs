@@ -12,6 +12,13 @@ namespace Cratis.Chronicle.Storage.Events.Constraints;
 public interface IUniqueConstraintsStorage
 {
     /// <summary>
+    /// Deletes persisted claims that are not exactly 64 lowercase hexadecimal characters and repairs SQL value indexes.
+    /// </summary>
+    /// <param name="cancellationToken">Cancellation of the cleanup.</param>
+    /// <returns>The deleted per-event-source and per-value claim counts.</returns>
+    Task<(long PerEventSource, long PerValue)> RemoveUnhashedValues(CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Clears every claim in a constraint's scope before rebuilding its index, in either retention mode.
     /// </summary>
     /// <param name="definition">The constraint definition.</param>

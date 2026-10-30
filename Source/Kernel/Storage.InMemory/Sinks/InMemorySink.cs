@@ -68,6 +68,7 @@ public partial class InMemorySink(
     /// </summary>
     /// <param name="key">The <see cref="Key"/> to resolve.</param>
     /// <returns>The value the document for <paramref name="key"/> is stored under in <see cref="Collection"/>.</returns>
+    /// <exception cref="ReadModelKeyHasNoValue">The key has no value.</exception>
     /// <remarks>
     /// Two <see cref="Key"/> instances addressing the same document — a concept and its underlying primitive,
     /// say — resolve to the same value here. Callers that keep per-document state beside the sink must derive
@@ -75,6 +76,11 @@ public partial class InMemorySink(
     /// </remarks>
     public object GetKeyValue(Key key)
     {
+        if (key.Value is null)
+        {
+            throw new ReadModelKeyHasNoValue(readModel.Identifier);
+        }
+
         if (key.Value is ExpandoObject expandoKey)
         {
             return CompositeKeyEncoding.Encode(expandoKey);
@@ -425,24 +431,32 @@ public partial class InMemorySink(
     public Task EnsureIndexes() => Task.CompletedTask;
 
     /// <inheritdoc/>
-    public Task<ReadModelInstances> GetInstances(ReadModelContainerName? occurrence = null, int skip = 0, int take = 50)
+    public Task<ReadModelInstances> GetInstances(ReadModelContainerName? occurrence = null, int skip = 0, int take = 50) =>
+        GetInstances(occurrence, skip, take, ReadModelInstanceVisibility.InitializedOnly);
+
+    /// <inheritdoc/>
+    public Task<ReadModelInstances> GetInstances(ReadModelContainerName? occurrence, int skip, int take, ReadModelInstanceVisibility visibility)
     {
-        var (instances, totalCount) = SnapshotInstances(skip, take);
+        var (instances, totalCount) = SnapshotInstances(skip, take, visibility);
         return Task.FromResult(new ReadModelInstances(instances, totalCount));
     }
 
     /// <inheritdoc/>
-    public IObservable<IEnumerable<ExpandoObject>> ObserveInstances(ReadModelContainerName? occurrence = null, int skip = 0, int take = 50)
+    public IObservable<IEnumerable<ExpandoObject>> ObserveInstances(ReadModelContainerName? occurrence = null, int skip = 0, int take = 50) =>
+        ObserveInstances(occurrence, skip, take, ReadModelInstanceVisibility.InitializedOnly);
+
+    /// <inheritdoc/>
+    public IObservable<IEnumerable<ExpandoObject>> ObserveInstances(ReadModelContainerName? occurrence, int skip, int take, ReadModelInstanceVisibility visibility)
     {
         // For in-memory sink, return an observable that emits whenever the collection changes
         return Observable.Create<IEnumerable<ExpandoObject>>(observer =>
         {
             // Emit initial state
-            observer.OnNext(SnapshotInstances(skip, take).Instances);
+            observer.OnNext(SnapshotInstances(skip, take, visibility).Instances);
 
             // Subscribe to changes on _changeSubject and emit updated instances
             return _changeSubject.Subscribe(
-                _ => observer.OnNext(SnapshotInstances(skip, take).Instances),
+                _ => observer.OnNext(SnapshotInstances(skip, take, visibility).Instances),
                 observer.OnError,
                 observer.OnCompleted);
         });
@@ -472,7 +486,7 @@ public partial class InMemorySink(
         }
     }
 
-    (IReadOnlyList<ExpandoObject> Instances, int TotalCount) SnapshotInstances(int skip, int take)
+    (IReadOnlyList<ExpandoObject> Instances, int TotalCount) SnapshotInstances(int skip, int take, ReadModelInstanceVisibility visibility)
     {
         static string KeyOrderValue(object key)
         {
@@ -490,10 +504,12 @@ public partial class InMemorySink(
         // collection, and the primary one keeps the previous state until the replay ends and promotes it.
         lock (_collectionLock)
         {
-            var collection = _collection;
-            var instances = collection.OrderBy(entry => KeyOrderValue(entry.Key), StringComparer.Ordinal)
+            var visible = _collection.Where(entry =>
+                visibility == ReadModelInstanceVisibility.IncludeUninitialized ||
+                !((IDictionary<string, object?>)entry.Value).TryGetValue(WellKnownProperties.ReadModelInstanceInitialized, out var initialized) || initialized is not false).ToArray();
+            var instances = visible.OrderBy(entry => KeyOrderValue(entry.Key), StringComparer.Ordinal)
                 .Skip(skip).Take(take).Select(entry => entry.Value).ToArray();
-            return (instances, collection.Count);
+            return (instances, visible.Length);
         }
     }
 

@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Arc.Commands;
+using Cratis.Chronicle.Sequences;
 using FluentValidation;
 
 namespace Cratis.Chronicle.SequenceQueries;
@@ -17,6 +18,7 @@ internal class DeleteSequenceQueryFolderValidator : CommandValidator<DeleteSeque
     public DeleteSequenceQueryFolderValidator()
     {
         RuleFor(_ => _.EventStore).NotEmpty().WithMessage("Event store name is required.");
+        RuleFor(_ => _.EventStore).NotSystemEventStore();
         RuleFor(_ => _.Id).NotEmpty().WithMessage("Folder identifier is required.");
     }
 }

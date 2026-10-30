@@ -11,10 +11,13 @@ namespace Cratis.Chronicle.Observation.Reactors.Clients;
 
 internal static partial class ReactorLogMessages
 {
+    [LoggerMessage(LogLevel.Information, "Client subscription for reactor '{ReactorId}' is waiting for the webhook to leave")]
+    internal static partial void WaitingForWebhook(this ILogger<Reactor> logger, ReactorId reactorId);
+
     [LoggerMessage(LogLevel.Debug, "Starting client Reactor {ReactorId} for event store {EventStore} on sequence {EventSequenceId} for namespace {Namespace}")]
     internal static partial void Starting(this ILogger<Reactor> logger, EventStoreName eventStore, ReactorId ReactorId, EventSequenceId eventSequenceId, EventStoreNamespaceName @namespace);
 
-    [LoggerMessage(LogLevel.Debug, "Client with connection id {connectionId} has disconnected - unsubscribing observer {ReactorId} for event store {EventStore} on sequence {EventSequenceId} for namespace {Namespace}")]
+    [LoggerMessage(LogLevel.Information, "Client with connection id {connectionId} has disconnected - unsubscribing observer {ReactorId} for event store {EventStore} on sequence {EventSequenceId} for namespace {Namespace}")]
     internal static partial void ClientDisconnected(this ILogger<Reactor> logger, ConnectionId connectionId, EventStoreName eventStore, ReactorId ReactorId, EventSequenceId eventSequenceId, EventStoreNamespaceName @namespace);
 
     [LoggerMessage(LogLevel.Information, "Auto-replaying reactor {ReactorId} for event store {EventStore} on sequence {EventSequenceId} for namespace {Namespace} due to definition change")]

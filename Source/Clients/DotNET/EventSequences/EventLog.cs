@@ -34,6 +34,7 @@ namespace Cratis.Chronicle.EventSequences;
 /// <param name="jsonSerializerOptions">JSON serializer options to use.</param>
 /// <param name="sideEffectHandlers">Optional handlers used to recognize synchronous reactor return types.</param>
 /// <param name="eventSources">Optional <see cref="IEventSources"/> for appending through event source definitions.</param>
+/// <param name="telemetry">Optional event source id tracing configuration.</param>
 public class EventLog(
      EventStoreName eventStoreName,
      EventStoreNamespaceName @namespace,
@@ -48,7 +49,8 @@ public class EventLog(
      IIdentityProvider identityProvider,
      JsonSerializerOptions jsonSerializerOptions,
      IReactorSideEffectHandlers? sideEffectHandlers = null,
-     IEventSources? eventSources = null) : EventSequence(
+     IEventSources? eventSources = null,
+     ChronicleTelemetryOptions? telemetry = null) : EventSequence(
         eventStoreName,
         @namespace,
         EventSequenceId.Log,
@@ -63,4 +65,5 @@ public class EventLog(
         identityProvider,
         jsonSerializerOptions,
         sideEffectHandlers: sideEffectHandlers,
-        eventSources: eventSources), IEventLog;
+        eventSources: eventSources,
+        telemetry: telemetry), IEventLog;

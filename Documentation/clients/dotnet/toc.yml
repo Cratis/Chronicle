@@ -2,6 +2,8 @@
   href: index.md
 - name: Get started
   href: getting-started.md
+- name: Short-lived processes
+  href: short-lived-processes.md
 - name: Explicit artifact registration
   href: explicit-artifacts.md
 - name: Observing artifact registration

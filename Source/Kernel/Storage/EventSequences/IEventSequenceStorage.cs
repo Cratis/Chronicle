@@ -336,6 +336,24 @@ public interface IEventSequenceStorage
     Task<IEventCursor> GetFromSequenceNumber(EventSequenceNumber sequenceNumber, EventSourceId? eventSourceId = default, EventSourceType? eventSourceType = default, EventStreamType? eventStreamType = default, EventStreamId? eventStreamId = default, IEnumerable<EventType>? eventTypes = default, IEnumerable<Tag>? tags = default, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Reads a bounded keyset window, ordered by sequence number without offset paging or counting.
+    /// </summary>
+    /// <param name="from">Inclusive lower bound, regardless of read direction.</param>
+    /// <param name="until">Inclusive upper bound, regardless of read direction.</param>
+    /// <param name="limit">Positive maximum number of matching events to read, including any caller's lookahead.</param>
+    /// <param name="descending">Whether to read newest first.</param>
+    /// <param name="eventSourceId">Optional event source; unspecified or empty does not narrow.</param>
+    /// <param name="eventSourceType">Optional source type; default, unspecified or empty does not narrow.</param>
+    /// <param name="eventStreamType">Optional stream type; all or empty does not narrow.</param>
+    /// <param name="eventStreamId">Optional stream; default or empty does not narrow.</param>
+    /// <param name="eventTypes">Optional event types; null or empty does not narrow.</param>
+    /// <param name="tags">Optional tags to match any of; null or empty does not narrow.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>A cursor over at most <paramref name="limit"/> matching events in read order. Reversed bounds return no events.</returns>
+    /// <exception cref="InvalidEventSequenceWindowLimit">The limit is not positive.</exception>
+    Task<IEventCursor> GetWindow(EventSequenceNumber from, EventSequenceNumber until, int limit, bool descending, EventSourceId? eventSourceId = default, EventSourceType? eventSourceType = default, EventStreamType? eventStreamType = default, EventStreamId? eventStreamId = default, IEnumerable<EventType>? eventTypes = default, IEnumerable<Tag>? tags = default, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Get events within a specific sequence number range.
     /// </summary>
     /// <param name="start">Start of the range.</param>

@@ -44,6 +44,7 @@ public class an_observer_entering_quarantine : an_observer_with_subscription
             {
                 Id = _retryJobId,
                 Status = JobStatus.Stopped,
+                StatusChanges = [new JobStatusChanged { Status = JobStatus.StartingSteps, Occurred = DateTimeOffset.UtcNow }],
                 Request = new RetryFailedPartitionRequest(_observerKey, ObserverType.External, _retryablePartition, EventSequenceNumber.First, [EventType.Unknown])
             });
 

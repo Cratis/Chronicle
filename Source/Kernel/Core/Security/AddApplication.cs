@@ -17,6 +17,7 @@ namespace Cratis.Chronicle.Security;
 /// <param name="ClientId">The OAuth client identifier.</param>
 /// <param name="ClientSecret">The plain-text client secret to be hashed and stored.</param>
 [Command]
+[Cratis.Arc.Authorization.Authorize(Policy = WellKnownAuthorizationPolicies.AdministratorOperations)]
 [BelongsTo(WellKnownServices.Applications)]
 public record AddApplication(Concepts.Security.ApplicationId Id, ClientId ClientId, ClientSecret ClientSecret)
 {

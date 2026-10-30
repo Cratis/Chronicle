@@ -204,6 +204,16 @@ public interface IEventStore
     Task RegisterAll();
 
     /// <summary>
+    /// Registers definitions as a deployment step without starting observers or seeding events.
+    /// </summary>
+    /// <param name="generation">A monotonic deployment generation; zero sends no generation.</param>
+    /// <param name="cancellationToken">Cancellation for waiting for services and between registration steps.</param>
+    /// <returns>The fingerprint and generation of the registered definitions.</returns>
+    /// <exception cref="DefinitionsRegistrationNotSupported">The implementation does not support definitions registration.</exception>
+    Task<DefinitionsRegistration> RegisterDefinitions(DeploymentGeneration? generation = default, CancellationToken cancellationToken = default) =>
+        throw new DefinitionsRegistrationNotSupported(GetType());
+
+    /// <summary>
     /// Get an event sequence by id.
     /// </summary>
     /// <param name="id">The identifier of the event sequence to get.</param>

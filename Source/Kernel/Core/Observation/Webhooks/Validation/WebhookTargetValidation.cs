@@ -14,4 +14,9 @@ public record WebhookTargetValidation(bool IsAllowed, string Reason)
     /// A target with no policy violations.
     /// </summary>
     public static readonly WebhookTargetValidation Allowed = new(true, string.Empty);
+
+    /// <summary>
+    /// Gets whether infrastructure prevented a definitive policy decision and validation should be retried.
+    /// </summary>
+    internal bool IsIndeterminate { get; init; }
 }
