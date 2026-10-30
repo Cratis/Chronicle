@@ -185,12 +185,6 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
 
                 silo.ConfigureServices(services =>
                 {
-                    // AuthenticationService resolves IInitialAdminSetupTokens (discovered by the [Singleton]
-                    // convention) during admin bootstrap, and that implementation depends on
-                    // IDataProtectionProvider. The real kernel host registers Data Protection as part of
-                    // AddChronicleAuthentication (Source/Kernel/Server), which this test silo never calls.
-                    services.AddDataProtection();
-
                     // The ChronicleServerStartupTask deadlocks during test silo startup because
                     // PatchManager grain activation hangs while other test infrastructure is
                     // initializing concurrently. Tests handle their own setup via the fixture.

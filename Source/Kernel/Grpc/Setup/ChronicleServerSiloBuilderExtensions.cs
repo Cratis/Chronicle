@@ -19,6 +19,7 @@ using Cratis.Chronicle.Observation.Reactors.Clients;
 using Cratis.Chronicle.Observation.Reducers.Clients;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Schemas;
+using Cratis.Chronicle.Security;
 using Cratis.Chronicle.Servers;
 using Cratis.Chronicle.Services.Events.Constraints;
 using Cratis.Chronicle.Services.Observation;
@@ -127,6 +128,7 @@ public static class ChronicleServerSiloBuilderExtensions
         builder.Services.AddSingleton<ILifecycleParticipant<ISiloLifecycle>, ChronicleServerStartupTask>();
         builder.Services.AddSingleton<ILifecycleParticipant<ISiloLifecycle>, AlertIncidentsMetricsOwnerKeeper>();
 
+        builder.Services.AddChronicleDataProtection();
         builder.Services.AddChronicleMeters();
         var chronicleBuilder = new ChronicleBuilder(builder, builder.Services, builder.Configuration);
         configure?.Invoke(chronicleBuilder);

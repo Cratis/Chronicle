@@ -9,8 +9,6 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
-using Microsoft.AspNetCore.DataProtection.KeyManagement;
-using Microsoft.AspNetCore.DataProtection.Repositories;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using OpenIddict.Validation.AspNetCore;
@@ -52,12 +50,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<Cratis.Chronicle.Security.IEncryptionCertificateRing>(encryptionCertificateRing);
 
         // Configure Data Protection with Chronicle's shared storage so every node uses the same authentication key ring.
-        services.AddSingleton<GrainBasedXmlRepository>();
-        services.AddSingleton<IXmlRepository>(sp => sp.GetRequiredService<GrainBasedXmlRepository>());
-        services.AddOptions<KeyManagementOptions>()
-            .Configure<GrainBasedXmlRepository>((options, repository) => options.XmlRepository = repository);
-        var dataProtectionBuilder = services.AddDataProtection()
-            .SetApplicationName("Chronicle");
+        var dataProtectionBuilder = Security.ChronicleDataProtection.AddChronicleDataProtection(services);
 
         // New keys are protected with the active certificate; every certificate in the ring can unprotect,
         // so keys written before a rotation stay readable through it. The active certificate is passed to

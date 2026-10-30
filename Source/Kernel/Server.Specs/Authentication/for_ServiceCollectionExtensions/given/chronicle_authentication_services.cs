@@ -3,7 +3,6 @@
 
 using System.Xml.Linq;
 using Cratis.Chronicle.Security;
-using Cratis.Chronicle.Server.Authentication.OpenIddict;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.DataProtection.KeyManagement;
 using Microsoft.AspNetCore.DataProtection.Repositories;

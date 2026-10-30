@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Security;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 
 namespace Cratis.Chronicle.Server;
@@ -24,13 +25,19 @@ internal static class KernelHostComposition
             throw new InvalidOperationException($"Expected exactly one Orleans silo hosted service, found {descriptors.Length}.");
         }
 
+        services.DeferChronicleDataProtectionWarmup();
         var descriptor = descriptors[0];
 
         // Keep its position: the web host must still stop before the silo.
         services[services.IndexOf(descriptor)] = ServiceDescriptor.Singleton<IHostedService>(provider =>
-            new DeferredSiloStart(
+        {
+            var warmups = provider.GetServices<DataProtectionKeyRingWarmup>().ToArray();
+            foreach (var warmup in warmups) warmup.DeferToSiloStart();
+            return new DeferredSiloStart(
                 (IHostedService)ActivatorUtilities.CreateInstance(provider, descriptor.ImplementationType!),
-                provider.GetRequiredService<ILogger<Kernel>>()));
+                provider.GetRequiredService<ILogger<Kernel>>(),
+                warmups);
+        });
         services.AddSingleton<KernelStartupState>();
         services.AddHealthChecks().AddCheck<KernelReadinessHealthCheck>("kernel-ready", tags: ["ready"]);
     }

@@ -55,6 +55,11 @@ public class ClusteringFixture : IAsyncLifetime
     public IServiceProvider SiloServices => EventSequencesSilo.ServiceProvider;
 
     /// <summary>
+    /// Gets the observer silo's services for cross-silo routing specifications.
+    /// </summary>
+    public IServiceProvider ObserversSiloServices => ObserversSilo.ServiceProvider;
+
+    /// <summary>
     /// Gets the <see cref="SiloAddress"/> of the silo configured to host EventSequences grains.
     /// </summary>
     public SiloAddress EventSequencesSiloAddress => EventSequencesSilo.SiloAddress;
@@ -252,12 +257,6 @@ public class ClusteringFixture : IAsyncLifetime
 
                 siloBuilder.ConfigureServices(services =>
                 {
-                    // AuthenticationService resolves IInitialAdminSetupTokens (discovered by the [Singleton]
-                    // convention) during admin bootstrap, and that implementation depends on
-                    // IDataProtectionProvider. The real kernel host registers Data Protection as part of
-                    // AddChronicleAuthentication (Source/Kernel/Server), which this test cluster never calls.
-                    services.AddDataProtection();
-
                     RemoveChronicleServerStartupTask(services);
                     ConfigureFixtureServices(services);
 
