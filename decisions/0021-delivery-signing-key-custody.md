@@ -82,7 +82,7 @@ Without AuthProxy nothing changes: the signature is required everywhere, and `Al
 | --- | --- |
 | Kernel | Generates and encrypts keys, signs every envelope delivery, exposes public keys, enforces the overlap and retirement, audits rotations. |
 | Operator | Runs rotation, distributes the new public key (or HMAC secret) to receivers within the overlap, protects the kernel's encryption key. |
-| Receiver | Holds the public key from configuration, verifies in constant time, enforces the timestamp tolerance, rejects unknown key ids, takes event store and namespace from the signed body, never follows redirects. |
+| Receiver | Holds the public key from configuration, verifies in constant time, enforces the timestamp tolerance, verifies only with the listed key ids it trusts (ignoring the others) and rejects a request no trusted key verifies, takes event store and namespace from the signed body, never follows redirects. |
 | Platform (AuthProxy) | Strips identity and tenant headers and gates the route by token. Does not replace signature verification. |
 
 ### Library
