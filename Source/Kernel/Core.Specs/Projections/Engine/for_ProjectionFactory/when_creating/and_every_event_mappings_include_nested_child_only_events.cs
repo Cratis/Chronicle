@@ -18,6 +18,7 @@ public class and_every_event_mappings_include_nested_child_only_events : given.a
 
     Task Because() => ProjectChildEvent(nested: true);
 
+    [Fact] void should_keep_nested_child_writers_conservative() => _projection.IsEventSourceKeyed.ShouldBeFalse();
     [Fact] void should_update_the_root_from_the_grandchild_event() => _result["lastUpdated"].ShouldEqual(_occurred.UtcDateTime);
     [Fact] void should_count_the_grandchild_event_once_at_the_root() => _result["count"].ShouldEqual(1L);
     [Fact] void should_resolve_the_containing_root_through_the_parent_event() => _key.Value.ShouldEqual("parent");

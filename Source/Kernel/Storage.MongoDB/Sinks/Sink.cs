@@ -5,6 +5,7 @@ using System.Collections.Concurrent;
 using System.Dynamic;
 using System.Reactive.Linq;
 using System.Runtime.ExceptionServices;
+using System.Text.RegularExpressions;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
@@ -1288,13 +1289,20 @@ public partial class Sink(
         return after.IsPromotionInProgress || after.PrimaryExists != before.PrimaryExists || after.PrimaryId != before.PrimaryId ? null : page;
     }
 
+    /// <summary>
+    /// Builds the listCollections filter matching either name. Deliberately not an operator document such as
+    /// $in: MongoDB Atlas shared and Flex tiers only accept a plain string or a regular expression for the
+    /// name filter and fail any other shape with "can't get regex from filter doc not a regex".
+    /// </summary>
+    /// <param name="names">The collection names to match exactly.</param>
+    /// <returns>The filter document.</returns>
+    static BsonDocument CollectionNameFilter(params string[] names) =>
+        new("name", new BsonRegularExpression($"^({string.Join('|', names.Select(Regex.Escape))})$"));
+
     async Task<CollectionState> GetCollectionState(IMongoDatabase database, string containerName, CancellationToken cancellationToken)
     {
         var promotingName = collections.PromotingCollectionName;
-        var options = new ListCollectionsOptions
-        {
-            Filter = new BsonDocument("name", new BsonDocument("$in", new BsonArray { containerName, promotingName }))
-        };
+        var options = new ListCollectionsOptions { Filter = CollectionNameFilter(containerName, promotingName) };
         using var cursor = await database.ListCollectionsAsync(options, cancellationToken);
         var listed = await cursor.ToListAsync(cancellationToken);
         var primary = listed.FirstOrDefault(collection => collection["name"] == containerName);

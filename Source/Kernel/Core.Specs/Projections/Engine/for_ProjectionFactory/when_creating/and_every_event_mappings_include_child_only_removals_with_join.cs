@@ -17,6 +17,7 @@ public class and_every_event_mappings_include_child_only_removals_with_join : gi
 
     Task Because() => ProjectChildEvent();
 
+    [Fact] void should_keep_child_removal_writers_conservative() => _projection.IsEventSourceKeyed.ShouldBeFalse();
     [Fact] void should_apply_parent_mappings_inside_a_join_on_the_removed_child() => _changeset.Changes.OfType<Joined>().Single().Changes.OfType<PropertiesChanged<ExpandoObject>>().Any(_ => ((IDictionary<string, object?>)_.State)["count"] is 1L).ShouldBeTrue();
     [Fact] void should_join_on_the_removed_child_identifier() => _changeset.Changes.OfType<Joined>().Single().ArrayIndexers.All.Single().Identifier.ShouldEqual(42);
     [Fact] void should_remove_the_child_from_every_parent() => _changeset.Changes.OfType<ChildRemovedFromAll>().Single().Key.ShouldEqual(42);

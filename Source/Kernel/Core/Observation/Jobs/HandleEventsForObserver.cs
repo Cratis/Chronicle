@@ -248,13 +248,18 @@ public class HandleEventsForObserver(
                 return ClosedResult();
             }
 
-            var storageEvents = await eventSequenceStorage.GetRange(
-                currentState.LastSuccessfullyHandledEventSequenceNumber == EventSequenceNumber.Unavailable
-                    ? currentState.StartEventSequenceNumber
-                    : currentState.LastSuccessfullyHandledEventSequenceNumber.Next(),
-                currentState.EndEventSequenceNumber,
-                eventTypes: eventTypesToRead,
-                cancellationToken: cancellationToken);
+            // A storage batch can hold thousands of events; a client or webhook subscriber gets them a bounded call
+            // at a time, so its timeout guards a known amount of work and every answered call is checkpointed.
+            var maxEventsPerCall = await configurationProvider.GetMaxEventsPerSubscriberCallForObserver(currentState.ObserverKey, _subscription.SubscriberType);
+            var storageEvents = Storage.EventSequences.BoundedEventCursor.Over(
+                await eventSequenceStorage.GetRange(
+                    currentState.LastSuccessfullyHandledEventSequenceNumber == EventSequenceNumber.Unavailable
+                        ? currentState.StartEventSequenceNumber
+                        : currentState.LastSuccessfullyHandledEventSequenceNumber.Next(),
+                    currentState.EndEventSequenceNumber,
+                    eventTypes: eventTypesToRead,
+                    cancellationToken: cancellationToken),
+                maxEventsPerCall);
 
             // Replay pages are sized by the read model batch size and keep the storage batches whole. Every other
             // delivery is sliced, so one subscriber call never carries a whole storage batch.

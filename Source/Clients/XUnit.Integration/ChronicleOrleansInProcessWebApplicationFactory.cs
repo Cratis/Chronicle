@@ -98,6 +98,10 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
             _.ClearProviders();
             _.AddFile($"{DateTimeOffset.UtcNow:yyyyMMdd-HHmmss}.log");
         });
+
+        // Register the ASP.NET Core Arc runtime before the silo's fallback checks for ICommandPipeline.
+        // Arc configures a default service provider, so the fixture's provider factory must follow it.
+        builder.AddCratisArc();
         builder
             .UseDefaultServiceProvider(_ => _.ValidateOnBuild = false)
             .UseServiceProviderFactory(new FallbackServiceProviderFactory())
@@ -161,9 +165,9 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
                 // Storage.Sql assemblies and registers their classes by convention; if those
                 // registrations come last, they shadow the explicit ones and grain activations
                 // fail with "Unable to resolve ITableMigrator<>" because the inactive backend's
-                // services have no infrastructure wired up. Use silo.Services directly because
-                // silo.ConfigureServices QUEUES the action — it would run later than the
-                // IMMEDIATE registrations performed inside AddChronicleToSilo's WithMongoDB call.
+                // services have no infrastructure wired up. Both silo.Services and
+                // silo.ConfigureServices apply immediately within this queued UseOrleans callback,
+                // before AddChronicleToSilo's WithMongoDB registrations.
                 silo.Services.AddTypeDiscovery();
                 silo.Services.AddBindingsByConvention();
                 silo.Services.AddSelfBindings();
