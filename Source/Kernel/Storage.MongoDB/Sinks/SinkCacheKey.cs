@@ -29,7 +29,8 @@ internal static class SinkCacheKey
 
     static BsonDecimal128 NormalizeDecimal(Decimal128 value)
     {
-        if (Decimal128.IsNaN(value) || Decimal128.IsInfinity(value)) return new(value);
+        if (Decimal128.IsNaN(value)) return new(Decimal128.QNaN);
+        if (Decimal128.IsInfinity(value)) return new(Decimal128.IsNegative(value) ? Decimal128.NegativeInfinity : Decimal128.PositiveInfinity);
         if (Decimal128.IsZero(value)) return new(Decimal128.Zero);
 
         var significand = ((BigInteger)Decimal128.GetSignificandHighBits(value) << 64) | Decimal128.GetSignificandLowBits(value);
