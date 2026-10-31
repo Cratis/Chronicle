@@ -1,0 +1,48 @@
+---
+title: Operating Chronicle
+description: The operator path for a running Chronicle: watch health, find a stuck observer, read the failure, choose a recovery and confirm it worked.
+---
+
+import { CardGrid } from '@astrojs/starlight/components';
+import SimpleCard from '@components/SimpleCard.astro';
+import TopicHero from '@components/TopicHero.astro';
+
+<TopicHero
+  icon="setting"
+  eyebrow="Operations"
+  title="Operate a running Chronicle"
+>
+  An observer stopped, a read model went stale, or an alert fired. This section
+  gives you one path from the symptom to a confirmed recovery, and sends you to
+  the Cratis CLI pages that own every command.
+</TopicHero>
+
+## The operator journey
+
+1. **Watch.** Chronicle exposes a [health endpoint](/chronicle/hosting/configuration/health-endpoint/) and can [alert on observer failures](/chronicle/hosting/alerting-on-observer-failures/). Start from an alert rather than from a user report.
+2. **Find the stuck observer.** [Diagnostics](/chronicle/operations/diagnostics/) lists what to look at, in order.
+3. **Read the failure.** The failed partition carries the error message and the sequence number it stopped at.
+4. **Choose a recovery.** [Recovering from failures](/chronicle/operations/recovering-from-failures/) explains retry, partition replay, full observer replay and clearing quarantine, and when each one fits.
+5. **Confirm.** [Recover a failed partition](/chronicle/operations/recover-a-failed-partition/) ends with what done looks like.
+
+Chronicle already retries a failed partition on its own, with a backoff. You step in when the retries are used up, or when you know retrying cannot help.
+
+## Continue
+
+<CardGrid>
+  <SimpleCard title="Troubleshooting" icon="seti:error" link="/chronicle/troubleshooting/">
+    Start from a symptom in your application.
+  </SimpleCard>
+  <SimpleCard title="Workbench" icon="laptop" link="/chronicle/workbench/">
+    Inspect runtime state from a local browser.
+  </SimpleCard>
+  <SimpleCard title="Cratis CLI" icon="rocket" link="/cli/">
+    The commands for diagnosis and recovery.
+  </SimpleCard>
+  <SimpleCard title="Jobs" icon="seti:json" link="/chronicle/jobs/">
+    See and control the background work the kernel runs.
+  </SimpleCard>
+  <SimpleCard title="Hosting" icon="seti:docker" link="/chronicle/hosting/">
+    Configure, deploy and alert on Chronicle.
+  </SimpleCard>
+</CardGrid>
