@@ -15,6 +15,7 @@ namespace Cratis.Chronicle.Storage.InMemory.Observation;
 public sealed class ObserverStateStorage : IObserverStateStorage, IDisposable
 {
     readonly ConcurrentDictionary<ObserverId, ObserverState> _states = new();
+    readonly ConcurrentDictionary<ObserverId, DateTimeOffset> _runningStatesChangedAt = new();
     readonly ReplaySubject<IEnumerable<ObserverState>> _allSubject = new(1);
 
     /// <summary>
@@ -81,10 +82,43 @@ public sealed class ObserverStateStorage : IObserverStateStorage, IDisposable
     }
 
     /// <inheritdoc/>
+    public Task<DateTimeOffset?> GetRunningStateChangedAt(ObserverId observerId) =>
+        Task.FromResult<DateTimeOffset?>(_runningStatesChangedAt.TryGetValue(observerId, out var changedAt) ? changedAt : null);
+
+    /// <inheritdoc/>
+    public Task<IReadOnlyDictionary<ObserverId, DateTimeOffset>> GetRunningStatesChangedAt() =>
+        Task.FromResult<IReadOnlyDictionary<ObserverId, DateTimeOffset>>(new Dictionary<ObserverId, DateTimeOffset>(_runningStatesChangedAt));
+
+    /// <inheritdoc/>
+    public Task<bool> SaveRunningStateChangedAt(ObserverId observerId, DateTimeOffset? runningStateChangedAt, EventSequenceId owner)
+    {
+        lock (_runningStatesChangedAt)
+        {
+            if (!_states.TryGetValue(observerId, out var existing) || (existing.Owner is not null && existing.Owner != owner))
+            {
+                return Task.FromResult(false);
+            }
+
+            if (runningStateChangedAt is null)
+            {
+                _runningStatesChangedAt.TryRemove(observerId, out _);
+            }
+            else
+            {
+                _runningStatesChangedAt[observerId] = runningStateChangedAt.Value;
+            }
+        }
+
+        _allSubject.OnNext(Snapshot());
+        return Task.FromResult(true);
+    }
+
+    /// <inheritdoc/>
     public Task Delete(ObserverId observerId)
     {
         if (_states.TryRemove(observerId, out _))
         {
+            _runningStatesChangedAt.TryRemove(observerId, out _);
             _allSubject.OnNext(Snapshot());
         }
 
@@ -97,6 +131,11 @@ public sealed class ObserverStateStorage : IObserverStateStorage, IDisposable
         if (_states.TryRemove(currentId, out var state))
         {
             _states[newId] = state with { Identifier = newId };
+            if (_runningStatesChangedAt.TryRemove(currentId, out var changedAt))
+            {
+                _runningStatesChangedAt[newId] = changedAt;
+            }
+
             _allSubject.OnNext(Snapshot());
         }
 
