@@ -228,11 +228,15 @@ public static partial class JobsManagerExtensions
 
                 // A job that was stopped before it prepared any step has nothing to resume and never will, so every
                 // later lookup would find it, refuse it again and leave the observer retrying catch-up in a tight
-                // loop. It carries no work: remove it so the next catch-up starts a job of its own.
-                if (JobLiveness.NeverPrepared(pausedJob))
+                // loop. It carries no work: remove it so the next catch-up starts a job of its own. A caller that reports
+                // drops owns a per-turn budget of them, and this removal takes from that budget like any other drop, so
+                // a turn never deletes more than it allows; the job is then removed by a later turn instead.
+                var budgetAllowsRemoval = onJobsDropped is null || maxJobsToDrop > 0;
+                if (JobLiveness.NeverPrepared(pausedJob) && budgetAllowsRemoval)
                 {
                     logger.RemovingUnresumableJob(pausedJob.Id);
                     await jobsManager.Delete(pausedJob.Id);
+                    onJobsDropped?.Invoke(1);
                 }
 
                 return JobId.NotSet;
