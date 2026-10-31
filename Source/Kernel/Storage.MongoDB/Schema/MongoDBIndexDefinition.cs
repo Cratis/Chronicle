@@ -48,7 +48,7 @@ internal record MongoDBIndexDefinition(
     {
         var indexes = models.ToArray();
         var names = indexes.Select(model => model.Options.Name ?? throw new InvalidOperationException("A provisioned MongoDB index requires an explicit name.")).ToArray();
-        var accepted = indexes.ToDictionary(model => model.Options.Name!, model => new List<BsonDocument> { MongoDBIndexShape.Render(model, collection) }, StringComparer.Ordinal);
+        var accepted = indexes.ToDictionary(model => model.Options.Name, model => new List<BsonDocument> { MongoDBIndexShape.Render(model, collection) }, StringComparer.Ordinal);
         foreach (var alternative in alternatives ?? [])
         {
             if (alternative.Options.Name is not { } name || !accepted.TryGetValue(name, out var shapes))

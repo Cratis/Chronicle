@@ -121,8 +121,8 @@ public class MongoDBIndexProvisioner(
             }
             missing.AddRange(definition.Names.Except(existing, StringComparer.Ordinal).Select(name => $"{definition.Collection}/{name}"));
             obsolete.AddRange(definition.Obsolete.Where(existing.Contains).Select(name => $"{definition.Collection}/{name}"));
-            incompatible.AddRange(definition.Names.Where(existing.Contains)
-                .Where(name => !definition.Accepted[name].Any(shape => MongoDBIndexShape.Matches(shape, listed.Single(index => index["name"].AsString == name))))
+            incompatible.AddRange(definition.Names
+                .Where(name => existing.Contains(name) && !definition.Accepted[name].Any(shape => MongoDBIndexShape.Matches(shape, listed.Single(index => index["name"].AsString == name))))
                 .Select(name => $"{definition.Collection}/{name}"));
         }
         results.Add(new(scope, mongo.DatabaseNamespace.DatabaseName, missing, obsolete) { Unclassified = unclassified, Incompatible = incompatible });
