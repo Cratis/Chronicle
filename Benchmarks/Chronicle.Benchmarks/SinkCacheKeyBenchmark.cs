@@ -60,11 +60,11 @@ public class SinkCacheKeyBenchmark
     public int PrefetchGroupOld() => _keys.GroupBy(key => key).Count();
 
     /// <summary>
-    /// Groups the keys by cache identity, as the prefetch does after #5427.
+    /// Groups the keys by SinkCacheKey.Identity. Mirrors the grouping in SinkPagePrefetch.Prefetch.
     /// </summary>
     /// <returns>The number of groups.</returns>
     [Benchmark]
-    public int PrefetchGroupNew() => _keys.GroupBy(SinkCacheKey.For).Count();
+    public int PrefetchGroupNew() => _keys.GroupBy(SinkCacheKey.Identity).Count();
 
     static BsonValue CreateKey(string kind, int index) => kind switch
     {

@@ -65,7 +65,8 @@ key. The passive reducer has no cache, so it is read once per iteration.
 
 An in-process micro-benchmark that needs neither Docker nor the Chronicle container. It compares the MongoDB sink's
 cache identity for a read-model key before and after scale-independent decimal keys (#5427): the BSON value's string
-form against `SinkCacheKey.For`. It also compares grouping 1000 prefetch keys by each identity.
+form against `SinkCacheKey.For`, which keeps that string form for keys without a Decimal128. It also compares grouping
+1000 prefetch keys by the BSON value against `SinkCacheKey.Identity`, which the prefetch groups by.
 
 Parameters:
 - KeyKind: String, Int64, Guid, CompositeStrings, Decimal, CompositeDecimal
