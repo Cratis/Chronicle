@@ -13,7 +13,7 @@ Configure MongoDB storage, then run the server executable with `--migrate-only`:
 ./Cratis.Chronicle.Server --migrate-only
 ```
 
-Chronicle creates missing named indexes, removes obsolete event indexes, and verifies the result. Repeating the command against a current deployment performs no index DDL. It does not drop collections, remove application data, or rebuild indexes whose names already exist. Back up the deployment and review index-build capacity before provisioning a large event log.
+Chronicle creates missing named indexes, removes obsolete event indexes, and verifies the result. Repeating the command against a current deployment performs no index DDL. It does not drop collections, remove application data, or rebuild indexes whose names already exist. An existing index with different keys or options is reported as incompatible (exit code `2`) and left untouched. Review incompatible indexes before dropping them manually and running `--migrate-only` again with a schema identity. Back up the deployment and review index-build capacity before provisioning a large event log.
 
 Stored event stores, their stored namespaces, the system store, and default namespaces are discovered automatically. Add explicit scopes to provision a new store or tenant before it has registration data:
 
@@ -29,13 +29,13 @@ Repeat `--event-store` and `--namespace` to add scopes. Explicit namespaces appl
 ./Cratis.Chronicle.Server --verify-schema --event-store orders --namespace tenant-a
 ```
 
-Verification only reads registration data, lists collection names, and lists indexes. Missing databases and collections are reported as missing indexes; verification does not create them. The report identifies each logical scope, its database name, missing or obsolete collection/index names, and unclassified constraint collections. Unclassified collections produce a warning but do not make the report non-current or cause exit code `2`. Verification checks index names, not a complete comparison of options and key definitions.
+Verification only reads registration data, lists collection names, and lists indexes. Missing databases and collections are reported as missing indexes; verification does not create them. The report identifies each logical scope, its database name, missing, obsolete or incompatible collection/index names, and unclassified constraint collections. Unclassified collections produce a warning but do not make the report non-current or cause exit code `2`. Verification compares key fields and their order, key direction or type, uniqueness, sparseness, hidden state, TTL, partial filters, and collation. Simple collation is equivalent whether explicitly listed or omitted. Non-simple collation, including an inherited collection default, must match the expected definition. The legacy non-unique `value` index on per-event-source constraint collections is accepted.
 
 | Exit code | Meaning |
 | --- | --- |
-| `0` | All classified required indexes are present and no obsolete indexes remain; unclassified collections are advisory |
+| `0` | All classified required indexes are present with compatible keys and options and no obsolete indexes remain; unclassified collections are advisory |
 | `1` | Unexpected failure, including MongoDB authorization or connection failures |
-| `2` | Indexes are missing or obsolete |
+| `2` | Indexes are missing, obsolete, or incompatible |
 | `3` | Schema lock could not be acquired; reserved for the shared SQL command contract |
 | `4` | Configuration or operation validation failure |
 
@@ -57,7 +57,7 @@ Set `storage.schemaMode` to `Verify` to add a read-only startup inspection limit
 }
 ```
 
-For MongoDB, startup verification **only warns** about missing or obsolete indexes. Connection and authorization failures during this inspection also produce warnings, not startup exceptions. Unlike SQL verification, this is not a fail-startup policy. Runtime lazy index creation remains unchanged in both modes; a missing index encountered later by a runtime store can still require DDL privileges. Use `--verify-schema` when a deployment gate needs a nonzero exit code. On a fresh deployment, `Verify` warns about every missing index until the kernel or `--migrate-only` has created them.
+For MongoDB, startup verification **only warns** about missing, obsolete, or incompatible indexes. Connection and authorization failures during this inspection also produce warnings, not startup exceptions. Unlike SQL verification, this is not a fail-startup policy. Runtime lazy index creation remains unchanged in both modes; a missing index encountered later by a runtime store can still require DDL privileges. Use `--verify-schema` when a deployment gate needs a nonzero exit code. On a fresh deployment, `Verify` warns about every missing index until the kernel or `--migrate-only` has created them.
 
 ## Scope and permissions
 

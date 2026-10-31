@@ -100,12 +100,14 @@ public class MongoDBIndexProvisioner(
     {
         var missing = new List<string>();
         var obsolete = new List<string>();
+        var incompatible = new List<string>();
         var created = 0;
         var dropped = 0;
         foreach (var definition in definitions)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var existing = await definition.Existing();
+            var listed = await definition.Inspect();
+            var existing = listed.Select(index => index["name"].AsString).ToHashSet(StringComparer.Ordinal);
             var pending = definition.Names.Except(existing, StringComparer.Ordinal).ToArray();
             var old = definition.Obsolete.Where(existing.Contains).ToArray();
             if (migrate)
@@ -114,17 +116,22 @@ public class MongoDBIndexProvisioner(
                 await definition.Ensure();
                 created += pending.Length;
                 dropped += old.Length;
-                existing = await definition.Existing();
+                listed = await definition.Inspect();
+                existing = listed.Select(index => index["name"].AsString).ToHashSet(StringComparer.Ordinal);
             }
             missing.AddRange(definition.Names.Except(existing, StringComparer.Ordinal).Select(name => $"{definition.Collection}/{name}"));
             obsolete.AddRange(definition.Obsolete.Where(existing.Contains).Select(name => $"{definition.Collection}/{name}"));
+            incompatible.AddRange(definition.Names.Where(existing.Contains)
+                .Where(name => !definition.Accepted[name].Any(shape => MongoDBIndexShape.Matches(shape, listed.Single(index => index["name"].AsString == name))))
+                .Select(name => $"{definition.Collection}/{name}"));
         }
-        results.Add(new(scope, mongo.DatabaseNamespace.DatabaseName, missing, obsolete) { Unclassified = unclassified });
-        _logger.IndexState(scope, mongo.DatabaseNamespace.DatabaseName, missing.Count, obsolete.Count, created, dropped);
+        results.Add(new(scope, mongo.DatabaseNamespace.DatabaseName, missing, obsolete) { Unclassified = unclassified, Incompatible = incompatible });
+        _logger.IndexState(scope, mongo.DatabaseNamespace.DatabaseName, missing.Count, obsolete.Count, incompatible.Count, created, dropped);
         if (missing.Count > 0 || obsolete.Count > 0)
         {
             _logger.IndexesMissing(scope, mongo.DatabaseNamespace.DatabaseName, string.Join(", ", missing), string.Join(", ", obsolete));
         }
+        _logger.ReportIncompatibleIndexes(scope, mongo.DatabaseNamespace.DatabaseName, incompatible);
         if (unclassified.Count > 0)
         {
             var action = migrate
