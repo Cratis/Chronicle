@@ -133,7 +133,7 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage, IO
             var failedObserverIds = failedPartitions.Partitions.Select(_ => _.ObserverId.Value).ToHashSet(StringComparer.Ordinal);
             var undecidedObservers = observers.Where(_ => NeedsSubscription(_, eventTypeTails, request.TailEventSequenceNumber, failedObserverIds)).ToArray();
             var subscriptions = await Task.WhenAll(undecidedObservers.Select(observer =>
-                grainFactory.GetGrain<Cratis.Chronicle.Observation.IObserver>(
+                grainFactory.GetGrain<Chronicle.Observation.IObserver>(
                     new Concepts.Observation.ObserverKey(observer.Id, request.EventStore, request.Namespace, request.EventSequenceId)).GetSubscription()));
             var matchingObserverIds = new HashSet<string>(StringComparer.Ordinal);
             var outstanding = new List<string>();
@@ -443,7 +443,7 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage, IO
 
     async Task<EventSequenceNumber?> GetLastMatchingEvent(
         WaitForObserverCompletionRequest request,
-        Cratis.Chronicle.Observation.ObserverSubscription subscription,
+        Chronicle.Observation.ObserverSubscription subscription,
         EventSequenceNumber lastHandled,
         EventSequenceNumber target,
         Concepts.Observation.ObserverFilters filters,
@@ -496,7 +496,7 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage, IO
 
     sealed record CachedMatchingEvent(
         Concepts.Observation.ObserverFilters Filters,
-        Concepts.Events.EventType[] SubscriptionEventTypes,
+        EventType[] SubscriptionEventTypes,
         string[] ObserverEventTypeIds,
         bool IncludesHandledEvents,
         EventSequenceNumber LastMatchingEvent);

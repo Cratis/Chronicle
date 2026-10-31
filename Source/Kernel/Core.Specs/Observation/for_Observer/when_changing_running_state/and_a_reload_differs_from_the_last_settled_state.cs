@@ -19,6 +19,7 @@ public class and_a_reload_differs_from_the_last_settled_state : given.an_observe
     async Task Because()
     {
         _quarantineClock.Advance(TimeSpan.FromHours(1));
+
         // Routing is Unknown; returning to the activation's previous Active state is not a new transition.
         await ReconcileSubscription();
         await _observer.SetHandledStats(42UL);
