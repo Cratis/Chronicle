@@ -4,12 +4,10 @@
 import { given } from 'given';
 import { a_view_model } from './given/a_view_model';
 
-describe('when managing selection and clearing the selection', given(a_view_model, (context) => {
+describe('when managing selection and clearing the selection', given(a_view_model, context => {
     beforeAll(() => {
-        context.viewModel.selectAllRecommendations([context.firstRecommendationId, context.secondRecommendationId]);
-        context.viewModel.clearRecommendationSelection();
+        context.viewModel.selectedRecommendations = context.recommendations;
+        context.viewModel.selectedRecommendations = [];
     });
-
-    it('should hold no selected ids', () => context.viewModel.selectedRecommendationIds.length.should.equal(0));
-    it('should no longer mark the first recommendation as selected', () => context.viewModel.isRecommendationSelected(context.firstRecommendationId).should.be.false);
+    it('should hold no selected recommendations', () => context.viewModel.selectedRecommendations.should.have.lengthOf(0));
 }));
