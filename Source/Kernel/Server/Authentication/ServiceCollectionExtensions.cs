@@ -53,7 +53,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<Security.IEncryptionCertificateRing>(encryptionCertificateRing);
 
         // Configure Data Protection with Chronicle's shared storage so every node uses the same authentication key ring.
-        var dataProtectionBuilder = Security.ChronicleDataProtection.AddChronicleDataProtection(services);
+        var dataProtectionBuilder = services.AddChronicleDataProtection();
 
         // New keys are protected with the active certificate; every certificate in the ring can unprotect,
         // so keys written before a rotation stay readable through it. The active certificate is passed to

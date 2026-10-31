@@ -25,6 +25,7 @@ public class when_an_existing_username_matches_bootstrap_configuration : given.a
             _grainFactory,
             Options.Create(_options),
             _serializer,
+            Substitute.For<IInitialAdminSetupTokens>(),
             NullLogger<AuthenticationService>.Instance);
     }
 
