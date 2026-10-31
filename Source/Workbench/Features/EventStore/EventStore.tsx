@@ -30,6 +30,7 @@ import { PatternHeatmap } from './Namespaces/Patterns/PatternHeatmap';
 import strings from 'Strings';
 import { Namespaces } from './General/Namespaces/Namespaces';
 import { Sequences } from './Namespaces/Sequences/Sequences';
+import { SequenceEventDetails } from './Namespaces/Sequences/SequenceEventDetails';
 import { useRelativePath } from '../../Utils/useRelativePath';
 import { Users } from './System/Users/Users';
 import { Applications } from './System/Applications/Applications';
@@ -136,6 +137,7 @@ export const EventStore = () => {
                     <Route path={'recommendations'} element={<Recommendations />} />
                     <Route path={'jobs'} element={<Jobs />} />
                     <Route path={'sequences'} element={<Sequences />} />
+                    <Route path={'sequences/event/:sequenceNumber'} element={<SequenceEventDetails />} />
                     <Route path={'pivot'} element={<Pivot />} />
                     <Route path={'patterns'} element={<Patterns />} />
                     <Route path={'pattern-heatmap'} element={<PatternHeatmap />} />

@@ -484,6 +484,21 @@
                 }
             },
             "sequences": {
+                "inspection": {
+                    "title": "Inspect event",
+                    "return": "Return to failed partitions",
+                    "returnToSequences": "Return to sequences",
+                    "eventStore": "Event store",
+                    "namespace": "Namespace",
+                    "sequence": "Event sequence",
+                    "number": "Sequence number",
+                    "loading": "Loading event…",
+                    "unavailable": "This event identity or sequence number cannot be inspected.",
+                    "missing": "The exact event was not found.",
+                    "denied": "You are not authorized to inspect this event.",
+                    "failed": "The event could not be loaded.",
+                    "retry": "Try lookup again"
+                },
                 "title": "Sequences",
                 "empty": "No events found",
                 "actions": {
@@ -710,6 +725,13 @@
             },
             "failedPartitions": {
                 "title": "Failed partitions",
+                "restoration": {
+                    "loading": "Finding the originating failed partition…",
+                    "missing": "The originating failed partition is no longer available.",
+                    "denied": "You are not authorized to look up the originating failed partition.",
+                    "failed": "The originating failed partition could not be loaded.",
+                    "retry": "Try lookup again"
+                },
                 "empty": "No failed partitions found",
                 "actions": {
                     "retry": "Retry"
@@ -734,7 +756,16 @@
                     "sequenceNumber": "Sequence number",
                     "messages": "Messages",
                     "stackTrace": "Stack trace",
-                    "noStackTrace": "No stack trace available"
+                    "noStackTrace": "No stack trace available",
+                    "inspection": {
+                        "inspect": "Inspect event",
+                        "loading": "Finding the observer's event sequence…",
+                        "missing": "The observer's event sequence is no longer available.",
+                        "denied": "You are not authorized to look up the observer's event sequence.",
+                        "failed": "The observer's event sequence could not be loaded.",
+                        "unavailable": "Event inspection unavailable",
+                        "retry": "Try lookup again"
+                    }
                 }
             },
             "closedStreams": {
