@@ -933,17 +933,17 @@ public partial class EventStore : IEventStore
                 reactorHandlers,
                 type => type,
                 handler => handler.ReactorType,
-                (type, handler) => (Type: type, HandledEventTypes: handler.EventTypes))
+                (type, handler) => (Type: type, HandledEventTypes: handler.EventTypes, ConfiguredStore: RegisteredObserverMetadata.ReactorSourceStoreFor(_clientArtifactsProvider, type)))
             .Concat(_clientArtifactsProvider.Reducers
                 .Where(r => !RegisteredObserverMetadata.HasExplicitSequence(r, r.GetCustomAttribute<ReducerAttribute>()?.EventSequenceId))
                 .Join(
                     Reducers.GetAllHandlers(),
                     type => type,
                     handler => handler.ReducerType,
-                    (type, handler) => (Type: type, HandledEventTypes: handler.EventTypes)))
+                    (type, handler) => (Type: type, HandledEventTypes: handler.EventTypes, ConfiguredStore: (EventStoreName?)null)))
             .Select(observer =>
             {
-                var sourceStore = ObserverEventTypes.GetSourceStore(observer.Type, EventTypes, _eventStoreName, observer.HandledEventTypes);
+                var sourceStore = ObserverEventTypes.GetSourceStore(observer.Type, EventTypes, _eventStoreName, observer.HandledEventTypes, observer.ConfiguredStore);
                 return (observer.HandledEventTypes, sourceStore);
             })
             .Where(item => item.sourceStore is not null && item.sourceStore != currentStoreName)

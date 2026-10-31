@@ -427,7 +427,7 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
         var handler = CreateHandler(
             ResolveId(reactorType),
             reactorType,
-            reactorType.GetEventSequenceId(_eventStore.EventTypes, _eventStore.Name, _sideEffectHandlers),
+            reactorType.GetEventSequenceId(_eventStore.EventTypes, _eventStore.Name, _sideEffectHandlers, _clientArtifactsProvider),
             eventTypes);
 #pragma warning restore CA2000
         var eventSourceFilter = reactorType.GetEventSourceFilter(_eventStore.EventSources);

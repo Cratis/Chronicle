@@ -26,9 +26,15 @@ internal static class ObserverEventTypes
     /// <param name="eventTypes">The event registry.</param>
     /// <param name="currentStore">The current client's store.</param>
     /// <param name="handledEventTypes">The owning invoker's accepted event identities.</param>
+    /// <param name="configuredStore">The optional configured source event store.</param>
     /// <returns>The single source store, or null when there is none or several.</returns>
-    internal static string? GetSourceStore(Type observerType, IEventTypes eventTypes, EventStoreName currentStore, IEnumerable<EventType> handledEventTypes)
+    internal static string? GetSourceStore(Type observerType, IEventTypes eventTypes, EventStoreName currentStore, IEnumerable<EventType> handledEventTypes, EventStoreName? configuredStore = null)
     {
+        if (configuredStore is not null)
+        {
+            return configuredStore.Value;
+        }
+
         if (observerType.GetCustomAttribute<EventStoreAttribute>() is { } declaredStore)
         {
             return declaredStore.EventStore;
