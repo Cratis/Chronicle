@@ -37,6 +37,9 @@ internal static partial class ProjectionsManagerLogging
     [LoggerMessage(LogLevel.Information, "Registered projections for event store {EventStore} from '{Registrant}': {Definitions} submitted, {Changed} changed, {Skipped} subscriptions left to the background repair. Took {TotalMs:F0} ms (detecting changes {DetectingMs:F0}, engine {EngineMs:F0}, subscribing {SubscribingMs:F0}, retiring {RetiringMs:F0})")]
     internal static partial void RegistrationTimings(this ILogger<ProjectionsManager> logger, EventStoreName eventStore, string registrant, int definitions, int changed, int skipped, double totalMs, double detectingMs, double engineMs, double subscribingMs, double retiringMs);
 
+    [LoggerMessage(LogLevel.Information, "Skipping a repeat of the registration of {Definitions} projections for event store {EventStore} from '{Registrant}': an identical one has just completed")]
+    internal static partial void SkippingRepeatedRegistration(this ILogger<ProjectionsManager> logger, EventStoreName eventStore, string registrant, int definitions);
+
     [LoggerMessage(LogLevel.Debug, "Registering {Count} changed projection definitions")]
     internal static partial void RegisteringChangedDefinitions(this ILogger<ProjectionsManager> logger, int count);
 

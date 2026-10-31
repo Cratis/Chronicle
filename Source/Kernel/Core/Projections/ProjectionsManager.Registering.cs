@@ -1,9 +1,12 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Security.Cryptography;
+using System.Text;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Namespaces;
+using Cratis.Chronicle.Projections.Engine;
 using Cratis.Chronicle.Recommendations;
 
 namespace Cratis.Chronicle.Projections;
@@ -12,6 +15,55 @@ public partial class ProjectionsManager
 {
     static List<ProjectionDefinition> StampWithVersion(IEnumerable<ProjectionDefinition> definitions, string? version) =>
         [.. definitions.Select(definition => string.IsNullOrWhiteSpace(version) ? definition : definition with { Version = version })];
+
+    /// <summary>
+    /// Fingerprints everything in a registration that decides what it does, independent of the order the definitions
+    /// were submitted in.
+    /// </summary>
+    /// <param name="definitions">The submitted definitions.</param>
+    /// <param name="fullSetOwner">The owner whose full set this is, if any.</param>
+    /// <param name="registrant">The registering application, if any.</param>
+    /// <param name="version">The registering application's version, if any.</param>
+    /// <returns>The signature.</returns>
+    static string RegistrationSignature(IReadOnlyList<ProjectionDefinition> definitions, ProjectionOwner? fullSetOwner, string? registrant, string? version)
+    {
+        var builder = new StringBuilder()
+            .Append(fullSetOwner).Append('|')
+            .Append(registrant).Append('|')
+            .Append(version);
+
+        foreach (var definition in definitions.OrderBy(definition => definition.Identifier.Value, StringComparer.Ordinal))
+        {
+            builder
+                .Append('|').Append(definition.Identifier.Value)
+                .Append(':').Append(ProjectionFactory.DefinitionFingerprintFor(definition))
+                .Append(':').Append(definition.Version)
+                .Append(':').Append(definition.HasLegacyStorageFields)
+                .Append(':').AppendJoin(',', definition.Tags ?? []);
+        }
+
+        return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(builder.ToString())));
+    }
+
+    /// <summary>
+    /// Whether this exact registration just completed, with nothing since that it would have to react to.
+    /// </summary>
+    /// <param name="signature">The signature of the incoming registration.</param>
+    /// <returns>True when it can be answered without doing the work again.</returns>
+    async Task<bool> IsRepeatOfRecentRegistration(string signature)
+    {
+        if (_lastRegistrationSignature != signature ||
+            _registrationNamespaces is null ||
+            !_pendingRevival.IsEmpty ||
+            _clock.GetUtcNow() - _lastRegistrationCompletedAt > IdenticalRegistrationWindow)
+        {
+            return false;
+        }
+
+        // A namespace added since is work the registration owes: its projections need subscribing there.
+        var namespaces = await GrainFactory.GetGrain<INamespaces>(_eventStoreName).GetAll();
+        return _registrationNamespaces.SetEquals(namespaces);
+    }
 
     /// <summary>
     /// Announces the definitions a registration is about to replace. Namespace passes interleave with a registration

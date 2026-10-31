@@ -59,6 +59,23 @@ public partial class ProjectionsManager(
     internal static readonly TimeSpan RegistrationSubscribeBudget = TimeSpan.FromSeconds(15);
 
     /// <summary>
+    /// How long after a successful registration an identical one is answered without repeating the work.
+    /// </summary>
+    /// <remarks>
+    /// A kernel restart leaves hundreds of identical registrations queued on this non-reentrant grain: every replica of
+    /// a client, and each of its retries, registers the same set while the kernel is not answering, and the grain keeps
+    /// running requests whose sender has long given up. Each one used to spend a store lookup per definition just to
+    /// conclude nothing changed, so the backlog outlived the response timeout and fed the retries that built it. Well
+    /// inside the background repair period, so a registration that is genuinely wanted again after a while still runs.
+    /// </remarks>
+    internal static readonly TimeSpan IdenticalRegistrationWindow = TimeSpan.FromSeconds(30);
+
+    /// <summary>
+    /// How many definitions are compared with their stored versions at the same time.
+    /// </summary>
+    const int ChangeDetectionConcurrency = 16;
+
+    /// <summary>
     /// Maximum number of observer subscribe operations this grain lets run concurrently.
     /// </summary>
     /// <remarks>
@@ -101,6 +118,8 @@ public partial class ProjectionsManager(
     bool _resubscribeRunning;
     DateTimeOffset? _registrationSubscribeDeadline;
     bool _resubscribeRequested;
+    string? _lastRegistrationSignature;
+    DateTimeOffset _lastRegistrationCompletedAt;
     HashSet<EventStoreNamespaceName>? _registrationNamespaces;
     bool _skippedWhileRegistering;
 
@@ -138,9 +157,20 @@ public partial class ProjectionsManager(
     /// <inheritdoc/>
     public async Task Register(IEnumerable<ProjectionDefinition> definitions, ProjectionOwner? fullSetOwner = null, string? registrant = null, string? version = null)
     {
+        var submitted = definitions as IReadOnlyList<ProjectionDefinition> ?? [.. definitions];
+        var signature = RegistrationSignature(submitted, fullSetOwner, registrant, version);
+        if (await IsRepeatOfRecentRegistration(signature))
+        {
+            logger.SkippingRepeatedRegistration(_eventStoreName, registrant ?? string.Empty, submitted.Count);
+            return;
+        }
+
+        _lastRegistrationSignature = null;
         try
         {
-            await RegisterDefinitions(definitions, fullSetOwner, registrant, version);
+            await RegisterDefinitions(submitted, fullSetOwner, registrant, version);
+            _lastRegistrationSignature = signature;
+            _lastRegistrationCompletedAt = _clock.GetUtcNow();
         }
         finally
         {
@@ -328,33 +358,47 @@ public partial class ProjectionsManager(
 
     async Task<IReadOnlyList<ProjectionDefinition>> GetChangedDefinitions(IEnumerable<ProjectionDefinition> definitions)
     {
-        var changed = new List<ProjectionDefinition>();
-        foreach (var definition in definitions)
+        // Comparing asks the store about each definition. Doing that one after the other made a registration of a
+        // large client cost one round trip per definition before anything else happened; the answers are
+        // independent, so a bounded number are asked at once and the submitted order is kept.
+        var submitted = definitions.ToArray();
+        var isChanged = new bool[submitted.Length];
+        using var gate = new SemaphoreSlim(ChangeDetectionConcurrency);
+        await Task.WhenAll(submitted.Select(async (definition, index) =>
         {
-            var existing = State.Projections.FirstOrDefault(p => p.Identifier == definition.Identifier);
-            if (existing is null)
+            await gate.WaitAsync();
+            try
             {
-                changed.Add(definition);
-                continue;
+                isChanged[index] = await IsChanged(definition);
             }
-
-            var compareResult = await projectionDefinitionComparer.Compare(
-                new ProjectionKey(definition.Identifier, _eventStoreName),
-                existing,
-                definition);
-
-            // Metadata and a legacy storage refresh must reach the engine and storage without evolution.
-            // A registration without a version never counts as a version change.
-            if ((existing.HasLegacyStorageFields && !definition.HasLegacyStorageFields) ||
-                compareResult != ProjectionDefinitionCompareResult.Same ||
-                !(existing.Tags ?? []).SequenceEqual(definition.Tags ?? []) ||
-                (!string.IsNullOrWhiteSpace(definition.Version) && existing.Version != definition.Version))
+            finally
             {
-                changed.Add(definition);
+                gate.Release();
             }
+        }));
+
+        return [.. submitted.Where((_, index) => isChanged[index])];
+    }
+
+    async Task<bool> IsChanged(ProjectionDefinition definition)
+    {
+        var existing = State.Projections.FirstOrDefault(p => p.Identifier == definition.Identifier);
+        if (existing is null)
+        {
+            return true;
         }
 
-        return changed;
+        var compareResult = await projectionDefinitionComparer.Compare(
+            new ProjectionKey(definition.Identifier, _eventStoreName),
+            existing,
+            definition);
+
+        // Metadata and a legacy storage refresh must reach the engine and storage without evolution.
+        // A registration without a version never counts as a version change.
+        return (existing.HasLegacyStorageFields && !definition.HasLegacyStorageFields) ||
+            compareResult != ProjectionDefinitionCompareResult.Same ||
+            !(existing.Tags ?? []).SequenceEqual(definition.Tags ?? []) ||
+            (!string.IsNullOrWhiteSpace(definition.Version) && existing.Version != definition.Version);
     }
 
     async Task<IEnumerable<ProjectionDefinition>> GetRetiredDefinitions(ProjectionDefinition[] definitions)
