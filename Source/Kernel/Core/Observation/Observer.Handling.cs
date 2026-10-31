@@ -208,7 +208,8 @@ public partial class Observer
             return;
         }
 
-        if (_pendingHandledCounts.Count >= MaxPendingHandledCountPartitions)
+        if (_pendingHandledCounts.Count >= MaxPendingHandledCountPartitions ||
+            _pendingLivePartitionCounts.Count >= MaxPendingHandledCountPartitions)
         {
             BringCoalescedWriteForward();
             return;
@@ -223,6 +224,7 @@ public partial class Observer
     /// <returns>Awaitable task.</returns>
     async Task FlushPendingHandledCounts()
     {
+        await FlushPendingLivePartitionCounts();
         if (_pendingHandledCounts.Count == 0)
         {
             return;
@@ -289,7 +291,8 @@ public partial class Observer
 
     void EnsureCoalescedWriteTimer()
     {
-        if (_coalescedWriteTimer is not null || (_pendingHandledCounts.Count == 0 && !_failureStateWritePending))
+        if (_coalescedWriteTimer is not null ||
+            (_pendingHandledCounts.Count == 0 && _pendingLivePartitionCounts.Count == 0 && !_failureStateWritePending))
         {
             return;
         }
@@ -592,10 +595,7 @@ public partial class Observer
                     await WriteStateAsync();
                 }
 
-                if (handledCountsPerEventType.Count > 0)
-                {
-                    await GetObserverHandledCountsStorage().Increment(_observerId, partition, handledCountsPerEventType);
-                }
+                await CoalesceLiveHandledCounts(partition, handledCountsPerEventType);
             }
             catch (Exception ex)
             {
