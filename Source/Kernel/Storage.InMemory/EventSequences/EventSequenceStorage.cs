@@ -42,6 +42,7 @@ public partial class EventSequenceStorage(
     EventSequenceNumber? _constraintIndexWatermark;
     EventSequenceNumber? _constraintIndexCatchUpBelow;
     Concepts.Events.Constraints.ConstraintName[]? _constraintIndexCatchUpRefusing;
+    EventSequenceMutationEpoch _mutationEpoch = EventSequenceMutationEpoch.Initial;
 
     /// <summary>
     /// Initializes storage with its original constructor contract and a private receipt scope.
@@ -64,16 +65,7 @@ public partial class EventSequenceStorage(
         {
             lock (_lock)
             {
-                return _events.Select(@event => @event with
-                {
-                    Context = @event.Context with
-                    {
-                        AppendedGeneration = _appendedGenerations.TryGetValue(@event.Context.SequenceNumber, out var generation) ? new EventTypeGeneration(generation) : null
-                    },
-                    GenerationalHashes = _generationHashes.TryGetValue(@event.Context.SequenceNumber, out var hashes)
-                        ? hashes.ToImmutableDictionary(_ => (int)_.Key.Value, _ => _.Value)
-                        : new Dictionary<int, EventHash>()
-                }).ToImmutableList();
+                return _events.Select(WithGenerationMetadata).ToImmutableList();
             }
         }
     }
@@ -112,7 +104,8 @@ public partial class EventSequenceStorage(
                     : _events.Max(_ => _.Context.SequenceNumber.Value) + 1,
                 ConstraintIndexWatermark = _constraintIndexWatermark,
                 ConstraintIndexCatchUpBelow = _constraintIndexCatchUpBelow,
-                ConstraintIndexCatchUpRefusing = _constraintIndexCatchUpRefusing?.ToArray()
+                ConstraintIndexCatchUpRefusing = _constraintIndexCatchUpRefusing?.ToArray(),
+                MutationEpoch = _mutationEpoch
             });
         }
     }
@@ -126,6 +119,7 @@ public partial class EventSequenceStorage(
             _constraintIndexCatchUpBelow = state.ConstraintIndexCatchUpBelow;
             var refusing = state.ConstraintIndexCatchUpRefusing?.ToArray();
             _constraintIndexCatchUpRefusing = refusing?.Length > 0 ? refusing : null;
+            _mutationEpoch = state.MutationEpoch;
         }
 
         return Task.CompletedTask;
@@ -240,7 +234,7 @@ public partial class EventSequenceStorage(
     }
 
     /// <inheritdoc/>
-    public Task Revise(
+    public async Task Revise(
         EventSequenceNumber sequenceNumber,
         EventType eventType,
         CorrelationId correlationId,
@@ -250,6 +244,7 @@ public partial class EventSequenceStorage(
         ExpandoObject content,
         EventHash hash)
     {
+        var causedBy = await identityStorage.GetFor(causedByChain).ConfigureAwait(false);
         lock (_lock)
         {
             var index = _events.FindIndex(_ => _.Context.SequenceNumber == sequenceNumber);
@@ -263,7 +258,7 @@ public partial class EventSequenceStorage(
                 eventType.Generation,
                 correlationId,
                 causation,
-                Identity.System,
+                causedBy,
                 occurred,
                 Serialize(content));
 
@@ -272,12 +267,10 @@ public partial class EventSequenceStorage(
             {
                 Context = original.Context with { EventType = eventType, Hash = hash },
                 Content = content,
-                OriginalContent = original.IsRevised ? original.OriginalContent : Serialize(original.Content),
+                OriginalContent = original.IsRevised ? original.OriginalContent : FirstGenerationContent(original),
                 Revisions = [.. original.Revisions, revision]
             };
         }
-
-        return Task.CompletedTask;
     }
 
     /// <inheritdoc/>
@@ -642,6 +635,9 @@ public partial class EventSequenceStorage(
     /// <param name="content">The content to render.</param>
     /// <returns>The content as a JSON string.</returns>
     static string Serialize(ExpandoObject content) => JsonSerializer.Serialize(content, _serializerOptions);
+
+    static string FirstGenerationContent(AppendedEvent appended) =>
+        appended.GenerationalContent.TryGetValue((int)EventTypeGeneration.First.Value, out var first) ? first : string.Empty;
 
     /// <summary>
     /// Order events by a key in either direction.

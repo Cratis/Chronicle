@@ -17,8 +17,12 @@ internal class AppendManyForEventSourcesValidator : CommandValidator<AppendManyF
     public AppendManyForEventSourcesValidator()
     {
         RuleFor(_ => _.EventStore).RequiredEventStore();
+        RuleFor(_ => _.EventStore).NotSystemEventStore();
+        RuleFor(_ => _.EventStore).NoKeySeparator();
         RuleFor(_ => _.Namespace).RequiredNamespace();
+        RuleFor(_ => _.Namespace).NoKeySeparator();
         RuleFor(_ => _.EventSequenceId).RequiredEventSequence();
+        RuleFor(_ => _.EventSequenceId).NoKeySeparator();
 
         RuleFor(_ => _.Events)
             .Must((command, events) => events is not null && (events.Any() || command.ConcurrencyScopes?.Any(_ => !string.IsNullOrWhiteSpace(_.EventSourceId) && _.Scope is { } scope && (scope.ExpectsNoMatchingEvent || scope.SequenceNumber < Concepts.Events.EventSequenceNumber.BeforeFirst.Value)) == true))

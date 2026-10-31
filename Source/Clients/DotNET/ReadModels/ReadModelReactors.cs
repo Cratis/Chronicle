@@ -114,7 +114,7 @@ public class ReadModelReactors(
     IDisposable SubscribeMaterialized<TReadModel>(Type reactorType)
     {
         var differ = new MaterializedReadModelDiffer(jsonSerializerOptions);
-        return eventStore.ReadModels.Materialized.ObserveInstances<TReadModel>().Subscribe(
+        return eventStore.ReadModels.Materialized.ObserveInstances<TReadModel>(take: InstanceCount.Unlimited).Subscribe(
             window =>
             {
                 foreach (var change in differ.Diff(window.Cast<object>()))

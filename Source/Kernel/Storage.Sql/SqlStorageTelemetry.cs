@@ -8,11 +8,12 @@ using Cratis.Metrics;
 namespace Cratis.Chronicle.Storage.Sql;
 
 /// <summary>
-/// Records SQL coordination and recovered concurrent writes without identifying individual rows or databases.
+/// Records SQL coordination, recovered concurrent writes and failed live-query polls without identifying individual rows or databases.
 /// </summary>
 internal sealed class SqlStorageTelemetry
 {
     static readonly IMeter<SqlStorageTelemetry> _meter = new Meter<SqlStorageTelemetry>(new System.Diagnostics.Metrics.Meter(WellKnown.MeterName));
+    static readonly SqlStorageErrorClassifier _errors = new();
 
     /// <summary>
     /// Measures just the database lock acquisition, including failed waits.
@@ -34,6 +35,13 @@ internal sealed class SqlStorageTelemetry
             _meter.SchemaLockWait(Stopwatch.GetElapsedTime(started).TotalSeconds, provider, outcome);
         }
     }
+
+    /// <summary>
+    /// Counts a failed live-query poll that will be retried.
+    /// </summary>
+    /// <param name="query">The bounded query name.</param>
+    /// <param name="error">The poll failure.</param>
+    internal static void LiveQueryPollFailed(string query, Exception error) => _meter.LiveQueryPollFailed(query, _errors.IsTransient(error) ? "transient" : "other");
 
     /// <summary>
     /// Counts a concurrent insert that an existing recovery path handled.

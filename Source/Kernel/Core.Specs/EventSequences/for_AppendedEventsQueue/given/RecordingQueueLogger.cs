@@ -26,6 +26,13 @@ public sealed class RecordingQueueLogger : ILogger<AppendedEventsQueue>
         .Select(_ => _.Message);
 
     /// <summary>
+    /// Gets the messages that were logged at a level.
+    /// </summary>
+    /// <param name="level">The <see cref="LogLevel"/> to get the messages of.</param>
+    /// <returns>The formatted messages.</returns>
+    public IEnumerable<string> Messages(LogLevel level) => _entries.Where(_ => _.Level == level).Select(_ => _.Message);
+
+    /// <summary>
     /// Gets the exceptions that were logged.
     /// </summary>
     public IEnumerable<Exception> Exceptions => _entries.Where(_ => _.Exception is not null).Select(_ => _.Exception!);

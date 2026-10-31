@@ -22,6 +22,7 @@ namespace Cratis.Chronicle.Observation;
 /// Resets the retry budget of the partition while keeping its attempt history.
 /// </remarks>
 [Command]
+[Cratis.Arc.Authorization.Authorize(Policy = Security.WellKnownAuthorizationPolicies.AdministratorOperations)]
 [BelongsTo(WellKnownServices.Observers)]
 public record ClearPartitionQuarantine(string EventStore, string Namespace, string ObserverId, string EventSequenceId, string Partition, bool RetryImmediately)
 {

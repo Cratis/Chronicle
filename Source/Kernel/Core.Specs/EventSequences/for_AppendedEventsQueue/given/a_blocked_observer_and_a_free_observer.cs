@@ -121,7 +121,7 @@ public class a_blocked_observer_and_a_free_observer : all_dependencies
 
             try
             {
-                await nextChange.WaitAsync(remaining);
+                await nextChange.WaitAsync(remaining, TimeProvider.System);
             }
             catch (TimeoutException)
             {

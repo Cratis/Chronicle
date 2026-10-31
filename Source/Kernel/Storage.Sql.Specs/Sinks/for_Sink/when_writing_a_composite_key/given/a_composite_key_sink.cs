@@ -67,7 +67,7 @@ public abstract class a_composite_key_sink : Specification
         return _sink.ApplyChanges(new Key(parts, ArrayIndexers.NoIndexers), changeset, EventSequenceNumber.First);
     }
 
-    protected DbContext CreateContext() => new(new DbContextOptionsBuilder<DbContext>().UseDatabaseFromConnectionString(_harness.ConnectionString).Options);
+    protected DbContext CreateContext() => new(SpecDbContextOptions.ForConnection<DbContext>(_harness.ConnectionString));
 
     static Task<int> CountShadowColumns(DbContext context) => context.Database.GetDatabaseType() switch
     {

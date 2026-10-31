@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Arc.Commands;
+using Cratis.Chronicle.Concepts;
 using FluentValidation;
 
 namespace Cratis.Chronicle.EventStores;
@@ -19,5 +20,8 @@ internal class EnsureEventStoreValidator : CommandValidator<EnsureEventStore>
         // Name is the event store being created, not a reference to one that must already exist - the
         // cross-cutting EventStoreNameValidator existence check does not apply here.
         RuleFor(_ => _.Name).IgnoreConceptRules().NotEmpty().WithMessage("Event store name is required.");
+        RuleFor(_ => _.Name)
+            .Must(name => !string.Equals(name, EventStoreName.System.Value, StringComparison.OrdinalIgnoreCase))
+            .WithMessage("The System event store is reserved for the kernel and cannot be created through the public API.");
     }
 }

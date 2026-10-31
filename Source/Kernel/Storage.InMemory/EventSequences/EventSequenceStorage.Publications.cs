@@ -54,7 +54,7 @@ public partial class EventSequenceStorage
                 @event.NamedTags,
                 @event.EventSource);
             var receipt = new EventPublicationReceipt(@event.SequenceNumber);
-            _events.Add(appended);
+            AddEvent(appended);
             _originalCausedByChains[@event.SequenceNumber] = @event.CausedByChain.ToArray();
             TrackMetadata(appended, _originalCausedByChains[@event.SequenceNumber]);
             _appendedGenerations[@event.SequenceNumber] = @event.EventType.Generation.Value;

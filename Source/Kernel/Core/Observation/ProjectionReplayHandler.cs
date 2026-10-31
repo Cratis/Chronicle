@@ -105,6 +105,25 @@ public class ProjectionReplayHandler(
         pipeline => pipeline.LeaveReplay());
 
     /// <inheritdoc/>
+    public async Task<Result<ICanHandleReplayForObserver.Error>> AbandonReplayFor(ObserverDetails observerDetails) => await DoWorkOnPipeline(
+        observerDetails,
+        async projection =>
+        {
+            var namespaceStorage = storage.GetEventStore(observerDetails.Key.EventStore).GetNamespace(observerDetails.Key.Namespace);
+            return await namespaceStorage.ReplayContexts.TryGet(projection.ReadModel.Identifier);
+        },
+        async (pipeline, projection, _) =>
+        {
+            await Abandon(pipeline);
+            var namespaceStorage = storage.GetEventStore(observerDetails.Key.EventStore).GetNamespace(observerDetails.Key.Namespace);
+            await namespaceStorage.ReplayContexts.Evict(projection.ReadModel.Identifier);
+            return Result<ICanHandleReplayForObserver.Error>.Success();
+        },
+
+        // Another silo has already evicted the context; this silo still has to stop writing to the replay container.
+        Abandon);
+
+    /// <inheritdoc/>
     public async Task<Result<ICanHandleReplayForObserver.Error>> FlushReplayFor(ObserverDetails observerDetails)
     {
         try
@@ -175,6 +194,22 @@ public class ProjectionReplayHandler(
     }
 
     static bool CanHandle(ObserverDetails observerDetails) => observerDetails.Type == ObserverType.Projection;
+
+    /// <summary>
+    /// Leaves replay mode without writing anything the replay rebuilt to the read model's own container.
+    /// </summary>
+    /// <remarks>
+    /// Leaving replay mode writes whatever is still held back to the read model's own container, which is wrong for an
+    /// abandoned replay: that is partial state. Flushing it into the replay container first, while still in replay mode,
+    /// leaves nothing to leak. Failed partitions of that flush describe a discarded container and are not recorded.
+    /// </remarks>
+    /// <param name="pipeline">The <see cref="IProjectionPipeline"/> to take out of replay mode.</param>
+    /// <returns>Awaitable task.</returns>
+    static async Task Abandon(IProjectionPipeline pipeline)
+    {
+        _ = await pipeline.EndBulk();
+        await pipeline.LeaveReplay();
+    }
 
     async Task<int> VersionsToKeepFor(ObserverDetails observerDetails) =>
         await IsKernelOwned(observerDetails) ? 0 : options.Value.ReadModels.ReplayedVersionsToKeep;

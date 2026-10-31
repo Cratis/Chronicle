@@ -25,7 +25,75 @@ The legacy `identityProvider.certificate` option is ignored; see [Identity Provi
 | authority | string | null | External OAuth authority URL |
 | audience | string | "chronicle" | Required audience for external-authority access tokens |
 | requireHttpsMetadata | bool | true | Require HTTPS when retrieving external-authority metadata |
+| enforceAdministratorPolicyForOperations | bool | false | Enforce administrator privilege for System-store operational recovery instead of auditing would-be denials |
 | defaultAdminUsername | string | "admin" | Default admin username created on first startup when `adminUser` is not configured |
+| initialAdminSetupToken | string | null | Optional operator-provided token for initial password setup; use secret management |
+
+## Password sign-ins
+
+New passwords must contain at least eight characters, whether chosen through Chronicle commands or the Identity API. Existing configured administrator passwords remain accepted; a shorter bootstrap password produces a warning without logging the password.
+
+Failed password sign-ins are throttled per node by normalized username/address, with a separate, higher username-wide ceiling across addresses. IPv6 addresses share a /64 bucket, and IPv4-mapped IPv6 addresses use their IPv4 address. The password grant, `/api/security/login` and `/identity/login` share the same throttle. A successful check clears the username counter and its current address bucket. Configure these values under `Cratis:Chronicle:Authentication:SignInThrottling`:
+
+| Property | Default | Description |
+| --- | --- | --- |
+| MaxFailedAttempts | 5 | Failures per username/address before lockout; set to 0 to disable throttling |
+| MaxFailedAttemptsPerUsername | 50 | Username-wide failure ceiling across addresses; values at or below MaxFailedAttempts are treated as MaxFailedAttempts plus one |
+| WindowSeconds | 300 | Window for counting failures |
+| LockoutSeconds | 300 | Duration before password checks can resume |
+| MaxTrackedEntries | 10000 | Maximum counters in each of the username and username/address tables per node |
+
+Per-address lockout is the primary control. Failures reported for an already locked address do not advance the username-wide counter. The username-wide ceiling defaults to ten times the default per-address allowance and limits address rotation; reaching it temporarily denies that username from every address. A higher ceiling reduces the ability of one address to affect other callers, at the cost of allowing more attempts from rotating addresses. Keep the ceiling substantially above the per-address limit when tuning these settings.
+
+Expired entries are reclaimed on access. Each table admits new counters at capacity by replacing the oldest unlocked counter, or the oldest locked counter if all are locked. Capacity alone never locks out an untracked user. This bounds storage to twice `MaxTrackedEntries` counters; capacity pressure can shorten a counter's retention, including a lockout when all retained counters are locked. Positive windows, durations and capacity are required; values below one are treated as one. Throttling is in memory, so restarting clears it and multiple nodes each have their own allowance. Client-credentials grants are validated separately by OpenIddict and are not covered by password sign-in throttling.
+
+Behind an ingress, configure ASP.NET Core `ForwardedHeaders` with trusted proxies or networks before relying on distinct client IPs. Without trusted forwarded headers, callers sharing a proxy also share its address and therefore the same per-username allowance. Do not trust forwarded addresses from arbitrary callers.
+
+## Administrator authorization
+
+Administrator privilege is separate from a user account. The `Administrators` service lets an existing
+administrator grant or revoke that privilege and list active administrators. The last active administrator
+cannot be revoked or removed. These management operations always enforce the `Chronicle.Administrator`
+policy when authentication is enabled; the audit-mode setting below does not weaken them.
+
+Only authenticated users issued by Chronicle's internal authority can pass that policy. Their principal
+must carry `chronicle_principal=user`, and the authoritative System roster must still grant the privilege
+to an active user. An application or client-credentials token never receives this marker and cannot become
+an administrator, even if its subject happens to match an administrator's user identifier. External-authority
+principals are denied; there is no external role or claim mapping for administrator privilege.
+
+User tokens issued before this marker was introduced must be refreshed or obtained again. Existing cookie
+or Identity bearer sessions without the marker must sign in again. Privilege is checked against the roster
+on each call, not cached in the token or inferred from the administrator read-model projection.
+
+### Audit mode for existing operations
+
+Existing user/application management commands, job stop/resume/delete operations, observer recovery
+operations, and development-only kernel reset use `Chronicle.Administrator.Operations`. By default,
+`EnforceAdministratorPolicyForOperations` is `false`: operations that would fail the administrator check
+log a warning and continue under their existing authentication requirements. Each would-deny warning names
+the caller kind (`user`, `app`, or `anonymous`) and operation, without token, secret, or command-property
+contents. Audit mode does not grant administrator privilege.
+
+Review those warnings before switching on enforcement. Set `EnforceAdministratorPolicyForOperations=true`
+through the authentication configuration:
+
+```json
+{
+  "authentication": {
+    "enabled": true,
+    "enforceAdministratorPolicyForOperations": true
+  }
+}
+```
+
+With enforcement enabled, these operations require administrator privilege only when targeting `System`
+(case-insensitive). Security management and kernel reset have no event-store property and always count as
+System operations. Operations on application stores remain available without administrator privilege.
+Self-service password changes and anonymous bootstrap endpoints keep their existing behavior.
+
+When authentication is disabled, administrator checks allow all callers and the server logs a startup
+warning. Do not use authentication-off mode on a reachable server.
 
 ## Authentication behind an HTTPS reverse proxy
 
@@ -69,10 +137,69 @@ Chronicle supports pre-configuring the initial admin user's credentials at start
 1. `adminUser.username` takes precedence over `defaultAdminUsername`; an empty or whitespace-only override uses the default. Existing users are matched case-insensitively, preserving their deployed identifiers.
 2. A new administrator uses one deterministic identifier across silos. Creation and initial password events use event-source and event-type concurrency checks: concurrent startup cannot append the same bootstrap step twice.
 3. A configured password initializes only an administrator without existing credentials. A restart can resume incomplete initialization, but never overwrites a password that has already been set.
-4. Without a configured password, the Workbench offers setup for the configured administrator only. Confirmation must match. Once credentials exist, including temporary credentials from older deployments, anonymous setup is rejected.
+4. Without a configured password, setup requires the token from the server logs or `initialAdminSetupToken`, and matching password confirmation. Only the configured administrator can be initialized. Once credentials exist, including temporary credentials from older deployments, anonymous setup is rejected.
 5. Creation and password operations wait for the persisted user state. Append failures or a projection that does not complete are reported instead of returning successful setup. A completion timeout does not undo an accepted event; inspect the user state before retrying.
 
 Keep administrator configuration consistent across silos. Changing the bootstrap username is not an account-rename mechanism. Restrict network access until interactive initial setup has completed, or supply the initial password through your secret mechanism.
+
+### Interactive initial setup
+
+If no administrator password or setup token is configured, Chronicle logs a generated initial setup token when the administrator has no credentials. Copy it into the Workbench setup form with the new password and matching confirmation. Treat the token and the logs containing it as credentials; restrict access to both. Older clients that do not send a setup token cannot complete initial setup.
+
+For automated deployments, supply `authentication.initialAdminSetupToken` through your secret mechanism (`Cratis__Chronicle__Authentication__InitialAdminSetupToken`), or configure `adminUser.password` to avoid interactive setup entirely. Keep the token consistent across silos. Configured tokens are never logged; startup instead indicates that the configured token is required. Generated tokens use the shared data-protection key ring and remain usable across restarts while the administrator is unconfigured. Remove configured setup tokens after successful setup; they cannot replace credentials once a password exists. No setup token is logged when a password has been configured or the administrator has logged in.
+
+### Administrator privileges and recovery
+
+Administrator privilege is stored separately from user documents. Creating or logging in as a user named `admin` does not confer it. New bootstrap grants privilege to the deterministic initial administrator. User replay and stale user-document updates do not overwrite privileges.
+
+On upgrade, Chronicle runs a one-time provenance migration. It reads the lowest-sequence `InitialAdminUserAdded` in the system event log, checks that event's username against the configured administrator username case-insensitively, requires an existing active user for its event source, and rejects provenance if that source has a later `UserRemoved`. This preserves proven legacy administrators with random identifiers. It does not choose a later matching bootstrap event or infer privilege from a username, deterministic identifier, or successful login alone.
+
+The migration records either a proven outcome (granting `UpgradeProvenance` only if no grant history exists), or an unproven outcome with no grant and a warning. An unproven outcome is not retried automatically. Verified grants and revocations remain authoritative across restarts.
+
+Roster grants, revocations and migration markers require kernel proof. Public System-store writes are rejected, including redaction and revision. A roster-family event on its reserved source counts in every stream. A missing or unreadable proof, a revised slot or a redaction tombstone suspends all administrator privileges until server-local `administratorRecovery` appends a verified grant with a fresh nonce. Earlier grants do not remain effective when a later slot cannot be verified. Ordinary management grants cannot restore suspended privileges.
+
+Once any roster slot fails verification, automatic bootstrap and upgrade grants remain disabled for that history, even after recovery. Unsigned historical grants and migration markers are not grandfathered: deployments containing them require operator recovery. An older installation with no roster history may still use the one-time provenance migration described above.
+
+The proof uses the deployment's existing Data Protection provider and `Chronicle` application name. Persist and share its key ring across every silo and retain historical keys for the lifetime of the roster history. Normal key rotation retains old proofs. Key deletion, key revocation, restoring a different key ring, or changing the application name can make historical proofs unreadable and suspend administrator privileges. Restoring readable keys permits verification again; otherwise use server-local recovery with a fresh nonce, not automatic bootstrap. Do not log or disclose key material or protected proofs.
+
+When upgrading from a version before 19.115.0, stop all nodes, or keep public client traffic off the cluster until every node runs 19.115.0.
+
+Authorization and the `AllAdministrators` query replay the authoritative roster on every read, including unchanged tails. The eventual administrator projection is not an authorization source. In-place storage mutations do not trigger that projection; it can remain stale until a later roster event, while authoritative reads already fail closed.
+
+If the guarded roster append fails, startup stops rather than running without a durable administrator decision. Concurrency conflicts trigger retries, with at most eight append attempts; exhausting those attempts also stops startup. The `AdministratorInitializationFailed` error records the cause and recovery action. Check the System event-log storage connection, availability, and write permissions. If the roster keeps changing, stop competing roster writers before restarting the servers. Do not bypass the concurrency guard or edit the administrator projection directly. After storage is healthy, restart with the same configuration; persisted migration outcomes and consumed recovery nonces remain authoritative. If there is still no active administrator, follow the server-local recovery procedure below with a new nonce.
+
+To recover an unproven deployment or one without an active administrator:
+
+1. Identify an existing active user. Recovery does not create or reactivate users.
+2. Configure `authentication.administratorRecovery` consistently on all silos, using a new nonce for this request:
+
+   ```json
+   {
+     "authentication": {
+       "administratorRecovery": {
+         "username": "operator",
+         "nonce": "recovery-2026-10-28-unique-request",
+         "force": false
+       }
+     }
+   }
+   ```
+
+3. Restart the servers. Recovery runs through the roster coordinator, not through a login or HTTP request. By default it refuses to grant when any active administrator already exists. Set `force` to `true` only when deliberately granting despite an existing active administrator.
+4. Confirm the `OperatorRecovery` grant in the system event log. Its evidence includes the nonce, executing host, configuration source, and force flag. Recovery also logs a warning.
+5. Remove the recovery configuration from every silo. A consumed nonce never grants again, including after revocation; a later recovery requires a new nonce.
+
+Environment variables use the same configuration path:
+
+```shell
+Cratis__Chronicle__Authentication__AdministratorRecovery__Username=operator
+Cratis__Chronicle__Authentication__AdministratorRecovery__Nonce=recovery-2026-10-28-unique-request
+Cratis__Chronicle__Authentication__AdministratorRecovery__Force=false
+```
+
+Updated nodes serialize administrator removals and revocations through one guarded roster. Removing the last active administrator fails the command with the error "The last active administrator cannot be removed." Removing another administrator appends its privilege revocation and user removal in one guarded batch. A legacy `UserRemoved` is also interpreted as revocation, but older nodes do not enforce the last-administrator guard: upgrade every writer before relying on it. If an older node removed the only active user, add a user first, then use administrator recovery to grant it the privilege.
+
+This roster does not itself add administrator-only HTTP or gRPC authorization policies. Continue to restrict management access at the deployment boundary; authentication alone is not an administrator permission check.
 
 ### Configuration file
 

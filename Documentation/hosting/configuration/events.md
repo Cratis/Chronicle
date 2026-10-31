@@ -41,6 +41,7 @@ Within a queue, every observer has its own backlog and receives its events at it
 Appends never wait for observers:
 
 - When one observer's backlog exceeds `queueBoundedCapacity` batches, that observer alone stops receiving live events and spills to catch-up. Catch-up rereads what it missed from its persisted cursor, and the observer subscribes again once it has caught up. The other observers on the queue are not affected.
+- When a single pass of an observer's backlog would need more than 256 sequential per-partition deliveries, the observer spills to catch-up the same way. Bulk appends that interleave many event sources are then processed in parallel per partition instead of one event at a time.
 - When a queue itself fills, all its observers spill to catch-up the same way.
 
 Increase `queueBoundedCapacity` to absorb longer bursts. A smaller value moves a lagging observer to catch-up sooner.

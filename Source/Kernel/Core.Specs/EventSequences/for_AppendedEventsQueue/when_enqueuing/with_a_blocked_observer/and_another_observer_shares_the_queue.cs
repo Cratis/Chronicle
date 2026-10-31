@@ -24,7 +24,8 @@ public class and_another_observer_shares_the_queue : given.a_blocked_observer_an
             await _queue.Enqueue([EventFor(_partitions[batch % _partitions.Length])]);
         }
 
-        await WaitTill(() => FreeObserverEventCount == Batches);
+        // The blocked observer's first delivery is on its own lane and may start after the free observer is done.
+        await WaitTill(() => FreeObserverEventCount == Batches && !_blockedObserverHandled.IsEmpty);
         _freeObserverEventsWhileBlocked = FreeObserverEventCount;
         _blockedObserverDeliveriesWhileBlocked = _blockedObserverHandled.Count;
         _freeObserverSequenceNumbers = _freeObserverHandled.SelectMany(handled => handled.Events).Select(@event => @event.Context.SequenceNumber).ToArray();

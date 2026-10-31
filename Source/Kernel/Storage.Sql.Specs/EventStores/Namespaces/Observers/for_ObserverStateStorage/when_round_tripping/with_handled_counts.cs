@@ -13,7 +13,7 @@ public class with_handled_counts : given.an_observer_state_storage
 
     async Task Because()
     {
-        await _storage.Save(new() { Identifier = "observer", HandledEventCount = 7, HandledEventCountPerEventType = new Dictionary<EventTypeId, EventCount> { ["event-a"] = 4, ["event-b"] = 3 } });
+        await _storage.Save(new() { Identifier = "observer", HandledEventCount = 7, HandledEventCountPerEventType = new Dictionary<EventTypeId, EventCount> { ["event-a"] = 4, ["event-b"] = 3 } }, Concepts.EventSequences.EventSequenceId.Log);
         _saved = await _storage.Get("observer");
     }
 

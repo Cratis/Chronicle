@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Storage.Observation;
@@ -19,6 +20,30 @@ public class ObserverState
     /// Gets or sets the unique identifier of the observer.
     /// </summary>
     public ObserverId Id { get; set; } = ObserverId.Unspecified;
+
+    /// <summary>
+    /// Gets or sets the owning event sequence, absent on legacy state.
+    /// </summary>
+    [BsonIgnoreIfNull]
+    public EventSequenceId? Owner { get; set; }
+
+    /// <summary>
+    /// Gets or sets the shadow partition claims, absent on legacy state.
+    /// </summary>
+    [BsonIgnoreIfNull]
+    public IEnumerable<PartitionClaim>? PartitionClaims { get; set; }
+
+    /// <summary>
+    /// Gets or sets the shadow observer-wide claim, absent on legacy state.
+    /// </summary>
+    [BsonIgnoreIfNull]
+    public ObserverWideClaim? ObserverWideClaim { get; set; }
+
+    /// <summary>
+    /// Gets or sets the shadow ownership revision, absent on legacy state.
+    /// </summary>
+    [BsonIgnoreIfNull]
+    public OwnershipRevision? OwnershipRevision { get; set; }
 
     /// <summary>
     /// Gets or sets the type-set control, absent before initialization.

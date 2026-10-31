@@ -2,6 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.EventSequences.Concurrency;
+using Cratis.Chronicle.Concepts.Identities;
 
 namespace Cratis.Chronicle.EventSequences.for_EventSequence.when_a_constraint_index_is_rebuilt;
 
@@ -15,7 +17,19 @@ public class and_closing_progress_is_unknown : given.a_catching_up_sequence
     async Task Establish()
     {
         await _eventSequence.ConstraintIndexRebuildStarting(_run, [_closingDefinition.Name]);
-        await AppendAnEvent();
+
+        _result = await _eventSequence.Append(
+            EventSourceType.Default,
+            _eventSourceId,
+            EventStreamType.All,
+            EventStreamId.Default,
+            _eventType,
+            new(),
+            CorrelationId.New(),
+            [],
+            Identity.System,
+            [],
+            ConcurrencyScope.None);
 
         // An empty-cursor rebuild can reopen a snapshot scope after a live close.
         await _closures.Reopen(_closingDefinition.Name.Value, new(EventSourceId: _eventSourceId));
@@ -27,6 +41,7 @@ public class and_closing_progress_is_unknown : given.a_catching_up_sequence
         await Tick();
     }
 
+    [Fact] void should_accept_the_live_close() => _result.IsSuccess.ShouldBeTrue();
     [Fact] async Task should_restore_the_live_close_from_the_start_of_the_run() => (await _closures.GetFor(_closingDefinition.Name.Value, new(EventSourceId: _eventSourceId))).ShouldNotBeNull();
     [Fact] void should_persist_the_completed_watermark() => _snapshots.Written!.ConstraintIndexWatermark.ShouldEqual((EventSequenceNumber)1);
 }

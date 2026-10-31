@@ -4,6 +4,7 @@
 using System.Threading.Channels;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Observation;
 
 namespace Cratis.Chronicle.EventSequences;
 
@@ -38,19 +39,23 @@ internal sealed class AppendedEventsQueueObserverLane
     /// <summary>
     /// Initializes a new instance of the <see cref="AppendedEventsQueueObserverLane"/> class.
     /// </summary>
-    /// <param name="observerKey">The <see cref="ObserverKey"/> of the observer the lane delivers to.</param>
+    /// <param name="subscription">The <see cref="AppendedEventsQueueObserverSubscription"/> the lane delivers for.</param>
+    /// <param name="observer">The <see cref="IObserver"/> grain the lane delivers to.</param>
     /// <param name="deliver">Delivers events, in sequence order, to the observer; it should stop once the lane is closed.</param>
     /// <param name="settled">Called with the number of queued batches a delivery (or a discard) has settled.</param>
     /// <param name="failed">Called when a delivery throws; the lane carries on with the next delivery.</param>
     /// <param name="run">Starts the lane's worker.</param>
     public AppendedEventsQueueObserverLane(
-        ObserverKey observerKey,
+        AppendedEventsQueueObserverSubscription subscription,
+        IObserver observer,
         Func<AppendedEventsQueueObserverLane, IReadOnlyList<AppendedEvent>, Task> deliver,
         Action<int> settled,
         Action<Exception> failed,
         Func<Func<Task>, Task> run)
     {
-        ObserverKey = observerKey;
+        ObserverKey = subscription.ObserverKey;
+        Subscription = subscription;
+        Observer = observer;
         _deliver = deliver;
         _settled = settled;
         _failed = failed;
@@ -61,6 +66,17 @@ internal sealed class AppendedEventsQueueObserverLane
     /// Gets the <see cref="ObserverKey"/> of the observer the lane delivers to.
     /// </summary>
     public ObserverKey ObserverKey { get; }
+
+    /// <summary>
+    /// Gets the <see cref="IObserver"/> grain the lane delivers to, resolved once when the lane is created.
+    /// </summary>
+    public IObserver Observer { get; }
+
+    /// <summary>
+    /// Gets or sets the subscription the lane currently delivers for. A re-subscription of the same observer replaces it
+    /// and keeps the lane. Only read and written under the queue's subscriptions lock.
+    /// </summary>
+    public AppendedEventsQueueObserverSubscription Subscription { get; set; }
 
     /// <summary>
     /// Gets the task that completes once the lane has stopped and settled everything routed to it.

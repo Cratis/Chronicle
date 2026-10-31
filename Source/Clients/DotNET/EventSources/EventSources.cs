@@ -45,22 +45,10 @@ public class EventSources(IEventStore? eventStore, IClientArtifactsProvider clie
     /// <inheritdoc/>
     public async Task Register()
     {
-        if (_byType.Count == 0)
+        if (PrepareRegistration() is { } request)
         {
-            return;
+            await RegisterPrepared(request);
         }
-
-        if (eventStore is null)
-        {
-            throw new InvalidOperationException("Event sources can only be registered when they belong to an event store.");
-        }
-
-        var servicesAccessor = (IChronicleServicesAccessor)eventStore.Connection;
-        await servicesAccessor.Services.EventSources.RegisterEventSources(new RegisterEventSourcesRequest
-        {
-            EventStore = eventStore.Name.Value,
-            Sources = [.. All.Select(_ => _.ToContract())]
-        }).EnsureSuccess();
     }
 
     /// <inheritdoc/>
@@ -78,6 +66,47 @@ public class EventSources(IEventStore? eventStore, IClientArtifactsProvider clie
     /// <returns>The <see cref="EventSourceDefinition"/>.</returns>
     /// <exception cref="DuplicateEventStreamName">The type declares the same stream twice.</exception>
     internal static EventSourceDefinition Describe(Type type) => Describe(type, null);
+
+    /// <summary>
+    /// Builds the event-source payload before registration effects.
+    /// </summary>
+    /// <returns>The prepared payload, or null when no sources were discovered.</returns>
+    /// <exception cref="InvalidOperationException">The sources do not belong to an event store.</exception>
+    internal RegisterEventSourcesRequest? PrepareRegistration()
+    {
+        if (_byType.Count == 0)
+        {
+            return null;
+        }
+
+        if (eventStore is null)
+        {
+            throw new InvalidOperationException("Event sources can only be registered when they belong to an event store.");
+        }
+
+        return new RegisterEventSourcesRequest
+        {
+            EventStore = eventStore.Name.Value,
+            Sources = [.. All.Select(_ => _.ToContract())]
+        };
+    }
+
+    /// <summary>
+    /// Sends a prepared event-source registration payload.
+    /// </summary>
+    /// <param name="request">The prepared payload.</param>
+    /// <returns>The wire registration operation.</returns>
+    /// <exception cref="InvalidOperationException">The sources do not belong to an event store.</exception>
+    internal Task RegisterPrepared(RegisterEventSourcesRequest request)
+    {
+        if (eventStore is null)
+        {
+            throw new InvalidOperationException("Event sources can only be registered when they belong to an event store.");
+        }
+
+        var servicesAccessor = (IChronicleServicesAccessor)eventStore.Connection;
+        return servicesAccessor.Services.EventSources.RegisterEventSources(request).EnsureSuccess();
+    }
 
     static EventSourceDefinition Describe(Type type, string? registeredName)
     {
