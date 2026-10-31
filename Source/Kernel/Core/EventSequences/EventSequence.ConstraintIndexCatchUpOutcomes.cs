@@ -8,8 +8,27 @@ namespace Cratis.Chronicle.EventSequences;
 
 public partial class EventSequence
 {
+    /// <summary>
+    /// More than the 5 consecutive identical failures <see cref="ConstraintIndexPoisonTracker"/> needs,
+    /// so a poison-candidate event settles before its fold is discarded.
+    /// </summary>
+    const int CatchUpFailuresBeforeYield = 6;
     readonly ConstraintIndexPoisonTracker _catchUpPoisonTracker = new(storageErrorClassifier);
     int _catchUpSettledErrors;
+    DateTimeOffset _nextConstraintCatchUpAttempt;
+    int _constraintCatchUpFailures;
+
+    void BackOffConstraintCatchUp()
+    {
+        _constraintCatchUpFailures++;
+        _nextConstraintCatchUpAttempt = ConstraintIndexTimeProvider.GetUtcNow().AddSeconds(Math.Min(60, Math.Pow(2, Math.Min(6, _constraintCatchUpFailures - 1))));
+    }
+
+    void ResetConstraintCatchUpBackOff()
+    {
+        _constraintCatchUpFailures = 0;
+        _nextConstraintCatchUpAttempt = default;
+    }
 
     bool CatchUpTurnFailed(ConstraintIndexReplayResult result)
     {
@@ -39,13 +58,12 @@ public partial class EventSequence
         UpdateConstraintIndexWatermark();
         if (result.Failed.Keys.Any(name => !poisoned.ContainsKey(name)) || result.Abandoned.Any())
         {
-            BackOffConstraintRepair();
+            BackOffConstraintCatchUp();
             return true;
         }
         if (poisoned.Count > 0)
         {
-            _constraintRepairFailures = 0;
-            _nextConstraintRepairAttempt = default;
+            ResetConstraintCatchUpBackOff();
         }
         return false;
     }

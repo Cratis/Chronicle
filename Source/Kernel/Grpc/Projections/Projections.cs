@@ -281,6 +281,11 @@ internal sealed class Projections(
                     }
 
                     var inferredSchema = InferSchema(definition.From.Keys, eventTypeSchemas, draftDefinition.DisplayName);
+                    if (RefuseUncoveredInferredTargets(definition, inferredSchema, draftDefinition.DisplayName) is { } refused)
+                    {
+                        return refused;
+                    }
+
                     var inferredSchemas = new Dictionary<ReadModelGeneration, JsonSchema>
                     {
                         { ReadModelGeneration.First, inferredSchema }
@@ -434,6 +439,32 @@ internal sealed class Projections(
             new Concepts.Sinks.SinkDefinition(Concepts.Sinks.SinkConfigurationId.None, WellKnownSinkTypes.MongoDB),
             schemas,
             []);
+    }
+
+    /// <summary>
+    /// Refuses saving with an inferred read model when the inferred schema cannot hold every target the projection writes.
+    /// </summary>
+    /// <param name="definition">The compiled projection definition.</param>
+    /// <param name="inferredSchema">The read model schema inferred from the event properties.</param>
+    /// <param name="displayName">The display name of the inferred read model.</param>
+    /// <returns>A <see cref="SaveProjectionResult"/> with the refusal, or null when every target is covered.</returns>
+    static SaveProjectionResult? RefuseUncoveredInferredTargets(Concepts.Projections.Definitions.ProjectionDefinition definition, JsonSchema inferredSchema, string displayName)
+    {
+        var uncovered = InferredReadModelCoverage.FindUncoveredTargets(definition, inferredSchema);
+        if (uncovered.Count == 0)
+        {
+            return null;
+        }
+
+        return new SaveProjectionResult
+        {
+            Errors = [new ProjectionDeclarationSyntaxError
+            {
+                Line = 1,
+                Column = 1,
+                Message = $"Cannot infer read model '{displayName}' from the event properties: the projection writes {string.Join(", ", uncovered)}, which no event property provides. Create the read model type with these properties and target it with '=> <ReadModel>'."
+            }]
+        };
     }
 
     /// <summary>

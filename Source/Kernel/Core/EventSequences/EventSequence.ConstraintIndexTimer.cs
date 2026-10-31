@@ -8,6 +8,11 @@ public partial class EventSequence
     IGrainTimer? _constraintIndexRepairTimer;
     bool _constraintIndexRepairTimerRunning;
 
+    /// <summary>
+    /// One bounded turn per tick keeps decision 0008 item 4's per-turn budget; repair and catch-up alternate when both are due.
+    /// </summary>
+    bool _catchUpTurnNext;
+
     void UpdateConstraintIndexRepairTimer()
     {
         var hasGap = _indexedDefinitions.Count > 0 && _constraintIndexPosition < State.SequenceNumber;
@@ -36,13 +41,17 @@ public partial class EventSequence
         {
             await CheckHeldConstraintIndexRebuilds(cancellationToken);
             PrepareConstraintIndexRepair();
-            if (ConstraintIndexTimeProvider.GetUtcNow() < _nextConstraintRepairAttempt) return;
-            if (_pendingConstraintIndexes.Count > 0)
+            var now = ConstraintIndexTimeProvider.GetUtcNow();
+            var repairDue = _pendingConstraintIndexes.Count > 0 && now >= _nextConstraintRepairAttempt;
+            var catchUpDue = ConstraintCatchUpDue(now);
+            if (repairDue && (!catchUpDue || !_catchUpTurnNext))
             {
+                _catchUpTurnNext = true;
                 await RunConstraintIndexRepairTurn(TimeSpan.FromSeconds(2), true, cancellationToken);
             }
-            else if (State.ConstraintIndexCatchUpBelow is not null)
+            else if (catchUpDue)
             {
+                _catchUpTurnNext = false;
                 await RunConstraintIndexCatchUpTurn(cancellationToken);
             }
         }

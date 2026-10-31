@@ -102,8 +102,20 @@ public partial class EventSequence
         _catchUpTracking = false;
         _catchUpExcludedThrough = null;
         _catchUpExcluded.Clear();
-        _constraintRepairFailures = 0;
-        _nextConstraintRepairAttempt = default;
+        ResetConstraintCatchUpBackOff();
         ConstraintIndexCatchUpSlots.For(storage).Complete(this);
+    }
+
+    async Task CompleteCatchUpMembers(CancellationToken token)
+    {
+        if (State.ConstraintIndexCatchUpRefusing?.Any() == true) await ClearCatchUpRefusal(token);
+        foreach (var name in _catchUpScope)
+        {
+            _catchUpDefinitionNames.Remove(name);
+            _catchUpPoisonTracker.ForgetSettledBefore(name, State.ConstraintIndexCatchUpBelow!);
+        }
+        ResetConstraintCatchUpBackOff();
+
+        // The boundary stays persisted while deferred members remain, as for rebuilds.
     }
 }
