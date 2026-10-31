@@ -227,7 +227,7 @@ internal sealed class AuthenticationService(
 #endif
 
     Task GrantBootstrapPrivilege(AppendResult initialResult, UserId userId) => initialResult.IsSuccess
-        ? grainFactory.GetGrain<Security.IAdministratorRoster>(Concepts.Security.AdministratorRoster.Key)
+        ? grainFactory.GetGrain<Security.IAdministratorRoster>(AdministratorRoster.Key)
             .Grant(userId, GrantReason.Bootstrap, "Successfully appended InitialAdminUserAdded for the deterministic initial administrator.")
         : Task.CompletedTask;
 
