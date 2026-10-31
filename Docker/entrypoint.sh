@@ -49,19 +49,32 @@ else
   report_all_listening_sockets() { echo "  (port diagnostics unavailable)"; }
 fi
 
-./Cratis.Chronicle.Server &
-server_pid=$!
+server_pid=""
 shutdown_requested=false
 signal_count=0
+pending_signal=""
 
 forward_signal() {
   shutdown_requested=true
   signal_count=$((signal_count + 1))
-  # The server may have exited just before the signal arrived.
-  kill -s "$1" "$server_pid" 2>/dev/null || true
+  pending_signal=$1
+  # Before the launch there is no server to signal; the launch forwards the pending signal.
+  # The server may also have exited just before the signal arrived.
+  if [ -n "$server_pid" ]; then
+    kill -s "$1" "$server_pid" 2>/dev/null || true
+  fi
 }
+# Install the traps before the launch so a stop request that arrives in between is not lost.
 trap 'forward_signal TERM' TERM
-trap 'forward_signal INT' INT
+# Bash starts a background command with SIGINT ignored, so the server cannot act on an interrupt;
+# forward it as TERM, which the server handles as a stop request.
+trap 'forward_signal TERM' INT
+
+./Cratis.Chronicle.Server &
+server_pid=$!
+if [ -n "$pending_signal" ]; then
+  kill -s "$pending_signal" "$server_pid" 2>/dev/null || true
+fi
 
 # Allow at least 30 seconds of container stop grace for the host's 10-second shutdown
 # timeout and the subsequent embedded MongoDB shutdown.
@@ -74,7 +87,8 @@ exit_status=$?
 if [ "$shutdown_requested" = true ]; then
   # A trap interrupts wait with 128 + signal, not the server's exit status. Re-wait
   # after every interruption, even if the server exited while the trap was running.
-  exit_status=127
+  # Keep the wait -n status as it is: when wait -n already reaped the server, the re-wait
+  # returns 127 and the server's own status must stand.
   while :; do
     wait_signal_count=$signal_count
     wait "$server_pid"
