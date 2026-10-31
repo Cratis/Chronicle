@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Clients;
+using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.Reactors;
@@ -17,12 +18,18 @@ public class a_reactor_grain_with_replay_on_definition_change : Specification
 {
     protected Reactor _grain;
     protected TestKitSilo _silo;
+    protected IClientConnection _clientConnection;
+    protected ClientConnectionEpoch _epoch = ClientConnectionEpoch.New();
     protected ReactorDefinition _definition;
     protected IObserver _observerProbe;
 
     async Task Establish()
     {
         _silo = new TestKitSilo();
+
+        _clientConnection = Substitute.For<IClientConnection>();
+        _clientConnection.Subscribe(Arg.Any<GrainId>()).Returns(_epoch);
+        _silo.AddProbe(_ => _clientConnection);
 
         var definitionComparer = Substitute.For<IReactorDefinitionComparer>();
         definitionComparer

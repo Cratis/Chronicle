@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Clients;
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.Reactors;
 using Cratis.Chronicle.Concepts.Observation.Replaying;
@@ -30,9 +31,11 @@ public class Reactor(
     IReactorDefinitionComparer reactorDefinitionComparer,
     ILocalSiloDetails localSiloDetails,
     IOptions<ChronicleOptions> options,
-    ILogger<Reactor> logger) : Grain<ReactorDefinition>, IReactor
+    ILogger<Reactor> logger) : Grain<ReactorDefinition>, IReactor, IClientDisconnectionSubscriber
 {
     IConnectedClients? _connectedClients;
+    IClientConnection? _clientConnection;
+    ClientConnectionEpoch? _connectionEpoch;
     ConnectedObserverKey? _observerKey;
     IObserver? _observer;
     bool _subscribed;
@@ -43,6 +46,7 @@ public class Reactor(
         _connectedClients = GrainFactory.GetConnectedClients(localSiloDetails.SiloAddress);
 
         _observerKey = ConnectedObserverKey.Parse(this.GetPrimaryKeyString());
+        _clientConnection = GrainFactory.GetGrain<IClientConnection>(_observerKey.ConnectionId.Value);
 
         return Task.CompletedTask;
     }
@@ -110,6 +114,7 @@ public class Reactor(
                     definition.Filters);
             }
             _subscribed = true;
+            await SubscribeToClientConnection();
         }
     }
 
@@ -133,6 +138,34 @@ public class Reactor(
         await observer.UnsubscribeIfMatchesClient(_observerKey!.ConnectionId);
 
         _subscribed = false;
+
+        try
+        {
+            await _clientConnection!.Unsubscribe(this.GetGrainId());
+        }
+        catch (Exception ex)
+        {
+            logger.FailedUnsubscribingFromClientConnection(ex, _observerKey.ConnectionId, _observerKey.ObserverId!);
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task ClientDisconnected(ClientConnectionEpoch epoch)
+    {
+        if (_connectionEpoch is not null && epoch != _connectionEpoch)
+        {
+            logger.StaleClientDisconnection(_observerKey!.ConnectionId, _observerKey.ObserverId!);
+            return;
+        }
+
+        try
+        {
+            await ReleaseForDisconnectedClient();
+        }
+        catch (Exception ex)
+        {
+            logger.FailedReleasingForDisconnectedClient(ex, _observerKey!.ConnectionId, _observerKey.ObserverId!);
+        }
     }
 
     /// <inheritdoc/>
@@ -161,6 +194,50 @@ public class Reactor(
         }
 
         _subscribed = true;
+
+        // Only on a fresh activation: a tick that already holds an epoch adds no per-tick work.
+        if (_connectionEpoch is null)
+        {
+            await SubscribeToClientConnection();
+        }
+    }
+
+    async Task SubscribeToClientConnection()
+    {
+        try
+        {
+            var epoch = await _clientConnection!.Subscribe(this.GetGrainId());
+            if (epoch == ClientConnectionEpoch.NotSet)
+            {
+                await ReleaseForDisconnectedClient();
+                return;
+            }
+
+            _connectionEpoch = epoch;
+        }
+        catch (Exception ex)
+        {
+            // Best effort: the closing of the client stream and the observer watchdog remain the fallbacks.
+            logger.FailedSubscribingToClientConnection(ex, _observerKey!.ConnectionId, _observerKey.ObserverId!);
+        }
+    }
+
+    async Task ReleaseForDisconnectedClient()
+    {
+        logger.ClientConnectionDisconnected(
+            _observerKey!.ConnectionId,
+            _observerKey!.EventStore,
+            _observerKey.ObserverId!,
+            _observerKey!.EventSequenceId,
+            _observerKey!.Namespace);
+
+        var key = new ObserverKey(_observerKey.ObserverId, _observerKey.EventStore, _observerKey.Namespace, _observerKey.EventSequenceId);
+        var observer = GrainFactory.GetGrain<IObserver>(key);
+
+        // Always unsubscribe, even when not marked as subscribed: a fresh activation may still own the observer subscription.
+        await observer.UnsubscribeIfMatchesClient(_observerKey.ConnectionId);
+        _subscribed = false;
+        _connectionEpoch = null;
     }
 
     async Task ReplayForAllNamespaces(ReactorKey key, IEnumerable<EventStoreNamespaceName> namespaces)

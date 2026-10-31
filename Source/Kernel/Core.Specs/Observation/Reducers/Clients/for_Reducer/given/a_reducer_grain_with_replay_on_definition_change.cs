@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Clients;
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.Reducers;
@@ -18,11 +19,17 @@ public class a_reducer_grain_with_replay_on_definition_change : Specification
 {
     protected Reducer _grain;
     protected TestKitSilo _silo;
+    protected IClientConnection _clientConnection;
+    protected ClientConnectionEpoch _epoch = ClientConnectionEpoch.New();
     protected ReducerDefinition _definition;
 
     async Task Establish()
     {
         _silo = new TestKitSilo();
+
+        _clientConnection = Substitute.For<IClientConnection>();
+        _clientConnection.Subscribe(Arg.Any<GrainId>()).Returns(_epoch);
+        _silo.AddProbe(_ => _clientConnection);
 
         var definitionComparer = Substitute.For<IReducerDefinitionComparer>();
         definitionComparer

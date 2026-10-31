@@ -19,6 +19,8 @@ namespace Cratis.Chronicle.Observation.Reducers.Clients.for_Reducer.given;
 public class a_reducer_grain_with_a_stored_definition : Specification
 {
     protected TestKitSilo _silo;
+    protected IClientConnection _clientConnection;
+    protected ClientConnectionEpoch _epoch = ClientConnectionEpoch.New();
     protected Reducer _grain;
     protected IObserver _observer;
     protected IConnectedClients _connectedClients;
@@ -29,6 +31,10 @@ public class a_reducer_grain_with_a_stored_definition : Specification
     async Task Establish()
     {
         _silo = new TestKitSilo();
+
+        _clientConnection = Substitute.For<IClientConnection>();
+        _clientConnection.Subscribe(Arg.Any<GrainId>()).Returns(_epoch);
+        _silo.AddProbe(_ => _clientConnection);
 
         var definitionComparer = Substitute.For<IReducerDefinitionComparer>();
         definitionComparer

@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Clients;
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.Reducers;
@@ -37,18 +38,21 @@ public class Reducer(
     ILocalSiloDetails localSiloDetails,
     IOptions<ChronicleOptions> options,
     IStorage storage,
-    ILogger<Reducer> logger) : Grain<ReducerDefinition>, IReducer
+    ILogger<Reducer> logger) : Grain<ReducerDefinition>, IReducer, IClientDisconnectionSubscriber
 {
     IObserver? _observer;
     bool _subscribed;
     ConnectedObserverKey? _observerKey;
     IConnectedClients? _connectedClients;
+    IClientConnection? _clientConnection;
+    ClientConnectionEpoch? _connectionEpoch;
 
     /// <inheritdoc/>
     public override Task OnActivateAsync(CancellationToken cancellationToken)
     {
         _observerKey = ConnectedObserverKey.Parse(this.GetPrimaryKeyString());
         _connectedClients = GrainFactory.GetConnectedClients(localSiloDetails.SiloAddress);
+        _clientConnection = GrainFactory.GetGrain<IClientConnection>(_observerKey.ConnectionId.Value);
 
         return Task.CompletedTask;
     }
@@ -102,6 +106,7 @@ public class Reducer(
             }
 
             _subscribed = true;
+            await SubscribeToClientConnection();
         }
         else if (_subscribed && !definition.IsActive)
         {
@@ -139,6 +144,34 @@ public class Reducer(
             // new client's subscription.
             await observer.UnsubscribeIfMatchesClient(_observerKey!.ConnectionId);
             _subscribed = false;
+
+            try
+            {
+                await _clientConnection!.Unsubscribe(this.GetGrainId());
+            }
+            catch (Exception ex)
+            {
+                logger.FailedUnsubscribingFromClientConnection(ex, _observerKey.ConnectionId, _observerKey.ObserverId!);
+            }
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task ClientDisconnected(ClientConnectionEpoch epoch)
+    {
+        if (_connectionEpoch is not null && epoch != _connectionEpoch)
+        {
+            logger.StaleClientDisconnection(_observerKey!.ConnectionId, _observerKey.ObserverId!);
+            return;
+        }
+
+        try
+        {
+            await ReleaseForDisconnectedClient();
+        }
+        catch (Exception ex)
+        {
+            logger.FailedReleasingForDisconnectedClient(ex, _observerKey!.ConnectionId, _observerKey.ObserverId!);
         }
     }
 
@@ -172,6 +205,59 @@ public class Reducer(
         }
 
         _subscribed = true;
+
+        // Only on a fresh activation: a tick that already holds an epoch adds no per-tick work.
+        if (_connectionEpoch is null)
+        {
+            await SubscribeToClientConnection();
+        }
+    }
+
+    async Task SubscribeToClientConnection()
+    {
+        try
+        {
+            var epoch = await _clientConnection!.Subscribe(this.GetGrainId());
+            if (epoch == ClientConnectionEpoch.NotSet)
+            {
+                await ReleaseForDisconnectedClient();
+                return;
+            }
+
+            _connectionEpoch = epoch;
+        }
+        catch (Exception ex)
+        {
+            // Best effort: the closing of the client stream and the observer watchdog remain the fallbacks.
+            logger.FailedSubscribingToClientConnection(ex, _observerKey!.ConnectionId, _observerKey.ObserverId!);
+        }
+    }
+
+    async Task ReleaseForDisconnectedClient()
+    {
+        logger.ClientConnectionDisconnected(
+            _observerKey!.ConnectionId,
+            _observerKey!.EventStore,
+            _observerKey.ObserverId!,
+            _observerKey!.EventSequenceId,
+            _observerKey!.Namespace);
+
+        try
+        {
+            DeactivateOnIdle();
+        }
+        catch (InvalidOperationException)
+        {
+            // Grain activation may already be invalid during silo shutdown.
+        }
+
+        var key = new ObserverKey(_observerKey.ObserverId, _observerKey.EventStore, _observerKey.Namespace, _observerKey.EventSequenceId);
+        var observer = GrainFactory.GetGrain<IObserver>(key);
+
+        // Always unsubscribe, even when not marked as subscribed: a fresh activation may still own the observer subscription.
+        await observer.UnsubscribeIfMatchesClient(_observerKey.ConnectionId);
+        _subscribed = false;
+        _connectionEpoch = null;
     }
 
     async Task EvolveForAllNamespaces(

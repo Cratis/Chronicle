@@ -21,6 +21,8 @@ public class a_reactor_grain_with_a_stored_definition : Specification
     protected const string TheConnection = "the-connection";
     protected Reactor _grain;
     protected TestKitSilo _silo;
+    protected IClientConnection _clientConnection;
+    protected ClientConnectionEpoch _epoch = ClientConnectionEpoch.New();
     protected IObserver _observer;
     protected IConnectedClients _connectedClients;
     protected ConnectedClient _client;
@@ -31,6 +33,10 @@ public class a_reactor_grain_with_a_stored_definition : Specification
     async Task Establish()
     {
         _silo = new TestKitSilo();
+
+        _clientConnection = Substitute.For<IClientConnection>();
+        _clientConnection.Subscribe(Arg.Any<GrainId>()).Returns(_epoch);
+        _silo.AddProbe(_ => _clientConnection);
 
         var definitionComparer = Substitute.For<IReactorDefinitionComparer>();
         definitionComparer

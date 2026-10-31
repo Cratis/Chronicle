@@ -19,4 +19,19 @@ internal static partial class ReactorLogMessages
 
     [LoggerMessage(LogLevel.Information, "Auto-replaying reactor {ReactorId} for event store {EventStore} on sequence {EventSequenceId} for namespace {Namespace} due to definition change")]
     internal static partial void AutoReplayingReactor(this ILogger<Reactor> logger, EventStoreName eventStore, ReactorId ReactorId, EventSequenceId eventSequenceId, EventStoreNamespaceName @namespace);
+
+    [LoggerMessage(LogLevel.Debug, "Client connection {ConnectionId} has been disconnected - releasing reactor {ObserverId} for event store {EventStore} on sequence {EventSequenceId} for namespace {Namespace}")]
+    internal static partial void ClientConnectionDisconnected(this ILogger<Reactor> logger, ConnectionId connectionId, EventStoreName eventStore, ReactorId observerId, EventSequenceId eventSequenceId, EventStoreNamespaceName @namespace);
+
+    [LoggerMessage(LogLevel.Debug, "Ignoring disconnection of an earlier period of client connection {ConnectionId} for reactor {ObserverId}")]
+    internal static partial void StaleClientDisconnection(this ILogger<Reactor> logger, ConnectionId connectionId, ReactorId observerId);
+
+    [LoggerMessage(LogLevel.Warning, "Failed subscribing reactor {ObserverId} to client connection {ConnectionId}")]
+    internal static partial void FailedSubscribingToClientConnection(this ILogger<Reactor> logger, Exception exception, ConnectionId connectionId, ReactorId observerId);
+
+    [LoggerMessage(LogLevel.Warning, "Failed unsubscribing reactor {ObserverId} from client connection {ConnectionId}")]
+    internal static partial void FailedUnsubscribingFromClientConnection(this ILogger<Reactor> logger, Exception exception, ConnectionId connectionId, ReactorId observerId);
+
+    [LoggerMessage(LogLevel.Warning, "Failed releasing reactor {ObserverId} after client connection {ConnectionId} disconnected")]
+    internal static partial void FailedReleasingForDisconnectedClient(this ILogger<Reactor> logger, Exception exception, ConnectionId connectionId, ReactorId observerId);
 }

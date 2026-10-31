@@ -25,4 +25,19 @@ internal static partial class ReducerLogMessages
 
     [LoggerMessage(LogLevel.Information, "No action - reducer {observerId} for event store {EventStore} on sequence {EventSequenceId} in namespace {@namespace} only consumes newly added event types with no historical events")]
     internal static partial void ReducerEvolutionNeedsNoAction(this ILogger<Reducer> logger, EventStoreName eventStore, ObserverId observerId, EventSequenceId eventSequenceId, EventStoreNamespaceName @namespace);
+
+    [LoggerMessage(LogLevel.Debug, "Client connection {ConnectionId} has been disconnected - releasing reducer {ObserverId} for event store {EventStore} on sequence {EventSequenceId} for namespace {Namespace}")]
+    internal static partial void ClientConnectionDisconnected(this ILogger<Reducer> logger, ConnectionId connectionId, EventStoreName eventStore, ObserverId observerId, EventSequenceId eventSequenceId, EventStoreNamespaceName @namespace);
+
+    [LoggerMessage(LogLevel.Debug, "Ignoring disconnection of an earlier period of client connection {ConnectionId} for reducer {ObserverId}")]
+    internal static partial void StaleClientDisconnection(this ILogger<Reducer> logger, ConnectionId connectionId, ObserverId observerId);
+
+    [LoggerMessage(LogLevel.Warning, "Failed subscribing reducer {ObserverId} to client connection {ConnectionId}")]
+    internal static partial void FailedSubscribingToClientConnection(this ILogger<Reducer> logger, Exception exception, ConnectionId connectionId, ObserverId observerId);
+
+    [LoggerMessage(LogLevel.Warning, "Failed unsubscribing reducer {ObserverId} from client connection {ConnectionId}")]
+    internal static partial void FailedUnsubscribingFromClientConnection(this ILogger<Reducer> logger, Exception exception, ConnectionId connectionId, ObserverId observerId);
+
+    [LoggerMessage(LogLevel.Warning, "Failed releasing reducer {ObserverId} after client connection {ConnectionId} disconnected")]
+    internal static partial void FailedReleasingForDisconnectedClient(this ILogger<Reducer> logger, Exception exception, ConnectionId connectionId, ObserverId observerId);
 }

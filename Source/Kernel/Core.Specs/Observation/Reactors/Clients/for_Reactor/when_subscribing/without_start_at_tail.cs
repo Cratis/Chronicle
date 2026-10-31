@@ -12,4 +12,5 @@ public class without_start_at_tail : given.a_reactor_grain_with_replay_on_defini
     async Task Because() => await _grain.SetDefinitionAndSubscribe(_definition);
 
     [Fact] async Task should_leave_the_position_alone() => await _observer.DidNotReceive().StartAtTailWhenNew();
+    [Fact] async Task should_subscribe_to_its_client_connection() => await _clientConnection.Received(1).Subscribe(Arg.Any<GrainId>());
 }

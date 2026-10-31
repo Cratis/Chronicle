@@ -18,4 +18,5 @@ public class with_pinned_delivery : given.a_reducer_grain_with_replay_on_definit
     }
     async Task Because() => await _grain.SetDefinitionAndSubscribe(_definition);
     [Fact] async Task should_pass_the_delivery_policy() => await _observer.Received(1).SubscribeWithGenerationDelivery<IReducerObserverSubscriber>(ObserverType.Reducer, Arg.Any<IEnumerable<EventType>>(), Arg.Any<SiloAddress>(), EventGenerationDelivery.Pinned, Arg.Any<object?>(), Arg.Any<bool>(), Arg.Any<ObserverFilters?>());
+    [Fact] async Task should_subscribe_to_its_client_connection() => await _clientConnection.Received(1).Subscribe(Arg.Any<GrainId>());
 }
