@@ -197,6 +197,27 @@ public interface IEventSequence
         IEnumerable<EventType>? filterEventTypes = default);
 
     /// <summary>
+    /// Get the tail sequence number with cancellation support.
+    /// </summary>
+    /// <param name="cancellationToken">The token that stops waiting for the connection and is forwarded to the RPC. RPC cancellation requires transport acknowledgement.</param>
+    /// <param name="eventSourceId">Optional event source identifier to filter by.</param>
+    /// <param name="eventSourceType">Optional event source type to filter by.</param>
+    /// <param name="eventStreamType">Optional event stream type to filter by.</param>
+    /// <param name="eventStreamId">Optional event stream identifier to filter by.</param>
+    /// <param name="filterEventTypes">Optional event types to filter by.</param>
+    /// <returns>The tail <see cref="EventSequenceNumber"/>.</returns>
+    /// <exception cref="NotSupportedException">The implementation does not support cancellable tail reads. Legacy implementations do not fall back to the non-cancellable method.</exception>
+    /// <exception cref="OperationCanceledException">The token is cancelled before dispatch, while waiting for the connection, or acknowledged as cancelled by the RPC.</exception>
+    Task<EventSequenceNumber> GetTailSequenceNumberWithCancellation(
+        CancellationToken cancellationToken,
+        EventSourceId? eventSourceId = default,
+        EventSourceType? eventSourceType = default,
+        EventStreamType? eventStreamType = default,
+        EventStreamId? eventStreamId = default,
+        IEnumerable<EventType>? filterEventTypes = default) =>
+        throw new NotSupportedException("This event sequence does not support cancellable tail reads.");
+
+    /// <summary>
     /// Get the sequence number of the last (tail) event in the sequence for a specific observer.
     /// </summary>
     /// <param name="type">Type of observer to get for.</param>
