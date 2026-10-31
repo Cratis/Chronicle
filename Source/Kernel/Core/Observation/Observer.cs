@@ -220,7 +220,12 @@ public partial class Observer(
         _writeCoalescingInterval = TimeSpan.FromSeconds(Math.Max(config.WriteCoalescingInterval, 0));
         RegisterWatchdog(config.WatchdogInterval);
         _webhookProbe = State.WebhookProbe;
+        RestoreShadowClaims();
         await InitializeAlertState();
+        if (!KeyOwnsDefinition)
+        {
+            logger.ActivatedOnAnotherEventSequence(_observerId, _observerKey.EventSequenceId, Definition.EventSequenceId);
+        }
     }
 
     /// <inheritdoc/>
@@ -234,8 +239,19 @@ public partial class Observer(
                 return;
             }
 
+            using (logger.BeginObserverScope(_observerId, _observerKey))
+            {
+                logger.Deactivating(reason.ReasonCode, reason.Description);
+            }
+
             await DrainWebhookProbe();
             await FlushDebouncedProgressState();
+            if (!_observerExists)
+            {
+                await base.OnDeactivateAsync(reason, cancellationToken);
+                return;
+            }
+
             if (reason.ReasonCode != DeactivationReasonCode.ShuttingDown)
             {
                 await TransitionTo<Disconnected>();
@@ -307,6 +323,7 @@ public partial class Observer(
     public async Task ClearObserverQuarantine()
     {
         ThrowIfSealed();
+        await ThrowIfKeyDoesNotOwnDefinition();
         await CancelWebhookProbe();
         if (IsQuarantined)
         {
@@ -328,6 +345,7 @@ public partial class Observer(
         logger.RemovingObserver();
 
         ThrowIfSealed();
+        await ThrowIfKeyDoesNotOwnDefinition();
 
         // Normal subscription calls cannot interleave this namespace-local operation. The store-wide guard
         // is only a preflight check; earlier namespaces may already be removed if this recheck fails.
@@ -442,10 +460,12 @@ public partial class Observer(
         logger.Subscribing();
         logger.SubscribingToAllEvents();
 
-        await ReloadObserverState();
+        var storageWasReset = await ReloadObserverState();
         await observerDefinition.ReadStateAsync();
         await failures.ReadStateAsync();
         if (!reactivateRetired && State.AlertDisposition == AlertDisposition.Retired) return;
+        await ClaimDefinitionForKey();
+        await ApplyPendingStartAtTail(storageWasReset);
         await BeginAlertLifecycle();
         await LeaveQuarantineForSubscription();
 
@@ -473,6 +493,7 @@ public partial class Observer(
             observerDefinition,
             _eventSequence,
             storage,
+            CurrentPartitionHoldsVersion,
             loggerFactory.CreateLogger<Routing>()),
 
         new Replay(
@@ -506,6 +527,11 @@ public partial class Observer(
     /// <inheritdoc/>
     public async Task Unsubscribe()
     {
+        using (logger.BeginObserverScope(_observerId, _observerKey))
+        {
+            logger.Unsubscribed();
+        }
+
         await CancelWebhookProbe();
         SupersedeRecoveryAfterQuarantine();
         _subscription = ObserverSubscription.Unsubscribed;
@@ -527,12 +553,14 @@ public partial class Observer(
                 .ToArray();
             if (remaining.Length == _subscription.Targets.Count)
             {
+                LogClientDisconnected(connectionId, "not a current target, dropping any superseded registration");
                 DropSupersededRegistration(connectionId);
                 return;
             }
 
             if (remaining.Length > 0)
             {
+                LogClientDisconnected(connectionId, "removing it from the fan-out targets");
                 _subscription = _subscription with
                 {
                     SiloAddress = remaining[0].SiloAddress,
@@ -542,6 +570,7 @@ public partial class Observer(
                 return;
             }
 
+            LogClientDisconnected(connectionId, "last target, promoting a superseded registration or unsubscribing");
             await PromoteSupersededRegistrationOrUnsubscribe();
             return;
         }
@@ -550,16 +579,24 @@ public partial class Observer(
             _subscription.Arguments is ConnectedClient connectedClient &&
             connectedClient.ConnectionId != connectionId)
         {
+            LogClientDisconnected(connectionId, "not the subscribed client, dropping any superseded registration");
             DropSupersededRegistration(connectionId);
             return;
         }
 
+        LogClientDisconnected(connectionId, "unsubscribing");
         await Unsubscribe();
     }
 
     /// <inheritdoc/>
     public async Task ReceiveReminder(string reminderName, TickStatus status)
     {
+        if (!KeyOwnsDefinition || !_observerExists)
+        {
+            await UnregisterReminderNamed(reminderName);
+            return;
+        }
+
         if (reminderName == WebhookProbeReminderName)
         {
             await ReceiveWebhookProbeReminder();
@@ -743,6 +780,7 @@ public partial class Observer(
 
             // A state-machine OnEnter can return an earlier record after awaiting a job callback. Preserve the
             // source-owned metadata advanced by that callback, and serialize writes from AlwaysInterleave methods.
+            var shadowClaims = ShadowClaimsSnapshot();
             State = State with
             {
                 AlertLifecycleId = _alertLifecycleId,
@@ -750,10 +788,32 @@ public partial class Observer(
                 AlertDisposition = _alertDisposition,
                 QuarantineEpisodeId = _quarantineEpisodeId,
                 WebhookProbe = _webhookProbe,
-                DeliveryFences = DeliveryFenceSnapshot()
+                DeliveryFences = DeliveryFenceSnapshot(),
+                PartitionClaims = shadowClaims.Claims,
+                ObserverWideClaim = shadowClaims.Wide,
+                OwnershipRevision = shadowClaims.Revision
             };
             var revision = _alertRevision;
-            await base.WriteStateAsync();
+            try
+            {
+                await base.WriteStateAsync();
+            }
+            catch (ObserverKeyDoesNotMatchDefinition)
+            {
+                if (await RelinquishOwnershipIfMoved()) return;
+                await storage.GetEventStore(_observerKey.EventStore).GetNamespace(_observerKey.Namespace)
+                    .Observers.ClaimOwnership(_observerId, _observerKey.EventSequenceId);
+                try
+                {
+                    await base.WriteStateAsync();
+                }
+                catch (ObserverKeyDoesNotMatchDefinition)
+                {
+                    if (await RelinquishOwnershipIfMoved()) return;
+                    throw;
+                }
+            }
+
             if (revision == _alertRevision)
             {
                 _alertStateNeedsPersistence = false;
@@ -805,7 +865,7 @@ public partial class Observer(
         !_subscription.EventTypes.Any() &&
         !State.SubscribesToAllEvents;
 
-    bool CannotWriteState() => _stateWritingSuspended || !_observerExists;
+    bool CannotWriteState() => _stateWritingSuspended || !_observerExists || !KeyOwnsDefinition;
 
     bool CannotRecoverFromReminder() => IsRetired || _removed || IsQuarantined || !_subscription.IsSubscribed;
 
@@ -894,6 +954,7 @@ public partial class Observer(
         // Ordinary Subscribe keeps its explicit-registration semantics, including throwing when sealed.
         if (IsAdditiveSubscriptionBlocked(additive)) return;
         ThrowIfSealed();
+        await ThrowIfServedByAnotherTransport(typeof(TObserverSubscriber), subscriberArgs);
         if (recovering && !await NeedsSubscriptionRecovery(eventTypes)) return;
 
         // Only a subscription that may end quarantine supersedes recovery owed by an earlier clearance.
@@ -920,10 +981,11 @@ public partial class Observer(
             // Ordinary subscription and automatic reconciliation re-read storage, including after a shared
             // test silo's database reset, but must not let a stale snapshot overwrite an interleaved quarantine.
             // Recovery retains live progress rather than reloading a stale persisted position.
+            var storageWasReset = false;
             if (!recovering)
             {
                 var wasQuarantined = IsQuarantined;
-                var storageWasReset = await ReloadObserverState();
+                storageWasReset = await ReloadObserverState();
 
                 await observerDefinition.ReadStateAsync();
                 await failures.ReadStateAsync();
@@ -937,16 +999,16 @@ public partial class Observer(
             }
 
             if (IsRetiredAndNotReactivating(reactivateRetired)) return;
+
+            // Only an accepted subscription may move the definition; persist ownership before any cleanup writes.
+            await ClaimDefinitionForKey();
+            await ApplyPendingStartAtTail(storageWasReset);
             await BeginAlertLifecycle();
             var webhookSubscription = typeof(IWebhookObserverSubscriber).IsAssignableFrom(typeof(TObserverSubscriber));
             if (webhookSubscription)
             {
                 await SetUpSubscription<TObserverSubscriber>(type, eventTypes, siloAddress, subscriberArgs, isReplayable, filters, generationDelivery);
-                if (!await ValidateStoredWebhookTarget())
-                {
-                    _subscriptionSetupFailed = false;
-                    return;
-                }
+                if (!await ValidateStoredWebhookTarget()) return;
             }
 
             if (recovering)
@@ -986,6 +1048,8 @@ public partial class Observer(
 
     void DiscardQuarantineFromWipedWorld()
     {
+        // The entry time belongs to the discarded episode, not to a future quarantine.
+        _quarantineRunningStateChangedAt = null;
         _webhookProbe = null;
         _armWebhookProbe = false;
         _recoverSubscriptionAfterQuarantine = false;
@@ -1014,6 +1078,7 @@ public partial class Observer(
 
         observerDefinition.State = observerDefinition.State with
         {
+            EventSequenceId = _observerKey.EventSequenceId,
             Type = type,
             Owner = owner,
             EventTypes = eventTypes,
@@ -1040,6 +1105,7 @@ public partial class Observer(
         if (reconcile && CannotReconcileSubscription(typeof(IWebhookObserverSubscriber).IsAssignableFrom(typeof(TObserverSubscriber)))) return;
         observerDefinition.State = observerDefinition.State with
         {
+            EventSequenceId = _observerKey.EventSequenceId,
             Type = type,
             Owner = GetOwner<TObserverSubscriber>(),
             EventTypes = [],

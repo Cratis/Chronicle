@@ -38,7 +38,7 @@ public class with_a_webhook_probe : Specification
         _expected = _state.ToMongoDB().ToBsonDocument();
     }
 
-    async Task Because() => await _storage.Save(_state);
+    async Task Because() => await _storage.Save(_state, Concepts.EventSequences.EventSequenceId.Log);
 
     [Fact] void should_set_the_webhook_probe() => ValueIn(_set, nameof(ObserverState.WebhookProbe)).ShouldEqual(ValueIn(_expected, nameof(ObserverState.WebhookProbe)));
 

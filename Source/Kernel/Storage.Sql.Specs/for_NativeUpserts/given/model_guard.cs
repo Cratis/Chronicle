@@ -1,11 +1,13 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Arc.EntityFrameworkCore;
 using Cratis.Arc.EntityFrameworkCore.Concepts;
 using Cratis.Chronicle.Storage.Sql.Cluster;
 using Cratis.Chronicle.Storage.Sql.EventStores;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
 
 namespace Cratis.Chronicle.Storage.Sql.for_NativeUpserts.given;
@@ -29,7 +31,10 @@ public static class model_guard
     {
         var builder = new DbContextOptionsBuilder<T>();
         configure(builder);
-        return builder.AddConceptAsSupport().WithoutServiceProviderCaching().Options;
+        var connection = RelationalOptionsExtension.Extract(builder.Options).ConnectionString!;
+        return connection.GetDatabaseType() == DatabaseType.PostgreSql
+            ? SpecDbContextOptions.Kernel<T>(connection)
+            : builder.AddConceptAsSupport().WithoutServiceProviderCaching().Options;
     }
 
     static void Check(DbContext context, string[] sets, List<string> unsupported)

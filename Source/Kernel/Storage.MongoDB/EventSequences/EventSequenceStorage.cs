@@ -57,6 +57,23 @@ public partial class EventSequenceStorage(
     /// <inheritdoc/>
     public bool SupportsRevisionTracking => true;
 
+    /// <summary>
+    /// Gets the effect receipt indexes.
+    /// </summary>
+    internal static IReadOnlyList<CreateIndexModel<BsonDocument>> EffectReceiptIndexes { get; } =
+    [
+        new(Builders<BsonDocument>.IndexKeys.Ascending("occurrenceId"), new CreateIndexOptions { Name = "occurrenceId" })
+    ];
+
+    /// <summary>
+    /// Gets the additional event sequence indexes.
+    /// </summary>
+    internal static IReadOnlyList<CreateIndexModel<Event>> SequenceIndexes { get; } =
+    [
+        new(Builders<Event>.IndexKeys.Ascending(e => e.PublicationId), new CreateIndexOptions { Unique = true, Sparse = true, Name = "publication_identity" }),
+        new(Builders<Event>.IndexKeys.Ascending(e => e.Subject), new CreateIndexOptions { Sparse = true, Name = "subject_index" })
+    ];
+
     /// <inheritdoc/>
     public string SerializeContentForVerification(ExpandoObject content, JsonSchema schema) => EventContentBson.ToJson(SerializeContent(content, schema));
 
@@ -82,7 +99,8 @@ public partial class EventSequenceStorage(
             .Set(_ => _.TailSequenceNumberPerEventType, stateForStorage.TailSequenceNumberPerEventType)
             .Set(_ => _.ConstraintIndexWatermark, stateForStorage.ConstraintIndexWatermark)
             .Set(_ => _.ConstraintIndexCatchUpBelow, stateForStorage.ConstraintIndexCatchUpBelow)
-            .Set(_ => _.ConstraintIndexCatchUpRefusing, stateForStorage.ConstraintIndexCatchUpRefusing);
+            .Set(_ => _.ConstraintIndexCatchUpRefusing, stateForStorage.ConstraintIndexCatchUpRefusing)
+            .Set(_ => _.MutationEpoch, stateForStorage.MutationEpoch);
 
         await collection.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = true }).ConfigureAwait(false);
     }
@@ -148,6 +166,51 @@ public partial class EventSequenceStorage(
             .ToCursorAsync(cancellationToken)
             .ConfigureAwait(false);
 
+        return new EventCursor(converter, cursor);
+    }
+
+    /// <inheritdoc/>
+    public async Task<IEventCursor> GetWindow(
+        EventSequenceNumber from,
+        EventSequenceNumber until,
+        int limit,
+        bool descending,
+        EventSourceId? eventSourceId = default,
+        EventSourceType? eventSourceType = default,
+        EventStreamType? eventStreamType = default,
+        EventStreamId? eventStreamId = default,
+        IEnumerable<EventType>? eventTypes = default,
+        IEnumerable<Concepts.Events.Tag>? tags = default,
+        CancellationToken cancellationToken = default)
+    {
+        if (limit < 1)
+        {
+            throw new InvalidEventSequenceWindowLimit(limit);
+        }
+
+        var criteria = new EventSequenceQueryCriteria(
+            eventSourceId,
+            eventSourceType?.IsDefaultOrUnspecified == false ? eventSourceType : null,
+            eventStreamType,
+            EventTypes: eventTypes,
+            Tags: tags);
+        if (from.Value > long.MaxValue || from > until)
+        {
+            return new MaterializedEventCursor([]);
+        }
+
+        var upper = (EventSequenceNumber)Math.Min(until.Value, long.MaxValue);
+        var filter = CreateFilterFor(criteria) &
+            Builders<Event>.Filter.Gte(_ => _.SequenceNumber, from) &
+            Builders<Event>.Filter.Lte(_ => _.SequenceNumber, upper);
+        if (eventStreamId is { Value.Length: > 0, IsDefault: false })
+        {
+            filter &= Builders<Event>.Filter.Eq(_ => _.EventStreamId, eventStreamId);
+        }
+
+        var find = _collection.Find(filter);
+        var sorted = descending ? find.SortByDescending(_ => _.SequenceNumber) : find.SortBy(_ => _.SequenceNumber);
+        var cursor = await sorted.Limit(limit).ToCursorAsync(cancellationToken).ConfigureAwait(false);
         return new EventCursor(converter, cursor);
     }
 
@@ -984,18 +1047,8 @@ public partial class EventSequenceStorage(
     public async Task EnsureIndexes()
     {
         await database.EnsureIndexesForEventSequence(eventSequenceId).ConfigureAwait(false);
-        await ReceiptCollection.EnsureIndexesAsync(
-            new CreateIndexModel<BsonDocument>(
-                Builders<BsonDocument>.IndexKeys.Ascending("occurrenceId"),
-                new CreateIndexOptions { Name = "occurrenceId" })).ConfigureAwait(false);
-        await _collection.EnsureIndexesAsync(
-            new CreateIndexModel<Event>(
-                Builders<Event>.IndexKeys.Ascending(e => e.PublicationId),
-                new CreateIndexOptions { Unique = true, Sparse = true, Name = "publication_identity" })).ConfigureAwait(false);
-        await _collection.EnsureIndexesAsync(
-            new CreateIndexModel<Event>(
-                Builders<Event>.IndexKeys.Ascending(e => e.Subject),
-                new CreateIndexOptions { Sparse = true, Name = "subject_index" })).ConfigureAwait(false);
+        await ReceiptCollection.EnsureIndexesAsync(EffectReceiptIndexes.ToArray()).ConfigureAwait(false);
+        await _collection.EnsureIndexesAsync(SequenceIndexes.ToArray()).ConfigureAwait(false);
     }
 
     /// <summary>

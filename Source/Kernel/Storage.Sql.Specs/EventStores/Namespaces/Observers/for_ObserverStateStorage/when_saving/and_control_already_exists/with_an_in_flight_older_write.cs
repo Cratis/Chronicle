@@ -24,7 +24,7 @@ public class with_an_in_flight_older_write : given.an_observer_state_storage
     async Task Establish()
     {
         _control = new(new(5), new("reactor-subscriber", ObserverFilters.None), new Dictionary<EventTypeId, ObserverTypeSetMember>(), []);
-        await _storage.Save(new() { Identifier = "observer", TypeSetControl = _control });
+        await _storage.Save(new() { Identifier = "observer", TypeSetControl = _control }, Concepts.EventSequences.EventSequenceId.Log);
         _barrier = new();
         var options = new DbContextOptionsBuilder<NamespaceDbContext>()
             .UseSqlite(_connection).AddConceptAsSupport().WithoutServiceProviderCaching().AddInterceptors(_barrier).Options;
@@ -37,11 +37,11 @@ public class with_an_in_flight_older_write : given.an_observer_state_storage
 
     async Task Because()
     {
-        var oldSave = _delayedStorage.Save(new() { Identifier = "observer", TypeSetControl = _control with { Revision = new(6) } });
+        var oldSave = _delayedStorage.Save(new() { Identifier = "observer", TypeSetControl = _control with { Revision = new(6) } }, Concepts.EventSequences.EventSequenceId.Log);
         try
         {
             await _barrier.Reached.Task.WaitAsync(TimeSpan.FromSeconds(10));
-            await _storage.Save(new() { Identifier = "observer", TypeSetControl = _control with { Revision = new(7) } });
+            await _storage.Save(new() { Identifier = "observer", TypeSetControl = _control with { Revision = new(7) } }, Concepts.EventSequences.EventSequenceId.Log);
         }
         finally
         {

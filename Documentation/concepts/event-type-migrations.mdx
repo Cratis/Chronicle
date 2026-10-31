@@ -126,6 +126,9 @@ key, parent-key, and removal clause uses the generation it names, including even
 to resolve joins or parent keys. A pinned projection can name only one generation per event type
 across all its clauses, including children and nested objects; registration rejects conflicting pins,
 just as it does for reactors and reducers. Different event types can pin different generations.
+Strongly consistent reads of a pinned projection (`GetInstanceById`, stream-scoped reads, Workbench
+snapshots and previews) use the same generation selection and release as its observer. Like observers,
+a read fails when its pinned generation is unavailable.
 Live, catch-up, and replay use the same generation-selection and release boundary.
 
 For a PDL definition saved with `GenerationDelivery = Pinned`, a bare `from PersonRegistered` resolves
@@ -156,7 +159,7 @@ only a deliberate registration update changes them. See
 [pinned subscription delivery](../subscriptions/explicit-subscriptions.mdx#pin-the-generation-your-application-understands).
 
 `GenerationalContent` remains on delivered events for compatibility in this major version. The global
-client option does not change immediate/passive or wildcard (`all`) projections, reads, webhooks,
+client option does not change immediate/passive or wildcard (`all`) projections, webhooks,
 captures, or event-store subscriptions.
 
 ## Protected values

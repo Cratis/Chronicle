@@ -17,6 +17,8 @@ using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.UniqueConstraints;
 using Cratis.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 #if DEVELOPMENT
 using System.Collections.Frozen;
@@ -82,9 +84,12 @@ public partial class Database(IServiceProvider serviceProvider, IOptions<Chronic
     }.ToFrozenSet(StringComparer.OrdinalIgnoreCase);
 #endif
 
+    readonly Lazy<ILogger> _liveQueryLogger = new(() => (serviceProvider.GetService<ILoggerFactory>() ?? NullLoggerFactory.Instance).CreateLogger(typeof(LiveQuery).FullName!));
     readonly SqlConnectionResolution _resolution = SqlConnectionResolution.From(serviceProvider, options.Value.Storage);
     readonly DatabaseNameResolver _databaseNames = new(
-        SqlConnectionStrings.WithSchema(options.Value.Storage.ConnectionDetails, options.Value.Storage.Schema),
+        SqlConnectionStrings.WithPooling(
+            SqlConnectionStrings.WithSchema(options.Value.Storage.ConnectionDetails, options.Value.Storage.Schema),
+            options.Value.Storage.PostgreSqlPooling),
         SqlConnectionResolution.From(serviceProvider, options.Value.Storage).PrepareRawConnection);
 
     readonly System.Collections.Concurrent.ConcurrentDictionary<DatabaseMigrationLock, long> _migrationGenerations = new();
@@ -108,6 +113,11 @@ public partial class Database(IServiceProvider serviceProvider, IOptions<Chronic
     /// Gets whether runtime schema operations are read-only.
     /// </summary>
     internal bool VerifySchema => options.Value.Storage.SchemaMode == SchemaMode.Verify;
+
+    /// <summary>
+    /// Gets the logger for live-query polling diagnostics.
+    /// </summary>
+    internal ILogger LiveQueryLogger => _liveQueryLogger.Value;
 
     bool CanCreateSchema => options.Value.Storage.CreateIfMissing && !VerifySchema;
 
@@ -207,7 +217,7 @@ public partial class Database(IServiceProvider serviceProvider, IOptions<Chronic
 
         var schema = _resolution.SchemaFor(resolved);
         var target = new SqlTarget(
-            SqlConnectionStrings.WithSchema(connectionString, schema),
+            SqlConnectionStrings.WithPooling(SqlConnectionStrings.WithSchema(connectionString, schema), options.Value.Storage.PostgreSqlPooling),
             schema,
             _resolution.IsConfigured ? _resolution.RequestFor(identity, ConnectionPurpose.Runtime) : null);
         return OptionsFor(_jobsOptions, $"jobs:{eventStore}:{@namespace}", target);

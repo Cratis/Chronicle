@@ -17,17 +17,19 @@ public class with_delivery_fences : given.an_observer_state_storage
 
     async Task Because()
     {
-        await _storage.Save(new()
-        {
-            Identifier = "observer",
-            DeliveryFences = [new("partition", _releaseBy, [_target]), new("conservative", _releaseBy, [])]
-        });
+        await _storage.Save(
+            new()
+            {
+                Identifier = "observer",
+                DeliveryFences = [new("partition", _releaseBy, [_target]), new("conservative", _releaseBy, [])]
+            },
+            Concepts.EventSequences.EventSequenceId.Log);
         _saved = await _storage.Get("observer");
         await _storage.Rename("observer", "renamed");
         _renamed = await _storage.Get("renamed");
-        await _storage.Save(_renamed with { DeliveryFences = [] });
+        await _storage.Save(_renamed with { DeliveryFences = [] }, Concepts.EventSequences.EventSequenceId.Log);
         _released = await _storage.Get("renamed");
-        await _storage.Save(new() { Identifier = "legacy" });
+        await _storage.Save(new() { Identifier = "legacy" }, Concepts.EventSequences.EventSequenceId.Log);
         _legacy = await _storage.Get("legacy");
     }
 

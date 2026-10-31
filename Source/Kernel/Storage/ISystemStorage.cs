@@ -18,6 +18,11 @@ public interface ISystemStorage
     IUserStorage Users { get; }
 
     /// <summary>
+    /// Gets the separately persisted administrator privileges.
+    /// </summary>
+    IAdministratorStorage Administrators { get; }
+
+    /// <summary>
     /// Gets the application storage.
     /// </summary>
     IApplicationStorage Applications { get; }

@@ -34,10 +34,22 @@ public class a_jobs_manager : Specification
         HasJobs();
     }
 
-    protected void HasJobs(params JobState[] jobs) =>
+    /// <summary>
+    /// Lists the given jobs. A deleted job is gone from the next listing.
+    /// </summary>
+    /// <param name="jobs">The jobs to list.</param>
+    protected void HasJobs(params JobState[] jobs)
+    {
+        var listed = jobs.ToList();
         _jobsManager
             .GetJobs(Arg.Any<JobQuery>())
-            .Returns(Task.FromResult<IImmutableList<JobState>>(ImmutableList.Create(jobs)));
+            .Returns(_ => Task.FromResult<IImmutableList<JobState>>(listed.ToImmutableList()));
+        _jobsManager.Delete(Arg.Any<JobId>()).Returns(call =>
+        {
+            listed.RemoveAll(_ => _.Id == call.Arg<JobId>());
+            return Task.CompletedTask;
+        });
+    }
 
     protected JobState AJob(JobStatus status, ObserverKey? forObserver = null) => new()
     {
@@ -46,7 +58,14 @@ public class a_jobs_manager : Specification
         Request = new CatchUpObserverRequest(forObserver ?? _observerKey, ObserverType.Reactor, EventSequenceNumber.First, [])
     };
 
-    protected async Task StartOrResume(Func<CatchUpObserverRequest, bool>? requestPredicate = null, ICollection<JobId>? concludedJobs = null) =>
+    protected JobState APreparedJob(JobStatus status)
+    {
+        var job = AJob(status);
+        job.StatusChanges = [new JobStatusChanged { Status = JobStatus.StartingSteps, Occurred = DateTimeOffset.UtcNow }];
+        return job;
+    }
+
+    protected async Task StartOrResume(Func<CatchUpObserverRequest, bool>? requestPredicate = null, ICollection<JobId>? concludedJobs = null, int maxJobsToDrop = 0) =>
         _result = await _jobsManager.StartOrResumeObserverJobFor<ICatchUpObserver, CatchUpObserverRequest>(
             NullLogger.Instance,
             _request,
@@ -55,7 +74,8 @@ public class a_jobs_manager : Specification
             onResume: () => Record(() => _onResumeWasCalled = true),
             onStartNew: () => Record(() => _onStartNewWasCalled = true),
             onResumeRefused: () => Record(() => _onResumeRefusedWasCalled = true),
-            concludedJobs: concludedJobs);
+            concludedJobs: concludedJobs,
+            maxJobsToDrop: maxJobsToDrop);
 
     static Task Record(Action record)
     {

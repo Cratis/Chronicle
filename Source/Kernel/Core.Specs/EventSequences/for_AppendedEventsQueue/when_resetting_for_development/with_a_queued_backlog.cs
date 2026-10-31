@@ -47,9 +47,9 @@ public class with_a_queued_backlog : Specification
         _resetCompletedBeforeWorker = reset.IsCompleted;
 
         // Release the worker only after reset has sealed subscriptions. No elapsed-time assumption controls the backlog.
-        await _worker().WaitAsync(TimeSpan.FromSeconds(5));
+        await _worker().WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
         _workerFinished.SetResult();
-        await reset.WaitAsync(TimeSpan.FromSeconds(5));
+        await reset.WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
         await _queue.SubscribeToAllEventTypes(_observerKey);
         await _queue.Subscribe(_observerKey, [_eventType]);
         await _queue.Enqueue([AppendedEvent.Empty()]);
@@ -61,5 +61,5 @@ public class with_a_queued_backlog : Specification
     [Fact] void should_wait_for_the_worker() => _resetCompletedBeforeWorker.ShouldBeFalse();
     [Fact] void should_clear_and_seal_subscriptions() => _subscriptions.ShouldBeEmpty();
     [Fact] void should_never_deliver_the_backlog() => _grainFactory.DidNotReceive().GetGrain<IObserver>(Arg.Any<string>(), Arg.Any<string?>());
-    [Fact] async Task should_leave_no_pending_batches() => await _queue.AwaitQueueDepletion().WaitAsync(TimeSpan.FromSeconds(5));
+    [Fact] async Task should_leave_no_pending_batches() => await _queue.AwaitQueueDepletion().WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
 }

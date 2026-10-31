@@ -30,6 +30,34 @@ Types are automatically discovered by the presence of:
 No explicit marker is required on the type. `[Passive]` alone is not a discovery signal: it configures
 how an already-defined model is read, and can also configure a reducer model.
 
+## Stable Projection Identity
+
+By default, a model-bound projection uses the read model's fully qualified CLR type name as its identifier.
+Use `[Projection(id: "...")]` from `Cratis.Chronicle.Projections` on a class, record, or record struct to
+keep that projection identity when renaming the type or moving its namespace. When adding the attribute
+to an existing projection, use its previous identifier:
+
+<ChronicleClientTabs snippet="projections/model-bound/index/stable-identity" />
+
+An absent or empty attribute ID keeps the full-name default. The ID is not trimmed or normalized.
+Discovery, `RegisterReadModel<T>()` in client options, and runtime `Projections.Register<T>()` all use
+the same identifier. Callback-defined projections use it as their default too; an explicitly supplied
+callback ID takes precedence.
+
+`[Projection]` is identity metadata, not a discovery marker or a mapping annotation. Keep the real
+model-bound annotations such as `[FromEvent<TEvent>]`. `[Projection]` alone, or with only `[Passive]`,
+does not make a model a projection. Its `eventSequence` argument configures fluent projections only;
+model-bound event-sequence routing still uses `[EventSequence]` and the existing event-store rules.
+
+Different local projection owners cannot share an ID. Chronicle rejects competing fluent, model-bound,
+or explicit declarations before publishing the conflicting registration, identifying the ID and owner
+types. Registering the same model-bound read model explicitly as well as discovering it is still one
+projection; repeating that registration is allowed. Do not keep both the old and renamed owners locally.
+
+A stable projection ID does not freeze the definition: Chronicle can still detect definition changes and
+apply its normal evolution or replay behavior. It also does not preserve the read model's separate
+identifier or storage container name; a type rename can still change those defaults.
+
 ## Key Features
 
 Model-bound projections cover the common projection operations below. Specialized builder features,

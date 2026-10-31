@@ -39,6 +39,15 @@ public class ObserverDefinitionChangeRows<T> : IObserverDefinitionChangeRows<T>
             .WithWriteConcern(WriteConcern.WMajority);
     }
 
+    /// <summary>
+    /// Gets the durable observer definition change indexes.
+    /// </summary>
+    internal static IReadOnlyList<CreateIndexModel<BsonDocument>> Indexes { get; } =
+    [
+        new(new BsonDocument { { "observer", 1 }, { "revision", 1 }, { "_id", 1 } }, new CreateIndexOptions { Name = "observer_revision_id" }),
+        new(new BsonDocument { { "observer", 1 }, { "_id", 1 } }, new CreateIndexOptions { Name = "observer_id" })
+    ];
+
     /// <inheritdoc/>
     public async Task<ObserverDefinitionChangeRow<T>?> Get(ObserverDefinitionChangeRowKey key)
     {
@@ -118,8 +127,5 @@ public class ObserverDefinitionChangeRows<T> : IObserverDefinitionChangeRows<T>
         { "data", RowEncoding.Serialize(row) }
     };
 
-    Task EnsureIndexes() => _rows.EnsureIndexesOnceAsync(
-        _ensuredIndexes,
-        new CreateIndexModel<BsonDocument>(new BsonDocument { { "observer", 1 }, { "revision", 1 }, { "_id", 1 } }, new CreateIndexOptions { Name = "observer_revision_id" }),
-        new CreateIndexModel<BsonDocument>(new BsonDocument { { "observer", 1 }, { "_id", 1 } }, new CreateIndexOptions { Name = "observer_id" }));
+    Task EnsureIndexes() => _rows.EnsureIndexesOnceAsync(_ensuredIndexes, Indexes.ToArray());
 }

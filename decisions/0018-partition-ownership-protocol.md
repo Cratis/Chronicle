@@ -168,7 +168,7 @@ Increments, each shippable and reviewable on its own:
 4. **Introduce the claim in shadow.** Add the claim and ownership revision to the state document in every provider, write them on every transition alongside the existing sets, and report divergence. Closes nothing; proves the model under real traffic and settles the mixed-version storage questions.
 5. **Deterministic job ids and admission by epoch.** Closes #5382.
 6. **Single-document completion with idempotent side effects.** Closes #5383.
-7. **Enforce behind the floor.** Every writer checks the claim, observer-wide jobs and partition claims exclude each other, retries become recovery claims, and the watchdog and routing reconcile from claims. Closes #5380 and the remaining hold races, and supersedes the guards from increments 2 and 3.
+7. **Enforce behind the floor.** Every writer checks the claim, observer-wide jobs and partition claims exclude each other, retries become recovery claims, and the watchdog and routing reconcile from claims. Closes #5380 and the remaining hold races, and supersedes the guards from increments 2 and 3. A claim that cannot be restored must not read as "no claim": in shadow (increment 4) a failed restore starts the ledger empty and logs a warning, which is acceptable because nothing obeys it, but under enforcement an empty ledger would hand every partition to live delivery. The enforcing increment fails the activation, or rebuilds the claims from the state document, instead.
 8. **Rebuild partition rewinds on claims** (#4334), with no fence of its own.
 
 ## Verification

@@ -84,6 +84,26 @@ public class a_read_model_migrator : Specification
     }
 
     /// <summary>
+    /// Counts initialized-marker index lock entries during an admission, including SQLite's absent lock.
+    /// </summary>
+    /// <param name="context">The read-model context to admit.</param>
+    /// <returns>The number of marker-index lock entries.</returns>
+    protected async Task<int> EnsureTableMigratedAndCountMarkerLocks(ReadModelDbContext context)
+    {
+        var calls = 0;
+        InitializedMarkerIndex.OnLock.Value = () => calls++;
+        try
+        {
+            await _migrator.EnsureTableMigrated(context.TableName, context);
+            return calls;
+        }
+        finally
+        {
+            InitializedMarkerIndex.OnLock.Value = null;
+        }
+    }
+
+    /// <summary>
     /// Returns the column names that physically exist in the given table by querying
     /// SQLite's <c language="csharp">PRAGMA table_xinfo</c> via the master connection.
     /// Column name is at ordinal 1 (0 = cid, 1 = name, 2 = type, …).
