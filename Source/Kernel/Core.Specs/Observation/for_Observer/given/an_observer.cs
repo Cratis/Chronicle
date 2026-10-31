@@ -43,6 +43,7 @@ namespace Cratis.Chronicle.Observation.for_Observer.given;
 public class an_observer : Specification
 {
     protected Observer _observer;
+    protected TimeProvider _timeProvider = TimeProvider.System;
     protected IStreamProvider _streamProvider;
     protected IStreamProvider _sequenceStreamProvider;
     protected IObserverSubscriber _subscriber;
@@ -88,7 +89,7 @@ public class an_observer : Specification
         silo.AddService(options);
         silo.AddService(_configurationProvider);
         silo.AddService(_storage);
-        silo.AddService<TimeProvider>(TimeProvider.System);
+        silo.AddService(_timeProvider);
         silo.AddService(_webhookTargetPolicy);
         silo.AddService(_eventCompliance);
         silo.AddService(_eventGenerationRelease);
@@ -240,7 +241,7 @@ public class an_observer : Specification
 
     void ConfigureDefaultJobStorage()
     {
-        _jobStorage.GetJob(Arg.Any<JobId>()).Returns(call => Task.FromResult<Catch<JobState, Cratis.Orleans.Storage.Jobs.JobError>>(new JobState
+        _jobStorage.GetJob(Arg.Any<JobId>()).Returns(call => Task.FromResult<Catch<JobState, Orleans.Storage.Jobs.JobError>>(new JobState
         {
             Id = call.Arg<JobId>(),
             Status = JobStatus.Running

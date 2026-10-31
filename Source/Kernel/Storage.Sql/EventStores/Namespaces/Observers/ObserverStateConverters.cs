@@ -36,6 +36,7 @@ public static class ObserverStateConverters
             NextEventSequenceNumber = definition.NextEventSequenceNumber,
             TailEventSequenceNumber = definition.TailEventSequenceNumber,
             RunningState = definition.RunningState,
+            RunningStateChangedAt = definition.RunningStateChangedAt,
             ReplayingPartitions = definition.ReplayingPartitions.Select(partition => partition.Value.ToString()!).ToHashSet(),
             CatchingUpPartitions = definition.CatchingUpPartitions.Select(partition => partition.Value.ToString()!).ToHashSet(),
             FailedPartitions = definition.FailedPartitions.Select(fp => new FailedPartition(
@@ -121,6 +122,7 @@ public static class ObserverStateConverters
             WebhookProbe = state.WebhookProbe is null ? null : JsonSerializer.Deserialize<Observation.WebhookProbeState>(state.WebhookProbe, ObserverStateJson.Options),
             NextEventSequenceNumber = state.NextEventSequenceNumber,
             TailEventSequenceNumber = state.TailEventSequenceNumber,
+            RunningStateChangedAt = state.RunningStateChangedAt,
             HandledEventCount = state.HandledEventCount,
             HandledEventCountPerEventType = state.HandledEventCountPerEventType?.ToDictionary(kvp => (Concepts.Events.EventTypeId)kvp.Key, kvp => (Concepts.Events.EventCount)kvp.Value) ?? new Dictionary<Concepts.Events.EventTypeId, Concepts.Events.EventCount>()
         };
