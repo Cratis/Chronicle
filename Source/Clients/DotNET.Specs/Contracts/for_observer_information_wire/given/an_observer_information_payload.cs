@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.ComponentModel;
 using Cratis.Chronicle.Contracts.Events;
 using Cratis.Chronicle.Contracts.Observation;
 using ProtoBuf;
@@ -62,12 +63,14 @@ public class an_observer_information_payload : Specification
         [ProtoMember(2)] public string EventSequenceId { get; set; }
         [ProtoMember(3)] public ObserverType Type { get; set; }
         [ProtoMember(4)] public ObserverOwner Owner { get; set; }
-        [ProtoMember(5)] public IEnumerable<EventType> EventTypes { get; set; } = [];
+        [ProtoMember(5)] public IEnumerable<EventType> EventTypes { get; set; } = new List<EventType>();
         [ProtoMember(6)] public ulong NextEventSequenceNumber { get; set; }
         [ProtoMember(7)] public ulong LastHandledEventSequenceNumber { get; set; }
         [ProtoMember(8)] public ObserverRunningState RunningState { get; set; }
         [ProtoMember(9)] public bool IsSubscribed { get; set; }
-        [ProtoMember(10, IsRequired = true)] public bool IsReplayable { get; set; }
+        [ProtoMember(10, IsRequired = true)]
+        [DefaultValue(true)]
+        public bool IsReplayable { get; set; } = true;
         [ProtoMember(11)] public ulong TailEventSequenceNumber { get; set; }
         [ProtoMember(12)] public ulong HandledEventCount { get; set; }
     }
