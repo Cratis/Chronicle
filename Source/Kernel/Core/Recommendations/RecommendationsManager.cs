@@ -26,6 +26,9 @@ public class RecommendationsManager(IStorage storage) : Grain, IRecommendationsM
         var recommendationType = (RecommendationType)typeof(TRecommendation);
         var existingRecommendations = await recommendationStorage.GetAll();
         var requestAsJson = JsonSerializer.Serialize((object)request);
+
+        // Ignored recommendations are kept on purpose: an identical request that was ignored matches here, so it is not raised again.
+        // The scan reads every retained row, ignored ones included, so its cost grows with the total number of retained recommendations.
         var existing = existingRecommendations.FirstOrDefault(r =>
             r.Type == recommendationType &&
             JsonSerializer.Serialize((object)r.Request) == requestAsJson);
