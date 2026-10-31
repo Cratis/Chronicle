@@ -29,5 +29,6 @@ public class and_a_stopped_job_refuses_to_resume : given.a_jobs_manager
     [Fact] void should_not_report_a_job() => _result.ShouldEqual(JobId.NotSet);
     [Fact] void should_not_report_the_refused_job() => _result.ShouldNotEqual(_stopped.Id);
     [Fact] void should_tell_the_caller_the_resume_was_refused() => _onResumeRefusedWasCalled.ShouldBeTrue();
+    [Fact] async Task should_remove_the_job_that_never_prepared_a_step() => await _jobsManager.Received(1).Delete(_stopped.Id);
     [Fact] async Task should_not_fall_back_to_starting_a_new_job() => await _jobsManager.DidNotReceive().Start<ICatchUpObserver, CatchUpObserverRequest>(Arg.Any<CatchUpObserverRequest>());
 }

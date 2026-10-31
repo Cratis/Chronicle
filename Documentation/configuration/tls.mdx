@@ -52,6 +52,16 @@ To go the other way and skip explicitly:
 > [!WARNING]
 > The default accepts **any** server certificate, which removes protection against man-in-the-middle attacks. Set `skipTlsValidation=false` for anything reachable beyond a trusted network — and always over the public internet.
 
+## Enabling validation
+
+Trust the server's certificate authority on each client machine, or mount its CA certificate into application containers and add it to their trust stores. Alternatively, configure `certificatePath` with the matching certificate to pin it. Then set `skipTlsValidation=false` in the connection string or `Tls:SkipCertificateValidation=false` in the client configuration. A pin still requires the server certificate to match the host name.
+
+The .NET client logs one warning when a connection is constructed with validation disabled for any non-loopback target or a DNS SRV lookup. The warning lists only server hosts and ports, not credentials. Localhost, IPv4 loopback addresses in 127.0.0.0/8, and ::1 are exempt. A future major version validates by default.
+
+## Development setup
+
+The development image generates a self-signed certificate, so a client using `localhost` connects without certificate setup. Aspire deployments and other non-localhost development hosts can keep `skipTlsValidation=true` until their certificates are trusted; these connections log the warning. To exercise validation in development, trust the development CA or configure a matching certificate pin and set `skipTlsValidation=false`.
+
 ## Development vs production
 
 - **Development**: the server serves TLS with an auto-generated self-signed certificate and the client skips validation by default, so a development client connects out of the box — no certificate setup is needed on either side.

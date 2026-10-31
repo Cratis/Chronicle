@@ -38,6 +38,12 @@ public class Clustering
     public int GatewayPort { get; set; } = 30000;
 
     /// <summary>
+    /// Gets or sets whether the Orleans client gateway is enabled. Disable it when only
+    /// Chronicle HTTP and gRPC clients connect to this node.
+    /// </summary>
+    public bool GatewayEnabled { get; set; } = true;
+
+    /// <summary>
     /// Gets the cluster id - all nodes that should form one cluster must share it.
     /// </summary>
     public string ClusterId { get; set; } = "chronicle";
@@ -49,8 +55,9 @@ public class Clustering
 
     /// <summary>
     /// Gets the IP address the silo advertises to other cluster members. When not set, the
-    /// address is resolved from the machine's host name. Set it explicitly (e.g. 127.0.0.1) when
-    /// running multiple nodes on one machine.
+    /// address is resolved from the machine's host name. In MongoDB and SQL clustering this
+    /// also binds the silo and enabled gateway listeners to that local interface. Localhost
+    /// clustering retains Orleans' loopback address selection.
     /// </summary>
     public string? AdvertisedIP { get; set; }
 
