@@ -15,13 +15,22 @@ public sealed class SqlClusterDatabase(bool postgres, INetwork network) : IAsync
 {
     const string Password = "Clustering-5127-Password!";
     const string Database = "chronicle";
-    readonly IContainer _container = Build(postgres, network);
+    IContainer _container = Build(postgres, network);
 
     public string KernelConnection => postgres
         ? $"Host=database;Database={Database};Username=postgres;Password={Password}"
         : $"Server=database,1433;Database={Database};User Id=sa;Password={Password};TrustServerCertificate=True";
 
-    public Task Start(CancellationToken token) => _container.StartAsync(token);
+    public async Task Start(CancellationToken token)
+    {
+        if (postgres)
+        {
+            await _container.StartAsync(token);
+            return;
+        }
+
+        _container = await ContainerStartup.ForDocker(() => Build(postgres, network)).Start(c => _container = c, null, token);
+    }
 
     public async Task<IReadOnlyList<MembershipEntry>> Membership(string clusterId, CancellationToken token)
     {
