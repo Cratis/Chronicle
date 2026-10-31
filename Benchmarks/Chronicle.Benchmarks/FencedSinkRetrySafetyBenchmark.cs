@@ -50,11 +50,11 @@ public class FencedSinkRetrySafetyBenchmark
     /// Checks a single idempotent update.
     /// </summary>
     [Benchmark]
-    public void SingleUpdate() => SinkBatchDocuments.RequireRetrySafe(_collection, _update, MaxBatchSize);
+    public void SingleUpdate() => SinkBatchDocuments.RequireRetrySafe(_collection, _update);
 
     /// <summary>
     /// Checks a bulk of ten keyed updates.
     /// </summary>
     [Benchmark]
-    public void BulkUpdates() => SinkBatchDocuments.RequireRetrySafe(_collection, _requests, MaxBatchSize);
+    public void BulkUpdates() => SinkBatchDocuments.RequireRetrySafe(_collection, _requests);
 }
