@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.Configuration;
 /// <summary>
 /// Represents the configuration for webhook observers.
 /// </summary>
-public class Webhooks
+public class Webhooks : IOutboundTargetSettings
 {
     /// <summary>
     /// The webhook retry delays in seconds used when <see cref="Observers.BackoffScheduleSeconds"/> is not configured.
@@ -22,9 +22,13 @@ public class Webhooks
     public WebhookProbe Probe { get; init; } = new();
 
     /// <summary>
-    /// Gets the validation rollout mode. Enforce will become the default in the next major release.
+    /// Gets the destination validation mode.
     /// </summary>
+#if DEVELOPMENT
     public WebhookValidationMode Validation { get; init; } = WebhookValidationMode.Warn;
+#else
+    public WebhookValidationMode Validation { get; init; } = WebhookValidationMode.BlockLocalAddresses;
+#endif
 
     /// <summary>
     /// Gets whether HTTP is allowed in Development. Ignored outside Development.

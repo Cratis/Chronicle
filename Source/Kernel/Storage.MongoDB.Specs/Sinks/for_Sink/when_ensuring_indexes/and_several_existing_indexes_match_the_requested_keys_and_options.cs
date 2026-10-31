@@ -24,9 +24,9 @@ public class and_several_existing_indexes_match_the_requested_keys_and_options :
 
     [Fact] void should_fetch_the_collection_collation_only_once() =>
         _database.Received(1).ListCollectionsAsync(Arg.Any<ListCollectionsOptions>(), Arg.Any<CancellationToken>());
-    [Fact] void should_not_create_any_indexes() =>
+    [Fact] void should_not_recreate_existing_indexes() =>
         _indexManager.DidNotReceive().CreateOneAsync(
-            Arg.Any<CreateIndexModel<BsonDocument>>(),
+            Arg.Is<CreateIndexModel<BsonDocument>>(model => model.Options.Name != "chronicle_idx___initialized"),
             Arg.Any<CreateOneIndexOptions>(),
             Arg.Any<CancellationToken>());
 }

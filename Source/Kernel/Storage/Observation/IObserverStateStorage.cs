@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reactive.Subjects;
+using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation;
 
 namespace Cratis.Chronicle.Storage.Observation;
@@ -41,8 +42,21 @@ public interface IObserverStateStorage
     /// Save the state of an observer.
     /// </summary>
     /// <param name="state"><see cref="ObserverState"/> to save.</param>
+    /// <param name="owner">The event sequence addressed by the writing activation.</param>
+    /// <returns>Whether the state was saved. False means another sequence owns the record.</returns>
+    /// <remarks>
+    /// A missing owner on legacy state counts as unowned; the next successful save stamps it.
+    /// During a rolling upgrade older kernels preserve but ignore Owner, so their writes bypass the owner guard until the next newer write.
+    /// </remarks>
+    Task<bool> Save(ObserverState state, EventSequenceId owner);
+
+    /// <summary>
+    /// Stamps ownership on an existing state record without creating one.
+    /// </summary>
+    /// <param name="observerId">The observer whose ownership changed.</param>
+    /// <param name="owner">The event sequence that now owns the observer.</param>
     /// <returns>Awaitable task.</returns>
-    Task Save(ObserverState state);
+    Task ClaimOwnership(ObserverId observerId, EventSequenceId owner);
 
     /// <summary>
     /// Delete the state of an observer.

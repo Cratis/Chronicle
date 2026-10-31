@@ -129,6 +129,8 @@ public class an_observer : Specification
         _configurationProvider.GetFor(Arg.Any<string>()).Returns(_observersConfig);
         _subscriber = Substitute.For<IObserverSubscriber>();
         _jobsManager = Substitute.For<IJobsManager>();
+        _jobsManager.Start<IRetryFailedPartition, RetryFailedPartitionRequest>(Arg.Any<RetryFailedPartitionRequest>())
+            .Returns(Task.FromResult(Result<JobId, StartJobError>.Success(JobId.New())));
         _observerAlerts = Substitute.For<IObserverAlerts>();
         ApplyAlertReports();
         _eventSequence = Substitute.For<IEventSequence>();
@@ -172,11 +174,7 @@ public class an_observer : Specification
         // By default, every job looked up individually is still running - so nothing it concluded is forgotten.
         _jobStorage = Substitute.For<IJobStorage>();
         _eventStoreNamespaceStorage.Jobs.Returns(_jobStorage);
-        _jobStorage.GetJob(Arg.Any<JobId>()).Returns(call => Task.FromResult<Catch<JobState, Cratis.Orleans.Storage.Jobs.JobError>>(new JobState
-        {
-            Id = call.Arg<JobId>(),
-            Status = JobStatus.Running
-        }));
+        ConfigureDefaultJobStorage();
         _observerHandledCountsStorage.GetFor(Arg.Any<ObserverId>(), Arg.Any<Key>()).Returns(new Dictionary<EventTypeId, EventCount>());
 
         // By default, no schemas are known — events pass through unchanged.
@@ -210,6 +208,7 @@ public class an_observer : Specification
         _failedPartitionsStorage = _silo.StorageManager.GetStorage<FailedPartitions>(nameof(FailedPartition));
         _failedPartitionsStorage.State = _failedPartitionsState;
         _eventStoreNamespaceStorage.Observers.Get(_observerId).Returns(_ => _stateStorage.State with { Identifier = _observerId });
+        _eventStoreNamespaceStorage.Observers.Save(Arg.Any<ObserverState>(), Arg.Any<EventSequenceId>()).Returns(true);
         _eventStoreNamespaceStorage.FailedPartitions.GetFor(_observerId).Returns(_ => _failedPartitionsStorage.State);
 
         _eventSequence.GetTailSequenceNumber().Returns(EventSequenceNumber.Unavailable);
@@ -239,6 +238,36 @@ public class an_observer : Specification
         return await Crash();
     }
 
+    void ConfigureDefaultJobStorage()
+    {
+        _jobStorage.GetJob(Arg.Any<JobId>()).Returns(call => Task.FromResult<Catch<JobState, Cratis.Orleans.Storage.Jobs.JobError>>(new JobState
+        {
+            Id = call.Arg<JobId>(),
+            Status = JobStatus.Running
+        }));
+
+        // By default the namespace has no outstanding jobs. It is a separate stub from the jobs manager's lookup, which some
+        // specs block, and it reports success: a failed listing is distinguishable from an empty one.
+        _jobStorage.GetJobs(Arg.Any<JobQuery>()).Returns(_ => Task.FromResult(Catch<IImmutableList<JobState>>.Success(ImmutableList<JobState>.Empty)));
+    }
+
+    /// <summary>
+    /// Makes both the jobs manager and the job storage list the given jobs, whatever the query.
+    /// </summary>
+    /// <param name="jobs">The jobs to list.</param>
+    protected void HasOutstandingJobs(params JobState[] jobs)
+    {
+        // A deleted job is gone from the next listing.
+        var listed = jobs.ToList();
+        _jobsManager.GetJobs(Arg.Any<JobQuery>()).Returns(_ => Task.FromResult<IImmutableList<JobState>>(listed.ToImmutableList()));
+        _jobStorage.GetJobs(Arg.Any<JobQuery>()).Returns(_ => Task.FromResult(Catch<IImmutableList<JobState>>.Success(listed.ToImmutableList())));
+        _jobsManager.Delete(Arg.Any<JobId>()).Returns(call =>
+        {
+            listed.RemoveAll(_ => _.Id == call.Arg<JobId>());
+            return Task.CompletedTask;
+        });
+    }
+
     protected void ApplyAlertReports() => _observerAlerts.Configure().Reconcile(Arg.Any<ObserverAlertSnapshot>()).Returns(call =>
     {
         // NSubstitute also invokes an existing return callback with matcher placeholders during reconfiguration.
@@ -252,17 +281,35 @@ public class an_observer : Specification
     protected Task<bool> ReportAlerts() => _observer.ReportAlertState();
 
     /// <summary>
+    /// Gets the observer state as it was last persisted, which a crash carries over to the fresh activation.
+    /// </summary>
+    /// <remarks>
+    /// The default storage shares its state with the activation, so it is also the activation's state.
+    /// </remarks>
+    protected virtual ObserverState PersistedObserverState => _stateStorage.State;
+
+    /// <summary>
+    /// Configures the storage of the fresh silo a crash activates the observer in.
+    /// </summary>
+    /// <param name="silo">The fresh <see cref="TestKitSilo"/>.</param>
+    /// <param name="persistedState">The observer state carried over.</param>
+    protected virtual void ConfigureStorage(TestKitSilo silo, ObserverState persistedState)
+    {
+    }
+
+    /// <summary>
     /// Discards activation memory without running OnDeactivateAsync or its flushes.
     /// </summary>
     /// <param name="resetStorageStatistics">Whether to reset the write counts after activation.</param>
     /// <returns>The fresh activation backed by copies of the stored records.</returns>
     protected async Task<Observer> Crash(bool resetStorageStatistics = true)
     {
-        var persistedState = _stateStorage.State with
+        var stored = PersistedObserverState;
+        var persistedState = stored with
         {
-            ReplayingPartitions = _stateStorage.State.ReplayingPartitions.ToHashSet(),
-            CatchingUpPartitions = _stateStorage.State.CatchingUpPartitions.ToHashSet(),
-            InFlightPartitions = _stateStorage.State.InFlightPartitions.ToHashSet()
+            ReplayingPartitions = stored.ReplayingPartitions.ToHashSet(),
+            CatchingUpPartitions = stored.CatchingUpPartitions.ToHashSet(),
+            InFlightPartitions = stored.InFlightPartitions.ToHashSet()
         };
         var persistedDefinition = _definitionStorage.State with { EventTypes = _definitionStorage.State.EventTypes.ToArray() };
         var persistedFailures = new FailedPartitions
@@ -285,6 +332,7 @@ public class an_observer : Specification
 
         _silo = new();
         AddServices(_silo);
+        ConfigureStorage(_silo, persistedState);
         _stateStorage = _silo.StorageManager.GetStorage<ObserverState>(typeof(Observer).FullName);
         _stateStorage.State = persistedState;
         _definitionStorage = _silo.StorageManager.GetStorage<ObserverDefinition>(nameof(ObserverDefinition));

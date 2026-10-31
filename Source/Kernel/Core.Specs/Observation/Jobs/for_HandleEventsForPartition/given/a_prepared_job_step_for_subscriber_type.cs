@@ -44,6 +44,7 @@ public abstract class a_prepared_job_step_for_subscriber_type : Specification
         _silo.AddProbe(_ => Substitute.For<Projections.ICollapsingProjectionObserverSubscriber>());
         _silo.AddProbe(_ => Substitute.For<Projections.IProjectionObserverSubscriber>());
         _silo.AddService(Substitute.For<Storage.IStorage>());
+        _silo.AddService(Substitute.For<IObserverServiceClient>());
         _silo.AddService(Substitute.For<IJobStepThrottle>());
         _silo.AddService(Substitute.For<IEventCompliance>());
         _silo.AddService<IObserverSubscriberSelector>(new RoundRobinObserverSubscriberSelector());

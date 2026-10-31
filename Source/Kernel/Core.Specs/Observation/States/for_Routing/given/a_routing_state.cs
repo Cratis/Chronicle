@@ -29,6 +29,7 @@ public class a_routing_state : Specification
     protected ObserverSubscription _subscription;
     protected ObserverKey _observerKey;
     protected IStorage _storage;
+    protected Func<int> _holdsVersion = () => 0;
 
     void Establish()
     {
@@ -45,6 +46,7 @@ public class a_routing_state : Specification
             _definitionState,
             _eventSequence,
             _storage,
+            () => _holdsVersion(),
             Substitute.For<ILogger<Routing>>());
         _state.SetStateMachine(_stateMachine);
         _storedState = new ObserverState

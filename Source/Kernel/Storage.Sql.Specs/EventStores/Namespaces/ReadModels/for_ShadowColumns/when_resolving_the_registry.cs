@@ -19,7 +19,7 @@ public class when_resolving_the_registry : Specification
         var columns = ProjectedColumns.ForSchema(JsonSchema.FromJson("""{"type":"object","properties":{"id":{"type":"number","format":"decimal"},"amount":{"type":"number","format":"decimal"},"other":{"type":"number"},"nested":{"type":"object","properties":{"amount":{"type":"number","format":"decimal"}}}}}"""));
         _projected = columns.Select(column => column.Name).ToArray();
         using var sqlite = new ReadModelDbContext(new DbContextOptionsBuilder<ReadModelDbContext>().UseSqlite("Data Source=:memory:").Options, "decimals", columns, Substitute.For<IReadModelMigrator>());
-        using var postgres = new ReadModelDbContext(new DbContextOptionsBuilder<ReadModelDbContext>().UseNpgsql("Host=localhost;Database=not_opened").Options, "decimals", columns, Substitute.For<IReadModelMigrator>());
+        using var postgres = new ReadModelDbContext(SpecDbContextOptions.Kernel<ReadModelDbContext>("Host=localhost;Database=not_opened"), "decimals", columns, Substitute.For<IReadModelMigrator>());
         using var sqlServer = new ReadModelDbContext(new DbContextOptionsBuilder<ReadModelDbContext>().UseSqlServer("Server=localhost;Database=not_opened").Options, "decimals", columns, Substitute.For<IReadModelMigrator>());
         _sqlite = ShadowColumns.For(sqlite);
         _postgres = ShadowColumns.For(postgres);

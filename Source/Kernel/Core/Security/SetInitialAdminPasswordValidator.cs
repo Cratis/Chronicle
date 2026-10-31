@@ -17,7 +17,8 @@ internal class SetInitialAdminPasswordValidator : CommandValidator<SetInitialAdm
     public SetInitialAdminPasswordValidator()
     {
         RuleFor(_ => _.UserId).NotEmpty().WithMessage("User identifier is required.");
-        RuleFor(_ => _.Password).NotEmpty().MinimumLength(8).WithMessage("Password must be at least 8 characters long.");
+        RuleFor(_ => _.SetupToken).NotEmpty().WithMessage("Setup token is required.");
+        RuleFor(_ => _.Password).NotEmpty().MinimumLength(PasswordPolicy.MinimumLength).WithMessage("Password must be at least 8 characters long.");
         RuleFor(_ => _.ConfirmedPassword).Equal(_ => _.Password).WithMessage("Confirmed password must match the password.");
     }
 }

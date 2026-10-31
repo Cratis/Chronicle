@@ -24,6 +24,7 @@ namespace Cratis.Chronicle.Observation.Jobs.for_HandleEventsForPartition;
 /// <param name="eventCompliance">The <see cref="IEventCompliance"/> for decrypting PII event content.</param>
 /// <param name="subscriberSelector">The <see cref="IObserverSubscriberSelector"/> for selecting the target client instance.</param>
 /// <param name="configurationProvider">The <see cref="IConfigurationForObserverProvider"/> for the observer's subscriber timeout.</param>
+/// <param name="observerServiceClient">The service client for confirming projection writes.</param>
 /// <param name="logger">The logger.</param>
 /// <param name="eventGenerationRelease">The pinned generation release boundary.</param>
 /// <param name="timeProvider">The delivery fence clock.</param>
@@ -35,10 +36,11 @@ public class TestableHandleEventsForPartition(
     IEventCompliance eventCompliance,
     IObserverSubscriberSelector subscriberSelector,
     IConfigurationForObserverProvider configurationProvider,
+    IObserverServiceClient observerServiceClient,
     ILogger<HandleEventsForPartition> logger,
     IEventGenerationRelease? eventGenerationRelease = null,
     TimeProvider? timeProvider = null)
-    : HandleEventsForPartition(state, throttle, storage, eventCompliance, subscriberSelector, configurationProvider, logger, eventGenerationRelease, timeProvider), IGrainType
+    : HandleEventsForPartition(state, throttle, storage, eventCompliance, subscriberSelector, configurationProvider, observerServiceClient, logger, eventGenerationRelease, timeProvider), IGrainType
 {
     static readonly FieldInfo _observerField = typeof(HandleEventsForPartition).GetField("_observer", BindingFlags.NonPublic | BindingFlags.Instance);
     static readonly FieldInfo _subscriberField = typeof(HandleEventsForPartition).GetField("_subscriber", BindingFlags.NonPublic | BindingFlags.Instance);

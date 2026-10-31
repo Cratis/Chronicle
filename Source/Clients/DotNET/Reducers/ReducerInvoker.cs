@@ -123,11 +123,7 @@ public class ReducerInvoker : IReducerInvoker
             }
             catch (Exception ex)
             {
-                return new ReduceResult(
-                            currentModelState,
-                            lastSuccessfulObservedEventAndContext?.Context.SequenceNumber ?? EventSequenceNumber.Unavailable,
-                            ex.GetAllMessages(),
-                            ex.StackTrace ?? string.Empty);
+                return FailedReduction(currentModelState, lastSuccessfulObservedEventAndContext?.Context.SequenceNumber ?? EventSequenceNumber.Unavailable, ex);
             }
         }
 
@@ -135,7 +131,8 @@ public class ReducerInvoker : IReducerInvoker
                 currentModelState,
                 lastSuccessfulObservedEventAndContext?.Context.SequenceNumber ?? EventSequenceNumber.Unavailable,
                 [],
-                string.Empty) { DispatchedEvents = dispatched };
+                string.Empty)
+        { DispatchedEvents = dispatched };
     }
 
     /// <summary>
@@ -147,6 +144,12 @@ public class ReducerInvoker : IReducerInvoker
     /// <returns>The accepted event identities.</returns>
     internal static IImmutableList<EventType> GetEventTypesFor(IEventTypes eventTypes, Type targetType, Type readModelType) =>
         GetMethodsFor(eventTypes, targetType, readModelType).Keys.Select(eventTypes.GetEventTypeFor).ToImmutableList();
+
+    static ReduceResult FailedReduction(object? currentModelState, EventSequenceNumber lastSuccessfulObservation, Exception exception) =>
+        new(currentModelState, lastSuccessfulObservation, exception.GetAllMessages(), exception.StackTrace ?? string.Empty)
+        {
+            ExceptionType = exception.GetType().FullName
+        };
 
     static FrozenDictionary<Type, MethodInfo> GetMethodsFor(IEventTypes eventTypes, Type targetType, Type readModelType) =>
         _methodsByEventTypeCache.Get(eventTypes, targetType, readModelType, types => BuildMethodsByEventType(targetType, readModelType, types));

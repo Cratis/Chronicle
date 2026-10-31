@@ -33,10 +33,11 @@ namespace Cratis.Chronicle.Observation.Jobs;
 /// <param name="eventCompliance"><see cref="IEventCompliance"/> for decrypting PII event content before dispatching to subscribers.</param>
 /// <param name="subscriberSelector"><see cref="IObserverSubscriberSelector"/> for selecting which connected client instance to deliver to.</param>
 /// <param name="configurationProvider"><see cref="IConfigurationForObserverProvider"/> for getting the observer's subscriber timeout.</param>
+/// <param name="observerServiceClient">The service client for confirming projection writes.</param>
 /// <param name="logger">The logger.</param>
 /// <param name="eventGenerationRelease">The pinned generation release boundary.</param>
 /// <param name="timeProvider">The delivery fence clock.</param>
-public class HandleEventsForPartition(
+public partial class HandleEventsForPartition(
     [PersistentState(nameof(JobStepState), Cratis.Orleans.WellKnownGrainStorageProviders.JobSteps)]
     IPersistentState<HandleEventsForPartitionState> state,
     IJobStepThrottle throttle,
@@ -44,6 +45,7 @@ public class HandleEventsForPartition(
     IEventCompliance eventCompliance,
     IObserverSubscriberSelector subscriberSelector,
     IConfigurationForObserverProvider configurationProvider,
+    IObserverServiceClient observerServiceClient,
     ILogger<HandleEventsForPartition> logger,
     IEventGenerationRelease? eventGenerationRelease = null,
     TimeProvider? timeProvider = null) : JobStep<HandleEventsForPartitionArguments, HandleEventsForPartitionResult, HandleEventsForPartitionState>(state, throttle, logger), IHandleEventsForPartition
@@ -72,6 +74,11 @@ public class HandleEventsForPartition(
     /// Gets or sets how long to wait before a handling attempt that timed out is made again. Exposed for testing.
     /// </summary>
     internal TimeSpan TransientRetryDelay { get; set; } = TransientTimeouts.DefaultRetryDelay;
+
+    /// <summary>
+    /// Gets or sets the most events one subscriber call may carry. Exposed for testing.
+    /// </summary>
+    internal int MaxEventsPerBatch { get; set; } = BoundedEventCursor.DefaultMaximumEventsPerBatch;
 
     /// <inheritdoc/>
     /// <remarks>
@@ -187,10 +194,6 @@ public class HandleEventsForPartition(
                 logger.CancelledBeforeHandlingAnyEvents(currentState.Partition);
                 return JobStepResult.Failed(PerformJobStepError.CancelledWithNoResult());
             }
-            var eventSequenceStorage = GetEventSequenceStorage(
-                currentState.ObserverKey.EventStore,
-                currentState.ObserverKey.Namespace,
-                currentState.ObserverKey.EventSequenceId);
             var scopedEventTypes = ObserverReaderScope
                 .ForRequest(currentState.ReaderScope, currentState.EventTypes)
                 .EventTypesToRead(currentState.EventTypes);
@@ -209,16 +212,13 @@ public class HandleEventsForPartition(
             // A storage batch can hold thousands of events; a client or webhook subscriber gets them a bounded call
             // at a time, so its timeout guards a known amount of work and every answered call is checkpointed.
             var maxEventsPerCall = await configurationProvider.GetMaxEventsPerSubscriberCallForObserver(currentState.ObserverKey, subscription.SubscriberType);
-            using var events = BoundedEventCursor.Over(
-                await eventSequenceStorage.GetRange(
-                    currentState.LastSuccessfullyHandledEventSequenceNumber == EventSequenceNumber.Unavailable
-                        ? currentState.StartEventSequenceNumber
-                        : currentState.LastSuccessfullyHandledEventSequenceNumber.Next(),
-                    currentState.EndEventSequenceNumber,
-                    _eventSourceId,
-                    eventTypesToRead,
-                    cancellationToken: cancellationToken),
+            var storageEvents = Storage.EventSequences.BoundedEventCursor.Over(
+                await OpenDurableRange(currentState, subscription, eventTypesToRead, cancellationToken),
                 maxEventsPerCall);
+            var maximumEventsPerCall = _subscriber is IUnpartitionedObserverSubscriber
+                ? Math.Min(MaxEventsPerBatch, ObserverSubscriberExtensions.MaximumEventsPerUnpartitionedCall)
+                : MaxEventsPerBatch;
+            using var events = new BoundedEventCursor(storageEvents, maximumEventsPerCall);
 
             var subscriberContext = CreateSubscriberContext(subscription, currentState.Partition);
             var subscriberTimeout = await configurationProvider.GetSubscriberTimeoutForObserver(currentState.ObserverKey);
@@ -345,10 +345,11 @@ public class HandleEventsForPartition(
                 if (failed)
                 {
                     var failedAt = lastEventSequenceNumberAttempted.IsActualValue ? lastEventSequenceNumberAttempted : currentState.StartEventSequenceNumber;
-                    if (failureKind == FailureKind.Timeout)
+                    if (failureKind == FailureKind.Timeout && _subscriber is not IWebhookObserverSubscriber)
                     {
                         // The observer is not told yet: it is the grain that was too busy to answer, and the job runs the
-                        // step again before it reports the partition.
+                        // step again before it reports the partition. A webhook timeout is different: it is a delivery
+                        // failure, so it is reported below and retried only by the webhook retry policy.
                         logger.StepTimedOut(exceptionMessages[0]);
                         return JobStepResult.Failed(PerformJobStepError.FailedWithPartialResult(
                             CreateResult(lastSuccessfullyHandledEventSequenceNumber) with
@@ -453,7 +454,7 @@ public class HandleEventsForPartition(
 
     static HandleEventsForPartitionResult CreateResult(EventSequenceNumber lastSuccessfullyHandled) => new(lastSuccessfullyHandled);
 
-    static EventSequenceNumber GetLastScanned(EventSequenceNumber lastScanned, IEventCursor events)
+    static EventSequenceNumber GetLastScanned(EventSequenceNumber lastScanned, BoundedEventCursor events)
     {
         foreach (var @event in events.Current)
         {
@@ -488,6 +489,7 @@ public class HandleEventsForPartition(
     /// <returns>True when the progress was recorded; false when the step refused the callback because its run is closed.</returns>
     async Task<bool> ReportFromWork(EventSequenceNumber lastHandled)
     {
+        await ConfirmBulkWindowDurability();
         var reported = await TryInvokeOnActivation(() => ReportNewSuccessfullyHandledEvent(lastHandled));
         if (reported.TryGetError(out var rejection))
         {
@@ -525,7 +527,7 @@ public class HandleEventsForPartition(
 
     async Task<Catch<(ObserverSubscriberResult Result, AppendedEvent[] HandledEvents), None>> TryHandleEvents(
         HandleEventsForPartitionState state,
-        IEventCursor events,
+        BoundedEventCursor events,
         ObserverSubscriberContext subscriberContext,
         TimeSpan subscriberTimeout,
         HashSet<EventTypeId> nonRedactionEventTypeIds,

@@ -79,7 +79,7 @@ public class when_saving_observer_state(MongoDBFixture fixture) : Specification
             NextEventSequenceNumber = 99
         };
 
-        await _storage.Save(state);
+        await _storage.Save(state, Concepts.EventSequences.EventSequenceId.Log);
 
         _documentAfterSave = await _database
             .GetCollection<ObserverState>(WellKnownCollectionNames.Observers)

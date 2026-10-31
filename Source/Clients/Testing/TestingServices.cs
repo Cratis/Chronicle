@@ -35,8 +35,10 @@ using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Testing.Compliance;
 using Cratis.Chronicle.Transactions;
 using Cratis.Traces;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using ClientEventLog = Cratis.Chronicle.EventSequences.IEventLog;
 using KernelApplicationsService = KernelGrpc::Cratis.Chronicle.Services.Security.Applications;
 using KernelCaptureLanguageService = KernelCore::Cratis.Chronicle.Captures.Engine.DeclarationLanguage.LanguageService;
 using KernelCapturesService = KernelGrpc::Cratis.Chronicle.Services.Captures.Captures;
@@ -61,9 +63,11 @@ using KernelOccurrencesService = KernelGrpc::Cratis.Chronicle.Services.Occurrenc
 using KernelPatternMatcher = KernelCore::Cratis.Chronicle.Patterns.PatternMatcher;
 using KernelPatternsService = KernelGrpc::Cratis.Chronicle.Services.Patterns.Patterns;
 using KernelProjectionChangesetMediator = KernelCore::Cratis.Chronicle.Projections.ProjectionChangesetMediator;
+using KernelProjectionsManager = KernelCore::Cratis.Chronicle.Projections.Engine.ProjectionsManager;
 using KernelProjectionsService = KernelGrpc::Cratis.Chronicle.Services.Projections.Projections;
 using KernelReactorMediator = KernelCore::Cratis.Chronicle.Observation.Reactors.Clients.ReactorMediator;
 using KernelReactorsService = KernelGrpc::Cratis.Chronicle.Services.Observation.Reactors.Reactors;
+using KernelReadModelInstanceVisibilities = KernelCore::Cratis.Chronicle.ReadModels.ReadModelInstanceVisibilities;
 using KernelReadModelReadBindings = KernelCore::Cratis.Chronicle.ReadModels.ReadModelReadBindings;
 using KernelReadModelsService = KernelGrpc::Cratis.Chronicle.Services.ReadModels.ReadModels;
 using KernelRecommendationsService = KernelGrpc::Cratis.Chronicle.Services.Recommendations.Recommendations;
@@ -140,7 +144,7 @@ internal sealed class TestingServices : IServices
         // One pipeline serves every command-dispatching service. Its provider carries the collaborators the
         // command handlers resolve their parameters from - the same instances the service constructors used
         // to receive directly before dispatch moved to the Arc command pipeline.
-        var commandPipeline = new Lazy<Cratis.Arc.Commands.ICommandPipeline>(() =>
+        var commandPipeline = new Lazy<Arc.Commands.ICommandPipeline>(() =>
             InProcessCommandPipeline.Create(
                 grainFactory,
                 storage,
@@ -153,7 +157,7 @@ internal sealed class TestingServices : IServices
                     services.AddSingleton(new KernelEventTypeRegistrar(grainFactory));
                     services.AddSingleton<KernelCore::Cratis.Chronicle.Captures.Engine.DeclarationLanguage.ILanguageService>(new KernelCaptureLanguageService());
                     services.AddSingleton<KernelCore::Cratis.Chronicle.Captures.Engine.ICaptureValidator>(new KernelCaptureValidator(storage));
-                    services.AddSingleton(CreateWebhookRegistrar(grainFactory, storage, jsonSerializerOptions));
+                    AddInitialAdminSetupServices(services).AddSingleton(CreateWebhookRegistrar(grainFactory, storage, jsonSerializerOptions));
 
                     // AddCratisArcCore discovers every ICommandExecutionScope across the whole process, not just the
                     // ones this pipeline cares about - an Arc.Chronicle consumer's transactional command scope is
@@ -163,14 +167,16 @@ internal sealed class TestingServices : IServices
                     // needs a live connection this in-process kernel does not have. This satisfies the resolution
                     // harmlessly instead.
                     services.AddSingleton<IUnitOfWorkManager>(new EventSequences.NoOpUnitOfWorkManager());
-                    services.AddSingleton<Cratis.Chronicle.EventSequences.IEventLog>(new EventSequences.NoOpEventLog());
+                    services.AddSingleton<ClientEventLog>(new EventSequences.NoOpEventLog());
                     services.AddSingleton(eventTypes());
                 }));
 
         _observers = new(() => new ObserversForTesting(new KernelObserversService(
             grainFactory,
             storage,
-            new KernelObserverRemover(grainFactory, storage, NullLogger<KernelObserverRemover>.Instance))));
+            new KernelObserverRemover(grainFactory, storage, NullLogger<KernelObserverRemover>.Instance),
+            new InProcessAuthorizationService(),
+            new HttpContextAccessor())));
 
         _failedPartitions = new(() => new KernelFailedPartitionsService(storage));
 
@@ -292,9 +298,9 @@ internal sealed class TestingServices : IServices
         _server = new(() => new KernelServerService(null!));
 
         _eventStores = new(() =>
-            new KernelEventStoresService(commandPipeline.Value, storage, NullLogger<KernelEventStoresService>.Instance));
+            new KernelEventStoresService(commandPipeline.Value, grainFactory, storage, NullLogger<KernelEventStoresService>.Instance));
 
-        var readBindings = new KernelReadModelReadBindings(storage);
+        var readBindings = CreateReadBindings(storage, grainFactory);
         _readModels = new(() =>
             new KernelReadModelsService(
                 grainFactory,
@@ -404,6 +410,15 @@ internal sealed class TestingServices : IServices
 
     /// <inheritdoc/>
     public Contracts.Clients.IConnectionService Connections => throw new NotSupportedException("Connections is not supported in test scenarios.");
+
+    static KernelReadModelReadBindings CreateReadBindings(IStorage storage, IGrainFactory grainFactory) =>
+        new(
+            storage,
+            new KernelReadModelInstanceVisibilities(
+                new KernelProjectionsManager(Cratis.Chronicle.Testing.ReadModels.ProjectionReadModelProcessor.CreateProjectionFactory(storage), storage, grainFactory)));
+
+    static IServiceCollection AddInitialAdminSetupServices(IServiceCollection services) =>
+        services.AddDataProtection().Services.AddSingleton<KernelCore::Cratis.Chronicle.Security.IInitialAdminSetupTokens, KernelCore::Cratis.Chronicle.Security.InitialAdminSetupTokens>();
 
     static KernelWebhookRegistrar CreateWebhookRegistrar(IGrainFactory grainFactory, IStorage storage, JsonSerializerOptions jsonSerializerOptions) =>
         new(

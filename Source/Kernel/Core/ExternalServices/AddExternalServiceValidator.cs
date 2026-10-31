@@ -4,6 +4,7 @@
 using Cratis.Arc.Commands;
 using Cratis.Chronicle.Contracts.ExternalServices;
 using Cratis.Chronicle.Contracts.Security;
+using Cratis.Chronicle.Sequences;
 using FluentValidation;
 
 namespace Cratis.Chronicle.ExternalServices;
@@ -27,6 +28,7 @@ internal class AddExternalServiceValidator : CommandValidator<AddExternalService
     public AddExternalServiceValidator()
     {
         RuleFor(_ => _.EventStore).NotEmpty().WithMessage("Event store name is required.");
+        RuleFor(_ => _.EventStore).NotSystemEventStore();
         RuleFor(_ => _.Name).NotEmpty().WithMessage("External service name is required.");
 
         When(_ => _.EndpointType == ExternalServiceEndpointType.Http, () =>

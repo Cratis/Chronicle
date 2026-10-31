@@ -7,12 +7,14 @@ using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.Reducers;
 using Cratis.Chronicle.Storage;
+using Cratis.Chronicle.Storage.Observation.Reducers;
 
 namespace Cratis.Chronicle.Observation.Reducers.Clients.for_ReducerDefinitionComparer.given;
 
 public class two_definitions : Specification
 {
     protected ReducerDefinitionComparer _comparer;
+    protected IReducerDefinitionsStorage _reducersStorage;
     protected ReducerKey _key;
     protected ReducerDefinition _previous;
     protected ReducerDefinition _current;
@@ -22,7 +24,9 @@ public class two_definitions : Specification
     {
         _key = new("reducer", "store", "namespace", EventSequenceId.Log);
         var storage = Substitute.For<IStorage>();
-        storage.GetEventStore(_key.EventStore).Reducers.Has(_key.ReducerId).Returns(true);
+        _reducersStorage = Substitute.For<IReducerDefinitionsStorage>();
+        storage.GetEventStore(_key.EventStore).Reducers.Returns(_reducersStorage);
+        _reducersStorage.Has(_key.ReducerId).Returns(true);
         _comparer = new(storage);
         _previous = new(
             "reducer",

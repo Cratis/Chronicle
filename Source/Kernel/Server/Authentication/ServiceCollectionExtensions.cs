@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Arc.Authorization;
+using Cratis.Chronicle.Security;
 using Cratis.Chronicle.Server.Authentication.OpenIddict;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.MongoDB.Security;
@@ -9,10 +11,10 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
-using Microsoft.AspNetCore.DataProtection.KeyManagement;
-using Microsoft.AspNetCore.DataProtection.Repositories;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using OpenIddict.Validation.AspNetCore;
+using User = Cratis.Chronicle.Storage.Security.User;
 
 namespace Cratis.Chronicle.Server.Authentication;
 
@@ -47,16 +49,11 @@ public static class ServiceCollectionExtensions
         // service collection is still being built. Registering that same instance is what makes the rotation
         // diagnostic report the certificates those two were actually handed, rather than a second reading of
         // the same configuration.
-        var encryptionCertificateRing = Cratis.Chronicle.Security.EncryptionCertificateRing.From(chronicleOptions);
-        services.AddSingleton<Cratis.Chronicle.Security.IEncryptionCertificateRing>(encryptionCertificateRing);
+        var encryptionCertificateRing = EncryptionCertificateRing.From(chronicleOptions);
+        services.AddSingleton<IEncryptionCertificateRing>(encryptionCertificateRing);
 
         // Configure Data Protection with Chronicle's shared storage so every node uses the same authentication key ring.
-        services.AddSingleton<GrainBasedXmlRepository>();
-        services.AddSingleton<IXmlRepository>(sp => sp.GetRequiredService<GrainBasedXmlRepository>());
-        services.AddOptions<KeyManagementOptions>()
-            .Configure<GrainBasedXmlRepository>((options, repository) => options.XmlRepository = repository);
-        var dataProtectionBuilder = services.AddDataProtection()
-            .SetApplicationName("Chronicle");
+        var dataProtectionBuilder = services.AddChronicleDataProtection();
 
         // New keys are protected with the active certificate; every certificate in the ring can unprotect,
         // so keys written before a rotation stay readable through it. The active certificate is passed to
@@ -73,12 +70,17 @@ public static class ServiceCollectionExtensions
         // authenticate them against, so the token authority, the identity stack and the schemes are all skipped
         // and the fallback policy lets every request through. Data Protection above stays either way - webhook
         // secret encryption depends on it and has nothing to do with authentication.
+        services.AddAdministratorAuthorizationHandlers();
+
         if (!chronicleOptions.Authentication.Enabled)
         {
             services.AddAuthorizationBuilder()
                 .SetFallbackPolicy(new AuthorizationPolicyBuilder()
                     .RequireAssertion(_ => true)
-                    .Build());
+                    .Build())
+                .AddAdministratorPolicies();
+            services.AddArcAnonymousAspNetAuthorizationPolicy(WellKnownAuthorizationPolicies.Administrator);
+            services.AddArcAnonymousAspNetAuthorizationPolicy(WellKnownAuthorizationPolicies.AdministratorOperations);
 
             return services;
         }
@@ -93,19 +95,7 @@ public static class ServiceCollectionExtensions
         });
 
         // Add ASP.NET Identity
-        services.AddIdentityCore<User>(options =>
-            {
-                options.Password.RequireDigit = false;
-                options.Password.RequireLowercase = false;
-                options.Password.RequireNonAlphanumeric = false;
-                options.Password.RequireUppercase = false;
-                options.Password.RequiredLength = 4;
-                options.User.RequireUniqueEmail = false;
-            })
-            .AddUserStore<UserStore>()
-            .AddSignInManager()
-            .AddDefaultTokenProviders()
-            .AddApiEndpoints();
+        services.AddChronicleIdentity();
 
         // Add OpenIdDict if OAuth Authority feature is enabled
         services.AddOpenIddictIfEnabled(chronicleOptions, encryptionCertificateRing);
@@ -168,6 +158,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IClaimsTransformation, ChronicleClaimsTransformation>();
 
         services.AddAuthorizationBuilder()
+            .AddAdministratorPolicies("MultiScheme", IdentityConstants.BearerScheme)
 
             // Require authentication for all endpoints except those with [AllowAnonymous]
             // This applies zero-trust security across all gRPC services and HTTP endpoints
@@ -176,5 +167,47 @@ public static class ServiceCollectionExtensions
                 .Build());
 
         return services;
+    }
+
+    static void AddAdministratorAuthorizationHandlers(this IServiceCollection services)
+    {
+        services.AddChronicleAdministratorAuthorization();
+        services.AddHostedService<AdministratorPolicyStartupWarning>();
+    }
+
+    static AuthorizationBuilder AddAdministratorPolicies(this AuthorizationBuilder builder, params string[] authenticationSchemes) => builder
+        .AddPolicy(WellKnownAuthorizationPolicies.Administrator, policy => AdministratorPolicy(policy, authenticationSchemes).AddRequirements(new AdministratorRequirement()))
+        .AddPolicy(WellKnownAuthorizationPolicies.AdministratorOperations, policy => AdministratorPolicy(policy, authenticationSchemes).AddRequirements(new SystemStoreOperationRequirement()));
+
+    /// <summary>
+    /// Shapes an administrator policy. With authentication disabled there are no schemes and the handlers decide alone;
+    /// with it enabled, the policy authenticates through the fallback policy's schemes and requires an authenticated caller.
+    /// </summary>
+    /// <param name="policy">The policy being built.</param>
+    /// <param name="authenticationSchemes">The authentication schemes, empty when authentication is disabled.</param>
+    /// <returns>The policy builder.</returns>
+    static AuthorizationPolicyBuilder AdministratorPolicy(AuthorizationPolicyBuilder policy, string[] authenticationSchemes) =>
+        authenticationSchemes.Length == 0 ? policy : policy.AddAuthenticationSchemes(authenticationSchemes).RequireAuthenticatedUser();
+
+    static void AddChronicleIdentity(this IServiceCollection services) =>
+        services.AddPasswordSignInThrottling().AddIdentityCore<User>(options =>
+            {
+                options.Password.RequireDigit = false;
+                options.Password.RequireLowercase = false;
+                options.Password.RequireNonAlphanumeric = false;
+                options.Password.RequireUppercase = false;
+                options.Password.RequiredLength = PasswordPolicy.MinimumLength;
+                options.User.RequireUniqueEmail = false;
+            })
+            .AddUserStore<UserStore>()
+            .AddClaimsPrincipalFactory<ChronicleUserClaimsPrincipalFactory>()
+            .AddSignInManager<ChronicleSignInManager>()
+            .AddDefaultTokenProviders()
+            .AddApiEndpoints();
+
+    static IServiceCollection AddPasswordSignInThrottling(this IServiceCollection services)
+    {
+        services.TryAddSingleton(TimeProvider.System);
+        return services.AddSingleton<ISignInThrottle, SignInThrottle>();
     }
 }
