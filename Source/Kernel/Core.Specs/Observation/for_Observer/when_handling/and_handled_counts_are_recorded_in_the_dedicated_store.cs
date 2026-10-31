@@ -16,8 +16,11 @@ public class and_handled_counts_are_recorded_in_the_dedicated_store : given.an_o
     [Fact]
     void should_increment_the_dedicated_store_with_the_handled_counts() => _observerHandledCountsStorage.Received(1).Increment(
         _observerId,
-        Arg.Is<Key>(_ => _.IsEqualTo("Something")),
-        Arg.Is<IReadOnlyDictionary<EventTypeId, EventCount>>(_ => _.Count == 1 && _[event_type.Id] == (EventCount)1UL));
+        Arg.Is<IReadOnlyCollection<KeyValuePair<Key, IReadOnlyDictionary<EventTypeId, EventCount>>>>(counts =>
+            counts.Count == 1 &&
+            counts.Single().Key.IsEqualTo("Something") &&
+            counts.Single().Value.Count == 1 &&
+            counts.Single().Value[event_type.Id] == (EventCount)1UL));
 
     [Fact]
     void should_keep_the_running_total_on_the_observer_state() => _stateStorage.State.HandledEventCount.ShouldEqual((EventCount)1UL);
