@@ -141,7 +141,7 @@ jobs:
           python3 .github/scripts/test-sparse-integration-workflows.py
 
       - name: Spec Workbench proxy freshness guard
-        run: python3 -B .github/scripts/test-check-workbench-proxies.py
+        run: node .github/scripts/test-check-workbench-proxies.mjs
 
       - name: Setup .Net
         uses: actions/setup-dotnet@v4
@@ -187,7 +187,7 @@ jobs:
         run: echo "WORKBENCH_PROXIES=$RUNNER_TEMP/workbench-proxies" >> "$GITHUB_ENV"
 
       - name: Prepare isolated Workbench proxy generation
-        run: python3 -B .github/scripts/check-workbench-proxies.py prepare --output "$WORKBENCH_PROXIES"
+        run: node .github/scripts/check-workbench-proxies.mjs prepare --output "$WORKBENCH_PROXIES"
 
       - name: Generate native Debug Workbench proxies
         run: >-
@@ -197,7 +197,7 @@ jobs:
           -p:CratisProxiesIncremental=false "-p:CratisProxiesOutputPath=$WORKBENCH_PROXIES"
 
       - name: Check Workbench proxy freshness
-        run: python3 -B .github/scripts/check-workbench-proxies.py check --generated "$WORKBENCH_PROXIES"
+        run: node .github/scripts/check-workbench-proxies.mjs check --generated "$WORKBENCH_PROXIES"
 
       - name: Build
         run: dotnet build --configuration Release -p:DisableProxyGenerator=true -p:DisableDockerBuild=true
