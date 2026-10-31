@@ -62,11 +62,18 @@ export const FailedPartitions = withViewModel(FailedPartitionsViewModel, ({ view
 
     return (
         <Page title={strings.eventStore.namespaces.failedPartitions.title}>
+        {viewModel.restorationState !== 'idle' && viewModel.restorationState !== 'ready' && (
+            <p role='status'>{strings.eventStore.namespaces.failedPartitions.restoration[viewModel.restorationState]}</p>
+        )}
+        {(viewModel.restorationState === 'failed' || viewModel.restorationState === 'denied') && (
+            <button type='button' onClick={() => viewModel.retryRestoration()}>{strings.eventStore.namespaces.failedPartitions.restoration.retry}</button>
+        )}
         <DataPage
             title={strings.eventStore.namespaces.failedPartitions.title}
             query={AllFailedPartitions}
             queryArguments={queryArgs}
-            onSelectionChange={(e) => (viewModel.selectedFailedPartition = e.value as FailedPartition)}
+            selection={viewModel.selectedFailedPartition ?? null}
+            onSelectionChange={(e) => viewModel.selectFailedPartition(e.value as FailedPartition | null)}
             dataKey='id'
             detailsComponent={FailedPartitionDetails}
             defaultFilters={defaultFilters}
