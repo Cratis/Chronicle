@@ -18,8 +18,10 @@ vi.mock('Components/Common/Page', () => ({ Page: () => undefined }));
 type Props = { children?: unknown; queryArguments?: { observerId?: string }; key?: string };
 
 const render = () => {
-    const page = (FailedPartitions as unknown as (props: { viewModel: FailedPartitionsViewModel }) => ReactElement)({ viewModel: {} as FailedPartitionsViewModel });
-    const [banner, table] = (page.props as { children: ReactElement<Props>[] }).children;
+    const page = (FailedPartitions as unknown as (props: { viewModel: FailedPartitionsViewModel }) => ReactElement)({ viewModel: { restorationState: 'idle' } as unknown as FailedPartitionsViewModel });
+    const children = (page.props as { children: ReactElement<Props>[] }).children;
+    const banner = children[0];
+    const table = children[children.length - 1];
     return { banner: banner as unknown as ReactElement<{ children: ReactElement<{ onClick: () => void }>[] }> | false | undefined, table };
 };
 
@@ -43,7 +45,7 @@ describe('when failed partitions are scoped to an observer', () => {
     it('should announce the narrowing with the observer id', () => {
         mocks.search = '?observerId=My.Observer';
         const { banner } = render();
-        const text = (banner as ReactElement<{ children: ReactElement<{ children: string }>[] }>).props.children[0].props.children;
+        const text = (banner as unknown as ReactElement<{ children: ReactElement<{ children: string }>[] }>).props.children[0].props.children;
         text.should.contain('My.Observer');
     });
 

@@ -179,7 +179,7 @@ export const Observers = withViewModel(ObserversViewModel, ({ viewModel }) => {
             <div className='flex-1 overflow-hidden px-4 pb-4'>
                 <Allotment className='h-full' proportionalLayout={false}>
                     <Allotment.Pane className='flex-grow'>
-                        <DataTableCore<ObserverRow>
+                        <DataTableCore<ObserverInformation>
                             data={observerRows}
                             selectionMode='single'
                             selection={viewModel.selectedObserver}
