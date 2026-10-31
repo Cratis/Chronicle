@@ -15,6 +15,6 @@ public class an_initializing_administrator_roster : an_administrator_roster
     void Establish()
     {
         _logger = new RecordingLogger();
-        _roster = new AdministratorRoster(_storage, _grainFactory, _serializer, Options.Create(_options), new ConfigurationBuilder().Build(), _logger);
+        _roster = new AdministratorRoster(_storage, _grainFactory, _serializer, _proof, Options.Create(_options), new ConfigurationBuilder().Build(), _logger);
     }
 }

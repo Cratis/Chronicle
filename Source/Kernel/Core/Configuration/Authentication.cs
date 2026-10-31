@@ -76,6 +76,18 @@ public class Authentication
     /// </summary>
     public AdminUserBootstrapConfig? AdminUser { get; init; }
 
+    /// <summary>
+    /// Gets an optional operator-provided token for initial administrator setup.
+    /// When absent, a token is issued and logged while the administrator has no credentials.
+    /// Store this value as a secret and remove it after setup.
+    /// </summary>
+    public string? InitialAdminSetupToken { get; init; }
+
+    /// <summary>
+    /// Gets the per-node password sign-in throttling settings.
+    /// </summary>
+    public SignInThrottling SignInThrottling { get; init; } = new();
+
 #if DEVELOPMENT
     /// <summary>
     /// Gets the default admin password for development. When set, the admin user is created with this password pre-configured,

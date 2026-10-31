@@ -371,6 +371,10 @@ public partial class EventSequence(
         IEnumerable<Causation> causation,
         Identity causedBy)
     {
+        if (string.Equals(_eventSequenceKey.EventStore.Value, EventStoreName.System.Value, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new SystemEventStoreEventsAreImmutable();
+        }
         logger.Revising(
             _eventSequenceKey.EventStore,
             _eventSequenceKey.Namespace,
@@ -411,6 +415,10 @@ public partial class EventSequence(
         IEnumerable<Causation> causation,
         Identity causedBy)
     {
+        if (string.Equals(_eventSequenceKey.EventStore.Value, EventStoreName.System.Value, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new SystemEventStoreEventsAreImmutable();
+        }
         logger.Redacting(
             _eventSequenceKey.EventStore,
             _eventSequenceKey.Namespace,
@@ -450,6 +458,10 @@ public partial class EventSequence(
         IEnumerable<Causation> causation,
         Identity causedBy)
     {
+        if (string.Equals(_eventSequenceKey.EventStore.Value, EventStoreName.System.Value, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new SystemEventStoreEventsAreImmutable();
+        }
         logger.RedactingMultiple(
             _eventSequenceKey.EventStore,
             _eventSequenceKey.Namespace,

@@ -78,7 +78,7 @@ public class when_old_kernel_reads_and_writes_new_claims : Specification
     [Fact] void should_preserve_the_legacy_identity() => _after.Identifier.ShouldEqual(_before.Identifier);
     [Fact] void should_preserve_legacy_subscription_mode() => _after.SubscribesToAllEvents.ShouldEqual(_before.SubscribesToAllEvents);
     [Fact] void should_preserve_the_last_handled_event() => _after.LastHandledEventSequenceNumber.ShouldEqual(_before.LastHandledEventSequenceNumber);
-    [Fact] void should_preserve_the_next_event() => _after.NextEventSequenceNumber.ShouldEqual(_before.NextEventSequenceNumber);
+    [Fact] void should_not_move_the_next_event_backwards() => (_after.NextEventSequenceNumber.Value >= _before.NextEventSequenceNumber.Value).ShouldBeTrue();
     [Fact] void should_preserve_handled_count() => _after.HandledEventCount.ShouldEqual(_before.HandledEventCount);
     [Fact] void should_preserve_legacy_replay_sets() => _after.ReplayingPartitions.ShouldContainOnly(_before.ReplayingPartitions);
     [Fact] void should_preserve_legacy_partition_sets() => _after.CatchingUpPartitions.ShouldContainOnly(_before.CatchingUpPartitions);

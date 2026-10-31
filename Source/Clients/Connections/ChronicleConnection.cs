@@ -114,6 +114,11 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         ILoadBalancerStrategy? loadBalancerStrategy = null,
         TimeProvider? timeProvider = null)
     {
+        if (connectionString.DisableTls && connectionString.AuthenticationMode == AuthenticationMode.ClientCredentials)
+        {
+            throw new ClientCredentialsRequireTls();
+        }
+
         _timeProvider = timeProvider ?? TimeProvider.System;
         _skipTlsValidation = skipTlsValidation;
         _skipCompatibilityCheck = skipCompatibilityCheck;
@@ -127,11 +132,16 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         _cancellationToken = cancellationToken;
         _logger = logger;
         _loggerFactory = loggerFactory;
+        if (ServerCertificateValidationWarning.AppliesTo(skipTlsValidation, connectionString))
+        {
+            _logger.ServerCertificateValidationDisabled(string.Join(", ", connectionString.ServerAddresses));
+        }
+
         _certificatePath = certificatePath;
         _certificatePassword = certificatePassword;
         _tokenProvider = tokenProvider ?? new NoOpTokenProvider();
         _serverAddressResolver = serverAddressResolver ?? new ChronicleServerAddressResolver();
-        _loadBalancerStrategy = loadBalancerStrategy ?? LoadBalancerStrategies.Create(connectionString.LoadBalancer, skipTlsValidation);
+        _loadBalancerStrategy = loadBalancerStrategy ?? LoadBalancerStrategies.Create(connectionString.LoadBalancer, skipTlsValidation, connectionString.DisableTls);
         _watchDog = new ConnectionWatchdog(
             tasks,
             OnSessionDropped,
@@ -454,7 +464,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
                 ClientType = ChronicleClientIdentity.Type,
                 ClientVersion = ChronicleClientIdentity.Version,
                 ProtocolVersion = ChronicleClientIdentity.ProtocolVersion,
-                DescriptorSet = Contracts.WireContractDescriptorSet.Bytes.ToArray()
+                DescriptorSet = WireContractDescriptorSet.Bytes.ToArray()
             });
         }
         catch (RpcException ex) when (ex.StatusCode == StatusCode.Unimplemented)
@@ -565,7 +575,9 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
             httpHandler.SslOptions.RemoteCertificateValidationCallback =
                 CertificateLoader.CreateServerCertificateValidationCallback(_skipTlsValidation, certificate?.GetCertHashString());
 
-            var address = $"https://{serverAddress.Host}:{serverAddress.Port}";
+            // With TLS disabled the server speaks HTTP/2 without TLS (h2c); an http:// address makes the gRPC channel
+            // use HTTP/2 with prior knowledge.
+            var address = $"{(_connectionString.DisableTls ? Uri.UriSchemeHttp : Uri.UriSchemeHttps)}://{serverAddress.Host}:{serverAddress.Port}";
 
             var channel = GrpcChannel.ForAddress(
                 address,

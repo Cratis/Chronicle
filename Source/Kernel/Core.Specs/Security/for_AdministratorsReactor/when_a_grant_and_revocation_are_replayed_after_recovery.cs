@@ -24,7 +24,7 @@ public class when_a_grant_and_revocation_are_replayed_after_recovery : given.an_
         _revocationContext = Seed(_grantContext.EventSourceId, _revoked);
         await _reactor.Revoked(_revoked, _revocationContext);
         _afterRevocation = await _storage.System.Administrators.GetAll();
-        _recovered = new UserGrantedAdministrator(_userId, GrantReason.OperatorRecovery, "new recovery nonce");
+        _recovered = new UserGrantedAdministrator(_userId, GrantReason.OperatorRecovery, "{\"Nonce\":\"fresh\"}");
         await _reactor.Granted(_recovered, Seed(_grantContext.EventSourceId, _recovered));
     }
 
