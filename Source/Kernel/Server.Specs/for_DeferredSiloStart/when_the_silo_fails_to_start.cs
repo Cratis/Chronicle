@@ -19,7 +19,7 @@ public class when_the_silo_fails_to_start : Specification
         _silo.StartAsync(Arg.Any<CancellationToken>()).Returns(Task.FromException(_failure));
     }
 
-    async Task Because() => _error = await Catch.Exception(() => new DeferredSiloStart(_silo, NullLogger<Kernel>.Instance).StartedAsync(CancellationToken.None));
+    async Task Because() => _error = await Catch.Exception(() => new DeferredSiloStart(_silo, NullLogger<Kernel>.Instance, []).StartedAsync(CancellationToken.None));
 
     [Fact] void should_propagate_the_failure_to_the_host() => _error.ShouldBeSame(_failure);
 }

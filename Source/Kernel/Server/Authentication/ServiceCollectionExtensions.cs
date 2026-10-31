@@ -11,9 +11,8 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
-using Microsoft.AspNetCore.DataProtection.KeyManagement;
-using Microsoft.AspNetCore.DataProtection.Repositories;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using OpenIddict.Validation.AspNetCore;
 using User = Cratis.Chronicle.Storage.Security.User;
 
@@ -50,16 +49,11 @@ public static class ServiceCollectionExtensions
         // service collection is still being built. Registering that same instance is what makes the rotation
         // diagnostic report the certificates those two were actually handed, rather than a second reading of
         // the same configuration.
-        var encryptionCertificateRing = Cratis.Chronicle.Security.EncryptionCertificateRing.From(chronicleOptions);
-        services.AddSingleton<Cratis.Chronicle.Security.IEncryptionCertificateRing>(encryptionCertificateRing);
+        var encryptionCertificateRing = Security.EncryptionCertificateRing.From(chronicleOptions);
+        services.AddSingleton<Security.IEncryptionCertificateRing>(encryptionCertificateRing);
 
         // Configure Data Protection with Chronicle's shared storage so every node uses the same authentication key ring.
-        services.AddSingleton<GrainBasedXmlRepository>();
-        services.AddSingleton<IXmlRepository>(sp => sp.GetRequiredService<GrainBasedXmlRepository>());
-        services.AddOptions<KeyManagementOptions>()
-            .Configure<GrainBasedXmlRepository>((options, repository) => options.XmlRepository = repository);
-        var dataProtectionBuilder = services.AddDataProtection()
-            .SetApplicationName("Chronicle");
+        var dataProtectionBuilder = Security.ChronicleDataProtection.AddChronicleDataProtection(services);
 
         // New keys are protected with the active certificate; every certificate in the ring can unprotect,
         // so keys written before a rotation stay readable through it. The active certificate is passed to
@@ -101,20 +95,7 @@ public static class ServiceCollectionExtensions
         });
 
         // Add ASP.NET Identity
-        services.AddIdentityCore<User>(options =>
-            {
-                options.Password.RequireDigit = false;
-                options.Password.RequireLowercase = false;
-                options.Password.RequireNonAlphanumeric = false;
-                options.Password.RequireUppercase = false;
-                options.Password.RequiredLength = 4;
-                options.User.RequireUniqueEmail = false;
-            })
-            .AddUserStore<UserStore>()
-            .AddSignInManager()
-            .AddClaimsPrincipalFactory<ChronicleUserClaimsPrincipalFactory>()
-            .AddDefaultTokenProviders()
-            .AddApiEndpoints();
+        services.AddChronicleIdentity();
 
         // Add OpenIdDict if OAuth Authority feature is enabled
         services.AddOpenIddictIfEnabled(chronicleOptions, encryptionCertificateRing);
@@ -207,4 +188,26 @@ public static class ServiceCollectionExtensions
     /// <returns>The policy builder.</returns>
     static AuthorizationPolicyBuilder AdministratorPolicy(AuthorizationPolicyBuilder policy, string[] authenticationSchemes) =>
         authenticationSchemes.Length == 0 ? policy : policy.AddAuthenticationSchemes(authenticationSchemes).RequireAuthenticatedUser();
+
+    static void AddChronicleIdentity(this IServiceCollection services) =>
+        services.AddPasswordSignInThrottling().AddIdentityCore<User>(options =>
+            {
+                options.Password.RequireDigit = false;
+                options.Password.RequireLowercase = false;
+                options.Password.RequireNonAlphanumeric = false;
+                options.Password.RequireUppercase = false;
+                options.Password.RequiredLength = Security.PasswordPolicy.MinimumLength;
+                options.User.RequireUniqueEmail = false;
+            })
+            .AddUserStore<UserStore>()
+            .AddClaimsPrincipalFactory<ChronicleUserClaimsPrincipalFactory>()
+            .AddSignInManager<ChronicleSignInManager>()
+            .AddDefaultTokenProviders()
+            .AddApiEndpoints();
+
+    static IServiceCollection AddPasswordSignInThrottling(this IServiceCollection services)
+    {
+        services.TryAddSingleton(TimeProvider.System);
+        return services.AddSingleton<ISignInThrottle, SignInThrottle>();
+    }
 }

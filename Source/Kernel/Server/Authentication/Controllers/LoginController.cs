@@ -20,8 +20,8 @@ namespace Cratis.Chronicle.Server.Authentication.Controllers;
 [Route("api/security")]
 [AllowAnonymous]
 public class LoginController(
-    UserManager<Storage.Security.User> userManager,
-    SignInManager<Storage.Security.User> signInManager,
+    UserManager<User> userManager,
+    SignInManager<User> signInManager,
     IUserStorage userStorage) : ControllerBase
 {
     /// <summary>
@@ -62,6 +62,14 @@ public class LoginController(
         }
 
         var result = await signInManager.CheckPasswordSignInAsync(user, request.Password, lockoutOnFailure: false);
+        if (result.IsLockedOut)
+        {
+            return new LoginResponse
+            {
+                Success = false,
+                ErrorMessage = "Too many failed sign-in attempts. Try again later."
+            };
+        }
         if (!result.Succeeded)
         {
             return new LoginResponse

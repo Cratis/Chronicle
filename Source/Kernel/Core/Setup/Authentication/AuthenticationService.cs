@@ -22,6 +22,7 @@ namespace Cratis.Chronicle.Setup.Authentication;
 /// <param name="grainFactory">The <see cref="IGrainFactory"/> for creating grains.</param>
 /// <param name="options">Chronicle options.</param>
 /// <param name="eventSerializer">The event serializer.</param>
+/// <param name="setupTokens">The initial administrator setup tokens.</param>
 /// <param name="logger">The logger.</param>
 [Singleton]
 internal sealed class AuthenticationService(
@@ -30,10 +31,12 @@ internal sealed class AuthenticationService(
     IGrainFactory grainFactory,
     IOptions<Configuration.ChronicleOptions> options,
     IEventSerializer eventSerializer,
+    Security.IInitialAdminSetupTokens setupTokens,
     ILogger<AuthenticationService> logger) : IAuthenticationService
 {
     static readonly PasswordHasher<object> _passwordHasher = new();
     readonly Configuration.ChronicleOptions _options = options.Value;
+    readonly InitialAdminSetupTokenLogging _setupTokenLogging = new(setupTokens, options, logger);
 
     /// <inheritdoc/>
     public async Task<User?> AuthenticateUser(Username username, Password password)
@@ -74,6 +77,8 @@ internal sealed class AuthenticationService(
         }
 #endif
 
+        WarnIfConfiguredPasswordIsShort(bootstrapPassword);
+
         var eventSequence = grainFactory.GetEventLog();
         var existingAdmin = (await userStorage.GetAll()).FirstOrDefault(user =>
             string.Equals(user.Username, effectiveUsername, StringComparison.OrdinalIgnoreCase));
@@ -89,6 +94,7 @@ internal sealed class AuthenticationService(
                     adminUser?.RequirePasswordChangeOnFirstLogin is true,
                     effectiveUsername);
             }
+            _setupTokenLogging.LogIfRequired(existingAdmin, bootstrapPassword);
             return;
         }
 
@@ -119,6 +125,8 @@ internal sealed class AuthenticationService(
             logger.AdminUserWithCredentialsCreated(effectiveUsername);
         }
 
+        // Re-read after creation so a concurrently configured password suppresses token issuance.
+        _setupTokenLogging.LogIfRequired(await userStorage.GetById(userId), bootstrapPassword);
         logger.DefaultAdminUserAdded();
     }
 
@@ -222,6 +230,14 @@ internal sealed class AuthenticationService(
         ? grainFactory.GetGrain<Security.IAdministratorRoster>(Concepts.Security.AdministratorRoster.Key)
             .Grant(userId, GrantReason.Bootstrap, "Successfully appended InitialAdminUserAdded for the deterministic initial administrator.")
         : Task.CompletedTask;
+
+    void WarnIfConfiguredPasswordIsShort(string password)
+    {
+        if (password.Length is > 0 and < Security.PasswordPolicy.MinimumLength)
+        {
+            logger.ConfiguredAdminPasswordIsShort(Security.PasswordPolicy.MinimumLength);
+        }
+    }
 
     async Task EnsureConfiguredPassword(
         IEventSequence eventSequence,

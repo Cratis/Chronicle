@@ -49,7 +49,7 @@ internal sealed class Users(
     public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult> SetInitialAdminPassword(global::Cratis.Chronicle.Contracts.Security.SetInitialAdminPasswordRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         CommandExecutor.Execute(
             commandPipeline,
-            new global::Cratis.Chronicle.Security.SetInitialAdminPassword((global::Cratis.Chronicle.Concepts.Security.UserId)request.UserId, (global::Cratis.Chronicle.Concepts.Security.Password)request.Password, (global::Cratis.Chronicle.Concepts.Security.Password)request.ConfirmedPassword));
+            new global::Cratis.Chronicle.Security.SetInitialAdminPassword((global::Cratis.Chronicle.Concepts.Security.UserId)request.UserId, (global::Cratis.Chronicle.Concepts.Security.Password)request.Password, (global::Cratis.Chronicle.Concepts.Security.Password)request.ConfirmedPassword, (global::Cratis.Chronicle.Concepts.Security.InitialAdminSetupToken)request.SetupToken));
 
     /// <inheritdoc/>
     [global::Microsoft.AspNetCore.Authorization.AllowAnonymous]

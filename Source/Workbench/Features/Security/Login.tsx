@@ -113,6 +113,21 @@ export const Login = withViewModel(LoginViewModel, ({ viewModel }) => {
                                 </p>
                             )}
 
+                            {viewModel.isInitialSetup && (
+                                <div className={css.formGroup}>
+                                    <label htmlFor="setupToken" className={css.label}>Setup token</label>
+                                    <InputText
+                                        id="setupToken"
+                                        value={viewModel.setupToken}
+                                        onChange={(event: ChangeEvent<HTMLInputElement>) => viewModel.setupToken = event.target.value}
+                                        className={css.input}
+                                        placeholder="Paste the setup token from the server log"
+                                        autoFocus={viewModel.requiresPasswordChange}
+                                        disabled={viewModel.isLoggingIn}
+                                    />
+                                </div>
+                            )}
+
                             <div className={css.formGroup}>
                                 <label htmlFor="newPassword" className={css.label}>
                                     {viewModel.isInitialSetup ? 'Password' : 'New Password'}
@@ -123,7 +138,7 @@ export const Login = withViewModel(LoginViewModel, ({ viewModel }) => {
                                     onValueChange={(event: InputPasswordValueChangeEvent) => viewModel.newPassword = event.value}
                                     className={css.input}
                                     placeholder={viewModel.isInitialSetup ? 'Enter password' : 'Enter new password'}
-                                    autoFocus={viewModel.requiresPasswordChange}
+                                    autoFocus={viewModel.requiresPasswordChange && !viewModel.isInitialSetup}
                                     disabled={viewModel.isLoggingIn}
                                 />
                             </div>
@@ -154,7 +169,7 @@ export const Login = withViewModel(LoginViewModel, ({ viewModel }) => {
                                     label={getButtonLabel()}
                                     className={css.loginButton}
                                     loading={viewModel.isLoggingIn}
-                                    disabled={viewModel.isLoggingIn || !viewModel.newPassword || !viewModel.confirmPassword}
+                                    disabled={viewModel.isLoggingIn || !viewModel.newPassword || !viewModel.confirmPassword || (viewModel.isInitialSetup && !viewModel.setupToken.trim())}
                                 />
                                 {!viewModel.isInitialSetup && (
                                     <Button

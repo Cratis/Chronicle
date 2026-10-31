@@ -27,6 +27,27 @@ The legacy `identityProvider.certificate` option is ignored; see [Identity Provi
 | requireHttpsMetadata | bool | true | Require HTTPS when retrieving external-authority metadata |
 | enforceAdministratorPolicyForOperations | bool | false | Enforce administrator privilege for System-store operational recovery instead of auditing would-be denials |
 | defaultAdminUsername | string | "admin" | Default admin username created on first startup when `adminUser` is not configured |
+| initialAdminSetupToken | string | null | Optional operator-provided token for initial password setup; use secret management |
+
+## Password sign-ins
+
+New passwords must contain at least eight characters, whether chosen through Chronicle commands or the Identity API. Existing configured administrator passwords remain accepted; a shorter bootstrap password produces a warning without logging the password.
+
+Failed password sign-ins are throttled per node by normalized username/address, with a separate, higher username-wide ceiling across addresses. IPv6 addresses share a /64 bucket, and IPv4-mapped IPv6 addresses use their IPv4 address. The password grant, `/api/security/login` and `/identity/login` share the same throttle. A successful check clears the username counter and its current address bucket. Configure these values under `Cratis:Chronicle:Authentication:SignInThrottling`:
+
+| Property | Default | Description |
+| --- | --- | --- |
+| MaxFailedAttempts | 5 | Failures per username/address before lockout; set to 0 to disable throttling |
+| MaxFailedAttemptsPerUsername | 50 | Username-wide failure ceiling across addresses; values at or below MaxFailedAttempts are treated as MaxFailedAttempts plus one |
+| WindowSeconds | 300 | Window for counting failures |
+| LockoutSeconds | 300 | Duration before password checks can resume |
+| MaxTrackedEntries | 10000 | Maximum counters in each of the username and username/address tables per node |
+
+Per-address lockout is the primary control. Failures reported for an already locked address do not advance the username-wide counter. The username-wide ceiling defaults to ten times the default per-address allowance and limits address rotation; reaching it temporarily denies that username from every address. A higher ceiling reduces the ability of one address to affect other callers, at the cost of allowing more attempts from rotating addresses. Keep the ceiling substantially above the per-address limit when tuning these settings.
+
+Expired entries are reclaimed on access. Each table admits new counters at capacity by replacing the oldest unlocked counter, or the oldest locked counter if all are locked. Capacity alone never locks out an untracked user. This bounds storage to twice `MaxTrackedEntries` counters; capacity pressure can shorten a counter's retention, including a lockout when all retained counters are locked. Positive windows, durations and capacity are required; values below one are treated as one. Throttling is in memory, so restarting clears it and multiple nodes each have their own allowance. Client-credentials grants are validated separately by OpenIddict and are not covered by password sign-in throttling.
+
+Behind an ingress, configure ASP.NET Core `ForwardedHeaders` with trusted proxies or networks before relying on distinct client IPs. Without trusted forwarded headers, callers sharing a proxy also share its address and therefore the same per-username allowance. Do not trust forwarded addresses from arbitrary callers.
 
 ## Administrator authorization
 
@@ -116,10 +137,16 @@ Chronicle supports pre-configuring the initial admin user's credentials at start
 1. `adminUser.username` takes precedence over `defaultAdminUsername`; an empty or whitespace-only override uses the default. Existing users are matched case-insensitively, preserving their deployed identifiers.
 2. A new administrator uses one deterministic identifier across silos. Creation and initial password events use event-source and event-type concurrency checks: concurrent startup cannot append the same bootstrap step twice.
 3. A configured password initializes only an administrator without existing credentials. A restart can resume incomplete initialization, but never overwrites a password that has already been set.
-4. Without a configured password, the Workbench offers setup for the configured administrator only. Confirmation must match. Once credentials exist, including temporary credentials from older deployments, anonymous setup is rejected.
+4. Without a configured password, setup requires the token from the server logs or `initialAdminSetupToken`, and matching password confirmation. Only the configured administrator can be initialized. Once credentials exist, including temporary credentials from older deployments, anonymous setup is rejected.
 5. Creation and password operations wait for the persisted user state. Append failures or a projection that does not complete are reported instead of returning successful setup. A completion timeout does not undo an accepted event; inspect the user state before retrying.
 
 Keep administrator configuration consistent across silos. Changing the bootstrap username is not an account-rename mechanism. Restrict network access until interactive initial setup has completed, or supply the initial password through your secret mechanism.
+
+### Interactive initial setup
+
+If no administrator password or setup token is configured, Chronicle logs a generated initial setup token when the administrator has no credentials. Copy it into the Workbench setup form with the new password and matching confirmation. Treat the token and the logs containing it as credentials; restrict access to both. Older clients that do not send a setup token cannot complete initial setup.
+
+For automated deployments, supply `authentication.initialAdminSetupToken` through your secret mechanism (`Cratis__Chronicle__Authentication__InitialAdminSetupToken`), or configure `adminUser.password` to avoid interactive setup entirely. Keep the token consistent across silos. Configured tokens are never logged; startup instead indicates that the configured token is required. Generated tokens use the shared data-protection key ring and remain usable across restarts while the administrator is unconfigured. Remove configured setup tokens after successful setup; they cannot replace credentials once a password exists. No setup token is logged when a password has been configured or the administrator has logged in.
 
 ### Administrator privileges and recovery
 

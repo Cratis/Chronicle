@@ -21,7 +21,7 @@ namespace Cratis.Chronicle.Sequences;
 /// <param name="CorrelationId">Optional correlation identifier. Defaults to a new one when not provided.</param>
 /// <param name="Tags">The tags to associate with every event in the batch, in addition to each event's own tags.</param>
 /// <param name="Causation">Optional caller-supplied causation chain. Defaults to the request causation when not provided.</param>
-/// <param name="CausedBy">Optional caller-supplied identity. Defaults to the current principal when not provided.</param>
+/// <param name="CausedBy">Optional identity for application callers. Chronicle users are always recorded as the current principal.</param>
 /// <param name="ConcurrencyScopes">Optional concurrency scopes to validate the append against, one per event source. An event source with no entry gets no check.</param>
 /// <param name="EffectReceipt">Optional occurrence effect to commit atomically with this batch.</param>
 [Command]
@@ -94,7 +94,7 @@ public record AppendManyForEventSources(
 
         var correlationId = CorrelationId ?? Guid.NewGuid();
         var causationChain = Causation?.ToChronicle() ?? causation.GetCurrentChain();
-        var identity = CausedBy?.ToChronicle() ?? principalAccessor.Current.ToIdentity();
+        var identity = principalAccessor.Current.ResolveCausedBy(CausedBy);
         var scopes = (ConcurrencyScopes ?? []).ToChronicle();
         if (scopes.TryGetError(out var error))
         {

@@ -18,7 +18,7 @@ internal class ChangeUserPasswordValidator : CommandValidator<ChangeUserPassword
     {
         RuleFor(_ => _.UserId).NotEmpty().WithMessage("User identifier is required.");
         RuleFor(_ => _.OldPassword).NotEmpty().WithMessage("Current password is required.");
-        RuleFor(_ => _.Password).NotEmpty().MinimumLength(8).WithMessage("New password must be at least 8 characters long.");
+        RuleFor(_ => _.Password).NotEmpty().MinimumLength(PasswordPolicy.MinimumLength).WithMessage("New password must be at least 8 characters long.");
         RuleFor(_ => _.ConfirmedPassword).Equal(_ => _.Password).WithMessage("Confirmed password must match the new password.");
     }
 }

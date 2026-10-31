@@ -24,12 +24,12 @@ namespace Cratis.Chronicle.Sequences;
 /// <param name="EventType">The type of the event being revised.</param>
 /// <param name="Content">The revised content, as serialized JSON.</param>
 /// <param name="Causation">Optional caller-supplied causation chain. Defaults to the request causation when not provided.</param>
-/// <param name="CausedBy">Optional caller-supplied identity. Defaults to the current principal when not provided.</param>
+/// <param name="CausedBy">Optional identity for application callers. Chronicle users are always recorded as the current principal.</param>
 /// <remarks>
 /// A revision does not rewrite history - the original content is kept alongside the revision, so what the event
 /// said before stays answerable.
 /// <para>
-/// Content travels as a JSON string rather than <see cref="System.Text.Json.Nodes.JsonObject"/> because protobuf-net
+/// Content travels as a JSON string rather than <see cref="JsonObject"/> because protobuf-net
 /// has no serializer for that BCL type - it has no plain reflectable shape, so the gRPC contract generated from this
 /// command would produce a field nothing can actually put on the wire.
 /// </para>
@@ -89,6 +89,6 @@ public record Revise(
                 protectedContent.ToJsonString()),
             correlationId: correlationId,
             causation: Causation?.ToChronicle() ?? causation.GetCurrentChain(),
-            causedBy: CausedBy?.ToChronicle() ?? principalAccessor.Current.ToIdentity());
+            causedBy: principalAccessor.Current.ResolveCausedBy(CausedBy));
     }
 }

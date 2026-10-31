@@ -132,6 +132,11 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         _cancellationToken = cancellationToken;
         _logger = logger;
         _loggerFactory = loggerFactory;
+        if (ServerCertificateValidationWarning.AppliesTo(skipTlsValidation, connectionString))
+        {
+            _logger.ServerCertificateValidationDisabled(string.Join(", ", connectionString.ServerAddresses));
+        }
+
         _certificatePath = certificatePath;
         _certificatePassword = certificatePassword;
         _tokenProvider = tokenProvider ?? new NoOpTokenProvider();
@@ -459,7 +464,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
                 ClientType = ChronicleClientIdentity.Type,
                 ClientVersion = ChronicleClientIdentity.Version,
                 ProtocolVersion = ChronicleClientIdentity.ProtocolVersion,
-                DescriptorSet = Contracts.WireContractDescriptorSet.Bytes.ToArray()
+                DescriptorSet = WireContractDescriptorSet.Bytes.ToArray()
             });
         }
         catch (RpcException ex) when (ex.StatusCode == StatusCode.Unimplemented)

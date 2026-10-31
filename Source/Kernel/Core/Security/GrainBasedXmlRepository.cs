@@ -2,10 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Xml.Linq;
-using Cratis.Chronicle.Security;
 using Microsoft.AspNetCore.DataProtection.Repositories;
 
-namespace Cratis.Chronicle.Server.Authentication.OpenIddict;
+namespace Cratis.Chronicle.Security;
 
 /// <summary>
 /// Represents an XML repository for Data Protection keys that uses an Orleans grain for storage.

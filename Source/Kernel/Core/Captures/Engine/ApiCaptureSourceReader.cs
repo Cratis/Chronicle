@@ -6,6 +6,7 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Captures;
 using Cratis.Chronicle.Concepts.ExternalServices;
 using Cratis.Chronicle.ExternalServices;
+using Cratis.Chronicle.Observation.Webhooks.Validation;
 using Cratis.Chronicle.Storage;
 using Cratis.DependencyInjection;
 
@@ -33,7 +34,9 @@ public class ApiCaptureSourceReader(
             ?? throw new MissingExternalServiceForCapture(source.Api ?? string.Empty);
 
         using var client = await httpClientFactory.Create(externalService);
-        var response = await client.GetAsync(source.Route ?? string.Empty);
+        using var request = new HttpRequestMessage(HttpMethod.Get, source.Route ?? string.Empty);
+        request.Options.Set(WebhookRequestOptions.EventStore, eventStore);
+        using var response = await client.SendAsync(request);
         response.EnsureSuccessStatusCode();
 
         var content = await response.Content.ReadAsStringAsync();

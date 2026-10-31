@@ -34,3 +34,18 @@ Every port is published on this machine only: the development image's Workbench 
 
 With this setup, Chronicle runs alongside Microsoft Aspire, which provides a dashboard for OpenTelemetry.
 
+## Private cluster ports
+
+Keep the Orleans silo (11111) and client gateway (30000) off host `ports` mappings and public load balancers. They do not use Chronicle's HTTP authentication. A container's unpublished ports are still reachable by other containers on the same network, so use a dedicated network containing only trusted cluster nodes.
+
+For deployments whose clients use only HTTP/gRPC, add this environment setting to the Chronicle service:
+
+```yaml
+services:
+  chronicle:
+    environment:
+      Cratis__Chronicle__Clustering__GatewayEnabled: "false"
+```
+
+This is an opt-in change; the gateway remains enabled by default. Multi-node deployments still need the silo port reachable between nodes. If you set `Cratis__Chronicle__Clustering__AdvertisedIP` with MongoDB or SQL clustering, it must be the node's actual private interface/container IP, reachable from peers, not a host port mapping or external NAT address. See [Clustering](configuration/clustering.md#listener-and-network-boundaries) for binding and Kubernetes NetworkPolicy guidance.
+

@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Diagnostics.CodeAnalysis;
+using System.Net;
 using System.Net.Sockets;
 
 namespace Cratis.Chronicle.Observation.Webhooks.Validation;
@@ -25,13 +26,7 @@ public class WebhookConnection(IWebhookHostResolver resolver, IWebhookTargetPoli
     {
         var request = context.InitialRequestMessage;
         var addresses = await resolver.Resolve(context.DnsEndPoint.Host, cancellationToken);
-        request.Options.TryGetValue(WebhookRequestOptions.EventStore, out var eventStore);
-        var result = policy.CheckAddresses(request.RequestUri!, addresses, eventStore);
-        if (!result.IsAllowed) throw new WebhookTargetRejected(result.Reason);
-
-        // A metadata exception belongs to this store only, including in Warn mode. Do not lend its
-        // connection to a later request from another store. These clients use HTTP/1.1.
-        if (addresses.Any(WebhookAddressRules.IsMetadata)) request.Headers.ConnectionClose = true;
+        ValidateRequest(request, addresses);
 
         // Connections are pooled per authority. The delegating handler checks the per-store authority on
         // every request; this callback validates the actual DNS answers whenever a new connection is made.
@@ -55,5 +50,22 @@ public class WebhookConnection(IWebhookHostResolver resolver, IWebhookTargetPoli
         }
 
         throw new WebhookTargetRejected("Webhook target host resolved to no usable addresses.");
+    }
+
+    /// <summary>
+    /// Validates the resolved destination before connecting.
+    /// </summary>
+    /// <param name="request">The initial request.</param>
+    /// <param name="addresses">The resolved destination addresses.</param>
+    /// <exception cref="WebhookTargetRejected">The resolved addresses violate policy.</exception>
+    internal void ValidateRequest(HttpRequestMessage request, IPAddress[] addresses)
+    {
+        request.Options.TryGetValue(WebhookRequestOptions.EventStore, out var eventStore);
+        var result = policy.CheckAddresses(request.RequestUri!, addresses, eventStore);
+        if (!result.IsAllowed) throw new WebhookTargetRejected(result.Reason);
+
+        // A metadata exception belongs to this store only, including in Warn mode. Do not lend its
+        // connection to a later request from another store. These clients use HTTP/1.1.
+        if (addresses.Any(WebhookAddressRules.IsMetadata)) request.Headers.ConnectionClose = true;
     }
 }

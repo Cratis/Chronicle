@@ -104,6 +104,7 @@ message SetInitialAdminPasswordRequest {
    .bcl.Guid UserId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
    string Password = 2;
    string ConfirmedPassword = 3;
+   string SetupToken = 4;
 }
 message UserResponse {
    .bcl.Guid Id = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
