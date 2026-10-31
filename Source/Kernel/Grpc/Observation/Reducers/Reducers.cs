@@ -205,22 +205,22 @@ internal sealed class Reducers(
                     // The parent is the long-lived Observe request, which the server deliberately does not trace.
                     var requestActivity = Activity.Current;
                     Activity.Current = null;
-                    using (var span = activitySource.Register())
+                    try
                     {
+                        using var span = activitySource.Register();
                         span?.Activity?.Tag(key, ObserverType.Reducer);
 
                         clientObserver = grainFactory.GetGrain<IReducer>(key);
-                        try
-                        {
-                            await clientObserver.SetDefinitionAndSubscribe(reducerDefinition);
-                        }
-                        catch (Exception exception)
-                        {
-                            throw CreateRegistrationFailure(registration, exception);
-                        }
+                        await clientObserver.SetDefinitionAndSubscribe(reducerDefinition);
                     }
-
-                    Activity.Current = requestActivity;
+                    catch (Exception exception)
+                    {
+                        throw CreateRegistrationFailure(registration, exception);
+                    }
+                    finally
+                    {
+                        Activity.Current = requestActivity;
+                    }
 
                     await ClientSubscriptionKeeper.KeepWhileConnected(
                         () => clientObserver!.KeepSubscription(reducerDefinition),

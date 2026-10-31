@@ -94,9 +94,9 @@ public partial class Observer
         using var span = activitySource.Handle();
         span?.Activity?.Tag(_observerKey);
         span?.Activity?.Tag(Definition.Type);
-        if (span?.Activity is not null)
+        if (span?.Activity is { IsAllDataRequested: true } activity && events.TryGetNonEnumeratedCount(out var eventCount))
         {
-            span.Activity.Tag(new EventCount((ulong)(events.TryGetNonEnumeratedCount(out var count) ? count : events.Count())));
+            activity.TagEventCount(eventCount);
         }
 
         try

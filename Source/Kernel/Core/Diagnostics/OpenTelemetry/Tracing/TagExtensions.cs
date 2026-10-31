@@ -122,14 +122,14 @@ public static class TagExtensions
     }
 
     /// <summary>
-    /// Tag <see cref="EventCount"/>.
+    /// Tag the number of events an operation covers.
     /// </summary>
     /// <param name="activity">The <see cref="Activity"/>.</param>
-    /// <param name="eventCount">The <see cref="EventCount"/>.</param>
+    /// <param name="eventCount">The number of events.</param>
     /// <returns>The <see cref="Activity"/> with the tag.</returns>
-    public static Activity Tag(this Activity activity, EventCount eventCount)
+    public static Activity TagEventCount(this Activity activity, long eventCount)
     {
-        activity.SetTag(EventCount, (long)eventCount.Value);
+        activity.SetTag(EventCount, eventCount);
         return activity;
     }
 

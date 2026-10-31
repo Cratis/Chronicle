@@ -154,14 +154,17 @@ internal sealed class Reactors(
                 // The parent is the long-lived Observe request, which the server deliberately does not trace.
                 var requestActivity = Activity.Current;
                 Activity.Current = null;
-                using (var span = activitySource.Register())
+                try
                 {
+                    using var span = activitySource.Register();
                     span?.Activity?.Tag(key, ObserverType.Reactor);
                     clientObserver = grainFactory.GetGrain<IReactor>(key);
                     await clientObserver.SetDefinitionAndSubscribe(definition);
                 }
-
-                Activity.Current = requestActivity;
+                finally
+                {
+                    Activity.Current = requestActivity;
+                }
 
                 await ClientSubscriptionKeeper.KeepWhileConnected(
                     () => clientObserver.KeepSubscription(definition),
