@@ -248,11 +248,13 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     /// <exception cref="ConnectionTimedOut">Thrown when an established connection times out.</exception>
     internal void HandleConnectTimedOut()
     {
-        _logger.TimedOut();
         if (_hasEverConnected)
         {
+            _logger.TimedOut();
             throw new ConnectionTimedOut();
         }
+
+        _logger.NotAcceptingConnectionsYet(CurrentServerAddress.ToString(), _connectTimeout);
     }
 
     /// <summary>
@@ -289,6 +291,12 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
             // Such a server predates the capabilities handshake, so it is known to advertise no capabilities.
             CapabilitiesAreKnown = true;
             await CheckCompatibilityAgainstOlderServer(connectionService);
+            return;
+        }
+        catch (RpcException ex) when (ex.StatusCode == StatusCode.Unavailable)
+        {
+            // The connect attempt's own outcome (warning, error or connected) reports the transport state.
+            _logger.CompatibilityCheckUnreachable(ex.Message);
             return;
         }
         catch (RpcException ex)
