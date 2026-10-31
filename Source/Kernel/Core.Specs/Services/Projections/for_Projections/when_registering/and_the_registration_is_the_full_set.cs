@@ -49,7 +49,7 @@ public class and_the_registration_is_the_full_set : Specification
 
     [Fact]
     void should_register_as_the_full_set_for_the_owner() =>
-        _projectionsManager.Received(1).Register(
+        _projectionsManager.Received(1).RegisterShared(Arg.Any<string>(),
             Arg.Any<IEnumerable<Concepts.Projections.Definitions.ProjectionDefinition>>(),
             Concepts.Projections.ProjectionOwner.Client,
             "the-app");

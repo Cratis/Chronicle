@@ -59,6 +59,28 @@ public partial class ProjectionsManager(
     internal static readonly TimeSpan RegistrationSubscribeBudget = TimeSpan.FromSeconds(15);
 
     /// <summary>
+    /// How long after a successful registration an identical one is answered without repeating the work.
+    /// </summary>
+    /// <remarks>
+    /// A kernel restart leaves hundreds of identical registrations queued on this non-reentrant grain: every replica of
+    /// a client, and each of its retries, registers the same set while the kernel is not answering, and the grain keeps
+    /// running requests whose sender has long given up. Each one used to spend a store lookup per definition just to
+    /// conclude nothing changed, so the backlog outlived the response timeout and fed the retries that built it. Well
+    /// inside the background repair period, so a registration that is genuinely wanted again after a while still runs.
+    /// </remarks>
+    internal static readonly TimeSpan IdenticalRegistrationWindow = TimeSpan.FromSeconds(30);
+
+    /// <summary>
+    /// How many definitions are compared with their stored versions at the same time.
+    /// </summary>
+    const int ChangeDetectionConcurrency = 16;
+
+    /// <summary>
+    /// The most changed definitions a registration names in the log.
+    /// </summary>
+    const int MaxChangedDefinitionsLogged = 25;
+
+    /// <summary>
     /// Maximum number of observer subscribe operations this grain lets run concurrently.
     /// </summary>
     /// <remarks>
@@ -98,9 +120,13 @@ public partial class ProjectionsManager(
     readonly HashSet<EventStoreNamespaceName> _failedNamespaceSetups = new();
     readonly ConcurrentDictionary<ProjectionId, Lazy<Task>> _projectionDefinitions = new();
     readonly Dictionary<ProjectionId, ProjectionDefinition> _registeringDefinitions = new();
+    readonly Dictionary<string, Task> _sharedRegistrations = [];
     bool _resubscribeRunning;
     DateTimeOffset? _registrationSubscribeDeadline;
     bool _resubscribeRequested;
+    Dictionary<ProjectionId, string> _changeReasons = [];
+    string? _lastRegistrationSignature;
+    DateTimeOffset _lastRegistrationCompletedAt;
     HashSet<EventStoreNamespaceName>? _registrationNamespaces;
     bool _skippedWhileRegistering;
 
@@ -136,11 +162,42 @@ public partial class ProjectionsManager(
     }
 
     /// <inheritdoc/>
+    /// <remarks>
+    /// Runs interleaved, and only touches the table of registrations in flight: the work itself is queued on the
+    /// grain's ordinary serialized path by the first caller, and every identical registration that arrives before it
+    /// finishes waits for that one instead of queueing behind it.
+    /// </remarks>
+    public Task RegisterShared(string signature, IEnumerable<ProjectionDefinition> definitions, ProjectionOwner? fullSetOwner = null, string? registrant = null, string? version = null)
+    {
+        if (_sharedRegistrations.TryGetValue(signature, out var inFlight))
+        {
+            logger.JoiningRegistrationInFlight(_eventStoreName, registrant ?? string.Empty);
+            return inFlight;
+        }
+
+        var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        _sharedRegistrations[signature] = completion.Task;
+        _ = LeadSharedRegistration(signature, completion, definitions, fullSetOwner, registrant, version);
+        return completion.Task;
+    }
+
+    /// <inheritdoc/>
     public async Task Register(IEnumerable<ProjectionDefinition> definitions, ProjectionOwner? fullSetOwner = null, string? registrant = null, string? version = null)
     {
+        var submitted = definitions as IReadOnlyList<ProjectionDefinition> ?? [.. definitions];
+        var signature = ProjectionRegistrationSignature.For(submitted, fullSetOwner, registrant, version);
+        if (await IsRepeatOfRecentRegistration(signature))
+        {
+            logger.SkippingRepeatedRegistration(_eventStoreName, registrant ?? string.Empty, submitted.Count);
+            return;
+        }
+
+        _lastRegistrationSignature = null;
         try
         {
-            await RegisterDefinitions(definitions, fullSetOwner, registrant, version);
+            await RegisterDefinitions(submitted, fullSetOwner, registrant, version);
+            _lastRegistrationSignature = signature;
+            _lastRegistrationCompletedAt = _clock.GetUtcNow();
         }
         finally
         {
@@ -245,8 +302,15 @@ public partial class ProjectionsManager(
         timing.Definitions = definitionList.Count;
         var changedDefinitions = (await GetChangedDefinitions(definitionList)).ToList();
         var unchanged = definitionList.ExceptBy(changedDefinitions.Select(definition => definition.Identifier), definition => definition.Identifier).ToArray();
-        changedDefinitions.AddRange(await GetRetiredDefinitions(unchanged));
+        var retired = (await GetRetiredDefinitions(unchanged)).ToArray();
+        foreach (var definition in retired)
+        {
+            _changeReasons[definition.Identifier] = "observer retired";
+        }
+
+        changedDefinitions.AddRange(retired);
         timing.Changed = changedDefinitions.Count;
+        LogWhatChanged(changedDefinitions);
         timing.Mark(RegistrationPhase.Detecting);
 
         KeepAnnounced(changedDefinitions);
@@ -326,35 +390,98 @@ public partial class ProjectionsManager(
     /// <returns>Awaitable task.</returns>
     Task OnNamespaceAdded(NamespaceAdded added) => SubscribeInNamespace(added.Namespace, reconcile: false);
 
+    void LogWhatChanged(List<ProjectionDefinition> changed)
+    {
+        // A registration that changes a handful of definitions again and again is the thing worth seeing; a
+        // deployment that changes most of them is not, and would only fill the log.
+        if (changed.Count == 0 || changed.Count > MaxChangedDefinitionsLogged) return;
+
+        logger.ChangedDefinitions(_eventStoreName, string.Join(", ", changed.Select(definition => $"{definition.Identifier} ({_changeReasons.GetValueOrDefault(definition.Identifier, "changed")})")));
+    }
+
+    async Task LeadSharedRegistration(string signature, TaskCompletionSource completion, IEnumerable<ProjectionDefinition> definitions, ProjectionOwner? fullSetOwner, string? registrant, string? version)
+    {
+        Exception? failure = null;
+        try
+        {
+            await GrainFactory.GetGrain<IProjectionsManager>(_eventStoreName).Register(definitions, fullSetOwner, registrant, version);
+        }
+        catch (Exception exception)
+        {
+            failure = exception;
+        }
+
+        // Leave the table before answering, so a registration arriving after this one finished leads its own.
+        _sharedRegistrations.Remove(signature);
+        if (failure is null)
+        {
+            completion.SetResult();
+        }
+        else
+        {
+            completion.SetException(failure);
+        }
+    }
+
     async Task<IReadOnlyList<ProjectionDefinition>> GetChangedDefinitions(IEnumerable<ProjectionDefinition> definitions)
     {
-        var changed = new List<ProjectionDefinition>();
-        foreach (var definition in definitions)
+        // Comparing asks the store about each definition. Doing that one after the other made a registration of a
+        // large client cost one round trip per definition before anything else happened; the answers are
+        // independent, so a bounded number are asked at once and the submitted order is kept.
+        var submitted = definitions.ToArray();
+        var reasons = new string?[submitted.Length];
+        using var gate = new SemaphoreSlim(ChangeDetectionConcurrency);
+        await Task.WhenAll(submitted.Select(async (definition, index) =>
         {
-            var existing = State.Projections.FirstOrDefault(p => p.Identifier == definition.Identifier);
-            if (existing is null)
+            await gate.WaitAsync();
+            try
             {
-                changed.Add(definition);
-                continue;
+                reasons[index] = await ChangeReason(definition);
             }
-
-            var compareResult = await projectionDefinitionComparer.Compare(
-                new ProjectionKey(definition.Identifier, _eventStoreName),
-                existing,
-                definition);
-
-            // Metadata and a legacy storage refresh must reach the engine and storage without evolution.
-            // A registration without a version never counts as a version change.
-            if ((existing.HasLegacyStorageFields && !definition.HasLegacyStorageFields) ||
-                compareResult != ProjectionDefinitionCompareResult.Same ||
-                !(existing.Tags ?? []).SequenceEqual(definition.Tags ?? []) ||
-                (!string.IsNullOrWhiteSpace(definition.Version) && existing.Version != definition.Version))
+            finally
             {
-                changed.Add(definition);
+                gate.Release();
             }
+        }));
+
+        var changed = new List<ProjectionDefinition>();
+        _changeReasons = [];
+        for (var index = 0; index < submitted.Length; index++)
+        {
+            if (reasons[index] is null) continue;
+
+            changed.Add(submitted[index]);
+            _changeReasons[submitted[index].Identifier] = reasons[index]!;
         }
 
         return changed;
+    }
+
+    /// <summary>
+    /// Says why a submitted definition needs work, or nothing when it does not.
+    /// </summary>
+    /// <param name="definition">The submitted definition.</param>
+    /// <returns>The reason, or null when the definition is unchanged.</returns>
+    async Task<string?> ChangeReason(ProjectionDefinition definition)
+    {
+        var existing = State.Projections.FirstOrDefault(p => p.Identifier == definition.Identifier);
+        if (existing is null)
+        {
+            return "not registered";
+        }
+
+        var compareResult = await projectionDefinitionComparer.Compare(
+            new ProjectionKey(definition.Identifier, _eventStoreName),
+            existing,
+            definition);
+
+        // Metadata and a legacy storage refresh must reach the engine and storage without evolution.
+        // A registration without a version never counts as a version change.
+        if (existing.HasLegacyStorageFields && !definition.HasLegacyStorageFields) return "legacy storage";
+        if (compareResult != ProjectionDefinitionCompareResult.Same) return $"definition {compareResult}";
+        if (!(existing.Tags ?? []).SequenceEqual(definition.Tags ?? [])) return "tags";
+        if (!string.IsNullOrWhiteSpace(definition.Version) && existing.Version != definition.Version) return $"version {existing.Version ?? "none"} to {definition.Version}";
+        return null;
     }
 
     async Task<IEnumerable<ProjectionDefinition>> GetRetiredDefinitions(ProjectionDefinition[] definitions)

@@ -17,7 +17,7 @@ public class and_registration_fails : Specification
         var grainFactory = Substitute.For<IGrainFactory>();
         var projectionsManager = Substitute.For<Chronicle.Projections.IProjectionsManager>();
         grainFactory.GetGrain<Chronicle.Projections.IProjectionsManager>(Arg.Any<string>()).Returns(projectionsManager);
-        projectionsManager.Register(Arg.Any<IEnumerable<Concepts.Projections.Definitions.ProjectionDefinition>>())
+        projectionsManager.RegisterShared(Arg.Any<string>(), Arg.Any<IEnumerable<Concepts.Projections.Definitions.ProjectionDefinition>>())
             .Returns(Task.FromException(new InvalidOperationException("Failed to compile projection definition")));
 
         _service = new Projections(

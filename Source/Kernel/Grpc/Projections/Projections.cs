@@ -84,7 +84,14 @@ internal sealed class Projections(
             // several applications sharing the event store would each retire the others' projections.
             var registrant = string.IsNullOrEmpty(request.Registrant) ? null : request.Registrant;
             var version = string.IsNullOrWhiteSpace(request.Version) ? null : request.Version;
-            await projectionsManager.Register(projections, request.FullSet && registrant is not null ? owner : null, registrant, version);
+            Concepts.Projections.ProjectionOwner? fullSetOwner = request.FullSet && registrant is not null ? owner : null;
+            if (!TryComputeSignature(projections, fullSetOwner, registrant, version, out var signature))
+            {
+                await projectionsManager.Register(projections, fullSetOwner, registrant, version);
+                return;
+            }
+
+            await projectionsManager.RegisterShared(signature, projections, fullSetOwner, registrant, version);
         }
         catch (Exception exception)
         {
@@ -633,5 +640,21 @@ internal sealed class Projections(
         }
 
         return released;
+    }
+
+    bool TryComputeSignature(IEnumerable<Concepts.Projections.Definitions.ProjectionDefinition> projections, Concepts.Projections.ProjectionOwner? fullSetOwner, string? registrant, string? version, out string signature)
+    {
+        // Sharing is an optimization. A registration whose signature cannot be computed is registered as before.
+        try
+        {
+            signature = ProjectionRegistrationSignature.For(projections, fullSetOwner, registrant, version);
+            return true;
+        }
+        catch (Exception exception)
+        {
+            logger.FailedComputingRegistrationSignature(exception);
+            signature = string.Empty;
+            return false;
+        }
     }
 }

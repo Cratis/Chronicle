@@ -14,6 +14,26 @@ public partial class ProjectionsManager
         [.. definitions.Select(definition => string.IsNullOrWhiteSpace(version) ? definition : definition with { Version = version })];
 
     /// <summary>
+    /// Whether this exact registration just completed, with nothing since that it would have to react to.
+    /// </summary>
+    /// <param name="signature">The signature of the incoming registration.</param>
+    /// <returns>True when it can be answered without doing the work again.</returns>
+    async Task<bool> IsRepeatOfRecentRegistration(string signature)
+    {
+        if (_lastRegistrationSignature != signature ||
+            _registrationNamespaces is null ||
+            !_pendingRevival.IsEmpty ||
+            _clock.GetUtcNow() - _lastRegistrationCompletedAt > IdenticalRegistrationWindow)
+        {
+            return false;
+        }
+
+        // A namespace added since is work the registration owes: its projections need subscribing there.
+        var namespaces = await GrainFactory.GetGrain<INamespaces>(_eventStoreName).GetAll();
+        return _registrationNamespaces.SetEquals(namespaces);
+    }
+
+    /// <summary>
     /// Announces the definitions a registration is about to replace. Namespace passes interleave with a registration
     /// and read the stored definitions, which are only replaced once the incoming ones are set and subscribed, so an
     /// announced definition keeps such a pass from setting or subscribing what is being replaced.

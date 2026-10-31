@@ -488,13 +488,14 @@ interface [GrainInterfaceType("Cratis.Chronicle.Projections.IProjectionFutures")
 
 interface [GrainInterfaceType("Cratis.Chronicle.Projections.IProjectionObserverSubscriber")] Cratis.Chronicle.Projections.IProjectionObserverSubscriber [Version(1)]
 
-interface [GrainInterfaceType("Cratis.Chronicle.Projections.IProjectionsManager")] Cratis.Chronicle.Projections.IProjectionsManager [Version(0)]
+interface [GrainInterfaceType("Cratis.Chronicle.Projections.IProjectionsManager")] Cratis.Chronicle.Projections.IProjectionsManager [Version(1)]
   E36EB1EC: Ensure() -> Task
   B3BC1EEA: EnsureSubscribedIn(Cratis.Chronicle.Concepts.EventStoreNamespaceName) -> Task
   9A52F44E: Forget(Cratis.Chronicle.Concepts.Projections.ProjectionId) -> Task
   A9B07C4C: GetProjectionDeclarations() -> Task<System.Collections.Generic.IEnumerable<Cratis.Chronicle.Projections.ProjectionWithDeclaration>>
   7C666A08: GetProjectionDefinitions() -> Task<System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Projections.Definitions.ProjectionDefinition>>
   F436C56F: Register(System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Projections.Definitions.ProjectionDefinition>, Cratis.Chronicle.Concepts.Projections.ProjectionOwner?, string?, string?) -> Task
+  7D652C49: RegisterShared(string, System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Projections.Definitions.ProjectionDefinition>, Cratis.Chronicle.Concepts.Projections.ProjectionOwner?, string?, string?) -> Task
   3C273B4B: Remove(Cratis.Chronicle.Concepts.Projections.ProjectionId) -> Task<Cratis.Chronicle.Concepts.Observation.ObserverRemovalResult>
 
 interface [GrainInterfaceType("Cratis.Chronicle.Projections.IProjectionsService")] Cratis.Chronicle.Projections.IProjectionsService [Version(0)]
