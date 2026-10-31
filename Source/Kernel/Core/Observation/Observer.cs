@@ -71,7 +71,6 @@ public partial class Observer(
 {
     readonly TimeProvider _clock = timeProvider ?? TimeProvider.System;
     readonly HashSet<JobId> _concludedCatchUpJobs = [];
-    ObserverRunningState _settledRunningState;
 
     /// <summary>
     /// The catch-up job acquisition currently in flight, if any.
@@ -96,11 +95,6 @@ public partial class Observer(
     /// </summary>
     bool _subscriptionSetupFailed;
     bool _isQuarantined;
-
-    /// <summary>
-    /// The activation owns this entry time, independently of reloaded progress snapshots.
-    /// </summary>
-    DateTimeOffset? _quarantineRunningStateChangedAt;
     bool _recoverSubscriptionAfterQuarantine;
     bool _retryRecoveryAfterQuarantine;
     int _owedRecoveryAttempts;
@@ -199,8 +193,6 @@ public partial class Observer(
         _observerKey = ObserverKey.Parse(this.GetPrimaryKeyString());
         _observerId = _observerKey.ObserverId;
         State = State with { Identifier = _observerId };
-        _settledRunningState = State.RunningState;
-        _quarantineRunningStateChangedAt = State.RunningState == ObserverRunningState.Quarantined ? State.RunningStateChangedAt : null;
         SeedSuspectedSkipOwnership();
 
         _jobsManager = GrainFactory.GetJobsManager(_observerKey.EventStore, _observerKey.Namespace);
@@ -718,16 +710,7 @@ public partial class Observer(
             if (state is BaseObserverState observerState)
             {
                 TrackQuarantineAlertFor(observerState);
-                var wasQuarantined = _settledRunningState == ObserverRunningState.Quarantined;
-                (State, _settledRunningState) = ObserverRunningStateChanges.Apply(State, _settledRunningState, observerState.RunningState, _clock.GetUtcNow());
-                if (_isQuarantined)
-                {
-                    if (!wasQuarantined)
-                    {
-                        _quarantineRunningStateChangedAt = State.RunningStateChangedAt;
-                    }
-                    State = State with { RunningStateChangedAt = _quarantineRunningStateChangedAt };
-                }
+                State = State with { RunningState = observerState.RunningState };
             }
         }
         finally
@@ -772,10 +755,10 @@ public partial class Observer(
             if (_removed || CannotWriteState()) return;
 
             // A quarantine owned by this activation outranks whatever running state a reloaded snapshot carried,
-            // so any write while quarantined persists the quarantine and its entry time rather than a stale active snapshot.
+            // so any write while quarantined persists the quarantine rather than a stale active snapshot.
             if (IsQuarantined)
             {
-                State = State with { RunningState = ObserverRunningState.Quarantined, RunningStateChangedAt = _quarantineRunningStateChangedAt };
+                State = State with { RunningState = ObserverRunningState.Quarantined };
             }
 
             // A state-machine OnEnter can return an earlier record after awaiting a job callback. Preserve the
@@ -920,7 +903,7 @@ public partial class Observer(
         State = State with { Identifier = _observerId };
         if (IsQuarantined)
         {
-            State = State with { RunningState = ObserverRunningState.Quarantined, RunningStateChangedAt = _quarantineRunningStateChangedAt };
+            State = State with { RunningState = ObserverRunningState.Quarantined };
         }
 
         // A reload during a transition hook is newer than the snapshot the hook was handed; keep it from being reverted.
@@ -1048,8 +1031,6 @@ public partial class Observer(
 
     void DiscardQuarantineFromWipedWorld()
     {
-        // The entry time belongs to the discarded episode, not to a future quarantine.
-        _quarantineRunningStateChangedAt = null;
         _webhookProbe = null;
         _armWebhookProbe = false;
         _recoverSubscriptionAfterQuarantine = false;
@@ -1071,7 +1052,7 @@ public partial class Observer(
         bool reconcile = false)
         where TObserverSubscriber : IObserverSubscriber
     {
-        if (reconcile && CannotReconcileSubscription(typeof(IWebhookObserverSubscriber).IsAssignableFrom(typeof(TObserverSubscriber)))) return;
+        if (reconcile && CannotReconcileSubscription(typeof(Webhooks.IWebhookObserverSubscriber).IsAssignableFrom(typeof(TObserverSubscriber)))) return;
         var owner = GetOwner<TObserverSubscriber>();
         logger.Subscribing();
         logger.SubscribingWithEventTypes(eventTypes.Count(), string.Join(", ", eventTypes.Select(et => et.Id)));
@@ -1087,7 +1068,7 @@ public partial class Observer(
         };
         await observerDefinition.WriteStateAsync();
 
-        if (reconcile && CannotReconcileSubscription(typeof(IWebhookObserverSubscriber).IsAssignableFrom(typeof(TObserverSubscriber)))) return;
+        if (reconcile && CannotReconcileSubscription(typeof(Webhooks.IWebhookObserverSubscriber).IsAssignableFrom(typeof(TObserverSubscriber)))) return;
         ApplySubscription<TObserverSubscriber>(eventTypes, siloAddress, subscriberArgs, isReplayable, filters, generationDelivery);
 
         State = State with { SubscribesToAllEvents = false };
@@ -1102,7 +1083,7 @@ public partial class Observer(
         bool reconcile = false)
         where TObserverSubscriber : IObserverSubscriber
     {
-        if (reconcile && CannotReconcileSubscription(typeof(IWebhookObserverSubscriber).IsAssignableFrom(typeof(TObserverSubscriber)))) return;
+        if (reconcile && CannotReconcileSubscription(typeof(Webhooks.IWebhookObserverSubscriber).IsAssignableFrom(typeof(TObserverSubscriber)))) return;
         observerDefinition.State = observerDefinition.State with
         {
             EventSequenceId = _observerKey.EventSequenceId,
@@ -1113,7 +1094,7 @@ public partial class Observer(
         };
         await observerDefinition.WriteStateAsync();
 
-        if (reconcile && CannotReconcileSubscription(typeof(IWebhookObserverSubscriber).IsAssignableFrom(typeof(TObserverSubscriber)))) return;
+        if (reconcile && CannotReconcileSubscription(typeof(Webhooks.IWebhookObserverSubscriber).IsAssignableFrom(typeof(TObserverSubscriber)))) return;
         _subscription = new(
             _observerId,
             _observerKey,

@@ -42,7 +42,6 @@ internal static class ObserverInformationConverters
             TailEventSequenceNumber = state.TailEventSequenceNumber,
             HandledEventCount = state.HandledEventCount,
             RunningState = state.RunningState.ToContract(),
-            RunningStateChangedAt = state.RunningStateChangedAt,
             IsReplayable = definition.IsReplayable
         };
 
