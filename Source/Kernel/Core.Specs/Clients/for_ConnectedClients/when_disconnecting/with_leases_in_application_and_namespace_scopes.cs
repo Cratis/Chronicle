@@ -37,7 +37,7 @@ public class with_leases_in_application_and_namespace_scopes : Specification
             _expired.SetResult();
             return Task.CompletedTask;
         });
-        _clients = new(Substitute.For<ILogger<ConnectedClients>>(), Substitute.For<IMeter<ConnectedClients>>(), Options.Create(new ChronicleOptions()), storage);
+        _clients = new(Substitute.For<IGrainFactory>(), Substitute.For<ILogger<ConnectedClients>>(), Substitute.For<IMeter<ConnectedClients>>(), Options.Create(new ChronicleOptions()), storage);
     }
 
     async Task Because()

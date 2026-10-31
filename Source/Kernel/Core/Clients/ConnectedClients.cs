@@ -17,6 +17,7 @@ namespace Cratis.Chronicle.Clients;
 /// <summary>
 /// Represents an implementation of <see cref="IConnectedClients"/>.
 /// </summary>
+/// <param name="grainFactory"><see cref="IGrainFactory"/> for reaching the per-connection <see cref="IClientConnection"/> grains.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
 /// <param name="meter"><see cref="IMeter{ConnectedClients}"/> for metrics.</param>
 /// <param name="options"><see cref="IOptions{ChronicleOptions}"/> for configuration.</param>
@@ -24,6 +25,7 @@ namespace Cratis.Chronicle.Clients;
 [KeepAlive]
 [ConnectedClientsPlacement]
 public partial class ConnectedClients(
+    IGrainFactory grainFactory,
     ILogger<ConnectedClients> logger,
     [FromKeyedServices(WellKnown.MeterName)] IMeter<ConnectedClients> meter,
     IOptions<ChronicleOptions> options,
@@ -52,7 +54,7 @@ public partial class ConnectedClients(
     }
 
     /// <inheritdoc/>
-    public Task OnClientConnected(
+    public async Task OnClientConnected(
         ConnectionId connectionId,
         string version,
         bool isRunningWithDebugger,
@@ -76,11 +78,11 @@ public partial class ConnectedClients(
 
         meter.ConnectedClients(_clients.Count);
 
-        return Task.CompletedTask;
+        await ConnectClientConnection(connectionId);
     }
 
     /// <inheritdoc/>
-    public Task OnClientRestored(
+    public async Task OnClientRestored(
         ConnectionId connectionId,
         string version,
         bool isRunningWithDebugger,
@@ -91,18 +93,18 @@ public partial class ConnectedClients(
     {
         if (_clients.ContainsKey(connectionId))
         {
-            return Task.CompletedTask;
+            return;
         }
 
         logger.ClientRestored(connectionId);
         _clients[connectionId] = CreateEntry(connectionId, version, isRunningWithDebugger, processId, processPath, machineName, clientType);
         meter.ConnectedClients(_clients.Count);
 
-        return Task.CompletedTask;
+        await ConnectClientConnection(connectionId);
     }
 
     /// <inheritdoc/>
-    public Task OnClientDisconnected(ConnectionId connectionId, string reason)
+    public async Task OnClientDisconnected(ConnectionId connectionId, string reason)
     {
         logger.ClientDisconnected(connectionId, reason);
 
@@ -114,7 +116,17 @@ public partial class ConnectedClients(
         // by kernel time, so a failed scope only delays redelivery until its lease deadline.
         var now = DateTimeOffset.UtcNow;
         _ = Task.Run(() => OccurrenceRecovery.ExpireLeases(storage, connectionId.Value, now, logger));
-        return Task.CompletedTask;
+
+        // Always notify, even when the registry did not know the connection: after a lost registry
+        // activation the per-connection grain may still hold subscribers. The call is one-way.
+        try
+        {
+            await grainFactory.GetGrain<IClientConnection>(connectionId.Value).Disconnect();
+        }
+        catch (Exception ex)
+        {
+            logger.FailedToDisconnectClientConnection(ex, connectionId);
+        }
     }
 
     /// <inheritdoc/>
@@ -175,6 +187,18 @@ public partial class ConnectedClients(
             MachineName = machineName,
             ClientType = clientType
         });
+
+    async Task ConnectClientConnection(ConnectionId connectionId)
+    {
+        try
+        {
+            await grainFactory.GetGrain<IClientConnection>(connectionId.Value).Connect();
+        }
+        catch (Exception ex)
+        {
+            logger.FailedToConnectClientConnection(ex, connectionId);
+        }
+    }
 
     async Task ReviseConnectedClients(CancellationToken cancellationToken)
     {

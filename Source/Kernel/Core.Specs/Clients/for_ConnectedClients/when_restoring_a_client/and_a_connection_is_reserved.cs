@@ -20,6 +20,7 @@ public class and_a_connection_is_reserved : Specification
     int _count;
 
     void Establish() => _clients = new ConnectedClients(
+        Substitute.For<IGrainFactory>(),
         Substitute.For<ILogger<ConnectedClients>>(),
         Substitute.For<IMeter<ConnectedClients>>(),
         Options.Create(new ChronicleOptions()),

@@ -18,6 +18,7 @@ public class when_getting_connection_count_with_a_reservation_and_a_connected_cl
     void Establish()
     {
         _connectedClients = new ConnectedClients(
+            Substitute.For<IGrainFactory>(),
             Substitute.For<ILogger<ConnectedClients>>(),
             Substitute.For<IMeter<ConnectedClients>>(),
             Options.Create(new ChronicleOptions()),

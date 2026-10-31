@@ -39,7 +39,18 @@ interface [GrainInterfaceType("Cratis.Chronicle.Captures.ICapturesManager")] Cra
   0DE70EA8: Start(Cratis.Chronicle.Concepts.Captures.CaptureId) -> Task<System.Collections.Generic.IEnumerable<Cratis.Chronicle.Captures.Engine.CaptureValidationMessage>>
   1D37B5D5: Stop(Cratis.Chronicle.Concepts.Captures.CaptureId) -> Task
 
+class [GrainType("clientconnection")] Cratis.Chronicle.Clients.ClientConnection
+
 class [GrainType("connectedclients")] Cratis.Chronicle.Clients.ConnectedClients
+
+interface [GrainInterfaceType("Cratis.Chronicle.Clients.IClientConnection")] Cratis.Chronicle.Clients.IClientConnection [Version(0)]
+  30EA0312: Connect() -> Task
+  A4B5A813: Disconnect() -> Task
+  872F6512: Subscribe(Orleans.Runtime.GrainId) -> Task<Cratis.Chronicle.Concepts.Clients.ClientConnectionEpoch>
+  5A6BF6EB: Unsubscribe(Orleans.Runtime.GrainId) -> Task
+
+interface [GrainInterfaceType("Cratis.Chronicle.Clients.IClientDisconnectionSubscriber")] Cratis.Chronicle.Clients.IClientDisconnectionSubscriber [Version(0)]
+  832F8ABC: ClientDisconnected(Cratis.Chronicle.Concepts.Clients.ClientConnectionEpoch) -> Task
 
 interface [GrainInterfaceType("Cratis.Chronicle.Clients.IConnectedClients")] Cratis.Chronicle.Clients.IConnectedClients [Version(1)]
   AE0E91A3: DeclaresProjection(Cratis.Chronicle.Concepts.EventStoreName, Cratis.Chronicle.Concepts.Projections.ProjectionId) -> Task<bool>

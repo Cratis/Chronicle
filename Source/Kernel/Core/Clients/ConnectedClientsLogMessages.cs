@@ -18,4 +18,10 @@ internal static partial class ConnectedClientsLogMessages
 
     [LoggerMessage(LogLevel.Debug, "Disconnected client with connection identifier '{ConnectionId}'. Reason: {Reason}")]
     internal static partial void ClientDisconnected(this ILogger<ConnectedClients> logger, string connectionId, string reason);
+
+    [LoggerMessage(LogLevel.Warning, "Failed to mark client connection '{ConnectionId}' as connected.")]
+    internal static partial void FailedToConnectClientConnection(this ILogger<ConnectedClients> logger, Exception exception, string connectionId);
+
+    [LoggerMessage(LogLevel.Warning, "Failed to mark client connection '{ConnectionId}' as disconnected.")]
+    internal static partial void FailedToDisconnectClientConnection(this ILogger<ConnectedClients> logger, Exception exception, string connectionId);
 }

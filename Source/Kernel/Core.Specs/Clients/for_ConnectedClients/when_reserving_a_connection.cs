@@ -17,6 +17,7 @@ public class when_reserving_a_connection : Specification
     void Establish()
     {
         _connectedClients = new ConnectedClients(
+            Substitute.For<IGrainFactory>(),
             Substitute.For<ILogger<ConnectedClients>>(),
             Substitute.For<IMeter<ConnectedClients>>(),
             Options.Create(new ChronicleOptions()),

@@ -16,12 +16,15 @@ public class a_connection_with_projection_declarations : Specification
 {
     protected ConnectedClients _clients;
     protected ConnectionId _connection = ConnectionId.New();
+    protected IGrainFactory _grainFactory = Substitute.For<IGrainFactory>();
+    protected IClientConnection _clientConnection = Substitute.For<IClientConnection>();
     protected EventStoreName _eventStore = "the-store";
     protected ProjectionId _projection = "the-projection";
 
     async Task Establish()
     {
-        _clients = new ConnectedClients(Substitute.For<ILogger<ConnectedClients>>(), Substitute.For<IMeter<ConnectedClients>>(), Options.Create(new ChronicleOptions()), Substitute.For<IStorage>());
+        _grainFactory.GetGrain<IClientConnection>(_connection.Value).Returns(_clientConnection);
+        _clients = new ConnectedClients(_grainFactory, Substitute.For<ILogger<ConnectedClients>>(), Substitute.For<IMeter<ConnectedClients>>(), Options.Create(new ChronicleOptions()), Substitute.For<IStorage>());
         await Connect(_connection);
         await _clients.RecordDeclaredProjections(_connection, _eventStore, [_projection]);
     }
