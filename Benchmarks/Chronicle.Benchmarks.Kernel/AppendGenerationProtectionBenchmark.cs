@@ -36,6 +36,7 @@ namespace Cratis.Chronicle.Benchmarks.Kernel;
 public class AppendGenerationProtectionBenchmark
 {
     Fixture _single = null!;
+    Fixture _singleProtected = null!;
     Fixture _plain = null!;
     Fixture _protected = null!;
 
@@ -47,11 +48,14 @@ public class AppendGenerationProtectionBenchmark
     public async Task Setup()
     {
         _single = await Fixture.Create(1, false);
+        _singleProtected = await Fixture.Create(1, true);
         _plain = await Fixture.Create(3, false);
         _protected = await Fixture.Create(3, true);
         await _single.Migrate();
         await _plain.Migrate();
         await _protected.Migrate();
+        await _singleProtected.ProtectAndMigrate();
+        await _protected.ProtectAndMigrate();
         await _single.Release();
     }
 
@@ -77,6 +81,20 @@ public class AppendGenerationProtectionBenchmark
     public Task<IDictionary<EventTypeGeneration, ExpandoObject>> ThreeGenerationsLatestPii() => _protected.Migrate();
 
     /// <summary>
+    /// Measures source protection and migration for a single generation with PII.
+    /// </summary>
+    /// <returns>The protected generations.</returns>
+    [Benchmark]
+    public Task<IDictionary<EventTypeGeneration, ExpandoObject>> OneGenerationFullAppendPii() => _singleProtected.ProtectAndMigrate();
+
+    /// <summary>
+    /// Measures source protection and migration when only generation three classifies its string property as PII.
+    /// </summary>
+    /// <returns>The protected generations.</returns>
+    [Benchmark]
+    public Task<IDictionary<EventTypeGeneration, ExpandoObject>> ThreeGenerationsFullAppendLatestPii() => _protected.ProtectAndMigrate();
+
+    /// <summary>
     /// Measures release of one unpinned event with no classified properties.
     /// </summary>
     /// <returns>The released events.</returns>
@@ -90,6 +108,7 @@ public class AppendGenerationProtectionBenchmark
     public void Cleanup()
     {
         _single.Registry.Dispose();
+        _singleProtected.Registry.Dispose();
         _plain.Registry.Dispose();
         _protected.Registry.Dispose();
     }
@@ -109,6 +128,9 @@ public class AppendGenerationProtectionBenchmark
         static readonly EventStoreNamespaceName _namespace = "namespace";
         readonly JsonObject _plaintext = new() { ["token"] = "eyJhbGciOiJIUzI1NiJ9.personal-token.signature" };
         ProtectedEventTypeMigrations _migrations = null!;
+        JsonSchemaMetadataManager _manager = null!;
+        ExpandoObjectConverter _converter = null!;
+        JsonSchema _sourceSchema = null!;
         EventGenerationRelease _release = null!;
         EventType _eventType = null!;
         ExpandoObject _source = null!;
@@ -126,6 +148,13 @@ public class AppendGenerationProtectionBenchmark
 
         public Task<IDictionary<EventTypeGeneration, ExpandoObject>> Migrate() =>
             _migrations.MigratePlaintext(_store, _namespace, _eventType, _plaintext, _source, Subject);
+
+        public async Task<IDictionary<EventTypeGeneration, ExpandoObject>> ProtectAndMigrate()
+        {
+            var protectedContent = await _manager.Apply(_store, _namespace, _sourceSchema, Subject, _plaintext);
+            var source = _converter.ToExpandoObject(protectedContent, _sourceSchema);
+            return await _migrations.MigratePlaintext(_store, _namespace, _eventType, _plaintext, source, Subject);
+        }
 
         public Task<AppendedEvent[]> Release() => _release.Release(_store, [], _schemas, _events);
 
@@ -156,6 +185,9 @@ public class AppendGenerationProtectionBenchmark
             var definition = new EventTypeDefinition(_eventType.Id, EventTypeOwner.None, false, schemas, migrations);
             await eventTypes.Register(definition);
             var sourceSchema = schemas[^1].Schema;
+            _manager = manager;
+            _converter = converter;
+            _sourceSchema = sourceSchema;
             var protectedContent = await manager.Apply(_store, _namespace, sourceSchema, Subject, _plaintext);
             _source = converter.ToExpandoObject(protectedContent, sourceSchema);
             var engine = new EventTypeMigrations(storage, converter);

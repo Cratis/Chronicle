@@ -22,7 +22,7 @@ public class and_the_subject_is_erased : given.a_token_protected_only_in_the_lat
     }
 
     [Fact] void should_protect_all_three_generations() => _stored.Length.ShouldEqual(3);
-    [Fact] void should_release_the_token_before_erasure() => _released.All(content => content["token"]!.GetValue<string>() == Token).ShouldBeTrue();
-    [Fact] void should_not_release_the_token_after_erasure() => _erased.All(content => content["token"]!.GetValue<string>() == string.Empty).ShouldBeTrue();
+    [Fact] void should_release_the_token_before_erasure() => _released.All(content => content["token"].GetValue<string>() == Token).ShouldBeTrue();
+    [Fact] void should_not_release_the_token_after_erasure() => _erased.All(content => content["token"].GetValue<string>().Length == 0).ShouldBeTrue();
     [Fact] void should_not_store_plaintext_in_any_generation() => _stored.All(content => !content.ToJsonString().Contains(Token, StringComparison.Ordinal)).ShouldBeTrue();
 }

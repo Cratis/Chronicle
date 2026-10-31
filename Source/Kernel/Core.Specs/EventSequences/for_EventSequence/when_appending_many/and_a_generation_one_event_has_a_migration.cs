@@ -10,7 +10,6 @@ using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Identities;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.EventSequences;
-using Cratis.Chronicle.Storage.EventTypes;
 
 namespace Cratis.Chronicle.EventSequences.for_EventSequence.when_appending_many;
 
@@ -33,9 +32,9 @@ public class and_a_generation_one_event_has_a_migration : given.an_event_sequenc
         ((IDictionary<string, object?>)_original)["legacyValue"] = "original";
         _upcast = new ExpandoObject();
         ((IDictionary<string, object?>)_upcast)["value"] = "migrated";
-        _complianceManager.Apply(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<Cratis.Chronicle.Schemas.JsonSchema>(), Arg.Any<string>(), Arg.Any<JsonObject>())
+        _complianceManager.Apply(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<JsonSchema>(), Arg.Any<string>(), Arg.Any<JsonObject>())
             .Returns(new JsonObject { ["legacyValue"] = "original" });
-        _expandoObjectConverter.ToExpandoObject(Arg.Any<JsonObject>(), Arg.Any<Cratis.Chronicle.Schemas.JsonSchema>()).Returns(_original);
+        _expandoObjectConverter.ToExpandoObject(Arg.Any<JsonObject>(), Arg.Any<JsonSchema>()).Returns(_original);
         _eventTypeMigrations.MigrateToAllGenerations(Arg.Any<EventStoreName>(), Arg.Any<EventType>(), Arg.Any<JsonObject>(), Arg.Any<ExpandoObject>())
             .Returns(new Dictionary<EventTypeGeneration, ExpandoObject>
             {

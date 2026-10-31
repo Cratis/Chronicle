@@ -82,6 +82,6 @@ public class a_token_protected_only_in_the_latest_generation : Specification
     {
         var schema = GenerationProtectionSchemas.For(_definition, generation);
         var released = await _manager.ReleaseStrict(Store, Namespace, schema, subject, Generation(generation));
-        return released["token"]!.GetValue<string>();
+        return released["token"].GetValue<string>();
     }
 }
