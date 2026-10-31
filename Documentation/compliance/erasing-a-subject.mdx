@@ -24,7 +24,17 @@ Read one of that subject's events afterwards and nothing breaks. The event is st
 | Collection | An empty collection |
 | Object or value object | An empty object |
 
-That is the whole point of crypto-shredding: the log stays immutable and the personal data stops existing. The consequence is that an erased `0`, `false` or empty string is indistinguishable from a value that was genuinely recorded as `0`, `false` or empty. Whether Chronicle should let a caller tell the two apart is an open decision, tracked in [issue 4620](https://github.com/Cratis/Chronicle/issues/4620).
+That is the whole point of crypto-shredding: the log stays immutable and the personal data stops existing. In 19.x, existing reads keep these defaults. A normal read cannot distinguish an erased `0`, `false` or empty string from a genuine value. An explicit .NET sequence read can additionally report confirmed erased paths.
+
+### Opt in to erased paths in .NET
+
+For example, with an `IEventSequence` named `sequence`, call `var events = await sequence.GetFromSequenceNumberWithErasedProperties(42);`. The optional `eventSourceId` and `filterEventTypes` parameters work as on `GetFromSequenceNumber`. Inspect each event's `ErasedProperties`, also available as `event.Context.ErasedProperties`, alongside its ordinary typed `Content`. The content still uses the defaults above; the metadata adds no markers or replacement values inside it.
+
+Paths use JSON/schema names, dotted members and bracketed indices: `profile.name`, `contacts[0].email`. A protected whole container reports its boundary, such as `contacts`, not invented child paths. Lists are per event, unique and ordinally sorted. Dictionary keys use the same grammar without escaping, so keys containing dots or brackets can be ambiguous. Treat paths as potentially sensitive metadata; they may contain dictionary keys.
+
+A path is reported only for recognized encrypted content whose key is missing **and** whose subject has a recorded erasure. Plaintext (including genuine defaults), decryptable content, unknown missing keys, corrupt ciphertext and other release failures are not evidence of erasure. An empty list therefore does **not** prove that nothing was erased. In particular, legacy tombstone gaps and old ciphertext encountered after a new key was authorized cannot be conclusively classified here; the list is not an authoritative erasure audit.
+
+This opt-in describes only the returned current `Content`, not `OriginalContent`, revisions or generational content. It does not opt observers, projections or other SDKs into metadata. Existing reads remain unchanged and do not perform extra erasure lookups. Older servers do not support the new operation: unsupported/Unimplemented errors are propagated, not replaced by an apparently authoritative empty list. Use a server supporting this operation when opting in. Broader read surfaces remain tracked in [issue 4620](https://github.com/Cratis/Chronicle/issues/4620); representation changes are deferred to [issue 5388](https://github.com/Cratis/Chronicle/issues/5388).
 
 Causation property values are not encrypted under the subject's key, so deleting the key does not erase them. Set [`events.causationPropertyRetention` to `Omit`](../hosting/configuration/events.md) to prevent **new** causation property values from being retained, including on forwarded events, revisions, and redactions. `Omit` does not remove values already stored in historical causation chains; handle those separately when assessing an erasure.
 
