@@ -42,6 +42,21 @@ public partial class EventStore
     }
 
     /// <summary>
+    /// Releases everything a store whose creation failed holds on the shared connection: its lifecycle
+    /// subscriptions, the server streams it opened, and the watchers it started. Only for a store that was never
+    /// handed to a caller. Registration that is still in flight becomes a no-op, because the reactors, reducers,
+    /// read-model reactors and watcher manager each refuse new work once released.
+    /// </summary>
+    internal void ReleaseAfterFailedCreation()
+    {
+        DetachAutomaticRegistration();
+        (Reactors as Reactors.Reactors)?.Release();
+        (Reducers as Reducers.Reducers)?.Release();
+        (ReadModelReactors as ReadModels.ReadModelReactors)?.Release();
+        _readModelWatchers?.Release();
+    }
+
+    /// <summary>
     /// Stops the background registration retry, now and for any loop started later. Used when the store is detached
     /// and when the owning client is disposed, which does not raise a disconnect that would end the loop.
     /// </summary>
@@ -70,21 +85,38 @@ public partial class EventStore
 
     Task ValidateManualPreparation() => EventTypes is EventTypes native ? native.ValidatePreparation() : Task.CompletedTask;
 
+    Task DiscoverInlineOnlyArtifacts()
+    {
+        if (_registrationMode != RegistrationMode.Inline)
+        {
+            return Task.CompletedTask;
+        }
+
+        return Task.WhenAll(
+            Reactors.Discover(),
+            Seeding.Discover(),
+            Occurrences is Occurrences.Occurrences occurrences ? occurrences.Discover() : Task.CompletedTask);
+    }
+
     async Task DiscoverAllLocal()
     {
         _logger.DiscoverAllArtifacts();
         _storeArtifacts?.Prepare();
 
         // Finalize identities before schema, migration, source, constraint or observer construction.
+        if (_nominatesClientObservers && !ClientObserverHosting.IsAvailable(Connection))
+        {
+            throw new ClientObserversRequireKeepAlive(_nominatedObserverKind ?? "Reactor", _nominatedObserverId ?? "(nominated)");
+        }
+
+        // Reads and constraint violation messages depend on local discovery of everything except client-hosted observers.
         await EventTypes.Discover();
         await EventSources.Discover();
         await Task.WhenAll(
             Constraints.Discover(),
-            Reactors.Discover(),
             Reducers.Discover(),
             Projections.Discover(),
-            Seeding.Discover(),
-            Occurrences is Occurrences.Occurrences occurrences ? occurrences.Discover() : Task.CompletedTask);
+            DiscoverInlineOnlyArtifacts());
         var report = BuildDiscoveryReport();
         if (report is not null)
         {

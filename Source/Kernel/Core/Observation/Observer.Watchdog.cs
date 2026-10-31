@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Clients;
 using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Observation.Jobs;
@@ -50,9 +51,11 @@ public partial class Observer
             return;
         }
 
+        if (await RelinquishOwnershipIfMoved()) return;
+
         if (_webhookProbe is not null || _armWebhookProbe) await ReconcileWebhookProbe();
         await CheckConnectedClient();
-        await RecoverIfStuck();
+        if (!await RecoverIfStuck()) await NudgeStalledJobs();
         await FlushDebouncedProgressState();
         await ReconcileAlertsIfNeeded();
     }
@@ -60,7 +63,7 @@ public partial class Observer
     /// <summary>
     /// Runs the recovery checks, stopping at the first one that acts on the observer.
     /// </summary>
-    /// <returns>Awaitable task.</returns>
+    /// <returns>True when a check recovered the observer; otherwise false.</returns>
     /// <remarks>
     /// Every check here recovers by re-routing the observer, and routing re-evaluates everything the later checks
     /// look at - including starting a fresh catch-up. Running on past the first recovery therefore reads the
@@ -69,17 +72,19 @@ public partial class Observer
     /// catch-up attempts and the queue unsubscribe/subscribe cycles in a single tick. One tick, one recovery; the
     /// next tick re-evaluates from a settled state.
     /// </remarks>
-    async Task RecoverIfStuck()
+    async Task<bool> RecoverIfStuck()
     {
         if (await RecoveredBySettlingChecks())
         {
-            return;
+            return true;
         }
 
         if (await CheckNextSequenceNumber())
         {
             await CheckStrandedSubscription();
         }
+
+        return false;
     }
 
     async Task<bool> RecoveredBySettlingChecks() =>
@@ -250,7 +255,8 @@ public partial class Observer
         if (State.IsReplaying &&
             (_subscription.EventTypes.Any() || State.SubscribesToAllEvents || State.RunningState == ObserverRunningState.Replaying))
         {
-            var replayJobs = await _jobsManager.GetUnfinishedJobs();
+            // Removing jobs still drain and own their work (#5378).
+            var replayJobs = await _jobsManager.GetOutstandingJobs();
             if (IsQuarantined)
             {
                 return false;
@@ -300,7 +306,9 @@ public partial class Observer
         // A concluded job stays listed until it is finalized but owns nothing; counting it would keep a failed
         // replacement from ever being rescued while that finalization is slow or failed.
         var ownershipEpochBeforeLookup = _catchUpOwnershipEpoch;
-        var catchupJobs = await _jobsManager.GetUnfinishedJobs();
+
+        // Partition jobs also own their holds, including while draining (#5379/#5378).
+        var catchupJobs = await _jobsManager.GetOutstandingJobs();
 
         // CaughtUp can begin a handover while the lookup is awaited, so ownership must be checked again. It can also
         // begin and finish there - successor started, nothing left in flight - and then the listing predates the
@@ -310,12 +318,23 @@ public partial class Observer
             return true;
         }
 
+        var now = DateTimeOffset.UtcNow;
+        var ownedPartitions = catchupJobs.PartitionsHeldBy<CatchUpObserverPartitionRequest>(_observerKey, now);
         return catchupJobs.Any(job =>
             job.Request is CatchUpObserverRequest request &&
             request.ObserverKey == _observerKey &&
-            job.IsLive(DateTimeOffset.UtcNow) &&
-            !_concludedCatchUpJobs.Contains(job.Id));
+            job.IsLive(now) &&
+            !_concludedCatchUpJobs.Contains(job.Id)) ||
+            AreAllHeldPartitionsOwned(ownedPartitions);
     }
+
+    /// <summary>
+    /// Gets whether every held catch-up partition is owned by its own job. An empty set of holds is not ownership.
+    /// </summary>
+    /// <param name="ownedPartitions">The partitions owned by outstanding partition jobs.</param>
+    /// <returns>True if there are holds and every one is owned.</returns>
+    bool AreAllHeldPartitionsOwned(ISet<Key> ownedPartitions) =>
+        State.CatchingUpPartitions.Count > 0 && State.CatchingUpPartitions.All(ownedPartitions.Contains);
 
     bool HasCatchupOwnershipInFlight() => _catchUpHandoversInFlight > 0 || _pendingCatchUpAcquisition is not null;
 

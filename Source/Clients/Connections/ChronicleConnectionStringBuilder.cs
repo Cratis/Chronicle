@@ -30,6 +30,7 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
     const string SkipTlsValidationKey = "skipTlsValidation";
     const string DisableTlsKey = "disableTls";
     const string SkipCompatibilityCheckKey = "skipCompatibilityCheck";
+    const string SkipKeepAliveKey = "skipKeepAlive";
     const string LoadBalancerKey = "loadBalancer";
     const string SrvNameServerKey = "srvNameServer";
     const string CertificatePathKey = "certificatePath";
@@ -46,6 +47,25 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
     /// Fragments in an option name that mark its value as a credential.
     /// </summary>
     static readonly string[] _sensitiveKeyFragments = ["password", "secret", "token", "key", "credential"];
+
+    static readonly HashSet<string> _keysWithDedicatedRendering =
+    [
+        HostKey,
+        PortKey,
+        ServersKey,
+        UsernameKey,
+        PasswordKey,
+        SchemeKey,
+        ApiKeyKey,
+        SkipTlsValidationKey,
+        DisableTlsKey,
+        SkipCompatibilityCheckKey,
+        SkipKeepAliveKey,
+        LoadBalancerKey,
+        SrvNameServerKey,
+        CertificatePathKey,
+        CertificatePasswordKey
+    ];
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ChronicleConnectionStringBuilder"/> class.
@@ -325,6 +345,20 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
     }
 
     /// <summary>
+    /// Gets or sets whether to skip the keep-alive connection on connect.
+    /// </summary>
+    /// <remarks>
+    /// Skipping keep-alive avoids the long-lived keep-alive stream and its watchdog, which suits short-lived
+    /// processes such as command line tools, functions and jobs. A client that skips keep-alive cannot host
+    /// reactors or reducers, as the kernel has no live connection to deliver events on.
+    /// </remarks>
+    public bool SkipKeepAlive
+    {
+        get => ContainsKey(SkipKeepAliveKey) && Convert.ToBoolean(this[SkipKeepAliveKey]);
+        set => this[SkipKeepAliveKey] = value;
+    }
+
+    /// <summary>
     /// Gets or sets the name of the load balancer strategy to use when multiple servers are available.
     /// </summary>
     public string? LoadBalancer
@@ -451,6 +485,8 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
             queryParams.Add("skipCompatibilityCheck=true");
         }
 
+        AddSkipKeepAlive(queryParams);
+
         if (ContainsKey(LoadBalancerKey))
         {
             queryParams.Add($"loadBalancer={Uri.EscapeDataString((string)this[LoadBalancerKey])}");
@@ -475,21 +511,7 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
         foreach (var key in Keys)
         {
             var keyStr = key.ToString();
-            if (keyStr != null &&
-                keyStr != HostKey &&
-                keyStr != PortKey &&
-                keyStr != ServersKey &&
-                keyStr != UsernameKey &&
-                keyStr != PasswordKey &&
-                keyStr != SchemeKey &&
-                keyStr != ApiKeyKey &&
-                keyStr != SkipTlsValidationKey &&
-                keyStr != DisableTlsKey &&
-                keyStr != SkipCompatibilityCheckKey &&
-                keyStr != LoadBalancerKey &&
-                keyStr != SrvNameServerKey &&
-                keyStr != CertificatePathKey &&
-                keyStr != CertificatePasswordKey)
+            if (keyStr != null && !_keysWithDedicatedRendering.Contains(keyStr))
             {
                 queryParams.Add($"{Uri.EscapeDataString(keyStr)}={Uri.EscapeDataString(this[keyStr]?.ToString() ?? string.Empty)}");
             }
@@ -594,6 +616,14 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
         {
             // Fall back to standard key=value parsing
             ConnectionString = connectionString;
+        }
+    }
+
+    void AddSkipKeepAlive(List<string> queryParams)
+    {
+        if (SkipKeepAlive)
+        {
+            queryParams.Add("skipKeepAlive=true");
         }
     }
 

@@ -16,4 +16,5 @@ namespace Cratis.Chronicle.Testing.ReadModels;
 [DerivedType("userExperience", typeof(IActor))]
 public sealed record UserExperienceActor(
     [Key] Guid ActorId,
-    [SetFrom<SliceUiActorUpdated>(nameof(SliceUiActorUpdated.DisplayName))] string DisplayName) : IActor;
+    [SetFrom<SliceUiActorUpdated>(nameof(SliceUiActorUpdated.DisplayName))]
+    [SetFrom<SliceUiActorImported>(nameof(SliceUiActorImported.DisplayName))] string DisplayName) : IActor;

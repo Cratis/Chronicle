@@ -83,6 +83,12 @@ public sealed class SqlClusterDatabase(bool postgres, INetwork network) : IAsync
         return builder.Build();
     }
 
+    /// <summary>
+    /// Creates a host-side connection for inspecting the isolated test database.
+    /// </summary>
+    /// <returns>A connection owned by the caller.</returns>
+    public DbConnection CreateConnection() => Connection();
+
     DbConnection Connection() => postgres
         ? new NpgsqlConnection($"Host={_container.Hostname};Port={_container.GetMappedPublicPort(5432)};Database={Database};Username=postgres;Password={Password}")
         : new SqlConnection($"Server={_container.Hostname},{_container.GetMappedPublicPort(1433)};Database={Database};User Id=sa;Password={Password};TrustServerCertificate=True");

@@ -7,7 +7,11 @@ namespace Cratis.Chronicle.EventSequences.for_EventSequence.when_a_constraint_in
 
 public class and_every_retry_fails : given.an_event_sequence_with_a_failing_index
 {
-    void Establish() => _update = _ => Task.FromException(new given.SimulatedStateWriteError());
+    void Establish()
+    {
+        UseDeterministicRetryClock();
+        _update = _ => Task.FromException(new given.SimulatedStateWriteError());
+    }
     async Task Because() => _result = await AppendAnEvent();
 
     [Fact] void should_succeed_despite_the_failed_index() => _result.IsSuccess.ShouldBeTrue();

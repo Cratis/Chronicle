@@ -18,6 +18,8 @@ namespace Cratis.Chronicle.Storage.Sql.Sinks;
 /// <param name="Targets">The ordered resolved properties.</param>
 internal sealed record ReadModelIndexPlan(IndexDefinition Definition, IReadOnlyList<ReadModelIndexTarget> Targets)
 {
+    const string DecimalOrderMarker = "|sqlite-decimal-order:v1";
+
     static readonly JsonSerializerOptions _pathOptions = new() { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
 
     /// <summary>
@@ -41,9 +43,33 @@ internal sealed record ReadModelIndexPlan(IndexDefinition Definition, IReadOnlyL
     /// <param name="type">The database provider.</param>
     /// <param name="table">The table name.</param>
     /// <returns>The index name.</returns>
-    internal string Name(DatabaseType type, string table) => IsLegacy
+    internal string Name(DatabaseType type, string table) => UsesDecimalOrderKey(type)
+        ? ReadModelIndexNames.ForSignature(type, table, Signature + DecimalOrderMarker)
+        : PreviousName(type, table);
+
+    /// <summary>
+    /// Gets the name used before SQLite composite decimal keys moved to the order key; identical to <see cref="Name"/> elsewhere.
+    /// </summary>
+    /// <param name="type">The database provider.</param>
+    /// <param name="table">The table name.</param>
+    /// <returns>The superseded index name.</returns>
+    internal string PreviousName(DatabaseType type, string table) => IsLegacy
         ? ReadModelIndexNames.For(type, table, Targets[0].Column.Name)
         : ReadModelIndexNames.ForSignature(type, table, Signature);
+
+    /// <summary>
+    /// Gets whether a SQLite composite index keys a top-level decimal by its order-preserving shadow column.
+    /// </summary>
+    /// <param name="type">The database provider.</param>
+    /// <returns>True when the plan is a SQLite composite containing a top-level decimal.</returns>
+    internal bool UsesDecimalOrderKey(DatabaseType type) => type == DatabaseType.Sqlite && Targets.Count > 1 && Targets.Any(IsDecimalOrderTarget);
+
+    /// <summary>
+    /// Gets whether a target is a top-level decimal column.
+    /// </summary>
+    /// <param name="target">The resolved property.</param>
+    /// <returns>True when the target is a scalar top-level decimal.</returns>
+    internal static bool IsDecimalOrderTarget(ReadModelIndexTarget target) => !target.IsExpression && !target.IsArray && SqliteDecimalSortKey.IsDecimal(target.Column);
 
     /// <summary>
     /// Resolves every declared property or rejects the complete definition.
@@ -84,6 +110,7 @@ internal sealed record ReadModelIndexPlan(IndexDefinition Definition, IReadOnlyL
     internal static string Expression(ReadModelIndexTarget target, DatabaseType type, ISqlGenerationHelper helper)
     {
         var column = helper.DelimitIdentifier(target.Column.Name);
+        if (type == DatabaseType.Sqlite && IsDecimalOrderTarget(target)) return helper.DelimitIdentifier(SqliteDecimalSortKey.ColumnNameFor(target.Column.Name));
         if (!target.IsExpression) return column;
         if (type == DatabaseType.SqlServer) return helper.DelimitIdentifier(SqlServerIndexColumns.Name(target));
         if (type == DatabaseType.Sqlite) return $"json_extract({column}, {Literal(JsonPath(target))})";

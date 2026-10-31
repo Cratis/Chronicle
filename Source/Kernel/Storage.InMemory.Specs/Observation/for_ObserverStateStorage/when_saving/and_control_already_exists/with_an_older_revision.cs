@@ -26,7 +26,7 @@ public class with_an_older_revision : Specification
             RetirementResults = [new(Guid.NewGuid(), _type, ObserverEventTypeRetirementOutcome.Retired, new(3), [])],
             PendingChange = new(new(8), DateTimeOffset.UtcNow, new(42), [new("event-b")], [])
         };
-        await _storage.Save(new() { Identifier = "observer", TypeSetControl = _control });
+        await _storage.Save(new() { Identifier = "observer", TypeSetControl = _control }, Concepts.EventSequences.EventSequenceId.Log);
     }
 
     async Task Because()
@@ -39,7 +39,7 @@ public class with_an_older_revision : Specification
             RetirementResults = null,
             PendingChange = null
         };
-        await _storage.Save(new() { Identifier = "observer", TypeSetControl = stale, NextEventSequenceNumber = new(123) });
+        await _storage.Save(new() { Identifier = "observer", TypeSetControl = stale, NextEventSequenceNumber = new(123) }, Concepts.EventSequences.EventSequenceId.Log);
         _saved = await _storage.Get("observer");
     }
 

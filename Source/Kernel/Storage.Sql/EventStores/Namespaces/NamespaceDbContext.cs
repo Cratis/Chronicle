@@ -121,6 +121,7 @@ public class NamespaceDbContext(DbContextOptions<NamespaceDbContext> options) : 
             {
                 entity.Property(row => row.ConstraintIndexWatermark).HasPrecision(20, 0);
                 entity.Property(row => row.ConstraintIndexCatchUpBelow).HasPrecision(20, 0);
+                entity.Property(row => row.MutationEpoch).HasPrecision(20, 0);
             })
             .Entity<ClosedStreamEntry>(entity =>
             {

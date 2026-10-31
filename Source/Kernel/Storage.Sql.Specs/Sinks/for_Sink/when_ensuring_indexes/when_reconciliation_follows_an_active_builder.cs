@@ -51,7 +51,7 @@ public abstract class when_reconciliation_follows_an_active_builder : Specificat
         }
         await _build;
         await _reconciliation;
-        await using var context = new DbContext(new DbContextOptionsBuilder<DbContext>().UseDatabaseFromConnectionString(_harness.ConnectionString).Options);
+        await using var context = new DbContext(SpecDbContextOptions.ForConnection<DbContext>(_harness.ConnectionString));
         var table = definition.ContainerName.Value;
         _names = context.Database.IsNpgsql()
             ? await context.Database.SqlQuery<string>($"SELECT indexname AS \"Value\" FROM pg_indexes WHERE schemaname=current_schema() AND tablename={table}").ToListAsync()

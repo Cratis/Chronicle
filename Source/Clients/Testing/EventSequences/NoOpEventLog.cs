@@ -54,6 +54,14 @@ internal sealed class NoOpEventLog : IEventLog
         throw new EventLogNotAvailableInKernelPipeline();
 
     /// <inheritdoc/>
+    public Task<EventSequencePage> GetPage(EventSequencePageRequest request, CancellationToken cancellationToken = default) =>
+        throw new EventLogNotAvailableInKernelPipeline();
+
+    /// <inheritdoc/>
+    public Task<EventSequencePage> GetLatest(int count, EventSequenceFilter? filter = default, CancellationToken cancellationToken = default) =>
+        throw new EventLogNotAvailableInKernelPipeline();
+
+    /// <inheritdoc/>
     public Task<EventSequenceNumber> GetNextSequenceNumber() => throw new EventLogNotAvailableInKernelPipeline();
 
     /// <inheritdoc/>

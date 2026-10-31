@@ -18,7 +18,7 @@ public class without_incoming_control : given.an_observer_state_storage
 
     async Task Because()
     {
-        await _storage.Save(new() { Identifier = "observer", NextEventSequenceNumber = new(123) });
+        await _storage.Save(new() { Identifier = "observer", NextEventSequenceNumber = new(123) }, Concepts.EventSequences.EventSequenceId.Log);
         await using var context = CreateContext();
         _saved = await context.Observers.SingleAsync();
     }

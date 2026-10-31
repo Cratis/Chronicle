@@ -42,7 +42,7 @@ public class with_alert_lifecycle : Specification
         _expected = _state.ToMongoDB().ToBsonDocument();
     }
 
-    async Task Because() => await _storage.Save(_state);
+    async Task Because() => await _storage.Save(_state, Concepts.EventSequences.EventSequenceId.Log);
 
     [Fact] void should_set_the_lifecycle() => ValueIn(_set, nameof(ObserverState.AlertLifecycleId)).ShouldEqual(ValueIn(_expected, nameof(ObserverState.AlertLifecycleId)));
     [Fact] void should_set_the_revision() => ValueIn(_set, nameof(ObserverState.AlertRevision)).ShouldEqual(ValueIn(_expected, nameof(ObserverState.AlertRevision)));

@@ -30,7 +30,7 @@ Put these settings at the root of `chronicle.json`, not inside a `Cratis` or `Ch
 | `constraintsVersionCheckInterval` | Maximum frequency of constraint-version polling during appends. A zero interval checks on every append. |
 | `queueDepletionWaitTimeoutMilliseconds` | Bounds the final queue-empty wait when awaiting depletion outside a debugger. |
 
-When a bounded queue fills, appends do not wait for observers to drain it. Its observers spill to catch-up, which rereads from their persisted cursors. Increase capacity to absorb longer bursts; smaller queues trade live delivery for catch-up sooner. The state snapshot interval does not determine sequence-number correctness: activation can rebuild state from the event tail.
+When a bounded queue fills, appends do not wait for observers to drain it. Its observers spill to catch-up, which rereads from their persisted cursors. An observer whose queued backlog would need more than 256 sequential per-partition deliveries in one pass is also moved to catch-up, so bulk appends that interleave many event sources are processed in parallel per partition instead of one event at a time. Increase capacity to absorb longer bursts; smaller queues trade live delivery for catch-up sooner. The state snapshot interval does not determine sequence-number correctness: activation can rebuild state from the event tail.
 
 ## Causation property retention
 

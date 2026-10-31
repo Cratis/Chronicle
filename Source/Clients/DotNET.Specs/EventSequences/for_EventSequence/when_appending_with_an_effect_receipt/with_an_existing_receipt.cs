@@ -14,5 +14,7 @@ public class with_an_existing_receipt : given.a_receipted_append
     [Fact] void should_carry_the_receipt_to_the_untagged_transport() => _request.EffectReceipt.ShouldEqual(_receipt);
     [Fact] void should_suppress_local_append_notifications() => _notifications.ShouldEqual(0);
     [Fact] void should_return_the_winning_response() => _result.EffectReceipt.Receipt.Response.ToJsonString().ShouldEqual("\"winner\"");
+    [Fact] void should_report_no_event_types() => _result.EventTypes.ShouldBeEmpty();
+    [Fact] void should_report_no_appended_event_types() => _result.AppendedEventTypes.ShouldBeEmpty();
     [Fact] void should_report_the_duplicate() => _result.EffectReceipt.Status.ShouldEqual(EffectReceiptStatus.AlreadyRecorded);
 }
