@@ -53,7 +53,10 @@ public static class OpenTelemetryConfigurationExtensions
     /// <param name="configuration">The <see cref="IConfiguration"/> to use.</param>
     /// <param name="serviceName">The name of the service exposed on Open Telemetry.</param>
     /// <returns>The builder for continuation.</returns>
-    [Obsolete("Use AddOpenTelemetry().WithCratis(configuration, TelemetryConfiguration.Configure) instead.")]
+    /// <remarks>
+    /// Deprecated. Use <c language="csharp">AddOpenTelemetry().WithCratis(configuration, TelemetryConfiguration.Configure)</c> instead.
+    /// Retained for source compatibility without compiler warnings.
+    /// </remarks>
     public static IServiceCollection AddChronicleTelemetry(this IServiceCollection services, IConfiguration configuration, string serviceName = "Chronicle")
     {
         services.AddOpenTelemetry().WithCratis(configuration, options =>

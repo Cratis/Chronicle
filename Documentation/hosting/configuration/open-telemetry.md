@@ -38,7 +38,7 @@ Log export includes both the formatted message and logging scopes, including obs
 
 ### Hosting API
 
-Custom kernel hosts use `AddOpenTelemetry().WithCratis(configuration, TelemetryConfiguration.Configure)`. `WithCratis` comes from `Cratis.OpenTelemetry`; `TelemetryConfiguration` comes from `Cratis.Chronicle.Diagnostics.OpenTelemetry` and adds Chronicle instrumentation and fallback defaults. The former `AddChronicleTelemetry` extension is obsolete and delegates to this shared setup.
+Custom kernel hosts use `AddOpenTelemetry().WithCratis(configuration, TelemetryConfiguration.Configure)`. `WithCratis` comes from `Cratis.OpenTelemetry`; `TelemetryConfiguration` comes from `Cratis.Chronicle.Diagnostics.OpenTelemetry` and adds Chronicle instrumentation and fallback defaults. The `AddChronicleTelemetry` extension is deprecated and delegates to this shared setup. It is retained for source compatibility without compiler warnings, not removed.
 
 ## Local development with .NET Aspire Dashboard
 
