@@ -14,6 +14,8 @@
   <ItemGroup>
     <PackageReference Include="BenchmarkDotNet" />
     <PackageReference Include="MongoDB.Driver" />
+    <PackageReference Include="NSubstitute" />
+    <PackageReference Include="Castle.Core" NoWarn="NU1605" />
     <PackageReference Include="Testcontainers" />
   </ItemGroup>
 
@@ -24,6 +26,8 @@
     <ProjectReference Include="../../Source/Clients/DotNET/DotNET.csproj" />
     <ProjectReference Include="../../Source/Clients/Connections/Connections.csproj" />
     <ProjectReference Include="../../Source/Infrastructure/Infrastructure.csproj" />
+    <ProjectReference Include="../../Source/Kernel/Core/Core.csproj" />
+    <ProjectReference Include="../../Source/Kernel/Storage.InMemory/Storage.InMemory.csproj" />
     <ProjectReference Include="../../Source/Kernel/Server/Server.csproj" Condition="'$(ArtifactsPath)' == ''" />
   </ItemGroup>
 
