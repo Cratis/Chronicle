@@ -38,9 +38,9 @@ public partial class EventSequence
     /// Gets or sets the constraint-index repair retries, budgets, cadence and caps.
     /// </summary>
     /// <remarks>
-    /// Defaults to <see cref="ConstraintIndexRepairOptions.Default"/>. Specifications replace it to exercise configured values.
+    /// Set from <see cref="ChronicleOptions.ConstraintIndexRepair"/> on activation. Specifications replace it to exercise configured values.
     /// </remarks>
-    internal ConstraintIndexRepairOptions ConstraintIndexRepair { get; set; } = ConstraintIndexRepairOptions.Default;
+    internal ConstraintIndexRepairOptions ConstraintIndexRepair { get; set; } = new();
 
     async Task InitializeConstraintIndexes()
     {

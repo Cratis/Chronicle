@@ -79,6 +79,7 @@ public class an_event_sequence : Specification
     /// every append, so specs about picking up constraint changes do not have to wait out a production interval.
     /// </summary>
     protected virtual TimeSpan ConstraintsVersionCheckInterval => TimeSpan.Zero;
+    protected virtual Configuration.ConstraintIndexRepairOptions ConstraintIndexRepairConfiguration => new();
 
     async Task Establish()
     {
@@ -212,7 +213,8 @@ public class an_event_sequence : Specification
                 StatePersistenceInterval = StatePersistenceInterval,
                 ConstraintsVersionCheckInterval = ConstraintsVersionCheckInterval,
                 CausationPropertyRetention = CausationPropertyRetention
-            }
+            },
+            ConstraintIndexRepair = ConstraintIndexRepairConfiguration
         }));
         _silo.AddService(_eventSequenceLogger);
         _silo.AddService(NullLogger<ConstraintIndexReplay>.Instance);

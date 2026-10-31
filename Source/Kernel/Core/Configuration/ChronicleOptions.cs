@@ -120,6 +120,11 @@ public class ChronicleOptions : IValidatableObject
     public IDictionary<string, ObserverRetryOverride> ObserverRetryOverrides { get; init; } = new Dictionary<string, ObserverRetryOverride>(StringComparer.Ordinal);
 
     /// <summary>
+    /// Gets the constraint-index repair configuration: retries, time budgets, cadence and memory caps.
+    /// </summary>
+    public ConstraintIndexRepairOptions ConstraintIndexRepair { get; init; } = new();
+
+    /// <summary>
     /// Gets the durable occurrence delivery configuration.
     /// </summary>
     public Occurrences Occurrences { get; init; } = new();
@@ -244,6 +249,7 @@ public class ChronicleOptions : IValidatableObject
                 [$"{nameof(Alerts)}.{nameof(Alerts.Conditions)}[{_.Key}].{nameof(AlertConditionOptions.RaiseAfter)}"]));
         foreach (var error in ValidateSingleWriterLease().Concat(alertErrors)) yield return error;
         foreach (var error in ObserverRetryOverrides.SelectMany(_ => _.Value.Validate(_.Key))) yield return error;
+        foreach (var error in ConstraintIndexRepair.Validate()) yield return error;
         if (!Webhooks.Probe.HasValidTiming)
         {
             yield return new ValidationResult("Invalid webhook probe timing settings.", [$"{nameof(Webhooks)}.{nameof(Configuration.Webhooks.Probe)}"]);

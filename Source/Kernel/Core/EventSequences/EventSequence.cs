@@ -146,6 +146,7 @@ public partial class EventSequence(
         _constraintsVersionCheckInterval = options.Value.Events.ConstraintsVersionCheckInterval;
         _lastConstraintsVersionCheck = 0;
         _statePersistenceInterval = Math.Max(1, options.Value.Events.StatePersistenceInterval);
+        ConstraintIndexRepair = options.Value.ConstraintIndexRepair;
 
         await EventSequenceStorage.EnsureIndexes();
         await base.OnActivateAsync(cancellationToken);
