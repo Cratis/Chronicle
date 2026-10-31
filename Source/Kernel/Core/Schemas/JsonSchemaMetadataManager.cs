@@ -232,6 +232,37 @@ public class JsonSchemaMetadataManager(
         return result;
     }
 
+    /// <summary>
+    /// Gets the metadata that applies to a schema node, including that of a referenced scalar definition,
+    /// de-duplicated by category and metadata type with the first occurrence winning.
+    /// </summary>
+    /// <remarks>
+    /// Published schemas are effectively immutable and a changed schema is a new instance, so the classification
+    /// is cached per schema instance. The returned array is shared and must never be modified.
+    /// </remarks>
+    /// <param name="schema"><see cref="JsonSchema"/> to classify.</param>
+    /// <param name="forComparison">Whether to also consider the compliance and security categories for comparison.</param>
+    /// <param name="cacheable">Whether the schema instance is stable. Transient instances are never cached.</param>
+    /// <returns>The shared classification.</returns>
+    internal (SchemaMetadataCategory Category, ComplianceSchemaMetadata Metadata)[] MetadataFor(JsonSchema schema, bool forComparison, bool cacheable = true)
+    {
+        if (!cacheable)
+        {
+            return Classify(schema, forComparison);
+        }
+
+        var entry = _classified.GetValue(schema, CreateClassifiedMetadata);
+        var cached = entry.Get(forComparison);
+        if (cached is not null)
+        {
+            return cached;
+        }
+
+        var classified = Classify(schema, forComparison);
+        entry.Set(forComparison, classified);
+        return classified;
+    }
+
     static ProtectionKeyLocation ProtectionLocation(string path, IJsonSchemaMetadataValueHandler[] handlers, string identifier)
     {
         if (handlers.Length != 1 || handlers[0].KeyLocationFor(identifier) is not { } location)
@@ -324,6 +355,52 @@ public class JsonSchemaMetadataManager(
     static bool CanInspectReference(JsonSchema schema, int depth) =>
         schema.Reference is { } reference && CanInspectReferencedType(reference, depth + 1);
 
+    static ClassifiedMetadata CreateClassifiedMetadata(JsonSchema schema) => new();
+
+    static void CollectMetadata(JsonSchema schema, SchemaMetadataCategory[] categories, List<(SchemaMetadataCategory Category, ComplianceSchemaMetadata Metadata)> target)
+    {
+        foreach (var category in categories)
+        {
+            foreach (var metadata in schema.GetSchemaMetadata(category))
+            {
+                target.Add((category, metadata));
+            }
+        }
+    }
+
+    static bool ContainsKey(List<(SchemaMetadataCategory Category, ComplianceSchemaMetadata Metadata)> entries, (SchemaMetadataCategory Category, ComplianceSchemaMetadata Metadata) candidate)
+    {
+        for (var i = 0; i < entries.Count; i++)
+        {
+            if (entries[i].Category.Equals(candidate.Category) && entries[i].Metadata.metadataType == candidate.Metadata.metadataType)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    static (SchemaMetadataCategory Category, ComplianceSchemaMetadata Metadata)[] Merge(
+        (SchemaMetadataCategory Category, ComplianceSchemaMetadata Metadata)[] first,
+        (SchemaMetadataCategory Category, ComplianceSchemaMetadata Metadata)[] second)
+    {
+        // Both inputs are shared, already de-duplicated arrays; never modify them. The first occurrence wins.
+        if (second.Length == 0) return first;
+        if (first.Length == 0) return second;
+        var merged = new List<(SchemaMetadataCategory Category, ComplianceSchemaMetadata Metadata)>(first.Length + second.Length);
+        merged.AddRange(first);
+        foreach (var entry in second)
+        {
+            if (!ContainsKey(merged, entry))
+            {
+                merged.Add(entry);
+            }
+        }
+
+        return merged.ToArray();
+    }
+
     IJsonSchemaMetadataValueHandler[] RegisteredHandlers((SchemaMetadataCategory Category, ComplianceSchemaMetadata Metadata)[] metadata) =>
         metadata.Where(_ => _propertyValueHandlers.ContainsKey((_.Category, _.Metadata.metadataType)))
             .Select(_ => _propertyValueHandlers[(_.Category, _.Metadata.metadataType)]).ToArray();
@@ -358,39 +435,6 @@ public class JsonSchemaMetadataManager(
         {
             throw new InvalidOperationException("Protected boundary cannot be compared.");
         }
-    }
-
-    static ClassifiedMetadata CreateClassifiedMetadata(JsonSchema schema) => new();
-
-    /// <summary>
-    /// Gets the metadata that applies to a schema node, including that of a referenced scalar definition,
-    /// de-duplicated by category and metadata type with the first occurrence winning.
-    /// </summary>
-    /// <remarks>
-    /// Published schemas are effectively immutable and a changed schema is a new instance, so the classification
-    /// is cached per schema instance. The returned array is shared and must never be modified.
-    /// </remarks>
-    /// <param name="schema"><see cref="JsonSchema"/> to classify.</param>
-    /// <param name="forComparison">Whether to also consider the compliance and security categories for comparison.</param>
-    /// <param name="cacheable">Whether the schema instance is stable. Transient instances are never cached.</param>
-    /// <returns>The shared classification.</returns>
-    internal (SchemaMetadataCategory Category, ComplianceSchemaMetadata Metadata)[] MetadataFor(JsonSchema schema, bool forComparison, bool cacheable = true)
-    {
-        if (!cacheable)
-        {
-            return Classify(schema, forComparison);
-        }
-
-        var entry = _classified.GetValue(schema, CreateClassifiedMetadata);
-        var cached = entry.Get(forComparison);
-        if (cached is not null)
-        {
-            return cached;
-        }
-
-        var classified = Classify(schema, forComparison);
-        entry.Set(forComparison, classified);
-        return classified;
     }
 
     (SchemaMetadataCategory Category, ComplianceSchemaMetadata Metadata)[] Classify(JsonSchema schema, bool forComparison)
@@ -436,50 +480,6 @@ public class JsonSchemaMetadataManager(
         }
 
         return distinct.ToArray();
-    }
-
-    static void CollectMetadata(JsonSchema schema, SchemaMetadataCategory[] categories, List<(SchemaMetadataCategory Category, ComplianceSchemaMetadata Metadata)> target)
-    {
-        foreach (var category in categories)
-        {
-            foreach (var metadata in schema.GetSchemaMetadata(category))
-            {
-                target.Add((category, metadata));
-            }
-        }
-    }
-
-    static bool ContainsKey(IReadOnlyList<(SchemaMetadataCategory Category, ComplianceSchemaMetadata Metadata)> entries, (SchemaMetadataCategory Category, ComplianceSchemaMetadata Metadata) candidate)
-    {
-        for (var i = 0; i < entries.Count; i++)
-        {
-            if (entries[i].Category.Equals(candidate.Category) && entries[i].Metadata.metadataType == candidate.Metadata.metadataType)
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    static (SchemaMetadataCategory Category, ComplianceSchemaMetadata Metadata)[] Merge(
-        (SchemaMetadataCategory Category, ComplianceSchemaMetadata Metadata)[] first,
-        (SchemaMetadataCategory Category, ComplianceSchemaMetadata Metadata)[] second)
-    {
-        // Both inputs are shared, already de-duplicated arrays; never modify them. The first occurrence wins.
-        if (second.Length == 0) return first;
-        if (first.Length == 0) return second;
-        var merged = new List<(SchemaMetadataCategory Category, ComplianceSchemaMetadata Metadata)>(first.Length + second.Length);
-        merged.AddRange(first);
-        foreach (var entry in second)
-        {
-            if (!ContainsKey(merged, entry))
-            {
-                merged.Add(entry);
-            }
-        }
-
-        return merged.ToArray();
     }
 
     async Task HandleActionFor(
