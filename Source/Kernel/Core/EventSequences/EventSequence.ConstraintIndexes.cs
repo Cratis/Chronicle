@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Events.Constraints;
+using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.Storage;
 
@@ -32,6 +33,14 @@ public partial class EventSequence
     /// Gets or sets the clock used for repair cadence and retry deadlines.
     /// </summary>
     internal TimeProvider ConstraintIndexTimeProvider { get; set; } = TimeProvider.System;
+
+    /// <summary>
+    /// Gets or sets the constraint-index repair retries, budgets, cadence and caps.
+    /// </summary>
+    /// <remarks>
+    /// Defaults to <see cref="ConstraintIndexRepairOptions.Default"/>. Specifications replace it to exercise configured values.
+    /// </remarks>
+    internal ConstraintIndexRepairOptions ConstraintIndexRepair { get; set; } = ConstraintIndexRepairOptions.Default;
 
     async Task InitializeConstraintIndexes()
     {

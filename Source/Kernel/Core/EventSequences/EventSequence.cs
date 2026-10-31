@@ -176,7 +176,7 @@ public partial class EventSequence(
         _constraintIndexRepairTimer?.Dispose();
         _constraintIndexRepairTimer = null;
         DisposeSpillRetry();
-        ConstraintIndexCatchUpSlots.For(storage).Complete(this);
+        CatchUpSlots.Complete(this);
         _catchUpTracking = false;
         _catchUpReplay = null;
         _catchUpExcluded.Clear();

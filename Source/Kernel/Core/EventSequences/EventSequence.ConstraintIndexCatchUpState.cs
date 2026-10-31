@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Events.Constraints;
-using Cratis.Chronicle.Events.Constraints;
 
 namespace Cratis.Chronicle.EventSequences;
 
@@ -104,6 +103,6 @@ public partial class EventSequence
         _catchUpExcluded.Clear();
         _constraintRepairFailures = 0;
         _nextConstraintRepairAttempt = default;
-        ConstraintIndexCatchUpSlots.For(storage).Complete(this);
+        CatchUpSlots.Complete(this);
     }
 }

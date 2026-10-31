@@ -38,7 +38,7 @@ public partial class EventSequence
             if (ConstraintIndexTimeProvider.GetUtcNow() < _nextConstraintRepairAttempt) return;
             if (_pendingConstraintIndexes.Count > 0)
             {
-                await RunConstraintIndexRepairTurn(TimeSpan.FromSeconds(2), true, cancellationToken);
+                await RunConstraintIndexRepairTurn(ConstraintIndexRepair.TimerTurnBudget, true, cancellationToken);
             }
             else if (State.ConstraintIndexCatchUpBelow is not null)
             {

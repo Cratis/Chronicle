@@ -4,6 +4,7 @@
 using System.Collections.Immutable;
 using System.Dynamic;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Configuration;
 
 namespace Cratis.Chronicle.Events.Constraints;
 
@@ -152,7 +153,7 @@ public record ConstraintValidationContext
     public async Task<IEnumerable<ConstraintIndexUpdateResult>> Update(EventSequenceNumber eventSequenceNumber, CancellationToken cancellationToken) =>
         await Task.WhenAll(_indexUpdates.Select(async update =>
         {
-            var (outcome, error) = await ConstraintIndexUpdateAttempt.Run(token => update.Updater.Update(eventSequenceNumber, token), cancellationToken);
+            var (outcome, error) = await ConstraintIndexUpdateAttempt.Run(token => update.Updater.Update(eventSequenceNumber, token), ConstraintIndexRepairOptions.Default.AttemptTimeout, cancellationToken);
             return new ConstraintIndexUpdateResult(update.Updater, outcome, error);
         }));
 }

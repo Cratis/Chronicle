@@ -22,7 +22,7 @@ public partial class EventSequence
         // A corrupt input can be settled before it causes a write. Never poison-settle a
         // partially released group's failed claim: its refusal must last until it is written.
         var failures = replay.IsFolding ? result.Failed : new Dictionary<ConstraintName, ConstraintIndexReplayFailure>();
-        var poisoned = _catchUpPoisonTracker.Observe(failures, replay.StorageCallSucceeded);
+        var poisoned = _catchUpPoisonTracker.Observe(failures, replay.StorageCallSucceeded, ConstraintIndexRepair.PoisonThreshold);
         foreach (var (name, failure) in poisoned)
         {
             replay.SettlePoison(name, failure.Position!);
