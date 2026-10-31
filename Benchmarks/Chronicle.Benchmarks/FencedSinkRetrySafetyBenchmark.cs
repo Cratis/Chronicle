@@ -17,7 +17,6 @@ public class FencedSinkRetrySafetyBenchmark
 {
     const int MaxBatchSize = 1000;
 
-    MongoClient _client = null!;
     IMongoCollection<BsonDocument> _collection = null!;
     UpdateDefinition<BsonDocument> _update = null!;
     List<WriteModel<BsonDocument>> _requests = null!;
@@ -28,8 +27,12 @@ public class FencedSinkRetrySafetyBenchmark
     [GlobalSetup]
     public void Setup()
     {
-        _client = new MongoClient("mongodb://localhost:27017");
-        _collection = _client.GetDatabase("benchmark").GetCollection<BsonDocument>("benchmark");
+        // The client is disposed straight away: rendering needs only the collection's serializer settings, and a live
+        // client's background server monitoring would allocate on other threads and pollute the allocation figures.
+        using (var client = new MongoClient("mongodb://localhost:27017"))
+        {
+            _collection = client.GetDatabase("benchmark").GetCollection<BsonDocument>("benchmark");
+        }
         _update = Builders<BsonDocument>.Update.Set("name", "value").Unset("obsolete");
         _requests = [];
         for (var i = 0; i < 10; i++)
@@ -39,12 +42,6 @@ public class FencedSinkRetrySafetyBenchmark
                 Builders<BsonDocument>.Update.Set("name", $"value{i}")));
         }
     }
-
-    /// <summary>
-    /// Releases the client.
-    /// </summary>
-    [GlobalCleanup]
-    public void Cleanup() => _client.Dispose();
 
     /// <summary>
     /// Checks a single idempotent update.
