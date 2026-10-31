@@ -49,7 +49,7 @@ public class when_upgrading_from_v15_0_0 : given.an_unmigrated_namespace_databas
     [Fact] void should_not_have_the_column_before_the_upgrade() => _hadColumnBefore.ShouldBeFalse();
     [Fact] void should_add_the_ignored_column() => _hasColumnAfter.ShouldBeTrue();
     [Fact] void should_keep_existing_rows_active() => _keptRowsActive.ShouldBeTrue();
-    [Fact] void should_sort_after_the_original_migration() => string.CompareOrdinal(Current, Previous).ShouldBeGreaterThan(0);
+    [Fact] void should_run_after_the_original_migration_in_release_order() => MigrationReleaseOrder.Instance.Compare(Current, Previous).ShouldBeGreaterThan(0);
 
     static async Task<bool> ColumnExists(NamespaceDbContext context)
     {
