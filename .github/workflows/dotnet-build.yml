@@ -197,14 +197,15 @@ jobs:
       # happens only under IsPackaging - which until now nothing ran before publish. So an API newer than net8.0
       # passed every check on a pull request and failed while the release was being cut, with the merge already
       # done. This builds what publish packs, on the frameworks it packs them for. The SDKs are already installed
-      # above for exactly this reason.
+      # above for exactly this reason. The Build step above already analyzes net10.0 with warnings as errors, so
+      # analyzers are skipped for that framework here (generators still run) and own net8.0 and net9.0 only.
       - name: Build client packages for every shipped framework
         run: |
           set -e
           find ./Source/Clients -name "*.csproj" ! -name "*.Specs.csproj" -print0 | while IFS= read -r -d '' project; do
-            dotnet build "$project" --configuration Release -p:IsPackaging=true -p:DisableProxyGenerator=true -p:DisableDockerBuild=true
+            dotnet build "$project" --configuration Release -p:IsPackaging=true -p:SkipAnalyzersForTargetFramework=net10.0 -p:DisableProxyGenerator=true -p:DisableDockerBuild=true
           done
-          dotnet build ./Source/Kernel/Contracts/Contracts.csproj --configuration Release -p:IsPackaging=true -p:DisableProxyGenerator=true -p:DisableDockerBuild=true
+          dotnet build ./Source/Kernel/Contracts/Contracts.csproj --configuration Release -p:IsPackaging=true -p:SkipAnalyzersForTargetFramework=net10.0 -p:DisableProxyGenerator=true -p:DisableDockerBuild=true
 
       # A package can build and still fail to restore for a consumer: a transitive dependency resolves below what
       # another package declares (NU1605) or outside an exact constraint (NU1608), which only shows up once the

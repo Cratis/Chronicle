@@ -65,6 +65,18 @@ class AnalyzerOwnership(unittest.TestCase):
         self.assertIn("dotnet build", run)
         self.assertIn(f"-p:{SKIP}", run)
 
+    def test_packaging_build_skips_analyzers_only_for_the_owned_framework(self):
+        run = without_comments(step_run(self.build, "dotnet-build", "Build client packages for every shipped framework"))
+        self.assertEqual(2, run.count("dotnet build"))
+        self.assertEqual(2, run.count("-p:SkipAnalyzersForTargetFramework=net10.0"))
+
+    def test_framework_skip_is_scoped_to_that_framework(self):
+        targets = (ROOT / "Directory.Build.targets").read_text(encoding="utf-8")
+        match = re.search(r'<PropertyGroup Condition="([^"]*SkipAnalyzersForTargetFramework[^"]*)">\s*<RunAnalyzers>false</RunAnalyzers>', targets)
+        self.assertIsNotNone(match)
+        self.assertIn("'$(TargetFramework)' == '$(SkipAnalyzersForTargetFramework)'", match.group(1))
+        self.assertEqual(1, targets.count("<RunAnalyzers>false</RunAnalyzers>"))
+
     def test_analyzers_are_never_removed(self):
         files = list(WORKFLOWS.glob("*.yml")) + [ROOT / "Directory.Build.props", ROOT / "Directory.Build.targets"]
         for path in files:
