@@ -10,7 +10,7 @@ namespace Cratis.Chronicle.Services.Observation.for_Observers.when_getting_obser
 public class and_running_state_changed_at_is_known : given.all_dependencies
 {
     readonly DateTimeOffset _timestamp = new(2026, 1, 2, 3, 4, 5, TimeSpan.Zero);
-    IEnumerable<Contracts.Observation.ObserverInformation> _result;
+    IEnumerable<ObserverInformation> _result;
 
     void Establish()
     {
