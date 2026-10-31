@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
@@ -29,6 +30,8 @@ public class a_blocked_observer_and_a_free_observer : all_dependencies
     protected IObserver _blockedObserver;
     protected IObserver _freeObserver;
     protected AppendedEventsQueue _queue;
+    readonly Lock _changedLock = new();
+    TaskCompletionSource _changed = new(TaskCreationOptions.RunContinuationsAsynchronously);
     ulong _nextSequenceNumber;
 
     protected virtual int QueueBoundedCapacity => new Configuration.Events().QueueBoundedCapacity;
@@ -44,9 +47,14 @@ public class a_blocked_observer_and_a_free_observer : all_dependencies
             .Returns(async callInfo =>
             {
                 _blockedObserverHandled.Enqueue(new(callInfo.Arg<Key>(), callInfo.Arg<IEnumerable<AppendedEvent>>().ToArray()));
+                Changed();
                 await _release.Task;
             });
-        _blockedObserver.CatchUp().Returns(Task.CompletedTask);
+        _blockedObserver.CatchUp().Returns(_ =>
+        {
+            Changed();
+            return Task.CompletedTask;
+        });
         _grainFactory.GetGrain<IObserver>(_blockedObserverKey).Returns(_blockedObserver);
 
         _freeObserverKey = new ObserverKey("Free observer", "Some event store", "Some namespace", "Some event sequence");
@@ -56,6 +64,7 @@ public class a_blocked_observer_and_a_free_observer : all_dependencies
             .Returns(callInfo =>
             {
                 _freeObserverHandled.Enqueue(new(callInfo.Arg<Key>(), callInfo.Arg<IEnumerable<AppendedEvent>>().ToArray()));
+                Changed();
                 return Task.CompletedTask;
             });
         _grainFactory.GetGrain<IObserver>(_freeObserverKey).Returns(_freeObserver);
@@ -85,12 +94,51 @@ public class a_blocked_observer_and_a_free_observer : all_dependencies
         }
     };
 
+    /// <summary>
+    /// Waits until the condition holds, re-checking it each time one of the observers is called. Gives up after a
+    /// bound so a spec whose condition never holds fails on its assertions instead of hanging.
+    /// </summary>
+    /// <param name="condition">The condition to wait for.</param>
+    /// <returns>Awaitable task.</returns>
     protected async Task WaitTill(Func<bool> condition)
     {
-        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-        while (!condition() && !timeout.IsCancellationRequested)
+        var bound = TimeSpan.FromSeconds(5);
+        var elapsed = Stopwatch.StartNew();
+        while (true)
         {
-            await Task.Delay(10, CancellationToken.None);
+            // Take the signal before checking, so a change between the check and the wait is not missed.
+            Task nextChange;
+            lock (_changedLock)
+            {
+                nextChange = _changed.Task;
+            }
+
+            var remaining = bound - elapsed.Elapsed;
+            if (condition() || remaining <= TimeSpan.Zero)
+            {
+                return;
+            }
+
+            try
+            {
+                await nextChange.WaitAsync(remaining);
+            }
+            catch (TimeoutException)
+            {
+                return;
+            }
         }
+    }
+
+    void Changed()
+    {
+        TaskCompletionSource changed;
+        lock (_changedLock)
+        {
+            changed = _changed;
+            _changed = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        }
+
+        changed.TrySetResult();
     }
 }

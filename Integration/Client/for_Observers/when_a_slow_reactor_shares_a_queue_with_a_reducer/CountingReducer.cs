@@ -18,27 +18,35 @@ public class CountingReducer : IReducerFor<ItemCount>
     /// </summary>
     public const string Id = "fast-reducer-sharing-a-queue-1124";
 
+    readonly TaskCompletionSource _reachedExpected = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    int _expected = int.MaxValue;
     int _handled;
 
     public int Handled => Volatile.Read(ref _handled);
 
     public Task<ItemCount?> Registered(ItemRegistered evt, ItemCount? current, EventContext ctx)
     {
-        Interlocked.Increment(ref _handled);
+        if (Interlocked.Increment(ref _handled) >= Volatile.Read(ref _expected))
+        {
+            _reachedExpected.TrySetResult();
+        }
+
         return Task.FromResult<ItemCount?>(new((current?.Count ?? 0) + 1));
     }
 
     public async Task WaitTillHandled(int count, TimeSpan timeout)
     {
-        using var cts = new CancellationTokenSource(timeout);
+        Volatile.Write(ref _expected, count);
+        if (Handled >= count)
+        {
+            return;
+        }
+
         try
         {
-            while (Handled < count)
-            {
-                await Task.Delay(20, cts.Token);
-            }
+            await _reachedExpected.Task.WaitAsync(timeout);
         }
-        catch (OperationCanceledException)
+        catch (TimeoutException)
         {
             // The caller asserts on how far the reducer got.
         }
