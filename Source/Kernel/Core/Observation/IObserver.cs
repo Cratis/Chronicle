@@ -647,6 +647,11 @@ public interface IObserver : IGrainWithStringKey
     /// <summary>
     /// Notify that the observer has been caught up, including how far the catchup read.
     /// </summary>
+    /// <remarks>
+    /// Retained only for wire compatibility within the current major; scheduled for removal in the next major.
+    /// Has no production caller and skips concluded-job bookkeeping. Callers must use the job-owned
+    /// <see cref="CaughtUp(JobId, EventSequenceNumber, EventSequenceNumber)"/> overload instead.
+    /// </remarks>
     /// <param name="lastHandledEventSequenceNumber">The event sequence number of the last event that was handled in the catchup.</param>
     /// <param name="lastScannedEventSequenceNumber">The event sequence number of the last event the catchup read, handled or excluded by the observer's filters, or <see cref="EventSequenceNumber.Unavailable"/> when the catchup did not complete every step.</param>
     /// <returns>Awaitable task.</returns>

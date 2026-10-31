@@ -75,13 +75,15 @@ internal static class InProcessEventSequence
     /// <param name="eventStoreName">The event store name.</param>
     /// <param name="namespaceName">The event store namespace name.</param>
     /// <param name="compliance">The <see cref="InProcessCompliance"/> the scenario shares, so what this grain encrypts on append is what the reading side can release.</param>
+    /// <param name="timeProvider">The clock for event occurrence defaults and effect receipts.</param>
     /// <returns>The initialized kernel <see cref="KernelEventSequences::EventSequence"/> grain.</returns>
     internal static async Task<KernelEventSequences::EventSequence> Create(
         Storage.IStorage storage,
         KernelSequenceConcepts::EventSequenceId eventSequenceId,
         KernelConceptsNs::EventStoreName eventStoreName,
         KernelConceptsNs::EventStoreNamespaceName namespaceName,
-        InProcessCompliance compliance)
+        InProcessCompliance compliance,
+        TimeProvider? timeProvider = null)
     {
         var typeFormats = new TypeFormats();
         var expandoObjectConverter = new ExpandoObjectConverter(typeFormats);
@@ -133,7 +135,8 @@ internal static class InProcessEventSequence
                 Options.Create(new KernelConfiguration::ChronicleOptions()),
                 NullLogger<KernelEventSequences::EventSequence>.Instance,
                 NullLogger<KernelEventSequences::Concurrency.ConcurrencyValidator>.Instance,
-                encryptionKeyStorage: compliance.KeyStorage);
+                encryptionKeyStorage: compliance.KeyStorage,
+                timeProvider: timeProvider);
         }
 
         var key = new KernelSequenceConcepts::EventSequenceKey(eventSequenceId, eventStoreName, namespaceName);

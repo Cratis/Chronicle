@@ -17,6 +17,8 @@ namespace Cratis.Chronicle.Storage.EventSequences;
 /// Provider-independent behaviors of revising an event: the original content and every revision are kept, the
 /// latest revision is what a read delivers, and a redaction clears the history. Each fact opens its own storage.
 /// </summary>
+// Each fact appends at the same sequence numbers into storage the provider caches per instance, so it needs a fresh instance.
+[PerFactSpecificationLifecycle]
 public abstract class EventRevisionContract : Specification
 {
     /// <summary>The event type, generation 1.</summary>

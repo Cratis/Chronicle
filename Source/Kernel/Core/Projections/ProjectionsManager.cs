@@ -29,6 +29,7 @@ namespace Cratis.Chronicle.Projections;
 /// <param name="languageService"><see cref="Generator"/> for generating projection declaration language strings.</param>
 /// <param name="storage"><see cref="IStorage"/> for accessing storage.</param>
 /// <param name="localSiloDetails"><see cref="ILocalSiloDetails"/> for getting the local silo details.</param>
+/// <param name="clusterMembership"><see cref="IClusterMembershipService"/> for noticing silos that leave the cluster.</param>
 /// <param name="logger">The logger.</param>
 [ImplicitChannelSubscription]
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.ProjectionsManager)]
@@ -39,6 +40,7 @@ public partial class ProjectionsManager(
     ILanguageService languageService,
     IStorage storage,
     ILocalSiloDetails localSiloDetails,
+    IClusterMembershipService clusterMembership,
     ILogger<ProjectionsManager> logger) : Grain<ProjectionsManagerState>, IProjectionsManager, IOnBroadcastChannelSubscribed, IDisposable
 {
     /// <summary>
@@ -89,6 +91,7 @@ public partial class ProjectionsManager(
     public override Task OnActivateAsync(CancellationToken cancellationToken)
     {
         _eventStoreName = this.GetPrimaryKeyString();
+        WatchForSiloDepartures();
         ScheduleSetDefinitionAndSubscribe();
         return Task.CompletedTask;
     }
@@ -105,6 +108,7 @@ public partial class ProjectionsManager(
     {
         _subscribeTimer?.Dispose();
         _resubscribeTimer?.Dispose();
+        _siloDepartureTimer?.Dispose();
         _subscriptionThrottle.Dispose();
         GC.SuppressFinalize(this);
     }
@@ -173,6 +177,7 @@ public partial class ProjectionsManager(
 
     async Task RegisterDefinitions(IEnumerable<ProjectionDefinition> definitions, ProjectionOwner? fullSetOwner, string? registrant, string? version)
     {
+        CheckForDepartedSilos();
         var namespaces = (await GrainFactory.GetGrain<INamespaces>(_eventStoreName).GetAll()).ToArray();
         var definitionList = FilterUnsupportedKernelDefinitions(StampWithVersion(definitions, version));
         _removingProjections.ExceptWith(definitionList.Select(definition => definition.Identifier));

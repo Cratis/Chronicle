@@ -63,4 +63,7 @@ internal static partial class ProjectionsManagerLogging
 
     [LoggerMessage(LogLevel.Warning, "The full set of projections for owner '{Owner}' registered by client version {IncomingVersion} is older than what is stored - not retiring any projections")]
     internal static partial void NotRetiringForOlderRegistration(this ILogger<ProjectionsManager> logger, ProjectionOwner owner, string incomingVersion);
+
+    [LoggerMessage(LogLevel.Information, "Silos {Silos} left the cluster; reconciling every projection subscription in event store {EventStore}")]
+    internal static partial void SilosLeftReconcilingSubscriptions(this ILogger<ProjectionsManager> logger, IEnumerable<string> silos, EventStoreName eventStore);
 }
