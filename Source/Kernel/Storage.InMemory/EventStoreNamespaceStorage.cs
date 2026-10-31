@@ -166,6 +166,22 @@ public sealed class EventStoreNamespaceStorage(
         return (await Observers.GetAll()).Any();
     }
 
+    /// <summary>
+    /// Forgets an event sequence and its constraint state, so its memory can be reclaimed.
+    /// </summary>
+    /// <param name="eventSequenceId">The sequence to forget.</param>
+    /// <remarks>
+    /// For hosts that create short-lived sequences in a long-lived store, such as test harnesses folding scratch input.
+    /// Asking for the sequence again afterwards starts an empty one.
+    /// </remarks>
+    internal void RemoveEventSequence(EventSequenceId eventSequenceId)
+    {
+        _eventSequences.TryRemove(eventSequenceId, out _);
+        _uniqueConstraints.TryRemove(eventSequenceId, out _);
+        _uniqueEventTypesConstraints.TryRemove(eventSequenceId, out _);
+        _closedStreamsConstraints.TryRemove(eventSequenceId, out _);
+    }
+
     EventSequenceStorage GetConcreteEventSequence(EventSequenceId eventSequenceId)
     {
         if (_eventSequences.TryGetValue(eventSequenceId, out var existing))
