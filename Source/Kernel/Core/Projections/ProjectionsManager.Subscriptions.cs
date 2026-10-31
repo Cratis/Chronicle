@@ -94,7 +94,11 @@ public partial class ProjectionsManager
 
                 _subscribed.TryRemove((definition.Identifier, @namespace), out _);
                 var state = await observer.GetState();
-                if (state.AlertDisposition == AlertDisposition.Retired || (reconcile && state.RunningState == ObserverRunningState.Quarantined))
+
+                // A retired observer is left retired - unless a registration meant to revive it and ran out of
+                // subscribe budget before it got there.
+                var revive = _pendingRevival.ContainsKey((definition.Identifier, @namespace));
+                if ((state.AlertDisposition == AlertDisposition.Retired && !revive) || (reconcile && state.RunningState == ObserverRunningState.Quarantined))
                 {
                     _subscribed.TryAdd((definition.Identifier, @namespace), default);
                     return;
@@ -151,7 +155,9 @@ public partial class ProjectionsManager
                 }
 
                 await SetProjectionDefinition(definition);
-                await SubscribeIfNotSubscribed(definition, readModel, @namespace, schemas, reactivateRetired: false, reconcile: reconcile);
+                // Reviving takes a fresh subscription: a reconciling one cannot end a retirement.
+                var revive = _pendingRevival.ContainsKey((definition.Identifier, @namespace));
+                await SubscribeIfNotSubscribed(definition, readModel, @namespace, schemas, reactivateRetired: revive, reconcile: reconcile && !revive);
                 var observer = GrainFactory.GetGrain<IObserver>(new ObserverKey(definition.Identifier, _eventStoreName, @namespace, definition.EventSequenceId));
                 if (!await observer.IsSubscriptionEstablished())
                 {
@@ -263,6 +269,11 @@ public partial class ProjectionsManager
         foreach (var pair in _subscribed.Keys.Where(pair => pair.Projection == identifier))
         {
             _subscribed.TryRemove(pair, out _);
+        }
+
+        foreach (var pair in _pendingRevival.Keys.Where(pair => pair.Projection == identifier))
+        {
+            _pendingRevival.TryRemove(pair, out _);
         }
     }
 }
