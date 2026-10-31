@@ -28,13 +28,26 @@ public sealed class EventsWithConcurrencyScopes
     /// <param name="events">The events to append, in append order.</param>
     /// <param name="concurrencyScopes">The independently labeled concurrency scopes to pass to the append operation.</param>
     /// <exception cref="ConcurrencyScopeLabelMustBeSpecified">Thrown when an event target or scope label is unspecified, blank, or whitespace.</exception>
-    /// <exception cref="DuplicateConcurrencyScopeForEventSourceId">Thrown when more than one scope has the same key.</exception>
+    /// <exception cref="DuplicateConcurrencyScopeForEventSourceId">Thrown when the same predicate has conflicting expectations or mixes no guard with a guard, or mixes strategy resolution with an explicit guard.</exception>
     /// <exception cref="ConcurrencyScopeEventSourceIdDoesNotMatchLabel">Thrown when a scope narrows by an event source different from its label.</exception>
     /// <exception cref="IndependentConcurrencyScopeMustBeExplicit">Thrown when an independent non-target label has a scope that cannot be validated explicitly.</exception>
     public EventsWithConcurrencyScopes(
         IEnumerable<EventForEventSourceId> events,
         IEnumerable<KeyValuePair<EventSourceId, ConcurrencyScope>> concurrencyScopes)
+        : this(events, concurrencyScopes, false)
     {
+    }
+
+    /// <summary>Initializes a batch with identity validation scoped to read protection.</summary>
+    /// <param name="events">The events to append, retaining caller IDs.</param>
+    /// <param name="concurrencyScopes">The independently labeled concurrency scopes.</param>
+    /// <param name="useReadProtectionIdentity">Whether validation compares source labels by wire value.</param>
+    internal EventsWithConcurrencyScopes(
+        IEnumerable<EventForEventSourceId> events,
+        IEnumerable<KeyValuePair<EventSourceId, ConcurrencyScope>> concurrencyScopes,
+        bool useReadProtectionIdentity)
+    {
+        EventSourceId Label(EventSourceId source) => useReadProtectionIdentity ? new(source.Value) : source;
         var materializedEvents = events.ToArray();
         foreach (var @event in materializedEvents)
         {
@@ -42,32 +55,39 @@ public sealed class EventsWithConcurrencyScopes
         }
 
         Events = Array.AsReadOnly(materializedEvents);
-        var eventTargets = materializedEvents.Select(_ => _.EventSourceId).ToHashSet();
+        var eventTargets = materializedEvents.Select(_ => Label(_.EventSourceId)).ToHashSet();
 
-        var materializedConcurrencyScopes = new Dictionary<EventSourceId, ConcurrencyScope>();
+        var materializedConcurrencyScopes = new List<KeyValuePair<EventSourceId, ConcurrencyScope>>();
         foreach (var (eventSourceId, concurrencyScope) in concurrencyScopes)
         {
             ThrowIfLabelIsNotSpecified(eventSourceId);
 
             var materializedConcurrencyScope = Materialize(concurrencyScope);
-            if (materializedConcurrencyScope.EventSourceId is not null && materializedConcurrencyScope.EventSourceId != eventSourceId)
+            if (materializedConcurrencyScope.EventSourceId is not null && Label(materializedConcurrencyScope.EventSourceId) != Label(eventSourceId))
             {
                 throw new ConcurrencyScopeEventSourceIdDoesNotMatchLabel(eventSourceId, materializedConcurrencyScope.EventSourceId);
             }
 
-            if (!eventTargets.Contains(eventSourceId) &&
+            if (!eventTargets.Contains(Label(eventSourceId)) &&
                 (materializedConcurrencyScope == ConcurrencyScope.NotSet || materializedConcurrencyScope.IsIncomplete))
             {
                 throw new IndependentConcurrencyScopeMustBeExplicit(eventSourceId);
             }
 
-            if (!materializedConcurrencyScopes.TryAdd(eventSourceId, materializedConcurrencyScope))
+            var existing = materializedConcurrencyScopes.Where(_ => Label(_.Key) == Label(eventSourceId)).Select(_ => _.Value).ToArray();
+            if (existing.Any(_ => (_ == ConcurrencyScope.NotSet != (materializedConcurrencyScope == ConcurrencyScope.NotSet)) ||
+                _ == ConcurrencyScope.None != (materializedConcurrencyScope == ConcurrencyScope.None) ||
+                (DefinitionConcurrencyScopeResolver.SamePredicate(_, materializedConcurrencyScope) && _.SequenceNumber != materializedConcurrencyScope.SequenceNumber)))
             {
                 throw new DuplicateConcurrencyScopeForEventSourceId(eventSourceId);
             }
+            if (!existing.Any(_ => DefinitionConcurrencyScopeResolver.SamePredicate(_, materializedConcurrencyScope) && _.SequenceNumber == materializedConcurrencyScope.SequenceNumber))
+            {
+                materializedConcurrencyScopes.Add(new(eventSourceId, materializedConcurrencyScope));
+            }
         }
 
-        ConcurrencyScopes = new ReadOnlyDictionary<EventSourceId, ConcurrencyScope>(materializedConcurrencyScopes);
+        Entries = materializedConcurrencyScopes.AsReadOnly();
     }
 
     /// <summary>
@@ -76,9 +96,24 @@ public sealed class EventsWithConcurrencyScopes
     public IReadOnlyList<EventForEventSourceId> Events { get; }
 
     /// <summary>
-    /// Gets the copied, independently labeled concurrency scopes.
+    /// Gets the copied scopes when every label has at most one predicate.
     /// </summary>
-    public IReadOnlyDictionary<EventSourceId, ConcurrencyScope> ConcurrencyScopes { get; }
+    /// <remarks>Use <see cref="Entries"/> for conjunctions. This accessor refuses rather than discarding guards.</remarks>
+    /// <exception cref="DuplicateConcurrencyScopeForEventSourceId">A label has multiple scopes.</exception>
+    public IReadOnlyDictionary<EventSourceId, ConcurrencyScope> ConcurrencyScopes
+    {
+        get
+        {
+            var repeated = Entries.GroupBy(_ => _.Key).FirstOrDefault(_ => _.Count() > 1);
+            if (repeated is not null) throw new DuplicateConcurrencyScopeForEventSourceId(repeated.Key);
+            return new ReadOnlyDictionary<EventSourceId, ConcurrencyScope>(Entries.ToDictionary(_ => _.Key, _ => _.Value));
+        }
+    }
+
+    /// <summary>
+    /// Gets the ordered scope entries, including several predicates for the same label.
+    /// </summary>
+    public IReadOnlyList<KeyValuePair<EventSourceId, ConcurrencyScope>> Entries { get; }
 
     static ConcurrencyScope Materialize(ConcurrencyScope concurrencyScope) =>
         concurrencyScope.EventTypes is null

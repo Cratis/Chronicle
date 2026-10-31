@@ -1,0 +1,9 @@
+projection UserProfile => UserProfileReadModel
+  from ProfileCreated
+    UserId = userId
+
+  join User on UserId
+    with UserCreated
+      Name = name
+
+  remove via join on UserDeleted

@@ -1,0 +1,5 @@
+projection User => UserReadModel
+  from UserCreated key userId
+    Name = name
+
+  remove with UserDeleted key userId

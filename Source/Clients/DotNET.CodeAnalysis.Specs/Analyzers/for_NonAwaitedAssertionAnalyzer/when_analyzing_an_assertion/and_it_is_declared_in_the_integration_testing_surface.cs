@@ -25,7 +25,7 @@ public class and_it_is_declared_in_the_integration_testing_surface : given.a_non
 
     void Because() => _result = AnalyzerVerifier<CodeAnalysis.Analyzers.NonAwaitedAssertionAnalyzer>.VerifyAnalyzer(
         CreateSource(Usage),
-        new ExpectedDiagnostic(DiagnosticIds.NonAwaitedAssertion, Microsoft.CodeAnalysis.DiagnosticSeverity.Warning));
+        new ExpectedDiagnostic(DiagnosticIds.NonAwaitedAssertion, Microsoft.CodeAnalysis.DiagnosticSeverity.Error));
 
     [Fact] Task should_report_the_discarded_assertion() => _result;
 }

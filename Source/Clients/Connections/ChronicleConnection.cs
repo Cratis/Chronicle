@@ -39,7 +39,7 @@ namespace Cratis.Chronicle.Connections;
 /// <summary>
 /// Represents an implementation of <see cref="IChronicleConnection"/>.
 /// </summary>
-public sealed class ChronicleConnection : IChronicleConnection, IChronicleServicesAccessor
+public sealed class ChronicleConnection : IChronicleConnection, IChronicleServicesAccessor, IGetServicesAsynchronously, IKernelCapabilities
 {
     readonly ChronicleConnectionString _connectionString;
     readonly int _connectTimeout;
@@ -114,6 +114,11 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         ILoadBalancerStrategy? loadBalancerStrategy = null,
         TimeProvider? timeProvider = null)
     {
+        if (connectionString.DisableTls && connectionString.AuthenticationMode == AuthenticationMode.ClientCredentials)
+        {
+            throw new ClientCredentialsRequireTls();
+        }
+
         _timeProvider = timeProvider ?? TimeProvider.System;
         _skipTlsValidation = skipTlsValidation;
         _skipCompatibilityCheck = skipCompatibilityCheck;
@@ -131,7 +136,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         _certificatePassword = certificatePassword;
         _tokenProvider = tokenProvider ?? new NoOpTokenProvider();
         _serverAddressResolver = serverAddressResolver ?? new ChronicleServerAddressResolver();
-        _loadBalancerStrategy = loadBalancerStrategy ?? LoadBalancerStrategies.Create(connectionString.LoadBalancer, skipTlsValidation);
+        _loadBalancerStrategy = loadBalancerStrategy ?? LoadBalancerStrategies.Create(connectionString.LoadBalancer, skipTlsValidation, connectionString.DisableTls);
         _watchDog = new ConnectionWatchdog(
             tasks,
             OnSessionDropped,
@@ -153,6 +158,12 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     /// <inheritdoc/>
     public IConnectionLifecycle Lifecycle { get; }
 
+    /// <inheritdoc/>
+    public IReadOnlyCollection<string> Capabilities { get; private set; } = [];
+
+    /// <inheritdoc/>
+    public bool CapabilitiesAreKnown { get; private set; }
+
     /// <summary>
     /// Gets the <see cref="ChronicleServerAddress"/> the connection is currently using, or the
     /// first configured address when no connection has been established yet.
@@ -167,6 +178,18 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
             ConnectIfNotConnected();
             return _services;
         }
+    }
+
+    /// <inheritdoc/>
+    public async ValueTask<IServices> GetServices(CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        if (!Lifecycle.IsConnected)
+        {
+            await Connect().WaitAsync(cancellationToken);
+        }
+
+        return _services;
     }
 
     /// <inheritdoc/>
@@ -195,6 +218,9 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     /// queue without bound (#3948).
     /// </remarks>
     public Task Connect() => Connect(respectFailureBackoff: true);
+
+    /// <inheritdoc/>
+    public void RequestReconnect() => _watchDog.RequestReconnect();
 
     /// <summary>
     /// Reconnect on behalf of the watchdog, which must always get to attempt.
@@ -339,7 +365,10 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
             callInvoker.CreateGrpcService<IApplications>(clientFactory),
             callInvoker.CreateGrpcService<IServer>(clientFactory),
             callInvoker.CreateGrpcService<IConnectionService>(clientFactory),
-            callInvoker.CreateGrpcService<IEventSources>(clientFactory));
+            callInvoker.CreateGrpcService<IEventSources>(clientFactory))
+        {
+            Occurrences = callInvoker.CreateGrpcService<Contracts.Occurrences.IOccurrences>(clientFactory)
+        };
 
         if (_skipKeepAlive)
         {
@@ -415,6 +444,8 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     /// </remarks>
     async Task CheckCompatibility(IConnectionService connectionService)
     {
+        Capabilities = [];
+        CapabilitiesAreKnown = false;
         CompatibilityResponse response;
 
         try
@@ -431,6 +462,8 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         {
             // A server from before the check moved server-side does not have this method. Fall back to the older
             // exchange it does have, so upgrading the client does not silently drop the check against those servers.
+            // Such a server predates the capabilities handshake, so it is known to advertise no capabilities.
+            CapabilitiesAreKnown = true;
             await CheckCompatibilityAgainstOlderServer(connectionService);
             return;
         }
@@ -454,6 +487,8 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
             throw new IncompatibleServerException(message);
         }
 
+        Capabilities = response.Capabilities.ToArray();
+        CapabilitiesAreKnown = true;
         _logger.CompatibilityCheckPassed(ChronicleClientIdentity.Version, ChronicleClientIdentity.ProtocolVersion, response.ServerVersion, response.ServerProtocolVersion);
     }
 
@@ -531,7 +566,9 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
             httpHandler.SslOptions.RemoteCertificateValidationCallback =
                 CertificateLoader.CreateServerCertificateValidationCallback(_skipTlsValidation, certificate?.GetCertHashString());
 
-            var address = $"https://{serverAddress.Host}:{serverAddress.Port}";
+            // With TLS disabled the server speaks HTTP/2 without TLS (h2c); an http:// address makes the gRPC channel
+            // use HTTP/2 with prior knowledge.
+            var address = $"{(_connectionString.DisableTls ? Uri.UriSchemeHttp : Uri.UriSchemeHttps)}://{serverAddress.Host}:{serverAddress.Port}";
 
             var channel = GrpcChannel.ForAddress(
                 address,

@@ -7,11 +7,13 @@ using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.EventTypes;
+using Cratis.Chronicle.Generations.Admission;
 using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Observation.EventStoreSubscriptions;
 using Cratis.Chronicle.Observation.Reactors.Kernel;
 using Cratis.Chronicle.Observation.Webhooks;
+using Cratis.Chronicle.Occurrences;
 using Cratis.Chronicle.Patching;
 using Cratis.Chronicle.Patterns;
 using Cratis.Chronicle.Projections;
@@ -38,6 +40,7 @@ namespace Orleans.Hosting;
 /// <param name="authenticationService"><see cref="IAuthenticationService"/> for managing authentication.</param>
 /// <param name="logger">The logger.</param>
 /// <param name="timeProvider">Optional <see cref="TimeProvider"/> the retry backoff waits on; defaults to <see cref="TimeProvider.System"/>.</param>
+/// <param name="generationFloorAdmission">Optional read-only generation admission; defaults to the real storage-backed admission.</param>
 /// <remarks>
 /// Every step in <see cref="Execute"/> is a grain call that can land on a sibling silo, and every
 /// silo runs this task as it starts. A sibling that has not stabilized yet answers none of them, and
@@ -58,7 +61,8 @@ internal sealed class ChronicleServerStartupTask(
     IGrainFactory grainFactory,
     IAuthenticationService authenticationService,
     ILogger<ChronicleServerStartupTask> logger,
-    TimeProvider? timeProvider = null) : ILifecycleParticipant<ISiloLifecycle>
+    TimeProvider? timeProvider = null,
+    IGenerationFloorAdmission? generationFloorAdmission = null) : ILifecycleParticipant<ISiloLifecycle>
 {
     /// <summary>
     /// How many times a step is attempted before its failure is believed.
@@ -72,6 +76,8 @@ internal sealed class ChronicleServerStartupTask(
     const int MaxAttempts = 5;
 
     static readonly TimeSpan _initialRetryDelay = TimeSpan.FromSeconds(2);
+
+    static readonly TimeSpan _patchManagerRelocationDelay = TimeSpan.FromMilliseconds(500);
 
     readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
 
@@ -97,19 +103,64 @@ internal sealed class ChronicleServerStartupTask(
 
     async Task Execute(CancellationToken cancellationToken)
     {
-        // Apply patches first before anything else starts
+        await (generationFloorAdmission ?? new GenerationFloorAdmission(storage)).Admit(cancellationToken);
+
+        Task Step(string step, Func<Task> action) => RunStep(step, action, cancellationToken);
+
+        // Populate the local CLR map before any grain can deserialize system events.
+        await Step("DiscoverAndRegisterSystemEventTypes", () => eventTypes.DiscoverAndRegister(EventStoreName.System));
+
+        // Apply patches before other grains start
         var patchManager = grainFactory.GetGrain<IPatchManager>(0);
-        await Step(nameof(IPatchManager.ApplyPatches), patchManager.ApplyPatches);
+        await Step(nameof(IPatchManager.ApplyPatches), async () =>
+        {
+            for (var attempt = 0; attempt < MaxAttempts; attempt++)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (await patchManager.ApplyPatchesFor(Cratis.Chronicle.Sys.KernelVersion.Current) == PatchOutcome.Completed)
+                {
+                    return;
+                }
+
+                // The older activation deactivates once idle; give it time to go before asking again, so the next
+                // call activates the patch manager on a kernel at least as new as this one.
+                if (attempt < MaxAttempts - 1)
+                {
+                    await Task.Delay(_patchManagerRelocationDelay, _timeProvider, cancellationToken);
+                }
+            }
+            throw new InvalidOperationException("Patch manager could not relocate to a kernel at least as new as the caller.");
+        });
 
         await Step("EnsureDefaultSystemNamespace", grainFactory.GetGrain<INamespaces>(EventStoreName.System).EnsureDefault);
 
         // Register reactors for the system event store first, so ReactorsReactor can process EventStoreAdded/NamespaceAdded events
-        await Step("DiscoverAndRegisterSystemReactors", () => reactors.DiscoverAndRegister(EventStoreName.System, EventStoreNamespaceName.Default));
+        await Step("DiscoverAndRegisterSystemReactors", () => reactors.DiscoverAndRegister(EventStoreName.System, EventStoreNamespaceName.Default, cancellationToken));
 
-        var allEventStores = await storage.GetEventStores();
+        var allEventStores = await storage.GetEventStores().WaitAsync(cancellationToken);
         foreach (var eventStore in allEventStores)
         {
-            await Step("DiscoverAndRegisterEventTypes", () => eventTypes.DiscoverAndRegister(eventStore));
+            // A registry entry without a usable name cannot be addressed as a grain; starting it would stop the silo
+            // from starting at all, so it is reported and left for an operator instead.
+            if (eventStore is null || string.IsNullOrWhiteSpace(eventStore.Value))
+            {
+                logger.SkippingEventStoreWithoutAName();
+                continue;
+            }
+
+            if (eventStore != EventStoreName.System)
+            {
+                await Step("DiscoverAndRegisterEventTypes", () => eventTypes.DiscoverAndRegister(eventStore));
+            }
+            try
+            {
+                await Step("ReconcileLifecycleOccurrences", grainFactory.GetGrain<ILifecycleOccurrences>(eventStore.Value).Ensure);
+            }
+            catch (Exception exception) when (!cancellationToken.IsCancellationRequested)
+            {
+                logger.FailedReconcilingLifecycleOccurrences(exception, eventStore.Value);
+            }
+            await RehydrateOccurrences(eventStore, null, cancellationToken);
             var namespaces = grainFactory.GetGrain<INamespaces>(eventStore);
             await Step("EnsureDefaultNamespace", namespaces.EnsureDefault);
 
@@ -132,14 +183,14 @@ internal sealed class ChronicleServerStartupTask(
             var capturesManager = grainFactory.GetGrain<ICapturesManager>(eventStore);
             await Step("EnsureCaptures", capturesManager.Ensure);
 
-            var projectionDefinitions = await projectionsManager.GetProjectionDefinitions();
+            var projectionDefinitions = await projectionsManager.GetProjectionDefinitions().WaitAsync(cancellationToken);
             await Step("RegisterPersistedProjectionDefinitions", () => RegisterPersistedProjectionDefinitions(eventStore, projectionDefinitions));
 
             // Bound the namespace fan-out so starting a store with many tenants does not flood the cluster.
-            await Parallel.ForEachAsync(await namespaces.GetAll(), new ParallelOptions { MaxDegreeOfParallelism = 8, CancellationToken = cancellationToken }, async (namespaceName, _) =>
+            await Parallel.ForEachAsync(await namespaces.GetAll().WaitAsync(cancellationToken), new ParallelOptions { MaxDegreeOfParallelism = 8, CancellationToken = cancellationToken }, async (namespaceName, token) =>
             {
                 var namespaceStorage = storage.GetEventStore(eventStore).GetNamespace(namespaceName);
-                var hasData = await namespaceStorage.HasData();
+                var hasData = await namespaceStorage.HasData().WaitAsync(token);
 
                 // Capture must be ready for the first append even in a namespace created before this restart.
                 // There will be no new NamespaceAdded broadcast for an already registered namespace.
@@ -147,12 +198,14 @@ internal sealed class ChronicleServerStartupTask(
                 {
                     await Step("SubscribePatternCapture", () => patternCapture.Subscribe(eventStore, namespaceName));
                 }
-                catch (Exception exception)
+                catch (Exception exception) when (!cancellationToken.IsCancellationRequested)
                 {
                     // Analytics must not fail the Active lifecycle stage. The event log reconciles a missed
                     // subscription on its timer, including namespaces whose first append happens after startup.
                     logger.FailedSubscribingPatternCapture(exception, eventStore, namespaceName);
                 }
+
+                await RehydrateOccurrences(eventStore, namespaceName, token);
 
                 if (!hasData)
                 {
@@ -160,7 +213,7 @@ internal sealed class ChronicleServerStartupTask(
                     return;
                 }
 
-                await Step("DiscoverAndRegisterReactors", () => reactors.DiscoverAndRegister(eventStore, namespaceName));
+                await Step("DiscoverAndRegisterReactors", () => reactors.DiscoverAndRegister(eventStore, namespaceName, cancellationToken));
 
                 var jobsManager = grainFactory.GetJobsManager(eventStore, namespaceName);
                 await Step("RehydrateJobs", jobsManager.Rehydrate);
@@ -170,10 +223,10 @@ internal sealed class ChronicleServerStartupTask(
             });
         }
 
-        await authenticationService.EnsureDefaultAdminUser();
-        await authenticationService.EnsureBootstrapClients();
+        await Step(nameof(IAuthenticationService.EnsureDefaultAdminUser), authenticationService.EnsureDefaultAdminUser);
+        await Step(nameof(IAuthenticationService.EnsureBootstrapClients), authenticationService.EnsureBootstrapClients);
 #if DEVELOPMENT
-        await authenticationService.EnsureDefaultClientCredentials();
+        await Step(nameof(IAuthenticationService.EnsureDefaultClientCredentials), authenticationService.EnsureDefaultClientCredentials);
 #endif
     }
 
@@ -182,31 +235,38 @@ internal sealed class ChronicleServerStartupTask(
     /// </summary>
     /// <param name="step">The name of the step, for the operator reading the log.</param>
     /// <param name="action">The work to perform.</param>
+    /// <param name="cancellationToken">Token for cancelling startup and retry backoff.</param>
     /// <returns>Awaitable task.</returns>
     /// <remarks>
     /// Only the failures <see cref="SiblingSiloInstability.IsTransient"/> recognizes are retried.
     /// Anything else - and anything still failing once the budget is spent - propagates, so a
     /// genuine defect still fails the host on startup rather than being started around.
     /// </remarks>
-    async Task Step(string step, Func<Task> action)
+    async Task RunStep(string step, Func<Task> action, CancellationToken cancellationToken)
     {
         var delay = _initialRetryDelay;
         for (var attempt = 1; ; attempt++)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             try
             {
-                await action();
+                await action().WaitAsync(cancellationToken);
                 return;
             }
             catch (Exception exception) when (SiblingSiloInstability.IsTransient(exception) && attempt < MaxAttempts)
             {
                 logger.RetryingStartupStep(exception, step, attempt, MaxAttempts, delay);
-                await Task.Delay(delay, _timeProvider);
+                await Task.Delay(delay, _timeProvider, cancellationToken);
                 delay += delay;
             }
             catch (Exception exception) when (SiblingSiloInstability.IsTransient(exception))
             {
                 logger.StartupStepExhaustedRetries(exception, step, MaxAttempts);
+                throw;
+            }
+            catch (Exception exception) when (IncompatibleSiloRelease.IsLikely(exception))
+            {
+                logger.StartupStepReachedIncompatibleSilo(exception, step);
                 throw;
             }
         }
@@ -224,7 +284,7 @@ internal sealed class ChronicleServerStartupTask(
     /// a production store was observed fanning out to 782 of them inside one call. Since the whole
     /// fan-out has to answer within Orleans' one response timeout, the budget effectively shrinks as
     /// a store grows, and the call is therefore the likeliest in the task to exceed it. It must go
-    /// through <see cref="Step"/> for the same reason every other call here does: an unhandled
+    /// through <see cref="RunStep"/> for the same reason every other call here does: an unhandled
     /// timeout terminates the host, and a host that cannot start cannot start on the next attempt
     /// either, so the store stays down until someone intervenes.
     /// </remarks>
@@ -237,6 +297,25 @@ internal sealed class ChronicleServerStartupTask(
             {
                 logger.FailedRegisteringPersistedProjectionDefinition(failure, identifier);
             }
+        }
+    }
+
+    async Task RehydrateOccurrences(EventStoreName eventStore, EventStoreNamespaceName? namespaceName, CancellationToken cancellationToken)
+    {
+        // Occurrences are independent of event-log data. Discover only unfinished triggers, cap
+        // wake-up fan-out, and bound each scope so a slow store cannot prevent the host starting.
+        using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        deadline.CancelAfter(TimeSpan.FromSeconds(30));
+        try
+        {
+            var store = storage.GetEventStore(eventStore);
+            var occurrences = namespaceName is null ? store.Occurrences : store.GetNamespace(namespaceName).Occurrences;
+            await OccurrenceRecovery.Rehydrate(grainFactory, occurrences, eventStore, namespaceName?.Value, logger, deadline.Token);
+        }
+        catch (Exception exception) when (!cancellationToken.IsCancellationRequested)
+        {
+            // Previously recorded work has reminders; a failing namespace must not block others.
+            logger.FailedRehydratingOccurrences(exception, eventStore, namespaceName);
         }
     }
 

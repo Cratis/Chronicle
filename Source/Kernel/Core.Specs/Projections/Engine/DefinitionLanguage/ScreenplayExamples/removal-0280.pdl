@@ -1,0 +1,20 @@
+projection Department => DepartmentReadModel
+  from DepartmentCreated
+    Name = name
+    CompanyId = companyId
+
+  join Company on CompanyId
+    with CompanyCreated
+      CompanyName = name
+
+  children employees identified by employeeId
+    from EmployeeAssigned key employeeId
+      parent deptId
+      Name = name
+
+    remove with EmployeeUnassigned key employeeId
+      parent deptId
+
+  remove with DepartmentDisbanded
+
+  remove via join on CompanyDissolved

@@ -4,6 +4,7 @@
 using System.Dynamic;
 using System.Reactive.Linq;
 using System.Text.Json.Nodes;
+using Cratis.Chronicle.Clients;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Projections;
@@ -20,6 +21,7 @@ using Cratis.Chronicle.Services.Projections.Definitions;
 using Cratis.Chronicle.Services.ReadModels;
 using Cratis.Chronicle.Storage;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using ProtoBuf.Grpc;
 using ContractProjectionDefinitionParsingErrors = Cratis.Chronicle.Contracts.Projections.ProjectionDeclarationParsingErrors;
 using ContractProjectionPreview = Cratis.Chronicle.Contracts.Projections.ProjectionPreview;
@@ -35,12 +37,16 @@ namespace Cratis.Chronicle.Services.Projections;
 /// <param name="languageService"><see cref="ILanguageService"/> for handling projection declaration language.</param>
 /// <param name="serviceProvider"><see cref="IServiceProvider"/> for accessing services.</param>
 /// <param name="readModelsCompliance"><see cref="IReadModelsCompliance"/> for decrypting PII fields in previewed read model instances.</param>
+/// <param name="localSiloDetails">The local silo details for locating client connections.</param>
+/// <param name="logger">The logger.</param>
 internal sealed class Projections(
     IGrainFactory grainFactory,
     IExpandoObjectConverter expandoObjectConverter,
     ILanguageService languageService,
     IServiceProvider serviceProvider,
-    IReadModelsCompliance readModelsCompliance) : IProjections
+    IReadModelsCompliance readModelsCompliance,
+    ILocalSiloDetails localSiloDetails,
+    ILogger<Projections> logger) : IProjections
 {
     /// <summary>
     /// The property a materialized read model carries its key in, which is what the read side looks it up by.
@@ -59,9 +65,26 @@ internal sealed class Projections(
         var projectionsManager = grainFactory.GetGrain<IProjectionsManager>(request.EventStore);
         var owner = (Concepts.Projections.ProjectionOwner)(int)request.Owner;
         var projections = request.Projections.Select(_ => _.ToChronicle(owner)).ToArray();
+        if (!string.IsNullOrEmpty(request.ConnectionId))
+        {
+            try
+            {
+                // Connection lookup must not occupy the non-reentrant manager's registration turn.
+                await ProjectionDeclarations.Record(grainFactory, localSiloDetails.SiloAddress, new(request.ConnectionId), request.EventStore, projections.Select(projection => projection.Identifier), request.Version);
+            }
+            catch (Exception exception)
+            {
+                logger.FailedRecordingDeclarations(exception, request.EventStore, request.ConnectionId);
+            }
+        }
+
         try
         {
-            await projectionsManager.Register(projections, request.FullSet ? owner : null);
+            // A full set can only be attributed to an application when the client identified itself. Without that,
+            // several applications sharing the event store would each retire the others' projections.
+            var registrant = string.IsNullOrEmpty(request.Registrant) ? null : request.Registrant;
+            var version = string.IsNullOrWhiteSpace(request.Version) ? null : request.Version;
+            await projectionsManager.Register(projections, request.FullSet && registrant is not null ? owner : null, registrant, version);
         }
         catch (Exception exception)
         {
@@ -231,7 +254,8 @@ internal sealed class Projections(
             request.Declaration ?? string.Empty,
             Concepts.Projections.ProjectionOwner.Server,
             allReadModels,
-            eventTypeSchemas);
+            eventTypeSchemas,
+            (Concepts.Observation.EventGenerationDelivery)request.GenerationDelivery);
 
         return await compileResult.Match(
             async definition =>

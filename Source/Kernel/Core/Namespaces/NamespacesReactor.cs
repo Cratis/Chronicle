@@ -52,7 +52,7 @@ public class NamespacesReactor(IGrainFactory grainFactory, IPatternCapture patte
 
         var entries = seeds.ByEventSource
             .SelectMany(kvp => kvp.Value)
-            .Select(e => new SeedingEntry(e.EventSourceId, e.EventTypeId, e.Content, e.Tags?.Select(t => new Tag(t))))
+            .Select(e => new SeedingEntry(e.EventSourceId, e.EventTypeId, e.Content, e.Tags?.Select(t => new Tag(t)), e.EventSourceType, e.EventStreamType, e.EventStreamId))
             .ToArray();
 
         if (entries.Length > 0)

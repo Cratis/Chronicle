@@ -14,7 +14,8 @@ Add a Chronicle projection that populates a read model from events. Invoke the *
 
 ## Key rules
 
-- Default to **model-bound attributes** on the read model (`[FromEvent<T>]` class-level, `[SetFrom<T>]`, `[Key]`, `[ChildrenFrom<T>]`, `[RemovedWith<T>]`); drop to fluent `IProjectionFor<T>` only for joins/transforms; reducer for "current state + event → next state".
+- Start with **model-bound attributes** on the read model (`[FromEvent<T>]`, `[SetFrom<T>]`, `[Key]`, `[ChildrenFrom<T>]`, `[RemovedWith<T>]`); use fluent `IProjectionFor<T>` when mappings need structure or an attribute-free model. Choose reducer code when prior-state branches, calculations or guards read better as code: default new .NET reducers to static `Reduce` on the model, not a mandatory separate class. Follow **cratis-chronicle-read-model** for the ladder and **cratis-chronicle-reducer** for placement/signatures.
+- Preserve admission/ordering guards when converting a reducer, and remove competing self-model builders.
 - **AutoMap is on by default — never call `.AutoMap()`** (matching names map automatically).
 - Projections consume Chronicle **events**, never other read models.
 

@@ -33,7 +33,10 @@ public class ExternalServiceAuthorizationJsonConverter : JsonConverter<ExternalS
                     "oauth" => new OAuthAuthorization(
                         root.GetProperty("authority").GetString()!,
                         root.GetProperty("clientId").GetString()!,
-                        root.GetProperty("clientSecret").GetString()!),
+                        root.GetProperty("clientSecret").GetString()!)
+                    {
+                        Scope = root.TryGetProperty("scope", out var scope) ? scope.GetString() ?? string.Empty : string.Empty
+                    },
                     _ => ExternalServiceAuthorization.None
                 };
             }
@@ -67,6 +70,7 @@ public class ExternalServiceAuthorizationJsonConverter : JsonConverter<ExternalS
                 writer.WriteString("authority", oauth.Authority);
                 writer.WriteString("clientId", oauth.ClientId);
                 writer.WriteString("clientSecret", oauth.ClientSecret);
+                writer.WriteString("scope", oauth.Scope);
                 writer.WriteEndObject();
             },
             none =>

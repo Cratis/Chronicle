@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Dynamic;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
@@ -37,6 +38,8 @@ public class an_immediate_projection : Specification
     protected IExpandoObjectConverter _expandoObjectConverter;
     protected ILogger<ImmediateProjection> _logger;
 
+    protected virtual ImmediateProjectionStreamScope? StreamScope => null;
+
     async Task Establish()
     {
         _silo = new TestKitSilo();
@@ -45,6 +48,7 @@ public class an_immediate_projection : Specification
         _eventSequence = Substitute.For<IEventSequence>();
         _eventSequenceStorage = Substitute.For<IEventSequenceStorage>();
         _expandoObjectConverter = Substitute.For<IExpandoObjectConverter>();
+        _expandoObjectConverter.ToExpandoObject(Arg.Any<JsonObject>(), Arg.Any<JsonSchema>()).Returns(_ => new ExpandoObject());
         _logger = Substitute.For<ILogger<ImmediateProjection>>();
         _logger.IsEnabled(Arg.Any<LogLevel>()).Returns(true);
 
@@ -74,7 +78,8 @@ public class an_immediate_projection : Specification
             EventStore,
             EventStoreNamespaceName.Default,
             EventSequenceId.Log,
-            ReadModelKey);
+            ReadModelKey,
+            StreamScope: StreamScope);
         _grain = await _silo.CreateGrainAsync<TestableImmediateProjection>(key.ToString());
     }
 

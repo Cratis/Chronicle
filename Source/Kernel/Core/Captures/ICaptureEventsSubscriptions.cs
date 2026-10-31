@@ -40,6 +40,15 @@ public interface ICaptureEventsSubscriptions
     Task Recover(EventStoreName eventStore, CaptureDefinition definition);
 
     /// <summary>
+    /// Recover an events capture in one namespace without releasing quarantine or reviving retired observers.
+    /// </summary>
+    /// <param name="eventStore">The event store the capture belongs to.</param>
+    /// <param name="namespace">The namespace to reconcile.</param>
+    /// <param name="definition">The events capture definition.</param>
+    /// <returns>Awaitable task.</returns>
+    Task Recover(EventStoreName eventStore, EventStoreNamespaceName @namespace, CaptureDefinition definition);
+
+    /// <summary>
     /// Unsubscribe an events capture from its inbox in every namespace of the event store.
     /// </summary>
     /// <param name="eventStore">The <see cref="EventStoreName"/> the capture belongs to.</param>

@@ -1,3 +1,6 @@
+---
+description: Configure TLS for Chronicle Server, which serves gRPC, the Workbench, REST API, OAuth and health endpoints over HTTPS on one port.
+---
 # TLS Configuration (Server)
 
 By default, the Chronicle port serves gRPC (HTTP/2) and the Workbench, REST API, OAuth and health endpoints (HTTP/1.1) over HTTPS. TLS uses ALPN to select the protocol per connection. You can explicitly disable TLS **only** when a TLS-terminating reverse proxy fronts the private backend port and forwards **all** traffic using cleartext HTTP/2 (h2c). The cleartext port does not negotiate HTTP/1.1; do not expose it directly to browsers or the internet. Clients and browsers connect to the proxy over HTTPS.

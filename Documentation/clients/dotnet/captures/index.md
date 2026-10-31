@@ -1,6 +1,6 @@
 ---
 title: Authoring captures in .NET
-description: The two .NET-only ways to author Chronicle captures in code — model-bound attributes and the declarative fluent builder — alongside the language-neutral Capture Declaration Language.
+description: The two .NET-only ways to author Chronicle captures in code, model-bound attributes and the fluent builder, plus the language-neutral CDL.
 ---
 
 [Captures](/chronicle/captures/) turn external data changes into Chronicle events. Chronicle supports three ways to author a capture, and only one of them is language-neutral:

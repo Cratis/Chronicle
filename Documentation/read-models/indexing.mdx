@@ -1,5 +1,6 @@
 ---
 uid: Chronicle.ReadModels.Indexing
+description: Declare indexes on a Chronicle read model so the store can read it efficiently, including nested and child properties and when they take effect.
 ---
 
 # Indexing Read Models
@@ -11,8 +12,9 @@ container is recreated — and Chronicle recreates it on its own, during a repla
 The `[Index]` attribute moves the decision to where it belongs: onto the read model. You declare
 which properties are indexed, and Chronicle creates them every time the container is built.
 
-Today that applies to the MongoDB sink. The SQL sink creates its tables but not the indexes a read
-model declares, so on SQL storage you still create them yourself.
+The MongoDB sink supports the full property path. The SQL sink creates non-unique indexes on
+top-level scalar columns and nested JSON scalar paths for SQLite, PostgreSQL, and SQL Server,
+including replay shadow tables.
 
 ## Declaring an index
 
@@ -37,6 +39,93 @@ collection's element type is indexed at its full path:
 This declares an index on `lines.productId`. The path uses the naming policy the client is
 configured with, the same one that decides how the properties are stored.
 
+## Composite and descending indexes
+
+Use `[CompositeIndex]` on a read model to declare an ordered set of property names or dotted paths:
+
+<ChronicleClientTabs snippet="read-models/indexing/composite" />
+
+The order of the properties is the order of the index keys. `IsDescending` supplies one flag per
+property; omitting it, or using an empty array, makes every key ascending. A read model can declare
+multiple composite indexes. Each path segment is resolved against the CLR model and converted through
+the serialization naming policy, including nested and collection-element paths.
+
+Use `[Index(IsDescending = true)]` for a descending single-property index, on either a property or a
+record parameter:
+
+<ChronicleClientTabs snippet="read-models/indexing/descending" />
+
+Registration throws `InvalidIndexDeclaration` before sending definitions to the kernel for an empty
+composite, an unknown property, repeated properties within a composite, a direction
+array whose length does not match the properties, or a composite containing more than one
+distinct array scope. Multiple keys from the same array, such as `lines.sku` and `lines.qty`, are
+supported by MongoDB; parallel arrays are not. Repeated identical declarations coalesce into one index. SQL sinks
+warn and skip a composite containing an array path. Unique indexes are not part of these attributes;
+use event constraints to enforce uniqueness.
+
+The definition retains its leading property as the legacy path. Older kernels can therefore create
+an ascending index on that property, but need an upgrade to honor the complete order and directions.
+Workbench schema edits carry the full structured definitions; older flat-path edits preserve existing
+composite and descending indexes instead of flattening them. A structured empty set removes all indexes,
+while an empty legacy path list continues to preserve composite and descending declarations.
+
+## SQL storage
+
+SQL stores nested objects and arrays in JSON columns. A nested scalar declaration uses an expression
+index on SQLite (`json_extract`) or PostgreSQL (`#>>`). PostgreSQL casts integer and number leaves to
+`numeric`, preserving unsigned and large JSON integers without an `Int64` range limit, and boolean
+leaves to `boolean`. SQL Server indexes a non-persisted computed column using
+`CAST(JSON_VALUE(...) AS nvarchar(450))` for every scalar kind. SQL Server therefore orders nested
+values lexically as text, not numerically or as booleans. These columns do not store a second copy of
+your read-model data; adding them changes metadata only. The index itself still requires a build.
+
+| Declaration | SQLite | PostgreSQL | SQL Server |
+| --- | --- | --- | --- |
+| Top-level scalar | Column index | Column index | Column index |
+| Nested scalar | Expression index | Typed expression index | Computed-column index |
+| Path through an array | Warning; not created | GIN with `jsonb_path_ops` on the containing JSON column | Warning; requires SQL Server 2025 JSON indexes |
+| Object without a scalar leaf | Warning; not created | Warning; not created | Warning; not created |
+
+GIN indexes support JSON containment and JSONPath predicates, not arbitrary scalar comparisons.
+They have no ascending or descending key order. PostgreSQL ignores an array declaration's direction
+with a warning and creates the same GIN index for either direction; SQLite and SQL Server still warn
+and skip array declarations. Directions apply to scalar indexes.
+Queries must use the indexed expression and compatible casts for the database to use an expression
+index. Chronicle does not rewrite your application queries. For SQL Server, a matching nested numeric
+predicate is `CAST(JSON_VALUE([details], '$."total"') AS nvarchar(450)) = N'42.5'`.
+Compare text to text: a numeric literal forces implicit conversion and is not an equivalent indexed
+predicate. Ordering is lexical (`'10'` precedes `'2'`), booleans are text, and comparisons use the
+450-character bounded value rather than the full JSON value. Expression matching, compatible types
+and collation, and the optimizer's cost estimate determine whether the index is used; declaring an
+index does not guarantee a seek.
+
+SQL Server requires compatible session options for writes to read models with nested indexes.
+Chronicle uses `ARITHABORT` and `ANSI_WARNINGS` ON. A connection that sets either `ARITHABORT` or
+`ANSI_WARNINGS` OFF (a non-default configuration) fails inserts and updates against those indexed
+computed columns. Keep both options enabled on connections that write these read models.
+
+SQL Server bounds newly projected indexed strings to a supported key size; existing unbounded
+columns are not resized during activation. A declaration on an unbounded column produces a warning
+and requires a replay to apply the bound. The combined nonclustered key must fit in 1700 bytes.
+All nested scalar keys use `nvarchar(450)`, truncating index values beyond 450 characters without
+changing the stored JSON, including exponent-form numbers. Each nested key consumes a 900-byte
+budget. SQL Server skips a composite whose combined key exceeds 1700 bytes and logs a warning.
+An unsupported computed expression fails visibly in the kernel log; Chronicle does not fall back to
+persisted computed columns or alter the stored values.
+
+A composite SQL index is created only when every path is supported; arrays cannot be mixed into a composite.
+MongoDB supports compound keys sharing one array but rejects keys spanning distinct array scopes. Legacy flat-path
+updates preserve existing ordered definitions rather than flattening or deleting them.
+
+Index names are deterministic and stay within provider identifier limits. Single ascending scalar
+index names remain unchanged. Changes to property order, direction, or expression produce a different
+name. Replay promotion preserves the complete index definition, including expressions and directions;
+SQLite rebuilds indexes inside the swap transaction because it cannot rename them.
+
+Routine activation adds missing indexes without pruning existing ones. An explicit definition
+reconciliation removes undeclared Chronicle-owned indexes and unused Chronicle-owned computed
+columns, but preserves user indexes and computed columns still used by an index.
+
 ## Why it lives on the read model
 
 Chronicle replays a read model by building it into a **shadow container** — a separate collection or
@@ -51,8 +140,8 @@ filling. An index created manually against the live collection does not survive 
 one does.
 
 It is also why this is declarative rather than store-specific. `[Index]` says *what* should be
-indexed; each sink decides *how*. On MongoDB that means an ascending index built in the background
-and named `chronicle_idx_<path>`; another store expresses the same declaration its own way.
+indexed; each sink decides *how*. On MongoDB that means an ordered single-property or compound index. A single ascending index is
+named `chronicle_idx_<path>`; another store expresses the same declaration its own way.
 
 ## When it takes effect
 

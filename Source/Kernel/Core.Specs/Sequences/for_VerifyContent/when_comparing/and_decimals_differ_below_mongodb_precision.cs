@@ -13,5 +13,5 @@ public class and_decimals_differ_below_mongodb_precision : given.a_mongodb_round
 
     async Task Because() => _result = await Verify();
 
-    [Fact] void should_not_claim_equality_for_the_rounded_attempt() => _result.Result.ShouldEqual(ContentVerificationResult.Unavailable);
+    [Fact] void should_distinguish_the_exact_decimal_values() => _result.Result.ShouldEqual(ContentVerificationResult.Different);
 }

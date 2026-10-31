@@ -6,6 +6,7 @@ extern alias KernelConcepts;
 
 using System.Reflection;
 using System.Runtime.ExceptionServices;
+using Cratis.Chronicle.Diagnostics;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
@@ -15,7 +16,6 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Orleans.Storage;
-using Xunit;
 using EventSequencesStorageProvider = KernelCore::Cratis.Chronicle.EventSequences.EventSequencesStorageProvider;
 
 namespace Cratis.Chronicle.XUnit.Integration;
@@ -24,17 +24,19 @@ namespace Cratis.Chronicle.XUnit.Integration;
 /// Represents the base fixture.
 /// </summary>
 /// <typeparam name="TChronicleFixture">The type of the Chronicle fixture.</typeparam>
-public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, IAsyncLifetime, IChronicleSetupFixture
+public abstract partial class ChronicleClientFixture<TChronicleFixture> : IDisposable, IChronicleSetupFixture
     where TChronicleFixture : IChronicleFixture
 {
 #pragma warning disable CA2213, SA1600, CA1051, MA0069
     protected static IAsyncDisposable? _webApplicationFactory;
 #pragma warning restore CA2213, SA1600, CA1051, MA0069
     static readonly DefaultClientArtifactsProvider _defaultClientArtifactsProvider = DefaultClientArtifactsProvider.Default;
-    static PropertyInfo _servicesProperty = null!;
-    static MethodInfo _createClientMethod = null!;
-    static MethodInfo _createClientWithOptionsMethod = null!;
-    static bool _isInitialized;
+    PropertyInfo? _servicesProperty;
+    MethodInfo _createClientMethod = null!;
+    MethodInfo _createClientWithOptionsMethod = null!;
+#pragma warning disable CA2213 // The context factory is disposed asynchronously during context cleanup.
+    IAsyncDisposable? _contextWebApplicationFactory;
+#pragma warning restore CA2213
     bool _backupPerformed;
     string _name = string.Empty;
     IServiceScope? _servicesScope;
@@ -47,6 +49,11 @@ public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, I
     protected ChronicleClientFixture(TChronicleFixture chronicleFixture)
     {
         ChronicleFixture = chronicleFixture;
+        Timings = CreateTimings(chronicleFixture);
+        if (chronicleFixture is ChronicleFixture { UsesPerContextMongoDBHost: true } mongoFixture)
+        {
+            DatabaseNamePrefix = mongoFixture.BeginMongoDBContext();
+        }
 
         TestAssembly ??= TestAssemblyLocator.GetTestAssembly();
         if (ContentRoot is null)
@@ -162,10 +169,25 @@ public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, I
     /// </summary>
     public IServiceProvider Services => EnsureServicesScope();
 
+    /// <inheritdoc/>
+    string IChronicleSetupFixture.DatabaseNamePrefix => DatabaseNamePrefix;
+
+    /// <summary>
+    /// Gets the lifecycle timings recorder.
+    /// </summary>
+    internal IntegrationTimings Timings { get; }
+
     /// <summary>
     /// Gets the <see cref="IGrainFactory"/> for resolving grains.
     /// </summary>
     internal IGrainFactory GrainFactory => (this as IChronicleSetupFixture).GrainFactory;
+
+    /// <summary>
+    /// Gets the factory belonging to this context, or the shared factory in other modes.
+    /// </summary>
+    internal IAsyncDisposable? CurrentWebApplicationFactory => DatabaseNamePrefix.Length > 0
+        ? _contextWebApplicationFactory
+        : _webApplicationFactory;
 
     /// <summary>
     /// Gets the <see cref="KernelCore::Cratis.Chronicle.EventSequences.IEventSequence"/> grain for the event log sequence.
@@ -176,6 +198,15 @@ public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, I
     /// Gets the <see cref="IEventStoreStorage"/> for the event store storage.
     /// </summary>
     internal IEventStoreStorage EventStoreStorage => (this as IChronicleSetupFixture).EventStoreStorage;
+
+    /// <summary>
+    /// Gets the database name prefix of this context's isolated MongoDB storage, or empty when storage is shared.
+    /// </summary>
+    /// <remarks>
+    /// A fixture that opts in through <see cref="ChronicleFixture.UsesPerContextMongoDBHost"/> and overrides the storage
+    /// configuration passes this prefix to <c language="csharp">WithMongoDB</c>.
+    /// </remarks>
+    protected internal string DatabaseNamePrefix { get; } = string.Empty;
 
     /// <summary>
     /// Gets the test <see cref="Assembly"/>.
@@ -209,14 +240,22 @@ public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, I
     /// Create a new <see cref="HttpClient"/> instance.
     /// </summary>
     /// <returns>A new <see cref="HttpClient"/> instance.</returns>
-    public HttpClient CreateClient() => EnsureInitialized(() => _createClientMethod.Invoke(_webApplicationFactory, null) as HttpClient)!;
+    public HttpClient CreateClient() => EnsureInitialized(() => IntegrationHostTimings.Measure(
+        Timings,
+        CurrentWebApplicationFactory!,
+        DatabaseNamePrefix.Length > 0,
+        () => _createClientMethod.Invoke(CurrentWebApplicationFactory, null) as HttpClient))!;
 
     /// <summary>
     /// Create a new <see cref="HttpClient"/> instance.
     /// </summary>
     /// <param name="options">The <see cref="WebApplicationFactoryClientOptions"/>.</param>
     /// <returns>A new <see cref="HttpClient"/> instance.</returns>
-    public HttpClient CreateClient(WebApplicationFactoryClientOptions options) => EnsureInitialized(() => _createClientWithOptionsMethod.Invoke(_webApplicationFactory, [options]) as HttpClient)!;
+    public HttpClient CreateClient(WebApplicationFactoryClientOptions options) => EnsureInitialized(() => IntegrationHostTimings.Measure(
+        Timings,
+        CurrentWebApplicationFactory!,
+        DatabaseNamePrefix.Length > 0,
+        () => _createClientWithOptionsMethod.Invoke(CurrentWebApplicationFactory, [options]) as HttpClient))!;
 
     /// <summary>
     /// Begins collecting appended events from this point forward.
@@ -252,42 +291,32 @@ public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, I
         DisposeServicesScope();
     }
 
-    /// <inheritdoc/>
+    /// <summary>
+    /// Initializes the fixture: resets or bootstraps the environment, then runs the scenario setup.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
     public async Task InitializeAsync()
     {
-        await OnBeforeInitializeAsync();
-        await OnInitializeAsync();
+        await Timings.Run("initialize", async () =>
+        {
+            await Timings.Run("reset-or-bootstrap", OnBeforeInitializeAsync);
+            await Timings.Run("scenario", OnInitializeAsync);
+        });
     }
 
-    /// <inheritdoc/>
+    /// <summary>
+    /// Disposes the fixture, running every cleanup step and rethrowing the failures together.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
     public virtual async Task DisposeAsync()
     {
-        var exceptions = new List<Exception>(4);
-
-        await TryCleanup(OnDisposeAsync, exceptions);
-        await TryCleanup(DisposeServicesScopeAsync, exceptions);
-
-        if (!_backupPerformed && IsBackupEnabled)
+        try
         {
-            await TryCleanup(
-                async () =>
-                {
-                    await ChronicleFixture.PerformBackupAsync(_name);
-                    _backupPerformed = true;
-                },
-                exceptions);
+            await Timings.Run("cleanup", DisposeFixture);
         }
-
-        await TryCleanup(() => ChronicleFixture.RemoveAllDatabases(), exceptions);
-
-        if (exceptions.Count == 1)
+        finally
         {
-            ExceptionDispatchInfo.Capture(exceptions[0]).Throw();
-        }
-
-        if (exceptions.Count > 1)
-        {
-            throw new AggregateException(exceptions);
+            Timings.Complete();
         }
     }
 
@@ -394,26 +423,80 @@ public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, I
         }
     }
 
+    IntegrationTimings CreateTimings(TChronicleFixture chronicleFixture)
+    {
+        var perContextMongoDB = chronicleFixture is ChronicleFixture { UsesPerContextMongoDBHost: true };
+        return new IntegrationTimings(
+            GetType().FullName ?? GetType().Name,
+            Environment.GetEnvironmentVariable("CHRONICLE_RUNTIME_MODE") ?? (perContextMongoDB ? "inprocess-per-context" : "unavailable"),
+            Environment.GetEnvironmentVariable("CHRONICLE_STORAGE_PROVIDER") ?? (perContextMongoDB ? "MongoDB" : "unavailable"));
+    }
+
+    async Task DisposeFixture()
+    {
+        var exceptions = new List<Exception>(4);
+
+        await TryCleanup(() => Timings.Run("scenario-destroy", OnDisposeAsync), exceptions);
+        await TryCleanup(() => Timings.Run("services-scope-disposal", DisposeServicesScopeAsync), exceptions);
+
+        if (!_backupPerformed && IsBackupEnabled)
+        {
+            await TryCleanup(
+                async () =>
+                {
+                    await ChronicleFixture.PerformBackupAsync(_name);
+                    _backupPerformed = true;
+                },
+                exceptions);
+        }
+
+        if (DatabaseNamePrefix.Length > 0)
+        {
+            await TryCleanup(() => Timings.Run("host-silo-disposal-per-context", DisposeContextFactory), exceptions);
+        }
+        else
+        {
+            await TryCleanup(() => Timings.Run("storage-remove-cleanup", () => ChronicleFixture.RemoveAllDatabases()), exceptions);
+        }
+
+        if (exceptions.Count == 1)
+        {
+            ExceptionDispatchInfo.Capture(exceptions[0]).Throw();
+        }
+
+        if (exceptions.Count > 1)
+        {
+            throw new AggregateException(exceptions);
+        }
+    }
+
     T EnsureInitialized<T>(Func<T> getObject)
     {
-        if (_webApplicationFactory is null)
-        {
-            InitializeFixture();
-        }
+        // Idempotent: the shared factory may already exist while this instance's reflection members do not.
+        InitializeFixture();
         return getObject();
     }
 
     void InitializeFixture()
     {
-        _webApplicationFactory ??= CreateWebApplicationFactory();
-        if (!_isInitialized)
+        if (DatabaseNamePrefix.Length > 0)
         {
-            var webApplicationFactoryType = _webApplicationFactory.GetType();
-            _servicesProperty = webApplicationFactoryType.GetProperty(nameof(WebApplicationFactory<object>.Services), BindingFlags.Instance | BindingFlags.Public)!;
-            _createClientMethod = webApplicationFactoryType.GetMethod(nameof(WebApplicationFactory<object>.CreateClient), BindingFlags.Instance | BindingFlags.Public, [])!;
-            _createClientWithOptionsMethod = webApplicationFactoryType.GetMethod(nameof(WebApplicationFactory<object>.CreateClient), BindingFlags.Instance | BindingFlags.Public, [typeof(WebApplicationFactoryClientOptions)])!;
-            _isInitialized = true;
+            _contextWebApplicationFactory ??= Timings.Measure("factory-create-per-context", CreateWebApplicationFactory);
         }
+        else
+        {
+            _webApplicationFactory ??= Timings.Measure("factory-create-shared", CreateWebApplicationFactory);
+        }
+
+        if (_servicesProperty is not null)
+        {
+            return;
+        }
+
+        var webApplicationFactoryType = CurrentWebApplicationFactory!.GetType();
+        _servicesProperty = webApplicationFactoryType.GetProperty(nameof(WebApplicationFactory<object>.Services), BindingFlags.Instance | BindingFlags.Public)!;
+        _createClientMethod = webApplicationFactoryType.GetMethod(nameof(WebApplicationFactory<object>.CreateClient), BindingFlags.Instance | BindingFlags.Public, [])!;
+        _createClientWithOptionsMethod = webApplicationFactoryType.GetMethod(nameof(WebApplicationFactory<object>.CreateClient), BindingFlags.Instance | BindingFlags.Public, [typeof(WebApplicationFactoryClientOptions)])!;
     }
 
     IServiceProvider EnsureServicesScope()
@@ -421,12 +504,27 @@ public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, I
         InitializeFixture();
         if (_services is null)
         {
-            var rootServices = (_servicesProperty.GetValue(_webApplicationFactory) as IServiceProvider)!;
+            // Services access, not factory allocation, starts the lazy host and silo.
+            var rootServices = IntegrationHostTimings.Measure(
+                Timings,
+                CurrentWebApplicationFactory!,
+                DatabaseNamePrefix.Length > 0,
+                () => (_servicesProperty!.GetValue(CurrentWebApplicationFactory) as IServiceProvider)!);
             _servicesScope = rootServices.CreateScope();
             _services = _servicesScope.ServiceProvider;
         }
 
         return _services;
+    }
+
+    async Task DisposeContextFactory()
+    {
+        var factory = _contextWebApplicationFactory;
+        _contextWebApplicationFactory = null;
+        if (factory is not null)
+        {
+            await factory.DisposeAsync();
+        }
     }
 
     void DisposeServicesScope()

@@ -1,0 +1,15 @@
+{
+  "mcp": {
+    "screenplay": {
+      "type": "local",
+      "command": [
+        "cratis",
+        "screenplay",
+        "mcp",
+        "--project-root",
+        "."
+      ],
+      "enabled": true
+    }
+  }
+}

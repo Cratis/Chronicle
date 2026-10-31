@@ -7,11 +7,13 @@ using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.Events.Migrations;
 using Cratis.Chronicle.EventSources;
+using Cratis.Chronicle.Occurrences;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Projections.ModelBound;
 using Cratis.Chronicle.Reactors;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Reducers;
+using Cratis.Chronicle.Reducers.Validators;
 using Cratis.Chronicle.Seeding;
 using Cratis.Reflection;
 using Cratis.Types;
@@ -61,9 +63,32 @@ public class DefaultClientArtifactsProvider(ICanProvideAssembliesForDiscovery as
     IEnumerable<Type> _uniqueConstraints = [];
     IEnumerable<Type> _uniqueEventTypeConstraints = [];
     IEnumerable<Type> _removeConstraintEventTypes = [];
+    IEnumerable<Type> _closesStreamEventTypes = [];
     IEnumerable<Type> _eventSeeders = [];
     IEnumerable<Type> _eventTypeMigrators = [];
     IEnumerable<Type> _eventSources = [];
+    IEnumerable<Type> _triggers = [];
+    IEnumerable<Type> _occurrenceHandlers = [];
+
+    /// <inheritdoc/>
+    public virtual IEnumerable<Type> Triggers
+    {
+        get
+        {
+            EnsureInitialized();
+            return _triggers;
+        }
+    }
+
+    /// <inheritdoc/>
+    public virtual IEnumerable<Type> OccurrenceHandlers
+    {
+        get
+        {
+            EnsureInitialized();
+            return _occurrenceHandlers;
+        }
+    }
 
     /// <inheritdoc/>
     public virtual IEnumerable<Type> EventTypes
@@ -226,6 +251,16 @@ public class DefaultClientArtifactsProvider(ICanProvideAssembliesForDiscovery as
     }
 
     /// <inheritdoc/>
+    public virtual IEnumerable<Type> ClosesStreamEventTypes
+    {
+        get
+        {
+            EnsureInitialized();
+            return _closesStreamEventTypes;
+        }
+    }
+
+    /// <inheritdoc/>
     public virtual IEnumerable<Type> EventSeeders
     {
         get
@@ -255,10 +290,30 @@ public class DefaultClientArtifactsProvider(ICanProvideAssembliesForDiscovery as
         }
     }
 
+    static Type[] FindArtifacts(IEnumerable<Type> types, Type interfaceType, Func<Type, IEnumerable<Type>, Exception> createException)
+    {
+        var artifacts = new List<Type>();
+        foreach (var type in types)
+        {
+            var interfaces = type.GetInterfaces().Where(_ => _.IsGenericType && _.GetGenericTypeDefinition() == interfaceType).ToArray();
+            if (interfaces.Length > 1)
+            {
+                throw createException(type, interfaces.Select(_ => _.GetGenericArguments()[0]));
+            }
+            if (interfaces.Length == 1)
+            {
+                artifacts.Add(type);
+            }
+        }
+        return artifacts.ToArray();
+    }
+
     /// <summary>
     /// Ensures that all artifacts are initialized before they are published to readers.
     /// </summary>
     /// <exception cref="ReentrantClientArtifactsInitialization">Artifact access reenters initialization on the initializing thread.</exception>
+    /// <exception cref="TypeImplementsMultipleProjectionInterfaces">A type targets multiple projection read models.</exception>
+    /// <exception cref="TypeMustImplementOnlyOneReducer">A type implements more than one reducer interface.</exception>
     void EnsureInitialized()
     {
         if (_initialized) return;
@@ -279,20 +334,25 @@ public class DefaultClientArtifactsProvider(ICanProvideAssembliesForDiscovery as
                 _complianceForPropertiesProviders = assembliesProvider.DefinedTypes.Where(_ => _ != typeof(ICanProvideComplianceMetadataForProperty) && _.IsAssignableTo(typeof(ICanProvideComplianceMetadataForProperty))).ToArray();
                 _securityForTypesProviders = assembliesProvider.DefinedTypes.Where(_ => _ != typeof(ICanProvideSecurityMetadataForType) && _.IsAssignableTo(typeof(ICanProvideSecurityMetadataForType))).ToArray();
                 _securityForPropertiesProviders = assembliesProvider.DefinedTypes.Where(_ => _ != typeof(ICanProvideSecurityMetadataForProperty) && _.IsAssignableTo(typeof(ICanProvideSecurityMetadataForProperty))).ToArray();
-                _projections = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(IProjectionFor<>))).ToArray();
+                _projections = FindArtifacts(assembliesProvider.DefinedTypes, typeof(IProjectionFor<>), (type, models) => new TypeImplementsMultipleProjectionInterfaces(type, models));
                 _modelBoundProjections = assembliesProvider.DefinedTypes.Where(_ => _.HasModelBoundProjectionAttributes()).ToArray();
                 _reactors = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface<IReactor>() && !_.IsGenericType).ToArray();
                 _readModelReactors = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface<IReadModelReactor>() && !_.IsGenericType).ToArray();
                 _reactorMiddlewares = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface<IReactorMiddleware>()).ToArray();
-                _reducers = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(IReducerFor<>)) && !_.IsGenericType).ToArray();
+                _reducers = FindArtifacts(assembliesProvider.DefinedTypes.Where(_ => !_.IsGenericType), typeof(IReducerFor<>), (type, _) => new TypeMustImplementOnlyOneReducer(type))
+                    .Concat(assembliesProvider.DefinedTypes.Where(SelfReducerMethods.IsDiscoveryCandidate)).Distinct().ToArray();
                 _additionalEventInformationProviders = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface<ICanProvideAdditionalEventInformation>()).ToArray();
                 _constraintTypes = assembliesProvider.DefinedTypes.Where(_ => _ != typeof(IConstraint) && _.IsAssignableTo(typeof(IConstraint))).ToArray();
                 _uniqueConstraints = _eventTypes.Where(_ => _.GetProperties().Any(p => p.HasAttribute<UniqueAttribute>())).ToArray();
                 _uniqueEventTypeConstraints = _eventTypes.Where(_ => _.HasAttribute<UniqueAttribute>()).ToArray();
                 _removeConstraintEventTypes = _eventTypes.Where(_ => _.HasAttribute<RemoveConstraintAttribute>()).ToArray();
+                _closesStreamEventTypes = _eventTypes.Where(_ => _.HasAttribute<ClosesStreamAttribute>()).ToArray();
                 _eventSeeders = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface<ICanSeedEvents>()).ToArray();
                 _eventSources = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface<IEventSource>() && _.IsClass && !_.IsAbstract && !_.IsGenericTypeDefinition).ToArray();
                 _eventTypeMigrators = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(IEventTypeMigrationFor<>))).ToArray();
+
+                _triggers = assembliesProvider.DefinedTypes.Where(_ => _.HasAttribute<TriggerAttribute>()).ToArray();
+                _occurrenceHandlers = assembliesProvider.DefinedTypes.Where(_ => _.IsClass && !_.IsAbstract && !_.ContainsGenericParameters && _.HasInterface(typeof(IOccurrenceHandler<>))).ToArray();
 
                 // Publish all artifact arrays together only after every discovery step succeeds.
                 _initialized = true;

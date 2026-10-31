@@ -7,6 +7,7 @@ using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Chronicle.Observation.States;
 using Cratis.Orleans.Jobs;
+using Microsoft.Extensions.Logging;
 namespace Cratis.Chronicle.Observation;
 
 public partial class Observer
@@ -26,6 +27,10 @@ public partial class Observer
             return JobId.NotSet;
         }
 
+        // Refuse before resetting progress, entering replay, or starting a job. The handler also guards
+        // persisted jobs that resume without coming through this observer entry point.
+        await GlobalProjectionReplay.EnsureSupported(storage, _observerKey, Definition.Type);
+
         while (_catchUpHandoversSettled is { } settled)
         {
             logger.WaitingForCatchUpHandoverBeforeReplay();
@@ -42,6 +47,7 @@ public partial class Observer
         // routing in between and replace it.
         if (State.RunningState != ObserverRunningState.Replaying)
         {
+            Skips.Reset();
             var canReplay = await CanTransitionTo<Replay>();
             await TransitionTo<Replay>();
             if (State.RunningState != ObserverRunningState.Replaying)
@@ -91,10 +97,23 @@ public partial class Observer
     public Task PartitionReplayed(Key partition, EventSequenceNumber lastHandledEventSequenceNumber, EventSequenceNumber lastScannedEventSequenceNumber, EventType[] replayedEventTypes) =>
         CompletePartitionReplay(partition, lastHandledEventSequenceNumber, replayedEventTypes, lastScannedEventSequenceNumber);
 
+    [LoggerMessage(LogLevel.Warning, "Could not flush handled-event counts while completing replay; counts remain pending")]
+    static partial void FailedFlushingHandledCountsOnReplay(ILogger logger, Exception exception);
+
     async Task CompleteReplay(EventSequenceNumber lastHandledEventSequenceNumber, IReadOnlyDictionary<Key, EventSequenceNumber> replayedPartitions, EventType[] replayedEventTypes, DateTimeOffset replayStartedAt)
     {
         if (IsRetired || _removed) return;
+        try
+        {
+            await FlushPendingHandledCounts();
+        }
+        catch (Exception exception)
+        {
+            FailedFlushingHandledCountsOnReplay(logger, exception);
+        }
+
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
+        Skips.Reset();
 
         var eventTypeIds = replayedEventTypes.Select(_ => _.Id).ToHashSet();
         if (eventTypeIds.Count > 0 && replayedPartitions.Count > 0)
@@ -163,6 +182,7 @@ public partial class Observer
     {
         if (IsRetired || _removed) return;
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
+        Skips.Completing(partition, FurthestOf(lastHandledEventSequenceNumber, lastScannedEventSequenceNumber));
         logger.FinishedReplayForPartition(partition);
         State.ReplayingPartitions.Remove(partition);
         if (replayedEventTypes.Length > 0 && lastHandledEventSequenceNumber.IsActualValue &&
@@ -186,9 +206,10 @@ public partial class Observer
             }
         }
 
-        HandleNewLastHandledEvent(lastHandledEventSequenceNumber);
+        HandleNewLastHandledEventForPartition(partition, lastHandledEventSequenceNumber);
         await WriteStateAsync();
         await StartCatchupJobIfNeeded(partition, FurthestOf(lastHandledEventSequenceNumber, lastScannedEventSequenceNumber), fromStartWhenNothingRead: true);
+        EvaluateSuspectedSkips();
     }
 
     async Task ReplayPartitionTo(Key partition, EventSequenceNumber sequenceNumber, IEnumerable<EventType> eventTypes, bool retainOtherCounts)
@@ -205,6 +226,7 @@ public partial class Observer
             return;
         }
 
+        await GlobalProjectionReplay.EnsureSupported(storage, _observerKey, Definition.Type);
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
         logger.AttemptReplayPartition(partition, sequenceNumber);
 
@@ -216,6 +238,7 @@ public partial class Observer
             ? partitionCounts.Where(_ => eventTypeIdsToReplay.Contains(_.Key)).ToDictionary()
             : partitionCounts.ToDictionary();
         State = WithSubtractedPartitionHandledEventCounts(State, replayedPartitionCounts);
+        RecordedHandlingState();
         await handledCountsStorage.RemoveFor(_observerId, partition);
         var retainedPartitionCounts = retainOtherCounts
             ? partitionCounts.Where(_ => !eventTypeIdsToReplay.Contains(_.Key)).ToDictionary()
@@ -224,13 +247,31 @@ public partial class Observer
         {
             await handledCountsStorage.Increment(_observerId, partition, retainedPartitionCounts);
         }
-        await _jobsManager.Start<IReplayObserverPartition, ReplayObserverPartitionRequest>(new(_observerKey, Definition.Type, partition, EventSequenceNumber.First, sequenceNumber, eventTypesToReplay)
-        {
-            ReplaysAllEventTypes = !retainOtherCounts
-        });
 
+        // Capture and mark in the same synchronous turn, before awaiting storage or job admission. Live delivery
+        // may interleave those awaits: events below this cursor were already handled or belong to existing
+        // failure/catch-up work; events from here on cannot reach this partition while its replay marker is set.
+        var heldBackFrom = State.NextEventSequenceNumber;
         State.ReplayingPartitions.Add(partition);
+        Skips.JobStarted(partition);
+        RecordedHandlingState();
         await WriteStateAsync();
+        try
+        {
+            await _jobsManager.Start<IReplayObserverPartition, ReplayObserverPartitionRequest>(new(_observerKey, Definition.Type, partition, EventSequenceNumber.First, sequenceNumber, eventTypesToReplay)
+            {
+                ReplaysAllEventTypes = !retainOtherCounts,
+                ReaderScope = ReaderScope,
+                HeldBackFrom = heldBackFrom
+            });
+        }
+        catch
+        {
+            // No job owns the marker, so nothing would ever release it. The sink is untouched: hand the partition
+            // back to catch-up from the captured bound, as a refused replay does, and report the failure.
+            await ReleaseRefusedPartitionReplay(partition, heldBackFrom);
+            throw;
+        }
     }
 
     async Task<bool> TransitionToReplayIfNeeded(int recovery)

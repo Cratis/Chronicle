@@ -15,32 +15,9 @@ public class WebhookAuthorizationJsonConverter : JsonConverter<WebhookAuthorizat
     /// <inheritdoc/>
     public override WebhookAuthorization? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
-        if (reader.TokenType == JsonTokenType.StartObject)
-        {
-            // Read the entire object
-            var jsonDoc = JsonDocument.ParseValue(ref reader);
-            var root = jsonDoc.RootElement;
-
-            if (root.TryGetProperty("type", out var typeElement))
-            {
-                var authType = typeElement.GetString();
-                return authType switch
-                {
-                    "basic" => new BasicAuthorization(
-                        root.GetProperty("username").GetString()!,
-                        root.GetProperty("password").GetString()!),
-                    "bearer" => new BearerTokenAuthorization(
-                        root.GetProperty("token").GetString()!),
-                    "oauth" => new OAuthAuthorization(
-                        root.GetProperty("authority").GetString()!,
-                        root.GetProperty("clientId").GetString()!,
-                        root.GetProperty("clientSecret").GetString()!),
-                    _ => WebhookAuthorization.None
-                };
-            }
-        }
-
-        return WebhookAuthorization.None;
+        if (reader.TokenType != JsonTokenType.StartObject) return WebhookAuthorization.None;
+        var jsonDoc = JsonDocument.ParseValue(ref reader);
+        return ReadAuthorization(jsonDoc.RootElement);
     }
 
     /// <inheritdoc/>
@@ -70,6 +47,7 @@ public class WebhookAuthorizationJsonConverter : JsonConverter<WebhookAuthorizat
                 writer.WriteString("authority", oauth.Authority);
                 writer.WriteString("clientId", oauth.ClientId);
                 writer.WriteString("clientSecret", oauth.ClientSecret);
+                writer.WriteString("scope", oauth.Scope);
                 writer.WriteEndObject();
             },
             none =>
@@ -77,6 +55,41 @@ public class WebhookAuthorizationJsonConverter : JsonConverter<WebhookAuthorizat
                 writer.WriteStartObject();
                 writer.WriteString("type", "none");
                 writer.WriteEndObject();
+            },
+            managedIdentity =>
+            {
+                writer.WriteStartObject();
+                writer.WriteString("type", "managedIdentity");
+                writer.WriteString("clientId", managedIdentity.ClientId.Value);
+                writer.WriteString("scope", managedIdentity.Scope.Value);
+                writer.WriteEndObject();
             });
     }
+
+    static WebhookAuthorization ReadAuthorization(JsonElement root)
+    {
+        if (!root.TryGetProperty("type", out var typeElement)) return WebhookAuthorization.None;
+        return typeElement.GetString() switch
+        {
+            "basic" => new BasicAuthorization(
+                root.GetProperty("username").GetString()!,
+                root.GetProperty("password").GetString()!),
+            "bearer" => new BearerTokenAuthorization(root.GetProperty("token").GetString()!),
+            "oauth" => ReadOAuth(root),
+            "managedIdentity" => ReadManagedIdentity(root),
+            _ => WebhookAuthorization.None
+        };
+    }
+
+    static OAuthAuthorization ReadOAuth(JsonElement root) => new(
+        root.GetProperty("authority").GetString()!,
+        root.GetProperty("clientId").GetString()!,
+        root.GetProperty("clientSecret").GetString()!)
+    {
+        Scope = root.TryGetProperty("scope", out var scope) ? scope.GetString() ?? string.Empty : string.Empty
+    };
+
+    static ManagedIdentityAuthorization ReadManagedIdentity(JsonElement root) => new(
+        root.TryGetProperty("clientId", out var clientId) ? clientId.GetString() ?? string.Empty : string.Empty,
+        root.GetProperty("scope").GetString()!);
 }

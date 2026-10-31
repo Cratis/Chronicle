@@ -33,6 +33,10 @@ public static class ModelBoundProjectionsExtensions
 
         try
         {
+            if (SelfReducerMethods.HasSelfShape(type))
+            {
+                return type.HasGenuineModelBoundProjectionAttributes();
+            }
             if (type.GetCustomAttributes().Any(IsModelBoundProjectionAttribute))
             {
                 return true;
@@ -61,7 +65,17 @@ public static class ModelBoundProjectionsExtensions
         }
     }
 
+    /// <summary>
+    /// Checks genuine mapping annotations without interpreting shared observer configuration as ownership.
+    /// </summary>
+    /// <param name="type">The model to inspect.</param>
+    /// <returns>Whether mapping annotations are declared on the model or its state.</returns>
+    internal static bool HasGenuineModelBoundProjectionAttributes(this Type type) =>
+        type.GetCustomAttributes().Concat(type.GetProperties(BindingFlags.Public | BindingFlags.Instance).SelectMany(property => property.GetCustomAttributes()))
+            .Concat(type.GetConstructors().SelectMany(constructor => constructor.GetParameters()).SelectMany(parameter => parameter.GetCustomAttributes()))
+            .Any(attribute => attribute is IProjectionAnnotation and not PassiveAttribute and not NotProjectedAttribute);
+
     static bool IsModelBoundProjectionAttribute(object attribute) =>
         attribute is EventSequenceAttribute ||
-        attribute is IProjectionAnnotation and not PassiveAttribute;
+        attribute is IProjectionAnnotation and not PassiveAttribute and not NotProjectedAttribute;
 }

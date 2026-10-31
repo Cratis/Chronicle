@@ -31,7 +31,7 @@ public class EventTypeGenerationMigrationReactor(IGrainFactory grainFactory, ILo
         logger.StartingMigrationJob(@event.EventTypeId, @event.Generation, context.EventStore);
 
         var jobsManager = grainFactory.GetJobsManager(context.EventStore, context.Namespace);
-        await jobsManager.Start<IMigrateExistingEventsForType, MigrateExistingEventsForTypeRequest>(
-            new MigrateExistingEventsForTypeRequest(@event.EventTypeId));
+        await jobsManager.Start<IBackfillEventTypeGenerations, BackfillEventTypeGenerationsRequest>(
+            new BackfillEventTypeGenerationsRequest(@event.EventTypeId));
     }
 }

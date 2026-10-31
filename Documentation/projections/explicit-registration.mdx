@@ -37,7 +37,9 @@ To declare registrations before the client exists, from hosting or dependency in
 
 <ChronicleClientTabs snippet="projections/explicit-registration/at-startup" />
 
-Registrations on the options are built during discovery, which is on by default (`AutoDiscoverAndRegister`). A projection that cannot be built is reported through the event store's registration outcome, like a discovered one.
+Registrations on the options are captured when the store is constructed and built during discovery, which is on by default (`AutoDiscoverAndRegister`). Later options changes apply only to new stores; reconnect retains the original recipes. A projection that cannot be built is reported through the event store's registration outcome, like a discovered one.
+
+Event types and the other artifact kinds can also be nominated without marker interfaces or attributes. See [explicit artifact registration](../clients/dotnet/explicit-artifacts) for the .NET composition APIs, peer conflicts and lifetime rules.
 
 ## Rules
 

@@ -50,6 +50,7 @@ public record CompleteStream(
     {
         Cratis.Chronicle.EventSequences.CompleteStreamError.AlreadyCompleted => CompleteStreamError.AlreadyCompleted,
         Cratis.Chronicle.EventSequences.CompleteStreamError.DefaultStreamCannotBeCompleted => CompleteStreamError.DefaultStreamCannotBeCompleted,
+        Cratis.Chronicle.EventSequences.CompleteStreamError.EmptyScope => CompleteStreamError.EmptyScope,
         _ => CompleteStreamError.None
     };
 }

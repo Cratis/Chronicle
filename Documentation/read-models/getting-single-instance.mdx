@@ -11,10 +11,18 @@ Chronicle knows whether the read model is **materialized** — whether an observ
 
 The client sends the read model type and key to the kernel. The kernel resolves the read model's definition and takes one of two paths:
 
-- **Materialized read model** — the kernel looks the instance up in the sink by key, releases compliance-protected values, and returns it. The cost is a single storage lookup regardless of how long the event history is. The instance is as current as the observer that wrote it, so it is eventually consistent.
+- **Materialized read model** — the kernel looks the instance up in the sink by key, releases compliance-protected values, and returns it. The lookup cost does not grow with the event history. The instance is as current as the observer that wrote it, so it is eventually consistent.
 - **Passive read model** — the kernel replays the relevant events through the projection or reducer that owns the read model and returns the result. The instance reflects every event appended up to that call, so it is strongly consistent. The cost grows with the length of the history.
 
 The materialized path is also the only one that sees the whole picture for a projection that joins across event sources or resolves keys from other events. Replay walks one event source, so it cannot reconstruct state that was built from events belonging to a different key.
+
+## Reads during a replay
+
+For MongoDB, SQL, and in-memory sinks, a materialized lookup by key reads the **primary container**, not the shadow container a replay is rebuilding. You keep seeing the pre-replay state until promotion completes. A key absent from the primary returns the normal not-found result, even if the replay has already created it. Projection processing still reads its own replay state.
+
+If a MongoDB lookup overlaps the promotion's rename window and cannot distinguish a missing key from a replaced container, it retries up to three attempts with short pauses. If promotion still prevents a reliable answer, it fails explicitly rather than reporting a missing instance. A missing primary beside a promoting collection is logged as a warning; if a promotion was interrupted, the warning can persist until promotion is recovered. Retry the lookup after promotion completes.
+
+The event-sequence sink has no shadow container: its primary lookup returns the latest durable publication, including facts already published during a replay.
 
 ## Read by key
 
@@ -23,6 +31,10 @@ The read model type must already be registered by the client, either as a model-
 <ChronicleClientTabs snippet="read-models/getting-single-instance/basic" />
 
 Each client names the operation in its own idiom, but the inputs are the same: the read model type and the read model key.
+
+## Read one stream instance
+
+A model declaring `[EventStream<TSource>(stream)]` must be read with `GetInstanceById<T>(EventSourceId, EventStreamId)`. It keeps the source ID as its model key and folds only that source's declared stream and requested ID. The declaration supplies the event source type as well; events written without that source type are not included. This implies passive and supplies no append guard. A key-only read refuses with `ReadModelRequiresStreamScope` rather than mixing streams. See [Read models scoped to one event stream](per-stream.mdx) for the monthly-limit example and query call.
 
 ## Missing instances
 

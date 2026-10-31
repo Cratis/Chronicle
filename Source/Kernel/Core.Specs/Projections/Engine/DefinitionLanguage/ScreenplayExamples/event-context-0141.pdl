@@ -1,0 +1,4 @@
+projection EventStatistics => EventStatisticsReadModel
+  all
+    count eventCountByType.$eventContext.eventType.id
+    increment eventsPerSource.$eventContext.eventSourceId

@@ -9,6 +9,11 @@ namespace Cratis.Chronicle;
 public static class WellKnownServices
 {
     /// <summary>
+    /// Durable application occurrences and effect receipts.
+    /// </summary>
+    public const string Occurrences = "Occurrences";
+
+    /// <summary>
     /// The name of the scoped alert incident query service.
     /// </summary>
     public const string Alerts = "Alerts";
@@ -87,6 +92,11 @@ public static class WellKnownServices
     /// The name of the ReadModelExplorer service - reading a read model instance and the history behind it.
     /// </summary>
     public const string ReadModelExplorer = "ReadModelExplorer";
+
+    /// <summary>
+    /// The name of the structured composite-key read service.
+    /// </summary>
+    public const string ReadModelLookups = "ReadModelLookups";
 
     /// <summary>
     /// The name of the ProjectionEditor service - the projection-editing surface the Workbench drives.

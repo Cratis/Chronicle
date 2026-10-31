@@ -22,6 +22,18 @@ public class ConcurrencyOptions
     Type _defaultStrategy = typeof(OptimisticConcurrencyStrategy);
 
     /// <summary>
+    /// Gets or sets a value indicating whether incomplete caller-supplied scopes retain the legacy unchecked behavior.
+    /// </summary>
+    /// <remarks>False by default. Incomplete narrowed explicit scopes otherwise expect no matching event.</remarks>
+    public bool SkipIncompleteExplicitScopes { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether a definition-linked explicit scope may guard a different stream than a single-route append.
+    /// </summary>
+    /// <remarks>False by default. Labelled independent conditions are not subject to this check.</remarks>
+    public bool AllowRouteScopeStreamMismatch { get; set; }
+
+    /// <summary>
     /// Gets or sets the default concurrency strategy to use when no specific strategy is provided.
     /// </summary>
     public Type DefaultStrategy

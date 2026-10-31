@@ -1,3 +1,6 @@
+---
+description: Configure the maximum gRPC send and receive message sizes of the Chronicle client, 100 MB by default, for large event batches and queries.
+---
 # gRPC Message Size
 
 Large event batches or queries that return many events can exceed gRPC message limits. Chronicle provides configuration options to adjust the maximum send and receive message sizes.
@@ -37,6 +40,24 @@ Cratis__Chronicle__MaxReceiveMessageSize=209715200
 Cratis__Chronicle__MaxSendMessageSize=209715200
 ```
 
+## Server limits
+
+The kernel enforces a receive limit of its own, and it defaults to the same 100 MB the clients allow themselves to send. Before this default existed the kernel accepted 4 MB, so a client on default options could be refused by the server it was configured to talk to. Set it through the kernel's configuration:
+
+```json
+{
+  "maxReceiveMessageSize": 209715200,
+  "maxSendMessageSize": 209715200
+}
+```
+
+```bash
+Cratis__Chronicle__MaxReceiveMessageSize=209715200
+Cratis__Chronicle__MaxSendMessageSize=209715200
+```
+
+The server's send size is unlimited unless you set it. See [Root Properties](../hosting/configuration/root-properties.md).
+
 ## Understanding the Error
 
 If you encounter an error like:
@@ -45,14 +66,14 @@ If you encounter an error like:
 Status(StatusCode="ResourceExhausted", Detail="Received message exceeds the maximum configured message size.")
 ```
 
-This indicates that the response from the server exceeds `MaxReceiveMessageSize`. Increase this value to accommodate larger responses.
+This indicates that the response from the server exceeds the client's `MaxReceiveMessageSize`. Increase this value to accommodate larger responses. A call that fails with status `ResourceExhausted` while sending, for instance when appending a large event, points at the kernel's `maxReceiveMessageSize` instead.
 
 ## Recommendations
 
 - **Default (100 MB)**: Suitable for most applications with moderate event batch sizes
 - **200+ MB**: Consider for applications that frequently query large event ranges or work with many events
 - **Performance considerations**: Larger message sizes consume more memory. Balance your needs with available resources
-- **Server configuration**: Ensure the Chronicle Server is also configured to handle the message sizes you need
+- **Server configuration**: The kernel has its own limits, see [Server limits](#server-limits). A message is only as large as the smaller of the two sides allows
 
 ## Null Values
 

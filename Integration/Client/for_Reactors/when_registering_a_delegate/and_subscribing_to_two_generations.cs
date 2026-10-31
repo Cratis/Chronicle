@@ -14,6 +14,7 @@ public class and_subscribing_to_two_generations(context context) : Given<context
         readonly TaskCompletionSource<ReactorEvent> _first = new(TaskCreationOptions.RunContinuationsAsynchronously);
         readonly TaskCompletionSource<ReactorEvent> _second = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public override IEnumerable<Type> EventTypes => [typeof(RuntimeGenerationEventV1), typeof(RuntimeGenerationEvent)];
+        public override IEnumerable<Type> EventTypeMigrators => [typeof(RuntimeGenerationEventMigration)];
         public ReactorEvent First;
         public ReactorEvent Second;
 

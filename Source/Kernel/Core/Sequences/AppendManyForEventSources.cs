@@ -23,6 +23,7 @@ namespace Cratis.Chronicle.Sequences;
 /// <param name="Causation">Optional caller-supplied causation chain. Defaults to the request causation when not provided.</param>
 /// <param name="CausedBy">Optional caller-supplied identity. Defaults to the current principal when not provided.</param>
 /// <param name="ConcurrencyScopes">Optional concurrency scopes to validate the append against, one per event source. An event source with no entry gets no check.</param>
+/// <param name="EffectReceipt">Optional occurrence effect to commit atomically with this batch.</param>
 [Command]
 [BelongsTo(WellKnownServices.EventSequences)]
 public record AppendManyForEventSources(
@@ -34,7 +35,8 @@ public record AppendManyForEventSources(
     IEnumerable<string>? Tags = default,
     IEnumerable<Causation>? Causation = default,
     Identity? CausedBy = default,
-    IEnumerable<EventSourceConcurrencyScope>? ConcurrencyScopes = default)
+    IEnumerable<EventSourceConcurrencyScope>? ConcurrencyScopes = default,
+    Occurrences.EffectReceipt? EffectReceipt = default)
 {
     /// <summary>
     /// Handles the command by appending every event in one transaction.
@@ -94,7 +96,49 @@ public record AppendManyForEventSources(
         var causationChain = Causation?.ToChronicle() ?? causation.GetCurrentChain();
         var identity = CausedBy?.ToChronicle() ?? principalAccessor.Current.ToIdentity();
         var scopes = (ConcurrencyScopes ?? []).ToChronicle();
+        if (scopes.TryGetError(out var error))
+        {
+            return Task.FromResult(new AppendManyResult
+            {
+                CorrelationId = correlationId,
+                Errors = [error]
+            });
+        }
 
-        return eventSequence.AppendMany(events, correlationId, causationChain, identity, scopes);
+        var conjunctions = scopes.AsT0;
+        if (conjunctions.HasRepeatedIds)
+        {
+            return (EffectReceipt is null
+                ? eventSequence.AppendManyWithConjunctions(events, correlationId, causationChain, identity, conjunctions)
+                : eventSequence.AppendManyWithConjunctionsAndEffectReceipt(events, correlationId, causationChain, identity, conjunctions, EffectReceipt)).WithUnknownOutcome(correlationId);
+        }
+
+        var legacyScopes = new Concepts.EventSequences.Concurrency.ConcurrencyScopes(conjunctions.Entries.ToDictionary(_ => _.EventSourceId, _ => _.Scope));
+        var append = EffectReceipt is null
+            ? eventSequence.AppendMany(events, correlationId, causationChain, identity, legacyScopes)
+            : eventSequence.AppendManyWithEffectReceipt(events, correlationId, causationChain, identity, legacyScopes, EffectReceipt);
+        return WithScopePositions(append.WithUnknownOutcome(correlationId), conjunctions);
+    }
+
+    static async Task<AppendManyResult> WithScopePositions(Task<AppendManyResult> append, Concepts.EventSequences.Concurrency.ConcurrencyScopeConjunctions scopes)
+    {
+        var result = await append;
+        if (!result.HasConcurrencyViolations) return result;
+
+        return new AppendManyResult
+        {
+            CorrelationId = result.CorrelationId,
+            SequenceNumbers = result.SequenceNumbers,
+            ConstraintViolations = result.ConstraintViolations,
+            Errors = result.Errors,
+            ConcurrencyCheckPerformed = result.ConcurrencyCheckPerformed,
+            EffectReceipt = result.EffectReceipt,
+            EffectAlreadyRecorded = result.EffectAlreadyRecorded,
+            ConcurrencyViolations = result.ConcurrencyViolations.Select(violation =>
+            {
+                var entry = scopes.Entries.Single(_ => _.EventSourceId == violation.EventSourceId);
+                return violation with { ScopeIndex = entry.ScopeIndex, Scope = entry.Scope.ToApi() };
+            }).ToArray()
+        };
     }
 }

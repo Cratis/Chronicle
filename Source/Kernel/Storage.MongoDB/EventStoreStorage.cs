@@ -37,6 +37,8 @@ using Cratis.Chronicle.Storage.SequenceQueries;
 using Cratis.Chronicle.Storage.Sinks;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using MongoDB.Bson;
+using MongoDB.Driver;
 
 namespace Cratis.Chronicle.Storage.MongoDB;
 
@@ -65,6 +67,25 @@ public class EventStoreStorage(
     ILoggerFactory loggerFactory) : IEventStoreStorage
 {
     readonly ConcurrentDictionary<EventStoreNamespaceName, IEventStoreNamespaceStorage> _namespaces = new();
+    readonly Occurrences.OccurrencesStorage _occurrences = new(eventStoreDatabase.GetCollection<BsonDocument>("occurrences").Database);
+
+    /// <inheritdoc/>
+    public Chronicle.Storage.Generations.IGenerationInitializationStorage GenerationInitialization { get; } = new Generations.GenerationInitializationStorage(eventStoreDatabase.GetCollection<BsonDocument>("generation-initialization"));
+
+    /// <inheritdoc/>
+    public Chronicle.Storage.Occurrences.ITriggerDefinitionsStorage TriggerDefinitions { get; } = new Occurrences.TriggerDefinitionsStorage(eventStoreDatabase.GetCollection<BsonDocument>("trigger-definitions").Database);
+
+    /// <inheritdoc/>
+    public Chronicle.Storage.Occurrences.IOccurrencesStorage Occurrences => _occurrences;
+
+    /// <inheritdoc/>
+    public Chronicle.Storage.Occurrences.ILifecycleFanOutStorage LifecycleFanOut { get; } = new Occurrences.LifecycleFanOutStorage(eventStoreDatabase.GetCollection<BsonDocument>("lifecycle-fan-out-intents").Database);
+
+    /// <inheritdoc/>
+    public Chronicle.Storage.Occurrences.IScheduleStorage Schedules => _occurrences;
+
+    /// <inheritdoc/>
+    public Chronicle.Storage.Generations.IGenerationFloorStorage GenerationFloor { get; } = new Generations.GenerationFloorStorage(eventStoreDatabase.GetCollection<BsonDocument>("generation-floor"));
 
     /// <inheritdoc/>
     public EventStoreName EventStore { get; } = eventStore;
@@ -88,7 +109,7 @@ public class EventStoreStorage(
     public IReducerDefinitionsStorage Reducers { get; } = new ReducerDefinitionsStorage(eventStoreDatabase);
 
     /// <inheritdoc/>
-    public IProjectionDefinitionsStorage Projections { get; } = new CachingProjectionDefinitionsStorage(new ProjectionDefinitionsStorage(eventStoreDatabase));
+    public IProjectionDefinitionsStorage Projections { get; } = new ProjectionDefinitionsStorage(eventStoreDatabase);
 
     /// <inheritdoc/>
     public IWebhookDefinitionsStorage Webhooks { get; } = new WebhookDefinitionsStorage(eventStoreDatabase);
@@ -115,6 +136,22 @@ public class EventStoreStorage(
     public IEventSeedingStorage EventSeeding { get; } = new EventSeedingStorage(eventStoreDatabase);
 
     /// <inheritdoc/>
+    public async Task<bool> IsInitialized() => await eventStoreDatabase.GetCollection<BsonDocument>("initialization")
+        .CountDocumentsAsync(new BsonDocument("_id", 1)) > 0;
+
+    /// <inheritdoc/>
+    public Task MarkInitialized() => DuplicateKeyConvergence.UpsertWithRetry(() => eventStoreDatabase.GetCollection<BsonDocument>("initialization")
+        .UpdateOneAsync(new BsonDocument("_id", 1), new BsonDocument("$setOnInsert", new BsonDocument("_id", 1)), new UpdateOptions { IsUpsert = true }));
+
+    /// <inheritdoc/>
+    public async Task<bool> AreObserversInitialized() => await eventStoreDatabase.GetCollection<BsonDocument>("initialization")
+        .CountDocumentsAsync(new BsonDocument("_id", 2)) > 0;
+
+    /// <inheritdoc/>
+    public Task MarkObserversInitialized() => DuplicateKeyConvergence.UpsertWithRetry(() => eventStoreDatabase.GetCollection<BsonDocument>("initialization")
+        .UpdateOneAsync(new BsonDocument("_id", 2), new BsonDocument("$setOnInsert", new BsonDocument("_id", 2)), new UpdateOptions { IsUpsert = true }));
+
+    /// <inheritdoc/>
     public IEventStoreNamespaceStorage GetNamespace(EventStoreNamespaceName @namespace)
     {
         if (_namespaces.TryGetValue(@namespace, out var instance))
@@ -127,7 +164,6 @@ public class EventStoreStorage(
             @namespace,
             eventStoreDatabase.GetNamespaceDatabase(@namespace),
             EventTypes,
-            Observers,
             expandoObjectConverter,
             jsonSerializerOptions,
             sinksFactory(@namespace),
@@ -136,5 +172,12 @@ public class EventStoreStorage(
             loggerFactory);
 
         return _namespaces.GetOrAdd(@namespace, created);
+    }
+
+    /// <inheritdoc/>
+    public async Task DropNamespace(EventStoreNamespaceName @namespace)
+    {
+        await eventStoreDatabase.GetNamespaceDatabase(@namespace).Drop();
+        _namespaces.TryRemove(@namespace, out _);
     }
 }

@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventTypes;
 using MongoDB.Bson;
+using MongoDB.Bson.Serialization.Attributes;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Events.EventTypes;
 
@@ -26,4 +27,11 @@ public record EventType(
     IDictionary<string, BsonDocument> Schemas,
     IEnumerable<EventTypeMigration>? Migrations = null,
     EventTypeVisibility Visibility = EventTypeVisibility.Unspecified,
-    string Origin = "");
+    string Origin = "")
+{
+    /// <summary>
+    /// Gets the immutable migration definitions keyed by their content-addressed version.
+    /// </summary>
+    [BsonIgnoreIfNull]
+    public IDictionary<string, MigrationVersion>? MigrationVersions { get; init; }
+}

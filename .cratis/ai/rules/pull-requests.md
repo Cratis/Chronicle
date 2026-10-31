@@ -7,7 +7,9 @@ applyTo: "**/*"
 
 ## The description is the release note
 
-**The PR description is published verbatim as the GitHub release. In repositories released by `cratis/release-action`, it also closes every issue written as `(#n)`; elsewhere, follow the repository's own release and issue-closing process.** Write the note the person upgrading should read, not a development write-up. The same contract applies to release notes typed into a manual workflow run or written straight into a release. Where it is installed, the `verify-release-notes` check enforces it on release-bound PRs into the default branch carrying `major`/`minor`/`patch` (it re-runs when the label is added); it warns on `no-release` and unlabelled PRs, which must still be written this way because any of them may become releasable. `release-action` does not run for a `no-release` PR, so `(#n)` closes nothing there. Editing the description re-runs the check. HTML comments are not shown on the release page and the check ignores them for headings, keywords and placeholders, but a `(#n)` inside a comment still closes the issue (`release-action` skips only fenced and inline code) and the check fails it, so never put an issue reference in a comment. The template's own comment can stay: its `(#123)` examples are inline code.
+**The PR description is published verbatim as the GitHub release. In repositories released by `cratis/release-action`, it also closes every issue written as `(#n)`; elsewhere, follow the repository's own release and issue-closing process.** Write the note the person upgrading should read, not a development write-up. The same contract applies to release notes typed into a manual workflow run or written straight into a release. Where it is installed, the `policy / verify` check enforces it on release-bound PRs into the default branch carrying `major`/`minor`/`patch` (it re-runs when the label is added); its release-note step warns on `no-release` and unlabelled PRs, which must still be written this way because any of them may become releasable. `release-action` does not run for a `no-release` PR, so `(#n)` closes nothing there. Editing the description re-runs the check. HTML comments are not shown on the release page and the check ignores them for headings, keywords and placeholders, and `release-action` removes them before publishing, so a `(#n)` only inside a comment closes nothing; the check fails it, so never put an issue reference in a comment. The template's own comment can stay: its `(#123)` examples are inline code, and the comment is not published.
+
+**A change to a hook script or its wiring (`.cratis/ai/hooks/**`) needs a release-note line that tells consumers to run `cratis ai update`; a hook fix does not reach a repository until they do.**
 
 ### Allowed shape
 
@@ -82,12 +84,12 @@ Arc can now construct Chronicle reactors and reducers through its own dependency
 
 ### Before you create or edit a PR
 
-1. Run `node .cratis/ai/hooks/scripts/cratis-check-pr.mjs --body-file <file> --label <intent>`. It runs the exact `verify-release-notes` rules plus the label and diff checks, and the Bash hook runs it on `gh pr create` and `gh pr edit`.
+1. Run `node .cratis/ai/hooks/scripts/cratis-check-pr.mjs --body-file <file> --label <intent>`. It runs the exact `policy / verify` release-note rules plus the label and diff checks, and the Bash hook runs it on `gh pr create` and `gh pr edit`.
 2. Read the body against the forbidden list and the issue table above; delete every hit and verify every issue number.
 3. Sections in order, none empty, at most one summary form; every bullet user-facing.
 4. Test plan, verification and review notes are in a PR comment.
 
-If `verify-release-notes` fails, fix it by editing the description, not by pushing code.
+If the release-note rules fail, fix the description, not the code.
 
 ## Commits
 
@@ -103,7 +105,7 @@ Quick reminders:
 
 Confirm the current repository workflow contract before selecting release intent because release-intent labels can trigger publication. A direct request to ship with a named label authorizes applying that label and completing the repository's standard pull-request workflow, including the release it normally triggers. Do not ask for separate authorization at each step. If the user did not request shipping or publication, a proposed semantic label describes impact but does not grant authority.
 
-- Exactly one of `major`/`minor`/`patch`/`no-release`, set in the creating command (`gh pr create --label patch`), in every repository, including samples, docs and tooling repositories (`no-release` when nothing is shipped). To change intent, swap labels in one command: `gh pr edit <n> --remove-label minor --add-label patch`. Never add a second.
+- Exactly one of `major`/`minor`/`patch`/`no-release`, set in the creating command (`gh pr create --label patch`), in every repository, including samples, docs and tooling repositories (`no-release` when nothing is shipped). To change intent, swap labels in one command: `gh pr edit <n> --remove-label minor --add-label patch`. Never add a second: with more than one of them, release-action releases nothing and reports `reason=error`. Re-running a `pull_request` workflow replays the original label payload, so fix a label mistake by editing the PR or pushing; a `workflow_dispatch` run needs an explicit `version` and the PR description as `release-notes`, and without notes it closes no issues.
 - Dependabot PRs carry only `no-release`. release-action never releases them, and the `major`/`minor`/`patch` Dependabot adds describe the dependency's version, not this product's.
 - Label the PR according to semantic versioning impact:
   - **major** — breaking changes to public APIs
@@ -158,6 +160,8 @@ Do not open a pull request per task when the tasks belong to the same body of wo
 
 **Before consolidating open PRs, review each PR’s release intent and workflow effects.** Integration may trigger completion/publication behavior on an absorbed PR. Use supported non-release intent where appropriate. A direct request to consolidate the named pull requests authorizes the necessary relabeling and merge; it does not authorize unrelated notifications.
 
+Before a consolidation or a re-land of reverted work merges, prove it dropped nothing with `cratis-engineering-consolidation-guard`.
+
 Split into separate pull requests when the changes are genuinely unrelated, when one is urgent and the others are not, or when one is risky enough to want its own revert.
 
 ## Quality Gates
@@ -173,4 +177,4 @@ Before marking code/automation work ready, select the affected-project gates tha
 - `yarn lint` — zero errors
 - `npx tsc -b` — zero TypeScript errors
 - Code follows all project coding standards and conventions
-- **Required CI checks pass.** After an authorized push, inspect checks and failure logs. Diagnose within a bounded attempt, fix in-scope causes, and re-run relevant gates after each fix. Report unrelated/environmental failures and missing authority as blockers rather than retrying indefinitely or silently waiving required checks.
+- **Required CI checks pass.** After an authorized push, inspect checks and failure logs. Diagnose within a bounded attempt, fix in-scope causes, and re-run relevant gates after each fix. Report unrelated/environmental failures and missing authority as blockers rather than retrying indefinitely or silently waiving required checks. If a release job fails after a concurrent merge (the release for the tag exists for another commit), re-run it: it releases under the next version (release-action v1.4.2 fails the job rather than reporting success).

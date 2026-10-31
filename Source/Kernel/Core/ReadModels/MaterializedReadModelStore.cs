@@ -6,7 +6,6 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
-using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Sinks;
 
 namespace Cratis.Chronicle.ReadModels;
@@ -15,10 +14,10 @@ namespace Cratis.Chronicle.ReadModels;
 /// Represents an implementation of <see cref="IMaterializedReadModelStore"/> that reads instances from the
 /// <see cref="ISink"/> a read model's observer writes to.
 /// </summary>
-/// <param name="storage">The <see cref="IStorage"/> to resolve sinks through.</param>
+/// <param name="readBindings">The bindings for resolving materialized read destinations.</param>
 /// <param name="compliance">The <see cref="IReadModelsCompliance"/> for releasing compliance and security fields before instances leave the kernel.</param>
 public class MaterializedReadModelStore(
-    IStorage storage,
+    IReadModelReadBindings readBindings,
     IReadModelsCompliance compliance) : IMaterializedReadModelStore
 {
     /// <summary>
@@ -40,8 +39,8 @@ public class MaterializedReadModelStore(
         ReadModelDefinition definition,
         Key key)
     {
-        var sink = await GetSinkFor(eventStore, eventStoreNamespace, definition);
-        var instance = await sink.FindOrDefault(key);
+        var binding = await readBindings.Resolve(eventStore, eventStoreNamespace, definition);
+        var instance = await binding.Sink.FindInPrimaryOrDefault(key);
         if (instance is null)
         {
             return null;
@@ -55,19 +54,35 @@ public class MaterializedReadModelStore(
     }
 
     /// <inheritdoc/>
+    public async Task<CompositeKeyLookupResult> FindByCompositeKey(
+        EventStoreName eventStore,
+        EventStoreNamespaceName eventStoreNamespace,
+        ReadModelDefinition definition,
+        Key key)
+    {
+        if (!IsMaterialized(definition)) return CompositeKeyLookupResult.NotSupported;
+        var binding = await readBindings.Resolve(eventStore, eventStoreNamespace, definition);
+        if (binding.Sink is not ISinkCompositeKeyLookup lookup) return CompositeKeyLookupResult.NotSupported;
+        var result = await lookup.FindByCompositeKey(key);
+        if (result.Outcome != CompositeKeyLookupOutcome.Found) return result;
+        var instance = await compliance.Release(eventStore, eventStoreNamespace, definition.GetSchemaForLatestGeneration(), result.Instance!);
+        return result with { Instance = instance };
+    }
+
+    /// <inheritdoc/>
     public async Task<IEnumerable<ExpandoObject>> GetAllInstances(
         EventStoreName eventStore,
         EventStoreNamespaceName eventStoreNamespace,
         ReadModelDefinition definition)
     {
-        var sink = await GetSinkFor(eventStore, eventStoreNamespace, definition);
+        var binding = await readBindings.Resolve(eventStore, eventStoreNamespace, definition);
         var schema = definition.GetSchemaForLatestGeneration();
         var instances = new List<ExpandoObject>();
         var skip = 0;
 
         while (true)
         {
-            var page = await sink.GetInstances(skip: skip, take: PageSize);
+            var page = await binding.Sink.GetInstances(binding.Occurrence, skip: skip, take: PageSize);
             var pageInstances = page.Instances.ToList();
             if (pageInstances.Count == 0)
             {
@@ -85,7 +100,4 @@ public class MaterializedReadModelStore(
 
         return instances;
     }
-
-    Task<ISink> GetSinkFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, ReadModelDefinition definition) =>
-        storage.GetEventStore(eventStore).GetNamespace(eventStoreNamespace).Sinks.GetFor(definition);
 }

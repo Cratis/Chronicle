@@ -18,7 +18,7 @@ public class when_getting_the_same_definition_twice : given.a_caching_projection
         _second = await _storage.Get(_id);
     }
 
-    [Fact] void should_only_ask_inner_once() => _inner.Received(1).Get(_id);
+    [Fact] void should_read_shared_storage_each_time() => _inner.Received(2).Get(_id);
     [Fact] void should_return_the_definition_the_first_time() => _first.ShouldEqual(_definition);
     [Fact] void should_return_the_same_definition_the_second_time() => _second.ShouldEqual(_definition);
 }

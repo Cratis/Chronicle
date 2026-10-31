@@ -1,0 +1,7 @@
+projection Doc => DocReadModel
+  from DocEvent
+    Status = "Pending"
+    IsActive = true
+    Count = 0
+    Balance = 0.0
+    Notes = null

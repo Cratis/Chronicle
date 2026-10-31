@@ -34,5 +34,13 @@ public enum CompleteStreamError
     /// <summary>
     /// The default stream cannot be completed.
     /// </summary>
-    DefaultStreamCannotBeCompleted = 2
+    DefaultStreamCannotBeCompleted = 2,
+    /// <summary>
+    /// The scope has no participating dimensions.
+    /// </summary>
+    EmptyScope = 3,
+    /// <summary>
+    /// The scope tail differs from the expected sequence number.
+    /// </summary>
+    ExpectedTailMismatch = 4
 }

@@ -8,6 +8,10 @@
   href: features.md
 - name: Storage
   href: storage.mdx
+- name: Storage Connection Resolution
+  href: storage-connection-resolution.md
+- name: SQL Schema Operations
+  href: sql-schema-operations.md
 - name: Compliance Storage
   href: compliance-storage.md
 - name: Clustering
@@ -24,6 +28,8 @@
   href: tls.md
 - name: Health Endpoint
   href: health-endpoint.md
+- name: Workbench
+  href: workbench.md
 - name: Identity Provider Certificate
   href: identity-provider-certificate.md
 - name: Client Bootstrap

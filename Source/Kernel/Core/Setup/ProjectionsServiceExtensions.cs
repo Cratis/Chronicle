@@ -1,9 +1,13 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.Projections.Generations.Enablement;
+using Cratis.Chronicle.Generations.Admission;
+using Cratis.Chronicle.Generations.Enablement;
 using Cratis.Chronicle.Projections;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Polly;
 using Polly.Telemetry;
 
@@ -22,6 +26,14 @@ public static class ProjectionsServiceExtensions
     /// <returns><see cref="ISiloBuilder"/> for continuation.</returns>
     public static ISiloBuilder AddProjectionsService(this ISiloBuilder siloBuilder)
     {
+        siloBuilder.Services.TryAddTransient<IGenerationFloorAdmission, GenerationFloorAdmission>();
+        siloBuilder.Services.TryAddTransient<IGenerationFloorAdvancement, GenerationFloorAdvancement>();
+        siloBuilder.Services.TryAddTransient<IGenerationMembershipProbe, UnknownGenerationMembershipProbe>();
+        siloBuilder.Services.TryAddSingleton(GenerationBinarySupport.Current);
+        siloBuilder.Services.TryAddTransient<IGenerationEnablement, GenerationEnablement>();
+        siloBuilder.Services.TryAddTransient<IGenerationExclusionProof, NotProvenGenerationExclusionProof>();
+        siloBuilder.Services.TryAddTransient<IGenerationLegacyWork, GenerationLegacyWork>();
+        siloBuilder.Services.TryAddTransient<ILegacyMaterializations, LegacyMaterializations>();
         siloBuilder.AddGrainService<ProjectionsService>();
         siloBuilder.ConfigureServices(_ => _.AddSingleton<IProjectionsServiceClient, ProjectionsServiceClient>());
 

@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Storage.Observation;
+
 namespace Cratis.Chronicle.Storage.MongoDB;
 
 /// <summary>
@@ -8,6 +10,11 @@ namespace Cratis.Chronicle.Storage.MongoDB;
 /// </summary>
 public static class WellKnownCollectionNames
 {
+    /// <summary>
+    /// The kernel single-writer lease.
+    /// </summary>
+    public const string SingleWriterLeases = "single-writer-leases";
+
     /// <summary>
     /// The collection holding retained alert incidents.
     /// </summary>
@@ -42,6 +49,26 @@ public static class WellKnownCollectionNames
     /// The collection that holds observer state.
     /// </summary>
     public const string Observers = "observers";
+
+    /// <summary>
+    /// The collection holding durable definition-change step progress.
+    /// </summary>
+    public const string ObserverDefinitionChangeProgress = ObserverDefinitionChangeRowFamilies.Progress;
+
+    /// <summary>
+    /// The collection holding partition continuation obligations.
+    /// </summary>
+    public const string ObserverDefinitionChangeContinuations = ObserverDefinitionChangeRowFamilies.Continuations;
+
+    /// <summary>
+    /// The collection holding replay restart plans.
+    /// </summary>
+    public const string ObserverDefinitionChangeRestartPlans = ObserverDefinitionChangeRowFamilies.RestartPlans;
+
+    /// <summary>
+    /// The collection holding job inventory and terminal outcomes.
+    /// </summary>
+    public const string ObserverDefinitionChangeInventory = ObserverDefinitionChangeRowFamilies.Inventory;
 
     /// <summary>
     /// The collection that holds event sequences.

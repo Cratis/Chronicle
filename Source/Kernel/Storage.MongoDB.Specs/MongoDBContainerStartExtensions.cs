@@ -27,7 +27,14 @@ public static class MongoDBContainerStartExtensions
     /// </summary>
     public const string GlibcRseqCompatibilityValue = "glibc.pthread.rseq=1";
 
+    /// <summary>
+    /// The default deadline for a MongoDB spec container to become ready. It also covers starting the resource reaper and pulling the image
+    /// on a cold runner, and stays far below the test session limit.
+    /// </summary>
+    public static readonly TimeSpan DefaultStartDeadline = TimeSpan.FromMinutes(5);
+
     const string KernelIncompatibilityMarker = "known incompatibility with this version of MongoDB";
+    const int LogTailCharacters = 4000;
 
     /// <summary>
     /// Configures the container to start reliably on a host whose Linux kernel falls in MongoDB's documented
@@ -49,22 +56,49 @@ public static class MongoDBContainerStartExtensions
         builder.WithEnvironment(GlibcRseqCompatibilityVariable, GlibcRseqCompatibilityValue);
 
     /// <summary>
-    /// Starts the given MongoDB container, turning MongoDB's kernel-incompatibility startup
+    /// Starts the given MongoDB container within a deadline, turning MongoDB's kernel-incompatibility startup
     /// guard into a <see cref="MongoDBKernelIncompatible"/> exception instead of Testcontainers'
-    /// raw container-exit trace.
+    /// raw container-exit trace, and a container that never becomes ready into a
+    /// <see cref="MongoDBContainerStartTimedOut"/> carrying its logs instead of a hung test run.
     /// </summary>
     /// <param name="container">The <see cref="IContainer"/> to start.</param>
+    /// <param name="deadline">How long the container may take to become ready; <see cref="DefaultStartDeadline"/> when omitted.</param>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     /// <exception cref="MongoDBKernelIncompatible">Thrown when the container failed to start because of MongoDB's Linux kernel 6.19-7.0.13 startup guard.</exception>
-    public static async Task StartMongoDBWithDiagnostics(this IContainer container)
+    /// <exception cref="MongoDBContainerStartTimedOut">Thrown when the container did not become ready within the deadline.</exception>
+    public static async Task StartMongoDBWithDiagnostics(this IContainer container, TimeSpan? deadline = default)
     {
+        var startDeadline = deadline ?? DefaultStartDeadline;
+        using var timeout = new CancellationTokenSource(startDeadline);
         try
         {
-            await container.StartAsync();
+            await container.StartAsync(timeout.Token);
+        }
+        catch (Exception ex) when (timeout.IsCancellationRequested && ex is OperationCanceledException or TimeoutException)
+        {
+            // Testcontainers reports a wait cancelled by the token as a TimeoutException, a cancelled request as an OperationCanceledException.
+            throw new MongoDBContainerStartTimedOut(startDeadline, await ReadLogTail(container), ex);
         }
         catch (Exception ex) when (ex.Message.Contains(KernelIncompatibilityMarker, StringComparison.OrdinalIgnoreCase))
         {
             throw new MongoDBKernelIncompatible(ex);
         }
     }
+
+    static async Task<string> ReadLogTail(IContainer container)
+    {
+        try
+        {
+            using var logsTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            var (stdout, stderr) = await container.GetLogsAsync(ct: logsTimeout.Token);
+            return $"stderr:{Environment.NewLine}{Tail(stderr)}{Environment.NewLine}stdout:{Environment.NewLine}{Tail(stdout)}";
+        }
+        catch (Exception error)
+        {
+            // The timeout is the failure being reported; a log read failure only explains missing logs.
+            return $"(could not read container logs: {error.Message})";
+        }
+    }
+
+    static string Tail(string value) => value.Length <= LogTailCharacters ? value : value[^LogTailCharacters..];
 }

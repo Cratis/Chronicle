@@ -58,9 +58,9 @@ public class structural_levels : for_LanguageService.given.a_language_service
     CompilerErrors Errors(string declaration) => _languageService.Compile(declaration, ProjectionOwner.Client, [], [])
         .Match(_ => CompilerErrors.Empty, errors => errors);
 
-    [Fact] void should_reject_duplicate_from_inside_nested() => _duplicateNestedFrom.Errors.ShouldContain(_ => _.Message.Contains("Duplicate event type 'DepartmentCreated'", StringComparison.Ordinal));
-    [Fact] void should_reject_duplicate_clear_with() => _duplicateClear.Errors.ShouldContain(_ => _.Message.Contains("Duplicate event type 'DepartmentDeleted'", StringComparison.Ordinal));
-    [Fact] void should_reject_remove_with_and_clear_with_same_event() => _removeAndClear.Errors.ShouldContain(_ => _.Message.Contains("Duplicate event type 'DepartmentDeleted'", StringComparison.Ordinal));
-    [Fact] void should_reject_join_event_in_separate_join_blocks() => _duplicateJoinAcrossBlocks.Errors.ShouldContain(_ => _.Message.Contains("Duplicate event type 'DepartmentCreated'", StringComparison.Ordinal));
+    [Fact] void should_reject_duplicate_from_inside_nested() => _duplicateNestedFrom.Errors.ShouldContain(_ => _.Message.Contains("Event 'DepartmentCreated' is used more than once", StringComparison.Ordinal));
+    [Fact] void should_reject_duplicate_clear_with() => _duplicateClear.Errors.ShouldContain(_ => _.Message.Contains("Event 'DepartmentDeleted' is used more than once", StringComparison.Ordinal));
+    [Fact] void should_reject_remove_with_and_clear_with_same_event() => _removeAndClear.Errors.ShouldContain(_ => _.Message.Contains("Event 'DepartmentDeleted' is used more than once", StringComparison.Ordinal));
+    [Fact] void should_reject_join_event_in_separate_join_blocks() => _duplicateJoinAcrossBlocks.Errors.ShouldContain(_ => _.Message.Contains("Event 'DepartmentCreated' is used more than once", StringComparison.Ordinal));
     [Fact] void should_allow_parent_and_nested_to_handle_same_event() => _reusedParentEvent.ShouldNotBeNull();
 }

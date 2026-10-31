@@ -26,6 +26,7 @@ using Cratis.Metrics;
 using Cratis.Monads;
 using Cratis.Orleans.Jobs;
 using Cratis.Traces;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Orleans.TestKit;
@@ -57,6 +58,7 @@ public class an_event_sequence : Specification
     protected IConstraintValidation _constraintValidation;
     protected IConstraintValidation _currentValidation;
     protected IEventTypeMigrations _eventTypeMigrations;
+    protected IEventHashCalculator _eventHashCalculator = Substitute.For<IEventHashCalculator>();
     protected IPatternCapture _patternCapture;
     protected IJsonSchemaMetadataManager _complianceManager;
     protected IExpandoObjectConverter _expandoObjectConverter;
@@ -66,6 +68,7 @@ public class an_event_sequence : Specification
     protected IConstraints _constraintsGrain;
     protected IJobsManager _jobsManager;
     protected List<IConstraintDefinition> _registeredConstraints;
+    protected ILogger<EventSequence> _eventSequenceLogger = NullLogger<EventSequence>.Instance;
 
     protected virtual EventSequenceId SequenceId => EventSequenceId.Log;
     protected virtual int StatePersistenceInterval => 1000;
@@ -129,7 +132,9 @@ public class an_event_sequence : Specification
             Arg.Any<EventSourceType?>(),
             Arg.Any<EventStreamType?>(),
             Arg.Any<EventStreamId?>(),
-            Arg.Any<ConstraintBatchClaims?>())
+            Arg.Any<ConstraintBatchClaims?>(),
+            Arg.Any<Subject?>(),
+            Arg.Any<IReadOnlyCollection<string>?>())
             .Returns(callInfo => new ConstraintValidationContext(
                 [_recordingValidator],
                 callInfo.ArgAt<EventSourceId>(0),
@@ -179,14 +184,27 @@ public class an_event_sequence : Specification
         _constraintsGrain.GetVersion().Returns(_ => ConstraintDefinitionComparison.ComputeVersion(_registeredConstraints));
         _jobsManager = Substitute.For<IJobsManager>();
 
+        ConfigureSilo();
+        _stateStorage = _silo.StorageManager.GetStorage<EventSequenceState>(typeof(EventSequence).FullName!);
+        _stateStorage.State = new EventSequenceState { ConstraintIndexWatermark = EventSequenceNumber.First };
+
+        _eventSequence = await CreateEventSequence();
+    }
+
+    /// <summary>
+    /// Registers the existing collaborators in a fresh test silo for activation lifecycle specifications.
+    /// </summary>
+    protected void ConfigureSilo()
+    {
         _silo.AddService(_storage);
+        _silo.AddService<IStorageErrorClassifier>(new Storage.InMemory.InMemoryStorageErrorClassifier());
         _silo.AddService(_constraintValidationFactory);
         _silo.AddService(_eventTypeMigrations);
         _silo.AddService(_patternCapture);
         _silo.AddService(_complianceManager);
         _silo.AddService(_expandoObjectConverter);
         _silo.AddService(Substitute.For<IEventSerializer>());
-        _silo.AddService(Substitute.For<IEventHashCalculator>());
+        _silo.AddService(_eventHashCalculator);
         _silo.AddService<IOptions<ChronicleOptions>>(Options.Create(new ChronicleOptions
         {
             Events = new Configuration.Events
@@ -196,18 +214,14 @@ public class an_event_sequence : Specification
                 CausationPropertyRetention = CausationPropertyRetention
             }
         }));
-        _silo.AddService(NullLogger<EventSequence>.Instance);
+        _silo.AddService(_eventSequenceLogger);
+        _silo.AddService(NullLogger<ConstraintIndexReplay>.Instance);
         _silo.AddKeyedService<IMeter<EventSequence>>(WellKnown.MeterName, Substitute.For<IMeter<EventSequence>>());
         _silo.AddKeyedService<IActivitySource<EventSequence>>(WellKnown.MeterName, new ActivitySource<EventSequence>());
         _silo.AddProbe(_ => _namespaces);
         _silo.AddProbe(_ => _appendedEventsQueues);
         _silo.AddProbe(_ => _constraintsGrain);
         _silo.AddProbe(_ => _jobsManager);
-
-        _stateStorage = _silo.StorageManager.GetStorage<EventSequenceState>(typeof(EventSequence).FullName!);
-        _stateStorage.State = new EventSequenceState();
-
-        _eventSequence = await CreateEventSequence();
     }
 
     /// <summary>

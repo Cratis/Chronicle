@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Compliance.GDPR;
 using Cratis.Chronicle.Connections;
+using Cratis.Chronicle.Discovery;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.EventSequences;
@@ -12,6 +13,7 @@ using Cratis.Chronicle.ExternalServices;
 using Cratis.Chronicle.Identities;
 using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Observation;
+using Cratis.Chronicle.Occurrences;
 using Cratis.Chronicle.Patterns;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Reactors;
@@ -79,6 +81,12 @@ public interface IEventStore
     /// Gets the <see cref="IReactors"/> for the event store.
     /// </summary>
     IReactors Reactors { get; }
+
+    /// <summary>
+    /// Gets occurrence effect receipts bound to this store and namespace.
+    /// </summary>
+    /// <exception cref="EffectReceiptsNotSupported">This implementation does not support occurrences.</exception>
+    IOccurrences Occurrences => throw new EffectReceiptsNotSupported();
 
     /// <summary>
     /// Gets the <see cref="IReducers"/> for the event store.
@@ -178,6 +186,12 @@ public interface IEventStore
     RegistrationOutcome Registration { get; }
 
     /// <summary>
+    /// Gets the artifacts found by the last completed discovery pass, or <see cref="DiscoveryReport.NotRun"/>.
+    /// Reading this does not trigger discovery or indicate registration success.
+    /// </summary>
+    DiscoveryReport Discovery => DiscoveryReport.NotRun;
+
+    /// <summary>
     /// Discover all artifacts for the event store.
     /// </summary>
     /// <returns>Awaitable task.</returns>
@@ -202,4 +216,16 @@ public interface IEventStore
     /// <param name="cancellationToken">Optional <see cref="CancellationToken"/>.</param>
     /// <returns>An asynchronous enumerable for all namespace names.</returns>
     Task<IEnumerable<EventStoreNamespaceName>> GetNamespaces(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Remove a namespace from the event store, together with its observers, their reminders and the data Chronicle
+    /// stores for it. Clients connected to the namespace must stop using it first. Removing a namespace that does not
+    /// exist does nothing; the default namespace cannot be removed.
+    /// </summary>
+    /// <param name="namespace">The <see cref="EventStoreNamespaceName"/> to remove.</param>
+    /// <param name="cancellationToken">Optional <see cref="CancellationToken"/>.</param>
+    /// <returns>Awaitable task.</returns>
+    /// <exception cref="NotSupportedException">The event store does not support removing namespaces.</exception>
+    Task RemoveNamespace(EventStoreNamespaceName @namespace, CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException("Removing a namespace is not supported by this event store");
 }

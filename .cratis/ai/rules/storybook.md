@@ -18,7 +18,7 @@ Good candidates: a presentational card/list-item/form-field with multiple visual
 
 ## Preview infrastructure (what you get for free)
 
-A configured `.storybook/preview` should wrap every story in `CratisComponentsProvider` (from `@cratis/components`) and import `@cratis/components/tokens`, `@cratis/components/styles` and (for the baseline look) `@cratis/components/theme` — the same three entries the app imports — so components render styled. With that in place:
+A configured `.storybook/preview` should wrap every story in `CratisComponentsProvider` (from `@cratis/components`) with `toaster` when stories show notifications. Import one `index.css` containing `@import '@cratis/components/tokens'`, `@import '@cratis/components/styles'` and (for the baseline look) `@import '@cratis/components/theme'`, each terminated by a semicolon — the same entries as the app. CSS imports from TypeScript need ambient declarations on TypeScript 6; keeping the subpaths in CSS avoids TS2882. Mount only one toaster. With that in place:
 
 - **Auto prop tables** via `react-docgen-typescript` — a component's `interface` + per-prop JSDoc renders as a Docs prop table, and union props become `select` controls automatically. Keep a JSDoc comment on every prop. **`argTypes` is an override layer** (change control type, group under `table.category`, disable a control) — don't re-list every prop.
 - **Accessibility panel** (`@storybook/addon-a11y`) scans each story with axe-core. Treat new violations as defects.

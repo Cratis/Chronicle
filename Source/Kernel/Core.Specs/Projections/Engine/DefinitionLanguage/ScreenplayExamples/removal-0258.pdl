@@ -1,0 +1,15 @@
+projection Task => TaskReadModel
+  from TaskCreated
+    Title = title
+    ProjectId = projectId
+    AssignedTo = assigneeId
+
+  join Project on ProjectId
+    with ProjectCreated
+      ProjectName = name
+
+  join User on AssignedTo
+    with UserCreated
+      AssigneeName = name
+
+  remove via join on ProjectDeleted

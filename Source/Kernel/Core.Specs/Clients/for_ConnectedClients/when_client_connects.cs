@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Configuration;
+using Cratis.Chronicle.Storage;
 using Cratis.Metrics;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -20,7 +21,8 @@ public class when_client_connects : Specification
         _connectedClients = new ConnectedClients(
             Substitute.For<ILogger<ConnectedClients>>(),
             Substitute.For<IMeter<ConnectedClients>>(),
-            Options.Create(new ChronicleOptions()));
+            Options.Create(new ChronicleOptions()),
+            Substitute.For<IStorage>());
         _connectionId = ConnectionId.New();
     }
 

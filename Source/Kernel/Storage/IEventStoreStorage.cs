@@ -26,6 +26,38 @@ namespace Cratis.Chronicle.Storage;
 public interface IEventStoreStorage
 {
     /// <summary>
+    /// Gets durable generation initialization evidence.
+    /// </summary>
+    Generations.IGenerationInitializationStorage GenerationInitialization { get; }
+
+    /// <summary>Gets the durable generation compatibility floor.</summary>
+    Generations.IGenerationFloorStorage GenerationFloor { get; }
+
+    /// <summary>
+    /// Gets the durable lifecycle fan-out intents for this event store.
+    /// </summary>
+    /// <exception cref="Occurrences.OccurrencesStorageNotSupported">The provider has not implemented lifecycle intents.</exception>
+    Occurrences.ILifecycleFanOutStorage LifecycleFanOut => throw new Occurrences.OccurrencesStorageNotSupported();
+
+    /// <summary>
+    /// Gets the payload contracts registered for application and lifecycle triggers.
+    /// </summary>
+    /// <exception cref="Occurrences.OccurrencesStorageNotSupported">The custom provider has not implemented trigger definition storage.</exception>
+    Occurrences.ITriggerDefinitionsStorage TriggerDefinitions => throw new Occurrences.OccurrencesStorageNotSupported();
+
+    /// <summary>
+    /// Gets application-scoped occurrences, separately from every namespace's queue.
+    /// </summary>
+    /// <exception cref="Occurrences.OccurrencesStorageNotSupported">The custom provider has not implemented occurrence storage.</exception>
+    Occurrences.IOccurrencesStorage Occurrences => throw new Occurrences.OccurrencesStorageNotSupported();
+
+    /// <summary>
+    /// Gets event-store definitions and application-scoped schedule cursors.
+    /// </summary>
+    /// <exception cref="Occurrences.OccurrencesStorageNotSupported">The custom provider has not implemented schedule storage.</exception>
+    Occurrences.IScheduleStorage Schedules => throw new Occurrences.OccurrencesStorageNotSupported();
+
+    /// <summary>
     /// Gets the event store the storage represents.
     /// </summary>
     EventStoreName EventStore { get; }
@@ -106,6 +138,36 @@ public interface IEventStoreStorage
     IEventSeedingStorage EventSeeding { get; }
 
     /// <summary>
+    /// Checks whether first-time kernel setup completed. Missing markers in older stores mean uninitialized.
+    /// </summary>
+    /// <returns>Whether initialization completed.</returns>
+    /// <exception cref="EventStoreInitializationNotSupported">The provider does not support initialization markers.</exception>
+    Task<bool> IsInitialized() => throw new EventStoreInitializationNotSupported();
+
+    /// <summary>
+    /// Durably records successful first-time kernel setup. Only the store's initializer grain writes this marker.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    /// <exception cref="EventStoreInitializationNotSupported">The provider does not support initialization markers.</exception>
+    Task MarkInitialized() => throw new EventStoreInitializationNotSupported();
+
+    /// <summary>
+    /// Checks the observer-enablement marker, independently of first-time kernel setup.
+    /// Missing markers in legacy stores mean observer initialization has not completed.
+    /// </summary>
+    /// <returns>Whether observer initialization completed for the event store.</returns>
+    /// <exception cref="EventStoreInitializationNotSupported">The provider does not support initialization markers.</exception>
+    Task<bool> AreObserversInitialized() => throw new EventStoreInitializationNotSupported();
+
+    /// <summary>
+    /// Persists observer enablement after the initialization operation's cluster checks.
+    /// This storage operation performs no initialization or runtime state changes itself.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    /// <exception cref="EventStoreInitializationNotSupported">The provider does not support initialization markers.</exception>
+    Task MarkObserversInitialized() => throw new EventStoreInitializationNotSupported();
+
+    /// <summary>
     /// Get a specific <see cref="IEventStoreNamespaceStorage"/> for a <see cref="EventStoreNamespaceName"/>.
     /// </summary>
     /// <param name="namespace">The <see cref="EventStoreNamespaceName"/> to get for.</param>
@@ -118,4 +180,15 @@ public interface IEventStoreStorage
     /// Namespace names are matched exactly; they are derived byte for byte into physical database names.
     /// </remarks>
     IEventStoreNamespaceStorage GetNamespace(EventStoreNamespaceName @namespace);
+
+    /// <summary>
+    /// Drop the data stored for a namespace. Called once the namespace's observers have been removed.
+    /// </summary>
+    /// <param name="namespace">The <see cref="EventStoreNamespaceName"/> whose data to drop.</param>
+    /// <returns>Awaitable task.</returns>
+    /// <remarks>
+    /// Storage providers that keep a namespace's data apart from the other namespaces override this. The default
+    /// does nothing, leaving the data in place.
+    /// </remarks>
+    Task DropNamespace(EventStoreNamespaceName @namespace) => Task.CompletedTask;
 }

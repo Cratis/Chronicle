@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Observation;
 
 namespace Cratis.Chronicle.Observation.Jobs;
 
@@ -12,6 +13,11 @@ namespace Cratis.Chronicle.Observation.Jobs;
 public record HandleEventsForPartitionResult(EventSequenceNumber LastHandledEventSequenceNumber)
 {
     /// <summary>
+    /// Gets the durable deferral when this step stopped without completing delivery.
+    /// </summary>
+    public PartitionDeferral? Deferral { get; init; }
+
+    /// <summary>
     /// Gets the sequence number of the last event the step read and dealt with, whether it handed it to the
     /// subscriber or left it out because the observer's filters exclude it.
     /// </summary>
@@ -21,4 +27,14 @@ public record HandleEventsForPartitionResult(EventSequenceNumber LastHandledEven
     /// without claiming they were handled.
     /// </remarks>
     public EventSequenceNumber LastScannedEventSequenceNumber { get; init; } = EventSequenceNumber.Unavailable;
+
+    /// <summary>
+    /// Gets the timeout that ended the step, when that is why it failed.
+    /// </summary>
+    /// <remarks>
+    /// A timeout says the callee was too busy to answer, not that the events cannot be handled, so the step does not
+    /// report the partition as failed. The job runs the step again and reports the partition only when it has run out
+    /// of attempts - see <see cref="TransientTimeouts"/>.
+    /// </remarks>
+    public TransientPartitionFailure? TransientFailure { get; init; }
 }

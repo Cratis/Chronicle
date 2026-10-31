@@ -1,6 +1,6 @@
 ---
 name: cratis-engineering-decision-record
-description: Consult, author, accept, and supersede decision records in a Cratis repository's decisions/ folder. Use before an architectural, contract, scope, or cross-cutting change, when a ruling has been made that later work must obey, or when an accepted decision has to be replaced. Defer product documentation, session handovers, and work-item status to their own workflows.
+description: Consult, author, accept, and supersede decision records in a Cratis repository's decisions/ folder (or the folder in `.cratis/ai.json` `process.decisions.path`). Use before an architectural, contract, scope, or cross-cutting change, when a ruling has been made that later work must obey, or when an accepted decision has to be replaced. Defer product documentation, session handovers, and work-item status to their own workflows.
 license: LICENSE
 ---
 <!-- cratis-ai-managed: skills/cratis-engineering-decision-record/SKILL.md -->
@@ -9,7 +9,7 @@ license: LICENSE
 
 A decision is a durable choice with a **decider** and a **date**. It is
 documentation, not a work record: it lives in the repository's `decisions/`
-folder and is reviewed like any other documentation. A handover may summarize a
+folder (or the folder `.cratis/ai.json` sets as `process.decisions.path`) and is reviewed like any other documentation. A handover may summarize a
 decision; it never holds the only copy.
 
 This skill owns the *procedure* — how to consult, author, accept, and supersede
@@ -53,7 +53,7 @@ into an approval ceremony merely because this skill is available.
 ## Steps
 
 1. **List the records in force for the paths you are changing.** Read
-   `decisions/`, keep the records whose `applies-to` matches a path you are
+   `decisions/` (or the configured folder), keep the records whose `applies-to` matches a path you are
    about to touch and whose `status` is `accepted`, and order them newest first.
    Report the count — "0 records matched" and "3 matched, none contradicted" are
    different verdicts and must read differently.
@@ -105,8 +105,7 @@ into an approval ceremony merely because this skill is available.
     commit trailer citing the old id and point it at the new one. A reader
     arriving at either record must be able to reach the other.
 
-The exact front-matter fields, the closed value sets, and the index shape are in
-[record-format.md](references/record-format.md).
+Read [record-format.md](references/record-format.md) when authoring or updating a record or regenerating its index; it defines the exact front-matter fields, closed value sets, and index shape.
 
 ## What breaks
 

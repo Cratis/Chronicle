@@ -1,3 +1,6 @@
+---
+description: How a Chronicle reactor behaves when its observer replays history, so work meant to happen once is not repeated for past events.
+---
 # Replay
 
 A reactor sees the same event twice for different reasons: once as it happens, and again whenever its observer
@@ -24,5 +27,5 @@ a replay needs to do something *different* rather than nothing. Neither covers t
 failed partition being recovered — for that, see [Delivery identity](delivery-identity).
 
 :::note[Client coverage]
-TypeScript supports `@replay()` from `@cratis/chronicle` 6.9.0, with the same meaning as `Replay`. Elixir has no equivalent marker, so a replay always re-runs the regular handler there.
+TypeScript supports `@replay()` from `@cratis/chronicle` 6.9.0, with the same meaning as `Replay`. In Elixir, define the optional `handle_replay/2` callback; when present it is called instead of `handle/2` for replayed events, and `context.replaying?` tells a handler whether a replay is running.
 :::

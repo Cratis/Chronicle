@@ -6,7 +6,6 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Captures;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
-using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Observation;
@@ -81,18 +80,7 @@ public class CaptureEventsSubscriptions(
         {
             try
             {
-                var observer = GetObserver(eventStore, @namespace, definition.Id, sequence);
-                if (!await observer.NeedsSubscriptionRecovery(eventTypes))
-                {
-                    continue;
-                }
-
-                logger.RecoveringCaptureSubscription(definition.Name, eventStore, @namespace);
-                await observer.RecoverStalledSubscription<ICaptureEventsSubscriber>(
-                    ObserverType.Reactor,
-                    eventTypes,
-                    localSiloDetails.SiloAddress,
-                    isReplayable: false);
+                await RecoverIn(eventStore, @namespace, definition, sequence, eventTypes);
             }
             catch (Exception exception) when (exception is not OperationCanceledException)
             {
@@ -104,6 +92,13 @@ public class CaptureEventsSubscriptions(
         {
             throw new AggregateException($"The capture '{definition.Name}' could not be recovered in every namespace", failures);
         }
+    }
+
+    /// <inheritdoc/>
+    public async Task Recover(EventStoreName eventStore, EventStoreNamespaceName @namespace, CaptureDefinition definition)
+    {
+        var (sequence, eventTypes) = await Resolve(eventStore, definition);
+        await RecoverIn(eventStore, @namespace, definition, sequence, eventTypes);
     }
 
     /// <inheritdoc/>
@@ -153,14 +148,13 @@ public class CaptureEventsSubscriptions(
     async Task<(string Sequence, EventType[] EventTypes)> Resolve(EventStoreName eventStore, CaptureDefinition definition)
     {
         ThrowWhenNotEvents(definition);
-        var schemas = await GetSchemas(eventStore, definition);
-        var errors = EventsCaptureSequence.Resolve(definition.Source.Sequence, schemas, out var sequence);
-        if (errors.Count > 0 || string.IsNullOrWhiteSpace(sequence))
+        var resolved = await EventsCaptureSequence.ResolveFor(storage.GetEventStore(eventStore).EventTypes, definition.Source);
+        if (resolved.Errors.Count > 0 || string.IsNullOrWhiteSpace(resolved.Sequence))
         {
-            throw new UnsupportedCaptureCapability($"The capture '{definition.Name}' cannot read from an inbox: {string.Join("; ", errors)}");
+            throw new UnsupportedCaptureCapability($"The capture '{definition.Name}' cannot read from an inbox: {string.Join("; ", resolved.Errors)}");
         }
 
-        return (sequence, [.. schemas.Select(schema => schema.Type)]);
+        return (resolved.Sequence, [.. resolved.Schemas.Select(schema => schema.Type)]);
     }
 
     async Task<string?> ResolveForRemoval(EventStoreName eventStore, CaptureDefinition definition)
@@ -171,18 +165,24 @@ public class CaptureEventsSubscriptions(
             return definition.Source.Sequence;
         }
 
-        EventsCaptureSequence.Resolve(null, await GetSchemas(eventStore, definition), out var sequence);
-        if (string.IsNullOrWhiteSpace(sequence))
+        var resolved = await EventsCaptureSequence.ResolveFor(storage.GetEventStore(eventStore).EventTypes, definition.Source);
+        if (string.IsNullOrWhiteSpace(resolved.Sequence))
         {
             logger.CouldNotResolveCaptureSequence(definition.Name);
             return null;
         }
 
-        return sequence;
+        return resolved.Sequence;
     }
 
-    async Task<EventTypeSchema[]> GetSchemas(EventStoreName eventStore, CaptureDefinition definition) =>
-        [.. await storage.GetEventStore(eventStore).EventTypes.GetFor((definition.Source.Events ?? []).Select(name => new EventTypeId(name)))];
+    async Task RecoverIn(EventStoreName eventStore, EventStoreNamespaceName @namespace, CaptureDefinition definition, string sequence, EventType[] eventTypes)
+    {
+        var observer = GetObserver(eventStore, @namespace, definition.Id, sequence);
+        if (!await observer.NeedsSubscriptionRecovery(eventTypes)) return;
+        logger.RecoveringCaptureSubscription(definition.Name, eventStore, @namespace);
+        await observer.RecoverStalledSubscription<ICaptureEventsSubscriber>(
+            ObserverType.Reactor, eventTypes, localSiloDetails.SiloAddress, isReplayable: false);
+    }
 
     async Task SubscribeIn(EventStoreName eventStore, EventStoreNamespaceName @namespace, CaptureDefinition definition, string sequence, EventType[] eventTypes) =>
 

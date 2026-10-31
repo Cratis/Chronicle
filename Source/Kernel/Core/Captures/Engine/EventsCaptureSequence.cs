@@ -1,9 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.Captures;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.EventTypes;
+using Cratis.Chronicle.Storage.EventTypes;
 
 namespace Cratis.Chronicle.Captures.Engine;
 
@@ -19,6 +21,33 @@ namespace Cratis.Chronicle.Captures.Engine;
 /// </remarks>
 public static class EventsCaptureSequence
 {
+    /// <summary>
+    /// Resolves an events source using its registered event types.
+    /// </summary>
+    /// <param name="eventTypes">The event type storage of the consuming event store.</param>
+    /// <param name="source">The source to resolve.</param>
+    /// <returns>The inbox, schemas and problems preventing resolution.</returns>
+    public static async Task<(string Sequence, IReadOnlyList<EventTypeSchema> Schemas, IReadOnlyList<string> Errors)> ResolveFor(IEventTypesStorage eventTypes, SourceDefinition source)
+    {
+        var schemas = new List<EventTypeSchema>();
+        var errors = new List<string>();
+        foreach (var name in (source.Events ?? []).Distinct())
+        {
+            var id = new EventTypeId(name);
+            if (await eventTypes.HasFor(id))
+            {
+                schemas.Add(await eventTypes.GetFor(id));
+            }
+            else
+            {
+                errors.Add($"There is no event type named '{name}' to capture from");
+            }
+        }
+
+        errors.AddRange(Resolve(source.Sequence, schemas, out var sequence));
+        return (sequence, schemas, errors);
+    }
+
     /// <summary>
     /// Resolve the inbox sequence of an events capture.
     /// </summary>
@@ -65,8 +94,8 @@ public static class EventsCaptureSequence
 
     static void DeriveFromOrigin(EventTypeSchema[] schemas, List<string> errors, ref string sequence)
     {
-        var origins = schemas.Select(schema => schema.Origin).Distinct().ToArray();
-        if (origins.Length == 1 && origins[0].Length > 0)
+        var origins = schemas.Select(schema => schema.Origin).Where(origin => origin.Length > 0).Distinct().ToArray();
+        if (origins.Length == 1 && schemas.All(schema => schema.Origin.Length > 0))
         {
             sequence = $"{EventSequenceId.InboxPrefix}{origins[0]}";
             return;
@@ -77,8 +106,11 @@ public static class EventsCaptureSequence
             return;
         }
 
-        errors.Add(origins.Any(origin => origin.Length == 0)
-            ? "The sequence was not named and cannot be derived because some of the event types do not originate from another event store - name it explicitly, e.g. 'sequence inbox-fulfillment'"
-            : $"The sequence was not named and the event types originate from several event stores ({string.Join(", ", origins.Order())}) - name the inbox explicitly, e.g. 'sequence inbox-{origins.Order().First()}'");
+        errors.AddRange(schemas.Where(schema => string.IsNullOrEmpty(schema.Origin))
+            .Select(schema => $"'{schema.Type.Id}' has no origin; register it with the [EventStore] of its owner"));
+        if (origins.Length > 1)
+        {
+            errors.Add($"The 'from' events originate from several event stores ({string.Join(", ", origins.Order())}); they must all originate from one event store - split into one capture per origin");
+        }
     }
 }

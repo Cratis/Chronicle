@@ -1,3 +1,6 @@
+---
+description: Adorn an event property with [Unique] so Chronicle enforces that its value is unique across every event of that type in the event store.
+---
 # Unique property constraint
 
 Adorn a property with `[Unique]` to enforce that the **value of that property is unique** across every event of this type in the event store.
@@ -13,6 +16,16 @@ Chronicle discovers `[Unique]`-adorned properties automatically and registers th
 A unique property value belongs to an event source, not to a single append. The same event source may append its current value again without violating the constraint. If it claims a different value, the new value replaces its previous claim, freeing the old value for another event source.
 
 Do not constrain a property containing the event source's own id to prevent a second event on that source: it will re-claim its own value and pass. To allow an event type only once per event source, use a [unique event type constraint](unique-event-type) instead.
+
+## Keeping every value
+
+If one project accumulates many version ids, retaining only its latest id lets another project reuse an earlier one. Set `Mode = UniqueConstraintMode.PerValue` to reserve every value until you explicitly release it. The default, `PerEventSource`, keeps the replacement behavior described above. Per-value mode is available through the .NET client for now.
+
+<ChronicleClientTabs snippet="constraints/model-bound/unique/per-value" />
+
+Appending two different version ids for the same project now keeps both reserved. Another project cannot claim either; the original project may append either again without a violation. `ScheduleVersionRemoved` releases only the id carried by that event, and only if its event source owns that value. `ScheduleVersionsRemoved`, which declares no removal properties, releases all values held by that event source in the constraint's scope.
+
+For a composite value, list removal properties in the same order as the constrained properties. A value-carrying event with no constrained properties present claims nothing and does not release earlier values. Properties sharing a constraint name must declare the same mode.
 
 ## Strongly-typed properties
 
@@ -40,7 +53,7 @@ Changing the sequences takes effect when the client next registers its constrain
 
 ## Violation message
 
-The `message` parameter is optional. Chronicle produces a default violation message when one is not supplied. C# supports a custom violation message, and so do Kotlin and Java from `io.cratis:chronicle` 6.5.0: the client that registered the constraint puts its message on the violations its appends return, with `{detailKey}` placeholders filled in from the violation details. Elixir and TypeScript use Chronicle's default message:
+The `message` parameter is optional. Chronicle produces a default violation message when one is not supplied. C# supports a custom violation message, and so do Kotlin and Java from `io.cratis:chronicle` 6.5.0: the client that registered the constraint puts its message on the violations its appends return, with `{detailKey}` placeholders filled in from the violation details. TypeScript uses Chronicle's default message. Elixir accepts `:message` as a string or a `{Module, :function}` callback:
 
 <ChronicleClientTabs snippet="constraints/model-bound/unique/violation-message" />
 

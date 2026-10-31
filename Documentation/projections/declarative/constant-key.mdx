@@ -1,3 +1,6 @@
+---
+description: Use UsingConstantKey in a declarative Chronicle projection so all events of a type accumulate into one read model instance.
+---
 # Constant Keys
 
 A constant key allows all events of a given type to accumulate into a **single** read model instance, regardless of which event source the events originate from. This is useful for global aggregates, system-wide counters, and singleton read models.
@@ -10,21 +13,16 @@ Use `UsingConstantKey(string value)` to specify a fixed key value for a `from` b
 
 Every `OrderPlaced` event, from every event source, updates the single `GlobalCounter` instance with the key `"global"`.
 
-> **TypeScript note:** the fluent builder's `count()` is not implemented yet (`FromBuilder.ts` throws at runtime even though it type-checks). This particular example — an unconditional occurrence counter — is C#-only for now. `increment()`/`decrement()` **are** implemented; see the next example.
-
 ## Combining with functions
 
-Constant keys work with all counting and arithmetic functions, making them ideal for global aggregates. The TypeScript example below tracks only `activeSessions` via `increment()`/`decrement()` — it omits the C# example's `count()`-based `totalUsers`, since `count()` isn't implemented in TypeScript yet:
+Constant keys work with counting and arithmetic functions. Keep separate totals for occurrences and
+currently active items, using count for the former and increment/decrement for the latter:
 
 <ChronicleClientTabs snippet="projections/declarative/constant-key/increment-decrement" />
 
 ## Constant parent keys
 
 Use `UsingConstantParentKey(string value)` when working with child collections and you want all events to target the same parent read model:
-
-:::note[Client coverage]
-This example depends on declarative child collections, which are currently C#-only (see [Children](./children)). It stays C#-only until child projection scopes are available in the other clients.
-:::
 
 <ChronicleClientTabs snippet="projections/declarative/constant-key/constant-parent-key" />
 

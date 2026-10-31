@@ -2,11 +2,13 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Diagnostics.CodeAnalysis;
+using System.Text.Json.Nodes;
 using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.EventSequences.Concurrency;
+using Cratis.Chronicle.Occurrences;
 using Cratis.Chronicle.ReadModels;
 
 namespace Cratis.Chronicle.Transactions;
@@ -35,6 +37,11 @@ public interface IUnitOfWork : IDisposable
     bool IsSuccess { get; }
 
     /// <summary>
+    /// Gets the winning receipt after a successful receipted commit.
+    /// </summary>
+    EffectReceiptResult? EffectReceipt => null;
+
+    /// <summary>
     /// Gets a value indicating whether a decision read has ever been successfully enrolled in this unit of work.
     /// </summary>
     /// <remarks>
@@ -42,6 +49,76 @@ public interface IUnitOfWork : IDisposable
     /// override this property report false by default.
     /// </remarks>
     bool HasEnrolledDecisionReads => false;
+
+    /// <summary>
+    /// Gets whether this unit permanently uses enforced read protection and a strict lifecycle.
+    /// </summary>
+    bool IsEnforcingReadProtection => false;
+
+    /// <summary>
+    /// Enrolls one effect key in this unit's atomic commit. Re-enrolling the same key replaces its response until completion begins.
+    /// </summary>
+    /// <param name="key">The occurrence effect key.</param>
+    /// <param name="response">Optional plaintext JSON response without personal data.</param>
+    /// <exception cref="EffectReceiptsNotSupported">Atomic receipt support is absent or unknown.</exception>
+    /// <exception cref="EffectReceiptResponseTooLarge">The response exceeds 64 KiB of UTF-8 JSON.</exception>
+    /// <exception cref="UnitOfWorkEffectReceiptAlreadySet">Another key is already enrolled.</exception>
+    void UseEffectReceipt(EffectKey key, JsonNode? response = null) => throw new EffectReceiptsNotSupported();
+
+    /// <summary>
+    /// Refuses immediate appends in this asynchronous flow without changing read admission.
+    /// The first caller owns completion only if no completion owner or enforced read protection already exists.
+    /// Otherwise the frame is refusal-only and completion stays with the existing owner.
+    /// Later acquisitions cannot complete the unit or end refusal.
+    /// </summary>
+    /// <returns>The refusal lifetime, or a borrowed frame for a nested acquisition. Commit through the existing owner when present.</returns>
+    /// <exception cref="UnitOfWorkImmediateAppendRefusalNotSupported">The implementation cannot enforce append admission.</exception>
+    /// <exception cref="ImmediateAppendRefusalRequiresOwner">Another unit owns the active refusal.</exception>
+    ImmediateAppendRefusal RefuseImmediateAppends() => throw new UnitOfWorkImmediateAppendRefusalNotSupported(GetType());
+
+    /// <summary>
+    /// Begins invocation read protection before any event or read dependency is enrolled.
+    /// Only the first caller receives the owning lifetime; subsequent leases cannot end enforcement.
+    /// </summary>
+    /// <returns>The invocation frame, disposed by the owning command pipeline in a finally block.</returns>
+    /// <exception cref="UnitOfWorkReadProtectionNotSupported">The implementation cannot enforce read protection.</exception>
+    ReadProtectionFrame EnforceReadProtection() => throw new UnitOfWorkReadProtectionNotSupported(GetType());
+
+    /// <summary>
+    /// Allows explicit reads without permitting immediate appends or removing existing dependencies.
+    /// </summary>
+    /// <param name="allowance">Advisory reads or reads contributed before exposure.</param>
+    /// <param name="reason">The explicit reason for the region.</param>
+    /// <returns>The flow-local read region.</returns>
+    /// <exception cref="UnitOfWorkReadProtectionNotSupported">The implementation cannot support allowances.</exception>
+    IDisposable AllowReads(ReadAllowance allowance, string reason) => throw new UnitOfWorkReadProtectionNotSupported(GetType());
+
+    /// <summary>
+    /// Suspends the read regions this asynchronous flow inherited, without ending read protection.
+    /// </summary>
+    /// <remarks>
+    /// A read region flows with the asynchronous context, so a region opened by an outer invocation also covers a
+    /// nested invocation it runs. A host that runs nested invocations under the same read protection suspends the
+    /// inherited regions at the start of the nested one: reads are then refused as if no region were open, while
+    /// regions opened inside the suspension apply as usual. Disposing the returned scope restores the inherited
+    /// regions. Suspensions nest.
+    /// </remarks>
+    /// <returns>The suspension, disposed by the host when the nested invocation ends.</returns>
+    /// <exception cref="UnitOfWorkReadProtectionNotSupported">The implementation cannot support read regions.</exception>
+    IDisposable SuspendReadRegions() => throw new UnitOfWorkReadProtectionNotSupported(GetType());
+
+    /// <summary>
+    /// Atomically validates target, staged overlap and distinct contributions before enrolling a read.
+    /// </summary>
+    /// <param name="contribution">The stream or aggregate dependency.</param>
+    /// <exception cref="UnitOfWorkReadProtectionNotSupported">The implementation cannot enroll contributions.</exception>
+    void EnrolContributedRead(ContributedRead contribution) => throw new UnitOfWorkReadProtectionNotSupported(GetType());
+
+    /// <summary>
+    /// Gets the append conditions captured by the trusted commit.
+    /// </summary>
+    /// <returns>The immutable append-condition descriptions.</returns>
+    IReadOnlyList<AppendCondition> GetAppendConditions() => [];
 
     /// <summary>
     /// Add an event that has occurred to the <see cref="IUnitOfWork"/>.
@@ -97,13 +174,60 @@ public interface IUnitOfWork : IDisposable
         IEnumerable<KeyValuePair<EventSourceId, ConcurrencyScope>> concurrencyScopes) =>
         throw new UnitOfWorkBatchEnrollmentNotSupported(GetType());
 
+    /// <summary>
+    /// Enrolls an event with its scope origin. Alternate implementations retain their existing enrollment behavior.
+    /// </summary>
+    /// <param name="eventSequenceId">The event sequence.</param>
+    /// <param name="eventSourceId">The event source.</param>
+    /// <param name="event">The event.</param>
+    /// <param name="causation">The causation.</param>
+    /// <param name="options">The enrollment options.</param>
+    /// <exception cref="ConcurrencyScopeOriginNotValidForEvents">The origin is reserved for reads.</exception>
+    void AddEventWithOptions(EventSequenceId eventSequenceId, EventSourceId eventSourceId, object @event, Causation causation, EventEnrollmentOptions options)
+    {
+        ConcurrencyScopeOriginNotValidForEvents.ThrowIfNotValid(options.Origin);
+        var namedTags = options.NamedTags?.ToArray() ?? [];
+        if (namedTags.Length != 0)
+        {
+            AddEventWithNamedTags(eventSequenceId, eventSourceId, @event, namedTags, causation, options.EventStreamType, options.EventStreamId, options.EventSourceType, options.ConcurrencyScope, options.Tags, options.Occurred, options.Subject);
+        }
+        else
+        {
+            AddEvent(eventSequenceId, eventSourceId, @event, causation, options.EventStreamType, options.EventStreamId, options.EventSourceType, options.ConcurrencyScope, options.Tags, options.Occurred, options.Subject);
+        }
+    }
+
+    /// <summary>
+    /// Enrolls an ordered batch with the origin of its supplied scopes.
+    /// </summary>
+    /// <param name="eventSequenceId">The event sequence.</param>
+    /// <param name="events">The ordered events.</param>
+    /// <param name="concurrencyScopes">The supplied scopes.</param>
+    /// <param name="origin">The scope contribution.</param>
+    /// <exception cref="ConcurrencyScopeOriginNotValidForEvents">The origin is reserved for reads.</exception>
+    void AddEvents(EventSequenceId eventSequenceId, IEnumerable<EventForEventSourceId> events, IEnumerable<KeyValuePair<EventSourceId, ConcurrencyScope>> concurrencyScopes, ConcurrencyScopeOrigin origin)
+    {
+        ConcurrencyScopeOriginNotValidForEvents.ThrowIfNotValid(origin);
+        AddEvents(eventSequenceId, events, concurrencyScopes);
+    }
+
+    /// <summary>
+    /// Attaches a contributor for the lifetime of an enrollment scope, such as one command invocation.
+    /// </summary>
+    /// <param name="contributor">The contributor to consult before enrollment.</param>
+    /// <returns>A handle that removes only this registration on disposal.</returns>
+    /// <exception cref="UnitOfWorkEnrollmentContributorsNotSupported">The implementation does not support contributors.</exception>
+    /// <exception cref="UnitOfWorkMutatedDuringEnrollment">A contributor attempted to change registrations.</exception>
+    IDisposable AddEnrollmentContributor(IUnitOfWorkEnrollmentContributor contributor) =>
+        throw new UnitOfWorkEnrollmentContributorsNotSupported(GetType());
+
     /// <summary>Enroll a protected read as a commit dependency.</summary>
     /// <param name="read">The protected read.</param>
     /// <exception cref="UnitOfWorkDecisionReadsNotSupported">This implementation does not support decision reads.</exception>
     void AddDecisionRead(IDecisionRead read) => throw new UnitOfWorkDecisionReadsNotSupported(GetType());
 
-    /// <summary>Gets decision conflicts without exposing sequence numbers.</summary>
-    /// <returns>Decision conflicts, if any.</returns>
+    /// <summary>Gets the decision conflicts that refused the commit.</summary>
+    /// <returns>Decision conflicts, if any, with the first conflicting event when the kernel reported it.</returns>
     IEnumerable<DecisionConflict> GetDecisionConflicts() => [];
 
     /// <summary>

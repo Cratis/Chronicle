@@ -8,19 +8,25 @@ import { fileURLToPath } from 'node:url';
 import type { ExtensionAPI, ExtensionContext } from '@earendil-works/pi-coding-agent';
 import { ConnectionFailure } from './ConnectionFailure.ts';
 import { object, selectedServer } from './configuration.ts';
-import { startConnection } from './process.ts';
+import type { CorpusServer } from './CorpusServer.ts';
+import { startConnection, startServer, supportsNoModelStartup } from './process.ts';
 import { discover, failedResult, mapResult } from './protocol.ts';
+import { createServerBridge } from './ServerBridge.ts';
+import type { DiscoveredTool } from './DiscoveredTool.ts';
 import type { StdioConnection } from './StdioConnection.ts';
 
 const extensionDirectory = dirname(fileURLToPath(import.meta.url));
 const bundledCorpus = resolve(extensionDirectory, '..', '..', '..', '..');
 
 /** Native tools go through Pi's tool_call restrictions and normal execution/result pipeline. */
-export function registerBridge(pi: ExtensionAPI, corpus: string, connect = startConnection): void {
+export function registerBridge(pi: ExtensionAPI, corpus: string, connect = startConnection, checkVersion = supportsNoModelStartup, connectServer: (project: string, server: CorpusServer) => StdioConnection = startServer): void {
+    const servers = createServerBridge(pi, corpus, connectServer);
     let connection: StdioConnection | undefined;
     let selectionKey: string | undefined;
     let attempted = false;
     let uncertain = false;
+    let startupSupported: Promise<boolean> | undefined;
+    let unavailableReported = false;
     const registered = new Set<string>();
     const paused = new Set<string>();
     const failures = new Map<string, ReturnType<typeof failedResult>>();
@@ -48,6 +54,7 @@ export function registerBridge(pi: ExtensionAPI, corpus: string, connect = start
         if (!connection || connection.stopped) throw new Error('Screenplay connection is unavailable. No request was retried; explicitly reload after inspecting any uncertain mutation.');
     };
     const refresh = async (context: ExtensionContext, newSession = false): Promise<void> => {
+        if (newSession) { startupSupported = undefined; unavailableReported = false; }
         const previouslyActive = new Set([...pi.getActiveTools(), ...paused]);
         let selection: ReturnType<typeof selectedServer>;
         try { selection = currentSelection(context); }
@@ -60,12 +67,28 @@ export function registerBridge(pi: ExtensionAPI, corpus: string, connect = start
         failures.clear();
         if (!selection) return;
         if (uncertain) throw new Error('Screenplay mutation outcome remains unknown. Explicitly reload, inspect workspace-state, and obtain authorization before any recovery.');
-        const modelRoot = selection.root;
-        const activeConnection = connect(selection.project);
-        connection = activeConnection;
+        const modelRoot = selection.root ?? "the project's Screenplay model";
+        let activeConnection: StdioConnection;
+        let tools: DiscoveredTool[];
         try {
-            const tools = await discover(activeConnection);
+            if (selection.composedOnly && !await (startupSupported ??= checkVersion(selection.project))) {
+                throw new Error('Screenplay optional startup requires Cratis CLI 3.46.1 or later.');
+            }
+            activeConnection = connect(selection.project);
+            connection = activeConnection;
+            tools = await discover(activeConnection);
             if (connection !== activeConnection || activeConnection.stopped) throw new Error('Screenplay session ended during discovery.');
+        } catch (error) {
+            dispose();
+            // Application-only composition makes MCP optional. Independent profile/root errors and uncertain mutations still surface.
+            if (!selection.composedOnly || uncertain) throw error;
+            if (!unavailableReported) {
+                unavailableReported = true;
+                if (context.hasUI) context.ui.notify('Screenplay MCP is unavailable; install/update the Cratis CLI to 3.46.1 or later to enable it.', 'info');
+            }
+            return;
+        }
+        try {
             const existing = new Set(pi.getAllTools().map(tool => tool.name));
             if (tools.some(tool => existing.has(tool.nativeName) && !registered.has(tool.nativeName))) throw new Error('Screenplay native tool name conflicts with another extension.');
             const oldNames = new Set(registered);
@@ -130,9 +153,15 @@ export function registerBridge(pi: ExtensionAPI, corpus: string, connect = start
         }
     };
 
-    pi.on('session_start', (_event, context) => refresh(context, true));
-    pi.on('before_agent_start', async (_event, context) => { await refresh(context); });
-    pi.on('session_shutdown', () => { dispose(); failures.clear(); });
+    // Screenplay and the other corpus servers fail independently; the first failure is surfaced after both ran.
+    const refreshAll = async (context: ExtensionContext, newSession: boolean): Promise<void> => {
+        const outcomes = await Promise.allSettled([refresh(context, newSession), servers.refresh(context, newSession)]);
+        const failed = outcomes.find(outcome => outcome.status === 'rejected');
+        if (failed) throw failed.reason;
+    };
+    pi.on('session_start', (_event, context) => refreshAll(context, true));
+    pi.on('before_agent_start', async (_event, context) => { await refreshAll(context, false); });
+    pi.on('session_shutdown', () => { dispose(); servers.dispose(); failures.clear(); });
     pi.on('tool_result', event => {
         if (!registered.has(event.toolName)) return;
         const failure = failures.get(event.toolCallId);

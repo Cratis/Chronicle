@@ -13,6 +13,18 @@ namespace Cratis.Chronicle.EventSequences;
 /// </summary>
 internal static partial class EventSequenceLogMessages
 {
+    [LoggerMessage(LogLevel.Debug, "Settled append key {Key} at sequence number {SequenceNumber}")]
+    internal static partial void KeyedAppendSettled(this ILogger<EventSequence> logger, IdempotencyKey key, EventSequenceNumber sequenceNumber);
+
+    [LoggerMessage(LogLevel.Warning, "Refused append key {Key} at sequence number {SequenceNumber}")]
+    internal static partial void KeyedAppendRefused(this ILogger<EventSequence> logger, IdempotencyKey key, EventSequenceNumber sequenceNumber);
+
+    [LoggerMessage(LogLevel.Debug, "Settling append key {Key} again at sequence number {SequenceNumber}")]
+    internal static partial void KeyedAppendSettlingAgain(this ILogger<EventSequence> logger, IdempotencyKey key, EventSequenceNumber sequenceNumber);
+
+    [LoggerMessage(LogLevel.Warning, "Failed reconciling namespace subscriptions for event store {EventStore} in namespace {Namespace}. The next event-log timer tick will retry")]
+    internal static partial void FailedReconcilingNamespaceSubscriptions(this ILogger<EventSequence> logger, Exception exception, EventStoreName eventStore, EventStoreNamespaceName @namespace);
+
     [LoggerMessage(LogLevel.Warning, "Failed reconciling pattern capture for event store {EventStore} in namespace {Namespace}. The next event-log timer tick will retry")]
     internal static partial void FailedReconcilingPatternCapture(this ILogger<EventSequence> logger, Exception exception, EventStoreName eventStore, EventStoreNamespaceName @namespace);
 
@@ -58,6 +70,9 @@ internal static partial class EventSequenceLogMessages
     [LoggerMessage(LogLevel.Error, "Failed appending many events in event sequence {EventSequenceId} for event store '{EventStore}' on namespace {Namespace}")]
     internal static partial void ErrorAppendingMany(this ILogger<EventSequence> logger, EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId, Exception exception);
 
+    [LoggerMessage(LogLevel.Error, "Append outcome unknown from slot {First} in event sequence {EventSequenceId} for event store {EventStore} on namespace {Namespace}. Check the correlation id before appending again")]
+    internal static partial void AppendOutcomeUnknown(this ILogger<EventSequence> logger, EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId, EventSequenceNumber first);
+
     [LoggerMessage(LogLevel.Debug, "Grain.EventSequence.AppendMany calling storage with {Count} events for {EventSequenceId} for event store {EventStore} on namespace {Namespace}")]
     internal static partial void AppendManyCallingStorage(this ILogger<EventSequence> logger, EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId, int count);
 
@@ -76,11 +91,11 @@ internal static partial class EventSequenceLogMessages
     [LoggerMessage(LogLevel.Error, "Failed enqueueing {Count} durably appended events for live delivery in event sequence {EventSequenceId} for event store {EventStore} on namespace {Namespace}. Spilling the queues to catch-up")]
     internal static partial void FailedEnqueueingAppendedEvents(this ILogger<EventSequence> logger, EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId, int count, Exception exception);
 
-    [LoggerMessage(LogLevel.Critical, "Failed spilling the appended-events queues to catch-up in event sequence {EventSequenceId} for event store {EventStore} on namespace {Namespace}. Observers recover on their next watchdog run")]
-    internal static partial void FailedSpillingAppendedEventsQueuesToCatchup(this ILogger<EventSequence> logger, EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId, Exception exception);
+    [LoggerMessage(LogLevel.Error, "Failed spilling the appended-events queues to catch-up in event sequence {EventSequenceId} for event store {EventStore} on namespace {Namespace} (attempt {Attempt}). Retrying in {RetryDelay}")]
+    internal static partial void FailedSpillingAppendedEventsQueuesToCatchup(this ILogger<EventSequence> logger, EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId, int attempt, TimeSpan retryDelay, Exception exception);
 
-    [LoggerMessage(LogLevel.Critical, "Failed updating the constraint index for the durably appended event at sequence number {SequenceNumber} in event sequence {EventSequenceId} for event store {EventStore} on namespace {Namespace}. A later duplicate of its value can pass validation")]
-    internal static partial void FailedUpdatingConstraintIndex(this ILogger<EventSequence> logger, EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId, EventSequenceNumber sequenceNumber, Exception exception);
+    [LoggerMessage(LogLevel.Information, "Spilled the appended-events queues to catch-up in event sequence {EventSequenceId} for event store {EventStore} on namespace {Namespace} after {FailedAttempts} failed attempt(s)")]
+    internal static partial void RecoveredSpillingAppendedEventsQueuesToCatchup(this ILogger<EventSequence> logger, EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId, int failedAttempts);
 
     [LoggerMessage(LogLevel.Warning, "Event type '{EventType}' has no declared visibility, as it was registered by a client that predates public event types. Allowing append to event sequence {EventSequenceId} for event store '{EventStore}' on namespace {Namespace} - upgrade the client to have visibility enforced")]
     internal static partial void EventTypeVisibilityNotSpecified(this ILogger<EventSequence> logger, EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId, EventType eventType);

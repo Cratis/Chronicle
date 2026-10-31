@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <Solution>
+    <Folder Name="/Benchmarks/">
+        <Project Path="Benchmarks/Chronicle.Benchmarks.Clustering.Specs/Chronicle.Benchmarks.Clustering.Specs.csproj" />
+    </Folder>
     <Folder Name="/Source/Clients/">
         <Project Path="Source/Clients/Aspire/Aspire.csproj" />
         <Project Path="Source/Clients/Aspire.Specs/Aspire.Specs.csproj" />
@@ -17,6 +20,8 @@
         <Project Path="Source/Clients/Workbench/Workbench.csproj" />
         <Project Path="Source/Clients/XUnit.Integration/XUnit.Integration.csproj" />
         <Project Path="Source/Clients/XUnit.Integration.Specs/XUnit.Integration.Specs.csproj" />
+        <Project Path="Source/Clients/XUnit.Integration.v3/XUnit.Integration.v3.csproj" />
+        <Project Path="Source/Clients/XUnit.Integration.v3.Specs/XUnit.Integration.v3.Specs.csproj" />
     </Folder>
     <Folder Name="/Source/Kernel/">
         <Project Path="Source/Kernel/Concepts/Concepts.csproj" />
@@ -31,6 +36,7 @@
         <Project Path="Source/Kernel/Server.Specs/Server.Specs.csproj" />
         <Project Path="Source/Kernel/Storage/Storage.csproj" />
         <Project Path="Source/Kernel/Storage.AzureKeyVault/Storage.AzureKeyVault.csproj" />
+        <Project Path="Source/Kernel/Storage.AzureKeyVault.Specs/Storage.AzureKeyVault.Specs.csproj" />
         <Project Path="Source/Kernel/Storage.InMemory/Storage.InMemory.csproj" />
         <Project Path="Source/Kernel/Storage.InMemory.Specs/Storage.InMemory.Specs.csproj" />
         <Project Path="Source/Kernel/Storage.MongoDB/Storage.MongoDB.csproj" />
@@ -43,10 +49,14 @@
     </Folder>
     <Folder Name="/Source/Tools/">
         <Project Path="Source/Tools/AssemblyFixer/AssemblyFixer.csproj" />
+        <Project Path="Source/Tools/GrainCompatibility/GrainCompatibility.csproj" />
+        <Project Path="Source/Tools/GrainCompatibility.Specs/GrainCompatibility.Specs.csproj" />
         <Project Path="Source/Tools/GrpcClients/GrpcClients.csproj" />
         <Project Path="Source/Tools/GrpcCodeGenerator/GrpcCodeGenerator.csproj" />
         <Project Path="Source/Tools/GrpcCodeGenerator.Specs/GrpcCodeGenerator.Specs.csproj" />
         <Project Path="Source/Tools/InternalsVerifier/InternalsVerifier.csproj" />
+        <Project Path="Source/Tools/LegacyContracts/LegacyContracts.csproj" />
+        <Project Path="Source/Tools/LegacyContracts.Specs/LegacyContracts.Specs.csproj" />
         <Project Path="Source/Tools/ProtoGenerator/ProtoGenerator.csproj" />
         <Project Path="Source/Tools/ProtoGenerator.Specs/ProtoGenerator.Specs.csproj" />
         <Project Path="Source/Tools/ResourceEmbedder/ResourceEmbedder.csproj" />
@@ -61,6 +71,7 @@
         <Project Path="Integration/Api/Api.csproj" />
         <Project Path="Integration/Client/Client.csproj" />
         <Project Path="Integration/Clustering/Clustering.csproj" />
+        <Project Path="Integration/SqlClustering/SqlClustering.csproj" />
         <Project Path="Integration/Kernel/Kernel.csproj" />
         <Project Path="Integration/MongoDB/MongoDB.csproj" />
     </Folder>

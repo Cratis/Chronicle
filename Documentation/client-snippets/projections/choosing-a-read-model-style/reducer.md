@@ -1,13 +1,14 @@
 ```csharp
+using Cratis.Chronicle.Compliance.GDPR;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Reducers;
 
 public record ChoosingStyleBookStatusReducerModel(
     string Id,
-    string Title,
-    string Isbn,
+    string? Title,
+    string? Isbn,
     bool IsBorrowed,
-    string? BorrowedBy);
+    [PII] string? BorrowedBy);
 
 public class ChoosingStyleBookStatusReducer : IReducerFor<ChoosingStyleBookStatusReducerModel>
 {
@@ -26,7 +27,7 @@ public class ChoosingStyleBookStatusReducer : IReducerFor<ChoosingStyleBookStatu
         ChoosingStyleBookBorrowed @event,
         ChoosingStyleBookStatusReducerModel? current,
         EventContext context) =>
-        current! with
+        (current ?? new(context.EventSourceId.Value, null, null, false, null)) with
         {
             IsBorrowed = true,
             BorrowedBy = @event.MemberName
@@ -36,7 +37,7 @@ public class ChoosingStyleBookStatusReducer : IReducerFor<ChoosingStyleBookStatu
         ChoosingStyleBookReturned @event,
         ChoosingStyleBookStatusReducerModel? current,
         EventContext context) =>
-        current! with
+        (current ?? new(context.EventSourceId.Value, null, null, false, null)) with
         {
             IsBorrowed = false,
             BorrowedBy = null

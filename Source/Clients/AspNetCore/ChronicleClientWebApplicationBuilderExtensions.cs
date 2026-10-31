@@ -3,6 +3,8 @@
 
 using Cratis.Chronicle;
 using Cratis.Chronicle.AspNetCore;
+using Cratis.Chronicle.AspNetCore.Auditing;
+using Cratis.Chronicle.AspNetCore.Transactions;
 using Cratis.Chronicle.Connections;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -35,6 +37,23 @@ public static class ChronicleClientWebApplicationBuilderExtensions
         Action<ChronicleAspNetCoreOptions>? configureOptions = default,
         string? configSection = default,
         Action<IChronicleBuilder>? configure = default)
+        => builder.AddCratisChronicle(configureOptions, configSection, configure, "chronicle");
+
+    /// <summary>
+    /// Configures the Chronicle client using a named connection string as the fallback endpoint.
+    /// </summary>
+    /// <param name="builder"><see cref="WebApplicationBuilder"/> to configure Chronicle on.</param>
+    /// <param name="configureOptions">Optional callback whose connection string overrides configuration.</param>
+    /// <param name="configSection">Optional configuration section path override. Defaults to <c language="csharp">Cratis:Chronicle</c>.</param>
+    /// <param name="configure">Optional delegate for configuring the <see cref="IChronicleBuilder"/>.</param>
+    /// <param name="connectionStringName">Name under <c language="csharp">ConnectionStrings</c>, typically the Aspire resource name.</param>
+    /// <returns>The same <see cref="WebApplicationBuilder"/> for configuration continuation.</returns>
+    public static WebApplicationBuilder AddCratisChronicle(
+        this WebApplicationBuilder builder,
+        Action<ChronicleAspNetCoreOptions>? configureOptions,
+        string? configSection,
+        Action<IChronicleBuilder>? configure,
+        string connectionStringName)
     {
         ConceptTypeConvertersRegistrar.EnsureFor(typeof(ChronicleClientWebApplicationBuilderExtensions).Assembly);
         ConceptTypeConvertersRegistrar.EnsureForEntryAssembly();
@@ -48,7 +67,7 @@ public static class ChronicleClientWebApplicationBuilderExtensions
         var chronicleBuilder = new ChronicleBuilder(builder.Services, builder.Configuration, DefaultClientArtifactsProvider.Default);
 
         // Register via the standard options pipeline for runtime resolution.
-        builder.Services.AddChronicleOptions(configureOptions, configSectionPath);
+        builder.Services.AddChronicleOptions(configureOptions, configSectionPath, connectionStringName);
 
         builder.Services
             .AddUnitOfWork()
@@ -66,12 +85,26 @@ public static class ChronicleClientWebApplicationBuilderExtensions
     }
 
     /// <summary>
-    /// Configures the usage of Cratis for the app.
+    /// Configures Chronicle startup and, when automatic middleware is disabled, installs its middleware at this position.
     /// </summary>
+    /// <remarks>Call after routing, authentication, and authorization when the namespace depends on the authenticated user.</remarks>
     /// <param name="app"><see cref="IApplicationBuilder"/> to extend.</param>
     /// <returns><see cref="IApplicationBuilder"/> for continuation.</returns>
     public static IApplicationBuilder UseCratisChronicle(this IApplicationBuilder app)
     {
+        const string middlewareKey = "Cratis.Chronicle.MiddlewareRegistered";
+        if (app.Properties.ContainsKey(middlewareKey))
+        {
+            return app;
+        }
+        app.Properties[middlewareKey] = true;
+
+        if (!app.ApplicationServices.GetRequiredService<IOptions<ChronicleAspNetCoreOptions>>().Value.UseAutomaticMiddleware)
+        {
+            app.UseMiddleware<UnitOfWorkMiddleware>();
+            app.UseMiddleware<CausationMiddleware>();
+        }
+
         GlobalInstances.ServiceProvider = app.ApplicationServices;
         var appLifetime = app.ApplicationServices.GetRequiredService<IHostApplicationLifetime>();
         appLifetime.ApplicationStarted.Register(() =>
@@ -108,14 +141,16 @@ public static class ChronicleClientWebApplicationBuilderExtensions
     /// <param name="services"><see cref="IServiceCollection"/> to add to.</param>
     /// <param name="configure">Optional user callback for configuring options.</param>
     /// <param name="configSectionPath">Configuration section path to bind.</param>
+    /// <param name="connectionStringName">Name of the fallback connection string.</param>
     static void AddChronicleOptions(
         this IServiceCollection services,
         Action<ChronicleAspNetCoreOptions>? configure,
-        string configSectionPath)
+        string configSectionPath,
+        string connectionStringName)
     {
         services
             .AddOptions<ChronicleAspNetCoreOptions>()
-            .BindConfiguration(configSectionPath)
+            .WithChronicleConfiguration(configSectionPath, connectionStringName)
             .Configure(options => configure?.Invoke(options))
             .Configure<IOptions<ChronicleClientOptions>>((options, clientOptions) =>
             {
@@ -129,7 +164,7 @@ public static class ChronicleClientWebApplicationBuilderExtensions
 
         var baseBuilder = services
             .AddOptions<ChronicleOptions>()
-            .BindConfiguration(configSectionPath)
+            .WithChronicleConfiguration(configSectionPath, connectionStringName)
             .ValidateDataAnnotations()
             .ValidateOnStart();
 

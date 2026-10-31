@@ -1,3 +1,6 @@
+---
+description: Chronicle analyzer rule CHR0039 reports discarded Chronicle test assertion results that can never fail, and how to await them in a test.
+---
 # CHR0039: Assertion result is discarded and can never fail
 
 ## Rule Description
@@ -10,7 +13,18 @@ Await the assertion and declare the containing member `async Task`, or return th
 
 ## Severity
 
-Warning
+Error
+
+A discarded assertion cannot verify behavior. This rule stops the build by default, even if your project does not treat warnings as errors.
+
+If you need to migrate existing specs incrementally, temporarily downgrade the rule in your consuming repository's `.editorconfig`:
+
+```ini
+[*.cs]
+dotnet_diagnostic.CHR0039.severity = warning
+```
+
+Await the flagged assertions and make their containing members `async Task`, then remove the override. Keep the default error severity once the specs are fixed; a permanent downgrade leaves assertions that can never fail in your suite.
 
 ## Example
 

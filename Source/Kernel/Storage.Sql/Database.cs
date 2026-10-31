@@ -3,11 +3,12 @@
 
 using System.Data.Common;
 using System.Diagnostics.CodeAnalysis;
+using Cratis.Arc.Connections;
 using Cratis.Arc.EntityFrameworkCore;
-using Cratis.Arc.EntityFrameworkCore.Concepts;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Storage.Sql.Cluster;
+using Cratis.Chronicle.Storage.Sql.Connections;
 using Cratis.Chronicle.Storage.Sql.EventStores;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences;
@@ -15,12 +16,11 @@ using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.UniqueConstraints;
 using Cratis.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 #if DEVELOPMENT
 using System.Collections.Frozen;
+using Cratis.Chronicle.Diagnostics;
 using Microsoft.Data.SqlClient;
 using Microsoft.Data.Sqlite;
 using Npgsql;
@@ -45,11 +45,14 @@ namespace Cratis.Chronicle.Storage.Sql;
 /// <param name="uniqueConstraintMigrator">The <see cref="IUniqueConstraintMigrator"/> for managing unique constraint table migrations.</param>
 /// <param name="readModelMigrator">The <see cref="IReadModelMigrator"/> for managing read model table migrations.</param>
 [IgnoreConvention]
-public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOptions> options, IEventSequenceMigrator eventSequenceMigrator, IUniqueConstraintMigrator uniqueConstraintMigrator, IReadModelMigrator readModelMigrator) : IDatabase
+public partial class Database(IServiceProvider serviceProvider, IOptions<ChronicleOptions> options, IEventSequenceMigrator eventSequenceMigrator, IUniqueConstraintMigrator uniqueConstraintMigrator, IReadModelMigrator readModelMigrator) : IDatabase
 {
-    static readonly System.Collections.Concurrent.ConcurrentDictionary<string, SemaphoreSlim> _migrationLocks = new();
-
 #if DEVELOPMENT
+    /// <summary>
+    /// The migration that creates the single-writer lease table, kept in the SQLite cluster file's history across a wipe.
+    /// </summary>
+    const string SingleWriterLeaseMigrationId = "Cluster-SingleWriterLease-v19_105_0";
+
     /// <summary>
     /// Tables that survive <see cref="Wipe"/> for shared-database backends (PostgreSQL / Microsoft
     /// SQL Server). Identity and Data Protection key material lives in these tables; wiping them
@@ -69,84 +72,145 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
         WellKnownTableNames.Tokens,
         WellKnownTableNames.Authorizations,
         WellKnownTableNames.Scopes,
+
+        // The single-writer lease is cluster state held by the running kernel; deleting it makes the kernel fence itself.
+        WellKnownTableNames.SingleWriterLeases,
         "__EFMigrationsHistory",
+        "DatabaseNames",
+        "GenerationFloor",
+        "GenerationFloorHistory",
     }.ToFrozenSet(StringComparer.OrdinalIgnoreCase);
 #endif
 
-    readonly System.Collections.Concurrent.ConcurrentDictionary<string, DbContextOptions<ClusterDbContext>> _clusterOptions = new();
-    readonly System.Collections.Concurrent.ConcurrentDictionary<string, DbContextOptions<EventStoreDbContext>> _eventStoreOptions = new();
-    readonly System.Collections.Concurrent.ConcurrentDictionary<string, DbContextOptions<NamespaceDbContext>> _namespaceOptions = new();
-    readonly System.Collections.Concurrent.ConcurrentDictionary<string, DbContextOptions<Cratis.Orleans.Storage.Sql.Jobs.JobsDbContext>> _jobsOptions = new();
-    readonly System.Collections.Concurrent.ConcurrentDictionary<string, DbContextOptions<UniqueConstraintDbContext>> _uniqueConstraintOptions = new();
-    readonly System.Collections.Concurrent.ConcurrentDictionary<string, DbContextOptions<EventSequenceDbContext>> _eventSequenceOptions = new();
-    readonly System.Collections.Concurrent.ConcurrentDictionary<string, DbContextOptions<ReadModelDbContext>> _readModelOptions = new();
-    readonly System.Collections.Concurrent.ConcurrentDictionary<string, bool> _migratedKeys = new();
+    readonly SqlConnectionResolution _resolution = SqlConnectionResolution.From(serviceProvider, options.Value.Storage);
+    readonly DatabaseNameResolver _databaseNames = new(
+        SqlConnectionStrings.WithSchema(options.Value.Storage.ConnectionDetails, options.Value.Storage.Schema),
+        SqlConnectionResolution.From(serviceProvider, options.Value.Storage).PrepareRawConnection);
+
+    readonly System.Collections.Concurrent.ConcurrentDictionary<DatabaseMigrationLock, long> _migrationGenerations = new();
+    readonly System.Collections.Concurrent.ConcurrentDictionary<string, CachedDbContextOptions<ClusterDbContext>> _clusterOptions = new();
+    readonly System.Collections.Concurrent.ConcurrentDictionary<string, CachedDbContextOptions<EventStoreDbContext>> _eventStoreOptions = new();
+    readonly System.Collections.Concurrent.ConcurrentDictionary<string, CachedDbContextOptions<NamespaceDbContext>> _namespaceOptions = new();
+    readonly System.Collections.Concurrent.ConcurrentDictionary<string, CachedDbContextOptions<Cratis.Orleans.Storage.Sql.Jobs.JobsDbContext>> _jobsOptions = new();
+    readonly System.Collections.Concurrent.ConcurrentDictionary<string, CachedDbContextOptions<UniqueConstraintDbContext>> _uniqueConstraintOptions = new();
+    readonly System.Collections.Concurrent.ConcurrentDictionary<string, CachedDbContextOptions<UniqueConstraintValuesDbContext>> _uniqueConstraintValuesOptions = new();
+    readonly System.Collections.Concurrent.ConcurrentDictionary<string, CachedDbContextOptions<EventSequenceDbContext>> _eventSequenceOptions = new();
+    readonly System.Collections.Concurrent.ConcurrentDictionary<string, CachedDbContextOptions<ReadModelDbContext>> _readModelOptions = new();
+    readonly System.Collections.Concurrent.ConcurrentDictionary<(DatabaseMigrationLock Target, string Key), long> _migratedKeys = new();
+    readonly System.Collections.Concurrent.ConcurrentDictionary<(DatabaseMigrationLock Target, Type Context, string Table), long> _ensuredTableGenerations = new();
     readonly System.Collections.Concurrent.ConcurrentDictionary<string, bool> _ensuredDatabaseKeys = new();
+    readonly System.Collections.Concurrent.ConcurrentDictionary<string, bool> _ensuredSchemaKeys = new();
 
     /// <inheritdoc/>
     public TimeSpan LiveQueryPollingInterval { get; } = TimeSpan.FromSeconds(options.Value.Sql.LiveQueryPollIntervalSeconds);
 
+    /// <summary>
+    /// Gets whether runtime schema operations are read-only.
+    /// </summary>
+    internal bool VerifySchema => options.Value.Storage.SchemaMode == SchemaMode.Verify;
+
+    bool CanCreateSchema => options.Value.Storage.CreateIfMissing && !VerifySchema;
+
+    bool UsesBindings => options.Value.Storage.ConnectionDetails.GetDatabaseType() is DatabaseType.PostgreSql or DatabaseType.SqlServer;
+
     /// <inheritdoc/>
     public async Task<DbContextScope<ClusterDbContext>> Cluster()
     {
-        var connectionString = options.Value.Storage.ConnectionDetails;
-        var key = $"cluster:{connectionString}";
-        var dbContextOptions = _clusterOptions.GetOrAdd(
-            key,
-            static (_, args) => BuildOptions<ClusterDbContext>(args.serviceProvider, args.connectionString),
-            (serviceProvider, connectionString));
+        if (UsesBindings)
+        {
+            _databaseNames.ValidateClusterName();
+        }
 
         // DbContext ownership transfers to DbContextScope, which disposes it.
 #pragma warning disable CA2000
-        var dbContext = new ClusterDbContext(dbContextOptions);
+        var dbContext = await CreateContext(
+            DatabaseIdentity.Cluster,
+            "cluster",
+            _clusterOptions,
+            static options => new ClusterDbContext(options),
+            (context, target) => EnsureMigratedOnce($"cluster:{target.ConnectionString}", target, context));
 #pragma warning restore CA2000
-        await EnsureMigratedOnce(key, connectionString, dbContext);
+        try
+        {
+            if (UsesBindings && !VerifySchema)
+            {
+                await _databaseNames.ReserveCluster(dbContext);
+            }
+        }
+        catch
+        {
+            await dbContext.DisposeAsync();
+            throw;
+        }
+
         return new DbContextScope<ClusterDbContext>(dbContext, static () => { });
     }
 
     /// <inheritdoc/>
     public async Task<DbContextScope<EventStoreDbContext>> EventStore(EventStoreName eventStore)
     {
-        var connectionString = GetConnectionStringForEventStore(eventStore);
-        var key = $"event-store:{eventStore.Value}:{connectionString}";
-        var dbContextOptions = _eventStoreOptions.GetOrAdd(
-            key,
-            static (_, args) => BuildOptions<EventStoreDbContext>(args.serviceProvider, args.connectionString),
-            (serviceProvider, connectionString));
-
+        var key = $"event-store:{eventStore.Value}";
 #pragma warning disable CA2000
-        var dbContext = new EventStoreDbContext(dbContextOptions);
+        var dbContext = await CreateContext(
+            DatabaseIdentity.Store(eventStore.Value),
+            key,
+            _eventStoreOptions,
+            static options => new EventStoreDbContext(options),
+            (context, target) => EnsureMigratedOnce($"{key}:{target.ConnectionString}", target, context));
 #pragma warning restore CA2000
-        await EnsureMigratedOnce(key, connectionString, dbContext);
+
         return new DbContextScope<EventStoreDbContext>(dbContext, static () => { });
     }
 
     /// <inheritdoc/>
     public async Task<DbContextScope<NamespaceDbContext>> Namespace(EventStoreName eventStore, EventStoreNamespaceName @namespace)
     {
-        var connectionString = GetConnectionStringForEventStoreAndNamespace(eventStore, @namespace);
-        var key = $"namespace:{eventStore.Value}:{@namespace.Value}:{connectionString}";
-        var dbContextOptions = _namespaceOptions.GetOrAdd(
-            key,
-            static (_, args) => BuildOptions<NamespaceDbContext>(args.serviceProvider, args.connectionString),
-            (serviceProvider, connectionString));
-
+        var key = $"namespace:{eventStore.Value}:{@namespace.Value}";
 #pragma warning disable CA2000
-        var dbContext = new NamespaceDbContext(dbContextOptions);
+        var dbContext = await CreateContext(
+            new(DatabaseKind.Namespace, eventStore.Value, @namespace.Value),
+            key,
+            _namespaceOptions,
+            static options => new NamespaceDbContext(options),
+            (context, target) => EnsureMigratedOnce($"{key}:{target.ConnectionString}", target, context));
 #pragma warning restore CA2000
-        await EnsureMigratedOnce(key, connectionString, dbContext);
+
         return new DbContextScope<NamespaceDbContext>(dbContext, static () => { });
     }
 
     /// <inheritdoc/>
+    /// <remarks>
+    /// The jobs storage migrates its own tables through these options, so they resolve for
+    /// <see cref="ConnectionPurpose.Runtime"/> only.
+    /// </remarks>
     public DbContextOptions<Cratis.Orleans.Storage.Sql.Jobs.JobsDbContext> GetJobsDbContextOptions(string eventStore, string @namespace)
     {
-        var connectionString = GetConnectionStringForEventStoreAndNamespace(eventStore, @namespace);
-        var key = $"jobs:{eventStore}:{@namespace}:{connectionString}";
-        return _jobsOptions.GetOrAdd(
-            key,
-            static (_, args) => BuildOptions<Cratis.Orleans.Storage.Sql.Jobs.JobsDbContext>(args.serviceProvider, args.connectionString),
-            (serviceProvider, connectionString));
+        var identity = new DatabaseIdentity(DatabaseKind.Namespace, eventStore, @namespace);
+
+        // Called synchronously by the jobs storage. The resolution is cached, so this only waits when it is not.
+        var resolved = _resolution.Resolve(identity, ConnectionPurpose.Runtime).GetAwaiter().GetResult();
+        string connectionString;
+        if (SqlConnectionStrings.OwnsPlacement(resolved))
+        {
+            connectionString = SqlConnectionStrings.WithPlacement(options.Value.Storage.ConnectionDetails, resolved);
+        }
+        else if (UsesBindings)
+        {
+            connectionString = VerifySchema
+                ? KnownConnectionString(identity)
+                : _databaseNames.Known(identity, () => new ClusterDbContext(BuildOptions<ClusterDbContext>(ClusterTarget(ConnectionPurpose.Runtime))));
+        }
+        else
+        {
+            connectionString = ConnectionStringFor($"+es+{eventStore}+{@namespace}");
+        }
+
+        var schema = _resolution.SchemaFor(resolved);
+        var target = new SqlTarget(
+            SqlConnectionStrings.WithSchema(connectionString, schema),
+            schema,
+            _resolution.IsConfigured ? _resolution.RequestFor(identity, ConnectionPurpose.Runtime) : null);
+        return OptionsFor(_jobsOptions, $"jobs:{eventStore}:{@namespace}", target);
     }
 
     /// <inheritdoc/>
@@ -159,6 +223,15 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
             (options, name) => new UniqueConstraintDbContext(options, name, uniqueConstraintMigrator));
 
     /// <inheritdoc/>
+    public Task<DbContextScope<UniqueConstraintValuesDbContext>> UniqueConstraintValuesTable(EventStoreName eventStore, EventStoreNamespaceName @namespace, string constraintName) =>
+        GetOrCreateTableDbContext(
+            eventStore,
+            @namespace,
+            constraintName,
+            _uniqueConstraintValuesOptions,
+            (options, name) => new UniqueConstraintValuesDbContext(options, name, uniqueConstraintMigrator));
+
+    /// <inheritdoc/>
     public Task<DbContextScope<EventSequenceDbContext>> EventSequenceTable(EventStoreName eventStore, EventStoreNamespaceName @namespace, string eventSequenceName) =>
         GetOrCreateTableDbContext(
             eventStore,
@@ -168,12 +241,13 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
             (options, name) => new EventSequenceDbContext(options, name, eventSequenceMigrator));
 
     /// <inheritdoc/>
-    public Task<DbContextScope<ReadModelDbContext>> ReadModelTable(EventStoreName eventStore, EventStoreNamespaceName @namespace, string containerName, IReadOnlyList<ProjectedColumn> columns) =>
+    public Task<DbContextScope<ReadModelDbContext>> ReadModelTable(EventStoreName eventStore, EventStoreNamespaceName @namespace, string containerName, IReadOnlyList<ProjectedColumn> columns, ConnectionPurpose purpose = ConnectionPurpose.Runtime) =>
         GetOrCreateReadModelDbContext(
             eventStore,
             @namespace,
             containerName,
-            (options, name) => new ReadModelDbContext(options, name, columns, serviceProvider.GetRequiredService<IReadModelMigrator>()));
+            (options, name) => new ReadModelDbContext(options, name, columns, serviceProvider.GetRequiredService<IReadModelMigrator>()),
+            purpose);
 
     /// <inheritdoc/>
     public void ClearTableMigrationCache(string connectionStringPrefix)
@@ -186,65 +260,49 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
         // migrations. SQLite tests delete the database file between test classes; without
         // this the in-process silo would skip migration and then query non-existent tables.
         _migratedKeys.Clear();
+        _ensuredTableGenerations.Clear();
 
         // And clear the "database exists" cache so the next request after a Wipe re-checks
         // (the SQLite path deletes files; the PG/MsSql path truncates tables but leaves the
         // databases standing — either way we must not skip the check based on a pre-wipe
         // observation).
         _ensuredDatabaseKeys.Clear();
+        _ensuredSchemaKeys.Clear();
+        _databaseNames.Clear();
+        _jobsOptions.Clear();
     }
 
 #if DEVELOPMENT
     /// <inheritdoc/>
     public async Task Wipe()
     {
-        var storageType = options.Value.Storage.Type;
-        var connectionDetails = options.Value.Storage.ConnectionDetails;
-        var isSqlite = string.Equals(storageType, StorageType.Sqlite, StringComparison.OrdinalIgnoreCase);
-
-        if (isSqlite)
+        var timings = new IntegrationTimings(GetType().FullName!, Environment.GetEnvironmentVariable("CHRONICLE_RUNTIME_MODE") ?? "unavailable", options.Value.Storage.Type);
+        try
         {
-            // SQLite: each event store, namespace, and read-model namespace lives in its own
-            // file. The cluster file path is the configured Data Source; the derived files
-            // sit alongside it with a "+" suffix in the basename. We drop every table inside
-            // each file via a fresh single-writer connection rather than File.Delete because
-            // grain activations in the same process may still hold open handles to the
-            // database when the wipe runs. File.Delete unlinks the path on Linux/macOS but
-            // leaves the inode live for the open handle — and the next SQLite open against
-            // the path can intermittently fail with "disk I/O error" or "attempt to write a
-            // readonly database" while the file system juggles the recreate. DROP TABLE
-            // serializes through SQLite's own RESERVED/EXCLUSIVE locks, so it is safe under
-            // concurrent grain access, leaves the file intact, and never triggers WAL
-            // recovery against a vanished main file.
-            SqliteConnection.ClearAllPools();
-            await WipeAllSqliteDatabases(connectionDetails);
+            await timings.Run("sql-wipe-total", WipeCore);
         }
-        else if (string.Equals(storageType, StorageType.PostgreSql, StringComparison.OrdinalIgnoreCase))
+        finally
         {
-            await WipeAllPostgreSqlDatabases(connectionDetails);
-        }
-        else if (string.Equals(storageType, StorageType.MsSql, StringComparison.OrdinalIgnoreCase))
-        {
-            await WipeAllMsSqlDatabases(connectionDetails);
-        }
-
-        // Cache invalidation must happen AFTER the wipe so that any in-flight migration that
-        // populates the cache concurrently with the wipe is overwritten by a final empty cache.
-        ClearTableMigrationCache(string.Empty);
-
-        // Only SQLite drops the job tables - the other backends truncate, so their schema survives
-        // the wipe. The job system caches the storage it resolves, and applying its migrations is
-        // part of resolving, so on SQLite it has to forget: otherwise it holds storage for tables
-        // that are gone and the next write says there is no such table as Jobs. Telling it to
-        // forget where the tables never went away is not harmless - the next job in every event
-        // store and namespace would re-run the migrations, and on a real database server that is
-        // slow enough to push the integration specs past their deadlines.
-        if (isSqlite)
-        {
-            serviceProvider.GetService<Cratis.Orleans.Storage.IJobsStorage>()?.Reset();
+            timings.Complete();
         }
     }
 
+#endif
+
+    /// <summary>
+    /// Binds a namespace before it is published to consumers, without changing IDatabase.
+    /// </summary>
+    /// <param name="eventStore">The event store.</param>
+    /// <param name="namespace">The namespace.</param>
+    /// <returns>The binding operation.</returns>
+    internal async Task BindNamespace(EventStoreName eventStore, EventStoreNamespaceName @namespace)
+    {
+        var target = await Target(new(DatabaseKind.Namespace, eventStore.Value, @namespace.Value), ConnectionPurpose.Schema);
+        await using var context = new NamespaceDbContext(BuildOptions<NamespaceDbContext>(target));
+        await EnsureDatabaseExists(context, target);
+    }
+
+#if DEVELOPMENT
     static string ExtractSqliteDataSource(string connectionString)
     {
         var builder = new DbConnectionStringBuilder { ConnectionString = connectionString };
@@ -259,48 +317,16 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
     static string PreservedNamesForSql() =>
         string.Join(", ", _preservedTables.Select(t => $"'{t}'"));
 
-    static async Task WipeAllSqliteDatabases(string clusterConnectionString)
-    {
-        var clusterPath = ExtractSqliteDataSource(clusterConnectionString);
-        if (string.IsNullOrEmpty(clusterPath))
-        {
-            return;
-        }
-
-        var directory = Path.GetDirectoryName(clusterPath);
-        if (string.IsNullOrEmpty(directory))
-        {
-            directory = ".";
-        }
-
-        var baseName = Path.GetFileNameWithoutExtension(clusterPath);
-        var extension = Path.GetExtension(clusterPath);
-
-        // Enumerate every SQLite database file in the cluster directory whose name starts
-        // with the cluster basename. Sidecar files (-wal, -shm, -journal) are filtered out
-        // — they aren't database files themselves and SQLite manages them as part of the
-        // main file's lifecycle.
-        var pattern = string.IsNullOrEmpty(extension) ? $"{baseName}*" : $"{baseName}*{extension}";
-        foreach (var file in Directory.GetFiles(directory, pattern))
-        {
-            if (file.EndsWith("-wal", StringComparison.Ordinal)
-                || file.EndsWith("-shm", StringComparison.Ordinal)
-                || file.EndsWith("-journal", StringComparison.Ordinal))
-            {
-                continue;
-            }
-
-            await DropAllSqliteTables(file);
-        }
-    }
-
-    static async Task DropAllSqliteTables(string filePath)
+    static async Task DropAllSqliteTables(string filePath, bool isClusterFile = false)
     {
         if (!File.Exists(filePath))
         {
             return;
         }
 
+        using var timing = IntegrationTimings.BeginCurrent("sql-wipe-target-sqlite");
+        timing?.Target();
+        timing?.Failure();
         await using var conn = new SqliteConnection($"Data Source={filePath};Pooling=False");
         try
         {
@@ -313,10 +339,13 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
             return;
         }
 
+        // Schema and history must disappear together, even if a DROP fails halfway through.
+        await using var transaction = (SqliteTransaction)await conn.BeginTransactionAsync();
         var tables = new List<string>();
         await using (var listCmd = conn.CreateCommand())
         {
-            listCmd.CommandText = "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'";
+            listCmd.Transaction = transaction;
+            listCmd.CommandText = "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name = '__EFMigrationsHistory'";
             await using var reader = await listCmd.ExecuteReaderAsync();
             while (await reader.ReadAsync())
             {
@@ -324,17 +353,46 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
             }
         }
 
-        foreach (var table in tables)
+        var keepFloor = false;
+        if (tables.Contains("GenerationFloor", StringComparer.Ordinal))
+        {
+            await using var floor = conn.CreateCommand();
+            floor.Transaction = transaction;
+            floor.CommandText = "SELECT COUNT(*) FROM GenerationFloor";
+            keepFloor = Convert.ToInt64(await floor.ExecuteScalarAsync(), System.Globalization.CultureInfo.InvariantCulture) > 0;
+        }
+
+        // The single-writer lease is cluster state held by the running kernel; deleting it makes the kernel fence itself.
+        // Keep the table and its migration-history row so the next migration does not try to create it again.
+        var keepLease = isClusterFile && tables.Contains(WellKnownTableNames.SingleWriterLeases, StringComparer.Ordinal);
+        if (keepLease && !keepFloor && tables.Contains("__EFMigrationsHistory", StringComparer.Ordinal))
+        {
+            await using var history = conn.CreateCommand();
+            history.Transaction = transaction;
+            history.CommandText = "DELETE FROM \"__EFMigrationsHistory\" WHERE \"MigrationId\" <> $lease";
+            history.Parameters.AddWithValue("$lease", SingleWriterLeaseMigrationId);
+            await history.ExecuteNonQueryAsync();
+        }
+
+        timing?.TablesObserved();
+        foreach (var table in tables.Where(_ =>
+            (!keepFloor || (_ != "GenerationFloor" && _ != "GenerationFloorHistory" && _ != "__EFMigrationsHistory"))
+            && (!keepLease || (_ != WellKnownTableNames.SingleWriterLeases && _ != "__EFMigrationsHistory"))))
         {
             await using var dropCmd = conn.CreateCommand();
+            dropCmd.Transaction = transaction;
 #pragma warning disable CA2100 // Table names come from sqlite_master in this same file — there is no user input.
-            dropCmd.CommandText = $"DROP TABLE IF EXISTS \"{table}\"";
+            dropCmd.CommandText = $"{(keepFloor ? "DELETE FROM" : "DROP TABLE IF EXISTS")} \"{table.Replace("\"", "\"\"", StringComparison.Ordinal)}\"";
 #pragma warning restore CA2100
             await dropCmd.ExecuteNonQueryAsync();
+            timing?.Table();
         }
+
+        await transaction.CommitAsync();
+        timing?.Success();
     }
 
-    static async Task WipeAllPostgreSqlDatabases(string clusterConnectionString)
+    static async Task WipeAllPostgreSqlDatabases(string clusterConnectionString, IEnumerable<string> boundDatabases)
     {
         var builder = new NpgsqlConnectionStringBuilder(clusterConnectionString);
         var clusterDb = builder.Database;
@@ -357,7 +415,7 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
             return;
         }
 
-        var databasesToWipe = new List<string> { clusterDb };
+        var databasesToWipe = new HashSet<string>(boundDatabases, StringComparer.Ordinal) { clusterDb };
 #pragma warning disable CA2100
         await using (var listCmd = new NpgsqlCommand("SELECT datname FROM pg_database WHERE datname LIKE @prefix || '+%' AND datname <> @cluster", maintenanceConn))
 #pragma warning restore CA2100
@@ -382,6 +440,9 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
 
     static async Task TruncateAllPostgreSqlTables(string connectionString)
     {
+        using var timing = IntegrationTimings.BeginCurrent("sql-wipe-target-postgresql");
+        timing?.Target();
+        timing?.Failure();
         await using var conn = new NpgsqlConnection(connectionString);
         try
         {
@@ -406,9 +467,10 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
         await using var cmd = new NpgsqlCommand(sql, conn);
 #pragma warning restore CA2100
         await cmd.ExecuteNonQueryAsync();
+        timing?.Success();
     }
 
-    static async Task WipeAllMsSqlDatabases(string clusterConnectionString)
+    static async Task WipeAllMsSqlDatabases(string clusterConnectionString, IEnumerable<string> boundDatabases)
     {
         var builder = new SqlConnectionStringBuilder(clusterConnectionString);
         var clusterDb = builder.InitialCatalog;
@@ -428,7 +490,7 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
             return;
         }
 
-        var databasesToWipe = new List<string> { clusterDb };
+        var databasesToWipe = new HashSet<string>(boundDatabases, StringComparer.Ordinal) { clusterDb };
 #pragma warning disable CA2100
         await using (var listCmd = new SqlCommand("SELECT name FROM sys.databases WHERE name LIKE @prefix + '+%' AND name <> @cluster", maintenanceConn))
 #pragma warning restore CA2100
@@ -453,6 +515,9 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
 
     static async Task TruncateAllMsSqlTables(string connectionString)
     {
+        using var timing = IntegrationTimings.BeginCurrent("sql-wipe-target-mssql");
+        timing?.Target();
+        timing?.Failure();
         await using var conn = new SqlConnection(connectionString);
         try
         {
@@ -480,218 +545,86 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
         await using var cmd = new SqlCommand(sql, conn);
 #pragma warning restore CA2100
         await cmd.ExecuteNonQueryAsync();
+        timing?.Success();
     }
 #endif
 
-    static bool IsAlreadyExistsException(Exception? ex)
+    static bool IsAlreadyExistsException(Exception? ex) => SchemaObjectAlreadyExists.Is(ex);
+
+#if DEVELOPMENT
+    async Task WipeCore()
     {
-        while (ex is not null)
+        if (options.Value.Clustering.Type == ClusteringType.Sql)
         {
-            if (ex.Message.Contains("already exists", StringComparison.OrdinalIgnoreCase))
+            throw new SqlClusteringPreventsKernelStateReset();
+        }
+
+        foreach (var target in (await GenerationStoreTargets()).Values)
+        {
+            await using var context = new EventStoreDbContext(ReadOptions<EventStoreDbContext>(target));
+            try
             {
-                return true;
-            }
-
-            ex = ex.InnerException;
-        }
-
-        return false;
-    }
-
-    static DbContextOptions<TDbContext> BuildOptions<TDbContext>(IServiceProvider serviceProvider, string connectionString)
-        where TDbContext : DbContext
-    {
-        var builder = new DbContextOptionsBuilder<TDbContext>();
-        builder.UseDatabaseFromConnectionString(connectionString);
-        builder
-            .UseApplicationServiceProvider(serviceProvider)
-            .AddConceptAsSupport();
-
-        // SQLite serializes writers on a database-wide lock; the kernel writes from many grains at
-        // once, so without WAL + a busy timeout concurrent writes fail with SQLITE_BUSY and stall
-        // observer catch-up. The interceptor applies those pragmas on every SQLite connection.
-        if (connectionString.GetDatabaseType() == DatabaseType.Sqlite)
-        {
-            builder.AddInterceptors(SqlitePragmaConnectionInterceptor.Instance);
-        }
-
-        return builder.Options;
-    }
-
-    async Task EnsureMigratedOnce(string key, string connectionString, DbContext context)
-    {
-        if (_migratedKeys.ContainsKey(key))
-        {
-            return;
-        }
-
-        await MigrateWithLock(context, connectionString);
-        _migratedKeys.TryAdd(key, true);
-    }
-
-    /// <summary>
-    /// Serializes EF Core <c language="csharp">MigrateAsync</c> calls per connection string to prevent concurrent migration race conditions
-    /// when multiple grains access the same database simultaneously.
-    /// </summary>
-    /// <param name="context">The <see cref="DbContext"/> to migrate.</param>
-    /// <param name="connectionString">The connection string used as the lock key.</param>
-    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-    async Task MigrateWithLock(DbContext context, string connectionString)
-    {
-        // For SQLite the file is created automatically when EF Core opens a connection
-        // to a non-existent path. PostgreSQL and SQL Server require the database to
-        // exist before a connection succeeds, so explicitly create it first when the
-        // event-store / namespace targets a per-database isolation name that has not
-        // been provisioned yet. This mirrors MongoDB, where each event store and each
-        // namespace lives in its own database that the kernel creates on first access.
-        await EnsureDatabaseExists(context, connectionString);
-
-        var migrationLock = _migrationLocks.GetOrAdd(connectionString, _ => new SemaphoreSlim(1, 1));
-        await migrationLock.WaitAsync();
-        try
-        {
-            await context.Database.MigrateAsync();
-        }
-        catch (Exception ex) when (IsAlreadyExistsException(ex))
-        {
-            // A concurrent migration already completed and created the tables.
-            // This is safe to ignore: the schema is in the correct final state.
-        }
-        finally
-        {
-            migrationLock.Release();
-        }
-    }
-
-    async Task EnsureDatabaseExists(DbContext context, string connectionString)
-    {
-        var databaseType = connectionString.GetDatabaseType();
-        if (databaseType is not DatabaseType.PostgreSql and not DatabaseType.SqlServer)
-        {
-            return;
-        }
-
-        // Hot-path fast-skip: once a database has been confirmed to exist for this connection
-        // string we never roundtrip again. The kernel calls EnsureDatabaseExists on every read
-        // model / table request, so without this cache PostgreSQL/SQL Server would issue an
-        // ExistsAsync probe per operation — a cumulative slowdown that visibly dominates the
-        // ResetKernelState window on integration test boundaries.
-        if (_ensuredDatabaseKeys.ContainsKey(connectionString))
-        {
-            return;
-        }
-
-        var migrationLock = _migrationLocks.GetOrAdd(connectionString, _ => new SemaphoreSlim(1, 1));
-        await migrationLock.WaitAsync();
-        try
-        {
-            if (_ensuredDatabaseKeys.ContainsKey(connectionString))
-            {
-                return;
-            }
-
-            var creator = context.Database.GetInfrastructure().GetRequiredService<IRelationalDatabaseCreator>();
-            if (!await creator.ExistsAsync())
-            {
-                try
+                if (await context.GenerationInitializationReceipts.AnyAsync())
                 {
-                    await creator.CreateAsync();
-                }
-                catch (Exception ex) when (IsAlreadyExistsException(ex))
-                {
-                    // Another concurrent migrator created the database; safe to ignore.
+                    throw new InvalidOperationException("Kernel state reset is refused for an initialized generation store.");
                 }
             }
-
-            _ensuredDatabaseKeys.TryAdd(connectionString, true);
+            catch (Exception error) when (MissingGenerationTable(error))
+            {
+                // The legacy store has never been initialized.
+            }
         }
-        finally
+        var storageType = options.Value.Storage.Type;
+        var connectionDetails = options.Value.Storage.ConnectionDetails;
+        var isSqlite = string.Equals(storageType, StorageType.Sqlite, StringComparison.OrdinalIgnoreCase);
+        var boundDatabases = UsesBindings ? await BoundDatabases() : [];
+
+        if (isSqlite)
         {
-            migrationLock.Release();
+            // SQLite: each event store, namespace, and read-model namespace lives in its own
+            // file. The cluster file path is the configured Data Source; the derived files
+            // sit alongside it with a "+" suffix in the basename. We drop every table inside
+            // each file via a fresh single-writer connection rather than File.Delete because
+            // grain activations in the same process may still hold open handles to the
+            // database when the wipe runs. File.Delete unlinks the path on Linux/macOS but
+            // leaves the inode live for the open handle — and the next SQLite open against
+            // the path can intermittently fail with "disk I/O error" or "attempt to write a
+            // readonly database" while the file system juggles the recreate. DROP TABLE
+            // serializes through SQLite's own RESERVED/EXCLUSIVE locks, so it is safe under
+            // concurrent grain access, leaves the file intact, and never triggers WAL
+            // recovery against a vanished main file.
+            SqliteConnection.ClearAllPools();
+            await WipeAllSqliteDatabases(connectionDetails);
         }
+        else if (string.Equals(storageType, StorageType.PostgreSql, StringComparison.OrdinalIgnoreCase))
+        {
+            await WipeAllPostgreSqlDatabases(connectionDetails, boundDatabases);
+
+            // Every database and namespace schema has a connection string of its own, so each one keeps an
+            // Npgsql pool of its own. A wipe keeps the databases, and without releasing the idle connections
+            // here every reset carries the previous run's pools forward until the server refuses new clients.
+            NpgsqlConnection.ClearAllPools();
+        }
+        else if (string.Equals(storageType, StorageType.MsSql, StringComparison.OrdinalIgnoreCase))
+        {
+            await WipeAllMsSqlDatabases(connectionDetails, boundDatabases);
+        }
+
+        // SQLite invalidates its caches under each target's migration lock during the wipe.
+        if (!isSqlite)
+        {
+            ClearTableMigrationCache(string.Empty);
+        }
+
+        serviceProvider.GetService<Cratis.Orleans.Storage.IJobsStorage>()?.Reset();
     }
 
-    async Task<DbContextScope<TDbContext>> GetOrCreateTableDbContext<TDbContext>(
-        EventStoreName eventStore,
-        EventStoreNamespaceName @namespace,
-        string tableName,
-        System.Collections.Concurrent.ConcurrentDictionary<string, DbContextOptions<TDbContext>> optionsCache,
-        Func<DbContextOptions<TDbContext>, string, TDbContext> createDbContext)
-        where TDbContext : DbContext, ITableDbContext
+    async Task<string[]> BoundDatabases()
     {
-        var connectionString = GetConnectionStringForEventStoreAndNamespace(eventStore, @namespace);
-        var key = $"{eventStore.Value}:{@namespace.Value}:{tableName}:{connectionString}";
-        var dbContextOptions = optionsCache.GetOrAdd(
-            key,
-            static (_, args) => BuildOptions<TDbContext>(args.serviceProvider, args.connectionString),
-            (serviceProvider, connectionString));
-
-        // DbContext ownership transfers to DbContextScope, which disposes it.
-#pragma warning disable CA2000
-        var dbContext = createDbContext(dbContextOptions, tableName);
-#pragma warning restore CA2000
-
-        // Every event store / namespace pair lives in its own database, and PostgreSQL / SQL Server
-        // refuse a connection to one that does not exist yet. Namespace() creates it on the way past,
-        // but nothing guarantees it ran first: appending to a namespace reaches its event-sequence
-        // table through here, so a namespace whose Namespaces table was never touched arrives at a
-        // database that is not there. Provision it the same way GetOrCreateReadModelDbContext does.
-        await EnsureDatabaseExists(dbContext, connectionString);
-
-        // Per-table migration is handled by the table-specific migrator (EnsureTableExists)
-        // which already caches "already migrated" inside the migrator implementation, so we
-        // only need to call it once per request — the migrator itself will fast-path on
-        // subsequent calls without a DB roundtrip.
-        await dbContext.EnsureTableExists();
-        return new DbContextScope<TDbContext>(dbContext, static () => { });
+        await using var scope = await Cluster();
+        return await scope.DbContext.DatabaseNames.Select(row => row.PhysicalName).ToArrayAsync();
     }
-
-    async Task<DbContextScope<ReadModelDbContext>> GetOrCreateReadModelDbContext(
-        EventStoreName eventStore,
-        EventStoreNamespaceName @namespace,
-        string tableName,
-        Func<DbContextOptions<ReadModelDbContext>, string, ReadModelDbContext> createDbContext)
-    {
-        var connectionString = GetConnectionStringForReadModels(eventStore, @namespace);
-        var key = $"readmodel:{eventStore.Value}:{@namespace.Value}:{tableName}:{connectionString}";
-        var dbContextOptions = _readModelOptions.GetOrAdd(
-            key,
-            static (_, args) => BuildOptions<ReadModelDbContext>(args.serviceProvider, args.connectionString),
-            (serviceProvider, connectionString));
-
-#pragma warning disable CA2000
-        var dbContext = createDbContext(dbContextOptions, tableName);
-#pragma warning restore CA2000
-
-        // Read models live in their own database (one per event store / non-default namespace
-        // pair), matching the MongoDB layout. PostgreSQL / SQL Server require the database to
-        // exist before any connection succeeds; SQLite creates the file on first connection.
-        await EnsureDatabaseExists(dbContext, connectionString);
-
-        await dbContext.EnsureTableExists();
-        return new DbContextScope<ReadModelDbContext>(dbContext, static () => { });
-    }
-
-    string GetConnectionStringForEventStore(EventStoreName eventStore) =>
-        ConnectionStringFor($"+es+{eventStore.Value}");
-
-    string GetConnectionStringForEventStoreAndNamespace(EventStoreName eventStore, EventStoreNamespaceName @namespace) =>
-        ConnectionStringFor($"+es+{eventStore.Value}+{@namespace.Value}");
-
-    /// <summary>
-    /// Builds the connection string for the read-model database of a given event store and namespace.
-    /// Mirrors MongoDB's read-model database naming: <c language="csharp">{eventStore}</c> for the default namespace and
-    /// <c language="csharp">{eventStore}+{namespace}</c> for non-default namespaces. The cluster database name is
-    /// always prefixed (separated by <c language="csharp">+</c>) so SQL backends — which serve every Chronicle
-    /// instance from the same server — can co-exist without colliding on read-model database names.
-    /// </summary>
-    /// <param name="eventStore">The event store the read model belongs to.</param>
-    /// <param name="namespace">The namespace the read model belongs to.</param>
-    /// <returns>A connection string targeting the read-model database.</returns>
-    string GetConnectionStringForReadModels(EventStoreName eventStore, EventStoreNamespaceName @namespace) =>
-        @namespace == EventStoreNamespaceName.Default
-            ? ConnectionStringFor($"+{eventStore.Value}")
-            : ConnectionStringFor($"+{eventStore.Value}+{@namespace.Value}");
+#endif
 
     /// <summary>
     /// Builds the connection string for a per-event-store or per-namespace database.

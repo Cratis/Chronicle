@@ -17,30 +17,65 @@ public class ProjectionFutures : Grain<ProjectionFuturesState>, IProjectionFutur
         Task.FromResult<IEnumerable<ProjectionFuture>>(State.Futures);
 
     /// <inheritdoc/>
-    public async Task<int> AddFuture(ProjectionFuture future)
-    {
-        if (State.Futures.Any(f => f.Event.Context.SequenceNumber == future.Event.Context.SequenceNumber))
-        {
-            return State.Futures.Count;
-        }
+    public Task<int> AddFuture(ProjectionFuture future) => AddFuture(future, pinned: false);
 
-        State.Futures.Add(future);
-        State.AddedFutures.Add(future);
-        await WriteStateAsync();
-        State.AddedFutures.Clear();
-        return State.Futures.Count;
-    }
+    /// <inheritdoc/>
+    public Task<int> AddPinnedFuture(ProjectionFuture future) => AddFuture(future, pinned: true);
 
     /// <inheritdoc/>
     public async Task ResolveFuture(ProjectionFutureId futureId)
     {
         var future = State.Futures.FirstOrDefault(f => f.Id == futureId);
+        var previousState = State;
         if (future is not null)
         {
-            State.Futures.Remove(future);
             State.ResolvedFutures.Add(future);
         }
-        await WriteStateAsync();
-        State.ResolvedFutures.Clear();
+
+        try
+        {
+            await WriteStateAsync();
+            if (future is not null)
+            {
+                State.Futures.Remove(future);
+            }
+        }
+        catch
+        {
+            State = previousState;
+            throw;
+        }
+        finally
+        {
+            State.ResolvedFutures.Clear();
+        }
+    }
+
+    async Task<int> AddFuture(ProjectionFuture future, bool pinned)
+    {
+        if (State.Futures.Any(f => f.Event.Context.SequenceNumber == future.Event.Context.SequenceNumber &&
+            (!pinned || f.Event.Context.EventType == future.Event.Context.EventType)))
+        {
+            return State.Futures.Count;
+        }
+
+        var previousState = State;
+        State.AddedFutures.Add(future);
+        try
+        {
+            await WriteStateAsync();
+            State.Futures.Add(future);
+        }
+        catch
+        {
+            State = previousState;
+            throw;
+        }
+        finally
+        {
+            State.AddedFutures.Clear();
+        }
+
+        return State.Futures.Count;
     }
 }

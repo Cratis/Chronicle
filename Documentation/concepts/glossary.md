@@ -35,15 +35,23 @@ An ordered, append-only series of events. The [event log](#event-log) is the def
 
 ## Event Source
 
-The thing an event is *about* — the source of the change, such as a specific customer or order. Events that share an event source form that source's stream. See [Event Source](./event-source.md).
+The thing an event is *about* — the source of the change, such as a specific customer or order. Events that share an event source id form that source's history. See [Event Source](./event-source.md).
 
 ## Event Source ID
 
 The strongly-typed identifier of an [event source](./event-source.md) (for example a `CustomerId`). It is the key Chronicle uses to group and replay an entity's events.
 
+## Event Source Definition
+
+A type that implements `IEventSource` to declare an event source's name, its named [event streams](#event-stream) and the dimensions its concurrency checks use. See [Event sources and streams](../event-sources/index.mdx).
+
 ## Event Store
 
 The top-level container for everything in a bounded context: event sequences, observers, projections, and read models. You obtain one from the client and work within it. See [Event Store](./event-store.md).
+
+## Event Stream
+
+A named part of an event source, such as the transactions of one month. It is identified by an event stream type and an event stream id. See [Event Source](./event-source.md) and [Event sources and streams](../event-sources/index.mdx).
 
 ## Event Type
 

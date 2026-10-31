@@ -31,9 +31,11 @@ namespace Cratis.Chronicle.EventSequences.for_EventSequence.given;
 /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between json and expando object.</param>
 /// <param name="eventSerializer"><see cref="IEventSerializer"/> for serializing and deserializing events.</param>
 /// <param name="eventHashCalculator"><see cref="IEventHashCalculator"/> for calculating event content hashes.</param>
+/// <param name="storageErrorClassifier">The active provider's transient failure policy.</param>
 /// <param name="options"><see cref="IOptions{T}"/> for <see cref="ChronicleOptions"/>.</param>
 /// <param name="logger"><see cref="ILogger{T}"/> for logging.</param>
 /// <param name="concurrencyValidatorLogger"><see cref="ILogger{T}"/> for the concurrency validator.</param>
+/// <param name="constraintIndexReplayLogger">The constraint replay logger.</param>
 public class EventSequenceThatCannotPersistState(
     IStorage storage,
     IConstraintValidationFactory constraintValidatorSetFactory,
@@ -45,9 +47,11 @@ public class EventSequenceThatCannotPersistState(
     IExpandoObjectConverter expandoObjectConverter,
     IEventSerializer eventSerializer,
     IEventHashCalculator eventHashCalculator,
+    IStorageErrorClassifier storageErrorClassifier,
     IOptions<ChronicleOptions> options,
     ILogger<EventSequence> logger,
-    ILogger<Concurrency.ConcurrencyValidator> concurrencyValidatorLogger) : EventSequence(
+    ILogger<Concurrency.ConcurrencyValidator> concurrencyValidatorLogger,
+    ILogger<ConstraintIndexReplay> constraintIndexReplayLogger) : EventSequence(
         storage,
         constraintValidatorSetFactory,
         eventTypeMigrations,
@@ -58,9 +62,11 @@ public class EventSequenceThatCannotPersistState(
         expandoObjectConverter,
         eventSerializer,
         eventHashCalculator,
+        storageErrorClassifier,
         options,
         logger,
-        concurrencyValidatorLogger)
+        concurrencyValidatorLogger,
+        constraintIndexReplayLogger)
 {
     /// <inheritdoc/>
     protected override Task WriteStateAsync() => throw new SimulatedStateWriteError();

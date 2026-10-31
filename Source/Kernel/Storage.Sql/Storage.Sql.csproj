@@ -9,10 +9,9 @@
     </ItemGroup>
 
     <ItemGroup>
+        <PackageReference Include="Cratis.Metrics.Roslyn" />
         <PackageReference Include="Microsoft.Orleans.Reminders" />
         <PackageReference Include="Cratis.Orleans.Storage.Sql" />
-        <PackageReference Include="AspNetCore.HealthChecks.NpgSql" />
-        <PackageReference Include="AspNetCore.HealthChecks.SqlServer" />
     </ItemGroup>
 
     <ItemGroup>
@@ -32,7 +31,12 @@
       <PackageReference Include="SQLitePCLRaw.lib.e_sqlite3" />
       <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" />
       <PackageReference Include="Microsoft.Data.SqlClient" />
+      <PackageReference Include="Microsoft.Data.SqlClient.Extensions.Azure" />
+      <PackageReference Include="Microsoft.Identity.Client.NativeInterop" ExcludeAssets="native" />
+      <!-- Override the vulnerable System.Security.Cryptography.Pkcs 9.0.18 pulled in transitively by Microsoft.Data.SqlClient. -->
+      <PackageReference Include="System.Security.Cryptography.Pkcs" />
       <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+      <PackageReference Include="Azure.Identity" />
     <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
     <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
     </ItemGroup>

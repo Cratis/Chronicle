@@ -1,0 +1,5 @@
+projection Doc => DocReadModel
+  from DocEvent
+    add Balance by amount
+    subtract Stock by quantity
+    add Total by lineItem.total

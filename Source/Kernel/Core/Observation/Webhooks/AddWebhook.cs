@@ -3,6 +3,7 @@
 
 using Cratis.Arc.Commands.ModelBound;
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Contracts.Observation.Webhooks;
 using Cratis.Chronicle.Contracts.Security;
 using Cratis.Chronicle.Grpc;
@@ -51,6 +52,26 @@ public record AddWebhook(
     bool IsActive)
 {
     /// <summary>
+    /// Gets the optional OAuth scope.
+    /// </summary>
+    public string OAuthScope { get; init; } = string.Empty;
+
+    /// <summary>
+    /// Gets the policy for delivering event generations.
+    /// </summary>
+    public EventGenerationDelivery GenerationDelivery { get; init; } = EventGenerationDelivery.Compatibility;
+
+    /// <summary>
+    /// Gets the client identifier, or empty for the system-assigned identity.
+    /// </summary>
+    public string ManagedIdentityClientId { get; init; } = string.Empty;
+
+    /// <summary>
+    /// Gets the required scope when using managed identity authorization.
+    /// </summary>
+    public string ManagedIdentityScope { get; init; } = string.Empty;
+
+    /// <summary>
     /// Handles the command by registering the assembled definition.
     /// </summary>
     /// <param name="registrar">The <see cref="WebhookRegistrar"/> that decides what changed.</param>
@@ -67,6 +88,9 @@ public record AddWebhook(
         {
             Url = Url,
             Authorization = Authorization(),
+            ManagedIdentity = AuthorizationType == AuthorizationType.ManagedIdentity
+                ? new ManagedIdentityAuthorization { ClientId = ManagedIdentityClientId, Scope = ManagedIdentityScope }
+                : null,
             Headers = Headers.ToDictionary(_ => _.Key, _ => _.Value)
         };
 
@@ -78,7 +102,8 @@ public record AddWebhook(
             EventTypes = [.. EventTypes],
             Target = Target(),
             IsReplayable = IsReplayable,
-            IsActive = IsActive
+            IsActive = IsActive,
+            GenerationDelivery = (Contracts.Observation.EventGenerationDelivery)GenerationDelivery
         };
 
     Contracts.Primitives.OneOf<BasicAuthorization, BearerTokenAuthorization, OAuthAuthorization>? Authorization() =>
@@ -86,7 +111,7 @@ public record AddWebhook(
         {
             AuthorizationType.Basic => new(new BasicAuthorization { Username = BasicUsername, Password = BasicPassword }),
             AuthorizationType.Bearer => new(new BearerTokenAuthorization { Token = BearerToken }),
-            AuthorizationType.OAuth => new(new OAuthAuthorization { Authority = OAuthAuthority, ClientId = OAuthClientId, ClientSecret = OAuthClientSecret }),
+            AuthorizationType.OAuth => new(new OAuthAuthorization { Authority = OAuthAuthority, ClientId = OAuthClientId, ClientSecret = OAuthClientSecret, Scope = OAuthScope }),
             _ => null
         };
 }

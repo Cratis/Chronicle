@@ -3,6 +3,8 @@
 
 using Cratis.Arc.EntityFrameworkCore.Concepts;
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Diagnostics;
+using Cratis.Chronicle.Storage.Sql.Diagnostics;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 
@@ -21,6 +23,8 @@ public class a_migrated_namespace_database : Specification, IDisposable
     protected IDatabase _database;
     SqliteConnection _connection;
     string _connectionString;
+    readonly IntegrationTimings _timings = new(nameof(a_migrated_namespace_database), "sql-specs", "sqlite");
+    SqlCommandTimings? _commandTimings;
 
     void Establish()
     {
@@ -37,7 +41,11 @@ public class a_migrated_namespace_database : Specification, IDisposable
 
         using (var migrationContext = CreateContext())
         {
-            migrationContext.Database.Migrate();
+            _timings.Measure("ef-migration", () =>
+            {
+                migrationContext.Database.Migrate();
+                return true;
+            });
         }
 
         _database = Substitute.For<IDatabase>();
@@ -49,10 +57,19 @@ public class a_migrated_namespace_database : Specification, IDisposable
     {
         var options = new DbContextOptionsBuilder<NamespaceDbContext>()
             .UseSqlite(_connectionString)
-            .AddConceptAsSupport()
+            .AddConceptAsSupport().WithoutServiceProviderCaching()
             .Options;
 
-        return new NamespaceDbContext(options);
+        if (IntegrationTimings.Enabled && _commandTimings is null)
+        {
+            _commandTimings = new(_timings);
+            _commandTimings.Start();
+        }
+        return _timings.Measure("ef-context-construction", () =>
+        {
+            var context = new NamespaceDbContext(options);
+            return _commandTimings?.Track(context) ?? context;
+        });
     }
 
     protected IEnumerable<string> ColumnsOf(string table)
@@ -72,7 +89,15 @@ public class a_migrated_namespace_database : Specification, IDisposable
 
     public void Dispose()
     {
-        _connection.Dispose();
-        GC.SuppressFinalize(this);
+        try
+        {
+            _connection.Dispose();
+            GC.SuppressFinalize(this);
+        }
+        finally
+        {
+            _commandTimings?.Dispose();
+            _timings.Complete();
+        }
     }
 }

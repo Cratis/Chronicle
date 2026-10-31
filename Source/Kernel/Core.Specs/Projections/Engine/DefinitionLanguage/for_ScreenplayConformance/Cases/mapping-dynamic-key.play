@@ -1,0 +1,17 @@
+// A dynamic dictionary key on a mapping target
+// Screenplay documentation: Documentation/screenplay/projections/grammar.md
+
+module Conformance
+  feature Cases
+    slice StateView Case
+      event OrderPlaced
+        orderId String
+      readmodel OrderView
+        orderId String
+        counts Int
+      query OrderViewById => OrderView?
+        by orderId String
+      projection Orders => OrderView
+        no automap
+        from OrderPlaced
+          count counts.$eventContext.eventType.id

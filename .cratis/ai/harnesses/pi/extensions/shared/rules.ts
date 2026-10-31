@@ -34,6 +34,7 @@ function matchesProfile(rule: ManagedRule, selected: AiConfiguration | undefined
     const profiles = selected.profiles ?? [];
     if (rule.profile === 'application') return profiles.some(profile => profile.startsWith('cratis/application'));
     if (rule.profile === 'framework') return profiles.some(profile => profile.startsWith('cratis/engineering'));
+    if (rule.profile.startsWith('cratis/')) return profiles.some(profile => profile === rule.profile || profile.startsWith(`${rule.profile}/`));
     return true;
 }
 
@@ -48,10 +49,20 @@ function matchesSelection(name: string, applyTo: string[], selected: AiConfigura
     const scope = applyTo.join(',');
     const needsCSharp = scope.includes('.cs');
     const needsTypeScript = scope.includes('.ts') || name === 'rtk.md' || name.endsWith('/rtk.md');
+    const needsGo = scope.includes('.go') || scope.includes('go.mod') || scope.includes('go.sum');
+    const needsKotlin = scope.includes('.kt');
+    const needsJava = scope.includes('.java');
+    const needsElixir = scope.includes('.ex');
     const needsDocumentation = scope.includes('md');
-    if (!needsCSharp && !needsTypeScript && !needsDocumentation) return true;
+    // A scope that also names model files (`.play`) is not tied to one language, so it is always kept.
+    if (scope.includes('.play')) return true;
+    if (!needsCSharp && !needsTypeScript && !needsGo && !needsKotlin && !needsJava && !needsElixir && !needsDocumentation) return true;
     return (needsCSharp && languages.includes('csharp')) ||
         (needsTypeScript && languages.includes('typescript')) ||
+        (needsGo && languages.includes('go')) ||
+        (needsKotlin && languages.includes('kotlin')) ||
+        (needsJava && languages.includes('java')) ||
+        (needsElixir && languages.includes('elixir')) ||
         (needsDocumentation && (selected.profiles ?? []).includes('cratis/documentation'));
 }
 

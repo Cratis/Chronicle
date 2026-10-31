@@ -1,0 +1,51 @@
+---
+title: Observing Read Models
+description: Keep a complete read model list current with collection snapshots.
+---
+
+Use `IReadModels.Observe<T>()` when a list needs its current contents on subscription and a replacement collection whenever the stored data changes. Unlike [Watch](watching-read-models.mdx), it emits whole collections rather than individual changesets.
+
+## Subscribe to a collection
+
+The read model must already be registered and maintained by an active projection or reducer. Subscribe to the returned subject and keep the subscription for as long as you need updates:
+
+<ChronicleClientTabs snippet="read-models/observing-read-models/basic" />
+
+The first emission is the complete current set, including an empty set when there are no instances. Later emissions replace that set. There is no default 50-instance window: every stored instance is included. For a large dataset, prefer a [paginated materialized observation](materialized-pagination.mdx).
+
+Chronicle resolves its registered container name and converts stored keys to your read model's key property. You do not need a property named `Id`, or a direct MongoDB collection. The same API works with MongoDB, SQL, and the in-memory sink. The kernel releases PII and encrypted values before sending the collection.
+
+The namespace is the event store's namespace at the time you call `Observe`. Keep observations within the lifetime of the tenant scope that created them.
+
+## Filter the list
+
+Pass an expression to select instances from each full snapshot:
+
+<ChronicleClientTabs snippet="read-models/observing-read-models/filtering" />
+
+The expression is compiled once and evaluated client-side after release. It does not reduce what the server reads or sends, and it does not add server-side sorting or paging.
+
+## Return an observable query
+
+A query can return the subject directly:
+
+<ChronicleClientTabs snippet="read-models/observing-read-models/query" />
+
+The query's consumer owns the subscription lifetime. Use [read-model watching](watching-read-models.mdx) instead when it needs the key, removal flag, or event context of an individual change.
+
+## Lifetime and errors
+
+Each call creates its own observation, independent of `Watch` and other calls to `Observe`. The server stream starts with the first subscriber. Additional subscribers share that stream and immediately receive its latest collection.
+
+Disposing the last subscription closes the stream. Calling `OnCompleted` on the subject or disposing the subject also closes it. A stopped observation does not reopen: call `Observe` again to start a new one.
+
+Stream, deserialization, and filter failures reach subscribers through `OnError`. Chronicle does not automatically resubscribe; the consumer decides when to reconnect.
+
+## Boundaries
+
+- Existing or custom `IReadModels` implementations that do not override `Observe` remain usable through their existing APIs. Calling `Observe` on them throws `ReadModelCannotBeObserved`; they must implement or forward it to support collection observation.
+- Passive read models have no materialized sink; `ReadModelCannotBeObserved` refuses them.
+- Event-target types publish events instead of storing a collection; they are refused with the same exception.
+- A type without a known projection or reducer raises `UnknownReadModel`.
+- Materialized reads are eventually consistent. SQL polls for changes, so several writes between polls can appear as one snapshot. Use `Watch` when you need projection changesets rather than snapshots.
+- The [testing event store](../testing/read-models/scenario.mdx#observing-read-models) rebuilds collections from its event log; it does not exercise server streams or database notifications.

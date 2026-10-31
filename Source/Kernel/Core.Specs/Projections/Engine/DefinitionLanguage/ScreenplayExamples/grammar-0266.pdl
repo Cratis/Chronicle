@@ -1,0 +1,4 @@
+projection User => UserReadModel
+  file Users/UserProjection.cs
+  from UserCreated
+    Name = name

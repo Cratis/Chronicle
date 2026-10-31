@@ -42,6 +42,8 @@ public class all_dependencies : Specification
         _eventTypes = Substitute.For<IEventTypes>();
         _additionalReadModels = [];
         _schemaGenerator = Substitute.For<IJsonSchemaGenerator>();
+        _schemaGenerator.Generate(Arg.Any<Type>(), Arg.Any<IEventTypes>()).Returns(call => _schemaGenerator.Generate(call.Arg<Type>()));
+        _schemaGenerator.GenerateLegacyEventType(Arg.Any<Type>(), Arg.Any<IEventTypes>()).Returns(call => _schemaGenerator.GenerateLegacyEventType(call.Arg<Type>()));
         _schemaGenerator.GenerateForReadModel(Arg.Any<Type>()).Returns(new JsonSchema());
         _readModelWatcherManager = Substitute.For<IReadModelWatcherManager>();
         _reducerObservers = Substitute.For<IReducerObservers>();

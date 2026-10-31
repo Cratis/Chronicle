@@ -7,10 +7,8 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Storage.Sinks;
 using Cratis.Chronicle.Storage.Sql.EventStores;
 using Cratis.Types;
-using Microsoft.Data.SqlClient;
-using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
-using Npgsql;
+using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Storage.Sql.Cluster;
 
@@ -27,9 +25,14 @@ namespace Cratis.Chronicle.Storage.Sql.Cluster;
 /// <param name="sinkFactories"><see cref="IInstancesOf{T}"/> for getting all <see cref="ISinkFactory"/> instances.</param>
 /// <param name="jobsStorage">The <see cref="Orleans.Storage.IJobsStorage"/> the job system resolves through.</param>
 /// <param name="jsonSerializerOptions">The configured <see cref="JsonSerializerOptions"/> including all concept converters.</param>
-public class ClusterStorage(IDatabase database, IInstancesOf<ISinkFactory> sinkFactories, Orleans.Storage.IJobsStorage jobsStorage, JsonSerializerOptions jsonSerializerOptions) : IClusterStorage, IDisposable
+/// <param name="converter">The schema-aware content converter.</param>
+/// <param name="loggerFactory">Optional <see cref="ILoggerFactory"/> for the storage created for each event store.</param>
+public class ClusterStorage(IDatabase database, IInstancesOf<ISinkFactory> sinkFactories, Orleans.Storage.IJobsStorage jobsStorage, JsonSerializerOptions jsonSerializerOptions, Json.IExpandoObjectConverter converter, ILoggerFactory? loggerFactory = null) : IClusterStorage, IDisposable
 {
     readonly Subject<IEnumerable<EventStoreName>> _eventStoresSubject = new();
+
+    /// <inheritdoc/>
+    public Task<IReadOnlyDictionary<EventStoreName, Concepts.Projections.Generations.Enablement.GenerationFloor>> ReadGenerationFloors() => database.ReadGenerationFloors();
 
     /// <inheritdoc/>
     public async Task<IEnumerable<EventStoreName>> GetEventStores()
@@ -57,7 +60,7 @@ public class ClusterStorage(IDatabase database, IInstancesOf<ISinkFactory> sinkF
     /// <inheritdoc/>
     public IEventStoreStorage CreateStorageForEventStore(EventStoreName eventStore, SinksFactory sinksFactory)
     {
-        return new EventStoreStorage(eventStore, database, sinkFactories, jobsStorage, jsonSerializerOptions);
+        return new EventStoreStorage(eventStore, database, sinkFactories, jobsStorage, jsonSerializerOptions, converter, loggerFactory);
     }
 
     /// <inheritdoc/>
@@ -65,34 +68,11 @@ public class ClusterStorage(IDatabase database, IInstancesOf<ISinkFactory> sinkF
     {
         await using var scope = await database.Cluster();
         await scope.DbContext.EventStores.Upsert(new EventStore { Name = eventStore });
-        try
-        {
-            await scope.DbContext.SaveChangesAsync();
-        }
-        catch (DbUpdateException exception) when (IsUniqueViolation(exception))
-        {
-            // An upsert checks for existence before inserting. Another client can insert the
-            // same name between that check and SaveChanges. Only suppress a duplicate when
-            // the requested store now exists; other constraint failures must still surface.
-            if (!await scope.DbContext.EventStores.AsNoTracking().AnyAsync(store => store.Name == eventStore.Value))
-            {
-                throw;
-            }
-        }
-
         await PushEventStoresToSubjectAsync(_eventStoresSubject);
     }
 
     /// <inheritdoc/>
     public void Dispose() => _eventStoresSubject.Dispose();
-
-    static bool IsUniqueViolation(DbUpdateException exception) => exception.InnerException switch
-    {
-        PostgresException postgres => postgres.SqlState == PostgresErrorCodes.UniqueViolation,
-        SqliteException sqlite => sqlite.SqliteErrorCode == 19 && sqlite.SqliteExtendedErrorCode is 1555 or 2067,
-        SqlException sqlServer => sqlServer.Number is 2627 or 2601,
-        _ => false
-    };
 
     async Task PushEventStoresToSubjectAsync(IObserver<IEnumerable<EventStoreName>> observer)
     {

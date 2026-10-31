@@ -18,6 +18,8 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Orleans.TestKit;
 
+using ReadModelsConfiguration = Cratis.Chronicle.Configuration.ReadModels;
+
 namespace Cratis.Chronicle.Observation.Jobs.for_HandleEventsForObserver.given;
 
 public class a_performing_job_step : Specification
@@ -27,17 +29,21 @@ public class a_performing_job_step : Specification
     protected TestKitSilo _silo = new();
     protected Storage.IStorage _storage;
     protected IObserver _observer;
+    protected IObserverServiceClient _observerServiceClient;
     protected IConfigurationForObserverProvider _configurationProvider;
     protected Observers _observersConfig;
     protected ISomeObserverType _observerSubscriber;
     protected IEventCursor _eventCursor;
     protected IEventTypesStorage _eventTypesStorage;
     protected IEventCompliance _eventCompliance;
+    protected IEventGenerationRelease _eventGenerationRelease;
     protected IEventSequenceStorage _eventSequenceStorage;
     protected HandleEventsForObserverState _performState;
     protected EventSourceId? _eventSourceIdFilter;
     protected EventSequenceNumber _startSequenceNumber = EventSequenceNumber.Unavailable;
     protected readonly List<HandledBatch> _handledBatches = [];
+
+    protected virtual ReadModelsConfiguration CreateReadModelsConfig() => new();
 
     protected virtual Cratis.Chronicle.Configuration.Jobs CreateJobsConfig() => new();
 
@@ -105,6 +111,11 @@ public class a_performing_job_step : Specification
         _silo.AddProbe(_ => _observer);
         _silo.AddProbe(_ => _observerSubscriber);
         _silo.AddService(_storage);
+        _silo.AddService<TimeProvider>(TimeProvider.System);
+        _observerServiceClient = Substitute.For<IObserverServiceClient>();
+        _observerServiceClient.FlushAllFor(Arg.Any<ObserverDetails>(), Arg.Any<bool>())
+            .Returns(Task.FromResult<IReadOnlyDictionary<SiloAddress, Guid[]>>(new Dictionary<SiloAddress, Guid[]> { [SiloAddress.Zero] = [] }));
+        _silo.AddService(_observerServiceClient);
         _silo.AddService(Substitute.For<IJobStepThrottle>());
         _silo.AddService<IObserverSubscriberSelector>(new RoundRobinObserverSubscriberSelector());
 
@@ -118,12 +129,15 @@ public class a_performing_job_step : Specification
             .Release(Arg.Any<IEnumerable<AppendedEvent>>(), Arg.Any<IDictionary<EventType, EventTypeSchema>>())
             .Returns(callInfo => Task.FromResult(callInfo.Arg<IEnumerable<AppendedEvent>>().ToArray()));
         _silo.AddService(_eventCompliance);
+        _eventGenerationRelease = Substitute.For<IEventGenerationRelease>();
+        _silo.AddService(_eventGenerationRelease);
 
         var logger = _silo.AddService(NullLogger<HandleEventsForObserver>.Instance);
         var loggerFactory = Substitute.For<ILoggerFactory>();
         _silo.AddService(loggerFactory);
         loggerFactory.CreateLogger(Arg.Any<string>()).Returns(logger);
 
+        _silo.AddService(Options.Create(new ChronicleOptions { ReadModels = CreateReadModelsConfig() }));
         var jobsConfig = CreateJobsConfig();
         var options = Options.Create(new JobsOptions
         {
@@ -145,9 +159,11 @@ public class a_performing_job_step : Specification
             LastSuccessfullyHandledEventSequenceNumber = EventSequenceNumber.Unavailable
         };
 
+        _stateStorage.State = _performState;
         _jobStep = await _silo.CreateGrainAsync<TestableHandleEventsForObserver>(
             JobStepId.New(),
             new JobStepKey(JobId.New(), "event-store", "event-store-namespace"));
         _jobStep.SetupForTesting(_observer, subscription);
+        _jobStep.GuardStateAccess = true;
     }
 }

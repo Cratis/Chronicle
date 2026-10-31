@@ -1,10 +1,9 @@
+---
+description: Run a Chronicle projection ad hoc from the .NET client with IProjections.Query() and a PDL declaration, without a read model type or registration.
+---
 # Ad-hoc Querying with `IProjections.Query()`
 
 The `IProjections.Query()` method lets you run a projection ad-hoc from the .NET client — without defining a read model type or registering a permanent projection. You write a PDL declaration, send it to the server, and get back the projected read model entries as JSON strings.
-
-:::note[Client coverage]
-Ad-hoc PDL querying with `IProjections.Query()` is currently C#-only. Kotlin's `IProjectionsService`, Elixir's `Chronicle.Projections.Projection`, and TypeScript's `IProjections` all support only statically-registered/annotated projections — none exposes a runtime API for sending a PDL declaration string and getting back projected results.
-:::
 
 > [!WARNING]
 > **This API is not a replacement for registered projections.**

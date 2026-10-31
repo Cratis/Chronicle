@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Reactive.Disposables;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts.Auditing;
 using Cratis.Chronicle.Concepts.Events;
@@ -8,6 +9,7 @@ using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.EventSequences.Concurrency;
 using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Identities;
+using Cratis.Chronicle.EventSequences.Concurrency;
 using Cratis.Chronicle.EventSources;
 using Cratis.Chronicle.Storage.EventSequences;
 
@@ -15,6 +17,14 @@ namespace Cratis.Chronicle.EventSequences;
 
 public partial class EventSequence
 {
+    /// <summary>
+    /// Tracks the current append's scopes for renumbered retries.
+    /// </summary>
+    /// <remarks>
+    /// Appends do not interleave on this grain; the disposable restores scopes even after a failed append.
+    /// </remarks>
+    Func<ValueTask<IEnumerable<ConcurrencyViolation>>>? _concurrencyValidationForRetry;
+
     async Task<AppendResult> AppendValidated(
         EventSourceType eventSourceType,
         EventSourceId eventSourceId,
@@ -35,17 +45,13 @@ public partial class EventSequence
     {
         try
         {
-            if (publication is not null)
-            {
-                var publicationStorage = EventSequenceStorage as IEventPublicationStorage ?? throw new EventPublicationStorageNotSupported();
-                if ((await publicationStorage.TryGetPublication(publication)).TryGetValue(out var receipt))
-                {
-                    await ReconcileExistingPublication(receipt, eventType, eventSourceId, eventSourceType, eventStreamType, eventStreamId, content);
-                    return AppendResult.Success(correlationId, receipt.SequenceNumber);
-                }
-            }
+            if (await TryReconcilePublication(publication, eventType, correlationId) is { } reconciled) return reconciled;
 
             await RefreshConstraintsIfChanged();
+            if (await RefusedByPendingConstraintIndex([eventType.Id]))
+            {
+                return AppendResult.Failed(correlationId, [AppendError.ConstraintIndexUnavailable]);
+            }
             var resolvedEventSourceType = await EventSourceResolution.Resolve(EventSourcesStorage, eventSource, eventSourceType, eventStreamType, correlationId);
             if (resolvedEventSourceType.TryGetError(out var eventSourceError))
             {
@@ -60,11 +66,11 @@ public partial class EventSequence
             }
 
             var (compliantEvent, compliantContent, constraintContext) = getValidAndCompliantEvent.AsT0;
-            var concurrencyCheckPerformed = concurrencyScope.ShouldBeValidated;
+            using var concurrencyCheck = BeginConcurrencyValidation(eventSourceId, concurrencyScope);
             var maybeConcurrencyViolation = await ConcurrencyValidator.Validate(eventSourceId, concurrencyScope);
             if (maybeConcurrencyViolation.TryGetValue(out var concurrencyViolation))
             {
-                return AppendResult.Failed(correlationId, concurrencyViolation).ReportingConcurrencyCheck(concurrencyCheckPerformed);
+                return AppendResult.Failed(correlationId, concurrencyViolation).ReportingConcurrencyCheck(concurrencyScope.ShouldBeValidated);
             }
 
             var appendResult = await AppendValidAndCompliantEvent(
@@ -86,7 +92,7 @@ public partial class EventSequence
                 eventSource,
                 publication);
 
-            return appendResult.ReportingConcurrencyCheck(concurrencyCheckPerformed);
+            return appendResult.ReportingConcurrencyCheck(concurrencyScope.ShouldBeValidated);
         }
         catch (Exception ex)
         {
@@ -94,35 +100,73 @@ public partial class EventSequence
         }
     }
 
+    async Task<AppendResult?> TryReconcilePublication(EventPublication? publication, EventType eventType, CorrelationId correlationId)
+    {
+        if (publication is null) return null;
+
+        var publicationStorage = EventSequenceStorage as IEventPublicationStorage ?? throw new EventPublicationStorageNotSupported();
+        if (!(await publicationStorage.TryGetPublication(publication)).TryGetValue(out var receipt)) return null;
+
+        await ReconcileExistingPublication(receipt, eventType);
+        return AppendResult.Success(correlationId, receipt.SequenceNumber);
+    }
+
+    async Task<bool> RefusedByPendingConstraintIndex(IReadOnlyCollection<EventTypeId> eventTypeIds)
+    {
+        await PrepareConstraintIndexes(eventTypeIds);
+        if (!eventTypeIds.Any(IsGovernedByPendingIndex)) return false;
+
+        _metrics?.ConstraintIndexRefused();
+        return true;
+    }
+
+    IDisposable BeginConcurrencyValidation(EventSourceId eventSourceId, ConcurrencyScope scope) =>
+        BeginConcurrencyValidation(new ConcurrencyScopes(new Dictionary<EventSourceId, ConcurrencyScope> { [eventSourceId] = scope }));
+
+    IDisposable BeginConcurrencyValidation(ConcurrencyScopes scopes) => BeginConcurrencyValidation(() => ConcurrencyValidator.Validate(scopes));
+
+    IDisposable BeginConcurrencyValidation(ConcurrencyScopeConjunctions scopes) => BeginConcurrencyValidation(() => ConcurrencyValidator.Validate(scopes));
+
+    IDisposable BeginConcurrencyValidation(Func<ValueTask<IEnumerable<ConcurrencyViolation>>> validate)
+    {
+        var previous = _concurrencyValidationForRetry;
+        _concurrencyValidationForRetry = validate;
+        return Disposable.Create(() => _concurrencyValidationForRetry = previous);
+    }
+
+    async Task<IEnumerable<ConcurrencyViolation>> ValidateRetryConcurrency() =>
+        _concurrencyValidationForRetry is { } validate ? await validate() : [];
+
+    async Task<AppendResult?> ValidateAppendRetry(CorrelationId correlationId)
+    {
+        var violation = (await ValidateRetryConcurrency()).FirstOrDefault();
+        return violation is not null ? AppendResult.Failed(correlationId, violation) : null;
+    }
+
+    async Task<AppendManyResult?> ValidateAppendManyRetry(CorrelationId correlationId)
+    {
+        var violations = (await ValidateRetryConcurrency()).ToArray();
+        return violations.Length > 0 ? AppendManyResult.Failed(correlationId, violations) : null;
+    }
+
     /// <summary>
     /// Brings the grain state and the post-append side effects in line with a publication that is already durable.
     /// </summary>
     /// <param name="receipt">The <see cref="EventPublicationReceipt"/> of the durable publication.</param>
     /// <param name="eventType">The <see cref="EventType"/> that was published.</param>
-    /// <param name="eventSourceId">The <see cref="EventSourceId"/> of the publication.</param>
-    /// <param name="eventSourceType">The <see cref="EventSourceType"/> of the publication.</param>
-    /// <param name="eventStreamType">The <see cref="EventStreamType"/> of the publication.</param>
-    /// <param name="eventStreamId">The <see cref="EventStreamId"/> of the publication.</param>
-    /// <param name="content">The content of the publication.</param>
     /// <returns>Awaitable task.</returns>
     /// <remarks>
     /// The publication can be durable while the activation that wrote it crashed before it advanced the sequence
     /// number, the per event type tail, handed the event to the observers or updated the constraint indexes. A retry
-    /// finding the receipt must therefore finish that work (all of it is idempotent) instead of just reporting
-    /// success. Constraints are deliberately not validated: the event itself already occupies its unique values.
+    /// finding the receipt must therefore finish that work instead of just reporting success. Index repair
+    /// folds stored history, never retry content, so later changes and removals remain authoritative.
     /// </remarks>
-    async Task ReconcileExistingPublication(
-        EventPublicationReceipt receipt,
-        EventType eventType,
-        EventSourceId eventSourceId,
-        EventSourceType eventSourceType,
-        EventStreamType eventStreamType,
-        EventStreamId eventStreamId,
-        JsonObject content)
+    async Task ReconcileExistingPublication(EventPublicationReceipt receipt, EventType eventType)
     {
         var appendedEvent = await EventSequenceStorage.GetEventAt(receipt.SequenceNumber);
         if (State.SequenceNumber <= receipt.SequenceNumber)
         {
+            MarkConstraintIndexGap(State.SequenceNumber);
             State.SequenceNumber = receipt.SequenceNumber.Next();
         }
 
@@ -132,15 +176,13 @@ public partial class EventSequence
         }
 
         await RefreshConstraintsIfChanged();
-        var eventSchema = await EventTypesStorage.GetFor(eventType.Id, eventType.Generation);
-        var constraintContext = _constraints!.Establish(
-            eventSourceId,
-            eventType.Id,
-            expandoObjectConverter.ToExpandoObject(content, eventSchema.Schema),
-            eventSourceType,
-            eventStreamType,
-            eventStreamId);
-        await CompleteDurableAppend([appendedEvent], [(constraintContext, receipt.SequenceNumber)]);
+        SynchronizeIndexedDefinitions();
+        if (receipt.SequenceNumber >= State.ConstraintIndexWatermark!)
+        {
+            MarkConstraintIndexGap(State.ConstraintIndexWatermark!);
+            await RepairConstraintIndexesBeforeAppend();
+        }
+        await CompleteDurableAppend([appendedEvent], []);
     }
 
     /// <summary>

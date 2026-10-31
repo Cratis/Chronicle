@@ -3,7 +3,6 @@
 
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Storage.Keys;
-using Cratis.Chronicle.Storage.Observation;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Keys;
 
@@ -14,16 +13,12 @@ namespace Cratis.Chronicle.Storage.MongoDB.Keys;
 /// Initializes a new instance of the <see cref="ObserverKeyIndexes"/> class.
 /// </remarks>
 /// <param name="database">Provider for <see cref="IEventStoreNamespaceDatabase"/>.</param>
-/// <param name="observerStorage">Provider for <see cref="IObserverDefinitionsStorage"/>.</param>
-public class ObserverKeyIndexes(
-    IEventStoreNamespaceDatabase database,
-    IObserverDefinitionsStorage observerStorage) : IObserverKeyIndexes
+public class ObserverKeyIndexes(IEventStoreNamespaceDatabase database) : IObserverKeyIndexes
 {
     /// <inheritdoc/>
-    public async Task<IObserverKeyIndex> GetFor(ObserverKey observerKey)
+    public Task<IObserverKeyIndex> GetFor(ObserverKey observerKey, ObserverReaderScope scope)
     {
-        var observer = await observerStorage.Get(observerKey.ObserverId);
         var collection = database.GetEventSequenceCollectionFor(observerKey.EventSequenceId);
-        return new EventSourceKeyIndex(collection, observer.EventTypes);
+        return Task.FromResult<IObserverKeyIndex>(new EventSourceKeyIndex(collection, scope));
     }
 }

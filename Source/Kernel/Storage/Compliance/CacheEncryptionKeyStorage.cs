@@ -59,6 +59,7 @@ public class CacheEncryptionKeyStorage(
     public static readonly TimeSpan DefaultNegativeCacheTimeToLive = TimeSpan.FromSeconds(5);
 
     readonly Dictionary<Key, EncryptionKey> _keys = [];
+    readonly Dictionary<KeyScope, EncryptionKeyAtRevision> _latestPairs = [];
     readonly Dictionary<Key, DateTimeOffset> _absentKeys = [];
     readonly Dictionary<KeyScope, long> _generations = [];
     readonly Lock _lock = new();
@@ -152,6 +153,76 @@ public class CacheEncryptionKeyStorage(
         }
 
         return provisioned;
+    }
+
+    /// <inheritdoc/>
+    public async Task<EncryptionKeyAtRevision?> TryGetLatestFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier)
+    {
+        var scope = new KeyScope(eventStore, eventStoreNamespace, identifier);
+        var cacheKey = new Key(scope, EncryptionKeyRevision.Latest);
+        long generation;
+        lock (_lock)
+        {
+            if (_latestPairs.TryGetValue(scope, out var cached))
+            {
+                return cached;
+            }
+
+            if (IsRememberedAbsent(cacheKey))
+            {
+                return null;
+            }
+
+            generation = GenerationFor(scope);
+        }
+
+        var pair = await actualKeyStore.TryGetLatestFor(eventStore, eventStoreNamespace, identifier);
+        lock (_lock)
+        {
+            if (generation == GenerationFor(scope))
+            {
+                if (pair is not null)
+                {
+                    CachePair(scope, pair);
+                }
+                else
+                {
+                    RememberAbsent(cacheKey);
+                }
+            }
+        }
+
+        return pair;
+    }
+
+    /// <inheritdoc/>
+    public async Task<EncryptionKeyAtRevision> GetOrAddWithRevisionFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKey key)
+    {
+        var scope = new KeyScope(eventStore, eventStoreNamespace, identifier);
+        long generation;
+        lock (_lock)
+        {
+            if (_latestPairs.TryGetValue(scope, out var cached))
+            {
+                return cached;
+            }
+
+            generation = GenerationFor(scope);
+        }
+
+        var pair = await actualKeyStore.GetOrAddWithRevisionFor(eventStore, eventStoreNamespace, identifier, key);
+        lock (_lock)
+        {
+            if (generation == GenerationFor(scope))
+            {
+                CachePair(scope, pair);
+                var cacheKey = new Key(scope, pair.Revision);
+                _keys[cacheKey] = pair.Key;
+                _absentKeys.Remove(cacheKey);
+            }
+        }
+
+        return pair;
     }
 
     /// <inheritdoc/>
@@ -250,6 +321,7 @@ public class CacheEncryptionKeyStorage(
             // back over the one just written, and the cache serves the superseded key until something evicts it.
             // The save's own writes happen below under this same lock, so they are not fenced by their own advance.
             AdvanceGeneration(scope);
+            _latestPairs.Remove(scope);
 
             var latest = new Key(scope, EncryptionKeyRevision.Latest);
             _keys.Remove(latest);
@@ -278,6 +350,16 @@ public class CacheEncryptionKeyStorage(
             Invalidate(scope, revision);
             throw;
         }
+        finally
+        {
+            lock (_lock)
+            {
+                // A pair read may have reached storage before the save became durable.
+                AdvanceGeneration(scope);
+                _latestPairs.Remove(scope);
+                _absentKeys.Remove(new Key(scope, EncryptionKeyRevision.Latest));
+            }
+        }
     }
 
     static bool IsLatest(EncryptionKeyRevision? revision) => revision is null || revision == EncryptionKeyRevision.Latest;
@@ -295,6 +377,7 @@ public class CacheEncryptionKeyStorage(
         lock (_lock)
         {
             AdvanceGeneration(scope);
+            _latestPairs.Remove(scope);
 
             if (IsLatest(revision))
             {
@@ -310,6 +393,13 @@ public class CacheEncryptionKeyStorage(
             _absentKeys.Remove(specific);
             _absentKeys.Remove(latest);
         }
+    }
+
+    void CachePair(KeyScope scope, EncryptionKeyAtRevision pair)
+    {
+        var latest = new Key(scope, EncryptionKeyRevision.Latest);
+        _latestPairs[scope] = pair;
+        _absentKeys.Remove(latest);
     }
 
     long GenerationFor(KeyScope scope) => _generations.GetValueOrDefault(scope);

@@ -1,16 +1,32 @@
-# Namespaces
+---
+title: Namespaces and data isolation
+description: Chronicle namespaces segregate data within a single event store, for example per tenant in a multi-tenant system, and determine database names.
+---
 
 Chronicle has been designed with the concept of namespaces from the ground up.
 Namespaces provide a way to provide segregation of data in the same event store.
 This can typically be used for multi-tenant scenarios were you have multiple
 tenants of your system and you want to provide data segregation between them.
 
-When not specified, Chronicle will use the **Default** namespace.
+When not specified, Chronicle will use the **Default** namespace. For how namespaces fit into tenancy, including choosing where each tenant's database lives, see [Tenancy](../tenancy/index.md).
 
 > Note: A tenant is typically an organization or an organizational unit that uses a system.
 > In cloud terminology it is often linked to Software as a Service offerings were companies
 > can sign up to use a system. The system being the same for all these companies, or tenants,
 > but all their data segregated from each other.
+
+For client usage and namespace removal, see [Manage namespaces](../namespaces/index.md).
+
+## Subscription Readiness
+
+The explicit `EnsureNamespace` operation returns once healthy active projections and started events
+captures are subscribed in that namespace. Broken artifacts are logged and retried by the next
+subscription trigger; they do not prevent namespace creation, and retired observers are skipped.
+A very large projection set can exceed the call timeout; retrying joins the running subscription
+pass. A namespace created implicitly by its first append is reconciled on its event log's next
+observer watchdog tick, even if the namespace-added notification was missed. Subscription does not
+mean catch-up is complete: wait for observer completion before querying a read model that must
+include an append.
 
 ## Data Segregation
 

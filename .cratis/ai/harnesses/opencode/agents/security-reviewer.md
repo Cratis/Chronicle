@@ -14,6 +14,8 @@ permission:
 
 # Security Reviewer
 
+Run on a different provider than the author where the harness can select one; see "Reviewer independence" in `review-reports.md`.
+
 ## Scope before checklists
 
 Identify the repository profile and changed lane before selecting rules or running a checklist. Read the repository's `AGENTS.md` and applicable universal rules in `.cratis/ai/rules/`. For framework contributions, load `.cratis/ai/rules/framework.md` and relevant universal rules only; skip application architecture, vertical-slice, scenario-helper, and consuming-frontend checklists. Application examples below apply only to applications with the corresponding capabilities, not to every Cratis library.
@@ -39,12 +41,14 @@ Your responsibility is to perform a structured **security review** of all change
 ### Authentication & Authorization
 
 - [ ] All HTTP endpoints are decorated with `[Authorize]` or explicitly marked `[AllowAnonymous]` with justification
+- [ ] Apply the source-pinned Arc v22.75.0 checks in `cratis-security-review/references/arc-boundaries.md`: host-wide forwarded-header opt-in only behind stripping ingress, principal-derived identity (no cookie reads), deployed discovery exposure, declaration precedence and guest-policy intent, plain-HTTP emission guards, narrow system actors, and embedded viewer opt-in overrides.
 - [ ] Tenant isolation enforced — no cross-tenant data accessible without explicit authorization
 - [ ] Claims are verified before acting on command data that depends on identity
 
 ### Sensitive Data Exposure
 
-- [ ] No passwords, secrets, API keys, tokens stored in event properties or read models
+- [ ] Credentials used for authentication (passwords, bearer/session tokens) are never stored; keep a hash or a reference
+- [ ] Operational secrets the system must retain (third-party API key, a company's bank account number) are stored only as `[Encrypted]` + `[NotAudited]` concepts, never in a read model returned to clients in plaintext
 - [ ] No PII (email, phone, national ID, etc.) returned to clients that did not provide it
 - [ ] Query results are scoped to the requesting tenant/user — never return all-tenant data in a paged list
 
@@ -76,42 +80,8 @@ Your responsibility is to perform a structured **security review** of all change
 
 ---
 
-## Risk classification
-
-Assign each finding one of:
-
-| Label | Meaning |
-|-------|---------|
-| 🔴 Critical | Must be fixed before merge — exploitable without significant effort |
-| 🟡 Medium | Should be fixed soon — exploitable under specific conditions |
-| 🟢 Low | Improvement or defense-in-depth — fix when convenient |
-
----
-
 ## Output format
 
-Start with a **summary**:
-> **Security Review: ✅ No issues / ⚠️ Low-risk findings / ❌ Blocking issues found**
-
-Then list findings grouped by category:
-
-```
-### Input Validation & Injection
-
-🔴 **Critical** — `Projects/Registration/RegisterProject.cs`
-> Line 14: `var path = Path.Combine(root, command.FileName);`
-> A path traversal attack is possible if `FileName` contains `../` sequences.
-> Fix: Validate that the resolved path stays within the expected root directory.
-```
-
-End with a summary table:
-
-| Category | Status |
-|----------|--------|
-| Input Validation | ✅ / ⚠️ / ❌ |
-| Auth / Authz | ✅ / ⚠️ / ❌ |
-| Data Exposure | ✅ / ⚠️ / ❌ |
-| Secrets | ✅ / ⚠️ / ❌ |
-| Dependencies | ✅ / ⚠️ / ❌ |
-| Event Sourcing | ✅ / ⚠️ / ❌ |
-| Frontend | ✅ / ⚠️ / ❌ |
+Read and use `.cratis/ai/rules/review-reports.md` when writing conclusions.
+Apply the domain-specific risk mapping in the Report section of
+`.cratis/ai/skills/cratis-security-review/SKILL.md`.

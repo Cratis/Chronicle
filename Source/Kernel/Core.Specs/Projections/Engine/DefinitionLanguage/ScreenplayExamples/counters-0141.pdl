@@ -1,0 +1,12 @@
+projection Account => AccountReadModel
+  from AccountOpened
+    AccountNumber = accountNumber
+    Balance = initialBalance
+
+  from DepositMade
+    increment TransactionCount
+    add Balance by amount
+
+  from WithdrawalMade
+    increment TransactionCount
+    subtract Balance by amount

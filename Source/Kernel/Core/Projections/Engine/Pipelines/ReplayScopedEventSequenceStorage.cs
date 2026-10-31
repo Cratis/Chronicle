@@ -22,10 +22,10 @@ namespace Cratis.Chronicle.Projections.Engine.Pipelines;
 /// session. Replaying a hierarchy repeats the same parent/creation-event lookups once per child event;
 /// caching them collapses those repeats to a single storage query per distinct pair.
 /// <para>
-/// Only the position-independent lookups (<see cref="GetHeadSequenceNumber"/> and
-/// <see cref="TryGetLastInstanceOfAny"/>) are cached — they read only the immutable event log. Every
-/// other member, and all sink-dependent resolution, passes straight through so live behavior is
-/// unchanged. The caches are consulted only while a session is active and are cleared at both session
+/// Position-independent lookups (<see cref="GetHeadSequenceNumber"/> and
+/// <see cref="TryGetLastInstanceOfAny"/>) are memoized. Bounded parent history is cached only for the
+/// prepared page interval, including missing sources; older predecessors are fetched on demand.
+/// All sink-dependent resolution passes straight through so live behavior is unchanged. The caches are consulted only while a session is active and are cleared at both session
 /// boundaries, so a cached value can never leak into live event handling (see <see cref="IReplayScopedCache"/>).
 /// </para>
 /// <para>
@@ -37,15 +37,18 @@ namespace Cratis.Chronicle.Projections.Engine.Pipelines;
 /// </para>
 /// </remarks>
 /// <param name="inner">The underlying <see cref="IEventSequenceStorage"/> that performs the actual work.</param>
-internal sealed class ReplayScopedEventSequenceStorage(IEventSequenceStorage inner) : IEventSequenceStorage, IReplayScopedCache
+internal sealed partial class ReplayScopedEventSequenceStorage(IEventSequenceStorage inner) : IEventSequenceStorage, IReplayScopedCache, IProjectionPageCache
 {
     readonly ConcurrentDictionary<string, Task<EventSequenceNumber>> _headSequenceNumbers = new();
     readonly ConcurrentDictionary<string, Task<Option<AppendedEvent>>> _lastInstances = new();
+    readonly ConcurrentDictionary<string, byte> _preparedKeys = new();
+    volatile bool _preparingPage;
     volatile bool _active;
 
     /// <inheritdoc/>
     public void BeginReplaySession()
     {
+        ClearPreparedPage();
         _headSequenceNumbers.Clear();
         _lastInstances.Clear();
         _active = true;
@@ -54,6 +57,7 @@ internal sealed class ReplayScopedEventSequenceStorage(IEventSequenceStorage inn
     /// <inheritdoc/>
     public void EndReplaySession()
     {
+        ClearPreparedPage();
         _active = false;
         _headSequenceNumbers.Clear();
         _lastInstances.Clear();
@@ -89,6 +93,42 @@ internal sealed class ReplayScopedEventSequenceStorage(IEventSequenceStorage inn
             cacheKey,
             static (_, arg) => arg.inner.TryGetLastInstanceOfAny(arg.eventSourceId, arg.eventTypesList),
             (inner, eventSourceId, eventTypesList));
+    }
+
+    /// <inheritdoc/>
+    public void BeginPreparedPage()
+    {
+        ClearPreparedPage();
+        _preparingPage = true;
+    }
+
+    /// <inheritdoc/>
+    public void ClearPreparedPage()
+    {
+        _preparingPage = false;
+        _parentHistory.Clear();
+        foreach (var key in _preparedKeys.Keys) _lastInstances.TryRemove(key, out _);
+        _preparedKeys.Clear();
+    }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyDictionary<EventSourceId, Option<AppendedEvent>>> GetLastInstancesOfAny(IEnumerable<EventSourceId> eventSourceIds, IEnumerable<EventTypeId> eventTypes)
+    {
+        var types = eventTypes.ToArray();
+        var results = await inner.GetLastInstancesOfAny(eventSourceIds, types);
+        if (_active)
+        {
+            foreach (var (source, result) in results)
+            {
+                var key = BuildKey(source, types.Select(type => type.Value));
+                if (_lastInstances.TryAdd(key, Task.FromResult(result)) && _preparingPage)
+                {
+                    _preparedKeys.TryAdd(key, 0);
+                }
+            }
+        }
+
+        return results;
     }
 
     /// <inheritdoc/>
@@ -204,6 +244,10 @@ internal sealed class ReplayScopedEventSequenceStorage(IEventSequenceStorage inn
     public Task<AppendedEvent> GetEventAt(EventSequenceNumber sequenceNumber) => inner.GetEventAt(sequenceNumber);
 
     /// <inheritdoc/>
+    public Task<IReadOnlyList<StoredEventMetadata>> GetMetadataAt(IEnumerable<EventSequenceNumber> sequenceNumbers, CancellationToken cancellationToken = default)
+        => inner.GetMetadataAt(sequenceNumbers, cancellationToken);
+
+    /// <inheritdoc/>
     public Task<IEventCursor> GetFromSequenceNumber(EventSequenceNumber sequenceNumber, EventSourceId? eventSourceId = default, EventSourceType? eventSourceType = default, EventStreamType? eventStreamType = default, EventStreamId? eventStreamId = default, IEnumerable<EventType>? eventTypes = default, IEnumerable<Tag>? tags = default, CancellationToken cancellationToken = default) =>
         inner.GetFromSequenceNumber(sequenceNumber, eventSourceId, eventSourceType, eventStreamType, eventStreamId, eventTypes, tags, cancellationToken);
 
@@ -230,6 +274,12 @@ internal sealed class ReplayScopedEventSequenceStorage(IEventSequenceStorage inn
     /// <inheritdoc/>
     public Task ReplaceGenerationContent(EventSequenceNumber sequenceNumber, IDictionary<EventTypeGeneration, ExpandoObject> content) =>
         inner.ReplaceGenerationContent(sequenceNumber, content);
+
+    /// <inheritdoc/>
+    public Task<StoredEventGenerations?> GetStoredGenerations(EventSequenceNumber sequenceNumber) => inner.GetStoredGenerations(sequenceNumber);
+
+    /// <inheritdoc/>
+    public Task<bool> TryAddGenerations(StoredEventGenerations observed, IEnumerable<GenerationToAdd> generations) => inner.TryAddGenerations(observed, generations);
 
     static string BuildKey(EventSourceId? eventSourceId, IEnumerable<string>? eventTypeTokens)
     {

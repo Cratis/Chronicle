@@ -16,6 +16,8 @@ using Cratis.Chronicle.Projections.Engine.DeclarationLanguage;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Schemas;
+using Cratis.Chronicle.Storage.Observation;
+using Microsoft.Extensions.Logging;
 using Orleans.Core;
 using Orleans.TestKit;
 
@@ -26,29 +28,41 @@ public class a_projections_manager_grain : Specification
     protected const string EventStore = "the-event-store";
 
     protected ProjectionsManager _grain;
+    protected ILogger<ProjectionsManager> _logger;
     protected TestKitSilo _silo;
     protected IProjectionsServiceClient _projectionsServiceClient;
     protected IProjectionDefinitionComparer _definitionComparer;
     protected IProjection _projectionGrain;
+    protected IProjectionFactory _projectionFactory;
+    protected Engine.IProjection _engineProjection;
+    protected AdvancingClock _clock;
+    protected IReadModelsManager _readModelsManager;
     protected Observation.IObserver _observerGrain;
+    protected readonly Dictionary<string, Observation.IObserver> _observersByKey = [];
+    protected INamespaces _namespaces;
     protected Cratis.Orleans.Jobs.IJobsManager _jobsManager;
     protected Recommendations.IRecommendationsManager _recommendationsManager;
     protected Storage.Observation.IFailedPartitionsStorage _failedPartitionsStorage;
+    protected Storage.IEventStoreStorage _eventStoreStorage;
     protected ProjectionsManagerState _state;
+    protected IStorage<ProjectionsManagerState> _stateStorage;
     protected Storage.Observation.IObserverStateStorage _observerStates;
     protected IEnumerable<ReadModelDefinition> _readModelDefinitions = [];
 
     async Task Establish()
     {
         _silo = new TestKitSilo();
+        _logger = Substitute.For<ILogger<ProjectionsManager>>();
+        _logger.IsEnabled(Arg.Any<LogLevel>()).Returns(true);
+        _silo.AddService(_logger);
 
         _definitionComparer = Substitute.For<IProjectionDefinitionComparer>();
         _silo.AddService(_definitionComparer);
 
-        var engineProjection = Substitute.For<Engine.IProjection>();
+        var engineProjection = _engineProjection = Substitute.For<Engine.IProjection>();
         engineProjection.EventTypes.Returns([]);
         engineProjection.IsEventSourceKeyed.Returns(true);
-        var projectionFactory = Substitute.For<IProjectionFactory>();
+        var projectionFactory = _projectionFactory = Substitute.For<IProjectionFactory>();
         projectionFactory
             .Create(
                 Arg.Any<EventStoreName>(),
@@ -59,6 +73,9 @@ public class a_projections_manager_grain : Specification
             .Returns(engineProjection);
         _silo.AddService(projectionFactory);
 
+        _clock = new AdvancingClock();
+        _silo.AddService<TimeProvider>(_clock);
+
         _projectionsServiceClient = Substitute.For<IProjectionsServiceClient>();
         _projectionsServiceClient
             .Register(Arg.Any<EventStoreName>(), Arg.Any<IEnumerable<ProjectionDefinition>>())
@@ -68,7 +85,7 @@ public class a_projections_manager_grain : Specification
         _silo.AddService(Substitute.For<ILanguageService>());
 
         var storage = Substitute.For<Storage.IStorage>();
-        var eventStoreStorage = Substitute.For<Storage.IEventStoreStorage>();
+        var eventStoreStorage = _eventStoreStorage = Substitute.For<Storage.IEventStoreStorage>();
         storage.GetEventStore(Arg.Any<EventStoreName>()).Returns(eventStoreStorage);
         eventStoreStorage.EventTypes.GetLatestForAllEventTypes().Returns([]);
         var namespaceStorage = Substitute.For<Storage.IEventStoreNamespaceStorage>();
@@ -78,22 +95,26 @@ public class a_projections_manager_grain : Specification
         _observerStates = namespaceStorage.Observers;
         _silo.AddService(storage);
 
-        _silo.AddService(Substitute.For<ILocalSiloDetails>());
+        var siloDetails = Substitute.For<ILocalSiloDetails>();
+        siloDetails.SiloAddress.Returns(SiloAddress.Zero);
+        _silo.AddService(siloDetails);
 
-        var namespaces = Substitute.For<INamespaces>();
-        namespaces.GetAll().Returns([EventStoreNamespaceName.Default]);
-        _silo.AddProbe(_ => namespaces);
+        _namespaces = Substitute.For<INamespaces>();
+        _namespaces.GetAll().Returns([EventStoreNamespaceName.Default]);
+        _silo.AddProbe(_ => _namespaces);
 
-        var readModelsManager = Substitute.For<IReadModelsManager>();
-        readModelsManager.GetDefinitions().Returns(_ => Task.FromResult(_readModelDefinitions));
-        _silo.AddProbe(_ => readModelsManager);
+        _readModelsManager = Substitute.For<IReadModelsManager>();
+        _readModelsManager.GetDefinitions().Returns(_ => Task.FromResult(_readModelDefinitions));
+        _silo.AddProbe(_ => _readModelsManager);
 
         _projectionGrain = Substitute.For<IProjection>();
         _silo.AddProbe(_ => _projectionGrain);
 
         _observerGrain = Substitute.For<Observation.IObserver>();
         _observerGrain.IsSubscribed().Returns(true);
-        _silo.AddProbe(_ => _observerGrain);
+        _observerGrain.IsSubscriptionEstablished().Returns(true);
+        _observerGrain.GetState().Returns(new ObserverState());
+        _silo.AddProbe<Observation.IObserver>(key => _observersByKey.TryGetValue(key.ToString(), out var observer) ? observer : _observerGrain);
 
         _jobsManager = Substitute.For<Cratis.Orleans.Jobs.IJobsManager>();
         _jobsManager.GetAllJobs().Returns(System.Collections.Immutable.ImmutableList<Cratis.Orleans.Storage.Jobs.JobState>.Empty);
@@ -103,9 +124,9 @@ public class a_projections_manager_grain : Specification
         _silo.AddProbe(_ => _recommendationsManager);
 
         _state = new ProjectionsManagerState();
-        var stateStorage = Substitute.For<IStorage<ProjectionsManagerState>>();
-        stateStorage.State = _state;
-        _silo.Options.StorageFactory = _ => stateStorage;
+        _stateStorage = Substitute.For<IStorage<ProjectionsManagerState>>();
+        _stateStorage.State = _state;
+        _silo.Options.StorageFactory = _ => _stateStorage;
 
         _grain = await _silo.CreateGrainAsync<ProjectionsManager>(EventStore);
     }

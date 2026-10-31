@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text.Json.Serialization;
 using Cratis.Chronicle.Concepts.Keys;
 
 namespace Cratis.Chronicle.Concepts.Observation;
@@ -11,6 +12,16 @@ namespace Cratis.Chronicle.Concepts.Observation;
 public class FailedPartition
 {
     List<FailedPartitionAttempt> _attempts = [];
+
+    /// <summary>
+    /// Gets or sets the explicit webhook receiver policy, absent on legacy failures.
+    /// </summary>
+    public WebhookFailureDisposition? WebhookDisposition { get; set; }
+
+    /// <summary>
+    /// Gets or sets the last automatic recovery that reset this episode's budget.
+    /// </summary>
+    public Guid? WebhookRecoveryId { get; set; }
 
     /// <summary>
     /// Unique identifier of the failed partition.
@@ -52,6 +63,36 @@ public class FailedPartition
     /// Clearing the quarantine of a partition starts a new retry budget without discarding the attempt history.
     /// </summary>
     public int AttemptsBeforeBudgetReset { get; set; }
+
+    /// <summary>
+    /// Gets or sets the exact recovery cursor, or null for an entry written before initialization.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public FailedPartitionRecoveryCursor? RecoveryCursor { get; set; }
+
+    /// <summary>
+    /// Gets or sets the recovery owner, assigned only when initialized recovery work starts.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public FailedPartitionRecoveryOwner? RecoveryOwner { get; set; }
+
+    /// <summary>
+    /// Gets or sets the handler hold, independently of the attempt history and quarantine budget.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public FailedPartitionHold? Hold { get; set; }
+
+    /// <summary>
+    /// Gets or sets the durable deadline for the next delivery, independently of attempts.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public PartitionDeferral? Deferral { get; set; }
+
+    /// <summary>
+    /// Gets the recovery cursor, interpreting a legacy entry as live from its last attempt without initializing it.
+    /// </summary>
+    [JsonIgnore]
+    public FailedPartitionRecoveryCursor EffectiveRecoveryCursor => RecoveryCursor ?? new(LastAttempt.SequenceNumber, FailedPartitionRecoveryMode.Live, null);
 
     /// <summary>
     /// Gets the number of attempts counted against the current retry budget, which is the attempts made since the

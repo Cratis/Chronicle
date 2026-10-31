@@ -12,4 +12,14 @@ namespace Cratis.Chronicle.Seeding;
 /// <param name="EventTypeId">The event type identifier.</param>
 /// <param name="Content">The JSON content.</param>
 /// <param name="Tags">The collection of tags associated with the event.</param>
-public record SeedingEntry(EventSourceId EventSourceId, EventTypeId EventTypeId, string Content, IEnumerable<Tag>? Tags);
+/// <param name="EventSourceType">The optional event source type.</param>
+/// <param name="EventStreamType">The optional event stream type.</param>
+/// <param name="EventStreamId">The optional event stream identifier.</param>
+public record SeedingEntry(
+    EventSourceId EventSourceId,
+    EventTypeId EventTypeId,
+    string Content,
+    IEnumerable<Tag>? Tags,
+    EventSourceType? EventSourceType = default,
+    EventStreamType? EventStreamType = default,
+    EventStreamId? EventStreamId = default);

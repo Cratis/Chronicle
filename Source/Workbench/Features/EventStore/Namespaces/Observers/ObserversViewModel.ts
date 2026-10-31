@@ -3,14 +3,15 @@
 
 import { injectable } from 'tsyringe';
 import { ObserverInformation } from 'Features/Observation';
-import { ClearObserverQuarantine, RemoveObserver, ReplayObserver as Replay } from 'Features/Observation';
+import { ClearObserverQuarantine, FastForward, RemoveObserver, ReplayObserver as Replay } from 'Features/Observation';
 import { IDialogs } from '@cratis/arc.react.mvvm/dialogs';
 import { DialogButtons, DialogResult } from '@cratis/arc.react/dialogs';
 import { ObserverOwner, ObserverRunningState } from 'Features/Contracts/Observation';
-import { ObserverRemovalOutcome, ObserverRemovalResult } from 'Features/Concepts/Observation';
+import { FastForwardOutcome, FastForwardResult, ObserverRemovalOutcome, ObserverRemovalResult } from 'Features/Concepts/Observation';
 import strings from 'Strings';
 
 const dialogStrings = strings.eventStore.namespaces.observers.dialogs.removeObserver;
+const fastForwardStrings = strings.eventStore.namespaces.observers.dialogs.fastForward;
 
 @injectable()
 export class ObserversViewModel {
@@ -19,7 +20,8 @@ export class ObserversViewModel {
         private readonly _replay: Replay,
         private readonly _clearObserverQuarantine: ClearObserverQuarantine,
         private readonly _removeObserver: RemoveObserver,
-        private readonly _dialogs: IDialogs) {
+        private readonly _dialogs: IDialogs,
+        private readonly _fastForward: FastForward) {
     }
 
     selectedObserver: ObserverInformation | undefined;
@@ -36,6 +38,17 @@ export class ObserversViewModel {
      */
     get canReplay() {
         return !!this.selectedObserver && this.selectedObserver.owner !== ObserverOwner.kernel;
+    }
+
+    /**
+     * Whether the selected observer may be fast forwarded.
+     *
+     * Like replay, kernel-owned observers are refused server-side, and one that is replaying has to finish first.
+     */
+    get canFastForward() {
+        return !!this.selectedObserver &&
+            this.selectedObserver.owner !== ObserverOwner.kernel &&
+            this.selectedObserver.runningState !== ObserverRunningState.replaying;
     }
 
     /**
@@ -58,12 +71,70 @@ export class ObserversViewModel {
                 this._replay.eventStore = eventStore;
                 this._replay.namespace = namespace;
                 this._replay.observerId = observerId;
+                this._replay.eventSequenceId = this.selectedObserver.eventSequenceId;
                 const commandResult = await this._replay.execute();
                 commandResult
                     .onException((error) => {
                         this._dialogs.showConfirmation('Replay', `Replay ${observerId} failed: ${error}`, DialogButtons.Ok);
+                    })
+                    .onValidationFailure((validationResults) => {
+                        this._dialogs.showConfirmation('Replay', `Replay ${observerId} was not started: ${validationResults.map(_ => _.message).join('; ')}`, DialogButtons.Ok);
                     });
             }
+        }
+    }
+
+    /**
+     * Fast forward the selected observer to the tail of its event sequence after confirming what that skips.
+     */
+    async fastForward(eventStore: string, namespace: string) {
+        if (!this.canFastForward || !this.selectedObserver) {
+            return;
+        }
+
+        const observerId = this.selectedObserver.id;
+        const confirmation = await this._dialogs.showConfirmation(
+            fastForwardStrings.title,
+            fastForwardStrings.message.replace('{observerId}', observerId),
+            DialogButtons.YesNo);
+
+        if (confirmation !== DialogResult.Yes) {
+            return;
+        }
+
+        this._fastForward.eventStore = eventStore;
+        this._fastForward.namespace = namespace;
+        this._fastForward.observerId = observerId;
+        this._fastForward.eventSequenceId = this.selectedObserver.eventSequenceId;
+
+        const commandResult = await this._fastForward.execute();
+        commandResult.onException((error) => {
+            this._dialogs.showConfirmation(
+                fastForwardStrings.resultTitle,
+                fastForwardStrings.failed.replace('{observerId}', observerId).replace('{error}', `${error}`),
+                DialogButtons.Ok);
+        });
+
+        if (!commandResult.isSuccess) {
+            return;
+        }
+
+        const message = this.fastForwardOutcomeMessage(commandResult.response);
+        if (message) {
+            this._dialogs.showConfirmation(fastForwardStrings.resultTitle, message.replace('{observerId}', observerId), DialogButtons.Ok);
+        }
+    }
+
+    private fastForwardOutcomeMessage(result: FastForwardResult | undefined): string | undefined {
+        switch (result?.outcome) {
+            case FastForwardOutcome.alreadyAtTail:
+                return fastForwardStrings.alreadyAtTail;
+            case FastForwardOutcome.replaying:
+                return fastForwardStrings.replaying;
+            case FastForwardOutcome.notAvailable:
+                return fastForwardStrings.notAvailable;
+            default:
+                return undefined;
         }
     }
 

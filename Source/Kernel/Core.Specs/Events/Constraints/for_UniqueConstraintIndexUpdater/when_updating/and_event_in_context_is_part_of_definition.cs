@@ -37,5 +37,5 @@ public class and_event_in_context_is_part_of_definition : Specification
 
     async Task Because() => await _updater.Update(_eventSequenceNumber);
 
-    [Fact] void should_save_to_storage() => _storage.Received(1).Save(_context.EventSourceId, _definition.Name, Arg.Any<EventSequenceNumber>(), _expectedHashedValue);
+    [Fact] void should_save_to_storage() => _storage.Received(1).Save(_context.EventSourceId, _definition, Arg.Any<EventSequenceNumber>(), _expectedHashedValue);
 }

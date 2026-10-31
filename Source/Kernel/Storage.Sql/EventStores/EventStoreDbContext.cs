@@ -27,6 +27,27 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores;
 public class EventStoreDbContext(DbContextOptions<EventStoreDbContext> options) : BaseDbContext(options)
 {
     /// <summary>
+    /// Gets or sets initialization receipts.
+    /// </summary>
+    public DbSet<Generations.GenerationInitializationReceiptRow> GenerationInitializationReceipts { get; set; }
+
+    /// <summary>
+    /// Gets or sets initialization blockers.
+    /// </summary>
+    public DbSet<Generations.GenerationInitializationBlockerRow> GenerationInitializationBlockers { get; set; }
+
+    /// <summary>Gets or sets the durable generation floor.</summary>
+    public DbSet<Generations.GenerationFloor> GenerationFloor { get; set; }
+
+    /// <summary>Gets or sets the generation floor audit trail.</summary>
+    public DbSet<Generations.GenerationFloorHistoryEntry> GenerationFloorHistory { get; set; }
+
+    /// <summary>
+    /// Gets or sets the first-time initialization marker.
+    /// </summary>
+    public DbSet<EventStoreInitialization> EventStoreInitialization { get; set; }
+
+    /// <summary>
     /// Gets or sets the event types DbSet.
     /// </summary>
     public DbSet<EventType> EventTypes { get; set; }
@@ -135,7 +156,28 @@ public class EventStoreDbContext(DbContextOptions<EventStoreDbContext> options) 
         // whose read model type is named "ReadModel" (pluralized to "ReadModels" by DefaultNamingPolicy).
         modelBuilder.Entity<ReadModelDefinition>().ToTable(WellKnownTableNames.ReadModelDefinitions);
 
+        modelBuilder.Entity<Generations.GenerationInitializationReceiptRow>().ToTable("GenerationInitializationReceipts").HasKey(row => new { row.Step, row.Subject });
+        modelBuilder.Entity<Generations.GenerationInitializationBlockerRow>().ToTable("GenerationInitializationBlockers").HasKey(row => new { row.Kind, row.Subject });
+        modelBuilder.Entity<Generations.GenerationInitializationReceiptRow>().Property(row => row.Subject).HasMaxLength(400);
+        modelBuilder.Entity<Generations.GenerationInitializationBlockerRow>().Property(row => row.Subject).HasMaxLength(400);
+        modelBuilder.Entity<Generations.GenerationFloor>().ToTable("GenerationFloor").HasKey(_ => _.Id);
+        modelBuilder.Entity<Generations.GenerationFloor>().Property(_ => _.Id).ValueGeneratedNever();
+        modelBuilder.Entity<Generations.GenerationFloorHistoryEntry>().ToTable("GenerationFloorHistory").HasKey(_ => _.Revision);
+        modelBuilder.Entity<Generations.GenerationFloorHistoryEntry>().Property(_ => _.Revision).ValueGeneratedNever();
+
         base.OnModelCreating(modelBuilder);
+        Occurrences.OccurrenceModel.Configure(modelBuilder);
+        modelBuilder.Entity<Occurrences.LifecycleFanOutEntry>(entity =>
+        {
+            entity.ToTable("LifecycleFanOutIntents");
+            entity.HasKey(row => row.Id);
+            entity.Property(row => row.Id).HasMaxLength(64);
+        }).Entity<Occurrences.TriggerDefinitionEntry>(entity =>
+        {
+            entity.ToTable("TriggerDefinitions");
+            entity.HasKey(row => row.Id);
+            entity.Property(row => row.Id).HasMaxLength(64);
+        });
 
         // Match the column mappings to the provider-native JSON type the migrations create
         // (jsonb on Npgsql). PostgreSQL is the only provider that requires this because its

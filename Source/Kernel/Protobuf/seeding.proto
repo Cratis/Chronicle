@@ -1,5 +1,6 @@
 syntax = "proto3";
 package Cratis.Chronicle.Contracts.Seeding;
+import "google/protobuf/empty.proto";
 import "protobuf-net/bcl.proto"; // schema for protobuf-net's handling of core .NET types
 
 message AddSeedEntryRequest {
@@ -9,6 +10,9 @@ message AddSeedEntryRequest {
    string EventTypeId = 4;
    string Content = 5;
    bool IsGlobal = 6;
+   string EventSourceType = 7;
+   string EventStreamType = 8;
+   string EventStreamId = 9;
 }
 message CommandResult {
    .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
@@ -17,6 +21,9 @@ message CommandResult {
    repeated string ExceptionMessages = 4;
    string ExceptionStackTrace = 5;
    string AuthorizationFailureReason = 6;
+}
+message EventSeedingSupportResponse {
+   bool RoutingSupported = 1;
 }
 message EventSourceSeedEntries {
    string EventSourceId = 1;
@@ -38,6 +45,14 @@ message NamespacedSeedEntries {
    repeated EventTypeSeedEntries ByEventType = 2;
    repeated EventSourceSeedEntries ByEventSource = 3;
 }
+message QueryResult_EventSeedingSupportResponse {
+   .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   bool IsAuthorized = 2;
+   repeated ValidationResult ValidationResults = 3;
+   repeated string ExceptionMessages = 4;
+   string ExceptionStackTrace = 5;
+   EventSeedingSupportResponse Data = 6;
+}
 message QueryResult_SeedDataResponse {
    .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
    bool IsAuthorized = 2;
@@ -55,12 +70,17 @@ message SeedEventsRequest {
    repeated EventTypeSeedEntries GlobalByEventType = 2;
    repeated EventSourceSeedEntries GlobalByEventSource = 3;
    repeated NamespacedSeedEntries NamespacedEntries = 4;
+   bool GlobalSetIsAuthoritative = 5;
+   string GlobalSetOwner = 6;
 }
 message SeedingEntry {
    string EventSourceId = 1;
    string EventTypeId = 2;
    string Content = 3;
    repeated string Tags = 4;
+   string EventSourceType = 5;
+   string EventStreamType = 6;
+   string EventStreamId = 7;
 }
 message ValidationResult {
    ValidationResultSeverity Severity = 1; // default value could not be applied: Error
@@ -77,5 +97,6 @@ service EventSeeding {
    rpc AddSeedEntry (AddSeedEntryRequest) returns (CommandResult);
    rpc GetGlobalSeedData (GetGlobalSeedDataRequest) returns (QueryResult_SeedDataResponse);
    rpc GetNamespaceSeedData (GetNamespaceSeedDataRequest) returns (QueryResult_SeedDataResponse);
+   rpc GetSeedingSupport (.google.protobuf.Empty) returns (QueryResult_EventSeedingSupportResponse);
    rpc SeedEvents (SeedEventsRequest) returns (CommandResult);
 }

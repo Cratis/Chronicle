@@ -1,3 +1,6 @@
+---
+description: Set any Chronicle Server option with environment variables using the Cratis__Chronicle__ prefix and double underscores for nested sections.
+---
 # Environment Variables
 
 All configuration options can be set using environment variables with the prefix `Cratis__Chronicle__`. Use double underscores (`__`) to represent nested configuration sections.
@@ -38,6 +41,8 @@ the same way (`compliance.encryption.migrateFromDefaultStorage` becomes
 | Cratis__Chronicle__Features__OAuthAuthority | Enable internal OAuth authority |
 | Cratis__Chronicle__Storage__Type | Storage provider type |
 | Cratis__Chronicle__Storage__ConnectionDetails | Storage connection string |
+| Cratis__Chronicle__Storage__Schema | SQL schema for Chronicle's tables |
+| Cratis__Chronicle__Storage__CreateIfMissing | Whether Chronicle creates missing databases and schemas |
 | Cratis__Chronicle__Observers__SubscriberTimeout | Seconds an observer waits for its subscriber to answer (0 = indefinitely) |
 | Cratis__Chronicle__Observers__MaxConcurrentPartitions | Upper bound on parallel job steps, applied together with `Jobs__MaxParallelSteps` (does not limit live event delivery) |
 | Cratis__Chronicle__Observers__MaxRetryAttempts | Maximum retry attempts for observers |
@@ -45,6 +50,7 @@ the same way (`compliance.encryption.migrateFromDefaultStorage` becomes
 | Cratis__Chronicle__Observers__ExponentialBackoffDelayFactor | Exponential backoff multiplier |
 | Cratis__Chronicle__Observers__MaximumBackoffDelay | Maximum observer backoff delay in seconds |
 | Cratis__Chronicle__Observers__DefinitionEvolution | Read-model evolution policy: `Automatic`, `PartialOnly`, or `Manual` |
+| Cratis__Chronicle__ReadModels__MaxBatchSize | Maximum items per read-model batch (default 500; must be greater than zero): events per subscriber call when replaying a projection, and documents per fenced sink write. Projection replay splits event pages at this limit. |
 | Cratis__Chronicle__ReadModels__ReplayedVersionsToKeep | Number of replay-generated read model versions to keep |
 | Cratis__Chronicle__Events__Queues | Number of event queues |
 | Cratis__Chronicle__Authentication__Enabled | Whether authentication is enforced (default `true`) - see [Authentication](authentication.md#turning-authentication-off) before turning it off |
@@ -55,12 +61,17 @@ the same way (`compliance.encryption.migrateFromDefaultStorage` becomes
 | Cratis__Chronicle__Authentication__AdminUser__Email | Bootstrap admin email address |
 | Cratis__Chronicle__Authentication__AdminUser__RequirePasswordChangeOnFirstLogin | Force a password change on the admin's first login |
 | Cratis__Chronicle__Jobs__MaxParallelSteps | Maximum parallel job steps |
-| Cratis__Chronicle__Clustering__Type | Clustering provider — `Localhost` (default) or `MongoDB` |
+| Cratis__Chronicle__Clustering__Type | Clustering provider — `Localhost` (default), `MongoDB` (MongoDB storage), or `Sql` (SQL Server/PostgreSQL storage) |
 | Cratis__Chronicle__Clustering__ClusterId | Orleans cluster id, identical on every node |
 | Cratis__Chronicle__Clustering__ServiceId | Orleans service id, identical on every node |
 | Cratis__Chronicle__Clustering__SiloPort | Orleans silo port (default 11111) |
 | Cratis__Chronicle__Clustering__GatewayPort | Orleans gateway port (default 30000) |
 | Cratis__Chronicle__Clustering__AdvertisedIP | IP address this node advertises to the cluster |
+| Cratis__Chronicle__Clustering__DefunctSiloCleanupPeriod | Membership cleanup interval for MongoDB and Sql (default `01:00:00`; `00:00:00` disables) |
+| Cratis__Chronicle__Clustering__DefunctSiloExpiration | Age at which defunct membership entries are removed (default `03:00:00`) |
+| Cratis__Chronicle__Clustering__SingleWriterLease__Enabled | Single-writer protection for Localhost persistent storage (unset: automatic; `false`: opt out) |
+| Cratis__Chronicle__Clustering__SingleWriterLease__Ttl | Lease lifetime, minimum `00:00:05` (default `00:00:30`) |
+| Cratis__Chronicle__Clustering__SingleWriterLease__AcquireTimeout | Maximum startup wait; zero attempts once (default `00:02:00`) |
 | Cratis__Chronicle__Tls__Enabled | Use TLS on the Chronicle port (default `true`); `false` requires a private h2c backend behind an HTTPS proxy |
 | Cratis__Chronicle__ForwardedHeaders__KnownProxies__0 | Trusted immediate proxy IP (index upward for more than one); see [Trusted reverse proxies](tls.md#trusted-reverse-proxies) |
 | Cratis__Chronicle__ForwardedHeaders__KnownNetworks__0 | Trusted immediate proxy CIDR (index upward for more than one) |
@@ -114,7 +125,52 @@ Cratis__Chronicle__Storage__Type=MongoDB
 
 # MongoDB connection string
 Cratis__Chronicle__Storage__ConnectionDetails=mongodb://localhost:27017
+
+# SQL schema for Chronicle's tables (default: the database user's default schema)
+Cratis__Chronicle__Storage__Schema=chronicle
+
+# Create missing databases and schemas (default: true)
+Cratis__Chronicle__Storage__CreateIfMissing=false
+
+# Resolve connections per event store, namespace and purpose
+Cratis__Chronicle__Storage__ConnectionResolution__Connection__Resolver=Http
+Cratis__Chronicle__Storage__ConnectionResolution__Connection__Http__Endpoint=https://platform-mgmt.example/internal/connections
 ```
+
+### HTTP resolver authentication
+
+Choose one of these alternatives alongside the HTTP resolver and endpoint above. Authentication to the resolver is independent of database authentication. Supply tokens and secrets from your deployment's secret store.
+
+Static bearer token:
+
+```bash
+Cratis__Chronicle__Storage__ConnectionResolution__Connection__Http__Headers__Authorization='Bearer <token-from-your-secret-store>'
+```
+
+OAuth client credentials:
+
+```bash
+Cratis__Chronicle__Storage__ConnectionResolution__Connection__Http__Authentication__Type=ClientCredentials
+Cratis__Chronicle__Storage__ConnectionResolution__Connection__Http__Authentication__TokenEndpoint=https://login.example/oauth2/token
+Cratis__Chronicle__Storage__ConnectionResolution__Connection__Http__Authentication__ClientId=chronicle
+Cratis__Chronicle__Storage__ConnectionResolution__Connection__Http__Authentication__ClientSecret='<from-your-secret-store>'
+Cratis__Chronicle__Storage__ConnectionResolution__Connection__Http__Authentication__Scope=connections
+```
+
+Microsoft Entra ID with a user-assigned managed identity:
+
+```bash
+Cratis__Chronicle__Storage__ConnectionResolution__Connection__Http__Authentication__Type=AzureCredential
+Cratis__Chronicle__Storage__ConnectionResolution__Connection__Http__Authentication__Credential=ManagedIdentity
+Cratis__Chronicle__Storage__ConnectionResolution__Connection__Http__Authentication__ClientId='<resolver-identity-client-id>'
+Cratis__Chronicle__Storage__ConnectionResolution__Connection__Http__Authentication__Scope=api://platform-mgmt/.default
+```
+
+`ManagedIdentity` is the default; omit `ClientId` for a system-assigned identity. For workload identity, set `Credential=WorkloadIdentity` and provide `AZURE_CLIENT_ID`, `AZURE_TENANT_ID` and `AZURE_FEDERATED_TOKEN_FILE` through your workload identity setup. Set the resolver's `ClientId` to the workload application's client id. `Credential=Default` selects the Azure SDK's default credential chain.
+
+Do not combine an `Authorization` header with `Authentication__Type` other than `None`. Replace `Connection` with `Identity` in these paths when authenticating the identity slot's HTTP resolver instead.
+
+See [storage connection resolution](storage-connection-resolution.md#authenticate-the-resolver) for JSON examples and every resolver setting.
 
 ## Observers
 
@@ -182,7 +238,7 @@ See [Data Protection Key Encryption](../encryption-certificate.md) for generatin
 ## Clustering
 
 ```bash
-# Clustering provider - must be MongoDB for every multi-node deployment
+# Clustering provider - explicitly use MongoDB for MongoDB storage, Sql for SQL Server/PostgreSQL
 Cratis__Chronicle__Clustering__Type=MongoDB
 
 # Identical on every node so they join the same cluster
@@ -190,7 +246,7 @@ Cratis__Chronicle__Clustering__ClusterId=chronicle
 Cratis__Chronicle__Clustering__ServiceId=chronicle
 ```
 
-See [Clustering](clustering.md) for the full set of clustering properties.
+See [Clustering](clustering.md) for the full set of clustering properties. All nodes must share one cluster database and cluster identity. SQL clustering is opt-in and does not support SQLite; the default remains `Localhost` for every storage type.
 
 ## Open Telemetry
 

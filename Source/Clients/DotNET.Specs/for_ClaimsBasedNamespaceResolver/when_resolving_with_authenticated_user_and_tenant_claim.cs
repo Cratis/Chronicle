@@ -21,8 +21,7 @@ public class when_resolving_with_authenticated_user_and_tenant_claim : Specifica
         var identity = new ClaimsIdentity(claims, "TestAuth");
         var principal = new ClaimsPrincipal(identity);
 
-        ClaimsPrincipal.ClaimsPrincipalSelector = () => principal;
-        _resolver = new ClaimsBasedNamespaceResolver();
+        _resolver = new ClaimsBasedNamespaceResolver(() => principal);
     }
 
     void Because() => _result = _resolver.Resolve();

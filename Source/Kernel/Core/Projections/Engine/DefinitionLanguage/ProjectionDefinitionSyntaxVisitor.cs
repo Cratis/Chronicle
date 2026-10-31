@@ -7,6 +7,8 @@ using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
+using Cratis.Chronicle.Concepts.EventTypes;
+using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
@@ -20,7 +22,9 @@ namespace Cratis.Chronicle.Projections.Engine.DeclarationLanguage;
 /// Visits a Screenplay <see cref="ProjectionSyntax"/> tree and produces the corresponding <see cref="ProjectionDefinition"/>.
 /// </summary>
 /// <param name="owner">The <see cref="ProjectionOwner"/> for the resulting definition.</param>
-public class ProjectionDefinitionSyntaxVisitor(ProjectionOwner owner) : IProjectionSyntaxVisitor<ProjectionDefinition>
+/// <param name="eventTypeSchemas">The registered generations used to resolve bare event references.</param>
+/// <param name="generationDelivery">The generation delivery policy.</param>
+public class ProjectionDefinitionSyntaxVisitor(ProjectionOwner owner, IEnumerable<EventTypeSchema>? eventTypeSchemas = null, EventGenerationDelivery generationDelivery = EventGenerationDelivery.Compatibility) : IProjectionSyntaxVisitor<ProjectionDefinition>
 {
     bool _noAutoMap;
 
@@ -53,7 +57,7 @@ public class ProjectionDefinitionSyntaxVisitor(ProjectionOwner owner) : IProject
             Tags: default,
             AutoMap: _noAutoMap ? AutoMap.Disabled : AutoMap.Enabled,
             Nested: context.Nested.Count > 0 ? context.Nested : null,
-            SubscribesToAllEvents: context.SubscribesToAllEvents);
+            SubscribesToAllEvents: context.SubscribesToAllEvents) { GenerationDelivery = generationDelivery };
     }
 
     BlockContext ProcessBlocks(IEnumerable<ProjectionBlockSyntax> blocks, bool isChildContext)
@@ -87,16 +91,16 @@ public class ProjectionDefinitionSyntaxVisitor(ProjectionOwner owner) : IProject
                     ProcessNested(nested, context.Nested);
                     break;
                 case RemoveWithSyntax removeWith:
-                    context.RemovedWith[EventType.Parse(removeWith.Event)] = new RemovedWithDefinition(
+                    context.RemovedWith[ResolveEventType(removeWith.Event)] = new RemovedWithDefinition(
                         removeWith.Key is not null ? ConvertKeyExpression(removeWith.Key) : PropertyExpression.NotSet,
                         removeWith.ParentKey is not null ? ConvertKeyExpression(removeWith.ParentKey) : null);
                     break;
                 case RemoveViaJoinSyntax removeViaJoin:
-                    context.RemovedWithJoin[EventType.Parse(removeViaJoin.Event)] = new RemovedWithJoinDefinition(
+                    context.RemovedWithJoin[ResolveEventType(removeViaJoin.Event)] = new RemovedWithJoinDefinition(
                         removeViaJoin.Key is not null ? ConvertKeyExpression(removeViaJoin.Key) : PropertyExpression.NotSet);
                     break;
                 case ClearWithSyntax clearWith:
-                    context.RemovedWith[EventType.Parse(clearWith.Event)] = new RemovedWithDefinition(PropertyExpression.NotSet, ParentKey: null);
+                    context.RemovedWith[ResolveEventType(clearWith.Event)] = new RemovedWithDefinition(PropertyExpression.NotSet, ParentKey: null);
                     break;
                 default:
                     throw new UnsupportedProjectionSyntax(block);
@@ -105,6 +109,8 @@ public class ProjectionDefinitionSyntaxVisitor(ProjectionOwner owner) : IProject
 
         return context;
     }
+
+    EventType ResolveEventType(string reference) => ProjectionEventTypeReference.Resolve(reference, eventTypeSchemas ?? [], generationDelivery);
 
     void ProcessFrom(FromSyntax from, Dictionary<EventType, FromDefinition> fromDefinitions)
     {
@@ -116,7 +122,7 @@ public class ProjectionDefinitionSyntaxVisitor(ProjectionOwner owner) : IProject
                 ? ConvertKeyExpression(eventSpec.Key)
                 : ConvertKey(from.Key);
 
-            fromDefinitions[EventType.Parse(eventSpec.Event)] = new FromDefinition(ProcessMappings(from.Mappings), key, parentKey);
+            fromDefinitions[ResolveEventType(eventSpec.Event)] = new FromDefinition(ProcessMappings(from.Mappings), key, parentKey);
         }
     }
 
@@ -148,7 +154,7 @@ public class ProjectionDefinitionSyntaxVisitor(ProjectionOwner owner) : IProject
     {
         foreach (var joinEvent in join.Events)
         {
-            joinDefinitions[EventType.Parse(joinEvent.Event)] = new JoinDefinition(
+            joinDefinitions[ResolveEventType(joinEvent.Event)] = new JoinDefinition(
                 new PropertyPath(join.On),
                 ProcessMappings(joinEvent.Mappings),
                 PropertyExpression.NotSet,

@@ -13,6 +13,8 @@ namespace Cratis.Chronicle.Storage.MongoDB.Projections.Definitions;
 /// </summary>
 public static class ProjectionDefinitionConverters
 {
+    const int LosslessStorageFormatVersion = 1;
+
     /// <summary>
     /// Converts a MongoDB ProjectionDefinition to a Kernel ProjectionDefinition.
     /// </summary>
@@ -48,12 +50,16 @@ public static class ProjectionDefinitionConverters
             source.LastUpdated,
             source.Tags,
             source.AutoMap,
-            source.Nested.ToDictionary(
-                kv => (PropertyPath)kv.Key,
-                kv => kv.Value.ToKernel()),
+            Nested: source.Nested?.ToDictionary(kv => (PropertyPath)kv.Key, kv => kv.Value.ToKernel()),
             SubscribesToAllEvents: source.SubscribesToAllEvents,
-            NoAutoMapProperties: source.NoAutoMapProperties.Select(_ => (PropertyPath)_).ToList()
-        );
+            NoAutoMapProperties: source.NoAutoMapProperties?.Select(_ => (PropertyPath)_).ToList(),
+            Scope: source.Scope
+        )
+        {
+            GenerationDelivery = source.GenerationDelivery,
+            Version = source.Version,
+            HasLegacyStorageFields = source.StorageFormatVersion < LosslessStorageFormatVersion
+        };
 
     /// <summary>
     /// Converts a Kernel ProjectionDefinition to a MongoDB ProjectionDefinition.
@@ -63,6 +69,8 @@ public static class ProjectionDefinitionConverters
     public static ProjectionDefinition ToMongoDB(this KernelDefs.ProjectionDefinition source) =>
         new()
         {
+            GenerationDelivery = source.GenerationDelivery,
+            Version = source.Version,
             Owner = source.Owner,
             EventSequenceId = source.EventSequenceId,
             Identifier = source.Identifier,
@@ -95,6 +103,10 @@ public static class ProjectionDefinitionConverters
                 kv => kv.Key.ToString(),
                 kv => kv.Value.ToMongoDB()),
             SubscribesToAllEvents = source.SubscribesToAllEvents,
-            NoAutoMapProperties = (source.NoAutoMapProperties ?? []).Select(_ => (string)_).ToList()
+            NoAutoMapProperties = (source.NoAutoMapProperties ?? []).Select(_ => (string)_).ToList(),
+            Scope = source.Scope,
+
+            // Re-saving an unreconciled legacy definition must not claim its defaulted fields were known.
+            StorageFormatVersion = source.HasLegacyStorageFields ? 0 : LosslessStorageFormatVersion
         };
 }

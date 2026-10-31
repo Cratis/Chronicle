@@ -1,0 +1,6 @@
+projection Doc => DocReadModel
+  children members identified by userId
+    automap
+
+    from UserAddedToGroup
+      Role = role

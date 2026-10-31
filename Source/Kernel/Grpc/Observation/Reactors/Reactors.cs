@@ -1,13 +1,12 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Collections.Concurrent;
 using System.Reactive.Linq;
 using System.Text.Json;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Clients;
-using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Contracts.Observation.Reactors;
 using Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
@@ -15,10 +14,10 @@ using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Observation.Reactors.Clients;
 using Cratis.Chronicle.Services.Events;
 using Cratis.Chronicle.Storage;
-using Cratis.Collections;
 using Cratis.Traces;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using ProtoBuf.Grpc;
 using ObserverType = Cratis.Chronicle.Concepts.Observation.ObserverType;
 
@@ -35,6 +34,7 @@ namespace Cratis.Chronicle.Services.Observation.Reactors;
 /// <param name="storage"><see cref="IStorage"/> for accessing storage.</param>
 /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for serialization.</param>
 /// <param name="activitySource">The <see cref="IActivitySource{T}"/> for tracing.</param>
+/// <param name="options"><see cref="IOptions{ChronicleOptions}"/> for how often to check the subscription of a connected client.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
 internal sealed class Reactors(
     IGrainFactory grainFactory,
@@ -42,6 +42,7 @@ internal sealed class Reactors(
     IStorage storage,
     JsonSerializerOptions jsonSerializerOptions,
     [FromKeyedServices(WellKnown.MeterName)] IActivitySource<Reactors> activitySource,
+    IOptions<ChronicleOptions> options,
     ILogger<Reactors> logger) : IReactors
 {
     /// <inheritdoc/>
@@ -50,7 +51,7 @@ internal sealed class Reactors(
         logger.Observe();
 
         var registrationTcs = new TaskCompletionSource<RegisterReactor>(TaskCreationOptions.RunContinuationsAsynchronously);
-        ConcurrentDictionary<EventSourceId, TaskCompletionSource<ObserverSubscriberResult>> reactorResultTcs = [];
+        var pendingDeliveries = new PendingDeliveries<ObserverSubscriberResult>();
         IReactor clientObserver = null!;
 
         var messagesSubscription = messages.Subscribe(message =>
@@ -82,10 +83,9 @@ internal sealed class Reactors(
                         result.ExceptionMessages,
                         result.ExceptionStackTrace);
 
-                    if (reactorResultTcs.TryGetValue(result.Partition, out var tcs))
+                    if (!pendingDeliveries.TryComplete(result.DeliveryId, result.Partition, subscriberResult))
                     {
-                        tcs.SetResult(subscriberResult);
-                        reactorResultTcs.TryRemove(result.Partition, out _);
+                        logger.UnknownDeliveryResult(result.DeliveryId, result.Partition);
                     }
 
                     break;
@@ -128,11 +128,17 @@ internal sealed class Reactors(
                     registration.ConnectionId,
                     registration.EventStore,
                     registration.Namespace,
-                    (partition, events, tcs) =>
+                    (partition, events, tcs, deliverWithin) =>
                     {
-                        reactorResultTcs[partition] = tcs;
+                        var deliveryId = pendingDeliveries.Add(partition, tcs);
                         var eventsToObserve = events.Select(_ => _.ToContract(jsonSerializerOptions)).ToArray();
-                        observer.OnNext(new EventsToObserve { Partition = partition.Value.ToString()!, Events = eventsToObserve });
+                        observer.OnNext(new EventsToObserve
+                        {
+                            Partition = partition.Value.ToString()!,
+                            Events = eventsToObserve,
+                            DeliveryId = deliveryId,
+                            DeliverWithinMilliseconds = DeliveryDeadlines.ToMilliseconds(deliverWithin)
+                        });
                     });
 
                 reactorMediator.SubscribeReplayNotifications(
@@ -142,14 +148,20 @@ internal sealed class Reactors(
                     registration.Namespace,
                     (replayState, partition) => observer.OnNext(new EventsToObserve { Partition = partition, ReplayState = (Contracts.Observation.ReplayState)replayState }));
 
+                var definition = registration.Reactor.ToChronicle();
                 using (var span = activitySource.Register())
                 {
                     span?.Activity?.Tag(key, ObserverType.Reactor);
                     clientObserver = grainFactory.GetGrain<IReactor>(key);
-                    await clientObserver.SetDefinitionAndSubscribe(registration.Reactor.ToChronicle());
+                    await clientObserver.SetDefinitionAndSubscribe(definition);
                 }
 
-                await Task.Delay(Timeout.Infinite, cancellationToken).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
+                await ClientSubscriptionKeeper.KeepWhileConnected(
+                    () => clientObserver.KeepSubscription(definition),
+                    TimeSpan.FromSeconds(options.Value.ConnectedClients.ReviseIntervalSeconds),
+                    registration.ConnectionId,
+                    logger,
+                    cancellationToken);
 
                 logger.Disconnected(
                     registration.Reactor.ReactorId,
@@ -173,7 +185,7 @@ internal sealed class Reactors(
             {
                 messagesSubscription.Dispose();
                 reactorMediator.Disconnected(observerId, connectionId, eventStoreName, namespaceName);
-                reactorResultTcs.Values.ForEach(_ => _.TrySetResult(ObserverSubscriberResult.Disconnected()));
+                pendingDeliveries.Disconnect(ObserverSubscriberResult.Disconnected());
                 if (clientObserver is not null)
                 {
                     await clientObserver.Unsubscribe();
@@ -187,6 +199,7 @@ internal sealed class Reactors(
         register = context.CancellationToken.Register(() =>
         {
             logger.ObserverStreamDisconnected(observerId, connectionId);
+            pendingDeliveries.Disconnect(ObserverSubscriberResult.Disconnected());
             observableObserver?.OnCompleted();
             reactorMediator.Disconnected(observerId, connectionId, eventStoreName, namespaceName);
             register?.Dispose();

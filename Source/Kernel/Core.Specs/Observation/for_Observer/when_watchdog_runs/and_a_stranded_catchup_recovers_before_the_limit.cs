@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Orleans.Jobs;
 
 namespace Cratis.Chronicle.Observation.for_Observer.when_watchdog_runs;
 
@@ -22,10 +23,10 @@ public class and_a_stranded_catchup_recovers_before_the_limit : given.an_observe
             await _observer.RunWatchdogAsync();
         }
 
-        // Genuine forward progress - a job actually prepared its steps - resets the consecutive-failure count.
-        // An empty partition set is enough to reach that reset without pulling in the separate
-        // "catching-up partitions with no running job" watchdog path.
-        await _observer.RegisterCatchingUpPartitions([]);
+        // Genuine forward progress - a catch-up job concluded having handled events past the observer's position -
+        // resets the consecutive-failure count. A lap that moved nothing does not, which is covered separately.
+        await _observer.CaughtUp(JobId.New(), 42L);
+        _observer.SetCatchupRecoveryAttemptsForTesting(_observer.CatchupRecoveryAttempts);
 
         // Second, distinct incident: also fails right up to the retry limit. Without the reset above this would
         // exceed the limit on the very first of these ticks, since it follows immediately after the first incident's

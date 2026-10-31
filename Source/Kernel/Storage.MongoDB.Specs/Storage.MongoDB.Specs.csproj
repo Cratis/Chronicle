@@ -3,10 +3,14 @@
         <AssemblyName>Cratis.Chronicle.Storage.MongoDB.Specs</AssemblyName>
         <RootNamespace>Cratis.Chronicle.Storage.MongoDB</RootNamespace>
         <IsTestProject>true</IsTestProject>
+        <OutputType>Exe</OutputType>
+        <CratisSpecificationsSharedLifecycle>false</CratisSpecificationsSharedLifecycle>
+        <CratisSpecificationsReadableNames>false</CratisSpecificationsReadableNames>
         <IsPackable>false</IsPackable>
     </PropertyGroup>
 
     <ItemGroup>
+        <Compile Include="../Core.Specs/Compliance/given/protected_values.cs" Link="Compliance/given/protected_values.cs" />
         <PackageReference Include="Cratis.Arc" />
         <PackageReference Include="Testcontainers" />
         <!-- Pulls Testcontainers' vulnerable SSH.NET forward — see Directory.Packages.props. -->

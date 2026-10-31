@@ -19,6 +19,22 @@ public class ObserverState
     public required ObserverId Id { get; set; }
 
     /// <summary>
+    /// Gets or sets the serialized type-set control, or null before initialization.
+    /// </summary>
+    [ConcurrencyCheck]
+    public string? TypeSetControl { get; set; }
+
+    /// <summary>
+    /// Gets or sets serialized observer initialization and latest refusal reasons, absent on legacy rows.
+    /// </summary>
+    public string? Initialization { get; set; }
+
+    /// <summary>
+    /// Gets or sets the outstanding delivery fence snapshot, absent on legacy state.
+    /// </summary>
+    public string? DeliveryFences { get; set; }
+
+    /// <summary>
     /// Gets or sets the source-owned alert lifecycle token.
     /// </summary>
     public Guid AlertLifecycleId { get; set; }
@@ -37,6 +53,9 @@ public class ObserverState
     /// Gets or sets the current quarantine episode identity.
     /// </summary>
     public Guid? QuarantineEpisodeId { get; set; }
+
+    /// <summary>Gets or sets serialized optional webhook probe coordination.</summary>
+    public string? WebhookProbe { get; set; }
 
     /// <summary>
     /// Gets or sets the sequence number of the last event the observer handled.
@@ -97,4 +116,15 @@ public class ObserverState
     /// Gets or sets a value indicating whether the observer subscribes to all event types.
     /// </summary>
     public bool SubscribesToAllEvents { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of events handled by the observer.
+    /// </summary>
+    public ulong HandledEventCount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of events handled per event type, or null for legacy rows.
+    /// </summary>
+    [Json]
+    public IDictionary<string, ulong>? HandledEventCountPerEventType { get; set; } = new Dictionary<string, ulong>();
 }

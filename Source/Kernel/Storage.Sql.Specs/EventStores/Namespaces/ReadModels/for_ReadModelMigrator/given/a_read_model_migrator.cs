@@ -57,15 +57,35 @@ public class a_read_model_migrator : Specification
     {
         var options = new DbContextOptionsBuilder<ReadModelDbContext>()
             .UseSqlite(_connectionString)
-            .AddConceptAsSupport()
+            .AddConceptAsSupport().WithoutServiceProviderCaching()
             .Options;
 
         return new ReadModelDbContext(options, tableName, columns, _migrator);
     }
 
     /// <summary>
+    /// Counts schema-lock scope entries during an admission, including SQLite's no-op lock.
+    /// </summary>
+    /// <param name="context">The read-model context to admit.</param>
+    /// <returns>The number of schema-lock scope entries.</returns>
+    protected async Task<int> EnsureTableMigratedAndCountSchemaLocks(ReadModelDbContext context)
+    {
+        var calls = 0;
+        DatabaseSchemaLock.OnRun.Value = () => calls++;
+        try
+        {
+            await _migrator.EnsureTableMigrated(context.TableName, context);
+            return calls;
+        }
+        finally
+        {
+            DatabaseSchemaLock.OnRun.Value = null;
+        }
+    }
+
+    /// <summary>
     /// Returns the column names that physically exist in the given table by querying
-    /// SQLite's <c language="csharp">PRAGMA table_info</c> via the master connection.
+    /// SQLite's <c language="csharp">PRAGMA table_xinfo</c> via the master connection.
     /// Column name is at ordinal 1 (0 = cid, 1 = name, 2 = type, …).
     /// </summary>
     /// <param name="tableName">Name of the table to inspect.</param>
@@ -73,7 +93,7 @@ public class a_read_model_migrator : Specification
     protected async Task<IReadOnlySet<string>> GetActualColumnNamesAsync(string tableName)
     {
         await using var command = _masterConnection.CreateCommand();
-        command.CommandText = $"PRAGMA table_info(\"{tableName}\")";
+        command.CommandText = $"PRAGMA table_xinfo(\"{tableName}\")";
 
         var columns = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         await using var reader = await command.ExecuteReaderAsync();

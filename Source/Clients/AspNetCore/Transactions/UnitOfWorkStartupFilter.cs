@@ -3,6 +3,8 @@
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 namespace Cratis.Chronicle.AspNetCore.Transactions;
 
@@ -16,7 +18,10 @@ public class UnitOfWorkStartupFilter : IStartupFilter
     {
         return app =>
         {
-            app.UseMiddleware<UnitOfWorkMiddleware>();
+            if (app.ApplicationServices.GetRequiredService<IOptions<ChronicleAspNetCoreOptions>>().Value.UseAutomaticMiddleware)
+            {
+                app.UseMiddleware<UnitOfWorkMiddleware>();
+            }
             next(app);
         };
     }

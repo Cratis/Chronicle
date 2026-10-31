@@ -36,6 +36,6 @@ public class an_inferred_read_model_preview : all_dependencies
         var language = new LanguageService(new Generator(), Cratis.Chronicle.Projections.Engine.DeclarationLanguage.CodeGeneration.given.ProjectionCodeGenerators.All());
         var services = new ServiceCollection();
         services.AddSingleton(_storage);
-        _service = new Projections(_grainFactory, new ExpandoObjectConverter(typeFormats), language, services.BuildServiceProvider(), _readModelsCompliance);
+        _service = new Projections(_grainFactory, new ExpandoObjectConverter(typeFormats), language, services.BuildServiceProvider(), _readModelsCompliance, _localSiloDetails, Microsoft.Extensions.Logging.Abstractions.NullLogger<Projections>.Instance);
     }
 }

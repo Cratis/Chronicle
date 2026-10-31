@@ -28,7 +28,7 @@ public class EventSeeding(
     [PersistentState(nameof(EventSeeds), WellKnownGrainStorageProviders.EventSeeding)]
     IPersistentState<EventSeeds> state,
     IGrainFactory grainFactory,
-    ILogger<EventSeeding> logger) : Grain, IResultAwareEventSeeding
+    ILogger<EventSeeding> logger) : Grain, IGlobalEventSeeding
 {
     /// <summary>
     /// The maximum number of events to append in a single batch during seeding.
@@ -60,12 +60,35 @@ public class EventSeeding(
     public Task Seed(IEnumerable<SeedingEntry> entries) => SeedWithResult(entries);
 
     /// <inheritdoc/>
-    public async Task<SeedingResult> SeedWithResult(IEnumerable<SeedingEntry> entries)
+    public Task<SeedingResult> SeedWithResult(IEnumerable<SeedingEntry> entries) => SeedWithResult(entries, false, string.Empty);
+
+    /// <inheritdoc/>
+    public Task<SeedingResult> SeedGlobalWithResult(IEnumerable<SeedingEntry> entries, bool authoritative, string owner) =>
+        SeedWithResult(entries, authoritative, owner);
+
+    /// <inheritdoc/>
+    public Task<EventSeeds> GetSeededEvents()
+    {
+        state.State ??= new EventSeeds(
+            new Dictionary<EventTypeId, IEnumerable<SeededEventEntry>>(),
+            new Dictionary<EventSourceId, IEnumerable<SeededEventEntry>>());
+
+        return Task.FromResult(_key.IsGlobal ? GlobalSeedSet.Effective(state.State) : state.State);
+    }
+
+    static SeededEventEntry ToSeededEntry(SeedingEntry entry) => new(entry.EventSourceId, entry.EventTypeId, entry.Content, entry.Tags?.Select(t => t.Value) ?? [])
+    {
+        EventSourceType = SeedRouting.SourceType(entry.EventSourceType?.Value),
+        EventStreamType = SeedRouting.StreamType(entry.EventStreamType?.Value),
+        EventStreamId = SeedRouting.StreamId(entry.EventStreamId?.Value)
+    };
+
+    async Task<SeedingResult> SeedWithResult(IEnumerable<SeedingEntry> entries, bool authoritative, string owner)
     {
         logger.SeedingEvents(_key.EventStore.Value, _key.Namespace.Value);
 
         var entriesList = entries.ToList();
-        if (entriesList.Count == 0)
+        if (entriesList.Count == 0 && !(_key.IsGlobal && authoritative))
         {
             return SeedingResult.Complete;
         }
@@ -76,27 +99,28 @@ public class EventSeeding(
 
         // For global grains, store the entries and apply to all existing namespaces
         return _key.IsGlobal
-            ? await SeedGlobally(entriesList)
+            ? await SeedGlobally(entriesList, authoritative, owner)
             : await SeedNamespace(entriesList);
     }
 
-    /// <inheritdoc/>
-    public Task<EventSeeds> GetSeededEvents()
+    async Task<SeedingResult> SeedGlobally(List<SeedingEntry> entriesList, bool authoritative, string owner)
     {
-        state.State ??= new EventSeeds(
-            new Dictionary<EventTypeId, IEnumerable<SeededEventEntry>>(),
-            new Dictionary<EventSourceId, IEnumerable<SeededEventEntry>>());
-
-        return Task.FromResult(state.State);
-    }
-
-    async Task<SeedingResult> SeedGlobally(List<SeedingEntry> entriesList)
-    {
-        var newEntries = GetEntriesStillToSeed(entriesList);
-        if (newEntries.Count == 0)
+        var offered = entriesList.Select(entry => ToSeededEntry(entry) with
+        {
+            Origin = authoritative ? SeedOrigin.Declared : SeedOrigin.Added,
+            Owner = owner
+        });
+        var updated = authoritative
+            ? GlobalSeedSet.Replace(state.State, offered, owner)
+            : GlobalSeedSet.Add(state.State, offered, owner);
+        if (ReferenceEquals(updated, state.State))
         {
             return SeedingResult.Complete;
         }
+
+        var growingEntries = GlobalSeedSet.GrowingEntries(state.State, updated)
+            .Select(entry => new SeedingEntry(entry.EventSourceId, entry.EventTypeId, entry.Content, entry.Tags?.Select(tag => new Tag(tag)), entry.EventSourceType, entry.EventStreamType, entry.EventStreamId))
+            .ToList();
 
         // Dispatch to every namespace grain BEFORE committing the global tracking. Each namespace
         // grain applies its own idempotency guard, so re-dispatching after a transient failure is
@@ -104,18 +128,7 @@ public class EventSeeding(
         // that throws mid-loop would never be retried - on retry IsAlreadySeeded would report the
         // entries as seeded, the dispatch would be skipped, and the remaining namespaces would
         // never receive the events.
-        var entriesToSeed = newEntries.ConvertAll(_ => _.Entry);
-        var namespacesGrain = grainFactory.GetGrain<INamespaces>(_key.EventStore.Value);
-        var namespaces = await namespacesGrain.GetAll();
-        var everyNamespaceSeeded = true;
-        foreach (var ns in namespaces)
-        {
-            logger.ApplyingSeedsToNamespace(ns.Value);
-            var namespaceKey = EventSeedingKey.ForNamespace(_key.EventStore, ns);
-            var nsGrain = grainFactory.GetGrain<IResultAwareEventSeeding>(namespaceKey.ToString());
-            var result = await nsGrain.SeedWithResult(entriesToSeed);
-            everyNamespaceSeeded &= result.AllEntriesSeeded;
-        }
+        var everyNamespaceSeeded = await DispatchGlobally(growingEntries);
 
         // A namespace that declined part of what it was given is the same situation as one that threw:
         // the entries are still waiting. Committing the tracking here would mean they are never
@@ -129,14 +142,33 @@ public class EventSeeding(
 
         // Only now, after every namespace has seeded everything, commit the global tracking so a retry
         // re-dispatches when a namespace dispatch throws or declines.
-        foreach (var (_, seededEntry) in newEntries)
-        {
-            TrackSeededEvent(seededEntry);
-        }
+        state.State = updated;
 
         await state.WriteStateAsync();
 
         return SeedingResult.Complete;
+    }
+
+    async Task<bool> DispatchGlobally(List<SeedingEntry> entries)
+    {
+        if (entries.Count == 0)
+        {
+            return true;
+        }
+
+        var namespacesGrain = grainFactory.GetGrain<INamespaces>(_key.EventStore.Value);
+        var namespaces = await namespacesGrain.GetAll();
+        var everyNamespaceSeeded = true;
+        foreach (var ns in namespaces)
+        {
+            logger.ApplyingSeedsToNamespace(ns.Value);
+            var namespaceKey = EventSeedingKey.ForNamespace(_key.EventStore, ns);
+            var nsGrain = grainFactory.GetGrain<IResultAwareEventSeeding>(namespaceKey.ToString());
+            var result = await nsGrain.SeedWithResult(entries);
+            everyNamespaceSeeded &= result.AllEntriesSeeded;
+        }
+
+        return everyNamespaceSeeded;
     }
 
     async Task<SeedingResult> SeedNamespace(List<SeedingEntry> entriesList)
@@ -221,10 +253,10 @@ public class EventSeeding(
             return new SeedableEvent(
                 _.Seeded,
                 new EventToAppend(
-                    EventSourceType.Default,
+                    _.Seeded.EventSourceType,
                     _.Entry.EventSourceId,
-                    EventStreamType.All,
-                    EventStreamId.Default,
+                    _.Seeded.EventStreamType,
+                    _.Seeded.EventStreamId,
                     new EventType(_.Entry.EventTypeId, EventTypeGeneration.First),
                     _.Entry.Tags ?? [],
                     content));
@@ -250,8 +282,7 @@ public class EventSeeding(
 
         foreach (var entry in entriesList)
         {
-            var tags = entry.Tags?.Select(t => t.Value) ?? [];
-            var seededEntry = new SeededEventEntry(entry.EventSourceId, entry.EventTypeId, entry.Content, tags);
+            var seededEntry = ToSeededEntry(entry);
 
             if (!stillAccountedFor.TryGetValue(seededEntry, out var remaining))
             {
@@ -313,28 +344,4 @@ public class EventSeeding(
     /// <param name="Seeded">The <see cref="SeededEventEntry"/> to record once the event has been appended.</param>
     /// <param name="ToAppend">The <see cref="EventToAppend"/> to append to the event sequence.</param>
     record SeedableEvent(SeededEventEntry Seeded, EventToAppend ToAppend);
-
-    /// <summary>
-    /// Compares two seeded entries on what identifies them: the event source, the event type, the content
-    /// and the set of tags. The record's own equality cannot be used - it compares the tag sequence by
-    /// reference, so two entries with equal tags never match.
-    /// </summary>
-    sealed class SeededEventEntryIdentity : IEqualityComparer<SeededEventEntry>
-    {
-        internal static readonly SeededEventEntryIdentity Comparer = new();
-
-        public bool Equals(SeededEventEntry? x, SeededEventEntry? y) =>
-            ReferenceEquals(x, y) ||
-            (x is not null &&
-             y is not null &&
-             x.EventSourceId == y.EventSourceId &&
-             x.EventTypeId == y.EventTypeId &&
-             string.Equals(x.Content, y.Content, StringComparison.Ordinal) &&
-             TagsOf(x).SetEquals(TagsOf(y)));
-
-        public int GetHashCode(SeededEventEntry obj) =>
-            HashCode.Combine(obj.EventSourceId, obj.EventTypeId, obj.Content, TagsOf(obj).Count);
-
-        static HashSet<string> TagsOf(SeededEventEntry entry) => new(entry.Tags ?? [], StringComparer.Ordinal);
-    }
 }

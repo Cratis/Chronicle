@@ -25,7 +25,8 @@ namespace Cratis.Chronicle.Observation.States;
 /// replaying, or catching up — gets a dedicated catch-up job starting from the next event after
 /// the observer's last confirmed sequence number. The state then transitions to <see cref="Routing"/>
 /// so the observer can resume normal operation. If enqueueing a catch-up job fails or throws, the observer
-/// transitions to <see cref="QuarantinedObserver"/> rather than silently losing recovery work.
+/// transitions to <see cref="QuarantinedObserver"/> rather than silently losing recovery work. Markers are
+/// relinquished only when a durable job or an existing recovery mechanism owns the partition.
 /// </remarks>
 public class CatchingUpInFlight(
     ObserverKey observerKey,
@@ -71,6 +72,9 @@ public class CatchingUpInFlight(
                 !failuresState.State.IsFailed(p))
             .ToArray();
 
+        // Other recovery mechanisms own the skipped markers. Keep a private set until each new job is durable.
+        state = state with { InFlightPartitions = partitions.ToHashSet() };
+
         var startFrom = state.LastHandledEventSequenceNumber.IsActualValue
             ? state.LastHandledEventSequenceNumber.Next()
             : EventSequenceNumber.First;
@@ -82,7 +86,10 @@ public class CatchingUpInFlight(
                 logger.StartingInFlightCatchUpForPartition(partition, startFrom);
                 state.CatchingUpPartitions.Add(partition);
                 var startResult = await jobsManager.Start<ICatchUpObserverPartition, CatchUpObserverPartitionRequest>(
-                    new(observerKey, definitionState.State.Type, partition, startFrom, definitionState.State.EventTypes));
+                    new(observerKey, definitionState.State.Type, partition, startFrom, definitionState.State.EventTypes)
+                    {
+                        ReaderScope = ObserverReaderScope.For(state.SubscribesToAllEvents, definitionState.State.EventTypes)
+                    });
                 if (startResult?.TryGetResult(out _) is not true)
                 {
                     var error = startResult?.TryGetError(out var startError) is true ? startError : default;
@@ -90,6 +97,8 @@ public class CatchingUpInFlight(
                     await StateMachine.TransitionTo<QuarantinedObserver>();
                     return state;
                 }
+
+                state.InFlightPartitions.Remove(partition);
             }
         }
         catch (Exception ex)

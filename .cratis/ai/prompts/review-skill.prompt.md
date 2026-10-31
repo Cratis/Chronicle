@@ -6,12 +6,10 @@ description: Review one skill for clarity, trigger quality, and maintainability.
 
 # Review Skill
 
-Review a specific skill folder under `.cratis/ai/skills/` for:
+Read [authoring-skills.md](../rules/authoring-skills.md), then apply its section 10
+checklist to the requested skill folder under `.cratis/ai/skills/`. Check routing
+against neighboring skills and workflow correctness against the owning product.
 
-- trigger quality in the description
-- correctness of workflow steps
-- overlap with existing skills
-- missing references or checklists
-- opportunities to split large files
-
-Return findings first, then proposed edits.
+Read and use `.cratis/ai/rules/review-reports.md` when writing the report.
+Name any evaluation runs or verification not performed on the scope line.
+Include proposed edits with the findings; do not edit during the review.

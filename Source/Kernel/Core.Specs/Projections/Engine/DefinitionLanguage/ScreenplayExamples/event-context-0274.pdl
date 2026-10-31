@@ -1,0 +1,13 @@
+projection Group => GroupReadModel
+  from GroupCreated
+    Name = name
+    CreatedAt = $eventContext.occurred
+    CreatedBy = $eventContext.eventSourceId
+
+  children members identified by userId
+    from UserAddedToGroup key userId
+      parent groupId
+      Name = userName
+      Role = role
+      AddedAt = $eventContext.occurred
+      AddedSequence = $eventContext.sequenceNumber

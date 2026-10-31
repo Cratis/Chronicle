@@ -1,0 +1,11 @@
+projection Customer => CustomerReadModel
+  from CustomerRegistered
+    Name = name
+    Points = 0
+
+  from PurchaseMade
+    add Points by pointsEarned
+
+  from PointsRedeemed
+    subtract Points by pointsUsed
+    LastRedemption = $eventContext.occurred

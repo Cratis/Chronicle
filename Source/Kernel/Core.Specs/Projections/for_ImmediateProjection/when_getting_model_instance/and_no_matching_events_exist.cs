@@ -12,19 +12,25 @@ public class and_no_matching_events_exist : given.an_immediate_projection
 {
     readonly EventType _eventType = new("ModelCreated", EventTypeGeneration.First);
     ProjectionResult _result;
+    ProjectionResult _reread;
 
     void Establish()
     {
         _projection.GetEventTypes().Returns([_eventType]);
         _eventSequence.GetTailSequenceNumberForEventTypes(Arg.Any<IEnumerable<EventType>>()).Returns((EventSequenceNumber)10);
         _expandoObjectConverter.ToExpandoObject(Arg.Any<JsonObject>(), Arg.Any<JsonSchema>()).Returns(new ExpandoObject());
-        var cursor = CreateCursor();
         _eventSequenceStorage.GetFromSequenceNumber(EventSequenceNumber.First, eventSourceId: ReadModelKey, eventTypes: Arg.Any<IEnumerable<EventType>>())
-            .Returns(cursor);
+            .Returns(_ => CreateCursor());
     }
 
-    async Task Because() => _result = await _grain.GetModelInstance();
+    async Task Because()
+    {
+        _result = await _grain.GetModelInstance();
+        _reread = await _grain.GetModelInstance();
+    }
 
     [Fact] void should_report_absence() => _result.HasReadModel.ShouldBeFalse();
     [Fact] void should_report_no_matching_event() => _result.LastHandledEventSequenceNumber.ShouldEqual(EventSequenceNumber.Unavailable);
+    [Fact] void should_keep_the_reread_absent() => _reread.HasReadModel.ShouldBeFalse();
+    [Fact] void should_not_use_another_sources_tail_on_the_reread() => _reread.LastHandledEventSequenceNumber.ShouldEqual(EventSequenceNumber.Unavailable);
 }

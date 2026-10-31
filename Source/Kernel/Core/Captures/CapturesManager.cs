@@ -19,7 +19,7 @@ namespace Cratis.Chronicle.Captures;
 /// <param name="captureValidator"><see cref="ICaptureValidator"/> for validating compiled captures.</param>
 /// <param name="eventsSubscriptions"><see cref="ICaptureEventsSubscriptions"/> for running captures that read from an inbox.</param>
 /// <param name="logger">The logger.</param>
-public class CapturesManager(
+public partial class CapturesManager(
     IStorage storage,
     ILanguageService languageService,
     ICaptureValidator captureValidator,
@@ -32,6 +32,7 @@ public class CapturesManager(
     /// </summary>
     internal static readonly TimeSpan ReconcileInterval = TimeSpan.FromMinutes(1);
 
+    readonly Dictionary<EventStoreNamespaceName, Task> _namespaceSubscriptions = new();
     EventStoreName _eventStoreName = EventStoreName.NotSet;
 
     ICapturesStorage Captures => storage.GetEventStore(_eventStoreName).Captures;
@@ -60,7 +61,7 @@ public class CapturesManager(
         {
             try
             {
-                await Run(capture);
+                await RunStartedCapture(capture.Id);
             }
             catch (Exception exception) when (exception is not OperationCanceledException)
             {
@@ -74,21 +75,92 @@ public class CapturesManager(
     /// <inheritdoc/>
     public async Task NamespaceAdded(EventStoreNamespaceName @namespace)
     {
-        foreach (var (capture, definition) in await GetStartedEventsCaptures())
+        try
         {
-            try
-            {
-                await eventsSubscriptions.Subscribe(_eventStoreName, @namespace, definition);
-            }
-            catch (Exception exception) when (exception is not OperationCanceledException)
-            {
-                logger.FailedSubscribingCaptureInNamespace(exception, capture.Name, capture.Id, @namespace);
-            }
+            await EnsureSubscribedIn(@namespace);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            logger.FailedEnsuringSubscriptionsInNamespace(exception, @namespace);
         }
     }
 
     /// <inheritdoc/>
     public async Task<IEnumerable<CaptureValidationMessage>> Start(CaptureId captureId)
+    {
+        var lifecycle = GetLifecycle(captureId);
+        var closure = lifecycle.Closure;
+        await lifecycle.Gate.WaitAsync();
+        try
+        {
+            return await StartWhileHeld(captureId, lifecycle, closure);
+        }
+        finally
+        {
+            lifecycle.Gate.Release();
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task Stop(CaptureId captureId)
+    {
+        var lifecycle = GetLifecycle(captureId);
+        var closure = lifecycle.Close();
+        await lifecycle.Gate.WaitAsync();
+        try
+        {
+            if (!await Captures.Has(captureId)) return;
+            var capture = await Captures.Get(captureId);
+            await StopRunning(capture);
+            if (capture.Status != CaptureStatus.Stopped)
+            {
+                await Captures.Save(capture with { Status = CaptureStatus.Stopped });
+            }
+        }
+        catch
+        {
+            lifecycle.ReopenAfterFailure(closure);
+            throw;
+        }
+        finally
+        {
+            lifecycle.Gate.Release();
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task Delete(CaptureId captureId)
+    {
+        var lifecycle = GetLifecycle(captureId);
+        var closure = lifecycle.Close();
+        await lifecycle.Gate.WaitAsync();
+        try
+        {
+            var definition = await Captures.Has(captureId) ? GetEventsDefinition(await Captures.Get(captureId)) : null;
+            if (definition is not null)
+            {
+                // Removes the observers, their offsets and definition and the state kept per namespace too.
+                await eventsSubscriptions.Remove(_eventStoreName, definition);
+            }
+            else
+            {
+                await GetCapturer(captureId).Stop();
+            }
+
+            await Captures.Delete(captureId);
+        }
+        catch
+        {
+            lifecycle.ReopenAfterFailure(closure);
+            throw;
+        }
+        finally
+        {
+            lifecycle.Gate.Release();
+        }
+    }
+
+    async Task<IEnumerable<CaptureValidationMessage>> StartWhileHeld(CaptureId captureId, CaptureLifecycle lifecycle, int closure)
     {
         if (!await Captures.Has(captureId))
         {
@@ -98,6 +170,20 @@ public class CapturesManager(
         var capture = await Captures.Get(captureId);
         if (capture.Status == CaptureStatus.Started)
         {
+            if (lifecycle.Closure != closure) return [];
+            if (lifecycle.Closed || lifecycle.RestartRequired)
+            {
+                // Persisted Started can outlive a partially completed Stop. Re-establish explicitly under
+                // the gate, rather than claiming success from a status whose subscription was torn down.
+                lifecycle.RestartRequired = true;
+                await Run(capture);
+                if (lifecycle.Closure == closure)
+                {
+                    lifecycle.Closed = false;
+                    lifecycle.RestartRequired = false;
+                }
+            }
+
             return [];
         }
 
@@ -112,6 +198,8 @@ public class CapturesManager(
             return messagesResolved;
         }
 
+        if (lifecycle.Closure != closure) return [];
+        lifecycle.Closed = false;
         capture = capture with { Status = CaptureStatus.Started };
         if (GetEventsDefinition(capture) is not null)
         {
@@ -127,46 +215,13 @@ public class CapturesManager(
         return [];
     }
 
-    /// <inheritdoc/>
-    public async Task Stop(CaptureId captureId)
-    {
-        if (!await Captures.Has(captureId))
-        {
-            return;
-        }
-
-        var capture = await Captures.Get(captureId);
-        await StopRunning(capture);
-        if (capture.Status != CaptureStatus.Stopped)
-        {
-            await Captures.Save(capture with { Status = CaptureStatus.Stopped });
-        }
-    }
-
-    /// <inheritdoc/>
-    public async Task Delete(CaptureId captureId)
-    {
-        var definition = await Captures.Has(captureId) ? GetEventsDefinition(await Captures.Get(captureId)) : null;
-        if (definition is not null)
-        {
-            // Removes the observers, their offsets and definition and the state kept per namespace too.
-            await eventsSubscriptions.Remove(_eventStoreName, definition);
-        }
-        else
-        {
-            await GetCapturer(captureId).Stop();
-        }
-
-        await Captures.Delete(captureId);
-    }
-
     async Task Reconcile(CancellationToken cancellationToken)
     {
-        foreach (var (capture, definition) in await GetStartedEventsCaptures())
+        foreach (var (capture, _) in await GetStartedEventsCaptures())
         {
             try
             {
-                await eventsSubscriptions.Recover(_eventStoreName, definition);
+                await RunStartedCapture(capture.Id);
             }
             catch (Exception exception) when (exception is not OperationCanceledException)
             {

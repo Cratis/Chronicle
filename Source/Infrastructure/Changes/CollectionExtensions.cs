@@ -28,7 +28,9 @@ public static class CollectionExtensions
             return items.FirstOrDefault(_ => _!.Equals(key));
         }
 
-        return items.FirstOrDefault(_ => identityProperty.GetValue(_!, ArrayIndexers.NoIndexers)?.Equals(key) ?? false);
+        return items.FirstOrDefault(item => item is IDictionary<string, object?>
+            ? ChildIdentity.TryGetValue(item, identityProperty, out var identity) && (identity?.Equals(key) ?? false)
+            : identityProperty.GetValue(item!, ArrayIndexers.NoIndexers)?.Equals(key) ?? false);
     }
 
     /// <summary>
@@ -79,6 +81,8 @@ public static class CollectionExtensions
         }
 
         if (items is IEnumerable<ExpandoObject> expandoObjectItems) return ExpandoObjectExtensions.Contains(expandoObjectItems, identityProperty, key);
-        return items.Any(_ => identityProperty.GetValue(_!, ArrayIndexers.NoIndexers)!.IsEqualTo(key));
+        return items.Any(item => item is IDictionary<string, object?>
+            ? ChildIdentity.TryGetValue(item, identityProperty, out var identity) && identity?.IsEqualTo(key) == true
+            : identityProperty.GetValue(item!, ArrayIndexers.NoIndexers)!.IsEqualTo(key));
     }
 }

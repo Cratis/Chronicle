@@ -1,3 +1,6 @@
+---
+description: How Chronicle reducers process events, discover handler methods, resolve multiple matching methods and isolate event sources.
+---
 # Event Processing
 
 Understanding how reducers process events is crucial for building effective read models. This guide covers the event processing model, method patterns, and advanced techniques.
@@ -20,6 +23,8 @@ Reducers use convention-based method discovery. Chronicle automatically finds an
 
 ### When more than one method matches
 
+This section describes classic instance reducers. [Self reducers](self-reducing-read-models#handler-selection) use public static `Reduce` methods and uniquely most-specific dispatch; ambiguity fails rather than using method-name or context-overload tie-breaking.
+
 Discovery matches on the parameter types, so a helper you extract out of a reducer method keeps the same shape the reducer method has and matches the same event type. When that happens, Chronicle picks one method per event type, in this order:
 
 1. **A public method beats a non-public one.** Reducer methods are public by convention; anything else is an implementation detail, so a private helper never displaces the method that calls it.
@@ -41,7 +46,7 @@ Each reducer method is called for a single event source:
 Events are guaranteed to be processed in sequence order:
 
 1. Events are ordered by their sequence number
-2. Each method is called once per event
+2. Each event in the delivered batch invokes its selected method; retries and replays can deliver it again
 3. The return value becomes the `current` parameter for the next event
 
 ## Method Signatures
@@ -130,6 +135,8 @@ Skip processing based on conditions:
 
 ## Error Handling
 
+A failed fold does not persist a successful prefix of that batch. Watchers can still be notified on a failed fold, so a `Watch` notification is not a persistence-success signal ([#4817](https://github.com/Cratis/Chronicle/issues/4817)). This limitation is shared by classic and self reducers.
+
 ### Handling Invalid State
 
 When there's no state to build on yet, return `null` from a nullable-returning handler (`TReadModel? Handle(...)`) to leave the read model unset:
@@ -169,4 +176,8 @@ Copy a collection before mutating it — a previously-returned state instance ma
 7. **Name methods clearly** - Use descriptive method names that match event types
 8. **Test thoroughly** - Unit test with various event sequences and edge cases
 
+## Concurrency Across Partitions (.NET client)
 
+Within one partition the .NET client runs batches strictly in arrival order. Different partitions of the same reducer can now be reduced **at the same time**, up to a bound, so reducer code and any services it uses must be safe for concurrent use, and there is no ordering across partitions. Replay begin and end notifications wait for work in flight. Results are still reported to the Kernel one at a time.
+
+The bound is `Reducers.MaxConcurrentPartitions` in [`ChronicleOptions`](../configuration/chronicle-options#reducers) and defaults to the processor count, at most 8. Set it to `1` to restore the previous behavior of handling one batch at a time.

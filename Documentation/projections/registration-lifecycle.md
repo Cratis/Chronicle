@@ -1,3 +1,6 @@
+---
+description: How Chronicle handles projection registration when clients connect, including changed definitions, the version guard for older clients, and rollback.
+---
 # Registration lifecycle
 
 Clients register their projections on every connect — the full set of definitions the client's code
@@ -15,17 +18,66 @@ resolvers without requiring a kernel restart.
 The rebuild decision is:
 
 - **No action** when the only change adds event types and no events of those types exist yet.
-- **Partial replay** when only new event types were added, their explicit property mappings do not overlap
-  existing mappings, and every read-model instance is isolated to one event source. Chronicle applies only
-  the newly consumed event types to event sources containing those events.
-- **Full replay** for changes that can affect event ordering, keys, joins, children, removal behavior,
-  or existing mappings. Full replay is the safe fallback whenever Chronicle cannot prove independence.
+- **Full replay** when newly mapped event types have history, or when changes affect event ordering,
+  keys, joins, children, removal behavior, or existing mappings. Even independent new mappings require
+  a full rebuild: replaying selected historical events into the live container can reject writes behind
+  its watermark or apply contributions twice.
 
 The [`definitionEvolution`](../hosting/configuration/observers.md#definition-evolution) policy controls
-which plans Chronicle performs automatically. The default, `Automatic`, applies all three. `PartialOnly`
-performs safe partial work but creates a recommendation for a full replay, while `Manual` creates a
-recommendation for any replay. Chronicle reports the chosen classification in its logs, and partial and
-full replays use the existing observer job progress shown in the Workbench.
+which plans Chronicle performs automatically. The default, `Automatic`, performs the full replay.
+`PartialOnly` and `Manual` create a recommendation for a full replay instead. No-action changes do not
+create recommendations. Explicit partition replay remains available and is not changed by this policy.
+Full replays use the existing observer job progress shown in the Workbench.
+
+## When an older client registers — the version guard
+
+During a rolling deploy an old pod can reconnect, or retry a registration, after a newer pod has already
+registered. Without a guard the older definitions would overwrite the newer ones, and an older full set
+would retire projections the newer version added.
+
+Every registration carries the client's [`SoftwareVersion`](../configuration/chronicle-options.mdx#softwareversion)
+and Chronicle stores it with each projection definition. When a registration arrives, Chronicle compares
+its version with the stored one by [semantic version](https://semver.org) precedence, ignoring build metadata:
+
+- A projection whose stored version is **greater** than the registration's is left out. The stored definition
+  is kept, a warning is logged, the registrant is not recorded, and the Workbench shows a recommendation —
+  "Projection registration ignored: projection *X* was registered by an older client version" — once per projection and
+  version pair.
+- A full set that is older than **any** stored projection of its owner is treated as a partial registration,
+  so it retires nothing.
+- An **equal**, missing or unparseable version on either side behaves exactly as before: the registration
+  replaces the stored definition.
+- A newer version replaces the stored definition. A version change alone is only metadata: it is stored, but
+  it never triggers a replay.
+
+### Setting the version
+
+The .NET client sends `ChronicleOptions.SoftwareVersion`, which defaults to the entry assembly's informational
+version. An application that never sets a version reports `1.0.0`, which gives every release the same number
+and so no protection; the client logs a warning at startup when it sees that default. Set a real version in
+your build, or override it in configuration:
+
+```json
+{
+  "Cratis": {
+    "Chronicle": {
+      "SoftwareVersion": "2.4.0"
+    }
+  }
+}
+```
+
+The same override works as the environment variable `Cratis__Chronicle__SoftwareVersion`, or in code through
+`options.SoftwareVersion`. The key sits under the `Cratis:Chronicle` section that `AddCratisChronicle` binds by default.
+
+Pre-release and pull request builds are ordered by semantic version rules, so stamp them with a version that
+sorts where you expect (for example `2.4.0-rc.1`, which is older than `2.4.0`).
+
+### Rolling back
+
+A rollback that redeploys an older image is an older registration, and Chronicle ignores it. Roll back
+by redeploying the previous code **with a higher version**, or set `Cratis:Chronicle:SoftwareVersion` on the
+rolled-back deployment to a version above the one you are leaving. Rolling forward with a fix works the same way.
 
 ## When a registration partially fails
 
@@ -67,8 +119,12 @@ client-owned full set never retires server-owned projections (or the other way a
 
 ### Renamed read models and shared containers
 
-A renamed read model keeps its type name and thus its **container name**. Without retirement, the old
-projection and its successor would keep writing the same container with different definitions and
-overwrite each other's documents. With retirement the old projection stops, and because another
-registered projection targets the same container, Chronicle raises a replay recommendation for the
-successor so the container can be rebuilt cleanly from its definition alone.
+Moving a read model to another namespace changes its full-name identity but can preserve its short
+type name and therefore its default **container name**. Renaming the type itself normally changes the
+container too: the default .NET naming policy pluralizes the short type name. An explicit fluent
+container override can also preserve a shared container.
+
+When the successor targets the same container, retirement stops the old projection and Chronicle
+raises a replay recommendation for the remaining projection so that container can be rebuilt from its
+definition alone. This does not migrate documents to a newly named container or plan a successor
+reducer's rebuild. See [switching read-model styles](choosing-a-read-model-style.mdx#what-it-costs-to-switch-later).

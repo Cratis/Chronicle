@@ -39,7 +39,8 @@ public class all_dependencies : Specification
         _causationManager = Substitute.For<ICausationManager>();
         _unitOfWorkManager = Substitute.For<IUnitOfWorkManager>();
         _identityProvider = Substitute.For<IIdentityProvider>();
-        _connection = Substitute.For<IChronicleConnection, IChronicleServicesAccessor>();
+        _connection = Substitute.For<IChronicleConnection, IChronicleServicesAccessor, IKernelCapabilities>();
+        ((IKernelCapabilities)_connection).CapabilitiesAreKnown.Returns(true);
         _serviceAccessor = _connection as IChronicleServicesAccessor;
         _sequences = Substitute.For<Contracts.Sequences.IEventSequences>();
         services = Substitute.For<IServices>();

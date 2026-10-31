@@ -13,8 +13,11 @@ using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.Identities;
 using Cratis.Monads;
+using Microsoft.Data.SqlClient;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Npgsql;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences;
 
@@ -27,13 +30,17 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences;
 /// <param name="database">The <see cref="IDatabase"/> for storage operations.</param>
 /// <param name="identityStorage">The <see cref="IIdentityStorage"/> for managing identities.</param>
 /// <param name="logger">The <see cref="ILogger{EventSequenceStorage}"/> for logging.</param>
+/// <param name="eventTypesStorage">The shared event type storage.</param>
+/// <param name="converter">The schema-aware content converter.</param>
 public partial class EventSequenceStorage(
     EventStoreName eventStore,
     EventStoreNamespaceName @namespace,
     EventSequenceId eventSequenceId,
     IDatabase database,
     IIdentityStorage identityStorage,
-    ILogger<EventSequenceStorage> logger) : IEventSequenceStorage, IEventPublicationStorage
+    ILogger<EventSequenceStorage> logger,
+    Chronicle.Storage.EventTypes.IEventTypesStorage eventTypesStorage,
+    Json.IExpandoObjectConverter converter) : IEventSequenceStorage, IEventPublicationStorage
 {
     /// <inheritdoc/>
     public bool SupportsRevisionTracking => false;
@@ -79,7 +86,6 @@ public partial class EventSequenceStorage(
         await using var scope = await database.Namespace(eventStore, @namespace);
         var entry = EventSequenceStateConverter.ToEventSequenceStateEntry(state, eventSequenceId);
         await scope.DbContext.EventSequences.Upsert(entry);
-        await scope.DbContext.SaveChangesAsync();
     }
 
     /// <inheritdoc/>
@@ -141,6 +147,7 @@ public partial class EventSequenceStorage(
         Subject? subject,
         IReadOnlyCollection<NamedTag> namedTags)
     {
+        var writeIssued = false;
         try
         {
             await using var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);
@@ -185,6 +192,7 @@ public partial class EventSequenceStorage(
 
             scope.DbContext.Events.Add(eventEntry);
             scope.DbContext.NamedTags.AddRange(namedTags.Select((tag, position) => NamedTagEntry.From(eventSequenceId.Value, sequenceNumber.Value, position, tag)));
+            writeIssued = true;
             await scope.DbContext.SaveChangesAsync();
 
             var returnContent = content.TryGetValue(eventType.Generation, out var value) ? value : content.Values.FirstOrDefault() ?? new ExpandoObject();
@@ -207,14 +215,23 @@ public partial class EventSequenceStorage(
                 await identityStorage.GetFor(causedByChain),
                 tags,
                 eventHash,
-                Subject: resolvedSubject) { NamedTags = namedTags };
+                Subject: resolvedSubject) { NamedTags = namedTags, AppendedGeneration = eventType.Generation };
 
             var generationalContent = EventEntryConverter.BuildGenerationalContent(content);
-            return new AppendedEvent(eventContext, returnContent) { GenerationalContent = generationalContent };
+            return new AppendedEvent(eventContext, returnContent)
+            {
+                GenerationalContent = generationalContent,
+                GenerationalHashes = contentHashes.ToDictionary(_ => (int)_.Key.Value, _ => _.Value)
+            };
+        }
+        catch (DbUpdateException error) when (IsAppendUniqueViolation(error))
+        {
+            return new DuplicateEventSequenceNumber((await GetTailSequenceNumber()).Next());
         }
         catch (Exception ex)
         {
             logger.FailedToAppendEvent(ex, sequenceNumber, eventSequenceId);
+            if (!writeIssued) throw new EventsNotCommitted(ex);
             throw;
         }
     }
@@ -241,6 +258,7 @@ public partial class EventSequenceStorage(
 
         EventEntryConverter.UpdateContentForGeneration(eventEntry, eventType.Generation, content);
         EventEntryConverter.UpdateHashForGeneration(eventEntry, eventType.Generation, hash);
+        eventEntry.RevisedGeneration = eventType.Generation.Value;
         scope.DbContext.Events.Update(eventEntry);
         await scope.DbContext.SaveChangesAsync();
     }
@@ -264,93 +282,23 @@ public partial class EventSequenceStorage(
     /// <inheritdoc/>
     public async Task<Result<IEnumerable<AppendedEvent>, DuplicateEventSequenceNumber>> AppendManyWithNamedTags(IEnumerable<EventToAppendToStorage> events)
     {
-        var eventsArray = events.ToArray();
-        if (eventsArray.Length == 0)
-        {
-            return Result<IEnumerable<AppendedEvent>, DuplicateEventSequenceNumber>.Success([]);
-        }
+        var result = await AppendBatch(events, false);
+        return result.TryGetResult(out var appended) ? Result<IEnumerable<AppendedEvent>, DuplicateEventSequenceNumber>.Success(appended) : result.AsT1.AsT0;
+    }
 
-        try
-        {
-            await using var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);
-            var appendedEvents = new List<AppendedEvent>();
+    /// <inheritdoc/>
+    public async Task<IEventCursor> ReadBackAppend(EventSequenceNumber first, EventSequenceNumber last, CancellationToken cancellationToken = default)
+    {
+        await using var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);
 
-            foreach (var eventToAppend in eventsArray)
-            {
-                // Same precision-cap rationale as the single Append path: keep the value the
-                // projection observes equal to what GetForEventSourceIdAndEventTypes returns
-                // later. See the comment in Append for details.
-                var truncatedOccurred = TruncateToMicrosecond(eventToAppend.Occurred);
-
-                // Check if sequence number already exists
-                var appendManySeqNum = eventToAppend.SequenceNumber.Value;
-                var existingEvent = await scope.DbContext.Events
-                    .FirstOrDefaultAsync(e => e.SequenceNumber == appendManySeqNum);
-
-                if (existingEvent is not null)
-                {
-                    return new DuplicateEventSequenceNumber(await GetNextAvailableSequenceNumber(scope));
-                }
-
-                var eventEntry = EventEntryConverter.ToEventEntry(
-                    eventToAppend.SequenceNumber,
-                    eventToAppend.EventSourceType,
-                    eventToAppend.EventSourceId,
-                    eventToAppend.EventStreamType,
-                    eventToAppend.EventStreamId,
-                    eventToAppend.EventType,
-                    eventToAppend.CorrelationId,
-                    eventToAppend.Causation,
-                    eventToAppend.CausedByChain,
-                    eventToAppend.Tags,
-                    truncatedOccurred,
-                    eventToAppend.GenerationalContent,
-                    eventToAppend.ContentHashes,
-                    eventToAppend.Subject?.IsSet == true ? eventToAppend.Subject : null);
-                eventEntry.EventSource = eventToAppend.EventSource.IsSet ? eventToAppend.EventSource.Value : null;
-
-                scope.DbContext.Events.Add(eventEntry);
-                scope.DbContext.NamedTags.AddRange(eventToAppend.NamedTags.Select((tag, position) => NamedTagEntry.From(eventSequenceId.Value, eventToAppend.SequenceNumber.Value, position, tag)));
-
-                var resolvedSubject = eventToAppend.Subject?.IsSet == true
-                    ? eventToAppend.Subject
-                    : new Subject(eventToAppend.EventSourceId.Value);
-                var appendedHash = eventToAppend.ContentHashes.TryGetValue(eventToAppend.EventType.Generation, out var contentHash) ? contentHash : EventHash.NotSet;
-                var eventContext = new EventContext(
-                    eventToAppend.EventType,
-                    eventToAppend.EventSourceType,
-                    eventToAppend.EventSourceId,
-                    eventToAppend.EventStreamType,
-                    eventToAppend.EventStreamId,
-                    eventToAppend.SequenceNumber,
-                    truncatedOccurred,
-                    eventStore,
-                    @namespace,
-                    eventToAppend.CorrelationId,
-                    eventToAppend.Causation,
-                    await identityStorage.GetFor(eventToAppend.CausedByChain),
-                    eventToAppend.Tags,
-                    appendedHash,
-                    Subject: resolvedSubject)
-                {
-                    NamedTags = eventToAppend.NamedTags,
-                    EventSource = eventToAppend.EventSource
-                };
-
-                appendedEvents.Add(new AppendedEvent(eventContext, eventToAppend.GenerationalContent[eventToAppend.EventType.Generation])
-                {
-                    GenerationalContent = EventEntryConverter.BuildGenerationalContent(eventToAppend.GenerationalContent)
-                });
-            }
-
-            await scope.DbContext.SaveChangesAsync();
-            return Result<IEnumerable<AppendedEvent>, DuplicateEventSequenceNumber>.Success(appendedEvents);
-        }
-        catch (Exception ex)
-        {
-            logger.FailedToAppendEvent(ex, EventSequenceNumber.Unavailable, eventSequenceId);
-            throw;
-        }
+        // A fresh scope reads committed rows, never a tracked attempted insert.
+        var firstValue = first.Value;
+        var lastValue = last.Value;
+        var entries = await scope.DbContext.Events.AsNoTracking().Where(e => e.SequenceNumber >= firstValue && e.SequenceNumber <= lastValue)
+            .OrderBy(e => e.SequenceNumber).ToListAsync(cancellationToken);
+        var events = new List<AppendedEvent>();
+        foreach (var entry in entries) events.Add(await ToAppendedEvent(entry, scope));
+        return new MaterializedEventCursor(events);
     }
 
     /// <inheritdoc/>
@@ -388,6 +336,7 @@ public partial class EventSequenceStorage(
         eventEntry.CausedBy = EventEntryConverter.SerializeCausedBy(causedByChain);
         eventEntry.Content = redactionContent;
         eventEntry.ContentHashes = string.Empty;
+        eventEntry.RevisedGeneration = null;
 
         scope.DbContext.Events.Update(eventEntry);
         await scope.DbContext.SaveChangesAsync();
@@ -459,6 +408,7 @@ public partial class EventSequenceStorage(
             eventEntry.CausedBy = EventEntryConverter.SerializeCausedBy(causedByChain);
             eventEntry.Content = redactionContent;
             eventEntry.ContentHashes = string.Empty;
+            eventEntry.RevisedGeneration = null;
 
             scope.DbContext.Events.Update(eventEntry);
         }
@@ -665,6 +615,50 @@ public partial class EventSequenceStorage(
     }
 
     /// <inheritdoc/>
+    public async Task<IReadOnlyList<StoredEventMetadata>> GetMetadataAt(IEnumerable<EventSequenceNumber> sequenceNumbers, CancellationToken cancellationToken = default)
+    {
+        var numbers = sequenceNumbers.Select(_ => _.Value).Distinct().ToArray();
+        if (numbers.Length == 0)
+        {
+            return [];
+        }
+        await using var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);
+        var entries = await scope.DbContext.Events.AsNoTracking()
+            .Where(_ => numbers.Contains(_.SequenceNumber))
+            .OrderBy(_ => _.SequenceNumber)
+            .Select(_ => new EventEntry
+            {
+                SequenceNumber = _.SequenceNumber,
+                Type = _.Type,
+                EventSourceType = _.EventSourceType,
+                EventSourceId = _.EventSourceId,
+                EventStreamType = _.EventStreamType,
+                EventStreamId = _.EventStreamId,
+                Occurred = _.Occurred,
+                CorrelationId = _.CorrelationId,
+                Causation = _.Causation,
+                CausedBy = _.CausedBy,
+                Tags = _.Tags,
+                Subject = _.Subject,
+                EventSource = _.EventSource
+            }).ToListAsync(cancellationToken);
+        return entries.Select(_ => new StoredEventMetadata(
+            _.SequenceNumber,
+            _.Type,
+            _.EventSourceType,
+            _.EventSourceId,
+            _.EventStreamType,
+            _.EventStreamId,
+            _.Occurred,
+            new CorrelationId(Guid.Parse(_.CorrelationId)),
+            EventEntryConverter.GetCausation(_),
+            EventEntryConverter.GetCausedBy(_),
+            EventEntryConverter.GetTags(_),
+            new Subject(_.Subject ?? _.EventSourceId.Value),
+            new EventSourceName(_.EventSource ?? string.Empty))).ToArray();
+    }
+
+    /// <inheritdoc/>
     public async Task<AppendedEvent> GetEventAt(EventSequenceNumber sequenceNumber)
     {
         await using var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);
@@ -736,7 +730,7 @@ public partial class EventSequenceStorage(
 
         query = ApplyTagsFilter(query, tags);
 
-        return new EventCursor(query, scope, eventStore, @namespace, identityStorage, 100, cancellationToken);
+        return CreateCursor(query, scope, cancellationToken);
     }
 
     /// <inheritdoc/>
@@ -785,7 +779,7 @@ public partial class EventSequenceStorage(
 
         query = ApplyTagsFilter(query, tags);
 
-        return new EventCursor(query, scope, eventStore, @namespace, identityStorage, 100, cancellationToken);
+        return CreateCursor(query, scope, cancellationToken);
     }
 
     /// <inheritdoc/>
@@ -829,7 +823,7 @@ public partial class EventSequenceStorage(
 
         query = query.Take(limit);
 
-        return new EventCursor(query, scope, eventStore, @namespace, identityStorage, 100, cancellationToken);
+        return CreateCursor(query, scope, cancellationToken);
     }
 
     /// <inheritdoc/>
@@ -866,9 +860,10 @@ public partial class EventSequenceStorage(
         // handing it to EventCursor - that cursor re-sorts ascending as it batches.
         var namedTags = await NamedTagEntries.LoadFor(scope.DbContext, eventSequenceId.Value, entries.Select(entry => entry.SequenceNumber), cancellationToken);
         var events = new List<AppendedEvent>(entries.Count);
+        var schemas = new EventSchemaResolver(eventTypesStorage);
         foreach (var entry in entries)
         {
-            events.Add(await EventEntryConverter.ToAppendedEvent(entry, eventStore, @namespace, identityStorage, NamedTagEntries.At(namedTags, entry.SequenceNumber)));
+            events.Add(await EventEntryConverter.ToAppendedEvent(entry, eventStore, @namespace, identityStorage, NamedTagEntries.At(namedTags, entry.SequenceNumber), schemas.GetFor, converter));
         }
 
         return new MaterializedEventCursor(events);
@@ -1001,10 +996,28 @@ public partial class EventSequenceStorage(
             : EventSequenceNumber.First;
     }
 
+    static bool IsAppendUniqueViolation(DbUpdateException error) => error.InnerException switch
+    {
+        PostgresException postgres => postgres.SqlState == PostgresErrorCodes.UniqueViolation,
+        SqliteException sqlite => sqlite.SqliteErrorCode == 19 && sqlite.SqliteExtendedErrorCode is 1555 or 2067,
+        SqlException sqlServer => sqlServer.Number is 2627 or 2601,
+        _ => false
+    };
+
+    EventCursor CreateCursor(IQueryable<EventEntry> query, DbContextScope<EventSequenceDbContext> scope, CancellationToken cancellationToken)
+    {
+        var schemas = new EventSchemaResolver(eventTypesStorage);
+        return new(query, scope, eventStore, @namespace, identityStorage, 100, cancellationToken)
+        {
+            ConvertEntry = (entry, tags) => EventEntryConverter.ToAppendedEvent(entry, eventStore, @namespace, identityStorage, tags, schemas.GetFor, converter)
+        };
+    }
+
     async Task<AppendedEvent> ToAppendedEvent(EventEntry entry, DbContextScope<EventSequenceDbContext> scope)
     {
         var namedTags = await NamedTagEntries.LoadFor(scope.DbContext, eventSequenceId.Value, [entry.SequenceNumber]);
-        return await EventEntryConverter.ToAppendedEvent(entry, eventStore, @namespace, identityStorage, NamedTagEntries.At(namedTags, entry.SequenceNumber));
+        var schemas = new EventSchemaResolver(eventTypesStorage);
+        return await EventEntryConverter.ToAppendedEvent(entry, eventStore, @namespace, identityStorage, NamedTagEntries.At(namedTags, entry.SequenceNumber), schemas.GetFor, converter);
     }
 
     async Task<AppendedEvent> BuildAppendedEventFromRedactionEntry(EventEntry redactionEntry, DbContextScope<EventSequenceDbContext> scope)

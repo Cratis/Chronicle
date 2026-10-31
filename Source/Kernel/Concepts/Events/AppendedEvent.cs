@@ -30,9 +30,19 @@ public record AppendedEvent(EventContext Context, ExpandoObject Content)
     public IReadOnlyDictionary<int, string> GenerationalContent { get; init; } = new Dictionary<int, string>();
 
     /// <summary>
+    /// Gets the durable hash for each stored generation.
+    /// </summary>
+    public IReadOnlyDictionary<int, EventHash> GenerationalHashes { get; init; } = new Dictionary<int, EventHash>();
+
+    /// <summary>
     /// Gets whether this event has been revised.
     /// </summary>
-    public bool IsRevised => Revisions.Any();
+    public bool IsRevised => RevisedGeneration is not null || Revisions.Any();
+
+    /// <summary>
+    /// Gets the latest revision generation when storage records revision metadata separately.
+    /// </summary>
+    public EventTypeGeneration? RevisedGeneration { get; init; }
 
     /// <summary>
     /// Creates an empty <see cref="AppendedEvent"/> with no content and no context.

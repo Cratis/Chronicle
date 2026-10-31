@@ -106,6 +106,23 @@ public interface IEventTypesStorage
     Task<EventTypeDefinition> GetDefinition(EventTypeId eventTypeId);
 
     /// <summary>
+    /// Records an immutable migration version without replacing earlier versions.
+    /// </summary>
+    /// <param name="eventTypeId">The event type.</param>
+    /// <param name="version">The content-addressed version.</param>
+    /// <param name="migrations">The definitions for this version.</param>
+    /// <returns>Awaitable task.</returns>
+    Task RecordMigrationsVersion(EventTypeId eventTypeId, EventTypeMigrationsVersion version, IEnumerable<EventTypeMigrationDefinition> migrations) => Task.CompletedTask;
+
+    /// <summary>
+    /// Reads the recorded migration definitions by version.
+    /// </summary>
+    /// <param name="eventTypeId">The event type.</param>
+    /// <returns>The immutable versions known to this storage.</returns>
+    Task<IReadOnlyDictionary<EventTypeMigrationsVersion, IEnumerable<EventTypeMigrationDefinition>>> GetMigrationsVersions(EventTypeId eventTypeId) =>
+        Task.FromResult<IReadOnlyDictionary<EventTypeMigrationsVersion, IEnumerable<EventTypeMigrationDefinition>>>(new Dictionary<EventTypeMigrationsVersion, IEnumerable<EventTypeMigrationDefinition>>());
+
+    /// <summary>
     /// Get all the <see cref="EventTypeSchema">event schemas</see> for all generations for a specific <see cref="EventType"/>.
     /// </summary>
     /// <param name="eventType"><see cref="EventType"/> to get for.</param>

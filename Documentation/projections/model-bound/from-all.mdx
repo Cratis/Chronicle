@@ -1,3 +1,6 @@
+---
+description: FromAll subscribes a model-bound Chronicle projection to every event type in the sequence to create or update read models for any event source.
+---
 # From All
 
 `FromAll` subscribes to **every event type in the event sequence**, including types not declared by the projection. It can create or update read-model instances for any event source, keyed by the event source id unless another key is configured. The declaration language's `all` block has the same scope. If you only want the projection's own handled event types, use [From Every Event](./from-every) instead.
@@ -17,6 +20,14 @@ The `[FromAll]` attribute is also available in the .NET model-bound API. Use the
 <ChronicleClientTabs snippet="projections/model-bound/from-all/attribute-convention" />
 
 For explicit model-bound event payload or event context mappings, prefer `[FromEvery(...)]`. It creates the same every-event projection definition while making the source kind explicit. See [From Every Event](./from-every) for examples.
+
+## Child and nested properties
+
+In the .NET model-bound API, `[FromAll]` on a child or nested object's property maps into that object, including on the event that creates it. For example, a child `LastValue` mapped from the event's `Value` receives that value on its `ChildrenFrom` event. It does not write a root `LastValue`, even if the root declares a property with the same name.
+
+A root mapping such as `Source` from the event source id stays on the root; it is not copied into children. Child-level attributes do not enable sequence-wide subscription on the root. Use a root `[FromAll]` when the root must subscribe to all events.
+
+Older .NET clients, and the TypeScript client until it emits child-level mappings, send child mappings as bare root property names. The kernel moves such a mapping to each matching descendant only when the root schema does not declare that property. If both root and child declare it, the mapping stays at the root until you upgrade the client. Replay affected projections to rebuild previously materialized child values.
 
 ## Choosing Between FromAll And FromEvery
 

@@ -1,0 +1,27 @@
+/* Copyright (c) Cratis. All rights reserved.
+   Licensed under the MIT license. See LICENSE file in the project root for full license information. */
+
+.links {
+    max-width: 20rem;
+}
+
+.link {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    color: var(--text-color);
+    text-decoration: none;
+    border-radius: 4px;
+}
+
+.link:hover,
+.link:focus-visible {
+    background: var(--surface-hover);
+}
+
+.description {
+    margin: 0.5rem 0.75rem;
+    color: var(--text-color-secondary);
+    font-size: 0.875rem;
+}

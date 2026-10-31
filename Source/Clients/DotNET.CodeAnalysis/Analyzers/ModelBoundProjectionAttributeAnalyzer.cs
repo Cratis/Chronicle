@@ -48,23 +48,27 @@ public class ModelBoundProjectionAttributeAnalyzer : DiagnosticAnalyzer
     {
         context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
         context.EnableConcurrentExecution();
-        context.RegisterSymbolAction(AnalyzeNamedType, SymbolKind.NamedType);
-        context.RegisterSymbolAction(AnalyzeProperty, SymbolKind.Property);
+        context.RegisterCompilationStartAction(start =>
+        {
+            var evidence = new Lazy<ExplicitRegistrationEvidence>(() => ExplicitRegistrationEvidence.Create(start.Compilation, start.CancellationToken));
+            start.RegisterSymbolAction(symbol => AnalyzeNamedType(symbol, evidence.Value), SymbolKind.NamedType);
+            start.RegisterSymbolAction(symbol => AnalyzeProperty(symbol, evidence.Value), SymbolKind.Property);
+        });
     }
 
-    static void AnalyzeNamedType(SymbolAnalysisContext context)
+    static void AnalyzeNamedType(SymbolAnalysisContext context, ExplicitRegistrationEvidence evidence)
     {
         var namedTypeSymbol = (INamedTypeSymbol)context.Symbol;
-        AnalyzeAttributes(context, namedTypeSymbol.GetAttributes(), namedTypeSymbol.Locations);
+        AnalyzeAttributes(context, namedTypeSymbol.GetAttributes(), namedTypeSymbol.Locations, evidence);
     }
 
-    static void AnalyzeProperty(SymbolAnalysisContext context)
+    static void AnalyzeProperty(SymbolAnalysisContext context, ExplicitRegistrationEvidence evidence)
     {
         var propertySymbol = (IPropertySymbol)context.Symbol;
-        AnalyzeAttributes(context, propertySymbol.GetAttributes(), propertySymbol.Locations);
+        AnalyzeAttributes(context, propertySymbol.GetAttributes(), propertySymbol.Locations, evidence);
     }
 
-    static void AnalyzeAttributes(SymbolAnalysisContext context, ImmutableArray<AttributeData> attributes, ImmutableArray<Location> locations)
+    static void AnalyzeAttributes(SymbolAnalysisContext context, ImmutableArray<AttributeData> attributes, ImmutableArray<Location> locations, ExplicitRegistrationEvidence evidence)
     {
         foreach (var attribute in attributes)
         {
@@ -84,7 +88,7 @@ public class ModelBoundProjectionAttributeAnalyzer : DiagnosticAnalyzer
             if (attribute.AttributeClass.TypeArguments.Length > 0)
             {
                 var eventType = attribute.AttributeClass.TypeArguments[0];
-                if (!WellKnownTypes.HasEventTypeAttribute(eventType))
+                if (!evidence.IsEventType(eventType, context.Compilation))
                 {
                     var diagnostic = Diagnostic.Create(
                         Rule,

@@ -17,10 +17,14 @@ public static class ObserverStateConverters
         new()
         {
             Id = state.Identifier,
+            TypeSetControl = state.TypeSetControl,
+            Initialization = state.Initialization,
+            DeliveryFences = state.DeliveryFences,
             AlertLifecycleId = state.AlertLifecycleId,
             AlertRevision = state.AlertRevision,
             AlertDisposition = state.AlertDisposition,
             QuarantineEpisodeId = state.QuarantineEpisodeId,
+            WebhookProbe = state.WebhookProbe,
             LastHandledEventSequenceNumber = state.LastHandledEventSequenceNumber,
             NextEventSequenceNumber = state.NextEventSequenceNumber,
             TailEventSequenceNumber = state.TailEventSequenceNumber,
@@ -54,10 +58,14 @@ public static class ObserverStateConverters
             state.IsReplaying,
             state.SubscribesToAllEvents)
         {
+            TypeSetControl = state.TypeSetControl,
+            Initialization = state.Initialization,
+            DeliveryFences = state.DeliveryFences,
             AlertLifecycleId = state.AlertLifecycleId,
             AlertRevision = state.AlertRevision,
             AlertDisposition = state.AlertDisposition,
             QuarantineEpisodeId = state.QuarantineEpisodeId,
+            WebhookProbe = state.WebhookProbe,
             NextEventSequenceNumber = state.NextEventSequenceNumber,
             TailEventSequenceNumber = state.TailEventSequenceNumber,
             InFlightPartitions = state.InFlightPartitions.ToHashSet(),
@@ -84,10 +92,14 @@ public static class ObserverStateConverters
             state.IsReplaying,
             state.SubscribesToAllEvents)
         {
+            TypeSetControl = state.TypeSetControl,
+            Initialization = state.Initialization,
+            DeliveryFences = state.DeliveryFences,
             AlertLifecycleId = state.AlertLifecycleId,
             AlertRevision = state.AlertRevision,
             AlertDisposition = state.AlertDisposition,
             QuarantineEpisodeId = state.QuarantineEpisodeId,
+            WebhookProbe = state.WebhookProbe,
             NextEventSequenceNumber = state.NextEventSequenceNumber,
             TailEventSequenceNumber = state.TailEventSequenceNumber,
             InFlightPartitions = state.InFlightPartitions.ToHashSet(),

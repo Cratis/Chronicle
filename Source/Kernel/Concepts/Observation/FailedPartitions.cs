@@ -86,6 +86,11 @@ public class FailedPartitions
     /// <param name="stackTrace">The stack trace associated with the error.</param>
     /// <param name="kind">What kind of thing went wrong on the attempt.</param>
     /// <returns>A <see cref="FailedPartition"/> instance.</returns>
+    /// <remarks>
+    /// An attempt that fails at a later event than the previous attempt did made progress, and starts a new retry
+    /// budget (see <see cref="FailedPartition.AttemptsInCurrentBudget"/>). Only a partition that keeps failing at the
+    /// same place spends its budget and is eventually quarantined.
+    /// </remarks>
     public FailedPartition RegisterAttempt(
         Key partition,
         EventSequenceNumber sequenceNumber,
@@ -103,6 +108,13 @@ public class FailedPartitions
             Add(failure);
         }
 
+        if (AdvancedSincePreviousAttempt(failure, sequenceNumber))
+        {
+            // The partition moved forward since the last attempt, so it is not stuck: the attempt starts a new retry
+            // budget instead of spending the old one. A partition failing on the same event keeps counting.
+            failure.AttemptsBeforeBudgetReset = failure.Attempts.Count();
+        }
+
         failure.AddAttempt(new()
         {
             Occurred = DateTimeOffset.UtcNow,
@@ -112,6 +124,24 @@ public class FailedPartitions
             Kind = kind
         });
 
+        return failure;
+    }
+
+    /// <summary>
+    /// Defer delivery of a partition without registering a failure attempt.
+    /// </summary>
+    /// <param name="partition">The partition whose delivery is deferred.</param>
+    /// <param name="deferral">The durable deadline and inclusive resume position.</param>
+    /// <returns>The unresolved partition episode.</returns>
+    public FailedPartition Defer(Key partition, PartitionDeferral deferral)
+    {
+        if (!TryGet(partition, out var failure))
+        {
+            failure = new() { Partition = partition };
+            Add(failure);
+        }
+
+        failure.Deferral = deferral;
         return failure;
     }
 
@@ -159,6 +189,15 @@ public class FailedPartitions
         failedPartition.IsQuarantined = false;
         failedPartition.AttemptsBeforeBudgetReset = failedPartition.Attempts.Count();
         return true;
+    }
+
+    static bool AdvancedSincePreviousAttempt(FailedPartition failure, EventSequenceNumber sequenceNumber)
+    {
+        var previous = failure.LastAttempt.SequenceNumber;
+        return failure.Attempts.Any() &&
+            previous.IsActualValue &&
+            sequenceNumber.IsActualValue &&
+            sequenceNumber > previous;
     }
 
     void Add(FailedPartition failedPartition) => _partitions[failedPartition.Id] = failedPartition;

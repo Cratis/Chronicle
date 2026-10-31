@@ -5,7 +5,7 @@ namespace Cratis.Chronicle.Projections.Engine.DeclarationLanguage.for_Generator.
 
 public class with_read_model_that_has_schema_title : given.a_generator
 {
-    const string ReadModelIdentifier = "MyReadModel";
+    const string ReadModelIdentifier = "Example.ReadModels.MyReadModel";
     const string SchemaTitle = "MyReadModelTitle";
     const string ProjectionName = "MyProjection";
 
@@ -18,5 +18,5 @@ public class with_read_model_that_has_schema_title : given.a_generator
     }
 
     [Fact] void should_generate_declaration() => _result.ShouldNotBeNull();
-    [Fact] void should_use_schema_title_as_read_model_name() => _result.ShouldContain($"projection {ProjectionName} => {SchemaTitle}");
+    [Fact] void should_use_identifier_as_read_model_name() => _result.ShouldContain($"projection {ProjectionName} => {ReadModelIdentifier}");
 }

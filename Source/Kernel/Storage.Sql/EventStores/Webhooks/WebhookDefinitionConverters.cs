@@ -28,7 +28,8 @@ public static class WebhookDefinitionConverters
                 et => "$eventSourceId"),
             Target = definition.Target.ToSql(),
             IsReplayable = definition.IsReplayable,
-            IsActive = definition.IsActive
+            IsActive = definition.IsActive,
+            GenerationDelivery = definition.GenerationDelivery
         };
 
     /// <summary>
@@ -43,7 +44,11 @@ public static class WebhookDefinitionConverters
             definition.EventSequenceId,
             definition.EventTypes.Select(kvp => EventType.Parse(kvp.Key)),
             definition.Target.ToKernel(),
-            definition.IsReplayable);
+            definition.IsReplayable,
+            definition.IsActive)
+        {
+            GenerationDelivery = definition.GenerationDelivery
+        };
 
     static Concepts.Observation.Webhooks.WebhookTarget ToKernel(this WebhookTarget target)
     {
@@ -62,11 +67,11 @@ public static class WebhookDefinitionConverters
             authorization = new OAuthAuthorization(
                 target.OAuthAuthority,
                 target.OAuthClientId,
-                target.OAuthClientSecret);
+                target.OAuthClientSecret) { Scope = target.OAuthScope ?? string.Empty };
         }
         else
         {
-            authorization = WebhookAuthorization.None;
+            authorization = ToManagedIdentityOrNone(target);
         }
 
         return new(
@@ -74,6 +79,11 @@ public static class WebhookDefinitionConverters
             authorization,
             target.Headers.AsReadOnly());
     }
+
+    static WebhookAuthorization ToManagedIdentityOrNone(WebhookTarget target) =>
+        target.ManagedIdentityScope is null
+            ? WebhookAuthorization.None
+            : new ManagedIdentityAuthorization(target.ManagedIdentityClientId ?? string.Empty, target.ManagedIdentityScope);
 
     static WebhookTarget ToSql(this Concepts.Observation.Webhooks.WebhookTarget target)
     {
@@ -95,8 +105,14 @@ public static class WebhookDefinitionConverters
                 sqlTarget.OAuthAuthority = oauth.Authority;
                 sqlTarget.OAuthClientId = oauth.ClientId;
                 sqlTarget.OAuthClientSecret = oauth.ClientSecret;
+                sqlTarget.OAuthScope = oauth.Scope;
             },
-            none => { });
+            none => { },
+            managedIdentity =>
+            {
+                sqlTarget.ManagedIdentityClientId = managedIdentity.ClientId.Value;
+                sqlTarget.ManagedIdentityScope = managedIdentity.Scope.Value;
+            });
 
         return sqlTarget;
     }

@@ -54,6 +54,7 @@ public record Revise(
     /// <param name="principalAccessor">The <see cref="ICurrentPrincipalAccessor"/> resolving who is revising.</param>
     /// <param name="storage">Storage for the original event and revision schema.</param>
     /// <param name="metadataManager">The metadata manager protecting the revision request.</param>
+    /// <param name="correlationId">The server-generated correlation identifier for the revision request.</param>
     /// <returns>Awaitable task.</returns>
     /// <remarks>
     /// A reactor picks up the resulting <see cref="EventRevised"/> and performs the actual in-place update, rather
@@ -65,7 +66,8 @@ public record Revise(
         RequestCausation causation,
         ICurrentPrincipalAccessor principalAccessor,
         IStorage storage,
-        IJsonSchemaMetadataManager metadataManager)
+        IJsonSchemaMetadataManager metadataManager,
+        [GeneratedValue] CorrelationId correlationId)
     {
         var eventStore = storage.GetEventStore(EventStore);
         var original = await eventStore.GetNamespace(Namespace).GetEventSequence(EventSequenceId).GetEventAt(SequenceNumber);
@@ -85,7 +87,7 @@ public record Revise(
                 SequenceNumber,
                 EventType.ToChronicle(),
                 protectedContent.ToJsonString()),
-            correlationId: Guid.NewGuid(),
+            correlationId: correlationId,
             causation: Causation?.ToChronicle() ?? causation.GetCurrentChain(),
             causedBy: CausedBy?.ToChronicle() ?? principalAccessor.Current.ToIdentity());
     }

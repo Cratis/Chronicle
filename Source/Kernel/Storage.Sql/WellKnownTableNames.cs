@@ -9,6 +9,21 @@ namespace Cratis.Chronicle.Storage.Sql;
 public static class WellKnownTableNames
 {
     /// <summary>
+    /// The kernel single-writer lease.
+    /// </summary>
+    public const string SingleWriterLeases = "SingleWriterLeases";
+
+    /// <summary>
+    /// The Orleans membership table versions.
+    /// </summary>
+    public const string MembershipVersions = "MembershipVersions";
+
+    /// <summary>
+    /// The Orleans silo membership entries.
+    /// </summary>
+    public const string MembershipEntries = "MembershipEntries";
+
+    /// <summary>
     /// The table holding retained alert incidents.
     /// </summary>
     public const string AlertIncidents = "AlertIncidents";
@@ -42,6 +57,11 @@ public static class WellKnownTableNames
     /// The table that holds observer state.
     /// </summary>
     public const string Observers = "Observers";
+
+    /// <summary>
+    /// The table holding independently paged definition-change rows and terminal inventory.
+    /// </summary>
+    public const string ObserverDefinitionChangeRows = "ObserverDefinitionChangeRows";
 
     /// <summary>
     /// The table that holds event sequences.
@@ -267,4 +287,44 @@ public static class WellKnownTableNames
     /// The table that holds closed event streams per event sequence.
     /// </summary>
     public const string ClosedStreams = "ClosedStreams";
+
+    /// <summary>
+    /// The table that holds in-flight events per observer partition.
+    /// </summary>
+    public const string InFlightEvents = "InFlightEvents";
+
+    /// <summary>
+    /// The table that holds handled-event counts per observer, partition and event type.
+    /// </summary>
+    public const string ObserverHandledCounts = "ObserverHandledCounts";
+
+    /// <summary>
+    /// The table that holds durable application and schedule occurrences.
+    /// </summary>
+    public const string Occurrences = "Occurrences";
+
+    /// <summary>
+    /// The table that serializes occurrence claims per trigger.
+    /// </summary>
+    public const string OccurrenceClaimFences = "OccurrenceClaimFences";
+
+    /// <summary>
+    /// The table that holds registered schedule definitions.
+    /// </summary>
+    public const string ScheduleDefinitions = "ScheduleDefinitions";
+
+    /// <summary>
+    /// The table that holds versioned schedule cursors.
+    /// </summary>
+    public const string ScheduleCursors = "ScheduleCursors";
+
+    /// <summary>
+    /// The table that holds recorded skipped schedule ranges.
+    /// </summary>
+    public const string SkippedRanges = "SkippedRanges";
+
+    /// <summary>
+    /// The namespace table that holds atomic effect receipts.
+    /// </summary>
+    public const string EffectReceipts = "EffectReceipts";
 }

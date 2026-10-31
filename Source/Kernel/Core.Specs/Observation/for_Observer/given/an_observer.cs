@@ -9,10 +9,12 @@ using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Concepts.Observation.Webhooks;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Observation.Alerts;
 using Cratis.Chronicle.Observation.Jobs;
+using Cratis.Chronicle.Observation.Webhooks.Validation;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Chronicle.Storage.Observation;
@@ -23,6 +25,7 @@ using Cratis.Orleans.Storage.Jobs;
 using Cratis.Traces;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using NSubstitute.Extensions;
 using Orleans.Core;
 using Orleans.Streams;
@@ -67,18 +70,28 @@ public class an_observer : Specification
     protected IEventTypesStorage _eventTypesStorage;
     protected IEventSequenceStorage _eventSequenceStorage;
     protected IEventCompliance _eventCompliance;
+    protected IEventGenerationRelease _eventGenerationRelease;
     protected Observers _observersConfig;
-    protected NullLogger<Observer> _logger;
+    protected IWebhookTargetPolicy _webhookTargetPolicy;
+    protected ILogger<Observer> _logger;
     protected ILoggerFactory _loggerFactory;
     protected IMeter<Observer>? _meter;
 
-    protected virtual Observers CreateObserversConfig() => new();
+    protected virtual Observers CreateWebhookRetryConfig() => _observersConfig;
+
+    protected virtual Observers CreateObserversConfig() => new() { WriteCoalescingInterval = 0 };
 
     void AddServices(TestKitSilo silo)
     {
+        var options = Substitute.For<IOptionsMonitor<ChronicleOptions>>();
+        options.CurrentValue.Returns(new ChronicleOptions { Webhooks = new() { Retry = CreateWebhookRetryConfig() } });
+        silo.AddService(options);
         silo.AddService(_configurationProvider);
         silo.AddService(_storage);
+        silo.AddService<TimeProvider>(TimeProvider.System);
+        silo.AddService(_webhookTargetPolicy);
         silo.AddService(_eventCompliance);
+        silo.AddService(_eventGenerationRelease);
         silo.AddService<IObserverSubscriberSelector>(new RoundRobinObserverSubscriberSelector());
         silo.AddService(_observerServiceClient);
         silo.AddKeyedService<IActivitySource<Observer>>(WellKnown.MeterName, new ActivitySource<Observer>());
@@ -103,6 +116,12 @@ public class an_observer : Specification
     /// <returns>The <see cref="IMeter{T}"/> to register, or null for none.</returns>
     protected virtual IMeter<Observer>? CreateMeter() => null;
 
+    /// <summary>
+    /// Creates the logger the observer logs to. By default it is a logger that discards everything.
+    /// </summary>
+    /// <returns>The <see cref="ILogger{TCategoryName}"/> to register.</returns>
+    protected virtual ILogger<Observer> CreateLogger() => NullLogger<Observer>.Instance;
+
     async Task Establish()
     {
         _observersConfig = CreateObserversConfig();
@@ -122,14 +141,24 @@ public class an_observer : Specification
             .Returns(callInfo => new AppendedEventsQueueSubscription(callInfo.Arg<ObserverKey>(), 0));
         _appendedEventsQueues.IsSubscribed(Arg.Any<ObserverKey>()).Returns(true);
 
+        _webhookTargetPolicy = Substitute.For<IWebhookTargetPolicy>();
+        _webhookTargetPolicy.EvaluateForDelivery(Arg.Any<string>(), Arg.Any<EventStoreName?>(), Arg.Any<CancellationToken>()).Returns(WebhookTargetValidation.Allowed);
         _storage = Substitute.For<IChronicleStorage>();
         _eventStoreStorage = Substitute.For<IChronicleEventStoreStorage>();
+        _eventStoreStorage.Webhooks.Has(Arg.Any<WebhookId>()).Returns(true);
+        _eventStoreStorage.Webhooks.Get(Arg.Any<WebhookId>()).Returns(new WebhookDefinition(
+            (WebhookId)_observerId.Value,
+            WebhookOwner.Kernel,
+            EventSequenceId.Log,
+            [],
+            new("https://receiver.example/hook", WebhookAuthorization.None, new Dictionary<string, string>())));
         _eventStoreNamespaceStorage = Substitute.For<IEventStoreNamespaceStorage>();
         _inFlightEventsStorage = Substitute.For<IInFlightEventsStorage>();
         _observerHandledCountsStorage = Substitute.For<IObserverHandledCountsStorage>();
         _eventTypesStorage = Substitute.For<IEventTypesStorage>();
         _eventSequenceStorage = Substitute.For<IEventSequenceStorage>();
         _eventCompliance = Substitute.For<IEventCompliance>();
+        _eventGenerationRelease = Substitute.For<IEventGenerationRelease>();
 
         // Wire the storage chain: IStorage → IEventStoreStorage → IEventTypesStorage and IEventStoreNamespaceStorage → IInFlightEventsStorage / IObserverHandledCountsStorage
         _storage.GetEventStore(Arg.Any<EventStoreName>()).Returns(_eventStoreStorage);
@@ -162,7 +191,7 @@ public class an_observer : Specification
 
         _observerServiceClient = Substitute.For<IObserverServiceClient>();
 
-        _logger = NullLogger<Observer>.Instance;
+        _logger = CreateLogger();
         _loggerFactory = Substitute.For<ILoggerFactory>();
         _loggerFactory.CreateLogger(Arg.Any<string>()).Returns(_logger);
 
@@ -245,7 +274,12 @@ public class an_observer : Specification
                 Partition = partition.Partition,
                 IsQuarantined = partition.IsQuarantined,
                 IsResolved = partition.IsResolved,
-                Attempts = partition.Attempts.ToArray()
+                Attempts = partition.Attempts.ToArray(),
+                WebhookDisposition = partition.WebhookDisposition,
+                WebhookRecoveryId = partition.WebhookRecoveryId,
+                AttemptsBeforeBudgetReset = partition.AttemptsBeforeBudgetReset,
+                Deferral = partition.Deferral,
+                RecoveryCursor = partition.RecoveryCursor
             }).ToArray()
         };
 
@@ -283,7 +317,9 @@ public class an_observer : Specification
                 _.ObserverKey == _observerKey &&
                 _.Key == _partition &&
                 _.FromSequenceNumber == lastHandled.Next() &&
-                _.EventTypes.SequenceEqual(_definitionStorage.State.EventTypes)));
+                _.EventTypes.SequenceEqual(_definitionStorage.State.EventTypes) &&
+                _.ReaderScope != null &&
+                _.ReaderScope.EventTypes.SequenceEqual(_definitionStorage.State.EventTypes)));
 
     protected void CheckDidNotStartCatchupJob() => _jobsManager.DidNotReceive()
         .Start<ICatchUpObserverPartition, CatchUpObserverPartitionRequest>(Arg.Any<CatchUpObserverPartitionRequest>());

@@ -19,7 +19,9 @@ namespace Cratis.Chronicle.Events.Constraints;
 public sealed class ConstraintBatchClaims
 {
     readonly Dictionary<ClaimKey, EventSourceId> _claims = [];
+    readonly Dictionary<(ClaimKey Key, EventSourceId EventSourceId), (bool IsAllowed, EventSequenceNumber SequenceNumber)> _persistedAnswers = [];
     readonly Dictionary<EventTypeCycleKey, EventTypeCycleState> _eventTypeCycles = [];
+    readonly Dictionary<(ClosedStreamOwner Owner, ClosedStreamScope Scope), ClosedStream?> _closureChanges = [];
 
     enum EventTypeCycleState
     {
@@ -46,6 +48,29 @@ public sealed class ConstraintBatchClaims
         _claims[key] = eventSourceId;
         return true;
     }
+
+    /// <summary>
+    /// Records what the persisted index answered for a claim, read for the whole batch before any event is validated.
+    /// </summary>
+    /// <param name="constraintName">The <see cref="ConstraintName"/> the value belongs to.</param>
+    /// <param name="scopeKey">The scope key the value is constrained within.</param>
+    /// <param name="value">The <see cref="UniqueConstraintValue"/> being claimed.</param>
+    /// <param name="eventSourceId">The <see cref="EventSourceId"/> claiming the value.</param>
+    /// <param name="answer">Whether the persisted index allows the claim, and the sequence number of the event holding the value.</param>
+    internal void RecordPersistedAnswer(ConstraintName constraintName, string scopeKey, UniqueConstraintValue value, EventSourceId eventSourceId, (bool IsAllowed, EventSequenceNumber SequenceNumber) answer) =>
+        _persistedAnswers[(new ClaimKey(constraintName, scopeKey, value), eventSourceId)] = answer;
+
+    /// <summary>
+    /// Gets what the persisted index answered for a claim, when it was read for the whole batch.
+    /// </summary>
+    /// <param name="constraintName">The <see cref="ConstraintName"/> the value belongs to.</param>
+    /// <param name="scopeKey">The scope key the value is constrained within.</param>
+    /// <param name="value">The <see cref="UniqueConstraintValue"/> being claimed.</param>
+    /// <param name="eventSourceId">The <see cref="EventSourceId"/> claiming the value.</param>
+    /// <param name="answer">The recorded answer.</param>
+    /// <returns>True when an answer was recorded, false when the index has to be read.</returns>
+    internal bool TryGetPersistedAnswer(ConstraintName constraintName, string scopeKey, UniqueConstraintValue value, EventSourceId eventSourceId, out (bool IsAllowed, EventSequenceNumber SequenceNumber) answer) =>
+        _persistedAnswers.TryGetValue((new ClaimKey(constraintName, scopeKey, value), eventSourceId), out answer);
 
     /// <summary>
     /// Attempt to claim a unique event type constraint cycle for an event source within the batch.
@@ -99,6 +124,30 @@ public sealed class ConstraintBatchClaims
     /// <param name="eventSourceId">The <see cref="EventSourceId"/> the cycle is released for.</param>
     internal void ReleaseEventTypeCycle(ConstraintName constraintName, ResolvedConstraintScope? scope, EventSourceId eventSourceId) =>
         _eventTypeCycles[new EventTypeCycleKey(constraintName, scope, eventSourceId)] = EventTypeCycleState.Released;
+
+    /// <summary>
+    /// Record a closure established by an earlier valid event in this batch.
+    /// </summary>
+    /// <param name="closure">The owned closure.</param>
+    internal void RecordClosure(ClosedStream closure) =>
+        _closureChanges[(closure.Owner, closure.Scope.Normalized())] = closure with { Scope = closure.Scope.Normalized() };
+
+    /// <summary>
+    /// Record an exact owned reopening established by an earlier valid event in this batch.
+    /// </summary>
+    /// <param name="owner">The owning constraint.</param>
+    /// <param name="scope">The exact scope.</param>
+    internal void RecordReopen(ClosedStreamOwner owner, ClosedStreamScope scope) => _closureChanges[(owner, scope.Normalized())] = null;
+
+    /// <summary>
+    /// Apply earlier batch transitions to persisted covering closures.
+    /// </summary>
+    /// <param name="scope">The append scope.</param>
+    /// <param name="persisted">The persisted covering closures.</param>
+    /// <returns>The covering closures after earlier valid batch events.</returns>
+    internal IEnumerable<ClosedStream> GetBatchClosuresCovering(ClosedStreamScope scope, IEnumerable<ClosedStream> persisted) =>
+        persisted.Where(closure => !_closureChanges.ContainsKey((closure.Owner, closure.Scope.Normalized())))
+            .Concat(_closureChanges.Values.OfType<ClosedStream>().Where(closure => closure.Scope.Covers(scope)));
 
     record ClaimKey(ConstraintName ConstraintName, string ScopeKey, UniqueConstraintValue Value);
 

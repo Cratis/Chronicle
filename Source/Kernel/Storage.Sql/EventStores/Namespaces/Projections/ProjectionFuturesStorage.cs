@@ -29,7 +29,7 @@ public class ProjectionFuturesStorage(EventStoreName eventStore, EventStoreNames
         if (entity is null)
         {
             entity = ProjectionFuturesConverters.ToEntity(projectionId, future, jsonSerializerOptions);
-            scope.DbContext.ProjectionFutures.Add(entity);
+            await scope.DbContext.ProjectionFutures.Upsert(entity);
         }
         else
         {
@@ -39,15 +39,15 @@ public class ProjectionFuturesStorage(EventStoreName eventStore, EventStoreNames
             entity.EventTypeGeneration = updated.EventTypeGeneration;
             entity.EventSourceId = updated.EventSourceId;
             entity.EventContentJson = updated.EventContentJson;
+            entity.EventContextJson = updated.EventContextJson;
             entity.ParentPath = updated.ParentPath;
             entity.ChildPath = updated.ChildPath;
             entity.IdentifiedByProperty = updated.IdentifiedByProperty;
             entity.ParentIdentifiedByProperty = updated.ParentIdentifiedByProperty;
             entity.ParentKeyJson = updated.ParentKeyJson;
             entity.Created = updated.Created;
+            await scope.DbContext.SaveChangesAsync();
         }
-
-        await scope.DbContext.SaveChangesAsync();
     }
 
     /// <inheritdoc/>

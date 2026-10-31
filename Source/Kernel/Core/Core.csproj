@@ -5,6 +5,20 @@
         <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
         <CompilerGeneratedFilesOutputPath>$(BaseIntermediateOutputPath)\GeneratedFiles</CompilerGeneratedFilesOutputPath>
         <NoWarn>$(NoWarn);ORLEANS0010;CS8618;MA0182</NoWarn>
+
+        <!--
+            Silos of two releases run side by side during a rolling upgrade and call each other's grains. Orleans
+            identifies a grain method on the wire by a hash of its declaring interface, name and parameter types,
+            so changing a signature makes it a different method that the other release cannot decode.
+            OrleansContracts.txt records every grain interface, its [Version], each method's wire identity and
+            every grain class identity. The analyzer fails the build when the source drifts from it, and the
+            Grain Compatibility workflow fails when it drifts from the previous release in a way that is not
+            additive. See Documentation/contributing/kernel/grain-interfaces.mdx.
+        -->
+        <EnableOrleansContractsAnalyzer>true</EnableOrleansContractsAnalyzer>
+
+        <!-- Drift from OrleansContracts.txt fails every build, Debug included, rather than surfacing first in CI. -->
+        <WarningsAsErrors>$(WarningsAsErrors);ORLEANS0016;ORLEANS0017;ORLEANS0018;ORLEANS0019;ORLEANS0020;ORLEANS0021;ORLEANS0022;ORLEANS0023;ORLEANS0024;ORLEANS0025;ORLEANS0027</WarningsAsErrors>
     </PropertyGroup>
 
     <ItemGroup>
@@ -13,6 +27,7 @@
         <InternalsVisibleTo Include="Cratis.Chronicle.Grains.Interfaces" />
         <InternalsVisibleTo Include="Cratis.Chronicle.InProcess" />
         <InternalsVisibleTo Include="Cratis.Chronicle.XUnit.Integration" />
+        <InternalsVisibleTo Include="Cratis.Chronicle.XUnit.Integration.v3" />
         <InternalsVisibleTo Include="Cratis.Chronicle.Testing" />
         <!-- Cratis.Chronicle.Server used to need this only because the generated gRPC service
              implementations lived here and were internal. They now live in Cratis.Chronicle.Grpc,

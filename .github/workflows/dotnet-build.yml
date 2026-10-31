@@ -61,6 +61,7 @@ on:
       - ".github/workflows/**"
       - ".github/scripts/**"
       - ".github/build-affecting-paths.txt"
+      - ".github/legacy-contracts.json"
 
 jobs:
   # First, before anything is built: a change that breaks the wire contract for clients already running against this
@@ -68,10 +69,20 @@ jobs:
   wire-compatibility:
     uses: ./.github/workflows/wire-compatibility.yml
 
+  # Alongside it, the silo-to-silo contract: a change that stops this build's silos from sharing a cluster with the
+  # latest release's breaks every rolling upgrade. See grain-compatibility.yml.
+  grain-compatibility:
+    uses: ./.github/workflows/grain-compatibility.yml
+
   dotnet-build:
-    needs: [wire-compatibility]
+    needs: [wire-compatibility, grain-compatibility]
     runs-on: ubuntu-latest
     timeout-minutes: 120
+    # The repository's default token is read-only. Non-PR runs push the development image
+    # the integration shards pull, so this job asks for package write access explicitly.
+    permissions:
+      contents: read
+      packages: write
     outputs:
       chronicle-image: ${{ steps.export-image.outputs.image }}
 
@@ -93,6 +104,9 @@ jobs:
       - name: Assert every spec project is in the solution
         run: python3 .github/scripts/assert-solution-membership.py
 
+      - name: Spec executable runner contracts and forbid test-host dispatch
+        run: node --test .github/scripts/test-mixed-spec-runners.mjs
+
       # The publish workflow's Docker verification logic is release-only, so this checkout-only spec run is
       # where a pull request proves the tag expansion, retry and failure behavior before any publication occurs.
       - name: Spec the published Docker tag verifier
@@ -112,13 +126,9 @@ jobs:
             ${{ env.DOTNET9_VERSION }}
             ${{ env.DOTNET_VERSION }}
 
+      # Shared org cache: pull requests restore only; the nightly build and default-branch runs save (Cratis/Workflows#164).
       - name: Cache NuGet packages
-        uses: actions/cache@v4
-        with:
-          path: ~/.nuget/packages
-          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj', '**/Directory.*.props', '**/Directory.*.targets') }}
-          restore-keys: |
-            nuget-${{ runner.os }}-
+        uses: Cratis/Workflows/.github/actions/dotnet-cache@main
 
       - name: Restore obj cache
         uses: actions/cache@v4
@@ -193,13 +203,13 @@ jobs:
           for project in Source/Kernel/Core.Specs Source/Kernel/Server Integration/MongoDB; do
             test -d "$project/bin/Release/net10.0" || { echo "Missing build output for $project" >&2; exit 1; }
           done
-          find . -type d -name bin -not -path '*/node_modules/*' -prune -print0 | tar --null -czf build-output-release.tar.gz -T -
+          find . -type d -name bin -not -path '*/node_modules/*' -prune -print0 | tar --null -I 'zstd -T0' -cf build-output-release.tar.zst -T -
 
       - name: Upload Release build output
         uses: actions/upload-artifact@v4
         with:
           name: build-output-release
-          path: build-output-release.tar.gz
+          path: build-output-release.tar.zst
           retention-days: 1
           compression-level: 0
           if-no-files-found: error
@@ -212,8 +222,8 @@ jobs:
   # Only integration shards consume the DEVELOPMENT-symbol build. Ordinary PR pushes
   # keep the Release build and specs, without this extra build or artifact.
   dotnet-build-development:
-    if: github.event_name != 'pull_request' || inputs.integration_requested
-    needs: [wire-compatibility]
+    if: github.event_name != 'pull_request'
+    needs: [wire-compatibility, grain-compatibility]
     runs-on: ubuntu-latest
     timeout-minutes: 120
     permissions:
@@ -231,13 +241,9 @@ jobs:
             ${{ env.DOTNET9_VERSION }}
             ${{ env.DOTNET_VERSION }}
 
+      # Shared org cache: pull requests restore only; the nightly build and default-branch runs save (Cratis/Workflows#164).
       - name: Cache NuGet packages
-        uses: actions/cache@v4
-        with:
-          path: ~/.nuget/packages
-          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj', '**/Directory.*.props', '**/Directory.*.targets') }}
-          restore-keys: |
-            nuget-${{ runner.os }}-
+        uses: Cratis/Workflows/.github/actions/dotnet-cache@main
 
       - name: Restore obj cache
         uses: actions/cache@v4
@@ -259,21 +265,81 @@ jobs:
       - name: Pack DEVELOPMENT build output
         run: |
           set -euo pipefail
-          for project in Integration/Client Integration/Kernel Integration/Clustering; do
+          for project in Integration/Client Integration/Kernel Integration/Clustering Integration/SqlClustering; do
             test -d "$project/bin/Release/net10.0" || { echo "Missing build output for $project" >&2; exit 1; }
           done
-          find . -type d -name bin -not -path '*/node_modules/*' -prune -print0 | tar --null -czf build-output-development.tar.gz -T -
+          find . -type d -name bin -not -path '*/node_modules/*' -prune -print0 | tar --null -I 'zstd -T0' -cf build-output-development.tar.zst -T -
 
       - name: Upload DEVELOPMENT build output
         uses: actions/upload-artifact@v4
         with:
           name: build-output-development
-          path: build-output-development.tar.gz
+          path: build-output-development.tar.zst
           retention-days: 1
           compression-level: 0
           if-no-files-found: error
 
-  specs:
+  # Static needs keep manual/nightly DEVELOPMENT independent of specs. Only the
+  # requested PR path waits for successful specs (implicit success() also blocks cancellation).
+  dotnet-build-development-requested:
+    if: github.event_name == 'pull_request' && inputs.integration_requested
+    needs: [wire-compatibility, grain-compatibility, specs]
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .Net
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            ${{ env.DOTNET8_VERSION }}
+            ${{ env.DOTNET9_VERSION }}
+            ${{ env.DOTNET_VERSION }}
+
+      # Shared org cache: pull requests restore only; the nightly build and default-branch runs save (Cratis/Workflows#164).
+      - name: Cache NuGet packages
+        uses: Cratis/Workflows/.github/actions/dotnet-cache@main
+
+      - name: Restore obj cache
+        uses: actions/cache@v4
+        with:
+          path: ./**/obj
+          # Package-aware key (see the dotnet-build job) so a dependency bump busts the stale obj cache.
+          key: dotnet-dev-obj-cache-${{ hashFiles('**/*.csproj', '**/Directory.*.props', '**/Directory.*.targets') }}-${{ github.sha }}
+          restore-keys: |
+            dotnet-dev-obj-cache-${{ hashFiles('**/*.csproj', '**/Directory.*.props', '**/Directory.*.targets') }}-
+
+      - name: Add GitHub Package Registry to NuGet
+        run: |
+          dotnet nuget update source github --username cratis --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text || \
+          dotnet nuget add source --name github --username cratis --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text https://nuget.pkg.github.com/cratis/index.json
+
+      - name: Build with DEVELOPMENT symbol
+        run: dotnet build --configuration Release -p:EnableDevelopmentSymbol=true -p:DisableProxyGenerator=true -p:DisableDockerBuild=true
+
+      - name: Pack DEVELOPMENT build output
+        run: |
+          set -euo pipefail
+          for project in Integration/Client Integration/Kernel Integration/Clustering Integration/SqlClustering; do
+            test -d "$project/bin/Release/net10.0" || { echo "Missing build output for $project" >&2; exit 1; }
+          done
+          find . -type d -name bin -not -path '*/node_modules/*' -prune -print0 | tar --null -I 'zstd -T0' -cf build-output-development.tar.zst -T -
+
+      - name: Upload DEVELOPMENT build output
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-output-development
+          path: build-output-development.tar.zst
+          retention-days: 1
+          compression-level: 0
+          if-no-files-found: error
+
+  specs-other:
     runs-on: ubuntu-latest
     timeout-minutes: 120
     needs: [dotnet-build]
@@ -295,12 +361,50 @@ jobs:
           name: build-output-release
 
       - name: Extract Release build output
-        run: tar -xzf build-output-release.tar.gz
+        run: tar -I zstd -xf build-output-release.tar.zst
+
+      # Release artifacts contain bin, not obj. Restore current evaluated package inputs
+      # before comparing all 31 test + 2 shipping selections with the built runtime graph.
+      - name: Add GitHub Package Registry to NuGet
+        run: |
+          dotnet nuget update source github --username cratis --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text || \
+          dotnet nuget add source --name github --username cratis --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text https://nuget.pkg.github.com/cratis/index.json
+
+      - name: Restore mixed runner evaluation inputs
+        run: dotnet restore -p:DisableProxyGenerator=true -p:DisableDockerBuild=true
+
+      # Keep Azure Key Vault with Vault in this Docker-capable specs job, including
+      # before its solution-membership change lands. No rebuild once it is listed.
+      - name: Build Azure Key Vault specs when absent from solution
+        run: |
+          set -euo pipefail
+          listed=$(node --input-type=module -e "
+            import { readFile } from 'node:fs/promises';
+            import { validateSolutionProjects } from './.github/scripts/mixed-specs-selection.mjs';
+            const projects = validateSolutionProjects(await readFile('Chronicle.slnx', 'utf8'));
+            console.log(projects.includes('Source/Kernel/Storage.AzureKeyVault.Specs/Storage.AzureKeyVault.Specs.csproj'));
+          ")
+          if [ "$listed" = false ]; then
+            dotnet build Source/Kernel/Storage.AzureKeyVault.Specs/Storage.AzureKeyVault.Specs.csproj --configuration Release -p:DisableProxyGenerator=true -p:DisableDockerBuild=true
+          fi
+
+      - name: Restore pinned coverage tool
+        run: dotnet tool restore
+
+      # Mandatory real-collector proof on Linux before native-v3 coverage is accepted: exact
+      # child exit 37 and external deadline 124 with no probe-owned orphans. Failure or an
+      # incomplete run fails this gate; production hits still come only from the real specs.
+      # The profiler attaches only to .NET; this non-.NET child's launcher equivalence
+      # remains unproven until Linux CI runs this mandatory acceptance.
+      - name: Verify real collector exit and deadline cleanup
+        run: node .github/scripts/verify-mixed-specs-collector.mjs
 
       - name: Run tests with coverage
-        # Integration tests are executed by .github/workflows/integration.yml.
-        # Keep regular specs focused on non-integration test suites.
-        run: dotnet test --no-build --configuration Release --settings specs.runsettings --filter "FullyQualifiedName!~Cratis.Chronicle.Integration&FullyQualifiedName!~Cratis.Chronicle.Kernel.Integration" --collect:"XPlat Code Coverage" --results-directory ./coverage-results --logger "trx;LogFileName=results.trx"
+        # Integration and SQL retain their shard/retry selection. Ordinary dispatch excludes
+        # &FullyQualifiedName!~Cratis.Chronicle.Storage.Sql. and applies specs.runsettings.
+        # Each project gets fresh, unique TRX/Cobertura; empty/spec-only coverage fails.
+        # Actual production hits come only from these real library specs.
+        run: node .github/scripts/run-mixed-specs.mjs
 
       - name: Assert specs ran
         uses: ./.github/actions/assert-tests-ran
@@ -316,11 +420,96 @@ jobs:
           path: ./coverage-results/
           retention-days: 1
 
+  specs-sql:
+    runs-on: ubuntu-latest
+    # The sqlserver shard takes 21-27 minutes on hosted runners; 30 cancelled a passing run.
+    timeout-minutes: 45
+    needs: [dotnet-build]
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [postgresql, sqlserver, remaining]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .Net
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Download Release build output
+        uses: actions/download-artifact@v4
+        with:
+          name: build-output-release
+
+      - name: Extract Release build output
+        run: tar -I zstd -xf build-output-release.tar.zst
+
+      - name: Restore SQL runner evaluation inputs
+        run: dotnet restore Source/Kernel/Storage.Sql.Specs/Storage.Sql.Specs.csproj
+
+      - name: Restore pinned coverage tool
+        run: dotnet tool restore
+
+      - name: Run SQL collection filter specs
+        run: python3 .github/scripts/test-sql-spec-filter.py
+
+      - name: Run SQL specs with coverage
+        run: |
+          set -euo pipefail
+          filter=$(python3 .github/scripts/sql-spec-filter.py '${{ matrix.shard }}')
+          node .github/scripts/run-spec-project.mjs --project Source/Kernel/Storage.Sql.Specs/Storage.Sql.Specs.csproj --settings specs.runsettings --filter "$filter" --coverage --results-directory ./coverage-results
+
+      - name: Assert SQL specs ran
+        uses: ./.github/actions/assert-tests-ran
+        with:
+          path: ./coverage-results
+          name: The SQL specs ${{ matrix.shard }} shard
+
+      - name: Upload coverage results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-results-specs-sql-${{ matrix.shard }}
+          path: ./coverage-results/
+          retention-days: 1
+
+  legacy-contracts:
+    # Report red upstream jobs instead of skipping the gate, but not for a cancelled run.
+    if: ${{ !cancelled() }}
+    needs: [wire-compatibility, grain-compatibility, specs-other, specs-sql]
+    permissions:
+      contents: read
+      issues: read
+      actions: read
+    uses: ./.github/workflows/legacy-contracts.yml
+    with:
+      jobs: ${{ toJSON(needs) }}
+
+  # Preserve the required check and all existing integration/coverage dependencies.
+  # A failed, skipped or cancelled shard must never turn this aggregate green.
+  specs:
+    if: always()
+    needs: [specs-other, specs-sql]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Require every spec job to pass
+        env:
+          OTHER_RESULT: ${{ needs.specs-other.result }}
+          SQL_RESULT: ${{ needs.specs-sql.result }}
+        run: test "$OTHER_RESULT" = success && test "$SQL_RESULT" = success
+
   # Dependabot's read-only token cannot push the image these shards pull. A bump needing
   # the full matrix must be reopened as an ordinary PR, where the token can push.
   integration:
-    if: (github.event_name != 'pull_request' || inputs.integration_requested) && github.actor != 'dependabot[bot]'
-    needs: [dotnet-build, dotnet-build-development]
+    # On a pull request the matrix fans out only after the ordinary specs passed in this same run
+    # (#5050): a red spec must not spend the matrix. Nightly and manual runs keep integration
+    # independent of specs, so a failing spec does not hide integration results there.
+    # !cancelled() overrides implicit success(): the unused DEVELOPMENT sibling is skipped.
+    if: ${{ !cancelled() && needs.dotnet-build.result == 'success' && ((github.event_name != 'pull_request' && needs.dotnet-build-development.result == 'success') || (github.event_name == 'pull_request' && needs.dotnet-build-development-requested.result == 'success')) && (github.event_name != 'pull_request' || (inputs.integration_requested && needs.specs.result == 'success')) && github.actor != 'dependabot[bot]' }}
+    needs: [dotnet-build, dotnet-build-development, dotnet-build-development-requested, specs]
     permissions:
       contents: read
       packages: read
@@ -335,10 +524,11 @@ jobs:
       all-providers: ${{ github.event_name != 'pull_request' || inputs.all_providers }}
 
   integration-api:
-    if: github.event_name != 'pull_request' || inputs.integration_requested
+    # Waits for the ordinary specs on pull requests, like the integration matrix (#5050).
+    if: ${{ !cancelled() && needs.dotnet-build.result == 'success' && (github.event_name != 'pull_request' || (inputs.integration_requested && needs.specs.result == 'success')) }}
     runs-on: ubuntu-latest
     timeout-minutes: 120
-    needs: [dotnet-build]
+    needs: [dotnet-build, specs]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -357,7 +547,7 @@ jobs:
           name: build-output-release
 
       - name: Extract Release build output
-        run: tar -xzf build-output-release.tar.gz
+        run: tar -I zstd -xf build-output-release.tar.zst
 
       - name: Login to GitHub Docker Registry
         uses: docker/login-action@v3
@@ -373,11 +563,14 @@ jobs:
           cp -r Source/Kernel/Server/bin/Release/net10.0/. Source/Kernel/Server/out/
           docker build -t "${{ env.CRATIS_CHRONICLE_LOCAL_IMAGE }}" -f Docker/Local/Dockerfile .
 
+      - name: Restore API runner evaluation inputs
+        run: dotnet restore Integration/Api/Api.csproj
+
+      - name: Restore pinned coverage tool
+        run: dotnet tool restore
+
       - name: Run API integration tests with coverage
-        working-directory: ./Integration/Api
-        # Keep build enabled for .NET 10 test projects. `--no-build` causes an
-        # invalid test assembly argument failure in this workflow context.
-        run: dotnet test --logger "console;verbosity=normal" --configuration Release -p:DisableDockerBuild=true --collect:"XPlat Code Coverage" --results-directory ./coverage-results --logger "trx;LogFileName=results.trx"
+        run: node .github/scripts/run-spec-project.mjs --project Integration/Api/Api.csproj --coverage --results-directory ./Integration/Api/coverage-results
 
       - name: Assert API integration tests ran
         uses: ./.github/actions/assert-tests-ran
@@ -394,10 +587,11 @@ jobs:
           retention-days: 1
 
   mongodb:
-    if: github.event_name != 'pull_request' || inputs.integration_requested
+    # Waits for the ordinary specs on pull requests, like the integration matrix (#5050).
+    if: ${{ !cancelled() && needs.dotnet-build.result == 'success' && (github.event_name != 'pull_request' || (inputs.integration_requested && needs.specs.result == 'success')) }}
     runs-on: ubuntu-latest
     timeout-minutes: 120
-    needs: [dotnet-build]
+    needs: [dotnet-build, specs]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -416,7 +610,7 @@ jobs:
           name: build-output-release
 
       - name: Extract Release build output
-        run: tar -xzf build-output-release.tar.gz
+        run: tar -I zstd -xf build-output-release.tar.zst
 
       - name: Login to GitHub Docker Registry
         uses: docker/login-action@v3
@@ -425,9 +619,14 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Restore MongoDB runner evaluation inputs
+        run: dotnet restore Integration/MongoDB/MongoDB.csproj
+
+      - name: Restore pinned coverage tool
+        run: dotnet tool restore
+
       - name: Run MongoDB integration tests with coverage
-        working-directory: ./Integration/MongoDB
-        run: dotnet test --no-build --logger "console;verbosity=normal" --configuration Release --collect:"XPlat Code Coverage" --results-directory ./coverage-results --logger "trx;LogFileName=results.trx"
+        run: node .github/scripts/run-spec-project.mjs --project Integration/MongoDB/MongoDB.csproj --coverage --results-directory ./Integration/MongoDB/coverage-results
 
       - name: Assert MongoDB integration tests ran
         uses: ./.github/actions/assert-tests-ran
@@ -444,9 +643,9 @@ jobs:
           retention-days: 1
 
   coverage-merge-and-cache:
-    # Implicit success() on all dependencies skips this if any integration job fails or
-    # is skipped (ordinary PR pushes). Never cache incomplete results under the SHA key.
-    if: github.event_name != 'pull_request_target'
+    # Override implicit success() so the unused DEVELOPMENT ancestor does not suppress coverage.
+    # Require every immediate prerequisite: never cache incomplete results (including ordinary PRs).
+    if: ${{ !cancelled() && github.event_name != 'pull_request_target' && needs.specs.result == 'success' && needs.integration.result == 'success' && needs.integration-api.result == 'success' && needs.mongodb.result == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 120
     needs: [specs, integration, integration-api, mongodb]
@@ -555,7 +754,7 @@ jobs:
           name: build-output-release
 
       - name: Extract Release build output
-        run: tar -xzf build-output-release.tar.gz
+        run: tar -I zstd -xf build-output-release.tar.zst
 
       - name: Build benchmarks the way BenchmarkDotNet does
         run: |

@@ -1,7 +1,7 @@
 <!-- cratis-ai-managed: skills/cratis-arc-authentication-authorization-and-identity/references/local-development.md -->
 # Running with an identity locally
 
-Verified against `Cratis.Arc.Core` and `Cratis.Arc` `22.41.1`.
+Source: `Cratis.Arc.Core` and `Cratis.Arc`.
 
 ## What Arc does not give you
 
@@ -29,18 +29,18 @@ public record User(ClientPrincipal MicrosoftIdentity, object Details);
 public interface ICanProvideUsers { Task<IEnumerable<User>> Provide(); }
 ```
 
-⚠️ Both are mapped `AllowAnonymous` and **unconditionally** — there is no
-environment check in the mapper, so they are anonymous in Production too, and an
-ASP.NET `FallbackPolicy` does not protect them. Without providers they return
-empty arrays. Whatever your implementations return is public to anyone who can
-reach the application. The `Cratis:Arc:Introspection` options do not affect them;
-restrict them at the ingress (see the discovery note in the skill). Register them only for a development
-environment, and return fixtures rather than production users or tenants.
+Both follow `Introspection.IdentityDiscovery` and discovery
+access settings: anonymous by default only in Development, authenticated elsewhere,
+or unmapped (404) if the host cannot authenticate. Return development fixtures,
+not production users or tenants.
+Source: [secure defaults](https://github.com/Cratis/Arc/blob/main/Documentation/upgrading/secure-defaults.mdx).
 
 ## Supplying an identity locally
 
 Because the shipped handler reads forwarded headers, the way to run with an
-identity locally is to send those headers yourself. All three are required:
+identity locally is to send those headers yourself **after explicitly enabling**
+`Cratis:Arc:TrustForwardedIdentityHeaders=true` in the isolated development host.
+Without it they are ignored. All three are required:
 
 - `x-ms-client-principal-id`
 - `x-ms-client-principal-name`
@@ -87,3 +87,10 @@ Any local mechanism that lets the caller author its own principal is exactly the
 production risk described in [authentication](authentication.md). Keep it behind
 an environment check, and make sure the deployed application is unreachable
 except through the ingress that owns those headers.
+
+## Development fixtures
+
+Those endpoints follow the discovery exposure settings above. Return development
+fixtures from development providers; test deployed discovery access explicitly.
+Forwarded headers sent locally require the host-wide trust opt-in too; do not
+carry that shortcut into a directly reachable deployed host.

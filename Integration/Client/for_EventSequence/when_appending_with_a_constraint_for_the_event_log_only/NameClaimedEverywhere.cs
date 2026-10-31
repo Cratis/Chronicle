@@ -6,5 +6,4 @@ using Cratis.Chronicle.Events;
 namespace Cratis.Chronicle.Integration.for_EventSequence.when_appending_with_a_constraint_for_the_event_log_only;
 
 [EventType]
-[Public]
 public record NameClaimedEverywhere(string Name);

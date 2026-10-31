@@ -17,16 +17,31 @@ events.
 > event types and change schemas freely. A migration written too early is dead
 > code that hides the real schema in the history.
 
+## Route near misses
+
+- An accepted `.play` model under the model root covers the behavior, or the
+  repository is opted in (per `general.md` "Model first"; where `cratis-screenplay-modeling-lifecycle` is installed, run its `scripts/model-first-status.mjs`): change the model first with
+  `cratis-screenplay-event-modeling`. If the Screenplay skills are not installed,
+  say so and do not author `.play` from memory.
+  Edit code here only for infrastructure, clients, adapters, Screenplay code
+  attachments, or gap-fill scope (`cratis-screenplay-render-and-gap-fill`);
+  never edit Stage-managed output.
+
 ## Verified product sources
 
-This skill is verified against these exact sources:
+Sources:
 
-| Package | Version | Purpose |
-| --- | --- | --- |
-| `Cratis.Chronicle` | `18.3.0` | `Cratis.Chronicle.Events` and `Cratis.Chronicle.Events.Migrations` |
-| `Cratis.Chronicle.CodeAnalysis` | `18.3.0` | `CHR0012`, `CHR0037`, `CHR0049`, `CHR0050` |
+| Package | Purpose |
+| --- | --- |
+| `Cratis.Chronicle` | `Cratis.Chronicle.Events` and `Cratis.Chronicle.Events.Migrations` |
+| `Cratis.Chronicle.CodeAnalysis` | `CHR0012`, `CHR0037`, `CHR0049`, `CHR0050` |
 
 Reverify product sources before claiming support for another version.
+
+Requires Chronicle 19.52.0 for marker-free migration nomination through
+`ExplicitArtifacts.RegisterMigration<T>()`. Read references/explicit-migrations.md
+when event endpoints are plain/aliased or a migration cannot reference Chronicle;
+check the client package version, since older clients need migration markers.
 
 ## Generations
 
@@ -39,8 +54,9 @@ public sealed class EventTypeAttribute(string id = "", uint generation = 1) : At
 
 `id` defaults to the CLR type name and `generation` starts at `1`. The attribute
 is not repeatable, so two generations are always two distinct CLR types.
-Chronicle routes a stored event through the migration chain before delivering it
-to observers:
+Chronicle chains adjacent migrations to produce another generation. This is a
+possible upcast path, **not a promise that every observer receives the latest
+generation**; delivery policy is described below:
 
 ```text
 Generation 1 (stored) -> Migration 1->2 -> Migration 2->3 -> Current (Generation 3)
@@ -129,6 +145,11 @@ members:
 | `Combine(targetProperty, separator, params sourceProperties)` | several old values become one |
 | `MapValues(targetProperty, sourceProperty, map)` | one direction's value translation |
 
+Requires Chronicle 19.51.1 for `DefaultValue` and `MapValues` on concept
+properties to write the underlying primitive rather than a `{ Value: ... }`
+object. Check the client package version; older definitions need an upgrade
+before relying on concept-valued defaults/maps.
+
 There is **no `Rename`** — the method is `RenamedFrom`. There is **no `Join`** —
 concatenation is `Combine`.
 
@@ -147,6 +168,26 @@ public override void Downcast(IEventMigrationBuilder<<EventName>V1, <EventName>>
         .Combine(target => target.<Combined>, PropertySeparator.Space,
             source => source.<FirstPart>, source => source.<SecondPart>));
 ```
+
+## Nested paths and compatible schema metadata
+
+Property expressions traverse nested CLR members:
+`DefaultValue(m => m.Price.Description, "x")` and
+`RenamedFrom(m => m.Price.Amount, e => e.Amount)` address the nested target.
+`JsonPropertyName` wins over the client's naming policy; raw string paths are
+already JSON paths and are not renamed. An undeclared `DefaultValue` target in
+a nonempty target schema is rejected with `InvalidMigrationPropertyForEventType`
+(`Source/Kernel/Core/EventTypes/EventTypeRegistrar.cs`, `ValidatePropertyKeys`);
+an empty auto-generated target schema is the exception.
+
+Adding/removing an **optional** property at any depth still needs a migration
+class to complete the new generation chain, but no property operations: the
+target schema supplies absence/drops undeclared properties. That is a migration
+fact, not a reason to put nullable facts on newly authored events. Schema `title`
+is ignored, so renaming a CLR record with a pinned `[EventType("id")]` does not
+raise `EventTypeSchemaChanged`. A property described only by `default` may gain
+`type`/`format` without that error. Source:
+`Documentation/migrations/dotnet-client.mdx` and the kernel event-type schema comparison.
 
 ## Step 3 — When the values changed meaning, declare a value map
 
@@ -200,6 +241,43 @@ Migrations are discovered by convention — nothing is registered. They are
 activated through the service provider, so a migration may take constructor
 dependencies.
 
+## Backfill scope and rollout
+
+Per `Documentation/migrations/index.md`, registering a new
+generation starts **add-only** backfill in the **default namespace's event log
+only**. Other namespaces and sequences are not covered. Existing stored
+representations remain unchanged; changing a migration alone does not launch
+another backfill. Older backfills may already have overwritten originals:
+upgrading cannot recover those. Register new generations **only after every
+kernel silo is upgraded**; an old worker can still overwrite content mid-rollout.
+
+## Choose the generation an observer receives
+
+Requires Chronicle 19.41.0 for reactors and reducers, and 19.48.0 for typed materialized projections.
+
+`Compatibility` remains the default. With
+`ChronicleOptions.EventGenerationDelivery = EventGenerationDelivery.Pinned`,
+reactors and reducers receive the generation of their handler's CLR event type.
+Typed materialized projection clauses receive the
+generation they declare, including joins, children,
+removals, and event-content keys on live, catch-up, and replay.
+
+Read [references/pinned-generations.md](references/pinned-generations.md) for
+missing-generation migration, release and revision behavior, registration
+rejections, persisted PDL pins, and testing limits. Configure the opt-in through
+**cratis-chronicle-client-dotnet**; do not invent generation-qualified Screenplay
+syntax. `ReadModelScenario` and `ReactorScenario` do **not** emulate the kernel's
+pinned-generation migration and release; prove delivery with real-client
+integration, not a scenario-only assertion.
+
+Requires Chronicle 19.60.0 for webhook generation pinning with
+`WithGenerationDelivery(EventGenerationDelivery.Pinned)` on the .NET builder
+(or direct registration's `GenerationDelivery`). Live delivery, catch-up, replay
+and partition retries use the subscribed generation; unknown or duplicate
+same-id generations fail registration before recording it. Migration/release
+failure sends no request and fails the batch for retry. Check client/kernel
+versions; older webhooks retain compatibility delivery, not this guarantee.
+
 ## Do not model absence with a nullable property
 
 **CHR0012** (warning) flags a nullable property on an `[EventType]` record.
@@ -221,19 +299,6 @@ is expected, since the prior generation records history rather than new intent.
 | Splitting one event into two inside `Upcast` | a migration produces one event; model a split as a reactor or a command |
 | Adding a new generation for a renamed enum member | not needed; only removal or renumbering requires one |
 
-## Route near misses
-
-- An accepted `.play` model under the model root covers the behavior, or the
-  repository is opted in (the root holds a committed `.play` file (`git ls-tree -r --name-only HEAD -- <root>` lists it), or the project set
-  `mcpServers.screenplay.root` in `.cratis/ai.json`; an empty directory, install
-  output, an uncommitted `.play` draft or a `.play` file outside the root does not count; master definition:
-  `cratis-screenplay-modeling-lifecycle`): change the model first with
-  `cratis-screenplay-event-modeling`. If the Screenplay skills are not installed,
-  say so and do not author `.play` from memory.
-  Edit code here only for infrastructure, clients, adapters, Screenplay code
-  attachments, or gap-fill scope (`cratis-screenplay-render-and-gap-fill`);
-  never edit Stage-managed output.
-
 ## Verify
 
 - The current record carries the bumped `[EventType(generation: N)]`.
@@ -247,3 +312,7 @@ is expected, since the prior generation records history rather than new intent.
   outstanding.
 - Old-generation events replay into the current shape through the read-model
   specifications for the affected observers.
+- With `EventGenerationDelivery.Pinned`, real-client integration also verifies
+  old-generation events on live delivery, catch-up, and replay into each
+  observer's pinned generation; in-process read-model/reactor scenarios alone
+  do not prove kernel migration and release.

@@ -63,13 +63,15 @@ public class EventConverter(
                 Subject: @event.Subject?.IsSet == true ? @event.Subject : new Subject(@event.EventSourceId.Value))
             {
                 NamedTags = (@event.NamedTags ?? []).Select(tag => new NamedTag(new TagName(tag.Name), tag.Value)).ToArray(),
-                EventSource = @event.EventSource ?? EventSourceName.NotSet
+                EventSource = @event.EventSource ?? EventSourceName.NotSet,
+                AppendedGeneration = @event.AppendedGeneration is { } appended ? new EventTypeGeneration(appended) : null
             },
             resolvedContent)
         {
             OriginalContent = originalContent,
             Revisions = revisions,
-            GenerationalContent = generationalContent
+            GenerationalContent = generationalContent,
+            GenerationalHashes = @event.ContentHashes.Where(_ => int.TryParse(_.Key, out var generation) && generation > 0).ToDictionary(_ => int.Parse(_.Key), _ => new EventHash(_.Value))
         };
     }
 
@@ -106,6 +108,7 @@ public class EventConverter(
         JsonValue value when value.TryGetValue<long>(out var l) => l,
         JsonValue value when value.TryGetValue<ulong>(out var u) => u,
         JsonValue value when value.TryGetValue<double>(out var d) => d,
+        JsonValue value when value.TryGetValue<decimal>(out var decimalValue) => decimalValue,
         JsonValue value when value.TryGetValue<string>(out var s) => s,
         _ => node.ToString()
     };

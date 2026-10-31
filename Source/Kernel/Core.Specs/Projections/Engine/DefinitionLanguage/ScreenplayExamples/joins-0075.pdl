@@ -1,0 +1,9 @@
+projection Doc => DocReadModel
+  join Customer on CustomerId
+    with CustomerRegistered
+      CustomerName = name
+      IsVerified = verified
+    with CustomerUpdated
+      CustomerName = name
+    with CustomerVerified
+      IsVerified = verified

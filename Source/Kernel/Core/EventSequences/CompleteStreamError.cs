@@ -28,4 +28,14 @@ public enum CompleteStreamError
     /// Completing it would block all future appends to the event sequence and is therefore not permitted.
     /// </remarks>
     DefaultStreamCannotBeCompleted = 1,
+
+    /// <summary>
+    /// The scope has no participating dimensions.
+    /// </summary>
+    EmptyScope = 2,
+
+    /// <summary>
+    /// The scope tail differs from the expected sequence number.
+    /// </summary>
+    ExpectedTailMismatch = 3,
 }

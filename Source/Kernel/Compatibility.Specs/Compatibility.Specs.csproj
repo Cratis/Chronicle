@@ -12,5 +12,6 @@
         <ProjectReference Include="../Contracts/Contracts.csproj" />
     </ItemGroup>
     <ItemGroup>
+        <EmbeddedResource Include="for_WireCompatibilityChecker/given/before_managed_identity.desc" LogicalName="Cratis.Chronicle.Compatibility.Specs.before_managed_identity.desc" />
     </ItemGroup>
 </Project>

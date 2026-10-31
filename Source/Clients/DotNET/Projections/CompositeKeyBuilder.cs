@@ -3,7 +3,6 @@
 
 using System.Linq.Expressions;
 using System.Text;
-using Cratis.Chronicle.Properties;
 using Cratis.Reflection;
 using Cratis.Serialization;
 
@@ -22,15 +21,10 @@ public class CompositeKeyBuilder<TKeyType, TEvent>(INamingPolicy namingPolicy) :
     /// <inheritdoc/>
     public ISetBuilder<TKeyType, TEvent, TProperty, ICompositeKeyBuilder<TKeyType, TEvent>> Set<TProperty>(Expression<Func<TKeyType, TProperty>> readModelPropertyAccessor)
     {
-        if (!readModelPropertyAccessor.TryGetPropertyPath(out var accessorPropertyPath))
-        {
-            throw new InvalidPropertyExpression($"the composite key part on key type '{typeof(TKeyType).FullName}'", readModelPropertyAccessor);
-        }
-
+        var propertyPath = ProjectionPropertyPaths.FromExpression(readModelPropertyAccessor, namingPolicy, ProjectionPathRole.Target, $"the composite key part on key type '{typeof(TKeyType).FullName}'");
         var targetType = typeof(TProperty);
         var primitive = targetType.IsAPrimitiveType() || targetType.IsConcept();
 
-        var propertyPath = namingPolicy.GetPropertyName(accessorPropertyPath);
         if (_propertyExpressions.Exists(b => b.TargetProperty == propertyPath))
         {
             throw new DuplicatePropertyInProjection(propertyPath);

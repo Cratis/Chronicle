@@ -1,6 +1,11 @@
+---
+description: Point a Chronicle reducer at an event sequence other than the default event log with [EventSequence], [Reducer] or [EventLog], including inbox routing.
+---
 # Event Sequence
 
 By default, reducers observe the default event log. You can override this by specifying a different event sequence using either the `[EventSequence]` attribute or the `eventSequence` parameter on the `[Reducer]` attribute.
+
+For a [self reducer](self-reducing-read-models), place sequence configuration on the model itself. It has the same sequence selection and external-store routing rules as a classic reducer; a sequence attribute alone does not make it a model-bound projection.
 
 ## Using the `[EventSequence]` Attribute
 
@@ -8,7 +13,9 @@ Apply `[EventSequence]` directly to your reducer class to pin it to a specific e
 
 <ChronicleClientTabs snippet="reducers/event-sequence/event-sequence-attribute" />
 
-TypeScript reaches the same result through the `reducer()` decorator's event-sequence parameter, and Kotlin and Java through the `eventSequence` parameter on `@Reducer` — all shown under [Using the `[Reducer]` Attribute](#using-the-reducer-attribute) below, rather than as a separate attribute. Elixir doesn't currently support targeting a non-default event sequence for a reducer at all.
+TypeScript selects the sequence through the `reducer()` decorator's parameter. Kotlin and Java can
+use either `@EventSequence` or the `eventSequence` parameter on `@Reducer`. Use the client tab's
+configuration shape; the parameter-based form is shown below.
 
 ## Using the `[Reducer]` Attribute
 
@@ -24,7 +31,8 @@ Use `[EventLog]` when you want to be explicit that the reducer reads from the de
 
 <ChronicleClientTabs snippet="reducers/event-sequence/event-log-attribute" />
 
-This convenience is C#-only — it exists to disambiguate against C#'s `[EventStore]` attribute on event types, which the other clients don't have.
+`[EventLog]` explicitly selects the default log instead of inferring an inbox from event-store
+metadata. Use the event-log sequence name when configuring the same selection through a sequence parameter.
 
 ## External Event Store Inbox Routing
 

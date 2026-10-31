@@ -24,11 +24,42 @@ public interface ISink
     SinkTypeId TypeId { get; }
 
     /// <summary>
+    /// Gets a value indicating whether this sink supports watermark-conditional whole-instance replacement.
+    /// </summary>
+    bool SupportsIsolatedReplace => false;
+
+    /// <summary>
+    /// Replaces an isolated instance unless its stored watermark is beyond the supplied watermark.
+    /// </summary>
+    /// <param name="key">The instance to replace.</param>
+    /// <param name="state">The complete replacement state, or null to remove the instance.</param>
+    /// <param name="watermark">The inclusive upper bound of the rebuilt state.</param>
+    /// <returns>The outcome of the conditional replacement or removal.</returns>
+    /// <remarks>
+    /// The comparison and write are atomic against primary state, even during a replay. A stored watermark
+    /// strictly beyond the supplied bound prevents the write; equality permits replacement. Replacement is
+    /// whole-state, not a merge. Buffered writes already accepted for this instance must not overwrite it later.
+    /// Removal leaves no tombstone; preventing an old event from recreating an absent instance requires a
+    /// separately persisted replay floor.
+    /// </remarks>
+    /// <exception cref="NotSupportedException">The sink does not support isolated replacement.</exception>
+    Task<IsolatedReplaceResult> ReplaceIsolated(Key key, ExpandoObject? state, EventSequenceNumber watermark) =>
+        throw new NotSupportedException();
+
+    /// <summary>
     /// Find a read model by key, or return an empty object if not found.
     /// </summary>
     /// <param name="key">Key of the read model to find.</param>
     /// <returns>A read model instance with the data from the source, or an empty object.</returns>
     Task<ExpandoObject?> FindOrDefault(Key key);
+
+    /// <summary>
+    /// Finds a read model by key in the primary container, even while a replay rebuilds another container.
+    /// </summary>
+    /// <param name="key">Key of the read model to find.</param>
+    /// <returns>The primary instance, or null if the key is absent.</returns>
+    /// <remarks>This query-side read does not use the projection's replay state or pending bulk writes.</remarks>
+    Task<ExpandoObject?> FindInPrimaryOrDefault(Key key);
 
     /// <summary>
     /// Find the root key of a read model that contains a child with the specified value at the given property path.
@@ -72,16 +103,55 @@ public interface ISink
         ApplyChanges(key, changeset, eventSequenceNumber);
 
     /// <summary>
+    /// Apply changes with a confirmed write outcome, never leaving them buffered in a bulk window.
+    /// </summary>
+    /// <param name="key">Key of the read model to upsert.</param>
+    /// <param name="changeset">The changes to apply.</param>
+    /// <param name="eventSequenceNumber">The sequence number of the event that caused the changes.</param>
+    /// <param name="mode">The <see cref="SinkWriteMode"/> to apply the changes with.</param>
+    /// <returns>Failures from drained buffered writes and from the requested write.</returns>
+    /// <remarks>
+    /// Sinks that do not buffer writes can use the default implementation. An unknown outcome of the requested
+    /// write must throw. An unknown drained batch outcome may instead be reported as failures for all affected keys.
+    /// Buffered outcomes are reported once; an exceptional exit must retain any failures not reported to a caller.
+    /// </remarks>
+    Task<IEnumerable<FailedPartition>> ApplyChangesImmediately(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset, EventSequenceNumber eventSequenceNumber, SinkWriteMode mode) =>
+        ApplyChanges(key, changeset, eventSequenceNumber, mode);
+
+    /// <summary>
     /// Begin bulk operation mode.
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     Task BeginBulk();
 
     /// <summary>
+    /// Join the open bulk window, or begin one when none is open.
+    /// </summary>
+    /// <remarks>
+    /// Resuming work whose writers may still be running must not replace their window: replacing it discards the writes
+    /// they queued in it, and a writer that has not confirmed the window yet cannot tell.
+    /// </remarks>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    Task ResumeBulk() => BeginBulk();
+
+    /// <summary>
+    /// Drain buffered writes while keeping the bulk window open.
+    /// </summary>
+    /// <returns>The window identity and unreported buffered write failures.</returns>
+    Task<BulkFlushResult> FlushBulk() => Task.FromResult(new BulkFlushResult(null, []));
+
+    /// <summary>
     /// End bulk operation mode.
     /// </summary>
-    /// <returns>The partitions whose writes failed during the final flush.</returns>
+    /// <returns>The unreported partitions whose buffered writes failed, including those from the final flush.</returns>
     Task<IEnumerable<FailedPartition>> EndBulk();
+
+    /// <summary>
+    /// End bulk operation mode within a shutdown deadline.
+    /// </summary>
+    /// <param name="cancellationToken">The token bounding the drain.</param>
+    /// <returns>Failed partitions, including batches whose outcome is unknown after cancellation.</returns>
+    Task<IEnumerable<FailedPartition>> EndBulk(CancellationToken cancellationToken) => EndBulk();
 
     /// <summary>
     /// Enter replay state.

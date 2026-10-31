@@ -10,6 +10,10 @@ message DehydrateSessionRequest {
    string EventSequenceId = 4;
    string ReadModelKey = 5;
    string SessionId = 6;
+   string EventSourceType = 7;
+   string EventStreamType = 8;
+   string EventStreamId = 9;
+   string EventSourceId = 10;
 }
 message EventSequenceSinkConfiguration {
    EventType EventType = 1;
@@ -45,11 +49,16 @@ message GetInstanceByKeyRequest {
    string EventSequenceId = 4;
    string ReadModelKey = 5;
    string SessionId = 6;
+   string EventSourceType = 7;
+   string EventStreamType = 8;
+   string EventStreamId = 9;
+   string EventSourceId = 10;
 }
 message GetInstanceByKeyResponse {
    string ReadModel = 1;
    uint64 ProjectedEventsCount = 2;
    uint64 LastHandledEventSequenceNumber = 3;
+   bool StreamScoped = 4;
 }
 message GetInstancesRequest {
    string EventStore = 1;
@@ -75,6 +84,11 @@ message GetOccurrencesResponse {
 }
 message IndexDefinition {
    string PropertyPath = 1;
+   repeated IndexProperty Properties = 2;
+}
+message IndexProperty {
+   string Path = 1;
+   bool Descending = 2;
 }
 message ObserveInstancesRequest {
    string EventStore = 1;
@@ -168,6 +182,7 @@ message SinkDefinition {
 message UpdateDefinitionRequest {
    string EventStore = 1;
    ReadModelDefinition ReadModel = 2;
+   bool ReplaceIndexes = 3;
 }
 message WatchRequest {
    string EventStore = 1;

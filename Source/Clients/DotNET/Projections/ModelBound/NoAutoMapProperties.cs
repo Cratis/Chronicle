@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reflection;
-using Cratis.Chronicle.Properties;
 using Cratis.Serialization;
 
 namespace Cratis.Chronicle.Projections.ModelBound;
@@ -51,7 +50,7 @@ public static class NoAutoMapProperties
             if (parameter.IsDefined(typeof(NoAutoMapAttribute), inherit: true) ||
                 parameter.IsDefined(typeof(NotProjectedAttribute), inherit: true))
             {
-                names.Add(namingPolicy.GetPropertyName(new PropertyPath(parameter.Name!)));
+                names.Add(ProjectionPropertyPaths.Resolve(parameter.Name!, namingPolicy, ProjectionPathRole.Target));
             }
         }
 
@@ -60,7 +59,7 @@ public static class NoAutoMapProperties
             if (Attribute.IsDefined(property, typeof(NoAutoMapAttribute), inherit: true) ||
                 Attribute.IsDefined(property, typeof(NotProjectedAttribute), inherit: true))
             {
-                names.Add(namingPolicy.GetPropertyName(new PropertyPath(property.Name)));
+                names.Add(ProjectionPropertyPaths.Resolve(property.Name, namingPolicy, ProjectionPathRole.Target));
             }
         }
 

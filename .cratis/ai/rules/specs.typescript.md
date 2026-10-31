@@ -79,7 +79,8 @@ export class an_events_command_response_value_handler {
 ```
 
 - Properties are public (not protected) — tests access them via `context.propertyName`.
-- Import `given` from the package root: `import { given } from '../../given';`.
+- `given` is a package-local helper file, not a published export. Import it with the relative path to that file, for example `import { given } from '../../given';`; create it if absent. Fundamentals v7.23.0 constructs parameterless contexts; Arc v22.75.0 passes the Mocha Suite and binds callback `this` to it.
+- Configure Vitest's setup file to call `chai.should()` and register `sinon-chai` and `chai-as-promised`. Load the reflection polyfill for metadata-dependent specifications.
 - Simple tests without shared setup don't need a reusable context.
 
 ## Simple Test Pattern (without context)
@@ -124,6 +125,10 @@ array.should.contain(item);
 array.should.have.lengthOf(3);
 (() => throwingFn()).should.throw(ErrorType);
 ```
+
+### Comparing JSON
+
+Never assert JSON equality by comparing `JSON.stringify` output: object key order is insertion order, so two equal documents can serialize differently and a spec fails, or passes, for the wrong reason. Compare parsed values with `should.deep.equal`. When a helper must compare serialized JSON (a snapshot, a file on disk, a request body), canonicalize first: sort object keys recursively at every level and keep array order, because array order is data. Review flags raw `JSON.stringify(a) === JSON.stringify(b)` equality in specs and spec helpers.
 
 ## Mocking with Sinon
 

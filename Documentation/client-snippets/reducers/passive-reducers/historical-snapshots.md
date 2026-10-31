@@ -1,15 +1,21 @@
 ```csharp
 using Cratis.Chronicle;
+using Cratis.Chronicle.Events;
 using Cratis.Chronicle.ReadModels;
 
-public record PassiveReducersAccountBalance(decimal Balance);
+[EventType]
+public record PassivePrefixAmountRecorded(decimal Amount);
 
-public class PassiveReducersHistoricalBalanceService(IEventStore eventStore)
+[Passive]
+public record PassiveReducersAccountBalance(decimal Balance)
 {
-    public async Task<PassiveReducersAccountBalance> GetBalanceAtDate(Guid accountId, DateTimeOffset date)
-    {
-        // Passive reducer computes state on-demand from historical events
-        return await eventStore.ReadModels.GetInstanceById<PassiveReducersAccountBalance>(accountId);
-    }
+    public static PassiveReducersAccountBalance Reduce(PassivePrefixAmountRecorded @event, PassiveReducersAccountBalance? current) =>
+        new((current?.Balance ?? 0m) + @event.Amount);
+}
+
+public class PassiveReducersPrefixAnalysis(IEventStore eventStore)
+{
+    public Task<IEnumerable<PassiveReducersAccountBalance>> GetBalancesFromPrefix(EventCount eventCount) =>
+        eventStore.ReadModels.GetInstances<PassiveReducersAccountBalance>(eventCount);
 }
 ```

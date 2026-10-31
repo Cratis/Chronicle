@@ -1,0 +1,8 @@
+projection Doc => DocReadModel
+  join Status on StatusId
+    with StatusCreated
+      StatusName = name
+      StatusColor = color
+    with StatusUpdated
+      StatusName = name
+      StatusColor = color

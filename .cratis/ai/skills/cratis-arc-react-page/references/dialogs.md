@@ -1,6 +1,18 @@
 <!-- cratis-ai-managed: skills/cratis-arc-react-page/references/dialogs.md -->
 # Dialogs reference
 
+## Contents
+
+- Choose the dialog
+- Opening a dialog
+- The enums
+- `CommandDialog`
+- `CommandForm` fields
+- `Dialog` — data without a command
+- Host-registered confirmation and busy indicators
+- Step 6 — Confirming, and showing that work is in progress
+- Initial focus
+
 The Cratis dialog wrappers own command execution, validation timing, busy
 state, and footer buttons. Never use a vendor or hand-rolled modal — dialogs are Components-owned.
 
@@ -76,6 +88,9 @@ The most-used props:
 | --- | --- |
 | `command` | the generated command class |
 | `title` | dialog header |
+| `subtitle` / `closeIcon` | secondary header content / dismissal glyph (`ReactNode`) |
+| `placement` | `'center' \| 'start' \| 'end'`; RTL-aware side sheets |
+| `confirmBeforeExecute` | `(values) => boolean \| Promise<boolean>`; pre-execution approval |
 | `okLabel` / `cancelLabel` | button labels (`'Ok'` / `'Cancel'` by default) |
 | `initialValues` | synchronous baseline; also the change-tracking baseline |
 | `currentValues` | reactive overlay for late-loading values |
@@ -89,6 +104,12 @@ The most-used props:
 | `initialFocus` | which control receives focus when the dialog opens |
 | `dismissable` | X, Escape, and backdrop dismissal |
 | `pt` | `DialogParts` — per-part attributes (`backdrop`, `positioner`, `root`, `header`, `title`, `close`, `content`, `footer`, `confirm`, `cancel`); `ptOptions`/`unstyled` are accepted no-ops |
+
+Dialog presentation props, including `subtitle`, `placement` and `closeIcon`,
+are forwarded to the dialog, not the form. `children` may also be a
+render function receiving the command form context.
+
+Requires Cratis Components 4.14.1 or later for dialog presentation props forwarded to the dialog, and 4.25.1 or later for a `children` render function.
 
 `CommandDialog.Column` exists for multi-column layouts:
 
@@ -105,8 +126,10 @@ The most-used props:
 
 ### Execution flow
 
-On confirm, `CommandDialog` applies `onBeforeExecute`, sets busy, executes the
-command, and on failure calls `onValidationFailure(result.validationResults)`
+On confirm, after validation, `CommandDialog` applies `onBeforeExecute` and
+awaits `confirmBeforeExecute` when supplied. Only `true` executes; fields are
+disabled while it is pending, and changed command values discard approval.
+The command then executes, and on failure calls `onValidationFailure(result.validationResults)`
 or `onFailed(result)` and **keeps the dialog open**. On success it calls
 `onSuccess(result.response)` and then the close gate.
 
@@ -165,7 +188,9 @@ selection — renaming a command property produces a compile error at every
 binding.
 
 `AutoCommandForm` renders a field per command property from the generated
-property descriptors, with `exclude` for the ones you do not want:
+property descriptors, with `exclude` for the ones you do not want and `footer`
+for custom footer content. Generated fields bind to their own property; this
+requires Arc and Arc React >=22.16.0:
 
 ```tsx
 <AutoCommandForm command={RegisterInvoice} exclude={['invoiceId']} />
@@ -222,7 +247,52 @@ const handleConfirm = async (): Promise<boolean> => {
 `onClose(result)` is the combined handler for both outcomes and closes unless it
 returns `false`.
 
-### Initial focus
+See "Initial focus" in SKILL.md.
+
+## Host-registered confirmation and busy indicators
+
+`ConfirmationDialog` takes no props at all; it reads its title, message, and
+buttons from the dialog request. `BusyIndicatorDialog` takes the busy-indicator
+request. Register both once at the app root through `DialogComponents` and
+raise them by hook — see the skill's Step 6. From a view model, use the
+injectable `IDialogs` abstraction instead of the hooks.
+
+## Step 6 — Confirming, and showing that work is in progress
+
+Do not build a confirmation or busy dialog into a page. `ConfirmationDialog` and
+`BusyIndicatorDialog` are registered once at the app root through
+`DialogComponents` and raised by hook, which is what keeps every one of them
+identical:
+
+```tsx
+import { DialogComponents } from '@cratis/arc.react/dialogs';
+import { BusyIndicatorDialog, ConfirmationDialog } from '@cratis/components/Dialogs';
+
+<DialogComponents confirmation={ConfirmationDialog} busyIndicator={BusyIndicatorDialog}>
+    <YourApp />
+</DialogComponents>
+```
+
+```tsx
+import { DialogButtons, DialogResult, useBusyIndicator, useConfirmationDialog } from '@cratis/arc.react/dialogs';
+
+const [confirm] = useConfirmationDialog();
+if (await confirm('Delete this account?', `"${account.name}" disappears permanently.`, DialogButtons.YesNo) !== DialogResult.Yes) return;
+```
+
+A busy indicator is modal and deliberately non-dismissible, so reserve it for
+work the user genuinely cannot proceed past — a multi-step import, a migration.
+For an ordinary command behind a button, the in-flight disabled button is the
+right control; a modal that flashes for 200 ms tells the user nothing. When you
+do use one, pair it with the close call in a `finally`:
+
+```tsx
+const [showBusy, closeBusy] = useBusyIndicator('Importing', 'This takes a moment.');
+showBusy();
+try { await importEverything(); } finally { closeBusy(); }
+```
+
+## Initial focus
 
 `DialogInitialFocus.Confirm` is the default and *arms* the confirm button — a
 browser fires `click` from the `keydown` of Enter, so a held Enter confirms.
@@ -231,11 +301,3 @@ least destructive action and degrades to `Content` when the button set has
 nothing to dismiss with. `DialogInitialFocus.Content` focuses the title so
 nothing is armed. There is deliberately no "focus nothing" option — a modal
 must move focus into itself.
-
-## Host-registered confirmation and busy indicators
-
-`ConfirmationDialog` takes no props at all; it reads its title, message, and
-buttons from the dialog request. `BusyIndicatorDialog` takes the busy-indicator
-request. Register both once at the app root through `DialogComponents` and
-raise them by hook — see the skill's step 5. From a view model, use the
-injectable `IDialogs` abstraction instead of the hooks.

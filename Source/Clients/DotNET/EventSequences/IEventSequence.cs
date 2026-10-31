@@ -41,6 +41,14 @@ public interface IEventSequence
     ITransactionalEventSequence Transactional { get; }
 
     /// <summary>
+    /// Gets a value indicating whether this implementation can append with an <see cref="IdempotencyKey"/>. Defaults to <see langword="false"/>.
+    /// </summary>
+    /// <remarks>
+    /// Check this before choosing keyed appends when an older kernel may be connected; a keyed append never falls back to an unkeyed one.
+    /// </remarks>
+    bool SupportsIdempotentAppends => false;
+
+    /// <summary>
     /// Snapshots an event using this store's serializer and additional-information providers exactly once.
     /// </summary>
     /// <param name="event">The event to prepare.</param>
@@ -127,6 +135,28 @@ public interface IEventSequence
     /// <param name="eventSourceType">Optional <see cref="EventSourceType"/> to narrow to. Omit, or pass <see cref="EventSourceType.Default"/> or <see cref="EventSourceType.Unspecified"/>, to not narrow.</param>
     /// <returns>A collection of <see cref="AppendedEvent"/>.</returns>
     Task<IImmutableList<AppendedEvent>> GetForEventSourceIdAndEventTypes(EventSourceId eventSourceId, IEnumerable<EventType> filterEventTypes, EventStreamType? eventStreamType = default, EventStreamId? eventStreamId = default, EventSourceType? eventSourceType = default);
+
+    /// <summary>
+    /// Reads metadata without event content at one locator. Authorize the read before calling.
+    /// </summary>
+    /// <param name="sequenceNumber">The sequence locator.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The metadata, or null if the event does not exist.</returns>
+    /// <exception cref="EventMetadataReadsNotSupported">The implementation does not support metadata reads.</exception>
+    Task<EventMetadata?> GetMetadataAt(EventSequenceNumber sequenceNumber, CancellationToken cancellationToken = default)
+        => throw new EventMetadataReadsNotSupported();
+
+    /// <summary>
+    /// Reads metadata at up to 500 locators without event content. Missing events are omitted.
+    /// Authorize the read before calling. Identity names resolve at read time, not append time.
+    /// </summary>
+    /// <param name="sequenceNumbers">The sequence locators.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The matching metadata keyed by locator.</returns>
+    /// <exception cref="TooManyEventLocators">More than 500 locators were supplied.</exception>
+    /// <exception cref="EventMetadataReadsNotSupported">The implementation does not support metadata reads.</exception>
+    Task<IImmutableDictionary<EventSequenceNumber, EventMetadata>> GetMetadataAt(IEnumerable<EventSequenceNumber> sequenceNumbers, CancellationToken cancellationToken = default)
+        => throw new EventMetadataReadsNotSupported();
 
     /// <summary>
     /// Check if there are events for a specific <see cref="EventSourceId"/>.
@@ -241,12 +271,32 @@ public interface IEventSequence
     /// <returns><see cref="AppendManyResult"/> with details about whether or not it succeeded and more.</returns>
     /// <remarks>
     /// All events will be committed as one operation for the underlying data store.
+    /// When any event carries an <see cref="EventForEventSourceId.IdempotencyKey"/> the batch is appended once. Third-party
+    /// implementations that override this method themselves drop those keys; check <see cref="SupportsIdempotentAppends"/> first.
     /// </remarks>
     Task<AppendManyResult> AppendMany(
         IEnumerable<EventForEventSourceId> events,
         CorrelationId? correlationId = default,
         IEnumerable<string>? tags = default,
         IDictionary<EventSourceId, ConcurrencyScope>? concurrencyScopes = default);
+
+    /// <summary>
+    /// Appends a batch atomically, requiring every supplied concurrency predicate to hold.
+    /// </summary>
+    /// <param name="events">The events in append order.</param>
+    /// <param name="correlationId">Optional correlation id.</param>
+    /// <param name="tags">Optional shared tags.</param>
+    /// <param name="concurrencyScopes">Ordered guards; labels may repeat for different predicates.</param>
+    /// <returns>The atomic batch result.</returns>
+    Task<AppendManyResult> AppendMany(
+        IEnumerable<EventForEventSourceId> events,
+        CorrelationId? correlationId,
+        IEnumerable<string>? tags,
+        IEnumerable<KeyValuePair<EventSourceId, ConcurrencyScope>> concurrencyScopes)
+    {
+        var batch = new EventsWithConcurrencyScopes(events, concurrencyScopes);
+        return AppendMany(batch.Events, correlationId, tags, batch.ConcurrencyScopes.ToDictionary(_ => _.Key, _ => _.Value));
+    }
 
     /// <summary>
     /// Appends an event through a registered event source definition.
@@ -399,6 +449,156 @@ public interface IEventSequence
     }
 
     /// <summary>
+    /// Appends a batch with named tags and an ordered conjunction of guards.
+    /// </summary>
+    /// <param name="events">The events in append order.</param>
+    /// <param name="namedTags">Shared named tags.</param>
+    /// <param name="correlationId">Optional correlation id.</param>
+    /// <param name="tags">Optional shared tags.</param>
+    /// <param name="concurrencyScopes">Ordered guards; labels may repeat for different predicates.</param>
+    /// <returns>The atomic batch result.</returns>
+    Task<AppendManyResult> AppendManyWithNamedTags(
+        IEnumerable<EventForEventSourceId> events,
+        IEnumerable<NamedTag> namedTags,
+        CorrelationId? correlationId,
+        IEnumerable<string>? tags,
+        IEnumerable<KeyValuePair<EventSourceId, ConcurrencyScope>> concurrencyScopes)
+    {
+        var batch = new EventsWithConcurrencyScopes(events, concurrencyScopes);
+        return AppendManyWithNamedTags(batch.Events, namedTags, correlationId, tags, batch.ConcurrencyScopes.ToDictionary(_ => _.Key, _ => _.Value));
+    }
+
+    /// <summary>
+    /// Append a single event once: appending again with the same <paramref name="idempotencyKey"/> writes nothing and reports <see cref="AppendOutcome.AlreadyAppended"/>.
+    /// </summary>
+    /// <param name="eventSourceId">The event source.</param>
+    /// <param name="event">The event.</param>
+    /// <param name="idempotencyKey">The key identifying this append.</param>
+    /// <param name="eventStreamType">Optional stream type.</param>
+    /// <param name="eventStreamId">Optional stream id.</param>
+    /// <param name="eventSourceType">Optional source type.</param>
+    /// <param name="correlationId">Optional correlation id.</param>
+    /// <param name="tags">Optional plain tags.</param>
+    /// <param name="concurrencyScope">Optional concurrency scope.</param>
+    /// <param name="occurred">Optional occurred time.</param>
+    /// <param name="subject">Optional subject.</param>
+    /// <returns>The append result, carrying the <see cref="AppendResult.Outcome"/>.</returns>
+    /// <exception cref="IdempotentAppendsNotSupported">The kernel or this implementation cannot honor the key; nothing was sent.</exception>
+    Task<AppendResult> AppendOnce(
+        EventSourceId eventSourceId,
+        object @event,
+        IdempotencyKey idempotencyKey,
+        EventStreamType? eventStreamType = default,
+        EventStreamId? eventStreamId = default,
+        EventSourceType? eventSourceType = default,
+        CorrelationId? correlationId = default,
+        IEnumerable<string>? tags = default,
+        ConcurrencyScope? concurrencyScope = default,
+        DateTimeOffset? occurred = default,
+        Subject? subject = default) =>
+        throw new IdempotentAppendsNotSupported(GetType());
+
+    /// <summary>
+    /// Append events for one source once. The key is expanded per event with <see cref="IdempotencyKey.ForIndex(int)"/>.
+    /// </summary>
+    /// <param name="eventSourceId">The event source.</param>
+    /// <param name="events">The events.</param>
+    /// <param name="idempotencyKey">The key identifying this batch.</param>
+    /// <param name="eventStreamType">Optional stream type.</param>
+    /// <param name="eventStreamId">Optional stream id.</param>
+    /// <param name="eventSourceType">Optional source type.</param>
+    /// <param name="correlationId">Optional correlation id.</param>
+    /// <param name="tags">Optional plain tags.</param>
+    /// <param name="concurrencyScope">Optional concurrency scope.</param>
+    /// <param name="occurred">Optional occurred time.</param>
+    /// <param name="subject">Optional subject.</param>
+    /// <returns>The batch result, carrying an <see cref="AppendManyResult.Outcomes"/> entry per event.</returns>
+    /// <exception cref="IdempotentAppendsNotSupported">The kernel or this implementation cannot honor the key; nothing was sent.</exception>
+    Task<AppendManyResult> AppendManyOnce(
+        EventSourceId eventSourceId,
+        IEnumerable<object> events,
+        IdempotencyKey idempotencyKey,
+        EventStreamType? eventStreamType = default,
+        EventStreamId? eventStreamId = default,
+        EventSourceType? eventSourceType = default,
+        CorrelationId? correlationId = default,
+        IEnumerable<string>? tags = default,
+        ConcurrencyScope? concurrencyScope = default,
+        DateTimeOffset? occurred = default,
+        Subject? subject = default) =>
+        throw new IdempotentAppendsNotSupported(GetType());
+
+    /// <summary>
+    /// Append a single event once, with structured named tags.
+    /// </summary>
+    /// <param name="eventSourceId">The event source.</param>
+    /// <param name="event">The event.</param>
+    /// <param name="idempotencyKey">The key identifying this append.</param>
+    /// <param name="namedTags">Structured named tags for the event.</param>
+    /// <param name="eventStreamType">Optional stream type.</param>
+    /// <param name="eventStreamId">Optional stream id.</param>
+    /// <param name="eventSourceType">Optional source type.</param>
+    /// <param name="correlationId">Optional correlation id.</param>
+    /// <param name="tags">Optional plain tags.</param>
+    /// <param name="concurrencyScope">Optional concurrency scope.</param>
+    /// <param name="occurred">Optional occurred time.</param>
+    /// <param name="subject">Optional subject.</param>
+    /// <returns>The append result, carrying the <see cref="AppendResult.Outcome"/>.</returns>
+    /// <exception cref="NamedTagsNotSupported">The implementation cannot append nonempty named tags.</exception>
+    /// <exception cref="IdempotentAppendsNotSupported">The kernel or this implementation cannot honor the key; nothing was sent.</exception>
+    Task<AppendResult> AppendOnceWithNamedTags(
+        EventSourceId eventSourceId,
+        object @event,
+        IdempotencyKey idempotencyKey,
+        IEnumerable<NamedTag> namedTags,
+        EventStreamType? eventStreamType = default,
+        EventStreamId? eventStreamId = default,
+        EventSourceType? eventSourceType = default,
+        CorrelationId? correlationId = default,
+        IEnumerable<string>? tags = default,
+        ConcurrencyScope? concurrencyScope = default,
+        DateTimeOffset? occurred = default,
+        Subject? subject = default) =>
+        namedTags.Any()
+            ? throw new NamedTagsNotSupported(GetType())
+            : AppendOnce(eventSourceId, @event, idempotencyKey, eventStreamType, eventStreamId, eventSourceType, correlationId, tags, concurrencyScope, occurred, subject);
+
+    /// <summary>
+    /// Append events for one source once, with structured named tags for every event.
+    /// </summary>
+    /// <param name="eventSourceId">The event source.</param>
+    /// <param name="events">The events.</param>
+    /// <param name="idempotencyKey">The key identifying this batch.</param>
+    /// <param name="namedTags">Structured named tags for every event.</param>
+    /// <param name="eventStreamType">Optional stream type.</param>
+    /// <param name="eventStreamId">Optional stream id.</param>
+    /// <param name="eventSourceType">Optional source type.</param>
+    /// <param name="correlationId">Optional correlation id.</param>
+    /// <param name="tags">Optional plain tags.</param>
+    /// <param name="concurrencyScope">Optional concurrency scope.</param>
+    /// <param name="occurred">Optional occurred time.</param>
+    /// <param name="subject">Optional subject.</param>
+    /// <returns>The batch result, carrying an <see cref="AppendManyResult.Outcomes"/> entry per event.</returns>
+    /// <exception cref="NamedTagsNotSupported">The implementation cannot append nonempty named tags.</exception>
+    /// <exception cref="IdempotentAppendsNotSupported">The kernel or this implementation cannot honor the key; nothing was sent.</exception>
+    Task<AppendManyResult> AppendManyOnceWithNamedTags(
+        EventSourceId eventSourceId,
+        IEnumerable<object> events,
+        IdempotencyKey idempotencyKey,
+        IEnumerable<NamedTag> namedTags,
+        EventStreamType? eventStreamType = default,
+        EventStreamId? eventStreamId = default,
+        EventSourceType? eventSourceType = default,
+        CorrelationId? correlationId = default,
+        IEnumerable<string>? tags = default,
+        ConcurrencyScope? concurrencyScope = default,
+        DateTimeOffset? occurred = default,
+        Subject? subject = default) =>
+        namedTags.Any()
+            ? throw new NamedTagsNotSupported(GetType())
+            : AppendManyOnce(eventSourceId, events, idempotencyKey, eventStreamType, eventStreamId, eventSourceType, correlationId, tags, concurrencyScope, occurred, subject);
+
+    /// <summary>
     /// Revise a specific event in the event sequence with new content.
     /// </summary>
     /// <param name="sequenceNumber"><see cref="EventSequenceNumber"/> of the event to revise.</param>
@@ -440,4 +640,45 @@ public interface IEventSequence
     /// append targeting the same stream results in a constraint violation of type <c language="csharp">StreamClosed</c>.
     /// </remarks>
     Task<Result<EventSequenceNumber, CompleteStreamError>> CompleteStream(EventStreamType eventStreamType, EventStreamId eventStreamId);
+
+    /// <summary>
+    /// Manually complete a nonempty scope, optionally guarded by its expected tail.
+    /// </summary>
+    /// <param name="scope">The scope to close.</param>
+    /// <param name="expectedTailSequenceNumber">The expected scope tail, or null for no guard.</param>
+    /// <returns>The sequence tail at closure, or a completion error.</returns>
+    /// <exception cref="ClosedStreamScopesNotSupported">The implementation does not support scopes.</exception>
+    /// <remarks>
+    /// Covering manual closures return AlreadyCompleted. Event-owned coverage alone still writes a manual
+    /// closure, so later reopening events cannot undo the operator's explicit decision.
+    /// </remarks>
+    Task<Result<EventSequenceNumber, CompleteStreamError>> CompleteStream(ClosedStreamScope scope, EventSequenceNumber? expectedTailSequenceNumber = default) =>
+        throw new ClosedStreamScopesNotSupported();
+
+    /// <summary>
+    /// Check whether a scope is covered by a persisted closure.
+    /// </summary>
+    /// <param name="scope">The scope to inspect.</param>
+    /// <returns>True if covered.</returns>
+    /// <exception cref="ClosedStreamScopesNotSupported">The implementation does not support scopes.</exception>
+    Task<bool> IsStreamCompleted(ClosedStreamScope scope) => throw new ClosedStreamScopesNotSupported();
+
+    /// <summary>
+    /// Check whether a stream is covered by a persisted closure.
+    /// </summary>
+    /// <param name="eventStreamType">The stream type.</param>
+    /// <param name="eventStreamId">The stream identifier.</param>
+    /// <returns>True if covered.</returns>
+    Task<bool> IsStreamCompleted(EventStreamType eventStreamType, EventStreamId eventStreamId) =>
+        IsStreamCompleted(ClosedStreamScope.ForStream(
+            eventStreamType.Value.Length == 0 ? EventStreamType.All : eventStreamType,
+            eventStreamId.Value.Length == 0 ? EventStreamId.Default : eventStreamId));
+
+    /// <summary>
+    /// Inspect closed scopes within optional dimensions.
+    /// </summary>
+    /// <param name="within">The scope filter, or null for all closures.</param>
+    /// <returns>The matching closed scopes.</returns>
+    /// <exception cref="ClosedStreamScopesNotSupported">The implementation does not support scopes.</exception>
+    Task<IImmutableList<ClosedStream>> GetClosedStreams(ClosedStreamScope? within = default) => throw new ClosedStreamScopesNotSupported();
 }

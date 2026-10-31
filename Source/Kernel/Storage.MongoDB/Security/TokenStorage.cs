@@ -31,7 +31,7 @@ public class TokenStorage(IDatabase database) : ITokenStorage
 
     /// <inheritdoc/>
     public Task Create(Token token, CancellationToken cancellationToken = default) =>
-        _collection.InsertOneAsync(token, cancellationToken: cancellationToken);
+        _collection.InsertOnce(token, _ => _.Id == token.Id, cancellationToken);
 
     /// <inheritdoc/>
     public Task Update(Token token, CancellationToken cancellationToken = default) =>

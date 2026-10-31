@@ -98,7 +98,7 @@ A typed proxy class is generated per query. Pick the hook:
 | `<Query>.use(args?, sorting?)` | standard — returns `[result, perform, setSorting]`, re-renders on change |
 | `<Query>.useSuspense(...)` | suspense-aware — throws while loading; wrap in `<QueryBoundary>` |
 | `<Query>.when(condition).use(args)` | conditional — only fires when `condition` is true (don't wrap a hook in `if`) |
-| `<Query>.useWithPaging(pageSize, args?, sorting?)` | server-side paging (backend returns `IQueryable<T>`) |
+| `<Query>.useWithPaging(pageSize, args?, sorting?)` | server-side paging (backend returns `IQueryable<T>` or, for MongoDB, `ISubject<IEnumerable<T>>` from `Observe`) |
 | `<Query>.useSuspenseWithPaging(pageSize, ...)` | suspense + paging |
 | `<ObservableQuery>.use(...)` | live observable (`ISubject<T>` backend) pushed over SSE/WebSocket |
 | `<ObservableQuery>.useChangeStream(args?, getKey?, ...)` | item-level add/replace/remove deltas |
@@ -114,7 +114,7 @@ A typed proxy class is generated per query. Pick the hook:
 | `<ObservableQuery>.use(...)` | `[result, setSorting]` for an enumerable query; `[result]` for a single-instance one — **no `perform`** |
 | `<ObservableQuery>.useChangeStream(args?, getKey?, sorting?)` | `ChangeSet<T> { added, replaced, removed }` |
 
-`result.paging` = `{ page, size, totalItems, totalPages }` (zero-based `page`). Read models returning `IQueryable<TReadModel>` get automatic server-side paging/sorting — use it whenever a list can grow.
+`result.paging` = `{ page, size, totalItems, totalPages }` (zero-based `page`). Read models returning `IQueryable<TReadModel>`, or `ISubject<IEnumerable<TReadModel>>` from MongoDB `Observe`, get automatic server-side paging/sorting — use one whenever a list can grow, and never page or sort in the query itself.
 
 - **`useChangeStream` `getKey`:** without `getKey`, removed items can't be identified — everything shows up as `added`. `getKey` enables `replaced` detection. Change streams exist only on observable queries returning `IEnumerable<T>`.
 - **Conditional:** `<Query>.when(!!id).use({ id: id ?? '' })` — when `condition` is false no request/subscription is made and the hook returns `QueryResultWithState.empty()` (`hasData: false`, empty `data`); guard with `result.hasData`. `.when()` works with paging, suspense, and observable variants too.
@@ -150,7 +150,7 @@ Out-of-dialog execution branches in this order:
 const result = await command.execute();
 if (!result.isAuthorized) { redirectToLogin(); return; }
 if (!result.isValid)      { /* validationResults → inline field errors */ return; }
-if (result.hasExceptions) { toast.error('Something went wrong'); console.error(result.exceptionMessages); return; }
+if (result.hasExceptions) { toast.error({ title: 'Something went wrong' }); console.error(result.exceptionMessages); return; }
 // happy path — refresh queries, close, etc.
 ```
 
@@ -164,12 +164,19 @@ if (result.hasExceptions) { toast.error('Something went wrong'); console.error(r
 - **`asCommandFormField<P>(Component, opts)`** — wrap a custom input (rich text, address picker) so it participates in `CommandForm` with validation/error wiring.
 - **`CommandScope`** + `useCommandScope()` (`@cratis/arc.react/commands`) — aggregate state across multiple commands (and queries) on one screen; commands and queries rendered inside the scope register themselves (the `ICommandScope` API also exposes `addCommand`/`addQuery`/`addChildScope` for manual registration); scopes nest (a child reports up to its parent); injectable as `ICommandScope` (nearest enclosing scope). Props: `setHasChanges`, `setIsPerforming`, `onBeforeExecute`, `onSuccess(cmd, result)`, `onFailed`, `onException`, `onUnauthorized`. `ICommandScope` members: `hasChanges`, `isPerforming`, `hasValidationFailures`, `hasExceptions`, `validationFailures`/`exceptions` (this scope), `aggregatedValidationFailures`/`aggregatedExceptions` (scope + children), `execute()` (runs only commands with changes), `revertChanges()`, `parent`.
 
+At Arc v22.75.0 `CommandForm` defaults to safe exception text rather than raw
+server messages; customize with `exceptionMessage` or `exceptionDisplayComponent`
+(`ExceptionDisplayProps`). `showErrors={false}` hides built-in display. Dynamic
+accessors need explicit `fieldName`; custom field validation failures block submit.
+
 ### `<Arc>` global configuration
 
 Top-level provider for microservice name and API base path. Config props (with defaults):
 
 | Prop | Default | Notes |
 |---|---|---|
+| `apiBasePath` | — | Backend API prefix; `<Arc basePath>` is deprecated, not router configuration |
+| `detailsType` | — | Constructor for typed identity details |
 | `httpHeadersCallback` | — | returns `HeadersInit` merged into every request (bearer/tenant headers) |
 | `queryTransportMethod` | `ServerSentEvents` | SSE is capped at 4 connections on HTTP/1.1 |
 | `observableQueryTransferMode` | `Delta` | `Delta` = server ChangeSet/client diff; `Full` = all items as `added` |
@@ -183,6 +190,7 @@ Top-level provider for microservice name and API base path. Config props (with d
 - Single responsibility — if you write a `// Section` comment inside a component, that section is its own component. Parent owns state; children receive props.
 - Single-file component → in the slice folder; multi-file → a folder named after the component with an `index.ts` re-export.
 - A `.tsx` belongs in the slice folder it implements — never one level up. A feature's pass-through layout renders only `<Outlet />`.
+- **Composition point and slice isolation.** A page is the one place that composes slices, through their exported components; slice internals never import another slice's internals; identity, tenant and theme providers belong to the application; deleting a slice folder and its page registration removes the feature. Detail: the `cratis-arc-react-page` skill, `references/from-screenplay.md`.
 
 ## Styling default
 

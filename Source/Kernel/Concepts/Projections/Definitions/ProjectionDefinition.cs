@@ -5,6 +5,7 @@ using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
+using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Properties;
 
@@ -59,6 +60,30 @@ public record ProjectionDefinition(
     IEnumerable<PropertyPath>? NoAutoMapProperties = default,
     ProjectionScope Scope = ProjectionScope.Namespaced)
 {
+    /// <summary>
+    /// Gets the event generation delivery policy. Compatibility preserves identifier-only dispatch.
+    /// </summary>
+    public EventGenerationDelivery GenerationDelivery { get; init; }
+
+    /// <summary>
+    /// Gets the software version of the client application that registered the definition, if it identified one.
+    /// </summary>
+    /// <remarks>
+    /// Metadata, not structure: it is ignored when comparing definitions, so a version change alone never evolves
+    /// the projection. It exists so a registration from an older version can be told apart from a newer one.
+    /// </remarks>
+    public string? Version { get; init; }
+
+    /// <summary>
+    /// Gets whether storage predates preservation of <see cref="Scope"/> and every-event keys and AutoMap settings.
+    /// </summary>
+    /// <remarks>
+    /// Storage metadata, not a projection rule. Those fields are unknown in legacy MongoDB definitions,
+    /// including every-event settings in children and nested projections. A fresh registration supplies them
+    /// without evolution; the next lossless save removes this uncertainty.
+    /// </remarks>
+    public bool HasLegacyStorageFields { get; init; }
+
     /// <summary>
     /// Gets a value indicating whether the projection is owned by the kernel itself.
     /// </summary>

@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.Projections;
 
 /// <summary>
 /// Represents an implementation of <see cref="IFromAllBuilder{TReadModel}"/>. Its all-events subscription
-/// observes child event types and unrelated event types; the stored child-inclusion flag is not a filter.
+/// includes child events in their containing parent's mappings and also observes unrelated event types.
 /// </summary>
 /// <typeparam name="TReadModel">Type of read model to build for.</typeparam>
 /// <param name="namingPolicy">The <see cref="INamingPolicy"/> to use for converting names during serialization.</param>
@@ -22,12 +22,8 @@ public class FromAllBuilder<TReadModel>(INamingPolicy namingPolicy) : IFromAllBu
     /// <inheritdoc/>
     public IAllSetBuilder<TReadModel, IFromAllBuilder<TReadModel>> Set<TProperty>(Expression<Func<TReadModel, TProperty>> readModelPropertyAccessor)
     {
-        if (!readModelPropertyAccessor.TryGetPropertyPath(out var accessorPropertyPath))
-        {
-            throw new InvalidPropertyExpression($"the property to set on read model '{typeof(TReadModel).FullName}'", readModelPropertyAccessor);
-        }
-
-        var setBuilder = new AllSetBuilder<TReadModel, IFromAllBuilder<TReadModel>>(this, namingPolicy.GetPropertyName(accessorPropertyPath), namingPolicy);
+        var propertyPath = ProjectionPropertyPaths.FromExpression(readModelPropertyAccessor, namingPolicy, ProjectionPathRole.Target, $"the property to set on read model '{typeof(TReadModel).FullName}'");
+        var setBuilder = new AllSetBuilder<TReadModel, IFromAllBuilder<TReadModel>>(this, propertyPath, namingPolicy);
         _propertyExpressions.Add(setBuilder);
         return setBuilder;
     }
@@ -68,30 +64,16 @@ public class FromAllBuilder<TReadModel>(INamingPolicy namingPolicy) : IFromAllBu
         return this;
     }
 
-    PropertyPath GetTargetProperty<TProperty>(Expression<Func<TReadModel, TProperty>> readModelPropertyAccessor, string description)
-    {
-        if (!readModelPropertyAccessor.TryGetPropertyPath(out var accessorPropertyPath))
-        {
-            throw new InvalidPropertyExpression($"{description} read model '{typeof(TReadModel).FullName}'", readModelPropertyAccessor);
-        }
-
-        return namingPolicy.GetPropertyName(accessorPropertyPath);
-    }
+    PropertyPath GetTargetProperty<TProperty>(Expression<Func<TReadModel, TProperty>> readModelPropertyAccessor, string description) =>
+        ProjectionPropertyPaths.FromExpression(readModelPropertyAccessor, namingPolicy, ProjectionPathRole.Target, $"{description} read model '{typeof(TReadModel).FullName}'");
 
     PropertyPath BuildDynamicTargetProperty<TValue>(Expression<Func<TReadModel, IDictionary<string, TValue>>> readModelPropertyAccessor, Expression<Func<EventContext, object>> dynamicKeyAccessor)
     {
-        if (!readModelPropertyAccessor.TryGetPropertyPath(out var accessorPropertyPath))
-        {
-            throw new InvalidPropertyExpression($"the dictionary-typed property on read model '{typeof(TReadModel).FullName}'", readModelPropertyAccessor);
-        }
+        var dictionaryProperty = ProjectionPropertyPaths.FromExpression(readModelPropertyAccessor, namingPolicy, ProjectionPathRole.Target, $"the dictionary-typed property on read model '{typeof(TReadModel).FullName}'");
+        var contextProperty = ProjectionPropertyPaths.FromExpression(dynamicKeyAccessor, namingPolicy, ProjectionPathRole.Source, $"the dynamic dictionary key for read model '{typeof(TReadModel).FullName}'");
 
-        if (!dynamicKeyAccessor.TryGetPropertyPath(out var dynamicKeyPropertyPath))
-        {
-            throw new InvalidPropertyExpression($"the dynamic dictionary key for read model '{typeof(TReadModel).FullName}'", dynamicKeyAccessor);
-        }
-
-        var dictionaryProperty = namingPolicy.GetPropertyName(accessorPropertyPath);
-        var contextProperty = namingPolicy.GetPropertyName(dynamicKeyPropertyPath);
+        // Compose already-converted paths with the well-known context marker, not CLR member names.
+        // The context suffix is a source expression for a dynamic dictionary key, not a target member.
         return new PropertyPath($"{dictionaryProperty}.{WellKnownExpressions.EventContext}.{contextProperty}");
     }
 }

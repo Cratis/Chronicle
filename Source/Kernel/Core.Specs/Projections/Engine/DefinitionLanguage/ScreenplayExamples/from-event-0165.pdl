@@ -1,0 +1,5 @@
+projection Doc => DocReadModel
+  from OrderPlaced
+    CustomerId = customerId
+    Total = total
+    Status = "Pending"

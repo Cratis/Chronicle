@@ -1,0 +1,38 @@
+// every inside a child collection
+// Screenplay documentation: Documentation/screenplay/projections/from-every.md
+
+type OrderLine
+  lineNumber Int
+  sku String
+module Conformance
+  feature Cases
+    slice StateView Case
+      event LineAdded
+        orderId String
+        lineNumber Int
+        sku String
+        quantity Int
+      event LineChanged
+        orderId String
+        lineNumber Int
+        sku String
+      event LineRemoved
+        orderId String
+        lineNumber Int
+      event ProductDiscontinued
+        sku String
+      event ProductRenamed
+        sku String
+        title String
+      readmodel OrderView
+        orderId String
+        lines OrderLine[]
+      query OrderViewById => OrderView?
+        by orderId String
+      projection Orders => OrderView
+        no automap
+        children lines identified by lineNumber
+          every
+            sku = "unknown"
+          from LineAdded key lineNumber
+            parent orderId

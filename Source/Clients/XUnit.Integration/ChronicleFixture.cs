@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Diagnostics;
 using Docker.DotNet;
 using Docker.DotNet.Models;
 using DotNet.Testcontainers.Builders;
@@ -26,6 +27,8 @@ public abstract class ChronicleFixture : IChronicleFixture
     readonly Lock _containerLock = new();
 #endif
 
+    readonly IntegrationTimings _timings;
+    MongoDBContextStorage? _contextStorage;
     MongoDBDatabase? _eventStore;
     MongoDBDatabase? _eventStoreForNamespace;
     MongoDBDatabase? _readModels;
@@ -38,6 +41,10 @@ public abstract class ChronicleFixture : IChronicleFixture
     /// </summary>
     protected ChronicleFixture()
     {
+        _timings = new IntegrationTimings(
+            GetType().FullName ?? GetType().Name,
+            Environment.GetEnvironmentVariable("CHRONICLE_RUNTIME_MODE") ?? "unavailable",
+            Environment.GetEnvironmentVariable("CHRONICLE_STORAGE_PROVIDER") ?? "unavailable");
         LoggerFactory = Microsoft.Extensions.Logging.LoggerFactory.Create(builder =>
         {
             builder.AddConsole();
@@ -68,7 +75,7 @@ public abstract class ChronicleFixture : IChronicleFixture
             {
                 if (_container is null)
                 {
-                    _container = BuildContainer(Network);
+                    _container = _timings.Measure("container-build-and-auxiliary-start", () => BuildContainer(Network));
                     StartContainer(_container).GetAwaiter().GetResult();
                 }
                 return _container;
@@ -80,13 +87,24 @@ public abstract class ChronicleFixture : IChronicleFixture
     public INetwork Network { get; }
 
     /// <inheritdoc/>
-    public MongoDBDatabase EventStore => _eventStore ??= new(MongoDBContainer, Constants.EventStoreDatabaseName);
+    public MongoDBDatabase EventStore => _contextStorage?.EventStore ?? (_eventStore ??= new(MongoDBContainer, Constants.EventStoreDatabaseName));
 
     /// <inheritdoc/>
-    public MongoDBDatabase EventStoreForNamespace => _eventStoreForNamespace ??= new(MongoDBContainer, Constants.EventStoreNamespaceDatabaseName);
+    public MongoDBDatabase EventStoreForNamespace => _contextStorage?.EventStoreForNamespace ?? (_eventStoreForNamespace ??= new(MongoDBContainer, Constants.EventStoreNamespaceDatabaseName));
 
     /// <inheritdoc/>
-    public MongoDBDatabase ReadModels => _readModels ??= new(MongoDBContainer, Constants.ReadModelsDatabaseName);
+    public MongoDBDatabase ReadModels => _contextStorage?.ReadModels ?? (_readModels ??= new(MongoDBContainer, Constants.ReadModelsDatabaseName));
+
+    /// <summary>
+    /// Gets a value indicating whether each context owns a fresh in-process host with isolated MongoDB storage.
+    /// </summary>
+    /// <remarks>
+    /// Opt in only for in-process MongoDB fixtures. The default is false; out-of-process and remote kernels
+    /// continue to use the existing kernel reset. Issued databases are dropped when this collection fixture is disposed.
+    /// The prefix is applied by the default MongoDB storage configuration; a fixture that overrides
+    /// <c language="csharp">GetStorageConfigurator</c> must pass the client fixture's <c language="csharp">DatabaseNamePrefix</c> to <c language="csharp">WithMongoDB</c> itself.
+    /// </remarks>
+    public virtual bool UsesPerContextMongoDBHost => false;
 
     /// <summary>
     /// Gets the logger factory for creating loggers.
@@ -96,8 +114,37 @@ public abstract class ChronicleFixture : IChronicleFixture
     /// <inheritdoc/>
     public virtual async ValueTask DisposeAsync()
     {
-        await (_container?.DisposeAsync() ?? ValueTask.CompletedTask);
-        await Network.DisposeAsync();
+        var phase = _timings.Begin("fixture-disposal");
+        try
+        {
+            try
+            {
+                await DisposeContextStorage();
+            }
+            finally
+            {
+                try
+                {
+                    await (_container?.DisposeAsync() ?? ValueTask.CompletedTask);
+                }
+                finally
+                {
+                    await Network.DisposeAsync();
+                }
+            }
+
+            phase?.Success();
+        }
+        catch
+        {
+            phase?.Failure();
+            throw;
+        }
+        finally
+        {
+            phase?.Dispose();
+            _timings.Complete();
+        }
     }
 
     /// <inheritdoc/>
@@ -162,6 +209,16 @@ public abstract class ChronicleFixture : IChronicleFixture
     }
 
     /// <summary>
+    /// Starts a fresh MongoDB storage identity for a test context.
+    /// </summary>
+    /// <returns>The prefix for the new context.</returns>
+    internal string BeginMongoDBContext()
+    {
+        _contextStorage ??= new(name => new(MongoDBContainer, name));
+        return _contextStorage.BeginContext();
+    }
+
+    /// <summary>
     /// Builds the container with the specified network.
     /// </summary>
     /// <param name="network">The network to use.</param>
@@ -184,7 +241,38 @@ public abstract class ChronicleFixture : IChronicleFixture
         })
         : builder;
 
-    async Task StartContainer(IContainer container)
+    async Task DisposeContextStorage()
+    {
+        if (_contextStorage is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await DropContextDatabases();
+        }
+        finally
+        {
+            _contextStorage.ResetReaders();
+        }
+    }
+
+    async Task DropContextDatabases()
+    {
+        var urlBuilder = new MongoUrlBuilder($"mongodb://{MongoDBContainer.Hostname}:{MongoDBContainer.GetMappedPublicPort(27017)}")
+        {
+            DirectConnection = true
+        };
+        using var client = new MongoClient(MongoClientSettings.FromUrl(urlBuilder.ToMongoUrl()));
+        await _contextStorage!.DropDatabases(client);
+    }
+
+    Task StartContainer(IContainer container) => _started
+        ? Task.CompletedTask
+        : _timings.Run("container-start-total", () => StartContainerCore(container));
+
+    async Task StartContainerCore(IContainer container)
     {
         if (_started) return;
 
@@ -198,7 +286,7 @@ public abstract class ChronicleFixture : IChronicleFixture
 
                 failure = null;
 
-                await container.StartAsync();
+                await _timings.Run("container-start-attempt", () => container.StartAsync());
             }
             catch (Exception e) when (e is DockerApiException || e.InnerException is DockerApiException || e is TimeoutException)
             {
@@ -223,7 +311,8 @@ public abstract class ChronicleFixture : IChronicleFixture
                 container = BuildContainer(Network);
                 _container = container;
 
-                await Task.Delay(2000);
+                IntegrationTimings.CurrentPhase?.Retry();
+                await _timings.Run("container-start-retry-delay", () => Task.Delay(2000));
             }
 
             try

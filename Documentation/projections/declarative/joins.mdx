@@ -1,3 +1,6 @@
+---
+description: Use Join in a declarative Chronicle projection to combine data from events with a different event source id into one read model.
+---
 # Projection with joins
 
 Joins allow projections to incorporate data from events that don't share the same event source ID. This enables building read models that combine data from different streams.
@@ -38,6 +41,12 @@ Join keys are typically set from events that establish relationships — in the 
 
 Joins match events based on their event source ID and the join property — `.Join<GroupCreated>(j => j.On(m => m.GroupId))` links in group data whenever a `GroupCreated`/`GroupRenamed` event's event source ID matches the read model's `GroupId`.
 
+### Joining by an event property
+
+For a root join, `.UsingKey(e => e.X)` matches the read model's `On` property against that event property instead of the event source ID. If the property is missing or null, Chronicle falls back to the event source ID. Context, constant, and composite key expressions are not supported for root joins: Chronicle logs a warning and uses the event source ID instead.
+
+Append the root before the keyed join event when its key differs from its event source ID. If the joined event arrives first, backfill still looks it up by event source ID, not by the explicit key property.
+
 ### Join precedence
 
 When a `From` block and a join write the same property, the joined value wins — regardless of arrival order. Whenever the projection handles a `From` event, Chronicle re-resolves the join against the joined stream's last stored event and applies the joined properties after the `From` mappings. A `From` block therefore cannot reset or clear a property a join has written; there is no "clear this joined value" operation. If a property must reflect which fact happened most recently, give each fact its own property (for example, two timestamps) and compare them, rather than latching a single flag written from both sides. The [CHR0042](../../code-analysis/CHR0042) analyzer warns when the same property is written from both sides.
@@ -50,11 +59,7 @@ A projection can join with multiple streams:
 
 ### Joining children
 
-Joins can also be used within child collections:
-
-:::note[Client coverage]
-This example depends on declarative child collections, which are currently C#-only (see [Children](./children)). It stays C#-only until child projection scopes are available in the other clients.
-:::
+Joins can also be used within child collections. Inside `Children` a join always matches the joined event's event source against the child's identity (`IdentifiedBy`), so `.On()` is not used there. Identify the children by the id of the stream you join; here each member on a project board gets its name from the member's own `MemberRegistered` event:
 
 <ChronicleClientTabs snippet="projections/declarative/joins/children-join" />
 

@@ -3,7 +3,6 @@
 
 using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
-using Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
 using Cratis.Traces;
 using Microsoft.Extensions.Logging;
 
@@ -12,18 +11,30 @@ namespace Cratis.Chronicle.Transactions;
 /// <summary>
 /// Represents an implementation of <see cref="IUnitOfWorkManager"/>.
 /// </summary>
-/// <param name="eventStore">The <see cref="IEventStore"/> to use for the <see cref="IUnitOfWork"/>.</param>
-/// <param name="activitySource">Optional <see cref="IActivitySource{T}"/> for tracing. Defaults to a source named <see cref="ClientActivity.SourceName"/> when not provided.</param>
-/// <param name="lifecyclePolicy">The policy for staging after completion begins.</param>
-/// <param name="logger">Optional logger for late staging diagnostics.</param>
-public class UnitOfWorkManager(
-    IEventStore eventStore,
-    IActivitySource<UnitOfWork>? activitySource,
-    UnitOfWorkLifecyclePolicy lifecyclePolicy,
-    ILogger<UnitOfWork>? logger = null) : IUnitOfWorkManager
+public class UnitOfWorkManager : IUnitOfWorkManager
 {
-    static readonly AsyncLocal<IUnitOfWork> _current = new();
+    static readonly AsyncLocal<CurrentFrame?> _current = new();
     readonly ConcurrentDictionary<CorrelationId, IUnitOfWork> _unitsOfWork = new();
+    readonly Func<IEventStore> _eventStore;
+    readonly IActivitySource<UnitOfWork>? _activitySource;
+    readonly UnitOfWorkLifecyclePolicy _lifecyclePolicy;
+    readonly ILogger<UnitOfWork>? _logger;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="UnitOfWorkManager"/> class.
+    /// </summary>
+    /// <param name="eventStore">The event store.</param>
+    /// <param name="activitySource">Optional activity source.</param>
+    /// <param name="lifecyclePolicy">The policy for staging after completion begins.</param>
+    /// <param name="logger">Optional logger for late staging diagnostics.</param>
+    public UnitOfWorkManager(
+        IEventStore eventStore,
+        IActivitySource<UnitOfWork>? activitySource,
+        UnitOfWorkLifecyclePolicy lifecyclePolicy,
+        ILogger<UnitOfWork>? logger = null)
+        : this(() => eventStore, activitySource, lifecyclePolicy, logger)
+    {
+    }
 
     /// <summary>
     /// Initializes a manager with compatibility staging behavior.
@@ -35,11 +46,30 @@ public class UnitOfWorkManager(
     {
     }
 
-    /// <inheritdoc/>
-    public IUnitOfWork Current => _current.Value ?? throw new NoUnitOfWorkHasBeenStarted();
+    /// <summary>
+    /// Initializes a manager that binds each unit's event store on first use, not at request startup.
+    /// </summary>
+    /// <param name="eventStore">Resolves the event store in the owning scope.</param>
+    /// <param name="activitySource">Optional activity source.</param>
+    /// <param name="lifecyclePolicy">The policy for staging after completion begins.</param>
+    /// <param name="logger">Optional logger for late staging diagnostics.</param>
+    internal UnitOfWorkManager(
+        Func<IEventStore> eventStore,
+        IActivitySource<UnitOfWork>? activitySource,
+        UnitOfWorkLifecyclePolicy lifecyclePolicy,
+        ILogger<UnitOfWork>? logger)
+    {
+        _eventStore = eventStore;
+        _activitySource = activitySource;
+        _lifecyclePolicy = lifecyclePolicy;
+        _logger = logger;
+    }
 
     /// <inheritdoc/>
-    public bool HasCurrent => _current.Value is not null;
+    public IUnitOfWork Current => OpenFrame()?.UnitOfWork ?? throw new NoUnitOfWorkHasBeenStarted();
+
+    /// <inheritdoc/>
+    public bool HasCurrent => OpenFrame() is not null;
 
     /// <inheritdoc/>
     public bool TryGetFor(CorrelationId correlationId, [MaybeNullWhen(false)] out IUnitOfWork unitOfWork) =>
@@ -51,11 +81,13 @@ public class UnitOfWorkManager(
         var unitOfWork = new UnitOfWork(
             correlationId,
             UnitOfWorkCompleted,
-            eventStore,
-            activitySource,
-            lifecyclePolicy,
-            logger);
-        _current.Value = unitOfWork;
+            _eventStore,
+            _activitySource,
+            _lifecyclePolicy,
+            _logger);
+        ImmediateAppendGuard.RequireUnit(unitOfWork);
+        ReadProtectionGuard.RequireUnit(unitOfWork);
+        _current.Value = new CurrentFrame(unitOfWork, OpenFrame());
         _unitsOfWork[correlationId] = unitOfWork;
         return unitOfWork;
     }
@@ -63,20 +95,29 @@ public class UnitOfWorkManager(
     /// <inheritdoc/>
     public void SetCurrent(IUnitOfWork unitOfWork)
     {
-        _current.Value = unitOfWork;
+        ImmediateAppendGuard.RequireUnit(unitOfWork);
+        ReadProtectionGuard.RequireUnit(unitOfWork);
+        _current.Value = new CurrentFrame(unitOfWork, OpenFrame());
         _unitsOfWork[unitOfWork.CorrelationId] = unitOfWork;
         unitOfWork.OnCompleted(UnitOfWorkCompleted);
     }
 
-    void UnitOfWorkCompleted(IUnitOfWork unitOfWork)
+    /// <summary>
+    /// Gets the nearest still-open unit: a completed unit is skipped so the unit that was current when it began
+    /// becomes current again, in the flow that began it, without relying on the completion callback's flow.
+    /// </summary>
+    /// <returns>The nearest open frame, if any.</returns>
+    static CurrentFrame? OpenFrame()
     {
-        _unitsOfWork.TryRemove(unitOfWork.CorrelationId, out _);
-
-        // Only clear Current when the completing unit is the current one - clearing unconditionally
-        // would wipe a different unit that became current while this one was still live.
-        if (ReferenceEquals(_current.Value, unitOfWork))
+        var frame = _current.Value;
+        while (frame?.UnitOfWork.IsCompleted == true)
         {
-            _current.Value = null!;
+            frame = frame.Previous;
         }
+        return frame;
     }
+
+    void UnitOfWorkCompleted(IUnitOfWork unitOfWork) => _unitsOfWork.TryRemove(unitOfWork.CorrelationId, out _);
+
+    sealed record CurrentFrame(IUnitOfWork UnitOfWork, CurrentFrame? Previous);
 }

@@ -5,6 +5,7 @@ using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.EventSequences;
 using Cratis.Orleans.Jobs;
 using Microsoft.Extensions.Logging;
 
@@ -16,6 +17,21 @@ namespace Cratis.Chronicle.Observation;
 
 internal static partial class ObserverLogMessages
 {
+    [LoggerMessage(LogLevel.Warning, "Stored webhook target violates current policy; Warn mode allows delivery: {Reason}")]
+    internal static partial void StoredWebhookTargetWarning(this ILogger<Observer> logger, string reason);
+
+    [LoggerMessage(LogLevel.Warning, "Stored webhook target rejected by current policy; observer remains quarantined: {Reason}")]
+    internal static partial void StoredWebhookTargetRejected(this ILogger<Observer> logger, string reason);
+
+    [LoggerMessage(LogLevel.Warning, "Observer may have skipped {Count} event(s) of partition {Partition}, first at sequence number {EventSequenceNumber} ({Reason}); its position is {NextEventSequenceNumber}. This is a suspicion, not proof: investigate and consider replaying the partition")]
+    internal static partial void SuspectedSkippedEvents(this ILogger<Observer> logger, int count, Key partition, EventSequenceNumber eventSequenceNumber, SuspectedSkipReason reason, EventSequenceNumber nextEventSequenceNumber);
+
+    [LoggerMessage(LogLevel.Warning, "{Count} further suspected-skip warnings were not logged in the last {Seconds} seconds")]
+    internal static partial void SuspectedSkipWarningsSuppressed(this ILogger<Observer> logger, int count, int seconds);
+
+    [LoggerMessage(LogLevel.Debug, "Retrying routing after a failed next-event lookup from {NextEventSequenceNumber}")]
+    internal static partial void WatchdogRetryingEventLookup(this ILogger<Observer> logger, EventSequenceNumber nextEventSequenceNumber);
+
     [LoggerMessage(LogLevel.Debug, "Subscribing observer")]
     internal static partial void Subscribing(this ILogger<Observer> logger);
 
@@ -27,6 +43,15 @@ internal static partial class ObserverLogMessages
 
     [LoggerMessage(LogLevel.Warning, "Partition {Partition} failed for event with sequence number {EventSequenceNumber}. Error: {ExceptionMessages}. StackTrace: {StackTrace}")]
     internal static partial void PartitionFailed(this ILogger<Observer> logger, Key partition, EventSequenceNumber eventSequenceNumber, IEnumerable<string> exceptionMessages, string stackTrace);
+
+    [LoggerMessage(LogLevel.Information, "Manual retry overrides deferral for partition {Partition}: {Reason} until {Deadline}")]
+    internal static partial void PartitionDeferralOverridden(this ILogger<Observer> logger, Key partition, PartitionDeferralReason reason, DateTimeOffset deadline);
+
+    [LoggerMessage(LogLevel.Information, "Webhook partition {Partition} attempt {Attempt} failed: RetryBackoff until {Deadline}")]
+    internal static partial void WebhookRetryScheduled(this ILogger<Observer> logger, Key partition, int attempt, DateTimeOffset deadline);
+
+    [LoggerMessage(LogLevel.Warning, "Webhook partition {Partition} parked after exhausting its retry budget of {Budget}")]
+    internal static partial void WebhookRetryBudgetExhausted(this ILogger<Observer> logger, Key partition, TimeSpan budget);
 
     [LoggerMessage(LogLevel.Debug, "Trying to recover partition {Partition}")]
     internal static partial void TryingToRecoverFailedPartition(this ILogger<Observer> logger, Key partition);
@@ -162,6 +187,18 @@ internal static partial class ObserverLogMessages
     [LoggerMessage(LogLevel.Warning, "Watchdog detected that client instance {ConnectionId} is no longer connected. Removing it from the fan out targets.")]
     internal static partial void WatchdogClientInstanceDisconnected(this ILogger<Observer> logger, ConnectionId connectionId);
 
+    [LoggerMessage(LogLevel.Information, "The client {ConnectionId} that was superseded by a later registration is no longer connected. Dropping its registration.")]
+    internal static partial void SupersededClientDisconnected(this ILogger<Observer> logger, ConnectionId connectionId);
+
+    [LoggerMessage(LogLevel.Debug, "Restoring the subscription of client {ConnectionId}, which this observer activation does not know about")]
+    internal static partial void RestoringClientSubscription(this ILogger<Observer> logger, ConnectionId connectionId);
+
+    [LoggerMessage(LogLevel.Information, "The client that owned the subscription has left. Handing the observer over to the superseded client {ConnectionId} that is still connected.")]
+    internal static partial void PromotingSupersededClient(this ILogger<Observer> logger, ConnectionId connectionId);
+
+    [LoggerMessage(LogLevel.Warning, "Handing the observer over to the superseded client {ConnectionId} failed. Trying the next registration, or unsubscribing when none is left.")]
+    internal static partial void PromotingSupersededClientFailed(this ILogger<Observer> logger, ConnectionId connectionId, Exception exception);
+
     [LoggerMessage(LogLevel.Warning, "Client instance {ConnectionId} reported disconnected while handling partition {Partition}. Retrying with the remaining instances.")]
     internal static partial void ClientInstanceDisconnectedRetryingWithRemaining(this ILogger<Observer> logger, ConnectionId connectionId, Key partition);
 
@@ -170,6 +207,9 @@ internal static partial class ObserverLogMessages
 
     [LoggerMessage(LogLevel.Warning, "Watchdog detected that the catch-up job is missing while observer has catching-up partitions. Re-routing observer.")]
     internal static partial void WatchdogCatchupJobMissing(this ILogger<Observer> logger);
+
+    [LoggerMessage(LogLevel.Warning, "Watchdog could not look up the next relevant event from {NextEventSequenceNumber}: {Error}. Keeping the observer position unchanged until the next check.")]
+    internal static partial void WatchdogNextEventLookupFailed(this ILogger<Observer> logger, EventSequenceNumber nextEventSequenceNumber, GetSequenceNumberError error);
 
     [LoggerMessage(LogLevel.Debug, "Watchdog fast-forwarding NextEventSequenceNumber from {NextEventSequenceNumber} to tail {TailEventSequenceNumber} because there are no relevant events in that range.")]
     internal static partial void WatchdogFastForwardingNextEventSequenceNumber(this ILogger<Observer> logger, EventSequenceNumber nextEventSequenceNumber, EventSequenceNumber tailEventSequenceNumber);
@@ -215,10 +255,25 @@ internal static partial class ObserverLogMessages
 
     [LoggerMessage(LogLevel.Information, "Retiring observer - unsubscribing, discarding its failed partitions and clearing its alerts as removed while retaining quarantine")]
     internal static partial void RetiringObserver(this ILogger<Observer> logger);
+
+    [LoggerMessage(LogLevel.Warning, "A catch-up job concluded without moving the observer forward ({ConsecutiveLaps} in a row)")]
+    internal static partial void CatchUpProducedNoWork(this ILogger<Observer> logger, int consecutiveLaps);
+
+    [LoggerMessage(LogLevel.Information, "Catch-up backoff after catch-up jobs that produced no work has elapsed. Routing the observer again")]
+    internal static partial void CatchUpBackoffElapsed(this ILogger<Observer> logger);
 }
 
 internal static class ObserverScopes
 {
+    internal static IDisposable? BeginObserverKeyScope(this ILogger logger, ObserverKey observerKey) =>
+        logger.BeginScope(new
+        {
+            observerKey.ObserverId,
+            observerKey.EventStore,
+            observerKey.Namespace,
+            observerKey.EventSequenceId
+        });
+
     internal static IDisposable? BeginObserverScope(this ILogger<Observer> logger, ObserverId observerId, ObserverKey observerKey) =>
         logger.BeginScope(new
         {

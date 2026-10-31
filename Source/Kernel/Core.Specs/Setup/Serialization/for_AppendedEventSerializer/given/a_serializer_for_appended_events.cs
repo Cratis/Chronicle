@@ -41,7 +41,7 @@ public class a_serializer_for_appended_events : Specification
         storage.GetEventStore(Arg.Any<EventStoreName>()).Returns(eventStoreStorage);
 
         var services = new ServiceCollection();
-        services.AddSingleton(new JsonSerializerOptions());
+        services.AddSingleton(new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
         services.AddSingleton(Substitute.For<IExpandoObjectConverter>());
         services.AddSingleton(storage);
         services.AddSerializer(builder => builder.Services.AddCustomSerializers());

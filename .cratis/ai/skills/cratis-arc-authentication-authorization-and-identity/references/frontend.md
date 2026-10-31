@@ -1,7 +1,15 @@
 <!-- cratis-ai-managed: skills/cratis-arc-authentication-authorization-and-identity/references/frontend.md -->
 # Frontend identity
 
-Verified against `@cratis/arc` and `@cratis/arc.react` `22.41.1`.
+## Contents
+
+- `@cratis/arc/identity`
+- `@cratis/arc.react/identity`
+- `RequireRole`
+- MVVM
+- Identity hook examples
+
+Source: `@cratis/arc` and `@cratis/arc.react`.
 
 ## `@cratis/arc/identity`
 
@@ -21,12 +29,13 @@ interface IIdentity<TDetails = object> {
 
 | Member | Notes |
 | --- | --- |
-| `static readonly CookieName = '.cratis-identity'` | The cookie `/.cratis/me` writes |
+| `static readonly CookieName = '.cratis-identity'` | Deprecated legacy cookie name; current backend neither reads nor writes identity there |
 | `static setHttpHeadersCallback(callback)` | Headers to send on the refresh call |
 | `static setApiBasePath(path)` / `static setOrigin(origin)` | Where `/.cratis/me` lives |
-| `static getCurrent<TDetails>(type?)` | Reads the **cookie**, no network call |
+| `static getCurrent<TDetails>(type?)` | Fetches `/.cratis/me`, caches a resolved identity in memory |
 | `static refresh<TDetails>(type?)` | Fetches `<apiBasePath>/.cratis/me` |
-| `static clearIdentityCookie()` | Expires the cookie |
+| `static clearCache()` | Forgets memory cache and expires a legacy cookie; use on logout |
+| `static clearIdentityCookie()` | Deprecated alias for `clearCache()` |
 
 `IIdentityProvider` is an abstract class with a single
 `getCurrent<TDetails>(type?)`, which is what a view model injects.
@@ -34,9 +43,11 @@ interface IIdentity<TDetails = object> {
 `IdentityProviderResult` on the wire is
 `{ id: string; name: string; roles: string[]; details: object }`.
 
-`getCurrent` reads the cookie and never touches the network. That is what makes
-it cheap, and also why nothing it returns is a security decision — the cookie is
-deliberately not `HttpOnly`, so the browser can read *and write* it.
+`getCurrent` fetches once for a resolved identity; `refresh` always asks again.
+Only a 404 enables the warned legacy-cookie fallback; a cookie never overrides
+401/403. Stop reading `.cratis-identity` in application code. Neither the memory
+cache nor the legacy fallback is an authorization boundary.
+Source: [IdentityProvider.ts](https://github.com/Cratis/Arc/blob/main/Source/JavaScript/Arc/identity/IdentityProvider.ts).
 
 ## `@cratis/arc.react/identity`
 
@@ -96,8 +107,8 @@ Everything that is not an unambiguous yes renders `forbidden`:
 - the predicate throws;
 - an `allow` predicate with absent or `null` details.
 
-⚠️ **This hides UI; it does not protect data.** The identity comes from a cookie
-the browser can edit, so anyone can render these children at will. Every query
+⚠️ **This hides UI; it does not protect data.** Identity comes from the endpoint,
+but anyone can edit browser state and render these children at will. Every query
 and command behind the gate must carry its own `[Authorize]`/`[Roles]` on the
 server, where the decision cannot be edited.
 
@@ -106,3 +117,21 @@ server, where the decision cannot be edited.
 `@cratis/arc.react.mvvm` has **no** identity hook, provider, context, or type. It
 registers `IIdentityProvider` → `IdentityProvider` in its container so a view
 model can constructor-inject it. That is the whole integration.
+
+## Identity hook examples
+
+```tsx
+import { Arc } from '@cratis/arc.react';
+
+<Arc detailsType={<Details>}>{children}</Arc>
+```
+
+`<Arc>` renders the `IdentityProvider` context for you. Inside it:
+
+```tsx
+import { useIdentity, RequireRole } from '@cratis/arc.react/identity';
+
+const identity = useIdentity(<Details>, <defaultDetails>);
+// identity.id, .name, .roles, .details, .isSet, .isInRole(role)
+// identity.isLoading, identity.clearIdentity()
+```

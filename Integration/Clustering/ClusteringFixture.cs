@@ -95,10 +95,53 @@ public class ClusteringFixture : IAsyncLifetime
 
     InProcessSiloHandle EventSequencesSilo => _cluster!.Silos.Single(silo => silo.Name == EventSequencesSiloName);
 
-    InProcessSiloHandle ObserversSilo => _cluster!.Silos.Single(silo => silo.Name == ObserversSiloName);
+    InProcessSiloHandle ObserversSilo => SiloCount == 1 ? EventSequencesSilo : _cluster!.Silos.Single(silo => silo.Name == ObserversSiloName);
+
+    /// <summary>
+    /// Gets the second silo's services, or the same silo for a single-silo fixture.
+    /// </summary>
+    public IServiceProvider SecondSiloServices => ObserversSilo.ServiceProvider;
+
+    /// <summary>
+    /// Gets the number of kernel silos to deploy.
+    /// </summary>
+    protected virtual short SiloCount => 2;
+
+    /// <summary>
+    /// Configures the backing store without replacing cluster membership.
+    /// </summary>
+    /// <param name="builder">The kernel builder.</param>
+    /// <param name="mongoUrl">The fixture's MongoDB endpoint.</param>
+    protected virtual void ConfigureStorage(Configuration.IChronicleBuilder builder, string mongoUrl) => builder.WithMongoDB(mongoUrl, Constants.EventStore);
+
+    /// <summary>
+    /// Configures fixture-specific services before the silo is built.
+    /// </summary>
+    /// <param name="services">The silo services.</param>
+    protected virtual void ConfigureFixtureServices(IServiceCollection services) { }
+
+    /// <summary>
+    /// Abruptly terminates every kernel silo, retaining the backing database, then deploys fresh silos.
+    /// </summary>
+    /// <param name="afterSilosStopped">Releases test-only barriers after all old silos have terminated.</param>
+    /// <returns>The restarted and bootstrapped kernel.</returns>
+    public async Task CrashAndRestart(Action? afterSilosStopped = null)
+    {
+        foreach (var silo in _cluster!.GetActiveSilos().ToArray()) await _cluster.KillSiloAsync(silo);
+        afterSilosStopped?.Invoke();
+        await _cluster.DisposeAsync();
+        _cluster = null;
+        await BringUpClusterAsync(_mongoRunner!.ConnectionString);
+    }
+
+    /// <summary>
+    /// Abruptly terminates the observer silo; the event-sequences silo remains running.
+    /// </summary>
+    /// <returns>The termination operation.</returns>
+    public Task CrashSecondSilo() => _cluster!.KillSiloAsync(ObserversSilo);
 
     /// <inheritdoc/>
-    public async Task InitializeAsync()
+    public virtual async ValueTask InitializeAsync()
     {
         _mongoRunner = await MongoRunner.RunAsync(new MongoRunnerOptions
         {
@@ -132,7 +175,7 @@ public class ClusteringFixture : IAsyncLifetime
     }
 
     /// <inheritdoc/>
-    public async Task DisposeAsync()
+    public virtual async ValueTask DisposeAsync()
     {
         await TearDownClusterAsync();
         _mongoRunner?.Dispose();
@@ -145,7 +188,7 @@ public class ClusteringFixture : IAsyncLifetime
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     async Task BringUpClusterAsync(string mongoUrl)
     {
-        var builder = new InProcessTestClusterBuilder(2);
+        var builder = new InProcessTestClusterBuilder(SiloCount);
         builder.Options.ConfigureFileLogging = false;
 
         // The specs never use the Orleans cluster client — they talk to the co-hosted Chronicle client
@@ -198,18 +241,19 @@ public class ClusteringFixture : IAsyncLifetime
                 services.Configure<Configuration.ChronicleOptions>(options =>
                 {
                     options.Clustering.Roles.EventSequences = isEventSequencesSilo;
-                    options.Clustering.Roles.Observers = !isEventSequencesSilo;
+                    options.Clustering.Roles.Observers = SiloCount == 1 || !isEventSequencesSilo;
                 });
             })
             .ConfigureSilo((siloOptions, siloBuilder) =>
             {
                 KernelGrpc::Orleans.Hosting.ChronicleServerSiloBuilderExtensions.AddChronicleToSilo(
                     siloBuilder,
-                    chronicleBuilder => chronicleBuilder.WithMongoDB(mongoUrl, Constants.EventStore));
+                    chronicleBuilder => ConfigureStorage(chronicleBuilder, mongoUrl));
 
                 siloBuilder.ConfigureServices(services =>
                 {
                     RemoveChronicleServerStartupTask(services);
+                    ConfigureFixtureServices(services);
 
                     // Both silos co-host an instance of the same logical client application - two
                     // instances of every reactor and reducer - so the specs exercise the fan out
@@ -226,7 +270,7 @@ public class ClusteringFixture : IAsyncLifetime
         // With InitializeClientOnDeploy off, DeployAsync skips its own stabilization wait (it polls
         // through the cluster client), so wait for membership to reach two active silos here before
         // any grain placement happens.
-        await WaitForActiveSilos(expectedSilos: 2);
+        await WaitForActiveSilos(expectedSilos: SiloCount);
 
         // Manually perform the kernel bootstrap that ChronicleServerStartupTask normally handles.
         // That task is removed because it activates grains during silo startup, before the cluster is
@@ -274,7 +318,7 @@ public class ClusteringFixture : IAsyncLifetime
     /// propagates to the caller, which discards this cluster instance and brings up a fresh one.
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-    async Task WarmUpAsync()
+    protected virtual async Task WarmUpAsync()
     {
         var warmupTimeout = TimeSpan.FromSeconds(40);
 
@@ -415,7 +459,9 @@ public class ClusteringFixture : IAsyncLifetime
     {
         public IEnumerable<Assembly> Assemblies => [assembly];
 
-        public IEnumerable<Type> DefinedTypes => assembly.DefinedTypes.Select(_ => _.AsType());
+        public IEnumerable<Type> DefinedTypes => assembly.DefinedTypes
+            .Where(type => type.Namespace?.Contains(".for_Occurrences", StringComparison.Ordinal) != true)
+            .Select(_ => _.AsType());
 
         public void Initialize()
         {

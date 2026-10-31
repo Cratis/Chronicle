@@ -1,3 +1,6 @@
+---
+description: How a Chronicle client should normalize empty collection results and distinguish them from query failures at the contract boundary.
+---
 # Empty results and query failures
 
 A successful collection query with no matches returns an empty collection, not `null`.

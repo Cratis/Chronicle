@@ -20,10 +20,13 @@ internal sealed class ModelBoundExplicitProjection(Type readModelType) : IExplic
     /// The same identifier discovery gives a model-bound projection, so registering a read model explicitly that
     /// discovery also found is the same projection rather than a competing one.
     /// </remarks>
-    public ProjectionId Id => new(readModelType.FullName!);
+    public ProjectionId Id => ArtifactIdentity.ModelProjectionIdFor(readModelType);
 
     /// <inheritdoc/>
     public bool IsModelBound => true;
+
+    /// <inheritdoc/>
+    public string? ContainerNameOverride => null;
 
     /// <inheritdoc/>
     /// <exception cref="ReadModelIsNotModelBound">Thrown when the read model carries no model-bound projection attributes.</exception>

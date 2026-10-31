@@ -22,4 +22,10 @@ public record WebhookDefinitionChangedProperties(
     bool IsReplayableChanged,
     bool IsActiveChanged,
     bool OwnerChanged,
-    bool EventSequenceIdChanged);
+    bool EventSequenceIdChanged)
+{
+    /// <summary>
+    /// Gets whether the generation delivery policy changed.
+    /// </summary>
+    public bool GenerationDeliveryChanged { get; init; }
+}

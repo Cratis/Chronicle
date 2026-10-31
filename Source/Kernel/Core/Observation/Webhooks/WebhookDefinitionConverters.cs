@@ -5,6 +5,7 @@
 
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
+using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.Webhooks;
 using Cratis.Chronicle.Concepts.Security;
 using OneOf.Types;
@@ -29,7 +30,10 @@ internal static class WebhookDefinitionConverters
             webhookDefinition.EventTypes.Select(_ => _.ToChronicle()).ToArray(),
             webhookDefinition.Target.ToChronicle(),
             webhookDefinition.IsReplayable && !webhookDefinition.IsNotReplayable,
-            webhookDefinition.IsActive && !webhookDefinition.IsInactive);
+            webhookDefinition.IsActive && !webhookDefinition.IsInactive)
+        {
+            GenerationDelivery = (EventGenerationDelivery)webhookDefinition.GenerationDelivery
+        };
 
     /// <summary>
     /// Convert from <see cref="Contracts.Observation.Webhooks.WebhookDefinition"/> to <see cref="WebhookDefinition"/>.
@@ -40,6 +44,7 @@ internal static class WebhookDefinitionConverters
         new()
         {
             Identifier = webhookDefinition.Identifier,
+            GenerationDelivery = (Contracts.Observation.EventGenerationDelivery)webhookDefinition.GenerationDelivery,
             EventSequenceId = webhookDefinition.EventSequenceId,
             EventTypes = webhookDefinition.EventTypes.Select(type => type.ToContract()).ToList(),
             IsActive = webhookDefinition.IsActive,
@@ -56,7 +61,9 @@ internal static class WebhookDefinitionConverters
     /// <returns>Converted <see cref="WebhookTarget"/>.</returns>
     internal static WebhookTarget ToChronicle(this Contracts.Observation.Webhooks.WebhookTarget target)
     {
-        var authorization = target.Authorization switch
+        var authorization = target.ManagedIdentity is not null
+            ? WebhookAuthorization.FromT4(new ManagedIdentityAuthorization(target.ManagedIdentity.ClientId, target.ManagedIdentity.Scope))
+            : target.Authorization switch
         {
             null => WebhookAuthorization.None,
             var auth when auth.Value0 is not null => new BasicAuthorization(auth.Value0.Username, auth.Value0.Password),
@@ -64,7 +71,7 @@ internal static class WebhookDefinitionConverters
             var auth when auth.Value2 is not null => new OAuthAuthorization(
                 auth.Value2.Authority,
                 auth.Value2.ClientId,
-                auth.Value2.ClientSecret),
+                auth.Value2.ClientSecret) { Scope = auth.Value2.Scope },
             _ => WebhookAuthorization.None
         };
         return new(
@@ -100,9 +107,15 @@ internal static class WebhookDefinitionConverters
             {
                 Authority = oauth.Authority,
                 ClientId = oauth.ClientId,
-                ClientSecret = oauth.ClientSecret
+                ClientSecret = oauth.ClientSecret,
+                Scope = oauth.Scope
             }),
-            none => { });
+            none => { },
+            managedIdentity => contractTarget.ManagedIdentity = new Contracts.Security.ManagedIdentityAuthorization
+            {
+                ClientId = managedIdentity.ClientId,
+                Scope = managedIdentity.Scope
+            });
 
         return contractTarget;
     }
@@ -123,7 +136,7 @@ internal static class WebhookDefinitionConverters
     internal static WebhookDetails ToReadModel(this Concepts.Observation.Webhooks.WebhookDefinition definition)
     {
         var contract = definition.ToContract();
-        return new(
+        return new WebhookDetails(
             contract.Identifier,
             contract.Identifier,
             contract.Target.Url,
@@ -132,7 +145,10 @@ internal static class WebhookDefinitionConverters
             definition.Target.Authorization.ToAuthorizationType(),
             contract.Target.Headers,
             contract.IsReplayable,
-            contract.IsActive);
+            contract.IsActive)
+        {
+            GenerationDelivery = definition.GenerationDelivery
+        };
     }
 
     /// <summary>
@@ -145,5 +161,6 @@ internal static class WebhookDefinitionConverters
             _ => Contracts.Security.AuthorizationType.Basic,
             _ => Contracts.Security.AuthorizationType.Bearer,
             _ => Contracts.Security.AuthorizationType.OAuth,
-            _ => Contracts.Security.AuthorizationType.None);
+            _ => Contracts.Security.AuthorizationType.None,
+            _ => Contracts.Security.AuthorizationType.ManagedIdentity);
 }

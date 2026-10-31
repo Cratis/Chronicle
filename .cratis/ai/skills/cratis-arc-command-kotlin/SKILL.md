@@ -14,29 +14,23 @@ there is no controller or handler class to write by hand.
 
 ## Verified product sources
 
-Verified against `Arc.Kotlin` at tag **`v7.3.0`**, re-verified at commit
-`d0aa6a4` (14 commits past the tag), against the documented consumer setup:
-JDK 17, Gradle 8.14.4, Kotlin 2.4.20, KSP 2.3.12, Spring Boot 4.1.x. The
-re-verification picked up a real behavior correction to authorization
-override — see "Protect the command" below — confirmed against
-`ArcSymbolProcessorAuthorizationPrecedenceCompilationTest` and
-`buildAuthorization` in `ArcSymbolProcessor.kt`, not documentation prose alone:
-two of Arc.Kotlin's own reference pages (`reference/annotations.md`,
-`troubleshooting.md`) are currently stale on this point relative to
-`guides/security.md`, `reference/parity.md`, and the compiler source. The local workspace version is `0.0.0-SNAPSHOT`; use a released version
-from Maven Central for a real application.
+Source: `Arc.Kotlin`.
+Sources include `ArcSymbolProcessor.kt`, `GradlePlugin/ArcExtension.kt` and
+`Integrations/Cratis`/`Integrations/Chronicle` publishing blocks. Use a released
+version from Maven Central, not the local `0.0.0-SNAPSHOT`.
 
-| Artifact | Purpose |
-| --- | --- |
-| `io.cratis:arc` | `io.cratis.arc.artifacts.Command`, `CommandKey`, `FromServices` |
-| `io.cratis:arc-ksp` | the KSP processor that generates the command handler |
-| `io.cratis:arc-spring-boot-starter` | Spring Boot auto-configuration, the command pipeline host |
-| `io.cratis:arc-chronicle-spring-boot-starter` | optional — Chronicle event append from a returned event |
-| `io.cratis.arc` Gradle plugin | applies Kotlin/JVM + KSP, adds the dependencies, configures the module name and proxy output |
+Read [references/artifacts.md](references/artifacts.md) when choosing `io.cratis` artifacts.
+
+Requires Arc.Kotlin 7.5.0 for the single `io.cratis:cratis` dependency.
 
 Arc.Kotlin has no Chronicle dependency by default. Add the optional Chronicle
-starter only when a command should append a returned event or read a Chronicle
-read model; without it, `handle()` returns an ordinary response value.
+integration only when a command should append a returned event or read a
+Chronicle read model; without it, `handle()` returns an ordinary response value.
+For that setup prefer `implementation("io.cratis:cratis:<version>")` over the
+Arc-only starter in the example below. Arc brings a compatible Chronicle.Kotlin
+transitively, and its compatibility gate names the kernels it accepts. The standalone
+Chronicle client can need a newer kernel; do not assume that
+latest/latest is a verified Arc integration pair.
 
 Java applications still need Kotlin and KSP on the build — Arc generates Kotlin
 adapters for Java declarations even in an all-Java application. A Java project
@@ -45,42 +39,7 @@ application source files differ (Java records instead of Kotlin data classes).
 
 ## Set up the project
 
-```kotlin
-// settings.gradle.kts
-pluginManagement {
-    repositories {
-        mavenCentral()
-        gradlePluginPortal()
-    }
-}
-```
-
-```kotlin
-// build.gradle.kts
-plugins {
-    id("io.cratis.arc") version "<version>"
-    kotlin("plugin.spring") version "2.4.20"
-    id("org.springframework.boot") version "4.1.1"
-    id("io.spring.dependency-management") version "1.1.7"
-}
-
-repositories {
-    mavenCentral()
-}
-
-cratisArc {
-    moduleName.set("<ModuleName>")
-    dependencyVersion.set("<version>")
-    endpoints {
-        segmentsToSkip.set(<packageSegmentsUnderModuleRoot>)
-    }
-}
-
-dependencies {
-    implementation("io.cratis:arc-spring-boot-starter:<version>")
-    implementation("org.springframework.boot:spring-boot-starter-webmvc")
-}
-```
+Read [references/project-setup.md](references/project-setup.md) when writing the Gradle build for a new project.
 
 The plugin applies Kotlin/JVM and KSP, targets JDK 17, and treats warnings as
 errors. `moduleName` names the generated artifact module and manifest; every
@@ -182,7 +141,8 @@ data class CompleteTask(val taskId: TaskId) {
 
 ## Return a Chronicle event
 
-Requires the optional `io.cratis:arc-chronicle-spring-boot-starter`. A plain
+Requires `io.cratis:cratis` or the explicit
+`io.cratis:arc-chronicle-spring-boot-starter`. A plain
 event response needs a stable command key backed by `String`, `UUID`, a
 number, or a concept wrapping one of those — mark it `@CommandKey`.
 
@@ -236,9 +196,10 @@ data class CreateTask(@CommandKey val id: String, val title: String) {
 ```
 
 Each annotation is optional and must be nonblank with no control characters
-when present (`ARCKSP0110` otherwise). Omit one to keep Chronicle's own
-fallback: source/stream type default to `Default`, stream id/subject default
-to the event-source identifier. An explicit `EventForEventSourceId` value keeps
+when present (`ARCKSP0110` otherwise). Omitted routing is forwarded as absent by `ChronicleOperationContext`:
+with Chronicle `6.x`, the kernel resolves source/stream type/stream id to
+`Default`/`All`/`Default`; subject defaults to the event-source identifier.
+Pass all routing fields explicitly to preserve a legacy route. An explicit `EventForEventSourceId` value keeps
 its own metadata; only its missing fields inherit the command's declaration.
 Implement `CommandEventStreamIdProvider` or `CommandEventSubjectProvider`
 instead when a value depends on the command instance — never combine a
@@ -272,6 +233,10 @@ A value from `provide` still takes precedence over this injection. A missing
 model leaves the dependency unresolved rather than silently falling through to
 another store; an invalid key or unavailable store fails the command.
 
+Collection naming is shared with Arc's MongoDB integration.
+Read [references/read-model-naming.md](references/read-model-naming.md) when
+upgrading an existing projection or overriding its storage collection name.
+
 ## Protect the command
 
 ```kotlin
@@ -295,19 +260,7 @@ operation on an `@Authorize`-protected class is reachable without
 authentication — the shape a login-screen query needs on an otherwise
 protected read model):
 
-```kotlin
-@ReadModel
-@Authorize
-data class AuthenticationQueryItem(val message: String) {
-    companion object {
-        // Overrides the class: anyone may subscribe to this one.
-        @JvmStatic
-        @AllowAnonymous
-        fun anonymous(@FromServices source: AuthenticationQuerySource): Flow<AuthenticationQueryItem> =
-            source.observeAnonymous()
-    }
-}
-```
+Read [references/authorization-override-example.md](references/authorization-override-example.md) when you need the `@AllowAnonymous` operation-override example.
 
 Combining `@AllowAnonymous` with `@Authorize`/`@Roles` is only ever a
 contradiction — and only ever fails with `ARCKSP0108` — **on the exact same
@@ -338,6 +291,17 @@ they read almost identically. The generated proxy's runtime contract
 `@cratis/arc` client shape as Arc .NET; see the `cratis-arc-command` skill for
 that contract.
 
+`proxies.enabled` defaults to true; `removeStaleGeneratedFiles` defaults to
+true. Set `proxies.useProxyFileSuffix` for `Name.proxy.ts` instead of `Name.ts`
+(CLI: `--use-proxy-file-suffix`). `proxies.mapType(...)` and `mapPackage(...)`
+map external DTOs to TypeScript types/npm packages. Do not map a command or
+concept directly: command mappings fail, and `ConceptAs` is unwrapped to its
+underlying primitive before mapping, so its named type exists only in the backend.
+`@ExportedType` explicitly exports a DTO; KDoc/Javadoc summaries become JSDoc.
+
+`endpoints.routePrefix`, `includeCommandNames`, `includeQueryNames`, and
+`enableQueryHttpMethod` control endpoint conventions separately from proxy paths.
+
 ## Route near misses
 
 - Adding or changing a rejection rule on an existing command:
@@ -345,6 +309,9 @@ that contract.
 - Defining or changing a `@ReadModel` query: `cratis-arc-query-kotlin`.
 - Talking to Chronicle outside a command (a plain worker, a reactor's own
   event types, direct append): `cratis-chronicle-client-kotlin`.
+- In-process command/query specifications: `cratis-arc-testing-kotlin`.
+- Authentication, identity or tenant resolution: `cratis-arc-identity-and-tenancy-kotlin`.
+- Spring Data storage and observations: `cratis-arc-spring-data-kotlin`.
 - The C# Arc command shape and its causation-chain rules: `cratis-arc-command`.
 
 ## Verify
@@ -366,3 +333,5 @@ that contract.
   `allWarningsAsErrors`, Java `-Xlint:all -Werror`).
 - The generated proxy exists at the configured output directory when one was
   configured, and the frontend compiles against it.
+- Exercise the generated module through `cratis-arc-testing-kotlin`, including
+  rejection, authorization and append-failure paths when they apply.

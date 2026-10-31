@@ -34,6 +34,7 @@ internal static class ChronicleClientServiceCollectionExtensions
     {
         services.AddEventSerializer();
         services.AddReactorSideEffectHandlers();
+        services.AddChronicleOccurrenceLifecycle();
 
         services.AddSingleton(sp =>
         {
@@ -94,6 +95,7 @@ internal static class ChronicleClientServiceCollectionExtensions
         services.AddScoped(sp => sp.GetRequiredService<IEventStore>().ReadModels);
         services.AddScoped(sp => sp.GetRequiredService<IEventStore>().GetDecisionReads());
         services.AddScoped(sp => sp.GetRequiredService<IEventStore>().PII);
+        services.AddScoped(sp => sp.GetRequiredService<IEventStore>().EventSources);
 
         services.AddSingleton(_ => chronicleBuilder?.ClientArtifactsProvider ?? DefaultClientArtifactsProvider.Default);
         services.AddSingleton(_ => chronicleBuilder?.NamingPolicy ?? new DefaultNamingPolicy());

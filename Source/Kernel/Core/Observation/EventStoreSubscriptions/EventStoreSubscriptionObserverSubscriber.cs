@@ -8,9 +8,12 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.EventSequences.Concurrency;
+using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Compliance;
 using Microsoft.Extensions.Logging;
 
@@ -23,11 +26,15 @@ namespace Cratis.Chronicle.Observation.EventStoreSubscriptions;
 /// <param name="encryptionKeyStorage"><see cref="IEncryptionKeyStorage"/> for key propagation between event stores.</param>
 /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for serializing event content.</param>
 /// <param name="logger">The logger.</param>
+/// <param name="storage">Storage for current subscriptions and exact event generations.</param>
+/// <param name="generationRelease">The pinned generation release boundary.</param>
 public class EventStoreSubscriptionObserverSubscriber(
     IGrainFactory grainFactory,
     IEncryptionKeyStorage encryptionKeyStorage,
     JsonSerializerOptions jsonSerializerOptions,
-    ILogger<EventStoreSubscriptionObserverSubscriber> logger) : Grain, IEventStoreSubscriptionObserverSubscriber
+    ILogger<EventStoreSubscriptionObserverSubscriber> logger,
+    IStorage storage,
+    IEventGenerationRelease generationRelease) : Grain, IEventStoreSubscriptionObserverSubscriber
 {
     ObserverKey _key = ObserverKey.NotSet;
 
@@ -58,9 +65,25 @@ public class EventStoreSubscriptionObserverSubscriber(
         var lastSuccessfullyForwardedSequenceNumber = EventSequenceNumber.Unavailable;
         try
         {
-            var copiedSubjects = new HashSet<Subject>();
-            foreach (var @event in events)
+            // Read committed policy, not the manager grain: replay/reconciliation can await this delivery.
+            // Resolve on every batch so an old Compatibility job also observes a deliberate mode update.
+            var definitions = (await storage.GetEventStore(targetEventStore).EventStoreSubscriptions.GetAll())
+                .Where(_ => _.SourceEventStore == _key.EventStore).ToArray();
+            var definition = definitions.SingleOrDefault(_ => $"{_.Identifier.Value}->{targetEventStore.Value}" == _key.ObserverId.Value)
+                ?? definitions.SingleOrDefault(_ => _.Identifier.Value == _key.ObserverId.Value);
+            if (definition?.GenerationDelivery == EventGenerationDelivery.Pinned)
             {
+                EventStoreSubscriptionGenerationValidation.ValidatePins(definition.EventTypes);
+            }
+
+            var pins = definition?.GenerationDelivery == EventGenerationDelivery.Pinned
+                ? definition.EventTypes.Distinct().ToDictionary(_ => _.Id)
+                : new Dictionary<EventTypeId, EventType>();
+            var schemas = new Dictionary<EventType, EventTypeSchema>();
+            var copiedSubjects = new HashSet<Subject>();
+            foreach (var incoming in events)
+            {
+                var @event = await ReleaseForCurrentPin(incoming, pins, schemas, targetEventStore);
                 if (copiedSubjects.Add(@event.Context.Subject))
                 {
                     await CopyEncryptionKeyIfMissingForTargetStore(@event.Context.Subject, targetEventStore);
@@ -76,7 +99,7 @@ public class EventStoreSubscriptionObserverSubscriber(
                     @event.Context.CorrelationId,
                     @event.Context.Causation,
                     @event.Context.CausedBy,
-                    [],
+                    @event.Context.Tags,
                     ConcurrencyScope.None,
                     occurred: @event.Context.Occurred,
                     subject: @event.Context.Subject);
@@ -111,6 +134,48 @@ public class EventStoreSubscriptionObserverSubscriber(
                 [ex.Message],
                 ex.StackTrace ?? string.Empty);
         }
+    }
+
+    async Task<AppendedEvent> ReleaseForCurrentPin(
+        AppendedEvent @event,
+        Dictionary<EventTypeId, EventType> pins,
+        Dictionary<EventType, EventTypeSchema> schemas,
+        EventStoreName targetEventStore)
+    {
+        if (pins.Count == 0)
+        {
+            return @event;
+        }
+
+        // Redaction markers for subscribed original types also arrive on replay and retry. They have
+        // their own kernel schema, not the original type's pin, and contain no content to migrate.
+        if (@event.Context.EventType.Id == GlobalEventTypes.Redaction)
+        {
+            await EventStoreSubscriptionGenerationValidation.GetExactSchema(storage.GetEventStore(targetEventStore).EventTypes, @event.Context.EventType);
+            return @event;
+        }
+
+        if (!pins.TryGetValue(@event.Context.EventType.Id, out var pin))
+        {
+            throw new PinnedEventTypeGenerationUnavailable(@event.Context.EventType);
+        }
+
+        // Validate per event, before any key propagation or inbox append. A later failure must report
+        // the prefix already forwarded, and target registrations may change independently of the source.
+        await EventStoreSubscriptionGenerationValidation.GetExactSchema(storage.GetEventStore(targetEventStore).EventTypes, pin);
+        if (pin == @event.Context.EventType)
+        {
+            // The observer has already released this generation; never decrypt its plaintext again.
+            return @event;
+        }
+
+        if (!schemas.ContainsKey(pin))
+        {
+            schemas[pin] = await EventStoreSubscriptionGenerationValidation.GetExactSchema(storage.GetEventStore(_key.EventStore).EventTypes, pin);
+        }
+
+        var released = await generationRelease.Release(_key.EventStore, [pin], schemas, [@event]);
+        return released.Single();
     }
 
     JsonObject SerializeContent(System.Dynamic.ExpandoObject content)

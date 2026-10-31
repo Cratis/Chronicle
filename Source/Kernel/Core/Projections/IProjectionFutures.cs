@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Projections;
+using Cratis.Chronicle.Observation;
 
 namespace Cratis.Chronicle.Projections;
 
@@ -22,6 +23,13 @@ public interface IProjectionFutures : IGrainWithStringKey
     /// <param name="future">The <see cref="ProjectionFuture"/> to add.</param>
     /// <returns>The number of futures pending resolution after the add.</returns>
     Task<int> AddFuture(ProjectionFuture future);
+
+    /// <summary>
+    /// Adds a pinned clause's future, retaining different generations of one physical event.
+    /// </summary>
+    /// <param name="future">The released future to add.</param>
+    /// <returns>The number of pending futures.</returns>
+    Task<int> AddPinnedFuture(ProjectionFuture future) => Task.FromException<int>(new EventGenerationDeliveryNotSupported());
 
     /// <summary>
     /// Resolve a future that has been successfully resolved.

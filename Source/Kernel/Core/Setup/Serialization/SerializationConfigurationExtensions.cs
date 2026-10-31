@@ -76,6 +76,7 @@ public static class SerializationConfigurationExtensions
                 .AddCompleteSerializer<AppendedEventSerializer>()
                 .AddCompleteSerializer<OneOfSerializer>()
                 .AddCompleteSerializer<ConcurrencyScopesSerializer>()
+                .AddCompleteSerializer<ConcurrencyScopeConjunctionsSerializer>()
                 .AddCompleteSerializer<ExpandoObjectSerializer>()
                 .AddLinqCollectionCopier();
             builder.Services.AddSingleton<ITypeFilter, CratisTypesFilter>();

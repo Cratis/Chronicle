@@ -31,6 +31,7 @@ public class a_performing_job_step : Specification
     protected IEventCursor _eventCursor;
     protected IEventTypesStorage _eventTypesStorage;
     protected IEventCompliance _eventCompliance;
+    protected IEventGenerationRelease _eventGenerationRelease;
     protected HandleEventsForPartitionState _performState;
     protected static readonly EventSequenceNumber first_event_sequence_number = 42ul;
 
@@ -69,12 +70,14 @@ public class a_performing_job_step : Specification
             typeof(ISomeObserverType),
             SiloAddress.Zero);
         _observer = Substitute.For<IObserver>();
+        _observer.CanResumeFailedPartition(Arg.Any<Concepts.Keys.Key>(), Arg.Any<FailedPartitionId?>(), Arg.Any<Guid?>()).Returns(true);
         _observer.GetSubscription().Returns(subscription);
         _observerSubscriber = Substitute.For<ISomeObserverType>();
 
         _silo.AddProbe(_ => _observer);
         _silo.AddProbe(_ => _observerSubscriber);
         _silo.AddService(_storage);
+        _silo.AddService<TimeProvider>(TimeProvider.System);
         _silo.AddService(Substitute.For<IJobStepThrottle>());
         _silo.AddService<IObserverSubscriberSelector>(new RoundRobinObserverSubscriberSelector());
 
@@ -88,6 +91,8 @@ public class a_performing_job_step : Specification
             .Release(Arg.Any<IEnumerable<AppendedEvent>>(), Arg.Any<IDictionary<EventType, EventTypeSchema>>())
             .Returns(callInfo => Task.FromResult(callInfo.Arg<IEnumerable<AppendedEvent>>().ToArray()));
         _silo.AddService(_eventCompliance);
+        _eventGenerationRelease = Substitute.For<IEventGenerationRelease>();
+        _silo.AddService(_eventGenerationRelease);
 
         var logger = _silo.AddService(NullLogger<HandleEventsForPartition>.Instance);
         var loggerFactory = Substitute.For<ILoggerFactory>();
@@ -111,6 +116,6 @@ public class a_performing_job_step : Specification
         _jobStep = await _silo.CreateGrainAsync<TestableHandleEventsForPartition>(
             JobStepId.New(),
             new JobStepKey(JobId.New(), "event-store", "event-store-namespace"));
-        _jobStep.SetupForTesting(_observer, _observerSubscriber, "some-partition");
+        _jobStep.SetupForTesting(_observer, _observerSubscriber, "some-partition", subscription);
     }
 }

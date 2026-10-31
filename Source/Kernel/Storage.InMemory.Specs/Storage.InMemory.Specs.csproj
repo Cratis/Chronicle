@@ -3,10 +3,14 @@
         <AssemblyName>Cratis.Chronicle.Storage.InMemory.Specs</AssemblyName>
         <RootNamespace>Cratis.Chronicle.Storage.InMemory</RootNamespace>
         <IsTestProject>true</IsTestProject>
+        <OutputType>Exe</OutputType>
+        <CratisSpecificationsSharedLifecycle>false</CratisSpecificationsSharedLifecycle>
+        <CratisSpecificationsReadableNames>false</CratisSpecificationsReadableNames>
         <IsPackable>false</IsPackable>
     </PropertyGroup>
 
     <ItemGroup>
+        <Compile Include="../Core.Specs/Compliance/given/protected_values.cs" Link="Compliance/given/protected_values.cs" />
         <!-- These specs were authored against a now-removed changeset construction API and are excluded pending a rewrite against the current API. -->
         <Compile Remove="Sinks/for_InMemorySink/when_trying_to_find_root_key_by_child_value/**/*.cs" />
     </ItemGroup>

@@ -16,15 +16,30 @@ namespace Cratis.Chronicle.Storage.MongoDB.Sinks;
 /// </remarks>
 internal static partial class SinkLogging
 {
+    [LoggerMessage(LogLevel.Warning, "Composite-key lookup in collection '{Collection}' has {PartCount} parts and requires a collection scan")]
+    internal static partial void CompositeKeyCollectionScan(this ILogger<Sink> logger, string collection, int partCount);
+
     [LoggerMessage(LogLevel.Error, "Bulk write to collection '{Collection}' for read model '{ReadModel}' failed for partition '{Partition}' at operation {OperationIndex}: error {Code} ({Category}): {ErrorMessage}")]
     internal static partial void BulkWriteErrorOccurred(this ILogger<Sink> logger, string collection, ReadModelIdentifier readModel, string partition, int operationIndex, int code, ServerErrorCategory category, string errorMessage);
 
     [LoggerMessage(LogLevel.Error, "Bulk write to collection '{Collection}' for read model '{ReadModel}' reported a write concern error {Code} ({CodeName}): {ErrorMessage} - the outcome of {OperationCount} operations is unknown")]
     internal static partial void BulkWriteConcernErrorOccurred(this ILogger<Sink> logger, string collection, ReadModelIdentifier readModel, int code, string codeName, string errorMessage, int operationCount);
 
+    [LoggerMessage(LogLevel.Error, "Shutdown bulk write to collection '{Collection}' for read model '{ReadModel}' failed with {ErrorType}; the outcome of {FailedPartitionCount} partitions is unknown")]
+    internal static partial void ShutdownBulkWriteOutcomeUnknown(this ILogger<Sink> logger, string collection, ReadModelIdentifier readModel, string errorType, int failedPartitionCount);
+
+    [LoggerMessage(LogLevel.Debug, "Primary collection '{PrimaryCollection}' for read model '{ReadModel}' is missing while promoting collection '{PromotingCollection}' exists; a primary lookup cannot currently return a reliable answer")]
+    internal static partial void PrimaryReadDuringPromotion(this ILogger<Sink> logger, ReadModelIdentifier readModel, string primaryCollection, string promotingCollection);
+
+    [LoggerMessage(LogLevel.Warning, "Primary lookup in collection '{PrimaryCollection}' for read model '{ReadModel}' gave up after {AttemptCount} attempts; promotion through collection '{PromotingCollection}' may have been interrupted")]
+    internal static partial void PrimaryReadAttemptsExhausted(this ILogger<Sink> logger, ReadModelIdentifier readModel, string primaryCollection, string promotingCollection, int attemptCount);
+
     [LoggerMessage(LogLevel.Warning, "Replay of read model '{ReadModel}' ended with {FailedPartitionCount} failed partitions in its final flush; the rebuilt collection is promoted and the failed partitions are recorded for retry")]
     internal static partial void EndingReplayWithFailedPartitions(this ILogger<Sink> logger, ReadModelIdentifier readModel, int failedPartitionCount);
 
     [LoggerMessage(LogLevel.Warning, "The final flush of the replay of read model '{ReadModel}' failed; the sink leaves replay mode without promoting the rebuilt collection")]
     internal static partial void AbandoningReplayAfterFailedFlush(this ILogger<Sink> logger, ReadModelIdentifier readModel);
+
+    [LoggerMessage(LogLevel.Error, "Leaving the replay of read model '{ReadModel}' flushed what it held back with {FailedPartitionCount} failed partitions, {UnknownOutcomeCount} of them with an unknown outcome; nothing records them for retry")]
+    internal static partial void LeavingReplayWithFailedPartitions(this ILogger<Sink> logger, ReadModelIdentifier readModel, int failedPartitionCount, int unknownOutcomeCount);
 }

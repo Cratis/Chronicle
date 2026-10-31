@@ -12,13 +12,13 @@ request is made. Choose the transport first, then the command.
 
 ## Verified product sources
 
-| Package | Version | Purpose |
-| --- | --- | --- |
-| `Cratis.Arc.Core` | `22.16.0` | `ObservableQueryHttp`, `ObservableQueryHandler`, the demultiplexer routes |
+| Package | Purpose |
+| --- | --- |
+| `Cratis.Arc.Core` | `ObservableQueryHttp`, `ObservableQueryHandler`, the demultiplexer routes |
 
-> Re-verified at the versions above by **symbol and signature**: every type, attribute and member this skill names exists at that tag, and the public surface it describes is unchanged since the previous verification (Chronicle 16.45.x / Arc 22.10.4 — the Chronicle 16→18 client diff is converters, options and doc comments; no type was removed or renamed). Behavior claims were verified at the earlier tag unless a section says otherwise.
+Source symbols and signatures: every type, attribute and member this skill names exists in the product source.
 
-Reverify before claiming support for another version. This skill is read-only
+This skill is read-only
 inspection of an endpoint the user already has; it neither implements the query
 nor changes any state.
 
@@ -102,6 +102,12 @@ over one connection:
 Use the per-query route for debugging. The demultiplexer is what a browser
 client uses, and driving it by hand means managing subscription state yourself.
 
+Requires Arc 22.87.2 for invalid observable arguments to emit a structured
+invalid `QueryResult` with `validationResults` then end the SSE/WebSocket
+subscription, in direct and hub mode. Check `dotnet list package`; older servers
+can return a bare error or fail the connection. Controller-based direct
+WebSocket queries are outside this guarantee.
+
 ## Long polling
 
 ```bash
@@ -120,6 +126,40 @@ inconvenient — a proxy that buffers, a client with no streaming support.
 authorization and the `Count()` a paged query performs. Long polling a hot query
 is not free.
 
+## Diagnosis and emission protection
+
+Plain HTTP snapshots/waits/long polls run read-model interceptors and
+`IGuardObservableQueryEmission`: denied data returns unauthorized; suppressed
+emissions remain 202 until an allowed value (or the wait deadline). Failures
+respect `ExposeExceptionDetails`. `IAsyncEnumerable` plain-query requests still
+return 400; do not assume every streaming return shape works on snapshot HTTP.
+
+For a MongoDB-backed query stuck at Loading with no first result, check database
+connectivity, replica-set change-stream support and permissions first (Arc#2916).
+The collection watch logs failure then completes without `OnError`; frontend
+error UI is not reliable evidence the watch is healthy. A waiting HTTP request
+still has its timeout/completion contract; do not describe it as an infinite wait.
+Sources: `Arc.Core/Queries/ObservableQueryHttp.cs`,
+`ObservableQueryHandler.cs` and
+[MongoDB observations](https://github.com/Cratis/Arc/blob/main/Documentation/backend/csharp/mongodb/observing-collections.md).
+
+### Local `cratis` template ports
+
+The `cratis` template still publishes MongoDB on host port `27017` and configures
+`mongodb://localhost:27017` for the app (`Templates/Cratis/docker-compose.yml`,
+`appsettings.json`). Its Vite dev server runs on `9000` and proxies `/api`,
+`/.cratis` and `/swagger` to `http://localhost:5000`
+(`Templates/Cratis/.frontend/vite.config.ts`). A backend started on another
+port needs matching proxy targets; a healthy Chronicle container alone does not
+prove the browser can reach the app or its MongoDB read models.
+
+The bundled development MongoDB replica set advertises `localhost:27017`
+(Chronicle `Docker/entrypoint.sh`). For that setup, merely changing
+Docker's host mapping to another port does not change the advertised member
+address. Keep `27017` available, or deliberately reconfigure the replica set and
+application connection together. These are local template defaults, not Arc
+requirements or production topology advice.
+
 ## What comes back
 
 Every transport carries the same `QueryResult` shape:
@@ -131,7 +171,8 @@ paging { page, size, totalItems, totalPages }, changeSet?
 ```
 
 `data` is the full snapshot. `changeSet` may also be present for collection
-updates, carrying `added`, `replaced` and `removed`.
+updates, carrying `added`, `replaced` and `removed`. Items without `Id` use
+full snapshots; `IHaveKnownChanges` supports known-change collection results.
 
 Paging and sorting keys work here too: `page`, `pageSize`, `sortby`,
 `sortDirection`. `pageSize` is what enables paging at all, and `page` is
@@ -164,10 +205,7 @@ apply. Do not construct or suggest credentials.
 - Diagnosing a whole slice rather than one endpoint: the slice diagnostics
   guidance.
 - An accepted `.play` model under the model root covers the behavior, or the
-  repository is opted in (the root holds a committed `.play` file (`git ls-tree -r --name-only HEAD -- <root>` lists it), or the project set
-  `mcpServers.screenplay.root` in `.cratis/ai.json`; an empty directory, install
-  output, an uncommitted `.play` draft or a `.play` file outside the root does not count; master definition:
-  `cratis-screenplay-modeling-lifecycle`): change the model first with
+  repository is opted in (per `general.md` "Model first"; where `cratis-screenplay-modeling-lifecycle` is installed, run its `scripts/model-first-status.mjs`): change the model first with
   `cratis-screenplay-event-modeling`. If the Screenplay skills are not installed,
   say so and do not author `.play` from memory.
   Edit code here only for infrastructure, clients, adapters, Screenplay code

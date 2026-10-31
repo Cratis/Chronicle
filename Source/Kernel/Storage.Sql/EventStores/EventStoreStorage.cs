@@ -20,6 +20,9 @@ using Cratis.Chronicle.Storage.Seeding;
 using Cratis.Chronicle.Storage.SequenceQueries;
 using Cratis.Chronicle.Storage.Sinks;
 using Cratis.Types;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores;
 
@@ -31,8 +34,30 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores;
 /// <param name="sinkFactories"><see cref="IInstancesOf{T}"/> for getting all <see cref="ISinkFactory"/> instances.</param>
 /// <param name="jobsStorage">The <see cref="Cratis.Orleans.Storage.IJobsStorage"/> resolving jobs storage for an event store namespace.</param>
 /// <param name="jsonSerializerOptions">The global <see cref="JsonSerializerOptions"/>.</param>
-public class EventStoreStorage(EventStoreName eventStore, IDatabase database, IInstancesOf<ISinkFactory> sinkFactories, Cratis.Orleans.Storage.IJobsStorage jobsStorage, JsonSerializerOptions jsonSerializerOptions) : IEventStoreStorage
+/// <param name="converter">The schema-aware content converter.</param>
+/// <param name="loggerFactory">Optional <see cref="ILoggerFactory"/> used for logging inside the storages.</param>
+public class EventStoreStorage(EventStoreName eventStore, IDatabase database, IInstancesOf<ISinkFactory> sinkFactories, Cratis.Orleans.Storage.IJobsStorage jobsStorage, JsonSerializerOptions jsonSerializerOptions, Json.IExpandoObjectConverter converter, ILoggerFactory? loggerFactory = null) : IEventStoreStorage
 {
+    readonly Occurrences.OccurrencesStorage<EventStoreDbContext> _occurrences = new(() => database.EventStore(eventStore));
+
+    /// <inheritdoc/>
+    public Chronicle.Storage.Generations.IGenerationInitializationStorage GenerationInitialization { get; } = new Generations.GenerationInitializationStorage(() => database.EventStore(eventStore));
+
+    /// <inheritdoc/>
+    public Chronicle.Storage.Occurrences.ITriggerDefinitionsStorage TriggerDefinitions { get; } = new Occurrences.TriggerDefinitionsStorage(() => database.EventStore(eventStore));
+
+    /// <inheritdoc/>
+    public Chronicle.Storage.Occurrences.IOccurrencesStorage Occurrences => _occurrences;
+
+    /// <inheritdoc/>
+    public Chronicle.Storage.Occurrences.ILifecycleFanOutStorage LifecycleFanOut { get; } = new Occurrences.LifecycleFanOutStorage(() => database.EventStore(eventStore));
+
+    /// <inheritdoc/>
+    public Chronicle.Storage.Occurrences.IScheduleStorage Schedules => _occurrences;
+
+    /// <inheritdoc/>
+    public Chronicle.Storage.Generations.IGenerationFloorStorage GenerationFloor { get; } = new Generations.GenerationFloorStorage(() => database.EventStore(eventStore));
+
     /// <inheritdoc/>
     public EventStoreName EventStore { get; } = eventStore.Value;
 
@@ -40,7 +65,7 @@ public class EventStoreStorage(EventStoreName eventStore, IDatabase database, II
     public INamespaceStorage Namespaces { get; } = new Namespaces.NamespaceStorage(eventStore, database);
 
     /// <inheritdoc/>
-    public IEventTypesStorage EventTypes { get; } = new EventTypes.EventTypesStorage(eventStore, database);
+    public IEventTypesStorage EventTypes { get; } = new EventTypes.EventTypesStorage(eventStore, database, loggerFactory?.CreateLogger<EventTypes.EventTypesStorage>() ?? NullLogger<EventTypes.EventTypesStorage>.Instance);
 
     /// <inheritdoc/>
     public IEventSourcesStorage EventSources { get; } = new EventSources.EventSourcesStorage(eventStore, database);
@@ -58,7 +83,7 @@ public class EventStoreStorage(EventStoreName eventStore, IDatabase database, II
     public IReducerDefinitionsStorage Reducers { get; } = new Reducers.ReducerDefinitionsStorage(eventStore, database);
 
     /// <inheritdoc/>
-    public IProjectionDefinitionsStorage Projections { get; } = new CachingProjectionDefinitionsStorage(new Projections.ProjectionDefinitionsStorage(eventStore, database));
+    public IProjectionDefinitionsStorage Projections { get; } = new Projections.ProjectionDefinitionsStorage(eventStore, database);
 
     /// <inheritdoc/>
     public IWebhookDefinitionsStorage Webhooks { get; } = new Webhooks.WebhookDefinitionsStorage(eventStore, database);
@@ -82,6 +107,34 @@ public class EventStoreStorage(EventStoreName eventStore, IDatabase database, II
     public IEventSeedingStorage EventSeeding { get; } = new Seeding.EventSeedingStorage(eventStore, database, jsonSerializerOptions);
 
     /// <inheritdoc/>
+    public async Task<bool> IsInitialized()
+    {
+        await using var scope = await database.EventStore(eventStore);
+        return await scope.DbContext.EventStoreInitialization.AnyAsync(row => row.Id == 1);
+    }
+
+    /// <inheritdoc/>
+    public async Task MarkInitialized()
+    {
+        await using var scope = await database.EventStore(eventStore);
+        await scope.DbContext.EventStoreInitialization.Upsert(new EventStoreInitialization { Id = 1 });
+    }
+
+    /// <inheritdoc/>
+    public async Task<bool> AreObserversInitialized()
+    {
+        await using var scope = await database.EventStore(eventStore);
+        return await scope.DbContext.EventStoreInitialization.AnyAsync(row => row.Id == 2);
+    }
+
+    /// <inheritdoc/>
+    public async Task MarkObserversInitialized()
+    {
+        await using var scope = await database.EventStore(eventStore);
+        await scope.DbContext.EventStoreInitialization.Upsert(new EventStoreInitialization { Id = 2 });
+    }
+
+    /// <inheritdoc/>
     public IEventStoreNamespaceStorage GetNamespace(EventStoreNamespaceName @namespace)
-        => new Namespaces.EventStoreNamespaceStorage(eventStore, @namespace, database, sinkFactories, jobsStorage, Observers, jsonSerializerOptions);
+        => new Namespaces.EventStoreNamespaceStorage(eventStore, @namespace, database, sinkFactories, jobsStorage, jsonSerializerOptions, EventTypes, converter);
 }

@@ -14,6 +14,16 @@ namespace Cratis.Chronicle.Observation.Jobs;
 public class HandleEventsForPartitionState : JobStepState
 {
     /// <summary>
+    /// Gets or sets the failure episode that owns the recovery.
+    /// </summary>
+    public FailedPartitionId? EpisodeId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the deferral that owns the recovery.
+    /// </summary>
+    public Guid? DeferralId { get; set; }
+
+    /// <summary>
     /// The <see cref="ObserverKey"/> for the observer.
     /// </summary>
     public ObserverKey ObserverKey { get; set; } = ObserverKey.NotSet;
@@ -47,4 +57,9 @@ public class HandleEventsForPartitionState : JobStepState
     /// Gets or sets the collection of <see cref="EventType"/> to process.
     /// </summary>
     public IEnumerable<EventType> EventTypes { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the <see cref="ObserverReaderScope"/> the step reads with. Null for a step persisted before steps carried a scope.
+    /// </summary>
+    public ObserverReaderScope? ReaderScope { get; set; }
 }

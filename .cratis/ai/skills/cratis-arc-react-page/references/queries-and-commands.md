@@ -1,6 +1,13 @@
 <!-- cratis-ai-managed: skills/cratis-arc-react-page/references/queries-and-commands.md -->
 # Queries and commands reference
 
+## Contents
+
+- Query proxy hooks
+- Observable query transport
+- Command proxy
+- `<Arc>` configuration
+
 A Debug build generates one typed proxy class per query and per command. The
 proxy exposes static React hooks; the page calls those. Never edit a generated
 file — fix the C# source and rebuild.
@@ -37,6 +44,18 @@ function**:
 The underlying hooks live in `@cratis/arc.react/queries` if you need them
 directly.
 
+Requires Arc 22.112.1 for optional-argument changes to refetch snapshot queries
+and for concurrent same-key readers to settle together. Requires Arc 22.113.1
+for cancellation/unmount scope cleanup. Requires Arc 22.116.1 for observable
+page/size/sort changes to resubscribe and for query hooks to stop showing the
+previous key's data or status after arguments, paging or sorting change. Check
+`npm ls @cratis/arc.react`; upgrade older clients rather than relying on these
+state transitions.
+
+Each key includes arguments, page, size and sorting. A changed key shows that
+key's cached result, or an initial not-ready result, never the old key's rows.
+Two different pages must not share one request or subscription.
+
 ### The result object
 
 Every query hook returns a result carrying:
@@ -63,7 +82,8 @@ states separately instead of collapsing them into "loaded or not":
 | Converged, empty | `hasData` with an empty `data` and no recent command | the designed empty state |
 | Converged, populated | `hasData` with items | the content |
 | Failed | `!isSuccess` / `hasExceptions` / `!isAuthorized` | the matching error affordance |
-| Stale refresh | `isPerforming` while `data` still holds the previous result | keep the old content, indicate refresh |
+| Same-key refresh | `isPerforming` while `data` still holds that key's previous result | keep that content, indicate refresh |
+| Changed arguments/page/sort | new key's cached result, or initial not-ready state | show only the new key's content or a skeleton |
 
 Two consequences. After a create command, take the **window action on the
 command's success** (close the dialog, navigate to the new id) and let the list
@@ -89,8 +109,9 @@ class PagingInfo { page: number; size: number; totalItems: number; totalPages: n
 ```
 
 `page` is zero-based. `totalItems` is the total count. A read model returning a
-queryable gets server-side paging and sorting for free — use it whenever a list
-can grow. Over the wire the parameters are `page`, `pageSize`, `sortBy`, and
+queryable, or a MongoDB `Observe` subject, gets server-side paging and sorting
+for free — use one whenever a list can grow, and never page or sort in the
+query. Over the wire the parameters are `page`, `pageSize`, `sortBy`, and
 `sortDirection`.
 
 ### Change streams
@@ -214,10 +235,20 @@ view model as `ICommandScope`. It exposes `hasChanges`, `isPerforming`,
 `execute()` (which runs only the commands that have changes), and
 `revertChanges()`.
 
+At Arc v22.75.0 `CommandForm` hides raw server exception text by default
+("An unexpected error occurred. Please try again."). Customize `exceptionMessage`
+or `exceptionDisplayComponent` (`ExceptionDisplayProps`); `showErrors={false}`
+hides built-in display. Dynamic accessors need `fieldName`; custom field validation
+failures block submit. `useIdentity(type)` deserializes typed details.
+Sources: `Source/JavaScript/Arc.React/Arc.tsx` and
+`commands/CommandForm/CommandForm.tsx`.
+
 ## `<Arc>` configuration
 
 The top-level provider configures the microservice name, API base path, and
-query transport. Its props include `microservice`, `origin`, `basePath`,
+query transport. Verified at Arc v22.75.0: `basePath` is deprecated and does not
+configure routing; use `apiBasePath` for APIs, router basename for client routing
+and `UsePathBase` on the host. Its props include `microservice`, `origin`,
 `apiBasePath`, `httpHeadersCallback` (merged into every request — bearer and
 tenant headers), `detailsType`, `queryTransportMethod`, `queryConnectionCount`,
 `queryDirectMode`, `observableQueryTransferMode`, and `queryCacheRetentionMs`.

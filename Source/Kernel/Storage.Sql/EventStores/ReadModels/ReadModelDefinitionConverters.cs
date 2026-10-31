@@ -28,6 +28,7 @@ public static class ReadModelDefinitionConverters
             DisplayName = definition.DisplayName,
             SinkType = definition.Sink.Type,
             SinkConfigurationId = definition.Sink.Configuration,
+            IndexesJson = ReadModelIndexesJson.Serialize(definition.Indexes),
             Schemas = definition.Schemas.ToDictionary(kvp => (uint)kvp.Key, kvp => kvp.Value.ToJson())
         };
 
@@ -47,5 +48,5 @@ public static class ReadModelDefinitionConverters
             schema.ObserverIdentifier,
             new Concepts.Sinks.SinkDefinition(schema.SinkConfigurationId, schema.SinkType),
             schema.Schemas.ToDictionary(kvp => (ReadModelGeneration)kvp.Key, kvp => JsonSchema.FromJson(kvp.Value)),
-            []);
+            ReadModelIndexesJson.Deserialize(schema.IndexesJson));
 }

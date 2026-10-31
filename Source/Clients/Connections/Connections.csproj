@@ -1,5 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
+        <Description>Cratis Chronicle connections library for the event-sourcing database and runtime.</Description>
         <AssemblyName>Cratis.Chronicle.Connections</AssemblyName>
         <RootNamespace>Cratis.Chronicle.Connections</RootNamespace>
     </PropertyGroup>

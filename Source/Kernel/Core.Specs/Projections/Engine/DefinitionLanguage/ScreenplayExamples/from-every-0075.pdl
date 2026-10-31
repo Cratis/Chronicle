@@ -1,0 +1,4 @@
+projection Doc => DocReadModel
+  every
+    LastModifiedBy = $eventContext.eventSourceId
+    LastModifiedAt = $eventContext.occurred

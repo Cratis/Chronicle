@@ -12,6 +12,7 @@ using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Projections.Engine;
 using Cratis.Chronicle.Properties;
+using Cratis.Chronicle.Storage.Observation;
 using Microsoft.Extensions.Options;
 using Orleans.Core;
 using Orleans.TestKit;
@@ -23,6 +24,10 @@ public class a_projection_grain_with_replay_on_definition_change : Specification
     protected Projection _grain;
     protected TestKitSilo _silo;
     protected ProjectionDefinition _definition;
+    protected Storage.IStorage _storage;
+    protected INamespaces _namespaces;
+    protected Observation.IObserver _observer;
+    protected IProjectionFactory _projectionFactory;
 
     async Task Establish()
     {
@@ -34,21 +39,27 @@ public class a_projection_grain_with_replay_on_definition_change : Specification
             .Returns(ProjectionDefinitionCompareResult.Different);
         _silo.AddService(definitionComparer);
 
-        _silo.AddService(Substitute.For<IProjectionFactory>());
+        _projectionFactory = Substitute.For<IProjectionFactory>();
+        _silo.AddService(_projectionFactory);
         _silo.AddService(Substitute.For<IObjectComparer>());
 
-        var storage = Substitute.For<Storage.IStorage>();
-        storage.GetEventStore(Arg.Any<EventStoreName>()).ReadModels.GetAll().Returns([]);
-        _silo.AddService(storage);
+        _storage = Substitute.For<Storage.IStorage>();
+        _storage.GetEventStore(Arg.Any<EventStoreName>()).ReadModels.GetAll().Returns([]);
+        _silo.AddService(_storage);
 
         _silo.AddService(Options.Create(new ChronicleOptions
         {
             Observers = new Observers { DefinitionEvolution = DefinitionEvolutionPolicy.Automatic }
         }));
 
-        var namespacesGrain = Substitute.For<INamespaces>();
-        namespacesGrain.GetAll().Returns([EventStoreNamespaceName.Default]);
-        _silo.AddProbe(_ => namespacesGrain);
+        _namespaces = Substitute.For<INamespaces>();
+        _namespaces.GetAll().Returns([EventStoreNamespaceName.Default]);
+        _silo.AddProbe(_ => _namespaces);
+
+        // By default the observer is already subscribed with the event types the projection takes part in.
+        _observer = Substitute.For<Observation.IObserver>();
+        _observer.GetDefinition().Returns(ObserverDefinition.Empty);
+        _silo.AddProbe(_ => _observer);
 
         _definition = CreateDefinition("the-read-model");
 

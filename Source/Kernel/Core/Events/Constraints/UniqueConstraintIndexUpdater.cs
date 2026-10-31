@@ -19,7 +19,23 @@ public class UniqueConstraintIndexUpdater(
     IUniqueConstraintsStorage storage) : IUpdateConstraintIndex
 {
     /// <inheritdoc/>
-    public async Task Update(EventSequenceNumber eventSequenceNumber)
+    public Task Update(EventSequenceNumber eventSequenceNumber) => Update(eventSequenceNumber, CancellationToken.None);
+
+    /// <inheritdoc/>
+    public async Task Update(EventSequenceNumber eventSequenceNumber, CancellationToken cancellationToken)
+    {
+        if (Describe(eventSequenceNumber) is { } change)
+        {
+            await UniqueConstraintIndexChanges.Apply(storage, definition, change, cancellationToken);
+        }
+    }
+
+    /// <summary>
+    /// Describes the change the event makes to the index, without making it.
+    /// </summary>
+    /// <param name="eventSequenceNumber">The <see cref="EventSequenceNumber"/> of the event.</param>
+    /// <returns>The <see cref="UniqueConstraintIndexChange"/>, or null when the event leaves the index as it is.</returns>
+    internal UniqueConstraintIndexChange? Describe(EventSequenceNumber eventSequenceNumber)
     {
         var scopeKey = definition.Scope.BuildScopeKey(context.EventSourceType, context.EventStreamType, context.EventStreamId);
 
@@ -27,33 +43,40 @@ public class UniqueConstraintIndexUpdater(
         // one way has more than one terminal fact, and each of them frees the value.
         if (definition.RemovedWith.Contains(context.EventTypeId))
         {
-            await storage.Remove(context.EventSourceId, definition.Name, scopeKey);
+            var removal = definition.RemovalEventDefinitions.SingleOrDefault(_ => _.EventTypeId == context.EventTypeId);
+            if (definition.Mode == UniqueConstraintMode.PerValue && removal?.Properties.Any() == true)
+            {
+                var properties = removal.GetPropertiesAndValues(context).ToList();
+                return properties.Count > 0
+                    ? new(UniqueConstraintIndexChangeKind.RemoveValue, context.EventSourceId, eventSequenceNumber, scopeKey, properties.GetValue(definition.IgnoreCasing))
+                    : null;
+            }
+
+            return new(UniqueConstraintIndexChangeKind.Remove, context.EventSourceId, eventSequenceNumber, scopeKey);
         }
-        else
+
+        if (!definition.SupportsEventType(context.EventTypeId))
         {
-            if (!definition.SupportsEventType(context.EventTypeId))
-            {
-                return;
-            }
-
-            // The same guard the validator applies: properties that carry no value are dropped, so an event
-            // whose constrained properties are all absent yields nothing to constrain. Saving it anyway would
-            // reach GetValue with an empty sequence, which hashes the empty string rather than answering null,
-            // so every such event would claim one shared SHA-256("") key and the second one would collide while
-            // the validator had already waved it through on the very same emptiness.
-            //
-            // The event source still has to let go of whatever it claimed before: the index holds one entry per
-            // event source, and clearing the value means the source no longer holds the old one. Removing the
-            // entry frees it without ever writing the shared empty key.
-            var propertiesWithValues = definition.GetPropertiesAndValues(context).ToList();
-            if (propertiesWithValues.Count == 0)
-            {
-                await storage.Remove(context.EventSourceId, definition.Name, scopeKey);
-                return;
-            }
-
-            var value = propertiesWithValues.GetValue(definition.IgnoreCasing);
-            await storage.Save(context.EventSourceId, definition.Name, eventSequenceNumber, value, scopeKey);
+            return null;
         }
+
+        // The same guard the validator applies: properties that carry no value are dropped, so an event
+        // whose constrained properties are all absent yields nothing to constrain. Saving it anyway would
+        // reach GetValue with an empty sequence, which hashes the empty string rather than answering null,
+        // so every such event would claim one shared SHA-256("") key and the second one would collide while
+        // the validator had already waved it through on the very same emptiness.
+        //
+        // Per-event-source mode lets go of the source's previous claim when the value is cleared. Per-value
+        // mode keeps earlier claims until a removal event releases them; an absent value claims nothing.
+        var propertiesWithValues = definition.GetPropertiesAndValues(context).ToList();
+        if (propertiesWithValues.Count == 0)
+        {
+            return definition.Mode == UniqueConstraintMode.PerEventSource
+                ? new(UniqueConstraintIndexChangeKind.Remove, context.EventSourceId, eventSequenceNumber, scopeKey)
+                : null;
+        }
+
+        var value = propertiesWithValues.GetValue(definition.IgnoreCasing);
+        return new(UniqueConstraintIndexChangeKind.Save, context.EventSourceId, eventSequenceNumber, scopeKey, value, definition.SubjectFor(context));
     }
 }

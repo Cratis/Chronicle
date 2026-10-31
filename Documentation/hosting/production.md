@@ -105,7 +105,7 @@ services:
     restart: unless-stopped
 
   mongodb:
-    image: mongo:8
+    image: mongo:8.2
     command: ["mongod", "--replSet", "rs0", "--bind_ip_all"]
     # This MongoDB has no authentication. Publish it on loopback at most, for host tools.
     ports:
@@ -115,7 +115,7 @@ services:
     restart: unless-stopped
 
   mongodb-init:
-    image: mongo:8
+    image: mongo:8.2
     depends_on:
       - mongodb
     restart: "no"
@@ -159,7 +159,9 @@ The remaining settings stay in the mounted `chronicle.json`; the environment var
 
 ## Health Checks
 
-Chronicle exposes a health check endpoint at `/health` by default.
+Chronicle binds its listeners before starting the Orleans silo. `/health/live` returns 200 while the process is running and accepting requests, including during startup. `/health` and `/health/ready` return 503 until the silo has completed startup and the host has started, and become unready when shutdown begins. Existing storage health checks also contribute to readiness.
+
+While unready, non-health requests receive HTTP 503 with `Retry-After`, or gRPC `Unavailable`. This includes the Workbench and static files. Background catch-up does not delay readiness after startup completes.
 
 > [!IMPORTANT]
 > **Probe Chronicle from outside the container.** The production image is built on `mcr.microsoft.com/dotnet/aspnet:10.0-noble-chiseled`, which ships no shell and no `curl` or `wget`. A Docker `HEALTHCHECK` — or a Compose `healthcheck:` — runs *inside* the container, so any command you give it fails immediately and the container is reported unhealthy no matter how healthy Chronicle is.
@@ -174,9 +176,12 @@ Cratis__Chronicle__Health__Tls=false
 Then point the probe at it:
 
 ```yaml
+startupProbe:
+  tcpSocket:
+    port: 35000
 livenessProbe:
   httpGet:
-    path: /health
+    path: /health/live
     port: 8080
     scheme: HTTP
 readinessProbe:
@@ -185,6 +190,8 @@ readinessProbe:
     port: 8080
     scheme: HTTP
 ```
+
+You can instead use an HTTP startup probe on `/health/live` at port 8080. Do not use a TCP probe for readiness: an open listener does not mean the silo is ready. Raising `failureThreshold` is not the fix for backlog-dependent startup restarts; startup and liveness must probe the listener, not readiness.
 
 Treat that port as internal — it serves the other HTTP/1.1 endpoints too, so do not expose it publicly.
 
@@ -212,6 +219,7 @@ Start one node after a restore and read `GET /diagnostics/encryption-certificate
 - **Network Isolation**: Run Chronicle in a private network with MongoDB
 - **Connection Encryption**: Use TLS for all connections in production
 - **Client certificate validation**: The clients connect over TLS but accept *any* server certificate unless the connection string sets `skipTlsValidation=false`. Set it for every client that reaches a production kernel. See [Client TLS](../configuration/tls.mdx) and [Server connection strings](../connection-strings/server.md)
+- **Workbench behind a path-routed proxy**: When one host serves several instances by path, set `Workbench:BasePath` so the Workbench works under its prefix. See [Workbench](configuration/workbench.md)
 - **Initial administrator**: The production image creates the administrator without a password and lets the first visitor to the Workbench set one. Supply the initial password from your secret store through `Authentication:AdminUser`, or keep the port unreachable until setup is done. See [Authentication](configuration/authentication.md)
 - **Access Control**: Implement proper firewall rules for exposed ports
 - **Secrets Management**: Use external secret management for sensitive configuration
@@ -225,14 +233,30 @@ Chronicle supports horizontal scaling through Orleans clustering:
 1. **Multiple Instances**: Deploy multiple Chronicle containers
 2. **Load Balancing**: Use a load balancer for API traffic (port 35000)
 3. **Orleans Clustering**: Ensure Orleans ports (11111, 30000) are accessible between instances
-4. **Shared Storage**: All instances must connect to the same MongoDB cluster. Only MongoDB storage supports more than one node; with PostgreSQL, SQL Server or SQLite, run a single instance (see [Clustering](configuration/clustering.md))
+4. **Shared Storage**: All instances must connect to the same storage. MongoDB, PostgreSQL and SQL Server support more than one node; with SQLite, run a single instance (see [Clustering](configuration/clustering.md))
 
 > [!WARNING]
-> Every multi-node deployment **must** set the clustering type to `MongoDB`. The default is `Localhost`,
-> which is single-node membership. Two containers left on the default that share one MongoDB do **not**
-> join as one cluster - each forms its own isolated single-node cluster over the same data, a split-brain
-> topology reported by no error at startup. The server logs a warning when it detects localhost clustering
-> against non-local storage, but it does not refuse to start.
+> Every multi-node deployment **must** set the clustering type to `MongoDB` or `Sql` to match its storage.
+> The default `Localhost` mode permits only one active node per kernel storage. The single-writer lease
+> enforces this by default, including on SQL storage. A replacement waits for the old holder to stop or
+> expire; it does not process concurrently. Disabling the lease removes that protection.
+
+For a single-active-node deployment, configure stop-before-start replacement. In Kubernetes use
+`strategy: Recreate`, or `RollingUpdate` with `maxSurge: 0` and `maxUnavailable: 1`. The default one-replica
+rolling update (`maxSurge: 1`, `maxUnavailable: 0`) cannot converge: the new node waits for the lease while
+the platform waits for it to become ready before stopping the old holder.
+
+**Azure Container Apps single-revision deployments and Cloud Run have the same readiness deadlock.**
+They wait for the replacement to be ready before retiring the active revision. There is currently no
+supported zero-downtime handover for Localhost mode on those platforms. Explicitly stop the old revision
+before starting its replacement (accepting downtime), or use `MongoDB` or `Sql` clustering for multiple active nodes.
+Do not disable the lease to bypass this rollout failure. A ready-while-waiting standby and early health
+binding are separate follow-up work, not implemented by this lease.
+
+A lost renewal for half the TTL causes Critical logging and process shutdown with a nonzero exit code;
+a stuck shutdown is force-terminated before another holder can acquire the lease. Configure the restart
+policy to restart failed processes and allow the acquisition timeout to cover the previous holder's TTL.
+See [Single-writer lease](configuration/clustering.md#single-writer-lease) for settings and clock caveats.
 
 Set the clustering type explicitly on every node, and give every node the same cluster and service id:
 
@@ -294,7 +318,7 @@ services:
     restart: unless-stopped
 
   mongodb:
-    image: mongo:8
+    image: mongo:8.2
     command: ["mongod", "--replSet", "rs0", "--bind_ip_all"]
     # This MongoDB has no authentication. Publish it on loopback at most, for host tools.
     ports:
@@ -304,7 +328,7 @@ services:
     restart: unless-stopped
 
   mongodb-init:
-    image: mongo:8
+    image: mongo:8.2
     depends_on:
       - mongodb
     restart: "no"
@@ -339,3 +363,7 @@ Each container reaches the others over the Compose network by service name, so t
 address works. When you instead run multiple nodes directly on one host, set
 `Cratis__Chronicle__Clustering__AdvertisedIP` and distinct `SiloPort`/`GatewayPort` values per node - see
 [Clustering](configuration/clustering.md).
+
+## See also
+
+- [Run Chronicle on Azure with Microsoft Entra ID](azure.md) for Azure SQL, Azure Database for PostgreSQL and managed identities.

@@ -9,6 +9,26 @@ namespace Cratis.Chronicle.CodeAnalysis;
 public static class DiagnosticIds
 {
     /// <summary>
+    /// Declared concurrency omits the event source id and applies across sources.
+    /// </summary>
+    public const string ConcurrencyWithoutEventSourceId = "CHR0062";
+
+    /// <summary>
+    /// A definition-linked scope guards a different stream than a routed append.
+    /// </summary>
+    public const string RouteScopeStreamMismatch = "CHR0063";
+
+    /// <summary>
+    /// A read model's event stream declaration is invalid.
+    /// </summary>
+    public const string InvalidEventStreamReadModel = "CHR0064";
+
+    /// <summary>
+    /// A read model fold method will not be discovered because of its name or instance declaration.
+    /// </summary>
+    public const string SelfReducerMethodWillNotBeDiscovered = "CHR0065";
+
+    /// <summary>
     /// Event type must have EventType attribute when appended to event sequence.
     /// </summary>
     public const string EventTypeMustHaveAttributeWhenAppended = "CHR0001";
@@ -283,4 +303,29 @@ public static class DiagnosticIds
     /// Explicit event metadata routing contradicts a typed event-source filter.
     /// </summary>
     public const string ExplicitRoutingContradictsTypedEventSourceFilter = "CHR0056";
+
+    /// <summary>
+    /// A type implements multiple closed projection or reducer interfaces.
+    /// </summary>
+    public const string MultipleArtifactInterfaces = "CHR0057";
+
+    /// <summary>
+    /// A static self-reducer method has a near-miss signature.
+    /// </summary>
+    public const string SelfReducerMethodSignatureMustMatchAllowed = "CHR0058";
+
+    /// <summary>
+    /// A self-reducer lifecycle hook has an invalid declaration shape.
+    /// </summary>
+    public const string SelfReducerLifecycleHookSignatureMustMatchAllowed = "CHR0059";
+
+    /// <summary>
+    /// Self-reducer handlers have definite declaration-level ambiguity.
+    /// </summary>
+    public const string SelfReducerMethodMustBeUnambiguous = "CHR0060";
+
+    /// <summary>
+    /// A self-reducer read model has conflicting visible builder ownership.
+    /// </summary>
+    public const string ReadModelBuilderOwnershipMustBeUnambiguous = "CHR0061";
 }

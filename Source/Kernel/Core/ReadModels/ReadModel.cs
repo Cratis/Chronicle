@@ -12,18 +12,27 @@ namespace Cratis.Chronicle.ReadModels;
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.ReadModels)]
 public class ReadModel : Grain<ReadModelDefinition>, IReadModel
 {
-    bool _stateNeedsWrite;
-
     /// <inheritdoc/>
     public async Task SetDefinition(ReadModelDefinition definition)
     {
         definition.Sink.EnsureReadModelSupported();
-        if (!_stateNeedsWrite && State is not null && ReadModelDefinitionComparison.Equals(State, definition)) return;
+        if (ReadModelDefinitions.AreEqual(State, definition))
+        {
+            return;
+        }
 
-        _stateNeedsWrite = true;
+        var previous = State;
         State = definition;
-        await WriteStateAsync();
-        _stateNeedsWrite = false;
+        try
+        {
+            await WriteStateAsync();
+        }
+        catch
+        {
+            // An unsuccessful write must not turn a retry into an unchanged-definition no-op.
+            State = previous;
+            throw;
+        }
     }
 
     /// <inheritdoc/>

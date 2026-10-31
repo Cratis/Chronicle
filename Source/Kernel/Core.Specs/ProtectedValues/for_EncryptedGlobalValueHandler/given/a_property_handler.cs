@@ -31,5 +31,7 @@ public class a_property_handler : Specification
         // actually belongs to.
         _keyStore.TryGetFor(EncryptedValueKeyIdentifiers.GlobalEventStore, EncryptedValueKeyIdentifiers.GlobalNamespace, KeyIdentifier)
             .Returns(Task.FromResult<EncryptionKey?>(_key));
+        _keyStore.TryGetLatestFor(EncryptedValueKeyIdentifiers.GlobalEventStore, EncryptedValueKeyIdentifiers.GlobalNamespace, KeyIdentifier)
+            .Returns(new EncryptionKeyAtRevision(_key, EncryptionKeyRevision.Initial));
     }
 }

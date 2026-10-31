@@ -52,25 +52,33 @@ The complete list of available profiles is defined in [profile-catalog.json](../
 
 | Profile ID | Description | Automatically Includes |
 |---|---|---|
-| `cratis/application` | Full application stack (C# + React + TypeScript) | `cratis/application/csharp`, `cratis/application/elixir`, `cratis/application/kotlin`, `cratis/application/typescript`, `cratis/arc/core`, `cratis/arc/react`, `cratis/chronicle/core`, `cratis/components`, `cratis/fundamentals`, `cratis/specifications/dotnet`, `cratis/specifications/typescript` |
-| `cratis/application/csharp` | C# backend with Arc + Chronicle | `cratis/arc`, `cratis/arc/react`, `cratis/chronicle`, `cratis/components`, `cratis/fundamentals`, `cratis/language/csharp`, `cratis/specifications/dotnet`, `cratis/specifications/typescript` |
+| `cratis/application` | Full application stack (C# + React + TypeScript) | `cratis/application/csharp`, `cratis/application/elixir`, `cratis/application/java`, `cratis/application/kotlin`, `cratis/application/typescript`, `cratis/arc/core`, `cratis/arc/react`, `cratis/chronicle/core`, `cratis/components`, `cratis/fundamentals`, `cratis/specifications/dotnet`, `cratis/specifications/typescript` |
+| `cratis/application/csharp` | C# backend with Arc + Chronicle | `cratis/arc`, `cratis/arc/react`, `cratis/chronicle`, `cratis/components`, `cratis/fundamentals`, `cratis/language/csharp`, `cratis/screenplay`, `cratis/specifications/dotnet`, `cratis/specifications/typescript` |
 | `cratis/application/react` | React frontend with Cratis Components | `cratis/arc/core`, `cratis/arc/react`, `cratis/components`, `cratis/fundamentals`, `cratis/specifications/dotnet`, `cratis/specifications/typescript` |
-| `cratis/application/typescript` | TypeScript client for Chronicle | `cratis/chronicle/client-typescript`, `cratis/language/typescript`, `cratis/specifications/typescript` |
-| `cratis/application/arc-chronicle` | Arc + Chronicle integration | `cratis/arc/core`, `cratis/chronicle/core`, `cratis/fundamentals`, `cratis/specifications/dotnet` |
-| `cratis/application/arc-only` | Arc without Chronicle | `cratis/arc/core`, `cratis/fundamentals`, `cratis/specifications/dotnet` |
-| `cratis/application/chronicle-dotnet` | Chronicle .NET client | `cratis/chronicle/client-dotnet`, `cratis/chronicle/core`, `cratis/fundamentals`, `cratis/specifications/dotnet` |
-| `cratis/application/elixir` | Elixir Chronicle client | `cratis/chronicle/client-elixir`, `cratis/language/elixir` |
-| `cratis/application/kotlin` | Kotlin Arc + Chronicle application | `cratis/arc/client-kotlin`, `cratis/chronicle/client-kotlin`, `cratis/language/kotlin` |
-| `cratis/application/java` | Java Arc + Chronicle application | `cratis/arc/client-kotlin`, `cratis/chronicle/client-java`, `cratis/language/java` |
+| `cratis/application/typescript` | TypeScript client for Chronicle | `cratis/chronicle/client-typescript`, `cratis/language/typescript`, `cratis/screenplay`, `cratis/specifications/typescript` |
+| `cratis/application/arc-chronicle` | Arc + Chronicle integration | `cratis/arc/core`, `cratis/chronicle/core`, `cratis/fundamentals`, `cratis/screenplay`, `cratis/specifications/dotnet` |
+| `cratis/application/arc-only` | Arc without Chronicle | `cratis/arc/core`, `cratis/fundamentals`, `cratis/screenplay`, `cratis/specifications/dotnet` |
+| `cratis/application/chronicle-dotnet` | Chronicle .NET client | `cratis/chronicle/client-dotnet`, `cratis/chronicle/core`, `cratis/fundamentals`, `cratis/screenplay`, `cratis/specifications/dotnet` |
+| `cratis/application/elixir` | Elixir Chronicle client | `cratis/chronicle/client-elixir`, `cratis/language/elixir`, `cratis/screenplay` |
+| `cratis/application/kotlin` | Kotlin Arc + Chronicle application | `cratis/arc/client-kotlin`, `cratis/chronicle/client-kotlin`, `cratis/language/kotlin`, `cratis/screenplay` |
+| `cratis/application/java` | Java Arc + Chronicle application | `cratis/arc/client-kotlin`, `cratis/chronicle/client-java`, `cratis/language/java`, `cratis/screenplay` |
+
+`cratis/application` inherits `cratis/screenplay` through its language-specific
+children. Backend-bearing application profiles include the method skills and MCP
+declaration, not `cratis/stage`; the frontend-only `cratis/application/react`
+profile includes neither Screenplay nor Stage.
 
 ### Framework Profiles
 
 | Profile ID | Description | Automatically Includes |
 |---|---|---|
 | `cratis/arc` | Arc CQRS framework | `cratis/arc/csharp`, `cratis/arc/java`, `cratis/arc/kotlin` |
-| `cratis/chronicle` | Chronicle event sourcing engine | `cratis/chronicle/compliance`, `cratis/chronicle/csharp`, `cratis/chronicle/elixir`, `cratis/chronicle/java`, `cratis/chronicle/kotlin`, `cratis/chronicle/multi-tenancy`, `cratis/chronicle/typescript`, `cratis/chronicle/web-workbench` |
-| `cratis/components` | React component library | (no child profiles) |
-| `cratis/fundamentals` | Core primitives (`ConceptAs<T>`, `EventSourceId<T>`) | (no child profiles) |
+| `cratis/chronicle` | Chronicle event sourcing engine (does not compose `cratis/chronicle/mcp`) | `cratis/chronicle/compliance`, `cratis/chronicle/csharp`, `cratis/chronicle/elixir`, `cratis/chronicle/java`, `cratis/chronicle/kotlin`, `cratis/chronicle/multi-tenancy`, `cratis/chronicle/typescript`, `cratis/chronicle/web-workbench` |
+| `cratis/components` | React component library, including `cratis-components-common-controls` and `cratis-components-data-surfaces` | (no child profiles) |
+| `cratis/fundamentals` | Core primitives and generated .NET telemetry (`cratis-fundamentals-telemetry`) | (no child profiles) |
+| `cratis/arc/go` | Experimental Arc.Go HTTP CQRS (root module) | `cratis/language/go`, `cratis/fundamentals/go` |
+| `cratis/chronicle/client-go` | Experimental standalone Chronicle.Go client | `cratis/language/go`, `cratis/fundamentals/go` |
+| `cratis/fundamentals/go` | Fundamentals.Go named scalar concepts and codecs | `cratis/language/go` |
 | `cratis/specifications` | Specification framework | (no child profiles) |
 | `cratis/specifications/dotnet` | C# specifications and application slice conformance (`cratis-application-slice-conformance`), alongside slice specifications | `cratis/specifications` |
 
@@ -78,10 +86,22 @@ The complete list of available profiles is defined in [profile-catalog.json](../
 
 | Profile ID | Description | Automatically Includes |
 |---|---|---|
-| `cratis/engineering` | Engineering conventions and workflows | `cratis/engineering/core`, `cratis/engineering/csharp`, `cratis/engineering/elixir`, `cratis/engineering/kotlin`, `cratis/engineering/react`, `cratis/engineering/typescript` |
-| `cratis/engineering/csharp` | C# engineering conventions | `cratis/engineering/core` |
+| `cratis/engineering` | Engineering conventions and workflows | `cratis/engineering/core`, `cratis/engineering/csharp`, `cratis/engineering/elixir`, `cratis/engineering/go`, `cratis/engineering/kotlin`, `cratis/engineering/react`, `cratis/engineering/typescript` |
+| `cratis/engineering/csharp` | C# engineering conventions, .NET engineering skills, and framework Orleans jobs (`cratis-orleans-jobs`, alongside `orleans.md`) | `cratis/engineering/core`, `cratis/engineering/dotnet` |
+| `cratis/engineering/dotnet` | Upstream .NET engineering workflows | `cratis/engineering/dotnet/performance`, `cratis/engineering/dotnet/diagnostics`, `cratis/engineering/dotnet/msbuild`, `cratis/engineering/dotnet/orleans`, `cratis/engineering/dotnet/testing`, `cratis/engineering/dotnet/refactoring` |
+| `cratis/engineering/dotnet/performance` | Microbenchmarking, performance patterns, SIMD, and profiling | (no child profiles) |
+| `cratis/engineering/dotnet/diagnostics` | Trace and crash-dump collection | (no child profiles) |
+| `cratis/engineering/dotnet/msbuild` | MSBuild troubleshooting, build authoring, output paths, and binlogs | (no child profiles) |
+| `cratis/engineering/dotnet/orleans` | Orleans primitives, hosting, persistence, and runtime behavior | (no child profiles) |
+| `cratis/engineering/dotnet/testing` | Test-platform detection, runner commands, filters, and coverage | (no child profiles) |
+| `cratis/engineering/dotnet/refactoring` | Behavior-preserving C# refactoring and AOT compatibility | (no child profiles) |
+| `cratis/engineering/go` | Go framework parity and immutable module releases | `cratis/engineering/core`, `cratis/language/go` |
 | `cratis/engineering/typescript` | TypeScript engineering conventions | `cratis/engineering/core` |
 | `cratis/engineering/react` | React engineering conventions | `cratis/engineering/core` |
+
+The `cratis/engineering/dotnet` profiles carry upstream skills under MIT, with attribution and changes in each skill's NOTICE. Cratis rules and the `cratis-*` skills win where they differ.
+
+The `cratis/engineering` profile also carries [issue-assignment.md](./issue-assignment.md): when an agent starts work on a numbered issue in a known repository and nobody is assigned, it assigns the current `gh` user.
 
 ### Language Profiles
 
@@ -90,13 +110,15 @@ The complete list of available profiles is defined in [profile-catalog.json](../
 | `cratis/language/csharp` | C# language conventions |
 | `cratis/language/typescript` | TypeScript language conventions |
 | `cratis/language/elixir` | Elixir language conventions |
+| `cratis/language/go` | Go conventions for source, go.mod and go.sum |
 | `cratis/language/kotlin` | Kotlin language conventions |
 | `cratis/language/java` | Java language conventions |
 
 ### Arc and Chronicle on the JVM (Kotlin and Java)
 
 Arc.Kotlin (`io.cratis:arc`) and its optional Chronicle integration
-(`io.cratis:arc-chronicle-spring-boot-starter`) bring the same command/query
+(`io.cratis:cratis`, the all-in-one event-sourced application artifact, or
+`io.cratis:arc-chronicle-spring-boot-starter`) bring the same command/query
 model-bound shape to the JVM that Arc .NET brings to C#, for both Kotlin and
 Java application code. `cratis/arc/client-kotlin` carries the skills for both
 languages — Java application code still needs Kotlin and KSP on the build,
@@ -107,6 +129,9 @@ since Arc generates Kotlin adapters for Java declarations.
 | `cratis-arc-command-kotlin` | `@Command`, `handle()`/`provide()`, Chronicle event responses, command authorization, TypeScript proxy generation |
 | `cratis-arc-query-kotlin` | `@ReadModel` queries, GET vs RFC QUERY, observable queries (`Flow`, `Flow.Publisher`, RxJava 3) over SSE/WebSocket |
 | `cratis-arc-validation-kotlin` | `FluentModelValidator` shared rules, `CommandValidator`/`QueryValidator`/`ConceptValidator`/`ModelValidator`, Jakarta constraints |
+| `cratis-arc-testing-kotlin` | Real in-process command/query scenarios, bounded observable collection, read-model pins and Chronicle append assertions |
+| `cratis-arc-identity-and-tenancy-kotlin` | Authentication handlers, identity details, tenant resolution and propagation, opt-in trusted platform headers |
+| `cratis-arc-spring-data-kotlin` | JPA/Mongo repositories, paging, observations, concept converters, tenant storage and transaction boundaries |
 
 Standalone Chronicle client usage (no Arc) for Kotlin and Java is
 `cratis-chronicle-client-kotlin`, reused by `cratis/chronicle/client-java`.
@@ -115,8 +140,10 @@ JVM language conventions are `kotlin.md` and `java.md`.
 ### Arc for TypeScript on Node.js
 
 Arc for TypeScript (`@cratis/arc.core` with the Express, Fastify, Hono,
-MongoDB, Drizzle, testing and experimental Chronicle packages) brings the same
-model-bound command/query shape to a Node.js server. Its packages are a source
+MongoDB, Drizzle, testing and experimental Chronicle packages, plus
+`@cratis/arc.proxygenerator`, `@cratis/eslint-plugin-arc-core` and experimental
+`@cratis/cratis`) brings the same model-bound command/query shape to a Node.js
+server. Verified at GitHub pre-release **v0.57.2**: its packages are a source
 preview and are not published to npm. It is separate from `@cratis/arc`, the
 published client runtime that generated proxies import in a frontend.
 `cratis/arc/server-typescript` carries the skills; `cratis/arc/typescript` adds
@@ -135,6 +162,45 @@ Node.js server and a C# or React-frontend project has no use for them. Select
 Standalone Chronicle client usage (no Arc) in TypeScript is
 `cratis-chronicle-client-typescript`.
 
+### Several services with their own event stores
+
+`cratis/chronicle/core` carries both multi-service skills, so every profile that
+includes it loads them: `cratis/application`, `cratis/application/arc-chronicle`,
+`cratis/application/chronicle-dotnet`, and `cratis/application/csharp` and
+`cratis/chronicle` through `cratis/chronicle/compliance`.
+
+| Skill | Covers |
+| --- | --- |
+| `cratis-multi-service-architecture` | Store per service on one kernel, namespace alignment, public contract events and the outbox, consumer routes, delivery semantics, PII across stores, contract versioning, Arc between services |
+| `cratis-multi-service-local-orchestration` | Repository layout with contracts projects, .NET Aspire AppHost, Docker Compose with a MongoDB replica set, per-service settings, CLI contexts per store, frontends per service |
+
+Modeling such a system in Screenplay (one model folder per service) is
+`cratis-screenplay-streams-and-consistency`'s multi-service reference.
+
+### Experimental Go modules
+
+Select `cratis/language/go` for a Go repository without importing any HTTP or
+Chronicle guidance. `cratis/engineering/go` adds contributor parity and release
+policy through [go-engineering.md](./go-engineering.md), composing rather than
+duplicating [go.md](./go.md). Set `languages: ["go"]` in `.cratis/ai.json` so
+language-filtered composition selects the Go children. The catalog/manifest
+register `go`; there is no separate extension-based detection registry in the
+corpus's harness setup or Pi package.
+
+| Profile | Skill | Verified experimental version |
+| --- | --- | --- |
+| `cratis/chronicle/client-go` | `cratis-chronicle-client-go` | Chronicle.Go v0.9.1 (Chronicle kernel 19.32.3 profile) |
+| `cratis/arc/go` | `cratis-arc-go` | Arc.Go v0.1.1 |
+| `cratis/fundamentals/go` | `cratis-fundamentals-concept-go` | Fundamentals.Go v0.3.2 |
+
+Arc and Chronicle profiles compose language and Go concepts, **not each other**
+or C# client/HTTP skills. These profiles are explicit opt-ins; existing aggregate
+Arc/Chronicle and application profiles are unchanged. Only the Arc.Go root module
+is released; Chronicle/MongoDB integrations and Go generator tools remain source
+previews. `cratis/application/go` and Go scaffolding are deferred; do not prescribe
+`dotnet new` as a Go template. Each module currently requires Go 1.26, but generic
+language policy always follows the consuming repository's `go.mod` minimum.
+
 ### Specialized Profiles
 
 | Profile ID | Description |
@@ -142,26 +208,66 @@ Standalone Chronicle client usage (no Arc) in TypeScript is
 | `cratis/documentation` | Reader-centered product docs, technical examples, release notes, and voice review |
 | `cratis/content` | Release notes, social feed posts, voice review, content length, and developer marketing and distribution |
 | `cratis/review` | Code review, performance, security |
+| `cratis/codescene` | Opt-in CodeScene Code Health change gates, refactoring, debt prioritization and risk-based testing; requires an account and available MCP tools; each user registers the MCP server (see below) |
+| `cratis/playwright` | Opt-in Playwright browser automation MCP server declaration for exploratory checks; carries no skills or rules and each user registers the server (see below) |
 | `cratis/studio` | Studio MCP safety guidance |
 | `cratis/cli` | CLI operations |
+| `cratis/cli/terminal-workbench` | Human-operated terminal Workbench |
+| `cratis/chronicle/mcp` | Chronicle MCP inspection and exact tool-effect guidance |
 | `cratis/lens` | Lens browser extension |
 | `cratis/screenplay` | Model-first event modeling: lifecycle, phase skills, toolchain, review, render and gap-fill, plus the whole `.play` language |
 | `cratis/stage` | Stage rendering and sandbox |
 | `cratis/modeling/screenplay-stage` | Screenplay + Stage together |
 
+### Code Health with CodeScene
+
+Select `cratis/codescene` explicitly to load the four upstream CodeScene skills:
+`safeguarding-ai-generated-code`, `guiding-refactoring-with-code-health`,
+`prioritizing-technical-debt` and `risk-based-testing-with-code-health`.
+The [CodeScene policy](./codescene.md) overrides those skills where they differ.
+No other profile, including `cratis` and `cratis/full`, composes it.
+
+The profile selects the `codescene` stdio server (`cs-mcp`, no arguments) from
+`mcp-servers.json`, but neither the Cratis CLI nor any harness registers it,
+because it needs a per-user CodeScene account and a locally installed binary.
+Each user registers it in their own user-level MCP configuration, never in
+committed project files: `cs-mcp` over stdio (`brew install cs-mcp`), or
+`npx -y @codescene/codehealth-mcp`.
+CodeScene needs an account and OAuth `login`; without an account or available
+CodeScene tools, skip its steps and say so rather than blocking contributors.
+The MCP catalog has no install-hints field and does not install the executable.
+
+### Browser automation with Playwright
+
+Select `cratis/playwright` explicitly to declare the `playwright` stdio server
+(`npx -y @playwright/mcp@0.0.83 --headless --isolated`) in `mcp-servers.json`.
+The flags keep the browser headless and isolated: no persistent profile, so no
+personal cookies or logins are reused. The profile carries no skills or rules, and
+no other profile composes it.
+
+Today `cratis ai install` registers only Screenplay and Pi's `cratis-mcp` extension
+loads only Screenplay, so Playwright, like CodeScene, is not registered for you.
+Each user registers it in their own user-level MCP configuration, never in committed
+project files. For Claude Code:
+
+```bash
+claude mcp add --scope user playwright -- npx -y @playwright/mcp@0.0.83 --headless --isolated
+```
+
+Pi users register it through a Pi MCP adapter or extension of their choice. Use it
+for exploratory browser checks; repeatable checks stay in the repository's own
+Playwright tests. Without the server registered, skip browser steps and say so.
+
 ### Event modeling with Screenplay
 
-**Model first.** A repository is opted in only when its model root (default
-`.cratis/screenplay/`) holds a committed `.play` file (`git ls-tree -r --name-only HEAD -- <root>` lists it) or the project explicitly set
-`mcpServers.screenplay.root` in `.cratis/ai.json`; an empty directory, install output, an
-installed profile or skill, a `.play` file outside the root or an untracked or uncommitted draft is not
-opt-in. An accepted model under the root covering the scope is the contract and the source
+**Model first.** Decide opt-in per `general.md` "Model first"; where `cratis-screenplay-modeling-lifecycle` is installed, run its `scripts/model-first-status.mjs` for the decision, model root and drafts. An accepted model under the root covering the scope is the contract and the source
 of truth for behavior. Change the model, verify and independently review it, then render
 or gap-fill from its contract; never edit Stage-managed output or weaken protection.
 Otherwise stay code-first; only the entry-point session may propose a model, at most once
 per session. Master definition: `cratis-screenplay-modeling-lifecycle`. Framework and non-opted-in brownfield work remain
 code-first; infrastructure, clients, adapters and code attachments stay in code.
-Application profiles do not automatically compose `cratis/screenplay`.
+Backend-bearing application profiles automatically compose `cratis/screenplay`;
+installing its skills or registering its MCP server is not model-first opt-in.
 
 `cratis/screenplay` carries the **method** and the **language**. Load the lifecycle
 and one phase skill, then the construct skill needed for syntax.
@@ -181,6 +287,7 @@ and one phase skill, then the construct skill needed for syntax.
 | `cratis-screenplay-legacy-extraction` | Evidence-led extraction, expert verification and loss report |
 | `cratis-screenplay-toolchain` | Compiler and CLI versions, verdict commands, diagnostics and executable subsets |
 | `cratis-screenplay-render-and-gap-fill` | Admission, publication, target verification and contract-led hand-written delivery |
+| `cratis-screenplay-delivery-planning` | Slice counts by type, dependency waves, issue tracking and estimates from the team's own history |
 
 #### Language
 
@@ -206,8 +313,20 @@ The profile also selects the corpus-owned Screenplay MCP declaration from
 `mcp-servers.json`. The Cratis CLI hosts the server as `cratis screenplay mcp`
 and registers a scoped entry for supported clients without replacing their other
 servers. Inspect install/status results for adapter support or configuration
-conflicts. The conventional model root is `.cratis/screenplay/`; project-owned
-configuration can choose another root.
+conflicts. The model is wherever the project keeps its `.play` files, else under `Source/` or
+`src/`, else in a `Screenplay/` folder at the repository root; never under `.cratis/`.
+Project-owned configuration can name a root explicitly.
+
+Like `allowDependencyManifestWrites`, `modelFirst` (`frozen`, `reason`) and `process` (`decisions`, `workItems`, `acceptance`, `agents`) are project-owned keys in `.cratis/ai.json` that install and update preserve. Only `modelFirst.frozen` is read by code; the lifecycle skill's `references/project-process.md` defines the keys, defaults and routing.
+
+**No-model startup requires Cratis CLI 3.46.1 or later.** With
+`cratis screenplay mcp --project-root <project>`, that version resolves the root
+without creating it; discovery, startup and proposals leave no model folder, and
+the first `apply` write creates it. `cratis ai install` also creates no model
+folder unless the project configured a root. Older CLIs create the resolved model root at
+server startup (`Screenplay/` when no `.play` files, `Source/` or `src/` exist); upgrade before using the automatically selected MCP server in a
+repository without a model. In Pi, when every selected path to Screenplay goes through an application profile and no root is configured, a missing, older or unavailable CLI leaves its MCP tools inactive with one informational UI notice (none in headless mode); an independent non-application path to Screenplay or a configured root still surfaces startup errors. See the toolchain skill's
+[tool versions](../skills/cratis-screenplay-toolchain/SKILL.md).
 
 ## How to Use Profiles
 
@@ -249,7 +368,7 @@ Profiles can compose other profiles. When you select a parent profile, all child
 {
   "schemaVersion": "1.0.0",
   "profiles": [
-    "cratis/application/csharp"  // Includes: arc, arc/react, chronicle, components, fundamentals, language/csharp, specifications/dotnet, specifications/typescript
+    "cratis/application/csharp"  // Includes: arc, arc/react, chronicle, components, fundamentals, language/csharp, screenplay, specifications/dotnet, specifications/typescript
   ]
 }
 ```
@@ -315,12 +434,16 @@ profile: application
 - **`profile: framework`** - Rules for contributing to Cratis framework repos
 - **No profile tag** - Universal rules that apply to both profiles
 
+[authoring-skills.md](./authoring-skills.md) is universal but path-scoped to corpus
+skills, rules, agents and prompts. Harnesses without path-rule loading discover it
+through `general.md`'s Where to Look table; its body is needed only for authoring work.
+
 ## Finding Profile Information
 
 - **Full catalog:** [profile-catalog.json](../profile-catalog.json)
 - **Application rules:** [general.md](./general.md) (Application profile section)
 - **Framework rules:** [framework.md](./framework.md)
-- **Engineering conventions:** [csharp.md](./csharp.md), [typescript.md](./typescript.md)
+- **Engineering conventions:** [csharp.md](./csharp.md), [typescript.md](./typescript.md), [go.md](./go.md), [go-engineering.md](./go-engineering.md)
 
 ## See Also
 

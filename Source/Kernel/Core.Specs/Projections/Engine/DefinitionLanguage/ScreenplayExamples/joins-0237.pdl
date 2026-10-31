@@ -1,0 +1,27 @@
+projection Reservation => ReservationReadModel
+  from ReservationMade
+    ReservationNumber = number
+    RoomId = roomId
+    GuestId = guestId
+    CheckIn = checkInDate
+    CheckOut = checkOutDate
+
+  join Room on RoomId
+    with RoomCreated
+      RoomNumber = number
+      RoomType = type
+      RoomFloor = floor
+    with RoomUpdated
+      RoomNumber = number
+      RoomType = type
+      RoomFloor = floor
+
+  join Guest on GuestId
+    with GuestRegistered
+      GuestName = name
+      GuestEmail = email
+      GuestPhone = phone
+    with GuestUpdated
+      GuestName = name
+      GuestEmail = email
+      GuestPhone = phone

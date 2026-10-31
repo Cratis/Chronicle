@@ -41,6 +41,11 @@ public record ProjectionEventContext(
     public bool IsNewInstance { get; set; }
 
     /// <summary>
+    /// Gets the generation policy used to distinguish deferred clause identities.
+    /// </summary>
+    public Concepts.Observation.EventGenerationDelivery GenerationDelivery { get; init; }
+
+    /// <summary>
     /// Gets the collection of deferred futures that need to be stored.
     /// </summary>
     public IEnumerable<ProjectionFuture> DeferredFutures => _deferredFutures;
@@ -107,8 +112,9 @@ public record ProjectionEventContext(
     /// <param name="future">The <see cref="ProjectionFuture"/> to add.</param>
     public void AddDeferredFuture(ProjectionFuture future)
     {
-        // Avoid adding duplicate futures for the same event sequence number
-        if (_deferredFutures.Exists(f => f.Event.Context.SequenceNumber == future.Event.Context.SequenceNumber))
+        // One physical event can reach clauses pinned to different generations. Retain both futures.
+        if (_deferredFutures.Exists(f => f.Event.Context.SequenceNumber == future.Event.Context.SequenceNumber &&
+            (GenerationDelivery != Concepts.Observation.EventGenerationDelivery.Pinned || f.Event.Context.EventType == future.Event.Context.EventType)))
         {
             return;
         }
@@ -158,6 +164,15 @@ public record ProjectionEventContext(
     /// <param name="changeset">The changeset containing the resolved future's changes.</param>
     public void AddPendingFutureSave(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset) =>
         _pendingFutureSaves.Add(new PendingFutureSave(key, changeset));
+
+    /// <summary>
+    /// Adds a pending save whose persisted future must remain until its write succeeds.
+    /// </summary>
+    /// <param name="key">The key to use when applying the changeset.</param>
+    /// <param name="changeset">The changeset containing the resolved future's changes.</param>
+    /// <param name="futureId">The identity of the persisted future.</param>
+    public void AddPendingFutureSave(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset, ProjectionFutureId futureId) =>
+        _pendingFutureSaves.Add(new PendingFutureSave(key, changeset) { FutureId = futureId });
 
     /// <summary>
     /// Creates a new empty <see cref="ProjectionEventContext"/> with the given <see cref="IObjectComparer"/> and

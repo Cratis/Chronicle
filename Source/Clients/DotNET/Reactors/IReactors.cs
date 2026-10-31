@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Observation;
+using Cratis.Chronicle.Registrations;
 
 namespace Cratis.Chronicle.Reactors;
 
@@ -30,6 +31,14 @@ public interface IReactors
     /// <returns>Awaitable task.</returns>
     Task<IReactorHandler> Register<TReactor>()
         where TReactor : IReactor;
+
+    /// <summary>
+    /// Registers a reactor type using this store's declarations.
+    /// </summary>
+    /// <param name="reactorType">The reactor CLR type.</param>
+    /// <returns>The registered handler.</returns>
+    /// <exception cref="TypeBasedArtifactRegistrationNotSupported">The custom registry does not support type-based registration.</exception>
+    Task<IReactorHandler> Register(Type reactorType) => throw new TypeBasedArtifactRegistrationNotSupported(GetType());
 
     /// <summary>
     /// Registers a reactor from an explicit event subscription and an awaited callback.
@@ -102,6 +111,14 @@ public interface IReactors
         where TReactor : IReactor;
 
     /// <summary>
+    /// Gets the registered handler for a reactor CLR type.
+    /// </summary>
+    /// <param name="reactorType">The reactor CLR type.</param>
+    /// <returns>The registered handler.</returns>
+    /// <exception cref="TypeBasedArtifactRegistrationNotSupported">The custom registry does not support type-based lookup.</exception>
+    IReactorHandler GetHandlerFor(Type reactorType) => throw new TypeBasedArtifactRegistrationNotSupported(GetType());
+
+    /// <summary>
     /// Gets a specific handler by its <see cref="ReactorId"/>.
     /// </summary>
     /// <param name="id"><see cref="ReactorId"/> to get for.</param>
@@ -131,6 +148,14 @@ public interface IReactors
         where TReactor : IReactor;
 
     /// <summary>
+    /// Gets a registered reactor's state.
+    /// </summary>
+    /// <param name="reactorType">The reactor CLR type.</param>
+    /// <returns>The reactor state.</returns>
+    /// <exception cref="TypeBasedArtifactRegistrationNotSupported">The custom registry does not support type-based state lookup.</exception>
+    Task<ReactorState> GetStateFor(Type reactorType) => throw new TypeBasedArtifactRegistrationNotSupported(GetType());
+
+    /// <summary>
     /// Replay a specific reactor.
     /// </summary>
     /// <typeparam name="TReactor">Type of reactor to replay.</typeparam>
@@ -139,9 +164,32 @@ public interface IReactors
         where TReactor : IReactor;
 
     /// <summary>
+    /// Replays a registered reactor CLR type.
+    /// </summary>
+    /// <param name="reactorType">The reactor CLR type.</param>
+    /// <returns>The replay job identifier.</returns>
+    /// <exception cref="TypeBasedArtifactRegistrationNotSupported">The custom registry does not support type-based replay.</exception>
+    Task<JobId> Replay(Type reactorType) => throw new TypeBasedArtifactRegistrationNotSupported(GetType());
+
+    /// <summary>
     /// Replay a specific reactor by its identifier.
     /// </summary>
     /// <param name="reactorId"><see cref="ReactorId"/> to replay.</param>
     /// <returns>The <see cref="JobId"/> of the replay job that was started or resumed, or <see cref="JobId.NotSet"/> if the reactor is not replayable or its observer is not in a state it can replay from (disconnected, quarantined); reconnect or release it before replaying.</returns>
     Task<JobId> Replay(ReactorId reactorId);
+
+    /// <summary>
+    /// Fast forward a reactor to the tail of the event log, skipping every event it has not yet handled without invoking it.
+    /// </summary>
+    /// <typeparam name="TReactor">Type of reactor to fast forward.</typeparam>
+    /// <returns>The <see cref="FastForwardResult"/> describing what happened.</returns>
+    Task<FastForwardResult> FastForward<TReactor>()
+        where TReactor : IReactor;
+
+    /// <summary>
+    /// Fast forward a specific reactor by its identifier to the tail of the event log, skipping every event it has not yet handled without invoking it.
+    /// </summary>
+    /// <param name="reactorId"><see cref="ReactorId"/> to fast forward.</param>
+    /// <returns>The <see cref="FastForwardResult"/> describing what happened.</returns>
+    Task<FastForwardResult> FastForward(ReactorId reactorId);
 }

@@ -15,5 +15,6 @@ public class when_setting_default_value : Specification
 
     [Fact] void should_have_default_value_expression() => _builder.Properties["count"].ToString().ShouldContain("$defaultValue");
 
+    [Fact] void should_emit_the_primitive_default() => _builder.Properties["count"]["$defaultValue"]!.ToJsonString().ShouldEqual("0");
     [Fact] void should_only_add_one_property() => _builder.Properties.Count.ShouldEqual(1);
 }

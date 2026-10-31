@@ -35,7 +35,10 @@ public class EventStoreSubscriptionsReactor(IGrainFactory grainFactory, IStorage
         var definition = new EventStoreSubscriptionDefinition(
             subscriptionId,
             @event.SourceEventStore,
-            @event.EventTypes);
+            @event.EventTypes)
+        {
+            GenerationDelivery = @event.GenerationDelivery
+        };
 
         var subscriptionsManager = grainFactory.GetGrain<IEventStoreSubscriptionsManager>(eventContext.EventStore.Value);
         await subscriptionsManager.Add(definition);

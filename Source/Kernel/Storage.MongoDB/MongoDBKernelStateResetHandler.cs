@@ -5,6 +5,7 @@ using System.Collections.Frozen;
 using Cratis.Arc.MongoDB;
 using Cratis.Chronicle.Configuration;
 using Microsoft.Extensions.Options;
+using MongoDB.Bson;
 using MongoDB.Driver;
 
 namespace Cratis.Chronicle.Storage.MongoDB;
@@ -69,14 +70,39 @@ public class MongoDBKernelStateResetHandler(
             && (string.IsNullOrEmpty(prefix) || n.StartsWith(prefix, StringComparison.Ordinal))).ToList();
         foreach (var name in droppedNames)
         {
-            await DropDatabaseWithRetry(client, name);
+            var receipts = client.GetDatabase(name).GetCollection<BsonDocument>("generation-initialization");
+            if (await receipts.CountDocumentsAsync(Builders<BsonDocument>.Filter.Exists("receipt")) != 0)
+            {
+                throw new InvalidOperationException("Kernel state reset is refused for an initialized generation store.");
+            }
+        }
+
+        var fullyDropped = new List<string>();
+        foreach (var name in droppedNames)
+        {
+            var database = client.GetDatabase(name);
+            using var collections = await database.ListCollectionNamesAsync();
+            var names = await collections.ToListAsync();
+            if (names.Contains("generation-floor", StringComparer.Ordinal))
+            {
+                // Never drop and recreate a floor: even the reset window must retain admission.
+                foreach (var collection in names.Where(_ => _ != "generation-floor" && !_.StartsWith("system.", StringComparison.Ordinal)))
+                {
+                    await DropWithRetry(() => database.DropCollectionAsync(collection));
+                }
+            }
+            else
+            {
+                await DropDatabaseWithRetry(client, name);
+                fullyDropped.Add(name);
+            }
         }
 
         // DropDatabaseAsync acknowledges the command before MongoDB finishes the physical removal.
         // During this window any write to the dropped database name returns error 215:
         // "database is in the process of being dropped". Poll with a canary write against each
         // dropped name until the window closes so the next test class can safely write to MongoDB.
-        foreach (var name in droppedNames)
+        foreach (var name in fullyDropped)
         {
             await WaitForDatabaseReady(client, name);
         }
@@ -89,14 +115,16 @@ public class MongoDBKernelStateResetHandler(
     /// </summary>
     /// <param name="client">The <see cref="IMongoClient"/> to use.</param>
     /// <param name="name">Name of the database to drop.</param>
-    static async Task DropDatabaseWithRetry(IMongoClient client, string name)
+    static Task DropDatabaseWithRetry(IMongoClient client, string name) => DropWithRetry(() => client.DropDatabaseAsync(name));
+
+    static async Task DropWithRetry(Func<Task> drop)
     {
         var deadline = DateTime.UtcNow.AddSeconds(10);
         while (true)
         {
             try
             {
-                await client.DropDatabaseAsync(name);
+                await drop();
                 return;
             }
             catch (MongoCommandException ex) when (ex.Code == 10055 || ex.Message.Contains("currently being dropped"))

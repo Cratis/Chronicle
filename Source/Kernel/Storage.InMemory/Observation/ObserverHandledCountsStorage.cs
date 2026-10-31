@@ -39,11 +39,27 @@ public sealed class ObserverHandledCountsStorage : IObserverHandledCountsStorage
     }
 
     /// <inheritdoc/>
+    public async Task Increment(ObserverId observerId, IReadOnlyCollection<KeyValuePair<Key, IReadOnlyDictionary<EventTypeId, EventCount>>> countsPerPartition)
+    {
+        foreach (var (partition, counts) in countsPerPartition)
+        {
+            await Increment(observerId, partition, counts);
+        }
+    }
+
+    /// <inheritdoc/>
     public Task<IReadOnlyDictionary<EventTypeId, EventCount>> GetFor(ObserverId observerId, Key partition) =>
         Task.FromResult<IReadOnlyDictionary<EventTypeId, EventCount>>(
             _counts.TryGetValue((observerId, partition.ToString()), out var partitionCounts)
                 ? partitionCounts.ToDictionary(_ => _.Key, _ => _.Value)
                 : ImmutableDictionary<EventTypeId, EventCount>.Empty);
+
+    /// <inheritdoc/>
+    public Task SetForRecovery(ObserverId observerId, Key partition, IReadOnlyDictionary<EventTypeId, EventCount> countsPerEventType)
+    {
+        _counts[(observerId, partition.ToString())] = new(countsPerEventType);
+        return Task.CompletedTask;
+    }
 
     /// <inheritdoc/>
     public Task RemoveFor(ObserverId observerId, Key partition)

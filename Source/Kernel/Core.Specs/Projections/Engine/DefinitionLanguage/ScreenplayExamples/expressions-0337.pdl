@@ -1,0 +1,6 @@
+projection Doc => DocReadModel
+  children docs identified by docId
+    from DocEvent
+      parent groupId
+      parent $eventContext.eventSourceId
+      parent order.customerId

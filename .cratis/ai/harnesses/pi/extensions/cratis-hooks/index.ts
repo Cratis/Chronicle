@@ -9,8 +9,11 @@
  *
  *   Claude PreToolUse  (Write|Edit)  →  Pi `tool_call`      →  cratis-guard-writes.sh  (exit 2 = block)
  *   Claude PreToolUse  (Bash)        →  Pi `tool_call`      →  cratis-guard-store-mutations.sh  (exit 2 = block)
+ *   Claude PreToolUse  (Bash)        →  Pi `tool_call`      →  cratis-guard-secrets.sh  (exit 2 = block)
  *   Claude PreToolUse  (Bash)        →  Pi `tool_call`      →  cratis-guard-pr-body.sh  (exit 2 = block)
  *   Claude PostToolUse (Write|Edit)  →  Pi `tool_result`    →  cratis-pattern-scan.sh  (advisory context)
+ *   Claude PostToolUse (Bash)        →  Pi `tool_result`    →  cratis-cleanup-worktrees.sh --hook  (removes delivered worktrees/branches)
+ *   Claude SessionStart              →  Pi `session_start`  →  cratis-cleanup-worktrees.sh --hook  (sweeps orphans left by any earlier session)
  *   Explicit Pi `cratis_quality_gate` tool → cratis-quality-gate.sh  (exit 2 = failed)
  *
  * The quality gate is the one deliberate difference from Claude. It builds and tests the repository, which can
@@ -25,11 +28,11 @@
  *
  * Nothing here duplicates corpus content: it is adapter machinery, the Pi peer of the Claude
  * `hooks` block in `.claude/settings.json`. Every environment escape hatch the scripts honor
- * (CRATIS_HOOKS_ALLOW_PROTECTED_WRITES, CRATIS_HOOKS_ALLOW_STORE_MUTATIONS, CRATIS_HOOKS_SKIP_SCAN,
+ * (CRATIS_HOOKS_ALLOW_PROTECTED_WRITES, CRATIS_HOOKS_ALLOW_STORE_MUTATIONS, CRATIS_HOOKS_ALLOW_SECRET_READS, CRATIS_HOOKS_SKIP_SCAN,
  * CRATIS_HOOKS_SKIP_GATE, …) still works because the scripts are executed unchanged, in the environment
  * Pi was started from.
  *
- * Only Pi's `bash` tool is bridged to the store-mutation guard. A command the user types directly (`!cmd`,
+ * Only Pi's `bash` tool is bridged to the store-mutation and secrets guards. A command the user types directly (`!cmd`,
  * the `user_bash` event) is the person's own action and is deliberately not guarded.
  */
 
@@ -81,11 +84,11 @@ interface ScriptRun {
  * writes it exists to refuse. Callers decide what to do with `failed`; this function only reports
  * it honestly.
  */
-function runScript(script: string, stdinJson: string, cwd: string, signal?: AbortSignal): Promise<ScriptRun> {
+function runScript(script: string, stdinJson: string, cwd: string, signal?: AbortSignal, args: string[] = []): Promise<ScriptRun> {
 	return new Promise<ScriptRun>((resolve) => {
 		let proc: ReturnType<typeof spawn>;
 		try {
-			proc = spawn("bash", [script], { cwd, stdio: ["pipe", "pipe", "pipe"] });
+			proc = spawn("bash", [script, ...args], { cwd, stdio: ["pipe", "pipe", "pipe"] });
 		} catch (error) {
 			resolve({ code: 127, stdout: "", stderr: String(error), failed: true });
 			return;
@@ -160,6 +163,19 @@ async function runBlockingGuard(
 	return undefined;
 }
 
+/** Runs the installed blocking Bash guards in order; the first refusal wins. */
+async function runCommandGuards(
+	guards: Array<[script: string, name: string]>,
+	payload: object,
+	ctx: ToolCallContext,
+): Promise<{ block: true; reason: string } | undefined> {
+	for (const [script, name] of guards.filter(([guard]) => isInstalled(guard))) {
+		const blocked = await runBlockingGuard(script, name, "command", payload, ctx);
+		if (blocked) return blocked;
+	}
+	return undefined;
+}
+
 /**
  * Whether a hook script is installed at all.
  *
@@ -185,9 +201,11 @@ export default function (pi: ExtensionAPI) {
 	const scriptsDir = fs.existsSync(managedScriptsDir) ? managedScriptsDir : path.join(bundledCorpusRoot, "hooks", "scripts");
 	const guardWrites = path.join(scriptsDir, "cratis-guard-writes.sh");
 	const guardStoreMutations = path.join(scriptsDir, "cratis-guard-store-mutations.sh");
+	const guardSecrets = path.join(scriptsDir, "cratis-guard-secrets.sh");
 	const guardPrBody = path.join(scriptsDir, "cratis-guard-pr-body.sh");
 	const patternScan = path.join(scriptsDir, "cratis-pattern-scan.sh");
 	const qualityGate = path.join(scriptsDir, "cratis-quality-gate.sh");
+	const cleanupWorktrees = path.join(scriptsDir, "cratis-cleanup-worktrees.sh");
 
 	// The explicit gate owns its subprocesses; shutdown also cancels a still-running tool.
 	const activeGateRuns = new Map<AbortController, Promise<void>>();
@@ -212,10 +230,8 @@ export default function (pi: ExtensionAPI) {
 			const command = (event as any).input?.command;
 			if (typeof command !== "string" || !command.trim()) return;
 			const payload = { cwd: ctx.cwd, tool_name: "Bash", tool_input: { command } };
-			if (isInstalled(guardStoreMutations)) {
-				const blocked = await runBlockingGuard(guardStoreMutations, "cratis-guard-store-mutations", "command", payload, ctx);
-				if (blocked) return blocked;
-			}
+			const blocked = await runCommandGuards([[guardStoreMutations, "cratis-guard-store-mutations"], [guardSecrets, "cratis-guard-secrets"]], payload, ctx);
+			if (blocked) return blocked;
 			if (isInstalled(guardPrBody)) {
 				const run = await runScript(guardPrBody, JSON.stringify(payload), ctx.cwd, ctx.signal);
 				if (run.failed || run.code !== 0) return { block: true, reason: run.stderr.trim() || "cratis-guard-pr-body could not check this command." };
@@ -228,11 +244,43 @@ export default function (pi: ExtensionAPI) {
 		if (!filePath) return;
 		if (!isInstalled(guardWrites)) return; // no guard installed in this repository - nothing to enforce
 		const payload = { cwd: ctx.cwd, tool_input: { file_path: filePath, content, new_string: newString } };
+		// The shared script resolves the write target's Git origin and allowDependencyManifestWrites setting;
+		// keep manifest defaults and generated/.env protection identical to Claude Code.
 		return runBlockingGuard(guardWrites, "cratis-guard-writes", "write", payload, ctx, "write guards");
 	});
 
+	// ── Cleanup of delivered worktrees and branches ──
+	// The script decides on evidence that the work reached the default branch and only then removes anything; this
+	// bridge just fires it at the same moments Claude does: after a delivering command, and when a session starts.
+	// A failure here must never fail the tool call that already succeeded, so it is reported, not thrown.
+	async function sweepDelivered(hookEvent: "PostToolUse" | "SessionStart", command: string | undefined, cwd: string, signal?: AbortSignal): Promise<string> {
+		if (!isInstalled(cleanupWorktrees)) return "";
+		const payload = JSON.stringify({ hook_event_name: hookEvent, cwd, tool_input: command ? { command } : undefined });
+		const run = await runScript(cleanupWorktrees, payload, cwd, signal, ["--hook"]);
+		if (run.failed) return "cratis-cleanup-worktrees is installed but could not be run, so delivered worktrees were not cleaned up.";
+		try {
+			return JSON.parse(run.stdout)?.hookSpecificOutput?.additionalContext?.trim() ?? run.stderr.trim();
+		} catch {
+			return run.stderr.trim();
+		}
+	}
+	pi.on("session_start", async (_event, ctx) => {
+		const message = await sweepDelivered("SessionStart", undefined, ctx.cwd);
+		if (message) pi.sendMessage({ customType: "cratis-cleanup-worktrees", content: message, display: true });
+	});
+	async function sweepAfterBash(event: any, ctx: ExtensionContext) {
+		if (event.isError) return;
+		const command = event.input?.command;
+		if (typeof command !== "string") return;
+		const message = await sweepDelivered("PostToolUse", command, ctx.cwd, ctx.signal);
+		if (!message) return;
+		const existing = Array.isArray(event.content) ? event.content : [];
+		return { content: [...existing, { type: "text", text: `\n\n[cratis-hooks]\n${message}` }] };
+	}
+
 	// ── PostToolUse → deterministic pattern scan (advisory; injects reminders the model sees) ──
 	pi.on("tool_result", async (event, ctx) => {
+		if (event.toolName === "bash") return sweepAfterBash(event, ctx);
 		if (event.toolName !== "write" && event.toolName !== "edit") return;
 		if (event.isError) return;
 		const { filePath } = writeTarget(event.toolName, (event as any).input);
@@ -288,7 +336,7 @@ export default function (pi: ExtensionAPI) {
 		const gates = parseGatePlan(run.stderr);
 		if (run.aborted) return { gates: [], problem: "its dry run was cancelled" };
 		if (run.timedOut) return { gates, problem: `its dry run did not finish within ${PLAN_TIMEOUT_MS / 1000}s` };
-		if (run.failed || run.code !== 0) return { gates, problem: `its dry run could not be completed (exit ${run.code ?? "none"})` };
+		if (run.failed || run.code !== 0) return { gates, problem: `its dry run could not be completed (exit ${run.code ?? "none"})${run.stderr.trim() ? `\n\n${run.stderr.trim()}` : ""}` };
 		return { gates };
 	}
 
@@ -298,7 +346,10 @@ export default function (pi: ExtensionAPI) {
 		label: "Cratis quality gate",
 		description:
 			"Run the Cratis quality gate (.cratis/ai/hooks/scripts/cratis-quality-gate.sh): the build, spec and lint gates the current " +
-			"working-tree changes touch, configured in quality-gates.json. Runs in the foreground with a deadline and can be cancelled. " +
+			"working-tree changes touch. Shipped defaults: .cratis/ai/hooks/scripts/quality-gates.json; project overrides: " +
+			".cratis/ai/quality-gates.project.json, shallow-merged by gate id (command without requires drops inherited packageScripts). " +
+			"CRATIS_HOOKS_GATES replaces the defaults; project overrides still merge over it. " +
+			"Runs in the foreground with a whole-tool deadline and optional per-gate timeoutSeconds; can be cancelled. " +
 			"A failure, a timeout or a cancellation is returned as an error and means the change is NOT verified. " +
 			"Run it explicitly at a verification checkpoint, not after every prompt. It selects gates for all current " +
 			"working-tree changes, not the complete CI matrix; run CI-equivalent gates before claiming completion or pushing/opening a PR. " +
@@ -343,8 +394,8 @@ export default function (pi: ExtensionAPI) {
 			const reportTimedOut = () => {
 				const last = latestGateLog(gateLogDirectory(sessionId), started);
 				const tail = last ? tailLines(last.file, TAIL_LINES) : "";
-				throw new Error(`The Cratis quality gate TIMED OUT after ${duration(timeoutSeconds * 1000)}${last ? ` while running '${last.gate}'` : ""}. This is not a pass: nothing was verified.` +
-					(last ? `\n\nGate log: ${last.file}` : "") +
+				throw new Error(`The Cratis quality gate TIMED OUT after ${duration(timeoutSeconds * 1000)}${last ? ` while running '${last.gate}'${last.cwd ? ` (cwd: ${last.cwd})` : ""}` : ""}. This is not a pass: nothing was verified.` +
+					(last ? `\nRun a narrower command instead: ${last.gate === "backend-specs" ? "dotnet test <affected.Specs.csproj-or-Tests.csproj> --configuration Debug --no-build (replace the placeholder; repeat for affected dependents)." : "run the affected project alone using this gate's configured command."}\nConfigure it in .cratis/ai/quality-gates.project.json.\n\nGate log: ${last.file}` : "") +
 					(tail ? `\n\n--- last ${TAIL_LINES} lines ---\n${tail}\n--- end ---` : ""));
 			};
 			const reportInterrupted = () => {
@@ -364,15 +415,16 @@ export default function (pi: ExtensionAPI) {
 			if (plan.problem) throw new Error(`The Cratis quality gate plan could not be completed: ${plan.problem}. Nothing was verified.`);
 			const planned = plan.gates.length > 0 ? plan.gates.join(", ") : "none planned";
 			const progress = (elapsedMs: number) => {
-				const current = latestGateLog(logDirectory, started)?.gate;
+				const currentLog = latestGateLog(logDirectory, started);
+				const current = currentLog?.gate;
 				onUpdate?.({
 					content: [
 						{
 							type: "text",
-							text: `Cratis quality gate running${current ? ` ${current}` : ""}: ${duration(elapsedMs)} of ${duration(timeoutSeconds * 1000)} (gates: ${planned}). Escape cancels.`,
+							text: `Cratis quality gate running${current ? ` ${current}${currentLog?.cwd ? ` (cwd: ${currentLog.cwd})` : ""}` : ""}: ${duration(elapsedMs)} of ${duration(timeoutSeconds * 1000)} (gates: ${planned}). Escape cancels.`,
 						},
 					],
-					details: { status: "running", gates: plan.gates, current, elapsedMs, timeoutSeconds },
+					details: { status: "running", gates: plan.gates, current, cwd: currentLog?.cwd, elapsedMs, timeoutSeconds },
 				});
 			};
 			progress(Date.now() - started);

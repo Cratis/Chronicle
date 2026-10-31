@@ -1,0 +1,21 @@
+// An event-context path that names no member of the event context
+// Screenplay documentation: Documentation/screenplay/projections/event-context.md
+
+module Conformance
+  feature Cases
+    slice StateView Case
+      event OrderPlaced
+        orderId String
+      readmodel OrderView
+        orderId String
+        placedAt DateTime
+        position Int
+        correlation Uuid
+        source String
+        placedBy String
+      query OrderViewById => OrderView?
+        by orderId String
+      projection Orders => OrderView
+        no automap
+        from OrderPlaced
+          placedBy = $eventContext.whatever

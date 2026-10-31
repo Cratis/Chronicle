@@ -1,7 +1,16 @@
 <!-- cratis-ai-managed: skills/cratis-arc-authentication-authorization-and-identity/references/observable-emission-guards.md -->
 # Observable query emission guards
 
-Verified against `Cratis.Arc.Core` `22.41.1` (`Cratis.Arc.Queries`).
+## Contents
+
+- The opt-in
+- Verdicts
+- The context
+- Fail closed, and its blast radius
+- Cost
+- What a guard does not protect
+
+Source: `Cratis.Arc.Core` (`Cratis.Arc.Queries`).
 
 Authorization for an observable query runs **once, when the subscription is
 established**. It decides whether the caller may obtain the live stream. It does
@@ -36,6 +45,18 @@ Arc API, and never an always-true stub.
 It runs on **every emission** of **every subscription**, on **every transport**:
 the multiplexed hub, WebSocket and SSE.
 
+Requires Arc 22.69.1 for guards and read-model interceptors on plain HTTP snapshots
+of observable queries, waits and long polls; on an older Arc those requests are not guarded.
+
+Requires Arc 22.116.0 for **non-observable** query results performed through the
+hub to run emission guards. Such a result has `IsSnapshot = true` and
+`IsFirstEmission = true`. `Suppress` withholds the result (SSE subscribe still
+returns 200); denial sends Unauthorized (SSE subscribe returns 401). Ordinary
+non-observable direct HTTP queries do not run these guards. Check with
+`dotnet list package`; on older Arc secure hub snapshots without relying on a guard.
+
+Source: [ObservableQueryHttp.cs](https://github.com/Cratis/Arc/blob/main/Source/DotNET/Arc.Core/Queries/ObservableQueryHttp.cs).
+
 ## Verdicts
 
 | Verdict | Effect |
@@ -51,7 +72,7 @@ Several guards: every guard is asked, the **most restrictive** verdict wins
 ## The context
 
 `ObservableQueryEmissionContext` carries `QueryName`, `Arguments`,
-`SubscriptionScope`, `Principal`, `CorrelationId`, `IsFirstEmission`,
+`SubscriptionScope`, `Principal`, `CorrelationId`, `IsFirstEmission`, `IsSnapshot`,
 `CancellationToken` and the `ServiceProvider` to resolve from. Each guard gets its
 own copy of the scope and arguments.
 
@@ -96,9 +117,11 @@ a failure.
 
 ## What a guard does not protect
 
-- The HTTP **snapshot** path (`ObservableQueryHttp`, including
-  `waitForFirstResult=true`) is not an emission guard path. Apply subscription-time
-  authorization and safe data selection to every query.
+- Plain HTTP **observable-query** snapshots are guarded (Requires Arc 22.69.1;
+  older versions leave them unguarded): suppression returns 202 until an allowed
+  emission (or the wait deadline), denial returns unauthorized with no data.
+  Keep safe data selection and initial
+  authorization on every query regardless of transport.
 - A guard is not a substitute for the subscription-time declaration: the
   `[Authorize]`/`[Roles]`/policy on the read model still decides who may subscribe.
 - Interceptor masking is not an access control; the producer must never yield

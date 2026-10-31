@@ -1,3 +1,9 @@
 # cratis-ai-managed: skills/cratis-arc-command-execution/LICENSE
 Copyright (c) Cratis. All rights reserved.
 Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+This skill's guidance on redelivery against a refusing command draws on ideas from the
+Eventmodelers Build-Kits skills by Martin Dilger and Nebulit GmbH
+(https://github.com/Nebulit-GmbH/Eventmodelers-Build-Kits; https://nebulit.de), used with the
+explicit consent of Martin Dilger and Nebulit GmbH. The adapted material remains credited to
+Martin Dilger and Nebulit GmbH.

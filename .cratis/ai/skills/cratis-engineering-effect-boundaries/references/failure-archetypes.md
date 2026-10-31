@@ -1,6 +1,16 @@
 <!-- cratis-ai-managed: skills/cratis-engineering-effect-boundaries/references/failure-archetypes.md -->
 # The six cited failure archetypes
 
+## Contents
+
+- 1. A swallowed conflict reported as a successful release
+- 2. A generator that degrades silently
+- 3. A renderer that quietly renders less
+- 4. A container that stays `Running` after startup threw
+- 5. A constraint that only one implementation enforces
+- 6. A fan-out that succeeded 29 times out of 36 and said "done"
+- What the six have in common
+
 These are the six manifestations the 2026-08-24 Cratis organization-wide review
 identified as one disease: silent failure on an effect boundary. Each is a real,
 tracked defect. Read them as the shape of the mistake, not as a list of fixed
@@ -11,7 +21,7 @@ expensive, and what the contract required instead.
 
 ## 1. A swallowed conflict reported as a successful release
 
-*release-action #178.*
+*A release action.*
 
 **Boundary.** Publishing a version — the most public effect there is.
 
@@ -31,7 +41,7 @@ failed. "Caught an exception, carried on" is neither.
 
 ## 2. A generator that degrades silently
 
-*Arc #2571, #2564, #2527 — the proxy generator.*
+*Arc — the proxy generator.*
 
 **Boundary.** Generating TypeScript proxies from C# sources. The output is what
 the whole frontend compiles against.
@@ -67,7 +77,7 @@ line at the end of a stream nobody reads.
 
 ## 4. A container that stays `Running` after startup threw
 
-*Chronicle #3682.*
+*Chronicle — container startup.*
 
 **Boundary.** Process and container lifecycle — the state an orchestrator reads
 to decide whether to send traffic.
@@ -84,7 +94,7 @@ survives a failed start is not a degraded signal, it is a false one.
 
 ## 5. A constraint that only one implementation enforces
 
-*Chronicle #3744 — unique constraints on the SQL and in-memory providers.*
+*Chronicle — unique constraints on the SQL and in-memory providers.*
 
 **Boundary.** Persistence, and the invariant the store is supposed to guarantee.
 

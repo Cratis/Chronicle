@@ -4,6 +4,8 @@
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Storage.Observation;
+using MongoDB.Bson.Serialization.Attributes;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Observation;
 #pragma warning disable CA1849, MA0042 // MongoDB breaks the Orleans task model internally, so it won't return to the task scheduler
@@ -17,6 +19,26 @@ public class ObserverState
     /// Gets or sets the unique identifier of the observer.
     /// </summary>
     public ObserverId Id { get; set; } = ObserverId.Unspecified;
+
+    /// <summary>
+    /// Gets or sets the type-set control, absent before initialization.
+    /// </summary>
+    [BsonElement("typeSetControl")]
+    [BsonIgnoreIfNull]
+    public ObserverTypeSetControl? TypeSetControl { get; set; }
+
+    /// <summary>
+    /// Gets or sets the initialization state, absent before initialization.
+    /// </summary>
+    [BsonElement("initialization")]
+    [BsonIgnoreIfNull]
+    public ObserverInitialization? Initialization { get; set; }
+
+    /// <summary>
+    /// Gets or sets the outstanding delivery fence snapshot, absent on legacy state.
+    /// </summary>
+    [BsonIgnoreIfNull]
+    public IEnumerable<DeliveryFenceState>? DeliveryFences { get; set; }
 
     /// <summary>
     /// Gets or sets the source-owned alert lifecycle token.
@@ -37,6 +59,10 @@ public class ObserverState
     /// Gets or sets the current quarantine episode identity.
     /// </summary>
     public Guid? QuarantineEpisodeId { get; set; }
+
+    /// <summary>Gets or sets the optional durable webhook probe control.</summary>
+    [BsonIgnoreIfNull]
+    public WebhookProbeState? WebhookProbe { get; set; }
 
     /// <summary>
     /// Gets or sets the last handled event sequence number.

@@ -1,3 +1,6 @@
+---
+description: Model an entity that changes shape over its lifetime as a group of read model variants in a declarative Chronicle projection.
+---
 # Variants
 
 Some entities do not have one shape for their whole lifetime — a work item is a backlog entry until a
@@ -7,9 +10,13 @@ state before it can trust a field, and a shape meant for one stage leaks propert
 in another.
 
 Variants let you declare several mutually exclusive read models for the same logical entity instead. Each
-variant is an ordinary fluent projection with its own shape — only the properties that stage of the
-entity's life actually has. Entering one variant automatically removes the entity from every other variant
-in the group, so at any point in time an entity exists in exactly one of them.
+variant is an ordinary fluent projection with its own shape — the properties that stage of the entity's
+life needs. Entering one variant automatically removes the entity from every other variant in the group,
+so at any point in time an entity exists in exactly one of them.
+
+The stages can differ a lot, or hardly at all. Variants fit entities whose stages are really different
+things, and they fit just as well when the stages share nearly the same shape: each variant is its own
+collection, so a query for one stage reads only that stage and there is no `Status` to filter or index.
 
 ## Declaring a group of variants
 
@@ -49,6 +56,11 @@ variant, but it can never create one.
 it into an update-only join — keyed on the same property `.VariantOf<T>(_ => _.Id)` declared — before the
 definition ever reaches the projection engine. The entering event stays the only door into the variant.
 
+Because it is a join, it is also resolved when the variant is created: the join is re-resolved against the
+last stored event of the joined stream whenever the variant handles its own event. A `BuildCompleted`
+appended before the entering event never creates the variant on its own, but its value is on the variant the
+moment the entering event creates it.
+
 If a non-entering event also has an explicit `.Join<TEvent>()`, reclassification combines its `From`
 mappings with that join, including mappings inherited through `.From<BaseEvent>()`. The explicit join
 keeps its `On` and key settings and wins on conflicting property mappings, regardless of registration order.
@@ -78,11 +90,12 @@ maintenance concern, that repetition is itself a reason to reach for
 1. **Pick an identity type that means something on its own** — `DecVariantWorkItem` in the examples above,
    not a marker interface with no purpose beyond grouping. It is the type every variant in the group
    points back to.
-2. **Give every variant only the properties that stage of the entity actually has.** A property every
+2. **Give every variant the properties that stage of the entity needs.** A property every
    stage needs is still declared on each variant's builder individually — see "Sharing handlers" above.
-3. **Reach for variants when the shapes genuinely diverge.** A single read model with a `Status` property
-   is still the right choice when every stage shares almost all of its properties and differs only in a
-   flag or two — see [Choosing a read-model style](../choosing-a-read-model-style).
+3. **Variants suit both kinds of shape.** Use them when the stages genuinely diverge, each with properties
+   the others do not have. Use them just as well when the stages share nearly the same shape: each
+   variant is its own collection, so a query for one stage reads only that stage, with no `Status`
+   property to filter on or index. The two uses are not mutually exclusive.
 4. **Remember each variant is its own collection.** There is no built-in query that spans a whole group —
    a caller that needs "this entity, whichever stage it's currently in" queries each variant explicitly
    rather than assuming a single combined collection.

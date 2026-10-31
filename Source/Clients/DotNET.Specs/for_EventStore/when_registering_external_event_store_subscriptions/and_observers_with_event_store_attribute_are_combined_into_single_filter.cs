@@ -42,11 +42,28 @@ public class and_observers_with_event_store_attribute_are_combined_into_single_f
         var eventTypes = new EventTypesForSpecifications([typeof(external_user_invited), typeof(external_user_accepted)]);
         _invitedEventTypeId = eventTypes.GetEventTypeFor(typeof(external_user_invited)).Id;
         _acceptedEventTypeId = eventTypes.GetEventTypeFor(typeof(external_user_accepted)).Id;
+        var reactors = Substitute.For<IReactors>();
+        foreach (var type in clientArtifactsProvider.Reactors)
+        {
+            var handler = Substitute.For<IReactorHandler>();
+            handler.ReactorType.Returns(type);
+            handler.EventTypes.Returns(ReactorInvoker.GetEventTypesFor(eventTypes, type));
+            reactors.GetHandlerFor(type).Returns(handler);
+        }
+        var reducers = Substitute.For<IReducers>();
+        foreach (var type in clientArtifactsProvider.Reducers)
+        {
+            var handler = Substitute.For<IReducerHandler>();
+            handler.EventTypes.Returns(ReducerInvoker.GetEventTypesFor(eventTypes, type, typeof(object)));
+            reducers.GetHandlerFor(type).Returns(handler);
+        }
 
         _eventStore = (EventStore)RuntimeHelpers.GetUninitializedObject(typeof(EventStore));
         SetField("_eventStoreName", new EventStoreName("Lobby"));
         SetField("_clientArtifactsProvider", clientArtifactsProvider);
         SetAutoProperty("EventTypes", eventTypes);
+        SetAutoProperty("Reactors", reactors);
+        SetAutoProperty("Reducers", reducers);
         SetAutoProperty("Projections", projections);
         SetAutoProperty("Subscriptions", _subscriptions);
     }

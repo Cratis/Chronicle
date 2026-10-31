@@ -56,9 +56,33 @@ public class ChronicleOptions : IValidatableObject
     public int? DedicatedHealthPort => Health.Port is { } port && port != Port ? port : null;
 
     /// <summary>
+    /// Gets the maximum size, in bytes, of a gRPC message the kernel accepts from a client. Defaults to 100 MB.
+    /// </summary>
+    /// <remarks>
+    /// Matches what the Chronicle clients allow themselves to send by default. ASP.NET Core would otherwise limit this to
+    /// 4 MB, which fails any append of a large event, and any client-side reducer whose read model has grown past it,
+    /// with a <c language="csharp">ResourceExhausted</c> status. Set to <see langword="null"/> to remove the limit.
+    /// Configure through <c language="csharp">Cratis__Chronicle__MaxReceiveMessageSize</c> in the environment.
+    /// </remarks>
+    public int? MaxReceiveMessageSize { get; init; } = 100 * 1024 * 1024;
+
+    /// <summary>
+    /// Gets the maximum size, in bytes, of a gRPC message the kernel sends to a client. Defaults to unlimited.
+    /// </summary>
+    /// <remarks>
+    /// Configure through <c language="csharp">Cratis__Chronicle__MaxSendMessageSize</c> in the environment.
+    /// </remarks>
+    public int? MaxSendMessageSize { get; init; }
+
+    /// <summary>
     /// Gets the <see cref="Events"/> configuration.
     /// </summary>
     public Events Events { get; init; } = new Events();
+
+    /// <summary>
+    /// Gets the shared shutdown drain configuration.
+    /// </summary>
+    public Shutdown Shutdown { get; init; } = new();
 
     /// <summary>
     /// Feature toggles for Chronicle.
@@ -85,6 +109,11 @@ public class ChronicleOptions : IValidatableObject
     /// Gets the observers configuration.
     /// </summary>
     public Observers Observers { get; init; } = new Observers();
+
+    /// <summary>
+    /// Gets the durable occurrence delivery configuration.
+    /// </summary>
+    public Occurrences Occurrences { get; init; } = new();
 
     /// <summary>
     /// Gets the alerts configuration.
@@ -148,6 +177,11 @@ public class ChronicleOptions : IValidatableObject
     public PatternDetection PatternDetection { get; init; } = new PatternDetection();
 
     /// <summary>
+    /// Gets or inits the configuration for how the Workbench is served.
+    /// </summary>
+    public WorkbenchOptions Workbench { get; init; } = new WorkbenchOptions();
+
+    /// <summary>
     /// Gets or inits the TLS configuration.
     /// </summary>
     public Tls Tls { get; init; } = new Tls();
@@ -185,10 +219,37 @@ public class ChronicleOptions : IValidatableObject
     }
 
     /// <inheritdoc/>
-    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext) =>
-        Alerts.Conditions
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        if (ReadModels.MaxBatchSize <= 0)
+        {
+            yield return new ValidationResult(
+                "ReadModels.MaxBatchSize must be greater than zero.",
+                [$"{nameof(ReadModels)}.{nameof(ReadModels.MaxBatchSize)}"]);
+        }
+
+        var alertErrors = Alerts.Conditions
             .Where(_ => _.Value.RaiseAfter < TimeSpan.Zero)
             .Select(_ => new ValidationResult(
                 $"Alerts.Conditions['{_.Key}'].RaiseAfter must be non-negative; zero raises immediately.",
                 [$"{nameof(Alerts)}.{nameof(Alerts.Conditions)}[{_.Key}].{nameof(AlertConditionOptions.RaiseAfter)}"]));
+        foreach (var error in ValidateSingleWriterLease().Concat(alertErrors)) yield return error;
+        if (!Webhooks.Probe.HasValidTiming)
+        {
+            yield return new ValidationResult("Invalid webhook probe timing settings.", [$"{nameof(Webhooks)}.{nameof(Configuration.Webhooks.Probe)}"]);
+        }
+    }
+
+    IEnumerable<ValidationResult> ValidateSingleWriterLease()
+    {
+        if (Clustering.SingleWriterLease.Ttl < TimeSpan.FromSeconds(5))
+        {
+            yield return new ValidationResult("Clustering.SingleWriterLease.Ttl must be at least five seconds.", ["Clustering.SingleWriterLease.Ttl"]);
+        }
+
+        if (Clustering.SingleWriterLease.AcquireTimeout < TimeSpan.Zero)
+        {
+            yield return new ValidationResult("Clustering.SingleWriterLease.AcquireTimeout must be non-negative.", ["Clustering.SingleWriterLease.AcquireTimeout"]);
+        }
+    }
 }

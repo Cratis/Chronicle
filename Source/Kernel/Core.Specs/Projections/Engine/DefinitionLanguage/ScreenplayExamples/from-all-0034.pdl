@@ -1,0 +1,7 @@
+projection ActivityFeed => ActivityFeedModel
+  all
+    count totalSystemEvents
+    lastActivity = $eventContext.occurred
+
+  from UserRegistered
+    recentUsers = name

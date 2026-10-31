@@ -32,7 +32,7 @@ Replay is not the only way an event comes back, though. If a handler throws, its
 
 <ChronicleClientTabs snippet="tutorial/reacting/once-only" />
 
-Elixir and TypeScript don't currently have an equivalent to `[OnceOnly]` — replay/redaction exclusion for a specific handler is available in C#, Kotlin, and Java.
+TypeScript doesn't currently have an equivalent to `[OnceOnly]` for a specific handler — it is available in C#, Kotlin, Java, and Elixir (`once_only:` on `use Chronicle.Reactors.Reactor`).
 
 Use it deliberately, though — the same exclusion means a `[OnceOnly]` handler also *won't* run again when you replay on purpose. Idempotent-by-design stays the default; `[OnceOnly]` is for the effects where "again" is worse than "never".
 
@@ -57,7 +57,9 @@ Or skip the plumbing with **side effects**: return the event from the handler, a
 
 <ChronicleClientTabs snippet="tutorial/reacting/side-effect" />
 
-Returning an event for Chronicle to auto-append is a C#-only convention — Kotlin, Elixir, and TypeScript reactors don't have an equivalent, so they append explicitly (as above) instead.
+In C#, the returned event is appended with an idempotency key derived from the reactor delivery, so the retry described above does not append it a second time; the notification call itself still runs again, so keep it idempotent. See [Duplicate protection for returned events](/chronicle/reactors/side-effects/#duplicate-protection-for-returned-events).
+
+Returning an event for Chronicle to auto-append works in C#, Kotlin, Java, and Elixir (`{:ok, event}` from `handle/2`); TypeScript reactors append explicitly (as above) instead.
 
 :::
 

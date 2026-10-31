@@ -1,0 +1,23 @@
+// every with exclude children
+// Screenplay documentation: Documentation/screenplay/projections/from-every.md
+
+module Conformance
+  feature Cases
+    slice StateView Case
+      event OrderPlaced
+        orderId String
+      readmodel OrderView
+        orderId String
+        placedAt DateTime
+        position Int
+        correlation Uuid
+        source String
+        placedBy String
+      query OrderViewById => OrderView?
+        by orderId String
+      projection Orders => OrderView
+        no automap
+        every
+          placedAt = $eventContext.occurred
+          exclude children
+        from OrderPlaced

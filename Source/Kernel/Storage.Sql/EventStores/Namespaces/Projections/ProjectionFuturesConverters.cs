@@ -32,6 +32,7 @@ public static class ProjectionFuturesConverters
             EventTypeGeneration = future.Event.Context.EventType.Generation.Value,
             EventSourceId = future.Event.Context.EventSourceId.Value,
             EventContentJson = JsonSerializer.Serialize(future.Event.Content, jsonSerializerOptions),
+            EventContextJson = JsonSerializer.Serialize(future.Event.Context, jsonSerializerOptions),
             ParentPath = future.ParentPath.Path,
             ChildPath = future.ChildPath.Path,
             IdentifiedByProperty = future.IdentifiedByProperty.Path,
@@ -51,14 +52,15 @@ public static class ProjectionFuturesConverters
         var content = JsonSerializer.Deserialize<ExpandoObject>(entity.EventContentJson, jsonSerializerOptions)!;
         var parentKeyValue = JsonSerializer.Deserialize<object>(entity.ParentKeyJson, jsonSerializerOptions)!;
 
-        var appendedEvent = new AppendedEvent(
-            EventContext.Empty with
+        var context = entity.EventContextJson is not null
+            ? JsonSerializer.Deserialize<EventContext>(entity.EventContextJson, jsonSerializerOptions)!
+            : EventContext.Empty with
             {
                 SequenceNumber = new EventSequenceNumber(entity.EventSequenceNumber),
                 EventType = new EventType(new EventTypeId(entity.EventTypeId), entity.EventTypeGeneration),
                 EventSourceId = new EventSourceId(entity.EventSourceId)
-            },
-            content);
+            };
+        var appendedEvent = new AppendedEvent(context, content);
 
         return new ProjectionFuture(
             new ProjectionFutureId(Guid.Parse(entity.Id)),

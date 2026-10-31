@@ -5,6 +5,8 @@ description: "Run Chronicle's client integration tests in-process or out-of-proc
 
 Integration tests run from the `Integration/Client` project and can execute in either in-process or out-of-process mode. They require Docker to be running on your machine.
 
+To attribute an existing CI invocation without changing its test selection or lifecycle, see [Interpreting Integration Timings](integration-timings.md).
+
 When you provide no runtime arguments, the suite defaults to:
 
 - mode: `outofprocess`
@@ -12,11 +14,11 @@ When you provide no runtime arguments, the suite defaults to:
 
 ## When CI runs integration
 
-Pull-request pushes affecting the [build paths](https://github.com/Cratis/Chronicle/blob/main/.github/build-affecting-paths.txt) run the Release build, specs, and a local Docker image build from Release binaries without pushing it, **not** the Docker integration suites. Run the relevant integration namespace locally before requesting CI integration. The [hot-core gate](https://github.com/Cratis/Chronicle/blob/main/.github/hot-core-paths.txt) reports which hot-core paths a PR touches; its ordinary PR check does not run the matrix.
+Pull-request pushes affecting the [build paths](https://github.com/Cratis/Chronicle/blob/main/.github/build-affecting-paths.txt) run the Release build, specs, and a local Docker image build from Release binaries without pushing it, **not** the Docker integration suites. Run the relevant integration namespace locally before requesting CI integration. The [hot-core gate](https://github.com/Cratis/Chronicle/blob/main/.github/hot-core-paths.txt) fails on hot-core PRs until Requested Integration passes for the current head commit; its ordinary PR check does not run the matrix. Hot core includes the kernel Core, Concepts, Storage, Storage.InMemory, Storage.MongoDB and Storage.Sql runtime trees, plus Infrastructure/Changes; spec trees are excluded.
 
-Apply the `run-integration` label to a pull request to start the separate Requested Integration workflow, even for a documentation-only PR. It builds the commit and runs specs, API and MongoDB integration, and one client integration matrix: MongoDB and SQLite normally, every backend when the PR touches the hot core. The separately named requested hot-core gate requires that full matrix to pass. Remove and re-add the label to request another run after changes; pushing new commits does not rerun integration automatically. Other labels do not start integration or replace the ordinary PR check results.
+Apply the `run-integration` label to a pull request to start the separate Requested Integration workflow, even for a documentation-only PR. It builds the commit and runs specs, API and MongoDB integration, and one client integration matrix: MongoDB and SQLite normally, every backend when the PR touches the hot core. The separately named requested hot-core gate requires that full matrix to pass. The ordinary `hot-core-gate` check turns green automatically when that requested run passes, without a new push. While the label remains applied, each new push or reopening automatically starts integration for the current head commit and cancels any older requested run for that PR. A push invalidates the previous commit’s evidence; there is no need to remove and re-add the label. Other labels do not start integration or replace the ordinary PR check results.
 
-The existing nightly schedule on `main` and manual `workflow_dispatch` run the full client backend matrix. Main-branch pushes do not run integration; nightly coverage handles main. A fork PR cannot push the integration image with its read-only token; labeling it fails the requested gate with an "unavailable" notice instead of running integration, so a fork PR can never satisfy that gate. Ask a maintainer to dispatch the workflow on a trusted branch containing those changes.
+The existing nightly schedule on `main` and manual `workflow_dispatch` run the full client backend matrix. Main-branch pushes do not run integration; nightly coverage handles main. A fork PR cannot push the integration image with its read-only token; labeling it fails the requested gate with an "unavailable" notice instead of running integration, so a fork PR can never satisfy that gate. The ordinary hot-core gate also fails closed for forks. Ask a maintainer to dispatch Hot Core Gate on a trusted branch containing those changes and merge with bypass.
 
 For a labeled event, the image-push guard checks `github.actor`—the account that applied the label, not the PR author. A maintainer-labeled Dependabot PR therefore attempts the image push; if GitHub supplies a read-only token, the requested run fails rather than silently skipping the client matrix.
 
@@ -154,6 +156,14 @@ You can run the same configurations from VS Code by creating a dedicated test la
 For in-process mode, change the last two arguments to `"inprocess"` and `"mongodb"`.
 
 For database changes in out-of-process mode, set the second argument to `"postgresql"`, `"mssql"`, or `"sqlite"`.
+
+## Per-context storage isolation
+
+The in-process MongoDB lane starts a fresh host for each test context and gives its databases a unique prefix. A previous host can still flush writes after shutdown ([#4790](https://github.com/Cratis/Chronicle/issues/4790)); those writes now land in databases that the next context never reads. Context teardown awaits host disposal without wiping its databases in place. The collection fixture drops only the databases belonging to prefixes it issued when the collection ends.
+
+If you use `Cratis.Chronicle.XUnit.Integration` in your own suite, override `ChronicleFixture.UsesPerContextMongoDBHost` to return `true` for an in-process MongoDB fixture. It defaults to `false`, so package consumers keep the existing shared-host behavior unless they opt in. The prefix is applied by the default MongoDB storage configuration; if your fixture overrides `GetStorageConfigurator`, pass the fixture's `DatabaseNamePrefix` to `WithMongoDB` as `databaseNamePrefix`.
+
+Starting and stopping a host per context costs time: measured Projections shards took about 1.8–3.1 times as long as the shared-host baseline. [The performance follow-up (#4792)](https://github.com/Cratis/Chronicle/issues/4792) tracks that overhead. Out-of-process and remote-kernel lanes are not covered by this isolation; they still use the kernel reset.
 
 ## Consecutive runs
 

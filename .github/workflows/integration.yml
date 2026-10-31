@@ -30,6 +30,7 @@ jobs:
       all-providers: ${{ steps.client.outputs.all-providers }}
       kernel-matrix: ${{ steps.kernel.outputs.matrix }}
       clustering-matrix: ${{ steps.clustering.outputs.matrix }}
+      rolling-upgrade-enabled: ${{ steps.exclusions.outputs.rolling-upgrade-enabled }}
 
     steps:
       - name: Checkout code
@@ -40,6 +41,10 @@ jobs:
       # second and run before anything is discovered.
       - name: Verify the integration matrix generator
         run: python3 .github/scripts/test-generate-integration-matrix.py
+
+      - name: Report explicitly skipped integration lanes
+        id: exclusions
+        run: python3 .github/scripts/integration_lane_exclusions.py
 
       # Each client namespace runs against the selected infrastructure configs;
       # large namespaces are additionally split into parallel shards so the
@@ -114,7 +119,7 @@ jobs:
       - name: Extract build output
         env:
           BUILD_OUTPUT_ARTIFACT: ${{ inputs.build-output-artifact }}
-        run: tar -xzf "${BUILD_OUTPUT_ARTIFACT}.tar.gz"
+        run: tar -I zstd -xf "${BUILD_OUTPUT_ARTIFACT}.tar.zst"
 
       - name: Login to GitHub Docker Registry
         if: matrix.needs-docker == true
@@ -126,6 +131,9 @@ jobs:
 
       - name: Restore Client project
         run: dotnet restore Integration/Client/Client.csproj
+
+      - name: Restore pinned coverage tool
+        run: dotnet tool restore
 
       # Pre-pull Docker Hub images once per job so the per-fixture image
       # existence checks in Testcontainers do not race against anonymous
@@ -139,7 +147,7 @@ jobs:
           max_attempts: 5
           retry_wait_seconds: 15
           command: |
-            docker pull mongo
+            docker pull mongo:8.2
             if [ "${{ matrix.database }}" = "postgresql" ]; then
               docker pull postgres:16
             fi
@@ -179,9 +187,7 @@ jobs:
           .github/scripts/run-tests-with-retry.sh \
             Integration/Client/Client.csproj \
             "${{ matrix.filter }}" \
-            -p:DisableDockerBuild=true \
-            --no-build \
-            --collect:"XPlat Code Coverage"
+            --coverage
 
       # run-tests-with-retry.sh already writes a TRX per attempt into TEST_RESULTS_DIR.
       - name: Assert Client integration tests ran
@@ -227,10 +233,13 @@ jobs:
       - name: Extract build output
         env:
           BUILD_OUTPUT_ARTIFACT: ${{ inputs.build-output-artifact }}
-        run: tar -xzf "${BUILD_OUTPUT_ARTIFACT}.tar.gz"
+        run: tar -I zstd -xf "${BUILD_OUTPUT_ARTIFACT}.tar.zst"
 
       - name: Restore Kernel project
         run: dotnet restore Integration/Kernel/Kernel.csproj
+
+      - name: Restore pinned coverage tool
+        run: dotnet tool restore
 
       # See the equivalent step in client-integration-specs for the rationale.
       - name: Pre-pull Docker Hub images
@@ -239,7 +248,7 @@ jobs:
           timeout_minutes: 5
           max_attempts: 5
           retry_wait_seconds: 15
-          command: docker pull mongo
+          command: docker pull mongo:8.2
 
       - name: Run Kernel integration tests (${{ matrix.namespace }})
         env:
@@ -254,8 +263,7 @@ jobs:
           .github/scripts/run-tests-with-retry.sh \
             Integration/Kernel/Kernel.csproj \
             "FullyQualifiedName~${{ matrix.namespace }}" \
-            --no-build \
-            --collect:"XPlat Code Coverage"
+            --coverage
 
       # run-tests-with-retry.sh already writes a TRX per attempt into TEST_RESULTS_DIR.
       - name: Assert Kernel integration tests ran
@@ -298,10 +306,13 @@ jobs:
       - name: Extract build output
         env:
           BUILD_OUTPUT_ARTIFACT: ${{ inputs.build-output-artifact }}
-        run: tar -xzf "${BUILD_OUTPUT_ARTIFACT}.tar.gz"
+        run: tar -I zstd -xf "${BUILD_OUTPUT_ARTIFACT}.tar.zst"
 
       - name: Restore Clustering project
         run: dotnet restore Integration/Clustering/Clustering.csproj
+
+      - name: Restore pinned coverage tool
+        run: dotnet tool restore
 
       - name: Run Clustering integration tests (${{ matrix.namespace }})
         env:
@@ -315,8 +326,7 @@ jobs:
           .github/scripts/run-tests-with-retry.sh \
             Integration/Clustering/Clustering.csproj \
             "FullyQualifiedName~${{ matrix.namespace }}" \
-            --no-build \
-            --collect:"XPlat Code Coverage"
+            --coverage
 
       # run-tests-with-retry.sh already writes a TRX per attempt into TEST_RESULTS_DIR.
       - name: Assert Clustering integration tests ran
@@ -332,3 +342,144 @@ jobs:
           name: coverage-results-clustering-${{ matrix.namespace }}
           path: ./coverage-results/
           retention-days: 1
+
+  sql-clustering-integration-specs:
+    needs: [discover]
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        provider: [PostgreSql, SqlServer]
+
+    # Shared verbatim with the separately gated RollingUpgrade lane below.
+    steps: &sql-clustering-steps
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: ${{ matrix.provider == 'RollingUpgrade' && '0' || '1' }}
+
+      - name: Resolve previous release image
+        if: matrix.provider == 'RollingUpgrade'
+        shell: bash
+        run: |
+          set -euo pipefail
+          release_tag=$(git tag --merged HEAD --sort=version:refname --list 'v*' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | tail -n 1) || {
+            echo "::error::No release tag is an ancestor of $(git rev-parse HEAD)."
+            exit 1
+          }
+          image_tag="${release_tag#v}-development-slim"
+          metadata=$(curl --fail --silent --show-error --location --max-time 60 \
+            "https://hub.docker.com/v2/repositories/cratis/chronicle/tags/${image_tag}") || {
+            echo "::error::Previous release image cratis/chronicle:${image_tag} could not be resolved on Docker Hub."
+            exit 1
+          }
+          if ! jq -e --arg tag "$image_tag" '.name == $tag and (.images | length > 0)' <<< "$metadata"; then
+            echo "::error::Docker Hub returned no image for cratis/chronicle:${image_tag}."
+            exit 1
+          fi
+          echo "Previous release: ${release_tag}; image: cratis/chronicle:${image_tag}"
+          echo "CRATIS_CHRONICLE_PREVIOUS_IMAGE=cratis/chronicle:${image_tag}" >> "$GITHUB_ENV"
+
+          # The client under test must report a version above the previous release. The compatibility check
+          # orders the two sides by protocol version, and an unstamped build reports 1.0.0, so it would be
+          # treated as the older side and refused for every additive contract element (#5353).
+          if [[ ! "$release_tag" =~ ^v([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+            echo "::error::Cannot derive a client version from release tag '${release_tag}'."
+            exit 1
+          fi
+          client_version="${BASH_REMATCH[1]}.${BASH_REMATCH[2]}.$((BASH_REMATCH[3] + 1))"
+          echo "Client under test is stamped ${client_version}"
+          echo "CRATIS_CHRONICLE_CLIENT_VERSION=${client_version}" >> "$GITHUB_ENV"
+
+      # See client-integration-specs for the single-SDK rationale.
+      - name: Setup .Net
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Download build output
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.build-output-artifact }}
+
+      - name: Extract build output
+        env:
+          BUILD_OUTPUT_ARTIFACT: ${{ inputs.build-output-artifact }}
+        run: tar -I zstd -xf "${BUILD_OUTPUT_ARTIFACT}.tar.zst"
+
+      - name: Login to GitHub Docker Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Restore SQL clustering project
+        run: dotnet restore Integration/SqlClustering/SqlClustering.csproj
+
+      # Only the client side is rebuilt with the stamped version: the new kernel image keeps the shared build, and
+      # the client then compares as newer than both the previous release and this build's kernel.
+      - name: Rebuild the client under test with a version above the previous release
+        if: matrix.provider == 'RollingUpgrade'
+        run: >-
+          dotnet build Integration/SqlClustering/SqlClustering.csproj --no-restore -c Release
+          -p:EnableDevelopmentSymbol=true -p:DisableProxyGenerator=true -p:DisableDockerBuild=true
+          -p:Version="$CRATIS_CHRONICLE_CLIENT_VERSION"
+
+      - name: Pre-pull images
+        uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 5
+          max_attempts: 5
+          retry_wait_seconds: 15
+          command: |
+            docker pull "${{ inputs.chronicle-image }}"
+            if [ "${{ matrix.provider }}" = "RollingUpgrade" ]; then
+              docker pull "$CRATIS_CHRONICLE_PREVIOUS_IMAGE"
+            fi
+            if [ "${{ matrix.provider }}" != "SqlServer" ]; then
+              docker pull postgres:16
+            else
+              docker pull mcr.microsoft.com/mssql/server:2022-CU20-ubuntu-22.04
+            fi
+
+      # Three kernel containers from the image the Client shards use. No retries: an append that
+      # fails during a membership transition is part of the availability measurement.
+      - name: Run SQL clustering specifications (${{ matrix.provider }})
+        env:
+          CRATIS_CHRONICLE_LOCAL_IMAGE: ${{ inputs.chronicle-image }}
+          TESTCONTAINERS_RYUK_DISABLED: true
+        run: >-
+          node .github/scripts/run-spec-project.mjs --project Integration/SqlClustering/SqlClustering.csproj
+          --filter "FullyQualifiedName~Cratis.Chronicle.Integration.SqlClustering.${{ matrix.provider }}"
+          --results-directory coverage-results
+
+      - name: Assert SQL clustering specifications ran
+        uses: ./.github/actions/assert-tests-ran
+        with:
+          path: ./coverage-results
+          name: This SQL clustering provider
+
+      - name: Upload SQL clustering results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sql-clustering-${{ matrix.provider }}-results
+          path: coverage-results/
+          retention-days: 7
+
+  # A job-level condition (not a successful zero-spec run) makes the excluded lane visibly skipped.
+  # Its reason and issue links are in discovery's summary; remove only the declaration to re-enable.
+  sql-clustering-rolling-upgrade:
+    name: SQL clustering (RollingUpgrade)
+    needs: [discover]
+    if: needs.discover.outputs.rolling-upgrade-enabled == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        # Replace nodes from the latest release one at a time under load on PostgreSQL (#5272).
+        provider: [RollingUpgrade]
+    steps: *sql-clustering-steps

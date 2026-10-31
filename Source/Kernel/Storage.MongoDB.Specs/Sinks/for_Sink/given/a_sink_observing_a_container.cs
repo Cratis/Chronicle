@@ -4,6 +4,7 @@
 using System.Dynamic;
 using Cratis.Chronicle.Schemas;
 using MongoDB.Bson;
+using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Sinks.for_Sink.given;
@@ -19,7 +20,10 @@ public class a_sink_observing_a_container : a_sink_with_indexes
     protected Guid? _primaryId;
     protected bool _promotingExists;
     protected Action? _duringFind;
+    protected Action? _duringListCollections;
+    protected RecordingLogger _logger;
     protected int _listCollectionsCalls;
+    protected List<BsonDocument> _listCollectionsFilters = [];
     protected BsonDocument[] _documents = [];
     protected List<IEnumerable<ExpandoObject>> _pages = [];
 
@@ -32,9 +36,11 @@ public class a_sink_observing_a_container : a_sink_with_indexes
 
         _collections.PromotingCollectionName.Returns(PromotingName);
         _database.ListCollectionsAsync(Arg.Any<ListCollectionsOptions>(), Arg.Any<CancellationToken>())
-            .Returns(_ =>
+            .Returns(callInfo =>
             {
                 _listCollectionsCalls++;
+                _listCollectionsFilters.Add(callInfo.Arg<ListCollectionsOptions>().Filter.Render(new RenderArgs<BsonDocument>(BsonSerializer.SerializerRegistry.GetSerializer<BsonDocument>(), BsonSerializer.SerializerRegistry)).AsBsonDocument);
+                _duringListCollections?.Invoke();
                 return Task.FromResult(CursorOf(ListedCollections()));
             });
         _collection.FindAsync(
@@ -48,7 +54,8 @@ public class a_sink_observing_a_container : a_sink_with_indexes
             });
         _expandoObjectConverter.ToExpandoObject(Arg.Any<BsonDocument>(), Arg.Any<JsonSchema>()).Returns(_ => new ExpandoObject());
 
-        _sink = new Sink(_readModel, _converter, _collections, _changesetConverter, _expandoObjectConverter, _changeStreams);
+        _logger = new();
+        _sink = new Sink(_readModel, _converter, _collections, _changesetConverter, _expandoObjectConverter, _changeStreams, _logger);
     }
 
     protected string PromotingName => $"replay-{_readModel.ContainerName}-promoting";
@@ -78,6 +85,7 @@ public class a_sink_observing_a_container : a_sink_with_indexes
         var cursor = Substitute.For<IAsyncCursor<T>>();
         cursor.Current.Returns(items);
         cursor.MoveNextAsync(Arg.Any<CancellationToken>()).Returns(items.Length > 0, false);
+        cursor.MoveNext(Arg.Any<CancellationToken>()).Returns(items.Length > 0, false);
         return cursor;
     }
 }

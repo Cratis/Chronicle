@@ -22,4 +22,15 @@ public record ReactorDefinition(
     IEnumerable<EventTypeWithKeyExpression> EventTypes,
     bool IsReplayable = true,
     IEnumerable<string>? Tags = default,
-    ObserverFilters? Filters = default);
+    ObserverFilters? Filters = default)
+{
+    /// <summary>
+    /// Gets the event generation delivery policy.
+    /// </summary>
+    public EventGenerationDelivery GenerationDelivery { get; init; } = EventGenerationDelivery.Compatibility;
+
+    /// <summary>
+    /// Gets a value indicating whether the reactor begins at the tail of the event sequence when it is registered for the first time.
+    /// </summary>
+    public bool StartAtTail { get; init; }
+}

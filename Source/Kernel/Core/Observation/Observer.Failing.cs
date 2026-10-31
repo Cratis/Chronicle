@@ -8,6 +8,8 @@ using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Chronicle.Observation.States;
+using Cratis.Chronicle.Observation.Webhooks;
+
 namespace Cratis.Chronicle.Observation;
 
 public partial class Observer
@@ -18,71 +20,26 @@ public partial class Observer
     static readonly TimeSpan _minimumRetryReminderPeriod = TimeSpan.FromMinutes(1);
 
     /// <inheritdoc/>
-    public async Task PartitionFailed(
+    public Task PartitionFailed(
         Key partition,
         EventSequenceNumber sequenceNumber,
         IEnumerable<string> exceptionMessages,
         string exceptionStackTrace,
-        FailureKind kind = FailureKind.Unknown)
-    {
-        if (IsRetired || _removed)
-        {
-            return;
-        }
+        FailureKind kind = FailureKind.Unknown,
+        FailedPartitionId? episodeId = null,
+        Guid? deferralId = null,
+        WebhookDeliveryFailurePolicy failurePolicy = WebhookDeliveryFailurePolicy.Retry) =>
+        RecordPartitionFailure(partition, sequenceNumber, exceptionMessages, exceptionStackTrace, kind, episodeId, deferralId, new(failurePolicy));
 
-        var quarantineObserver = false;
-        await _alertMutationLock.WaitAsync();
-        try
-        {
-            var config = await configurationProvider.GetFor(_observerKey);
-            using var scope = logger.BeginObserverScope(_observerId, _observerKey);
-            _metrics?.PartitionFailed();
-            logger.PartitionFailed(partition, sequenceNumber, exceptionMessages, exceptionStackTrace);
-            var partitionWasAlreadyFailed = Failures.IsFailed(partition);
-            var failure = failures.State.RegisterAttempt(partition, sequenceNumber, exceptionMessages, exceptionStackTrace, kind);
-            if (!partitionWasAlreadyFailed)
-            {
-                State = State with { FailedPartitionCount = State.FailedPartitionCount + 1 };
-            }
-
-            _metrics?.PartitionRetryAttempt();
-            if (!IsQuarantined)
-            {
-                quarantineObserver = ShouldQuarantineObserver(config);
-                if (!quarantineObserver)
-                {
-                    if (config.MaxRetryAttempts == 0 || failure.AttemptsInCurrentBudget <= config.MaxRetryAttempts)
-                    {
-                        var retryDelay = GetNextRetryDelay(failure, config);
-                        await this.RegisterOrUpdateReminder(PartitionReminderName(failure.Id), retryDelay, GetRetryReminderPeriod(retryDelay));
-                    }
-                    else
-                    {
-                        logger.QuarantiningFailedPartition(partition);
-                        failures.State.Quarantine(partition);
-                        _metrics?.PartitionQuarantined();
-                    }
-                }
-            }
-
-            // Fence old reports before the partition write. A crash between the two writes reports whichever
-            // partition level actually committed. Reports alone are coalesced, never these source writes.
-            ChangeAlertState();
-            await WriteStateAsync();
-            await failures.WriteStateAsync();
-        }
-        finally
-        {
-            _alertMutationLock.Release();
-        }
-
-        // Entering quarantine stops jobs, which can call the AlwaysInterleave recovery callbacks. Never hold the
-        // source mutation lock over those calls. The separate reporting turn runs after this transition commits.
-        if (quarantineObserver)
-        {
-            await TransitionTo<QuarantinedObserver>();
-        }
-    }
+    /// <inheritdoc/>
+    public Task PartitionFailedWithDeliveryFence(
+        Key partition,
+        EventSequenceNumber sequenceNumber,
+        IEnumerable<string> exceptionMessages,
+        string exceptionStackTrace,
+        FailureKind kind,
+        PartitionFailureContext context) =>
+        RecordPartitionFailure(partition, sequenceNumber, exceptionMessages, exceptionStackTrace, kind, null, null, context);
 
     /// <inheritdoc/>
     public Task FailedPartitionRecovered(Key partition, EventSequenceNumber lastHandledEventSequenceNumber) =>
@@ -95,36 +52,39 @@ public partial class Observer
     /// the failure is cleared, from the furthest event the recovery read - including events the observer's filters
     /// exclude, which are never counted as handled.
     /// </remarks>
-    public async Task FailedPartitionRecovered(Key partition, EventSequenceNumber lastHandledEventSequenceNumber, EventSequenceNumber lastScannedEventSequenceNumber)
+    public async Task FailedPartitionRecovered(Key partition, EventSequenceNumber lastHandledEventSequenceNumber, EventSequenceNumber lastScannedEventSequenceNumber, FailedPartitionId? episodeId = null, Guid? deferralId = null)
     {
         if (IsRetired || _removed) return;
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
+        if (!await ResolveFailedPartition(partition, lastHandledEventSequenceNumber, episodeId, deferralId)) return;
+        Skips.Completing(partition, FurthestOf(lastHandledEventSequenceNumber, lastScannedEventSequenceNumber));
         logger.FailingPartitionRecovered(partition);
-        await ResolveFailedPartition(partition, lastHandledEventSequenceNumber);
         await StartCatchupJobIfNeeded(partition, FurthestOf(lastHandledEventSequenceNumber, lastScannedEventSequenceNumber));
+        EvaluateSuspectedSkips();
     }
 
     /// <inheritdoc/>
-    public async Task FailedPartitionNotRecovered(Key partition)
+    public async Task FailedPartitionNotRecovered(Key partition, FailedPartitionId? episodeId = null, Guid? deferralId = null)
     {
         if (IsRetired || _removed || State.RunningState == ObserverRunningState.Quarantined) return;
-        if (!Failures.TryGet(partition, out var failure) || failure.IsQuarantined) return;
+        if (!IsCurrentRecovery(partition, episodeId, deferralId) || !Failures.TryGet(partition, out var failure) || failure.IsQuarantined) return;
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
         logger.FailingPartitionNotRecovered(partition);
         await RegisterRetryReminder(failure);
     }
 
     /// <inheritdoc/>
-    public async Task FailedPartitionPartiallyRecovered(Key partition, EventSequenceNumber lastHandledEventSequenceNumber)
+    public async Task FailedPartitionPartiallyRecovered(Key partition, EventSequenceNumber lastHandledEventSequenceNumber, FailedPartitionId? episodeId = null, Guid? deferralId = null)
     {
         if (IsRetired || _removed) return;
         await _alertMutationLock.WaitAsync();
         try
         {
-            if (IsRetired || _removed) return;
+            if (IsRetired || _removed || !IsCurrentRecovery(partition, episodeId, deferralId)) return;
             using var scope = logger.BeginObserverScope(_observerId, _observerKey);
             logger.FailingPartitionPartiallyRecovered(partition, lastHandledEventSequenceNumber);
-            HandleNewLastHandledEvent(lastHandledEventSequenceNumber);
+            Skips.Delivered(partition, lastHandledEventSequenceNumber);
+            HandleNewLastHandledEventForPartition(partition, lastHandledEventSequenceNumber);
             await WriteStateAsync();
         }
         finally
@@ -137,6 +97,7 @@ public partial class Observer
     public async Task<PartitionRecoveryOutcome> TryStartRecoverJobForFailedPartition(Key partition)
     {
         ThrowIfSealed();
+        await CancelWebhookProbe();
         if (IsRetired) return PartitionRecoveryOutcome.PartitionNotFound;
         if (IsQuarantined)
         {
@@ -156,6 +117,22 @@ public partial class Observer
             return PartitionRecoveryOutcome.PartitionQuarantined;
         }
 
+        await _alertMutationLock.WaitAsync();
+        try
+        {
+            if (failure.Deferral is { } deferral)
+            {
+                failure.RecoveryCursor = new(deferral.ResumeFrom, FailedPartitionRecoveryMode.Live, null);
+                failure.Deferral = null;
+                await failures.WriteStateAsync();
+                logger.PartitionDeferralOverridden(partition, deferral.Reason, deferral.Until);
+            }
+        }
+        finally
+        {
+            _alertMutationLock.Release();
+        }
+
         await StartRecoverJobForFailedPartition(failure);
         return PartitionRecoveryOutcome.Started;
     }
@@ -164,6 +141,7 @@ public partial class Observer
     public async Task<ClearPartitionQuarantineResult> ClearPartitionQuarantine(Key partition, bool retry)
     {
         ThrowIfSealed();
+        await CancelWebhookProbe();
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
         FailedPartition? failure;
         await _alertMutationLock.WaitAsync();
@@ -221,6 +199,15 @@ public partial class Observer
         ScheduleAlertReport();
     }
 
+    static void SetWebhookFailureMetadata(FailedPartition failure, WebhookDeliveryFailurePolicy failurePolicy, EventSequenceNumber sequenceNumber)
+    {
+        failure.WebhookDisposition = WebhookProbeOutcome.Disposition(failurePolicy);
+
+        // This deadline belongs to the attempt that just ran, not the next retry.
+        failure.Deferral = null;
+        failure.RecoveryCursor = new(sequenceNumber, failure.RecoveryCursor?.Mode ?? FailedPartitionRecoveryMode.Live, failure.RecoveryCursor?.ReplayBoundary);
+    }
+
     static TimeSpan GetNextRetryDelay(FailedPartition failure, Observers config)
     {
         var time = TimeSpan.FromSeconds(config.BackoffDelay * Math.Pow(config.ExponentialBackoffDelayFactor, failure.AttemptsInCurrentBudget));
@@ -253,9 +240,212 @@ public partial class Observer
     static TimeSpan GetRetryReminderPeriod(TimeSpan retryDelay) =>
         retryDelay > _minimumRetryReminderPeriod ? retryDelay : _minimumRetryReminderPeriod;
 
+    async Task RecordPartitionFailure(
+        Key partition,
+        EventSequenceNumber sequenceNumber,
+        IEnumerable<string> exceptionMessages,
+        string exceptionStackTrace,
+        FailureKind kind,
+        FailedPartitionId? episodeId,
+        Guid? deferralId,
+        PartitionFailureContext context)
+    {
+        if (IsRetired || _removed)
+        {
+            return;
+        }
+
+        var quarantineObserver = false;
+        TimeSpan? retryDelayToRegister = null;
+        await _alertMutationLock.WaitAsync();
+        try
+        {
+            if (!IsCurrentRecovery(partition, episodeId, deferralId)) return;
+            var config = await GetRetryConfiguration();
+            using var scope = logger.BeginObserverScope(_observerId, _observerKey);
+            _metrics?.PartitionFailed();
+            logger.PartitionFailed(partition, sequenceNumber, exceptionMessages, exceptionStackTrace);
+            var partitionWasAlreadyFailed = Failures.IsFailed(partition);
+            var failure = failures.State.RegisterAttempt(partition, sequenceNumber, exceptionMessages, exceptionStackTrace, kind);
+            await RecordAbandonedDeliveryFence(failure, kind, context.DeliveryFence);
+            if (!partitionWasAlreadyFailed)
+            {
+                State = State with { FailedPartitionCount = State.FailedPartitionCount + 1 };
+            }
+
+            _metrics?.PartitionRetryAttempt();
+            var webhook = typeof(IWebhookObserverSubscriber).IsAssignableFrom(_subscription.SubscriberType);
+            if (webhook) SetWebhookFailureMetadata(failure, context.Policy, sequenceNumber);
+
+            if (!IsQuarantined)
+            {
+                quarantineObserver = webhook ? context.Policy == WebhookDeliveryFailurePolicy.PauseObserver : ShouldQuarantineObserver(config);
+                if (webhook && context.Policy == WebhookDeliveryFailurePolicy.ParkPartition)
+                {
+                    logger.QuarantiningFailedPartition(partition);
+                    failures.State.Quarantine(partition);
+                    _metrics?.PartitionQuarantined();
+                }
+                else if (!quarantineObserver)
+                {
+                    if ((config.MaxRetryAttempts == 0 || failure.AttemptsInCurrentBudget <= config.MaxRetryAttempts) &&
+                        (!webhook || GetRemainingRetryBudget(failure, config) > TimeSpan.Zero))
+                    {
+                        retryDelayToRegister = webhook ? SetWebhookRetryBackoff(failure, config, sequenceNumber) : GetNextRetryDelay(failure, config);
+                    }
+                    else
+                    {
+                        logger.QuarantiningFailedPartition(partition);
+                        failures.State.Quarantine(partition);
+                        _metrics?.PartitionQuarantined();
+                    }
+                }
+            }
+
+            if (webhook && !quarantineObserver)
+            {
+                quarantineObserver = ShouldQuarantineObserver(config);
+            }
+
+            // Arm durable webhook backoff before persisting it, including coalesced writes.
+            if (failure.Deferral is { } backoff && retryDelayToRegister is not null)
+            {
+                await RegisterDeferralReminder(failure, backoff);
+                retryDelayToRegister = null;
+            }
+
+            ChangeAlertState();
+            if (_writeCoalescingInterval > TimeSpan.Zero)
+            {
+                // Only this partition is written now, and only once: rewriting every failed partition per failure is
+                // what made a burst of failures cost O(n) writes each. The reminder and the observer state, which a
+                // burst of failures has in common, are written together by the flush.
+                await SaveFailedPartition(partition);
+                if (retryDelayToRegister is { } pendingDelay)
+                {
+                    _pendingRetryReminders[failure.Id] = pendingDelay;
+                }
+
+                _failureStateWritePending = true;
+                EnsureCoalescedWriteTimer();
+            }
+            else
+            {
+                if (retryDelayToRegister is { } retryDelay)
+                {
+                    await this.RegisterOrUpdateReminder(PartitionReminderName(failure.Id), retryDelay, GetRetryReminderPeriod(retryDelay));
+                }
+
+                // Fence old reports before the partition write. A crash between the two writes reports whichever
+                // partition level actually committed. Reports alone are coalesced, never these source writes.
+                await WriteStateAsync();
+                await failures.WriteStateAsync();
+            }
+        }
+        finally
+        {
+            _alertMutationLock.Release();
+        }
+
+        // Entering quarantine stops jobs, which can call the AlwaysInterleave recovery callbacks. Never hold the
+        // source mutation lock over those calls. The separate reporting turn runs after this transition commits.
+        if (quarantineObserver)
+        {
+            ArmWebhookProbeAfterFailure();
+            await TransitionTo<QuarantinedObserver>();
+        }
+    }
+
+    Task<Observers> GetRetryConfiguration() =>
+        typeof(IWebhookObserverSubscriber).IsAssignableFrom(_subscription.SubscriberType)
+            ? Task.FromResult(optionsMonitor.CurrentValue.Webhooks.Retry)
+            : configurationProvider.GetFor(_observerKey);
+
+    TimeSpan GetRemainingRetryBudget(FailedPartition failure, Observers config) =>
+        config.RetryBudget <= TimeSpan.Zero
+            ? TimeSpan.MaxValue
+            : config.RetryBudget - (DateTimeOffset.UtcNow - failure.Attempts.Skip(failure.AttemptsBeforeBudgetReset).First().Occurred);
+
+    async Task<bool> ParkExpiredWebhookRetry(FailedPartition failure, Observers config)
+    {
+        if (!typeof(IWebhookObserverSubscriber).IsAssignableFrom(_subscription.SubscriberType) ||
+            failure.AttemptsInCurrentBudget == 0 || GetRemainingRetryBudget(failure, config) > TimeSpan.Zero)
+        {
+            return false;
+        }
+
+        bool quarantineObserver;
+        await _alertMutationLock.WaitAsync();
+        try
+        {
+            failures.State.Quarantine(failure.Partition);
+            failure.Deferral = null;
+            _metrics?.PartitionQuarantined();
+            quarantineObserver = ShouldQuarantineObserver(config);
+            ChangeAlertState();
+            await WriteStateAsync();
+            await failures.WriteStateAsync();
+        }
+        finally
+        {
+            _alertMutationLock.Release();
+        }
+        logger.WebhookRetryBudgetExhausted(failure.Partition, config.RetryBudget);
+        await RemoveReminder(failure);
+        if (quarantineObserver)
+        {
+            _armWebhookProbe = failure.WebhookDisposition == WebhookFailureDisposition.Retryable;
+            await TransitionTo<QuarantinedObserver>();
+        }
+
+        return true;
+    }
+
+    TimeSpan SetWebhookRetryBackoff(FailedPartition failure, Observers config, EventSequenceNumber sequenceNumber)
+    {
+        var now = DateTimeOffset.UtcNow;
+        var maximum = TimeSpan.FromSeconds(Math.Max(1, config.MaximumBackoffDelay));
+        var schedule = config.BackoffScheduleSeconds.Count > 0 ? config.BackoffScheduleSeconds : Configuration.Webhooks.DefaultBackoffScheduleSeconds;
+        double basis = schedule[Math.Clamp(failure.AttemptsInCurrentBudget - 1, 0, schedule.Count - 1)];
+        basis = Math.Min(basis, maximum.TotalSeconds);
+        var jitter = 0.8 + (Random.Shared.NextDouble() * 0.4);
+        var delay = TimeSpan.FromSeconds(Math.Clamp(basis * jitter, 0.001, maximum.TotalSeconds));
+        var remaining = GetRemainingRetryBudget(failure, config);
+        if (delay > remaining)
+        {
+            delay = remaining > TimeSpan.Zero ? remaining : TimeSpan.FromMilliseconds(1);
+        }
+        failure.Deferral = new(Guid.NewGuid(), PartitionDeferralReason.RetryBackoff, now, now + delay, sequenceNumber);
+        logger.WebhookRetryScheduled(failure.Partition, failure.AttemptsInCurrentBudget, failure.Deferral.Until);
+        return delay;
+    }
+
+    /// <summary>
+    /// Writes a single failed partition to storage, leaving the others as they are.
+    /// </summary>
+    /// <param name="partition">The partition to write.</param>
+    /// <returns>Awaitable task.</returns>
+    async Task SaveFailedPartition(Key partition)
+    {
+        if (!Failures.TryGet(partition, out var failure))
+        {
+            return;
+        }
+
+        failure.ObserverId = _observerId;
+        var onlyThisPartition = new FailedPartitions { Partitions = [failure] };
+        await storage.GetEventStore(_observerKey.EventStore).GetNamespace(_observerKey.Namespace).FailedPartitions.Save(_observerId, onlyThisPartition);
+    }
+
     async Task RegisterRetryReminder(FailedPartition failure)
     {
-        var config = await configurationProvider.GetFor(_observerKey);
+        if (failure.Deferral is { } deferral)
+        {
+            await RegisterDeferralReminder(failure, deferral);
+            return;
+        }
+
+        var config = await GetRetryConfiguration();
         var retryDelay = GetNextRetryDelay(failure, config);
         await this.RegisterOrUpdateReminder(PartitionReminderName(failure.Id), retryDelay, GetRetryReminderPeriod(retryDelay));
     }
@@ -270,6 +460,7 @@ public partial class Observer
     /// </remarks>
     async Task DiscardFailedPartitions(AlertClearedReason reason)
     {
+        await CancelWebhookProbe();
         await _alertMutationLock.WaitAsync();
         try
         {
@@ -291,15 +482,15 @@ public partial class Observer
         }
     }
 
-    async Task ResolveFailedPartition(Key partition, EventSequenceNumber? lastHandled = null)
+    async Task<bool> ResolveFailedPartition(Key partition, EventSequenceNumber? lastHandled = null, FailedPartitionId? episodeId = null, Guid? deferralId = null)
     {
         await _alertMutationLock.WaitAsync();
         try
         {
-            if (IsRetired || _removed) return;
+            if (IsRetired || _removed || !IsCurrentRecovery(partition, episodeId, deferralId)) return false;
             if (lastHandled is not null)
             {
-                HandleNewLastHandledEvent(lastHandled);
+                HandleNewLastHandledEventForPartition(partition, lastHandled);
             }
 
             if (Failures.TryGet(partition, out var failure))
@@ -312,6 +503,7 @@ public partial class Observer
             ChangeAlertState();
             await WriteStateAsync();
             await failures.WriteStateAsync();
+            return true;
         }
         finally
         {
@@ -329,12 +521,20 @@ public partial class Observer
         }
 
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
+        if (failedPartition.IsQuarantined ||
+            await ParkExpiredWebhookRetry(failedPartition, await GetRetryConfiguration()) ||
+            !await IsDeferralDue(failedPartition))
+        {
+            return;
+        }
+
         logger.TryingToRecoverFailedPartition(failedPartition.Partition);
-        var request = new RetryFailedPartitionRequest(_observerKey, Definition.Type, failedPartition.Partition, failedPartition.LastAttempt.SequenceNumber, Definition.EventTypes);
+        var usesDeferrals = typeof(IWebhookObserverSubscriber).IsAssignableFrom(_subscription.SubscriberType);
+        var request = new RetryFailedPartitionRequest(_observerKey, Definition.Type, failedPartition.Partition, failedPartition.Deferral?.ResumeFrom ?? (usesDeferrals ? failedPartition.RecoveryCursor?.Position : null) ?? failedPartition.LastAttempt.SequenceNumber, Definition.EventTypes) { ReaderScope = ReaderScope, EpisodeId = usesDeferrals ? failedPartition.Id : null, DeferralId = failedPartition.Deferral?.Id };
         await _jobsManager.StartOrResumeObserverJobFor<IRetryFailedPartition, RetryFailedPartitionRequest>(
             logger,
             request,
-            requestPredicate: r => r.Key == failedPartition.Partition);
+            requestPredicate: r => r.Key == failedPartition.Partition && r.EpisodeId == request.EpisodeId && r.DeferralId == request.DeferralId);
     }
 
     /// <summary>
@@ -343,7 +543,7 @@ public partial class Observer
     /// <param name="config">The <see cref="Observers"/> configuration holding the thresholds.</param>
     /// <returns>True when the observer should be quarantined, false if not.</returns>
     /// <remarks>
-    /// A partition whose last attempt timed out does not count toward either threshold. Quarantining stops retries
+    /// For non-webhook observers, a partition whose last attempt timed out does not count toward either threshold. Quarantining stops retries
     /// and needs an operator to undo, which is the right answer for an observer that is wrong and the wrong answer
     /// for one that is only waiting on a congested kernel - the congestion is transient and takes the retries with it
     /// when it clears. Counting timeouts would let a busy period take healthy projections out of service, and the
@@ -351,7 +551,8 @@ public partial class Observer
     /// </remarks>
     bool ShouldQuarantineObserver(Observers config)
     {
-        var failedPartitionCount = Failures.Partitions.Count(_ => _.LastAttempt.Kind != FailureKind.Timeout);
+        var webhook = typeof(IWebhookObserverSubscriber).IsAssignableFrom(_subscription.SubscriberType);
+        var failedPartitionCount = Failures.Partitions.Count(_ => webhook ? _.IsQuarantined : _.Attempts.Any() && _.LastAttempt.Kind != FailureKind.Timeout);
         if (config.QuarantineOnFailedPartitionCount > 0 && failedPartitionCount >= config.QuarantineOnFailedPartitionCount)
         {
             logger.ObserverFailedPartitionCountThresholdReached(failedPartitionCount, config.QuarantineOnFailedPartitionCount);
@@ -369,7 +570,7 @@ public partial class Observer
             var failedPartitionRatio = totalObservedPartitions == 0
                 ? 0.0
                 : (double)failedPartitionCount / totalObservedPartitions;
-            if (failedPartitionRatio > config.QuarantineOnFailedPartitionPercentage)
+            if (webhook ? failedPartitionRatio >= config.QuarantineOnFailedPartitionPercentage : failedPartitionRatio > config.QuarantineOnFailedPartitionPercentage)
             {
                 logger.ObserverFailedPartitionPercentageThresholdExceeded(failedPartitionRatio, config.QuarantineOnFailedPartitionPercentage);
                 return true;
@@ -378,4 +579,7 @@ public partial class Observer
 
         return false;
     }
+
+    void ArmWebhookProbeAfterFailure() =>
+        _armWebhookProbe = IsWebhookSubscription && Failures.Partitions.Any(WebhookProbeEligibility.IsEligible);
 }

@@ -38,7 +38,7 @@ public class NonAwaitedAssertionAnalyzer : DiagnosticAnalyzer
         title: "Assertion result is discarded and can never fail",
         messageFormat: "'{0}' returns an awaitable that is never awaited, so the assertion can never fail. Await it and make the containing member 'async Task'.",
         category: "Usage",
-        defaultSeverity: DiagnosticSeverity.Warning,
+        defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true,
         description: "Awaitable-returning assertions throw on a Task or ValueTask the caller must observe. Discarding that awaitable from a void-bodied test silently turns the assertion into a no-op that passes regardless of behavior, and the compiler's CS4014 does not fire outside an async method. Await the assertion and declare the containing member as 'async Task'.");
 

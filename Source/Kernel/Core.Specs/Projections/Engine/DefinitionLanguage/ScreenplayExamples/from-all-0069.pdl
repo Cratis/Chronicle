@@ -1,0 +1,5 @@
+# Uses 'all' — runs for every event type in the entire system
+projection SystemAuditLog => AuditLogModel
+  all
+    count totalEvents
+    lastEventAt = $eventContext.occurred

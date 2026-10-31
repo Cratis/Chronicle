@@ -6,9 +6,20 @@ namespace Cratis.Chronicle.ReadModels;
 /// <summary>Thrown before enrollment when a decision read cannot be protected.</summary>
 /// <param name="reason">The refusal reason.</param>
 /// <param name="readModelType">The read model type.</param>
-public class DecisionReadRefused(DecisionReadRefusalReason reason, Type readModelType)
-    : Exception($"Decision read of '{readModelType}' was refused: {reason}. {Explain(reason)}".TrimEnd())
+/// <param name="detail">Optional diagnostic detail without definition values or event content.</param>
+public class DecisionReadRefused(DecisionReadRefusalReason reason, Type readModelType, string? detail)
+    : Exception($"Decision read of '{readModelType}' was refused: {reason}. {Explain(reason)} {detail}".TrimEnd())
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DecisionReadRefused"/> class.
+    /// </summary>
+    /// <param name="reason">The refusal reason.</param>
+    /// <param name="readModelType">The read model type.</param>
+    public DecisionReadRefused(DecisionReadRefusalReason reason, Type readModelType)
+        : this(reason, readModelType, null)
+    {
+    }
+
     /// <summary>Gets the refusal reason.</summary>
     public DecisionReadRefusalReason Reason { get; } = reason;
 
@@ -46,7 +57,31 @@ public class DecisionReadRefused(DecisionReadRefusalReason reason, Type readMode
         DecisionReadRefusalReason.FoldIncomplete =>
             "The fold did not reach the latest matching event. Try again.",
         DecisionReadRefusalReason.DefinitionMismatch =>
-            "Chronicle has no matching projection definition registered for the read model, or the registered one differs from the client's. Register the current definitions, for example by restarting the client.",
+            "The kernel's listed definition differs from the client's. Check the reported differences and align the client and kernel definitions before retrying.",
+        DecisionReadRefusalReason.DefinitionMissing =>
+            "The kernel has no definition for the read model or its projection. Ensure the client's artifact registration has completed before retrying.",
+        DecisionReadRefusalReason.StreamScopeNotSupported =>
+            "The reader or kernel does not support stream-scoped decision reads. Use a reader and kernel that acknowledge the requested stream scope.",
+        DecisionReadRefusalReason.StreamKeyRequiresStreamScope =>
+            "The projection is keyed by event stream id. Use the stream-scoped read overload with an event source id, stream type and stream id.",
+        DecisionReadRefusalReason.AllStreamsNotSupported =>
+            "A stream-scoped decision read cannot select all stream types. Supply a specific event stream type, or use a source-wide read for an event-source-keyed projection.",
+        DecisionReadRefusalReason.StreamKeyRequiresExplicitStreamId =>
+            "A stream-keyed projection cannot use the default stream id because it does not narrow the fold to one instance key. Supply an explicit event stream id.",
+        DecisionReadRefusalReason.GenerationDeliveryNotSupported =>
+            "The session fold uses Compatibility delivery and cannot honor a Pinned projection. Use Compatibility delivery for this projection.",
+        DecisionReadRefusalReason.ReducerDependencies =>
+            "The reducer has constructor dependencies. Only ILogger<T> infrastructure dependencies are allowed.",
+        DecisionReadRefusalReason.ReducerFilters =>
+            "reducer filters its events",
+        DecisionReadRefusalReason.ReducerGeneration =>
+            "The handler's declared event generation is unavailable or the event was revised to another generation.",
+        DecisionReadRefusalReason.ReducerDispatchIncomplete =>
+            "The reducer did not dispatch every fetched event of its handled types.",
+        DecisionReadRefusalReason.ReadModelRequiresStreamScope =>
+            "The read model is scoped to one event stream and was read without it. Use a stream-scoped decision read, or supply the event source id and stream id to the plain instance read.",
+        DecisionReadRefusalReason.StreamScopeDoesNotMatchReadModel =>
+            "The supplied stream type or event source type does not match the read model's declaration. Pass the declared stream and the event source definition's source type.",
         _ => string.Empty
     };
 }

@@ -4,6 +4,8 @@
 using System.Collections.Immutable;
 using System.Text.Json;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Observation.Webhooks;
 using Cratis.Chronicle.Storage;
 using Cratis.Orleans.Jobs;
 using Microsoft.Extensions.Logging;
@@ -35,6 +37,7 @@ public class RetryFailedPartition(
     {
         using var scope = logger.BeginJobScope(JobId, JobKey);
         var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
+        if (Request.EpisodeId is not null && !await observer.CanResumeFailedPartition(Request.Key, Request.EpisodeId, Request.DeferralId)) return;
 
         if (!State.LastHandledEventSequenceNumber.IsActualValue)
         {
@@ -54,7 +57,7 @@ public class RetryFailedPartition(
             if (State.LastScannedEventSequenceNumber.IsActualValue)
             {
                 logger.ClearingFailedPartitionWithOnlyExcludedEvents(Request.Key, State.LastScannedEventSequenceNumber);
-                await observer.FailedPartitionRecovered(Request.Key, EventSequenceNumber.Unavailable, State.LastScannedEventSequenceNumber);
+                await observer.FailedPartitionRecovered(Request.Key, EventSequenceNumber.Unavailable, State.LastScannedEventSequenceNumber, Request.EpisodeId, Request.DeferralId);
                 return;
             }
 
@@ -66,45 +69,56 @@ public class RetryFailedPartition(
             if (await HasEventsLeftToHandle())
             {
                 logger.NotClearingFailedPartitionWithEventsLeftToHandle(Request.Key, Request.FromSequenceNumber);
-                await observer.FailedPartitionNotRecovered(Request.Key);
+                await observer.FailedPartitionNotRecovered(Request.Key, Request.EpisodeId, Request.DeferralId);
                 return;
             }
 
             logger.ClearingFailedPartitionWithNothingLeftToHandle(Request.Key, Request.FromSequenceNumber);
-            await observer.FailedPartitionRecovered(Request.Key, Request.FromSequenceNumber, EventSequenceNumber.Unavailable);
+            await observer.FailedPartitionRecovered(Request.Key, Request.FromSequenceNumber, EventSequenceNumber.Unavailable, Request.EpisodeId, Request.DeferralId);
             return;
         }
 
         if (!State.HandledAllEvents)
         {
             logger.NotAllEventsWereHandled(nameof(RetryFailedPartition), State.LastHandledEventSequenceNumber);
-            await observer.FailedPartitionPartiallyRecovered(Request.Key, State.LastHandledEventSequenceNumber);
+            await observer.FailedPartitionPartiallyRecovered(Request.Key, State.LastHandledEventSequenceNumber, Request.EpisodeId, Request.DeferralId);
             return;
         }
 
-        await observer.FailedPartitionRecovered(Request.Key, State.LastHandledEventSequenceNumber, State.LastScannedEventSequenceNumber);
+        await observer.FailedPartitionRecovered(Request.Key, State.LastHandledEventSequenceNumber, State.LastScannedEventSequenceNumber, Request.EpisodeId, Request.DeferralId);
     }
 
     /// <inheritdoc/>
     protected override JobDetails GetJobDetails() => $"{Request.ObserverKey.ObserverId}-{Request.Key}";
 
     /// <inheritdoc/>
-    protected override Task<bool> CanResume()
+    protected override async Task<bool> CanResume()
     {
         if (State.Request is null)
         {
-            return Task.FromResult(false);
+            return false;
         }
 
         var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
-        return observer.IsSubscribed();
+        if (!await observer.IsSubscribed()) return false;
+        var subscription = await observer.GetSubscription();
+        return !typeof(IWebhookObserverSubscriber).IsAssignableFrom(subscription.SubscriberType) ||
+            await observer.CanResumeFailedPartition(Request.Key, Request.EpisodeId, Request.DeferralId);
     }
 
     /// <inheritdoc/>
-    protected override Task OnStepCompletedOrStopped(JobStepId jobStepId, JobStepResult result)
+    /// <remarks>
+    /// A step that timed out is run again - the callee was too busy, which says nothing about the events - and the
+    /// partition is reported as failed only when the attempts are used up.
+    /// </remarks>
+    protected override bool ShouldRetryStep(JobStepId stepId, JobStepResult result, int attempt) =>
+        TransientTimeouts.ShouldRetry(result, attempt, jsonSerializerOptions);
+
+    /// <inheritdoc/>
+    protected override async Task OnStepCompletedOrStopped(JobStepId jobStepId, JobStepResult result)
     {
+        await TransientTimeouts.ReportPartitionFailedWhenAttemptsAreExhausted(GrainFactory.GetGrain<IObserver>(Request.ObserverKey), result, jsonSerializerOptions);
         State.HandleResult(result, jsonSerializerOptions);
-        return Task.CompletedTask;
     }
 
     /// <inheritdoc/>
@@ -120,7 +134,12 @@ public class RetryFailedPartition(
                     request.FromSequenceNumber,
                     EventSequenceNumber.Max,
                     EventObservationState.None,
-                    request.EventTypes))
+                    request.EventTypes)
+                {
+                    ReaderScope = request.ReaderScope,
+                    EpisodeId = request.EpisodeId,
+                    DeferralId = request.DeferralId
+                })
         }.ToImmutableList();
 
         return Task.FromResult<IImmutableList<JobStepDetails>>(steps);
@@ -144,10 +163,12 @@ public class RetryFailedPartition(
                 .GetNamespace(Request.ObserverKey.Namespace)
                 .GetEventSequence(Request.ObserverKey.EventSequenceId);
 
-            var eventTypes = Request.EventTypes?.ToArray() ?? [];
+            var eventTypes = ObserverReaderScope
+                .ForRequest(Request.ReaderScope, Request.EventTypes)
+                .EventTypesToRead(Request.EventTypes);
             var nextSequenceNumber = await eventSequenceStorage.GetNextSequenceNumberGreaterOrEqualThan(
                 Request.FromSequenceNumber,
-                eventTypes.Length == 0 ? null : eventTypes,
+                eventTypes,
                 Request.Key);
 
             return nextSequenceNumber.IsActualValue;

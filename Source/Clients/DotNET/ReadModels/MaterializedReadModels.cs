@@ -8,6 +8,7 @@ using Cratis.Chronicle.Contracts.ReadModels;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Reducers;
 using Cratis.Chronicle.Schemas;
+using Cratis.Chronicle.Transactions;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.ReadModels;
@@ -36,6 +37,8 @@ public class MaterializedReadModels(
     /// <inheritdoc/>
     public async Task<IEnumerable<TReadModel>> GetInstances<TReadModel>(InstanceCountToSkip? skip = null, InstanceCount? take = null)
     {
+        ReadProtectionGuard.Read(nameof(GetInstances));
+
         // Apply defaults if not provided
         skip ??= InstanceCountToSkip.Zero;
         take ??= InstanceCount.Default;
@@ -74,6 +77,8 @@ public class MaterializedReadModels(
     /// <inheritdoc/>
     public IObservable<IEnumerable<TReadModel>> ObserveInstances<TReadModel>(InstanceCountToSkip? skip = null, InstanceCount? take = null)
     {
+        ReadProtectionGuard.Read(nameof(ObserveInstances));
+
         // Apply defaults if not provided
         skip ??= InstanceCountToSkip.Zero;
         take ??= InstanceCount.Default;

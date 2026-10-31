@@ -1,0 +1,4 @@
+projection Product => ProductReadModel
+  from ProductCreated
+    # Name, Price, Description auto-mapped if they exist
+    CreatedAt = $eventContext.occurred

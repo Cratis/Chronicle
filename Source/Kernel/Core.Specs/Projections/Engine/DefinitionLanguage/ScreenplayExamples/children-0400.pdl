@@ -1,0 +1,7 @@
+projection Doc => DocReadModel
+  children versions identified by versionNumber
+    from VersionCreated key versionNumber
+      parent documentId
+      Content = content
+      CreatedAt = $eventContext.occurred
+      CreatedBy = authorId

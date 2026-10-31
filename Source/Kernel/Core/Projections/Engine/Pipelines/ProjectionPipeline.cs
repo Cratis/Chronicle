@@ -3,6 +3,8 @@
 
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Projections.Generations;
+using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Projections.Engine.Pipelines.Steps;
 using Cratis.Chronicle.Storage.Changes;
 using Cratis.Chronicle.Storage.ReadModels;
@@ -26,7 +28,10 @@ namespace Cratis.Chronicle.Projections.Engine.Pipelines;
 /// <param name="handleLock">Per-projection lock that serializes <see cref="Handle"/> calls across all pipeline instances that share the same projection identifier.</param>
 /// <param name="replayScopedCache">The <see cref="IReplayScopedCache"/> whose key-resolution caching is active only for the duration of a replay.</param>
 /// <param name="logger"><see cref="ILogger{T}"/> for logging.</param>
-public class ProjectionPipeline(
+/// <param name="generation">The <see cref="MaterializationGenerationIdentity"/> the pipeline builds, if it builds a materialization generation.
+/// A generation writes only to its own destination and never puts its sink or changesets into replay mode: the destination is its own,
+/// so there is nothing to shadow and nothing to rename.</param>
+public partial class ProjectionPipeline(
     EngineProjection projection,
     ISink sink,
     IChangesetStorage changesetStorage,
@@ -34,7 +39,8 @@ public class ProjectionPipeline(
     IEnumerable<ICanPerformProjectionPipelineStep> steps,
     ProjectionHandleLock handleLock,
     IReplayScopedCache replayScopedCache,
-    ILogger<ProjectionPipeline> logger) : IProjectionPipeline
+    ILogger<ProjectionPipeline> logger,
+    MaterializationGenerationIdentity? generation = null) : IProjectionPipeline
 {
     /// <summary>
     /// Serializes the read-modify-write cycle in <see cref="Handle"/>.
@@ -56,25 +62,42 @@ public class ProjectionPipeline(
     /// </remarks>
     readonly ProjectionHandleLock _handleLock = handleLock;
 
+    ReadModelContainerName ChangesetContainer => generation?.Destination ?? projection.ReadModel.ContainerName;
+
     /// <inheritdoc/>
     public async Task BeginReplay(ReplayContext context)
     {
+        ClearPreparedPage();
+        _isReplaying = true;
         replayScopedCache.BeginReplaySession();
-        await changesetStorage.BeginReplay(projection.ReadModel.ContainerName);
+        if (generation is not null)
+        {
+            return;
+        }
+
+        await changesetStorage.BeginReplay(ChangesetContainer);
         await sink.BeginReplay(context);
     }
 
     /// <inheritdoc/>
     public Task ResumeReplay(ReplayContext context)
     {
+        ClearPreparedPage();
+        _isReplaying = true;
         replayScopedCache.BeginReplaySession();
-        return sink.ResumeReplay(context);
+        return generation is null ? sink.ResumeReplay(context) : Task.CompletedTask;
     }
 
     /// <inheritdoc/>
     public async Task<IEnumerable<FailedPartition>> EndReplay(ReplayContext context)
     {
+        ClearPreparedPage();
+        _isReplaying = false;
         replayScopedCache.EndReplaySession();
+        if (generation is not null)
+        {
+            return [];
+        }
 
         // The changeset storage leaves replay whether or not the sink reported failed partitions: those are
         // returned for the observer to record and retry, and the replay is over regardless.
@@ -84,21 +107,28 @@ public class ProjectionPipeline(
         }
         finally
         {
-            await changesetStorage.EndReplay(projection.ReadModel.ContainerName);
+            await changesetStorage.EndReplay(ChangesetContainer);
         }
     }
 
     /// <inheritdoc/>
     public async Task LeaveReplay()
     {
+        ClearPreparedPage();
+        _isReplaying = false;
         replayScopedCache.EndReplaySession();
+        if (generation is not null)
+        {
+            return;
+        }
+
         try
         {
             await sink.LeaveReplay();
         }
         finally
         {
-            await changesetStorage.EndReplay(projection.ReadModel.ContainerName);
+            await changesetStorage.EndReplay(ChangesetContainer);
         }
     }
 
@@ -106,7 +136,24 @@ public class ProjectionPipeline(
     public Task BeginBulk() => sink.BeginBulk();
 
     /// <inheritdoc/>
-    public Task<IEnumerable<FailedPartition>> EndBulk() => sink.EndBulk();
+    public Task ResumeBulk() => sink.ResumeBulk();
+
+    /// <inheritdoc/>
+    public Task<BulkFlushResult> FlushBulk() => sink.FlushBulk();
+
+    /// <inheritdoc/>
+    public Task<IEnumerable<FailedPartition>> EndBulk()
+    {
+        ClearPreparedPage();
+        return sink.EndBulk();
+    }
+
+    /// <inheritdoc/>
+    public Task<IEnumerable<FailedPartition>> EndBulk(CancellationToken cancellationToken)
+    {
+        ClearPreparedPage();
+        return sink.EndBulk(cancellationToken);
+    }
 
     /// <inheritdoc/>
     public async Task<ProjectionEventContext> Handle(AppendedEvent @event)
@@ -122,6 +169,7 @@ public class ProjectionPipeline(
         var context = ProjectionEventContext.Empty(objectComparer, @event) with
         {
             OperationType = projection.GetOperationTypeFor(@event.Context.EventType),
+            GenerationDelivery = projection.GenerationDelivery,
         };
 
         foreach (var step in steps)

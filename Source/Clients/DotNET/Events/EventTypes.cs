@@ -3,10 +3,10 @@
 
 using System.Collections.Frozen;
 using System.Collections.Immutable;
+using System.Runtime.ExceptionServices;
 using Cratis.Chronicle.Contracts;
-using Cratis.Chronicle.Contracts.Commands;
-using Cratis.Chronicle.Contracts.Events;
 using Cratis.Chronicle.Events.Migrations;
+using Cratis.Chronicle.Registrations;
 using Cratis.Chronicle.Schemas;
 using Cratis.Serialization;
 
@@ -15,7 +15,7 @@ namespace Cratis.Chronicle.Events;
 /// <summary>
 /// Represents an implementation of <see cref="IEventTypes"/>.
 /// </summary>
-public class EventTypes : IEventTypes
+public partial class EventTypes : IEventTypes
 {
     readonly IEventStore _eventStore;
     readonly IJsonSchemaGenerator _jsonSchemaGenerator;
@@ -24,6 +24,12 @@ public class EventTypes : IEventTypes
     readonly IChronicleServicesAccessor _servicesAccessor;
     readonly bool _enableEventTypeGenerationValidation;
     readonly INamingPolicy _namingPolicy;
+    readonly AsyncLocal<bool> _discovering = new();
+    volatile Task _schemaVerdict = Task.CompletedTask;
+    IServiceProvider? _migrationServices;
+    IEventTypeMigrators? _storeMigrators;
+    ExceptionDispatchInfo? _payloadFailure;
+    FrozenDictionary<Type, EventTypeDescriptor> _descriptors = FrozenDictionary<Type, EventTypeDescriptor>.Empty;
     FrozenDictionary<EventType, Type> _typesByEventType = FrozenDictionary<EventType, Type>.Empty;
     FrozenDictionary<EventType, JsonSchema> _schemasByEventType = FrozenDictionary<EventType, JsonSchema>.Empty;
 
@@ -81,121 +87,21 @@ public class EventTypes : IEventTypes
     /// <exception cref="MultipleEventTypesWithSameIdFound">
     /// Thrown when more than one CLR type resolves to the same event type id and generation.
     /// </exception>
-    public Task Discover()
-    {
-        var eventTypes = _clientArtifacts.EventTypes.Select(_ => new
-        {
-            ClrType = _,
-            EventType = _.GetEventType()
-        }).ToArray();
-
-        var duplicate = eventTypes
-            .GroupBy(_ => _.EventType)
-            .Where(_ => _.Count() > 1)
-            .OrderBy(_ => _.Key.Id.Value)
-            .ThenBy(_ => _.Key.Generation.Value)
-            .FirstOrDefault();
-        if (duplicate is not null)
-        {
-            throw new MultipleEventTypesWithSameIdFound(duplicate.Key, duplicate.Select(_ => _.ClrType));
-        }
-
-        _typesByEventType = eventTypes.ToFrozenDictionary(_ => _.EventType, _ => _.ClrType);
-        _schemasByEventType = eventTypes.ToFrozenDictionary(_ => _.EventType, _ => _jsonSchemaGenerator.Generate(_.ClrType));
-
-        return Task.CompletedTask;
-    }
+    /// <exception cref="ArtifactPreparationReentered">Discovery reenters its own unfinished schema generation.</exception>
+    public Task Discover() => RunLocalPreparation(DiscoverLocal);
 
     /// <inheritdoc/>
+    /// <exception cref="ArtifactPreparationReentered">Registration reenters unfinished local preparation.</exception>
     public async Task Register()
     {
-        var registrations = new List<EventTypeRegistration>();
-
-        // Group all CLR types by event type ID so that all generations of the same event
-        // type are registered as a single registration with multiple generation schemas.
-        foreach (var group in _typesByEventType.GroupBy(_ => _.Key.Id))
+        if (_discovering.Value) throw new ArtifactPreparationReentered();
+        if (_eventStore is EventStore store)
         {
-            var orderedGroup = group.OrderBy(_ => _.Key.Generation.Value).ToList();
-            var latestEntry = orderedGroup[^1];
-            var latestEventType = latestEntry.Key;
-            var latestClrType = latestEntry.Value;
-            var latestSchema = _schemasByEventType[latestEventType];
-            var eventStoreName = latestClrType.GetEventStoreName();
-
-            var registration = new EventTypeRegistration
-            {
-                Type = latestEventType.ToContract(),
-                Schema = latestSchema.ToJson(),
-                EventStore = eventStoreName ?? string.Empty,
-                Visibility = GetVisibility(latestClrType, eventStoreName)
-            };
-
-            // Pass 1: register the real schema for every CLR type that represents a generation in
-            // this group before any migrator gets a chance to backfill a placeholder for it. This
-            // must be a distinct pass rather than interleaved with migrator processing below,
-            // because the underlying dictionary's enumeration order is not generation-ascending and
-            // is randomized per process - interleaving let a migrator's placeholder win the race
-            // against a lower generation's real schema depending on enumeration order.
-            foreach (var (eventType, _) in orderedGroup)
-            {
-                var schema = _schemasByEventType[eventType];
-                registration.Generations.Add(new EventTypeGenerationDefinition
-                {
-                    Generation = eventType.Generation,
-                    Schema = schema.ToJson()
-                });
-            }
-
-            // Pass 2: add migration definitions, backfilling an empty placeholder schema only for a
-            // generation that has no CLR type at all in this group (a genuine gap, kept for backward
-            // compatibility) - never for one whose real schema was already added in pass 1.
-            foreach (var (_, clrType) in orderedGroup)
-            {
-                foreach (var migrator in _eventTypeMigrators.GetMigratorsFor(clrType))
-                {
-                    var upcastBuilder = new EventMigrationBuilder(_namingPolicy);
-                    migrator.Upcast(upcastBuilder);
-
-                    var downcastBuilder = new EventMigrationBuilder(_namingPolicy);
-                    migrator.Downcast(downcastBuilder);
-
-                    registration.Migrations.Add(new EventTypeMigrationDefinition
-                    {
-                        FromGeneration = migrator.From,
-                        ToGeneration = migrator.To,
-                        UpcastJmesPath = upcastBuilder.ToJson().ToJsonString(),
-                        DowncastJmesPath = downcastBuilder.ToJson().ToJsonString()
-                    });
-
-                    if (!registration.Generations.Any(g => g.Generation == migrator.From.Value))
-                    {
-                        registration.Generations.Add(new EventTypeGenerationDefinition
-                        {
-                            Generation = migrator.From,
-                            Schema = "{}"
-                        });
-                    }
-
-                    if (!registration.Generations.Any(g => g.Generation == migrator.To.Value))
-                    {
-                        registration.Generations.Add(new EventTypeGenerationDefinition
-                        {
-                            Generation = migrator.To,
-                            Schema = "{}"
-                        });
-                    }
-                }
-            }
-
-            registrations.Add(registration);
+            store.ThrowIfArtifactPreparationReentered();
+            await store.LatestPreparationVerdict;
         }
-
-        await _servicesAccessor.Services.EventTypes.RegisterEventTypes(new()
-        {
-            EventStore = _eventStore.Name,
-            Types = registrations,
-            DisableValidation = !_enableEventTypeGenerationValidation
-        }).EnsureSuccess();
+        var payload = await PrepareRegistration();
+        await RegisterPrepared(payload);
     }
 
     /// <inheritdoc/>
@@ -244,14 +150,42 @@ public class EventTypes : IEventTypes
         .FirstOrDefault() ?? GetClrTypeFor(eventTypeId);
 
     /// <summary>
-    /// Gets the visibility to register an event type with: public when declared with <see cref="PublicAttribute"/> or when
-    /// it names an event store through <see cref="EventStoreAttribute"/> on the type or its assembly - its own or another service's - otherwise private.
+    /// Gets this registry's descriptor for a CLR type.
     /// </summary>
-    /// <param name="clrType">The CLR type of the event type.</param>
-    /// <param name="eventStoreName">The event store named by an <see cref="EventStoreAttribute"/> on the type or its assembly, if any.</param>
-    /// <returns>The <see cref="EventTypeVisibility"/>.</returns>
-    static EventTypeVisibility GetVisibility(Type clrType, string? eventStoreName) =>
-        eventStoreName is not null || clrType.IsDefined(typeof(PublicAttribute), false)
-            ? EventTypeVisibility.Public
-            : EventTypeVisibility.Private;
+    /// <param name="clrType">The registered CLR type.</param>
+    /// <returns>The descriptor.</returns>
+    /// <exception cref="TypeIsNotAnEventType">The CLR type is not registered.</exception>
+    internal EventTypeDescriptor GetDescriptorFor(Type clrType) =>
+        _descriptors.TryGetValue(clrType, out var descriptor) ? descriptor : throw new TypeIsNotAnEventType(clrType);
+
+    /// <summary>
+    /// Runs local preparation under the same reentrancy guard and schema verdict as <see cref="Discover"/>.
+    /// </summary>
+    /// <param name="prepare">The local preparation to run.</param>
+    /// <returns>A completed task.</returns>
+    /// <exception cref="ArtifactPreparationReentered">Preparation reenters its own unfinished local preparation.</exception>
+    Task RunLocalPreparation(Action prepare)
+    {
+        if (_discovering.Value) throw new ArtifactPreparationReentered();
+        var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        _schemaVerdict = completion.Task;
+        _payloadFailure = null;
+        _discovering.Value = true;
+        try
+        {
+            prepare();
+            completion.SetResult();
+        }
+        catch (Exception exception)
+        {
+            completion.SetException(exception);
+            throw;
+        }
+        finally
+        {
+            _discovering.Value = false;
+        }
+
+        return Task.CompletedTask;
+    }
 }

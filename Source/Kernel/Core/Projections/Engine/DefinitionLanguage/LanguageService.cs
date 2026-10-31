@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.EventTypes;
+using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
@@ -41,7 +42,8 @@ public class LanguageService(
         string definition,
         ProjectionOwner owner,
         IEnumerable<ReadModelDefinition> readModelDefinitions,
-        IEnumerable<EventTypeSchema> eventTypeSchemas)
+        IEnumerable<EventTypeSchema> eventTypeSchemas,
+        EventGenerationDelivery generationDelivery = EventGenerationDelivery.Compatibility)
     {
         var result = _compiler.CompileProjection(definition);
         var syntax = result.Value;
@@ -53,17 +55,18 @@ public class LanguageService(
             return errors;
         }
 
-        // Unsupported blocks must be reported even when no schemas are available for semantic validation.
+        // Unsupported syntax must be reported even when no schemas are available for semantic validation.
         ProjectionValidator.ValidateSupportedBlocks(syntax.Blocks, errors);
+        new ProjectionSyntaxSupport(errors).VisitProjection(syntax);
         if (errors.HasErrors)
         {
             return errors;
         }
 
         // Validate the projection if schemas are provided
-        if (readModelDefinitions.Any() || eventTypeSchemas.Any())
+        if (readModelDefinitions.Any() || eventTypeSchemas.Any() || generationDelivery == EventGenerationDelivery.Pinned)
         {
-            var validator = new ProjectionValidator(readModelDefinitions, eventTypeSchemas);
+            var validator = new ProjectionValidator(readModelDefinitions, eventTypeSchemas, generationDelivery);
             validator.Validate(syntax, errors);
 
             if (errors.HasErrors)
@@ -72,7 +75,7 @@ public class LanguageService(
             }
         }
 
-        var visitor = new ProjectionDefinitionSyntaxVisitor(owner);
+        var visitor = new ProjectionDefinitionSyntaxVisitor(owner, eventTypeSchemas, generationDelivery);
         return visitor.Visit(syntax);
     }
 

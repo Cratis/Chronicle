@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using Cratis.Chronicle.Registrations;
 using Cratis.Serialization;
 using Microsoft.Extensions.Logging;
 
@@ -27,8 +28,19 @@ public class ConstraintsByBuilderProvider(
     {
         var definitions = ImmutableList.CreateBuilder<IConstraintDefinition>();
 
+        var catalog = ExplicitArtifactCatalog.From(clientArtifactsProvider);
         foreach (var constraintType in clientArtifactsProvider.ConstraintTypes)
         {
+            if (catalog?.IsExplicit(constraintType, ExplicitArtifactKind.Constraint) == true)
+            {
+                var activation = artifactActivator.ActivateNonDisposable(constraintType);
+                if (activation.TryGetException(out var failure)) throw failure;
+                var explicitBuilder = new ConstraintBuilder(eventTypes, namingPolicy, constraintType);
+                ExplicitConstraintDefiner.Define(constraintType, activation.AsT0, explicitBuilder);
+                definitions.AddRange(explicitBuilder.Build());
+                continue;
+            }
+
             var activatedArtifactResult = artifactActivator.ActivateNonDisposable<IConstraint>(constraintType);
             if (activatedArtifactResult.TryGetException(out var exception))
             {

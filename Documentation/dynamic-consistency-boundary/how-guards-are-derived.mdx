@@ -1,0 +1,153 @@
+---
+title: How guards are derived
+description: How decision reads, explicit scopes and event source definitions produce append guards, including separate predicates and legacy widening.
+---
+
+Use this page when you want to know exactly which events make an append fail. A guard is the append condition Chronicle sends to the kernel with the events: a position in the log, plus a filter. The kernel rejects the append if an event that matches the filter was appended after the position. Everything else on this page is about where the position and the filter come from.
+
+## The parts of a guard
+
+| Part | What it decides | Decision read | Explicit scope | Event source definition |
+|---|---|---|---|---|
+| Event source | Whose events count | The key you read | `WithEventSourceId` | The event's own source, when the definition declares `EventSourceId` |
+| Event types | Which kinds of event count | The event types of the read model, including its removal types | `WithEventType` | None. Any type counts |
+| Source type, stream type, stream ID | Which part of the source counts | Only for a stream-scoped read, with the values you pass | The builder | The dimensions the definition declares |
+| Position | What the writer is assumed to have seen | The log's tail, captured before the read folds | The sequence number you captured | The tail, read when you append |
+
+A decision read is the only form that captures the position before it reads the facts. That is why it can guard a decision. The other two guard only what you wire up yourself. See [Choosing how a rule holds](./choosing.mdx).
+
+The guard is written with a `guard:` line in the examples below. It is a notation for this page. `IUnitOfWork.GetAppendConditions()` returns the real conditions, and their `ToString()` prints the same parts with event type IDs.
+
+## One read, one guard
+
+A read of a whole source guards the source, for the model's event types only.
+
+```text
+// GetDetached<MemberLoans>(member-1)
+guard member-1: types=[MemberRegistered, LoanTaken, LoanReturned], after <tail at read>
+```
+
+A `BookRenamed` for the same member does not conflict, because the model does not use it. A `LoanTaken` for another member does not conflict, because the source differs.
+
+A stream-scoped read adds the stream. The source type is added only when you pass one.
+
+```text
+// GetDetached<MonthlyWithdrawals>(BankAccount-7, "Transactions", "2026-10")
+guard BankAccount-7: types=[MoneyWithdrawn], streamType=Transactions, streamId=2026-10, after <tail at read>
+```
+
+A withdrawal in `2026-11`, or a withdrawal on another account, does not conflict. See [A limit inside one stream](./scenarios.mdx#a-limit-inside-one-stream).
+
+An absent model is guarded too. When no matching event existed at the read, an event of the model's types that arrives later conflicts. This is how "create it only if it does not exist yet" holds.
+
+### Per-stream read models
+
+A [per-stream read model](../read-models/per-stream.mdx) declares its stream with `[EventStream<TSource>("Transactions")]`. Its read must carry the declared event source type, the stream type and a stream ID, so the guard keeps all three dimensions. A read without them is refused, so the guard never falls back to the whole source.
+
+```text
+// GetDetached<WithdrawalsThisMonth>(BankAccount-7, "Transactions", "2026-10", "BankAccount")
+guard BankAccount-7: types=[MoneyWithdrawn], sourceType=BankAccount, streamType=Transactions, streamId=2026-10, after <tail at read>
+```
+
+Under a read-protection frame, a second read in another month keeps a separate guard. Outside a frame, reads still merge as described below. [CHR0064](../code-analysis/CHR0064.mdx) reports a declaration that cannot produce this guard.
+
+## Several reads on one source
+
+Under a [read-protection frame](../read-models/read-protection.mdx), reads with different predicates keep separate guards on the same source label. Repeated reads of the same predicate retain the earliest position, including an absent model's negative-read expectation. The kernel checks every guard atomically; unrelated streams need not conflict. Repeated labels require the `concurrency-scope-conjunctions` capability.
+
+Outside a frame, reads of the same source still merge into one guard. That legacy guard can only get wider, never narrower:
+
+| What the reads share | The merged guard |
+|---|---|
+| Same source, same stream and source type | The union of the event types, from the earliest position |
+| Same source, different stream type or stream ID | The union of the event types. Which stream values survive depends on where you commit, see below |
+| Same source, different source types | The source type is dropped. Every source type counts |
+| Different sources | One guard per source, validated together with the append |
+
+The earliest position wins. An absent model, read before any matching event existed, counts as the earliest of all.
+
+Where the reads are merged decides what happens to the stream values.
+
+| Where | Stream type and stream ID | Event types |
+|---|---|---|
+| `AppendMany(guardedBy: reads)`, or a unit of work without a [read-protection frame](../read-models/read-protection.mdx) | Kept only when both are equal. If either differs, both are dropped | The union |
+| A unit of work under a read-protection frame | Each predicate retains its stream type and ID in a separate guard | Each predicate retains its own event-type filter |
+
+```text
+// Two reads on BankAccount-7: Transactions/2026-10 and Transactions/2026-11
+
+// outside a frame
+guard BankAccount-7: types=[MoneyWithdrawn], any stream, after <earlier tail>
+
+// under a frame
+guard BankAccount-7: types=[MoneyWithdrawn], streamType=Transactions, streamId=2026-10, after <October tail>
+guard BankAccount-7: types=[MoneyWithdrawn], streamType=Transactions, streamId=2026-11, after <November tail>
+```
+
+Outside a frame, a withdrawal in any month conflicts. Under a frame, only the two guarded months conflict. Legacy widening produces extra conflicts but cannot hide one; an ordered explicit scope list is another way to retain separate stream guards.
+
+## Adding an explicit scope
+
+Chronicle does not guess whether your own scope is enough. It checks.
+
+| You combine | Result |
+|---|---|
+| A decision read and an explicit scope on one source, outside a read-protection frame | The append is refused with `DecisionReadConflictsWithConcurrencyScope`. Remove the scope or the read |
+| A decision read and an explicit scope on one source, under a [read-protection frame](../read-models/read-protection.mdx) | The explicit scope is used if it covers everything the read watches and its position is not later than the read's. Otherwise `ExplicitScopeDoesNotCoverReads` |
+| Two explicit scopes on one source, under a frame | Different predicates are retained. Contradictory expectations for the same predicate, or no guard mixed with a guard, throw `ConflictingExplicitScopes` with reads or `ConflictingContributionsOnLabel` without reads |
+| A decision read and an aggregate-style contributed read on one source | `ReadAndAggregateOnSameSource` |
+
+Two scopes mean the same when they have the same position and the same expectation, and each covers the other. Scopes that mean the same are merged into one.
+
+[CHR0063](../code-analysis/CHR0063.mdx) reports a scope built for one stream of a definition and passed to an append that writes another stream.
+
+A scope covers a read when its source, source type, stream type and stream ID are each unset or equal, its event types are empty or a superset, and its position is the same or earlier.
+
+## Declared routing on a definition
+
+An [event source definition](../event-sources/defining.mdx) can declare which dimensions guard an append. How that mixes with a read depends on where the append is made.
+
+| Where | What the declared dimensions do to a decision read |
+|---|---|
+| `AppendMany(guardedBy: reads)` outside a frame | Nothing. The read's guard replaces the definition's default scope for that source |
+| A unit of work under a [read-protection frame](../read-models/read-protection.mdx) | Read predicates remain intact. Different declared predicates add separate conditions at their own captured positions |
+| An explicit scope under a frame | The explicit scope must cover the declared dimensions, or the commit is refused with `DeclaredRoutingNotCoveredByExplicitScope` |
+
+A definition without a declared dimension, or with `None`, adds nothing. A declared set without `EventSourceId` becomes a separate guard that is not tied to the read, so it does not protect the state you read. [CHR0062](../code-analysis/CHR0062.mdx) reports it.
+
+An example under a frame. The account declares the event source ID and the `Transactions` stream dimensions, and you read `MonthlyWithdrawals` for `2026-10`.
+
+```text
+// without the definition's dimensions
+guard BankAccount-7: types=[MoneyWithdrawn], streamType=Transactions, streamId=2026-10, after <tail at read>
+
+// with the definition's dimensions as an additional condition
+guard BankAccount-7: types=[MoneyWithdrawn], streamType=Transactions, streamId=2026-10, after <tail at read>
+guard BankAccount-7: any type, streamType=Transactions, streamId=2026-10, after <tail at routing resolution>
+```
+
+A deposit in `2026-10` after routing resolution now conflicts too, because the definition guards the whole month at that point. The read's earlier boundary still guards withdrawals. That is correct when the month is the consistency boundary. It is more than you need when only withdrawals matter. Declare dimensions only for streams where every writer should see every other, such as a ledger. See [Concurrency per event source and stream](../event-sources/concurrency.mdx).
+
+```mermaid
+flowchart LR
+    R["Decision reads<br/>key + event types + stream"] --> M{"Merge per event source"}
+    E["Explicit scope"] --> M
+    D["Declared routing<br/>(definition)"] --> M
+    M --> G["One condition per predicate under a frame<br/>validated atomically with the append"]
+```
+
+## See what a commit guarded
+
+Under a read-protection frame, `GetAppendConditions()` returns one `AppendCondition` per guarded source after the commit. Use it in a test to assert that a rule is guarded by what you think. Each condition lists its `Origins`, such as `ProtectedRead` or `DeclaredRouting`, and the `Reads` behind it.
+
+<ChronicleClientTabs snippet="dynamic-consistency-boundary/how-guards-are-derived/see-the-guard" variants="csharp,elixir" />
+
+For a test that races two writers without a frame, see [Test the race](./scenarios.mdx#test-the-race).
+
+## Next steps
+
+- [Choosing how a rule holds](./choosing.mdx)
+- [Decision reads](../read-models/decision-reads.mdx): admission rules and limits.
+- [Read protection](../read-models/read-protection.mdx): refuse unguarded reads and immediate appends.
+- [Concurrency](../events/concurrency.mdx): the scope API.
+- [Event sources](../concepts/event-source.md): the four routing values.

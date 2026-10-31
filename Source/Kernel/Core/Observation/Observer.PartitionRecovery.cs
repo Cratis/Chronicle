@@ -34,13 +34,13 @@ public partial class Observer
     bool _partitionRecoveryTurnScheduled;
 
     /// <inheritdoc/>
-    public Task TryRecoverAllFailedPartitions()
+    public async Task TryRecoverAllFailedPartitions()
     {
-        if (IsRetired || _removed) return Task.CompletedTask;
+        if (IsRetired || _removed) return;
 
+        await ReconcilePartitionDeferrals();
         _recoveryOfAllFailedPartitionsRequested = true;
         SchedulePartitionRecoveryTurn();
-        return Task.CompletedTask;
     }
 
     void SchedulePartitionRecoveryTurn()
@@ -72,7 +72,7 @@ public partial class Observer
             }
         }
 
-        var config = await configurationProvider.GetFor(_observerKey);
+        var config = await GetRetryConfiguration();
         var started = 0;
         while (started < MaxPartitionRecoveriesPerTurn && _partitionsAwaitingRecovery.TryDequeue(out var failedPartitionId))
         {

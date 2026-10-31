@@ -1,6 +1,13 @@
-# Getting Started with Reducers
+---
+title: Build a separate reducer
+description: Put a read-model fold in an IReducerFor<T> class when it needs injected services or separation from the model.
+---
 
-Reducers provide a powerful way to build read models by reducing a sequence of events into aggregated state. This guide will walk you through creating your first reducer.
+Use a separate `IReducerFor<T>` when the fold needs injected services, instance behavior during replay,
+or must live apart from its model. For application code, start with model-bound attributes, then fluent
+mappings, then reducer code; a [self-reducing model](self-reducing-read-models.mdx) is the default for new
+reducers. [Choose how to build a read model](../projections/choosing-a-read-model-style.mdx) explains the
+choice; this guide shows the separate-class form.
 
 ## Prerequisites
 
@@ -24,7 +31,8 @@ Create a reducer by implementing `IReducerFor<TReadModel>` with methods for each
 
 <ChronicleClientTabs snippet="reducers/getting-started/reducer-implementation" />
 
-TypeScript handler methods only receive the event and the current state — unlike C#, Kotlin, Java, and Elixir, they don't get an `EventContext` parameter, so they can't use an event's metadata (like `Occurred`) when computing the next state.
+The event context supplies metadata such as occurrence time and event source ID. TypeScript handlers
+can take it as a third argument after the event and current state.
 
 ## Method Signatures
 
@@ -38,15 +46,28 @@ Reducer methods are discovered by convention and support the following signature
 
 <ChronicleClientTabs snippet="reducers/getting-started/async-signatures" />
 
-These overload tables are specific to C#'s method-overload-based dispatch. Kotlin, Java, and TypeScript each dispatch reducer handlers by matching the first parameter's event type. Kotlin and Java accept `(event)`, `(event, current)`, and `(event, current, context)`; TypeScript accepts a fixed `(event, current)` shape with no context parameter. TypeScript's dispatch does `await` the handler, so an `async` handler works there, and Kotlin awaits a `suspend` handler. Java handlers are ordinary methods that return the new state. Elixir dispatches through a single `reduce/3` callback per event, pattern-matched by struct type, which does receive a context map.
+These overload tables describe .NET instance-method dispatch. Kotlin and Java match the first
+parameter's event type. TypeScript selects a method by the camelCase event-class name and passes
+`(event, current, context)`; it awaits the result, so an `async` handler works. Kotlin awaits `suspend`
+handlers. Elixir uses a `reduce/3` callback pattern-matched by event struct.
 
 **Key Points:**
 
-- Method names can be anything, but typically start with `On` followed by the event type name
+- In .NET, method names are unrestricted; the examples use `On` followed by the event type name
 - The `@event` parameter is the specific event being processed
 - The `current` parameter contains the existing state (null if no previous state exists)
 - The `EventContext` parameter provides metadata like event source ID, occurred timestamp, and sequence number
 - Both synchronous and asynchronous methods are supported
+
+### .NET dispatch and diagnostics
+
+In .NET, the event must be the first parameter and the nullable current read model the second. An
+optional third parameter must be `EventContext`. Return the model or `Task<TReadModel>`, including a
+nullable result. Returning null deletes or leaves the instance absent. Classic plain `Task` is also
+accepted, but yields null state; a mutation-only `Task` handler does not retain current state. A method
+taking the current model first and `object` second is not dispatched.
+
+The .NET analyzers report unsupported signatures as **CHR0006** and event parameters without `[EventType]` as **CHR0007**, including `object` event parameters. If none of a reducer's methods can be dispatched, the client skips its kernel registration and logs a warning naming the reducer and explaining why its public reducer-like methods were skipped. The application still starts; correct the signatures so the reducer can observe events.
 
 ### 3. Using the Reducer Attribute (Optional)
 
@@ -60,7 +81,8 @@ You can customize the reducer using the `[Reducer]` attribute:
 - `eventSequence` - The event sequence to observe (defaults to the event log)
 - `isActive` - Whether the reducer actively observes events (defaults to `true`)
 
-Kotlin and Java support all three parameters on `@Reducer`. TypeScript supports `id` and the event sequence via the `reducer()` decorator's parameters, shown above. Elixir only supports setting a custom `id`.
+Use the client tab's configuration shape. TypeScript expresses identity and sequence through the
+`reducer()` decorator; Kotlin and Java use `@Reducer`.
 
 ## Retrieving Reduced State
 
@@ -83,7 +105,7 @@ The `current` parameter in each method:
 
 ## Best Practices
 
-1. **Keep reducers pure** - Avoid side effects; only compute state from events
+1. **Keep reducers deterministic** - Compute state from recorded facts. An injected clock or live rate service can return different values during replay; record time and rates in events when they determine the result.
 2. **Handle null current state** - Always check if `current` is null for the initial state
 3. **Use immutable state** - Create new instances rather than mutating the current state
 4. **Process events in order** - The events are provided in sequence order; respect that order

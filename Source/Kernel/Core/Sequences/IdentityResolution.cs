@@ -1,0 +1,35 @@
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+namespace Cratis.Chronicle.Sequences;
+
+/// <summary>
+/// Describes how an event's caused-by identity resolved at read time.
+/// </summary>
+public enum IdentityResolution
+{
+    /// <summary>
+    /// The identity exists and has a name.
+    /// </summary>
+    Resolved = 0,
+
+    /// <summary>
+    /// The identity exists, but its display name is empty.
+    /// </summary>
+    NameUnavailable = 1,
+
+    /// <summary>
+    /// The identity identifier is absent from storage.
+    /// </summary>
+    Missing = 2,
+
+    /// <summary>
+    /// No identity was set.
+    /// </summary>
+    NotSet = 3,
+
+    /// <summary>
+    /// Chronicle itself caused the event.
+    /// </summary>
+    System = 4
+}

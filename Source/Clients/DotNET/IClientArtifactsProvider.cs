@@ -104,6 +104,11 @@ public interface IClientArtifactsProvider
     IEnumerable<Type> RemoveConstraintEventTypes { get; }
 
     /// <summary>
+    /// Gets event types declaring owned closing scopes. Existing artifact providers default to none.
+    /// </summary>
+    IEnumerable<Type> ClosesStreamEventTypes => [];
+
+    /// <summary>
     /// Gets all the available event type migrators.
     /// </summary>
     IEnumerable<Type> EventTypeMigrators { get; }
@@ -117,4 +122,14 @@ public interface IClientArtifactsProvider
     /// Gets all the available event source definition types.
     /// </summary>
     IEnumerable<Type> EventSources => [];
+
+    /// <summary>
+    /// Gets the typed application triggers. Existing providers default to none.
+    /// </summary>
+    IEnumerable<Type> Triggers => [];
+
+    /// <summary>
+    /// Gets the concrete occurrence handler types. Existing providers default to none.
+    /// </summary>
+    IEnumerable<Type> OccurrenceHandlers => [];
 }

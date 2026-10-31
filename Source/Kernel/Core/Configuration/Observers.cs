@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.Projections.Generations;
+
 namespace Cratis.Chronicle.Configuration;
 
 /// <summary>
@@ -24,14 +26,33 @@ public class Observers
     /// indefinitely.
     /// </summary>
     /// <remarks>
-    /// The default matches the response timeout the transport already imposes, so it bounds nothing new on its own -
-    /// the point of the knob is being able to bound it tighter for a subscriber that should always answer quickly.
-    /// Raising it past the transport's own timeout has no effect, because that one gives up first. Giving up abandons
+    /// The call to a subscriber carries its own Orleans response timeout (see
+    /// <see cref="Observation.ObserverSubscriberResponseTimeout"/>), so this setting is not capped by
+    /// <c language="csharp">clustering.responseTimeout</c>: raising it lets a subscriber that needs longer per batch take longer.
+    /// Zero, and anything above the ceiling, is bounded by that ceiling, and the kernel warns about it at startup. Giving up abandons
     /// the wait, not the work: the subscriber keeps processing the batch, and the events are redelivered when the
     /// partition retries. A timeout is recorded as <c language="csharp">FailureKind.Timeout</c>, which is excluded from the quarantine
     /// thresholds below, so a congested period cannot take an otherwise healthy observer out of service.
     /// </remarks>
     public int SubscriberTimeout { get; init; } = 30;
+
+    /// <summary>
+    /// Gets the maximum time in seconds to hold an abandoned client delivery after its timeout.
+    /// A non-positive value disables fencing. Positive values are at least the subscriber timeout.
+    /// </summary>
+    public int AbandonedDeliveryHold { get; init; } = 300;
+
+    /// <summary>
+    /// Gets the most events handed to a client-owned or webhook subscriber in one call during catch-up, replay and
+    /// partition recovery. Zero or less hands over storage batches as they are read.
+    /// </summary>
+    /// <remarks>
+    /// A storage batch can hold thousands of events, and a subscriber that does real work per event can need longer
+    /// for that than any sensible <see cref="SubscriberTimeout"/>. Bounding the call bounds the work behind one answer,
+    /// and every answered call is checkpointed, so a long partition advances call by call instead of needing an
+    /// ever larger timeout. Kernel-owned subscribers, such as projections, are not bounded by this.
+    /// </remarks>
+    public int MaxEventsPerSubscriberCall { get; init; } = 100;
 
     /// <summary>
     /// Gets the timeout in seconds to wait for an event store subscription to become ready before returning to the client.
@@ -66,6 +87,21 @@ public class Observers
     public int MaximumBackoffDelay { get; init; } = 60 * 10;
 
     /// <summary>
+    /// Gets the webhook retry delays in seconds. After the last entry, that delay repeats.
+    /// When empty, webhooks use <see cref="Webhooks.DefaultBackoffScheduleSeconds"/>. Only used by Webhooks:Retry.
+    /// </summary>
+    /// <remarks>
+    /// The default stays empty because configuration binding appends configured entries to an existing collection.
+    /// </remarks>
+    public IReadOnlyList<int> BackoffScheduleSeconds { get; init; } = [];
+
+    /// <summary>
+    /// Gets the webhook retry budget from the first attempt since quarantine was cleared.
+    /// Zero disables the elapsed-time limit. Only used by Webhooks:Retry.
+    /// </summary>
+    public TimeSpan RetryBudget { get; init; }
+
+    /// <summary>
     /// Gets the threshold for quarantining an observer based on the number of failed partitions.
     /// A value of 0 disables observer quarantine based on failed partition count.
     /// </summary>
@@ -81,6 +117,21 @@ public class Observers
     /// Gets the policy for evolving read models when a projection or reducer definition changes.
     /// </summary>
     public DefinitionEvolutionPolicy DefinitionEvolution { get; init; } = DefinitionEvolutionPolicy.Automatic;
+
+    /// <summary>
+    /// Gets the promotion gate for projection generations. Takes effect only when <see cref="Features.ProjectionGenerations"/> is enabled.
+    /// </summary>
+    public PromotionGateMode GenerationPromotion { get; init; } = PromotionGateMode.OnCatchUp;
+
+    /// <summary>
+    /// Gets how long the deployment condition must hold before promotion. Takes effect only when <see cref="Features.ProjectionGenerations"/> is enabled.
+    /// </summary>
+    public TimeSpan DeploymentConditionGracePeriod { get; init; } = TimeSpan.FromSeconds(60);
+
+    /// <summary>
+    /// Gets how long a generation may remain pending before an alert is raised. Takes effect only when <see cref="Features.ProjectionGenerations"/> is enabled.
+    /// </summary>
+    public TimeSpan PendingGenerationAlertAfter { get; init; } = TimeSpan.FromHours(24);
 
     /// <summary>
     /// Gets whether reactors and webhooks should automatically replay when their definition changes.
@@ -113,6 +164,21 @@ public class Observers
     /// A larger value trades a longer post-crash re-scan for fewer writes. Defaults to 100.
     /// </remarks>
     public int StatePersistenceBatchInterval { get; init; } = 100;
+
+    /// <summary>
+    /// Gets the maximum time in seconds the observer holds back reported handled-event counts and the follow-up writes of partition failures before making them durable.
+    /// </summary>
+    /// <remarks>
+    /// Every handled batch of every job step reports its counts to the single observer grain. Writing them through
+    /// - an increment per partition plus the whole observer state - on each report makes the grain's queue grow
+    /// past the grain call timeout under a replay. Reports are therefore coalesced per partition and event type and
+    /// written together after at most this many seconds, on the watchdog tick and on deactivation. The sums are
+    /// exact; only their freshness is bounded. A partition failure is recorded in the observer's memory and in its
+    /// failed partitions storage straight away, one partition at a time; the observer state write and the retry
+    /// reminder registration, which are the same for every failure of a burst, wait for the same flush instead of
+    /// holding up the observer once per failure. 0 writes everything through. Defaults to 5.
+    /// </remarks>
+    public int WriteCoalescingInterval { get; init; } = 5;
 
     /// <summary>
     /// Gets the strategy used to fan events out when multiple instances of the same client are

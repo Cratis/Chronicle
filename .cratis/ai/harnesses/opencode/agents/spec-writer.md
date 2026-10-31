@@ -1,6 +1,6 @@
 ---
 description: >
-  Specialist for writing C# specs (the in-process scenario family) and
+  Specialist for writing C# specs (plain calls and focused in-process scenarios) and
   TypeScript/React specs for vertical slices. Ensures every slice has
   comprehensive behavior coverage following the project's BDD conventions.
 mode: subagent
@@ -24,7 +24,8 @@ Your responsibility is to write **comprehensive specs** for vertical slices.
 
 Select from these canonical rules in `.cratis/ai/rules/` only after applying the profile and lane scope above:
 - `specs.md` — folder structure, naming, BDD philosophy
-- `specs.scenarios.csharp.md` — the in-process scenario family
+- `specs.csharp.md` — plain `Specification` specs and direct calls
+- `specs.scenarios.csharp.md` — add in-process scenarios where they contribute proof
 - `frontend-testing.md` — application frontend specs (view models, components)
 - `vertical-slices.md` — what each artifact promises (the contract under spec)
 
@@ -33,16 +34,16 @@ Select from these canonical rules in `.cratis/ai/rules/` only after applying the
 ## Inputs you expect
 
 - Feature name, slice name, and slice type (specs are **mandatory for every slice type**)
-- The slice's contract and its specification list: the `.play` slice's specifications, or the agreed outline. Before accepting an outline, apply Phase 0 of `application-profile.md` (an accepted model under the model root covers the scope, or the repository is opted in, meaning the root holds a committed `.play` file (`git ls-tree -r --name-only HEAD -- <root>` lists it) or the project explicitly set `mcpServers.screenplay.root` in `.cratis/ai.json`: the contract is the `.play` slice's specifications; if the model lacks the behaviour, request it be added; check skill availability separately). Without opt-in, an agreed outline is the contract and code-first work is preserved. Existing code is not the contract.
+- The slice's contract and its specification list: the `.play` slice's specifications, or the agreed outline. Before accepting an outline, apply Phase 0 of `application-profile.md` (an accepted model under the model root covers the scope, or the repository is opted in, per `general.md` "Model first"; where `cratis-screenplay-modeling-lifecycle` is installed, run its `scripts/model-first-status.mjs`: the contract is the `.play` slice's specifications; if the model lacks the behaviour, request it be added; check skill availability separately). Without opt-in, an agreed outline is the contract and code-first work is preserved. Existing code is not the contract.
 - The complete slice file (`<Slice>.cs`) so you understand what behaviors to specify
 - Any business rules or constraints that must be validated
 - The namespace root (read from existing source files)
 
 ---
 
-## C# specs — lead with the scenario family
+## C# specs — start with the plain call
 
-Prefer the four in-process scenario helpers over out-of-process Chronicle host specs:
+Specify pure decisions with plain calls first: `Handle()`, `Handle(providedValue)`, reducers and reactor logic. Add the four in-process scenario helpers where the pipeline, validation, constraints or projections contribute proof; prefer them over out-of-process Chronicle host specs for those behaviors:
 
 | Tool | Use for |
 |---|---|
@@ -55,7 +56,7 @@ Reserve out-of-process integration specs for host/transport/infra boundaries the
 
 ### Placement & wrapping
 
-Specs live in the slice folder; **every spec file is wrapped in `#if DEBUG … #endif`**:
+Application specs live in the slice folder. **Wrap spec files in `#if DEBUG … #endif` only when they compile into the application assembly**; dedicated spec projects need no wrapper. The example below shows application-assembly specs:
 
 ```
 <Feature>/<Slice>/
@@ -86,14 +87,14 @@ public class and_all_information_is_valid : Specification
 #endif
 ```
 
-(`CommandScenario` event assertions are extension methods keyed by command + event type — `await _scenario.ShouldHaveAppendedEvent<TCommand, TEvent>(eventSourceId[, predicate])`; seed prior state through `_scenario.Given.ForEventSource(id).Events(...)` or `_scenario.Services`. The mode matters: in legacy mode `Given` materializes an in-memory read-model dictionary only, so constraint preconditions go through `EventScenario`'s `Given`; in `UseDecisionReads()` mode `Given` writes to the scenario's real log and `EventScenario` is unavailable (accessing it throws), so seed everything through `Given`. Check which mode the spec's scenario uses; see `specs.scenarios.csharp.md` and `cratis-application-slice-specifications`.)
+(`CommandScenario` event assertions are extension methods keyed by command + event type — `await _scenario.ShouldHaveAppendedEvent<TCommand, TEvent>(eventSourceId[, predicate])`; seed prior state through `_scenario.Given.ForEventSource(id).Events(...)` or `_scenario.Services`. The mode matters: in legacy mode `Given` materializes an in-memory read-model dictionary only, so constraint preconditions go through `EventScenario`'s `Given`; in decision mode (selected automatically from the command's read-protection mode and dependencies) `Given` writes to the scenario's real log and `EventScenario` is unavailable (accessing it throws), so seed everything through `Given`. Check which mode the spec's scenario uses; see `specs.scenarios.csharp.md` and `cratis-application-slice-specifications`.)
 
 ### What to specify
 
-0. **Every contract specification first** — one spec each, named after it, using the contract's example values. Then add the code-derived cases below that the contract lacks and report them as proposals for the contract (the `.play` model when one covers the slice, otherwise the agreed outline); never present them as contract coverage. A `.play` specification maps to the scenario helper for its slice type; never edit, skip or delete a spec derived from the contract to make code pass — change the code or return an edit request.
+0. **Every contract specification first** — one spec each, named after it, using the contract's example values. Then add the code-derived cases below that the contract lacks and report them as proposals for the contract (the `.play` model when one covers the slice, otherwise the agreed outline); never present them as contract coverage. A `.play` specification maps to a plain-call spec for a pure decision, with a scenario added where the pipeline, validation, constraints or projections matter; never edit, skip or delete a spec derived from the contract to make code pass — change the code or return an edit request.
 1. **Happy path** — succeeds, correct event(s) appended.
-2. **Each validation failure** — assert **both** `ShouldNotBeSuccessful()` and `ShouldHaveValidationErrors()`. Never assert on message strings. Violate **only** the rule the spec is named after (build the command valid in every other respect), or a neighbouring rule makes it pass.
-3. **Business-rule violations** — each `Result<,>` rejection / DCB condition.
+2. **Each validation failure** — assert **both** `ShouldNotBeSuccessful()` and `ShouldHaveValidationErrors()`. Do not assert on message strings by default; assert exact text only when that wording is the specified behavior, and name that behavior in the fact. Violate **only** the rule the spec is named after (build the command valid in every other respect), or a neighbouring rule makes it pass.
+3. **Business-rule violations** — each `Result<,>` rejection / guarded decision condition. Plain injection under `Off` is advisory; for read protection `On`, `[ProtectedDecision]` or stream decisions use `new CommandScenario<T>()` with seeded events, `AppendConcurrently` and `ShouldHaveValidationErrorBecauseOf(ValidationResultReason.ConcurrencyViolation)`, not pinned models and not `UseDecisionReads()`.
 4. **Constraint violations** — `ShouldHaveConstraintViolationFor(name)` via `EventScenario`.
 5. **Authorization** — `ShouldNotBeAuthorized()` (an unauthorized result has no validation errors).
 6. **Repeat execution**, when a reactor invokes the command — the same command twice for the same source; specify whether the second is rejected, a no-op, or appends again.
@@ -146,7 +147,8 @@ Before handing back:
 - [ ] Specs cover all meaningful outcomes of the slice's behavior
 - [ ] Happy-path spec exists
 - [ ] Each validation/business-rule/constraint failure has a spec (unhappy paths assert both not-successful and has-validation-errors)
-- [ ] C# spec files wrapped in `#if DEBUG`; folder follows `when_<behavior>/`
+- [ ] Pure decisions have plain-call specs; scenarios cover pipeline, validation, constraints or projections where needed
+- [ ] C# specs compiled into the application assembly are wrapped in `#if DEBUG`; dedicated spec projects need no wrapper; folder follows `when_<behavior>/`
 - [ ] TypeScript `it()` descriptions use spaces and start with "should"; `.should` assertions only
 - [ ] Specs pass (C# and, when written, frontend)
 - [ ] No spec for a simple property getter or constructor-parameter passthrough

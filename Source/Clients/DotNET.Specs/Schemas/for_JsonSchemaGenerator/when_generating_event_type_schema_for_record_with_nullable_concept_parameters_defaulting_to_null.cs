@@ -7,7 +7,7 @@ using Cratis.Chronicle.Events;
 namespace Cratis.Chronicle.Schemas.for_JsonSchemaGenerator;
 
 /// <summary>
-/// Event type schemas keep the shape already registered with the kernel, which refuses a schema change within a generation.
+/// Precise event type schemas restore converter-backed optional properties.
 /// </summary>
 public class when_generating_event_type_schema_for_record_with_nullable_concept_parameters_defaulting_to_null : given.a_json_schema_generator_with_pii_support
 {
@@ -23,7 +23,8 @@ public class when_generating_event_type_schema_for_record_with_nullable_concept_
 
     void Because() => _result = _generator.Generate(typeof(OrganizationSetupStarted));
 
-    [Fact] void should_keep_the_default_only_schema_for_the_string_concept() => _result.ActualProperties["ownerSubject"].ToJson().ShouldEqual("{\"default\":null}");
-    [Fact] void should_keep_the_default_only_schema_for_the_numeric_concept() => _result.ActualProperties["lastHandled"].ToJson().ShouldEqual("{\"default\":null}");
+    [Fact] void should_restore_the_string_concept_type() => _result.ActualProperties["ownerSubject"].Type.HasFlag(JsonObjectType.String).ShouldBeTrue();
+    [Fact] void should_restore_the_numeric_concept_format() => _result.ActualProperties["lastHandled"].Format.ShouldEqual("uint64?");
+    [Fact] void should_restore_the_pii_metadata() => _result.ActualProperties["ownerSubject"].GetComplianceMetadata().ShouldNotBeEmpty();
     [Fact] void should_leave_the_other_properties_alone() => _result.ActualProperties["name"].ToJson().ShouldEqual("{\"type\":\"string\"}");
 }

@@ -1,3 +1,6 @@
+---
+description: Design reference for nested projection objects in Chronicle, which populate, update and clear a single nullable child object from events.
+---
 # Nested Projection Objects — Design
 
 This page is the cross-cutting design reference for **nested projection objects** — the ability to populate, update, and clear a single nullable child object on a read model from events. It is an explanation-style page that ties together every layer affected by the feature: the [Projection Declaration Language (PDL)](/screenplay/projections/nested) syntax, the [declarative .NET client](declarative/nested), the [model-bound .NET client](model-bound/nested), the projection definition object model, the projection engine, the PDL compiler and code generator, and the Monaco language definition for the Workbench projection editor.
@@ -80,7 +83,7 @@ graph TB
 A `nested` block is declared with a property name. It supports `from`, `every`, `remove with`, and `clear with`, and can contain further `nested` blocks. `join` is supported only when the nested object is not under `children` (including any deeper nested level there). It does not support `all`, `children`, or `remove via join` inside the nested block:
 
 ```pdl
-projection Slice => SliceReadModel
+projection Slice => MyApp.ReadModels.SliceReadModel
   from SliceCreated
     Name = name
 
@@ -117,7 +120,7 @@ The nested type is scanned for `[FromEvent<T>]`, `[ClearWith<T>]`, `[SetFrom<T>]
 A `nested` block can appear inside another `nested` block, inside a `children` block, and inside a child of a child — there is no recursion depth limit imposed by the model. The reverse shape, `children` inside `nested`, is not supported. Each layer is rendered into the projection definition as a `ChildrenDefinition` with `IdentifiedBy = PropertyPath.NotSet`, which the engine treats as "scalar" rather than "collection".
 
 ```pdl
-projection Slice => SliceReadModel
+projection Slice => MyApp.ReadModels.SliceReadModel
   from SliceCreated
     Name = name
 
@@ -140,7 +143,7 @@ projection Slice => SliceReadModel
 A `nested` block may also live inside a [children](declarative/children) collection, attaching a single nullable child object to every item in the collection. The engine resolves the property path with the child's array indexers so each item maintains its own nested state. Joins inside that nested object (including deeper nested objects) are not supported: live join events cannot yet locate the correct child by its nested join property. PDL rejects them; the model-bound and fluent paths log a warning and omit their subscriptions:
 
 ```pdl
-projection Project => ProjectReadModel
+projection Project => MyApp.ReadModels.ProjectReadModel
   from ProjectCreated
     Name = name
 

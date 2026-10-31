@@ -8,6 +8,7 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Configuration;
+using Cratis.Chronicle.Diagnostics;
 using Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
 using Cratis.Chronicle.Observation;
 using Cratis.Metrics;
@@ -47,14 +48,19 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     readonly IMeter<AppendedEventsQueue> _meter;
     readonly IActivitySource<AppendedEventsQueue> _activitySource;
     readonly ILogger<AppendedEventsQueue> _logger;
+    readonly IShutdownDrainBudget? _stopBudget;
     readonly Channel<IReadOnlyList<AppendedEvent>> _channel;
     readonly int _queueDepletionWaitTimeoutMs;
     readonly AsyncManualResetEvent _queueEmptyEvent = new();
     readonly Lock _subscriptionsLock = new();
     readonly List<AppendedEventsQueueObserverSubscription> _subscriptions = [];
+    readonly List<Task> _catchupTriggers = [];
+    readonly SuspectedSkipWarningLimiter _suspectedUndeliveredLimiter = new();
     int _pendingItems;
     Task _queueTask = Task.CompletedTask;
     bool _isDisposed;
+    bool _isDraining;
+    volatile bool _isResetting;
     IMeterScope<AppendedEventsQueue>? _metrics;
     EventSequenceKey _eventSequenceKey = EventSequenceKey.NotSet;
 
@@ -67,19 +73,22 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     /// <param name="activitySource">The <see cref="IActivitySource{T}"/> for tracing.</param>
     /// <param name="options"><see cref="IOptions{T}"/> for <see cref="ChronicleOptions"/>.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
+    /// <param name="stopBudget">The shared deadline; optional for standalone specification queues.</param>
     public AppendedEventsQueue(
         ITaskFactory taskFactory,
         IGrainFactory grainFactory,
         [FromKeyedServices(WellKnown.MeterName)] IMeter<AppendedEventsQueue> meter,
         [FromKeyedServices(WellKnown.MeterName)] IActivitySource<AppendedEventsQueue> activitySource,
         IOptions<ChronicleOptions> options,
-        ILogger<AppendedEventsQueue> logger)
+        ILogger<AppendedEventsQueue> logger,
+        IShutdownDrainBudget? stopBudget = null)
     {
         _taskFactory = taskFactory;
         _grainFactory = grainFactory;
         _meter = meter;
         _activitySource = activitySource;
         _logger = logger;
+        _stopBudget = stopBudget;
 
         var eventsConfig = options.Value.Events;
         _queueDepletionWaitTimeoutMs = eventsConfig.QueueDepletionWaitTimeoutMilliseconds;
@@ -112,10 +121,28 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     }
 
     /// <inheritdoc/>
-    public override Task OnDeactivateAsync(DeactivationReason reason, CancellationToken cancellationToken)
+    public override async Task OnDeactivateAsync(DeactivationReason reason, CancellationToken cancellationToken)
     {
-        Dispose();
-        return Task.CompletedTask;
+        _isDraining = true;
+        _channel.Writer.TryComplete();
+
+        // An ordinary grain deactivation must not start or consume the kernel's future shutdown budget.
+        using var standaloneDeadline = _stopBudget?.IsStopping != true
+            ? new CancellationTokenSource(_stopBudget?.Timeout ?? TimeSpan.FromSeconds(8))
+            : null;
+        using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, standaloneDeadline?.Token ?? _stopBudget!.Token);
+        try
+        {
+            await _queueTask.WaitAsync(deadline.Token);
+        }
+        catch (OperationCanceledException) when (deadline.IsCancellationRequested)
+        {
+            _logger.DrainUnfinished(_eventSequenceKey, _pendingItems);
+        }
+        finally
+        {
+            Dispose();
+        }
     }
 
     /// <inheritdoc/>
@@ -129,6 +156,12 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     /// </remarks>
     public Task Enqueue(IEnumerable<AppendedEvent> appendedEvents)
     {
+        if (_isDisposed || _isDraining)
+        {
+            // Events are durable; a new owner catches up from the observers' persisted cursors.
+            return Task.CompletedTask;
+        }
+
         var batch = appendedEvents as AppendedEvent[] ?? appendedEvents.ToArray();
         using var span = _activitySource.Enqueue();
         span?.Activity?.Tag(_eventSequenceKey.EventStore);
@@ -154,6 +187,26 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     }
 
     /// <inheritdoc/>
+    public async Task ResetForDevelopment()
+    {
+        _isResetting = true;
+        _isDraining = true;
+        Task[] catchupTriggers;
+        lock (_subscriptionsLock)
+        {
+            _subscriptions.Clear();
+            catchupTriggers = [.. _catchupTriggers];
+        }
+
+        _channel.Writer.TryComplete();
+
+        // The worker owns the channel reader. It discards the backlog, but must settle any delivery already in flight
+        // before storage can be wiped. A reset failure propagates; a deadline must not turn an unfinished reset green.
+        await _queueTask;
+        await Task.WhenAll(catchupTriggers);
+    }
+
+    /// <inheritdoc/>
     public Task SpillToCatchup()
     {
         SpillSubscribersToCatchup();
@@ -165,6 +218,11 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     {
         lock (_subscriptionsLock)
         {
+            if (_isResetting)
+            {
+                return Task.CompletedTask;
+            }
+
             // Replace any existing subscription for this observer instead of appending a
             // duplicate. Re-subscription is legitimate (the Observing state may be entered
             // multiple times during the observer's lifetime as it cycles through Routing for
@@ -182,6 +240,11 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     {
         lock (_subscriptionsLock)
         {
+            if (_isResetting)
+            {
+                return Task.CompletedTask;
+            }
+
             _subscriptions.RemoveAll(subscription => subscription.ObserverKey == observerKey);
             _subscriptions.Add(new(observerKey, [], filters, AllEventTypes: true));
         }
@@ -219,23 +282,6 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     {
         _isDisposed = true;
         _channel.Writer.TryComplete();
-
-        if (!_queueTask.IsCompleted)
-        {
-            try
-            {
-                _queueTask.Wait(1000);
-            }
-            catch { }
-        }
-
-        if (_queueTask.Status is
-                TaskStatus.RanToCompletion or
-                TaskStatus.Canceled or
-                TaskStatus.Faulted)
-        {
-            _queueTask.Dispose();
-        }
 
         _metrics?.Dispose();
     }
@@ -396,8 +442,11 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
 
                 try
                 {
-                    await Dispatch(coalesced);
-                    _metrics?.EventsHandled(coalesced.Count);
+                    if (!_isResetting)
+                    {
+                        await Dispatch(coalesced);
+                        _metrics?.EventsHandled(coalesced.Count);
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -492,7 +541,16 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
         _logger.SpillingToCatchup(observerKeys.Length);
         foreach (var observerKey in observerKeys)
         {
-            _ = TriggerCatchup(observerKey);
+            lock (_subscriptionsLock)
+            {
+                if (_isResetting)
+                {
+                    return;
+                }
+
+                _catchupTriggers.RemoveAll(task => task.IsCompleted);
+                _catchupTriggers.Add(TriggerCatchup(observerKey));
+            }
         }
     }
 
@@ -511,7 +569,7 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
         var observer = _grainFactory.GetGrain<IObserver>(observerKey);
         for (var attempt = 1; attempt <= MaxCatchupTriggerAttempts; attempt++)
         {
-            if (_isDisposed)
+            if (_isDisposed || _isResetting)
             {
                 _logger.SpillCatchupTriggerAbandonedOnDispose(observerKey);
                 return;
@@ -541,6 +599,55 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     {
         using var span = _activitySource.Dispatch();
         span?.Activity?.Tag(observerKey);
-        await observer.Handle(partition, events);
+        try
+        {
+            await observer.Handle(partition, events);
+        }
+        catch (Exception ex) when (ObservationOnlyFailures.CanBeContained(ex))
+        {
+            ReportSuspectedUndeliveredEvents(partition, events, observerKey);
+            throw;
+        }
     }
+
+    /// <summary>
+    /// Counts and logs events whose dispatch to an observer failed. The queue cannot tell whether the observer got to
+    /// handle them, so they are only suspected to be undelivered. A failure of this telemetry never replaces the
+    /// failure being reported.
+    /// </summary>
+    /// <param name="partition">The partition of the events.</param>
+    /// <param name="events">The events whose dispatch failed.</param>
+    /// <param name="observerKey">The <see cref="ObserverKey"/> of the observer.</param>
+#pragma warning disable RCS1075 // Telemetry failures are deliberately swallowed: they must never replace the dispatch failure being reported
+    void ReportSuspectedUndeliveredEvents(EventSourceId partition, AppendedEvent[] events, ObserverKey observerKey)
+    {
+        try
+        {
+            _metrics?.EventsSuspectedUndelivered(events.Length, observerKey.ObserverId);
+        }
+        catch (Exception ex) when (ObservationOnlyFailures.CanBeContained(ex))
+        {
+            // Observation only.
+        }
+
+        try
+        {
+            if (!_suspectedUndeliveredLimiter.TryAdmit(out var suppressed))
+            {
+                return;
+            }
+
+            if (suppressed > 0)
+            {
+                _logger.SuspectedUndeliveredWarningsSuppressed(suppressed, _suspectedUndeliveredLimiter.WindowSeconds);
+            }
+
+            _logger.SuspectedUndeliveredEvents(events.Length, events[0].Context.SequenceNumber, events[^1].Context.SequenceNumber, partition, observerKey);
+        }
+        catch (Exception ex) when (ObservationOnlyFailures.CanBeContained(ex))
+        {
+            // Observation only.
+        }
+    }
+#pragma warning restore RCS1075
 }

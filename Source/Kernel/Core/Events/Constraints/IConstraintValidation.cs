@@ -3,6 +3,7 @@
 
 using System.Dynamic;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Events.Constraints;
 
 namespace Cratis.Chronicle.Events.Constraints;
 
@@ -11,6 +12,11 @@ namespace Cratis.Chronicle.Events.Constraints;
 /// </summary>
 public interface IConstraintValidation
 {
+    /// <summary>
+    /// Gets the definitions whose indexes this validation set maintains.
+    /// </summary>
+    IEnumerable<IConstraintDefinition> IndexedDefinitions { get; }
+
     /// <summary>
     /// Establish a context for a constraint validation.
     /// </summary>
@@ -21,6 +27,8 @@ public interface IConstraintValidation
     /// <param name="eventStreamType">The <see cref="EventStreamType"/> of the event.</param>
     /// <param name="eventStreamId">The <see cref="EventStreamId"/> of the event.</param>
     /// <param name="batchClaims">Optional <see cref="ConstraintBatchClaims"/> shared by all events in a batch append, used to detect intra-batch duplicates.</param>
+    /// <param name="subject">The <see cref="Subject"/> the event's personal data belongs to.</param>
+    /// <param name="personalProperties">The event's top-level properties that carry personal data.</param>
     /// <returns>A <see cref="ConstraintValidationContext"/> that can be used for validation.</returns>
     ConstraintValidationContext Establish(
         EventSourceId eventSourceId,
@@ -29,5 +37,7 @@ public interface IConstraintValidation
         EventSourceType? eventSourceType = default,
         EventStreamType? eventStreamType = default,
         EventStreamId? eventStreamId = default,
-        ConstraintBatchClaims? batchClaims = default);
+        ConstraintBatchClaims? batchClaims = default,
+        Subject? subject = default,
+        IReadOnlyCollection<string>? personalProperties = default);
 }

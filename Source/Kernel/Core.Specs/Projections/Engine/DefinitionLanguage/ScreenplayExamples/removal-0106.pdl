@@ -1,0 +1,13 @@
+projection Doc => DocReadModel
+  children groups identified by groupId
+    from UserAddedToGroup
+      parent userId
+      GroupId = groupId
+
+    join Group on GroupId
+      with GroupCreated
+        Name = name
+      with GroupRenamed
+        Name = name
+
+    remove via join on GroupDeleted

@@ -68,6 +68,8 @@ Migrations are created and applied with the **standard EF Core tooling** (`dotne
 | `table.JsonColumn<TProperty>(migrationBuilder, …)` | a `[Json]`-mapped property |
 | `migrationBuilder.Add{String,Guid,Number,Bool,DateTimeOffset,AutoIncrement,Json,Point,LineString,Polygon}Column(…)` | adding a column to an existing table |
 
+A migration that is committed or applied to any database is append-only: never edit or delete it. Correct mistakes with a new migration. Only an unapplied, uncommitted migration may be removed with `dotnet ef migrations remove` and regenerated.
+
 Where a repository organizes its migrations (a dedicated project, a versioned file naming scheme, a table-name constants class) is its own convention: follow what the repository already does, and do not introduce one as if Arc required it.
 
 ## Concepts and JSON **[contract]**
@@ -76,7 +78,7 @@ Where a repository organizes its migrations (a dedicated project, a versioned fi
 
 ## Observation **[contract]**
 
-An EF Core read model can back an observable query: `dbSet.Observe(...)`, `ObserveById(...)` and `ObserveSingle(...)` (extension methods declared in the `Microsoft.EntityFrameworkCore` namespace, so they are in scope wherever the `DbSet` is) push changes through the provider's change notifier — see the skill for what each provider supports.
+An EF Core read model can back an observable query: `dbSet.Observe(...)`, `ObserveById(...)` and `ObserveSingle(...)` (extension methods declared in the `Microsoft.EntityFrameworkCore` namespace, so they are in scope wherever the `DbSet` is) push changes through the provider's change notifier — see the skill for what each provider supports. At Arc v22.75.0 auxiliary sources support `ignoreQueryContext: true`; single-instance observations emit `default` on absence/deletion/filter exit. Indexer-property keys are supported; composite/shadow-only keys are refused at setup.
 
 ## See also
 

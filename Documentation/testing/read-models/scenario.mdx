@@ -1,11 +1,20 @@
 ---
 uid: Chronicle.Testing.ReadModels.Scenario
+description: ReadModelScenario checks Chronicle projection or reducer output by folding appended events in-process, without a server or database.
 ---
 # ReadModelScenario
 
-A read model scenario lets you check projection or reducer output without a running Chronicle server or database. The examples below use client tabs when a workflow is available; the .NET-only options and behavior are identified in the prose.
+A read model scenario lets you check projection or reducer output without a running Chronicle server
+or database. Use the client tabs for each workflow's API shape.
 
-In .NET, `ReadModelScenario<TReadModel>` auto-detects how the read model is backed — by a reducer, a fluent projection, or a model-bound projection — and routes events through the appropriate engine.
+For application code, start with model-bound attributes, then fluent mappings when the definition
+needs structure, then reducer code when transitions read better; a self-reducing model is the default
+for new reducers. [Choose how to build a read model](../../projections/choosing-a-read-model-style.mdx)
+compares the same event history across those forms.
+
+In .NET, `ReadModelScenario<TReadModel>` detects model-bound and fluent projections, self-reducing
+models, classic `IReducerFor<T>` classes, and nominated plain instance reducers. It routes events
+through the selected engine; there is no direct PDL-authoring overload.
 
 In a .NET [Cratis Specification](/testing-with-cratis/), the event history is the **given**, `Because()` feeds that history through the scenario, and the read model properties are the **then**.
 
@@ -26,7 +35,63 @@ dotnet add package Cratis.Chronicle.Testing
 
 <ChronicleClientTabs snippet="testing/read-models/scenario/basic" />
 
-Pass events to the read-model logic, then assert on the result. In .NET, the scenario takes `Given.ForEventSource(id).Events(...)` and exposes `Instance`; in TypeScript, `given.forEventSource(id).events(...)` and an awaited `instance`. Kotlin folds events through `scenario.fold(...)`. The Java example has no scenario: it calls the reducer directly and asserts on what it returns.
+Pass events to the read-model logic, then assert on the result. In .NET, the scenario takes `Given.ForEventSource(id).Events(...)` and exposes `Instance`; in TypeScript, `given.forEventSource(id).events(...)` and an awaited `instance`. Kotlin folds events through `scenario.fold(...)`. The Java example calls the reducer directly and asserts on what it returns.
+
+## Fold appended events with their original context (.NET)
+
+When rebuilding a read model from events that have already been appended, pass the client's
+`IEnumerable<AppendedEvent>` to `await scenario.ProcessAppendedEvents(events)`. Unlike bare events passed
+through `ProcessEventsFor` or `Given`, these events retain their original sequence numbers, occurrence
+times (including offsets), source and stream metadata, correlation, and causation.
+
+Input accumulates until you access `Instance`, `Instances`, or `InstanceForEventSourceId`. Every rebuild
+sorts the collected events by sequence number. Use distinct sequence numbers; duplicate slots fail
+when preparing the input. Bare events mixed into the same scenario receive synthetic contexts with
+collection-index sequence numbers.
+Projections retain their normal key resolution, including event-property keys, joins, and children.
+Reducers fold each event source independently; use `Instances` or `InstanceForEventSourceId` if more
+than one source materializes. The input is not appended to the scenario's application event log.
+
+## Seed routed events
+
+In .NET, use `Given.ForEventSource(id).OnStream(eventSourceType, eventStreamType, eventStreamId).Events(...)`
+when your read model needs the event's source or stream route. The route reaches the projection or reducer
+through `EventContext.EventSourceType`, `EventContext.EventStreamType`, and `EventContext.EventStreamId`.
+
+<ChronicleClientTabs snippet="testing/read-models/scenario/routed-events" />
+
+All three `OnStream` arguments are optional. Omitting an argument, or passing `null`, uses the same default
+as appending to the event log:
+
+| Argument | Default |
+|----------|---------|
+| `eventSourceType` | `EventSourceType.Default` |
+| `eventStreamType` | `EventStreamType.All` |
+| `eventStreamId` | `EventStreamId.Default` |
+
+For example, `OnStream(eventStreamType: "Payments")` seeds a payment stream with the default source type and
+stream id. Leaving out `OnStream` keeps these defaults too. The method returns a new builder, so reusing the
+original builder does not inherit the route. Calling `ReadModel(instance)` still registers the instance by
+its event source id, regardless of the builder's route.
+
+Reducer source and stream filters apply to seeded events just as they do under the kernel. A reducer carrying
+`[EventSourceType("Order")]` ignores events from other source types; `[EventStreamType("Payments")]` narrows
+by stream type. `[FromEventSource<TSource>("Payments")]` resolves both filters from the registered event
+source definition. Both filters must match, and neither filters by stream id. An unspecified source filter
+(`EventSourceType.Unspecified`) and `EventStreamType.All` do not narrow delivery. An explicit source filter
+of `EventSourceType.Default` matches only that source type.
+
+Projections have no source-type or stream-type filters: they consume the event types their definitions
+subscribe to, across every route. Use context mappings such as `[SetFromContext<TEvent>]` to inspect the
+route in a projected property.
+
+## Seed tagged self-reducer events
+
+`WithTags(params string[] tags)` adds append tags to seeded events. It returns a new builder, and preserves `OnStream` metadata in either call order. The effective tags combine the event's static/inherited `Tag`/`Tags` with the builder's append tags; named tags remain separate and do not satisfy `FilterEventsByTag`.
+
+<ChronicleClientTabs snippet="testing/read-models/scenario/self-reducer-tags" />
+
+Classic and self reducers use the same registry-selected invoker and metadata matcher. Filter tags are OR alternatives, while tag/source/stream categories are AND requirements. Descriptive tags on the reducer do not become filters. This adds reducer tag fidelity without changing projection or reactor scenario selection; compliance, replay and real-store behavior still need kernel-backed specifications.
 
 ## Event input serialization
 
@@ -51,22 +116,83 @@ In .NET, pass an initial state to the constructor when the read model starts fro
 
 ## Injecting dependencies
 
-In .NET, pass an `IServiceProvider` to the constructor to supply mocks and stubs that the reducer or projection depends on:
+In .NET, pass an `IServiceProvider` to the constructor to supply mocks and stubs for an instance
+reducer's fold or a fluent projection's definition construction. Static self-reduction methods do not
+accept service arguments:
 
 <ChronicleClientTabs snippet="testing/read-models/scenario/injecting-dependencies" />
 
 ## Pre-seeding read model instances
 
-In .NET, use `Given.ForEventSourceId(id).ReadModel(instance)` to register a pre-built read model instance for
-production code under test that calls `IReadModels.GetInstanceById`. This lets you test a service that
-fetches a read model by ID without replaying events through a full projection:
+In .NET, use `Given.ForEventSourceId(id).ReadModel(instance)` when one key already has state before your
+events. The projection starts from that instance exactly as supplied, including its identifier: setters,
+arithmetic and children apply on top of the seeded values. A reducer receives the seed as its current state
+for that key's first event. Other keys start from the constructor's optional initial state or the normal
+empty baseline.
+
+A seeded key appears in `Instances`, `InstanceForEventSourceId`, and (when it is the only instance) `Instance`,
+even without events. The supplied id addresses the **read-model key**, which can differ from an event source
+when you use `UsingKey` or joins. Seeding the same key twice throws `ReadModelAlreadySeeded`.
+
+You can also pass `scenario.ReadModels` to production code that calls `IReadModels.GetInstanceById`:
 
 <ChronicleClientTabs snippet="testing/read-models/scenario/preseeding-instances" />
 
 `scenario.ReadModels` returns an `IReadModels` instance that intercepts `GetInstanceById` for registered
-instances and delegates everything else to the real read model implementation. Only what you registered comes
-back from it: the rest of that surface is the production one and wants a running Chronicle, so reading the
-instances the scenario itself materialized means `Instances` or `InstanceForEventSourceId`, not `GetInstances`.
+instances, with collected events applied before each lookup. Models without a projection or reducer remain
+lookup-only seeds and do not appear in `Instances`. The rest of the surface delegates to the production
+implementation and needs a running Chronicle: enumerate scenario output through `Instances`, not `GetInstances`.
+
+### Named composite keys
+
+In .NET, use `Given.ForKey(parts).ReadModel(instance)` when the selected projection uses a root
+`UsingCompositeKey`. Supply exactly its mapped target names, as serialized by the projection naming
+policy; do not assume CLR spelling, invent aliases, or supply an encoded key string. For example, the
+current policy maps `TenantId` to `tenantId` but preserves `URLId`. Unmapped identifier properties are
+not key parts.
+
+<ChronicleClientTabs snippet="testing/read-models/scenario/preseeding-composite-keys" />
+
+The seed participates in the same native sink identity as event-built instances. Events for that key
+update the seed; other keys start normally. Parts are detached when supplied, so later dictionary
+changes do not retarget the seed. Equivalent normalized keys, including reordered parts, throw
+`ReadModelAlreadySeeded` without replacing the original seed. `CollectReadModelFor(parts, instance)`
+registers the same starting state synchronously.
+
+Use `InstanceForKey(parts)` for a **registered named seed's** current state, including before any events.
+It returns `null` for unregistered keys or a removed instance; it is not a general composite-key query
+for event-built instances. It throws `InvalidReadModelSeedKey` for missing, extra or invalid key parts
+rather than returning `null`. `Instances` still exposes the native encoded identities. The seed's identifier
+is preserved as supplied, just as with scalar seeds.
+
+Part values must be non-null scalars compatible with the identifier schema, including supported
+concepts and defined enum values. Missing, extra, differently cased or invalid parts throw
+`InvalidReadModelSeedKey` before registration. Nested key parts, missing or ambiguous schema paths,
+incompatible root mappings, scalar-key projections, child-only composite mappings and reducers are
+refused rather than guessed.
+
+A scalar seed (`Given.ReadModel` or `CollectReadModelFor(eventSourceId, ...)`) and a named seed that resolve to
+the same storage identity are refused with `ConflictingReadModelSeeds` instead of letting the last one win.
+
+Select `WithProjection` before registering named seeds if you need to override discovery. Once a named
+seed is registered, changing the projection throws `ReadModelSeedProjectionCannotChange`, even after
+processing. There is no reset operation. Existing scalar-key and reducer seeding APIs are unchanged.
+
+### Limitation
+
+A seeded parent without its originating events cannot resolve children whose parent key comes from those events.
+Include the originating events for those shapes. Children whose parent key resolves directly, without a
+parent-event lookup, can append onto the seeded parent.
+
+## Observing read models
+
+The testing event store supports [collection observations](../../read-models/observing-read-models.mdx) through `ReadModels.Observe<T>()`. It rebuilds the complete collection from its scenario event log on subscription and after successful appends, including batch appends and unit-of-work commits. Projections process events in log order; reducers fold each event source separately. Explicitly seeded instances are included, and the optional filter is applied to the rebuilt set. Unchanged sets do not emit again.
+
+Own and dispose the subscription just as you would in production. After the last subscriber leaves, or the subject completes or is disposed, further appends produce no emissions for that observation. The harness uses the projection and reducer processors described below; it does not verify kernel transport, sink notifications, or read-model compliance protection.
+
+`ReadModelsForTesting(inner, eventLog)` also provides this behavior when you have an existing scenario log. When `inner` comes from the testing event store, its artifact catalog, explicit projections, and injected services are retained; otherwise default artifact discovery is used. The constructor without an event log refuses observation with `ReadModelCannotBeObserved`. Passive read models and event-target types are refused just as they are by the client.
+
+`ReadModelScenario<T>.ReadModels.Observe<T>()` remains unsupported: that scenario collects its own input rather than appending it to the event log. Use `Instance`, `Instances`, or `InstanceForEventSourceId` to assert on that scenario's output.
 
 ## Per-run projections and artifacts
 
@@ -81,6 +207,24 @@ scenario and takes precedence over discovered projections and reducers; it does 
 the projection process-wide. TypeScript selects the projection from the catalog passed to the
 scenario instead.
 
+## Explicit registrations (.NET)
+
+Use `InMemoryClientArtifactsProvider` when you want to supply artifact lists without assembly discovery.
+Its settable collections default to empty; include every event type your scenario uses in `EventTypes`.
+You can also supply projection, model-bound projection, reducer, reactor, middleware, constraint,
+migration, seeding, event-source, compliance, and security provider types through their corresponding collections.
+
+Pass `ChronicleOptions` as the third argument to `new Defaults(artifacts, serviceProvider, options)`;
+use `null` for the service provider when you do not need dependency injection. Configure
+`options.ExplicitArtifacts.RegisterProjection<TReadModel>(...)`, `RegisterReadModel<TReadModel>()`, or
+`RegisterReducer<TReadModel>()` for a self model before constructing the defaults. Explicit projections use the same discovery recipes as the client
+and do not need a projection class or an entry in the provider's projection collections.
+
+`ReadModelScenario<TReadModel>(null, defaults)` honors the explicitly registered builder. `WithProjection` still takes precedence over it. Pass the same defaults to
+`EventScenario` or `ReactorScenario<TReactor>` to retain the run's artifact catalog and settings.
+The test event store applies registrations in-process; appending through an event scenario does not
+start observer delivery or automatically run those projections and reactors.
+
 ## Auto-detection
 
 In .NET, `ReadModelScenario<TReadModel>` looks up a handler in the client artifacts registry. By default, Chronicle's
@@ -88,9 +232,9 @@ reflection-based discovery resolves that registry once per process from project-
 assemblies. Supplying `Defaults` uses its `IClientArtifactsProvider` instead, so each run can discover a different
 set of handlers. Without an inline projection, handlers are selected in this order:
 
-1. **Reducer** — a class implementing `IReducerFor<TReadModel>`.
+1. **Reducer** — a classic `IReducerFor<TReadModel>`, explicitly nominated plain instance reducer, or structurally recognized self-reducing model.
 2. **Fluent projection** — a class implementing `IProjectionFor<TReadModel>`.
-3. **Model-bound projection** — `TReadModel` itself carries `[FromEvent<T>]` or `[Key]` attributes.
+3. **Model-bound projection** — `TReadModel` carries genuine projection mappings such as `[FromEvent<T>]`; a key or shared observer configuration alone does not establish mapping ownership.
 
 `WithProjection` takes precedence over all three, including a discovered reducer. If none are found and no
 inline projection was supplied, `NoReadModelHandlerFound` is thrown.
@@ -159,6 +303,14 @@ Both same-event-source children (parent and child events share one event source)
 
 <ChronicleClientTabs snippet="testing/read-models/scenario/children" />
 
+## Variants
+
+`ReadModelScenario` projects variants the way a running kernel does, for both model-bound (`[VariantOf<T>]`) and
+fluent (`.VariantOf<T>(...)`) variants. It discovers the other variants of the group from the registered
+artifacts, so entering one variant removes the entity from the others, and a non-entering event that was seeded
+before the entering event is on the variant when it is created. Use one scenario per variant, seeded with the
+same events, to specify a move from one variant to the next.
+
 ## Multiple instances (joins and cross-stream)
 
 In .NET, `Instance` returns a single threaded result, which is ambiguous when events span more than one event source — for example a `[Join]`, whose join-source event materializes a second instance. For those specs, assert against a specific instance with `InstanceForEventSourceId`, which resolves the intended instance from the sink even when another source's event was seeded first:
@@ -181,11 +333,13 @@ These are substituted for every scenario, whatever your read model looks like:
 | Layer | What runs instead |
 |-------|-------------------|
 | The read model sink | An in-memory sink. Documents are held as objects and round-tripped through JSON, never through the encoding a real store uses. |
-| Storage and the observer lifecycle | Nothing at all. There are no observers, no partitions, no failed-partition state, and no replay or rewind. |
-| The event context | The sequence number is the event's position in what you seeded, and `Occurred` is a fixed base plus one tick per event. A reducer gets a context built differently again, with no `Occurred`. |
+| Storage and the observer lifecycle | Chronicle's production in-memory storage holds seeded events, including their original and migrated generations and content hashes. No observers run: there is no partition scheduling, replay or rewind. |
+| The event context | The sequence number is the event's position in what you seeded. Projection inputs get an `Occurred` value from a UTC base plus one tick per event. Reducers get a UTC `Occurred` stamped when the scenario folds the events. |
 | The document key mapping | The `_id` ↔ identifier-property mapping a store performs is applied in C# instead. |
 | The read model definition | Identifier, container and display name come straight off the CLR type and there are no indexes, where a deployed Chronicle uses your naming policy and the indexes you declared. |
-| The client read surface | `scenario.ReadModels` is the production client surface; its read side wants a running Chronicle and refuses rather than answering. Read what the scenario materialized through `Instance`, `Instances` or `InstanceForEventSourceId`. |
+| The client read surface | `scenario.ReadModels` serves explicitly seeded instances and delegates other reads to in-process services backed by the same store. Those reads do not automatically return the processor's materialized result. Read it through `Instance`, `Instances` or `InstanceForEventSourceId`. |
+
+Old-generation events are migrated through the kernel's event-type migrations before projection or reduction. Re-reading `Instance` after collecting more events folds the accumulated input again without duplicating its stored rows.
 
 Four more are substituted only for certain shapes — and because the harness can see which of those shapes your read model has, it tells you.
 

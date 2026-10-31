@@ -16,5 +16,5 @@ public record DevelopmentToolsAvailability(bool IsAvailable)
     /// Gets whether the server exposes development tools.
     /// </summary>
     /// <returns>The <see cref="DevelopmentToolsAvailability"/>.</returns>
-    internal static DevelopmentToolsAvailability AreDevelopmentToolsAvailable() => new(KernelStateResetter.IsAvailable);
+    public static DevelopmentToolsAvailability AreDevelopmentToolsAvailable() => new(KernelStateResetter.IsAvailable);
 }

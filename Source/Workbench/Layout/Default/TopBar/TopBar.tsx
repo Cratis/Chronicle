@@ -10,6 +10,7 @@ import { version } from '../../../version';
 // import { Notifications } from './Notifications';
 // import { Connection } from './Connection';
 import { Breadcrumb } from './Breadcrumb';
+import { Help } from './Help';
 
 export const TopBar = () => {
     const { toggleLeftSidebarOpen } = useLayoutContext();
@@ -30,6 +31,7 @@ export const TopBar = () => {
                 </div>
             </div>
             <div className="flex-1 flex items-center justify-end px-5 gap-6">
+                <Help />
                 <div className={css.versionInfo}>
                     <div className={css.version}>v{version.version}</div>
                     <div className={css.commitSha}>{version.commitSha.length >= 7 ? version.commitSha.substring(0, 7) : version.commitSha}</div>

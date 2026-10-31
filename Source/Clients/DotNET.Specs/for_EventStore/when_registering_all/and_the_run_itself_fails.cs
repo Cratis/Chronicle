@@ -25,15 +25,21 @@ public class and_the_run_itself_fails : given.an_event_store_with_a_projection_t
     {
         _clientArtifacts.Projections.Returns([typeof(BuildableProjection)]);
         _eventStore.Seeding.Register().Returns(Task.FromException(_failure));
+
+        // The failed run starts the background retry. With the shared zero backoff it re-enters RegisterAll at once and
+        // flips IsRegistering back to true, racing the outcome read below. Park it between attempts instead.
+        SetField("_registrationBackoff", new RegistrationBackoff(TimeSpan.FromHours(1), TimeSpan.FromHours(1)));
     }
 
     async Task Because()
     {
         await _projections.Discover();
-        _thrown = await Catch.Exception(() => _eventStore.RegisterAll());
+        _thrown = await Catch.Exception(_eventStore.RegisterAll);
         _outcome = _eventStore.Registration;
+        _eventStore.StopBackgroundRegistrationRetry();
     }
 
+    [Fact] void should_clear_registering_after_failure() => _outcome.IsRegistering.ShouldBeFalse();
     [Fact] void should_still_surface_the_failure_to_the_caller() => _thrown.ShouldEqual(_failure);
     [Fact] void should_report_that_registration_ran() => _outcome.HasRun.ShouldBeTrue();
     [Fact] void should_not_report_it_as_successful() => _outcome.IsSuccess.ShouldBeFalse();

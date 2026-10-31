@@ -28,6 +28,10 @@ public class when_recovering_a_failed_partition_that_is_healthy : given.an_obser
 
     [Fact] void should_report_started() => _outcome.ShouldEqual(PartitionRecoveryOutcome.Started);
 
+    [Fact] void should_start_the_recover_job_with_the_scope_of_the_definition() => _jobsManager.Received(1)
+        .Start<IRetryFailedPartition, RetryFailedPartitionRequest>(
+            Arg.Is<RetryFailedPartitionRequest>(_ => _.ReaderScope != null && _.ReaderScope.EventTypes.SequenceEqual(_definitionStorage.State.EventTypes)));
+
     [Fact] void should_start_a_recover_job() => _jobsManager.Received(1)
         .Start<IRetryFailedPartition, RetryFailedPartitionRequest>(
             Arg.Is<RetryFailedPartitionRequest>(_ =>

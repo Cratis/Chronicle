@@ -2,27 +2,105 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Events.Constraints;
 
 namespace Cratis.Chronicle.Storage.Events.Constraints;
 
 /// <summary>
-/// Defines storage for tracking closed event streams.
+/// Defines storage for tracking owned closed event stream scopes.
 /// </summary>
 public interface IClosedStreamsConstraintStorage
 {
     /// <summary>
-    /// Checks whether a stream is closed.
+    /// Find closures covering a target in one round trip.
     /// </summary>
-    /// <param name="streamType">The <see cref="EventStreamType"/> of the stream.</param>
-    /// <param name="streamId">The <see cref="EventStreamId"/> of the stream.</param>
-    /// <returns><see langword="true"/> if the stream is closed; otherwise <see langword="false"/>.</returns>
-    Task<bool> IsStreamClosed(EventStreamType streamType, EventStreamId streamId);
+    /// <param name="target">The target scope.</param>
+    /// <param name="masks">The closure masks to check.</param>
+    /// <returns>The covering closures.</returns>
+    Task<IEnumerable<ClosedStream>> GetCovering(ClosedStreamScope target, IEnumerable<ClosedStreamDimensions> masks);
 
     /// <summary>
-    /// Marks a stream as closed.
+    /// Get all masks currently persisted.
     /// </summary>
-    /// <param name="streamType">The <see cref="EventStreamType"/> of the stream.</param>
-    /// <param name="streamId">The <see cref="EventStreamId"/> of the stream.</param>
+    /// <returns>The distinct masks.</returns>
+    Task<IEnumerable<ClosedStreamDimensions>> GetDimensionsInUse();
+
+    /// <summary>
+    /// Upsert a closure by owner and normalized scope.
+    /// </summary>
+    /// <param name="closure">The closure to persist.</param>
+    /// <param name="cancellationToken">Cancellation of the write.</param>
     /// <returns>Awaitable task.</returns>
-    Task CloseStream(EventStreamType streamType, EventStreamId streamId);
+    Task Close(ClosedStream closure, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Remove only the exact scope belonging to an owner.
+    /// </summary>
+    /// <param name="owner">The owning constraint or manual owner.</param>
+    /// <param name="scope">The exact scope.</param>
+    /// <param name="cancellationToken">Cancellation of the write.</param>
+    /// <returns>True if a closure was removed.</returns>
+    Task<bool> Reopen(ClosedStreamOwner owner, ClosedStreamScope scope, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Reads an owner's closure at one normalized scope without loading its other closures.
+    /// </summary>
+    /// <param name="owner">The owner.</param>
+    /// <param name="scope">The exact scope.</param>
+    /// <param name="cancellationToken">Cancellation of the read.</param>
+    /// <returns>The closure, or null if absent.</returns>
+    Task<ClosedStream?> GetFor(ClosedStreamOwner owner, ClosedStreamScope scope, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Reads an owner's closures decided by one event without loading its other closures.
+    /// </summary>
+    /// <param name="owner">The owner.</param>
+    /// <param name="sequenceNumber">The deciding event's sequence number.</param>
+    /// <param name="cancellationToken">Cancellation of the read.</param>
+    /// <returns>The closures decided by the event.</returns>
+    Task<IEnumerable<ClosedStream>> GetForEvent(ClosedStreamOwner owner, EventSequenceNumber sequenceNumber, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Get closures belonging to an owner.
+    /// </summary>
+    /// <param name="owner">The owner.</param>
+    /// <param name="cancellationToken">Cancellation of the read.</param>
+    /// <returns>The owner's closures.</returns>
+    Task<IEnumerable<ClosedStream>> GetForOwner(ClosedStreamOwner owner, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Remove every closure belonging to an owner.
+    /// </summary>
+    /// <param name="owner">The owner.</param>
+    /// <returns>Awaitable task.</returns>
+    Task RemoveAllFor(ClosedStreamOwner owner);
+
+    /// <summary>
+    /// List closures within an optional scope, with paging.
+    /// </summary>
+    /// <param name="within">Only return closures covered by this scope, or all closures if null.</param>
+    /// <param name="skip">The number of rows to skip.</param>
+    /// <param name="take">The maximum number of rows, or null for all.</param>
+    /// <returns>The matching closures.</returns>
+    Task<IEnumerable<ClosedStream>> GetAll(ClosedStreamScope? within = default, int skip = 0, int? take = default);
+
+    /// <summary>
+    /// Checks whether a stream is covered by a closure.
+    /// </summary>
+    /// <param name="streamType">The stream type.</param>
+    /// <param name="streamId">The stream identifier.</param>
+    /// <returns>True if the stream is closed.</returns>
+    [Obsolete("Use GetCovering with a ClosedStreamScope instead.")]
+    async Task<bool> IsStreamClosed(EventStreamType streamType, EventStreamId streamId) =>
+        (await GetCovering(new(EventStreamType: streamType, EventStreamId: streamId), await GetDimensionsInUse())).Any();
+
+    /// <summary>
+    /// Marks a stream as manually closed.
+    /// </summary>
+    /// <param name="streamType">The stream type.</param>
+    /// <param name="streamId">The stream identifier.</param>
+    /// <returns>Awaitable task.</returns>
+    [Obsolete("Use Close with a ClosedStream instead.")]
+    Task CloseStream(EventStreamType streamType, EventStreamId streamId) =>
+        Close(new(new(EventStreamType: streamType, EventStreamId: streamId), ClosedStreamOwner.Manual, EventSequenceNumber.Unavailable, null));
 }

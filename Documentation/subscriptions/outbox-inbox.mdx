@@ -1,3 +1,6 @@
+---
+description: Chronicle formalizes the outbox and inbox pattern as kernel-managed event sequences for reliably integrating event stores and distributed systems.
+---
 # Outbox and Inbox
 
 The outbox/inbox pattern is a well-established way to integrate distributed systems reliably. Chronicle formalizes this pattern as first-class, kernel-managed event sequences.
@@ -17,6 +20,8 @@ When event store **A** subscribes to event store **B**, Chronicle automatically 
 `EventSequenceId.InboxPrefix` is a small C#-only convenience constant — the other clients don't have a dedicated helper for it, since the inbox sequence id itself (`"inbox-<source-event-store>"`) is just a plain string wherever event sequence ids are used.
 
 You never write to an inbox directly. Chronicle forwards events from the source outbox to the target inbox as they are appended.
+
+Forwarding now preserves the source event's append tags as well as its event-source and stream-route metadata. Tag-filtered observers on the inbox can select these events. Events forwarded by earlier releases that dropped tags remain untagged; upgrading does not backfill them.
 
 ## Lifecycle
 

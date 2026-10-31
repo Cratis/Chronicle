@@ -20,12 +20,37 @@
           },
           {
             "type": "command",
+            "command": "bash \u0022$CLAUDE_PROJECT_DIR\u0022/.cratis/ai/hooks/scripts/cratis-guard-secrets.sh"
+          },
+          {
+            "type": "command",
             "command": "bash \u0022$CLAUDE_PROJECT_DIR\u0022/.cratis/ai/hooks/scripts/cratis-guard-pr-body.sh"
           }
         ]
       }
     ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \u0022$CLAUDE_PROJECT_DIR\u0022/.cratis/ai/hooks/scripts/cratis-cleanup-worktrees.sh --hook",
+            "timeout": 90
+          }
+        ]
+      }
+    ],
     "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \u0022$CLAUDE_PROJECT_DIR\u0022/.cratis/ai/hooks/scripts/cratis-cleanup-worktrees.sh --hook",
+            "timeout": 90
+          }
+        ]
+      },
       {
         "matcher": "Write|Edit|MultiEdit|NotebookEdit",
         "hooks": [

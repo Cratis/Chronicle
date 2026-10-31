@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.EventSequences;
 using Cratis.Monads;
 
 namespace Cratis.Chronicle.Reactors.SideEffects;
@@ -59,20 +60,38 @@ public class EventsResultHandler : IReactorSideEffectHandler
         }
 
         var eventSourceId = reactorContext.GetEventSourceId();
-        var result = await eventStore.EventLog.AppendMany(
-            eventSourceId,
-            events,
-            reactorContext.GetEventStreamType(),
-            reactorContext.GetEventStreamId(),
-            reactorContext.GetEventSourceType(),
-            subject: reactorContext.GetSubject());
+        var keyed = ReactorEffectKeys.ForReturned(reactorContext, eventStore, 0) is not null;
+        var result = keyed
+            ? await eventStore.EventLog.AppendMany(ReactorEffectKeys.Apply(reactorContext, eventStore, ToEventsForEventSourceId(reactorContext, eventSourceId, events)))
+            : await eventStore.EventLog.AppendMany(
+                eventSourceId,
+                events,
+                reactorContext.GetEventStreamType(),
+                reactorContext.GetEventStreamId(),
+                reactorContext.GetEventSourceType(),
+                subject: reactorContext.GetSubject());
 
         if (result.IsSuccess)
         {
             return Result.Success<ReactorSideEffectFailure>();
         }
 
-        return Result.Failed(ReactorSideEffectFailure.FromAppendResult(result, [eventSourceId]));
+        return Result.Failed(ReactorSideEffectFailure.FromAppendResult(result, [eventSourceId], reactorContext));
+    }
+
+    static List<EventForEventSourceId> ToEventsForEventSourceId(ReactorContext reactorContext, EventSourceId eventSourceId, object[] events)
+    {
+        var eventStreamType = reactorContext.GetEventStreamType() ?? EventStreamType.All;
+        var eventStreamId = reactorContext.GetEventStreamId() ?? EventStreamId.Default;
+        var eventSourceType = reactorContext.GetEventSourceType() ?? EventSourceType.Default;
+        var subject = reactorContext.GetSubject();
+        return events.Select(@event => new EventForEventSourceId(eventSourceId, @event)
+        {
+            EventStreamType = eventStreamType,
+            EventStreamId = eventStreamId,
+            EventSourceType = eventSourceType,
+            Subject = subject
+        }).ToList();
     }
 
     IEventTypes EventTypesFor(ReactorContext reactorContext) =>

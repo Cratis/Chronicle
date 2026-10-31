@@ -20,15 +20,22 @@ using Orleans.Core;
 using Orleans.TestKit;
 
 using EngineProjection = Cratis.Chronicle.Projections.Engine.IProjection;
+using EngineProjectionsManager = Cratis.Chronicle.Projections.Engine.IProjectionsManager;
 
 namespace Cratis.Chronicle.Projections.for_ProjectionObserverSubscriber.given;
 
 public class a_subscriber_with_a_cached_pipeline : Specification
 {
     protected ProjectionObserverSubscriber _subscriber;
+    protected IProjectionChangesetNotifier _notifier;
+    protected IExpandoObjectConverter _expandoObjectConverter;
     protected ProjectionDefinition _definition;
+    protected IProjection _projectionGrain;
+    protected IStorage<ProjectionDefinition> _stateStorage;
     protected IProjectionPipelineManager _pipelines;
     protected IProjectionFactory _factory;
+    protected EngineProjectionsManager _engineProjections;
+    protected Storage.IStorage _storage;
     protected EngineProjection _projection;
     protected IProjectionPipeline _cachedPipeline;
     protected IProjectionPipeline _refreshedPipeline;
@@ -39,14 +46,15 @@ public class a_subscriber_with_a_cached_pipeline : Specification
     {
         var silo = new TestKitSilo();
         _definition = CreateDefinition();
-        var stateStorage = Substitute.For<IStorage<ProjectionDefinition>>();
-        stateStorage.State = _definition;
-        silo.Options.StorageFactory = _ => stateStorage;
+        _stateStorage = Substitute.For<IStorage<ProjectionDefinition>>();
+        _stateStorage.State = _definition;
+        silo.Options.StorageFactory = _ => _stateStorage;
 
-        var projectionGrain = Substitute.For<IProjection>();
-        projectionGrain.GetDefinition().Returns(_definition);
-        silo.AddProbe(_ => projectionGrain);
-        silo.AddProbe(_ => Substitute.For<IProjectionChangesetNotifier>());
+        _projectionGrain = Substitute.For<IProjection>();
+        _projectionGrain.GetDefinition().Returns(_definition);
+        silo.AddProbe(_ => _projectionGrain);
+        _notifier = Substitute.For<IProjectionChangesetNotifier>();
+        silo.AddProbe(_ => _notifier);
 
         var readModel = new ReadModelDefinition(
             _definition.ReadModel,
@@ -63,10 +71,12 @@ public class a_subscriber_with_a_cached_pipeline : Specification
         readModelGrain.GetDefinition().Returns(readModel);
         silo.AddProbe(_ => readModelGrain);
 
-        var storage = Substitute.For<Storage.IStorage>();
-        storage.GetEventStore(_key.EventStore).EventTypes.GetLatestForAllEventTypes().Returns([]);
-        silo.AddService(storage);
-        silo.AddService(Substitute.For<IExpandoObjectConverter>());
+        _storage = Substitute.For<Storage.IStorage>();
+        _storage.GetEventStore(_key.EventStore).EventTypes.GetLatestForAllEventTypes().Returns([]);
+        _storage.GetEventStore(_key.EventStore).Projections.Has(_key.ObserverId).Returns(true);
+        _storage.GetEventStore(_key.EventStore).Projections.Get(_key.ObserverId).Returns(_definition);
+        silo.AddService(_storage);
+        _expandoObjectConverter = silo.AddService(Substitute.For<IExpandoObjectConverter>());
         _factory = Substitute.For<IProjectionFactory>();
         _projection = Substitute.For<EngineProjection>();
 
@@ -75,6 +85,8 @@ public class a_subscriber_with_a_cached_pipeline : Specification
         _projection.Accepts(Arg.Any<EventType>()).Returns(true);
         _factory.Create(_key.EventStore, _key.Namespace, Arg.Any<ProjectionDefinition>(), readModel, Arg.Any<IEnumerable<EventTypeSchema>>()).Returns(_projection);
         silo.AddService(_factory);
+        _engineProjections = Substitute.For<EngineProjectionsManager>();
+        silo.AddService(_engineProjections);
 
         _cachedPipeline = Substitute.For<IProjectionPipeline>();
         _refreshedPipeline = Substitute.For<IProjectionPipeline>();
@@ -97,6 +109,7 @@ public class a_subscriber_with_a_cached_pipeline : Specification
         _subscriber = await silo.CreateGrainAsync<ProjectionObserverSubscriber>(_key.ToString());
         _pipelines.ClearReceivedCalls();
         _factory.ClearReceivedCalls();
+        _engineProjections.ClearReceivedCalls();
     }
 
     static ProjectionDefinition CreateDefinition() => new(

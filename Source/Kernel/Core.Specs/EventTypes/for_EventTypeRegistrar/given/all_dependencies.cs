@@ -34,6 +34,8 @@ public class all_dependencies : Specification
         _eventStoreStorage.EventTypes.Returns(_eventTypesStorage);
         _grainFactory.GetGrain<IEventSequence>(Arg.Any<string>()).Returns(_systemEventSequence);
         _eventTypesStorage.GetAllDefinitions().Returns([]);
+        _eventTypesStorage.GetDefinition(Arg.Any<Concepts.Events.EventTypeId>()).Returns(call =>
+            new Concepts.Events.EventTypeDefinition(call.Arg<Concepts.Events.EventTypeId>(), Concepts.Events.EventTypeOwner.Client, false, [], []));
         _eventTypesStorage.Register(Arg.Any<IEnumerable<Concepts.Events.EventTypeToRegister>>()).Returns([]);
         _subject = new EventTypeRegistrar(_grainFactory);
     }

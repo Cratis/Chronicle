@@ -48,28 +48,44 @@ public class EncryptionKeyStorage(IDatabase database) : IEncryptionKeyStorage
         EventStoreName eventStore,
         EventStoreNamespaceName eventStoreNamespace,
         EncryptionKeyIdentifier identifier,
-        EncryptionKey key)
+        EncryptionKey key) =>
+        (await GetOrAddWithRevisionFor(eventStore, eventStoreNamespace, identifier, key)).Key;
+
+    /// <inheritdoc/>
+    public async Task<EncryptionKeyAtRevision?> TryGetLatestFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier)
     {
         var collection = await GetCollection(eventStore, eventStoreNamespace);
-        if (await TryGetFor(eventStore, eventStoreNamespace, identifier) is { } existing)
+        var document = await collection.Find(_ => _.Id.Identifier == identifier)
+            .SortByDescending(_ => _.Id.Revision)
+            .FirstOrDefaultAsync();
+        return document is null ? null : new(new(document.PublicKey, document.PrivateKey), document.Id.Revision);
+    }
+
+    /// <inheritdoc/>
+    public async Task<EncryptionKeyAtRevision> GetOrAddWithRevisionFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKey key)
+    {
+        if (await TryGetLatestFor(eventStore, eventStoreNamespace, identifier) is { } existing)
         {
             return existing;
         }
 
+        var collection = await GetCollection(eventStore, eventStoreNamespace);
         var revision = (await GetErasureFor(eventStore, eventStoreNamespace, identifier)).RevisionForNewKey(identifier, key);
         var id = new EncryptionKeyId(identifier, revision);
         try
         {
             await collection.InsertOneAsync(new EncryptionKeyForIdentifier(id, key.Public, key.Private));
-            return key;
+            return new(key, revision);
         }
         catch (MongoWriteException ex) when (ex.WriteError?.Category == ServerErrorCategory.DuplicateKey)
         {
-            // Another provisioner created the initial key concurrently. Converge on the persisted key so
-            // every writer encrypts under the same one — the insert on the primary is the ordering point,
-            // so this is race-safe even when the pre-check above read a stale replica.
-            var winner = await collection.Find(_ => _.Id == id).FirstOrDefaultAsync();
-            return winner is null ? key : new(winner.PublicKey, winner.PrivateKey);
+            // Another provisioner created the key concurrently. Converge on the persisted key so every writer
+            // encrypts under the same one — the insert on the primary is the ordering point, so this is race-safe
+            // even when the pre-check above read a stale replica. A winner that cannot be read back was removed
+            // concurrently; the candidate was never persisted, so it must never be handed back.
+            var winner = await collection.Find(_ => _.Id == id).FirstOrDefaultAsync()
+                ?? throw new EncryptionKeyProvisioningConflict(identifier, revision);
+            return new(new(winner.PublicKey, winner.PrivateKey), winner.Id.Revision);
         }
     }
 

@@ -1,0 +1,30 @@
+// A child transition with a composite key
+// Screenplay documentation: Documentation/screenplay/projections/children.mdx
+
+type LineKey
+  orderId String
+  lineNumber Int
+type KeyedLine
+  lineKey LineKey
+  sku String
+module Conformance
+  feature Cases
+    slice StateView Case
+      event LineAdded
+        orderId String
+        lineNumber Int
+        sku String
+      readmodel OrderView
+        orderId String
+        lines KeyedLine[]
+      query OrderViewById => OrderView?
+        by orderId String
+      projection Orders => OrderView
+        no automap
+        children lines identified by lineKey
+          from LineAdded
+            key LineKey
+              orderId = orderId
+              lineNumber = lineNumber
+            parent orderId
+            sku = sku

@@ -1,0 +1,3 @@
+projection Doc => DocReadModel
+  from OwnerNoteCleared
+    clear Owner.Note

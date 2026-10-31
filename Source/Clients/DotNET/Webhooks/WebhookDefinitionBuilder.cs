@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Security;
 
 namespace Cratis.Chronicle.Webhooks;
@@ -17,8 +18,17 @@ public class WebhookDefinitionBuilder(IEventTypes eventTypes) : IWebhookDefiniti
     readonly Dictionary<string, string> _headers = new();
     EventSequenceId _eventSequenceId = EventSequenceId.Log;
     OneOf.OneOf<BasicAuthorization, BearerTokenAuthorization, OAuthAuthorization, OneOf.Types.None> _authorization = default(OneOf.Types.None);
+    ManagedIdentityAuthorization? _managedIdentity;
     bool _isReplayable = true;
     bool _isActive = true;
+    EventGenerationDelivery _generationDelivery = EventGenerationDelivery.Compatibility;
+
+    /// <inheritdoc/>
+    public IWebhookDefinitionBuilder WithGenerationDelivery(EventGenerationDelivery generationDelivery)
+    {
+        _generationDelivery = generationDelivery;
+        return this;
+    }
 
     /// <inheritdoc/>
     public IWebhookDefinitionBuilder OnEventSequence(EventSequenceId eventSequenceId)
@@ -28,16 +38,22 @@ public class WebhookDefinitionBuilder(IEventTypes eventTypes) : IWebhookDefiniti
     }
 
     /// <inheritdoc/>
-    public IWebhookDefinitionBuilder WithBasicAuth(string username, string password)
-    {
-        _authorization = new BasicAuthorization(username, password);
-        return this;
-    }
+    public IWebhookDefinitionBuilder WithBasicAuth(string username, string password) =>
+        WithAuthorization(new BasicAuthorization(username, password));
 
     /// <inheritdoc/>
-    public IWebhookDefinitionBuilder WithBearerToken(string token)
+    public IWebhookDefinitionBuilder WithBearerToken(string token) =>
+        WithAuthorization(new BearerTokenAuthorization(token));
+
+    /// <inheritdoc/>
+    public IWebhookDefinitionBuilder WithOAuth(string authority, string clientId, string clientSecret, string scope = "") =>
+        WithAuthorization(new OAuthAuthorization(authority, clientId, clientSecret) { Scope = scope });
+
+    /// <inheritdoc/>
+    public IWebhookDefinitionBuilder WithManagedIdentity(string scope, string? clientId = null)
     {
-        _authorization = new BearerTokenAuthorization(token);
+        _managedIdentity = new ManagedIdentityAuthorization(scope, clientId);
+        _authorization = default(OneOf.Types.None);
         return this;
     }
 
@@ -81,7 +97,7 @@ public class WebhookDefinitionBuilder(IEventTypes eventTypes) : IWebhookDefiniti
         var target = new WebhookTarget(
             Url: targetUrl,
             Authorization: _authorization,
-            Headers: _headers);
+            Headers: _headers) { ManagedIdentity = _managedIdentity };
 
         return new WebhookDefinition(
             Identifier: id,
@@ -89,6 +105,16 @@ public class WebhookDefinitionBuilder(IEventTypes eventTypes) : IWebhookDefiniti
             Target: target,
             EventSequenceId: _eventSequenceId,
             IsReplayable: _isReplayable,
-            IsActive: _isActive);
+            IsActive: _isActive)
+        {
+            GenerationDelivery = _generationDelivery
+        };
+    }
+
+    WebhookDefinitionBuilder WithAuthorization(OneOf.OneOf<BasicAuthorization, BearerTokenAuthorization, OAuthAuthorization, OneOf.Types.None> authorization)
+    {
+        _authorization = authorization;
+        _managedIdentity = null;
+        return this;
     }
 }

@@ -1,0 +1,4 @@
+projection Doc => DocReadModel
+  nested command
+    from CommandSetForSlice
+    clear with CommandClearedForSlice

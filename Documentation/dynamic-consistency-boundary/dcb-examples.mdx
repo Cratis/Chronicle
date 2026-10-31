@@ -1,0 +1,97 @@
+---
+title: DCB examples in Chronicle
+description: The canonical Dynamic Consistency Boundary examples, such as unique username and idempotency, and the idiomatic Chronicle answer to each.
+---
+
+Use this page when you know a canonical example from [dcb.events](https://dcb.events) and want the Chronicle form. Each section says what DCB does, what Chronicle does instead and why. Chronicle gives an event one event source and no tags in consistency, so several answers differ from DCB on purpose. The overview is in [Dynamic Consistency Boundary in Chronicle](./chronicle.md).
+
+| Example | Chronicle answer |
+|---|---|
+| [Course subscription](#course-subscription) | Two decision reads, two events, one `AppendMany` |
+| [Unique username](#unique-username) | A `[Unique]` constraint |
+| [Invoice number](#invoice-number) | A numbering event source with one decision read, see [Gapless invoice numbers](./scenarios.mdx#gapless-invoice-numbers) |
+| [Opt-in token](#opt-in-token) | Both events on the sign-up's event source |
+| [Dynamic product price](#dynamic-product-price) | One decision read per product, one event on the order |
+| [Idempotency](#idempotency) | A `[Unique]` constraint on the token |
+
+## Course subscription
+
+**The rules.** A course accepts at most N students, and a student joins at most five courses.
+
+**DCB.** One `StudentSubscribedToCourse` event tagged with the student and the course. One decision model, five small projections composed, one append condition.
+
+**Chronicle.** A rule that spans two entities needs a decision read per entity, because a decision read folds one event source. Take one read for the course and one for the student, then append one event of its own type to each event source in a single `AppendMany` with both reads in `guardedBy`. The append is atomic. If another student takes the last seat, or the student joins another course after you read, the append is rejected and neither event is written.
+
+The code is the [A rule across two keys](./scenarios.mdx#a-rule-across-two-keys) scenario.
+
+**What this costs.** The fact is recorded twice. That is acceptable here because each copy is a fact in its own entity's story. Use two event types, as the scenario does: `CourseSeatTaken` and `CourseSeatReleased` on the course, `StudentJoinedCourse` and `StudentLeftCourse` on the student. Each read model counts only the types of its own source. Appending one type to both sources would also create rows keyed by the wrong ids, such as seat rows keyed by student ids. If you cannot accept two events for one fact, no Chronicle form removes the second one: the fact must be visible to two keys, and each key sees only its own event source.
+
+**Keeping it small.** Each read folds only the events its rule needs: seats and capacity for the course, the student's subscription count for the student. Do not build one wide model of both. That is DCB's own advice, and in Chronicle a wide model also fails the read's admission checks.
+
+## Unique username
+
+**The rule.** A username is unique across all users.
+
+**DCB.** Tag every event that claims or releases a username with `username:<name>` and query that tag in the decision model.
+
+**Chronicle.** Declare a [constraint](../constraints/index.md). The kernel checks it inside the append, for every writer, without a read. There is nothing to guard and nothing to retry.
+
+The code is the [Unique username](./scenarios.mdx#unique-username) scenario. Normalize the value before it reaches the event, as DCB does: `jamesbond` and `JamesBond` are two values to a constraint. To release a name when a user is removed or renamed, use [model-bound constraints](../constraints/model-bound/index.md) or [declarative constraints](../constraints/declarative/index.mdx). A decision read cannot do this job: it guards one key's history, not a value across keys.
+
+## Invoice number
+
+**The rule.** Invoices get numbers that form an unbroken sequence.
+
+**DCB.** Query every `InvoiceCreated` event, take the last number plus one, and append with a condition on the same query.
+
+**Chronicle.** Make the sequence one event source. Every `InvoiceCreated` event is appended to a numbering event source with a fixed id, and a decision read of the last number on that source guards the append. One event is written, on one source, and nothing is recorded twice. Two requests that read the same last number both try to append, and the second is rejected and reads again.
+
+**What this costs.** The numbering source is a hot key: every writer conflicts with every other, and every read folds the source's whole history. Both are inherent to an unbroken sequence. The code and the cost are in [Gapless invoice numbers](./scenarios.mdx#gapless-invoice-numbers).
+
+## Opt-in token
+
+**The rule.** A sign-up is confirmed once, with the token that was sent, before it expires.
+
+**DCB.** Tag `SignUpInitiated` and `SignUpConfirmed` with the email and the token, and query both tags to find a pending sign-up.
+
+**Chronicle.** Both events go on the sign-up's own event source, identified by a sign-up ID that the confirmation link carries. The token is compared with what the initiating event stored, so it needs no place in the boundary. A decision read of that one key checks the token, the expiry and whether it is already confirmed, and guards the confirmation against a concurrent one.
+
+<ChronicleClientTabs snippet="dynamic-consistency-boundary/dcb-examples/opt-in-token" variants="csharp,elixir" />
+
+Three details matter:
+
+- **Do not use the email as the event source ID.** Event source IDs are stored in plaintext and cannot be encrypted. A sign-up ID carries no personal data.
+- **Store a hash of the token** in the event, or mark the property `[Encrypted]`. See [encrypted values](../security/encrypted-values.mdx).
+- **If the caller has only an email, not a sign-up ID,** look the ID up in a read model first. That lookup is eventually consistent and only finds the key. The decision read of the key is what holds the rule.
+
+## Dynamic product price
+
+**The rule.** An order is accepted only at a price that is valid now, or valid recently when the price just changed. An order can contain any number of products.
+
+**DCB.** Build one decision model per product in the cart when the order is placed, each tagged with its product, and compose them into one condition.
+
+**Chronicle.** This is a reduced variant of DCB's rule: the model keeps the current price and the one before it, and accepts the displayed price when it is the current one or the previous one within the grace period. DCB accepts any price within the grace window, even after several changes. Take one decision read per product in the cart, and append one event on the order's own event source with all the reads in `guardedBy`. The product keys are only read, never appended to. If any product's price changed after you read it, the append is rejected and the order is not written.
+
+<ChronicleClientTabs snippet="dynamic-consistency-boundary/dcb-examples/product-price" variants="csharp,elixir" />
+
+The set of reads is whatever the order contains, so it is dynamic in the same sense as DCB's. One event records the order. Nothing is written to the products. The cost is one fold per product in the cart, so very large carts are the case to measure first.
+
+## Idempotency
+
+**The rule.** A retried request must not place the order twice.
+
+**DCB.** Tag `OrderPlaced` with the client's idempotency token and query that tag before appending.
+
+**Chronicle.** Put `[Unique]` on the token property of the event. The client generates one token per order and sends the same token on every retry. The server generates a new event source ID for each attempt, so a retry is a different source with a token that is already claimed, and the kernel rejects it as a constraint violation. Treat the violation as "already placed".
+
+<ChronicleClientTabs snippet="dynamic-consistency-boundary/dcb-examples/idempotency" variants="csharp,elixir" />
+
+By default a unique constraint lets one event source reclaim its own value, so do not reuse the event source ID across retries, or the second event would be accepted. If the order ID comes from the client, derive the event source ID from the token and declare a unique event type constraint, so a second `OrderPlaced` for the same source is rejected. This protects against an accidental resubmission. It does not protect against someone who deliberately sends a fresh token.
+
+## Next steps
+
+- [Choosing how a rule holds](./choosing.mdx)
+- [Scenarios](./scenarios.mdx)
+- [Event sources and the Dynamic Consistency Boundary](../event-sources/dcb.mdx)
+- [Decision reads](../read-models/decision-reads.mdx)
+- [Constraints](../constraints/index.md)

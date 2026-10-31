@@ -1,7 +1,7 @@
 # Copyright (c) Cratis. All rights reserved.
 # Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-"""Guard central-file coverage on both snippet triggers without weakening the build contract."""
+"""Guard central-file coverage on the snippet pull request trigger without weakening the build contract."""
 
 import contextlib
 import importlib.util
@@ -38,11 +38,11 @@ class BuildAffectingPaths(unittest.TestCase):
         result, output = self.run_check()
         self.assertEqual(0, result, output)
         self.assertIn(f"{checker.SNIPPET_WORKFLOW} (pull_request)", output)
-        self.assertIn(f"{checker.SNIPPET_WORKFLOW} (push)", output)
+        self.assertNotIn(f"{checker.SNIPPET_WORKFLOW} (push)", output)
 
-    def test_every_central_file_is_required_on_each_snippet_trigger(self):
+    def test_every_central_file_is_required_on_the_snippet_trigger(self):
         read_paths = checker.read_trigger_paths
-        for trigger in ("pull_request", "push"):
+        for trigger in ("pull_request",):
             for entry in CENTRAL_FILES:
                 with self.subTest(trigger=trigger, entry=entry):
                     def narrowed(root, workflow, event="pull_request"):
@@ -56,7 +56,7 @@ class BuildAffectingPaths(unittest.TestCase):
                     self.assertEqual(1, result, output)
                     self.assertIn(f"`{entry}` is required to trigger snippet verification", output)
                     self.assertIn("A change confined to it would skip Client Snippet Verification.", output)
-                    self.assertIn(f"both the pull_request and push triggers in {checker.SNIPPET_WORKFLOW}", output)
+                    self.assertIn(f"the pull_request trigger in {checker.SNIPPET_WORKFLOW}", output)
                     self.assertIn("exclude the entry from the snippet subset in main() with a reason", output)
                     self.assertNotIn("would merge without ever being built", output)
                     self.assertNotIn(f"remove it from {checker.CONTRACT}", output)

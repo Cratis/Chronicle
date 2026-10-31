@@ -9,6 +9,10 @@
     </ItemGroup>
 
     <ItemGroup>
+        <InternalsVisibleTo Include="Cratis.Chronicle.Storage.Vault.Specs" />
+    </ItemGroup>
+
+    <ItemGroup>
         <ProjectReference Include="../Core/Core.csproj" />
         <ProjectReference Include="../Storage/Storage.csproj" />
         <ProjectReference Include="../Concepts/Concepts.csproj">

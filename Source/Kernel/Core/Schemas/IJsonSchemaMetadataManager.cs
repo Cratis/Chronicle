@@ -21,6 +21,27 @@ namespace Cratis.Chronicle.Schemas;
 public interface IJsonSchemaMetadataManager
 {
     /// <summary>
+    /// Applies protection while reporting the plaintext boundaries and exact keys used, ordered by ordinal path.
+    /// </summary>
+    /// <param name="eventStore">The event store.</param>
+    /// <param name="eventStoreNamespace">The namespace.</param>
+    /// <param name="schema">The content schema.</param>
+    /// <param name="identifier">The subject identifier.</param>
+    /// <param name="json">The plaintext document.</param>
+    /// <returns>The protected document and its in-memory key uses.</returns>
+    Task<(JsonObject Value, IReadOnlyList<ProtectedValueUse> Uses)> ApplyReportingKeys(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, JsonSchema schema, string identifier, JsonObject json);
+
+    /// <summary>
+    /// Locates protected boundaries without reading or provisioning keys, ordered by ordinal path.
+    /// </summary>
+    /// <param name="schema">The content schema.</param>
+    /// <param name="identifier">The subject identifier.</param>
+    /// <param name="json">The plaintext document.</param>
+    /// <returns>The protected locations and detached plaintext values.</returns>
+    /// <exception cref="ProtectedBoundaryUnsupported">A registered boundary cannot identify exactly one protection key.</exception>
+    Task<IReadOnlyList<ProtectedValueLocation>> LocateProtectedValues(JsonSchema schema, string identifier, JsonObject json);
+
+    /// <summary>
     /// Apply schema metadata rules to JSON.
     /// </summary>
     /// <param name="eventStore"><see cref="EventStoreName"/> the value belongs to.</param>

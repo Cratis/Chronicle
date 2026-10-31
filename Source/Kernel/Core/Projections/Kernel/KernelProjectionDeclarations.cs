@@ -15,7 +15,7 @@ namespace Cratis.Chronicle.Projections.Kernel;
 /// </summary>
 /// <remarks>
 /// Kept separate from the registration that consumes it. Everything that can be got wrong about a declaration -
-/// which read model it targets, what identifier it lands under, how a dual scope becomes two definitions - happens
+/// which read model it targets, what identifier it lands under, whether its scope is supported - happens
 /// here, where it can be specified against a type rather than against a cluster.
 /// </remarks>
 public static class KernelProjectionDeclarations
@@ -46,9 +46,7 @@ public static class KernelProjectionDeclarations
     /// <returns>The read model definition and the projection definitions that write to it.</returns>
     /// <exception cref="KernelProjectionWithoutIdentifier">Thrown when the declaration carries no <see cref="KernelProjectionAttribute"/>.</exception>
     /// <remarks>
-    /// A <see cref="ProjectionScope.Both"/> declaration lowers to two projection definitions against one read
-    /// model - the global half carries its own identifier suffix, and its sink is resolved at event store level
-    /// rather than per namespace, so the two never write to the same place.
+    /// Kernel declarations support only namespaced materialization until decision 0014 provides global generation ownership.
     /// </remarks>
     public static (ReadModelDefinition ReadModel, IReadOnlyCollection<ProjectionDefinition> Projections) Lower(Type declaration, SinkTypeId? sinkType = null)
     {

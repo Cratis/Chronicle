@@ -1,0 +1,96 @@
+---
+applyTo: "**/*.cs,**/*.csproj,**/*.ts,**/*.tsx,**/*.go,**/go.mod,**/go.sum,**/*.kt,**/*.kts,**/*.java,**/*.ex,**/*.exs,**/*.play"
+paths:
+  - "**/*.cs"
+  - "**/*.csproj"
+  - "**/*.ts"
+  - "**/*.tsx"
+  - "**/*.go"
+  - "**/go.mod"
+  - "**/go.sum"
+  - "**/*.kt"
+  - "**/*.kts"
+  - "**/*.java"
+  - "**/*.ex"
+  - "**/*.exs"
+  - "**/*.play"
+profile: application
+---
+<!-- cratis-ai-managed: harnesses/copilot/instructions/application-profile.instructions.md -->
+<!-- cratis-ai: generated Copilot instructions. Do not edit; rules/ is the source. -->
+
+# Application profile
+
+> The following — **Project Layout, Slice Types, Slice Naming, the Rules, and the Implementation Workflow** — applies when **building an application on Cratis**. If you are contributing to a Cratis framework repo, skip to **Framework profile** below and follow [framework.md](./framework.instructions.md).
+
+## Project Layout (Cratis Application convention)
+
+The framework discovers commands and read models by attributes and static methods — **the folder shape is a convention, not a requirement.** The house default: the domain hierarchy lives directly under the app source root (**no top-level `Features/` wrapper**), cross-cutting concerns (`Common/` concepts, `Identity/`, shared components) at the top level, and one folder per behavior — `<Module>/<Feature>/<Slice>/` holding `<Slice>.cs`, the slice's `.tsx`, and its `when_*/` specs. **The slice is the invariant unit** — created, renamed, and deleted as one. Namespace mirrors the path under the source root, dropping any level that isn't present. The full tree and the split rules are in [vertical-slices.md](./vertical-slices.instructions.md).
+
+## Slice Types
+
+Pick exactly one type per slice folder — determined by what the slice *does*.
+
+| Type | What it does | Contents |
+| --- | --- | --- |
+| **State Change** | Accepts a command, appends events | Command + validator + event(s); optional `[Passive]` for a current read; a rule that must hold under concurrency needs read protection `On`, a stream decision or a constraint (see the `cratis-chronicle-decision-reads` skill, `references/choosing-how-a-rule-holds.md`) |
+| **State View** | Builds a queryable read model from events | `[ReadModel]` + projection mappings or reducer code + static query method(s) on the record |
+| **Automation** | Reacts to events, calls external systems / `ICommandPipeline`, or returns follow-up commands/events (including to another stream) | Reactor only |
+| **Translation** | Takes data from outside our own facts (an external system or another service) and records it as our facts | An adapter at the boundary, often a reactor |
+
+## Slice Naming (convention)
+
+Commands are imperative intents (`Register`, `Create`); the slice folder is the action only, never repeating a noun the Feature already establishes. **`[EventType]` records are past-tense facts** and must be self-describing (`AuthorRegistered`, never `Created`) — this past-tense, one-purpose naming is a Chronicle framework recommendation. Static query methods are descriptive reads (`AllAuthors`, `AuthorById`, `AuthorsByName`).
+
+## Rules
+
+Tagged **[contract]** (framework-enforced) or **[convention]** (house default). Mechanics and examples live in `vertical-slices.md`.
+
+1. **[contract] Model-bound — no controllers.** Commands are `[Command]` records with a public instance `Handle()` (Arc analyzers enforce this); queries are `static` methods on `[ReadModel]` records; projections/constraints/authorization use attributes. Arc generates the HTTP surface. For read-model style follow rule 11's ladder; for constraints use `IConstraint` when attributes cannot express the rule.
+2. **[contract] Command validation & data flow.** Put command rejection in `CommandValidator<T>`, global value invariants in `ConceptValidator<T>`, and fetched/computed handler data in **`Provide()`** (runs after validation/authorization; may short-circuit with `ValidationResult.Error` / `Result<TProvided, ValidationResult>`). Keep `Handle()` focused on event construction. For a state-dependent rule that must hold **under concurrency**, start new code with read protection `On` (`<CratisReadProtection>On</CratisReadProtection>`): put the rule in a `CommandValidator<T>` with the read model as a constructor parameter and return the events from `Handle()`. Use a constraint for uniqueness, a per-stream read model or `IStreamReads`/`StreamDecision` for one stream, an aggregate for a rich lifecycle; `[ProtectedDecision]` with `DecisionRead<T>` is the older per-command opt-in. Under `Off` (the default when nothing is set) a validator over a plain read is a hint, not a guard. Return a typed rejection via `Result<TEvent, ValidationResult>` where needed; the result alone adds no guard. **Throwing from `Provide()`/`Handle()` is an exception (HTTP 500), not a validation rejection** — throw only for genuinely exceptional conditions, never for normal business rejection.
+3. **[contract] Event-source id resolution:** `ICanProvideEventSourceId` first; else the first qualifying property in declaration order — an `EventSourceId`/`EventSourceId<T>`-derived value *or* a `[Key]` property (no priority between them; two candidates is `ARCCHR0002`); else Arc generates one. A value actually used as a Chronicle stream identity derives from `EventSourceId<T>` with the underlying `IComparable` primitive — never `ConceptAs<Guid>` for that stream identity. `NotSet`, `New()`, and primitive→derived-id operators are optional domain/API conveniences, not Chronicle requirements; typed empty/zero values are real specified stream IDs, not `EventSourceId.Unspecified`.
+4. **[contract] Events never carry the event-source id** — it is implicit in the event context.
+5. **[contract] `[Key]` / `[Subject]` are distinct.** `[Key]` is for event-source/read-model/projection key resolution; `[Subject]` is compliance identity only. Don't put either on an `EventSourceId<T>` value (it already is both); use them only for non-`EventSourceId<T>` values.
+6. **[contract] Avoid nullable event properties** — Chronicle's analyzer warns on them. Model optional facts as a separate event; resolve nullable command inputs to a non-null sentinel before constructing the event. **Likewise `Handle()` never returns a nullable event or `null` for "nothing to do"** — Arc treats a `null` result as success with nothing appended, so the caller is told a command succeeded that never happened. Missing state or a failed rule is a rejection: return `Result<TEvent, ValidationResult>` with `ValidationResult.Error(...)`, or reject in a validator or `Provide()`. Optional `ICommandOperation` returns are a separate contract and unaffected.
+7. **[contract] `[EventType]` takes no arguments for new events** — the type name is the identifier. Use `generation:`/id only when evolving an existing contract; schema changes get a new generation + an `EventTypeMigration<TUpgrade,TPrevious>` (never edit stored-event semantics silently). An enum that only gains a member, or has one renamed, is the exception — Chronicle accepts that in place; a *removed* or *renumbered* member still needs a generation, plus a value map saying what the old values became.
+8. **[convention] Every `[EventType]` has an XML `<summary>`** — a Cratis C# documentation convention (not a Chronicle rule); events live in the log forever, so record why they exist.
+9. **[convention] `[ReadModel]` properties carry no default values** except semantically meaningful enum initial states and `[SetValue<T>]`-driven `bool` flags. False defaults hide missing projection wiring.
+10. **[contract] AutoMap is on by default — never call `.AutoMap()`.** Match property names so AutoMap wires them; diverge with `[SetFrom<T>]` / fluent `.Set().To()` only for genuine name differences. Re-enable `.AutoMap()` only inside a scope where it was disabled with `.NoAutoMap()`.
+11. **[contract] Projections consume events and event context — never other read models.** **[convention]** For application code start with model-bound attributes, use fluent `IProjectionFor<T>` when mappings need structure, and choose reducer code when prior-state branches, calculations or guards read better as code (a normal choice, not a last resort). New .NET reducers default to static `Reduce` on the model; use `IReducerFor<T>` for injected services, replay instance behavior or separation, and nominate a plain instance class only when its assembly cannot reference Chronicle. PDL belongs outside application code. Follow the **cratis-chronicle-read-model** style ladder and **cratis-chronicle-reducer** signatures; preserve admission/ordering guards when converting. This does not change Stage's rendering contract or other SDK reducer contracts.
+12. **[contract] Model-bound query custom paths use `[Path("...")]`** (`PathAttribute`), not ASP.NET `[Route]`. Reserve `[Route]` for controller-based endpoints (which this convention avoids).
+13. **[convention] Cross-slice access is read-only through Chronicle** — inject another slice's read model or reference its events; never instantiate or DI another slice's command/handler/service.
+14. **[contract] Never inject `IEventLog` into `Handle()`** — express appends through return types (`IEnumerable<object>` with `EventForEventSourceId` wrappers for cross-stream). In application reactors, return side-effect events or commands (or use `ICommandPipeline` and inspect the result); don't reach for `IEventLog` directly.
+15. **[contract] Never edit a generated file** — proxies carry a `// @generated by Cratis` header. Fix the C# source and rebuild.
+16. **[convention] Use the Cratis dialogs** — `CommandDialog` from `@cratis/components/CommandDialog`, `Dialog` from `@cratis/components/Dialogs`; never a vendor or hand-rolled modal. The default frontend stack is Cratis Components **4.x** (Components-owned markup, `--cratis-*` tokens, `pt`/`data-cratis-part` parts; no PrimeReact dependency) — **not** Tailwind (Tailwind is one supported way to write the token-mapping CSS, not the generic default).
+17. **[convention] One slice is one unit** — creating/renaming/moving/deleting a slice means doing the same to every artifact (the `.cs`, every `when_*/`, every `.tsx`, the composition import/JSX, the route).
+
+**[convention]** Return immediate external work chosen by a command as a command operation, not a service write inside `Handle()`; durable after-commit work belongs in reactors. Direct service calls remain supported when the decision needs their result. Audit custom `ICommandExecutionScope`s first — every one must implement `ICommandOperationExecutionScope` or operation-bearing commands are rejected. See **cratis-arc-command-operation** (verified at Arc v22.48.1).
+
+## Implementation Workflow
+
+- **Starting a brand-new application:** scaffold it instead of hand-writing the skeleton: `dotnet new install Cratis.Templates`, then `dotnet new cratis -n MyApp -o MyApp` (`--language Kotlin|Java`, `--Database MongoDB|PostgreSQL|MsSql|SQLite`; `cratis-aspire` for Aspire; `cratis-chronicle-console` or `cratis-chronicle-web` for a Chronicle client only). Non-interactive runs need `--allow-scripts yes`; the .NET templates target `net10.0`. The template writes `.cratis/ai.json`; run `cratis ai update` afterwards. Its `SomeModule/SomeFeature/Registration/` slice is the house shape. There is no Go, Python or Elixir template (verified at Cratis.Templates `v1.7.4`).
+- **Phase 0 — Find the contract / choose the level.** Before writing slice code, find what the code must match, and choose the level once for the whole scope.
+  1. **Look for a Screenplay model** under the model root (opted in per `general.md` "Model first"; where `cratis-screenplay-modeling-lifecycle` is installed, run its `scripts/model-first-status.mjs` for the decision, root and drafts) for the slice, command, event and read-model names.
+  2. **Model level** — an accepted model under the root covers the scope, or the repository is opted in and this scope has no model yet. The `.play` slice and its specs are the contract: change the model first (new behavior starts in discovery), verify it (V1–V3), get an independent review, then render with Stage or gap-fill by hand only what the renderer rejects. Hand-written code stays checked against the model (**cratis-application-slice-conformance**). Never edit Stage-managed output, never implement behavior the model does not state, never change the model to match existing code, never weaken protection to make it compile or render. Start with **cratis-screenplay-event-modeling** (decision rule), then **cratis-screenplay-modeling-lifecycle**. If the Screenplay skills are not installed, say so; do not author `.play` from memory.
+  3. **Code level** — infrastructure (hosting, DI composition, identity wiring, CI, deployment), clients, Screenplay code attachments and handlers, adapters in the render's customization area, and scope Stage cannot render yet (the model remains the contract). Framework repositories and brownfield work that is not opted in also stay code-first. Only the entry-point session may propose a model, at most once per session and never for trivial, bug-fix, infrastructure, client, framework or brownfield-maintenance work; if declined, do not ask again. Confirm Module/Feature, slice name, slice type and domain requirements as before; for new behavior or unclear event vocabulary run **cratis-chronicle-event-modeling** first, and record the agreed outline (fields, events, rules, scenarios) where the team tracks work, if anywhere. If you write code first where a model exists, say the model now lags.
+  4. **Trivial changes** keep the proportional-delegation policy; Phases 1–3 below apply to code you write at either level.
+- **Phase 1 — Backend.** Implement a coherent slice change. **Gate:** incremental Debug build of the affected project (regenerates proxies, compiles `#if DEBUG` spec code).
+- **Phase 2 — Specs.** Mandatory for every slice type. Start with plain-call specs for pure decisions; add in-process scenarios (`CommandScenario<T>`, `EventScenario`, `ReadModelScenario<T>`, `ReactorScenario<T>`) where pipelines, validation, constraints or projections contribute proof. **Gate:** tests pass.
+- **Phase 3 — Frontend.** Build from the generated proxies, register in the composition page, wire routing. **Gate:** lint, conditional test, build.
+
+**Backend before frontend, always** — the frontend depends on proxies that exist only after a successful build. Generate proxies from the **Debug** build (house convention); verify Release without re-running the generator: `dotnet build -c Release -p:CratisProxiesOutputPath=`. Why that property, and what to do when nothing is generated: the **cratis-arc-command** skill's proxy-generation reference.
+
+## Quality Gates
+
+| Phase | Command (app-pinned) | Pass criteria |
+| --- | --- | --- |
+| Backend | build (Debug) | zero errors, zero warnings — validates `#if DEBUG` spec code and regenerates proxies |
+| Backend | build (Release) | zero errors, zero warnings — build-only check; pass `-p:CratisProxiesOutputPath=` to skip re-running proxy generation |
+| Specs | test | zero failures |
+| Frontend | lint | zero errors |
+| Frontend | test | zero failures when frontend specs/behavior changed |
+| Frontend | build | zero errors |
+
+Run affected-project incremental checks after a coherent change, then targeted regression tests for the changed behavior. Re-run a failed gate after a relevant fix. Reserve wider matrices and clean/Release builds for cross-cutting changes, demonstrated stale outputs, or required merge/release gates. Documentation/rule-only edits need relevant Markdown, frontmatter, link, and corpus checks, not an application build. Diagnose unrelated or environmental failures within a bounded attempt; report the evidence and blocker instead of broadening scope or retrying indefinitely. Required gates remain blocking until satisfied; never silently waive red CI.
+
+Documentation-only changes carry non-release intent and run the documentation checks, never a blanket exemption from red CI — see [pull-requests.md](./pull-requests.instructions.md).

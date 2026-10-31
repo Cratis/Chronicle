@@ -3,12 +3,17 @@
         <AssemblyName>Cratis.Chronicle.Storage.Sql.Specs</AssemblyName>
         <RootNamespace>Cratis.Chronicle.Storage.Sql</RootNamespace>
         <IsTestProject>true</IsTestProject>
+        <OutputType>Exe</OutputType>
+        <CratisSpecificationsSharedLifecycle>false</CratisSpecificationsSharedLifecycle>
+        <CratisSpecificationsReadableNames>false</CratisSpecificationsReadableNames>
         <IsPackable>false</IsPackable>
         <!-- Microsoft.Data.SqlClient cannot connect in globalization-invariant mode. -->
         <InvariantGlobalization>false</InvariantGlobalization>
     </PropertyGroup>
 
     <ItemGroup>
+        <Compile Include="../Core.Specs/Compliance/given/protected_values.cs" Link="Compliance/given/protected_values.cs" />
+        <ProjectReference Include="../Core/Core.csproj" />
         <PackageReference Include="Testcontainers" />
         <PackageReference Include="SSH.NET" />
         <ProjectReference Include="../Storage.Sql/Storage.Sql.csproj" />

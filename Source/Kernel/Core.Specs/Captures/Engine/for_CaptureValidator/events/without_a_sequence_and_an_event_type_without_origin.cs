@@ -13,5 +13,5 @@ public class without_a_sequence_and_an_event_type_without_origin : an_events_cap
 
     async Task Because() => _result = await _validator.Validate(_eventStore, EventsCapture(sequence: null, from: ["Local"]));
 
-    [Fact] void should_report_the_missing_origin() => _result.Any(_ => _.Message.Contains("do not originate")).ShouldBeTrue();
+    [Fact] void should_report_the_missing_origin() => _result.Any(_ => _.Message.Contains("has no origin")).ShouldBeTrue();
 }

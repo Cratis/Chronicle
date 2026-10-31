@@ -34,12 +34,18 @@ public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chroni
     /// <inheritdoc/>
     protected override async Task OnBeforeInitializeAsync()
     {
+        if (DatabaseNamePrefix.Length > 0)
+        {
+            await BootstrapKernel();
+            return;
+        }
+
         // The silo is reused across tests. Point the artifacts provider at the current
         // fixture so that DiscoverAll picks up this test's event types, reactors, etc.
         DelegatingClientArtifactsProvider.Instance?.SetCurrent(this);
 
         // Bootstrap before the first client registration as well as after every storage reset.
-        if (_webApplicationFactory is null)
+        if (CurrentWebApplicationFactory is null)
         {
             await BootstrapKernel();
             return;
@@ -61,7 +67,7 @@ public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chroni
         // 1. Signal disconnect — tears down all handler streams (cancels CancellationTokens),
         //    sets lifecycle.IsConnected = false, and assigns a fresh ConnectionId.
         var connection = Services.GetRequiredService<IChronicleConnection>();
-        await connection.Lifecycle.Disconnected();
+        await Timings.Run("client-disconnect", connection.Lifecycle.Disconnected);
 
         // 1b. Evict every cached IEventStore held by the shared IChronicleClient so the next
         //     Connect() does not fan out a RegisterAll for every event-store/namespace combination
@@ -88,6 +94,10 @@ public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chroni
         var sharedEventStore = Services.GetRequiredService<IEventStore>();
         connection.Lifecycle.OnConnected += sharedEventStore.RegisterAll;
 
+        // Stop KeepAlive delivery before the first wipe: activation collection does not reach these grains, and
+        // their background queues must settle before either storage or projection pipelines can be reset.
+        await KernelCore::Cratis.Chronicle.DevelopmentTools.KeepAliveGrainReset.Reset(GrainFactory);
+
         // 2. Evict all cached projection pipelines. The ProjectionPipelineManager is a singleton
         //    service whose cache persists across test classes. Without this, a test that registers
         //    ProjectionX can leave a stale pipeline in the cache that is then reused — with the
@@ -111,8 +121,8 @@ public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chroni
         //    in-process silo's SQL storage, the per-test fixture override invokes
         //    IDatabase.Wipe() on the test silo's IDatabase so the same atomic wipe + cache
         //    invalidation happens on this side too.
-        await ChronicleFixture.RemoveAllDatabases();
-        await WipeInProcessStorage();
+        await Timings.Run("storage-remove-before-deactivation", () => ChronicleFixture.RemoveAllDatabases());
+        await Timings.Run("storage-wipe-before-deactivation", WipeInProcessStorage);
 
         // 4. Deactivate all grains so stale in-memory state (e.g. State.Subscriptions held
         //    by EventStoreSubscriptionsManager) is discarded. With the OrleansReminders table
@@ -127,8 +137,8 @@ public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chroni
         //     silently filters out every appended event whose sequence number is below the
         //     stored NextEventSequenceNumber. Wiping again here catches anything written
         //     between the first wipe and the deactivation cycle.
-        await ChronicleFixture.RemoveAllDatabases();
-        await WipeInProcessStorage();
+        await Timings.Run("storage-remove-after-deactivation", () => ChronicleFixture.RemoveAllDatabases());
+        await Timings.Run("storage-wipe-after-deactivation", WipeInProcessStorage);
 
         // 4b. Evict the per-event-store storage cache so the next access reconstructs the
         //     namespace storage and its sinks from scratch. Sinks retain in-memory bookkeeping
@@ -155,13 +165,13 @@ public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chroni
         //     of every later registration pass - and one whose event types the next test does not declare cannot be
         //     built, which stops the client from claiming its full set and so stops retirement working.
         (eventStore.Projections as Projections.Projections)?.ForgetRuntimeRegistrations();
-        await eventStore.DiscoverAll();
+        await Timings.Run("client-discover", eventStore.DiscoverAll);
 
         // 5. Reconnect — registers with ConnectedClients, re-creates keep-alive stream,
         //    then fires lifecycle.Connected() which triggers RegisterAll() via OnConnected.
         if (connection is ChronicleConnection chronicleConnection)
         {
-            await chronicleConnection.Reconnect();
+            await Timings.Run("client-reconnect-register", chronicleConnection.Reconnect);
         }
 
         // Belt and braces: call RegisterAll directly so registration is guaranteed to have been
@@ -263,8 +273,12 @@ public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chroni
     /// the next test starts registering artifacts against fresh grain activations.
     /// </summary>
     /// <returns>A task that completes when grain deactivation has stabilized.</returns>
-    protected async Task DeactivateAllGrains()
+    protected Task DeactivateAllGrains() => Timings.Run("grain-deactivation", DeactivateAllGrainsCore);
+
+    async Task DeactivateAllGrainsCore()
     {
+        // Do not swallow a failed KeepAlive reset. Continuing to the final storage wipe would leak old live delivery.
+        await KernelCore::Cratis.Chronicle.DevelopmentTools.KeepAliveGrainReset.Reset(GrainFactory);
         try
         {
             var managementGrain = GrainFactory.GetGrain<IManagementGrain>(0);
@@ -309,7 +323,9 @@ public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chroni
         }
     }
 
-    async Task BootstrapKernel()
+    Task BootstrapKernel() => Timings.Run("kernel-bootstrap", BootstrapKernelCore);
+
+    async Task BootstrapKernelCore()
     {
         var grainFactory = Services.GetRequiredService<IGrainFactory>();
         var eventTypes = Services.GetRequiredService<KernelCore::Cratis.Chronicle.EventTypes.IEventTypes>();

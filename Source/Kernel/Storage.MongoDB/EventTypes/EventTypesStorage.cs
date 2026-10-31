@@ -25,7 +25,7 @@ namespace Cratis.Chronicle.Storage.MongoDB.Events.EventTypes;
 /// <param name="eventStore"><see cref="EventStoreName"/> the storage is for.</param>
 /// <param name="sharedDatabase">The <see cref="IEventStoreDatabase"/>.</param>
 /// <param name="logger">Logger for logging.</param>
-public class EventTypesStorage(
+public partial class EventTypesStorage(
     EventStoreName eventStore,
     IEventStoreDatabase sharedDatabase,
     ILogger<EventTypesStorage> logger) : IEventTypesStorage
@@ -166,7 +166,7 @@ public class EventTypesStorage(
         var existingDocument = await existingCursor.FirstOrDefaultAsync().ConfigureAwait(false);
         var mongoEventType = definition.ToMongoDB(
             visibility: existingDocument?.Visibility ?? EventTypeVisibility.Unspecified,
-            origin: existingDocument?.Origin ?? string.Empty);
+            origin: existingDocument?.Origin ?? string.Empty) with { MigrationVersions = existingDocument?.MigrationVersions };
 
         var result = await GetCollection().ReplaceOneAsync(
             _ => _.Id == definition.Id,

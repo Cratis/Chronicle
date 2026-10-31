@@ -26,6 +26,10 @@ public class Storage(
     public ISystemStorage System => systemStorage;
 
     /// <inheritdoc/>
+    public Task<IReadOnlyDictionary<EventStoreName, Concepts.Projections.Generations.Enablement.GenerationFloor>> ReadGenerationFloors() =>
+        clusterStorage.ReadGenerationFloors();
+
+    /// <inheritdoc/>
     public Task<IEnumerable<EventStoreName>> GetEventStores() => clusterStorage.GetEventStores();
 
     /// <inheritdoc/>
@@ -41,6 +45,13 @@ public class Storage(
     /// <inheritdoc/>
     public IEventStoreStorage GetEventStore(EventStoreName eventStore)
     {
+        // An unknown name is registered below, so an empty one would become an event store every later startup trips
+        // over - refuse it before anything is saved.
+        if (eventStore is null || string.IsNullOrWhiteSpace(eventStore.Value))
+        {
+            throw new InvalidEventStoreName(eventStore!, "EventStoreName cannot be null, empty or whitespace.");
+        }
+
         if (_eventStores.TryGetValue(eventStore, out var existing))
         {
             return existing;

@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Webhooks;
 
 namespace Cratis.Chronicle.Specs.Webhooks.for_WebhookDefinitionBuilder;
@@ -46,4 +47,7 @@ public class when_building_webhook_with_builder : Specification
 
     [Fact]
     void should_have_no_event_types() => _result.EventTypes.ShouldBeEmpty();
+
+    [Fact]
+    void should_default_to_compatibility_delivery() => _result.GenerationDelivery.ShouldEqual(EventGenerationDelivery.Compatibility);
 }

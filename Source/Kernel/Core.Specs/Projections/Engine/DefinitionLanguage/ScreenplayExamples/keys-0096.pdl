@@ -1,0 +1,6 @@
+projection Doc => DocReadModel
+  from PaymentRecorded
+    key
+      invoiceId = invoiceId
+      method = method
+    add total by amount

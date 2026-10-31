@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Schemas;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels;
@@ -54,7 +55,7 @@ public static class ProjectedColumns
         {
             var property = schema.Properties[name];
             var isKey = string.Equals(name, keyName, StringComparison.Ordinal);
-            columns.Add(BuildColumn(name, property, isKey));
+            columns.Add(BuildColumn(name, property, isKey) with { MaxLength = property.MaxLength });
         }
 
         // If the schema does not declare an Id, synthesize one. Reads/writes inject the key value
@@ -111,6 +112,18 @@ public static class ProjectedColumns
         return columns;
     }
 
+    /// <summary>
+    /// Derives table columns including the declared scalar indexes.
+    /// </summary>
+    /// <param name="schema">The read-model schema.</param>
+    /// <param name="indexes">The declared indexes.</param>
+    /// <returns>The ordered columns.</returns>
+    public static IReadOnlyList<ProjectedColumn> ForSchema(JsonSchema schema, IEnumerable<IndexDefinition> indexes)
+    {
+        var indexed = indexes.SelectMany(index => index.Properties).Select(property => property.Path.Path).ToHashSet(StringComparer.Ordinal);
+        return ForSchema(schema).Select(column => column with { IsIndexed = indexed.Contains(column.Name) }).ToArray();
+    }
+
     static ProjectedColumn BuildColumn(string name, JsonSchemaProperty property, bool isKey)
     {
         // The primary-key column always lives in a typed scalar column even when the schema
@@ -126,7 +139,10 @@ public static class ProjectedColumns
                 keyClrType = typeof(string);
             }
 
-            return new ProjectedColumn(name, keyClrType, IsKey: true, IsJson: false, IsArray: false, IsNullable: false);
+            return new ProjectedColumn(name, keyClrType, IsKey: true, IsJson: false, IsArray: false, IsNullable: false)
+            {
+                IsCompositeKey = IsCompositeKeyShape(property)
+            };
         }
 
         // Every non-key column is stored as nullable. The projection engine treats "not yet
@@ -146,6 +162,9 @@ public static class ProjectedColumns
             : clrType;
         return new ProjectedColumn(name, nullableClr, IsKey: false, IsJson: false, IsArray: false, IsNullable: true);
     }
+
+    static bool IsCompositeKeyShape(JsonSchemaProperty property) =>
+        IsJsonShape(property) && property.ActualSchema.Type.HasFlag(JsonObjectType.Object);
 
     static bool IsJsonShape(JsonSchemaProperty property)
     {

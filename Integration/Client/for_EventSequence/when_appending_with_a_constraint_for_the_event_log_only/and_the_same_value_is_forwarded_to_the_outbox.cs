@@ -20,10 +20,8 @@ public class and_the_same_value_is_forwarded_to_the_outbox(context context) : Gi
     public class context(ChronicleFixture fixture) : Specification(fixture)
     {
         public override IEnumerable<Type> ConstraintTypes => [typeof(UniqueNameInEventLog)];
-        public override IEnumerable<Type> EventTypes => [typeof(NameClaimed), typeof(NameClaimedInOutbox)];
+        public override IEnumerable<Type> EventTypes => [typeof(NameClaimed), typeof(PublicNameClaimed)];
 
-        public IAppendResult PrivateInOutbox { get; private set; }
-        public IAppendResult PublicInEventLog { get; private set; }
         public IAppendResult FirstInEventLog { get; private set; }
         public IAppendResult FirstInOutbox { get; private set; }
         public IAppendResult SecondInOutbox { get; private set; }
@@ -33,21 +31,17 @@ public class and_the_same_value_is_forwarded_to_the_outbox(context context) : Gi
         {
             var outbox = EventStore.GetEventSequence(EventSequenceId.Outbox);
             var @event = new NameClaimed("acme");
+            var forwarded = new PublicNameClaimed(@event.Name);
             var first = Guid.NewGuid().ToString();
             var second = Guid.NewGuid().ToString();
 
-            var publicEvent = new NameClaimedInOutbox(@event.Name);
             FirstInEventLog = await EventStore.EventLog.Append(first, @event);
-            PrivateInOutbox = await outbox.Append(first, @event);
-            PublicInEventLog = await EventStore.EventLog.Append(first, publicEvent);
-            FirstInOutbox = await outbox.Append(first, publicEvent);
-            SecondInOutbox = await outbox.Append(second, publicEvent);
+            FirstInOutbox = await outbox.Append(first, forwarded);
+            SecondInOutbox = await outbox.Append(second, forwarded);
             SecondInEventLog = await EventStore.EventLog.Append(second, @event);
         }
     }
 
-    [Fact] void should_reject_the_private_fact_in_the_outbox() => Context.PrivateInOutbox.Errors.Select(_ => _.Value).ShouldContain("PrivateEventTypeCannotBeAppendedToOutbox");
-    [Fact] void should_reject_the_public_fact_in_the_event_log() => Context.PublicInEventLog.Errors.Select(_ => _.Value).ShouldContain("PublicEventTypeCannotBeAppendedToEventLog");
     [Fact] void should_accept_the_first_claim_in_the_event_log() => Context.FirstInEventLog.IsSuccess.ShouldBeTrue();
     [Fact] void should_accept_forwarding_the_first_claim_to_the_outbox() => Context.FirstInOutbox.IsSuccess.ShouldBeTrue();
     [Fact] void should_accept_the_same_value_for_another_event_source_in_the_outbox() => Context.SecondInOutbox.IsSuccess.ShouldBeTrue();

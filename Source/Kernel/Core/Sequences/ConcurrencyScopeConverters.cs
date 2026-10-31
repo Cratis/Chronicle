@@ -1,6 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.EventSequences;
+using Cratis.Monads;
+
 namespace Cratis.Chronicle.Sequences;
 
 /// <summary>
@@ -54,16 +57,45 @@ internal static class ConcurrencyScopeConverters
 
     /// <summary>
     /// Converts a collection of <see cref="EventSourceConcurrencyScope"/> to a
-    /// <see cref="Concepts.EventSequences.Concurrency.ConcurrencyScopes"/>.
+    /// <see cref="Concepts.EventSequences.Concurrency.ConcurrencyScopeConjunctions"/>.
     /// </summary>
     /// <param name="scopes">The scopes to convert.</param>
-    /// <returns>The converted scopes.</returns>
-    public static Concepts.EventSequences.Concurrency.ConcurrencyScopes ToChronicle(this IEnumerable<EventSourceConcurrencyScope> scopes) =>
-        new(scopes
-            .Where(eventSourceScope => !string.IsNullOrWhiteSpace(eventSourceScope.EventSourceId) && eventSourceScope.Scope is not null)
-            .ToDictionary(
-                eventSourceScope => new Concepts.Events.EventSourceId(eventSourceScope.EventSourceId),
-                eventSourceScope => eventSourceScope.Scope.ToChronicle()));
+    /// <returns>The ordered guards, or an append error if one source mixes no-check and guarded scopes.</returns>
+    public static Result<Concepts.EventSequences.Concurrency.ConcurrencyScopeConjunctions, AppendError> ToChronicle(this IEnumerable<EventSourceConcurrencyScope> scopes)
+    {
+        var converted = new List<(Concepts.Events.EventSourceId EventSourceId, Concepts.EventSequences.Concurrency.ConcurrencyScope Scope, uint? ScopeIndex)>();
+        foreach (var (eventSourceScope, index) in scopes.Select((scope, index) => (scope, index)).Where(_ => !string.IsNullOrWhiteSpace(_.scope.EventSourceId) && _.scope.Scope is not null))
+        {
+            var eventSourceId = new Concepts.Events.EventSourceId(eventSourceScope.EventSourceId);
+            var scope = eventSourceScope.Scope.ToChronicle();
+            var existing = converted.Where(_ => _.EventSourceId == eventSourceId).ToArray();
+            var isNone = IsNoCheck(scope);
+            if (existing.Any(_ => IsNoCheck(_.Scope) != isNone))
+            {
+                return new AppendError($"Conflicting concurrency scopes for event source '{eventSourceId}'.");
+            }
+
+            if (!existing.Any(_ => AreEqual(_.Scope, scope))) converted.Add((eventSourceId, scope, (uint)index));
+        }
+
+        return new Concepts.EventSequences.Concurrency.ConcurrencyScopeConjunctions(converted);
+    }
+
+    /// <summary>
+    /// Converts a validated predicate to its API shape without exposing internal sequence-number sentinels.
+    /// </summary>
+    /// <param name="scope">The predicate.</param>
+    /// <returns>The predicate and explicit absence expectation.</returns>
+    internal static ConcurrencyScope ToApi(this Concepts.EventSequences.Concurrency.ConcurrencyScope scope) =>
+        new(scope.ExpectsNoMatchingEvent ? Concepts.Events.EventSequenceNumber.Unavailable.Value : scope.SequenceNumber.Value, scope.EventSourceId, scope.EventStreamType?.Value, scope.EventStreamId?.Value, scope.EventSourceType?.Value, scope.EventTypes?.Select(_ => new EventType(_.Id, _.Generation, _.Tombstone)), scope.ExpectsNoMatchingEvent);
+
+    static bool IsNoCheck(Concepts.EventSequences.Concurrency.ConcurrencyScope scope) => scope == Concepts.EventSequences.Concurrency.ConcurrencyScope.None;
+
+    static bool AreEqual(Concepts.EventSequences.Concurrency.ConcurrencyScope first, Concepts.EventSequences.Concurrency.ConcurrencyScope second) =>
+        first with { EventTypes = null } == second with { EventTypes = null } &&
+        (first.EventTypes is null
+            ? second.EventTypes is null
+            : second.EventTypes is not null && first.EventTypes.ToHashSet().SetEquals(second.EventTypes));
 
     /// <summary>
     /// Resolve the expected <see cref="Concepts.Events.EventSequenceNumber"/> a scope asks to be validated against.

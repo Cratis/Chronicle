@@ -1,0 +1,15 @@
+projection WorkItem
+  from TitleChanged
+    title = title
+
+  variant BacklogItem
+    enters on IssueCreated
+
+  variant DevelopmentItem
+    enters on IssueStarted
+
+  variant PullRequestItem
+    enters on PullRequestCreated
+
+    from BuildCompleted
+      buildStatus = status

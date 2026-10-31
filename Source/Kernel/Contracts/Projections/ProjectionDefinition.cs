@@ -132,4 +132,10 @@ public class ProjectionDefinition
     /// </summary>
     [ProtoMember(20, IsRequired = true)]
     public IList<string> NoAutoMapProperties { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the event generation delivery policy.
+    /// </summary>
+    [ProtoMember(21)]
+    public Observation.EventGenerationDelivery GenerationDelivery { get; set; }
 }

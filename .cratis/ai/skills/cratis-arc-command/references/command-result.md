@@ -1,7 +1,17 @@
 <!-- cratis-ai-managed: skills/cratis-arc-command/references/command-result.md -->
 # CommandResult and ValidationResult
 
-Verified against `Cratis.Arc.Core` `22.16.0` and `@cratis/arc` `22.16.0`.
+## Contents
+
+- Server side
+- Map integration exceptions
+- Severity filtering
+- Client side
+- Executing with a severity
+
+Source: `Cratis.Arc.Core` and `@cratis/arc`.
+Sources: `Source/DotNET/Arc.Core/Commands/CommandResult.cs`,
+`CommandValidationResults.cs` and `Source/JavaScript/Arc/commands/Command.ts`.
 
 ## Server side
 
@@ -32,15 +42,48 @@ every execution scope has completed and the result is not successful, so a
 transaction that rolls back after `Handle` returned a value does not leak that
 value into the error body.
 
+## Map integration exceptions
+
+Requires Arc 22.100.0 or later for `Cratis.Arc.Commands.ICommandExceptionMapper`.
+Check `dotnet list package --include-transitive`; older Arc has no mapper hook
+and uses `CommandResult.FromException` for unhandled execution exceptions.
+
+Implement the interface for an integration's typed failures, not ordinary
+user-correctable rejections (return validation results for those):
+
+```csharp
+bool TryMap(CommandContext context, Exception exception,
+    [NotNullWhen(true)] out CommandResult? result);
+```
+
+`NotNullWhen` is from `System.Diagnostics.CodeAnalysis`. Return `true` with a
+non-null **failure** preserving `context.CorrelationId`, or `false` with `null`
+to decline. Match exception types/properties rather than parsing messages.
+Implementations are convention-discovered through `IInstancesOf<ICommandExceptionMapper>`
+(`Cratis.Types`) and resolved from the command's service scope. The first accepting
+mapper wins. Mapping runs for exceptions escaping command execution or response
+processing, before execution scopes complete, so a mapped failure still rolls
+back pending work. If no mapper accepts, the pipeline falls back to
+`CommandResult.FromException`; a throwing mapper produces `CommandResult.Error`
+and scopes still complete with
+failure. This hook does not replace validation-only or scope-completion exception
+handling. Specify accepting, declining and throwing cases and assert rollback
+and correlation preservation, not only the message.
+
 ## Severity filtering
 
 `ValidationResultSeverity`: `Unknown = 0`, `Information = 1`, `Warning = 2`,
 `Error = 3`.
 
-Only *blocking* results survive onto the result. With no `allowedSeverity`, only
-`Error` blocks — information and warnings are filtered out entirely. With an
-`allowedSeverity`, anything strictly greater than it blocks. So passing
-`Warning` keeps errors blocking and lets warnings through.
+Only *blocking* results survive onto the result. For an unannotated command,
+with no `allowedSeverity`, only `Error` blocks; with a caller threshold, anything
+strictly greater blocks. `[BlockOnValidationSeverity(ValidationResultSeverity.Warning)]`
+(`Cratis.Arc.Commands.ModelBound`) declares an inclusive blocking floor across
+HTTP, Validate, Provide and in-process execution. Caller `X-Allowed-Severity` or
+`allowedSeverity` can tighten, never loosen, that floor; attributed commands
+also block `Unknown`. The generated proxy carries `blockOnValidationSeverity`
+and applies it client-side. This attribute does not change an unannotated
+command's legacy filtering.
 
 ## Client side
 

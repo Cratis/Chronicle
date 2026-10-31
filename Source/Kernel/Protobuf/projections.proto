@@ -27,6 +27,10 @@ message DraftReadModelDefinition {
    string Identifier = 3;
    string DisplayName = 4;
 }
+enum EventGenerationDelivery {
+   Compatibility = 0;
+   Pinned = 1;
+}
 message EventSequenceSinkConfiguration {
    EventType EventType = 1;
    string EventSequence = 2;
@@ -70,6 +74,11 @@ message IEnumerable_ProjectionWithDeclaration {
 }
 message IndexDefinition {
    string PropertyPath = 1;
+   repeated IndexProperty Properties = 2;
+}
+message IndexProperty {
+   string Path = 1;
+   bool Descending = 2;
 }
 message JoinDefinition {
    string On = 1;
@@ -133,6 +142,7 @@ message ProjectionDefinition {
    map<string,ChildrenDefinition> Nested = 18;
    bool SubscribesToAllEvents = 19;
    repeated string NoAutoMapProperties = 20;
+   EventGenerationDelivery GenerationDelivery = 21;
 }
 enum ProjectionOwner {
    PROJECTION_OWNER_None = 0;
@@ -186,6 +196,9 @@ message RegisterRequest {
    ProjectionOwner Owner = 2;
    repeated ProjectionDefinition Projections = 3;
    bool FullSet = 4;
+   string Registrant = 5;
+   string Version = 6;
+   string ConnectionId = 7;
 }
 message RemovedWithDefinition {
    string Key = 1;
@@ -200,6 +213,7 @@ message SaveProjectionRequest {
    string EventSequenceId = 3; // default value could not be applied: event-log
    string Declaration = 4;
    DraftReadModelDefinition DraftReadModel = 5;
+   EventGenerationDelivery GenerationDelivery = 6;
 }
 message SaveProjectionResult {
    repeated ProjectionDeclarationSyntaxError Errors = 1;

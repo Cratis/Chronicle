@@ -1,14 +1,17 @@
 ---
 uid: Chronicle.ReadModels.Materialized
+description: Use the Materialized API to get and page through Chronicle read model instances persisted in a sink by projections and reducers.
 ---
 
 # Materialized Read Models
 
 When a projection or reducer processes an event, Chronicle persists the resulting read model instance in a *sink* — a database-backed store that holds the materialized state. The `Materialized` API gives you direct, paginated access to that stored state without replaying the event log.
 
-:::note[Client coverage]
-Getting/paginating materialized instances and observing a live paginated window (below) are real in Elixir (`Chronicle.ReadModels.query/2`, page-based rather than skip/take) and TypeScript (`readModels.materialized.getInstances`/`.observeInstances`, an `AsyncIterable` rather than an `IObservable`) too. Kotlin and Java only support the single-instance strongly-consistent lookup covered in [Getting a single instance](./getting-single-instance) — no bulk or paginated materialized access exists in the Kotlin SDK yet. The named-constants convenience and the ASP.NET paged-endpoint example are C#-specific idioms with no equivalent elsewhere.
-:::
+Client APIs express paging differently: Elixir's `Chronicle.ReadModels.query/2` uses page/page-size;
+TypeScript's materialized API uses skip/take and an `AsyncIterable` for page observations; Kotlin uses
+skip/take and `Flow`, and Java exposes blocking reads and callback or publisher observations through
+`ReadModelsJavaBridge`. Use each example's client tab for its API shape. The named paging concepts
+and ASP.NET endpoint below illustrate .NET host code.
 
 > [!IMPORTANT]
 > The `Materialized` API is **not** a substitute for working directly with the underlying database. It provides a simple, database-agnostic way to retrieve and observe stored read model instances using skip/take pagination. For advanced queries — filtering, sorting, aggregation, full-text search, joins — use the sink's native query capabilities (MongoDB queries, SQL queries, etc.) directly.
@@ -67,6 +70,8 @@ The parameters use strongly-typed concepts that convert implicitly from `int`:
 <ChronicleClientTabs snippet="read-models/materialized-pagination/paged-endpoint" />
 
 ## Observing Changes
+
+For a complete live collection with optional client-side filtering, use [Observing Read Models](observing-read-models.mdx). `IReadModels.Observe<T>()` has no 50-instance default window; `Materialized.ObserveInstances` below observes only the requested page.
 
 `ObserveInstances` returns an `IObservable<IEnumerable<TReadModel>>` that emits a new page snapshot whenever the underlying stored data changes. This is useful for live-updating UIs, dashboards, and monitoring tools.
 

@@ -31,6 +31,7 @@ namespace Cratis.Chronicle.Sequences;
 /// <param name="CausedBy">Optional caller-supplied identity. Defaults to the current principal when not provided.</param>
 /// <param name="ConcurrencyScope">Optional concurrency scope to validate the append against. Defaults to no check when not provided.</param>
 /// <param name="EventSource">Optional name of the registered event source definition the event is appended through.</param>
+/// <param name="EffectReceipt">Optional occurrence effect to commit atomically with this event.</param>
 /// <remarks>
 /// Content travels as a JSON string rather than <see cref="JsonObject"/> because protobuf-net has no serializer for
 /// that BCL type - it has no plain reflectable shape, so the gRPC contract generated from this command would produce
@@ -55,7 +56,8 @@ public record Append(
     IEnumerable<Causation>? Causation = default,
     Identity? CausedBy = default,
     ConcurrencyScope? ConcurrencyScope = default,
-    string? EventSource = default)
+    string? EventSource = default,
+    Occurrences.EffectReceipt? EffectReceipt = default)
 {
     /// <summary>
     /// Handles the command by appending the event.
@@ -90,6 +92,11 @@ public record Append(
         var eventSequence = grainFactory.GetEventSequence(EventSequenceId, EventStore, Namespace);
         var route = AppendRoute.Resolve(EventSourceType?.Value, EventStreamType?.Value, EventStreamId?.Value);
 
+        if (EffectReceipt is not null)
+        {
+            return AppendReceipt(grainFactory, causation, principalAccessor, namedTags);
+        }
+
         var eventType = EventType.ToChronicle();
         var content = JsonNode.Parse(Content)!.AsObject();
         var correlationId = CorrelationId ?? Guid.NewGuid();
@@ -101,10 +108,54 @@ public record Append(
 
         if (namedTags.Count == 0 && string.IsNullOrEmpty(EventSource))
         {
-            return eventSequence.Append(route.SourceType, EventSourceId, route.StreamType, route.StreamId, eventType, content, correlationId, causationChain, identity, tags, scope, Occurred, subject);
+            return eventSequence.Append(route.SourceType, EventSourceId, route.StreamType, route.StreamId, eventType, content, correlationId, causationChain, identity, tags, scope, Occurred, subject).WithUnknownOutcome(correlationId);
         }
 
         var eventSource = string.IsNullOrEmpty(EventSource) ? null : new EventSourceName(EventSource);
-        return eventSequence.Append(route.SourceType, EventSourceId, route.StreamType, route.StreamId, eventType, content, correlationId, causationChain, identity, tags, scope, Occurred, subject, namedTags, eventSource);
+        return eventSequence.Append(route.SourceType, EventSourceId, route.StreamType, route.StreamId, eventType, content, correlationId, causationChain, identity, tags, scope, Occurred, subject, namedTags, eventSource).WithUnknownOutcome(correlationId);
+    }
+
+    async Task<AppendResult> AppendReceipt(IGrainFactory grainFactory, RequestCausation causation, ICurrentPrincipalAccessor principalAccessor, IReadOnlyCollection<Concepts.Events.NamedTag> namedTags)
+    {
+        var route = AppendRoute.Resolve(EventSourceType?.Value, EventStreamType?.Value, EventStreamId?.Value);
+
+        var events = new[] { Content }.Select(content => new EventSequences.EventToAppend(
+            route.SourceType,
+            EventSourceId,
+            route.StreamType,
+            route.StreamId,
+            EventType.ToChronicle(),
+            (Tags ?? []).Select(tag => (Tag)tag),
+            JsonNode.Parse(content)!.AsObject(),
+            Occurred,
+            string.IsNullOrWhiteSpace(Subject) ? null : new Subject(Subject))
+        {
+            NamedTags = namedTags,
+            EventSource = string.IsNullOrEmpty(EventSource) ? null : new EventSourceName(EventSource)
+        }).ToArray();
+        var scopes = new Concepts.EventSequences.Concurrency.ConcurrencyScopes(new Dictionary<EventSourceId, Concepts.EventSequences.Concurrency.ConcurrencyScope>
+        {
+            [EventSourceId] = ConcurrencyScope?.ToChronicle() ?? Concepts.EventSequences.Concurrency.ConcurrencyScope.None
+        });
+        var correlationId = CorrelationId ?? Guid.NewGuid();
+        var result = await grainFactory.GetEventSequence(EventSequenceId, EventStore, Namespace).AppendManyWithEffectReceipt(
+            events,
+            correlationId,
+            Causation?.ToChronicle() ?? causation.GetCurrentChain(),
+            CausedBy?.ToChronicle() ?? principalAccessor.Current.ToIdentity(),
+            scopes,
+            EffectReceipt!).WithUnknownOutcome(correlationId);
+
+        return new AppendResult
+        {
+            CorrelationId = result.CorrelationId,
+            SequenceNumber = result.SequenceNumbers.FirstOrDefault() ?? Concepts.Events.EventSequenceNumber.Unavailable,
+            ConstraintViolations = result.ConstraintViolations,
+            ConcurrencyViolation = result.ConcurrencyViolations.FirstOrDefault(),
+            Errors = result.Errors,
+            ConcurrencyCheckPerformed = result.ConcurrencyCheckPerformed,
+            EffectReceipt = result.EffectReceipt,
+            EffectAlreadyRecorded = result.EffectAlreadyRecorded
+        };
     }
 }

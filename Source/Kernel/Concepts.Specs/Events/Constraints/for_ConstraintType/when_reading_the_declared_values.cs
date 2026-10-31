@@ -21,8 +21,9 @@ public class when_reading_the_declared_values : Specification
     [Fact] void should_number_unique_event_type_two() => ((int)ConstraintType.UniqueEventType).ShouldEqual(2);
     [Fact] void should_number_schema_three() => ((int)ConstraintType.Schema).ShouldEqual(3);
     [Fact] void should_number_stream_closed_four() => ((int)ConstraintType.StreamClosed).ShouldEqual(4);
+    [Fact] void should_number_closes_stream_five() => ((int)ConstraintType.ClosesStream).ShouldEqual(5);
 
     [Fact]
     void should_declare_nothing_else() =>
-        Enum.GetValues<ConstraintType>().Length.ShouldEqual(5);
+        Enum.GetValues<ConstraintType>().Length.ShouldEqual(6);
 }

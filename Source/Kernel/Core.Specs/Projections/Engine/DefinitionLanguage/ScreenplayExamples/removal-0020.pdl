@@ -1,0 +1,6 @@
+projection User => UserReadModel
+  from UserCreated
+    Name = name
+    Email = email
+
+  remove with UserDeleted

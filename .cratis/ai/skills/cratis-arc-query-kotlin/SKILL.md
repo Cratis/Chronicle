@@ -1,6 +1,6 @@
 ---
 name: cratis-arc-query-kotlin
-description: Add a query to a Cratis Arc @ReadModel in Kotlin or Java — companion-object or static query methods, GET vs RFC QUERY, and observable queries returning Kotlin Flow, JDK Flow.Publisher, or RxJava 3 Observable over SSE and WebSocket. Use when exposing read-model data from a Kotlin or Java Arc application. Do not use for the .NET Arc query shape, for command definition, or for how events populate the read model (Chronicle projections/reducers).
+description: Add a query to a Cratis Arc @ReadModel in Kotlin or Java — companion-object or static query methods, GET vs RFC QUERY, and observable queries returning Kotlin Flow, JDK Flow.Publisher, or RxJava 3 Observable over SSE and WebSocket. Use when exposing JVM @ReadModel companion/static methods through KSP, Kotlin Flow, JDK Publisher or RxJava transports. Do not use for Node.js @query() (use cratis-arc-query-typescript), C# query creation (use cratis-chronicle-read-model), or commands (use cratis-arc-command-kotlin); event materialization belongs to cratis-chronicle-client-kotlin.
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/cratis-arc-query-kotlin/SKILL.md -->
@@ -13,14 +13,12 @@ static (Java) methods are queries. KSP generates a reflection-free
 
 ## Verified product sources
 
-Verified against `Arc.Kotlin` at tag **`v7.3.0`**, re-verified at commit
-`d0aa6a4` (14 commits past the tag), documented consumer setup: JDK 17,
-Kotlin 2.4.20, KSP 2.3.12, Spring Boot 4.1.x. `io.cratis:arc` supplies
+Source: `Arc.Kotlin`. `io.cratis:arc` supplies
 `io.cratis.arc.artifacts.ReadModel`, `io.cratis.arc.queries.Path`,
 `@QueryHttpMethod`, `@QueryTransport`, `ObservableState<T>`. The optional
 `arc-rxjava3` artifact adds RxJava 3 `Observable` support at runtime. The
-re-verification added `ObservableState<T>` (new since the tag) and the
-`observable-queries.allowed-origins` WebSocket setting — both covered below.
+`queries/QueryPage.kt`, `QueryRendererFor.kt` and the observable pipeline
+verify the paging and transport contracts below.
 
 ## Declare a one-shot query
 
@@ -116,7 +114,16 @@ needed for these:
 - RxJava 3 `Observable<T>` / `ObservableSource<T>` / `Subject<T>` — requires
   the optional `arc-rxjava3` artifact at runtime
 
-A one-shot return (`T`, `List<T>`, `Page<T>`) stays request-response.
+A one-shot return (`T`, `List<T>`, `io.cratis.arc.queries.QueryPage<T>`) stays
+request-response. `QueryPage(items, page, pageSize, totalItems)` carries a
+provider-owned page, with zero-based page and `totalItems: Long`.
+
+A matching application `QueryRendererFor<T>` chain owns data and paging:
+Arc does not append implicit in-memory sorting/paging after it. Return
+`QueryPage<T>` or include `QueryableQueryRenderer()` explicitly in that chain.
+`QueryPaging.UNPAGED` and `QuerySorting.UNSORTED` represent no paging/sorting;
+`InterceptReadModel<T>` is the read-model interception seam. The default
+in-memory sorter reads public properties only; sorting is not authorization.
 
 ```kotlin
 @ReadModel
@@ -202,10 +209,20 @@ Leave it empty in a real deployment — the WebSocket handshake is not subject
 to the same-origin policy `fetch` obeys, so this setting is what stops another
 site from opening a socket carrying your visitor's cookies.
 
+## Storage-backed queries
+
+For repository-backed paging, concept converters, tenant-aware storage and
+Mongo/JPA observable snapshots, use `cratis-arc-spring-data-kotlin`.
+Arc also aligns Chronicle projection collection names with Arc MongoDB;
+read [../cratis-arc-command-kotlin/references/read-model-naming.md](../cratis-arc-command-kotlin/references/read-model-naming.md)
+when upgrading or customizing collection names.
+
 ## Route near misses
 
 - Defining or changing a `@Command`: `cratis-arc-command-kotlin`.
 - Adding a query-argument rejection rule: `cratis-arc-validation-kotlin`.
+- In-process query specifications: `cratis-arc-testing-kotlin`.
+- Identity or tenant resolution: `cratis-arc-identity-and-tenancy-kotlin`.
 - How events populate the read model in the first place (Chronicle projections
   and reducers): `cratis-chronicle-client-kotlin`, `cratis-chronicle-projection`,
   `cratis-chronicle-reducer`.
@@ -224,3 +241,5 @@ site from opening a socket carrying your visitor's cookies.
 - A `delta`-mode observable query has a stable item identity, not incidental
   reliance on serialized-JSON fallback identity.
 - `./gradlew build` is clean with zero warnings and zero errors.
+- Use `QueryScenario` or bounded `ObservableQueryScenario.collect` from
+  `cratis-arc-testing-kotlin`; assert emission count, not only success.

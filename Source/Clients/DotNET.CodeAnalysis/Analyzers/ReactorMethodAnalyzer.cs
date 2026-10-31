@@ -27,11 +27,11 @@ public class ReactorMethodAnalyzer : DiagnosticAnalyzer
     static readonly DiagnosticDescriptor ReturnTypeRule = new(
         id: DiagnosticIds.ReactorMethodReturnTypeMustBeSupported,
         title: "Reactor method has an unsupported return type",
-        messageFormat: "Reactor method '{0}' has unsupported return type '{1}'. Return void, Task, an event type, EventForEventSourceId, EventsWithConcurrencyScopes, an array or IEnumerable<T> sequence of events, or a Task-wrapped side effect.",
+        messageFormat: "Reactor method '{0}' has unsupported return type '{1}'. Return void, Task, an event type, EventForEventSourceId, EventsWithConcurrencyScopes, a [ReactorSideEffect]-marked type, an array or IEnumerable<T> sequence of supported elements, or a Task-wrapped side effect.",
         category: "Usage",
         defaultSeverity: DiagnosticSeverity.Warning,
         isEnabledByDefault: true,
-        description: "Chronicle discovers reactor methods returning void, Task, a registered event type, EventForEventSourceId, EventsWithConcurrencyScopes, or a one-dimensional array or IEnumerable<T> implementation of events, targeted events, or objects. Other synchronous return types may be claimed by a registered side-effect handler; the analyzer cannot verify those claims statically.");
+        description: "Chronicle discovers reactor methods returning void, Task, a registered event type, EventForEventSourceId, EventsWithConcurrencyScopes, or a one-dimensional array or IEnumerable<T> implementation of events, targeted events, or objects. Mark custom synchronous side-effect types with [ReactorSideEffect] so the analyzer accepts them and their sequences. The marker only informs the analyzer; a registered side-effect handler must still claim and process the declared return type.");
 
     static readonly DiagnosticDescriptor EventTypeRule = new(
         id: DiagnosticIds.ReactorEventParameterMustHaveAttribute,
@@ -50,15 +50,19 @@ public class ReactorMethodAnalyzer : DiagnosticAnalyzer
     {
         context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
         context.EnableConcurrentExecution();
-        context.RegisterSymbolAction(AnalyzeMethod, SymbolKind.Method);
+        context.RegisterCompilationStartAction(start =>
+        {
+            var evidence = new Lazy<ExplicitRegistrationEvidence>(() => ExplicitRegistrationEvidence.Create(start.Compilation, start.CancellationToken));
+            start.RegisterSymbolAction(symbol => AnalyzeMethod(symbol, evidence.Value), SymbolKind.Method);
+        });
     }
 
-    static void AnalyzeMethod(SymbolAnalysisContext context)
+    static void AnalyzeMethod(SymbolAnalysisContext context, ExplicitRegistrationEvidence evidence)
     {
         var methodSymbol = (IMethodSymbol)context.Symbol;
 
         // Check if the containing type implements IReactor
-        if (!WellKnownTypes.ImplementsIReactor(methodSymbol.ContainingType, context.Compilation))
+        if (!WellKnownTypes.ImplementsIReactor(methodSymbol.ContainingType, context.Compilation) && !evidence.IsReactor(methodSymbol.ContainingType))
         {
             return;
         }
@@ -91,12 +95,12 @@ public class ReactorMethodAnalyzer : DiagnosticAnalyzer
         // analyzed as a handler: its first parameter was demanded to be an event type and its ordinary value-type
         // arguments were reported as unresolvable dependencies. A helper returning a string or a domain record
         // escaped, purely because its return type fell outside the supported set.
-        var isHandler = WellKnownTypes.HasEventTypeAttribute(firstParamType);
+        var isHandler = evidence.IsEventType(firstParamType, context.Compilation);
 
         // A method whose return type is not a supported reactor return shape is only a handler mistake when
         // its first parameter is unambiguously an event type. Chronicle silently skips such methods at
         // discovery, so flag them here.
-        if (!IsSupportedReturnType(methodSymbol, context.Compilation))
+        if (!IsSupportedReturnType(methodSymbol, context.Compilation, evidence))
         {
             if (isHandler)
             {
@@ -170,7 +174,7 @@ public class ReactorMethodAnalyzer : DiagnosticAnalyzer
                    string.Equals(name, WellKnownTypes.ReplayAttributeName, StringComparison.Ordinal);
         });
 
-    static bool IsSupportedReturnType(IMethodSymbol method, Compilation compilation)
+    static bool IsSupportedReturnType(IMethodSymbol method, Compilation compilation, ExplicitRegistrationEvidence evidence)
     {
         if (method.ReturnsVoid)
         {
@@ -189,12 +193,12 @@ public class ReactorMethodAnalyzer : DiagnosticAnalyzer
             }
         }
 
-        return IsSupportedSyncSideEffectReturnType(returnType, compilation);
+        return IsSupportedSyncSideEffectReturnType(returnType, compilation, evidence);
     }
 
-    static bool IsSupportedSyncSideEffectReturnType(ITypeSymbol returnType, Compilation compilation)
+    static bool IsSupportedSyncSideEffectReturnType(ITypeSymbol returnType, Compilation compilation, ExplicitRegistrationEvidence evidence)
     {
-        if (WellKnownTypes.HasEventTypeAttribute(returnType))
+        if (evidence.IsEventType(returnType, compilation) || WellKnownTypes.HasReactorSideEffectAttribute(returnType))
         {
             return true;
         }
@@ -213,7 +217,7 @@ public class ReactorMethodAnalyzer : DiagnosticAnalyzer
 
         if (returnType is IArrayTypeSymbol array)
         {
-            return array.IsSZArray && IsSupportedSequenceElement(array.ElementType, eventForEventSourceId);
+            return array.IsSZArray && IsSupportedSequenceElement(array.ElementType, eventForEventSourceId, compilation, evidence);
         }
 
         if (returnType.SpecialType == SpecialType.System_String)
@@ -224,11 +228,12 @@ public class ReactorMethodAnalyzer : DiagnosticAnalyzer
         return returnType is INamedTypeSymbol named &&
                named.AllInterfaces.Concat([named]).Any(candidate =>
                    candidate.OriginalDefinition.SpecialType == SpecialType.System_Collections_Generic_IEnumerable_T &&
-                   IsSupportedSequenceElement(candidate.TypeArguments[0], eventForEventSourceId));
+                   IsSupportedSequenceElement(candidate.TypeArguments[0], eventForEventSourceId, compilation, evidence));
     }
 
-    static bool IsSupportedSequenceElement(ITypeSymbol element, INamedTypeSymbol? eventForEventSourceId) =>
+    static bool IsSupportedSequenceElement(ITypeSymbol element, INamedTypeSymbol? eventForEventSourceId, Compilation compilation, ExplicitRegistrationEvidence evidence) =>
         element.SpecialType == SpecialType.System_Object ||
-        WellKnownTypes.HasEventTypeAttribute(element) ||
+        evidence.IsEventType(element, compilation) ||
+        WellKnownTypes.HasReactorSideEffectAttribute(element) ||
         (eventForEventSourceId != null && SymbolEqualityComparer.Default.Equals(element, eventForEventSourceId));
 }

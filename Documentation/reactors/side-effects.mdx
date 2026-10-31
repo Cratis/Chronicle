@@ -6,7 +6,7 @@ description: "Return events from a reactor handler and let Chronicle append them
 Reactor handler methods can return side-effect events directly instead of taking a dependency on `IEventLog`. The framework automatically appends the returned events to the correct sequence after the handler completes.
 
 :::note[Client coverage]
-C#, Kotlin and Java append a reactor handler's return value. Kotlin and Java accept a single event, an `EventForEventSourceId`, or a `List` of either; from `io.cratis:chronicle` 6.5.0 a returned list is appended as one transaction, as in C#, and earlier versions appended its events one at a time. Elixir's `handle/2` return value (`:ok` / `{:error, reason}`) reports success/failure, not an event to append, and TypeScript's dispatch doesn't inspect what the handler returns. In those two clients, appending a follow-up event from a reactor means calling the append API explicitly inside the handler — see [Getting started with reactors](getting-started) and [Event Processing](event-processing) for what each client's handler can and can't do.
+C#, Kotlin, Java and Elixir append a reactor handler's return value. Kotlin and Java accept a single event, an `EventForEventSourceId`, or a `List` of either; from `io.cratis:chronicle` 6.5.0 a returned list is appended as one transaction, as in C#, and earlier versions appended its events one at a time. Elixir's `handle/2` returns `:ok`, `{:error, reason}`, or `{:ok, event_or_events}`; the events (a single event, a list appended atomically, or `EventForEventSourceId` entries for other event sources) are appended for you. TypeScript's dispatch doesn't inspect what the handler returns. In TypeScript, appending a follow-up event from a reactor means calling the append API explicitly inside the handler — see [Getting started with reactors](getting-started) and [Event Processing](event-processing) for what each client's handler can and can't do.
 :::
 
 > **Important**: Side-effect appends are not fire-and-forget. If a returned event fails to append — a constraint violation, a concurrency conflict, or an error — the reactor's partition fails with the failure details and is retried per the observer's retry policy. Failures never pass silently. See [Error handling](#error-handling).
@@ -67,6 +67,18 @@ A scope entry with `ConcurrencyScope.NotSet`, or a missing entry for an event so
 
 The event list preserves the order you supplied to the append operation. That does not impose a global processing order on observers: events targeting different source partitions can be observed independently. The scope dictionary also holds one scope per `EventSourceId` key; it cannot represent multiple independent scopes under the same key.
 
+## Duplicate protection for returned events
+
+In C#, the built-in result handlers append each returned event with an [idempotency key](../events/appending) that Chronicle derives from the [delivery identity](delivery-identity), the reactor's effect epoch and the event's position in the returned value. When the same delivery comes back, the kernel recognizes the keys and does not append the events a second time. This covers redelivery after a failed partition recovers, catch-up and replay: a returned event lands once per delivery.
+
+What this does not cover is anything outside the event log. A payment call, an email or a webhook made inside the handler still runs again on every redelivery. Guard those with a receipt keyed by `ReactorDelivery`, as described in [Delivery identity](delivery-identity#keys-for-returned-events).
+
+- **A key you set yourself is kept.** If an `EventForEventSourceId` already carries an `IdempotencyKey`, Chronicle leaves it alone and keys only the events that have none. Use `delivery.IdempotencyKeyFor("name")` to derive a stable key for a named effect.
+- **Older kernels append unkeyed.** Against a kernel that does not advertise idempotent appends, returned events are appended without keys and Chronicle logs one warning per reactor. A key you set yourself on such a kernel throws `IdempotentAppendsNotSupported`, because silently dropping it would remove the protection you asked for.
+- **The in-process testing package advertises the capability.** `ReactorScenario` records returned events by default instead of appending them. When you give it the real side-effect handlers, `Cratis.Chronicle.Testing` appends them with keys, like a current kernel does, so redelivering an occurrence does not append the events again.
+- **Changed output is refused, not overwritten.** If the handler returns something different for a delivery that was already appended, the kernel reports a conflict and the partition fails. The failure message names the remedy: raise the [effect epoch](delivery-identity#when-to-bump-the-effect-epoch) or mark the handler [`[OnceOnly]`](once-only).
+- **Build returned events from stable inputs.** Derive the returned events from the triggering event and from state that does not change between deliveries. A payload carrying a fresh `Guid`, the current time or the result of a lookup that has since changed counts as changed output when the delivery comes back, so the partition fails instead of appending a duplicate. Take such values from the triggering event, or derive them from the delivery identity.
+
 ## Reactor-Level Metadata Resolution
 
 Set metadata once on the reactor type so every returned event inherits it automatically.
@@ -113,7 +125,9 @@ Extend the pipeline by registering a custom `IReactorSideEffectHandler`:
 
 Chronicle registers its built-in handlers and reactor metadata providers when you call `AddCratisChronicle`, including in standalone hosts. Register custom handlers under `IReactorSideEffectHandler` or their concrete type in the host's service collection. Handlers discovered from other loaded libraries only participate when registered; merely loading an assembly does not activate its integration.
 
-To return your custom side effect synchronously, implement `CanHandleReturnType(Type)` on the handler to claim its declared type. Existing handlers default to `false` and can still handle asynchronous `Task<T>` results. A handler can also claim a declared `IEnumerable<T>` return type; it must process the collection at invocation time. Returning a type that no handler claims synchronously is rejected during registration.
+To return your custom side effect synchronously, implement `CanHandleReturnType(Type)` on the handler to claim its declared type. Mark the return type with `[ReactorSideEffect]` from `Cratis.Chronicle.Reactors.SideEffects` so analyzer [CHR0054](../code-analysis/CHR0054.mdx) accepts it. The marker may be applied to classes, structs, or interfaces; types deriving from a marked base class or implementing a marked interface are also accepted. It only informs the analyzer: it does not register a handler or make the type supported at runtime.
+
+Existing handlers default to `false` and can still handle asynchronous `Task<T>` results without a marker. A handler can also claim a declared `IEnumerable<T>` return type; it must process the collection at invocation time. Arrays and `IEnumerable<T>` implementations of marked types are accepted by the analyzer, but the handler must claim the declared collection type, not only its elements. Returning a type that no handler claims synchronously is rejected during registration.
 
 ## Supported Return Types
 

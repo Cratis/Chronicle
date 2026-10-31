@@ -26,5 +26,10 @@ public enum ObserverSubscriberState
     /// <summary>
     /// The observer is disconnected.
     /// </summary>
-    Disconnected = 3
+    Disconnected = 3,
+
+    /// <summary>
+    /// Delivery is waiting for a durable deadline rather than failing.
+    /// </summary>
+    Deferred = 4
 }

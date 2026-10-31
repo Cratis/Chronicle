@@ -1,0 +1,11 @@
+projection User => UserReadModel
+  every
+    LastUpdated = $eventContext.occurred
+    UpdatedBy = $eventContext.eventSourceId
+
+  from UserRegistered
+    Name = name
+    Email = email
+
+  from UserEmailChanged
+    Email = email

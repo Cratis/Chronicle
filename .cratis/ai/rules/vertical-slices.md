@@ -15,13 +15,13 @@ A vertical slice owns a single behavior: the command or query, the events it pro
 
 This file is the reference for *what* goes in each part of a slice. Layout, slice types, workflow, and quality gates are in [general.md](./general.md).
 
-**Model-first check.** Before changing a slice, look for it in the accepted `.play` model (in the committed tree: `git ls-tree -r --name-only HEAD -- <root>` lists it; its HEAD version remains the contract until working-tree edits are committed) under the model root (default `.cratis/screenplay/`, or the root set by `mcpServers.screenplay.root` in `.cratis/ai.json`). A `.play` file outside the root or an untracked or uncommitted draft is not a contract. If an accepted model covers it, change the model and render or gap-fill from it; never edit Stage-managed files. See Phase 0 in [application-profile.md](./application-profile.md).
+**Model-first check.** Before changing a slice, look for it in the accepted `.play` model under the model root (opted in per `general.md` "Model first"; where `cratis-screenplay-modeling-lifecycle` is installed, run its `scripts/model-first-status.mjs` for the decision, root and drafts). If an accepted model covers it, change the model and render or gap-fill from it; never edit Stage-managed files. See Phase 0 in [application-profile.md](./application-profile.md).
 
 ## Technical stack
 
 - .NET / C# (ASP.NET Core) — **Cratis Arc** for CQRS / model-bound commands and queries, **Cratis Chronicle** for event sourcing, MongoDB or EF Core for read models.
 - React + TypeScript (Vite) — Cratis Components 4.x + Arc-generated proxies, MVVM. Vitest + Mocha/Chai/Sinon for frontend specs.
-- xUnit + Cratis.Specifications + NSubstitute for C# specs (the `*Scenario` family — see [specs.md](./specs.md)).
+- xUnit + Cratis.Specifications + NSubstitute for C# specs (`Specification` plus a direct call by default for pure decisions; add the `*Scenario` family only where pipelines, validation, constraints, projections or wiring contribute proof — see [specs.md](./specs.md)).
 
 ## Proxy generation — the build dependency
 
@@ -55,10 +55,10 @@ Every domain identifier or named value is a typed record — raw `string`/`Guid`
 - **[contract] Chronicle stream identities** derive from `EventSourceId<T>` with an `IComparable` underlying primitive. Add `NotSet`, `New()`, or a `T` → derived-id operator only when the domain API justifies it; typed empty/zero values are real specified stream IDs. The base conversion surface does not construct every derived domain record automatically.
 
 ```csharp
-public record AuthorId(Guid Value) : EventSourceId<Guid>(Value)
+public record AuthorId(Guid Value) : EventSourceId<Guid>(Value), IGeneratable<AuthorId>
 {
     public static readonly AuthorId NotSet = new(Guid.Empty);
-    public static AuthorId New() => new(Guid.NewGuid());
+    public static AuthorId New() => new(GenerateValue.Uuid());
     public static implicit operator AuthorId(Guid value) => new(value);
 }
 
@@ -67,6 +67,8 @@ public record AuthorName(string Value) : ConceptAs<string>(Value)
     public static implicit operator AuthorName(string value) => new(value);
 }
 ```
+
+`IGeneratable<T>` and `GenerateValue` need Cratis.Fundamentals 7.23.0 or later. Arc and Chronicle can resolve an older version; add a direct reference or keep a plain `static New()` until then (see [concepts.md](./concepts.md)).
 
 **[convention] Placement:** slice-specific concept → in the slice file; feature-shared → feature folder; module-shared → module folder; app-wide → `Common/`. Scan `Common/` and the feature folder before creating a new concept. See [concepts.md](./concepts.md) for full patterns, or invoke the **cratis-fundamentals-concept** skill.
 
@@ -87,7 +89,7 @@ The command carries input from the caller. `Handle()` is defined directly on the
 | Reusable value invariant (length, format, range) | `ConceptValidator<T>` on the concept type |
 | Command-input / cross-field / pre-handler rule (incl. injected read-model/service/identity checks) | `CommandValidator<TCommand>` with `RuleFor(...)` |
 | Handler needs fetched/computed data before it can build the event | `Provide()` — fetches the data; may validate it and short-circuit |
-| State-dependent rule that must hold **under concurrency** | inject the read model into `Handle()`, return `Result<TEvent, ValidationResult>` |
+| State-dependent rule that must hold **under concurrency** | Read protection `On`: the read model as a `CommandValidator<T>` constructor (or `Handle()`) parameter; a per-stream read model or `IStreamReads`/`StreamDecision` for one stream; an aggregate for a rich lifecycle. `[ProtectedDecision]` + `DecisionRead<T>` is the older per-command opt-in. Under `Off` (default) injection is a hint |
 | Uniqueness | Chronicle `[Unique]` / `IConstraint` (race-safe) — not a read-model pre-check |
 | Genuinely exceptional failure (bug, missing infra) | `throw` a domain exception |
 
@@ -106,18 +108,19 @@ for the versioned boundary and supported alternatives.
 
 A command's **property values** are recorded on the causation of every event it appends, alongside the command's name, so an event says not only which command produced it but what that command was asked to do. The causation is written into the event log and stays there for as long as the events do — a value recorded there cannot be taken back out by changing code.
 
-Two markings keep a value off the chain, and both are honored on the property, the declaring type, the positional record parameter, **and the property's type**:
+Two markings keep a value off the chain (`[PII]` from Chronicle, `[NotAudited]` from Arc), and both are honored on the property, the declaring type, the positional record parameter, **and the property's type**:
 
 | Marking | For | Also does |
 | --- | --- | --- |
 | `[PII]` | personal data | encrypts it in the event, enrolls it in erasure |
-| `[NotAudited]` | a secret that is not personal data — password, token, API key, card number | nothing else; it only withholds |
+| `[NotAudited]` | a secret that is not personal data — a password or token given as a command input, an API key, a card number | nothing else; it only withholds. A credential (password, token) is never put on an event: store a hash or a reference. A secret the system must retain on an event is also `[Encrypted]` |
 
-They are **not interchangeable**: `[PII]` on a password would encrypt it and enroll it in GDPR erasure, which is wrong; `[NotAudited]` on a name does nothing for an erasure request, which is also wrong.
+They are **not interchangeable**: `[PII]` on a password would encrypt it and enroll it in GDPR erasure, which is wrong; `[NotAudited]` on a name does nothing for an erasure request, which is also wrong. An operational secret the system retains on an event (a third-party API key, a company's bank account number) needs **both** `[Encrypted]` (`Cratis.Chronicle.ProtectedValues`, Chronicle 19.32.0+; at rest, no erasure) and `[NotAudited]` (off the chain); either alone leaves a gap. A credential used for authentication is never retained: the command marks it `[NotAudited]` and the event carries only a hash or a reference. Never combine `[PII]` with `[Encrypted]` (`CHR0053`), and neither goes on an event source id (`CHR0034`, `CHR0052`).
 
 **Prefer marking the concept**, exactly as with `[PII]` — mark `ApiKey` once and every command taking one is covered:
 
 ```csharp
+[Encrypted]
 [NotAudited]
 public record ApiKey(string Value) : ConceptAs<string>(Value);
 ```
@@ -162,7 +165,7 @@ Return the event(s) directly — Arc appends them; never inject `IEventLog` to a
 | `(EventSourceId, TEvent)` | command decides the event source id (tuple order doesn't matter) |
 | `(TResponse, TEvent)` | a response value plus an event |
 | `IEnumerable<object>` | multiple events; `EventForEventSourceId(id, @event)` wrappers for cross-stream |
-| `Result<TEvent, ValidationResult>` | success event or a typed validation error (concurrency-sensitive rule) |
+| `Result<TEvent, ValidationResult>` | success event or a typed validation error; does not itself guard concurrency |
 | `ICommandOperation` / `CommandOperations` | immediate server-side work after event enrollment, never the client response |
 | `void` | no event |
 
@@ -180,7 +183,33 @@ Three attributes scope an append broad→narrow, and each one *also* (only with 
 
 Each attribute always tags the appended events (visible in `EventContext`). **Only when the command also carries `concurrency: true`** does each dimension join the server-side `ConcurrencyScope` (plus the event source id), with the optimistic strategy supplying the expected tail sequence number. A command **without** `concurrency: true` contributes no scope of its own, and the append falls to whatever concurrency strategy the event sequence is configured with — by default the optimistic one, scoped to the event source. So the attribute chooses *which dimensions* bound the check, not whether a check happens at all. Reach for it on high-contention state transitions where a stale read would let two commands both "win" — it narrows the boundary so appends that are genuinely independent stop colliding (concurrency failures surface on `CommandResult`/`AppendResult`). Adopt it deliberately per behavior, not as a blanket default.
 
-When the stream id is known only at runtime, implement `ICanProvideEventStreamId.GetEventStreamId()` instead of `[EventStreamId]`. ⚠️ Combining `ICanProvideEventStreamId` with a non-null `[EventStreamId]` attribute on the same command throws `AmbiguousEventStreamId` when that command is executed (the check runs while Arc builds the command context, not at startup) — pick one (or set the attribute value to `null` to defer to the interface).
+New code sets `<CratisReadProtection>On</CratisReadProtection>` (Arc 22.106.0).
+Under `On`, a read-model parameter of `Handle()` or of a `CommandValidator<T>`
+constructor is read fresh and guards the append; the state rule goes in the
+validator. Two entities: two parameters, `[LookUpBy(nameof(Cmd.Prop))]` on the
+second, `IEnumerable<EventForEventSourceId>` returned. One stream inside a source:
+a per-stream read model (`[ReadModel, EventStream<TSource>("Stream")]`) on a command
+routed with `[EventSource<TSource>("Stream")]` and `[EventStreamId("{Prop}")]`, or
+`IStreamReads.ForCommand()` in `Provide()` returning `StreamDecision.Append(...)`.
+A deliberate advisory read is `[Unprotected("why")]`. Models must be admitted
+(source-keyed projection with a string or Guid `Id`, or an unfiltered reducer
+without constructor dependencies); joins, children and event-property keys are
+refused. Under `Off` (the default) injection and keyed reads are advisory,
+including in `Handle()`; `[ProtectedDecision]` + `DecisionRead<T>` is the older
+per-command opt-in and still works. Exact returned scopes replace automatic
+`concurrency: true` capture. Refusals: [choosing how a rule holds](../skills/cratis-chronicle-decision-reads/references/choosing-how-a-rule-holds.md).
+
+`[EventStreamId("{ReportingScopeId}:{Period}")]` resolves command property values
+after validation; concepts supply their underlying values. An interface can
+compute an id too. `AmbiguousEventStreamId` rejects any non-NotSet attribute
+value combined with `ICanProvideEventStreamId`, including a template; pick one.
+`[EventSource<TSource>(stream)]` selects a definition-backed route on commands and
+aggregate roots. `EventRoute`/`IEventRoutes` reuse it; explicit wrapper routing
+wins over command context. `[EventTag]`, `ICanProvideEventTags`, returned
+`EventTags` and discovered `ICanProvideCommandEventTags` add tags to returned
+events. `CompleteStream` runs after commit, not atomically with append, and closes
+stream type/id across the log, not just one source. Read the Arc command skill's
+`references/decisions-and-routing.md` for source-pinned contracts and limitations.
 
 ### Event-source id resolution order **[contract]**
 
@@ -205,6 +234,7 @@ Apply authorization attributes on the `[Command]` record or query method. **[con
 - **[contract] No arguments for new events** — the type name is the identifier. Use `generation:`/id only when evolving an existing contract (invoke the **cratis-chronicle-event-type-migration** skill).
 - **[contract] Past-tense, one-purpose names** (`AuthorRegistered`, not `Updated`/`FormSubmitted`) — Chronicle requires past-tense, single-purpose facts. Self-describing without slice context.
 - **[contract] Avoid nullable properties** — Chronicle's analyzer warns on nullable event members; model optional facts as a separate event, or resolve a nullable command input to a non-null sentinel before constructing the event.
+- **[contract] `Handle()` never returns a nullable event or `null` for "nothing to do"** — Arc treats a `null` result as success with nothing appended, so the caller is told a command succeeded that never happened. Missing state or a failed rule is a rejection: return `Result<TEvent, ValidationResult>` with `ValidationResult.Error(...)`, or reject in a validator or `Provide()`. Optional `ICommandOperation` returns are a separate contract and unaffected.
 - **[contract] Never carry the event-source id** — it's implicit in the event context.
 - **[convention] No `DateTimeOffset`/`DateTime` properties** that duplicate `EventContext.Occurred` — Chronicle records the wall-clock timestamp of every event there. Read it in projections/reducers via `[SetFromContext<T>]` or fluent `.Set(m => m.X).ToEventContextProperty(c => c.Occurred)`. Use `DateOnly` only for a business date the user explicitly supplies.
 - **[convention] Every `[EventType]` has an XML `<summary>`** (Cratis C# doc convention) recording why the event exists and what each value means.
@@ -215,6 +245,7 @@ Apply authorization attributes on the `[Command]` record or query method. **[con
 - **Events are not read models** — never append events for totals, counts, statuses, search indexes, or dashboards. Project those from source events into read models.
 - **Never duplicate one fact as an aggregate event *plus* a per-item fanout.** If a command fans out per item (one `RequestSentToPartner` per partner), don't also emit an aggregate event carrying the whole list. Keep the fanout as the single source of truth and project any aggregate from it; pick per-item vs. single-with-list event from how consumers read it — never both.
 - **Command rejection normally appends no event.** Validation and business-rule rejections are command results, not facts. Add a rejection/failed event only when the business must audit or react to that failure later.
+- **A settings event records the decision, not the whole blob.** Split composite configuration into one event per concern; a whole-object `…Set` event is last-writer-wins CRUD and turns every new field into a schema change. The tell is a `…Set`/`…Updated` event carrying a full settings record. Judgment-shaped; no gate.
 - **One event name = one meaning.** Don't reuse a vague event for several domain facts; if facts can occur, be absent, or have consumers independently, split them into separate event types.
 - **Never persist clock-relative state.** "Overdue", "expired", "due in 3 days" are true *now* and false later, and a projection only moves when an event arrives — so a projected `IsOverdue` is wrong the moment the clock crosses the line with no event to flip it. Store the **deadline** (a `DateOnly`/`DateTimeOffset` the business supplied) and compute the comparison at the query or UI edge, refreshing when time alone changes the answer. Only when *crossing* the deadline is itself a business fact (a fee is charged, a reminder goes out) does a scheduled process append an event for it.
 
@@ -227,13 +258,24 @@ public record AuthorRegistered(AuthorName Name);
 
 ## Read Models and Queries
 
-**[contract]** `[ReadModel]` records expose queries as `public static` methods; dependencies are plain method parameters (no `[FromServices]`). Default to model-bound projection shape; drop to fluent only when needed. For step-by-step creation, invoke the **cratis-chronicle-read-model** skill.
+**[contract]** `[ReadModel]` records expose eligible public and internal static methods as queries; internal visibility does not hide an endpoint. Dependencies are plain method parameters (no `[FromServices]`). For application code, start with model-bound mappings, use fluent when the definition needs structure, and choose reducer code when transitions read better as code. For step-by-step creation, invoke the **cratis-chronicle-read-model** skill.
+
+Use `[ReadModel(RequireQueryAttribute = true)]` with `[Query]` on intended
+endpoints when folds exist (ARC0026/ARCCHR0019). `[Query]` alone does not hide
+siblings. Keep helpers outside the read model regardless of visibility.
+Requires Arc 22.27.1 for private/protected/compiler-generated methods to be
+excluded; older versions can expose private statics too. Check `dotnet list package`.
+A `CancellationToken` is supplied by Arc; concept arguments come from the caller,
+not DI. Bad GET/QUERY argument conversions return 400. Single-instance MongoDB/EF
+observations emit `default` on absence/deletion/filter exit: guard `hasData` and
+`isReady` in React; see the read-model query reference.
 
 ### Query return shapes **[contract]**
 
 Stay within analyzer-supported shapes: the read model, `T?`, a collection/array/`IQueryable<T>` of it, `Task<...>` of those, `IAsyncEnumerable<T>`, or `ISubject<...>` of read model/collection.
 
-- **`IQueryable<TReadModel>`** → automatic server-side paging/sorting (frontend `useWithPaging` — see the **cratis-arc-query-paging** skill). Use it whenever a list can grow.
+- **`IQueryable<TReadModel>`** → Arc pages and sorts it through LINQ. Right for a LINQ-native provider such as Entity Framework Core.
+- **`ISubject<IEnumerable<TReadModel>>` from `collection.Observe(...)`** → the MongoDB way to a paged, sorted list, built on a native `Find` with no LINQ (frontend `useWithPaging` — see the **cratis-arc-query-paging** skill). **[contract]** A query never writes `Skip`/`Take`/`OrderBy` for the client's paging or sorting; Arc applies them. Use one of these two shapes whenever a list can grow.
 - **`ISubject<...>`** → live/observable queries. Return it directly — **never** `Task<ISubject<...>>`.
 - **[contract] Custom paths use `[Path("...")]`** (`PathAttribute`), not ASP.NET `[Route]`. Reserve `[Route]` for controller endpoints (which this convention avoids).
 
@@ -242,7 +284,7 @@ Stay within analyzer-supported shapes: the read model, `T?`, a collection/array/
 [FromEvent<AuthorRegistered>]
 public record Author(AuthorId Id, AuthorName Name)
 {
-    public static IQueryable<Author> AllAuthors(IMongoCollection<Author> collection) => collection.AsQueryable();
+    public static ISubject<IEnumerable<Author>> AllAuthors(IMongoCollection<Author> collection) => collection.Observe();
     public static Task<Author?> AuthorById(IReadModels readModels, AuthorId id) =>
         readModels.GetInstanceById<Author>((EventSourceId)id);
 }
@@ -265,7 +307,9 @@ query reference for versioned behavior and composition trade-offs.
 
 ### Choosing read-model access in command-side code **[convention]**
 
-Ladder, first that fits: (1) direct read-model (DCB) injection — only when keyed by the command's own event-source id; (2) a `[Passive]` projection; (3) `IReadModels.GetInstanceById<T>((EventSourceId)key)` for a different/derived key; (4) a materialized projection. A lookup *interface* is justified **only** for a genuine non-key search (e.g. find-by-email) — never to wrap a keyed `GetInstanceById`.
+Ladder, first that fits: (1) direct read-model injection — guarded under read protection `On`, advisory under `Off`; keyed by the command's own event-source id, or by `[LookUpBy]`; (2) a `[Passive]` projection; (3) `IReadModels.GetInstanceById<T>((EventSourceId)key)` for a different/derived key; (4) a materialized projection. A lookup *interface* is justified **only** for a genuine non-key search (e.g. find-by-email) — never to wrap a keyed `GetInstanceById`.
+
+**[convention] One read model per consumer scenario, and dispatch never reads a UI model.** When a second consumer needs different semantics (board vs list vs count vs control flow), add a projection instead of extending the existing model; a command, reactor or job deciding what to do reads a model built for that decision, never a screen's listing model. The tell is a read model many slices import or one that projects many unrelated slices. Judgment-shaped; no gate.
 
 **[contract] Passive state is not sink state.** `IMongoCollection<T>` cannot
 compute a passive read model; any leftover documents are not maintained state.
@@ -290,18 +334,34 @@ evaluate reconstruction frequency, history length, consistency, and security.
 
 **Injected-parameter nullability is the required/optional switch:** a nullable `TReadModel?` parameter (on a validator, `Provide()`, or `Handle()`) gets `null` injected for a never-created/removed instance — check `is null`. A **non-nullable** `TReadModel` whose instance does not exist is **rejected, not crashed**: Arc raises `ReadModelDoesNotExistForCommand`, which surfaces as a validation failure (HTTP 400) with reason `DependencyUnavailable` (non-nullable = "required, must exist"). The server-fault path (`CannotResolveCommandDependency` / `CannotResolveValidatorDependency`, HTTP 500) is reached only when the dependency is *not* a registered read model or no usable key was resolved — the exact contract is in the **cratis-arc-command** skill's `read-model-injection` reference. ⚠️ Both switches ride on the same resolution, so on a **`[Passive]` projection** neither fires for a never-created instance: the nullable parameter receives a default-valued object and the `is null` guard never runs, and the non-nullable one resolves happily. Check the existence flag there, not nullability. Type by-id accessors you write yourself as `Task<T?>` so callers get the compiler signal Chronicle's own signature withholds.
 
+### Observation commands append only changes **[convention]**
+
+A command fed by a webhook, poll, sweep, retry or classifier is an *observation*, and looking is not a fact.
+
+- Compare with current state and append **nothing** when nothing changed; `Handle()` takes the thing it would change and compares each fact on its own.
+- Compare against something that cannot lag: a `[Passive]` read model read by key, or the stream's own events, never a materialized read model (it trails the log and is bypassed exactly while rebuilding).
+- Never append a tick, a heartbeat, a trigger event for a reactor, a "last looked" timestamp, telemetry or a non-answer ("pending", "could not decide"); use a job, state machine, command operation or `ICommandPipeline`.
+- An event named `…Changed` records a real change; split a broad `…DetailsChanged` into per-fact events.
+- Specify two behaviors per observation command: the same observation twice appends nothing, and a changed observation appends exactly the change.
+
+See the **cratis-chronicle-event-modeling** skill (`references/event-log-hygiene.md`).
+
 ## Projections **[contract]**
 
 Projections build read models from **events** (never from other read models). Use the ladder — for adding one to an existing model, invoke the **cratis-chronicle-projection** skill:
 
 1. **Model-bound attributes** on the `[ReadModel]`: `[FromEvent<T>]`, `[SetFrom<T>]`, `[SetFromContext<T>]`, `[ChildrenFrom<T>]`, `[RemovedWith<T>]`, `[Nested]`, `[ClearWith<T>]`, counters, `[FromAll]`.
-2. **Fluent `IProjectionFor<T>`** for joins, composite/constant keys, parent-key extraction, context mapping, `.NotRewindable()`, or supported conditional setters. Declarative metadata only — no DI side effects, no imperative `Define()` body, builder lambdas are member access only.
-3. **Reducer `IReducerFor<T>`** when the model is "current state + event → next state" — branching on prior state, loops, calculations. A valid style, **not** a failure mode; carry an inline justification comment naming the limitation that ruled out a projection.
+2. **Fluent `IProjectionFor<T>`** when mappings need structure or the contract should stay attribute-free: joins, composite/constant keys, parent-key extraction, context mapping, `.NotRewindable()`, or supported conditional setters. Declarative metadata only — no DI side effects, no imperative `Define()` body, builder lambdas are member access only.
+3. **Reducer code** for clearer "current state + event → next state" logic — prior-state branches, calculations and guards. A normal choice, not a last resort. Default new .NET reducers to **self-reducing models** with public static `Reduce(event, model? current[, EventContext])`, returning model or `Task<model>` (including nullable results), without a marker. Use separate `IReducerFor<T>` for fold-time DI, replay instance behavior or separation.
+4. **Nominated plain instance class** only when its assembly cannot reference Chronicle; nominate through `ChronicleOptions.ExplicitArtifacts` before creating stores. Use **PDL** for definitions authored outside application code, not as the code-first default.
+
+For self models, keep `[ReadModel]`, static `Reduce` methods and queries on one record. Before Arc 22.90.0, use `[ReadModel(RequireQueryAttribute = true)]` and `[Query]`; from Arc 22.90.0, Arc excludes methods taking the model itself from query discovery and Arc.Chronicle claims self models for command injection. Complete marker-free shapes become reducers on upgrade; a competing builder fails with `AmbiguousReadModelBuilder`. Preserve admission/ordering guards when converting and remove the previous builder. See **cratis-chronicle-reducer** for exact signatures, hooks and limits. `[Passive]` belongs on the model; it gives fresh reads, not a concurrency guard — decision reads refuse reducers. Self reduction is .NET-only (Cratis/Chronicle#4851); this does not claim Stage renders it.
 
 - **[contract] AutoMap is on by default — never call `.AutoMap()`.** Match property names so AutoMap wires them; diverge with `[SetFrom<T>]` / `.Set().To()` only for genuine name differences. Re-enable `.AutoMap()` only inside a scope disabled with `.NoAutoMap()`.
   - ⚠️ **AutoMap runs per *event* across every event the projection references — it does not defer to your explicit setters.** A property sourced with `[SetFrom<A>]` can still be silently overwritten when some *other* referenced event `B` happens to carry an identically named property (AutoMap wires `B`'s value on top). Fence the property with property-level **`[NoAutoMap]`** (which pairs with the `[SetFrom]`, not replaces it) so only your explicit setter writes it. `[SetFrom]` does **not** imply this — leaving AutoMap on is what allows the common create-then-rename pattern (a later event updating a property by name-match). No colliding event property name means no `[NoAutoMap]` needed. (An event subscribed only via an aggregate like `[Count]` doesn't auto-map its other properties, so it can't collide.) The analyzer **`CHR0025`** surfaces this collision as an *informational* heads-up (not a warning, because either resolution — add `[NoAutoMap]`, or accept the update — can be correct).
 - **[contract] `[Nested]`** projects a single nullable child object; place `[FromEvent<T>]` on the nested type (or property-level `[SetFrom<T>]` when the parent shares the event — declaring class-level `[FromEvent<T>]` on both parent and nested type for the same event is a duplicate-registration startup crash).
 - **[contract] Event-sequence source attributes:** class-level `[EventSequence("name")]`, `[EventLog]`, or `[EventStore("name")]` select where the projection reads from (a named sequence, the explicit default log, or another Chronicle event store / inbox). ⚠️ `[FromEventSequence]` is **removed** — use `[EventSequence("name")]`.
+- **[convention] Counters and aggregates (`[Increment]`, `[Decrement]`, `[Count]`) need clean lifecycle transitions.** They see the event, not the item's previous state, so a close for an already closed item drifts the counter permanently and replay reproduces it. The command that appends the lifecycle event refuses a non-transition and appends nothing; fold the log per event source with the proposed mapping and compare it with the state it summarizes before shipping.
 
 ## Constraints **[contract]**
 
@@ -332,7 +392,7 @@ public Task AuthorRegistered(AuthorRegistered @event, EventContext context) => .
 **[contract]** Chronicle encrypts `[PII]`-marked values per subject; decryption is transparent to observers and queries (read models injected into a `CommandValidator<T>` or `Handle()` decrypt transparently under the command's resolved subject before validation/handler logic runs).
 
 - Prefer **concept-level `[PII]`** (on the `ConceptAs<T>` type) so the marker travels everywhere automatically; use property-level `[PII]` only when a value is personal in one event context but not everywhere.
-- `[PII]` also keeps the value **off the causation chain** when it is a command property — see [Causation](#causation--what-a-command-records-contract). A secret that is not personal data needs `[NotAudited]` instead; `[PII]` is the wrong tool for a password.
+- `[PII]` also keeps the value **off the causation chain** when it is a command property — see [Causation](#causation--what-a-command-records-contract). A retained operational secret that is not personal data needs `[Encrypted]` plus `[NotAudited]` instead; `[PII]` is the wrong tool for it, and a password is never retained at all (store a hash).
 - **`[PII]` is found at any nesting depth, and may mark a whole value object.** A `[PII]` concept inside a value object is encrypted where it sits (siblings stay readable). Marking the **value object type** (or a property typed as one) with `[PII]` classifies every value it holds — Chronicle pushes the marker down to the individual values, so the document keeps its shape and each value is separately encrypted rather than fused into one blob.
 - Projection-backed read models inherit PII lineage automatically — don't add `[PII]` to their properties. Reducer-backed models: a `[PII]`-concept-typed property is detected automatically; add property-level `[PII]` only for a primitive/non-PII-concept property populated from PII source data.
 - ⚠️ **`[PII]` cannot be applied to `EventSourceId`/`EventSourceId<T>`** — Chronicle throws `PIINotSupportedOnEventSourceId` at runtime because the identifier is the encryption-key lookup. If the identifier itself is sensitive, use a random `Guid`-backed surrogate as the event source id and store the sensitive value in a `[PII]` property.
@@ -361,9 +421,20 @@ Redaction is a system-event request that removes payload availability from the e
 
 ## Cross-slice patterns **[convention]**
 
-Cross-slice access is **read-only and goes through Chronicle** — inject another slice's read model (validator/`Provide()`/`Handle()`), read by explicit key with `IReadModels.GetInstanceById`, mark a `[Passive]` projection for command-side decisions, or react to its events. **Never** instantiate or DI another slice's command/handler/service.
+Cross-slice access is **read-only and goes through Chronicle** — inject another slice's read model (validator/`Provide()`/`Handle()`), read by explicit key with `IReadModels.GetInstanceById`, mark a `[Passive]` projection for a current read (a rule that must hold under concurrency needs read protection `On`, a stream decision or a constraint, see the `cratis-chronicle-decision-reads` skill's `references/choosing-how-a-rule-holds.md`), or react to its events. **Never** instantiate or DI another slice's command/handler/service.
 
-**DCB (Dynamic Consistency Boundary):** a command's consistency boundary is exactly the state its validator/`Provide()`/`Handle()` reads — determined at runtime, not pre-declared. Pair with `concurrency: true` stream metadata when a stale read could let two commands both "win."
+**[convention] Prompts are content.** In an AI-backed feature, keep prompt bodies as resources (embedded files/templates) assembled by a typed composer, not as string literals in classes; the tell is a class dominated by multi-line prompt text. Judgment-shaped; no gate.
+
+**[convention] The third copy of a job shape is the deadline for the abstraction.** Two similar jobs or decision flows are fine; when a third appears, extract the shared template instead of copying again. Judgment-shaped; no gate.
+
+**DCB (Dynamic Consistency Boundary):** the boundary is the event state explicitly
+enrolled in guarded decisions, not every model a command reads. Use stream
+reads/exact scopes or read-model parameters under read protection `On`
+(`[ProtectedDecision]` + `DecisionRead<T>` is the older per-command opt-in);
+validator/`Provide()`/`Handle()` injection under `Off` is advisory. Stream-level
+`concurrency: true` scopes are another explicit boundary, not protection for an
+arbitrary snapshot. Specify conflicts with `AppendConcurrently` and actual seeded
+events, not pinned models.
 
 ## Dialogs
 

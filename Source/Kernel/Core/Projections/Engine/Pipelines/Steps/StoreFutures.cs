@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.Observation;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Projections.Engine.Pipelines.Steps;
@@ -27,7 +28,9 @@ public class StoreFutures(
         // Store any deferred futures that were created during processing
         foreach (var future in context.DeferredFutures)
         {
-            var pending = await projectionFutures.AddFuture(future);
+            var pending = projection.GenerationDelivery == EventGenerationDelivery.Pinned
+                ? await projectionFutures.AddPinnedFuture(future)
+                : await projectionFutures.AddFuture(future);
             if (pending > 0)
             {
                 futuresTracker.HasPending = true;

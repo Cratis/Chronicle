@@ -58,7 +58,7 @@ public class a_named_tag_migrator : Specification, IDisposable
             case "SQLServer": builder.UseSqlServer(_connectionString); break;
             default: builder.UseSqlite(_connectionString); break;
         }
-        builder.AddConceptAsSupport();
+        builder.AddConceptAsSupport().WithoutServiceProviderCaching();
         return new EventSequenceDbContext(builder.Options, "event-sequence", _migrator);
     }
 

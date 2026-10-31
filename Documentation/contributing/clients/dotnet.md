@@ -1,3 +1,6 @@
+---
+description: How the Chronicle .NET client, the foundation of most clients, is designed and packaged for quick onboarding with full control when needed.
+---
 # .NET Client
 
 The .NET client serves as the foundation for most Chronicle clients. Its design philosophy is to

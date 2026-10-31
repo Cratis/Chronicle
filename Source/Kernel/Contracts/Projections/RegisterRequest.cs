@@ -36,4 +36,27 @@ public class RegisterRequest
     /// </summary>
     [ProtoMember(4)]
     public bool FullSet { get; set; }
+
+    /// <summary>
+    /// Gets or sets the identity of the application registering. A full set only retires projections that the same
+    /// registrant registered, so applications sharing an event store do not retire each other's projections. A full
+    /// set without a registrant retires nothing.
+    /// </summary>
+    [ProtoMember(5)]
+    public string Registrant { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the software version of the application registering, as a semantic version. The kernel ignores
+    /// a registration that is older than the version a projection was last registered with, so a client that
+    /// reconnects or retries during a rolling deploy cannot overwrite the definitions of a newer one. A missing or
+    /// unparseable version leaves the registration unguarded.
+    /// </summary>
+    [ProtoMember(6)]
+    public string? Version { get; set; }
+
+    /// <summary>
+    /// Gets or sets the declaring client's current connection identifier, if supported by the client.
+    /// </summary>
+    [ProtoMember(7)]
+    public string? ConnectionId { get; set; }
 }

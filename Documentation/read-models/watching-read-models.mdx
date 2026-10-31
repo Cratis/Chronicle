@@ -7,6 +7,8 @@ Watching a read model gives a client a stream of changes as Chronicle applies pr
 
 Not every Chronicle client exposes the watch API yet. The examples below show the clients that currently do.
 
+For a list that needs an initial snapshot and a complete replacement set after changes, use [Observing Read Models](observing-read-models.mdx) instead. `Watch` emits individual changesets, not the initial collection.
+
 ## What a change contains
 
 Each change tells you:

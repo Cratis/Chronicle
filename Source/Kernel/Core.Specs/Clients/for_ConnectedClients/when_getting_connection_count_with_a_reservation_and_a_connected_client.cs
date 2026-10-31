@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Configuration;
+using Cratis.Chronicle.Storage;
 using Cratis.Metrics;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -19,7 +20,8 @@ public class when_getting_connection_count_with_a_reservation_and_a_connected_cl
         _connectedClients = new ConnectedClients(
             Substitute.For<ILogger<ConnectedClients>>(),
             Substitute.For<IMeter<ConnectedClients>>(),
-            Options.Create(new ChronicleOptions()));
+            Options.Create(new ChronicleOptions()),
+            Substitute.For<IStorage>());
     }
 
     async Task Because()

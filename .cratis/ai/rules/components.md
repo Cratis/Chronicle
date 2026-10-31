@@ -17,7 +17,7 @@ The package root exports **only** setup (`CratisComponentsProvider`, configurati
 | Need | Use | Subpath |
 |---|---|---|
 | App root | `CratisComponentsProvider` | `@cratis/components` |
-| Page chrome, buttons, basic controls | `Page`, `Button`, `IconButton`, `TextInput`, `TextArea`, `NumberInput`, `Checkbox`, `Radio`, `Switch`, `Tooltip`, `ErrorBoundary`, `FormElement`, `ComboBox` (≥ 4.6.0 — single-selection, text-searching entity picker) | `@cratis/components/Common` |
+| Page chrome, buttons, basic controls | `Page`, `Button`, `IconButton`, `TextInput`, `TextArea`, `NumberInput`, `Checkbox`, `Radio`, `Switch`, `Tooltip`, `ErrorBoundary`, `FormElement`, `ComboBox`, `ToggleGroup`, `Tabs`, `TagGroup`, `Breadcrumbs`, `DatePickerInput`, `ActionMenubar`, `ToolbarFocusMode`, `Surface` | `@cratis/components/Common` |
 | Icon | `Icon` (type) / `IconDisplay` | `@cratis/components/Common` |
 | Query list page | `DataPage`, `MenuItem`, `Column` | `@cratis/components/DataPage` |
 | Standalone query table | `DataTableForQuery` / `DataTableForObservableQuery`, `Column` | `@cratis/components/DataTables` |
@@ -29,7 +29,34 @@ The package root exports **only** setup (`CratisComponentsProvider`, configurati
 | Notifications | `Toaster`, `toast`, `toastCommandResult` | `@cratis/components/Notifications` |
 | Status & display | `Tag`, `Badge`, `Chip`, `Skeleton`, `Avatar`, `ProgressBar`, `ProgressSpinner`, `Message` | `@cratis/components/Display` |
 | Canvas tool palette | `Toolbar`, `ToolbarButton`, … | `@cratis/components/Toolbar` |
+| Schema structure / object content | `SchemaEditor` / `ObjectContentEditor` / `ObjectNavigationalBar` | `@cratis/components/SchemaEditor`, `/ObjectContentEditor`, `/ObjectNavigationalBar` |
+| Spatial canvas / pivot data | `Canvas` / `PivotViewer` | `@cratis/components/Canvas`, `/PivotViewer` |
+| Chat | `Chat` | `@cratis/components/Chat` |
+| Ordered configuration | `OrderedItemEditor`, `PropertyControls` | `@cratis/components/ConfigurationEditor` |
+| Filter panel | `FilterPanel` | `@cratis/components/Filter` |
+| Icon / Markdown editing | `IconPicker` / `MarkdownEditor` | `@cratis/components/IconPicker`, `/MarkdownEditor` |
+| Time navigation | `TimeMachine` | `@cratis/components/TimeMachine` |
+| Renderer contracts / built-in | renderer exports | `@cratis/components/renderer`, `/renderer/builtin` |
+| CSS foundation / area sheets | layer order / structural CSS | `@cratis/components/styles/base`, `<subpath>/styles` |
 | Shared types | `JsonSchema`, `Json`, … | `@cratis/components/types` |
+
+At Components 4.26.4, React and React DOM are `^19.0.0`, Arc and Arc React are
+`>=20.3.1 <23`, Fundamentals is `^7.10.3`, and `reflect-metadata` `0.2.2` is required
+(import it at the entry point). `tsyringe` `4.10.0` is optional for Components;
+Arc React installs it. `Canvas` and `PivotViewer` need the optional `pixi.js ^8.20.0`
+peer; ordinary pages do not. No `motion-dom` or `motion-utils` resolution pin is needed.
+
+### Common controls
+
+All import from `@cratis/components/Common`:
+
+| Control | Main props / choice |
+| --- | --- |
+| `ComboBox` | `options`, `value: string \| null`, `onChange(key)`, `filter`, `openOnFocus`, `loading`, `emptyMessage`, `failure`, `action`, `optionLayout` — a single-select entity picker |
+| `ToggleGroup` | `options`, `value`, `onChange` — choose a value; radiogroup semantics with one Tab stop |
+| `Tabs` | `tabs`, `value`, `onChange` — choose a panel, not a domain value |
+| `TagGroup` | `value: string[]`, `onChange`, `editable`, `separators`, `allowDuplicates`, `removeIcon` |
+| `Breadcrumbs` | `items`, `separator` — last item is `aria-current='page'` |
 
 Use `Dropdown` from `@cratis/components/Dropdown`, never a vendor select: it renders through the Components overlay environment, so it stacks correctly above dialogs, and it follows the WAI-ARIA button/listbox (or combobox, when `filter` is on) pattern. Its `onChange` receives the **value**, not an event — as do every CommandForm field's.
 
@@ -46,6 +73,14 @@ messages, exceptions — never stack traces):
 const result = await command.execute();
 if (toastCommandResult(result, { successTitle: 'Author registered' })) refresh();
 ```
+
+Without a mounted toaster, neither `toast` nor `toastCommandResult` displays anything.
+Mount **one**, not both: two toasters show every toast twice. The provider has no
+Arc dependency; its position relative to `<Arc>` is not what enables notifications.
+
+`ErrorBoundary` (`Common`) contains a failing section with a neutral message, never
+exception text. Supply `fallback` (a node or `(reset) => node`), `onError`, and
+`onReset` when needed; retry remounts only the protected section.
 
 For ad-hoc notifications, call the imperative `toast.success/info/warn/error(...)` — each takes an
 **options object**, not a bare string: `toast.info({ title: 'Saved', description: '…' })`.
@@ -66,7 +101,12 @@ Required props: `title`, `query` (`Constructor<TQuery>`; snapshot and observable
 auto-detected), `emptyMessage`, and `children`. Other props: `queryArguments`, `dataKey` (pass
 whenever the read model has an identity), `selection` / `onSelectionChange`, `globalFilterFields` /
 `defaultFilters`, `detailsComponent` (`React.FC<IDetailsComponentProps<T>>` = `{ item, onRefresh? }`),
-`onRefresh`, and the Cratis part props `tablePt: DataTableParts` / `paginatorPt: TablePaginatorParts`
+`onRefresh` (forwarded unchanged to the details component; it never refetches the list),
+`selectionMode='multiple'` with `selectedItems` / `onSelectedItemsChange`, and
+`loadingMessage` / `failureMessage` / `unauthorizedMessage` for query-state rows.
+Use an observable query for a live list; DataPage exposes no snapshot refresh handle.
+Global search uses `globalSearchPlaceholder` / `globalSearchAriaLabel`; paginator
+styling and labels use `paginatorClassName` / `paginatorAriaLabels`. The Cratis part props are `tablePt: DataTableParts` / `paginatorPt: TablePaginatorParts`
 / `menubarPt: ButtonParts` (plus `tableClassName` / `menubarClassName`).
 
 Columns and toolbar actions are compositional children:
@@ -124,15 +164,28 @@ An app does three things, once, at its root — or the components render unstyle
 
 1. **Import the stylesheets, in this order** — components do not import their own CSS:
 
-   ```ts
-   import '@cratis/components/tokens';   // the semantic --cratis-* variables every component reads
-   import '@cratis/components/styles';   // structural rules for every component, in low-priority Cratis layers
-   import '@cratis/components/theme';    // optional: the baseline light/dark look (auto, or `cratis-dark`/`cratis-light`)
+   In `index.css`, imported once by the entry point with `import './index.css'`:
+
+   ```css
+   @import '@cratis/components/tokens';
+   @import '@cratis/components/styles';
+   @import '@cratis/components/theme'; /* optional baseline light/dark look */
    ```
+
+   Direct CSS subpath imports from TypeScript need ambient declarations on TypeScript 6
+   (otherwise TS2882). To reduce the roughly 32 KiB gzip aggregate, replace `styles`
+   with `styles/base` plus the needed `<subpath>/styles` sheets. Area order does not matter.
 
    A product with its own design system omits `theme`, defines the `--cratis-*` variables itself, and imports those values *after* the two Components entries so they win the cascade.
 
-2. **Mount `CratisComponentsProvider`** (from the package root) around the app. Its `value` carries `locale` (BCP 47 — drives dates, numbers, keyboard behavior and announcements) and `messages` (the Components-owned labels for `paginator`, `datePicker`, `dropdown`, `dialog`, `stepper`, `notifications`, `dataTable`, `columnFilter`, `toolbar`); `toaster` mounts the toast region. Renderer keys from Components 3 — `license`, `theme`, `pt`, `ripple`, `unstyled`, z-index — are a **type error**, on purpose. Keep the `value` object stable when it carries a large message catalog.
+2. **Mount `CratisComponentsProvider`** (from the package root) around the app. Its `value` carries `locale` (BCP 47 — drives dates, numbers, keyboard behavior and announcements) and `messages` (the Components-owned labels for `paginator`, `datePicker`, `dropdown`, `dialog`, `stepper`, `notifications`, `dataTable`, `filter`, `columnFilter`, `toolbar`); `icons` replaces the
+   product-wide glyphs (`close`, `remove`, `expand`, `sortAscending`, `sortDescending`,
+   `previous`, `next`, `clear`). Resolution is component prop → provider → built-in;
+   `null` hides only the glyph. `useCratisIcon()` (package root) resolves this vocabulary.
+   `locales` is deprecated; use `messages`. `toaster` accepts `boolean | ToasterProps`
+   and mounts the toast region. Provider props also include `overlayEnvironment`,
+   `rendererSetup` (non-secret booleans), experimental `libraryMode` (`strict` / `degrade`)
+   and `rendererFallback` (`core` / `throw`). Renderer keys from Components 3 — `license`, `theme`, `pt`, `ripple`, `unstyled`, z-index — are a **type error**, on purpose. Keep the `value` object stable when it carries a large message catalog.
 
    ```tsx
    import { CratisComponentsProvider } from '@cratis/components';
@@ -143,6 +196,9 @@ An app does three things, once, at its root — or the components render unstyle
        </CratisComponentsProvider>
    );
    ```
+
+   Components 4.22.1+ with `theme` imported maps Arc's `--color-error` and
+   `--color-error-bg` in dark schemes; a product theme omitting it must define both.
 
 3. **Install nothing else.** No PrimeReact, no PrimeIcons, no theme preset, no vendor provider. Only if the product wants a vendor's *look* on the nine primitive slots does it install one adapter package and pass its manifest to the provider's `library` prop — and the vendor's own provider, theme and license then stay the application's, outside Components.
 
@@ -178,6 +234,9 @@ See [dialogs.md](./dialogs.md) for the full dialog guide.
 ## Icons
 
 Components accepts an **`Icon`** (`@cratis/components/Common`) wherever a control takes an icon: either a React node — preferred — or a complete, consumer-owned icon-font class string. Components installs **no icon font**: a string is rendered on an `<i>` unchanged, so the product must load that stylesheet itself. `react-icons` is a Components dependency and the natural source of React icon nodes (`<FaHouse aria-hidden="true" />`). Not every `icon` prop has that shape — `DataPage.MenuItem.icon` is a React component *type* because the page instantiates it; follow the exported prop type.
+
+Use provider `value.icons` for Components' own glyphs across the product;
+`Dialog.closeIcon`, `TagGroup.removeIcon`, and other component props still win at one site.
 
 For the application's own SVG icons:
 

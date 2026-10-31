@@ -2,6 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
+using System.Security.Cryptography;
+using System.Text;
 using Cratis.Arc.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Migrations;
@@ -9,146 +11,168 @@ using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.UniqueConstraints;
 
-#pragma warning disable CA2100 // Table and column names are internal constants, not user input.
-
 /// <summary>
 /// Represents an implementation of <see cref="IUniqueConstraintMigrator"/>.
 /// </summary>
 /// <param name="tableMigrator">The <see cref="ITableMigrator{TContext}"/> for migrating tables.</param>
+/// <param name="valuesTableMigrator">The migrator for per-value tables.</param>
 /// <param name="logger">The <see cref="ILogger{UniqueConstraintMigrator}"/> for logging.</param>
 public class UniqueConstraintMigrator(
     ITableMigrator<UniqueConstraintDbContext> tableMigrator,
+    ITableMigrator<UniqueConstraintValuesDbContext> valuesTableMigrator,
     ILogger<UniqueConstraintMigrator> logger) : IUniqueConstraintMigrator
 {
-    static readonly ConcurrentDictionary<string, bool> _columnMigrations = new();
+    /// <summary>
+    /// The maximum length of the subject column, kept within every provider's index key limit.
+    /// </summary>
+    internal const int SubjectMaxLength = 200;
+
+    const int MaxIdentifierLength = 63;
+    const string SubjectColumn = nameof(UniqueConstraintIndexEntry.Subject);
+
+    static readonly ConcurrentDictionary<string, bool> _indexMigrations = new();
+    static readonly ConcurrentDictionary<string, SemaphoreSlim> _migrationLocks = new();
 
     /// <inheritdoc/>
     public async Task EnsureTableMigrated(string tableName, UniqueConstraintDbContext context)
     {
-        await tableMigrator.EnsureTableMigrated(tableName, context, CreateTable);
-        await EnsureValueColumnIsUnbounded(tableName, context);
+        var cacheKey = $"{context.Database.GetConnectionString()}:{tableName}:value-unique";
+        if (_indexMigrations.ContainsKey(cacheKey))
+        {
+            return;
+        }
+
+        var migrationLock = _migrationLocks.GetOrAdd(cacheKey, _ => new SemaphoreSlim(1, 1));
+        await migrationLock.WaitAsync();
+        try
+        {
+            if (_indexMigrations.ContainsKey(cacheKey))
+            {
+                return;
+            }
+
+            await tableMigrator.EnsureTableMigrated(tableName, context, CreateTable, (ctx, name) => AddSubjectColumn(tableMigrator, ctx, name));
+            await UniqueConstraintValueIndexMigration.EnsureValueIndexIsUnique(tableName, context, logger);
+
+            // A duplicate fallback stays cached until the next process start (or an explicit reset).
+            _indexMigrations.TryAdd(cacheKey, true);
+        }
+        finally
+        {
+            migrationLock.Release();
+        }
     }
+
+    /// <inheritdoc/>
+    public Task EnsureValuesTableMigrated(string tableName, UniqueConstraintValuesDbContext context) =>
+        valuesTableMigrator.EnsureTableMigrated(tableName, context, CreateValuesTable, (ctx, name) => AddSubjectColumn(valuesTableMigrator, ctx, name));
 
     /// <inheritdoc/>
     public void ClearMigrationCache(string connectionStringPrefix)
     {
         tableMigrator.ClearMigrationCacheForConnectionString(connectionStringPrefix);
-        foreach (var key in _columnMigrations.Keys.Where(k => k.StartsWith(connectionStringPrefix, StringComparison.OrdinalIgnoreCase)))
+        valuesTableMigrator.ClearMigrationCacheForConnectionString(connectionStringPrefix);
+        foreach (var key in _indexMigrations.Keys.Where(k => k.StartsWith(connectionStringPrefix, StringComparison.OrdinalIgnoreCase)))
         {
-            _columnMigrations.TryRemove(key, out _);
+            _indexMigrations.TryRemove(key, out _);
         }
     }
 
-    static async Task<bool> ValueColumnNeedsWidening(UniqueConstraintDbContext context, string tableName)
+    /// <summary>
+    /// Gets the name of the index on the subject column, kept within PostgreSQL's identifier limit.
+    /// </summary>
+    /// <param name="tableName">The claim table.</param>
+    /// <returns>The index name.</returns>
+    internal static string SubjectIndexName(string tableName)
     {
-        var connection = context.Database.GetDbConnection();
-        await connection.OpenAsync();
+        var name = "IX_" + tableName + "_" + SubjectColumn;
+        if (Encoding.UTF8.GetByteCount(name) <= MaxIdentifierLength) return name;
 
+        // PostgreSQL truncates identifiers longer than its limit in bytes, which would collide with the table's other
+        // indexes, so keep a hash of the full name where the truncation cannot remove it.
+        var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(name)))[..8];
+        var suffix = "_" + hash + "_" + SubjectColumn;
+        var prefixLength = 0;
+        var prefixBytes = 0;
+        while (prefixLength < name.Length)
+        {
+            var next = char.IsSurrogatePair(name, prefixLength) ? 2 : 1;
+            var bytes = Encoding.UTF8.GetByteCount(name.AsSpan(prefixLength, next));
+            if (prefixBytes + bytes > MaxIdentifierLength - suffix.Length) break;
+            prefixBytes += bytes;
+            prefixLength += next;
+        }
+
+        return name[..prefixLength] + suffix;
+    }
+
+    /// <summary>
+    /// Adds the nullable subject column and its index to a table created before claims recorded their subject.
+    /// </summary>
+    /// <remarks>
+    /// Every row the table already holds keeps a null subject, which erasure leaves alone, so adding it changes no existing claim.
+    /// Another kernel can add the column first, so a failure that leaves the column in place is success.
+    /// </remarks>
+    /// <typeparam name="TContext">The type of context.</typeparam>
+    /// <param name="migrator">The table migrator.</param>
+    /// <param name="context">The context connected to the namespace database.</param>
+    /// <param name="tableName">The table to upgrade.</param>
+    /// <returns>Awaitable task.</returns>
+    static async Task AddSubjectColumn<TContext>(ITableMigrator<TContext> migrator, TContext context, string tableName)
+        where TContext : DbContext
+    {
+        if (await migrator.ColumnExists(context, tableName, SubjectColumn)) return;
+
+        var migrationBuilder = new MigrationBuilder(context.Database.ProviderName);
+        migrationBuilder.AddColumn<string>(name: SubjectColumn, table: tableName, maxLength: SubjectMaxLength, nullable: true);
+        migrationBuilder.CreateIndex(name: SubjectIndexName(tableName), table: tableName, column: SubjectColumn);
         try
         {
-            await using var command = connection.CreateCommand();
-
-            if (context.Database.IsNpgsql())
-            {
-                command.CommandText =
-                    "SELECT character_maximum_length FROM information_schema.columns " +
-                    "WHERE table_schema = 'public' AND table_name = '" + tableName + "' AND column_name = 'Value'";
-            }
-            else if (context.Database.IsSqlServer())
-            {
-                command.CommandText =
-                    "SELECT CHARACTER_MAXIMUM_LENGTH FROM INFORMATION_SCHEMA.COLUMNS " +
-                    "WHERE TABLE_NAME = '" + tableName + "' AND COLUMN_NAME = 'Value'";
-            }
-            else
-            {
-                return false;
-            }
-
-            var result = await command.ExecuteScalarAsync();
-            if (result is null || result is DBNull)
-            {
-                return false;
-            }
-
-            var maxLength = Convert.ToInt32(result);
-            return maxLength > 0 && maxLength <= 200;
+            await migrator.ExecuteMigrationOperations(context, migrationBuilder);
         }
-        finally
+        catch (Exception)
         {
-            await connection.CloseAsync();
+            // Lost the race to another kernel when the column now exists.
+            if (!await migrator.ColumnExists(context, tableName, SubjectColumn)) throw;
         }
+    }
+
+    async Task CreateValuesTable(UniqueConstraintValuesDbContext context, string tableName)
+    {
+        var migrationBuilder = new MigrationBuilder(context.Database.ProviderName);
+        migrationBuilder.CreateTable(
+            name: tableName,
+            columns: table => new
+            {
+                Value = table.StringColumn(migrationBuilder, maxLength: 200, nullable: false),
+                EventSourceId = table.StringColumn(migrationBuilder, maxLength: 200, nullable: false),
+                SequenceNumber = table.NumberColumn<decimal>(migrationBuilder, nullable: false),
+                Subject = table.StringColumn(migrationBuilder, maxLength: SubjectMaxLength, nullable: true)
+            },
+            constraints: table => table.PrimaryKey("PK_" + tableName, _ => _.Value));
+        migrationBuilder.CreateIndex(name: "IX_" + tableName + "_EventSourceId", table: tableName, column: "EventSourceId");
+        migrationBuilder.CreateIndex(name: SubjectIndexName(tableName), table: tableName, column: SubjectColumn);
+        await valuesTableMigrator.ExecuteMigrationOperations(context, migrationBuilder);
     }
 
     async Task CreateTable(UniqueConstraintDbContext context, string tableName)
     {
         logger.CreatingUniqueConstraintTable(tableName);
-
         var migrationBuilder = new MigrationBuilder(context.Database.ProviderName);
-
         migrationBuilder.CreateTable(
             name: tableName,
             columns: table => new
             {
                 EventSourceId = table.StringColumn(migrationBuilder, maxLength: 200, nullable: false),
-                Value = table.StringColumn(migrationBuilder),
-                SequenceNumber = table.NumberColumn<decimal>(migrationBuilder, nullable: false)
+                Value = context.Database.IsSqlServer()
+                    ? table.StringColumn(migrationBuilder, maxLength: 200, nullable: false)
+                    : table.StringColumn(migrationBuilder, nullable: false),
+                SequenceNumber = table.NumberColumn<decimal>(migrationBuilder, nullable: false),
+                Subject = table.StringColumn(migrationBuilder, maxLength: SubjectMaxLength, nullable: true)
             },
             constraints: table => table.PrimaryKey("PK_" + tableName, x => x.EventSourceId));
-
-        // SQL Server does not allow indexes on NVARCHAR(MAX) / VARCHAR(MAX) columns.
-        // Omit the index for SQL Server; the WHERE Value = ? query remains correct without it.
-        if (!context.Database.IsSqlServer())
-        {
-            migrationBuilder.CreateIndex(
-                name: "IX_" + tableName + "_Value",
-                table: tableName,
-                column: "Value");
-        }
-
+        migrationBuilder.CreateIndex(name: "IX_" + tableName + "_Value", table: tableName, column: "Value", unique: true);
+        migrationBuilder.CreateIndex(name: SubjectIndexName(tableName), table: tableName, column: SubjectColumn);
         await tableMigrator.ExecuteMigrationOperations(context, migrationBuilder);
-    }
-
-    async Task EnsureValueColumnIsUnbounded(string tableName, UniqueConstraintDbContext context)
-    {
-        var connectionString = context.Database.GetConnectionString() ?? string.Empty;
-        var cacheKey = connectionString + ":" + tableName + ":value-unbounded";
-
-        if (_columnMigrations.ContainsKey(cacheKey))
-        {
-            return;
-        }
-
-        if (!await ValueColumnNeedsWidening(context, tableName))
-        {
-            _columnMigrations.TryAdd(cacheKey, true);
-            return;
-        }
-
-        logger.WideningValueColumn(tableName);
-
-        var migrationBuilder = new MigrationBuilder(context.Database.ProviderName);
-
-        if (context.Database.IsNpgsql())
-        {
-            migrationBuilder.Sql("ALTER TABLE \"" + tableName + "\" ALTER COLUMN \"Value\" TYPE TEXT");
-        }
-        else if (context.Database.IsSqlServer())
-        {
-            // SQL Server cannot ALTER a column to NVARCHAR(MAX) while an index references it,
-            // and cannot create indexes on MAX-type columns at all. Drop the index first, widen
-            // the column, and leave it un-indexed (the constraint check query is still correct).
-            migrationBuilder.Sql(
-                "IF EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_" + tableName + "_Value' AND object_id = OBJECT_ID('" + tableName + "')) " +
-                "DROP INDEX [IX_" + tableName + "_Value] ON [" + tableName + "]");
-            migrationBuilder.Sql("ALTER TABLE [" + tableName + "] ALTER COLUMN [Value] NVARCHAR(MAX)");
-        }
-
-        if (migrationBuilder.Operations.Count > 0)
-        {
-            await tableMigrator.ExecuteMigrationOperations(context, migrationBuilder);
-        }
-
-        _columnMigrations.TryAdd(cacheKey, true);
     }
 }

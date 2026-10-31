@@ -67,6 +67,7 @@ public class EventSequenceDbContext(DbContextOptions<EventSequenceDbContext> opt
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+        EventStores.Occurrences.OccurrenceModel.ConfigureReceipts(modelBuilder);
 
 #pragma warning disable RCS1201 // Separate EF entity configurations cannot be combined into a fluent chain.
         modelBuilder.Entity<NamedTagEntry>(entity =>
@@ -92,6 +93,7 @@ public class EventSequenceDbContext(DbContextOptions<EventSequenceDbContext> opt
             entity.HasIndex(e => e.SequenceNumber);
             entity.HasIndex(e => e.EventSourceId);
             entity.HasIndex(e => e.Type);
+            entity.HasIndex(e => new { e.EventSourceId, e.Type, e.SequenceNumber }).HasDatabaseName(EventSequenceMigrator.ParentHistoryIndexName(tableName));
             entity.Property(e => e.PublicationIdentityHash).HasMaxLength(32);
             entity.HasIndex(e => e.PublicationIdentityHash).IsUnique()
                 .HasFilter(Database.IsSqlServer() ? "[PublicationIdentityHash] IS NOT NULL" : "\"PublicationIdentityHash\" IS NOT NULL");

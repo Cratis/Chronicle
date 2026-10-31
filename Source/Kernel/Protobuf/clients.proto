@@ -13,6 +13,7 @@ message CompatibilityResponse {
    repeated string Incompatibilities = 2;
    string ServerVersion = 3;
    string ServerProtocolVersion = 4;
+   repeated string Capabilities = 5;
 }
 message ConnectRequest {
    string ConnectionId = 1;

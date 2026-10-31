@@ -15,15 +15,18 @@ namespace Cratis.Chronicle.Concepts.Projections;
 /// <param name="EventSequenceId">The event sequence.</param>
 /// <param name="ReadModelKey">The read model key.</param>
 /// <param name="SessionId">Optional projection session identifier.</param>
+/// <param name="StreamScope">Optional event stream scope.</param>
 public record ImmediateProjectionKey(
     ProjectionId ProjectionId,
     EventStoreName EventStore,
     EventStoreNamespaceName Namespace,
     EventSequenceId EventSequenceId,
     ReadModelKey ReadModelKey,
-    ProjectionSessionId? SessionId = default)
+    ProjectionSessionId? SessionId = default,
+    ImmediateProjectionStreamScope? StreamScope = default)
 {
     const string ReadModelKeyMarker = "$read-model-key";
+    const string StreamScopeMarker = "$stream-scope";
 
     /// <summary>
     /// Implicitly convert from <see cref="ImmediateProjectionKey"/> to string.
@@ -34,6 +37,22 @@ public record ImmediateProjectionKey(
     /// <inheritdoc/>
     public override string ToString()
     {
+        if (StreamScope is not null)
+        {
+            return KeyHelper.Combine(
+                ProjectionId,
+                EventStore,
+                Namespace,
+                EventSequenceId,
+                StreamScopeMarker,
+                Uri.EscapeDataString(StreamScope.EventSourceId.Value),
+                Uri.EscapeDataString(StreamScope.EventSourceType?.Value ?? string.Empty),
+                Uri.EscapeDataString(StreamScope.EventStreamType.Value),
+                Uri.EscapeDataString(StreamScope.EventStreamId.Value),
+                SessionId?.ToString() ?? string.Empty,
+                ReadModelKey);
+        }
+
         if (ReadModelKey.Value.Contains(KeyHelper.Separator))
         {
             // Mark the new layout so a key with one separator cannot be mistaken for an older key with a session.
@@ -57,6 +76,22 @@ public record ImmediateProjectionKey(
     public static ImmediateProjectionKey Parse(string key)
     {
         var parts = key.Split(KeyHelper.Separator);
+        if (parts.Length >= 11 && parts[4] == StreamScopeMarker)
+        {
+            return new(
+                parts[0],
+                parts[1],
+                parts[2],
+                parts[3],
+                string.Join(KeyHelper.Separator, parts[10..]),
+                string.IsNullOrEmpty(parts[9]) ? null : (ProjectionSessionId)Guid.Parse(parts[9]),
+                new(
+                    Uri.UnescapeDataString(parts[5]),
+                    string.IsNullOrEmpty(parts[6]) ? null : (Events.EventSourceType)Uri.UnescapeDataString(parts[6]),
+                    Uri.UnescapeDataString(parts[7]),
+                    Uri.UnescapeDataString(parts[8])));
+        }
+
         if (parts.Length >= 8 && parts[4] == ReadModelKeyMarker)
         {
             return new(

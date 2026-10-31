@@ -3,6 +3,7 @@
 
 using System.Reflection;
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.Reactors;
 using Cratis.Chronicle.Storage;
@@ -24,23 +25,54 @@ public class Reactors(
     ITypes types,
     ILocalSiloDetails localSiloDetails,
     IStorage storage,
-    IGrainFactory grainFactory) : IReactors
+    IGrainFactory grainFactory) : IReactors, IAsyncDisposable
 {
     readonly IEnumerable<Type> _reactorTypes = types.FindMultiple<IReactor>().Where(t => t != typeof(Reactor)).ToArray();
+    readonly SemaphoreSlim _definitionWrites = new(1, 1);
+    readonly CancellationTokenSource _shutdown = new();
+    readonly object _disposal = new();
+    Task? _disposeTask;
 
     /// <inheritdoc/>
-    public async Task DiscoverAndRegister(EventStoreName eventStore, EventStoreNamespaceName namespaceName)
+    public Task DiscoverAndRegister(EventStoreName eventStore, EventStoreNamespaceName namespaceName) =>
+        DiscoverAndRegister(eventStore, namespaceName, CancellationToken.None);
+
+    /// <inheritdoc/>
+    public async Task DiscoverAndRegister(EventStoreName eventStore, EventStoreNamespaceName namespaceName, CancellationToken cancellationToken)
     {
+        using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _shutdown.Token);
+        cancellationToken = cancellation.Token;
         var subscribeMethod = GetType().GetMethod(nameof(Subscribe), BindingFlags.Instance | BindingFlags.NonPublic)!;
         foreach (var reactor in _reactorTypes)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             await (subscribeMethod
                 .MakeGenericMethod(reactor)
-                .Invoke(this, [eventStore, namespaceName])! as Task)!;
+                .Invoke(this, [eventStore, namespaceName, cancellationToken])! as Task)!;
         }
     }
 
-    async Task Subscribe<TReactor>(EventStoreName eventStore, EventStoreNamespaceName namespaceName)
+    /// <inheritdoc/>
+    public ValueTask DisposeAsync()
+    {
+        lock (_disposal)
+        {
+            return new ValueTask(_disposeTask ??= StopDefinitionWrites());
+        }
+    }
+
+    async Task StopDefinitionWrites()
+    {
+        // Cancel queued admissions, then let the admitted storage operation release its lease before
+        // disposing the semaphore. Disposing while a write is in flight would mask its result on Release.
+        await _shutdown.CancelAsync();
+        await _definitionWrites.WaitAsync();
+        _definitionWrites.Dispose();
+        _shutdown.Dispose();
+        GC.SuppressFinalize(this);
+    }
+
+    async Task Subscribe<TReactor>(EventStoreName eventStore, EventStoreNamespaceName namespaceName, CancellationToken cancellationToken)
         where TReactor : IReactor
     {
         var system = typeof(TReactor).IsSystemEventStoreOnly();
@@ -69,8 +101,37 @@ public class Reactors(
             reactorType.GetEventSequenceId(),
             reactorType.GetEventTypes().Select(et => new EventTypeWithKeyExpression(et, WellKnownExpressions.EventSourceId)).ToArray(),
             false);
-        await storage.GetEventStore(eventStore).Reactors.Save(reactorDefinition);
 
+        // Definitions belong to the event store, not the namespace. Concurrent tenant startup must
+        // not rewrite identical metadata for every tenant. Keep the read/check/write bounded per silo;
+        // do not cache success across stores, activations or failed writes.
+        await _definitionWrites.WaitAsync(cancellationToken);
+        try
+        {
+            var definitions = storage.GetEventStore(eventStore).Reactors;
+            var existing = await definitions.Has(reactorDefinition.Identifier)
+                ? await definitions.Get(reactorDefinition.Identifier)
+                : null;
+            if (existing is null ||
+                existing.Owner != reactorDefinition.Owner ||
+                existing.EventSequenceId != reactorDefinition.EventSequenceId ||
+                existing.IsReplayable != reactorDefinition.IsReplayable ||
+                !existing.EventTypes.SequenceEqual(reactorDefinition.EventTypes) ||
+                (existing.Tags?.Any() ?? false) ||
+                (existing.Filters is { } filters &&
+                    (filters.Tags.Any() ||
+                     (filters.EventSourceType is not null && filters.EventSourceType != EventSourceType.Unspecified) ||
+                     filters.EventStreamType is { IsAll: false })))
+            {
+                await definitions.Save(reactorDefinition);
+            }
+        }
+        finally
+        {
+            _definitionWrites.Release();
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
         var observer = grainFactory.GetGrain<IObserver>(key);
         await observer.Subscribe<IReactorObserverSubscriber<TReactor>>(
             ObserverType.Reactor,

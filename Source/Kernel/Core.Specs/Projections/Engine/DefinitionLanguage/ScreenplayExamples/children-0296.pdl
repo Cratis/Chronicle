@@ -1,0 +1,19 @@
+projection Company => CompanyReadModel
+  from CompanyCreated
+    Name = name
+
+  children departments identified by deptId
+    from DepartmentCreated key deptId
+      parent companyId
+      Name = name
+
+    children teams identified by teamId
+      from TeamCreated key teamId
+        parent deptId
+        Name = name
+
+      children members identified by memberId
+        from MemberAdded key memberId
+          parent teamId
+          Name = name
+          Role = role

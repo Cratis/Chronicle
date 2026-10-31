@@ -4,6 +4,7 @@
 using System.Collections;
 using System.Globalization;
 using Cratis.Arc.MongoDB;
+using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Schemas;
 using Cratis.Geospatial;
 using Cratis.Reflection;
@@ -72,7 +73,12 @@ public static class BsonValueExtensions
 
         if (targetType is not null)
         {
-            input = TypeConversion.Convert(targetType, input);
+            input = (Nullable.GetUnderlyingType(targetType) ?? targetType) == typeof(decimal) ? input switch
+            {
+                double value => DecimalValues.FromDouble(value),
+                float value => DecimalValues.FromSingle(value),
+                _ => TypeConversion.Convert(targetType, input)
+            } : TypeConversion.Convert(targetType, input);
         }
 
         if (inputType.IsEnum)
@@ -351,6 +357,10 @@ public static class BsonValueExtensions
                 return new BsonInt32(value is int actualInt ? actualInt : int.Parse(value.ToString()!));
 
             case JsonObjectType.Number:
+                if (value is decimal decimalValue)
+                {
+                    return new BsonDecimal128(decimalValue);
+                }
                 return new BsonDouble(value is double actualDouble ? actualDouble : double.Parse(value.ToString()!));
         }
 
@@ -485,7 +495,7 @@ public static class BsonValueExtensions
                 break;
 
             case TypeCode.Decimal:
-                result = value.ToDecimal();
+                result = value is BsonDouble storedDouble ? DecimalValues.FromDouble(storedDouble.Value) : value.ToDecimal();
                 break;
 
             case TypeCode.DateTime:

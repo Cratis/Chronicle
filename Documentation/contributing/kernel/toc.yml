@@ -4,5 +4,9 @@
   href: ./contracts.mdx
 - name: Services
   href: ./services.md
+- name: Grain Interfaces
+  href: ./grain-interfaces.mdx
 - name: Patches
   href: ./patches/toc.yml
+- name: Legacy contract matrix
+  href: legacy-contracts.md

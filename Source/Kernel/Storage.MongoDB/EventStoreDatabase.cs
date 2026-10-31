@@ -4,6 +4,7 @@
 using System.Collections.Concurrent;
 using Cratis.Arc.MongoDB;
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Configuration;
 using Microsoft.Extensions.Options;
 using MongoDB.Driver;
 
@@ -20,6 +21,7 @@ public class EventStoreDatabase : IEventStoreDatabase
     readonly IMongoDBClientManager _clientManager;
     readonly IOptions<MongoDBOptions> _mongoDBOptions;
     readonly IOptions<MongoDBStorageOptions> _storageOptions;
+    readonly IMongoDBStorageConnections? _connections;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventStoreDatabase"/> class.
@@ -28,14 +30,27 @@ public class EventStoreDatabase : IEventStoreDatabase
     /// <param name="clientManager"><see cref="IMongoDBClientFactory"/> for working with MongoDB.</param>
     /// <param name="mongoDBOptions"><see cref="Storage"/> configuration.</param>
     /// <param name="storageOptions">Chronicle-specific database naming options.</param>
+    /// <param name="connections">Optional <see cref="IMongoDBStorageConnections"/> that resolves where each database is.</param>
     public EventStoreDatabase(
         EventStoreName eventStore,
         IMongoDBClientManager clientManager,
         IOptions<MongoDBOptions> mongoDBOptions,
-        IOptions<MongoDBStorageOptions>? storageOptions = null)
+        IOptions<MongoDBStorageOptions>? storageOptions = null,
+        IMongoDBStorageConnections? connections = null)
     {
         _storageOptions = storageOptions ?? Options.Create(new MongoDBStorageOptions());
+        _eventStore = eventStore;
+        _clientManager = clientManager;
+        _mongoDBOptions = mongoDBOptions;
+        _connections = connections;
+
         var databaseName = DatabaseNames.ForEventStore(eventStore, _storageOptions.Value.DatabaseNamePrefix);
+        if (connections is not null)
+        {
+            _database = connections.GetDatabase(StorageConnectionKind.EventStore, databaseName, eventStore.Value);
+            return;
+        }
+
         var settings = MongoClientSettings.FromUrl(new MongoUrl(mongoDBOptions.Value.Server));
         if (mongoDBOptions.Value.DirectConnection == true)
         {
@@ -44,11 +59,7 @@ public class EventStoreDatabase : IEventStoreDatabase
 
         var client = clientManager.GetClientFor(settings);
 
-        // TODO: The name of the database should be configurable or coming from a configurable provider with conventions
         _database = client.GetDatabase(databaseName);
-        _eventStore = eventStore;
-        _clientManager = clientManager;
-        _mongoDBOptions = mongoDBOptions;
     }
 
     /// <inheritdoc/>
@@ -70,6 +81,6 @@ public class EventStoreDatabase : IEventStoreDatabase
             return database;
         }
 
-        return _eventStoreNamespaceDatabases[@namespace] = new EventStoreNamespaceDatabase(_eventStore, @namespace, _clientManager, _mongoDBOptions, _storageOptions);
+        return _eventStoreNamespaceDatabases[@namespace] = new EventStoreNamespaceDatabase(_eventStore, @namespace, _clientManager, _mongoDBOptions, _storageOptions, _connections);
     }
 }

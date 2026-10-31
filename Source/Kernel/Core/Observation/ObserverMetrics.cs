@@ -24,6 +24,11 @@ internal static partial class ObserverMetrics
     const string PartitionQuarantinedDescription = "Number of partitions per observer that ran out of retry attempts and were quarantined. Does not count the observer itself being quarantined, see chronicle-observer-quarantined";
     const string ObserverQuarantinedName = "chronicle-observer-quarantined";
     const string ObserverQuarantinedDescription = "Number of times an observer was quarantined";
+    const string EventsSuspectedSkippedName = "chronicle-observer-events-suspected-skipped";
+    const string EventsSuspectedSkippedDescription = "Number of live events an observer's position moved past without the observer seeing any delivery path cover them. A suspicion, not proof";
+
+    const string ZeroWorkCatchUpName = "chronicle-observer-zero-work-catch-ups";
+    const string ZeroWorkCatchUpDescription = "Number of catch-up jobs per observer that concluded without moving the observer forward: no events handled and nothing read past its position";
 
     static readonly Lock _failureCountersLock = new();
     static FailureCounters? _failureCounters;
@@ -31,7 +36,7 @@ internal static partial class ObserverMetrics
     [Counter<int>("chronicle-observer-successful-observations", "Number of successful observations per observer in a given event store and namespace")]
     internal static partial void SuccessfulObservation(this IMeterScope<Observer> meter);
 
-    // The four failure counters below are written by hand rather than with the [Counter<int>] attribute.
+    // The failure counters below are written by hand rather than with the [Counter<int>] attribute.
     // The generator emits Meter.CreateCounter<T>(name, description) and the second positional parameter of
     // that method is the unit, so the description ends up as the unit and the description stays empty.
     // Exporters that put the unit in the metric name (the Prometheus exporters do) then produce names such as
@@ -73,7 +78,36 @@ internal static partial class ObserverMetrics
     /// <param name="meter">The <see cref="IMeterScope{T}"/> of the observer.</param>
     internal static void ObserverQuarantined(this IMeterScope<Observer> meter) => meter.Increment(_ => _.ObserverQuarantined);
 
-    static void Increment(this IMeterScope<Observer> meter, Func<FailureCounters, Counter<int>> counter)
+    /// <summary>
+    /// Records live events the position of the observer moved past without any delivery path covering them.
+    /// </summary>
+    /// <param name="meter">The <see cref="IMeterScope{T}"/> of the observer.</param>
+    /// <param name="count">The number of suspected skipped events.</param>
+    internal static void EventsSuspectedSkipped(this IMeterScope<Observer> meter, int count) => meter.Increment(_ => _.EventsSuspectedSkipped, count);
+
+    /// <summary>
+    /// Records a catch-up job of the observer that concluded without moving the observer forward.
+    /// </summary>
+    /// <param name="meter">The <see cref="IMeterScope{T}"/> of the observer.</param>
+    internal static void ZeroWorkCatchUp(this IMeterScope<Observer> meter) => meter.Increment(_ => _.ZeroWorkCatchUp);
+
+    internal static void WebhookProbeScheduled(this IMeterScope<Observer> meter) => meter.Increment(_ => _.WebhookProbeScheduled);
+
+    internal static void WebhookProbeAttempt(this IMeterScope<Observer> meter) => meter.Increment(_ => _.WebhookProbeAttempt);
+
+    internal static void WebhookProbeFailure(this IMeterScope<Observer> meter) => meter.Increment(_ => _.WebhookProbeFailure);
+
+    internal static void WebhookProbeSuccess(this IMeterScope<Observer> meter) => meter.Increment(_ => _.WebhookProbeSuccess);
+
+    internal static void WebhookProbeResumed(this IMeterScope<Observer> meter) => meter.Increment(_ => _.WebhookProbeResumed);
+
+    internal static void WebhookProbeDeferred(this IMeterScope<Observer> meter) => meter.Increment(_ => _.WebhookProbeDeferred);
+
+    internal static void WebhookProbeSkipped(this IMeterScope<Observer> meter) => meter.Increment(_ => _.WebhookProbeSkipped);
+
+    internal static void WebhookProbeCancelled(this IMeterScope<Observer> meter) => meter.Increment(_ => _.WebhookProbeCancelled);
+
+    static void Increment(this IMeterScope<Observer> meter, Func<FailureCounters, Counter<int>> counter, int count = 1)
     {
         var counters = GetFailureCounters(meter);
         if (counters is null)
@@ -87,7 +121,7 @@ internal static partial class ObserverMetrics
             tags.Add(key, tag);
         }
 
-        counter(counters).Add(1, tags);
+        counter(counters).Add(count, tags);
     }
 
     /// <summary>
@@ -111,6 +145,22 @@ internal static partial class ObserverMetrics
 
     sealed class FailureCounters(Meter meter)
     {
+        public Counter<int> WebhookProbeDeferred { get; } = meter.CreateCounter<int>("chronicle-webhook-probe-deferred");
+
+        public Counter<int> WebhookProbeSkipped { get; } = meter.CreateCounter<int>("chronicle-webhook-probe-skipped");
+
+        public Counter<int> WebhookProbeCancelled { get; } = meter.CreateCounter<int>("chronicle-webhook-probe-cancelled");
+
+        public Counter<int> WebhookProbeScheduled { get; } = meter.CreateCounter<int>("chronicle-webhook-probe-scheduled");
+
+        public Counter<int> WebhookProbeAttempt { get; } = meter.CreateCounter<int>("chronicle-webhook-probe-attempts");
+
+        public Counter<int> WebhookProbeFailure { get; } = meter.CreateCounter<int>("chronicle-webhook-probe-failures");
+
+        public Counter<int> WebhookProbeSuccess { get; } = meter.CreateCounter<int>("chronicle-webhook-probe-successes");
+
+        public Counter<int> WebhookProbeResumed { get; } = meter.CreateCounter<int>("chronicle-webhook-probe-resumes");
+
         public Counter<int> PartitionFailed { get; } = meter.CreateCounter<int>(PartitionFailedName, unit: null, description: PartitionFailedDescription);
 
         public Counter<int> PartitionRetryAttempt { get; } = meter.CreateCounter<int>(PartitionRetryAttemptName, unit: null, description: PartitionRetryAttemptDescription);
@@ -120,6 +170,10 @@ internal static partial class ObserverMetrics
         public Counter<int> PartitionQuarantineCleared { get; } = meter.CreateCounter<int>(PartitionQuarantineClearedName, unit: null, description: PartitionQuarantineClearedDescription);
 
         public Counter<int> ObserverQuarantined { get; } = meter.CreateCounter<int>(ObserverQuarantinedName, unit: null, description: ObserverQuarantinedDescription);
+
+        public Counter<int> ZeroWorkCatchUp { get; } = meter.CreateCounter<int>(ZeroWorkCatchUpName, unit: null, description: ZeroWorkCatchUpDescription);
+
+        public Counter<int> EventsSuspectedSkipped { get; } = meter.CreateCounter<int>(EventsSuspectedSkippedName, unit: null, description: EventsSuspectedSkippedDescription);
     }
 }
 

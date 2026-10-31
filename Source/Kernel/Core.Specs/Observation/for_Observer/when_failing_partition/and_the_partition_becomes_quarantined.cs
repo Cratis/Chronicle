@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.Observation.for_Observer.when_failing_partition;
 
 public class and_the_partition_becomes_quarantined : given.an_observer
 {
-    protected override Observers CreateObserversConfig() => new() { MaxRetryAttempts = 1 };
+    protected override Observers CreateObserversConfig() => new() { WriteCoalescingInterval = 0, MaxRetryAttempts = 1 };
 
     async Task Establish()
     {

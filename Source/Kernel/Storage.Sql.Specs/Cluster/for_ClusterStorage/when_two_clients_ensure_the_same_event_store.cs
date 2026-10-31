@@ -1,12 +1,14 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Data.Common;
 using System.Text.Json;
 using Cratis.Arc.EntityFrameworkCore.Concepts;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Storage.Sinks;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 
 namespace Cratis.Chronicle.Storage.Sql.Cluster.for_ClusterStorage;
 
@@ -34,14 +36,15 @@ public class when_two_clients_ensure_the_same_event_store : Specification, IDisp
         var count = 0;
         _database.Cluster().Returns(_ => Task.FromResult(new DbContextScope<ClusterDbContext>(
             Interlocked.Increment(ref count) == 1
-                ? new PausedClusterDbContext(Options(), _firstReady, _releaseFirst)
+                ? new ClusterDbContext(Options(new PauseBeforeInsert(_firstReady, _releaseFirst)))
                 : CreateContext(),
             () => { })));
         _storage = new ClusterStorage(
             _database,
             Substitute.For<IInstancesOf<ISinkFactory>>(),
             Substitute.For<Orleans.Storage.IJobsStorage>(),
-            new JsonSerializerOptions());
+            new JsonSerializerOptions(),
+            Substitute.For<Json.IExpandoObjectConverter>());
     }
 
     async Task Because()
@@ -57,9 +60,10 @@ public class when_two_clients_ensure_the_same_event_store : Specification, IDisp
     [Fact] void should_store_the_event_store_only_once() => _stores.Count().ShouldEqual(1);
     [Fact] void should_store_the_requested_name() => _stores.Single().ShouldEqual((EventStoreName)"orders");
 
-    DbContextOptions<ClusterDbContext> Options() => new DbContextOptionsBuilder<ClusterDbContext>()
+    DbContextOptions<ClusterDbContext> Options(params IInterceptor[] interceptors) => new DbContextOptionsBuilder<ClusterDbContext>()
         .UseSqlite(_connectionString)
-        .AddConceptAsSupport()
+        .AddConceptAsSupport().WithoutServiceProviderCaching()
+        .AddInterceptors(interceptors)
         .Options;
 
     ClusterDbContext CreateContext() => new(Options());
@@ -72,16 +76,37 @@ public class when_two_clients_ensure_the_same_event_store : Specification, IDisp
         GC.SuppressFinalize(this);
     }
 
-    sealed class PausedClusterDbContext(
-        DbContextOptions<ClusterDbContext> options,
-        TaskCompletionSource ready,
-        TaskCompletionSource release) : ClusterDbContext(options)
+    /// <summary>
+    /// Holds the first client's native upsert after it has decided to write, so the second
+    /// client stores the same name first. The held statement must then succeed without a duplicate.
+    /// </summary>
+    /// <param name="ready">Completed when the first client's insert is held.</param>
+    /// <param name="release">Completed by the specification to let the held insert run.</param>
+    sealed class PauseBeforeInsert(TaskCompletionSource ready, TaskCompletionSource release) : DbCommandInterceptor
     {
-        public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+        public override async ValueTask<InterceptionResult<int>> NonQueryExecutingAsync(
+            DbCommand command, CommandEventData eventData, InterceptionResult<int> result, CancellationToken cancellationToken = default)
         {
+            await Pause(command, cancellationToken);
+            return result;
+        }
+
+        public override async ValueTask<InterceptionResult<DbDataReader>> ReaderExecutingAsync(
+            DbCommand command, CommandEventData eventData, InterceptionResult<DbDataReader> result, CancellationToken cancellationToken = default)
+        {
+            await Pause(command, cancellationToken);
+            return result;
+        }
+
+        async Task Pause(DbCommand command, CancellationToken cancellationToken)
+        {
+            if (!command.CommandText.Contains("INSERT", StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
             ready.TrySetResult();
             await release.Task.WaitAsync(TimeSpan.FromSeconds(10), cancellationToken);
-            return await base.SaveChangesAsync(cancellationToken);
         }
     }
 }

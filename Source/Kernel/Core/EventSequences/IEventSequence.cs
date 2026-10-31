@@ -4,6 +4,7 @@
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts.Auditing;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Events.Constraints;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.EventSequences.Concurrency;
 using Cratis.Chronicle.Concepts.Identities;
@@ -48,6 +49,23 @@ public interface IEventSequence : IGrainWithStringKey
     /// index update, before the validators are replaced.
     /// </remarks>
     Task RefreshConstraints();
+
+    /// <summary>
+    /// Suspend repair writes for constraints being rebuilt by a job.
+    /// </summary>
+    /// <param name="runId">The stable job step identity.</param>
+    /// <param name="names">The constraints being rebuilt.</param>
+    /// <returns>Awaitable task.</returns>
+    Task ConstraintIndexRebuildStarting(ConstraintIndexRebuildRunId runId, IEnumerable<ConstraintName> names);
+
+    /// <summary>
+    /// Restore index updates beyond a rebuild's confirmed progress.
+    /// </summary>
+    /// <param name="runId">The stable job step identity.</param>
+    /// <param name="names">The rebuilt constraints.</param>
+    /// <param name="outcome">The job's confirmed write progress.</param>
+    /// <returns>Awaitable task.</returns>
+    Task ConstraintIndexRebuilt(ConstraintIndexRebuildRunId runId, IEnumerable<ConstraintName> names, ConstraintIndexRebuildOutcome outcome);
 
     /// <summary>
     /// Get the next sequence number.
@@ -114,6 +132,50 @@ public interface IEventSequence : IGrainWithStringKey
     /// A retry must reuse the same persisted intent. Replay must allocate a new occurrence identity.
     /// </remarks>
     Task<AppendResult> AppendPublication(string publicationId, string intentFingerprint, EventToAppend @event, CorrelationId correlationId, IEnumerable<Causation> causation, Identity causedBy);
+
+    /// <summary>
+    /// Looks up an occurrence effect before validation and commits its events and receipt atomically.
+    /// </summary>
+    /// <param name="events">The events; empty for a protected validate-only decision.</param>
+    /// <param name="correlationId">The correlation identifier.</param>
+    /// <param name="causation">The causation chain.</param>
+    /// <param name="causedBy">The identity that caused the append.</param>
+    /// <param name="concurrencyScopes">The protected decision scopes.</param>
+    /// <param name="effectReceipt">The occurrence effect and optional response.</param>
+    /// <returns>The append result or the winning receipt.</returns>
+    Task<AppendManyResult> AppendManyWithEffectReceipt(IEnumerable<EventToAppend> events, CorrelationId correlationId, IEnumerable<Causation> causation, Identity causedBy, ConcurrencyScopes concurrencyScopes, Occurrences.EffectReceipt effectReceipt);
+
+    /// <summary>
+    /// Atomically validates every guard and appends the batch using the conjunction-aware cluster protocol.
+    /// </summary>
+    /// <param name="events">The events.</param>
+    /// <param name="correlationId">The correlation identifier.</param>
+    /// <param name="causation">The causation chain.</param>
+    /// <param name="causedBy">The identity.</param>
+    /// <param name="concurrencyScopes">The ordered guards.</param>
+    /// <returns>The append result.</returns>
+    Task<AppendManyResult> AppendManyWithConjunctions(IEnumerable<EventToAppend> events, CorrelationId correlationId, IEnumerable<Causation> causation, Identity causedBy, ConcurrencyScopeConjunctions concurrencyScopes);
+
+    /// <summary>
+    /// Appends a guarded occurrence effect using the conjunction-aware cluster protocol.
+    /// </summary>
+    /// <param name="events">The events.</param>
+    /// <param name="correlationId">The correlation identifier.</param>
+    /// <param name="causation">The causation chain.</param>
+    /// <param name="causedBy">The identity.</param>
+    /// <param name="concurrencyScopes">The ordered guards.</param>
+    /// <param name="effectReceipt">The receipt to commit atomically.</param>
+    /// <returns>The append result.</returns>
+    Task<AppendManyResult> AppendManyWithConjunctionsAndEffectReceipt(IEnumerable<EventToAppend> events, CorrelationId correlationId, IEnumerable<Causation> causation, Identity causedBy, ConcurrencyScopeConjunctions concurrencyScopes, Occurrences.EffectReceipt effectReceipt);
+
+    /// <summary>
+    /// Records an unprotected NoEvents or Refused outcome, first writer wins.
+    /// </summary>
+    /// <param name="effectReceipt">The occurrence effect and optional response.</param>
+    /// <param name="outcome">The NoEvents or Refused outcome.</param>
+    /// <param name="reasons">The refusal reasons.</param>
+    /// <returns>The winning receipt and whether this call recorded it.</returns>
+    Task<Occurrences.RecordEffectReceiptResult> RecordEffectReceipt(Occurrences.EffectReceipt effectReceipt, Storage.Occurrences.EffectOutcome outcome, IReadOnlyList<string> reasons);
 
     /// <summary>
     /// Appends an event to the event sequence.
@@ -224,6 +286,30 @@ public interface IEventSequence : IGrainWithStringKey
         ConcurrencyScopes concurrencyScopes);
 
     /// <summary>
+    /// Appends an event once for a durable idempotency key.
+    /// </summary>
+    /// <param name="event">The event to append.</param>
+    /// <param name="idempotencyKey">The key identifying the append intent.</param>
+    /// <param name="correlationId">The attempt's correlation identifier.</param>
+    /// <param name="causation">The causation chain.</param>
+    /// <param name="causedBy">The identity causing the append.</param>
+    /// <param name="concurrencyScope">The concurrency scope, checked only for a new append.</param>
+    /// <returns>The append settlement.</returns>
+    Task<IdempotentAppendResult> AppendWithIdempotencyKey(EventToAppend @event, IdempotencyKey idempotencyKey, CorrelationId correlationId, IEnumerable<Causation> causation, Identity causedBy, ConcurrencyScope concurrencyScope);
+
+    /// <summary>
+    /// Append a batch, settling keyed events against their durable identities and always appending unkeyed events.
+    /// </summary>
+    /// <param name="events">The requested events, in order.</param>
+    /// <param name="idempotencyKeys">One optional key per event, in the same order.</param>
+    /// <param name="correlationId">The attempt's correlation identifier.</param>
+    /// <param name="causation">The causation chain.</param>
+    /// <param name="causedBy">The identity causing the append.</param>
+    /// <param name="concurrencyScopes">The scopes checked for the new remainder only.</param>
+    /// <returns>The batch settlement, with sequence numbers and outcomes in request order on success.</returns>
+    Task<IdempotentAppendManyResult> AppendManyWithIdempotencyKeys(IEnumerable<EventToAppend> events, IReadOnlyList<IdempotencyKey?> idempotencyKeys, CorrelationId correlationId, IEnumerable<Causation> causation, Identity causedBy, ConcurrencyScopes concurrencyScopes);
+
+    /// <summary>
     /// Revise a specific event in the event store.
     /// </summary>
     /// <param name="sequenceNumber">The <see cref="EventSequenceNumber"/> of the event to revise.</param>
@@ -291,6 +377,36 @@ public interface IEventSequence : IGrainWithStringKey
     /// <see cref="CompleteStreamError.AlreadyCompleted"/> and leaves the stream in its completed state.
     /// </remarks>
     Task<Result<EventSequenceNumber, CompleteStreamError>> CompleteStream(EventStreamType eventStreamType, EventStreamId eventStreamId);
+
+    /// <summary>
+    /// Manually close a nonempty scope in the same grain turn as its optional tail check.
+    /// </summary>
+    /// <param name="scope">The scope to close.</param>
+    /// <param name="expectedTailSequenceNumber">An optional expected scope tail.</param>
+    /// <returns>The sequence tail at closure, or a completion error.</returns>
+    /// <remarks>
+    /// A covering manual closure returns AlreadyCompleted without writing. Coverage only by event-owned
+    /// closures still writes a manual closure, so a later reopening event cannot undo the manual decision.
+    /// </remarks>
+    Task<Result<EventSequenceNumber, CompleteStreamError>> CompleteStream(ClosedStreamScope scope, EventSequenceNumber? expectedTailSequenceNumber = default);
+
+    /// <summary>
+    /// Check whether a scope is covered by any persisted closure.
+    /// </summary>
+    /// <param name="scope">The scope to check.</param>
+    /// <returns>True if covered.</returns>
+    Task<bool> IsStreamCompleted(ClosedStreamScope scope);
+
+    /// <summary>
+    /// Repairs an exact manual closure after durably auditing the operator's decision.
+    /// </summary>
+    /// <param name="scope">The exact scope to reopen.</param>
+    /// <param name="reason">The repair reason.</param>
+    /// <param name="correlationId">The correlation identifier.</param>
+    /// <param name="causation">The causation chain.</param>
+    /// <param name="causedBy">The authenticated operator.</param>
+    /// <returns>Success or the reason the repair was rejected.</returns>
+    Task<Result<Sequences.ReopenStreamScopeError>> ReopenCompletedStream(ClosedStreamScope scope, string reason, CorrelationId correlationId, IEnumerable<Causation> causation, Identity causedBy);
 
     /// <summary>
     /// Check whether or not the supplied stream has been completed.

@@ -24,5 +24,7 @@ public class and_nothing_is_configured : Specification
             .Bind(_options);
     }
 
+    [Fact] void should_keep_localhost_membership_as_the_default() => _options.Clustering.Type.ShouldEqual(ClusteringType.Localhost);
+
     [Fact] void should_default_to_the_orleans_response_timeout() => _options.Clustering.ResponseTimeout.ShouldEqual(TimeSpan.FromSeconds(30));
 }

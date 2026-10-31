@@ -1,6 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.Projections;
+
 namespace Cratis.Chronicle.Storage.MongoDB.Projections.Definitions;
 
 /// <summary>
@@ -17,6 +20,11 @@ public class FromEveryDefinition
     /// Gets or sets whether to include event types from child projections.
     /// </summary>
     public bool IncludeChildren { get; set; }
+
+    /// <summary>
+    /// Gets or sets the expression resolving the read model key for every event.
+    /// </summary>
+    public PropertyExpression Key { get; set; } = WellKnownExpressions.EventSourceId;
 
     /// <summary>
     /// Gets or sets whether properties should be auto-mapped from events.

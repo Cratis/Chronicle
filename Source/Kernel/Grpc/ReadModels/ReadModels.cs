@@ -21,6 +21,7 @@ using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
+using Grpc.Core;
 using ProtoBuf.Grpc;
 using AppendedEvent = Cratis.Chronicle.Concepts.Events.AppendedEvent;
 
@@ -31,6 +32,7 @@ namespace Cratis.Chronicle.Services.ReadModels;
 /// </summary>
 /// <param name="grainFactory">The grain factory.</param>
 /// <param name="storage">The storage.</param>
+/// <param name="readBindings">The bindings for resolving materialized read destinations.</param>
 /// <param name="expandoObjectConverter">The expando object converter.</param>
 /// <param name="reducerMediator">The reducer mediator.</param>
 /// <param name="changesetMediator">The <see cref="IProjectionChangesetMediator"/> for forwarding watched changesets to client streams.</param>
@@ -41,6 +43,7 @@ namespace Cratis.Chronicle.Services.ReadModels;
 internal sealed class ReadModels(
     IGrainFactory grainFactory,
     IStorage storage,
+    IReadModelReadBindings readBindings,
     IExpandoObjectConverter expandoObjectConverter,
     IReducerMediator reducerMediator,
     IProjectionChangesetMediator changesetMediator,
@@ -79,9 +82,7 @@ internal sealed class ReadModels(
             throw new InvalidOperationException($"Read model with identifier '{request.ReadModel.Type.Identifier}' not found.");
 
         var schema = await JsonSchema.FromJsonAsync(request.ReadModel.Schema);
-        var indexes = request.ReadModel.Indexes
-            .Select(i => new Concepts.ReadModels.IndexDefinition(i.PropertyPath))
-            .ToArray();
+        var indexes = ReadModelIndexUpdates.Apply(request.ReadModel.Indexes, existingDefinition.Indexes, request.ReplaceIndexes);
 
         var updatedDefinition = new Concepts.ReadModels.ReadModelDefinition(
             existingDefinition.Identifier,
@@ -128,15 +129,11 @@ internal sealed class ReadModels(
     {
         var readModel = grainFactory.GetReadModel(request.ReadModel, request.EventStore);
         var definition = await readModel.GetKnownDefinition(request.ReadModel);
-        var sinks = storage.GetEventStore(request.EventStore).GetNamespace(request.Namespace).Sinks;
-        var sink = await sinks.GetFor(definition);
+        var occurrence = string.IsNullOrEmpty(request.Occurrence) ? null : (ReadModelContainerName)request.Occurrence;
+        var binding = await readBindings.Resolve(request.EventStore, request.Namespace, definition, occurrence);
+        var sink = binding.Sink;
+        occurrence = binding.Occurrence;
         var skip = Math.Max(0, request.Page * request.PageSize);
-
-        ReadModelContainerName? occurrence = null;
-        if (!string.IsNullOrEmpty(request.Occurrence))
-        {
-            occurrence = request.Occurrence;
-        }
 
         var (instances, totalCount) = await sink.GetInstances(
             occurrence,
@@ -166,13 +163,30 @@ internal sealed class ReadModels(
         var readModel = grainFactory.GetReadModel(request.ReadModelIdentifier, request.EventStore);
         var definition = await readModel.GetKnownDefinition(request.ReadModelIdentifier);
 
+        var streamScoped = !string.IsNullOrEmpty(request.EventStreamType) || !string.IsNullOrEmpty(request.EventStreamId);
+        if (streamScoped && (string.IsNullOrEmpty(request.EventStreamType) || ((EventStreamType)request.EventStreamType).IsAll))
+        {
+            throw new RpcException(new Status(StatusCode.FailedPrecondition, "Stream-scoped decision reads require an explicit event stream type."));
+        }
+        if (streamScoped && definition.ObserverType != Concepts.ReadModels.ReadModelObserverType.Projection)
+        {
+            throw new RpcException(new Status(StatusCode.FailedPrecondition, "Stream-scoped decision reads require a projection."));
+        }
+        var streamScope = streamScoped
+            ? new ImmediateProjectionStreamScope(
+                string.IsNullOrEmpty(request.EventSourceId) ? request.ReadModelKey : request.EventSourceId,
+                string.IsNullOrEmpty(request.EventSourceType) ? null : (EventSourceType)request.EventSourceType,
+                string.IsNullOrEmpty(request.EventStreamType) ? EventStreamType.All : (EventStreamType)request.EventStreamType,
+                string.IsNullOrEmpty(request.EventStreamId) ? EventStreamId.Default : (EventStreamId)request.EventStreamId)
+            : null;
+
         // A materialized read model — projection or reducer alike — already has its state written to the sink by
         // its observer, so read it from there rather than re-projecting or round-tripping to a connected reducer
         // client. For a projection this is also the only path that reflects joins and custom key resolvers
         // (UsingKey), because ImmediateProjection replays by EventSourceId alone and misses cross-source events.
-        // A session pins a projection to an in-flight state, and an unspecified key ("*") cannot be looked up by
+        // Session reads fold from storage on every call, and an unspecified key ("*") cannot be looked up by
         // key at all, so both of those keep replaying.
-        if (materializedReadModels.IsMaterialized(definition) &&
+        if (!streamScoped && materializedReadModels.IsMaterialized(definition) &&
             string.IsNullOrEmpty(request.SessionId) &&
             request.ReadModelKey != ReadModelKey.Unspecified.Value)
         {
@@ -188,13 +202,15 @@ internal sealed class ReadModels(
                     request.Namespace,
                     request.EventSequenceId,
                     request.ReadModelKey,
-                    (ProjectionSessionId)Guid.Parse(request.SessionId))
+                    (ProjectionSessionId)Guid.Parse(request.SessionId),
+                    streamScope)
                 : new ImmediateProjectionKey(
                     (ProjectionId)definition.ObserverIdentifier.Value,
                     request.EventStore,
                     request.Namespace,
                     request.EventSequenceId,
-                    request.ReadModelKey);
+                    request.ReadModelKey,
+                    StreamScope: streamScope);
 
             var projection = grainFactory.GetGrain<IImmediateProjection>(projectionKey);
             var result = await projection.GetModelInstance();
@@ -205,7 +221,8 @@ internal sealed class ReadModels(
                 {
                     ReadModel = "null",
                     ProjectedEventsCount = (ulong)result.ProjectedEventsCount,
-                    LastHandledEventSequenceNumber = result.LastHandledEventSequenceNumber
+                    LastHandledEventSequenceNumber = result.LastHandledEventSequenceNumber,
+                    StreamScoped = streamScoped
                 };
             }
 
@@ -221,7 +238,8 @@ internal sealed class ReadModels(
             {
                 ReadModel = releasedReadModel.ToJsonString(jsonSerializerOptions),
                 ProjectedEventsCount = (ulong)result.ProjectedEventsCount,
-                LastHandledEventSequenceNumber = result.LastHandledEventSequenceNumber
+                LastHandledEventSequenceNumber = result.LastHandledEventSequenceNumber,
+                StreamScoped = streamScoped
             };
         }
 
@@ -490,13 +508,21 @@ internal sealed class ReadModels(
 
         if (definition.ObserverType == Concepts.ReadModels.ReadModelObserverType.Projection)
         {
+            var streamScope = !string.IsNullOrEmpty(request.EventStreamType) || !string.IsNullOrEmpty(request.EventStreamId)
+                ? new ImmediateProjectionStreamScope(
+                    string.IsNullOrEmpty(request.EventSourceId) ? request.ReadModelKey : request.EventSourceId,
+                    string.IsNullOrEmpty(request.EventSourceType) ? null : (EventSourceType)request.EventSourceType,
+                    string.IsNullOrEmpty(request.EventStreamType) ? EventStreamType.All : (EventStreamType)request.EventStreamType,
+                    string.IsNullOrEmpty(request.EventStreamId) ? EventStreamId.Default : (EventStreamId)request.EventStreamId)
+                : null;
             var projectionKey = new ImmediateProjectionKey(
                 (ProjectionId)definition.ObserverIdentifier.Value,
                 request.EventStore,
                 request.Namespace,
                 request.EventSequenceId,
                 request.ReadModelKey,
-                (ProjectionSessionId)Guid.Parse(request.SessionId));
+                (ProjectionSessionId)Guid.Parse(request.SessionId),
+                streamScope);
 
             var projection = grainFactory.GetGrain<IImmediateProjection>(projectionKey);
             await projection.Dehydrate();
@@ -504,25 +530,6 @@ internal sealed class ReadModels(
         else
         {
             throw new NotSupportedException("Server-side reducer session dehydration is not yet supported. Reducers typically run client-side.");
-        }
-    }
-
-    static EventSequenceNumber GetLastHandledEventSequenceNumber(ExpandoObject instance)
-    {
-        var values = (IDictionary<string, object?>)instance;
-        if (!values.TryGetValue(WellKnownProperties.LastHandledEventSequenceNumber, out var value) || value is null)
-        {
-            return EventSequenceNumber.Unavailable;
-        }
-
-        try
-        {
-            return (EventSequenceNumber)Convert.ToUInt64(value);
-        }
-        catch (Exception exception) when (exception is InvalidCastException or FormatException or OverflowException)
-        {
-            // The stored value is not a sequence number; report it as unavailable rather than failing the read.
-            return EventSequenceNumber.Unavailable;
         }
     }
 
@@ -551,7 +558,7 @@ internal sealed class ReadModels(
         {
             ReadModel = jsonObject.ToJsonString(jsonSerializerOptions),
             ProjectedEventsCount = 0,
-            LastHandledEventSequenceNumber = GetLastHandledEventSequenceNumber(instance)
+            LastHandledEventSequenceNumber = instance.GetLastHandledEventSequenceNumber()
         };
     }
 
@@ -573,7 +580,7 @@ internal sealed class ReadModels(
 
         // ToJsonObject drops the last handled event sequence number when the schema does not describe it, so
         // put it back — clients mirror it onto the instance to tell how far it has been brought up to date.
-        var lastHandled = GetLastHandledEventSequenceNumber(instance);
+        var lastHandled = instance.GetLastHandledEventSequenceNumber();
         if (lastHandled != EventSequenceNumber.Unavailable)
         {
             jsonObject[WellKnownProperties.LastHandledEventSequenceNumber] = JsonValue.Create(lastHandled.Value);

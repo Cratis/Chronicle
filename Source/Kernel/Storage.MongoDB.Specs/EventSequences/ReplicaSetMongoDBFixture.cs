@@ -33,7 +33,7 @@ public sealed class ReplicaSetMongoDBFixture : IAsyncLifetime
         ?? $"mongodb://localhost:{_container!.GetMappedPublicPort(MongoDBPort)}/?directConnection=true";
 
     /// <inheritdoc/>
-    public async Task InitializeAsync()
+    public async ValueTask InitializeAsync()
     {
         if (MongoDBSpecDatabaseNames.ExternalConnectionString is not null)
         {
@@ -41,7 +41,7 @@ public sealed class ReplicaSetMongoDBFixture : IAsyncLifetime
             return;
         }
 
-        var image = Environment.GetEnvironmentVariable("CHRONICLE_SPECS_MONGODB_IMAGE") ?? "mongo";
+        var image = Environment.GetEnvironmentVariable("CHRONICLE_SPECS_MONGODB_IMAGE") ?? "mongo:8.2";
         _container = new ContainerBuilder(image)
             .WithMongoDBKernelCompatibility()
             .WithCommand("/bin/sh", "-c", StartupCommand)
@@ -209,7 +209,7 @@ public sealed class ReplicaSetMongoDBFixture : IAsyncLifetime
     }
 
     /// <inheritdoc/>
-    public async Task DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
         if (_container is not null)
         {

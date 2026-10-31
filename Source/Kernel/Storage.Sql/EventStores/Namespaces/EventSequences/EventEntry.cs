@@ -39,6 +39,16 @@ public class EventEntry
     public EventTypeId Type { get; set; } = EventTypeId.Unknown;
 
     /// <summary>
+    /// Gets or sets the generation of the original append. Null for historic rows where it is unknown.
+    /// </summary>
+    public uint? AppendedGeneration { get; set; }
+
+    /// <summary>
+    /// Gets or sets the most recently revised generation. Null for unrevised or legacy rows.
+    /// </summary>
+    public uint? RevisedGeneration { get; set; }
+
+    /// <summary>
     /// Gets or sets the time the event occurred.
     /// </summary>
     public DateTimeOffset Occurred { get; set; }
@@ -73,6 +83,11 @@ public class EventEntry
     /// keyed by generation number. Empty when no hashes were supplied.
     /// </summary>
     public string ContentHashes { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the JSON provenance of generations added by backfill. Null for legacy and append-derived content.
+    /// </summary>
+    public string? DerivedGenerations { get; set; }
 
     /// <summary>
     /// Gets or sets the subject that identifies the compliance target for the event.
