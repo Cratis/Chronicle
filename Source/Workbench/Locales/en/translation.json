@@ -426,9 +426,13 @@
             "recommendations": {
                 "title": "Recommendations",
                 "empty": "No recommendations found",
+                "emptyIgnored": "No ignored recommendations found",
                 "actions": {
                     "perform": "Perform",
                     "ignore": "Ignore",
+                    "unignore": "Unignore",
+                    "showIgnored": "Show Ignored",
+                    "showActive": "Show Active",
                     "selectAll": "Select All"
                 },
                 "columns": {
@@ -440,11 +444,19 @@
                 "dialogs": {
                     "ignoreRecommendation": {
                         "title": "Ignore Recommendation",
-                        "message": "Are you sure you want to ignore the recommendation '{name}'? This action cannot be undone."
+                        "message": "Are you sure you want to ignore the recommendation '{name}'? You can restore it from the ignored view."
                     },
                     "ignoreRecommendations": {
                         "title": "Ignore Recommendations",
-                        "message": "Are you sure you want to ignore {count} recommendations? This action cannot be undone."
+                        "message": "Are you sure you want to ignore {count} recommendations? You can restore them from the ignored view."
+                    },
+                    "unignoreRecommendation": {
+                        "title": "Unignore Recommendation",
+                        "message": "Are you sure you want to unignore the recommendation '{name}'? It will be offered as an active recommendation again."
+                    },
+                    "unignoreRecommendations": {
+                        "title": "Unignore Recommendations",
+                        "message": "Are you sure you want to unignore {count} recommendations? They will be offered as active recommendations again."
                     }
                 }
             },

@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import strings from 'Strings';
-import { AllRecommendations, AllRecommendationsParameters } from 'Features/Recommendations';
+import { AllRecommendations, AllRecommendationsParameters, IgnoredRecommendations } from 'Features/Recommendations';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import { useParams } from 'react-router-dom';
 import { RecommendationDetails } from 'Features/Recommendations';
@@ -26,7 +26,13 @@ export const Recommendations = withViewModel(RecommendationsViewModel, ({ viewMo
         eventStore: params.eventStore!,
         namespace: params.namespace!
     };
-    const [recommendations] = AllRecommendations.use(queryArgs);
+    const [activeRecommendations] = AllRecommendations.use(queryArgs);
+    const [ignoredRecommendations] = IgnoredRecommendations.use(queryArgs);
+    const recommendations = viewModel.showIgnored ? ignoredRecommendations : activeRecommendations;
+    // Both queries return the same RecommendationDetails[] and take the same parameters; only the generated
+    // private sort helpers differ, which the DataPage constructor type cannot see through.
+    const query = (viewModel.showIgnored ? IgnoredRecommendations : AllRecommendations) as typeof AllRecommendations;
+    const strs = strings.eventStore.namespaces.recommendations;
 
     const handleIgnore = async () => {
         const recommendationIds = viewModel.selectedRecommendationIds;
@@ -59,28 +65,72 @@ export const Recommendations = withViewModel(RecommendationsViewModel, ({ viewMo
         }
     };
 
+    const handleUnignore = async () => {
+        const recommendationIds = viewModel.selectedRecommendationIds;
+        if (recommendationIds.length === 0) {
+            return;
+        }
+
+        const isBulk = recommendationIds.length > 1;
+        const singleRecommendation = isBulk
+            ? undefined
+            : recommendations.data.find(recommendation => recommendation.id.equals(recommendationIds[0]));
+
+        const result = await showConfirmation(
+            isBulk ? strs.dialogs.unignoreRecommendations.title : strs.dialogs.unignoreRecommendation.title,
+            isBulk
+                ? strs.dialogs.unignoreRecommendations.message.replace('{count}', recommendationIds.length.toString())
+                : strs.dialogs.unignoreRecommendation.message.replace('{name}', singleRecommendation?.name ?? ''),
+            DialogButtons.YesNo);
+
+        if (result !== DialogResult.Yes) {
+            return;
+        }
+
+        try {
+            await viewModel.unignoreRecommendations(recommendationIds);
+        } catch (error) {
+            console.error('Failed to unignore recommendations:', error);
+        }
+    };
+
     return (
         <Page title={strings.eventStore.namespaces.recommendations.title}>
         <DataPage
+            key={viewModel.showIgnored ? 'ignored' : 'active'}
             title={strings.eventStore.namespaces.recommendations.title}
-            query={AllRecommendations}
+            query={query}
             queryArguments={queryArgs}
             onSelectionChange={(e) => (viewModel.selectedRecommendation = e.value as RecommendationDetails)}
             dataKey='id'
-            emptyMessage={strings.eventStore.namespaces.recommendations.empty}>
+            emptyMessage={viewModel.showIgnored ? strs.emptyIgnored : strs.empty}>
 
             <DataPage.MenuItems>
                 <MenuItem
                     label={strings.eventStore.namespaces.recommendations.actions.selectAll} icon={faIcons.FaSquareCheck}
                     command={() => viewModel.selectAllRecommendations(recommendations.data.map((recommendation: RecommendationDetails) => recommendation.id))} />
                 <MenuItem
-                    label={strings.eventStore.namespaces.recommendations.actions.perform} icon={faIcons.FaArrowsRotate}
-                    disableOnUnselected
-                    command={() => viewModel.perform()} />
-                <MenuItem
-                    label={strings.eventStore.namespaces.recommendations.actions.ignore} icon={faIcons.FaBan}
-                    disabled={viewModel.selectedRecommendationIds.length === 0}
-                    command={() => handleIgnore()} />
+                    label={viewModel.showIgnored ? strs.actions.showActive : strs.actions.showIgnored}
+                    icon={viewModel.showIgnored ? faIcons.FaList : faIcons.FaEyeSlash}
+                    command={() => viewModel.toggleIgnoredView()} />
+                {!viewModel.showIgnored && (
+                    <MenuItem
+                        label={strs.actions.perform} icon={faIcons.FaArrowsRotate}
+                        disableOnUnselected
+                        command={() => viewModel.perform()} />
+                )}
+                {!viewModel.showIgnored && (
+                    <MenuItem
+                        label={strs.actions.ignore} icon={faIcons.FaBan}
+                        disabled={viewModel.selectedRecommendationIds.length === 0}
+                        command={() => handleIgnore()} />
+                )}
+                {viewModel.showIgnored && (
+                    <MenuItem
+                        label={strs.actions.unignore} icon={faIcons.FaRotateLeft}
+                        disabled={viewModel.selectedRecommendationIds.length === 0}
+                        command={() => handleUnignore()} />
+                )}
             </DataPage.MenuItems>
 
             <DataPage.Columns>

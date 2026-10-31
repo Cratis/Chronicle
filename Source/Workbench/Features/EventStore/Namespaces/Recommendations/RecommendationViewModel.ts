@@ -4,7 +4,7 @@
 import { RecommendationDetails } from 'Features/Recommendations';
 import { inject, injectable } from 'tsyringe';
 import { type EventStoreAndNamespaceParams } from 'Shared';
-import { IgnoreRecommendation, PerformRecommendation } from 'Features/Recommendations';
+import { IgnoreRecommendation, PerformRecommendation, UnignoreRecommendation } from 'Features/Recommendations';
 import { Guid } from '@cratis/fundamentals';
 
 @injectable()
@@ -15,6 +15,7 @@ export class RecommendationsViewModel {
 
     selectedRecommendation: RecommendationDetails | undefined;
     selectedRecommendationIds: Guid[] = [];
+    showIgnored = false;
 
     isRecommendationSelected(id: Guid): boolean {
         return this.selectedRecommendationIds.some(_ => _.equals(id));
@@ -32,6 +33,16 @@ export class RecommendationsViewModel {
 
     clearRecommendationSelection() {
         this.selectedRecommendationIds = [];
+    }
+
+    toggleIgnoredView() {
+        this.showIgnored = !this.showIgnored;
+        this.selectedRecommendation = undefined;
+        this.clearRecommendationSelection();
+    }
+
+    protected createUnignoreRecommendation(): UnignoreRecommendation {
+        return new UnignoreRecommendation();
     }
 
     async perform() {
@@ -74,6 +85,36 @@ export class RecommendationsViewModel {
 
         if (failures.length > 0) {
             throw new Error(`Failed to ignore ${failures.length} of ${recommendationIds.length} recommendation(s):\n${failures.join('\n')}`);
+        }
+    }
+
+    /**
+     * Restores every ignored recommendation in the given selection, so it is offered again as an active
+     * recommendation. Identifiers are passed explicitly for the same reason as in {@link ignoreRecommendations};
+     * partial failures are collected and thrown as one aggregate error after every unignore was attempted.
+     * @param recommendationIds The identifiers of the recommendations to unignore.
+     */
+    async unignoreRecommendations(recommendationIds: Guid[]) {
+        const failures: string[] = [];
+
+        for (const recommendationId of recommendationIds) {
+            const command = this.createUnignoreRecommendation();
+            command.eventStore = this._params.eventStore!;
+            command.namespace = this._params.namespace!;
+            command.recommendationId = recommendationId;
+
+            // eslint-disable-next-line no-await-in-loop
+            const result = await command.execute();
+            result.onFailed(() => {
+                const messages = [...result.validationResults.map(_ => _.message), ...result.exceptionMessages];
+                failures.push(`${recommendationId.toString()}: ${messages.join(', ') || 'Unknown error'}`);
+            });
+        }
+
+        this.clearRecommendationSelection();
+
+        if (failures.length > 0) {
+            throw new Error(`Failed to unignore ${failures.length} of ${recommendationIds.length} recommendation(s):\n${failures.join('\n')}`);
         }
     }
 }
