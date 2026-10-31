@@ -34,6 +34,8 @@ Do not reconstruct that scope by splitting an arbitrary observer name: subscript
 
 An older observer can have a different identity from the observer linked by the current definition. Recreating a definition does not establish that its current observer inherits that older observer's checkpoint. If a definition is missing, the linkage conflicts, or an older identity cannot be linked unambiguously, stop and inspect the actual stored definition and scoped observer before requesting replay. Do not guess a forwarding target from a name.
 
+If you wrap the existing replay API with explicit subscription and consumer labels, treat those labels as **UNVERIFIED, operator-attested information**. Only the supplied producer event store, namespace, and outbox observer ID select the source-forwarding replay target; the labels neither verify nor restrict which consumer receives events. You are responsible for checking that the supplied scope and observer match the subscription you intend to replay. Before opening a connection, such a wrapper must warn that replay can create duplicate inbox rows and repeat consumer side effects, and require explicit confirmation to proceed.
+
 This page explains existing subscription and replay behavior. It does not introduce a subscription-specific recovery command or guarantee that administrative lookups are non-mutating on every storage provider.
 
 ## See also
