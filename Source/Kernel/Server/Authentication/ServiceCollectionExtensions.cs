@@ -46,8 +46,8 @@ public static class ServiceCollectionExtensions
         // service collection is still being built. Registering that same instance is what makes the rotation
         // diagnostic report the certificates those two were actually handed, rather than a second reading of
         // the same configuration.
-        var encryptionCertificateRing = Cratis.Chronicle.Security.EncryptionCertificateRing.From(chronicleOptions);
-        services.AddSingleton<Cratis.Chronicle.Security.IEncryptionCertificateRing>(encryptionCertificateRing);
+        var encryptionCertificateRing = Security.EncryptionCertificateRing.From(chronicleOptions);
+        services.AddSingleton<Security.IEncryptionCertificateRing>(encryptionCertificateRing);
 
         // Configure Data Protection with Chronicle's shared storage so every node uses the same authentication key ring.
         var dataProtectionBuilder = Security.ChronicleDataProtection.AddChronicleDataProtection(services);
@@ -167,7 +167,7 @@ public static class ServiceCollectionExtensions
                 options.Password.RequireLowercase = false;
                 options.Password.RequireNonAlphanumeric = false;
                 options.Password.RequireUppercase = false;
-                options.Password.RequiredLength = Cratis.Chronicle.Security.PasswordPolicy.MinimumLength;
+                options.Password.RequiredLength = Security.PasswordPolicy.MinimumLength;
                 options.User.RequireUniqueEmail = false;
             })
             .AddUserStore<UserStore>()

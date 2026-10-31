@@ -149,7 +149,7 @@ public record Append(
         return new AppendResult
         {
             CorrelationId = result.CorrelationId,
-            SequenceNumber = result.SequenceNumbers.FirstOrDefault() ?? Concepts.Events.EventSequenceNumber.Unavailable,
+            SequenceNumber = result.SequenceNumbers.FirstOrDefault() ?? EventSequenceNumber.Unavailable,
             ConstraintViolations = result.ConstraintViolations,
             ConcurrencyViolation = result.ConcurrencyViolations.FirstOrDefault(),
             Errors = result.Errors,

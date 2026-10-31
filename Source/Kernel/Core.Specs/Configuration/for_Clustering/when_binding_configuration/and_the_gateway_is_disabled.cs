@@ -12,7 +12,7 @@ public class and_the_gateway_is_disabled : Specification
     {
         ["clustering:gatewayEnabled"] = "false",
         ["clustering:gatewayPort"] = "31000"
-    }).Build().GetSection("clustering").Get<Clustering>()!;
+    }).Build().GetSection("clustering").Get<Clustering>();
 
     [Fact] void should_bind_the_switch() => _result.GatewayEnabled.ShouldBeFalse();
     [Fact] void should_preserve_the_configured_port() => _result.GatewayPort.ShouldEqual(31000);

@@ -35,7 +35,7 @@ public class when_registering_the_client : Specification
         while (handler is DelegatingHandler delegating)
         {
             _hasValidation |= handler is WebhookValidationHandler;
-            handler = delegating.InnerHandler!;
+            handler = delegating.InnerHandler;
         }
         _primary = (SocketsHttpHandler)handler;
     }

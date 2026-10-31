@@ -86,7 +86,8 @@ public class when_targeting_the_configured_administrator : Specification
 
     [Fact] void should_not_fail() => _exception.ShouldBeNull();
     [Fact] void should_serialize_password_changed() => _eventSerializer.Received(1).Serialize(Arg.Any<UserPasswordChanged>());
-    [Fact] void should_append_password_changed() => _eventLog.Received(1).Append(
+    [Fact]
+    void should_append_password_changed() => _eventLog.Received(1).Append(
         Arg.Any<EventSourceType>(),
         Arg.Is<EventSourceId>(id => id == _administratorId),
         Arg.Any<EventStreamType>(),
@@ -100,5 +101,5 @@ public class when_targeting_the_configured_administrator : Specification
         Arg.Is<ConcurrencyScope>(scope =>
             scope.EventSourceId &&
             scope.SequenceNumber == EventSequenceNumber.BeforeFirst &&
-            scope.EventTypes!.Single() == typeof(UserPasswordChanged).GetEventType()));
+            scope.EventTypes.Single() == typeof(UserPasswordChanged).GetEventType()));
 }

@@ -7,7 +7,7 @@ namespace Cratis.Chronicle.Configuration.for_ExternalServices;
 
 public class when_using_the_defaults : Specification
 {
-    Configuration.ExternalServices _options;
+    ExternalServices _options;
 
     void Because() => _options = new();
 

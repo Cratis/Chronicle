@@ -29,7 +29,7 @@ namespace Cratis.Chronicle.Sequences;
 /// A revision does not rewrite history - the original content is kept alongside the revision, so what the event
 /// said before stays answerable.
 /// <para>
-/// Content travels as a JSON string rather than <see cref="System.Text.Json.Nodes.JsonObject"/> because protobuf-net
+/// Content travels as a JSON string rather than <see cref="JsonObject"/> because protobuf-net
 /// has no serializer for that BCL type - it has no plain reflectable shape, so the gRPC contract generated from this
 /// command would produce a field nothing can actually put on the wire.
 /// </para>

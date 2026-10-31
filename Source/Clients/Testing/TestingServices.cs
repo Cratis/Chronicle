@@ -37,6 +37,7 @@ using Cratis.Chronicle.Transactions;
 using Cratis.Traces;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using ClientEventLog = Cratis.Chronicle.EventSequences.IEventLog;
 using KernelApplicationsService = KernelGrpc::Cratis.Chronicle.Services.Security.Applications;
 using KernelCaptureLanguageService = KernelCore::Cratis.Chronicle.Captures.Engine.DeclarationLanguage.LanguageService;
 using KernelCapturesService = KernelGrpc::Cratis.Chronicle.Services.Captures.Captures;
@@ -140,7 +141,7 @@ internal sealed class TestingServices : IServices
         // One pipeline serves every command-dispatching service. Its provider carries the collaborators the
         // command handlers resolve their parameters from - the same instances the service constructors used
         // to receive directly before dispatch moved to the Arc command pipeline.
-        var commandPipeline = new Lazy<Cratis.Arc.Commands.ICommandPipeline>(() =>
+        var commandPipeline = new Lazy<Arc.Commands.ICommandPipeline>(() =>
             InProcessCommandPipeline.Create(
                 grainFactory,
                 storage,
@@ -163,7 +164,7 @@ internal sealed class TestingServices : IServices
                     // needs a live connection this in-process kernel does not have. This satisfies the resolution
                     // harmlessly instead.
                     services.AddSingleton<IUnitOfWorkManager>(new EventSequences.NoOpUnitOfWorkManager());
-                    services.AddSingleton<Cratis.Chronicle.EventSequences.IEventLog>(new EventSequences.NoOpEventLog());
+                    services.AddSingleton<ClientEventLog>(new EventSequences.NoOpEventLog());
                     services.AddSingleton(eventTypes());
                 }));
 

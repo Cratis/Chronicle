@@ -57,7 +57,7 @@ public class when_registering_clients : Specification
         {
             resilienceSeen |= handler is Microsoft.Extensions.Http.Resilience.ResilienceHandler;
             if (handler is WebhookConnectionPoolHandler) return resilienceSeen;
-            handler = delegating.InnerHandler!;
+            handler = delegating.InnerHandler;
         }
         return false;
     }

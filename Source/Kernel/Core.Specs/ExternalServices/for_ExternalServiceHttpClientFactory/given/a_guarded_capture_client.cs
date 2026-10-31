@@ -44,7 +44,7 @@ public class a_guarded_capture_client : Specification
             });
         var services = new ServiceCollection();
         services.AddLogging();
-        services.AddSingleton<IOptions<ChronicleOptions>>(_ => Options.Create(_options));
+        services.AddSingleton(_ => Options.Create(_options));
         services.AddSingleton(environment);
         services.AddSingleton(resolver);
         services.AddSingleton(logger);
@@ -71,8 +71,8 @@ public class a_guarded_capture_client : Specification
 
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
-            Targets.Add(request.RequestUri!);
-            var response = request.RequestUri!.AbsolutePath.Contains(".well-known", StringComparison.Ordinal)
+            Targets.Add(request.RequestUri);
+            var response = request.RequestUri.AbsolutePath.Contains(".well-known", StringComparison.Ordinal)
                 ? JsonContent.Create(new { token_endpoint = "https://tokens.example/token" })
                 : JsonContent.Create(new { access_token = "access-token", expires_in = 3600 });
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = response });

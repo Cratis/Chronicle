@@ -460,7 +460,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
                 ClientType = ChronicleClientIdentity.Type,
                 ClientVersion = ChronicleClientIdentity.Version,
                 ProtocolVersion = ChronicleClientIdentity.ProtocolVersion,
-                DescriptorSet = Contracts.WireContractDescriptorSet.Bytes.ToArray()
+                DescriptorSet = WireContractDescriptorSet.Bytes.ToArray()
             });
         }
         catch (RpcException ex) when (ex.StatusCode == StatusCode.Unimplemented)

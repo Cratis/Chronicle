@@ -1,9 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+extern alias KernelConcepts;
 extern alias KernelCore;
 extern alias KernelGrpc;
-extern alias KernelConcepts;
 
 using System.Reflection;
 using Cratis.Arc;
@@ -98,9 +98,9 @@ public class ClusteringFixture : IAsyncLifetime
     /// </summary>
     public string SecondClientConnectionId => ObserversSilo.ServiceProvider.GetRequiredService<IChronicleConnection>().Lifecycle.ConnectionId.Value;
 
-    InProcessSiloHandle EventSequencesSilo => _cluster!.Silos.Single(silo => silo.Name == EventSequencesSiloName);
+    InProcessSiloHandle EventSequencesSilo => _cluster.Silos.Single(silo => silo.Name == EventSequencesSiloName);
 
-    InProcessSiloHandle ObserversSilo => SiloCount == 1 ? EventSequencesSilo : _cluster!.Silos.Single(silo => silo.Name == ObserversSiloName);
+    InProcessSiloHandle ObserversSilo => SiloCount == 1 ? EventSequencesSilo : _cluster.Silos.Single(silo => silo.Name == ObserversSiloName);
 
     /// <summary>
     /// Gets the second silo's services, or the same silo for a single-silo fixture.
@@ -132,18 +132,18 @@ public class ClusteringFixture : IAsyncLifetime
     /// <returns>The restarted and bootstrapped kernel.</returns>
     public async Task CrashAndRestart(Action? afterSilosStopped = null)
     {
-        foreach (var silo in _cluster!.GetActiveSilos().ToArray()) await _cluster.KillSiloAsync(silo);
+        foreach (var silo in _cluster.GetActiveSilos().ToArray()) await _cluster.KillSiloAsync(silo);
         afterSilosStopped?.Invoke();
         await _cluster.DisposeAsync();
         _cluster = null;
-        await BringUpClusterAsync(_mongoRunner!.ConnectionString);
+        await BringUpClusterAsync(_mongoRunner.ConnectionString);
     }
 
     /// <summary>
     /// Abruptly terminates the observer silo; the event-sequences silo remains running.
     /// </summary>
     /// <returns>The termination operation.</returns>
-    public Task CrashSecondSilo() => _cluster!.KillSiloAsync(ObserversSilo);
+    public Task CrashSecondSilo() => _cluster.KillSiloAsync(ObserversSilo);
 
     /// <inheritdoc/>
     public virtual async ValueTask InitializeAsync()
@@ -384,7 +384,7 @@ public class ClusteringFixture : IAsyncLifetime
         SiloServices.GetRequiredService<IGrainFactory>()
             .GetGrain<KernelCore::Cratis.Chronicle.Observation.IObserver>(
                 new KernelConcepts::Cratis.Chronicle.Concepts.Observation.ObserverKey(
-                    typeof(TReactor).FullName!,
+                    typeof(TReactor).FullName,
                     (KernelConcepts::Cratis.Chronicle.Concepts.EventStoreName)Constants.EventStore,
                     KernelConcepts::Cratis.Chronicle.Concepts.EventStoreNamespaceName.Default,
                     KernelConcepts::Cratis.Chronicle.Concepts.EventSequences.EventSequenceId.Log));

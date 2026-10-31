@@ -9,7 +9,8 @@ public class and_the_request_carries_the_event_store : given.an_api_capture_sour
 {
     async Task Because() => await _reader.Read(_eventStore, _source);
 
-    [Fact] void should_carry_the_event_store()
+    [Fact]
+    void should_carry_the_event_store()
     {
         _request.Options.TryGetValue(WebhookRequestOptions.EventStore, out var eventStore).ShouldBeTrue();
         eventStore.ShouldEqual(_eventStore);

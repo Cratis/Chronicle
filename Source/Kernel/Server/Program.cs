@@ -200,63 +200,63 @@ var hostBuilder = builder.Host
 hostBuilder
    .UseOrleans(_ =>
    {
-        var clustering = chronicleOptions.Clustering;
-        if (clustering.Type is ClusteringType.MongoDB or ClusteringType.Sql)
-        {
-            // Membership is wired by WithMongoDB or WithSql below. Nodes sharing the
-            // same storage and cluster id form one cluster.
-            _.Configure<Orleans.Configuration.ClusterOptions>(options =>
-            {
-                options.ClusterId = clustering.ClusterId;
-                options.ServiceId = clustering.ServiceId;
-            });
+       var clustering = chronicleOptions.Clustering;
+       if (clustering.Type is ClusteringType.MongoDB or ClusteringType.Sql)
+       {
+           // Membership is wired by WithMongoDB or WithSql below. Nodes sharing the
+           // same storage and cluster id form one cluster.
+           _.Configure<Orleans.Configuration.ClusterOptions>(options =>
+           {
+               options.ClusterId = clustering.ClusterId;
+               options.ServiceId = clustering.ServiceId;
+           });
 
-            // Self-heal the membership table: Orleans ships with the defunct-silo sweep disabled,
-            // so dead entries from restarts and failed rollouts accumulate until new nodes cannot join.
-            _.Configure<Orleans.Configuration.ClusterMembershipOptions>(options => ClusterMembershipConfiguration.Apply(clustering, options));
-        }
-        else if (localhostGuard == LocalhostClusteringGuardAction.Lease)
-        {
-            _.AddSingleWriterLease();
-        }
-        else if (localhostGuard == LocalhostClusteringGuardAction.Warn)
-        {
-            logger.LocalhostClusteringAgainstSharedStorage();
-        }
+           // Self-heal the membership table: Orleans ships with the defunct-silo sweep disabled,
+           // so dead entries from restarts and failed rollouts accumulate until new nodes cannot join.
+           _.Configure<Orleans.Configuration.ClusterMembershipOptions>(options => ClusterMembershipConfiguration.Apply(clustering, options));
+       }
+       else if (localhostGuard == LocalhostClusteringGuardAction.Lease)
+       {
+           _.AddSingleWriterLease();
+       }
+       else if (localhostGuard == LocalhostClusteringGuardAction.Warn)
+       {
+           logger.LocalhostClusteringAgainstSharedStorage();
+       }
 
-        ClusterEndpointConfiguration.Configure(_, clustering);
+       ClusterEndpointConfiguration.Configure(_, clustering);
 
-        // Applies to all clustering types, and to calls a silo makes to itself as well as to a
-        // sibling. Startup work that fans out across everything the server holds grows with the
-        // deployment while Orleans' 30 second default does not, so this is the knob that lets an
-        // operator get a server that has outgrown it to start again.
-        //
-        // All three have to be set, and SystemResponseTimeout is the one that actually governs the
-        // call this exists for. A grain service is a system target, and Orleans times system target
-        // calls out against SystemResponseTimeout rather than ResponseTimeout - so setting only the
-        // latter leaves the startup path that needs the larger budget still on the 30 second
-        // default while appearing to have been configured. The startup task also reaches its grain
-        // services through the client the silo hosts for itself, which is bound by the client's own
-        // timeout, hence all three.
-        _.Configure<Orleans.Configuration.SiloMessagingOptions>(options =>
-        {
-            options.ResponseTimeout = clustering.ResponseTimeout;
-            options.SystemResponseTimeout = clustering.ResponseTimeout;
-        });
-        _.Configure<Orleans.Configuration.ClientMessagingOptions>(options => options.ResponseTimeout = clustering.ResponseTimeout);
+       // Applies to all clustering types, and to calls a silo makes to itself as well as to a
+       // sibling. Startup work that fans out across everything the server holds grows with the
+       // deployment while Orleans' 30 second default does not, so this is the knob that lets an
+       // operator get a server that has outgrown it to start again.
+       //
+       // All three have to be set, and SystemResponseTimeout is the one that actually governs the
+       // call this exists for. A grain service is a system target, and Orleans times system target
+       // calls out against SystemResponseTimeout rather than ResponseTimeout - so setting only the
+       // latter leaves the startup path that needs the larger budget still on the 30 second
+       // default while appearing to have been configured. The startup task also reaches its grain
+       // services through the client the silo hosts for itself, which is bound by the client's own
+       // timeout, hence all three.
+       _.Configure<Orleans.Configuration.SiloMessagingOptions>(options =>
+       {
+           options.ResponseTimeout = clustering.ResponseTimeout;
+           options.SystemResponseTimeout = clustering.ResponseTimeout;
+       });
+       _.Configure<Orleans.Configuration.ClientMessagingOptions>(options => options.ResponseTimeout = clustering.ResponseTimeout);
 
-        _.AddChronicleToSilo(chronicleBuilder =>
-        {
-            if (isInMemoryStorage)
-                chronicleBuilder.WithInMemory(chronicleOptions);
-            else if (isSqlStorage)
-                chronicleBuilder.WithSql(chronicleOptions);
-            else
-                chronicleBuilder.WithMongoDB(chronicleOptions);
+       _.AddChronicleToSilo(chronicleBuilder =>
+       {
+           if (isInMemoryStorage)
+               chronicleBuilder.WithInMemory(chronicleOptions);
+           else if (isSqlStorage)
+               chronicleBuilder.WithSql(chronicleOptions);
+           else
+               chronicleBuilder.WithMongoDB(chronicleOptions);
 
-            chronicleBuilder.WithVaultComplianceStorage(chronicleOptions);
-            chronicleBuilder.WithAzureKeyVaultComplianceStorage(chronicleOptions);
-        });
+           chronicleBuilder.WithVaultComplianceStorage(chronicleOptions);
+           chronicleBuilder.WithAzureKeyVaultComplianceStorage(chronicleOptions);
+       });
    })
    .ConfigureServices((context, services) =>
    {
