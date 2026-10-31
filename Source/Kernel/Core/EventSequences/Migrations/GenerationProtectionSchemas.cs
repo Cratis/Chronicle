@@ -13,6 +13,7 @@ namespace Cratis.Chronicle.EventSequences.Migrations;
 internal static class GenerationProtectionSchemas
 {
     static readonly ConditionalWeakTable<JsonSchema, Entry> _cache = new();
+    static readonly ConditionalWeakTable<EventTypeDefinition, IReadOnlyDictionary<EventTypeGeneration, JsonSchema>> _definitions = new();
 
     /// <summary>
     /// Resolves a generation's protection from a definition snapshot.
@@ -21,7 +22,11 @@ internal static class GenerationProtectionSchemas
     /// <param name="generation">The generation to protect or release.</param>
     /// <returns>The registered schema or an immutable clone with inherited metadata.</returns>
     internal static JsonSchema For(EventTypeDefinition definition, EventTypeGeneration generation) =>
-        For(generation, definition.Generations.Select(_ => (_.Generation, _.Schema)));
+        _definitions.GetValue(definition, static snapshot =>
+        {
+            var available = snapshot.Generations.Select(_ => (_.Generation, _.Schema)).ToArray();
+            return available.ToDictionary(_ => _.Generation, _ => For(_.Generation, available));
+        })[generation];
 
     /// <summary>
     /// Resolves a generation's protection using the nearest higher classification at each matching plain-string path.

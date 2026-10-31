@@ -96,17 +96,9 @@ internal class ProtectedEventTypeMigrations(
         var generations = definition is null
             ? await migrations.MigrateToAllGenerations(eventStore, eventType, plaintext, plaintextEvent)
             : await migrations.MigrateToAllGenerations(definition, eventType, plaintext, plaintextEvent);
-        var ownSchemas = new List<(EventTypeGeneration Generation, JsonSchema Schema)>();
-        foreach (var generation in generations.Keys)
+        if (generations.Count > 1)
         {
-            var own = sourceSchema;
-            if (generation != eventType.Generation)
-            {
-                own = definition is null
-                    ? (await eventTypes.GetFor(eventType.Id, generation)).Schema
-                    : definition.Generations.Single(_ => _.Generation == generation).Schema;
-            }
-            ownSchemas.Add((generation, own));
+            definition ??= await eventTypes.GetDefinition(eventType.Id);
         }
 
         var protectedGenerations = new Dictionary<EventTypeGeneration, ExpandoObject>();
@@ -119,7 +111,7 @@ internal class ProtectedEventTypeMigrations(
                 continue;
             }
 
-            var schema = GenerationProtectionSchemas.For(generation, ownSchemas);
+            var schema = GenerationProtectionSchemas.For(definition!, generation);
             if (!schema.HasSchemaMetadata())
             {
                 protectedGenerations[generation] = content;

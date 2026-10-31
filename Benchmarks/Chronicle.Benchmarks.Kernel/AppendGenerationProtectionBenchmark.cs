@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Configs;
@@ -152,15 +153,39 @@ public class AppendGenerationProtectionBenchmark
             var migrations = generations == 1
                 ? Array.Empty<EventTypeMigrationDefinition>()
                 : [new(1, 2, [], new JsonObject(), new JsonObject()), new(2, 3, [], new JsonObject(), new JsonObject())];
-            await eventTypes.Register(new EventTypeDefinition(_eventType.Id, EventTypeOwner.None, false, schemas, migrations));
+            var definition = new EventTypeDefinition(_eventType.Id, EventTypeOwner.None, false, schemas, migrations);
+            await eventTypes.Register(definition);
             var sourceSchema = schemas[^1].Schema;
             var protectedContent = await manager.Apply(_store, _namespace, sourceSchema, Subject, _plaintext);
             _source = converter.ToExpandoObject(protectedContent, sourceSchema);
             var engine = new EventTypeMigrations(storage, converter);
             _migrations = new(eventTypes, engine, manager, converter);
+            if (latestPii)
+            {
+                await VerifyProtection(definition, manager, converter, sourceSchema);
+            }
             _release = new(storage, new EventCompliance(manager, converter), engine, manager, converter);
             _schemas = new() { [_eventType] = new(_eventType, EventTypeOwner.Server, EventTypeSource.Code, sourceSchema) };
             _events = [new(EventContext.Empty with { EventStore = _store, Namespace = _namespace, EventType = _eventType, Subject = Subject }, _source)];
+        }
+
+        async Task VerifyProtection(EventTypeDefinition definition, JsonSchemaMetadataManager manager, ExpandoObjectConverter converter, JsonSchema sourceSchema)
+        {
+            foreach (var marker in new[] { "first-personal-marker", "second-personal-marker" })
+            {
+                var plaintext = new JsonObject { ["token"] = marker };
+                var protectedSource = converter.ToExpandoObject(await manager.Apply(_store, _namespace, sourceSchema, Subject, plaintext), sourceSchema);
+                var protectedGenerations = await _migrations.MigratePlaintext(_store, _namespace, _eventType, plaintext, protectedSource, Subject);
+                foreach (var (generation, content) in protectedGenerations)
+                {
+                    var json = JsonSerializer.SerializeToNode(content)!.AsObject();
+                    var released = await manager.ReleaseStrict(_store, _namespace, GenerationProtectionSchemas.For(definition, generation), Subject, json);
+                    if (json.ToJsonString().Contains(marker, StringComparison.Ordinal) || released["token"]!.GetValue<string>() != marker)
+                    {
+                        throw new InvalidOperationException("Generation protection must encrypt and release each call's own marker.");
+                    }
+                }
+            }
         }
     }
 }
