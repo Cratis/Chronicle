@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Observation.given;
 
@@ -17,7 +18,7 @@ public class and_the_observer_disconnects : given.an_observer
         _clock.Advance(_now - DateTimeOffset.UnixEpoch - TimeSpan.FromSeconds(1));
         _timeProvider = _clock;
         await Crash();
-        await _observer.Subscribe<NullObserverSubscriber>(ObserverType.Reactor, [], SiloAddress.Zero);
+        await _observer.Subscribe<NullObserverSubscriber>(ObserverType.Reactor, [EventType.Unknown], SiloAddress.Zero);
     }
 
     async Task Because()

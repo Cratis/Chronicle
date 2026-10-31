@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Observation.given;
 
@@ -20,7 +21,7 @@ public class and_a_client_subscribes : given.an_observer
         await Crash();
     }
 
-    Task Because() => _observer.Subscribe<NullObserverSubscriber>(ObserverType.Reactor, [], SiloAddress.Zero);
+    Task Because() => _observer.Subscribe<NullObserverSubscriber>(ObserverType.Reactor, [EventType.Unknown], SiloAddress.Zero);
 
     [Fact] void should_be_active() => _stateStorage.State.RunningState.ShouldEqual(ObserverRunningState.Active);
     [Fact] void should_renew_the_timestamp() => _stateStorage.State.RunningStateChangedAt.ShouldNotEqual(_previous);

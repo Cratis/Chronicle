@@ -70,8 +70,8 @@ public partial class Observer(
     TimeProvider? timeProvider = null) : StateMachine<ObserverState>, IObserver, IObserverDevelopmentReset, IRemindable, IDisposable
 {
     readonly TimeProvider _clock = timeProvider ?? TimeProvider.System;
-    ObserverRunningState _settledRunningState;
     readonly HashSet<JobId> _concludedCatchUpJobs = [];
+    ObserverRunningState _settledRunningState;
 
     /// <summary>
     /// The catch-up job acquisition currently in flight, if any.
@@ -96,7 +96,10 @@ public partial class Observer(
     /// </summary>
     bool _subscriptionSetupFailed;
     bool _isQuarantined;
-    // The activation owns this entry time, independently of reloaded progress snapshots.
+
+    /// <summary>
+    /// The activation owns this entry time, independently of reloaded progress snapshots.
+    /// </summary>
     DateTimeOffset? _quarantineRunningStateChangedAt;
     bool _recoverSubscriptionAfterQuarantine;
     bool _retryRecoveryAfterQuarantine;

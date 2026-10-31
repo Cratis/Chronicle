@@ -20,8 +20,7 @@ public class and_a_quarantine_writes_over_stale_snapshots : given.an_observer_wi
 
     async Task Because()
     {
-        DateTimeOffset?[] snapshots = [_quarantineTime.AddDays(-1), null, _quarantineTime.AddDays(-2), null];
-        foreach (var timestamp in snapshots)
+        foreach (var timestamp in new DateTimeOffset?[] { _quarantineTime.AddDays(-1), null, _quarantineTime.AddDays(-2), null })
         {
             _stateStorage.State = _stateStorage.State with { RunningState = ObserverRunningState.Active, RunningStateChangedAt = timestamp };
             _quarantineClock.Advance(TimeSpan.FromSeconds(1));
