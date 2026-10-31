@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Diagnostics;
 using System.Reactive.Linq;
 using System.Text.Json;
 using Cratis.Chronicle.Concepts;
@@ -149,12 +150,18 @@ internal sealed class Reactors(
                     (replayState, partition) => observer.OnNext(new EventsToObserve { Partition = partition, ReplayState = (Contracts.Observation.ReplayState)replayState }));
 
                 var definition = registration.Reactor.ToChronicle();
+
+                // The parent is the long-lived Observe request, which the server deliberately does not trace.
+                var requestActivity = Activity.Current;
+                Activity.Current = null;
                 using (var span = activitySource.Register())
                 {
                     span?.Activity?.Tag(key, ObserverType.Reactor);
                     clientObserver = grainFactory.GetGrain<IReactor>(key);
                     await clientObserver.SetDefinitionAndSubscribe(definition);
                 }
+
+                Activity.Current = requestActivity;
 
                 await ClientSubscriptionKeeper.KeepWhileConnected(
                     () => clientObserver.KeepSubscription(definition),

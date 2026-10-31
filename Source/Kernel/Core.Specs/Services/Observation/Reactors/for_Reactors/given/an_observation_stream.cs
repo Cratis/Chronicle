@@ -24,6 +24,8 @@ public class an_observation_stream : Specification
     protected ReactorEventsObserver _deliver;
     IDisposable _subscription;
 
+    private protected virtual IActivitySource<Reactors> CreateActivitySource() => new ActivitySource<Reactors>();
+
     async Task Establish()
     {
         var subscribed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -39,7 +41,7 @@ public class an_observation_stream : Specification
             mediator,
             Substitute.For<IStorage>(),
             new JsonSerializerOptions(),
-            new ActivitySource<Reactors>(),
+            CreateActivitySource(),
             Options.Create(new ChronicleOptions()),
             NullLogger<Reactors>.Instance);
         _subscription = reactors.Observe(_messages).Subscribe(_deliveries.Add);

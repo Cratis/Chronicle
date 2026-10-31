@@ -7,7 +7,6 @@ using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Observation;
 using Cratis.Metrics;
-using Cratis.Traces;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -52,7 +51,6 @@ public class and_the_catchup_trigger_faults : given.all_dependencies
             _taskFactory,
             _grainFactory,
             Substitute.For<IMeter<AppendedEventsQueue>>(),
-            new ActivitySource<AppendedEventsQueue>(),
             Options.Create(new ChronicleOptions
             {
                 Events = new Configuration.Events { QueueBoundedCapacity = ChannelCapacity }
@@ -98,6 +96,7 @@ public class and_the_catchup_trigger_faults : given.all_dependencies
     int CatchupAttempts() =>
         _observer.ReceivedCalls().Count(call => call.GetMethodInfo().Name == nameof(IObserver.CatchUp));
 
-    [Fact] void should_observe_the_fault_and_retry_exactly_the_bounded_number_of_times() =>
+    [Fact]
+    void should_observe_the_fault_and_retry_exactly_the_bounded_number_of_times() =>
         _observedCatchupAttempts.ShouldEqual(ExpectedAttempts);
 }

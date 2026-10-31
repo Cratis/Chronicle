@@ -7,7 +7,6 @@ using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Observation;
 using Cratis.Metrics;
 using Cratis.Tasks;
-using Cratis.Traces;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
@@ -33,7 +32,7 @@ public class with_a_queued_backlog : Specification
             return _workerFinished.Task;
         });
         _grainFactory = Substitute.For<IGrainFactory>();
-        _queue = new(tasks, _grainFactory, Substitute.For<IMeter<AppendedEventsQueue>>(), new ActivitySource<AppendedEventsQueue>(), Options.Create(new ChronicleOptions()), NullLogger<AppendedEventsQueue>.Instance);
+        _queue = new(tasks, _grainFactory, Substitute.For<IMeter<AppendedEventsQueue>>(), Options.Create(new ChronicleOptions()), NullLogger<AppendedEventsQueue>.Instance);
         await _queue.Subscribe(_observerKey, [_eventType]);
         for (var sequence = 0; sequence < 1000; sequence++)
         {

@@ -9,11 +9,9 @@ using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Diagnostics;
-using Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
 using Cratis.Chronicle.Observation;
 using Cratis.Metrics;
 using Cratis.Tasks;
-using Cratis.Traces;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -46,7 +44,6 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     readonly ITaskFactory _taskFactory;
     readonly IGrainFactory _grainFactory;
     readonly IMeter<AppendedEventsQueue> _meter;
-    readonly IActivitySource<AppendedEventsQueue> _activitySource;
     readonly ILogger<AppendedEventsQueue> _logger;
     readonly IShutdownDrainBudget? _stopBudget;
     readonly Channel<IReadOnlyList<AppendedEvent>> _channel;
@@ -70,7 +67,6 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     /// <param name="taskFactory"><see cref="ITaskFactory"/> for creating tasks.</param>
     /// <param name="grainFactory"><see cref="IGrainFactory"/> for creating grains.</param>
     /// <param name="meter"><see cref="IMeterScope{T}"/> for metering.</param>
-    /// <param name="activitySource">The <see cref="IActivitySource{T}"/> for tracing.</param>
     /// <param name="options"><see cref="IOptions{T}"/> for <see cref="ChronicleOptions"/>.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     /// <param name="stopBudget">The shared deadline; optional for standalone specification queues.</param>
@@ -78,7 +74,6 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
         ITaskFactory taskFactory,
         IGrainFactory grainFactory,
         [FromKeyedServices(WellKnown.MeterName)] IMeter<AppendedEventsQueue> meter,
-        [FromKeyedServices(WellKnown.MeterName)] IActivitySource<AppendedEventsQueue> activitySource,
         IOptions<ChronicleOptions> options,
         ILogger<AppendedEventsQueue> logger,
         IShutdownDrainBudget? stopBudget = null)
@@ -86,7 +81,6 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
         _taskFactory = taskFactory;
         _grainFactory = grainFactory;
         _meter = meter;
-        _activitySource = activitySource;
         _logger = logger;
         _stopBudget = stopBudget;
 
@@ -163,10 +157,6 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
         }
 
         var batch = appendedEvents as AppendedEvent[] ?? appendedEvents.ToArray();
-        using var span = _activitySource.Enqueue();
-        span?.Activity?.Tag(_eventSequenceKey.EventStore);
-        span?.Activity?.Tag(_eventSequenceKey.Namespace);
-        span?.Activity?.Tag(_eventSequenceKey.EventSequenceId);
 
         Interlocked.Increment(ref _pendingItems);
         _queueEmptyEvent.Reset();
@@ -498,7 +488,7 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
                 }
 
                 var observer = _grainFactory.GetGrain<IObserver>(subscription.ObserverKey);
-                tasks.Add(DispatchWithTracing(observer, partition, actualEvents, subscription.ObserverKey));
+                tasks.Add(Dispatch(observer, partition, actualEvents, subscription.ObserverKey));
             }
 
             try
@@ -595,10 +585,8 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
         }
     }
 
-    async Task DispatchWithTracing(IObserver observer, EventSourceId partition, AppendedEvent[] events, ObserverKey observerKey)
+    async Task Dispatch(IObserver observer, EventSourceId partition, AppendedEvent[] events, ObserverKey observerKey)
     {
-        using var span = _activitySource.Dispatch();
-        span?.Activity?.Tag(observerKey);
         try
         {
             await observer.Handle(partition, events);

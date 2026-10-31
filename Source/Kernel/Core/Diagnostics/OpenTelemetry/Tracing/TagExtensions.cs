@@ -24,6 +24,7 @@ public static class TagExtensions
     const string ObserverType = "cratis.observer.type";
     const string ConnectionId = "cratis.connection.id";
     const string EventTypeId = "cratis.eventtype.id";
+    const string EventCount = "cratis.event.count";
 
     /// <summary>
     /// Tag <see cref="EventSourceId"/>.
@@ -117,6 +118,18 @@ public static class TagExtensions
             _ => "Unknown"
         };
         activity.SetTag(ObserverType, observerTypeTag);
+        return activity;
+    }
+
+    /// <summary>
+    /// Tag <see cref="EventCount"/>.
+    /// </summary>
+    /// <param name="activity">The <see cref="Activity"/>.</param>
+    /// <param name="eventCount">The <see cref="EventCount"/>.</param>
+    /// <returns>The <see cref="Activity"/> with the tag.</returns>
+    public static Activity Tag(this Activity activity, EventCount eventCount)
+    {
+        activity.SetTag(EventCount, (long)eventCount.Value);
         return activity;
     }
 

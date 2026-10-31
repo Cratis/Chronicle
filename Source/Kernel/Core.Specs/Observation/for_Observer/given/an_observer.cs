@@ -81,6 +81,8 @@ public class an_observer : Specification
 
     protected virtual Observers CreateObserversConfig() => new() { WriteCoalescingInterval = 0 };
 
+    protected virtual IActivitySource<Observer> CreateActivitySource() => new ActivitySource<Observer>();
+
     void AddServices(TestKitSilo silo)
     {
         var options = Substitute.For<IOptionsMonitor<ChronicleOptions>>();
@@ -88,13 +90,13 @@ public class an_observer : Specification
         silo.AddService(options);
         silo.AddService(_configurationProvider);
         silo.AddService(_storage);
-        silo.AddService<TimeProvider>(TimeProvider.System);
+        silo.AddService(TimeProvider.System);
         silo.AddService(_webhookTargetPolicy);
         silo.AddService(_eventCompliance);
         silo.AddService(_eventGenerationRelease);
         silo.AddService<IObserverSubscriberSelector>(new RoundRobinObserverSubscriberSelector());
         silo.AddService(_observerServiceClient);
-        silo.AddKeyedService<IActivitySource<Observer>>(WellKnown.MeterName, new ActivitySource<Observer>());
+        silo.AddKeyedService(WellKnown.MeterName, CreateActivitySource());
         silo.AddService(_logger);
         silo.AddService(_loggerFactory);
 
@@ -172,7 +174,7 @@ public class an_observer : Specification
         // By default, every job looked up individually is still running - so nothing it concluded is forgotten.
         _jobStorage = Substitute.For<IJobStorage>();
         _eventStoreNamespaceStorage.Jobs.Returns(_jobStorage);
-        _jobStorage.GetJob(Arg.Any<JobId>()).Returns(call => Task.FromResult<Catch<JobState, Cratis.Orleans.Storage.Jobs.JobError>>(new JobState
+        _jobStorage.GetJob(Arg.Any<JobId>()).Returns(call => Task.FromResult<Catch<JobState, Orleans.Storage.Jobs.JobError>>(new JobState
         {
             Id = call.Arg<JobId>(),
             Status = JobStatus.Running
