@@ -51,8 +51,6 @@ message ConnectedClient {
    string MachineName = 8;
    string ClientType = 9;
 }
-message DateTimeOffset {
-}
 message EventType {
    string Id = 1;
    uint32 Generation = 2;
@@ -141,7 +139,7 @@ message ObserverInformation {
    bool IsReplayable = 10;
    uint64 TailEventSequenceNumber = 11;
    uint64 HandledEventCount = 12;
-   DateTimeOffset RunningStateChangedAt = 13;
+   SerializableDateTimeOffset RunningStateChangedAt = 13;
 }
 enum ObserverOwner {
    None = 0;
