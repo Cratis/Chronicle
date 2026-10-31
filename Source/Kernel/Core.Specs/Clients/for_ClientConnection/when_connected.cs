@@ -12,6 +12,6 @@ public class when_connected : given.a_client_connection
         await _connection.Unsubscribe(_first);
     }
 
-    [Fact] void should_be_kept_alive() => typeof(ClientConnection).GetCustomAttributes(typeof(KeepAliveAttribute), true).ShouldNotBeEmpty();
+    [Fact] void should_be_kept_alive() => _connection.PinCount.ShouldEqual(1);
     [Fact] void should_not_request_deactivation() => _connection.ReleaseCount.ShouldEqual(0);
 }

@@ -13,7 +13,6 @@ namespace Cratis.Chronicle.Clients;
 /// <param name="grainFactory"><see cref="IGrainFactory"/> for reaching subscribers.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
 [PreferLocalPlacement]
-[KeepAlive]
 public class ClientConnection(IGrainFactory grainFactory, ILogger<ClientConnection> logger) : Grain, IClientConnection
 {
     readonly HashSet<GrainId> _subscribers = [];
@@ -36,6 +35,9 @@ public class ClientConnection(IGrainFactory grainFactory, ILogger<ClientConnecti
         }
 
         _state = ConnectionState.Connected;
+
+        // Pinned only while connected: an unknown or disconnected activation follows normal idle collection.
+        Pin();
         return Task.CompletedTask;
     }
 
@@ -87,13 +89,18 @@ public class ClientConnection(IGrainFactory grainFactory, ILogger<ClientConnecti
     {
         _subscribers.Remove(subscriber);
 
-        if (_state == ConnectionState.Disconnected && _subscribers.Count == 0)
+        if (_state != ConnectionState.Connected && _subscribers.Count == 0)
         {
             Release();
         }
 
         return Task.CompletedTask;
     }
+
+    /// <summary>
+    /// Keeps the activation alive until it is released. Virtual so it can be observed without an Orleans runtime.
+    /// </summary>
+    protected virtual void Pin() => DelayDeactivation(TimeSpan.MaxValue);
 
     /// <summary>
     /// Releases the activation. Virtual so the deactivation request can be observed without an Orleans runtime.

@@ -26,7 +26,11 @@ public class a_client_connection : Specification
 
     protected class RecordingClientConnection(IGrainFactory grainFactory, ILogger<ClientConnection> logger) : ClientConnection(grainFactory, logger)
     {
+        public int PinCount { get; private set; }
+
         public int ReleaseCount { get; private set; }
+
+        protected override void Pin() => PinCount++;
 
         protected override void Release() => ReleaseCount++;
     }
