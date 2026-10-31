@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <NoWarn>$(NoWarn);CS0436</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../../Source/Kernel/Core/Core.csproj" />
+    <Compile Include="$(IntermediateOutputPath)AdministratorRoster.cs" />
+    <Compile Include="$(IntermediateOutputPath)AdministratorRosterLogging.cs" />
+  </ItemGroup>
+  <Target Name="ExtractCachedBaseline" BeforeTargets="CoreCompile">
+    <MakeDir Directories="$(IntermediateOutputPath)" />
+    <Exec Command="git show a5e06dbf0e:Source/Kernel/Core/Security/AdministratorRoster.cs &gt; &quot;$(IntermediateOutputPath)AdministratorRoster.cs&quot;" />
+    <Exec Command="git show a5e06dbf0e:Source/Kernel/Core/Security/AdministratorRosterLogging.cs &gt; &quot;$(IntermediateOutputPath)AdministratorRosterLogging.cs&quot;" />
+  </Target>
+</Project>

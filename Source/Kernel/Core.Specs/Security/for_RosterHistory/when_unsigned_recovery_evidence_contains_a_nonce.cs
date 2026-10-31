@@ -11,14 +11,14 @@ public class when_unsigned_recovery_evidence_contains_a_nonce : given.a_roster_h
 
     void Establish()
     {
-        Add(new UserGrantedAdministrator(_first, GrantReason.OperatorRecovery, "{\"Nonce\":\"used\"}"), unsigned: true);
+        Add(new UserGrantedAdministrator(_first, GrantReason.OperatorRecovery, "{\"Nonce\":\"used\"}"), omitProof: true);
         Add(new UserGrantedAdministrator(_second, GrantReason.OperatorRecovery, "{\"Nonce\":\"used\"}"));
         Replay();
         _blocked = _history.Granted.Count == 0 && _history.RecoveryNonces.Contains("used");
         Add(new UserGrantedAdministrator(_third, GrantReason.OperatorRecovery, "{\"Nonce\":\"fresh\"}"));
     }
 
-    void Because() => _history.Apply(_events.Last(), appended => _contents[appended]);
+    void Because() => _history.Apply(_events[^1], appended => _contents[appended]);
 
     [Fact] void should_consume_an_observed_nonce_without_trusting_the_grant() => _blocked.ShouldBeTrue();
     [Fact] void should_allow_a_fresh_nonce() => _history.Granted.ShouldContainOnly(_third);

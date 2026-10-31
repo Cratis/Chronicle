@@ -34,6 +34,6 @@ public class when_mutating_system_events : given.an_event_sequence
     }
 
     [Fact] void should_reject_all_three_mutations() => _errors.ShouldEachConformTo(error => error is SystemEventStoreEventsAreImmutable);
-    [Fact] void should_not_touch_storage() => _eventSequenceStorage.ReceivedCalls().Any(call => call.GetMethodInfo().Name is "Redact" or "Revise" or "GetEventAt").ShouldBeFalse();
+    [Fact] void should_not_touch_storage() => _eventSequenceStorage.ReceivedCalls().Any(call => new[] { "Redact", "Revise", "GetEventAt" }.Contains(call.GetMethodInfo().Name)).ShouldBeFalse();
     [Fact] void should_not_resolve_identities() => _identityStorage.ReceivedCalls().ShouldBeEmpty();
 }

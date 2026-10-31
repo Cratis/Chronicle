@@ -11,5 +11,6 @@ namespace Cratis.Chronicle.Security;
 /// </summary>
 /// <param name="UserId">The user losing the privilege.</param>
 /// <param name="RevokeReason">The reason the privilege was revoked.</param>
+/// <param name="Proof">The kernel proof.</param>
 [EventType]
-public record UserRevokedAdministrator(UserId UserId, string RevokeReason);
+public record UserRevokedAdministrator(UserId UserId, string RevokeReason, string Proof = "");

@@ -15,11 +15,16 @@ namespace Cratis.Chronicle.Security;
 /// Projects separately stored administrator privileges without replacing user documents.
 /// </summary>
 /// <param name="storage">The system storage.</param>
+/// <remarks>
+/// In-place mutations do not trigger this projection. It may remain stale until the next roster event;
+/// authorization and AllAdministrators use the authoritative roster grain, not this read model.
+/// </remarks>
 /// <param name="serializer">The event serializer.</param>
+/// <param name="proof">The kernel event proof.</param>
 [Reactor(systemEventStoreOnly: true, defaultNamespaceOnly: true)]
-public class AdministratorsReactor(IStorage storage, IEventSerializer serializer) : Reactor
+public class AdministratorsReactor(IStorage storage, IEventSerializer serializer, IKernelEventProof proof) : Reactor
 {
-    readonly AdministratorProjectionState _state = new(storage, serializer);
+    readonly AdministratorProjectionState _state = new(storage, serializer, proof);
 
     /// <summary>
     /// Reconciles a privilege grant with the authoritative roster.

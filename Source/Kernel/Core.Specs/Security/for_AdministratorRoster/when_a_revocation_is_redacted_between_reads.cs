@@ -2,8 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Concepts.Security;
-using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Events.EventSequences;
 using Roster = Cratis.Chronicle.Concepts.Security.AdministratorRoster;
 
 namespace Cratis.Chronicle.Security.for_AdministratorRoster;

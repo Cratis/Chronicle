@@ -17,5 +17,5 @@ public class when_a_revocation_key_is_unavailable : given.a_roster_history
 
     [Fact] void should_suspend_all_privileges() => _history.Granted.ShouldBeEmpty();
     [Fact] void should_require_recovery() => _history.RecoveryRequired.ShouldBeTrue();
-    [Fact] void should_keep_the_raw_tail() => _history.RawRosterTail.ShouldEqual(_events.Last().Context.SequenceNumber);
+    [Fact] void should_keep_the_raw_tail() => _history.RawRosterTail.ShouldEqual(_events[^1].Context.SequenceNumber);
 }

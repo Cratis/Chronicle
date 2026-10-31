@@ -4,8 +4,8 @@
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
-using Cratis.Chronicle.Concepts.Identities;
 using Cratis.Chronicle.Concepts.Security;
+using Cratis.Chronicle.Events.EventSequences;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
@@ -27,10 +27,10 @@ public class an_administrators_reactor : Specification
 
     protected EventContext SeedGrant() => Seed(Roster.EventSourceId, _grant);
 
-    protected EventContext Seed(EventSourceId source, object content, EventStreamType? streamType = null, EventStreamId? streamId = null, IKernelEventProof? signer = null)
+    protected EventContext Seed(EventSourceId source, object content, EventStreamType? streamType = null, EventStreamId? streamId = null, IKernelEventProof? signer = null, bool omitProof = false)
     {
         var predecessor = _appended.LastOrDefault(@event => @event.Context.EventSourceId == source)?.Context.SequenceNumber ?? EventSequenceNumber.BeforeFirst;
-        content = RosterHistory.WithProof(content, source, predecessor, signer ?? _proof);
+        if (!omitProof) content = RosterHistory.WithProof(content, source, predecessor, signer ?? _proof);
         var appended = AppendedEvent.Empty() with
         {
             Context = EventContext.Empty with

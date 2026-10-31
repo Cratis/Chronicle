@@ -10,12 +10,12 @@ public class when_a_migration_marker_has_no_kernel_proof : given.a_roster_histor
     void Establish()
     {
         Add(new UserGrantedAdministrator(_first, GrantReason.Bootstrap, "spec"));
-        Add(new AdministratorPrivilegeMigrated("completed", _first), unsigned: true);
+        Add(new AdministratorPrivilegeMigrated("completed", _first), omitProof: true);
     }
 
     void Because() => Replay();
 
     [Fact] void should_suspend_all_privileges() => _history.Granted.ShouldBeEmpty();
     [Fact] void should_not_trust_the_marker() => _history.MigrationCompleted.ShouldBeFalse();
-    [Fact] void should_advance_the_raw_marker_tail() => _history.RawMigrationTail.ShouldEqual(_events.Last().Context.SequenceNumber);
+    [Fact] void should_advance_the_raw_marker_tail() => _history.RawMigrationTail.ShouldEqual(_events[^1].Context.SequenceNumber);
 }

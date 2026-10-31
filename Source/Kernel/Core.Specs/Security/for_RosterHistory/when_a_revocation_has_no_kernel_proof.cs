@@ -10,7 +10,7 @@ public class when_a_revocation_has_no_kernel_proof : given.a_roster_history
     void Establish()
     {
         Add(new UserGrantedAdministrator(_first, GrantReason.Bootstrap, "spec"));
-        Add(new UserRevokedAdministrator(_first, "spec"), unsigned: true);
+        Add(new UserRevokedAdministrator(_first, "spec"), omitProof: true);
     }
 
     void Because() => Replay();

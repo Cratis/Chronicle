@@ -9,7 +9,7 @@ public class when_unsigned_history_is_followed_by_recovery : given.a_roster_hist
 {
     void Establish()
     {
-        Add(new UserGrantedAdministrator(_first, GrantReason.Bootstrap, "spec"), unsigned: true);
+        Add(new UserGrantedAdministrator(_first, GrantReason.Bootstrap, "spec"), omitProof: true);
         Add(new UserGrantedAdministrator(_second, GrantReason.Bootstrap, "spec"));
         Add(new UserGrantedAdministrator(_third, GrantReason.OperatorRecovery, "{\"Nonce\":\"fresh\"}"));
         Add(new UserGrantedAdministrator(_second, GrantReason.UpgradeProvenance, "spec"));

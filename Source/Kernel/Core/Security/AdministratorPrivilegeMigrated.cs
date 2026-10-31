@@ -11,5 +11,6 @@ namespace Cratis.Chronicle.Security;
 /// </summary>
 /// <param name="Outcome">Whether bootstrap provenance was proven.</param>
 /// <param name="UserId">The proven user, when any.</param>
+/// <param name="Proof">The kernel proof.</param>
 [EventType]
-public record AdministratorPrivilegeMigrated(string Outcome, UserId? UserId);
+public record AdministratorPrivilegeMigrated(string Outcome, UserId? UserId, string Proof = "");

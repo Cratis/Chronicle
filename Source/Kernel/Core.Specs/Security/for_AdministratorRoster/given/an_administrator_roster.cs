@@ -10,6 +10,7 @@ using Cratis.Chronicle.Concepts.EventSequences.Concurrency;
 using Cratis.Chronicle.Concepts.Identities;
 using Cratis.Chronicle.Concepts.Security;
 using Cratis.Chronicle.Configuration;
+using Cratis.Chronicle.Events.EventSequences;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.EventSequences.Concurrency;
 using Cratis.Chronicle.Storage;

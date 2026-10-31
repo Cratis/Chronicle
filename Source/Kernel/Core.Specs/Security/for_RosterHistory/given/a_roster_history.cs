@@ -4,10 +4,9 @@
 using System.Globalization;
 using System.Text.Json;
 using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Identities;
 using Cratis.Chronicle.Concepts.Security;
-using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Events.EventSequences;
 using Microsoft.AspNetCore.DataProtection;
 using Roster = Cratis.Chronicle.Concepts.Security.AdministratorRoster;
 
@@ -17,7 +16,7 @@ public class a_roster_history : Specification
 {
     protected IKernelEventProof _proof;
     protected IKernelEventProof _otherProof;
-    protected RosterHistory _history;
+    internal RosterHistory _history;
     protected UserId _first;
     protected UserId _second;
     protected UserId _third;
@@ -34,11 +33,11 @@ public class a_roster_history : Specification
         _third = Guid.NewGuid();
     }
 
-    protected AppendedEvent Add(object content, IKernelEventProof? signer = null, bool unsigned = false)
+    protected AppendedEvent Add(object content, IKernelEventProof? signer = null, bool omitProof = false)
     {
         var source = content is AdministratorPrivilegeMigrated ? Roster.MigrationEventSourceId : Roster.EventSourceId;
         var predecessor = _events.LastOrDefault(@event => @event.Context.EventSourceId == source)?.Context.SequenceNumber ?? EventSequenceNumber.BeforeFirst;
-        if (!unsigned) content = Signed(content, source, predecessor, signer ?? _proof);
+        if (!omitProof) content = WithProof(content, source, predecessor, signer ?? _proof);
         var appended = AppendedEvent.Empty() with
         {
             Context = EventContext.Empty with { EventType = content.GetType().GetEventType(), EventSourceId = source, SequenceNumber = (ulong)_events.Count }
@@ -48,7 +47,7 @@ public class a_roster_history : Specification
         return appended;
     }
 
-    protected static object Signed(object content, EventSourceId source, EventSequenceNumber predecessor, IKernelEventProof proof)
+    protected static object WithProof(object content, EventSourceId source, EventSequenceNumber predecessor, IKernelEventProof proof)
     {
         var body = content switch
         {
