@@ -123,6 +123,16 @@ public partial class Reducers : IReducers
     /// </summary>
     internal int MaxConcurrentPartitions { get; init; } = PartitionedDeliveryScheduler.DefaultMaxConcurrentPartitions;
 
+    /// <summary>
+    /// Gets the delay before a reducer re-registers after its observation stream ended.
+    /// </summary>
+    internal TimeSpan ReconnectDelay { get; init; } = TimeSpan.FromSeconds(2);
+
+    /// <summary>
+    /// Gets how the re-registration work is started. Specs replace this to run the work deterministically.
+    /// </summary>
+    internal Func<Func<Task>, Task> ScheduleReconnectWork { get; init; } = work => Task.Run(work);
+
     /// <inheritdoc/>
     public Task Discover()
     {
@@ -530,16 +540,20 @@ public partial class Reducers : IReducers
                 return;
             }
 
-            _ = Task.Run(async () =>
+            _ = ScheduleReconnectWork(async () =>
             {
                 try
                 {
                     await scheduler.DrainAndDispose();
-                    await Task.Delay(TimeSpan.FromSeconds(2), handler.CancellationToken);
+                    await Task.Delay(ReconnectDelay, handler.CancellationToken);
                     _logger.ReconnectingReducer(handler.Id);
                     RegisterReducerWhenHostable(handler);
                 }
                 catch (OperationCanceledException) { }
+                catch (Exception ex)
+                {
+                    _logger.ReducerReconnectFailed(handler.Id, ex);
+                }
             });
         }
 

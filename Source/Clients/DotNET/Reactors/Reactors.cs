@@ -125,6 +125,16 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
     internal int MaxConcurrentPartitions { get; init; } = PartitionedDeliveryScheduler.DefaultMaxConcurrentPartitions;
 
     /// <summary>
+    /// Gets the delay before a reactor re-registers after its observation stream ended.
+    /// </summary>
+    internal TimeSpan ReconnectDelay { get; init; } = TimeSpan.FromSeconds(2);
+
+    /// <summary>
+    /// Gets how the re-registration work is started. Specs replace this to run the work deterministically.
+    /// </summary>
+    internal Func<Func<Task>, Task> ScheduleReconnectWork { get; init; } = work => Task.Run(work);
+
+    /// <summary>
     /// Gets the current discovered and runtime reactor handlers.
     /// </summary>
     internal IEnumerable<IReactorHandler> Handlers => _handlers.Values.Select(_ => _.Handler);
@@ -607,18 +617,22 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
                 return;
             }
 
-            _ = Task.Run(async () =>
+            _ = ScheduleReconnectWork(async () =>
             {
                 try
                 {
                     await scheduler.DrainAndDispose();
-                    await Task.Delay(TimeSpan.FromSeconds(2), cancellationToken);
+                    await Task.Delay(ReconnectDelay, cancellationToken);
                     _logger.ReconnectingReactor(handler.Id);
                     RegisterReactor(registration);
                 }
                 catch (OperationCanceledException ex)
                 {
                     _logger.RegisteringReactorStreamCancelled(handler.Id, ex);
+                }
+                catch (Exception ex)
+                {
+                    _logger.ReactorReconnectFailed(handler.Id, ex);
                 }
             });
         }
