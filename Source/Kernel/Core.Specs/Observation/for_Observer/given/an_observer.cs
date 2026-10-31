@@ -241,7 +241,7 @@ public class an_observer : Specification
 
     void ConfigureDefaultJobStorage()
     {
-        _jobStorage.GetJob(Arg.Any<JobId>()).Returns(call => Task.FromResult<Catch<JobState, Cratis.Orleans.Storage.Jobs.JobError>>(new JobState
+        _jobStorage.GetJob(Arg.Any<JobId>()).Returns(call => Task.FromResult<Catch<JobState, Orleans.Storage.Jobs.JobError>>(new JobState
         {
             Id = call.Arg<JobId>(),
             Status = JobStatus.Running
