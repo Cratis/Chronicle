@@ -583,6 +583,26 @@ public class EventSequence(
     }
 
     /// <inheritdoc/>
+    public async Task<IImmutableList<AppendedEvent>> GetFromSequenceNumberWithErasedProperties(
+        EventSequenceNumber sequenceNumber,
+        EventSourceId? eventSourceId = default,
+        IEnumerable<EventType>? filterEventTypes = default)
+    {
+        ReadProtectionGuard.Read(nameof(GetFromSequenceNumberWithErasedProperties));
+        var result = await _servicesAccessor.Services.Sequences.FromSequenceNumberWithErasedProperties(new()
+        {
+            EventStore = eventStoreName,
+            Namespace = @namespace,
+            EventSequenceId = eventSequenceId,
+            FromEventSequenceNumber = sequenceNumber,
+            EventSourceId = eventSourceId?.Value,
+            EventTypeIds = JoinEventTypeIds(filterEventTypes)
+        }).EnsureSuccess();
+
+        return result.ToClient(eventStoreName, @namespace, eventTypes, jsonSerializerOptions);
+    }
+
+    /// <inheritdoc/>
     public async Task<IImmutableList<AppendedEvent>> GetForEventSourceIdAndEventTypes(
         EventSourceId eventSourceId,
         IEnumerable<EventType> filterEventTypes,
@@ -835,7 +855,7 @@ public class EventSequence(
                 row.EventStreamType is null ? null : new EventStreamType(row.EventStreamType),
                 row.EventStreamId is null ? null : new EventStreamId(row.EventStreamId)),
             row.Origin == Contracts.Sequences.ClosedStreamOrigin.CompleteStream ? ClosedStreamOrigin.CompleteStream : ClosedStreamOrigin.ClosingEvent,
-            row.ClosedBy is null ? null : new Events.Constraints.ConstraintName(row.ClosedBy),
+            row.ClosedBy is null ? null : new ConstraintName(row.ClosedBy),
             row.SequenceNumber,
             row.ClosedAt)).ToImmutableList();
     }

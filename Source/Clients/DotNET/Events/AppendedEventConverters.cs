@@ -75,7 +75,7 @@ internal static class AppendedEventConverters
         IEventTypes eventTypes,
         JsonSerializerOptions jsonSerializerOptions)
     {
-        var context = @event.Context.ToClient(eventStore, @namespace);
+        var context = @event.Context.ToClient(eventStore, @namespace) with { ErasedProperties = @event.ErasedProperties.ToArray() };
         object content;
 
         if (eventTypes.HasFor(context.EventType.Id))

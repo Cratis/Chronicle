@@ -195,6 +195,18 @@ public interface IEventSequence
         GetPage(EventSequencePageRequest.Backward(null, count, filter), cancellationToken);
 
     /// <summary>
+    /// Gets events with confirmed erased paths in current released content, using dotted members and bracketed indices.
+    /// Empty metadata is not proof of no erasure. Original, revision and generational content are not covered.
+    /// </summary>
+    /// <param name="sequenceNumber">The inclusive first sequence number.</param>
+    /// <param name="eventSourceId">Optional event source filter.</param>
+    /// <param name="filterEventTypes">Optional event type filters.</param>
+    /// <returns>The events with erased-path metadata, not an erasure audit.</returns>
+    /// <exception cref="ErasedPropertiesReadsNotSupported">The implementation does not support erased-path reads.</exception>
+    Task<IImmutableList<AppendedEvent>> GetFromSequenceNumberWithErasedProperties(EventSequenceNumber sequenceNumber, EventSourceId? eventSourceId = default, IEnumerable<EventType>? filterEventTypes = default)
+        => throw new ErasedPropertiesReadsNotSupported();
+
+    /// <summary>
     /// Get the next sequence number.
     /// </summary>
     /// <returns>Next sequence number.</returns>

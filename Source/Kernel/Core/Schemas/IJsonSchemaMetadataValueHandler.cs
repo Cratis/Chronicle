@@ -13,7 +13,7 @@ namespace Cratis.Chronicle.Schemas;
 /// <remarks>
 /// <see cref="Category"/> is what keeps a compliance handler (e.g. for <c language="csharp">PII</c>) and a security
 /// handler (e.g. for <c language="csharp">EncryptedSubject</c>) from ever being able to answer for the other's schema
-/// key, even though both are discovered into the same <see cref="Cratis.Types.IInstancesOf{T}"/> pool and dispatched
+/// key, even though both are discovered into the same <see cref="Types.IInstancesOf{T}"/> pool and dispatched
 /// by the same <see cref="IJsonSchemaMetadataManager"/>. <see cref="Type"/> only has to be unique within a
 /// <see cref="Category"/>, not globally.
 /// </remarks>
@@ -66,6 +66,17 @@ public interface IJsonSchemaMetadataValueHandler
     /// <param name="value">Value to release.</param>
     /// <returns>Released value.</returns>
     Task<JsonNode> Release(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, string identifier, JsonNode value);
+
+    /// <summary>
+    /// Releases a value and reports confirmed erasure without inferring it from an empty value or a failure.
+    /// </summary>
+    /// <param name="eventStore">The event store.</param>
+    /// <param name="eventStoreNamespace">The namespace.</param>
+    /// <param name="identifier">The subject identifier.</param>
+    /// <param name="value">The protected value.</param>
+    /// <returns>The released value and whether erasure was confirmed.</returns>
+    async Task<(JsonNode Value, bool IsErased)> ReleaseReportingErasure(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, string identifier, JsonNode value) =>
+        (await Release(eventStore, eventStoreNamespace, identifier, value), false);
 
     /// <summary>
     /// Releases a value only when its complete original content can be recovered.
