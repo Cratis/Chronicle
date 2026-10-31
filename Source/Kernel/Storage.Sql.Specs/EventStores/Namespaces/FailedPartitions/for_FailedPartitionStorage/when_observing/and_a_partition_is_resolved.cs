@@ -30,19 +30,39 @@ public class and_a_partition_is_resolved : given.a_failed_partition_storage
 
     async Task Because()
     {
-        var initial = new TaskCompletionSource();
-        var completion = new TaskCompletionSource<IEnumerable<Concepts.Observation.FailedPartition>>();
-        _subscription = _storage.ObserveAllFor().SubscribeOn(TaskPoolScheduler.Default).Subscribe(partitions =>
-        {
-            if (partitions.Any()) initial.TrySetResult();
-            if (initial.Task.IsCompleted && !partitions.Any()) completion.TrySetResult(partitions);
-        });
+        var initial = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var completion = new TaskCompletionSource<IEnumerable<Concepts.Observation.FailedPartition>>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _subscription = _storage.ObserveAllFor().SubscribeOn(TaskPoolScheduler.Default).Subscribe(
+            partitions =>
+            {
+                if (partitions.Any()) initial.TrySetResult();
+                if (initial.Task.IsCompleted && !partitions.Any()) completion.TrySetResult(partitions);
+            },
+            error =>
+            {
+                initial.TrySetException(error);
+                completion.TrySetException(error);
+            });
 
-        await initial.Task.WaitAsync(TimeSpan.FromSeconds(30));
+        try
+        {
+            await initial.Task.WaitAsync(TimeSpan.FromSeconds(30));
+        }
+        catch (TimeoutException error)
+        {
+            throw new TimeoutException("Timed out waiting for the initial failed-partition snapshot.", error);
+        }
         _state.Remove(_partition);
         await _storage.Save(_observerId, _state);
 
-        _received = await completion.Task.WaitAsync(TimeSpan.FromSeconds(30));
+        try
+        {
+            _received = await completion.Task.WaitAsync(TimeSpan.FromSeconds(30));
+        }
+        catch (TimeoutException error)
+        {
+            throw new TimeoutException("Timed out waiting for the resolved partition to be removed from the snapshot.", error);
+        }
     }
 
     [Fact] void should_publish_the_removal() => _received.ShouldBeEmpty();
