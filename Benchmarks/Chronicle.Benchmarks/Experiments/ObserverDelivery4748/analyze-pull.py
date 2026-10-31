@@ -73,15 +73,21 @@ def parse_plan(text):
 
 
 def statuses(path):
+    """Last substantive attempt per row: (exit, end, end of the row's previous substantive attempt or None).
+
+    A retried row is decided by its last attempt; the earlier attempt's end bounds the retry's result window.
+    """
     result = {}
     if path.exists():
         for line in path.read_text().splitlines():
             number, attempt, code, when = line.split("\t")
             # Admission-only attempts do not produce a benchmark row.
             if int(code) != 75:
-                if int(number) in result:
-                    raise ValueError(f"Duplicate substantive status for row {number}")
-                result[int(number)] = (int(code), timestamp(when))
+                end = timestamp(when)
+                earlier = result.get(int(number))
+                if earlier and end <= earlier[1]:
+                    raise ValueError(f"Out-of-order substantive status for row {number}")
+                result[int(number)] = (int(code), end, earlier[1] if earlier else None)
     return result
 
 
@@ -89,7 +95,7 @@ def map_results(directory, through):
     plan = parse_plan((directory / "run-list.md").read_text())
     status = statuses(directory / "status.tsv")
     prior = statuses(directory / "status-pre-fix.tsv")
-    cutoff = max((when for _, when in prior.values()), default=None)
+    cutoff = max((when for _, when, _ in prior.values()), default=None)
     lines = (directory / "results.jsonl").read_bytes().splitlines()
     raw = []
     partial = 0
@@ -101,10 +107,12 @@ def map_results(directory, through):
                 raise
             partial += 1  # A concurrent append is not a completed sample.
     mapped, cursor, previous = {}, 0, cutoff
-    for number, (code, end) in sorted(status.items()):
+    for number, (code, end, retried_after) in sorted(status.items()):
         if through is not None and number > through:
             continue
         key = plan[number]
+        if retried_after and (previous is None or retried_after > previous):
+            previous = retried_after
         candidates = []
         for offset in range(cursor, len(raw)):
             _, row = raw[offset]
@@ -536,6 +544,20 @@ def self_test():
     check(analysis.gates[-1][1] == "INSUFFICIENT")
     analysis.gate("mixed", [("PASS", "a"), ("FAIL", "b"), ("INSUFFICIENT", "c")])
     check(analysis.gates[-1][1] == "FAIL")
+    import tempfile
+    with tempfile.TemporaryDirectory() as folder:
+        status_file = Path(folder) / "status.tsv"
+        status_file.write_text("079\t1\t2\t2026-10-16T04:03:54Z\n079\t1\t75\t2026-10-16T04:10:00Z\n"
+                               "080\t1\t2\t2026-10-16T04:13:32Z\n079\t1\t0\t2026-10-16T04:19:42Z\n")
+        parsed = statuses(status_file)
+        check(parsed[79] == (0, timestamp("2026-10-16T04:19:42Z"), timestamp("2026-10-16T04:03:54Z")))
+        check(parsed[80] == (2, timestamp("2026-10-16T04:13:32Z"), None))
+        status_file.write_text("079\t1\t0\t2026-10-16T04:19:42Z\n079\t1\t2\t2026-10-16T04:03:54Z\n")
+        try:
+            statuses(status_file)
+            check(False)
+        except ValueError:
+            check(True)
     print(f"Self-test: {checks} assertions passed")
 
 

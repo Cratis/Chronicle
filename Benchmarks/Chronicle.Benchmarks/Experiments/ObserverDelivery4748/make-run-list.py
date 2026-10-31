@@ -2,9 +2,10 @@ from pathlib import Path
 import shlex
 
 out = Path('/Volumes/sourcecode/repos/cratis/Chronicle/.ai-work/strong-consistency/pull-2026-10-16')
-worktree = '/Volumes/sourcecode/repos/cratis/.worktrees/chronicle-4748-measure'
+worktree = '/Volumes/sourcecode/repos/cratis/.worktrees/chronicle-4975-bench'
 dll = worktree + '/Benchmarks/Chronicle.Benchmarks/bin/Debug/net10.0/Chronicle.Benchmarks.dll'
-phase = '/Users/sindrewilting/.pi/agent/bin/pi-phase'
+# Rows run unwrapped: run-matrix.sh is started once inside a single outer pi-phase integration phase,
+# so a per-row pi-phase would queue behind the outer phase's own permit. perl alarm enforces the row timeout.
 rows = []
 commands = []
 
@@ -25,8 +26,8 @@ def add(kind, shape, observer, profile='on', stats='equivalent', lanes=64, wake=
            f'PROBE_OUT={out}', 'PROBE_DRAIN_ALLOW_INFLIGHT=1', f'PROBE_DEADLINE_SECONDS={deadline}',
            f'PROBE_FINALIZE_SECONDS={reserve}', f'PROBE_DRAIN_SECONDS={drain}', f'PROBE_PROFILE={profile}',
            f'PULL_STATS={stats}', f'PULL_LANES={lanes}', 'PULL_PAGE=1000', 'PULL_FLUSH_MS=50', f'PULL_WAKE={wake}']
-    cmd = f'cd {shlex.quote(worktree)} && PATH=/opt/homebrew/bin:$PATH ' + shlex.join(env + [phase, 'run', '--kind', 'integration', '--label', f'4748 matrix {i:03d} {kind} {observer}',
-           '--timeout', str(timeout), '--queue-timeout', '2400', '--approved-long-timeout', '--log', str(out / (slug + '.log')), '--tail', '0', '--', 'dotnet', dll, 'probe', scenario])
+    cmd = f'cd {shlex.quote(worktree)} && PATH=/opt/homebrew/bin:$PATH ' + shlex.join(env + ['perl', '-e', 'alarm shift; exec @ARGV or die', str(timeout),
+           'dotnet', dll, 'probe', scenario]) + f' >> {shlex.quote(str(out / (slug + ".log")))} 2>&1'
     commands.append(cmd)
     mode = stats if observer == 'pull' else 'today' if kind != 'appendonly' else 'append-only twin'
     title = f'{scenario}; profile={profile}; {mode}; lanes={lanes}; wake={wake}'
