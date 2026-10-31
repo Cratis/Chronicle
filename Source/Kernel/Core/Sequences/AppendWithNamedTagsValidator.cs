@@ -20,8 +20,12 @@ internal class AppendWithNamedTagsValidator : CommandValidator<AppendWithNamedTa
     public AppendWithNamedTagsValidator()
     {
         RuleFor(_ => _.EventStore).RequiredEventStore();
+        RuleFor(_ => _.EventStore).NotSystemEventStore();
+        RuleFor(_ => _.EventStore).NoKeySeparator();
         RuleFor(_ => _.Namespace).RequiredNamespace();
+        RuleFor(_ => _.Namespace).NoKeySeparator();
         RuleFor(_ => _.EventSequenceId).RequiredEventSequence();
+        RuleFor(_ => _.EventSequenceId).NoKeySeparator();
         RuleFor(_ => _.EventSourceId).RequiredEventSource();
 
         // Omitted or empty routing metadata is accepted for older clients and direct API callers.

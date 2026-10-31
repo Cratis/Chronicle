@@ -132,6 +132,9 @@ internal sealed class SequenceReplies(IEventSequences inner, DropReplyIntercepto
     public Task<QueryResult<IEnumerable<EventSequenceNamesResponse>>> AllEventSequences(AllEventSequencesRequest request, CallContext callContext = default) => inner.AllEventSequences(request, callContext);
 
     /// <inheritdoc/>
+    public Task<QueryResult<EventSequencePageResponse>> Page(PageRequest request, CallContext callContext = default) => inner.Page(request, callContext);
+
+    /// <inheritdoc/>
     public Task<QueryResult<EventSequenceTailResponse>> TailSequenceNumber(TailSequenceNumberRequest request, CallContext callContext = default) => inner.TailSequenceNumber(request, callContext);
 
     /// <inheritdoc/>

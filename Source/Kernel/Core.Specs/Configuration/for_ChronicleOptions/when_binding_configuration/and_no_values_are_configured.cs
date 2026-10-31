@@ -20,7 +20,11 @@ public class and_no_values_are_configured : Specification
             .Bind(_options);
     }
 
+#if DEVELOPMENT
     [Fact] void should_default_target_validation_to_warn() => _options.Webhooks.Validation.ShouldEqual(WebhookValidationMode.Warn);
+#else
+    [Fact] void should_default_target_validation_to_block_local_addresses() => _options.Webhooks.Validation.ShouldEqual(WebhookValidationMode.BlockLocalAddresses);
+#endif
     [Fact] void should_not_allow_insecure_http_by_default() => _options.Webhooks.AllowInsecureHttp.ShouldBeFalse();
     [Fact] void should_have_no_approved_hosts_by_default() => _options.Webhooks.AllowedHosts.ShouldBeEmpty();
     [Fact] void should_have_no_event_store_host_overrides_by_default() => _options.Webhooks.EventStoreAllowedHosts.ShouldBeEmpty();
@@ -36,6 +40,9 @@ public class and_no_values_are_configured : Specification
     [Fact] void should_default_the_webhook_test_timeout() => _options.Webhooks.TestTimeoutSeconds.ShouldEqual(10);
     [Fact] void should_disable_native_postgresql_entra_authentication() => _options.Storage.PostgreSqlEntra.Enabled.ShouldBeFalse();
     [Fact] void should_not_select_a_postgresql_managed_identity_client_id() => _options.Storage.PostgreSqlEntra.ManagedIdentityClientId.ShouldBeNull();
+    [Fact] void should_default_the_postgresql_max_pool_size() => _options.Storage.PostgreSqlPooling.MaxPoolSize.ShouldEqual(20);
+    [Fact] void should_default_the_postgresql_connection_idle_lifetime() => _options.Storage.PostgreSqlPooling.ConnectionIdleLifetimeSeconds.ShouldEqual(15);
+    [Fact] void should_default_the_postgresql_connection_pruning_interval() => _options.Storage.PostgreSqlPooling.ConnectionPruningIntervalSeconds.ShouldEqual(5);
     [Fact] void should_default_the_live_query_poll_interval() => _options.Sql.LiveQueryPollIntervalSeconds.ShouldEqual(2);
     [Fact] void should_default_the_subscription_ready_timeout() => _options.Observers.SubscriptionReadyTimeout.ShouldEqual(5);
     [Fact] void should_default_the_queue_depletion_wait_timeout() => _options.Events.QueueDepletionWaitTimeoutMilliseconds.ShouldEqual(500);

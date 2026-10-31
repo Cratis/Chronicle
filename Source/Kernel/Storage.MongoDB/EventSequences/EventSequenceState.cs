@@ -13,9 +13,11 @@ namespace Cratis.Chronicle.Storage.MongoDB;
 /// <param name="ConstraintIndexWatermark">Exclusive position of settled constraint updates, or null before coverage was recorded.</param>
 /// <param name="ConstraintIndexCatchUpBelow">Exclusive boundary of pending unique-constraint catch-up.</param>
 /// <param name="ConstraintIndexCatchUpRefusing">Constraint names whose catch-up writes require append refusal.</param>
+/// <param name="MutationEpoch">Mutation epoch advanced by every revision and redaction, or null before one was recorded.</param>
 public record EventSequenceState(
     EventSequenceNumber SequenceNumber,
     IDictionary<string, EventSequenceNumber> TailSequenceNumberPerEventType,
     EventSequenceNumber? ConstraintIndexWatermark = null,
     EventSequenceNumber? ConstraintIndexCatchUpBelow = null,
-    IEnumerable<string>? ConstraintIndexCatchUpRefusing = null);
+    IEnumerable<string>? ConstraintIndexCatchUpRefusing = null,
+    ulong? MutationEpoch = null);

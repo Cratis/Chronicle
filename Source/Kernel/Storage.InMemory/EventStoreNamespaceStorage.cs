@@ -102,7 +102,7 @@ public sealed class EventStoreNamespaceStorage(
     public IBehaviorPatternStorage Patterns { get; } = new BehaviorPatternStorage();
 
     /// <inheritdoc/>
-    public IObserverKeyIndexes ObserverKeyIndexes { get; } = new ObserverKeyIndexes();
+    public IObserverKeyIndexes ObserverKeyIndexes => new ObserverKeyIndexes(GetConcreteEventSequence);
 
     /// <inheritdoc/>
     public ISinks Sinks { get; } = sinks;

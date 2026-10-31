@@ -25,6 +25,16 @@ dotnet add package Cratis.Chronicle
 dotnet add package Cratis.Chronicle.AspNetCore
 ```
 
+## Event content round trips
+
+Nullable event properties treat `null` and absence identically: both read back as `null`.
+The client can omit nulls when serializing. Non-null nullable values, including `decimal?` or
+`int?` holding `0`, remain values. Missing non-nullable values materialize as their type defaults
+where the schema permits them. Compare appended and stored content through the kernel's
+schema-aware `ContentComparison` / `VerifyContent` path, not raw JSON equality; these are kernel
+verification mechanisms, not .NET client methods. See
+[Null, absent, and default values](/chronicle/events/schema-representation/#null-absent-and-default-values).
+
 ## Shared Chronicle topics
 
 - [Get started](/chronicle/get-started/)
@@ -39,6 +49,7 @@ dotnet add package Cratis.Chronicle.AspNetCore
 ## .NET-specific pages
 
 - [Health checks](./health-checks.md)
+- [Short-lived processes](./short-lived-processes.md)
 - [Explicit artifact registration](./explicit-artifacts)
 - [Console quickstart](/chronicle/get-started/console/)
 - [ASP.NET Core hosting](/chronicle/get-started/aspnetcore/)

@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts;
 using FluentValidation;
 
 namespace Cratis.Chronicle.Sequences;
@@ -24,6 +25,26 @@ internal static class AppendRules
     /// <returns>The rule builder options for continuation.</returns>
     public static IRuleBuilderOptions<T, TProperty> RequiredEventStore<T, TProperty>(this IRuleBuilder<T, TProperty> rule) =>
         rule.NotEmpty().WithMessage("Event store name is required.");
+
+    /// <summary>
+    /// Reserves the System event store for kernel-internal writes.
+    /// </summary>
+    /// <typeparam name="T">Type being validated.</typeparam>
+    /// <param name="rule">The rule builder.</param>
+    /// <returns>The rule builder options for continuation.</returns>
+    public static IRuleBuilderOptions<T, string> NotSystemEventStore<T>(this IRuleBuilder<T, string> rule) =>
+        rule.Must(name => !string.Equals(name, EventStoreName.System.Value, StringComparison.OrdinalIgnoreCase))
+            .WithMessage("The System event store is reserved for the kernel and cannot be written through the public API.");
+
+    /// <summary>
+    /// Refuses the grain key separator, which would let a routing component address another key.
+    /// </summary>
+    /// <typeparam name="T">Type being validated.</typeparam>
+    /// <param name="rule">The rule builder.</param>
+    /// <returns>The rule builder options for continuation.</returns>
+    public static IRuleBuilderOptions<T, string> NoKeySeparator<T>(this IRuleBuilder<T, string> rule) =>
+        rule.Must(static value => value is null || value.AsSpan().IndexOf(KeyHelper.Separator) < 0)
+            .WithMessage("The value must not contain '#'.");
 
     /// <summary>
     /// Requires a namespace name.

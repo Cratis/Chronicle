@@ -40,10 +40,8 @@ public abstract class a_legacy_table : Specification
         var schema = JsonSchema.FromJson("""{"type":"object","properties":{"id":{"type":"object","properties":{"first":{"type":"string"},"second":{"type":"string"}}}}}""");
         _columns = ProjectedColumns.ForSchema(schema);
         _harness.CreateSink(new ReadModelDefinition("migration", "composite_migration", "Migration", ReadModelOwner.Client, ReadModelSource.Code, ReadModelObserverType.Projection, "migration", SinkDefinition.None, new Dictionary<ReadModelGeneration, JsonSchema> { [ReadModelGeneration.First] = schema }, []));
-        var builder = new DbContextOptionsBuilder<ReadModelDbContext>();
-        builder.UseDatabaseFromConnectionString(_harness.ConnectionString);
         _competing = new a_competing_kernel(new TableMigrator<ReadModelDbContext>(Substitute.For<ILogger<TableMigrator<ReadModelDbContext>>>()));
-        _options = builder.Options;
+        _options = SpecDbContextOptions.ForConnection<ReadModelDbContext>(_harness.ConnectionString);
     }
 
     protected async Task MigrateAndCheck()

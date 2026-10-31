@@ -40,6 +40,7 @@ internal static class GeneratedGrpcServices
         services.AddSingleton<global::Cratis.Chronicle.Contracts.ReadModelExplorer.IReadModelExplorer, global::Cratis.Chronicle.Services.ReadModelExplorer.ReadModelExplorer>();
         services.AddSingleton<global::Cratis.Chronicle.Contracts.ReadModelLookups.IReadModelLookups, global::Cratis.Chronicle.Services.ReadModelLookups.ReadModelLookups>();
         services.AddSingleton<global::Cratis.Chronicle.Contracts.Recommendations.IRecommendations, global::Cratis.Chronicle.Services.Recommendations.Recommendations>();
+        services.AddSingleton<global::Cratis.Chronicle.Contracts.Security.IAdministrators, global::Cratis.Chronicle.Services.Security.Administrators>();
         services.AddSingleton<global::Cratis.Chronicle.Contracts.Security.IApplications, global::Cratis.Chronicle.Services.Security.Applications>();
         services.AddSingleton<global::Cratis.Chronicle.Contracts.Security.IUsers, global::Cratis.Chronicle.Services.Security.Users>();
         services.AddSingleton<global::Cratis.Chronicle.Contracts.Seeding.IEventSeeding, global::Cratis.Chronicle.Services.Seeding.EventSeeding>();
@@ -73,6 +74,7 @@ internal static class GeneratedGrpcServices
         endpoints.MapGrpcService<global::Cratis.Chronicle.Services.ReadModelExplorer.ReadModelExplorer>();
         endpoints.MapGrpcService<global::Cratis.Chronicle.Services.ReadModelLookups.ReadModelLookups>();
         endpoints.MapGrpcService<global::Cratis.Chronicle.Services.Recommendations.Recommendations>();
+        endpoints.MapGrpcService<global::Cratis.Chronicle.Services.Security.Administrators>();
         endpoints.MapGrpcService<global::Cratis.Chronicle.Services.Security.Applications>();
         endpoints.MapGrpcService<global::Cratis.Chronicle.Services.Security.Users>();
         endpoints.MapGrpcService<global::Cratis.Chronicle.Services.Seeding.EventSeeding>();

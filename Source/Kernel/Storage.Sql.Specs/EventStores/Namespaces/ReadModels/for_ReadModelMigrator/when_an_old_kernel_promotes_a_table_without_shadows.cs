@@ -36,11 +36,11 @@ public class when_an_old_kernel_promotes_a_table_without_shadows : given.a_read_
             _attempts++;
             return await context.Database.SqlQuery<string>($"SELECT t.__order_amount AS Value FROM promoted t").SingleAsync();
         });
-        _indexesBefore = await context.Database.SqlQuery<string>($"SELECT name AS Value FROM pragma_index_list('promoted') WHERE origin='c'").ToArrayAsync();
+        _indexesBefore = await context.Database.SqlQuery<string>($"SELECT name AS Value FROM pragma_index_list('promoted') WHERE origin='c' AND substr(name, 1, 14) <> 'chronicle_imx_'").ToArrayAsync();
         await ReadModelIndexes.DropUndeclared(context, "promoted", []);
         await ReadModelIndexes.NameAfterTable(context, "promoted");
         await context.EnsureTableExists();
-        _indexesAfter = await context.Database.SqlQuery<string>($"SELECT name AS Value FROM pragma_index_list('promoted') WHERE origin='c'").ToArrayAsync();
+        _indexesAfter = await context.Database.SqlQuery<string>($"SELECT name AS Value FROM pragma_index_list('promoted') WHERE origin='c' AND substr(name, 1, 14) <> 'chronicle_imx_'").ToArrayAsync();
     }
 
     [Fact] void should_simulate_a_stale_migration_cache() => _shadowCount.ShouldEqual(0);

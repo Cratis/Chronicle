@@ -16,6 +16,8 @@
   href: observing-appends.mdx
 - name: Getting events
   href: getting-events.mdx
+- name: Bounded event pages
+  href: paged-reads.mdx
 - name: Getting state
   href: getting-state.mdx
 - name: Concurrency

@@ -64,18 +64,37 @@ on:
       - ".github/legacy-contracts.json"
 
 jobs:
+  # Nightly runs skip every job when this workflow already succeeded on the same commit. Pull requests, pushes
+  # and manual runs are never skipped (the action only skips the schedule event).
+  already-ran:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: read
+    outputs:
+      skip: ${{ steps.gate.outputs.skip }}
+    steps:
+      - name: Check for a prior successful run
+        id: gate
+        uses: Cratis/Workflows/.github/actions/skip-if-already-ran@main
+
   # First, before anything is built: a change that breaks the wire contract for clients already running against this
   # major cannot ship, so there is nothing to gain from building and testing it. See wire-compatibility.yml.
   wire-compatibility:
+    needs: [already-ran]
+    if: needs.already-ran.outputs.skip != 'true'
     uses: ./.github/workflows/wire-compatibility.yml
 
   # Alongside it, the silo-to-silo contract: a change that stops this build's silos from sharing a cluster with the
   # latest release's breaks every rolling upgrade. See grain-compatibility.yml.
   grain-compatibility:
+    needs: [already-ran]
+    if: needs.already-ran.outputs.skip != 'true'
     uses: ./.github/workflows/grain-compatibility.yml
 
   dotnet-build:
-    needs: [wire-compatibility, grain-compatibility]
+    needs: [already-ran, wire-compatibility, grain-compatibility]
+    if: needs.already-ran.outputs.skip != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 120
     # The repository's default token is read-only. Non-PR runs push the development image
@@ -111,6 +130,9 @@ jobs:
       # where a pull request proves the tag expansion, retry and failure behavior before any publication occurs.
       - name: Spec the published Docker tag verifier
         run: python3 .github/scripts/test-verify-published-docker-tags.py
+
+      - name: Spec the build version derivation
+        run: python3 .github/scripts/test-derive-build-version.py
 
       - name: Spec prerelease artifact handoff without caches
         run: |
@@ -155,8 +177,18 @@ jobs:
           dotnet nuget update source github --username cratis --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text || \
           dotnet nuget add source --name github --username cratis --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text https://nuget.pkg.github.com/cratis/index.json
 
+      - name: Stamp the build version
+        run: python3 .github/scripts/derive-build-version.py >> "$GITHUB_ENV"
+
       - name: Build
         run: dotnet build --configuration Release -p:DisableProxyGenerator=true -p:DisableDockerBuild=true
+
+      - name: Assert the build carries the stamped version
+        run: |
+          set -euo pipefail
+          for dll in Source/Kernel/Contracts/bin/Release/net10.0/Cratis.Chronicle.Contracts.dll Source/Kernel/Server/bin/Release/net10.0/Cratis.Chronicle.Server.dll; do
+            grep -a -F -q -- "$CRATIS_CHRONICLE_BUILD_VERSION" "$dll" || { echo "::error::$dll does not carry $CRATIS_CHRONICLE_BUILD_VERSION"; exit 1; }
+          done
 
       # The build above is net10.0 only. The client packages ship net8.0 and net9.0 as well, and that multi-target
       # happens only under IsPackaging - which until now nothing ran before publish. So an API newer than net8.0
@@ -170,6 +202,19 @@ jobs:
             dotnet build "$project" --configuration Release -p:IsPackaging=true -p:DisableProxyGenerator=true -p:DisableDockerBuild=true
           done
           dotnet build ./Source/Kernel/Contracts/Contracts.csproj --configuration Release -p:IsPackaging=true -p:DisableProxyGenerator=true -p:DisableDockerBuild=true
+
+      # A package can build and still fail to restore for a consumer: a transitive dependency resolves below what
+      # another package declares (NU1605) or outside an exact constraint (NU1608), which only shows up once the
+      # packages are restored from a feed. Pack what publish packs from the build above, into a local feed that is
+      # never pushed, and restore one isolated consumer per package with those warnings as errors.
+      - name: Verify packed client packages restore for consumers
+        env:
+          PACKED_VERSION: 0.0.0-pr.${{ github.event.pull_request.number || github.run_number }}
+        run: |
+          set -euo pipefail
+          feed="$RUNNER_TEMP/packed"
+          dotnet pack ./Source/Clients/Packages.slnf --no-build --configuration Release -p:IsPackaging=true -p:DisableProxyGenerator=true -p:DisableDockerBuild=true -p:PackageVersion="$PACKED_VERSION" -o "$feed"
+          bash .github/scripts/verify-packed-consumer-restore.sh "$PACKED_VERSION" "$feed"
 
       # Ordinary PRs can check the local Dockerfile against the Release binaries built above.
       # No DEVELOPMENT-symbol build, registry login or image push is needed for this smoke check.
@@ -200,7 +245,7 @@ jobs:
       - name: Pack Release build output
         run: |
           set -euo pipefail
-          for project in Source/Kernel/Core.Specs Source/Kernel/Server Integration/MongoDB; do
+          for project in Source/Kernel/Core.Specs Source/Kernel/Server Integration/MongoDB Integration/Api; do
             test -d "$project/bin/Release/net10.0" || { echo "Missing build output for $project" >&2; exit 1; }
           done
           find . -type d -name bin -not -path '*/node_modules/*' -prune -print0 | tar --null -I 'zstd -T0' -cf build-output-release.tar.zst -T -
@@ -222,8 +267,8 @@ jobs:
   # Only integration shards consume the DEVELOPMENT-symbol build. Ordinary PR pushes
   # keep the Release build and specs, without this extra build or artifact.
   dotnet-build-development:
-    if: github.event_name != 'pull_request'
-    needs: [wire-compatibility, grain-compatibility]
+    if: needs.already-ran.outputs.skip != 'true' && (github.event_name != 'pull_request')
+    needs: [already-ran, wire-compatibility, grain-compatibility]
     runs-on: ubuntu-latest
     timeout-minutes: 120
     permissions:
@@ -258,6 +303,9 @@ jobs:
         run: |
           dotnet nuget update source github --username cratis --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text || \
           dotnet nuget add source --name github --username cratis --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text https://nuget.pkg.github.com/cratis/index.json
+
+      - name: Stamp the build version
+        run: python3 .github/scripts/derive-build-version.py >> "$GITHUB_ENV"
 
       - name: Build with DEVELOPMENT symbol
         run: dotnet build --configuration Release -p:EnableDevelopmentSymbol=true -p:DisableProxyGenerator=true -p:DisableDockerBuild=true
@@ -279,11 +327,12 @@ jobs:
           compression-level: 0
           if-no-files-found: error
 
-  # Static needs keep manual/nightly DEVELOPMENT independent of specs. Only the
-  # requested PR path waits for successful specs (implicit success() also blocks cancellation).
+  # Requested PR path: builds in parallel with the specs, so integration does not wait for
+  # specs and then for this build in sequence. The integration job still requires successful
+  # specs before any shard runs; a red spec costs only this one build.
   dotnet-build-development-requested:
-    if: github.event_name == 'pull_request' && inputs.integration_requested
-    needs: [wire-compatibility, grain-compatibility, specs]
+    if: needs.already-ran.outputs.skip != 'true' && (github.event_name == 'pull_request' && inputs.integration_requested)
+    needs: [already-ran, wire-compatibility, grain-compatibility]
     runs-on: ubuntu-latest
     timeout-minutes: 120
     permissions:
@@ -318,6 +367,9 @@ jobs:
         run: |
           dotnet nuget update source github --username cratis --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text || \
           dotnet nuget add source --name github --username cratis --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text https://nuget.pkg.github.com/cratis/index.json
+
+      - name: Stamp the build version
+        run: python3 .github/scripts/derive-build-version.py >> "$GITHUB_ENV"
 
       - name: Build with DEVELOPMENT symbol
         run: dotnet build --configuration Release -p:EnableDevelopmentSymbol=true -p:DisableProxyGenerator=true -p:DisableDockerBuild=true
@@ -340,9 +392,10 @@ jobs:
           if-no-files-found: error
 
   specs-other:
+    if: needs.already-ran.outputs.skip != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 120
-    needs: [dotnet-build]
+    needs: [already-ran, dotnet-build]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -421,10 +474,11 @@ jobs:
           retention-days: 1
 
   specs-sql:
+    if: needs.already-ran.outputs.skip != 'true'
     runs-on: ubuntu-latest
     # The sqlserver shard takes 21-27 minutes on hosted runners; 30 cancelled a passing run.
     timeout-minutes: 45
-    needs: [dotnet-build]
+    needs: [already-ran, dotnet-build]
     strategy:
       fail-fast: false
       matrix:
@@ -477,8 +531,8 @@ jobs:
 
   legacy-contracts:
     # Report red upstream jobs instead of skipping the gate, but not for a cancelled run.
-    if: ${{ !cancelled() }}
-    needs: [wire-compatibility, grain-compatibility, specs-other, specs-sql]
+    if: ${{ needs.already-ran.outputs.skip != 'true' && (!cancelled()) }}
+    needs: [already-ran, wire-compatibility, grain-compatibility, specs-other, specs-sql]
     permissions:
       contents: read
       issues: read
@@ -490,8 +544,8 @@ jobs:
   # Preserve the required check and all existing integration/coverage dependencies.
   # A failed, skipped or cancelled shard must never turn this aggregate green.
   specs:
-    if: always()
-    needs: [specs-other, specs-sql]
+    if: ${{ needs.already-ran.outputs.skip != 'true' && (always()) }}
+    needs: [already-ran, specs-other, specs-sql]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -508,8 +562,8 @@ jobs:
     # (#5050): a red spec must not spend the matrix. Nightly and manual runs keep integration
     # independent of specs, so a failing spec does not hide integration results there.
     # !cancelled() overrides implicit success(): the unused DEVELOPMENT sibling is skipped.
-    if: ${{ !cancelled() && needs.dotnet-build.result == 'success' && ((github.event_name != 'pull_request' && needs.dotnet-build-development.result == 'success') || (github.event_name == 'pull_request' && needs.dotnet-build-development-requested.result == 'success')) && (github.event_name != 'pull_request' || (inputs.integration_requested && needs.specs.result == 'success')) && github.actor != 'dependabot[bot]' }}
-    needs: [dotnet-build, dotnet-build-development, dotnet-build-development-requested, specs]
+    if: ${{ needs.already-ran.outputs.skip != 'true' && (!cancelled() && needs.dotnet-build.result == 'success' && ((github.event_name != 'pull_request' && needs.dotnet-build-development.result == 'success') || (github.event_name == 'pull_request' && needs.dotnet-build-development-requested.result == 'success')) && (github.event_name != 'pull_request' || (inputs.integration_requested && needs.specs.result == 'success')) && github.actor != 'dependabot[bot]') }}
+    needs: [already-ran, dotnet-build, dotnet-build-development, dotnet-build-development-requested, specs]
     permissions:
       contents: read
       packages: read
@@ -525,10 +579,10 @@ jobs:
 
   integration-api:
     # Waits for the ordinary specs on pull requests, like the integration matrix (#5050).
-    if: ${{ !cancelled() && needs.dotnet-build.result == 'success' && (github.event_name != 'pull_request' || (inputs.integration_requested && needs.specs.result == 'success')) }}
+    if: ${{ needs.already-ran.outputs.skip != 'true' && (!cancelled() && needs.dotnet-build.result == 'success' && (github.event_name != 'pull_request' || (inputs.integration_requested && needs.specs.result == 'success'))) }}
     runs-on: ubuntu-latest
     timeout-minutes: 120
-    needs: [dotnet-build, specs]
+    needs: [already-ran, dotnet-build, specs]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -588,10 +642,10 @@ jobs:
 
   mongodb:
     # Waits for the ordinary specs on pull requests, like the integration matrix (#5050).
-    if: ${{ !cancelled() && needs.dotnet-build.result == 'success' && (github.event_name != 'pull_request' || (inputs.integration_requested && needs.specs.result == 'success')) }}
+    if: ${{ needs.already-ran.outputs.skip != 'true' && (!cancelled() && needs.dotnet-build.result == 'success' && (github.event_name != 'pull_request' || (inputs.integration_requested && needs.specs.result == 'success'))) }}
     runs-on: ubuntu-latest
     timeout-minutes: 120
-    needs: [dotnet-build, specs]
+    needs: [already-ran, dotnet-build, specs]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -625,6 +679,68 @@ jobs:
       - name: Restore pinned coverage tool
         run: dotnet tool restore
 
+      - name: Extract pinned released runtime for MongoDB binding proof
+        timeout-minutes: 10
+        run: |
+          set -euo pipefail
+          # Registry metadata pins the bytes; image-to-release-source provenance remains UNKNOWN.
+          image='cratis/chronicle:19.106.2-development-slim@sha256:3dcf0cf274200619809573faa16395195364568a1162d9c210e815b5ba5a9643'
+          runtime="$RUNNER_TEMP/chronicle-released-binding"
+          test ! -e "$runtime"
+          mkdir "$runtime"
+          timeout --kill-after=10s 5m docker pull "$image"
+          container="chronicle-released-binding-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          cleanup() {
+            status=$?
+            trap - EXIT
+            if ! timeout --kill-after=10s 30s docker rm "$container" >/dev/null; then
+              echo '::error::Could not remove the stopped released-runtime extraction container'
+              exit 1
+            fi
+            exit "$status"
+          }
+          trap cleanup EXIT
+          timeout --kill-after=10s 30s docker create --name "$container" "$image" >/dev/null
+          timeout --kill-after=10s 2m docker cp "$container:/app/." "$runtime/"
+          test -f "$runtime/Cratis.Chronicle.Core.dll"
+          test -f "$runtime/Cratis.Chronicle.Server.dll"
+          echo "CHRONICLE_RELEASED_RUNTIME_DIRECTORY=$runtime" >> "$GITHUB_ENV"
+
+      - name: Prove MongoDB keys bind only through released direct storage options
+        run: |
+          timeout --kill-after=10s 120s node .github/scripts/run-spec-project.mjs --project Integration/MongoDB/MongoDB.csproj --filter 'FullyQualifiedName~for_ReleasedKernelConfiguration' --results-directory ./Integration/MongoDB/released-binding-results
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { readFile } from 'node:fs/promises';
+          import { nodes, parseXml } from './.github/scripts/mixed-specs-results.mjs';
+          const root = parseXml(await readFile('./Integration/MongoDB/released-binding-results/results.trx', 'utf8'));
+          const results = nodes(root, 'UnitTestResult');
+          assert.equal(results.length, 12, 'All twelve released binding facts must run');
+          assert.ok(results.every(result => result.attrs.outcome === 'Passed'), 'Released binding facts must pass, never skip');
+          const passed = new Set(results.map(result => result.attrs.testId));
+          const methods = nodes(root, 'UnitTest').filter(test => passed.has(test.attrs.id))
+            .map(test => nodes(test, 'TestMethod')[0].attrs);
+          const classes = {
+            when_binding_fixture_storage_keys: ['should_bind_the_fixture_provider', 'should_bind_the_fixture_connection'],
+            when_binding_original_cluster_keys: ['should_not_bind_the_original_provider', 'should_not_bind_the_original_connection']
+          };
+          for (const [type, facts] of Object.entries(classes)) {
+            const expected = [...facts, 'should_use_released_options_not_head', 'should_use_released_storage_not_head'];
+            for (const name of expected) {
+              assert.ok(methods.some(method => method.className === `Cratis.Chronicle.MongoDB.Integration.Observation.for_ReleasedKernelConfiguration.${type}` && method.name === name), `Missing released binding fact: ${type}.${name}`);
+            }
+          }
+          const additionalClasses = {
+            when_loading_configuration_binder: ['should_share_the_default_binder_identity', 'should_load_binder_in_the_default_context'],
+            when_release_dependencies_are_missing: ['should_not_fall_back_to_head_cratis', 'should_not_fall_back_to_host_orleans']
+          };
+          for (const [type, facts] of Object.entries(additionalClasses)) {
+            for (const name of facts) {
+              assert.ok(methods.some(method => method.className === `Cratis.Chronicle.MongoDB.Integration.Observation.for_ReleasedKernelConfiguration.${type}` && method.name === name), `Missing released binding fact: ${type}.${name}`);
+            }
+          }
+          NODE
+
       - name: Run MongoDB integration tests with coverage
         run: node .github/scripts/run-spec-project.mjs --project Integration/MongoDB/MongoDB.csproj --coverage --results-directory ./Integration/MongoDB/coverage-results
 
@@ -634,21 +750,52 @@ jobs:
           path: ./Integration/MongoDB/coverage-results
           name: The MongoDB integration job
 
+      # The old-writer update fact is skipped until https://github.com/Cratis/Chronicle/issues/5457 is resolved;
+      # add 'should_require_an_actual_old_writer_update' back to this list when the skip is removed.
+      - name: Require old MongoDB writer payload preservation facts
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { readFile } from 'node:fs/promises';
+          import { nodes, parseXml } from './.github/scripts/mixed-specs-results.mjs';
+          const root = parseXml(await readFile('./Integration/MongoDB/coverage-results/results.trx', 'utf8'));
+          const passed = new Set(nodes(root, 'UnitTestResult').filter(result => result.attrs.outcome === 'Passed').map(result => result.attrs.testId));
+          const methods = nodes(root, 'UnitTest').filter(test => passed.has(test.attrs.id))
+            .map(test => nodes(test, 'TestMethod')[0].attrs);
+          for (const name of [
+            'should_preserve_the_legacy_identity',
+            'should_preserve_legacy_subscription_mode',
+            'should_preserve_the_last_handled_event',
+            'should_preserve_the_next_event',
+            'should_preserve_handled_count',
+            'should_preserve_legacy_replay_sets',
+            'should_preserve_legacy_partition_sets',
+            'should_preserve_partition_claims_byte_for_byte',
+            'should_preserve_the_wide_claim_byte_for_byte',
+            'should_preserve_the_revision',
+            'should_remain_readable_by_the_new_provider'
+          ]) {
+            assert.ok(methods.some(method => method.className === 'Cratis.Chronicle.MongoDB.Integration.Observation.for_ObserverPayloadRoundTrip.when_old_kernel_reads_and_writes_new_claims' && method.name === name), `Missing passing old MongoDB writer fact: ${name}`);
+          }
+          NODE
+
       - name: Upload coverage results
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: coverage-results-mongodb
-          path: ./Integration/MongoDB/coverage-results/
+          path: |
+            ./Integration/MongoDB/coverage-results/
+            ./Integration/MongoDB/released-binding-results/
           retention-days: 1
 
   coverage-merge-and-cache:
     # Override implicit success() so the unused DEVELOPMENT ancestor does not suppress coverage.
     # Require every immediate prerequisite: never cache incomplete results (including ordinary PRs).
-    if: ${{ !cancelled() && github.event_name != 'pull_request_target' && needs.specs.result == 'success' && needs.integration.result == 'success' && needs.integration-api.result == 'success' && needs.mongodb.result == 'success' }}
+    if: ${{ needs.already-ran.outputs.skip != 'true' && (!cancelled() && github.event_name != 'pull_request_target' && needs.specs.result == 'success' && needs.integration.result == 'success' && needs.integration-api.result == 'success' && needs.mongodb.result == 'success') }}
     runs-on: ubuntu-latest
     timeout-minutes: 120
-    needs: [specs, integration, integration-api, mongodb]
+    needs: [already-ran, specs, integration, integration-api, mongodb]
     outputs:
       coverage-cache-key: ${{ steps.export-coverage-key.outputs.key }}
 
@@ -735,9 +882,10 @@ jobs:
   # ArtifactsPath set, which changes which project references apply - is what catches that, and costs ~2
   # minutes off the critical path rather than ~13 on it.
   benchmarks-build:
+    if: needs.already-ran.outputs.skip != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 120
-    needs: [dotnet-build]
+    needs: [already-ran, dotnet-build]
 
     steps:
       - name: Checkout code

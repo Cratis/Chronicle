@@ -2,12 +2,13 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Net;
+using Cratis.Chronicle.Observation.Webhooks.Validation;
 
 namespace Cratis.Chronicle.Observation.Webhooks.for_WebhookTargetPolicy.when_evaluating;
 
 public class and_a_warned_stored_target_is_checked_during_delivery : given.a_target_policy
 {
-    void Establish() => Configure(new());
+    void Establish() => Configure(new() { Validation = WebhookValidationMode.Warn });
 
     async Task Because()
     {

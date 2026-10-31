@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Arc.Commands;
+using Cratis.Chronicle.Sequences;
 using FluentValidation;
 
 namespace Cratis.Chronicle.EventTypes;
@@ -17,6 +18,8 @@ internal class RegisterEventTypesValidator : CommandValidator<RegisterEventTypes
     public RegisterEventTypesValidator()
     {
         RuleFor(_ => _.EventStore).NotEmpty().WithMessage("Event store name is required.");
+        RuleFor(_ => _.EventStore).NotSystemEventStore();
+        RuleFor(_ => _.EventStore).NoKeySeparator();
         RuleFor(_ => _.Types).NotNull().WithMessage("Event type registrations are required.");
         RuleForEach(_ => _.Types).ChildRules(registration =>
         {

@@ -119,6 +119,7 @@ public class a_passive_projection_with_nullable_concepts : Specification
         var immediateSilo = new TestKitSilo();
         immediateSilo.AddService(storage);
         immediateSilo.AddService<IExpandoObjectConverter>(converter);
+        immediateSilo.AddService(Substitute.For<IReadModelInstanceVisibilities>());
         immediateSilo.AddService<ILogger<ImmediateProjection>>(NullLogger<ImmediateProjection>.Instance);
         immediateSilo.AddProbe<IProjection>(_ => projection);
         immediateSilo.AddProbe(_ => readModel);

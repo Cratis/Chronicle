@@ -16,10 +16,12 @@ Chronicle Server exposes the following ports:
 | Port | Service | Description |
 | --- | --- | --- |
 | 11111 | Orleans Silo | Internal Orleans clustering |
-| 30000 | Orleans Gateway | Client connections to Orleans cluster |
+| 30000 | Orleans Gateway | Client connections to Orleans cluster; enabled by default, disabled with `clustering.gatewayEnabled=false` |
 | 35000 | Chronicle | By default, gRPC (HTTP/2) and Workbench, REST API, OAuth and health (HTTP/1.1) over TLS; HTTP/2-only h2c if `tls.enabled=false` |
 
 TLS is enabled by default. In development, when no certificate is configured, Chronicle generates a self-signed certificate automatically. Explicitly set `tls.enabled=false` only behind an HTTPS proxy forwarding all backend requests using h2c; restrict direct access to the cleartext port. See [TLS](tls.md).
+
+Keep the Orleans silo and gateway ports private to trusted cluster peers and Orleans clients. They are not HTTP/gRPC endpoints and do not use Chronicle's HTTP authentication. HTTP/gRPC-only deployments can set `clustering.gatewayEnabled` to `false`; the silo port is still required for peer nodes. See [Clustering](clustering.md#listener-and-network-boundaries) for explicit interface binding and a NetworkPolicy example.
 
 ## Optional dedicated health port
 

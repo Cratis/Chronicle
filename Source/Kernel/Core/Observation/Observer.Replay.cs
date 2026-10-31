@@ -22,6 +22,7 @@ public partial class Observer
     public async Task<JobId> Replay()
     {
         ThrowIfSealed();
+        await ThrowIfKeyDoesNotOwnDefinition();
         if (IsRetired || !Definition.IsReplayable)
         {
             return JobId.NotSet;
@@ -158,6 +159,7 @@ public partial class Observer
         };
         State.CatchingUpPartitions.Clear();
         State.ReplayingPartitions.Clear();
+        _partitionHoldsVersion++;
         await WriteStateAsync();
         if (!IsQuarantined)
         {
@@ -170,13 +172,14 @@ public partial class Observer
     /// </summary>
     /// <param name="partition">The partition that was replayed.</param>
     /// <param name="lastHandledEventSequenceNumber">The last event the replay handled, or <see cref="EventSequenceNumber.Unavailable"/>.</param>
-    /// <param name="replayedEventTypes">The event types the replay proves it handled, or empty.</param>
+    /// <param name="replayedEventTypes">The event types the replay proves it handled; non-empty only proves a complete all-type replay. Stopped or selected-type replays that read nothing report HeldBackFrom - 1 as the scanned position when known. When no read or held-back boundary is known (legacy jobs or HeldBackFrom at <see cref="EventSequenceNumber.First"/>), catch-up falls back to the partition's start.</param>
     /// <param name="lastScannedEventSequenceNumber">The last event the replay read, handled or excluded by the observer's filters.</param>
     /// <returns>Awaitable task.</returns>
     /// <remarks>
     /// Live delivery holds back a partition while it is replaying, so the replay marker must come down however the
     /// replay ended - including a replay that read only events the observer's filters exclude and so handled nothing.
     /// Events held back while it replayed are handed to catch-up from the furthest event the replay read.
+    /// If no read or held-back boundary is known (including legacy jobs), catch-up falls back to the partition's start.
     /// </remarks>
     async Task CompletePartitionReplay(Key partition, EventSequenceNumber lastHandledEventSequenceNumber, EventType[] replayedEventTypes, EventSequenceNumber lastScannedEventSequenceNumber)
     {
@@ -185,6 +188,7 @@ public partial class Observer
         Skips.Completing(partition, FurthestOf(lastHandledEventSequenceNumber, lastScannedEventSequenceNumber));
         logger.FinishedReplayForPartition(partition);
         State.ReplayingPartitions.Remove(partition);
+        _partitionHoldsVersion++;
         if (replayedEventTypes.Length > 0 && lastHandledEventSequenceNumber.IsActualValue &&
             Failures.TryGet(partition, out var failure) && failure.LastAttempt.SequenceNumber <= lastHandledEventSequenceNumber)
         {
@@ -208,6 +212,8 @@ public partial class Observer
 
         HandleNewLastHandledEventForPartition(partition, lastHandledEventSequenceNumber);
         await WriteStateAsync();
+
+        // Empty partial replays report the position before held-back delivery when known; otherwise preserve the legacy fallback.
         await StartCatchupJobIfNeeded(partition, FurthestOf(lastHandledEventSequenceNumber, lastScannedEventSequenceNumber), fromStartWhenNothingRead: true);
         EvaluateSuspectedSkips();
     }
@@ -215,6 +221,7 @@ public partial class Observer
     async Task ReplayPartitionTo(Key partition, EventSequenceNumber sequenceNumber, IEnumerable<EventType> eventTypes, bool retainOtherCounts)
     {
         ThrowIfSealed();
+        await ThrowIfKeyDoesNotOwnDefinition();
         if (IsRetired || !Definition.IsReplayable)
         {
             return;
@@ -253,6 +260,7 @@ public partial class Observer
         // failure/catch-up work; events from here on cannot reach this partition while its replay marker is set.
         var heldBackFrom = State.NextEventSequenceNumber;
         State.ReplayingPartitions.Add(partition);
+        _partitionHoldsVersion++;
         Skips.JobStarted(partition);
         RecordedHandlingState();
         await WriteStateAsync();

@@ -65,6 +65,7 @@ public partial class EventStore : IEventStore
     readonly IReactorSideEffectHandlers _reactorSideEffectHandlers;
     readonly ILogger<EventStore> _logger;
     readonly IActivitySource<EventSequence> _activitySource;
+    readonly ChronicleTelemetryOptions _telemetry;
     readonly ConcurrentDictionary<EventSequenceId, IEventSequence> _sequences = new();
     readonly Projections.Projections _projections;
     readonly RegistrationRetryOptions _registrationRetry;
@@ -73,6 +74,10 @@ public partial class EventStore : IEventStore
     readonly ArtifactIdentityDriftDetector? _identityDriftDetector;
     readonly ArtifactIdentityDriftPolicy _identityDriftPolicy;
     readonly bool _autoDiscoverAndRegister;
+    readonly RegistrationMode _registrationMode;
+    readonly bool _nominatesClientObservers;
+    readonly string? _nominatedObserverKind;
+    readonly string? _nominatedObserverId;
     readonly StoreClientArtifactsProvider? _storeArtifacts;
     SingleFlightRegistration? _registerAllFlight;
     AsyncLocal<bool>? _backgroundRegistrationRetryContext;
@@ -128,6 +133,7 @@ public partial class EventStore : IEventStore
         IOptions<ChronicleOptions> options,
         ILoggerFactory loggerFactory)
     {
+        _telemetry = options.Value.Telemetry;
         _logger = loggerFactory.CreateLogger<EventStore>();
         _registrationRetry = options.Value.RegistrationRetry;
         _registrationBackoff = new RegistrationBackoff(_registrationRetry.InitialDelay, _registrationRetry.MaximumDelay);
@@ -139,7 +145,20 @@ public partial class EventStore : IEventStore
         DecisionReadJsonOptions = jsonSerializerOptions;
         _autoDiscoverAndRegister = autoDiscoverAndRegister;
         _preparation = new(PublishLocalPreparationFailure);
+        _registrationMode = options.Value.RegistrationMode;
         var explicitSnapshot = options.Value.ExplicitArtifacts.CreateSnapshot();
+        var nominatedType = explicitSnapshot.Types.FirstOrDefault(_ => _.Kind is ExplicitArtifactKind.Reactor or ExplicitArtifactKind.Reducer);
+        _nominatesClientObservers = !explicitSnapshot.Reactors.IsEmpty || nominatedType is not null;
+        if (!explicitSnapshot.Reactors.IsEmpty)
+        {
+            _nominatedObserverKind = "Reactor";
+            _nominatedObserverId = explicitSnapshot.Reactors[0].Id.Value;
+        }
+        else if (nominatedType is not null)
+        {
+            _nominatedObserverKind = nominatedType.Kind == ExplicitArtifactKind.Reactor ? "Reactor" : "Reducer";
+            _nominatedObserverId = nominatedType.Type.FullName ?? nominatedType.Type.Name;
+        }
         _storeArtifacts = new(clientArtifactsProvider, explicitSnapshot);
         clientArtifactsProvider = _storeArtifacts;
         _clientArtifactsProvider = clientArtifactsProvider;
@@ -192,7 +211,8 @@ public partial class EventStore : IEventStore
             identityProvider,
             jsonSerializerOptions,
             reactorSideEffectHandlers,
-            EventSources);
+            EventSources,
+            _telemetry);
         _sequences[EventLog.Id] = EventLog;
 
         Jobs = new Jobs.Jobs(this);
@@ -482,7 +502,8 @@ public partial class EventStore : IEventStore
                 state._jsonSerializerOptions,
                 state._activitySource,
                 state._reactorSideEffectHandlers,
-                state.EventSources),
+                state.EventSources,
+                state._telemetry),
             this);
 
     /// <inheritdoc/>
@@ -766,8 +787,23 @@ public partial class EventStore : IEventStore
     {
         Preparation.VerifyRegistrationLease();
 
+        // Another process of the application registered the artifacts at deployment time.
+        if (_registrationMode == RegistrationMode.AtDeployment)
+        {
+            return;
+        }
+
         // Ensure the event store exists before registering artifacts.
         await _servicesAccessor.Services.EventStores.EnsureEventStore(new EnsureEventStoreRequest { Name = Name.Value }).EnsureSuccess();
+
+        if (_registrationMode == RegistrationMode.EventTypesOnly)
+        {
+            await registerEventTypes();
+            return;
+        }
+
+        var hostsClientObservers = ClientObserverHosting.IsAvailable(Connection);
+        LogSkippedClientObservers(hostsClientObservers);
 
         // We need to register event types and read models first, as they are used by the other artifacts
         await Task.WhenAll(
@@ -779,16 +815,10 @@ public partial class EventStore : IEventStore
         // seeded events arrive at the kernel before observers are registered
         await Task.WhenAll(
             Constraints.Register(),
-            Reactors.Register(),
-            Reducers.Register(),
-            Projections.Register(),
-            Occurrences is Occurrences.Occurrences occurrences ? occurrences.Register() : Task.CompletedTask);
+            RegisterClientHostedObservers(hostsClientObservers),
+            Projections.Register());
 
-        // Auto-subscribe to any external event stores referenced by observers
-        await RegisterExternalEventStoreSubscriptionsAsync();
-
-        // Start watching read models for any registered read model reactors
-        ReadModelReactors.Start();
+        await RegisterExternalSubscriptions(hostsClientObservers);
 
         // Seed events only after all observers are registered
         if (Seeding is EventSeeding nativeSeeding)
@@ -801,14 +831,102 @@ public partial class EventStore : IEventStore
         }
     }
 
-    async Task RegisterExternalEventStoreSubscriptionsAsync()
+    void LogSkippedClientObservers(bool hostsClientObservers)
     {
-        var currentStoreName = _eventStoreName.Value;
+        if (hostsClientObservers)
+        {
+            return;
+        }
+
+        var skipped = _clientArtifactsProvider.Reactors.Count() + _clientArtifactsProvider.Reducers.Count();
+        if (skipped > 0)
+        {
+            _logger.ClientObserversNotRegistered(skipped);
+        }
+    }
+
+    Task RegisterClientHostedObservers(bool hostsClientObservers)
+    {
+        if (!hostsClientObservers)
+        {
+            return Task.CompletedTask;
+        }
+
+        return Task.WhenAll(
+            Reactors.Register(),
+            Reducers.Register(),
+            Occurrences is Occurrences.Occurrences occurrences ? occurrences.Register() : Task.CompletedTask);
+    }
+
+    async Task RegisterExternalSubscriptions(bool hostsClientObservers)
+    {
+        // Auto-subscribe to any external event stores referenced by observers. Server-hosted projections need their
+        // subscriptions even when this client hosts no observers of its own.
+        if (!hostsClientObservers)
+        {
+            await RegisterProjectionExternalEventStoreSubscriptionsAsync();
+            return;
+        }
+
+        await RegisterExternalEventStoreSubscriptionsAsync();
+
+        // Start watching read models for any registered read model reactors
+        ReadModelReactors.Start();
+    }
+
+    Task RegisterExternalEventStoreSubscriptionsAsync() =>
+        SubscribeToExternalEventStores(GetClientObserverExternalSubscriptions(_eventStoreName.Value));
+
+    Task RegisterProjectionExternalEventStoreSubscriptionsAsync() => SubscribeToExternalEventStores([]);
+
+    async Task SubscribeToExternalEventStores(Dictionary<string, List<EventTypeId>> observerExternalSubscriptions)
+    {
+        // Merge with projection external event store references (already filtered by GetExternalEventStoreSubscriptions)
+        var allByStore = new Dictionary<string, HashSet<EventTypeId>>();
+        foreach (var kvp in observerExternalSubscriptions)
+        {
+            allByStore[kvp.Key] = [.. kvp.Value];
+        }
+
+        MergeProjectionSubscriptions(allByStore);
+
+        // Register a subscription for each external event store
+        foreach (var kvp in allByStore)
+        {
+            await Subscriptions.Subscribe(
+                new EventStoreSubscriptionId(kvp.Key),
+                kvp.Key,
+                builder =>
+                {
+                    foreach (var id in kvp.Value)
+                    {
+                        builder.WithEventType(id);
+                    }
+                });
+        }
+    }
+
+    void MergeProjectionSubscriptions(Dictionary<string, HashSet<EventTypeId>> allByStore)
+    {
+        foreach (var subscription in Projections.GetExternalEventStoreSubscriptions())
+        {
+            if (!allByStore.TryGetValue(subscription.EventStoreName, out var existing))
+            {
+                existing = [];
+                allByStore[subscription.EventStoreName] = existing;
+            }
+
+            existing.UnionWith(subscription.EventTypeIds);
+        }
+    }
+
+    Dictionary<string, List<EventTypeId>> GetClientObserverExternalSubscriptions(string currentStoreName)
+    {
         var reactorHandlers = Reactors is Reactors.Reactors reactors
             ? reactors.Handlers
             : _clientArtifactsProvider.Reactors.Select(Reactors.GetHandlerFor);
 
-        var observerExternalSubscriptions = _clientArtifactsProvider.Reactors
+        return _clientArtifactsProvider.Reactors
             .Where(r => !RegisteredObserverMetadata.HasExplicitSequence(r, r.GetCustomAttribute<ReactorAttribute>()?.EventSequenceId))
             .Join(
                 reactorHandlers,
@@ -832,41 +950,5 @@ public partial class EventStore : IEventStore
             .ToDictionary(
                 g => g.Key,
                 g => ObserverEventTypes.GetIds(g.SelectMany(types => types)).ToList());
-
-        // Merge with projection external event store references (already filtered by GetExternalEventStoreSubscriptions)
-        var allByStore = new Dictionary<string, HashSet<EventTypeId>>();
-        foreach (var kvp in observerExternalSubscriptions)
-        {
-            allByStore[kvp.Key] = [.. kvp.Value];
-        }
-
-        foreach (var subscription in Projections.GetExternalEventStoreSubscriptions())
-        {
-            if (!allByStore.TryGetValue(subscription.EventStoreName, out var existing))
-            {
-                existing = [];
-                allByStore[subscription.EventStoreName] = existing;
-            }
-
-            foreach (var id in subscription.EventTypeIds)
-            {
-                existing.Add(id);
-            }
-        }
-
-        // Register a subscription for each external event store
-        foreach (var kvp in allByStore)
-        {
-            await Subscriptions.Subscribe(
-                new EventStoreSubscriptionId(kvp.Key),
-                kvp.Key,
-                builder =>
-                {
-                    foreach (var id in kvp.Value)
-                    {
-                        builder.WithEventType(id);
-                    }
-                });
-        }
     }
 }

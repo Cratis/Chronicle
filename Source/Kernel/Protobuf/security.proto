@@ -19,6 +19,10 @@ message AdminPasswordStatusResponse {
    .bcl.Guid AdminUserId = 2;
    string AdminUsername = 3;
 }
+message AdministratorResponse {
+   .bcl.Guid UserId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   string Username = 2;
+}
 message ApplicationResponse {
    .bcl.Guid Id = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
    string ClientId = 2;
@@ -44,6 +48,9 @@ message CommandResult {
    string ExceptionStackTrace = 5;
    string AuthorizationFailureReason = 6;
 }
+message GrantAdministratorRequest {
+   .bcl.Guid UserId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+}
 message QueryResult_AdminPasswordStatusResponse {
    .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
    bool IsAuthorized = 2;
@@ -51,6 +58,14 @@ message QueryResult_AdminPasswordStatusResponse {
    repeated string ExceptionMessages = 4;
    string ExceptionStackTrace = 5;
    AdminPasswordStatusResponse Data = 6;
+}
+message QueryResult_IEnumerable_AdministratorResponse {
+   .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   bool IsAuthorized = 2;
+   repeated ValidationResult ValidationResults = 3;
+   repeated string ExceptionMessages = 4;
+   string ExceptionStackTrace = 5;
+   repeated AdministratorResponse Data = 6;
 }
 message QueryResult_IEnumerable_ApplicationResponse {
    .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
@@ -77,6 +92,10 @@ message RemoveUserRequest {
 message RequirePasswordChangeRequest {
    .bcl.Guid UserId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
 }
+message RevokeAdministratorRequest {
+   .bcl.Guid UserId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   string Reason = 2;
+}
 // Represents a DateTimeOffset value as an ISO 8601 string (e.g., "2024-01-15T12:30:00.0000000+02:00").
 message SerializableDateTimeOffset {
    string Value = 1;
@@ -85,6 +104,7 @@ message SetInitialAdminPasswordRequest {
    .bcl.Guid UserId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
    string Password = 2;
    string ConfirmedPassword = 3;
+   string SetupToken = 4;
 }
 message UserResponse {
    .bcl.Guid Id = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
@@ -105,6 +125,11 @@ enum ValidationResultSeverity {
    Information = 1;
    Warning = 2;
    Error = 3;
+}
+service Administrators {
+   rpc AllAdministrators (.google.protobuf.Empty) returns (QueryResult_IEnumerable_AdministratorResponse);
+   rpc GrantAdministrator (GrantAdministratorRequest) returns (CommandResult);
+   rpc RevokeAdministrator (RevokeAdministratorRequest) returns (CommandResult);
 }
 service Applications {
    rpc AddApplication (AddApplicationRequest) returns (CommandResult);

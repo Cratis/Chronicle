@@ -32,11 +32,12 @@ public static class WebhookHttpClientExtensions
         builder.Services.AddHostedService<WebhookValidationStartup>();
         builder.Services.AddHttpClient(OAuthClient.HttpClientName)
             .ConfigurePrimaryHttpMessageHandler(services => CreateHandler(services.GetRequiredService<WebhookConnection>()))
-            .AddHttpMessageHandler<WebhookValidationHandler>();
-        builder.Services.AddHttpClient(WebhookHttpClientFactory.HttpClientName)
-            .ConfigurePrimaryHttpMessageHandler(services => CreateHandler(services.GetRequiredService<WebhookConnection>()))
             .AddHttpMessageHandler<WebhookValidationHandler>()
-            .AddResilienceHandler($"{WebhookHttpClientFactory.HttpClientName}-pipeline", (pipeline, context) =>
+            .AddHttpMessageHandler(services => new WebhookConnectionPoolHandler(CreateHandler(services.GetRequiredService<WebhookConnection>())));
+        var delivery = builder.Services.AddHttpClient(WebhookHttpClientFactory.HttpClientName)
+            .ConfigurePrimaryHttpMessageHandler(services => CreateHandler(services.GetRequiredService<WebhookConnection>()))
+            .AddHttpMessageHandler<WebhookValidationHandler>();
+        delivery.AddResilienceHandler($"{WebhookHttpClientFactory.HttpClientName}-pipeline", (pipeline, context) =>
             {
                 var webhooks = context.ServiceProvider.GetRequiredService<IOptions<ChronicleOptions>>().Value.Webhooks;
 
@@ -63,17 +64,16 @@ public static class WebhookHttpClientExtensions
                 // Timeout per request
                 pipeline.AddTimeout(TimeSpan.FromSeconds(webhooks.RequestTimeoutSeconds));
             }).SelectPipelineByAuthority();
+        delivery.AddHttpMessageHandler(services => new WebhookConnectionPoolHandler(CreateHandler(services.GetRequiredService<WebhookConnection>())));
         return builder;
     }
 
-    static bool IsTransientDeliveryFailure(HttpResponseMessage response)
-    {
-        if (response.StatusCode == System.Net.HttpStatusCode.RequestTimeout) return true;
-        if ((int)response.StatusCode < 500) return false;
-        return response.StatusCode != System.Net.HttpStatusCode.ServiceUnavailable || WebhookMediator.GetRetryAfter(response) is null;
-    }
-
-    static SocketsHttpHandler CreateHandler(WebhookConnection connection) => new()
+    /// <summary>
+    /// Creates a primary handler that connects only to validated destinations.
+    /// </summary>
+    /// <param name="connection">The guarded connection factory.</param>
+    /// <returns>The primary handler.</returns>
+    internal static SocketsHttpHandler CreateHandler(WebhookConnection connection) => new()
     {
         AllowAutoRedirect = false,
 
@@ -81,4 +81,11 @@ public static class WebhookHttpClientExtensions
         UseProxy = false,
         ConnectCallback = connection.Connect
     };
+
+    static bool IsTransientDeliveryFailure(HttpResponseMessage response)
+    {
+        if (response.StatusCode == System.Net.HttpStatusCode.RequestTimeout) return true;
+        if ((int)response.StatusCode < 500) return false;
+        return response.StatusCode != System.Net.HttpStatusCode.ServiceUnavailable || WebhookMediator.GetRetryAfter(response) is null;
+    }
 }

@@ -19,8 +19,9 @@ namespace Cratis.Chronicle.Observation.Webhooks;
 /// <param name="httpClientFactory">The HTTP client factory.</param>
 /// <param name="policy">The target policy.</param>
 /// <param name="timeProvider">The clock used for token expiry.</param>
+/// <param name="httpClientName">The guarded transport client name.</param>
 [Singleton]
-public class OAuthClient(IHttpClientFactory httpClientFactory, IWebhookTargetPolicy policy, TimeProvider? timeProvider = null) : IOAuthClient
+public class OAuthClient(IHttpClientFactory httpClientFactory, IWebhookTargetPolicy policy, TimeProvider? timeProvider = null, string httpClientName = OAuthClient.HttpClientName) : IOAuthClient
 {
     /// <summary>
     /// The dedicated OAuth client, sharing webhook target validation and redirect protection.
@@ -131,7 +132,7 @@ public class OAuthClient(IHttpClientFactory httpClientFactory, IWebhookTargetPol
 
     async Task<string?> Discover(string authority, EventStoreName? eventStore)
     {
-        using var client = httpClientFactory.CreateClient(HttpClientName);
+        using var client = httpClientFactory.CreateClient(httpClientName);
         using var request = CreateRequest(HttpMethod.Get, $"{authority}/.well-known/openid-configuration", eventStore);
         using var response = await client.SendAsync(request);
         EnsureSuccess(response);
@@ -141,7 +142,7 @@ public class OAuthClient(IHttpClientFactory httpClientFactory, IWebhookTargetPol
 
     async Task<AccessTokenInfo> Fetch(string endpoint, OAuthAuthorization authorization, EventStoreName? eventStore)
     {
-        using var client = httpClientFactory.CreateClient(HttpClientName);
+        using var client = httpClientFactory.CreateClient(httpClientName);
         var request = new Dictionary<string, string>
         {
             ["grant_type"] = "client_credentials",

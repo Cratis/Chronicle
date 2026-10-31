@@ -13,4 +13,5 @@ public class and_a_write_concern_error_occurs_for_repeated_partition : given.an_
     async Task Because() => await Flush();
     [Fact] void should_not_resend_operations_with_an_unknown_outcome() => Sent((0, 1000)).ShouldBeTrue();
     [Fact] void should_report_each_partition_once_at_its_earliest_sequence_number() => Failed(Enumerable.Range(0, OperationCount).Except([101, 700]).ToArray()).ShouldBeTrue();
+    [Fact] void should_mark_every_partition_outcome_unknown() => _failedPartitions.All(_ => _.OutcomeUnknown).ShouldBeTrue();
 }

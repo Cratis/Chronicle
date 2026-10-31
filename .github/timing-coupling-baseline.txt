@@ -32,6 +32,10 @@
 1 Integration/Client/Projections/Scenarios/when_projecting_with_functions/incrementing_per_key.cs
 1 Integration/Client/Projections/Scenarios/when_updating_projection_definition/for_materialized_projection_with_deactivated_subscriber.cs
 1 Integration/Client/RetryWaits.cs
+# Mutation repair polls persisted read-model predicates, not elapsed settling time. Each retry
+# rereads actual documents; a 30-second cancellation bounds visibility polling after jobs finish.
+1 Integration/Client/for_EventSequence/given/content_mutation_projections.cs  # readiness: persisted materialization visibility
+1 Integration/Client/for_EventSequence/given/joined_and_parent_state.cs  # readiness: persisted join visibility
 1 Integration/Client/for_EventSequence/when_appending_events_with_multiple_generation_migrations/UserRegisteredReactor.cs
 1 Integration/Client/for_EventSequence/when_appending_events_with_multiple_generation_migrations/UserRegisteredReducer.cs
 1 Integration/Client/for_EventSequence/when_appending_events_with_multiple_generation_migrations/and_observers_consume_second_generation.cs
@@ -101,7 +105,6 @@
 1 Source/Clients/XUnit.Integration/ChronicleOrleansFixture.cs
 1 Source/Kernel/Core.Specs/ConcurrentCallGate.cs  # deadline
 1 Source/Kernel/Core.Specs/EventSequences/for_AppendedEventsQueue/when_enqueuing/with_backpressure/and_channel_capacity_is_exceeded.cs
-3 Source/Kernel/Core.Specs/EventSequences/for_AppendedEventsQueue/when_enqueuing/with_backpressure/and_the_catchup_trigger_faults.cs
 1 Source/Kernel/Core.Specs/Observation/Reactors/Kernel/for_Reactors/when_registering/and_many_tenants_start_concurrently.cs  # interleave
 1 Source/Kernel/Core.Specs/Projections/Engine/Pipelines/for_ProjectionHandleLock/when_acquiring_coarsely_while_a_stripe_is_held.cs  # deadline
 1 Source/Kernel/Core.Specs/Projections/Engine/Pipelines/for_ProjectionHandleLock/when_different_event_source_ids_are_acquired_concurrently.cs  # deadline

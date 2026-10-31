@@ -17,8 +17,12 @@ internal class AppendManyValidator : CommandValidator<AppendMany>
     public AppendManyValidator()
     {
         RuleFor(_ => _.EventStore).RequiredEventStore();
+        RuleFor(_ => _.EventStore).NotSystemEventStore();
+        RuleFor(_ => _.EventStore).NoKeySeparator();
         RuleFor(_ => _.Namespace).RequiredNamespace();
+        RuleFor(_ => _.Namespace).NoKeySeparator();
         RuleFor(_ => _.EventSequenceId).RequiredEventSequence();
+        RuleFor(_ => _.EventSequenceId).NoKeySeparator();
         RuleFor(_ => _.EventSourceId).RequiredEventSource();
         RuleFor(_ => _.Events)
             .Must((command, events) => events is not null && (events.Any() || (command.ConcurrencyScope is { } scope && (scope.ExpectsNoMatchingEvent || scope.SequenceNumber < Concepts.Events.EventSequenceNumber.BeforeFirst.Value))))

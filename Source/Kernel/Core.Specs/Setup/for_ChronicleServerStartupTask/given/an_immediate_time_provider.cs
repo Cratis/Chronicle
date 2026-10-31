@@ -14,9 +14,32 @@ namespace Orleans.Hosting.for_ChronicleServerStartupTask.given;
 /// </remarks>
 public sealed class an_immediate_time_provider : TimeProvider
 {
+    readonly List<TimeSpan> _delays = [];
+
+    /// <summary>
+    /// Gets the delays requested, in order, so a spec can assert the backoff shape without waiting it out.
+    /// </summary>
+    public IReadOnlyList<TimeSpan> Delays
+    {
+        get
+        {
+            lock (_delays)
+            {
+                return [.. _delays];
+            }
+        }
+    }
+
     /// <inheritdoc/>
-    public override ITimer CreateTimer(TimerCallback callback, object? state, TimeSpan dueTime, TimeSpan period) =>
-        new immediate_timer(callback, state);
+    public override ITimer CreateTimer(TimerCallback callback, object? state, TimeSpan dueTime, TimeSpan period)
+    {
+        lock (_delays)
+        {
+            _delays.Add(dueTime);
+        }
+
+        return new immediate_timer(callback, state);
+    }
 
     sealed class immediate_timer : ITimer
     {

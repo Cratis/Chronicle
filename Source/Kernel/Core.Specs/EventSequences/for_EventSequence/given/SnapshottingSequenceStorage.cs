@@ -30,6 +30,7 @@ public class SnapshottingSequenceStorage(Func<EventSequenceState, Task> save) : 
             SequenceNumber = State.SequenceNumber,
             ConstraintIndexWatermark = State.ConstraintIndexWatermark,
             ConstraintIndexCatchUpBelow = State.ConstraintIndexCatchUpBelow,
+            MutationEpoch = State.MutationEpoch,
             ConstraintIndexCatchUpRefusing = State.ConstraintIndexCatchUpRefusing?.ToArray(),
             TailSequenceNumberPerEventType = new Dictionary<Concepts.Events.EventTypeId, Concepts.Events.EventSequenceNumber>(State.TailSequenceNumberPerEventType)
         };

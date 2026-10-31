@@ -43,7 +43,11 @@ the same way (`compliance.encryption.migrateFromDefaultStorage` becomes
 | Cratis__Chronicle__Storage__ConnectionDetails | Storage connection string |
 | Cratis__Chronicle__Storage__Schema | SQL schema for Chronicle's tables |
 | Cratis__Chronicle__Storage__CreateIfMissing | Whether Chronicle creates missing databases and schemas |
-| Cratis__Chronicle__Observers__SubscriberTimeout | Seconds an observer waits for its subscriber to answer (0 = indefinitely) |
+| Cratis__Chronicle__Storage__PostgreSqlPooling__MaxPoolSize | Maximum PostgreSQL connections per database pool (default 20; connection string values take precedence) |
+| Cratis__Chronicle__Storage__PostgreSqlPooling__ConnectionIdleLifetimeSeconds | PostgreSQL idle connection lifetime above the minimum pool size, in seconds (default 15) |
+| Cratis__Chronicle__Storage__PostgreSqlPooling__ConnectionPruningIntervalSeconds | PostgreSQL idle pruning sample interval in seconds (default 5) |
+| Cratis__Chronicle__Observers__SubscriberTimeout | Seconds an observer waits for its subscriber to answer (0 = indefinitely during catch-up and replay; live waits remain bounded by the Orleans response timeout) |
+| Cratis__Chronicle__Observers__LiveDeliveryBudget | Maximum events delivered inline in a live call (default 100); larger batches are deferred to partition catch-up (0 or less disables the limit) |
 | Cratis__Chronicle__Observers__MaxConcurrentPartitions | Upper bound on parallel job steps, applied together with `Jobs__MaxParallelSteps` (does not limit live event delivery) |
 | Cratis__Chronicle__Observers__MaxRetryAttempts | Maximum retry attempts for observers |
 | Cratis__Chronicle__Observers__BackoffDelay | Initial observer backoff delay in seconds |
@@ -53,9 +57,18 @@ the same way (`compliance.encryption.migrateFromDefaultStorage` becomes
 | Cratis__Chronicle__ReadModels__MaxBatchSize | Maximum items per read-model batch (default 500; must be greater than zero): events per subscriber call when replaying a projection, and documents per fenced sink write. Projection replay splits event pages at this limit. |
 | Cratis__Chronicle__ReadModels__ReplayedVersionsToKeep | Number of replay-generated read model versions to keep |
 | Cratis__Chronicle__Events__Queues | Number of event queues |
+| Cratis__Chronicle__Webhooks__Validation | Webhook destination mode: `Warn`, `BlockLocalAddresses`, `BlockPrivateAddresses`, or `Enforce`; default `Warn` in Development builds, `BlockLocalAddresses` otherwise |
+| Cratis__Chronicle__Webhooks__AllowInsecureHttp | Allow webhook HTTP in the Development runtime environment only (default `false`) |
+| Cratis__Chronicle__Webhooks__AllowedHosts__0 | First globally approved webhook host; use successive indices for more |
+| Cratis__Chronicle__Webhooks__EventStoreAllowedHosts__orders__0 | First approved webhook host for `orders`; replaces the global list |
+| Cratis__Chronicle__ExternalServices__Validation | Independent HTTP capture destination mode, with the same modes and build-dependent defaults as Webhooks |
+| Cratis__Chronicle__ExternalServices__AllowInsecureHttp | Allow capture HTTP in the Development runtime environment only (default `false`) |
+| Cratis__Chronicle__ExternalServices__AllowedHosts__0 | First globally approved capture host |
+| Cratis__Chronicle__ExternalServices__EventStoreAllowedHosts__orders__0 | First approved capture host for `orders`; replaces the global list |
 | Cratis__Chronicle__Authentication__Enabled | Whether authentication is enforced (default `true`) - see [Authentication](authentication.md#turning-authentication-off) before turning it off |
 | Cratis__Chronicle__Authentication__Authority | External OAuth authority URL |
 | Cratis__Chronicle__Authentication__DefaultAdminUsername | Default admin username |
+| Cratis__Chronicle__Authentication__InitialAdminSetupToken | Optional initial administrator setup token; supply through secret management and remove after setup |
 | Cratis__Chronicle__Authentication__AdminUser__Username | Bootstrap admin username (falls back to the default admin username when empty) |
 | Cratis__Chronicle__Authentication__AdminUser__Password | Bootstrap admin password, hashed on first startup |
 | Cratis__Chronicle__Authentication__AdminUser__Email | Bootstrap admin email address |
@@ -64,6 +77,8 @@ the same way (`compliance.encryption.migrateFromDefaultStorage` becomes
 | Cratis__Chronicle__Clustering__Type | Clustering provider — `Localhost` (default), `MongoDB` (MongoDB storage), or `Sql` (SQL Server/PostgreSQL storage) |
 | Cratis__Chronicle__Clustering__ClusterId | Orleans cluster id, identical on every node |
 | Cratis__Chronicle__Clustering__ServiceId | Orleans service id, identical on every node |
+| Cratis__Chronicle__Clustering__GatewayEnabled | Enable the Orleans client gateway (default `true`); set `false` when applications use only HTTP/gRPC |
+| Cratis__Chronicle__Clustering__AdvertisedIP | In MongoDB/SQL clustering, advertise and bind the silo and enabled gateway to this local interface address |
 | Cratis__Chronicle__Clustering__SiloPort | Orleans silo port (default 11111) |
 | Cratis__Chronicle__Clustering__GatewayPort | Orleans gateway port (default 30000) |
 | Cratis__Chronicle__Clustering__AdvertisedIP | IP address this node advertises to the cluster |

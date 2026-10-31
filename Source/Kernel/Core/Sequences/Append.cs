@@ -28,7 +28,7 @@ namespace Cratis.Chronicle.Sequences;
 /// <param name="Occurred">Optional occurred time. If null, the server sets it to approximately the time of append.</param>
 /// <param name="Subject">Optional subject identifying the compliance target for the event. Defaults to the event source.</param>
 /// <param name="Causation">Optional caller-supplied causation chain. Defaults to the request causation when not provided.</param>
-/// <param name="CausedBy">Optional caller-supplied identity. Defaults to the current principal when not provided.</param>
+/// <param name="CausedBy">Optional identity for application callers. Chronicle users are always recorded as the current principal.</param>
 /// <param name="ConcurrencyScope">Optional concurrency scope to validate the append against. Defaults to no check when not provided.</param>
 /// <param name="EventSource">Optional name of the registered event source definition the event is appended through.</param>
 /// <param name="EffectReceipt">Optional occurrence effect to commit atomically with this event.</param>
@@ -101,7 +101,7 @@ public record Append(
         var content = JsonNode.Parse(Content)!.AsObject();
         var correlationId = CorrelationId ?? Guid.NewGuid();
         var causationChain = Causation?.ToChronicle() ?? causation.GetCurrentChain();
-        var identity = CausedBy?.ToChronicle() ?? principalAccessor.Current.ToIdentity();
+        var identity = principalAccessor.Current.ResolveCausedBy(CausedBy);
         var tags = (Tags ?? []).Select(tag => (Tag)tag);
         var scope = ConcurrencyScope?.ToChronicle() ?? Concepts.EventSequences.Concurrency.ConcurrencyScope.None;
         var subject = string.IsNullOrWhiteSpace(Subject) ? null : new Subject(Subject);
@@ -142,14 +142,14 @@ public record Append(
             events,
             correlationId,
             Causation?.ToChronicle() ?? causation.GetCurrentChain(),
-            CausedBy?.ToChronicle() ?? principalAccessor.Current.ToIdentity(),
+            principalAccessor.Current.ResolveCausedBy(CausedBy),
             scopes,
             EffectReceipt!).WithUnknownOutcome(correlationId);
 
         return new AppendResult
         {
             CorrelationId = result.CorrelationId,
-            SequenceNumber = result.SequenceNumbers.FirstOrDefault() ?? Concepts.Events.EventSequenceNumber.Unavailable,
+            SequenceNumber = result.SequenceNumbers.FirstOrDefault() ?? EventSequenceNumber.Unavailable,
             ConstraintViolations = result.ConstraintViolations,
             ConcurrencyViolation = result.ConcurrencyViolations.FirstOrDefault(),
             Errors = result.Errors,

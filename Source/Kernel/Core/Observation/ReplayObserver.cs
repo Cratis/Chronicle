@@ -19,6 +19,7 @@ namespace Cratis.Chronicle.Observation;
 /// <param name="ObserverId">The unique identifier of the observer to replay.</param>
 /// <param name="EventSequenceId">The identifier of the event sequence; uses the stored observer sequence when empty, or the event log if unavailable.</param>
 [Command]
+[Cratis.Arc.Authorization.Authorize(Policy = Security.WellKnownAuthorizationPolicies.AdministratorOperations)]
 [BelongsTo(WellKnownServices.Observers)]
 public record ReplayObserver(string EventStore, string Namespace, string ObserverId, string EventSequenceId)
 {

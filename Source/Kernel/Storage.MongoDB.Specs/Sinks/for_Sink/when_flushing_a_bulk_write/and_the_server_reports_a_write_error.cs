@@ -34,4 +34,5 @@ public class and_the_server_reports_a_write_error : given.an_ordered_bulk_write
     [Fact] void should_carry_the_error_code_with_the_failed_partition() => _failedPartitions.Single().Reason.ShouldContain("11000");
     [Fact] void should_carry_the_server_message_with_the_failed_partition() => _failedPartitions.Single().Reason.ShouldContain(WriteErrorMessage);
     [Fact] void should_not_carry_the_document_with_the_failed_partition() => _failedPartitions.Single().Reason.ShouldNotContain(DocumentContent);
+    [Fact] void should_not_mark_the_outcome_unknown() => _failedPartitions.Any(_ => _.OutcomeUnknown).ShouldBeFalse();
 }

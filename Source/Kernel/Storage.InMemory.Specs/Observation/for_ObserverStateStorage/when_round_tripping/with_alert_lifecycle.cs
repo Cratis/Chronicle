@@ -28,7 +28,7 @@ public class with_alert_lifecycle : Specification
 
     async Task Because()
     {
-        await _storage.Save(_original);
+        await _storage.Save(_original, Concepts.EventSequences.EventSequenceId.Log);
 
         // Replacing the local record must not mutate durable metadata through a shared mutable child object.
         var changed = _original with { AlertRevision = 99, QuarantineEpisodeId = null };

@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Arc.Commands;
+using Cratis.Chronicle.Sequences;
 using FluentValidation;
 
 namespace Cratis.Chronicle.Captures;
@@ -20,6 +21,7 @@ internal class SaveCaptureValidator : CommandValidator<SaveCapture>
     public SaveCaptureValidator()
     {
         RuleFor(_ => _.EventStore).NotEmpty().WithMessage("Event store name is required.");
+        RuleFor(_ => _.EventStore).NotSystemEventStore();
         RuleFor(_ => _.Declaration).NotEmpty().WithMessage("Declaration is required.");
     }
 }

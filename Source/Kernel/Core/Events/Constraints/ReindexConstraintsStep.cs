@@ -32,7 +32,7 @@ namespace Cratis.Chronicle.Events.Constraints;
 /// existing snapshot, that entire owner's rows stay untouched and a structured warning identifies the
 /// constraint and event position. Other constraints still rebuild; no reopening tombstones are retained.
 /// </remarks>
-public class ReindexConstraintsStep(
+public partial class ReindexConstraintsStep(
     [PersistentState(nameof(ReindexConstraintsStepState), Cratis.Orleans.WellKnownGrainStorageProviders.JobSteps)]
     IPersistentState<ReindexConstraintsStepState> state,
     IJobStepThrottle throttle,
@@ -53,6 +53,7 @@ public class ReindexConstraintsStep(
     /// <param name="uniqueConstraintsStorage">The <see cref="IUniqueConstraintsStorage"/> to update.</param>
     /// <param name="beforeWrite">Called before the first write to a scope.</param>
     /// <param name="personalProperties">The event's top-level properties that carry personal data.</param>
+    /// <param name="beforeClaim">Receives the claimed index value before the update.</param>
     /// <returns>Awaitable task.</returns>
     internal static async Task ReindexEvent(
         UniqueConstraintDefinition definition,
@@ -62,7 +63,8 @@ public class ReindexConstraintsStep(
         UniqueConstraintValidator validator,
         IUniqueConstraintsStorage uniqueConstraintsStorage,
         Action? beforeWrite = null,
-        IReadOnlyCollection<string>? personalProperties = null)
+        IReadOnlyCollection<string>? personalProperties = null,
+        Action<string>? beforeClaim = null)
     {
         var scopeKey = definition.Scope.BuildScopeKey(
             @event.Context.EventSourceType,
@@ -88,6 +90,15 @@ public class ReindexConstraintsStep(
         if (StoredConstraintEventContent.IsErased(definition, context))
         {
             return;
+        }
+
+        if (beforeClaim is not null && !definition.RemovedWith.Contains(context.EventTypeId) && definition.SupportsEventType(context.EventTypeId))
+        {
+            var properties = definition.GetPropertiesAndValues(context).ToList();
+            if (properties.Count > 0)
+            {
+                beforeClaim(properties.GetValue(definition.IgnoreCasing));
+            }
         }
 
         await context.Update(@event.Context.SequenceNumber);
@@ -161,6 +172,10 @@ public class ReindexConstraintsStep(
                 var storedContent = new StoredConstraintEventContent(jobStepKey.Scope, jobStepKey.Namespace, eventStoreStorage.EventTypes, complianceManager, expandoObjectConverter);
                 await ReindexStoredEvents(namespaceStorage.GetEventSequence(currentState.EventSequenceId), storedContent, closingReindexer, tracking, cancellationToken);
                 await closingReindexer.Commit(cancellationToken, () => progress.WroteAnything = true);
+                if (!await ReportCollisions(progress, cancellationToken))
+                {
+                    return JobStepResult.Failed(PerformJobStepError.CancelledWithNoResult());
+                }
 
                 return JobStepResult.Succeeded(null);
             }
@@ -240,12 +255,14 @@ public class ReindexConstraintsStep(
     {
         foreach (var definition in tracking.Definitions)
         {
+            string? claimedValue = null;
             try
             {
-                await ReindexEvent(definition, @event, content, tracking.Seen[definition.Name], tracking.Validators[definition.Name], tracking.Storage, () => tracking.Progress.WroteAnything = true, personalProperties);
+                await ReindexEvent(definition, @event, content, tracking.Seen[definition.Name], tracking.Validators[definition.Name], tracking.Storage, () => tracking.Progress.WroteAnything = true, personalProperties, value => claimedValue = value);
             }
             catch (DuplicateUniqueConstraintValue error)
             {
+                tracking.Progress.RecordCollision(definition.Name, claimedValue, @event.Context.SequenceNumber);
                 logger.SkippingDuplicateUniqueConstraintClaim(definition.Name, @event.Context.EventSourceId, @event.Context.SequenceNumber, error);
             }
         }
@@ -270,13 +287,6 @@ public class ReindexConstraintsStep(
                 await Task.Delay(TimeSpan.FromSeconds(1 << attempt), CancellationToken.None);
             }
         }
-    }
-
-    sealed class RebuildProgress
-    {
-        public bool WroteAnything { get; set; }
-
-        public EventSequenceNumber? ProcessedThrough { get; set; }
     }
 
     sealed record RebuildTracking(

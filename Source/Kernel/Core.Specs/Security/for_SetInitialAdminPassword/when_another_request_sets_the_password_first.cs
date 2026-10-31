@@ -24,6 +24,7 @@ public class when_another_request_sets_the_password_first : Specification
     IEventSequence _eventLog;
     IEventSerializer _eventSerializer;
     SetInitialAdminPassword _command;
+    IInitialAdminSetupTokens _tokens;
     Exception _exception;
 
     void Establish()
@@ -57,7 +58,9 @@ public class when_another_request_sets_the_password_first : Specification
             Arg.Any<ConcurrencyScope>()).Returns(AppendResult.Failed(
                 CorrelationId.New(),
                 new ConcurrencyViolation(_administratorId, EventSequenceNumber.BeforeFirst, EventSequenceNumber.First)));
-        _command = new(_administratorId, "a-secure-password", "a-secure-password");
+        _tokens = Substitute.For<IInitialAdminSetupTokens>();
+        _tokens.IsValid(_administratorId, "setup-token").Returns(true);
+        _command = new(_administratorId, "a-secure-password", "a-secure-password", "setup-token");
     }
 
     async Task Because() =>
@@ -66,6 +69,7 @@ public class when_another_request_sets_the_password_first : Specification
             _storage,
             Microsoft.Extensions.Options.Options.Create(new Configuration.ChronicleOptions()),
             _eventSerializer,
+            _tokens,
             CorrelationId.New()));
 
     [Fact] void should_report_that_setup_already_completed() => _exception.ShouldBeOfExactType<InitialAdminPasswordAlreadyUsed>();

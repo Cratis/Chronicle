@@ -25,6 +25,7 @@ public class a_performing_job_step : Specification
     protected TestKitSilo _silo = new();
     protected Storage.IStorage _storage;
     protected IObserver _observer;
+    protected IObserverServiceClient _observerServiceClient;
     protected ISomeObserverType _observerSubscriber;
     protected IConfigurationForObserverProvider _configurationProvider;
     protected Observers _observersConfig;
@@ -76,7 +77,7 @@ public class a_performing_job_step : Specification
 
         _silo.AddProbe(_ => _observer);
         _silo.AddProbe(_ => _observerSubscriber);
-        _silo.AddService(_storage);
+        RegisterStorageServices();
         _silo.AddService<TimeProvider>(TimeProvider.System);
         _silo.AddService(Substitute.For<IJobStepThrottle>());
         _silo.AddService<IObserverSubscriberSelector>(new RoundRobinObserverSubscriberSelector());
@@ -117,5 +118,14 @@ public class a_performing_job_step : Specification
             JobStepId.New(),
             new JobStepKey(JobId.New(), "event-store", "event-store-namespace"));
         _jobStep.SetupForTesting(_observer, _observerSubscriber, "some-partition", subscription);
+    }
+
+    void RegisterStorageServices()
+    {
+        _silo.AddService(_storage);
+        _observerServiceClient = Substitute.For<IObserverServiceClient>();
+        _observerServiceClient.FlushAllFor(Arg.Any<ObserverDetails>(), Arg.Any<bool>())
+            .Returns(Task.FromResult<IReadOnlyDictionary<SiloAddress, Guid[]>>(new Dictionary<SiloAddress, Guid[]>()));
+        _silo.AddService(_observerServiceClient);
     }
 }

@@ -33,6 +33,7 @@ Clustering configuration controls how multiple Chronicle Server nodes form one O
     "type": "MongoDB",
     "siloPort": 11111,
     "gatewayPort": 30000,
+    "gatewayEnabled": true,
     "clusterId": "chronicle",
     "serviceId": "chronicle",
     "roles": {
@@ -65,8 +66,7 @@ For SQL Server or PostgreSQL storage, explicitly set `clustering.type` to `Sql`:
 
 For SQL Server, use `storage.type: MsSql` and its connection details instead. Every node must connect to
 one shared cluster database (including the same configured SQL schema), not a per-node database.
-Membership uses Chronicle's SQL connection resolution and schema provisioning. Silo and gateway ports
-must be reachable between nodes; use `advertisedIP` when the default address is not reachable.
+Membership uses Chronicle's SQL connection resolution and schema provisioning. Silo ports must be reachable between nodes, and enabled gateways must be reachable by trusted Orleans clients; use `advertisedIP` when the default address is not reachable.
 
 The defunct-silo cleanup settings apply to both `Sql` and `MongoDB`: the sweep runs hourly by default
 and removes defunct entries older than three hours. Set the cleanup period to `00:00:00` to disable it.
@@ -81,10 +81,11 @@ After a node is lost, observers can lag behind the event log until the observer 
 | --- | --- | --- | --- |
 | type | string | Localhost | Cluster membership. `Localhost` is single node development clustering. `MongoDB` keeps membership in MongoDB storage. `Sql` keeps membership in the SQL Server or PostgreSQL cluster database. Multi-node clustering is explicit opt-in; all nodes must share the cluster database and cluster identity. |
 | siloPort | number | 11111 | Port for silo to silo communication. Must differ per node when multiple nodes run on one machine. |
-| gatewayPort | number | 30000 | Port for the silo's client gateway. Must differ per node when multiple nodes run on one machine. |
+| gatewayPort | number | 30000 | Port for the silo's client gateway when enabled. Must differ per node when multiple nodes run on one machine. |
+| gatewayEnabled | boolean | true | Set to `false` to disable the Orleans client gateway on this node. HTTP and gRPC remain available. |
 | clusterId | string | chronicle | The cluster id - all nodes that should form one cluster must share it. |
 | serviceId | string | chronicle | The service id - all nodes that should form one cluster must share it. |
-| advertisedIP | string | | The IP address the silo advertises to other cluster members. Resolved from the machine's host name when not set; set it explicitly (e.g. `127.0.0.1`) when running multiple nodes on one machine. |
+| advertisedIP | string | | In MongoDB and SQL clustering, the IP address advertised to other silos and bound by the silo and enabled gateway listeners. Must belong to a local interface and be reachable from peer nodes. When omitted, Orleans keeps its automatic address selection and listener defaults. Localhost clustering keeps its loopback address selection. |
 | defunctSiloCleanupPeriod | timespan | 01:00:00 | How often defunct silo entries are swept out of the membership table when using `MongoDB` or `Sql` clustering. Without the sweep, dead entries from restarts and failed rollouts accumulate and slow down or block new nodes joining. Set to `00:00:00` to disable the sweep. |
 | defunctSiloExpiration | timespan | 03:00:00 | The age at which a defunct membership entry is removed by the sweep. A node never reuses a silo identity, so dead entries only have diagnostic value. |
 | probeTimeout | timespan | Orleans default | Interval between liveness probes and the timeout for each probe. Applies to `MongoDB` and `Sql` clustering. |
@@ -199,6 +200,60 @@ Role-based placement is applied by custom Orleans placement directors - one for 
 ## Deploying a single node
 
 With localhost clustering, including SQL deployments that have not opted into `Sql` clustering, the deployment must run one instance at a time. Stop the old instance before starting the new one. In Azure Container Apps, use single revision mode with no overlap between revisions. In Kubernetes, use the `Recreate` deployment strategy, or a rolling update with `maxSurge: 0`.
+
+## Listener and network boundaries
+
+The defaults are unchanged: the gateway is enabled, and omitting `advertisedIP` leaves Orleans' address selection and listener defaults intact. For MongoDB or SQL clustering, setting `advertisedIP` explicitly binds the silo and enabled gateway to that address. Use a private interface or pod IP, not a public NAT address absent from the host. Peers must be able to route to it. Localhost mode retains its existing loopback selection.
+
+If applications use Chronicle's HTTP or gRPC APIs rather than an Orleans client, disable the Orleans gateway on every applicable node:
+
+```json
+{
+  "clustering": {
+    "gatewayEnabled": false
+  }
+}
+```
+
+The environment-variable equivalent is `Cratis__Chronicle__Clustering__GatewayEnabled=false`. The configured `gatewayPort` is retained for later re-enabling, but Orleans receives port `0` while disabled. The silo port remains necessary for multi-node clusters. Changing either setting requires a server restart; mixed-version nodes can coexist, but older nodes do not honor `gatewayEnabled`.
+
+The silo protocol on port 11111 and the Orleans client protocol on port 30000 do not use Chronicle's HTTP authentication boundary. Restrict them to trusted cluster peers and, only if needed, trusted Orleans clients. Do not publish these ports on an internet-facing load balancer, ingress, or host interface. Disabling the gateway does not protect the silo port. Listener binding and firewall policies are not transport encryption or peer authentication.
+
+For Docker Compose, publish only the required HTTP/gRPC and health ports. Keep the silo and any enabled gateway on a dedicated private Docker network shared only by trusted nodes. Leaving a port out of `ports` prevents host publication, but does not isolate containers sharing the network. See [Docker Compose](../docker-compose.md#private-cluster-ports).
+
+### Kubernetes ingress policy example
+
+This example selects Chronicle pods labeled `app: chronicle` in the policy's namespace. It allows silo traffic only from other Chronicle pods in that namespace, and API traffic only from namespaces labeled `chronicle-clients: "true"`. It deliberately does not allow the Orleans gateway; set `gatewayEnabled` to `false` when it is not needed. Adapt selectors and configured ports to your deployment, including any ingress controller and health probes. If an Orleans client needs the gateway, add a separate narrow allow rule for its trusted pods on the configured gateway port.
+
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: chronicle-ingress
+spec:
+  podSelector:
+    matchLabels:
+      app: chronicle
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: chronicle
+      ports:
+        - protocol: TCP
+          port: 11111
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              chronicle-clients: "true"
+      ports:
+        - protocol: TCP
+          port: 35000
+```
+
+A NetworkPolicy-capable CNI is required. Policies are additive: another allow-all policy can broaden access. This ingress-only example does not restrict egress or configure access to storage, DNS, or other dependencies.
 
 ## Architecture
 

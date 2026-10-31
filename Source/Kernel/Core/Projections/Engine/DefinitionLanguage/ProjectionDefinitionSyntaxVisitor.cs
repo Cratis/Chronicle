@@ -130,6 +130,7 @@ public class ProjectionDefinitionSyntaxVisitor(ProjectionOwner owner, IEnumerabl
     {
         if (isChildContext)
         {
+            context.Every = context.Every with { IncludeChildren = every.IncludeChildren };
             var properties = (Dictionary<PropertyPath, string>)context.Every.Properties;
             foreach (var (property, expression) in ProcessMappings(every.Mappings))
             {

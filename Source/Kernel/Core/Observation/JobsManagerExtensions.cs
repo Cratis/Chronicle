@@ -2,7 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using Cratis.Chronicle.Concepts.Keys;
+using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Observation.Jobs;
+using Cratis.Monads;
 using Cratis.Orleans.Jobs;
 using Cratis.Orleans.Storage.Jobs;
 using Microsoft.Extensions.Logging;
@@ -23,6 +26,8 @@ public static partial class JobsManagerExtensions
         JobStatus.Stopped
     ];
 
+    static readonly JobStatus[] _outstandingStatuses = [.. _unfinishedStatuses, JobStatus.Removing];
+
     /// <summary>
     /// Gets the jobs that have not finished - the only ones an observer can pause, resume, stop or wait on.
     /// </summary>
@@ -40,6 +45,23 @@ public static partial class JobsManagerExtensions
         jobsManager.GetJobs(new JobQuery { Statuses = _unfinishedStatuses, Take = 0 });
 
     /// <summary>
+    /// Gets jobs that still own work, including jobs draining during removal.
+    /// </summary>
+    /// <param name="jobsManager">The jobs manager.</param>
+    /// <returns>The outstanding jobs.</returns>
+    public static Task<IImmutableList<JobState>> GetOutstandingJobs(this IJobsManager jobsManager) =>
+        jobsManager.GetJobs(new JobQuery { Statuses = _outstandingStatuses, Take = 0 });
+
+    /// <summary>
+    /// Gets outstanding jobs, preserving lookup failures so they cannot be mistaken for no jobs,
+    /// unlike the jobs manager lookup which returns an empty list on failure.
+    /// </summary>
+    /// <param name="jobStorage">The job storage.</param>
+    /// <returns>The outstanding jobs or the lookup failure.</returns>
+    public static Task<Catch<IImmutableList<JobState>>> GetOutstandingJobs(this IJobStorage jobStorage) =>
+        jobStorage.GetJobs(new JobQuery { Statuses = _outstandingStatuses, Take = 0 });
+
+    /// <summary>
     /// Starts or resumes an observer job.
     /// </summary>
     /// <param name="jobsManager">The jobs manager.</param>
@@ -51,6 +73,7 @@ public static partial class JobsManagerExtensions
     /// <param name="onStartNew">The optional callback when a new job needs to be started.</param>
     /// <param name="onResumeRefused">The optional callback when a stopped job was found but refused to resume, so nothing owns the work.</param>
     /// <param name="concludedJobs">The optional jobs that have already reported their work as done and therefore can not own it, even while still finalizing. Read after the lookup and never changed; forgetting them is up to their owner.</param>
+    /// <param name="maxJobsToDrop">The most stopped jobs that were never prepared to delete instead of resuming them; 0 drops none. Cratis.Orleans refuses to resume them, so they would block the work for good. When any exist, up to the allowed number is dropped and no job is resumed or started in this call; the next call looks the jobs up again.</param>
     /// <typeparam name="TJob">The type of the job.</typeparam>
     /// <typeparam name="TRequest">The type of the observer request.</typeparam>
     /// <returns>The <see cref="JobId"/> of the running, resumed, or newly started job; or <see cref="JobId.NotSet"/> if no job could be started.</returns>
@@ -63,7 +86,8 @@ public static partial class JobsManagerExtensions
         Func<Task>? onResume = null,
         Func<Task>? onStartNew = null,
         Func<Task>? onResumeRefused = null,
-        ICollection<JobId>? concludedJobs = null)
+        ICollection<JobId>? concludedJobs = null,
+        int maxJobsToDrop = 0)
         where TJob : IJob<TRequest>
         where TRequest : class, IObserverJobRequest =>
         jobsManager.StartOrResumeObserverJobFor<TJob, TRequest>(
@@ -74,7 +98,8 @@ public static partial class JobsManagerExtensions
             onResume,
             onStartNew,
             onResumeRefused,
-            concludedJobs);
+            concludedJobs,
+            maxJobsToDrop);
 
     /// <summary>
     /// Starts or resumes an observer job, creating the request only once the existing jobs have been looked up.
@@ -88,6 +113,7 @@ public static partial class JobsManagerExtensions
     /// <param name="onStartNew">The optional callback when a new job needs to be started.</param>
     /// <param name="onResumeRefused">The optional callback when a stopped job was found but refused to resume, so nothing owns the work.</param>
     /// <param name="concludedJobs">The optional jobs that have already reported their work as done and therefore can not own it, even while still finalizing. Read after the lookup and never changed; forgetting them is up to their owner.</param>
+    /// <param name="maxJobsToDrop">The most stopped jobs that were never prepared to delete instead of resuming them; 0 drops none. Cratis.Orleans refuses to resume them, so they would block the work for good. When any exist, up to the allowed number is dropped and no job is resumed or started in this call; the next call looks the jobs up again.</param>
     /// <typeparam name="TJob">The type of the job.</typeparam>
     /// <typeparam name="TRequest">The type of the observer request.</typeparam>
     /// <returns>The <see cref="JobId"/> of the running, resumed, or newly started job; or <see cref="JobId.NotSet"/> if no job could be started.</returns>
@@ -96,7 +122,7 @@ public static partial class JobsManagerExtensions
     /// before the lookup still carries the position from before that job's work, and a replacement started from it
     /// delivers that work a second time.
     /// </remarks>
-    public static async Task<JobId> StartOrResumeObserverJobFor<TJob, TRequest>(
+    public static Task<JobId> StartOrResumeObserverJobFor<TJob, TRequest>(
         this IJobsManager jobsManager,
         ILogger logger,
         Func<TRequest> createRequest,
@@ -105,7 +131,51 @@ public static partial class JobsManagerExtensions
         Func<Task>? onResume = null,
         Func<Task>? onStartNew = null,
         Func<Task>? onResumeRefused = null,
-        ICollection<JobId>? concludedJobs = null)
+        ICollection<JobId>? concludedJobs = null,
+        int maxJobsToDrop = 0)
+        where TJob : IJob<TRequest>
+        where TRequest : class, IObserverJobRequest =>
+        jobsManager.StartOrResumeObserverJobReportingDrops<TJob, TRequest>(
+            logger,
+            createRequest,
+            requestPredicate,
+            onAlreadyRunningJob,
+            onResume,
+            onStartNew,
+            onResumeRefused,
+            concludedJobs,
+            maxJobsToDrop,
+            null);
+
+    /// <summary>
+    /// Starts or resumes an observer job like the public overload, telling the caller how many jobs it deleted.
+    /// </summary>
+    /// <param name="jobsManager">The jobs manager.</param>
+    /// <param name="logger">The logger.</param>
+    /// <param name="createRequest">Creates the observer request after the existing jobs have been looked up.</param>
+    /// <param name="requestPredicate">The optional predicate.</param>
+    /// <param name="onAlreadyRunningJob">The optional callback when there already is a running job.</param>
+    /// <param name="onResume">The optional callback when a job needs to be resumed.</param>
+    /// <param name="onStartNew">The optional callback when a new job needs to be started.</param>
+    /// <param name="onResumeRefused">The optional callback when a stopped job was found but refused to resume, so nothing owns the work.</param>
+    /// <param name="concludedJobs">The optional jobs that have already reported their work as done.</param>
+    /// <param name="maxJobsToDrop">The most never-prepared stopped jobs to delete; 0 drops none.</param>
+    /// <param name="onJobsDropped">The optional callback with the number of jobs that were deleted, called before anything is resumed or started.</param>
+    /// <typeparam name="TJob">The type of the job.</typeparam>
+    /// <typeparam name="TRequest">The type of the observer request.</typeparam>
+    /// <returns>The <see cref="JobId"/> of the running, resumed, or newly started job; or <see cref="JobId.NotSet"/> if no job could be started.</returns>
+    internal static async Task<JobId> StartOrResumeObserverJobReportingDrops<TJob, TRequest>(
+        this IJobsManager jobsManager,
+        ILogger logger,
+        Func<TRequest> createRequest,
+        Func<TRequest, bool>? requestPredicate,
+        Func<Task>? onAlreadyRunningJob,
+        Func<Task>? onResume,
+        Func<Task>? onStartNew,
+        Func<Task>? onResumeRefused,
+        ICollection<JobId>? concludedJobs,
+        int maxJobsToDrop,
+        Action<int>? onJobsDropped)
         where TJob : IJob<TRequest>
         where TRequest : class, IObserverJobRequest
     {
@@ -114,7 +184,7 @@ public static partial class JobsManagerExtensions
         onResume ??= () => Task.CompletedTask;
         onStartNew ??= () => Task.CompletedTask;
         onResumeRefused ??= () => Task.CompletedTask;
-        var jobs = await jobsManager.GetUnfinishedJobs();
+        var jobs = await jobsManager.GetOutstandingJobs();
         var request = createRequest();
 
         // The exclusion is read after the lookup, so it covers jobs that concluded while it was in flight. A listing is no
@@ -135,6 +205,12 @@ public static partial class JobsManagerExtensions
         }
 
         var pausedJobs = jobs.Where(job => job.Status == JobStatus.Stopped).ToList();
+        if (maxJobsToDrop > 0 && !await jobsManager.TryDropJobsThatCanNeverResume(logger, pausedJobs, maxJobsToDrop, onJobsDropped))
+        {
+            // A job that can never resume blocks the work, or may still do so after a failed delete, so nothing is started until a later lookup lists none. The caller re-arms its own retry.
+            return JobId.NotSet;
+        }
+
         var pausedJob = pausedJobs.FirstOrDefault();
         if (pausedJob is not null)
         {
@@ -149,16 +225,7 @@ public static partial class JobsManagerExtensions
             {
                 logger.CouldNotResumeJob(pausedJob.Id);
                 await onResumeRefused.Invoke();
-
-                // A job that was stopped before it prepared any step has nothing to resume and never will, so every
-                // later lookup would find it, refuse it again and leave the observer retrying catch-up in a tight
-                // loop. It carries no work: remove it so the next catch-up starts a job of its own.
-                if (JobLiveness.NeverPrepared(pausedJob))
-                {
-                    logger.RemovingUnresumableJob(pausedJob.Id);
-                    await jobsManager.Delete(pausedJob.Id);
-                }
-
+                await jobsManager.RemoveRefusedJobThatNeverPrepared(logger, pausedJob, maxJobsToDrop, onJobsDropped);
                 return JobId.NotSet;
             }
 
@@ -182,7 +249,8 @@ public static partial class JobsManagerExtensions
     }
 
     /// <summary>
-    /// Gets whether a job is alive: preparing or running with work still in flight, not merely recorded as running.
+    /// Gets whether a job is alive: preparing, running or removing with work still in flight.
+    /// A removing job still drains and reports back when its workers stop, so it still owns its work.
     /// </summary>
     /// <param name="job">The <see cref="JobState"/> to check.</param>
     /// <param name="now">The current time.</param>
@@ -193,14 +261,110 @@ public static partial class JobsManagerExtensions
     /// a hung completion. Treating it as running told an operator a replay had started while nothing was created.
     /// </remarks>
     internal static bool IsLive(this JobState job, DateTimeOffset now) =>
-        job.IsPreparingOrRunning && !JobLiveness.HasConcludedAllStepsLongAgo(job, now);
+        (job.IsPreparingOrRunning || job.Status == JobStatus.Removing) && !JobLiveness.HasConcludedAllStepsLongAgo(job, now);
 
     /// <summary>
-    /// Gets whether a job with the given status has finished for good - the statuses <see cref="GetUnfinishedJobs"/> never lists.
+    /// Gets whether a job ever reached its steps. Mirrors Job.JobIsPrepared in Cratis.Orleans: a stopped job that
+    /// was never prepared is refused when resumed, so it can never run again.
+    /// </summary>
+    /// <param name="job">The <see cref="JobState"/> to check.</param>
+    /// <returns>True if the job has started its steps.</returns>
+    internal static bool WasEverPrepared(this JobState job) => job.StatusChanges.Any(_ => _.Status == JobStatus.StartingSteps);
+
+    /// <summary>
+    /// Gets whether a job with the given status has finished for good - excluding jobs still draining during removal.
     /// </summary>
     /// <param name="status">The <see cref="JobStatus"/> to check.</param>
-    /// <returns>True if the job has finished; false if it is preparing, running or stopped.</returns>
-    internal static bool HasFinished(this JobStatus status) => !_unfinishedStatuses.Contains(status);
+    /// <returns>True if the job has finished; false if it is preparing, running, stopped or removing.</returns>
+    internal static bool HasFinished(this JobStatus status) => !_outstandingStatuses.Contains(status);
+
+    /// <summary>
+    /// Finds partitions still owned by outstanding jobs of the requested kind and observer.
+    /// </summary>
+    /// <param name="jobs">The jobs to inspect.</param>
+    /// <param name="observerKey">The observer that owns the work.</param>
+    /// <param name="now">The current time.</param>
+    /// <typeparam name="TRequest">The partition job request kind.</typeparam>
+    /// <returns>The held partition keys.</returns>
+    internal static ISet<Key> PartitionsHeldBy<TRequest>(this IEnumerable<JobState> jobs, ObserverKey observerKey, DateTimeOffset now)
+        where TRequest : ObserverPartitionedJobRequest =>
+        jobs.Where(job =>
+            job.Request is TRequest request &&
+            request.ObserverKey == observerKey &&
+            !job.Status.HasFinished() &&
+            !JobLiveness.HasConcludedAllStepsLongAgo(job, now))
+            .Select(job => ((TRequest)job.Request).Key)
+            .ToHashSet();
+
+    /// <summary>
+    /// Removes a stopped job whose resume was refused when it was stopped before it prepared any step.
+    /// </summary>
+    /// <param name="jobsManager">The jobs manager.</param>
+    /// <param name="logger">The logger.</param>
+    /// <param name="refusedJob">The job that refused to resume.</param>
+    /// <param name="maxJobsToDrop">The drops left in the caller's budget.</param>
+    /// <param name="onJobsDropped">The optional callback with the number of jobs deleted; set when the caller owns a drop budget.</param>
+    /// <returns>An awaitable task.</returns>
+    /// <remarks>
+    /// Such a job has nothing to resume and never will, so every later lookup would find it, refuse it again and leave the
+    /// observer retrying catch-up in a tight loop. It carries no work: removing it lets the next catch-up start a job of its
+    /// own. A caller that reports drops owns a per-turn budget of them, and this removal takes from that budget like any
+    /// other drop, so a turn never deletes more than it allows; the job is then removed by a later turn instead.
+    /// </remarks>
+    static async Task RemoveRefusedJobThatNeverPrepared(this IJobsManager jobsManager, ILogger logger, JobState refusedJob, int maxJobsToDrop, Action<int>? onJobsDropped)
+    {
+        var budgetAllowsRemoval = onJobsDropped is null || maxJobsToDrop > 0;
+        if (!JobLiveness.NeverPrepared(refusedJob) || !budgetAllowsRemoval)
+        {
+            return;
+        }
+
+        logger.RemovingUnresumableJob(refusedJob.Id);
+        await jobsManager.Delete(refusedJob.Id);
+        onJobsDropped?.Invoke(1);
+    }
+
+    /// <summary>
+    /// Deletes up to the given number of stopped jobs that were never prepared.
+    /// </summary>
+    /// <param name="jobsManager">The jobs manager.</param>
+    /// <param name="logger">The logger.</param>
+    /// <param name="pausedJobs">The stopped jobs.</param>
+    /// <param name="maxJobsToDrop">The most jobs to delete.</param>
+    /// <param name="onJobsDropped">The optional callback with the number of jobs deleted.</param>
+    /// <returns>True if there was no job that can never resume, so the work can go on; false if any was found, whether or not it could be deleted.</returns>
+    /// <remarks>
+    /// Deleting returns normally even when the job could not be removed, and a lookup that fails reports an empty listing, so
+    /// a deletion is never taken as proof. Once a job has been dropped the caller starts nothing; its next retry looks the
+    /// jobs up afresh and goes on only when no such job is listed.
+    /// </remarks>
+    static async Task<bool> TryDropJobsThatCanNeverResume(this IJobsManager jobsManager, ILogger logger, List<JobState> pausedJobs, int maxJobsToDrop, Action<int>? onJobsDropped)
+    {
+        var unresumableJobs = pausedJobs.Where(job => !job.WasEverPrepared()).ToList();
+        if (unresumableJobs.Count == 0)
+        {
+            return true;
+        }
+
+        var dropped = 0;
+        foreach (var jobToDrop in unresumableJobs.Take(maxJobsToDrop))
+        {
+            try
+            {
+                logger.DroppingJobThatCanNeverResume(jobToDrop.Id);
+                await jobsManager.Delete(jobToDrop.Id);
+                dropped++;
+            }
+            catch (Exception ex)
+            {
+                logger.CouldNotDropJob(jobToDrop.Id, ex);
+                break;
+            }
+        }
+
+        onJobsDropped?.Invoke(dropped);
+        return false;
+    }
 
     [LoggerMessage(LogLevel.Debug, "Found already running job {JobId}")]
     static partial void FoundRunningJob(this ILogger logger, JobId jobId);
@@ -216,6 +380,12 @@ public static partial class JobsManagerExtensions
 
     [LoggerMessage(LogLevel.Warning, "Could not resume stopped job {JobId} - nothing will drive it forward")]
     static partial void CouldNotResumeJob(this ILogger logger, JobId jobId);
+
+    [LoggerMessage(LogLevel.Warning, "Dropping stopped job {JobId} that was never prepared and can never resume")]
+    static partial void DroppingJobThatCanNeverResume(this ILogger logger, JobId jobId);
+
+    [LoggerMessage(LogLevel.Warning, "Could not drop stopped job {JobId} that can never resume")]
+    static partial void CouldNotDropJob(this ILogger logger, JobId jobId, Exception exception);
 
     [LoggerMessage(LogLevel.Warning, "Stopped job {JobId} never prepared a step and can not be resumed - removing it so catch-up can start a new job")]
     static partial void RemovingUnresumableJob(this ILogger logger, JobId jobId);

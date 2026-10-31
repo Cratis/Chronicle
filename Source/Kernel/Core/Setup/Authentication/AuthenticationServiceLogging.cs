@@ -8,6 +8,9 @@ namespace Cratis.Chronicle.Setup.Authentication;
 #pragma warning disable MA0182 // Unused internal type. This is used during DEVELOPMENT builds only.
 internal static partial class AuthenticationServiceLogging
 {
+    [LoggerMessage(LogLevel.Warning, "The configured administrator password is shorter than the recommended minimum of {MinimumLength} characters")]
+    internal static partial void ConfiguredAdminPasswordIsShort(this ILogger<AuthenticationService> logger, int minimumLength);
+
     [LoggerMessage(LogLevel.Debug, "Checking for existing default admin user")]
     internal static partial void CheckingForDefaultAdminUser(this ILogger<AuthenticationService> logger);
 
@@ -49,6 +52,12 @@ internal static partial class AuthenticationServiceLogging
 
     [LoggerMessage(LogLevel.Information, "Successfully registered bootstrap client: {ClientId}")]
     internal static partial void BootstrapClientRegistered(this ILogger<AuthenticationService> logger, string clientId);
+
+    [LoggerMessage(LogLevel.Warning, "Initial administrator setup token: {SetupToken}. Use this token in the Workbench to set the initial password. Remove it from configuration after setup.")]
+    internal static partial void InitialAdministratorSetupToken(this ILogger<AuthenticationService> logger, string setupToken);
+
+    [LoggerMessage(LogLevel.Warning, "Initial administrator setup requires the configured Authentication:InitialAdminSetupToken. Remove it from configuration after setup.")]
+    internal static partial void ConfiguredInitialAdministratorSetupTokenRequired(this ILogger<AuthenticationService> logger);
 
     [LoggerMessage(LogLevel.Debug, "Checking for existing default client credentials with ClientId: {ClientId}")]
     internal static partial void CheckingForDefaultClientCredentials(this ILogger<AuthenticationService> logger, string clientId);

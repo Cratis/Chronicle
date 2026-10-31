@@ -18,15 +18,15 @@ public class with_non_decreasing_revisions : Specification
     {
         _storage = new();
         _control = new(new(7), new("reactor-subscriber", ObserverFilters.None), new Dictionary<EventTypeId, ObserverTypeSetMember>(), []);
-        await _storage.Save(new() { Identifier = "observer", TypeSetControl = _control });
+        await _storage.Save(new() { Identifier = "observer", TypeSetControl = _control }, Concepts.EventSequences.EventSequenceId.Log);
     }
 
     async Task Because()
     {
         var updated = _control with { Registrations = [new("connection-new", null, [], EventGenerationDelivery.Pinned)] };
-        await _storage.Save(new() { Identifier = "observer", TypeSetControl = updated });
+        await _storage.Save(new() { Identifier = "observer", TypeSetControl = updated }, Concepts.EventSequences.EventSequenceId.Log);
         _sameRevision = await _storage.Get("observer");
-        await _storage.Save(new() { Identifier = "observer", TypeSetControl = updated with { Revision = new(8) } });
+        await _storage.Save(new() { Identifier = "observer", TypeSetControl = updated with { Revision = new(8) } }, Concepts.EventSequences.EventSequenceId.Log);
         _nextRevision = await _storage.Get("observer");
     }
 

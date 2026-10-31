@@ -24,12 +24,25 @@ public sealed class DecisionRead<T> : IDecisionRead
     /// <param name="boundary">The pre-fold log boundary.</param>
     /// <param name="types">The model's event types.</param>
     internal DecisionRead(ReadModelKey key, T? instance, EventStoreName store, EventStoreNamespaceName @namespace, EventSequenceNumber boundary, EventType[] types)
+        : this(key, instance, store, @namespace, boundary, null, types)
+    {
+    }
+
+    /// <summary>Creates a guarded read with the observed mutation epoch.</summary>
+    /// <param name="key">The source key.</param>
+    /// <param name="instance">The folded model.</param>
+    /// <param name="store">The event store name.</param>
+    /// <param name="namespace">The event store namespace.</param>
+    /// <param name="boundary">The pre-fold log boundary.</param>
+    /// <param name="mutationEpoch">The mutation epoch of the event sequence observed before the fold, when the kernel reports one.</param>
+    /// <param name="types">The model's event types.</param>
+    internal DecisionRead(ReadModelKey key, T? instance, EventStoreName store, EventStoreNamespaceName @namespace, EventSequenceNumber boundary, ulong? mutationEpoch, EventType[] types)
     {
         Key = key;
         Instance = instance;
         EventStore = store;
         Namespace = @namespace;
-        _scope = new ConcurrencyScope(boundary, key, EventTypes: types);
+        _scope = new ConcurrencyScope(boundary, key, EventTypes: types) { MutationEpoch = mutationEpoch };
         IsProtected = true;
     }
 
@@ -43,12 +56,13 @@ public sealed class DecisionRead<T> : IDecisionRead
     /// <param name="boundary">The pre-fold boundary.</param>
     /// <param name="types">The event types.</param>
     /// <param name="streamScope">The event stream to guard.</param>
-    internal DecisionRead(ReadModelKey key, T? instance, EventStoreName store, EventStoreNamespaceName @namespace, EventSequenceNumber boundary, EventType[] types, DecisionReadStreamScope streamScope)
-        : this(key, instance, store, @namespace, boundary, types)
+    /// <param name="mutationEpoch">The mutation epoch of the event sequence observed before the fold, when the kernel reports one.</param>
+    internal DecisionRead(ReadModelKey key, T? instance, EventStoreName store, EventStoreNamespaceName @namespace, EventSequenceNumber boundary, EventType[] types, DecisionReadStreamScope streamScope, ulong? mutationEpoch = null)
+        : this(key, instance, store, @namespace, boundary, mutationEpoch, types)
     {
         EventStreamType = streamScope.EventStreamType;
         EventStreamId = streamScope.EventStreamId;
-        _scope = new ConcurrencyScope(boundary, streamScope.EventSourceId, streamScope.EventStreamType, streamScope.EventStreamId, streamScope.EventSourceType, types);
+        _scope = new ConcurrencyScope(boundary, streamScope.EventSourceId, streamScope.EventStreamType, streamScope.EventStreamId, streamScope.EventSourceType, types) { MutationEpoch = mutationEpoch };
     }
 
     DecisionRead(ReadModelKey key, T? instance)

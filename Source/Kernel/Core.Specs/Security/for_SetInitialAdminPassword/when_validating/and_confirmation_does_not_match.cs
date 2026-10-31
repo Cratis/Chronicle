@@ -20,7 +20,7 @@ public class and_confirmation_does_not_match : Specification
         _scenario.Services.AddSingleton(storage);
     }
 
-    async Task Because() => _result = await _scenario.Validate(new SetInitialAdminPassword(Guid.NewGuid(), "some-password-123", "some-other-password-123"));
+    async Task Because() => _result = await _scenario.Validate(new SetInitialAdminPassword(Guid.NewGuid(), "some-password-123", "some-other-password-123", "setup-token"));
 
     [Fact] void should_not_be_successful() => _result.ShouldNotBeSuccessful();
     [Fact] void should_have_validation_errors() => _result.ShouldHaveValidationErrors();

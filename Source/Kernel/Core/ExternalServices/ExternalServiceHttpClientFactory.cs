@@ -5,6 +5,7 @@ using System.Net.Http.Headers;
 using Cratis.Chronicle.Concepts.ExternalServices;
 using Cratis.Chronicle.Observation.Webhooks;
 using Cratis.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Cratis.Chronicle.ExternalServices;
 
@@ -12,11 +13,11 @@ namespace Cratis.Chronicle.ExternalServices;
 /// Represents an implementation of <see cref="IExternalServiceHttpClientFactory"/>.
 /// </summary>
 /// <param name="httpClientFactory">The <see cref="IHttpClientFactory"/>.</param>
-/// <param name="oAuthClient">The <see cref="IOAuthClient"/> for acquiring OAuth tokens.</param>
+/// <param name="oAuthClient">The <see cref="IOAuthClient"/> using the external-service destination policy.</param>
 [Singleton]
 public class ExternalServiceHttpClientFactory(
     IHttpClientFactory httpClientFactory,
-    IOAuthClient oAuthClient) : IExternalServiceHttpClientFactory
+    [FromKeyedServices(ExternalServiceHttpClientFactory.HttpClientName)] IOAuthClient oAuthClient) : IExternalServiceHttpClientFactory
 {
     /// <summary>
     /// The name of the <see cref="HttpClient"/> to use.

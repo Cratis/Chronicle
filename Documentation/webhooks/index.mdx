@@ -9,6 +9,10 @@ A webhook forwards events Chronicle observes to an external HTTP endpoint — us
 
 <ChronicleClientTabs snippet="webhooks/index/register" />
 
+An observer is served by either a webhook or connected clients, never both transports at once. Disconnect the clients before registering a webhook with the same observer identifier. Registration is refused while a connected client serves that observer in any namespace of the event store; the .NET client logs a warning and returns normally without changing the webhook registration.
+
+A client stream waits while a webhook serves the observer and resumes through subscription recovery after the webhook is removed. Delivery does not switch transports based on registration timing.
+
 If no event types are configured, the webhook forwards the event types the client knows about when it registers the webhook. An event type the client does not have is not forwarded; the list is refreshed the next time the client registers the webhook.
 
 :::caution[Failed deliveries are retried]
@@ -222,9 +226,13 @@ Configure the Kernel's `Webhooks` section (not client registration options). In 
 }
 ```
 
-`Validation` defaults to **Warn** for this release. Non-compliant existing receivers continue to work,
-with structured warnings. **Enforce** rejects HTTP, hosts outside the allow-list, and private/special
-resolved addresses unless the host is explicitly approved. Stored active webhooks are evaluated against
+`Validation` defaults to **Warn** in Development builds and **BlockLocalAddresses** in other builds.
+`Warn` permits violations with structured warnings. `BlockLocalAddresses` blocks loopback (including
+IPv4-mapped loopback), IPv4 `169.254/16` link-local and `0/8` unspecified addresses, and IPv6 `fe80::/10`
+link-local and `::` unspecified addresses, unless the host is explicitly approved. It warns rather than
+blocks for other private/special addresses, HTTP, and missing host approval. **BlockPrivateAddresses**
+also blocks other private/special addresses. **Enforce** rejects every violation, including HTTP and
+hosts outside the allow-list. Stored active webhooks are evaluated against
 current policy before subscription, including after restart. A rejected stored target or OAuth authority quarantines
 the observer without changing the definition or its `IsActive` flag. Warn-mode violations are logged
 at activation, not for every delivery. Inactive webhooks remain inactive and are not subscribed.
@@ -235,7 +243,10 @@ alone cannot bypass a still-invalid target. A policy rejection during request/co
 also pauses the whole observer rather than consuming its transient retry budget.
 
 Enforce will become the default in the
-next major release. Review warnings, add only trusted receiver and OAuth hosts, then opt in before upgrading.
+next major release. Review warnings and approve only trusted receiver and OAuth hosts. Deployments
+that intentionally use local receivers must explicitly approve them before upgrading, or explicitly
+select `Warn` as a migration setting. Review private-network approvals before selecting
+`BlockPrivateAddresses` or `Enforce`.
 
 An exact host entry also explicitly permits that host's private addresses. `*.example.com` approves
 subdomains, not `example.com` or `notexample.com`. Entries are hosts, without a scheme, path, or port.
@@ -250,7 +261,13 @@ an approved IP directly. IPv4-mapped IPv6 addresses are checked as IPv4. Loopbac
 unspecified, multicast, and other special addresses are not public destinations. The metadata services
 `169.254.169.254` and `fd00:ec2::254` are blocked **even in Warn** unless the host is explicitly approved.
 Do not approve metadata hosts in normal deployments. Kernel HTTP clients do not use system proxies,
-which would otherwise bypass local connect-time address validation.
+which would otherwise bypass local connect-time address validation. Requests using an explicit host
+allowance close their connection after each request, even when the host currently resolves publicly,
+so one event store cannot lend its approved connection to another. Unapproved public destinations
+retain connection pooling in modes that permit them.
+
+HTTP capture destinations use a separate `ExternalServices` policy and never inherit webhook approvals;
+see [External Services](../external-services/index.md#http-capture-destination-policy).
 
 ### Local development
 

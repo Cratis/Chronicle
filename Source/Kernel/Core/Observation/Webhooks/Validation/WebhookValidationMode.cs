@@ -16,5 +16,15 @@ public enum WebhookValidationMode
     /// <summary>
     /// Reject targets that violate policy.
     /// </summary>
-    Enforce = 1
+    Enforce = 1,
+
+    /// <summary>
+    /// Block local destinations and warn about other policy violations.
+    /// </summary>
+    BlockLocalAddresses = 2,
+
+    /// <summary>
+    /// Block private and special destinations and warn about other policy violations.
+    /// </summary>
+    BlockPrivateAddresses = 3
 }

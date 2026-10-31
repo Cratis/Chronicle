@@ -25,10 +25,20 @@ public abstract class an_accumulating_sql_read_model<THarness> : Contract.an_acc
     protected ReadModelDbContext OpenInspectionContext(string? connectionString = null)
     {
         var definition = CreateReadModelDefinition();
+        var connection = connectionString ?? _sqlHarness.ConnectionString;
         var builder = new DbContextOptionsBuilder<ReadModelDbContext>();
-        builder.UseDatabaseFromConnectionString(connectionString ?? _sqlHarness.ConnectionString);
+        if (connection.GetDatabaseType() == DatabaseType.PostgreSql)
+        {
+            builder = new(SpecDbContextOptions.Kernel<ReadModelDbContext>(connection));
+        }
+        else
+        {
+            builder.UseDatabaseFromConnectionString(connection);
+            builder.AddConceptAsSupport().WithoutServiceProviderCaching();
+        }
+
         return new ReadModelDbContext(
-            builder.AddConceptAsSupport().WithoutServiceProviderCaching().Options,
+            builder.Options,
             definition.ContainerName.Value,
             ProjectedColumns.ForSchema(definition.GetSchemaForLatestGeneration()),
             Substitute.For<IReadModelMigrator>());

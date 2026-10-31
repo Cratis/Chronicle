@@ -17,7 +17,7 @@ public class when_stopping : Specification
         _token = new();
     }
 
-    Task Because() => new DeferredSiloStart(_silo, NullLogger<Kernel>.Instance).StopAsync(_token.Token);
+    Task Because() => new DeferredSiloStart(_silo, NullLogger<Kernel>.Instance, []).StopAsync(_token.Token);
 
     void Destroy() => _token.Dispose();
 

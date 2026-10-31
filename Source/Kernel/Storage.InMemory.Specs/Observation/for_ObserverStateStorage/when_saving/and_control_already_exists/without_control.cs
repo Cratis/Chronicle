@@ -21,12 +21,12 @@ public class without_control : Specification
             new("reactor-subscriber", ObserverFilters.None),
             new Dictionary<EventTypeId, ObserverTypeSetMember> { [new("event-a")] = new(new(3), new(42)) },
             [new("connection-one", null, [new(new("event-a"), new(2))], EventGenerationDelivery.Pinned)]);
-        await _storage.Save(new() { Identifier = "observer", TypeSetControl = _control });
+        await _storage.Save(new() { Identifier = "observer", TypeSetControl = _control }, Concepts.EventSequences.EventSequenceId.Log);
     }
 
     async Task Because()
     {
-        await _storage.Save(new() { Identifier = "observer", NextEventSequenceNumber = new(123) });
+        await _storage.Save(new() { Identifier = "observer", NextEventSequenceNumber = new(123) }, Concepts.EventSequences.EventSequenceId.Log);
         _saved = await _storage.Get("observer");
     }
 

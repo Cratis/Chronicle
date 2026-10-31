@@ -17,7 +17,7 @@ public class when_started : Specification
         _token = new();
     }
 
-    Task Because() => new DeferredSiloStart(_silo, NullLogger<Kernel>.Instance).StartedAsync(_token.Token);
+    Task Because() => new DeferredSiloStart(_silo, NullLogger<Kernel>.Instance, []).StartedAsync(_token.Token);
 
     void Destroy() => _token.Dispose();
 
