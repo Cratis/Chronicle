@@ -36,6 +36,7 @@ internal static class runtime_index_paths
     /// <param name="database">The routed Chronicle database.</param>
     /// <param name="jobs">The real jobs database.</param>
     /// <returns>Awaitable task.</returns>
+    /// <exception cref="InvalidOperationException">A runtime jobs storage operation failed.</exception>
     internal static async Task Exercise(IDatabase database, IMongoDatabase jobs)
     {
         var store = database.GetEventStoreDatabase("orders");
@@ -64,9 +65,14 @@ internal static class runtime_index_paths
         await new OccurrencesStorage(ns.GetCollection<BsonDocument>(WellKnownCollectionNames.EventSequences).Database).Record(Occurrence());
         await new OccurrencesStorage(store.GetCollection<BsonDocument>(WellKnownCollectionNames.Namespaces).Database).Record(Occurrence());
         await ExerciseRows(ns);
-        (await new JobStorage(jobs, Substitute.For<IJobTypes>()).GetJobs()).IsSuccess.ShouldBeTrue();
-        (await new JobStepStorage(jobs).GetForJob(JobId.New())).IsSuccess.ShouldBeTrue();
+        var jobsResult = await new JobStorage(jobs, Substitute.For<IJobTypes>()).GetJobs();
+        if (jobsResult.TryGetException(out var jobsError)) throw StorageFailure("GetJobs", jobsError);
+        var stepsResult = await new JobStepStorage(jobs).GetForJob(JobId.New());
+        if (stepsResult.TryGetException(out var stepsError)) throw StorageFailure("GetForJob", stepsError);
     }
+
+    static InvalidOperationException StorageFailure(string operation, Exception error) => new(
+        $"{operation} failed: {error.GetType().Name}, MongoDB code {(error is MongoCommandException command ? command.Code : 0)}");
 
     static Occurrence Occurrence() => new(
         new(Guid.NewGuid().ToString()),

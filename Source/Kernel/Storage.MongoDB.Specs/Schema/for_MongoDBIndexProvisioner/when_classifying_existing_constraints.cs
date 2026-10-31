@@ -18,6 +18,7 @@ public class when_classifying_existing_constraints(MongoDBFixture fixture) : giv
     MongoDBIndexReport _before;
     MongoDBIndexReport _after;
     MongoDBIndexReport _verified;
+    readonly List<string> _warnings = [];
     ILogger _logger;
 
     async Task Establish()
@@ -30,6 +31,10 @@ public class when_classifying_existing_constraints(MongoDBFixture fixture) : giv
         foreach (var collection in new[] { NamedValues, Unknown, Ambiguous }) await _namespace.CreateCollectionAsync(collection);
         _logger = Substitute.For<ILogger>();
         _logger.IsEnabled(Arg.Any<LogLevel>()).Returns(true);
+
+        // Snapshot the rendered message before generated logging clears its reusable state.
+        _logger.When(logger => logger.Log(LogLevel.Warning, Arg.Any<EventId>(), Arg.Any<Arg.AnyType>(), Arg.Any<Exception?>(), Arg.Any<Func<Arg.AnyType, Exception?, string>>()))
+            .Do(call => _warnings.Add((string)((Delegate)call[4]).DynamicInvoke(call[2], call[3])));
         var factory = Substitute.For<ILoggerFactory>();
         factory.CreateLogger(Arg.Any<string>()).Returns(_logger);
         _provisioner = new(_database, _clients, _mongoOptions, _storageOptions, factory);
@@ -52,6 +57,6 @@ public class when_classifying_existing_constraints(MongoDBFixture fixture) : giv
     [Fact] void should_keep_unclassified_collections_advisory_after_migration() => _after.IsCurrent.ShouldBeTrue();
     [Fact] void should_keep_unclassified_collections_advisory_during_verify() => _verified.IsCurrent.ShouldBeTrue();
     [Fact] void should_keep_unclassified_names_in_the_report() => _verified.Scopes.Single(scope => scope.Scope == $"namespace:{Store}/{Namespace}").Unclassified.Contains(Ambiguous).ShouldBeTrue();
-    [Fact] void should_warn_about_unclassified_collections() => _logger.ReceivedCalls().Any(call => call.GetMethodInfo().Name == "Log" && (LogLevel)call.GetArguments()[0]! == LogLevel.Warning && call.GetArguments()[2]!.ToString()!.Contains("unclassified", StringComparison.Ordinal)).ShouldBeTrue();
-    [Fact] void should_explain_runtime_index_creation_in_the_migration_warning() => _logger.ReceivedCalls().Any(call => call.GetMethodInfo().Name == "Log" && call.GetArguments()[2].ToString().Contains("Runtime will create their indexes on first access", StringComparison.Ordinal)).ShouldBeTrue();
+    [Fact] void should_warn_about_unclassified_collections() => _warnings.Exists(message => message.Contains("unclassified", StringComparison.Ordinal)).ShouldBeTrue();
+    [Fact] void should_explain_runtime_index_creation_in_the_migration_warning() => _warnings.Exists(message => message.Contains("Runtime will create their indexes on first access", StringComparison.Ordinal)).ShouldBeTrue();
 }

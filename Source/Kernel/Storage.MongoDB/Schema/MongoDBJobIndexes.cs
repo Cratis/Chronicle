@@ -7,7 +7,7 @@ using MongoDB.Driver;
 namespace Cratis.Chronicle.Storage.MongoDB.Schema;
 
 /// <summary>
-/// Mirrors the internal job indexes in Cratis.Orleans.Storage.MongoDB 1.27.4, pinned by a drift spec.
+/// Mirrors the internal job indexes in Cratis.Orleans.Storage.MongoDB 1.32.1, pinned by a drift spec.
 /// </summary>
 internal static class MongoDBJobIndexes
 {
@@ -19,7 +19,8 @@ internal static class MongoDBJobIndexes
         new(new BsonDocument("status", 1), new CreateIndexOptions { Name = "status", Background = true }),
         new(new BsonDocument { { "type", 1 }, { "status", 1 } }, new CreateIndexOptions { Name = "type_status", Background = true }),
         new(new BsonDocument { { "status", 1 }, { "created", 1 }, { "_id", 1 } }, new CreateIndexOptions { Name = "status_created", Background = true }),
-        new(new BsonDocument { { "type", 1 }, { "status", 1 }, { "created", 1 }, { "_id", 1 } }, new CreateIndexOptions { Name = "type_status_created", Background = true })
+        new(new BsonDocument { { "type", 1 }, { "status", 1 }, { "created", 1 }, { "_id", 1 } }, new CreateIndexOptions { Name = "type_status_created", Background = true }),
+        new(new BsonDocument { { "status", 1 }, { "stopFinalized", 1 } }, new CreateIndexOptions { Name = "status_stopFinalized", Background = true })
     ];
 
     /// <summary>
