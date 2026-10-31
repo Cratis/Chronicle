@@ -406,6 +406,12 @@ public partial class Sink(
             EvictBulkState(key);
             failures = [];
         }
+        catch (NonIdempotentWriteCannotBeSplit error)
+        {
+            var partition = options.PartitionOr(key);
+            logger.RefusedOversizedChangesetSplit(readModel.Identifier, key.ToString(), partition.ToString(), error.Collection, error.MaxBatchSize, string.Join(", ", error.Operations));
+            throw new OversizedChangesetCannotBeSplit(readModel.Identifier, key, partition, error);
+        }
         return joinBatch is null ? failures : TakeBulkFailures([joinBatch]).Concat(failures).ToArray();
     }
 

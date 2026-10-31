@@ -1,16 +1,17 @@
 ---
-description: Configure how many replay-generated read model versions Chronicle Server keeps when projections are replayed.
+description: Configure how many replay-generated read model versions Chronicle Server keeps and how many documents one fenced sink transaction may hold.
 ---
 # Read Models
 
-Read model configuration controls how many replay-generated read model versions Chronicle keeps when projections are replayed.
+Read model configuration controls how many replay-generated read model versions Chronicle keeps when projections are replayed, and the batch size read-model writes are split at.
 
 ## Example configuration
 
 ```json
 {
   "readModels": {
-    "replayedVersionsToKeep": 1
+    "replayedVersionsToKeep": 1,
+    "maxBatchSize": 500
   }
 }
 ```
@@ -18,6 +19,7 @@ Read model configuration controls how many replay-generated read model versions 
 | Property | Type | Default | Description |
 | --- | --- | --- | --- |
 | replayedVersionsToKeep | number | 1 | Number of replay-generated read model versions to keep per read model |
+| maxBatchSize | number | 500 | Maximum number of items per read-model batch. Must be greater than zero |
 
 ## Replay retention behavior
 
@@ -33,3 +35,14 @@ Set `replayedVersionsToKeep` to:
 - `1` (default) to keep only the most recent replay version.
 - A higher number if you need additional replay history for diagnostics or rollback workflows.
 
+
+## Fenced sink writes
+
+With `Features.ProjectionGenerations` enabled (experimental), each MongoDB sink transaction covers at most `maxBatchSize` documents. A bulk flush larger than that is split into several transactions whose writes are idempotent, so a retry of a part is safe.
+
+A single changeset that touches more documents than `maxBatchSize` and contains a non-idempotent operation, for example a child addition (`$push`), cannot be split safely and is refused. Chronicle raises `OversizedChangesetCannotBeSplit`, logs an error naming the read model, key, partition, collection, the blocking operations and `maxBatchSize`, and the partition fails.
+
+To resolve it:
+
+1. Raise `maxBatchSize` (`Cratis__Chronicle__ReadModels__MaxBatchSize`) above the number of documents the changeset touches. Larger transactions run longer, and MongoDB aborts a transaction that exceeds `transactionLifetimeLimitSeconds` (default 60).
+2. Retry the failed partition.

@@ -37,14 +37,24 @@ internal sealed class SinkBatchDocuments(int cap)
     /// </summary>
     /// <param name="collection">The destination collection.</param>
     /// <param name="update">The update.</param>
-    /// <exception cref="InvalidOperationException">The update is not idempotent.</exception>
-    internal static void RequireRetrySafe(IMongoCollection<BsonDocument> collection, UpdateDefinition<BsonDocument> update)
+    /// <param name="maxBatchSize">The maximum number of documents of one transaction.</param>
+    /// <exception cref="NonIdempotentWriteCannotBeSplit">The update is not idempotent.</exception>
+    internal static void RequireRetrySafe(IMongoCollection<BsonDocument> collection, UpdateDefinition<BsonDocument> update, int maxBatchSize)
     {
         var rendered = update.Render(new(collection.DocumentSerializer, collection.Settings.SerializerRegistry));
-        if (rendered is not BsonDocument document || document.ElementCount == 0 ||
-            document.Names.Any(name => name is not ("$set" or "$unset" or "$max" or "$min" or "$setOnInsert" or "$pull")))
+        var name = collection.CollectionNamespace.CollectionName;
+        if (rendered is not BsonDocument document)
         {
-            throw new InvalidOperationException("A split fenced changeset requires idempotent set/upsert/delete writes; this update cannot be safely retried.");
+            throw new NonIdempotentWriteCannotBeSplit(name, ["(pipeline update)"], maxBatchSize);
+        }
+        if (document.ElementCount == 0)
+        {
+            throw new NonIdempotentWriteCannotBeSplit(name, ["(empty update)"], maxBatchSize);
+        }
+        var blocking = document.Names.Where(operation => operation is not ("$set" or "$unset" or "$max" or "$min" or "$setOnInsert" or "$pull")).ToArray();
+        if (blocking.Length > 0)
+        {
+            throw new NonIdempotentWriteCannotBeSplit(name, blocking, maxBatchSize);
         }
     }
 
@@ -53,15 +63,16 @@ internal sealed class SinkBatchDocuments(int cap)
     /// </summary>
     /// <param name="collection">The destination collection.</param>
     /// <param name="requests">The ordered requests.</param>
+    /// <param name="maxBatchSize">The maximum number of documents of one transaction.</param>
     /// <exception cref="InvalidOperationException">A request is not retry-safe.</exception>
-    internal static void RequireRetrySafe(IMongoCollection<BsonDocument> collection, IReadOnlyList<WriteModel<BsonDocument>> requests)
+    internal static void RequireRetrySafe(IMongoCollection<BsonDocument> collection, IReadOnlyList<WriteModel<BsonDocument>> requests, int maxBatchSize)
     {
         foreach (var request in requests)
         {
             switch (request)
             {
                 case UpdateOneModel<BsonDocument> update:
-                    RequireRetrySafe(collection, update.Update);
+                    RequireRetrySafe(collection, update.Update, maxBatchSize);
                     RequireDestinationKey(collection, update.Filter);
                     break;
                 case DeleteOneModel<BsonDocument> delete:
