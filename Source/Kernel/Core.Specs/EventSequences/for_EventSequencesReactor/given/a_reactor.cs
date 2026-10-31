@@ -47,6 +47,6 @@ public class a_reactor : Specification
         _reactor = new EventSequencesReactor(_grainFactory, new JsonSerializerOptions(), NullLogger<EventSequencesReactor>.Instance, _storage, metadataManager);
     }
 
-    protected static EventContext ContextFor(string eventStore) =>
-        EventContext.From(eventStore, "some-namespace", EventType, EventSourceType.Default, "some-source", EventStreamType.All, EventStreamId.Default, 1UL, CorrelationId.NotSet);
+    protected static EventContext ContextFor(string eventStore, string @namespace = "some-namespace") =>
+        EventContext.From(eventStore, @namespace, EventType, EventSourceType.Default, "some-source", EventStreamType.All, EventStreamId.Default, 1UL, CorrelationId.NotSet);
 }

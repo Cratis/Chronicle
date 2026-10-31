@@ -19,6 +19,7 @@ internal class CreateEventTypeValidator : CommandValidator<CreateEventType>
     {
         RuleFor(_ => _.EventStore).NotEmpty().WithMessage("Event store name is required.");
         RuleFor(_ => _.EventStore).NotSystemEventStore();
+        RuleFor(_ => _.EventStore).NoKeySeparator();
 
         // Name is the event type being created, not a reference to one that must already exist.
         RuleFor(_ => _.Name).IgnoreConceptRules().NotEmpty().WithMessage("Event type name is required.");

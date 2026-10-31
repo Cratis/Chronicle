@@ -19,6 +19,7 @@ internal class RegisterEventTypesValidator : CommandValidator<RegisterEventTypes
     {
         RuleFor(_ => _.EventStore).NotEmpty().WithMessage("Event store name is required.");
         RuleFor(_ => _.EventStore).NotSystemEventStore();
+        RuleFor(_ => _.EventStore).NoKeySeparator();
         RuleFor(_ => _.Types).NotNull().WithMessage("Event type registrations are required.");
         RuleForEach(_ => _.Types).ChildRules(registration =>
         {

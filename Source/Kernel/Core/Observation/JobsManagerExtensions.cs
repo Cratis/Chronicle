@@ -225,6 +225,16 @@ public static partial class JobsManagerExtensions
             {
                 logger.CouldNotResumeJob(pausedJob.Id);
                 await onResumeRefused.Invoke();
+
+                // A job that was stopped before it prepared any step has nothing to resume and never will, so every
+                // later lookup would find it, refuse it again and leave the observer retrying catch-up in a tight
+                // loop. It carries no work: remove it so the next catch-up starts a job of its own.
+                if (JobLiveness.NeverPrepared(pausedJob))
+                {
+                    logger.RemovingUnresumableJob(pausedJob.Id);
+                    await jobsManager.Delete(pausedJob.Id);
+                }
+
                 return JobId.NotSet;
             }
 
@@ -357,4 +367,7 @@ public static partial class JobsManagerExtensions
 
     [LoggerMessage(LogLevel.Warning, "Could not drop stopped job {JobId} that can never resume")]
     static partial void CouldNotDropJob(this ILogger logger, JobId jobId, Exception exception);
+
+    [LoggerMessage(LogLevel.Warning, "Stopped job {JobId} never prepared a step and can not be resumed - removing it so catch-up can start a new job")]
+    static partial void RemovingUnresumableJob(this ILogger logger, JobId jobId);
 }

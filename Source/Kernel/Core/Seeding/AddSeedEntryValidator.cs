@@ -19,7 +19,9 @@ internal class AddSeedEntryValidator : CommandValidator<AddSeedEntry>
     {
         RuleFor(_ => _.EventStore).NotEmpty().WithMessage("Event store name is required.");
         RuleFor(_ => _.EventStore).NotSystemEventStore();
+        RuleFor(_ => _.EventStore).NoKeySeparator();
         RuleFor(_ => _.Namespace).NotEmpty().WithMessage("Namespace name is required.");
+        RuleFor(_ => _.Namespace).NoKeySeparator();
         RuleFor(_ => _.EventSourceId).NotEmpty().WithMessage("Event source identifier is required.");
         RuleFor(_ => _.EventTypeId).NotEmpty().WithMessage("Event type identifier is required.");
         RuleFor(_ => _.Content).NotEmpty().WithMessage("Content is required.");
