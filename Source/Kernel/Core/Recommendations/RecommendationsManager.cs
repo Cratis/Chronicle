@@ -52,6 +52,13 @@ public class RecommendationsManager(IStorage storage) : Grain, IRecommendationsM
     }
 
     /// <inheritdoc/>
+    public async Task Unignore(RecommendationId recommendationId)
+    {
+        var recommendation = await GetGrainFor(recommendationId);
+        await recommendation.Unignore();
+    }
+
+    /// <inheritdoc/>
     public async Task Perform(RecommendationId recommendationId)
     {
         var recommendation = await GetGrainFor(recommendationId);

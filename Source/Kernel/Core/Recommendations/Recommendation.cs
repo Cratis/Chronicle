@@ -44,6 +44,14 @@ public class Recommendation<TRequest> : Grain<RecommendationState>, IRecommendat
         DeactivateOnIdle();
     }
 
+    /// <inheritdoc/>
+    public async Task Unignore()
+    {
+        State.IsIgnored = false;
+        await WriteStateAsync();
+        DeactivateOnIdle();
+    }
+
     /// <summary>
     /// THe method that gets called when the recommendation is performed.
     /// </summary>
