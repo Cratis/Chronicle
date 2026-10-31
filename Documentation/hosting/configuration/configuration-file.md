@@ -71,6 +71,7 @@ Environment variables can override any of these values. See [Configuration Prece
 | observers | Retry and timeout settings for observers |
 | readModels | Replay retention settings for replay-generated read model versions |
 | events | Event queue configuration |
+| constraintIndexRepair | Constraint-index repair budgets, retries and memory caps |
 | authentication | Authentication, default admin username, and initial admin user bootstrap |
 | tls | TLS certificate for the main Chronicle port by default; explicit `tls.enabled=false` requires a private h2c backend behind an HTTPS proxy |
 | encryptionCertificate | Certificate protecting OAuth keys, webhook credentials, and Data Protection keys — required in production |

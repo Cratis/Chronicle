@@ -198,6 +198,21 @@ Cratis__Chronicle__Observers__MaximumBackoffDelay=600
 Cratis__Chronicle__Events__Queues=2
 ```
 
+## Constraint index repair
+
+```bash
+# Total in-turn attempts to write a constraint index update (1 to 10, default: 3)
+Cratis__Chronicle__ConstraintIndexRepair__UpdateAttempts=3
+
+# Time budget for a repair performed in the turn of an append (default: 00:00:05)
+Cratis__Chronicle__ConstraintIndexRepair__AppendRepairBudget=00:00:05
+
+# Consecutive identical failures before a failure is settled as poison (default: 5)
+Cratis__Chronicle__ConstraintIndexRepair__PoisonThreshold=5
+```
+
+See [Constraint index repair](constraint-index-repair.md) for every setting.
+
 ## Read models
 
 ```bash

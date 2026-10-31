@@ -22,6 +22,8 @@
   href: read-models.md
 - name: Events
   href: events.md
+- name: Constraint Index Repair
+  href: constraint-index-repair.md
 - name: Authentication
   href: authentication.md
 - name: TLS
