@@ -77,6 +77,7 @@ public class a_held_silo : Specification
             builder.Services.AddChronicleDataProtection();
         }
         builder.Services.AddSingleton<IInitialAdminSetupTokens, InitialAdminSetupTokens>();
+        builder.Services.AddSingleton(Substitute.For<IAdministratorPrivileges>());
         builder.Services.UseDeferredSiloStart();
         _app = builder.Build();
         _app.Use(async (context, next) =>
