@@ -13,7 +13,7 @@ Configure MongoDB storage, then run the server executable with `--migrate-only`:
 ./Cratis.Chronicle.Server --migrate-only
 ```
 
-Chronicle creates missing named indexes, removes obsolete event indexes, and verifies the result. Repeating the command against a current deployment performs no index DDL. It does not drop collections, remove application data, or rebuild indexes whose names already exist. An existing index with different keys or options is reported as incompatible (exit code `2`) and left untouched. Review incompatible indexes before dropping them manually and running `--migrate-only` again with a schema identity. Back up the deployment and review index-build capacity before provisioning a large event log.
+Chronicle creates missing named indexes, removes obsolete event indexes, and verifies the result. Repeating the command against a current deployment performs no index DDL. It does not drop collections, remove application data, or rebuild indexes whose names already exist. An existing index with different keys or options is reported as incompatible (exit code `2`) and left untouched. Review incompatible indexes before dropping them manually and running `--migrate-only` again with a schema identity, which is an identity allowed to create and remove indexes (see the permissions below). Back up the deployment and review index-build capacity before provisioning a large event log.
 
 Stored event stores, their stored namespaces, the system store, and default namespaces are discovered automatically. Add explicit scopes to provision a new store or tenant before it has registration data:
 

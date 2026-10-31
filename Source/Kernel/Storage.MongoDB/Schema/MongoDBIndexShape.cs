@@ -9,6 +9,11 @@ namespace Cratis.Chronicle.Storage.MongoDB.Schema;
 /// <summary>
 /// Renders and compares the index keys and options owned by Chronicle.
 /// </summary>
+/// <remarks>
+/// Covers ascending and descending keys with the simple collation, which is all the catalogue defines. MongoDB lists text,
+/// hashed, geospatial and wildcard keys and non-simple collations in an expanded form, so adding such an index to the
+/// catalogue needs a matching rule here first, or it is reported as incompatible.
+/// </remarks>
 internal static class MongoDBIndexShape
 {
     /// <summary>
