@@ -51,10 +51,9 @@ internal sealed class SinkBatchDocuments(int cap)
         {
             throw new NonIdempotentWriteCannotBeSplit(name, ["(empty update)"], maxBatchSize);
         }
-        var blocking = document.Names.Where(operation => operation is not ("$set" or "$unset" or "$max" or "$min" or "$setOnInsert" or "$pull")).ToArray();
-        if (blocking.Length > 0)
+        if (document.Names.Any(IsBlocking))
         {
-            throw new NonIdempotentWriteCannotBeSplit(name, blocking, maxBatchSize);
+            throw new NonIdempotentWriteCannotBeSplit(name, document.Names.Where(IsBlocking).ToArray(), maxBatchSize);
         }
     }
 
@@ -168,6 +167,9 @@ internal sealed class SinkBatchDocuments(int cap)
             ? clauses.AsBsonArray.Select(clause => Key(clause.AsBsonDocument)).FirstOrDefault(id => id is not null)
             : null;
     }
+
+    static bool IsBlocking(string operation) =>
+        operation is not ("$set" or "$unset" or "$max" or "$min" or "$setOnInsert" or "$pull");
 
     void Add(IMongoCollection<BsonDocument> collection, BsonValue id)
     {
