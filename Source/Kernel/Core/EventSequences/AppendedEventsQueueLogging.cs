@@ -32,6 +32,9 @@ internal static partial class AppendedEventsQueueLogMessages
     [LoggerMessage(LogLevel.Debug, "Appended-events queue is full; spilling {NumberOfObservers} observer(s) to catch-up recovery")]
     internal static partial void SpillingToCatchup(this ILogger<AppendedEventsQueue> logger, int numberOfObservers);
 
+    [LoggerMessage(LogLevel.Information, "Observer {ObserverKey} has fallen too far behind on its appended-events queue; spilling it to catch-up recovery")]
+    internal static partial void SpillingObserverToCatchup(this ILogger<AppendedEventsQueue> logger, ObserverKey observerKey);
+
     [LoggerMessage(LogLevel.Warning, "Failed to start catch-up for spilled observer {ObserverKey} (attempt {Attempt} of {MaxAttempts})")]
     internal static partial void SpillCatchupTriggerFailed(this ILogger<AppendedEventsQueue> logger, ObserverKey observerKey, int attempt, int maxAttempts, Exception exception);
 
