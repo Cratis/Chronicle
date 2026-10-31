@@ -22,6 +22,7 @@ public sealed class SqlCluster(bool postgres, string? image = null) : IAsyncDisp
     readonly List<IContainer> _nodes = [];
     readonly List<int> _ports = [];
     readonly SqlClusterLogs _logs = new();
+    readonly ClusterLoadDiagnostics.MembershipDiagnostics _membershipDiagnostics = new();
     readonly string _id = $"sql-clustering-{Guid.NewGuid():N}";
     SqlClusterDatabase _database = null!;
 
@@ -40,6 +41,11 @@ public sealed class SqlCluster(bool postgres, string? image = null) : IAsyncDisp
         _ports.AddRange(Enumerable.Range(0, 3).Select(_ => FreePort()));
         _nodes.AddRange(Enumerable.Range(0, 3).Select(index => BuildNode(index, _image)));
         await Task.WhenAll(_nodes.Select(node => node.StartAsync(timeout.Token)));
+        foreach (var (node, index) in _nodes.Select((node, index) => (node, index)))
+        {
+            Console.WriteLine($"{DateTimeOffset.UtcNow:O} SQL node sql-node-{index} container={node.Id} image={_image}");
+        }
+
         await WaitForMembership(entries => entries.Count(entry => entry.Status == (int)SiloStatus.Active) == 3, TimeSpan.FromMinutes(1));
     }
 
@@ -60,6 +66,7 @@ public sealed class SqlCluster(bool postgres, string? image = null) : IAsyncDisp
         var replacement = BuildNode(index, replacementImage);
         _nodes[index] = replacement;
         await replacement.StartAsync().WaitAsync(TimeSpan.FromMinutes(3));
+        Console.WriteLine($"{DateTimeOffset.UtcNow:O} SQL replacement sql-node-{index} container={replacement.Id} image={replacementImage}");
     }
 
     public async Task<IReadOnlyList<MembershipEntry>> WaitForMembership(Func<IReadOnlyList<MembershipEntry>, bool> predicate, TimeSpan timeout)
@@ -71,6 +78,12 @@ public sealed class SqlCluster(bool postgres, string? image = null) : IAsyncDisp
         do
         {
             var entries = await _database.Membership(_id, deadline.Token);
+            var diagnostic = _membershipDiagnostics.Record(entries);
+            if (diagnostic is not null)
+            {
+                Console.WriteLine(diagnostic);
+            }
+
             if (predicate(entries))
             {
                 return entries;

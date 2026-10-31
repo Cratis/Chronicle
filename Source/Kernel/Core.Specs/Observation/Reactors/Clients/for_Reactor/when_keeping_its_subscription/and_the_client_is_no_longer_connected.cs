@@ -16,4 +16,6 @@ public class and_the_client_is_no_longer_connected : given.a_reactor_grain_with_
     Task Because() => _grain.KeepSubscription(_connectionDefinition);
 
     [Fact] Task should_not_restore_the_subscription() => WasRestored(0);
+    [Fact] void should_record_the_disconnected_predicate_as_structured_evidence() => DiagnosticStates().ShouldContain(state => state.TryGetValue("IsConnected", out var connected) && Equals(connected, false));
+    [Fact] void should_log_the_disconnected_predicate_and_connection() => DiagnosticMessages().ShouldContain(message => message.Contains("the-connection") && message.Contains("IsConnected=False") && message.Contains("KnowsClient=False"));
 }

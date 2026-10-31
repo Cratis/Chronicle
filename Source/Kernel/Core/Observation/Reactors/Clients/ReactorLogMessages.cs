@@ -20,6 +20,9 @@ internal static partial class ReactorLogMessages
     [LoggerMessage(LogLevel.Information, "Client with connection id {connectionId} has disconnected - unsubscribing observer {ReactorId} for event store {EventStore} on sequence {EventSequenceId} for namespace {Namespace}")]
     internal static partial void ClientDisconnected(this ILogger<Reactor> logger, ConnectionId connectionId, EventStoreName eventStore, ReactorId ReactorId, EventSequenceId eventSequenceId, EventStoreNamespaceName @namespace);
 
+    [LoggerMessage(LogLevel.Information, "Subscription predicate for reactor {ReactorId} connection {ConnectionId} event store {EventStore} namespace {Namespace} sequence {EventSequenceId}: KnowsClient={KnowsClient} IsConnected={IsConnected} silo={SiloAddress}")]
+    internal static partial void SubscriptionPredicateDiagnostic(this ILogger<Reactor> logger, ReactorId reactorId, ConnectionId connectionId, EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId, bool knowsClient, bool isConnected, string siloAddress);
+
     [LoggerMessage(LogLevel.Information, "Auto-replaying reactor {ReactorId} for event store {EventStore} on sequence {EventSequenceId} for namespace {Namespace} due to definition change")]
     internal static partial void AutoReplayingReactor(this ILogger<Reactor> logger, EventStoreName eventStore, ReactorId ReactorId, EventSequenceId eventSequenceId, EventStoreNamespaceName @namespace);
 }

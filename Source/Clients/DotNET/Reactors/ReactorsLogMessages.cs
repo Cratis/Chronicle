@@ -9,6 +9,12 @@ namespace Cratis.Chronicle.Reactors;
 
 internal static partial class ReactorsLogMessages
 {
+    [LoggerMessage(8100, LogLevel.Information, "Reactor diagnostic {Outcome}: Reactor={ReactorId}, Store={EventStore}, Namespace={Namespace}, Sequence={Sequence}, Connection={ConnectionId}, LocalCancellation={LocalCancellation}")]
+    internal static partial void ReactorLifecycleDiagnostic(this ILogger<Reactors> logger, string outcome, ReactorId reactorId, string eventStore, string @namespace, string sequence, string connectionId, bool localCancellation);
+
+    [LoggerMessage(8101, LogLevel.Information, "Reactor diagnostic terminal {Terminal}: Reactor={ReactorId}, Store={EventStore}, Namespace={Namespace}, Sequence={Sequence}, Connection={ConnectionId}, LocalCancellation={LocalCancellation}, RpcStatus={RpcStatus}")]
+    internal static partial void ReactorTerminalDiagnostic(this ILogger<Reactors> logger, string terminal, ReactorId reactorId, string eventStore, string @namespace, string sequence, string connectionId, bool localCancellation, string rpcStatus);
+
     [LoggerMessage(LogLevel.Debug, "Registering Reactor '{Id}'")]
     internal static partial void RegisteringReactor(this ILogger<Reactors> logger, ReactorId id);
 

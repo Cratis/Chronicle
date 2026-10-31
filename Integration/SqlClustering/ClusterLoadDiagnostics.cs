@@ -4,12 +4,60 @@
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Reactors;
+using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Integration.SqlClustering;
 
 internal static class ClusterLoadDiagnostics
 {
     const int SequenceLimit = 50;
+
+    internal static ILoggerFactory CreateClientLoggerFactory(TextWriter output) => LoggerFactory.Create(builder => builder
+        .AddFilter((category, level) => category == "Cratis.Chronicle.Reactors.Reactors" && level >= LogLevel.Information)
+        .AddProvider(new ClientDiagnosticsProvider(TextWriter.Synchronized(output))));
+
+    internal sealed class MembershipDiagnostics
+    {
+        string? _previous;
+        int _written;
+
+        public string? Record(IReadOnlyList<MembershipEntry> entries)
+        {
+            var snapshot = $"membership entries={entries.Count}: {string.Join(", ", entries.OrderBy(entry => entry.Address).ThenBy(entry => entry.Generation).Take(12).Select(entry => $"{entry.Address}@{entry.Generation} status={entry.Status}"))}";
+            if (snapshot == _previous || _written >= 40)
+            {
+                return null;
+            }
+
+            _previous = snapshot;
+            _written++;
+            return $"{DateTimeOffset.UtcNow:O} SQL {snapshot}";
+        }
+    }
+
+    sealed class ClientDiagnosticsProvider(TextWriter output) : ILoggerProvider
+    {
+        public ILogger CreateLogger(string categoryName) => new ClientDiagnosticsLogger(output);
+
+        public void Dispose() { }
+    }
+
+    sealed class ClientDiagnosticsLogger(TextWriter output) : ILogger
+    {
+        public IDisposable? BeginScope<TState>(TState state)
+            where TState : notnull => null;
+
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
+        {
+            // Only these lifecycle templates are safe: never emit general connection/options or exception logs.
+            if (eventId.Id is 8100 or 8101)
+            {
+                output.WriteLine($"{DateTimeOffset.UtcNow:O} SQL client {formatter(state, null).Replace('\r', ' ').Replace('\n', ' ')}");
+            }
+        }
+    }
 
     public static async Task Dump(
         IReactorHandler reactor,

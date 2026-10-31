@@ -10,4 +10,5 @@ public class and_the_observer_lost_the_client : given.a_reactor_grain_with_a_sto
     Task Because() => _grain.KeepSubscription(_connectionDefinition);
 
     [Fact] Task should_restore_the_subscription_with_the_definition_of_its_own_connection() => WasRestored(1);
+    [Fact] void should_log_the_restore_predicates_and_incarnation() => DiagnosticMessages().ShouldContain(message => message.Contains("the-connection") && message.Contains("IsConnected=True") && message.Contains("KnowsClient=False") && message.Contains(global::Orleans.Runtime.SiloAddress.FromParsableString("127.0.0.1:11111@1").ToString()));
 }

@@ -11,4 +11,5 @@ public class and_the_observer_still_knows_the_client : given.a_reactor_grain_wit
 
     [Fact] async Task should_check_with_the_observer() => await _observer.Received(1).KnowsClient(_client.ConnectionId);
     [Fact] Task should_not_restore_the_subscription() => WasRestored(0);
+    [Fact] void should_not_log_successful_keeper_polls() => DiagnosticMessages().ShouldBeEmpty();
 }

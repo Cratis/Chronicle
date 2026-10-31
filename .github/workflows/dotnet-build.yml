@@ -31,6 +31,12 @@ on:
         description: "Whether the integration matrix used all storage providers"
         value: ${{ jobs.integration.outputs.all-providers }}
   workflow_dispatch:
+    inputs:
+      sql_diagnostic:
+        description: "Run only SQL Server clustering integration diagnostics (not full integration)"
+        type: boolean
+        required: false
+        default: false
   # Nightly full-coverage run; ordinary pull-request events run only the build and specs.
   schedule:
     - cron: "0 2 * * *"
@@ -576,10 +582,11 @@ jobs:
       chronicle-image: ${{ needs.dotnet-build.outputs.chronicle-image }}
       # Every storage backend nightly and on dispatch; labeled hot-core PRs also use all providers.
       all-providers: ${{ github.event_name != 'pull_request' || inputs.all_providers }}
+      sql-diagnostic: ${{ github.event_name == 'workflow_dispatch' && inputs.sql_diagnostic }}
 
   integration-api:
     # Waits for the ordinary specs on pull requests, like the integration matrix (#5050).
-    if: ${{ needs.already-ran.outputs.skip != 'true' && (!cancelled() && needs.dotnet-build.result == 'success' && (github.event_name != 'pull_request' || (inputs.integration_requested && needs.specs.result == 'success'))) }}
+    if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.sql_diagnostic) && needs.already-ran.outputs.skip != 'true' && (!cancelled() && needs.dotnet-build.result == 'success' && (github.event_name != 'pull_request' || (inputs.integration_requested && needs.specs.result == 'success'))) }}
     runs-on: ubuntu-latest
     timeout-minutes: 120
     needs: [already-ran, dotnet-build, specs]
@@ -642,7 +649,7 @@ jobs:
 
   mongodb:
     # Waits for the ordinary specs on pull requests, like the integration matrix (#5050).
-    if: ${{ needs.already-ran.outputs.skip != 'true' && (!cancelled() && needs.dotnet-build.result == 'success' && (github.event_name != 'pull_request' || (inputs.integration_requested && needs.specs.result == 'success'))) }}
+    if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.sql_diagnostic) && needs.already-ran.outputs.skip != 'true' && (!cancelled() && needs.dotnet-build.result == 'success' && (github.event_name != 'pull_request' || (inputs.integration_requested && needs.specs.result == 'success'))) }}
     runs-on: ubuntu-latest
     timeout-minutes: 120
     needs: [already-ran, dotnet-build, specs]

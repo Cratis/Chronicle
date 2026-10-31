@@ -4,8 +4,10 @@
 using System.Collections.Frozen;
 using System.Reactive.Linq;
 using System.Reactive.Threading.Tasks;
+using System.Runtime.CompilerServices;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Auditing;
+using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Contracts.Observation.Reactors;
@@ -41,6 +43,7 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
     readonly ReactorDispatcher _dispatcher;
     readonly IChronicleServicesAccessor _servicesAccessor;
     readonly List<(ReactorId Id, Action<IReactorBuilder> Define)> _pendingDefinitions = [];
+    readonly ConditionalWeakTable<ReactorHandler, DiagnosticSession> _diagnosticSessions = new();
     IReadOnlyDictionary<ReactorId, ReactorRegistration> _handlers = FrozenDictionary<ReactorId, ReactorRegistration>.Empty;
 
     bool _registered;
@@ -265,6 +268,7 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
             if (_handlers.TryGetValue(id, out var registration))
             {
                 _handlers = _handlers.Where(_ => _.Key != id).ToFrozenDictionary();
+                LogLocalDisconnect(registration, "unregister");
                 registration.Handler.Disconnect();
                 (registration.Handler as IDisposable)?.Dispose();
             }
@@ -405,6 +409,8 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
         }
     }
 
+    static string DiagnosticRpcStatus(Exception? error) => error is global::Grpc.Core.RpcException rpc ? rpc.StatusCode.ToString() : "None";
+
     static void ThrowIfUnknownReactorId(IReactorHandler? handler, ReactorId reactorId)
     {
         if (handler is null)
@@ -488,8 +494,10 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
     ReactorHandler CreateHandler(ReactorId id, Type reactorType, EventSequenceId sequenceId, IEnumerable<EventType> eventTypes)
     {
         var handler = new ReactorHandler(_eventStore, id, reactorType, sequenceId, eventTypes, _causationManager, _identityProvider);
+        var session = _diagnosticSessions.GetValue(handler, _ => new(_eventStore.Connection.Lifecycle.ConnectionId));
         handler.CancellationToken.Register(() =>
         {
+            _logger.ReactorLifecycleDiagnostic("handler-cancelled", id, _eventStore.Name, _eventStore.Namespace, sequenceId.Value, session.ConnectionId, true);
             lock (_registerLock)
             {
                 if (_handlers.TryGetValue(id, out var current) && ReferenceEquals(current.Handler, handler))
@@ -525,10 +533,14 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
         }
     }
 
-    void DisconnectHandlers()
+    void LogLocalDisconnect(ReactorRegistration registration, string reason) =>
+        _logger.ReactorLifecycleDiagnostic(reason, registration.Handler.Id, _eventStore.Name, _eventStore.Namespace, registration.Handler.EventSequenceId.Value, _diagnosticSessions.GetValue(registration.Handler, _ => new(_eventStore.Connection.Lifecycle.ConnectionId)).ConnectionId, registration.Handler.CancellationToken.IsCancellationRequested);
+
+    void DisconnectHandlers(string reason = "disconnect-or-dispose")
     {
         foreach (var registration in _handlers.Values.ToList())
         {
+            LogLocalDisconnect(registration, reason);
             registration.Handler.Disconnect();
             (registration.Handler as IDisposable)?.Dispose();
         }
@@ -537,7 +549,7 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
     void RecreateHandlersForReconnect()
     {
         var registrations = _handlers.Values.ToArray();
-        DisconnectHandlers();
+        DisconnectHandlers("connection-lost-handler-replacement");
         _handlers = registrations.Select(RecreateRegistration).ToFrozenDictionary(_ => _.Handler.Id);
     }
 
@@ -593,6 +605,10 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
         var scheduler = new PartitionedDeliveryScheduler(MaxConcurrentPartitions);
 #pragma warning restore CA2000 // Dispose objects before losing scope
         var eventsToObserve = _servicesAccessor.Services.Reactors.Observe(messages.Messages, cancellationToken);
+        _diagnosticSessions.GetValue(handler, _ => new(request.ConnectionId)).ConnectionId = request.ConnectionId;
+        void Diagnostic(string outcome) => _logger.ReactorLifecycleDiagnostic(outcome, handler.Id, request.EventStore, request.Namespace, handler.EventSequenceId.Value, request.ConnectionId, cancellationToken.IsCancellationRequested);
+        void Terminal(string terminal, Exception? error = null) => _logger.ReactorTerminalDiagnostic(terminal, handler.Id, request.EventStore, request.Namespace, handler.EventSequenceId.Value, request.ConnectionId, cancellationToken.IsCancellationRequested, DiagnosticRpcStatus(error));
+        Diagnostic("stream-started");
 
         // Re-establish the observation after the stream ends. A cross-store
         // (inbox) reactor's stream can be CLOSED by the kernel rather than tailed
@@ -604,20 +620,24 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
         {
             if (cancellationToken.IsCancellationRequested)
             {
+                Diagnostic("reconnect-suppressed-local-cancellation");
                 return;
             }
 
+            Diagnostic("reconnect-scheduled");
             _ = Task.Run(async () =>
             {
                 try
                 {
                     await scheduler.DrainAndDispose();
                     await Task.Delay(TimeSpan.FromSeconds(2), cancellationToken);
+                    Diagnostic("reconnect-executing");
                     _logger.ReconnectingReactor(handler.Id);
                     RegisterReactor(registration);
                 }
                 catch (OperationCanceledException ex)
                 {
+                    Diagnostic("reconnect-abandoned-local-cancellation");
                     _logger.RegisteringReactorStreamCancelled(handler.Id, ex);
                 }
             });
@@ -643,6 +663,7 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
                 {
                     scheduler.Stop();
                     var errorKind = cancellationToken.IsCancellationRequested ? KernelConnectionErrorKind.Cancelled : ex.ClassifyStreamError();
+                    Terminal(errorKind.ToString(), ex);
                     if (errorKind == KernelConnectionErrorKind.Cancelled)
                     {
                         _logger.RegisteringReactorStreamCancelled(handler.Id, ex);
@@ -668,6 +689,7 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
                         _logger.ReactorStreamLostConnection(handler.Id, ex);
                         messages.Dispose();
                         _ = scheduler.DrainAndDispose();
+                        Diagnostic("connection-reconnect-requested-session-lost");
                         _eventStore.Connection.RequestReconnect();
                         return;
                     }
@@ -680,6 +702,7 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
                 () =>
                 {
                     scheduler.Stop();
+                    Terminal("Completed");
                     _logger.RegisteringReactorStreamCompleted(handler.Id);
                     messages.Dispose();
                     ScheduleReconnect();
@@ -688,6 +711,18 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
 
     Task ObserverMethod(SerializedMessages<ReactorMessage> messages, ReactorRegistration registration, EventsToObserve events, CancellationToken cancellationToken) =>
         _dispatcher.Dispatch(registration.Handler, registration.Handle, events, _eventStore.Namespace, result => messages.Publish(new(new(result))), cancellationToken);
+
+    /// <summary>
+    /// Holds diagnostic correlation state without retaining disconnected handlers through its weak keys.
+    /// </summary>
+    /// <param name="connectionId">The connection to use until the handler registers an observation stream.</param>
+    sealed class DiagnosticSession(ConnectionId connectionId)
+    {
+        /// <summary>
+        /// Gets or sets the connection captured by the handler's latest observation registration.
+        /// </summary>
+        public ConnectionId ConnectionId { get; set; } = connectionId;
+    }
 
     sealed record ReactorRegistration(
         ReactorHandler Handler,

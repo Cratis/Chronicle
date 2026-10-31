@@ -19,6 +19,8 @@ from unittest.mock import patch
 import integration_lane_exclusions as exclusions
 import yaml
 
+from sql_diagnostic_routing_specs import verify_sql_diagnostic_route
+
 WORKFLOWS = Path(__file__).resolve().parents[1] / "workflows"
 EFFECTIVE_LABEL = ("(github.event.action == 'labeled' && github.event.label.name || "
                    "contains(github.event.pull_request.labels.*.name, 'run-integration') && "
@@ -47,12 +49,14 @@ class ConditionContext:
     cancelled: bool = False
     actor: str = "contributor"
     gate_skip: str = "false"
+    sql_diagnostic: bool = False
 
     def bindings(self):
         values = {
             "github.event_name": self.event,
             "github.actor": self.actor,
             "inputs.integration_requested": self.requested,
+            "inputs.sql_diagnostic": self.sql_diagnostic,
             "cancelled()": self.cancelled,
             "always()": True,
         }
@@ -635,10 +639,12 @@ sys.exit(1 if failed else 0)
         jobs = workflow("integration.yml")["jobs"]
         ordinary = jobs["sql-clustering-integration-specs"]
         rolling = jobs["sql-clustering-rolling-upgrade"]
-        self.assertEqual(["PostgreSql", "SqlServer"], ordinary["strategy"]["matrix"]["provider"])
+        self.assertEqual('${{ fromJson(inputs.sql-diagnostic && \'["SqlServer"]\' || \'["PostgreSql","SqlServer"]\') }}',
+                         ordinary["strategy"]["matrix"]["provider"])
         self.assertNotIn("if", ordinary)
         self.assertEqual(["RollingUpgrade"], rolling["strategy"]["matrix"]["provider"])
-        self.assertEqual("needs.discover.outputs.rolling-upgrade-enabled == 'true'", rolling["if"])
+        self.assertEqual("${{ !inputs.sql-diagnostic && needs.discover.outputs.rolling-upgrade-enabled == 'true' }}",
+                         rolling["if"])
         self.assertEqual(["discover"], rolling["needs"])
         self.assertEqual(ordinary["steps"], rolling["steps"])
         self.assertEqual(ordinary["timeout-minutes"], rolling["timeout-minutes"])
@@ -646,6 +652,9 @@ sys.exit(1 if failed else 0)
                          jobs["discover"]["outputs"]["rolling-upgrade-enabled"])
         report = next(step for step in jobs["discover"]["steps"] if step.get("id") == "exclusions")
         self.assertEqual("python3 .github/scripts/integration_lane_exclusions.py", report["run"])
+
+    def test_sql_diagnostic_is_dispatch_only_default_off_and_not_all_provider_evidence(self):
+        verify_sql_diagnostic_route(self, workflow, ConditionContext, evaluate_boolean_condition)
 
     def test_declaration_is_visible_and_one_line_removal_reenables_the_job(self):
         for declarations in (exclusions.EXCLUDED_LANES.copy(), {}):

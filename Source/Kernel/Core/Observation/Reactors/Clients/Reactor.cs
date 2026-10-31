@@ -129,7 +129,9 @@ public class Reactor(
 
         if (!await _observer.KnowsClient(_observerKey.ConnectionId))
         {
-            if (!await _connectedClients!.IsConnected(_observerKey.ConnectionId))
+            var isConnected = await _connectedClients!.IsConnected(_observerKey.ConnectionId);
+            logger.SubscriptionPredicateDiagnostic(_observerKey.ObserverId, _observerKey.ConnectionId, _observerKey.EventStore, _observerKey.Namespace, _observerKey.EventSequenceId, false, isConnected, localSiloDetails.SiloAddress.ToString());
+            if (!isConnected)
             {
                 return;
             }

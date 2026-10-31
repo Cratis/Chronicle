@@ -10,6 +10,7 @@ using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.Reactors;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Namespaces;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Orleans.Core;
 using Orleans.TestKit;
@@ -19,6 +20,7 @@ namespace Cratis.Chronicle.Observation.Reactors.Clients.for_Reactor.given;
 public class a_reactor_grain_with_a_stored_definition : Specification
 {
     protected const string TheConnection = "the-connection";
+    readonly RecordingLogger _logger = new();
     protected Reactor _grain;
     protected TestKitSilo _silo;
     protected IObserver _observer;
@@ -34,6 +36,7 @@ public class a_reactor_grain_with_a_stored_definition : Specification
     async Task Establish()
     {
         _silo = new TestKitSilo();
+        _silo.AddService<ILogger<Reactor>>(_logger);
 
         _definitionComparer = Substitute.For<IReactorDefinitionComparer>();
         _definitionComparer
@@ -72,6 +75,31 @@ public class a_reactor_grain_with_a_stored_definition : Specification
 
         // A fresh activation, as after losing the one the client registered with.
         _grain = await _silo.CreateGrainAsync<Reactor>(key.ToString());
+    }
+
+    protected IEnumerable<string> DiagnosticMessages() => _logger.Messages;
+
+    protected IEnumerable<IReadOnlyDictionary<string, object?>> DiagnosticStates() => _logger.States;
+
+    sealed class RecordingLogger : ILogger<Reactor>
+    {
+        public List<string> Messages { get; } = [];
+        public List<IReadOnlyDictionary<string, object?>> States { get; } = [];
+
+        public IDisposable? BeginScope<TState>(TState state)
+            where TState : notnull => null;
+
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
+        {
+            // Generated logging state is pooled and cleared after Log returns.
+            Messages.Add(formatter(state, exception));
+            if (state is IEnumerable<KeyValuePair<string, object?>> properties)
+            {
+                States.Add(properties.ToDictionary(pair => pair.Key, pair => pair.Value));
+            }
+        }
     }
 
     protected Task WasSubscribed(ReactorDefinition definition) => _observer.Received(1).Subscribe<IReactorObserverSubscriber>(
