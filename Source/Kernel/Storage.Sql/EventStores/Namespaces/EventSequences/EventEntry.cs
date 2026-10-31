@@ -90,11 +90,6 @@ public class EventEntry
     public string? DerivedGenerations { get; set; }
 
     /// <summary>
-    /// Gets or sets the JSON array of revisions. Null when the event was never revised through revision tracking.
-    /// </summary>
-    public string? Revisions { get; set; }
-
-    /// <summary>
     /// Gets or sets the subject that identifies the compliance target for the event.
     /// </summary>
     public string? Subject { get; set; }

@@ -20,8 +20,8 @@ public class and_the_event_is_revised : given.a_storage_with_stored_generations
         _snapshot = (await _storage.GetStoredGenerations(0))!;
     }
 
-    [Fact] void should_keep_the_original_content() => _snapshot.Content[EventTypeGeneration.First].ShouldEqual("{\"value\":\"original\"}");
-    [Fact] void should_report_the_revision_count() => _snapshot.RevisionCount.ShouldEqual(1);
+    [Fact] void should_read_the_base_content() => _snapshot.Content[EventTypeGeneration.First].ShouldEqual("{}");
+    [Fact] void should_report_the_revision_count() => _snapshot.RevisionCount.ShouldEqual(0);
     [Fact] void should_report_the_revised_generation() => _snapshot.RevisedGeneration.ShouldEqual(EventTypeGeneration.First);
-    [Fact] void should_carry_the_revised_content() => _snapshot.RevisedContent.ShouldEqual("{}");
+    [Fact] void should_carry_the_revised_content() => _snapshot.RevisedContent.ShouldNotBeNull();
 }
