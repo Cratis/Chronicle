@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Diagnostics;
 using System.Reactive.Linq;
 using System.Security.Claims;
 using Cratis.Chronicle.Clients;
@@ -34,6 +33,11 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage, IO
 {
     const int ObserverCompletionPollingDelayMs = 50;
     const ulong MaximumObserverCompletionRange = 10_000;
+
+    /// <summary>
+    /// Gets or sets the clock used for observer completion deadlines and polling.
+    /// </summary>
+    internal TimeProvider CompletionTimeProvider { get; set; } = TimeProvider.System;
 
     /// <inheritdoc/>
     public async Task<RetryPartitionResponse> RetryPartition(RetryPartition command, CallContext context = default)
@@ -92,7 +96,7 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage, IO
             .GroupBy(_ => _.EventType.Id, StringComparer.Ordinal)
             .ToDictionary(_ => _.Key, _ => _.Max(tail => tail.SequenceNumber), StringComparer.Ordinal);
 
-        var stopwatch = Stopwatch.StartNew();
+        var started = CompletionTimeProvider.GetTimestamp();
 
         // Recheck the subscription on every poll, but retain a matching event for unchanged filters
         // and event types. An unsubscribed observer or an unknown match cannot be cached.
@@ -129,7 +133,7 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage, IO
             var failedObserverIds = failedPartitions.Partitions.Select(_ => _.ObserverId.Value).ToHashSet(StringComparer.Ordinal);
             var undecidedObservers = observers.Where(_ => NeedsSubscription(_, eventTypeTails, request.TailEventSequenceNumber, failedObserverIds)).ToArray();
             var subscriptions = await Task.WhenAll(undecidedObservers.Select(observer =>
-                grainFactory.GetGrain<Cratis.Chronicle.Observation.IObserver>(
+                grainFactory.GetGrain<Chronicle.Observation.IObserver>(
                     new Concepts.Observation.ObserverKey(observer.Id, request.EventStore, request.Namespace, request.EventSequenceId)).GetSubscription()));
             var matchingObserverIds = new HashSet<string>(StringComparer.Ordinal);
             var outstanding = new List<string>();
@@ -216,7 +220,7 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage, IO
                 };
             }
 
-            if (request.TimeoutMilliseconds > 0 && stopwatch.ElapsedMilliseconds >= request.TimeoutMilliseconds)
+            if (request.TimeoutMilliseconds > 0 && CompletionTimeProvider.GetElapsedTime(started).TotalMilliseconds >= request.TimeoutMilliseconds)
             {
                 return new WaitForObserverCompletionResponse
                 {
@@ -226,7 +230,7 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage, IO
                 };
             }
 
-            await Task.Delay(ObserverCompletionPollingDelayMs, context.CancellationToken);
+            await Task.Delay(TimeSpan.FromMilliseconds(ObserverCompletionPollingDelayMs), CompletionTimeProvider, context.CancellationToken);
         }
     }
 
@@ -293,6 +297,7 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage, IO
             TailEventSequenceNumber = state.TailEventSequenceNumber,
             HandledEventCount = state.HandledEventCount,
             RunningState = state.RunningState.ToContract(),
+            RunningStateChangedAt = state.RunningStateChangedAt,
             IsSubscribed = subscribed,
             IsReplayable = definition.IsReplayable
         };
@@ -438,7 +443,7 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage, IO
 
     async Task<EventSequenceNumber?> GetLastMatchingEvent(
         WaitForObserverCompletionRequest request,
-        Cratis.Chronicle.Observation.ObserverSubscription subscription,
+        Chronicle.Observation.ObserverSubscription subscription,
         EventSequenceNumber lastHandled,
         EventSequenceNumber target,
         Concepts.Observation.ObserverFilters filters,
@@ -491,7 +496,7 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage, IO
 
     sealed record CachedMatchingEvent(
         Concepts.Observation.ObserverFilters Filters,
-        Concepts.Events.EventType[] SubscriptionEventTypes,
+        EventType[] SubscriptionEventTypes,
         string[] ObserverEventTypeIds,
         bool IncludesHandledEvents,
         EventSequenceNumber LastMatchingEvent);

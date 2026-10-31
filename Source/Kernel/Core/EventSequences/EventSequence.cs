@@ -64,6 +64,7 @@ namespace Cratis.Chronicle.EventSequences;
 /// <param name="concurrencyValidatorLogger"><see cref="ILogger{T}"/> for the <see cref="ConcurrencyValidator"/> created per append.</param>
 /// <param name="constraintIndexReplayLogger">The constraint replay logger.</param>
 /// <param name="encryptionKeyStorage">The read-only key lookup used to compare keyed retries.</param>
+/// <param name="timeProvider">The clock for default occurrence times and effect receipts; defaults to the system clock.</param>
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.EventSequences)]
 [EventSequencePlacement]
 public partial class EventSequence(
@@ -82,8 +83,10 @@ public partial class EventSequence(
     ILogger<EventSequence> logger,
     ILogger<ConcurrencyValidator> concurrencyValidatorLogger,
     ILogger<ConstraintIndexReplay>? constraintIndexReplayLogger = null,
-    IEncryptionKeyStorage? encryptionKeyStorage = null) : Grain<EventSequenceState>, IEventSequence, IOnBroadcastChannelSubscribed
+    IEncryptionKeyStorage? encryptionKeyStorage = null,
+    TimeProvider? timeProvider = null) : Grain<EventSequenceState>, IEventSequence, IOnBroadcastChannelSubscribed
 {
+    readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
     readonly IdentifierTelemetry _spanIdentifiers = new(options.Value.Telemetry);
     readonly HashSet<EventTypeId> _unspecifiedVisibilityWarned = [];
     IEventSequenceStorage? _eventSequenceStorage;
@@ -644,7 +647,7 @@ public partial class EventSequence(
                 CausationForStorage(eventToAppend.Causation ?? causation),
                 causedByChain,
                 eventToAppend.Tags,
-                eventToAppend.Occurred ?? DateTimeOffset.UtcNow,
+                eventToAppend.Occurred ?? _timeProvider.GetUtcNow(),
                 compliantEvent,
                 eventHash,
                 eventToAppend.Subject)
@@ -788,7 +791,7 @@ public partial class EventSequence(
 
             async Task<Result<AppendedEvent, DuplicateEventSequenceNumber>> WriteToStorage()
             {
-                var eventOccurred = occurred ?? DateTimeOffset.UtcNow;
+                var eventOccurred = occurred ?? _timeProvider.GetUtcNow();
                 logger.Appending(
                     _eventSequenceKey.EventStore,
                     _eventSequenceKey.Namespace,
@@ -884,7 +887,7 @@ public partial class EventSequence(
             EventToAppendToStorage? attempted = null;
             Task<Result<AppendedEvent, DuplicateEventSequenceNumber>> AppendToStorage()
             {
-                attempted = new EventToAppendToStorage(State.SequenceNumber, eventSourceType, eventSourceId, eventStreamType, eventStreamId, eventType, correlationId, CausationForStorage(causation), identity, tags, occurred ?? DateTimeOffset.UtcNow, compliantEvent, contentHashes.TryGetValue(eventType.Generation, out var hash) ? hash : EventHash.NotSet, subject)
+                attempted = new EventToAppendToStorage(State.SequenceNumber, eventSourceType, eventSourceId, eventStreamType, eventStreamId, eventType, correlationId, CausationForStorage(causation), identity, tags, occurred ?? _timeProvider.GetUtcNow(), compliantEvent, contentHashes.TryGetValue(eventType.Generation, out var hash) ? hash : EventHash.NotSet, subject)
                 {
                     GenerationalContent = migratedContent,
                     ContentHashes = contentHashes

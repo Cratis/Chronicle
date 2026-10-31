@@ -6,7 +6,8 @@ import { withViewModel } from '@cratis/arc.react.mvvm';
 import { ObserversViewModel } from './ObserversViewModel';
 import { Column } from '@cratis/components/DataTables';
 import { DataTableCore } from '@cratis/components/DataTables';
-import { ActionMenubar, type ActionMenuItem } from '@cratis/components/Common';
+import { Message } from '@cratis/components/Display';
+import { ActionMenubar, Button, type ActionMenuItem } from '@cratis/components/Common';
 import { IconField } from 'primereact/iconfield';
 import { InputText } from 'primereact/inputtext';
 import { ObserverInformation } from 'Features/Observation';
@@ -144,6 +145,37 @@ export const Observers = withViewModel(ObserversViewModel, ({ viewModel }) => {
                 <ActionMenubar model={menuItems} />
                 {searchInput}
             </div>
+            <form className='px-4 py-2 flex flex-wrap items-end gap-2'
+                onSubmit={event => {
+                    event.preventDefault();
+                    void viewModel.replayPartition(params.eventStore!, params.namespace!);
+                }}>
+                <div className='flex flex-col gap-1'>
+                    <label htmlFor='partition-event-source-id'>{strings.eventStore.namespaces.observers.partitionReplay.label}</label>
+                    <InputText
+                        id='partition-event-source-id'
+                        value={viewModel.partitionEventSourceId}
+                        onChange={(event: ChangeEvent<HTMLInputElement>) => { viewModel.partitionEventSourceId = event.target.value; }}
+                        disabled={viewModel.isReplayingPartition}
+                        aria-describedby='partition-replay-helper partition-replay-feedback'
+                        aria-invalid={!!viewModel.partitionReplayFeedback && !viewModel.partitionReplayAccepted}
+                    />
+                </div>
+                <Button type='submit'
+                    label={strings.eventStore.namespaces.observers.partitionReplay.action}
+                    disabled={!viewModel.canReplayPartition}
+                    loading={viewModel.isReplayingPartition}
+                />
+                <small id='partition-replay-helper' className='basis-full'>
+                    {strings.eventStore.namespaces.observers.partitionReplay.helper}
+                </small>
+                <div id='partition-replay-feedback' role='status' aria-live='polite' className='basis-full'>
+                    {viewModel.partitionReplayFeedback && <Message
+                        severity={viewModel.partitionReplayAccepted ? 'success' : 'error'}
+                        text={viewModel.partitionReplayFeedback}
+                    />}
+                </div>
+            </form>
             <div className='flex-1 overflow-hidden px-4 pb-4'>
                 <Allotment className='h-full' proportionalLayout={false}>
                     <Allotment.Pane className='flex-grow'>

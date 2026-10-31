@@ -12,20 +12,62 @@ namespace Cratis.Chronicle.ReadModels;
 public class ReadModelWatcherManager(IReadModelWatcherFactory readModelWatcherFactory) : IReadModelWatcherManager
 {
     readonly ConcurrentDictionary<Type, IReadModelWatcher> _watchers = [];
+    readonly object _sync = new();
+    bool _released;
 
     /// <inheritdoc/>
     public IReadModelWatcher<TReadModel> GetWatcher<TReadModel>()
     {
-        if (!_watchers.TryGetValue(typeof(TReadModel), out var watcher))
+        IReadModelWatcher? watcher;
+        var created = false;
+        lock (_sync)
         {
-            watcher = _watchers[typeof(TReadModel)] = readModelWatcherFactory.Create<TReadModel>(() => _watchers.TryRemove(typeof(TReadModel), out _));
+            ThrowIfReleased();
+            if (!_watchers.TryGetValue(typeof(TReadModel), out watcher))
+            {
+                watcher = _watchers[typeof(TReadModel)] = readModelWatcherFactory.Create<TReadModel>(() => _watchers.TryRemove(typeof(TReadModel), out _));
+                created = true;
+            }
+        }
 
+        if (created)
+        {
             // Always start the watcher immediately. If the connection is not established yet,
-            // calling Start() will trigger the connection through Services access.
+            // calling Start() will trigger the connection through Services access, so it never runs under the lock.
             // The OnConnected callback in ReadModelWatcher will handle re-starting if needed.
             watcher.Start();
+
+            lock (_sync)
+            {
+                if (_released)
+                {
+                    watcher.Stop();
+                    ThrowIfReleased();
+                }
+            }
         }
 
         return (watcher as IReadModelWatcher<TReadModel>)!;
     }
+
+    /// <summary>
+    /// Releases the watchers of an event store whose creation failed and that no caller holds. Stops every watcher,
+    /// which closes its server stream and its connection lifecycle subscriptions, and refuses new ones.
+    /// </summary>
+    internal void Release()
+    {
+        IReadModelWatcher[] watchers;
+        lock (_sync)
+        {
+            _released = true;
+            watchers = [.. _watchers.Values];
+        }
+
+        foreach (var watcher in watchers)
+        {
+            watcher.Stop();
+        }
+    }
+
+    void ThrowIfReleased() => ObjectDisposedException.ThrowIf(_released, this);
 }

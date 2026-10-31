@@ -484,7 +484,7 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
         // discovery from any container other than the one that owns the mongod process.
         const string mongodStart = "mongod --replSet rs0 --bind_ip_all > /proc/1/fd/1 2>/proc/1/fd/2 & ";
         const string waitForPing = "until mongosh --quiet --eval 'db.adminCommand(\"ping\")' >/dev/null 2>&1; do sleep 0.1; done; ";
-        var initiateReplicaSet = $"mongosh --eval 'rs.initiate({{_id:\"rs0\",members:[{{_id:0,host:\"{MongoDbHostName}:27017\"}}]}})' || true; ";
+        var initiateReplicaSet = $"mongosh --eval 'rs.initiate({{_id:\"rs0\",members:[{{_id:0,host:\"{MongoDbHostName}:27017\"}}]}})' || echo \"chronicle-fixture: rs.initiate failed with exit $?\"; ";
         const string tailLoop = "tail -f /dev/null";
         var replicaSetCommand = mongodStart + waitForPing + initiateReplicaSet + tailLoop;
 
@@ -505,7 +505,16 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
             .Build();
 
         LifecycleHooks?.ContainerBuilt?.Invoke(_outOfProcessMongoContainer);
-        _outOfProcessMongoContainer.StartAsync().GetAwaiter().GetResult();
+        try
+        {
+            _outOfProcessMongoContainer.StartAsync().GetAwaiter().GetResult();
+        }
+        catch (Exception ex)
+        {
+            var diagnostics = MongoContainerStartupDiagnostics.Collect(_outOfProcessMongoContainer);
+            var disposal = MongoContainerStartupDiagnostics.Dispose(_outOfProcessMongoContainer);
+            throw new MongoContainerFailedToStart($"The out-of-process MongoDB container failed to start.\n{diagnostics}{disposal}", ex);
+        }
 
         timing?.Success();
         return $"mongodb://{MongoDbHostName}:27017/?replicaSet=rs0";

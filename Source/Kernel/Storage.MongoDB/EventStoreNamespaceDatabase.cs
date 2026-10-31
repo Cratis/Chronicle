@@ -24,7 +24,10 @@ public class EventStoreNamespaceDatabase : IEventStoreNamespaceDatabase
     /// type_sequenceNumber compound), the single-field "eventStreamType" (covered by the eventStreamType_eventStreamId
     /// compound), and the "contentHashes" wildcard index (never filtered on).
     /// </summary>
-    static readonly string[] _obsoleteEventIndexNames = ["eventSourceId", "eventTypeId", "eventStreamType", "contentHashes"];
+    /// <summary>
+    /// The historical event index names superseded by the desired event indexes.
+    /// </summary>
+    internal static readonly string[] ObsoleteEventIndexNames = ["eventSourceId", "eventTypeId", "eventStreamType", "contentHashes"];
 
     readonly IMongoDatabase _database;
     readonly ConcurrentDictionary<EventSequenceId, bool> _indexedEventSequences = [];
@@ -100,7 +103,7 @@ public class EventStoreNamespaceDatabase : IEventStoreNamespaceDatabase
         var collection = _database.GetCollection<Event>(GetCollectionNameFor(eventSequenceId));
         var existing = await collection.GetIndexNamesAsync().ConfigureAwait(false);
 
-        foreach (var obsolete in _obsoleteEventIndexNames.Where(existing.Contains))
+        foreach (var obsolete in ObsoleteEventIndexNames.Where(existing.Contains))
         {
             await collection.Indexes.DropOneAsync(obsolete).ConfigureAwait(false);
         }
@@ -129,7 +132,11 @@ public class EventStoreNamespaceDatabase : IEventStoreNamespaceDatabase
         return names.Count > 0;
     }
 
-    static IEnumerable<CreateIndexModel<Event>> DesiredEventIndexes()
+    /// <summary>
+    /// Gets the event indexes shared by runtime and offline provisioning.
+    /// </summary>
+    /// <returns>The desired named indexes.</returns>
+    internal static IEnumerable<CreateIndexModel<Event>> DesiredEventIndexes()
     {
         yield return new(
             Builders<Event>.IndexKeys.Ascending(_ => _.Type).Descending(_ => _.SequenceNumber),

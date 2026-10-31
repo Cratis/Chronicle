@@ -33,6 +33,7 @@ public static class ObserverStateConverters
             NextEventSequenceNumber = state.NextEventSequenceNumber,
             TailEventSequenceNumber = state.TailEventSequenceNumber,
             RunningState = state.RunningState,
+            RunningStateChangedAt = state.RunningStateChangedAt,
             ReplayingPartitions = state.ReplayingPartitions,
             CatchingUpPartitions = state.CatchingUpPartitions,
             InFlightPartitions = state.InFlightPartitions,
@@ -62,6 +63,7 @@ public static class ObserverStateConverters
             state.IsReplaying,
             state.SubscribesToAllEvents)
         {
+            RunningStateChangedAt = state.RunningStateChangedAt,
             Owner = state.Owner,
             PartitionClaims = state.PartitionClaims,
             ObserverWideClaim = state.ObserverWideClaim,
@@ -100,6 +102,7 @@ public static class ObserverStateConverters
             state.IsReplaying,
             state.SubscribesToAllEvents)
         {
+            RunningStateChangedAt = state.RunningStateChangedAt,
             Owner = state.Owner,
             PartitionClaims = state.PartitionClaims,
             ObserverWideClaim = state.ObserverWideClaim,

@@ -139,6 +139,7 @@ message ObserverInformation {
    bool IsReplayable = 10;
    uint64 TailEventSequenceNumber = 11;
    uint64 HandledEventCount = 12;
+   SerializableDateTimeOffset RunningStateChangedAt = 13;
 }
 enum ObserverOwner {
    None = 0;

@@ -110,6 +110,11 @@ public class ObserverState
     public ObserverRunningState RunningState { get; set; } = ObserverRunningState.Unknown;
 
     /// <summary>
+    /// Gets or sets when the running state last changed, or null when unknown.
+    /// </summary>
+    public DateTimeOffset? RunningStateChangedAt { get; set; }
+
+    /// <summary>
     /// Gets or sets the set of partitions being replayed.
     /// </summary>
     public IEnumerable<Key> ReplayingPartitions { get; set; } = [];

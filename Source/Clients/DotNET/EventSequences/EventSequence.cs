@@ -637,6 +637,32 @@ public class EventSequence(
     }
 
     /// <inheritdoc/>
+    public async Task<EventSequenceNumber> GetTailSequenceNumberWithCancellation(
+        CancellationToken cancellationToken,
+        EventSourceId? eventSourceId = default,
+        EventSourceType? eventSourceType = default,
+        EventStreamType? eventStreamType = default,
+        EventStreamId? eventStreamId = default,
+        IEnumerable<EventType>? filterEventTypes = default)
+    {
+        ReadProtectionGuard.Read(nameof(GetTailSequenceNumberWithCancellation));
+        cancellationToken.ThrowIfCancellationRequested();
+        var request = new Contracts.Sequences.TailSequenceNumberRequest
+        {
+            EventStore = eventStoreName,
+            Namespace = @namespace,
+            EventSequenceId = eventSequenceId,
+            EventSourceId = eventSourceId?.Value,
+            EventSourceType = eventSourceType?.Value,
+            EventStreamType = eventStreamType?.Value,
+            EventStreamId = eventStreamId?.Value,
+            EventTypeIds = JoinEventTypeIds(filterEventTypes)
+        };
+        var services = await _servicesAccessor.GetServices(cancellationToken);
+        return (await services.Sequences.TailSequenceNumber(request, new CallContext(new CallOptions(cancellationToken: cancellationToken))).EnsureSuccess()).SequenceNumber;
+    }
+
+    /// <inheritdoc/>
     public async Task<EventSequenceNumber> GetTailSequenceNumberForObserver(Type type)
     {
         ReadProtectionGuard.Read(nameof(GetTailSequenceNumberForObserver));
@@ -1491,7 +1517,8 @@ public class EventSequence(
         };
 
         // A duplicate did not append this attempt's events. Never notify local observers as if it did.
-        if (response?.EffectAlreadyRecorded == true) return result;
+        // Its result therefore reports no event types appended in this turn.
+        if (response?.EffectAlreadyRecorded == true) return result with { EventTypes = [], AppendedEventTypes = [] };
 
         var handler = result.AllAlreadyAppended ? null : _appendedEventsRaised;
         if (eventsList.Count > 0 && handler is not null)

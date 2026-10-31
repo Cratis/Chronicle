@@ -140,6 +140,9 @@ jobs:
           python3 .github/scripts/test-pr-artifact-handoff.py
           python3 .github/scripts/test-sparse-integration-workflows.py
 
+      - name: Spec Workbench proxy freshness guard
+        run: node .github/scripts/test-check-workbench-proxies.mjs
+
       - name: Setup .Net
         uses: actions/setup-dotnet@v4
         with:
@@ -179,6 +182,22 @@ jobs:
 
       - name: Stamp the build version
         run: python3 .github/scripts/derive-build-version.py >> "$GITHUB_ENV"
+
+      - name: Set isolated Workbench proxy destination
+        run: echo "WORKBENCH_PROXIES=$RUNNER_TEMP/workbench-proxies" >> "$GITHUB_ENV"
+
+      - name: Prepare isolated Workbench proxy generation
+        run: node .github/scripts/check-workbench-proxies.mjs prepare --output "$WORKBENCH_PROXIES"
+
+      - name: Generate native Debug Workbench proxies
+        run: >-
+          dotnet build Source/Kernel/Core/Core.csproj --configuration Debug
+          -p:DisableProxyGenerator=false -p:DisableGrpcContractGeneration=true
+          -p:DisableProtoGeneration=true -p:DisableDockerBuild=true
+          -p:CratisProxiesIncremental=false "-p:CratisProxiesOutputPath=$WORKBENCH_PROXIES"
+
+      - name: Check Workbench proxy freshness
+        run: node .github/scripts/check-workbench-proxies.mjs check --generated "$WORKBENCH_PROXIES"
 
       - name: Build
         run: dotnet build --configuration Release -p:DisableProxyGenerator=true -p:DisableDockerBuild=true
@@ -258,6 +277,13 @@ jobs:
           retention-days: 1
           compression-level: 0
           if-no-files-found: error
+
+      # The same pack command publish.yml runs, with a stable placeholder version, so pack-only failures
+      # (NU5104 stable-depends-on-prerelease, missing packed assets, nuspec errors) fail the pull request
+      # instead of surfacing after the release and tag exist. Runs after the build output is archived above.
+      - name: Verify NuGet packages can be created
+        if: github.event_name == 'pull_request'
+        run: dotnet pack ./Source/Clients/Packages.slnf --configuration Release -o "$RUNNER_TEMP/nuget-pack-check" -p:IsPackaging=true -p:Version=99.0.0 -p:PackageVersion=99.0.0 -p:SourceRevisionId=${{ github.sha }}
 
       - name: Export image
         if: github.event_name != 'pull_request' || inputs.integration_requested
