@@ -14,6 +14,7 @@ using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.EventSequences.Concurrency;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -30,6 +31,7 @@ public class an_administrator_roster : Specification
     protected IEventSequenceStorage _events;
     protected IEventSerializer _serializer;
     protected AdministratorRoster _roster;
+    protected IKernelEventProof _proof;
     protected ChronicleOptions _options;
     protected List<AppendedEvent> _appended;
     protected Dictionary<JsonObject, object> _serialized;
@@ -46,6 +48,7 @@ public class an_administrator_roster : Specification
 
     void Establish()
     {
+        _proof = new KernelEventProof(new EphemeralDataProtectionProvider());
         _first = Guid.NewGuid();
         _second = Guid.NewGuid();
         _appended = [];
@@ -68,13 +71,39 @@ public class an_administrator_roster : Specification
         _roster = CreateRoster();
     }
 
-    protected AdministratorRoster CreateRoster() => new(
-        _storage, _grainFactory, _serializer, Options.Create(_options), new ConfigurationBuilder().Build(), NullLogger<AdministratorRoster>.Instance);
+    protected AdministratorRoster CreateRoster() => CreateRosterWith(_proof);
+
+    protected AdministratorRoster CreateRosterWith(IKernelEventProof proof) => new(
+        _storage, _grainFactory, _serializer, proof, Options.Create(_options), new ConfigurationBuilder().Build(), NullLogger<AdministratorRoster>.Instance);
 
     protected async Task AddUser(UserId userId, string username, bool active = true) =>
         await _storage.System.Users.Create(new StorageUser { Id = userId, Username = username, IsActive = active });
 
-    protected AppendedEvent Seed(EventSourceId source, object content)
+    protected AppendedEvent Seed(EventSourceId source, object content) => SeedSigned(source, content);
+
+    protected AppendedEvent SeedSigned(EventSourceId source, object content, IKernelEventProof? signer = null)
+    {
+        var predecessor = _appended.LastOrDefault(@event => @event.Context.EventSourceId == source)?.Context.SequenceNumber ?? EventSequenceNumber.BeforeFirst;
+        return SeedForged(source, RosterHistory.WithProof(content, source, predecessor, signer ?? _proof));
+    }
+
+    protected void RedactSlot(EventSequenceNumber sequence)
+    {
+        var slot = _appended.Single(@event => @event.Context.SequenceNumber == sequence);
+        var tombstone = slot with { Context = slot.Context with { EventType = new EventType(GlobalEventTypes.Redaction, EventTypeGeneration.First) } };
+        _appended[_appended.IndexOf(slot)] = tombstone;
+        _contents[tombstone] = new EventRedacted("spec", slot.Context.EventType.Id, DateTimeOffset.UtcNow, slot.Context.CorrelationId, [], []);
+    }
+
+    protected void ReviseSlot(EventSequenceNumber sequence, object content)
+    {
+        var slot = _appended.Single(@event => @event.Context.SequenceNumber == sequence);
+        var revised = slot with { Revisions = [new EventRevision(EventTypeGeneration.First, slot.Context.CorrelationId, [], Identity.System, DateTimeOffset.UtcNow)] };
+        _appended[_appended.IndexOf(slot)] = revised;
+        _contents[revised] = content;
+    }
+
+    protected AppendedEvent SeedForged(EventSourceId source, object content)
     {
         var appended = AppendedEvent.Empty() with
         {
@@ -170,7 +199,7 @@ public class an_administrator_roster : Specification
                 _conflicts++;
                 return AppendManyResult.Failed(CorrelationId.New(), violations);
             }
-            var sequenceNumbers = events.Select(@event => Seed(@event.EventSourceId, _serialized[@event.Content]).Context.SequenceNumber).ToArray();
+            var sequenceNumbers = events.Select(@event => SeedForged(@event.EventSourceId, _serialized[@event.Content]).Context.SequenceNumber).ToArray();
             return new AppendManyResult { CorrelationId = CorrelationId.New(), SequenceNumbers = sequenceNumbers, ConcurrencyCheckPerformed = true };
         }
     }

@@ -4,10 +4,12 @@
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
+using Cratis.Chronicle.Concepts.Identities;
 using Cratis.Chronicle.Concepts.Security;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
+using Microsoft.AspNetCore.DataProtection;
 using Roster = Cratis.Chronicle.Concepts.Security.AdministratorRoster;
 
 namespace Cratis.Chronicle.Security.for_AdministratorsReactor.given;
@@ -19,13 +21,16 @@ public class an_administrators_reactor : Specification
     protected AdministratorsReactor _reactor;
     protected UserId _userId;
     protected UserGrantedAdministrator _grant;
-    readonly List<AppendedEvent> _appended = [];
-    readonly Dictionary<AppendedEvent, object> _contents = [];
+    protected IKernelEventProof _proof;
+    protected readonly List<AppendedEvent> _appended = [];
+    protected readonly Dictionary<AppendedEvent, object> _contents = [];
 
     protected EventContext SeedGrant() => Seed(Roster.EventSourceId, _grant);
 
-    protected EventContext Seed(EventSourceId source, object content, EventStreamType? streamType = null, EventStreamId? streamId = null)
+    protected EventContext Seed(EventSourceId source, object content, EventStreamType? streamType = null, EventStreamId? streamId = null, IKernelEventProof? signer = null)
     {
+        var predecessor = _appended.LastOrDefault(@event => @event.Context.EventSourceId == source)?.Context.SequenceNumber ?? EventSequenceNumber.BeforeFirst;
+        content = RosterHistory.WithProof(content, source, predecessor, signer ?? _proof);
         var appended = AppendedEvent.Empty() with
         {
             Context = EventContext.Empty with
@@ -44,6 +49,14 @@ public class an_administrators_reactor : Specification
         return appended.Context;
     }
 
+    protected void RedactSlot(EventSequenceNumber sequence)
+    {
+        var slot = _appended.Single(@event => @event.Context.SequenceNumber == sequence);
+        var tombstone = slot with { Context = slot.Context with { EventType = new EventType(GlobalEventTypes.Redaction, EventTypeGeneration.First) } };
+        _appended[_appended.IndexOf(slot)] = tombstone;
+        _contents[tombstone] = new EventRedacted("spec", slot.Context.EventType.Id, DateTimeOffset.UtcNow, slot.Context.CorrelationId, [], []);
+    }
+
     static IEventCursor Cursor(AppendedEvent[] events)
     {
         var cursor = Substitute.For<IEventCursor>();
@@ -54,6 +67,7 @@ public class an_administrators_reactor : Specification
 
     void Establish()
     {
+        _proof = new KernelEventProof(new EphemeralDataProtectionProvider());
         _userId = Guid.NewGuid();
         _grant = new UserGrantedAdministrator(_userId, GrantReason.Bootstrap, "spec");
         _storage = Substitute.For<IStorage>();
@@ -67,7 +81,7 @@ public class an_administrators_reactor : Specification
         _events.GetRange(Arg.Any<EventSequenceNumber>(), Arg.Any<EventSequenceNumber>(), Arg.Any<EventSourceId>(), Arg.Any<IEnumerable<EventType>>(), Arg.Any<IEnumerable<Tag>>(), Arg.Any<CancellationToken>())
             .Returns(call => Task.FromResult(Cursor(Matching(call.ArgAt<IEnumerable<EventType>>(3), call.ArgAt<EventSourceId>(2))
                 .Where(@event => @event.Context.SequenceNumber >= call.ArgAt<EventSequenceNumber>(0) && @event.Context.SequenceNumber <= call.ArgAt<EventSequenceNumber>(1)).ToArray())));
-        _reactor = new AdministratorsReactor(_storage, serializer);
+        _reactor = new AdministratorsReactor(_storage, serializer, _proof);
     }
 
     IEnumerable<AppendedEvent> Matching(IEnumerable<EventType>? types, EventSourceId? source) =>

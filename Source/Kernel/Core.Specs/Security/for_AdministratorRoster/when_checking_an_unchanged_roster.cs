@@ -24,5 +24,5 @@ public class when_checking_an_unchanged_roster : given.an_administrator_roster
 
     [Fact] void should_allow_both_checks() => (_firstCheck && _secondCheck).ShouldBeTrue();
     [Fact] void should_read_the_authoritative_tail_for_every_check() => _events.ReceivedCalls().Count(call => call.GetMethodInfo().Name == "GetTailSequenceNumber").ShouldEqual(2);
-    [Fact] void should_not_replay_an_unchanged_tail() => _events.ReceivedCalls().Any(call => call.GetMethodInfo().Name == "GetRange").ShouldBeFalse();
+    [Fact] void should_replay_on_every_read() => _events.ReceivedCalls().Count(call => call.GetMethodInfo().Name == "GetRange").ShouldEqual(2);
 }
