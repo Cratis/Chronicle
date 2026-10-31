@@ -39,7 +39,7 @@ public class ReadModelsManager(IProjectionPipelineManager projectionPipelines) :
         // Only successfully reconciled definitions qualify for the fast path. Persisted manager state alone
         // cannot prove that SetDefinition and pipeline eviction completed during a previous attempt.
         definitions = definitions.Where(definition => !_completed.TryGetValue(definition.Identifier, out var completed) ||
-            !ReadModelDefinitionComparison.Equals(completed, definition)).ToArray();
+            !ReadModelDefinitions.AreEqual(completed, definition)).ToArray();
         if (!definitions.Any()) return;
 
         var readModels = State.ReadModels.ToList();
@@ -53,7 +53,7 @@ public class ReadModelsManager(IProjectionPipelineManager projectionPipelines) :
                 // A fresh activation must also reconcile an equal persisted definition: the previous
                 // activation may have persisted it and then failed before evicting the old pipelines.
                 _pendingEvictions.Add(definition.Identifier);
-                if (ReadModelDefinitionComparison.Equals(existing, definition)) continue;
+                if (ReadModelDefinitions.AreEqual(existing, definition)) continue;
                 readModels.Remove(existing);
             }
 

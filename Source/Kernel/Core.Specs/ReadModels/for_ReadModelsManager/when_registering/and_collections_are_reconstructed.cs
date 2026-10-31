@@ -24,8 +24,8 @@ public class and_collections_are_reconstructed : given.a_read_models_manager
 
     async Task Because() => await _manager.Register([_definition with
     {
-        Schemas = new Dictionary<ReadModelGeneration, JsonSchema> { [ReadModelGeneration.First] = new(JsonNode.Parse("{\"properties\":{\"name\":{\"type\":\"string\"}},\"type\":\"object\"}")!.AsObject()) },
-        Indexes = [new("other"), new("name")]
+        Schemas = new Dictionary<ReadModelGeneration, JsonSchema> { [ReadModelGeneration.First] = new(JsonNode.Parse("{\"type\":\"object\",\"properties\":{\"name\":{\"type\":\"string\"}}}")!.AsObject()) },
+        Indexes = [new("name"), new("other")]
     }]);
 
     [Fact] void should_write_the_global_definitions_only_once() => _silo.StorageManager.GetStorageStats(typeof(ReadModelsManager).FullName)!.Writes.ShouldEqual(1);
