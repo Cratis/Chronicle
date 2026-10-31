@@ -242,6 +242,80 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     /// </remarks>
     internal async Task Reconnect() => await Connect(respectFailureBackoff: false);
 
+    /// <summary>
+    /// Handles a timed-out connection attempt, failing the caller only after a connection has been established.
+    /// </summary>
+    /// <exception cref="ConnectionTimedOut">Thrown when an established connection times out.</exception>
+    internal void HandleConnectTimedOut()
+    {
+        _logger.TimedOut();
+        if (_hasEverConnected)
+        {
+            throw new ConnectionTimedOut();
+        }
+    }
+
+    /// <summary>
+    /// Asks the server whether it still serves what this client expects, and refuses to connect when it does not.
+    /// </summary>
+    /// <param name="connectionService">The connection service to ask.</param>
+    /// <returns>Awaitable task.</returns>
+    /// <exception cref="IncompatibleServerException">Thrown when the server no longer serves this client's contracts.</exception>
+    /// <remarks>
+    /// The comparison itself is the server's, not this client's - Chronicle has clients in four languages and only
+    /// two of those can build a descriptor set at runtime, so every client ships the one its contracts package was
+    /// built with and the server does the one comparison. See <c language="csharp">Source/Kernel/Compatibility</c>.
+    /// </remarks>
+    internal async Task CheckCompatibility(IConnectionService connectionService)
+    {
+        Capabilities = [];
+        CapabilitiesAreKnown = false;
+        CompatibilityResponse response;
+
+        try
+        {
+            response = await connectionService.CheckCompatibility(new()
+            {
+                ClientType = ChronicleClientIdentity.Type,
+                ClientVersion = ChronicleClientIdentity.Version,
+                ProtocolVersion = ChronicleClientIdentity.ProtocolVersion,
+                DescriptorSet = WireContractDescriptorSet.Bytes.ToArray()
+            });
+        }
+        catch (RpcException ex) when (ex.StatusCode == StatusCode.Unimplemented)
+        {
+            // A server from before the check moved server-side does not have this method. Fall back to the older
+            // exchange it does have, so upgrading the client does not silently drop the check against those servers.
+            // Such a server predates the capabilities handshake, so it is known to advertise no capabilities.
+            CapabilitiesAreKnown = true;
+            await CheckCompatibilityAgainstOlderServer(connectionService);
+            return;
+        }
+        catch (RpcException ex)
+        {
+            // Not being able to ask says nothing about whether the two sides agree, and a transport problem here
+            // would surface again on the very next call with a better message than this one could give.
+            _logger.FailedToCheckCompatibility(ex.Message);
+            return;
+        }
+
+        if (!response.IsCompatible)
+        {
+            var message = IncompatibilityMessage.Build(
+                _currentServerAddress?.ToString() ?? _connectionString.Redacted,
+                response.ServerVersion,
+                response.ServerProtocolVersion,
+                response.Incompatibilities);
+
+            _logger.IncompatibleWithServer(message);
+            throw new IncompatibleServerException(message);
+        }
+
+        Capabilities = response.Capabilities.ToArray();
+        CapabilitiesAreKnown = true;
+        _logger.CompatibilityCheckPassed(ChronicleClientIdentity.Version, ChronicleClientIdentity.ProtocolVersion, response.ServerVersion, response.ServerProtocolVersion);
+    }
+
     async Task Connect(bool respectFailureBackoff)
     {
         if (Lifecycle.IsConnected)
@@ -419,11 +493,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
             // Only once a connection has been established, though. A kernel that has not come up yet while its
             // client starts is ordinary, and a host that cannot boot through it is worse than one that keeps
             // trying - so the first connect keeps waiting on the watchdog rather than failing its caller.
-            _logger.TimedOut();
-            if (_hasEverConnected)
-            {
-                throw new ConnectionTimedOut();
-            }
+            HandleConnectTimedOut();
         }
         finally
         {
@@ -438,67 +508,6 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
             _watchDog.NotifyKeepAlive();
             _watchDog.Start();
         }
-    }
-
-    /// <summary>
-    /// Asks the server whether it still serves what this client expects, and refuses to connect when it does not.
-    /// </summary>
-    /// <param name="connectionService">The connection service to ask.</param>
-    /// <returns>Awaitable task.</returns>
-    /// <exception cref="IncompatibleServerException">Thrown when the server no longer serves this client's contracts.</exception>
-    /// <remarks>
-    /// The comparison itself is the server's, not this client's - Chronicle has clients in four languages and only
-    /// two of those can build a descriptor set at runtime, so every client ships the one its contracts package was
-    /// built with and the server does the one comparison. See <c language="csharp">Source/Kernel/Compatibility</c>.
-    /// </remarks>
-    async Task CheckCompatibility(IConnectionService connectionService)
-    {
-        Capabilities = [];
-        CapabilitiesAreKnown = false;
-        CompatibilityResponse response;
-
-        try
-        {
-            response = await connectionService.CheckCompatibility(new()
-            {
-                ClientType = ChronicleClientIdentity.Type,
-                ClientVersion = ChronicleClientIdentity.Version,
-                ProtocolVersion = ChronicleClientIdentity.ProtocolVersion,
-                DescriptorSet = WireContractDescriptorSet.Bytes.ToArray()
-            });
-        }
-        catch (RpcException ex) when (ex.StatusCode == StatusCode.Unimplemented)
-        {
-            // A server from before the check moved server-side does not have this method. Fall back to the older
-            // exchange it does have, so upgrading the client does not silently drop the check against those servers.
-            // Such a server predates the capabilities handshake, so it is known to advertise no capabilities.
-            CapabilitiesAreKnown = true;
-            await CheckCompatibilityAgainstOlderServer(connectionService);
-            return;
-        }
-        catch (RpcException ex)
-        {
-            // Not being able to ask says nothing about whether the two sides agree, and a transport problem here
-            // would surface again on the very next call with a better message than this one could give.
-            _logger.FailedToCheckCompatibility(ex.Message);
-            return;
-        }
-
-        if (!response.IsCompatible)
-        {
-            var message = IncompatibilityMessage.Build(
-                _currentServerAddress?.ToString() ?? _connectionString.Redacted,
-                response.ServerVersion,
-                response.ServerProtocolVersion,
-                response.Incompatibilities);
-
-            _logger.IncompatibleWithServer(message);
-            throw new IncompatibleServerException(message);
-        }
-
-        Capabilities = response.Capabilities.ToArray();
-        CapabilitiesAreKnown = true;
-        _logger.CompatibilityCheckPassed(ChronicleClientIdentity.Version, ChronicleClientIdentity.ProtocolVersion, response.ServerVersion, response.ServerProtocolVersion);
     }
 
     /// <summary>
