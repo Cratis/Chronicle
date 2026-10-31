@@ -12,6 +12,7 @@ using Cratis.Chronicle.Compliance.GDPR;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventTypes;
+using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences.Migrations;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.ProtectedValues;
@@ -19,11 +20,12 @@ using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.Compliance;
 using Cratis.Chronicle.Storage.InMemory;
 using Cratis.Chronicle.Storage.Sinks;
+using Cratis.Orleans.Jobs;
+using Cratis.Orleans.Storage;
 using Cratis.Types;
 using Microsoft.Extensions.Logging.Abstractions;
-using NSubstitute;
 
-namespace Cratis.Chronicle.Benchmarks;
+namespace Cratis.Chronicle.Benchmarks.Kernel;
 
 /// <summary>
 /// Measures append-time generation protection and unpinned delivery without external infrastructure.
@@ -91,7 +93,9 @@ public class AppendGenerationProtectionBenchmark
         _protected.Registry.Dispose();
     }
 
-    // In-process execution is deliberate: copied baseline/final binaries must not rebuild against current sources.
+    /// <summary>
+    /// Runs copied baseline/final binaries in-process without rebuilding against current sources.
+    /// </summary>
     sealed class BenchmarkConfiguration : ManualConfig
     {
         public BenchmarkConfiguration() => AddJob(Job.ShortRun.WithToolchain(InProcessEmitToolchain.Instance));
@@ -100,17 +104,17 @@ public class AppendGenerationProtectionBenchmark
     sealed class Fixture
     {
         const string Subject = "subject";
-        static readonly EventStoreName Store = "store";
-        static readonly EventStoreNamespaceName Namespace = "namespace";
+        static readonly EventStoreName _store = "store";
+        static readonly EventStoreNamespaceName _namespace = "namespace";
         readonly JsonObject _plaintext = new() { ["token"] = "eyJhbGciOiJIUzI1NiJ9.personal-token.signature" };
         ProtectedEventTypeMigrations _migrations = null!;
-        Events.EventGenerationRelease _release = null!;
+        EventGenerationRelease _release = null!;
         EventType _eventType = null!;
         ExpandoObject _source = null!;
         AppendedEvent[] _events = [];
         Dictionary<EventType, EventTypeSchema> _schemas = [];
 
-        public EventStoreStorages Registry { get; } = new(new KnownInstancesOf<ISinkFactory>(), Substitute.For<Cratis.Orleans.Storage.IJobsStorage>());
+        public EventStoreStorages Registry { get; } = new(new KnownInstancesOf<ISinkFactory>(), new InMemoryJobsStorage(JobTypes.Instance));
 
         public static async Task<Fixture> Create(uint generations, bool latestPii)
         {
@@ -120,14 +124,14 @@ public class AppendGenerationProtectionBenchmark
         }
 
         public Task<IDictionary<EventTypeGeneration, ExpandoObject>> Migrate() =>
-            _migrations.MigratePlaintext(Store, Namespace, _eventType, _plaintext, _source, Subject);
+            _migrations.MigratePlaintext(_store, _namespace, _eventType, _plaintext, _source, Subject);
 
-        public Task<AppendedEvent[]> Release() => _release.Release(Store, [], _schemas, _events);
+        public Task<AppendedEvent[]> Release() => _release.Release(_store, [], _schemas, _events);
 
         async Task Initialize(uint generations, bool latestPii)
         {
             var storage = new Storage.InMemory.Storage(Registry, new SystemStorage());
-            var eventTypes = storage.GetEventStore(Store).EventTypes;
+            var eventTypes = storage.GetEventStore(_store).EventTypes;
             var keys = new InMemoryEncryptionKeyStorage();
             var encryption = new Encryption();
             var provisioner = new ManagedEncryptionKeyProvisioner(keys, encryption);
@@ -150,13 +154,13 @@ public class AppendGenerationProtectionBenchmark
                 : [new(1, 2, [], new JsonObject(), new JsonObject()), new(2, 3, [], new JsonObject(), new JsonObject())];
             await eventTypes.Register(new EventTypeDefinition(_eventType.Id, EventTypeOwner.None, false, schemas, migrations));
             var sourceSchema = schemas[^1].Schema;
-            var protectedContent = await manager.Apply(Store, Namespace, sourceSchema, Subject, _plaintext);
+            var protectedContent = await manager.Apply(_store, _namespace, sourceSchema, Subject, _plaintext);
             _source = converter.ToExpandoObject(protectedContent, sourceSchema);
             var engine = new EventTypeMigrations(storage, converter);
             _migrations = new(eventTypes, engine, manager, converter);
-            _release = new(storage, new Events.EventCompliance(manager, converter), engine, manager, converter);
+            _release = new(storage, new EventCompliance(manager, converter), engine, manager, converter);
             _schemas = new() { [_eventType] = new(_eventType, EventTypeOwner.Server, EventTypeSource.Code, sourceSchema) };
-            _events = [new(EventContext.Empty with { EventStore = Store, Namespace = Namespace, EventType = _eventType, Subject = Subject }, _source)];
+            _events = [new(EventContext.Empty with { EventStore = _store, Namespace = _namespace, EventType = _eventType, Subject = Subject }, _source)];
         }
     }
 }
