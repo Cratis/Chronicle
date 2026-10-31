@@ -138,7 +138,7 @@ public partial class EventSequence
         UpdateConstraintIndexWatermark();
         try
         {
-            await RunConstraintIndexRepairTurn(TimeSpan.FromSeconds(5), false, CancellationToken.None, persist: false);
+            await RunConstraintIndexRepairTurn(ConstraintIndexRepair.AppendRepairBudget, false, CancellationToken.None, persist: false);
         }
         catch (Exception error)
         {

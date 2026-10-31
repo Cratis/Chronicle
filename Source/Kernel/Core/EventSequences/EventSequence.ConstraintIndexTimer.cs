@@ -47,7 +47,7 @@ public partial class EventSequence
             if (repairDue && (!catchUpDue || !_catchUpTurnNext))
             {
                 _catchUpTurnNext = true;
-                await RunConstraintIndexRepairTurn(TimeSpan.FromSeconds(2), true, cancellationToken);
+                await RunConstraintIndexRepairTurn(ConstraintIndexRepair.TimerTurnBudget, true, cancellationToken);
             }
             else if (catchUpDue)
             {

@@ -20,11 +20,6 @@ public partial class EventSequence
     ConstraintName[] _catchUpDeferred = [];
 
     /// <summary>
-    /// Gets or sets the exclusion cap, lowered only by deterministic specifications.
-    /// </summary>
-    internal int ConstraintIndexCatchUpKeyLimit { get; set; } = 100000;
-
-    /// <summary>
     /// Gets the retained exclusion count for memory-bound specifications.
     /// </summary>
     internal int ConstraintIndexCatchUpExcludedKeyCount => _catchUpExcluded.Count;
@@ -40,13 +35,15 @@ public partial class EventSequence
         return _catchUpReplay is not null || CatchUpScopeDefinitions(out _).Any() || !CatchUpDefinitions().Any();
     }
 
+    ConstraintIndexCatchUpSlots CatchUpSlots => ConstraintIndexCatchUpSlots.For(storage, ConstraintIndexRepair.CatchUpSlots);
+
     void ExcludeLiveConstraintKeys(ConstraintValidationContext context, EventSequenceNumber number)
     {
         if (!_catchUpTracking || State.ConstraintIndexCatchUpBelow is not { } boundary || number < boundary) return;
         foreach (var definition in CatchUpDefinitions())
         {
             _catchUpExcluded.Include(definition, context);
-            if (_catchUpExcluded.Count < ConstraintIndexCatchUpKeyLimit) continue;
+            if (_catchUpExcluded.Count < ConstraintIndexRepair.CatchUpExclusionLimit) continue;
             RaiseConstraintCatchUpBoundary();
             return;
         }
@@ -67,11 +64,11 @@ public partial class EventSequence
     async Task RunConstraintIndexCatchUpTurn(CancellationToken cancellationToken)
     {
         if (_rebuildOwnsBoundary) return;
-        var slots = ConstraintIndexCatchUpSlots.For(storage);
+        var slots = CatchUpSlots;
         if (!slots.TryEnter(this)) return;
         _catchUpTracking = true;
         var yield = false;
-        using var timeout = new CancellationTokenSource(TimeSpan.FromMilliseconds(1750), ConstraintIndexTimeProvider);
+        using var timeout = new CancellationTokenSource(ConstraintIndexRepair.TimerTurnBudget - TimeSpan.FromMilliseconds(250), ConstraintIndexTimeProvider);
         using var budget = CancellationTokenSource.CreateLinkedTokenSource(timeout.Token, cancellationToken);
         try
         {
@@ -193,7 +190,7 @@ public partial class EventSequence
         {
             if (context is null) _catchUpExcluded.IncludeSource(definition, @event.Context);
             else _catchUpExcluded.Include(definition, context);
-            if (_catchUpExcluded.Count < ConstraintIndexCatchUpKeyLimit) continue;
+            if (_catchUpExcluded.Count < ConstraintIndexRepair.CatchUpExclusionLimit) continue;
             RaiseConstraintCatchUpBoundary();
             return true;
         }
@@ -214,9 +211,11 @@ public partial class EventSequence
             CatchUpContent(),
             constraintIndexReplayLogger ?? NullLogger<ConstraintIndexReplay>.Instance,
             definitions.Select(definition => new ConstraintIndexReplayScope(definition, EventSequenceNumber.First)),
-            State.ConstraintIndexCatchUpBelow!)
+            State.ConstraintIndexCatchUpBelow!,
+            ConstraintIndexRepair.FoldKeyLimit)
         {
             ConstraintIndexTimeProvider = ConstraintIndexTimeProvider,
+            AttemptTimeout = ConstraintIndexRepair.AttemptTimeout,
             StorageErrorClassifier = _storageErrorClassifier,
             SettledPoison = _catchUpPoisonTracker.Settled,
             CatchUp = new(
