@@ -89,7 +89,7 @@ public class an_observer : Specification
         silo.AddService(options);
         silo.AddService(_configurationProvider);
         silo.AddService(_storage);
-        silo.AddService<TimeProvider>(_timeProvider);
+        silo.AddService(_timeProvider);
         silo.AddService(_webhookTargetPolicy);
         silo.AddService(_eventCompliance);
         silo.AddService(_eventGenerationRelease);
@@ -173,7 +173,7 @@ public class an_observer : Specification
         // By default, every job looked up individually is still running - so nothing it concluded is forgotten.
         _jobStorage = Substitute.For<IJobStorage>();
         _eventStoreNamespaceStorage.Jobs.Returns(_jobStorage);
-        _jobStorage.GetJob(Arg.Any<JobId>()).Returns(call => Task.FromResult<Catch<JobState, Cratis.Orleans.Storage.Jobs.JobError>>(new JobState
+        _jobStorage.GetJob(Arg.Any<JobId>()).Returns(call => Task.FromResult<Catch<JobState, Orleans.Storage.Jobs.JobError>>(new JobState
         {
             Id = call.Arg<JobId>(),
             Status = JobStatus.Running

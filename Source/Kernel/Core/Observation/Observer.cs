@@ -1007,7 +1007,7 @@ public partial class Observer(
         bool reconcile = false)
         where TObserverSubscriber : IObserverSubscriber
     {
-        if (reconcile && CannotReconcileSubscription(typeof(Webhooks.IWebhookObserverSubscriber).IsAssignableFrom(typeof(TObserverSubscriber)))) return;
+        if (reconcile && CannotReconcileSubscription(typeof(IWebhookObserverSubscriber).IsAssignableFrom(typeof(TObserverSubscriber)))) return;
         var owner = GetOwner<TObserverSubscriber>();
         logger.Subscribing();
         logger.SubscribingWithEventTypes(eventTypes.Count(), string.Join(", ", eventTypes.Select(et => et.Id)));
@@ -1022,7 +1022,7 @@ public partial class Observer(
         };
         await observerDefinition.WriteStateAsync();
 
-        if (reconcile && CannotReconcileSubscription(typeof(Webhooks.IWebhookObserverSubscriber).IsAssignableFrom(typeof(TObserverSubscriber)))) return;
+        if (reconcile && CannotReconcileSubscription(typeof(IWebhookObserverSubscriber).IsAssignableFrom(typeof(TObserverSubscriber)))) return;
         ApplySubscription<TObserverSubscriber>(eventTypes, siloAddress, subscriberArgs, isReplayable, filters, generationDelivery);
 
         State = State with { SubscribesToAllEvents = false };
@@ -1037,7 +1037,7 @@ public partial class Observer(
         bool reconcile = false)
         where TObserverSubscriber : IObserverSubscriber
     {
-        if (reconcile && CannotReconcileSubscription(typeof(Webhooks.IWebhookObserverSubscriber).IsAssignableFrom(typeof(TObserverSubscriber)))) return;
+        if (reconcile && CannotReconcileSubscription(typeof(IWebhookObserverSubscriber).IsAssignableFrom(typeof(TObserverSubscriber)))) return;
         observerDefinition.State = observerDefinition.State with
         {
             Type = type,
@@ -1047,7 +1047,7 @@ public partial class Observer(
         };
         await observerDefinition.WriteStateAsync();
 
-        if (reconcile && CannotReconcileSubscription(typeof(Webhooks.IWebhookObserverSubscriber).IsAssignableFrom(typeof(TObserverSubscriber)))) return;
+        if (reconcile && CannotReconcileSubscription(typeof(IWebhookObserverSubscriber).IsAssignableFrom(typeof(TObserverSubscriber)))) return;
         _subscription = new(
             _observerId,
             _observerKey,
