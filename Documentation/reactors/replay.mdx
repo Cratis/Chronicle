@@ -33,6 +33,18 @@ Reach for [OnceOnly](once-only) instead when the side effect should simply not h
 a replay needs to do something *different* rather than nothing. Neither covers the re-delivery that follows a
 failed partition being recovered — for that, see [Delivery identity](delivery-identity).
 
+## Replay one event source from Workbench
+
+On the **Observers** page, select an application-owned observer, enter one **Event-source id**,
+then choose **Replay event source**. Confirm the observer, event-source id, event store and namespace
+before submitting. The id is one opaque value; this does not discover partitions, select multiple
+partitions or support arbitrary projection keys. The existing **Replay** action still replays the
+whole observer.
+
+Replay is a mutation requiring authorization, not an inspection-only operation. An accepted request
+means replay was requested, not that it has completed. Failure feedback leaves the input available
+for correction and retry.
+
 :::note[Client coverage]
 TypeScript supports `@replay()` from `@cratis/chronicle` 6.9.0, with the same meaning as `Replay`. In Elixir, define the optional `handle_replay/2` callback; when present it is called instead of `handle/2` for replayed events, and `context.replaying?` tells a handler whether a replay is running.
 :::
