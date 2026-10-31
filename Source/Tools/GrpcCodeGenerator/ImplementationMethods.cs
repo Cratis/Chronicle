@@ -14,6 +14,19 @@ public static class ImplementationMethods
     const string CommandResultType = "global::Cratis.Chronicle.Contracts.Commands.CommandResult";
     const string QueryResultType = "global::Cratis.Chronicle.Contracts.Queries.QueryResult";
     const string CallContextType = "global::ProtoBuf.Grpc.CallContext";
+    const int MaximumRoutingComponents = 5;
+
+    static readonly HashSet<string> _routingConceptNames =
+    [
+        "EventStoreNamespaceName", "EventSequenceId", "ObserverId", "ProjectionId", "ReactorId", "ReducerId",
+        "WebhookId", "ExternalServiceId", "SubscriptionId"
+    ];
+
+    static readonly HashSet<string> _routingParameterNames =
+    [
+        "namespace", "eventSequenceId", "observerId", "projectionId", "reactorId", "reducerId",
+        "webhookId", "externalServiceId", "subscriptionId"
+    ];
 
     /// <summary>
     /// Writes the method that dispatches a gRPC operation to a command.
@@ -90,7 +103,7 @@ public static class ImplementationMethods
             ? $"global::{context.ContractsNamespace}.{method.Name}Request request, {CallContextType} callContext = default"
             : $"{CallContextType} callContext = default";
 
-        var source = QueryDispatch(method.Name, method.Method, invocation, parameters, readModelType, serviceName, context)
+        var source = QueryDispatch(method.Name, method.Method, invocation, parameters, readModelType, serviceName, context, RoutingFor(wireParameters))
             .Replace("    public ", AuthorizationAttributes(readModelType, method.Method) + "    public ", StringComparison.Ordinal);
         return AllowsAnonymous(readModelType) || AllowsAnonymous(method.Method)
             ? source.Replace("    public ", "    [global::Microsoft.AspNetCore.Authorization.AllowAnonymous]\n    public ", StringComparison.Ordinal)
@@ -123,7 +136,7 @@ public static class ImplementationMethods
             ? $"global::{context.ContractsNamespace}.{method.Name}Request request, {CallContextType} callContext = default"
             : $"{CallContextType} callContext = default";
 
-        return QueryDispatch(method.Name, method.Method, invocation, parameters, null, serviceName, context);
+        return QueryDispatch(method.Name, method.Method, invocation, parameters, null, serviceName, context, RoutingFor([.. method.KeyParameters, .. method.Parameters]));
     }
 
     /// <summary>
@@ -165,11 +178,20 @@ public static class ImplementationMethods
     /// <param name="readModelType">The read model the query is declared on, or null when it is not declared on one.</param>
     /// <param name="serviceName">The name of the service the query belongs to.</param>
     /// <param name="context">The generation context.</param>
+    /// <param name="routing">The expression creating the query routing, or null when the query addresses no event store routing values.</param>
     /// <returns>The C# source for the method.</returns>
-    static string QueryDispatch(string name, MethodInfo method, string invocation, string parameters, Type? readModelType, string serviceName, ImplementationContext context)
+    /// <exception cref="UnsupportedServiceShape">Thrown when a query without a result addresses event store routing values.</exception>
+    static string QueryDispatch(string name, MethodInfo method, string invocation, string parameters, Type? readModelType, string serviceName, ImplementationContext context, string? routing = null)
     {
+        var routed = routing is null ? string.Empty : $"callContext,\n            {routing},\n            ";
+
         if (TypeHelper.IsVoidTask(method.ReturnType))
         {
+            if (routing is not null)
+            {
+                throw new UnsupportedServiceShape(name, "it has no result to carry a refusal but addresses event store routing values.");
+            }
+
             return Method("Task", name, parameters, invocation);
         }
 
@@ -188,7 +210,7 @@ public static class ImplementationMethods
                 $"IObservable<{QueryResultType}<{observed.ContractTypeName}>>",
                 name,
                 parameters,
-                $"QueryExecutor.Execute<{observed.ContractTypeName}>(\n            () => {stream},\n            {logger})");
+                $"QueryExecutor.Execute<{observed.ContractTypeName}>(\n            {routed}() => {stream},\n            {logger})");
         }
 
         var mapping = Nullable(ImplementationDataMapping.For(TypeHelper.GetQueryReturnType(method.ReturnType), readModelType, context), method);
@@ -197,7 +219,7 @@ public static class ImplementationMethods
             $"Task<{QueryResultType}<{mapping.ContractTypeName}>>",
             name,
             parameters,
-            $"QueryExecutor.Execute<{mapping.ContractTypeName}>(\n            {QueryBody(method, invocation, mapping)},\n            {logger})");
+            $"QueryExecutor.Execute<{mapping.ContractTypeName}>(\n            {routed}{QueryBody(method, invocation, mapping)},\n            {logger})");
     }
 
     /// <summary>
@@ -329,6 +351,47 @@ public static class ImplementationMethods
         return observable?.GetGenericArguments()[0]
             ?? throw new UnsupportedServiceShape(method.Name, "it is observable but the generator cannot determine what it observes.");
     }
+
+    /// <summary>
+    /// Writes the expression that creates the routing a query addresses, from the request fields its parameters map onto.
+    /// </summary>
+    /// <param name="parameters">The parameters that arrive on the wire.</param>
+    /// <returns>The C# expression, or null when no parameter carries a routing value.</returns>
+    /// <exception cref="UnsupportedServiceShape">Thrown when the query addresses more routing components than the guard carries.</exception>
+    static string? RoutingFor(IReadOnlyList<ParameterInfo> parameters)
+    {
+        var routing = parameters.Where(IsRouting).ToList();
+        if (routing.Count == 0)
+        {
+            return null;
+        }
+
+        var store = routing.FirstOrDefault(IsStore);
+        var components = routing.Where(p => p != store).ToList();
+        if (components.Count > MaximumRoutingComponents)
+        {
+            throw new UnsupportedServiceShape(
+                routing[0].Member.Name,
+                $"it addresses more than {MaximumRoutingComponents} routing components besides the event store.");
+        }
+
+        var values = new List<string> { store is null ? "null" : RequestField(store) };
+        values.AddRange(components.Select(RequestField));
+        return $"new global::Cratis.Chronicle.Services.QueryRouting({string.Join(", ", values)})";
+    }
+
+    static string RequestField(ParameterInfo parameter) => $"request.{ImplementationValues.PropertyName(parameter.Name ?? "value")}";
+
+    static bool IsRouting(ParameterInfo parameter) => IsStore(parameter) || IsComponent(parameter);
+
+    static bool IsStore(ParameterInfo parameter) =>
+        parameter.ParameterType.FullName == "Cratis.Chronicle.Concepts.EventStoreName" ||
+        (parameter.ParameterType.FullName == "System.String" && parameter.Name == "eventStore");
+
+    static bool IsComponent(ParameterInfo parameter) =>
+        (parameter.ParameterType.FullName?.StartsWith("Cratis.Chronicle.Concepts.", StringComparison.Ordinal) == true &&
+            _routingConceptNames.Contains(parameter.ParameterType.Name)) ||
+        (parameter.ParameterType.FullName == "System.String" && parameter.Name is not null && _routingParameterNames.Contains(parameter.Name));
 
     static string RequestArgument(ParameterInfo parameter) =>
         ImplementationValues.ToDomain(

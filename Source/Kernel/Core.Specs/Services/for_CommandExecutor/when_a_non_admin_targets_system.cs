@@ -7,7 +7,7 @@ using Cratis.Chronicle.Security;
 
 namespace Cratis.Chronicle.Services.for_CommandExecutor;
 
-public class when_a_non_admin_targets_system : Security.given.a_system_store_caller
+public class when_a_non_admin_targets_system : global::Cratis.Chronicle.Security.given.a_system_store_caller
 {
     ICommandPipeline _pipeline;
     RetryPartition _command;

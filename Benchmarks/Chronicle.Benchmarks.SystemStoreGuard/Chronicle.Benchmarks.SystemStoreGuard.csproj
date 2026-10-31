@@ -7,6 +7,8 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../../Source/Kernel/Core/Core.csproj" />
+    <ProjectReference Include="../../Source/Kernel/Grpc/Grpc.csproj" />
+    <ProjectReference Include="../../Source/Kernel/Contracts/Contracts.csproj" />
     <ProjectReference Include="../../Source/Kernel/Concepts/Concepts.csproj" />
     <PackageReference Include="BenchmarkDotNet" />
     <PackageReference Include="NSubstitute" />
