@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Compliance;
@@ -27,7 +28,10 @@ public class JsonSchemaMetadataManager(
 {
     readonly Dictionary<(SchemaMetadataCategory Category, SchemaMetadataTypeName Type), IJsonSchemaMetadataValueHandler> _propertyValueHandlers =
         propertyValueHandlers.ToDictionary(_ => (_.Category, _.Type), _ => _);
-    readonly IReadOnlyCollection<SchemaMetadataCategory> _categories = propertyValueHandlers.Select(_ => _.Category).Distinct().ToArray();
+    readonly SchemaMetadataCategory[] _categories = propertyValueHandlers.Select(_ => _.Category).Distinct().ToArray();
+    readonly ConditionalWeakTable<JsonSchema, ClassifiedMetadata> _classified = new();
+    readonly SchemaMetadataCategory[] _comparisonCategories = propertyValueHandlers.Select(_ => _.Category)
+        .Concat([SchemaMetadataCategory.Compliance, SchemaMetadataCategory.Security]).Distinct().ToArray();
 
     /// <inheritdoc/>
     public async Task<JsonObject> Apply(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, JsonSchema schema, string identifier, JsonObject json)
@@ -356,21 +360,126 @@ public class JsonSchemaMetadataManager(
         }
     }
 
-    IEnumerable<(SchemaMetadataCategory Category, ComplianceSchemaMetadata Metadata)> MetadataAcrossCategories(JsonSchema schema, bool forComparison = false)
+    static ClassifiedMetadata CreateClassifiedMetadata(JsonSchema schema) => new();
+
+    /// <summary>
+    /// Gets the metadata that applies to a schema node, including that of a referenced scalar definition,
+    /// de-duplicated by category and metadata type with the first occurrence winning.
+    /// </summary>
+    /// <remarks>
+    /// Published schemas are effectively immutable and a changed schema is a new instance, so the classification
+    /// is cached per schema instance. The returned array is shared and must never be modified.
+    /// </remarks>
+    /// <param name="schema"><see cref="JsonSchema"/> to classify.</param>
+    /// <param name="forComparison">Whether to also consider the compliance and security categories for comparison.</param>
+    /// <param name="cacheable">Whether the schema instance is stable. Transient instances are never cached.</param>
+    /// <returns>The shared classification.</returns>
+    internal (SchemaMetadataCategory Category, ComplianceSchemaMetadata Metadata)[] MetadataFor(JsonSchema schema, bool forComparison, bool cacheable = true)
     {
-        var categories = (forComparison ? _categories.Concat([SchemaMetadataCategory.Compliance, SchemaMetadataCategory.Security]).Distinct() : _categories).ToArray();
-        var own = categories.SelectMany(category => schema.GetSchemaMetadata(category).Select(metadata => (category, metadata)));
-        if (!schema.HasReference || schema.Reference is not { } reference) return own;
-        var referenced = categories.SelectMany(category => reference.GetSchemaMetadata(category).Select(metadata => (category, metadata))).ToArray();
-        if (referenced.Length == 0) return own;
-        if (CanInspectReferencedType(reference) && StrictJsonSchemaRelease.HasSupportedType(reference))
+        if (!cacheable)
         {
-            // Referenced containers retain their existing member-level protection boundaries.
-            var type = reference.ActualTypeSchema.Type;
-            return (type & (JsonObjectType.Object | JsonObjectType.Array)) != JsonObjectType.None ? own : own.Concat(referenced);
+            return Classify(schema, forComparison);
         }
-        logger.UnsupportedReferencedMetadata();
-        return own;
+
+        var entry = _classified.GetValue(schema, CreateClassifiedMetadata);
+        var cached = entry.Get(forComparison);
+        if (cached is not null)
+        {
+            return cached;
+        }
+
+        var classified = Classify(schema, forComparison);
+        entry.Set(forComparison, classified);
+        return classified;
+    }
+
+    (SchemaMetadataCategory Category, ComplianceSchemaMetadata Metadata)[] Classify(JsonSchema schema, bool forComparison)
+    {
+        var categories = forComparison ? _comparisonCategories : _categories;
+        var result = new List<(SchemaMetadataCategory Category, ComplianceSchemaMetadata Metadata)>();
+        CollectMetadata(schema, categories, result);
+
+        if (schema.HasReference && schema.Reference is { } reference)
+        {
+            var referenced = new List<(SchemaMetadataCategory Category, ComplianceSchemaMetadata Metadata)>();
+            CollectMetadata(reference, categories, referenced);
+            if (referenced.Count > 0)
+            {
+                if (CanInspectReferencedType(reference) && StrictJsonSchemaRelease.HasSupportedType(reference))
+                {
+                    // Referenced containers retain their existing member-level protection boundaries.
+                    var type = reference.ActualTypeSchema.Type;
+                    if ((type & (JsonObjectType.Object | JsonObjectType.Array)) == JsonObjectType.None)
+                    {
+                        result.AddRange(referenced);
+                    }
+                }
+                else
+                {
+                    logger.UnsupportedReferencedMetadata();
+                }
+            }
+        }
+
+        if (result.Count == 0)
+        {
+            return [];
+        }
+
+        var distinct = new List<(SchemaMetadataCategory Category, ComplianceSchemaMetadata Metadata)>(result.Count);
+        foreach (var entry in result)
+        {
+            if (!ContainsKey(distinct, entry))
+            {
+                distinct.Add(entry);
+            }
+        }
+
+        return distinct.ToArray();
+    }
+
+    static void CollectMetadata(JsonSchema schema, SchemaMetadataCategory[] categories, List<(SchemaMetadataCategory Category, ComplianceSchemaMetadata Metadata)> target)
+    {
+        foreach (var category in categories)
+        {
+            foreach (var metadata in schema.GetSchemaMetadata(category))
+            {
+                target.Add((category, metadata));
+            }
+        }
+    }
+
+    static bool ContainsKey(IReadOnlyList<(SchemaMetadataCategory Category, ComplianceSchemaMetadata Metadata)> entries, (SchemaMetadataCategory Category, ComplianceSchemaMetadata Metadata) candidate)
+    {
+        for (var i = 0; i < entries.Count; i++)
+        {
+            if (entries[i].Category.Equals(candidate.Category) && entries[i].Metadata.metadataType == candidate.Metadata.metadataType)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    static (SchemaMetadataCategory Category, ComplianceSchemaMetadata Metadata)[] Merge(
+        (SchemaMetadataCategory Category, ComplianceSchemaMetadata Metadata)[] first,
+        (SchemaMetadataCategory Category, ComplianceSchemaMetadata Metadata)[] second)
+    {
+        // Both inputs are shared, already de-duplicated arrays; never modify them. The first occurrence wins.
+        if (second.Length == 0) return first;
+        if (first.Length == 0) return second;
+        var merged = new List<(SchemaMetadataCategory Category, ComplianceSchemaMetadata Metadata)>(first.Length + second.Length);
+        merged.AddRange(first);
+        foreach (var entry in second)
+        {
+            if (!ContainsKey(merged, entry))
+            {
+                merged.Add(entry);
+            }
+        }
+
+        return merged.ToArray();
     }
 
     async Task HandleActionFor(
@@ -382,9 +491,10 @@ public class JsonSchemaMetadataManager(
         string path = "",
         bool strictRelease = false,
         Func<JsonSchema, IJsonSchemaMetadataValueHandler, JsonNode, Task<JsonNode?>>? comparisonTransform = null,
-        Func<string, IJsonSchemaMetadataValueHandler[], string, JsonNode, Task<JsonNode>>? boundaryTransform = null)
+        Func<string, IJsonSchemaMetadataValueHandler[], string, JsonNode, Task<JsonNode>>? boundaryTransform = null,
+        bool cacheable = true)
     {
-        var metadataForContainer = MetadataAcrossCategories(schema, comparisonTransform is not null).ToArray();
+        var metadataForContainer = MetadataFor(schema, comparisonTransform is not null, cacheable);
         foreach (var (property, value) in json.ToArray())
         {
             if (schema.Properties is not null && value is not null)
@@ -394,11 +504,22 @@ public class JsonSchemaMetadataManager(
 
                 // FirstOrDefault rather than Single: a schema flattened across inheritance can declare the same
                 // property name more than once, and the duplicate is not a reason to fail the whole walk.
-                var propertySchema = (JsonSchema?)flattenedProperties.FirstOrDefault(_ => _.Name == property) ??
-                    schema.AdditionalPropertiesSchema?.ActualSchema ??
+                JsonSchema? propertySchema = null;
+                foreach (var candidate in flattenedProperties)
+                {
+                    if (candidate.Name == property)
+                    {
+                        propertySchema = candidate;
+                        break;
+                    }
+                }
+
+                // AdditionalPropertiesSchema is a new instance on every access, so it must never be cached.
+                var propertyCacheable = cacheable && propertySchema is not null;
+                propertySchema ??= schema.AdditionalPropertiesSchema?.ActualSchema ??
                     throw new SchemaPropertyNotFoundInSchema(actionName, propertyPath, identifier, flattenedProperties.Select(_ => _.Name));
 
-                var propertyMetadata = MetadataAcrossCategories(propertySchema, comparisonTransform is not null).Concat(metadataForContainer).DistinctBy(_ => (_.Category, _.Metadata.metadataType)).ToArray();
+                var propertyMetadata = Merge(MetadataFor(propertySchema, comparisonTransform is not null, propertyCacheable), metadataForContainer);
                 if (comparisonTransform is not null)
                 {
                     ValidateComparisonBoundary(propertySchema, propertyMetadata);
@@ -456,14 +577,14 @@ public class JsonSchemaMetadataManager(
                     // property under them for a marker to sit on. Descending would report every one of them as drift
                     // and fail a document that matches its schema. Only the descent is skipped — a value marked
                     // [PII] or [Encrypted] is still handled as a whole above, like any other container.
-                    await HandleActionFor(propertySchema.ActualTypeSchema, identifier, jsonObjectValue, actionName, action, propertyPath, strictRelease, comparisonTransform, boundaryTransform);
+                    await HandleActionFor(propertySchema.ActualTypeSchema, identifier, jsonObjectValue, actionName, action, propertyPath, strictRelease, comparisonTransform, boundaryTransform, propertyCacheable);
                 }
                 else if (!handlerApplied && value is JsonArray jsonArrayValue)
                 {
                     // The property itself was not encrypted as a whole, so descend into the array and handle
                     // schema metadata that lives on the element type — a [PII]/[Encrypted] scalar concept (e.g.
                     // IReadOnlyList<Email>) or a member marked that way inside element objects.
-                    await HandleActionForArray(propertySchema.ActualTypeSchema, identifier, jsonArrayValue, actionName, action, propertyPath, strictRelease, comparisonTransform, boundaryTransform);
+                    await HandleActionForArray(propertySchema.ActualTypeSchema, identifier, jsonArrayValue, actionName, action, propertyPath, strictRelease, comparisonTransform, boundaryTransform, propertyCacheable);
                 }
             }
         }
@@ -478,7 +599,8 @@ public class JsonSchemaMetadataManager(
         string path,
         bool strictRelease = false,
         Func<JsonSchema, IJsonSchemaMetadataValueHandler, JsonNode, Task<JsonNode?>>? comparisonTransform = null,
-        Func<string, IJsonSchemaMetadataValueHandler[], string, JsonNode, Task<JsonNode>>? boundaryTransform = null)
+        Func<string, IJsonSchemaMetadataValueHandler[], string, JsonNode, Task<JsonNode>>? boundaryTransform = null,
+        bool cacheable = true)
     {
         var itemSchema = arraySchema.Item?.ActualSchema;
         if (itemSchema is null)
@@ -486,7 +608,7 @@ public class JsonSchemaMetadataManager(
             return;
         }
 
-        var itemMetadata = MetadataAcrossCategories(itemSchema, comparisonTransform is not null).DistinctBy(_ => (_.Category, _.Metadata.metadataType)).ToArray();
+        var itemMetadata = MetadataFor(itemSchema, comparisonTransform is not null, cacheable);
         for (var i = 0; i < array.Count; i++)
         {
             var element = array[i];
@@ -501,7 +623,7 @@ public class JsonSchemaMetadataManager(
                 // Declared object members have historically been protected individually, including
                 // projection child writes. Only arrays and objects without declared properties need
                 // whole-element protection; preserve the persisted member-level representation.
-                await HandleActionFor(itemSchema, identifier, declaredObject, actionName, action, elementPath, strictRelease, comparisonTransform, boundaryTransform);
+                await HandleActionFor(itemSchema, identifier, declaredObject, actionName, action, elementPath, strictRelease, comparisonTransform, boundaryTransform, cacheable);
                 continue;
             }
 
@@ -559,11 +681,31 @@ public class JsonSchemaMetadataManager(
             // descend into the detached original or decrypt members that were not separately encrypted.
             if (!handlerApplied && element is JsonObject elementObject && !itemSchema.DescribesGeospatialValue())
             {
-                await HandleActionFor(itemSchema, identifier, elementObject, actionName, action, elementPath, strictRelease, comparisonTransform, boundaryTransform);
+                await HandleActionFor(itemSchema, identifier, elementObject, actionName, action, elementPath, strictRelease, comparisonTransform, boundaryTransform, cacheable);
             }
             else if (!handlerApplied && element is JsonArray elementArray)
             {
-                await HandleActionForArray(itemSchema, identifier, elementArray, actionName, action, elementPath, strictRelease, comparisonTransform, boundaryTransform);
+                await HandleActionForArray(itemSchema, identifier, elementArray, actionName, action, elementPath, strictRelease, comparisonTransform, boundaryTransform, cacheable);
+            }
+        }
+    }
+
+    sealed class ClassifiedMetadata
+    {
+        (SchemaMetadataCategory Category, ComplianceSchemaMetadata Metadata)[]? _forAction;
+        (SchemaMetadataCategory Category, ComplianceSchemaMetadata Metadata)[]? _forComparison;
+
+        public (SchemaMetadataCategory Category, ComplianceSchemaMetadata Metadata)[]? Get(bool forComparison) => forComparison ? Volatile.Read(ref _forComparison) : Volatile.Read(ref _forAction);
+
+        public void Set(bool forComparison, (SchemaMetadataCategory Category, ComplianceSchemaMetadata Metadata)[] value)
+        {
+            if (forComparison)
+            {
+                Volatile.Write(ref _forComparison, value);
+            }
+            else
+            {
+                Volatile.Write(ref _forAction, value);
             }
         }
     }
