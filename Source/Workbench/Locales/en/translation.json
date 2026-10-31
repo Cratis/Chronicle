@@ -669,7 +669,10 @@
                     "owner": "Owner",
                     "state": "State",
                     "nextEventSequenceNumber": "Next event sequence number",
-                    "handledEventCount": "Handled events"
+                    "handledEventCount": "Handled events",
+                    "quarantined": "Quarantined",
+                    "quarantinedTooltip": "Quarantined",
+                    "failedPartitions": "Failed partitions"
                 },
                 "types": {
                     "unknown": "Unknown",
@@ -775,7 +778,9 @@
                         "unavailable": "Event inspection unavailable",
                         "retry": "Try lookup again"
                     }
-                }
+                },
+                "filteredByObserver": "Showing failed partitions for observer {observerId}.",
+                "clearObserverFilter": "Show all"
             },
             "closedStreams": {
                 "title": "Closed Streams",

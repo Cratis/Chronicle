@@ -10,7 +10,7 @@ import { Tag } from '@cratis/components/Display';
 import { getFailedPartitionStatus } from './getFailedPartitionStatus';
 import { getFailedPartitionStatusLabel } from './getFailedPartitionStatusLabel';
 import { getFailedPartitionSeverity } from './getFailedPartitionSeverity';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import { FailedPartitionDetails as FailedPartition } from 'Features/Observation';
 import { withViewModel } from '@cratis/arc.react.mvvm';
@@ -54,14 +54,31 @@ const lastAttempt = (failedPartition: FailedPartition) => {
 
 export const FailedPartitions = withViewModel(FailedPartitionsViewModel, ({ viewModel }) => {
     const params = useParams<EventStoreAndNamespaceParams>();
+    const [searchParams, setSearchParams] = useSearchParams();
+    const observerId = searchParams.get('observerId') ?? undefined;
 
     const queryArgs: AllFailedPartitionsParameters = {
         eventStore: params.eventStore!,
-        namespace: params.namespace!
+        namespace: params.namespace!,
+        observerId
+    };
+
+    const clearObserverFilter = () => {
+        const next = new URLSearchParams(searchParams);
+        next.delete('observerId');
+        setSearchParams(next);
     };
 
     return (
         <Page title={strings.eventStore.namespaces.failedPartitions.title}>
+        {/* A filtered list that does not say it is filtered is how people conclude their partitions have disappeared. */}
+        {observerId &&
+            <div className='px-4 py-2 flex items-center gap-2'>
+                <span>{strings.eventStore.namespaces.failedPartitions.filteredByObserver.replace('{observerId}', observerId)}</span>
+                <button type='button' className='underline' onClick={clearObserverFilter}>
+                    {strings.eventStore.namespaces.failedPartitions.clearObserverFilter}
+                </button>
+            </div>}
         {viewModel.restorationState !== 'idle' && viewModel.restorationState !== 'ready' && (
             <p role='status'>{strings.eventStore.namespaces.failedPartitions.restoration[viewModel.restorationState]}</p>
         )}
@@ -69,6 +86,7 @@ export const FailedPartitions = withViewModel(FailedPartitionsViewModel, ({ view
             <button type='button' onClick={() => viewModel.retryRestoration()}>{strings.eventStore.namespaces.failedPartitions.restoration.retry}</button>
         )}
         <DataPage
+            key={observerId ?? ''}
             title={strings.eventStore.namespaces.failedPartitions.title}
             query={AllFailedPartitions}
             queryArguments={queryArgs}

@@ -23,7 +23,10 @@ vi.mock('@cratis/arc.react.mvvm', () => ({
         return () => render({ viewModel: boundary.vm, props: {} });
     }
 }));
-vi.mock('react-router-dom', () => ({ useParams: () => ({ eventStore: 'store', namespace: 'namespace' }) }));
+vi.mock('react-router-dom', () => ({
+    useParams: () => ({ eventStore: 'store', namespace: 'namespace' }),
+    useSearchParams: () => [new URLSearchParams(), vi.fn()]
+}));
 vi.mock('Components/Common/Page', () => ({ Page: ({ children }: { children: ReactNode }) => children }));
 vi.mock('../FailedPartitionDetails', () => ({ FailedPartitionDetails: () => null }));
 
