@@ -199,6 +199,20 @@ public partial class ProjectionsManager(
 
     async Task RegisterDefinitions(IEnumerable<ProjectionDefinition> definitions, ProjectionOwner? fullSetOwner, string? registrant, string? version)
     {
+        var timing = new RegistrationTiming(_clock);
+        try
+        {
+            await RegisterDefinitions(definitions, fullSetOwner, registrant, version, timing);
+        }
+        finally
+        {
+            timing.Complete();
+            logger.RegistrationTimings(_eventStoreName, registrant ?? string.Empty, timing.Definitions, timing.Changed, timing.Skipped, timing.Total.TotalMilliseconds, timing.Detecting.TotalMilliseconds, timing.Engine.TotalMilliseconds, timing.Subscribing.TotalMilliseconds, timing.Retiring.TotalMilliseconds);
+        }
+    }
+
+    async Task RegisterDefinitions(IEnumerable<ProjectionDefinition> definitions, ProjectionOwner? fullSetOwner, string? registrant, string? version, RegistrationTiming timing)
+    {
         var namespaces = (await GrainFactory.GetGrain<INamespaces>(_eventStoreName).GetAll()).ToArray();
         var definitionList = FilterUnsupportedKernelDefinitions(StampWithVersion(definitions, version));
         _removingProjections.ExceptWith(definitionList.Select(definition => definition.Identifier));
@@ -228,9 +242,12 @@ public partial class ProjectionsManager(
         // it also collapses a queue of identical registrations: the first request does the work, every queued
         // duplicate compares equal against the registered state and returns immediately instead of repeating the
         // per-namespace fan-out. Without this, stacked retries kept the request queue from ever draining.
+        timing.Definitions = definitionList.Count;
         var changedDefinitions = (await GetChangedDefinitions(definitionList)).ToList();
         var unchanged = definitionList.ExceptBy(changedDefinitions.Select(definition => definition.Identifier), definition => definition.Identifier).ToArray();
         changedDefinitions.AddRange(await GetRetiredDefinitions(unchanged));
+        timing.Changed = changedDefinitions.Count;
+        timing.Mark(RegistrationPhase.Detecting);
 
         KeepAnnounced(changedDefinitions);
 
@@ -248,6 +265,7 @@ public partial class ProjectionsManager(
         {
             logger.RegisteringChangedDefinitions(changedDefinitions.Count);
             var acceptedByEngine = await RegisterWithEngine(changedDefinitions, failures);
+            timing.Mark(RegistrationPhase.Engine);
 
             // Subscribe projections immediately so that seeded events appended after registration
             // are not missed due to the asynchronous timer-based subscription scheduling
@@ -262,6 +280,8 @@ public partial class ProjectionsManager(
             finally
             {
                 _registrationSubscribeDeadline = null;
+                timing.Skipped = _pendingRevival.Count;
+                timing.Mark(RegistrationPhase.Subscribing);
             }
 
             // Merge fully accepted definitions. Storage upgrades were already retained after SetDefinition:
@@ -280,6 +300,8 @@ public partial class ProjectionsManager(
         {
             await RetireUnregisteredProjections(definitionList, fullSetOwner.Value, registrant, failures);
         }
+
+        timing.Mark(RegistrationPhase.Retiring);
 
         if (failures.Count > 0)
         {
