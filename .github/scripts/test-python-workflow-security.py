@@ -61,7 +61,8 @@ def plain_entry(line, indent):
     entry = re.fullmatch(r"([A-Za-z_][\w-]*):(?: (.*))?", content)
     if entry:
         key, value = entry.groups()
-        return key, (value or "").split(" #", 1)[0].strip()
+        value = (value or "").strip()
+        return key, value if key == "run" else value.split(" #", 1)[0].strip()
     require(line[indent:].startswith("- "), "Expected a plain YAML key or scalar list item")
     return None, content
 
@@ -83,6 +84,23 @@ def check_scalar(value):
         require(": " not in value, "Unsupported inline YAML mapping")
 
 
+def check_run_scalar(value):
+    """Never decode YAML or parse Actions expressions inside executable source."""
+    require("${{" not in value, "Run source must not interpolate Actions expressions")
+    if value == "|":
+        return
+    require(value and value[0] not in "\"'&*!>|{[?%@`", "Run must be literal block or plain single-line source")
+    check_scalar(value)
+
+
+def check_entry(key, value):
+    require(key != "defaults", "Shell defaults are not supported")
+    if key == "run":
+        check_run_scalar(value)
+    else:
+        check_scalar(value)
+
+
 def check_block_grammar(text):
     """Fail closed on YAML syntax the block reader cannot interpret.
 
@@ -90,22 +108,23 @@ def check_block_grammar(text):
     are data, not YAML. Elsewhere require plain keys and simple scalar values.
     This intentionally excludes quoted keys, flow mappings, tags and aliases.
     """
-    literal_indent = None
+    run_indent = None
+    literal_run = False
     for line in text.splitlines():
+        indent = len(line) - len(line.lstrip(" "))
+        if run_indent is not None and indent > run_indent:
+            require(literal_run, "Plain run source must stay on one line")
+            require("${{" not in line, "Run source must not interpolate Actions expressions")
+            continue
         if not line.strip() or line.lstrip().startswith("#"):
             continue
-        indent = len(line) - len(line.lstrip(" "))
-        if literal_indent is not None and indent > literal_indent:
-            continue
-        literal_indent = None
+        run_indent = None
         require("\t" not in line[:indent + 1] and indent % 2 == 0, "Unsupported YAML indentation")
         key, value = plain_entry(line, indent)
-        require(key != "defaults", "Shell defaults are not supported")
-        if value == "|":
-            require(key == "run", "Only run literal blocks are supported")
-            literal_indent = indent + (2 if line[indent:].startswith("- ") else 0)
-            continue
-        check_scalar(value)
+        check_entry(key, value)
+        if key == "run":
+            run_indent = indent + (2 if line[indent:].startswith("- ") else 0)
+            literal_run = value == "|"
 
 
 def check_common(text, expected_jobs):
@@ -150,13 +169,6 @@ def check_publish(text):
     require(step_field(build_steps[0], "name") == "Validate version format", "Validate version before checkout")
     require(step_field(build_steps[0], "env").strip() == "VERSION: ${{ inputs.version }}", "Version must come from env")
     require(any("actions/checkout@" in step for step in build_steps[1:]), "Missing checkout after validation")
-    for step in build_steps + publish_steps:
-        if "run" in mapping_keys(step, 8):
-            script = step_field(step, "run")
-            for expression in re.findall(r"\$\{\{(.*?)\}\}", script, re.DOTALL):
-                # The event context can expose inputs through computed indexing.
-                # Keep both contexts out of shell source; use env for their data.
-                require(not re.search(r"\b(inputs|github)\b", expression, re.IGNORECASE), "Input context interpolated into shell")
     script = step_field(build_steps[0], "run")
     matches = re.findall(r'if ! \[\[ "\$VERSION" =~ (\S+) \]\]; then', script)
     require(len(matches) == 1, "Missing rejecting version validation")
@@ -291,6 +303,42 @@ class WorkflowSecurity(unittest.TestCase):
             ("jobs:", "defaults:\n  run:\n    shell: sh\n\njobs:"),
         ]
         self.assert_mutations_rejected([(check_publish, self.publish, a, b) for a, b in mutations])
+
+    def test_run_source_forms_are_rejected(self):
+        sources = [
+            r'"echo ${{ \u0069nputs.version }}"',
+            "echo ${{ format('{0}}}', inputs.version) }}",
+            r'"echo \u0024\u007b\u007b inputs.version }}"',
+            "'echo safe'",
+            '"echo safe"',
+            r'"echo safe\necho more"',
+            ">\n          echo safe",
+            "*script",
+            "&script echo safe",
+            "!tag echo safe",
+            "",
+            "echo safe\n          echo continuation",
+            "echo safe\n          - echo ${{ inputs.version }}",
+            "|\n          echo ${{ env.VERSION }}",
+            "|\n          # ${{ inputs.version }}",
+            "echo safe # ${{ inputs.version }}",
+            "echo ${{ env.VERSION }}",
+        ]
+        mutations = []
+        for source in sources:
+            mutations.append((check_publish, self.publish, "run: python build_package.py", f"run: {source}"))
+            mutations.append((check_verify, self.verify, "    steps:", f"    steps:\n      - run: {source}"))
+        self.assert_mutations_rejected(mutations)
+
+    def test_plain_and_literal_run_sources_remain_supported(self):
+        for source in ("echo safe", "|\n          echo safe\n          echo more"):
+            with self.subTest(source=source):
+                alternate = self.verify.replace("    steps:", f"    steps:\n      - run: {source}", 1)
+                self.assertNotEqual(alternate, self.verify)
+                check_verify(alternate)
+                build = self.publish.replace("run: python build_package.py", f"run: {source}", 1)
+                self.assertNotEqual(build, self.publish)
+                check_publish(build)
 
     def test_shell_content_is_not_parsed_as_yaml(self):
         script = self.verify.replace(
