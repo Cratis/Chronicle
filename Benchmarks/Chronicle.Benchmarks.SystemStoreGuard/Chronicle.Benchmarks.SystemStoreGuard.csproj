@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../Source/Kernel/Core/Core.csproj" />
+    <ProjectReference Include="../../Source/Kernel/Concepts/Concepts.csproj" />
+    <PackageReference Include="BenchmarkDotNet" />
+    <PackageReference Include="NSubstitute" />
+  </ItemGroup>
+</Project>
