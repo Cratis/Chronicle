@@ -225,20 +225,7 @@ public static partial class JobsManagerExtensions
             {
                 logger.CouldNotResumeJob(pausedJob.Id);
                 await onResumeRefused.Invoke();
-
-                // A job that was stopped before it prepared any step has nothing to resume and never will, so every
-                // later lookup would find it, refuse it again and leave the observer retrying catch-up in a tight
-                // loop. It carries no work: remove it so the next catch-up starts a job of its own. A caller that reports
-                // drops owns a per-turn budget of them, and this removal takes from that budget like any other drop, so
-                // a turn never deletes more than it allows; the job is then removed by a later turn instead.
-                var budgetAllowsRemoval = onJobsDropped is null || maxJobsToDrop > 0;
-                if (JobLiveness.NeverPrepared(pausedJob) && budgetAllowsRemoval)
-                {
-                    logger.RemovingUnresumableJob(pausedJob.Id);
-                    await jobsManager.Delete(pausedJob.Id);
-                    onJobsDropped?.Invoke(1);
-                }
-
+                await jobsManager.RemoveRefusedJobThatNeverPrepared(logger, pausedJob, maxJobsToDrop, onJobsDropped);
                 return JobId.NotSet;
             }
 
@@ -308,6 +295,34 @@ public static partial class JobsManagerExtensions
             !JobLiveness.HasConcludedAllStepsLongAgo(job, now))
             .Select(job => ((TRequest)job.Request).Key)
             .ToHashSet();
+
+    /// <summary>
+    /// Removes a stopped job whose resume was refused when it was stopped before it prepared any step.
+    /// </summary>
+    /// <param name="jobsManager">The jobs manager.</param>
+    /// <param name="logger">The logger.</param>
+    /// <param name="refusedJob">The job that refused to resume.</param>
+    /// <param name="maxJobsToDrop">The drops left in the caller's budget.</param>
+    /// <param name="onJobsDropped">The optional callback with the number of jobs deleted; set when the caller owns a drop budget.</param>
+    /// <returns>An awaitable task.</returns>
+    /// <remarks>
+    /// Such a job has nothing to resume and never will, so every later lookup would find it, refuse it again and leave the
+    /// observer retrying catch-up in a tight loop. It carries no work: removing it lets the next catch-up start a job of its
+    /// own. A caller that reports drops owns a per-turn budget of them, and this removal takes from that budget like any
+    /// other drop, so a turn never deletes more than it allows; the job is then removed by a later turn instead.
+    /// </remarks>
+    static async Task RemoveRefusedJobThatNeverPrepared(this IJobsManager jobsManager, ILogger logger, JobState refusedJob, int maxJobsToDrop, Action<int>? onJobsDropped)
+    {
+        var budgetAllowsRemoval = onJobsDropped is null || maxJobsToDrop > 0;
+        if (!JobLiveness.NeverPrepared(refusedJob) || !budgetAllowsRemoval)
+        {
+            return;
+        }
+
+        logger.RemovingUnresumableJob(refusedJob.Id);
+        await jobsManager.Delete(refusedJob.Id);
+        onJobsDropped?.Invoke(1);
+    }
 
     /// <summary>
     /// Deletes up to the given number of stopped jobs that were never prepared.
