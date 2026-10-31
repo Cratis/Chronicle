@@ -95,7 +95,7 @@ Source properties:
 For API sources, `api` identifies a configured **[External Service](../../external-services/index.md)** by name. The External Service holds the base URL and the authentication for the connection. `route` is optional and is appended to that base URL; if omitted, the base URL is used as-is.
 
 > [!NOTE]
-> Authentication is **not** part of the CDL. For API sources it is configured on the referenced External Service; for webhook sources it is configured in code on the source builder. Either way, secrets and tokens never live in capture text. See [Configuring authentication](#configuring-authentication) below.
+> Authentication is **not** part of the CDL. For API sources it is configured on the referenced External Service, so secrets and tokens never live in capture text. Webhook sources do not support authentication yet. See [Configuring authentication](#configuring-authentication) below.
 
 ### Events source
 
@@ -134,13 +134,7 @@ capture ShipmentTracking
 
 **API sources** connect through a configured [External Service](/chronicle/external-services/). Configure the base URL and authentication once on the External Service; the capture simply references it by name — see the [Declarative Captures](/chronicle/clients/dotnet/captures/declarative/) example for what that reference looks like in the .NET client's builder API.
 
-**Webhook sources** are inbound and configure their authentication in code on the source builder:
-
-- `WithBasicAuth(username, password)` — basic authentication
-- `WithBearerToken(token)` — bearer token authentication
-- `WithOAuth(authority, clientId, clientSecret)` — OAuth authentication
-
-When no authentication is configured, the source is treated as unauthenticated.
+**Webhook sources** do not support authentication yet. Webhook sources are not read (see the limitations above), and the capture contract carries only the declaration text. Authentication set with the .NET source builder's `WithBasicAuth`, `WithBearerToken` or `WithOAuth` is therefore not sent to the kernel, stored or enforced. Do not rely on it to protect an endpoint.
 
 ### Key directive
 
