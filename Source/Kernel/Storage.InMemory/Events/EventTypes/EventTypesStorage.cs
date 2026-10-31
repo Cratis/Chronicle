@@ -87,7 +87,7 @@ public partial class EventTypesStorage : IEventTypesStorage, IDisposable
                         eventType.Source,
                         eventType.Visibility,
                         eventType.Origin)
-                    : ApplyDefinition(definition, RegisterMetadata(definition.Id, eventType.Source, eventType.Visibility, eventType.Origin));
+                    : ApplyDefinition(definition, false);
 
                 if (changed)
                 {
@@ -208,25 +208,20 @@ public partial class EventTypesStorage : IEventTypesStorage, IDisposable
             Migrations = incoming.Migrations.Any() ? incoming.Migrations : existing.Migrations
         };
 
-    bool RegisterSimple(EventType type, JsonSchema schema, EventTypeOwner owner, EventTypeSource source, EventTypeVisibility visibility, string origin) =>
-        ApplyDefinition(
-            new EventTypeDefinition(type.Id, owner, type.Tombstone, [new EventTypeGenerationDefinition(type.Generation, schema)], []),
-            RegisterMetadata(type.Id, source, visibility, origin));
-
-    bool RegisterMetadata(EventTypeId id, EventTypeSource source, EventTypeVisibility visibility, string origin)
+    bool RegisterSimple(EventType type, JsonSchema schema, EventTypeOwner owner, EventTypeSource source, EventTypeVisibility visibility, string origin)
     {
-        var sourceChanged = !_sources.TryGetValue(id, out var previousSource) || previousSource != source;
-        _sources[id] = source;
+        var sourceChanged = !_sources.TryGetValue(type.Id, out var previousSource) || previousSource != source;
+        _sources[type.Id] = source;
 
         // Unspecified means the client said nothing, which must not undo what a newer client declared.
-        _visibilities.TryGetValue(id, out var previousVisibility);
+        _visibilities.TryGetValue(type.Id, out var previousVisibility);
         var effectiveVisibility = visibility == EventTypeVisibility.Unspecified ? previousVisibility : visibility;
-        _origins.TryGetValue(id, out var previousOrigin);
+        _origins.TryGetValue(type.Id, out var previousOrigin);
         sourceChanged |= previousVisibility != effectiveVisibility || (previousOrigin ?? string.Empty) != origin;
-        _visibilities[id] = effectiveVisibility;
-        _origins[id] = origin;
+        _visibilities[type.Id] = effectiveVisibility;
+        _origins[type.Id] = origin;
 
-        return sourceChanged;
+        return ApplyDefinition(new EventTypeDefinition(type.Id, owner, type.Tombstone, [new EventTypeGenerationDefinition(type.Generation, schema)], []), sourceChanged);
     }
 
     bool ApplyDefinition(EventTypeDefinition definition, bool sourceChanged)

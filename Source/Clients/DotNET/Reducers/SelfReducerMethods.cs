@@ -13,7 +13,6 @@ namespace Cratis.Chronicle.Reducers;
 internal static class SelfReducerMethods
 {
     static readonly EventTypeRegistryCache<FrozenDictionary<Type, MethodInfo>> _cache = new();
-    static readonly EventTypeSetCache<FrozenDictionary<Type, MethodInfo>> _sharedCache = new();
 
     /// <summary>
     /// Recognizes the structural signal without classifying classic reducers as self models.
@@ -45,13 +44,13 @@ internal static class SelfReducerMethods
     }
 
     /// <summary>
-    /// Gets the immutable dispatch map for the registry's CLR type set.
+    /// Gets the registry-local dispatch map.
     /// </summary>
     /// <param name="eventTypes">The owning registry.</param>
     /// <param name="model">The self model.</param>
     /// <returns>The unique selected methods.</returns>
     internal static FrozenDictionary<Type, MethodInfo> Get(IEventTypes eventTypes, Type model) =>
-        _cache.Get(eventTypes, model, model, types => _sharedCache.Get(types, model, model, snapshot => Build(model, snapshot)));
+        _cache.Get(eventTypes, model, model, types => Build(model, types));
 
     /// <summary>
     /// Enumerates the declared hierarchy, retaining hidden methods for validation.
@@ -90,11 +89,10 @@ internal static class SelfReducerMethods
             }
         }
 
-        var handledTypes = methods.ToDictionary(method => method, method => method.GetParameters()[0].ParameterType.GetEventTypes(eventTypes).ToFrozenSet());
         var selected = new Dictionary<Type, MethodInfo>();
         foreach (var eventType in eventTypes.Where(type => type != typeof(object)))
         {
-            var candidates = methods.Where(method => handledTypes[method].Contains(eventType)).ToArray();
+            var candidates = methods.Where(method => method.GetParameters()[0].ParameterType.GetEventTypes(eventTypes).Contains(eventType)).ToArray();
             if (candidates.Length > 0)
             {
                 selected.Add(eventType, Select(model, eventType, candidates));

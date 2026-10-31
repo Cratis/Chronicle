@@ -42,16 +42,25 @@ internal static class TestingEventTypes
             : metadata.GetSeedDefinitions(() => CreateDefinitions(eventTypes, schemas, migrators));
         var definitions = templates.Select(Copy).ToArray();
 
-        var latestById = eventTypes.All.GroupBy(type => type.Id.Value).ToDictionary(group => group.Key, group => group.MaxBy(type => type.Generation.Value)!);
-        await storage.Register(definitions.Select(definition => WithVisibility(eventTypes, definition, latestById[definition.Id.Value])).ToArray());
+        await storage.Register(definitions.Select(definition => new KernelEvents::EventTypeToRegister(definition, KernelEvents::EventTypeSource.Code)).ToArray());
         foreach (var definition in definitions)
         {
+            await RegisterLatestWithVisibility(storage, eventTypes, definition);
             await storage.RecordMigrationsVersion(definition.Id, KernelEvents::EventTypeMigrationsVersion.For(definition.Migrations), definition.Migrations);
         }
     }
 
-    static KernelEvents::EventTypeToRegister WithVisibility(IEventTypes eventTypes, KernelEvents::EventTypeDefinition definition, EventType latest) =>
-        new(definition with { Tombstone = latest.Tombstone }, KernelEvents::EventTypeSource.Code, RegistrationVisibilityFor(eventTypes, latest));
+    static async Task RegisterLatestWithVisibility(IEventTypesStorage storage, IEventTypes eventTypes, KernelEvents::EventTypeDefinition definition)
+    {
+        var latest = eventTypes.All.Where(type => type.Id.Value == definition.Id.Value).MaxBy(type => type.Generation.Value)!;
+        var latestGeneration = definition.Generations.First(generation => generation.Generation.Value == latest.Generation.Value);
+        await storage.Register(
+            new KernelEvents::EventType(definition.Id, latestGeneration.Generation, latest.Tombstone),
+            latestGeneration.Schema,
+            KernelEvents::EventTypeOwner.Client,
+            KernelEvents::EventTypeSource.Code,
+            RegistrationVisibilityFor(eventTypes, latest));
+    }
 
     static KernelEvents::EventTypeVisibility RegistrationVisibilityFor(IEventTypes eventTypes, EventType type) =>
         eventTypes is EventTypes registry

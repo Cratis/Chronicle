@@ -17,7 +17,6 @@ namespace Cratis.Chronicle.Reducers;
 public class ReducerInvoker : IReducerInvoker
 {
     static readonly EventTypeRegistryCache<FrozenDictionary<Type, MethodInfo>> _methodsByEventTypeCache = new();
-    static readonly EventTypeSetCache<FrozenDictionary<Type, MethodInfo>> _sharedMethodsByEventTypeCache = new();
     readonly FrozenDictionary<Type, MethodInfo> _methodsByEventType;
     readonly IClientArtifactsActivator _artifactActivator;
     readonly Type _targetType;
@@ -153,11 +152,7 @@ public class ReducerInvoker : IReducerInvoker
         };
 
     static FrozenDictionary<Type, MethodInfo> GetMethodsFor(IEventTypes eventTypes, Type targetType, Type readModelType) =>
-        _methodsByEventTypeCache.Get(
-            eventTypes,
-            targetType,
-            readModelType,
-            types => _sharedMethodsByEventTypeCache.Get(types, targetType, readModelType, snapshot => BuildMethodsByEventType(targetType, readModelType, snapshot)));
+        _methodsByEventTypeCache.Get(eventTypes, targetType, readModelType, types => BuildMethodsByEventType(targetType, readModelType, types));
 
     static FrozenDictionary<Type, MethodInfo> BuildMethodsByEventType(Type targetType, Type readModelType, IEnumerable<Type> eventTypes)
     {

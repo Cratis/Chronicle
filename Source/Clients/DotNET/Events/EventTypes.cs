@@ -83,16 +83,6 @@ public partial class EventTypes : IEventTypes
     /// <inheritdoc/>
     public IImmutableList<EventType> All => _typesByEventType.Keys.ToImmutableList();
 
-    /// <summary>
-    /// Gets the immutable descriptor snapshot used to scope routing caches.
-    /// </summary>
-    internal FrozenDictionary<Type, EventTypeDescriptor> Descriptors => _descriptors;
-
-    /// <summary>
-    /// Gets the immutable registered identities in their discovery order.
-    /// </summary>
-    internal FrozenDictionary<EventType, Type> RegisteredTypes => _typesByEventType;
-
     /// <inheritdoc/>
     /// <exception cref="MultipleEventTypesWithSameIdFound">
     /// Thrown when more than one CLR type resolves to the same event type id and generation.
