@@ -3,6 +3,7 @@
 
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Events.EventSequences;
@@ -34,6 +35,12 @@ public class EventSequencesReactor(IGrainFactory grainFactory, JsonSerializerOpt
     /// <returns>Awaitable task.</returns>
     public async Task RedactionRequested(EventRedactionRequested @event, EventContext context)
     {
+        if (IsSystemEventStore(context))
+        {
+            logger.SkippingSystemEventStoreRequest(context.EventStore, context.Namespace, @event.Sequence);
+            return;
+        }
+
         logger.Redacting(context.EventStore, context.Namespace, @event.Sequence, @event.SequenceNumber);
 
         var eventSequence = grainFactory.GetEventSequence(@event.Sequence, context.EventStore, context.Namespace);
@@ -54,6 +61,12 @@ public class EventSequencesReactor(IGrainFactory grainFactory, JsonSerializerOpt
     /// <returns>Awaitable task.</returns>
     public async Task RedactedForEventSource(EventsRedactedForEventSource @event, EventContext context)
     {
+        if (IsSystemEventStore(context))
+        {
+            logger.SkippingSystemEventStoreRequest(context.EventStore, context.Namespace, @event.Sequence);
+            return;
+        }
+
         logger.RedactingForEventSource(context.EventStore, context.Namespace, @event.Sequence, @event.EventSourceId, @event.EventTypes);
 
         var eventSequence = grainFactory.GetEventSequence(@event.Sequence, context.EventStore, context.Namespace);
@@ -76,6 +89,12 @@ public class EventSequencesReactor(IGrainFactory grainFactory, JsonSerializerOpt
     /// <exception cref="InvalidOperationException">Thrown when the revision content is null or contains invalid JSON.</exception>
     public async Task Revised(EventRevised @event, EventContext context)
     {
+        if (IsSystemEventStore(context))
+        {
+            logger.SkippingSystemEventStoreRequest(context.EventStore, context.Namespace, @event.Sequence);
+            return;
+        }
+
         logger.Revising(context.EventStore, context.Namespace, @event.Sequence, @event.SequenceNumber, @event.EventType);
 
         var eventSequence = grainFactory.GetEventSequence(@event.Sequence, context.EventStore, context.Namespace);
@@ -97,4 +116,7 @@ public class EventSequencesReactor(IGrainFactory grainFactory, JsonSerializerOpt
             context.Causation,
             context.CausedBy);
     }
+
+    static bool IsSystemEventStore(EventContext context) =>
+        string.Equals(context.EventStore.Value, EventStoreName.System.Value, StringComparison.OrdinalIgnoreCase);
 }
