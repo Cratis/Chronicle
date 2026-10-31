@@ -4,7 +4,6 @@
 using System.Globalization;
 using System.Text.Json;
 using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Concepts.Identities;
 using Cratis.Chronicle.Concepts.Security;
 using Cratis.Chronicle.Events.EventSequences;
 using Microsoft.AspNetCore.DataProtection;
@@ -49,14 +48,7 @@ public class a_roster_history : Specification
 
     protected static object WithProof(object content, EventSourceId source, EventSequenceNumber predecessor, IKernelEventProof proof)
     {
-        var body = content switch
-        {
-            UserGrantedAdministrator grant => JsonSerializer.Serialize(new[] { grant.UserId.ToString(), ((int)grant.Reason).ToString(CultureInfo.InvariantCulture), grant.Evidence }),
-            UserRevokedAdministrator revoke => JsonSerializer.Serialize(new[] { revoke.UserId.ToString(), revoke.RevokeReason }),
-            AdministratorPrivilegeMigrated marker => JsonSerializer.Serialize(new[] { marker.Outcome, marker.UserId?.ToString() ?? "" }),
-            _ => throw new InvalidOperationException()
-        };
-        var signed = proof.Sign(content.GetType().GetEventType(), source, predecessor, body);
+        var signed = proof.Sign(content.GetType().GetEventType(), source, predecessor, Body(content));
         return content switch
         {
             UserGrantedAdministrator grant => grant with { Proof = signed },
@@ -84,4 +76,12 @@ public class a_roster_history : Specification
     {
         foreach (var @event in _events) _history.Apply(@event, appended => _contents[appended]);
     }
+
+    static string Body(object content) => content switch
+    {
+        UserGrantedAdministrator grant => JsonSerializer.Serialize(new[] { grant.UserId.ToString(), ((int)grant.Reason).ToString(CultureInfo.InvariantCulture), grant.Evidence }),
+        UserRevokedAdministrator revoke => JsonSerializer.Serialize(new[] { revoke.UserId.ToString(), revoke.RevokeReason }),
+        AdministratorPrivilegeMigrated marker => JsonSerializer.Serialize(new[] { marker.Outcome, marker.UserId?.ToString() ?? string.Empty }),
+        _ => throw new InvalidOperationException()
+    };
 }

@@ -38,20 +38,23 @@ internal class AdministratorProjectionState(IStorage storage, IEventSerializer s
         {
             foreach (var @event in cursor.Current)
             {
-                var context = @event.Context;
-                if (!string.Equals(context.EventStore.Value, EventStoreName.System.Value, StringComparison.OrdinalIgnoreCase) ||
-                    context.Namespace != EventStoreNamespaceName.Default)
-                {
-                    continue;
-                }
-
-                // Roster slots count in every stream. Legacy user removals keep their user-stream rule.
-                if (context.EventType.Id == typeof(UserRemoved).GetEventType().Id && !AdministratorEventScope.IsSystemEvent(context)) continue;
-                history.Apply(@event, serializer.Deserialize);
+                if (AppliesToHistory(@event.Context)) history.Apply(@event, serializer.Deserialize);
             }
         }
         return history.Granted.Contains(userId) && history.LatestGrants.TryGetValue(userId, out var grant)
             ? new StoredAdministrator(userId, grant.Reason, grant.Evidence)
             : null;
+    }
+
+    static bool AppliesToHistory(EventContext context)
+    {
+        if (!string.Equals(context.EventStore.Value, EventStoreName.System.Value, StringComparison.OrdinalIgnoreCase) ||
+            context.Namespace != EventStoreNamespaceName.Default)
+        {
+            return false;
+        }
+
+        // Roster slots count in every stream. Legacy user removals keep their user-stream rule.
+        return context.EventType.Id != typeof(UserRemoved).GetEventType().Id || AdministratorEventScope.IsSystemEvent(context);
     }
 }

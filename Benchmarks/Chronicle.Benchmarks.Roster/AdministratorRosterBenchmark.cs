@@ -10,6 +10,7 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Security;
+using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Security;
 using Cratis.Chronicle.Storage;
@@ -19,7 +20,6 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using NSubstitute;
-using Orleans;
 using CachedRoster = baseline::Cratis.Chronicle.Security.AdministratorRoster;
 using CurrentRoster = Cratis.Chronicle.Security.AdministratorRoster;
 using RosterSource = Cratis.Chronicle.Concepts.Security.AdministratorRoster;
@@ -56,6 +56,8 @@ public class AdministratorRosterBenchmark
     /// <summary>
     /// Constructs shared in-memory storage and warms both roster instances.
     /// </summary>
+    /// <returns>The setup task.</returns>
+    /// <exception cref="InvalidOperationException">One of the rosters did not accept the signed benchmark history.</exception>
     [GlobalSetup]
     public async Task Setup()
     {
@@ -64,7 +66,7 @@ public class AdministratorRosterBenchmark
         _serializer = Substitute.For<IEventSerializer>();
         _storage.GetEventStore(EventStoreName.System).GetNamespace(EventStoreNamespaceName.Default)
             .GetEventSequence(EventSequenceId.Log).Returns(_events);
-        var user = new StoredUser(_user, "root", "root", "root@example.com", true, []);
+        var user = new StoredUser { Id = _user, Username = "root", IsActive = true };
         _storage.System.Users.GetById(_user).Returns(user);
         var proof = new KernelEventProof(new EphemeralDataProtectionProvider());
         var history = BuildHistory(proof);
@@ -115,7 +117,7 @@ public class AdministratorRosterBenchmark
         return cursor;
     }
 
-    AppendedEvent[] BuildHistory(IKernelEventProof proof)
+    AppendedEvent[] BuildHistory(KernelEventProof proof)
     {
         var history = new List<AppendedEvent>();
         for (var index = 0; index < Slots; index++)

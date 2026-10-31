@@ -110,6 +110,15 @@ public class AdministratorRoster(
         }
     }
 
+    static void ValidateDecision(EventToAppend[] events)
+    {
+        if (events.Count(@event => @event.EventSourceId == Roster.EventSourceId) > 1 ||
+            events.Count(@event => @event.EventSourceId == Roster.MigrationEventSourceId) > 1)
+        {
+            throw new InvalidOperationException("A roster decision cannot contain more than one event per family.");
+        }
+    }
+
     async Task InitializeAdministratorPrivilege()
     {
         await Mutate(Migration, migration: true);
@@ -211,11 +220,7 @@ public class AdministratorRoster(
             await Reload();
             var decision = await decide();
             if (!decision.Accepted || decision.Events.Length == 0) return decision.Accepted;
-            if (decision.Events.Count(@event => @event.EventSourceId == Roster.EventSourceId) > 1 ||
-                decision.Events.Count(@event => @event.EventSourceId == Roster.MigrationEventSourceId) > 1)
-            {
-                throw new InvalidOperationException("A roster decision cannot contain more than one event per family.");
-            }
+            ValidateDecision(decision.Events);
             var result = await grainFactory.GetEventLog().AppendMany(
                 decision.Events, CorrelationId.New(), [], Identity.System, Scopes(decision.Events, migration));
             if (result.HasConcurrencyViolations) continue;
@@ -260,11 +265,7 @@ public class AdministratorRoster(
             using var cursor = await Events.GetRange(EventSequenceNumber.First, tail, eventTypes: RosterHistory.QueryTypes);
             while (await cursor.MoveNext())
             {
-                foreach (var @event in cursor.Current)
-                {
-                    var failure = history.Apply(@event, serializer.Deserialize);
-                    if (failure is not null) logger.AdministratorRosterVerificationFailed(@event.Context.SequenceNumber, failure);
-                }
+                foreach (var @event in cursor.Current) Apply(history, @event);
             }
         }
         _history = history;
@@ -274,6 +275,12 @@ public class AdministratorRoster(
     {
         if (content is UserGrantedAdministrator grant) _grantTargets.Add(grant.UserId);
         return ToEvent(Roster.EventSourceId, content);
+    }
+
+    void Apply(RosterHistory history, AppendedEvent @event)
+    {
+        var failure = history.Apply(@event, serializer.Deserialize);
+        if (failure is not null) logger.AdministratorRosterVerificationFailed(@event.Context.SequenceNumber, failure);
     }
 
     EventToAppend ToEvent(EventSourceId source, object content)

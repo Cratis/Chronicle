@@ -15,7 +15,7 @@ public class when_a_roster_key_is_unavailable : given.an_administrators_reactor
     void Establish()
     {
         _context = SeedGrant();
-        Seed(_context.EventSourceId, new UserRevokedAdministrator(_userId, "spec"), signer: new KernelEventProof(new EphemeralDataProtectionProvider()));
+        SeedWithDifferentProof(_context.EventSourceId, new UserRevokedAdministrator(_userId, "spec"), new KernelEventProof(new EphemeralDataProtectionProvider()));
     }
 
     async Task Because()

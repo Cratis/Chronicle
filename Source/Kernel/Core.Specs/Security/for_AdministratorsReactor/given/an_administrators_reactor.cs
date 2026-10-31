@@ -27,10 +27,23 @@ public class an_administrators_reactor : Specification
 
     protected EventContext SeedGrant() => Seed(Roster.EventSourceId, _grant);
 
-    protected EventContext Seed(EventSourceId source, object content, EventStreamType? streamType = null, EventStreamId? streamId = null, IKernelEventProof? signer = null, bool omitProof = false)
+    protected EventContext Seed(EventSourceId source, object content, EventStreamType? streamType = null, EventStreamId? streamId = null) =>
+        Append(source, SignedContent(source, content, _proof), streamType, streamId);
+
+    protected EventContext SeedWithDifferentProof(EventSourceId source, object content, IKernelEventProof signer) =>
+        Append(source, SignedContent(source, content, signer), null, null);
+
+    protected EventContext SeedWithoutProof(EventSourceId source, object content, EventStreamId streamId) =>
+        Append(source, content, null, streamId);
+
+    object SignedContent(EventSourceId source, object content, IKernelEventProof signer)
     {
         var predecessor = _appended.LastOrDefault(@event => @event.Context.EventSourceId == source)?.Context.SequenceNumber ?? EventSequenceNumber.BeforeFirst;
-        if (!omitProof) content = RosterHistory.WithProof(content, source, predecessor, signer ?? _proof);
+        return RosterHistory.WithProof(content, source, predecessor, signer);
+    }
+
+    EventContext Append(EventSourceId source, object content, EventStreamType? streamType, EventStreamId? streamId)
+    {
         var appended = AppendedEvent.Empty() with
         {
             Context = EventContext.Empty with

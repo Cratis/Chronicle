@@ -14,7 +14,7 @@ public class when_another_stream_contains_an_unsigned_roster_revocation : given.
     void Establish()
     {
         _context = SeedGrant();
-        Seed(_context.EventSourceId, new UserRevokedAdministrator(_userId, "spec"), streamId: "other", omitProof: true);
+        SeedWithoutProof(_context.EventSourceId, new UserRevokedAdministrator(_userId, "spec"), "other");
     }
 
     async Task Because()
