@@ -61,14 +61,24 @@ internal class RosterHistory(IKernelEventProof proof)
     internal Dictionary<UserId, UserGrantedAdministrator> LatestGrants { get; } = [];
 
     /// <summary>
-    /// Gets the last roster slot, regardless of trust.
+    /// Gets the last roster family slot, regardless of trust. This is the proof predecessor for the next roster event.
     /// </summary>
     internal EventSequenceNumber RawRosterTail { get; private set; } = EventSequenceNumber.BeforeFirst;
 
     /// <summary>
-    /// Gets the last migration slot, regardless of trust.
+    /// Gets the last migration family slot, regardless of trust. This is the proof predecessor for the next migration event.
     /// </summary>
     internal EventSequenceNumber RawMigrationTail { get; private set; } = EventSequenceNumber.BeforeFirst;
+
+    /// <summary>
+    /// Gets the last event on the roster source that the roster concurrency scope matches: family events and every redaction tombstone.
+    /// </summary>
+    internal EventSequenceNumber RosterScopeTail { get; private set; } = EventSequenceNumber.BeforeFirst;
+
+    /// <summary>
+    /// Gets the last event on the migration source that the migration concurrency scope matches: family events and every redaction tombstone.
+    /// </summary>
+    internal EventSequenceNumber MigrationScopeTail { get; private set; } = EventSequenceNumber.BeforeFirst;
 
     /// <summary>
     /// Gets whether a verified migration marker has been read.
@@ -131,6 +141,11 @@ internal class RosterHistory(IKernelEventProof proof)
         if (!roster && !migration) return null;
         var tombstone = context.EventType.Id == GlobalEventTypes.Redaction;
         if (!tombstone && !IsFamilyType(context.EventType.Id, roster)) return null;
+
+        // The append concurrency scope matches every tombstone on the source, whatever it replaced, so its tail
+        // advances before unrelated tombstones are skipped. The proof chain below stays family-only.
+        if (roster) RosterScopeTail = context.SequenceNumber;
+        else MigrationScopeTail = context.SequenceNumber;
 
         var content = Deserialize(@event, deserialize);
         if (tombstone && content is EventRedacted redacted && !IsFamilyType(redacted.OriginalEventType, roster)) return null;

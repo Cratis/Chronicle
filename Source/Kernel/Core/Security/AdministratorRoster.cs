@@ -238,11 +238,11 @@ public class AdministratorRoster(
     {
         var scopes = new Dictionary<EventSourceId, ConcurrencyScope>
         {
-            [Roster.EventSourceId] = new(_history.RawRosterTail, EventSourceId: true, EventStreamType: null, EventStreamId: null, EventSourceType: null, EventTypes: _rosterScopeTypes)
+            [Roster.EventSourceId] = new(_history.RosterScopeTail, EventSourceId: true, EventStreamType: null, EventStreamId: null, EventSourceType: null, EventTypes: _rosterScopeTypes)
         };
         if (migration)
         {
-            scopes[Roster.MigrationEventSourceId] = new(_history.RawMigrationTail, EventSourceId: true, EventStreamType: null, EventStreamId: null, EventSourceType: null, EventTypes: _migrationScopeTypes);
+            scopes[Roster.MigrationEventSourceId] = new(_history.MigrationScopeTail, EventSourceId: true, EventStreamType: null, EventStreamId: null, EventSourceType: null, EventTypes: _migrationScopeTypes);
         }
         foreach (var userId in _grantTargets)
         {

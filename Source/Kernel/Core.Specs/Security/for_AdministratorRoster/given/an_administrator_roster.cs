@@ -40,6 +40,7 @@ public class an_administrator_roster : Specification
     protected UserId _first;
     protected UserId _second;
     protected int _appendCalls;
+    protected List<ConcurrencyScopes> _scopes = [];
     protected int _conflicts;
     protected bool _failAppend;
     protected bool _synchronizeNextAppends;
@@ -94,6 +95,13 @@ public class an_administrator_roster : Specification
         var tombstone = slot with { Context = slot.Context with { EventType = new EventType(GlobalEventTypes.Redaction, EventTypeGeneration.First) } };
         _appended[_appended.IndexOf(slot)] = tombstone;
         _contents[tombstone] = new EventRedacted("spec", slot.Context.EventType.Id, DateTimeOffset.UtcNow, slot.Context.CorrelationId, [], []);
+    }
+
+    protected EventSequenceNumber SeedRedactedUnrelatedEvent(EventSourceId source)
+    {
+        var unrelated = SeedForged(source, new ApplicationRemoved());
+        RedactSlot(unrelated.Context.SequenceNumber);
+        return unrelated.Context.SequenceNumber;
     }
 
     protected void ReviseSlot(EventSequenceNumber sequence, object content)
@@ -192,6 +200,7 @@ public class an_administrator_roster : Specification
         lock (_appendLock)
         {
             _appendCalls++;
+            _scopes.Add(scopes);
             if (_failAppend) return new AppendManyResult { CorrelationId = CorrelationId.New(), Errors = ["storage failure"] };
             var violations = scopes.Scopes.Where(entry => Violates(entry.Key, entry.Value))
                 .Select(entry => new ConcurrencyViolation(entry.Key, entry.Value.SequenceNumber, Matching(entry.Value.EventTypes, entry.Key).Last().Context.SequenceNumber)).ToArray();
