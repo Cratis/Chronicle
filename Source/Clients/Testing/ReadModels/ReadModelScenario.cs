@@ -377,6 +377,7 @@ public partial class ReadModelScenario<TReadModel>(TReadModel? initialState, Def
     public void Dispose()
     {
         _eventStore?.Dispose();
+        if (_borrowedStore is not null && _syntheticInputSequenceId is not null) _borrowedStore.TestingStore.RemoveSequence(_syntheticInputSequenceId);
         if (serviceProvider is null && Services.Any() && _resolvedServiceProvider is IDisposable disposable) disposable.Dispose();
         GC.SuppressFinalize(this);
     }
