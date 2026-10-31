@@ -162,7 +162,7 @@ Once any roster slot fails verification, automatic bootstrap and upgrade grants 
 
 The proof uses the deployment's existing Data Protection provider and `Chronicle` application name. Persist and share its key ring across every silo and retain historical keys for the lifetime of the roster history. Normal key rotation retains old proofs. Key deletion, key revocation, restoring a different key ring, or changing the application name can make historical proofs unreadable and suspend administrator privileges. Restoring readable keys permits verification again; otherwise use server-local recovery with a fresh nonce, not automatic bootstrap. Do not log or disclose key material or protected proofs.
 
-When upgrading from 19.114.1 or earlier, stop all nodes, or keep public client traffic off the cluster until every node runs 19.115.0.
+When upgrading from a version before 19.115.0, stop all nodes, or keep public client traffic off the cluster until every node runs 19.115.0.
 
 Authorization and the `AllAdministrators` query replay the authoritative roster on every read, including unchanged tails. The eventual administrator projection is not an authorization source. In-place storage mutations do not trigger that projection; it can remain stale until a later roster event, while authoritative reads already fail closed.
 
