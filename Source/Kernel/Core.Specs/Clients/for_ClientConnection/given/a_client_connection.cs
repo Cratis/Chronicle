@@ -7,7 +7,7 @@ namespace Cratis.Chronicle.Clients.for_ClientConnection.given;
 
 public class a_client_connection : Specification
 {
-    protected ClientConnection _connection;
+    protected RecordingClientConnection _connection;
     protected IGrainFactory _grainFactory;
     protected GrainId _first = GrainId.Create("reactor", "first");
     protected GrainId _second = GrainId.Create("reducer", "second");
@@ -21,6 +21,13 @@ public class a_client_connection : Specification
         _secondSubscriber = Substitute.For<IClientDisconnectionSubscriber>();
         _grainFactory.GetGrain<IClientDisconnectionSubscriber>(_first).Returns(_firstSubscriber);
         _grainFactory.GetGrain<IClientDisconnectionSubscriber>(_second).Returns(_secondSubscriber);
-        _connection = new ClientConnection(_grainFactory, Substitute.For<ILogger<ClientConnection>>());
+        _connection = new RecordingClientConnection(_grainFactory, Substitute.For<ILogger<ClientConnection>>());
+    }
+
+    protected class RecordingClientConnection(IGrainFactory grainFactory, ILogger<ClientConnection> logger) : ClientConnection(grainFactory, logger)
+    {
+        public int ReleaseCount { get; private set; }
+
+        protected override void Release() => ReleaseCount++;
     }
 }

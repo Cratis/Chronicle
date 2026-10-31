@@ -13,6 +13,7 @@ namespace Cratis.Chronicle.Clients;
 /// <param name="grainFactory"><see cref="IGrainFactory"/> for reaching subscribers.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
 [PreferLocalPlacement]
+[KeepAlive]
 public class ClientConnection(IGrainFactory grainFactory, ILogger<ClientConnection> logger) : Grain, IClientConnection
 {
     readonly HashSet<GrainId> _subscribers = [];
@@ -64,6 +65,9 @@ public class ClientConnection(IGrainFactory grainFactory, ILogger<ClientConnecti
                 logger.FailedNotifyingSubscriber(ex, connectionId, subscriber.ToString());
             }
         }
+
+        // Subscribers have been notified and cleared, nothing more to keep in memory.
+        Release();
     }
 
     /// <inheritdoc/>
@@ -82,6 +86,17 @@ public class ClientConnection(IGrainFactory grainFactory, ILogger<ClientConnecti
     public Task Unsubscribe(GrainId subscriber)
     {
         _subscribers.Remove(subscriber);
+
+        if (_state == ConnectionState.Disconnected && _subscribers.Count == 0)
+        {
+            Release();
+        }
+
         return Task.CompletedTask;
     }
+
+    /// <summary>
+    /// Releases the activation. Virtual so the deactivation request can be observed without an Orleans runtime.
+    /// </summary>
+    protected virtual void Release() => DeactivateOnIdle();
 }
