@@ -35,7 +35,7 @@ public class EventSequencesReactor(IGrainFactory grainFactory, JsonSerializerOpt
     /// <returns>Awaitable task.</returns>
     public async Task RedactionRequested(EventRedactionRequested @event, EventContext context)
     {
-        if (IsSystemEventStore(context))
+        if (IsReservedTarget(context, @event.Sequence))
         {
             logger.SkippingSystemEventStoreRequest(context.EventStore, context.Namespace, @event.Sequence);
             return;
@@ -61,7 +61,7 @@ public class EventSequencesReactor(IGrainFactory grainFactory, JsonSerializerOpt
     /// <returns>Awaitable task.</returns>
     public async Task RedactedForEventSource(EventsRedactedForEventSource @event, EventContext context)
     {
-        if (IsSystemEventStore(context))
+        if (IsReservedTarget(context, @event.Sequence))
         {
             logger.SkippingSystemEventStoreRequest(context.EventStore, context.Namespace, @event.Sequence);
             return;
@@ -89,7 +89,7 @@ public class EventSequencesReactor(IGrainFactory grainFactory, JsonSerializerOpt
     /// <exception cref="InvalidOperationException">Thrown when the revision content is null or contains invalid JSON.</exception>
     public async Task Revised(EventRevised @event, EventContext context)
     {
-        if (IsSystemEventStore(context))
+        if (IsReservedTarget(context, @event.Sequence))
         {
             logger.SkippingSystemEventStoreRequest(context.EventStore, context.Namespace, @event.Sequence);
             return;
@@ -117,6 +117,9 @@ public class EventSequencesReactor(IGrainFactory grainFactory, JsonSerializerOpt
             context.CausedBy);
     }
 
-    static bool IsSystemEventStore(EventContext context) =>
-        string.Equals(context.EventStore.Value, EventStoreName.System.Value, StringComparison.OrdinalIgnoreCase);
+    static bool IsReservedTarget(EventContext context, EventSequenceId sequence) =>
+        string.Equals(context.EventStore.Value, EventStoreName.System.Value, StringComparison.OrdinalIgnoreCase)
+        || context.EventStore.Value.AsSpan().IndexOf(KeyHelper.Separator) >= 0
+        || context.Namespace.Value.AsSpan().IndexOf(KeyHelper.Separator) >= 0
+        || sequence.Value.AsSpan().IndexOf(KeyHelper.Separator) >= 0;
 }
