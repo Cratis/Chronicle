@@ -21,6 +21,6 @@ public class when_unignoring : given.all_dependencies
     [Fact] void should_not_fail() => _error.ShouldBeNull();
     [Fact] void should_write_state_once() => storageStats.Writes.ShouldEqual(1);
     [Fact] void should_not_clear_state() => storageStats.Clears.ShouldEqual(0);
-    [Fact] void should_no_longer_be_ignored() => recommendation.State.IsIgnored.ShouldBeFalse();
-    [Fact] void should_keep_the_request() => recommendation.State.Request.ShouldEqual(_request);
+    [Fact] void should_no_longer_be_ignored() => storage.State.IsIgnored.ShouldBeFalse();
+    [Fact] void should_keep_the_request() => storage.State.Request.ShouldEqual(_request);
 }
