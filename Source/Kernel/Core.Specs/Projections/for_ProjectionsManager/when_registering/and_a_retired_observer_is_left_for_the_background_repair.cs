@@ -2,10 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts;
-using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
-using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.Observation;
 
 namespace Cratis.Chronicle.Projections.for_ProjectionsManager.when_registering;
@@ -32,7 +30,7 @@ public class and_a_retired_observer_is_left_for_the_background_repair : given.a_
         _eventStoreStorage.EventTypes.GetLatestForAllEventTypes().Returns(_ =>
         {
             _clock.Advance(ProjectionsManager.RegistrationSubscribeBudget + TimeSpan.FromSeconds(1));
-            return (IEnumerable<EventTypeSchema>)[];
+            return [];
         });
 
         _observer = Substitute.For<Observation.IObserver>();

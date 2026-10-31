@@ -155,6 +155,7 @@ public partial class ProjectionsManager
                 }
 
                 await SetProjectionDefinition(definition);
+
                 // Reviving takes a fresh subscription: a reconciling one cannot end a retirement.
                 var revive = _pendingRevival.ContainsKey((definition.Identifier, @namespace));
                 await SubscribeIfNotSubscribed(definition, readModel, @namespace, schemas, reactivateRetired: revive, reconcile: reconcile && !revive);
