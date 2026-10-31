@@ -44,7 +44,7 @@ public class when_upgrading_sqlite : Specification, IDisposable
         read.CommandText = "SELECT Id FROM Observers";
         _identifier = (string)await read.ExecuteScalarAsync();
         read.CommandText = "SELECT COUNT(*) FROM pragma_table_info('Observers') WHERE name = 'RunningStateChangedAt' AND \"notnull\" = 0";
-        _columnExists = (long)await read.ExecuteScalarAsync() == 1;
+        _columnExists = await read.ExecuteScalarAsync() is long count && count == 1;
     }
 
     [Fact] void should_add_a_nullable_column() => _columnExists.ShouldBeTrue();
