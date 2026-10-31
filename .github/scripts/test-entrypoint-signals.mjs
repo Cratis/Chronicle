@@ -115,10 +115,12 @@ test('exits with the server status when the server exits on its own', async () =
 });
 
 // The signal lands either while wait -n is still waiting or just after it reaped the server; both
-// orders must report the server's own status rather than 127 or 128 + 15.
+// orders must report the server's own status rather than 127 or 128 + 15. The forwarded TERM can also
+// reach the server before it exits, so its stop status is the same 4. Which order happens is up to the
+// scheduler; the window after wait -n returns is too short to force from outside the script.
 test('keeps the server status when TERM arrives as the server exits', async () => {
     for (let attempt = 0; attempt < 5; attempt++) {
-        const result = await run({ EXIT_ON_ITS_OWN: '4', SIGNAL_PARENT_ON_EXIT: '1' });
+        const result = await run({ EXIT_ON_ITS_OWN: '4', SIGNAL_PARENT_ON_EXIT: '1', STOP_STATUS: '4' });
         assert.equal(result.code, 4, `attempt ${attempt}: ${result.output}`);
     }
 });

@@ -66,11 +66,12 @@ pending_signal=""
 forward_signal() {
   shutdown_requested=true
   signal_count=$((signal_count + 1))
-  pending_signal=$1
   # Before the launch there is no server to signal; the launch forwards the pending signal.
   # The server may also have exited just before the signal arrived.
   if [ -n "$server_pid" ]; then
     kill -s "$1" "$server_pid" 2>/dev/null || true
+  else
+    pending_signal=$1
   fi
 }
 # Install the traps before the launch so a stop request that arrives in between is not lost.
