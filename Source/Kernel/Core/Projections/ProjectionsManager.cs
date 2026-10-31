@@ -30,6 +30,7 @@ namespace Cratis.Chronicle.Projections;
 /// <param name="storage"><see cref="IStorage"/> for accessing storage.</param>
 /// <param name="localSiloDetails"><see cref="ILocalSiloDetails"/> for getting the local silo details.</param>
 /// <param name="logger">The logger.</param>
+/// <param name="timeProvider">The <see cref="TimeProvider"/> the registration subscribe budget is measured against. Defaults to the system clock.</param>
 [ImplicitChannelSubscription]
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.ProjectionsManager)]
 public partial class ProjectionsManager(
@@ -39,8 +40,24 @@ public partial class ProjectionsManager(
     ILanguageService languageService,
     IStorage storage,
     ILocalSiloDetails localSiloDetails,
-    ILogger<ProjectionsManager> logger) : Grain<ProjectionsManagerState>, IProjectionsManager, IOnBroadcastChannelSubscribed, IDisposable
+    ILogger<ProjectionsManager> logger,
+    TimeProvider? timeProvider = null) : Grain<ProjectionsManagerState>, IProjectionsManager, IOnBroadcastChannelSubscribed, IDisposable
 {
+    /// <summary>
+    /// How long a registration waits for its subscribe fan-out before handing what is left to the background repair.
+    /// </summary>
+    /// <remarks>
+    /// This grain is non-reentrant, so a registration holds its turn - and every other registration queues behind it,
+    /// including the kernel's own startup registration - for as long as it waits. A client registering a large artifact
+    /// set into a store with many namespaces fans out over definitions x namespaces (171 x 37 in production), which
+    /// outlasts Orleans' 30 second response timeout. Its caller then times out and retries, and the queue of retries
+    /// kept the host from starting. Bounding the wait keeps the turn short: whatever is not subscribed in time is
+    /// subscribed by <see cref="ResubscribeMissingProjections"/>, which already repairs any definition x namespace
+    /// pair missing from <see cref="_subscribed"/>. Well under the response timeout, to leave room for what a
+    /// registration does before and after the fan-out.
+    /// </remarks>
+    internal static readonly TimeSpan RegistrationSubscribeBudget = TimeSpan.FromSeconds(15);
+
     /// <summary>
     /// Maximum number of observer subscribe operations this grain lets run concurrently.
     /// </summary>
@@ -62,6 +79,14 @@ public partial class ProjectionsManager(
 
     readonly SemaphoreSlim _subscriptionThrottle = new(MaxConcurrentSubscriptions, MaxConcurrentSubscriptions);
 
+    readonly TimeProvider _clock = timeProvider ?? TimeProvider.System;
+
+    /// <summary>
+    /// The definition x namespace pairs a registration meant to subscribe and, if the observer was retired, revive,
+    /// but ran out of budget for. The repair pass revives them instead of skipping the retired observer.
+    /// </summary>
+    readonly ConcurrentDictionary<(ProjectionId Projection, EventStoreNamespaceName Namespace), byte> _pendingRevival = new();
+
     /// <summary>
     /// An activation-local hint, never proof that the observer still has its subscription.
     /// </summary>
@@ -74,6 +99,7 @@ public partial class ProjectionsManager(
     readonly ConcurrentDictionary<ProjectionId, Lazy<Task>> _projectionDefinitions = new();
     readonly Dictionary<ProjectionId, ProjectionDefinition> _registeringDefinitions = new();
     bool _resubscribeRunning;
+    DateTimeOffset? _registrationSubscribeDeadline;
     bool _resubscribeRequested;
     HashSet<EventStoreNamespaceName>? _registrationNamespaces;
     bool _skippedWhileRegistering;
@@ -225,9 +251,17 @@ public partial class ProjectionsManager(
 
             // Subscribe projections immediately so that seeded events appended after registration
             // are not missed due to the asynchronous timer-based subscription scheduling
-            foreach (var (identifier, exception) in await SetDefinitionAndSubscribeForProjections(acceptedByEngine, reactivateRetired: true))
+            _registrationSubscribeDeadline = _clock.GetUtcNow() + RegistrationSubscribeBudget;
+            try
             {
-                failures[identifier] = exception;
+                foreach (var (identifier, exception) in await SetDefinitionAndSubscribeForProjections(acceptedByEngine, reactivateRetired: true))
+                {
+                    failures[identifier] = exception;
+                }
+            }
+            finally
+            {
+                _registrationSubscribeDeadline = null;
             }
 
             // Merge fully accepted definitions. Storage upgrades were already retained after SetDefinition:
@@ -426,10 +460,10 @@ public partial class ProjectionsManager(
             return;
         }
 
-        await Task.WhenAll(namespaces.Select(namespaceName => SubscribeIfNotSubscribed(definition, readModelDefinition, namespaceName, eventTypeSchemas, reactivateRetired)));
+        await Task.WhenAll(namespaces.Select(namespaceName => SubscribeIfNotSubscribed(definition, readModelDefinition, namespaceName, eventTypeSchemas, reactivateRetired, boundedByRegistration: reactivateRetired)));
     }
 
-    async Task SubscribeIfNotSubscribed(ProjectionDefinition definition, ReadModelDefinition readModelDefinition, EventStoreNamespaceName namespaceName, IEnumerable<EventTypeSchema> eventTypeSchemas, bool reactivateRetired, bool reconcile = false)
+    async Task SubscribeIfNotSubscribed(ProjectionDefinition definition, ReadModelDefinition readModelDefinition, EventStoreNamespaceName namespaceName, IEnumerable<EventTypeSchema> eventTypeSchemas, bool reactivateRetired, bool reconcile = false, bool boundedByRegistration = false)
     {
         if (!definition.IsActive)
         {
@@ -437,21 +471,14 @@ public partial class ProjectionsManager(
         }
 
         var observer = GrainFactory.GetGrain<IObserver>(new ObserverKey(definition.Identifier, _eventStoreName, namespaceName, definition.EventSequenceId));
-
-        logger.Subscribing(definition.Identifier, namespaceName);
-        var projection = await projectionFactory.Create(_eventStoreName, namespaceName, definition, readModelDefinition, eventTypeSchemas);
-
-        logger.SubscribingWithEventTypes(
-            definition.Identifier,
-            projection.EventTypes.Count(),
-            string.Join(", ", projection.EventTypes.Select(et => et.Id)));
+        var pair = (definition.Identifier, namespaceName);
 
         // Always call Subscribe even when the observer thinks it is already
         // subscribed. For [KeepAlive] grains that survive deactivation
         // collection, the in-memory subscription state can be stale after
         // databases are dropped. Subscribe is idempotent and re-reads
         // persistent state, which detects the reset.
-        Task SubscribeAs<TSubscriber>()
+        Task SubscribeAs<TSubscriber>(Engine.IProjection projection)
             where TSubscriber : IObserverSubscriber
         {
             if (reconcile)
@@ -472,13 +499,28 @@ public partial class ProjectionsManager(
             return observer.Subscribe<TSubscriber>(ObserverType.Projection, projection.EventTypes, localSiloDetails.SiloAddress, reactivateRetired: reactivateRetired);
         }
 
-        // The subscriber type is how the observer learns whether the projection's partitions may be spread across
-        // the silos of a cluster. A projection that can collapse several event sources onto one read model
-        // document is serialized by a process-local lock, so all of its partitions must reach one activation.
+        // The throttle is taken before the projection is built: building one per definition x namespace pair ahead of
+        // the gate ran thousands of them at once on a large registration, CPU the subscribes then had to compete for.
         await _subscriptionThrottle.WaitAsync();
         try
         {
             if (!reactivateRetired && !IsCurrentActiveDefinition(definition)) return;
+
+            // Out of budget: leave the pair for the background repair, which revives it if the observer was retired.
+            if (boundedByRegistration && RegistrationSubscribeBudgetSpent())
+            {
+                _pendingRevival.TryAdd(pair, default);
+                return;
+            }
+
+            logger.Subscribing(definition.Identifier, namespaceName);
+            var projection = await projectionFactory.Create(_eventStoreName, namespaceName, definition, readModelDefinition, eventTypeSchemas);
+
+            logger.SubscribingWithEventTypes(
+                definition.Identifier,
+                projection.EventTypes.Count(),
+                string.Join(", ", projection.EventTypes.Select(et => et.Id)));
+
             if (reconcile)
             {
                 var state = await observer.GetState();
@@ -488,19 +530,23 @@ public partial class ProjectionsManager(
                 if (!IsCurrentActiveDefinition(definition)) return;
             }
 
+            // The subscriber type is how the observer learns whether the projection's partitions may be spread across
+            // the silos of a cluster. A projection that can collapse several event sources onto one read model
+            // document is serialized by a process-local lock, so all of its partitions must reach one activation.
             await (projection.IsEventSourceKeyed
-                ? SubscribeAs<IProjectionObserverSubscriber>()
-                : SubscribeAs<ICollapsingProjectionObserverSubscriber>());
+                ? SubscribeAs<IProjectionObserverSubscriber>(projection)
+                : SubscribeAs<ICollapsingProjectionObserverSubscriber>(projection));
 
             // Only on success - a pair left out here is one the next registration reconciles. Concurrent
             // because the fan-out subscribes definitions and namespaces in parallel.
             if (await observer.IsSubscriptionEstablished())
             {
-                _subscribed.TryAdd((definition.Identifier, namespaceName), default);
+                _subscribed.TryAdd(pair, default);
+                _pendingRevival.TryRemove(pair, out _);
             }
             else
             {
-                _subscribed.TryRemove((definition.Identifier, namespaceName), out _);
+                _subscribed.TryRemove(pair, out _);
             }
         }
         finally
@@ -508,6 +554,9 @@ public partial class ProjectionsManager(
             _subscriptionThrottle.Release();
         }
     }
+
+    bool RegistrationSubscribeBudgetSpent() =>
+        _registrationSubscribeDeadline is { } deadline && _clock.GetUtcNow() >= deadline;
 
     Task OnError(Exception exception) => Task.CompletedTask;
 

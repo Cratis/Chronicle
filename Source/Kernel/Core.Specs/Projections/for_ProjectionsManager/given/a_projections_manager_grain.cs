@@ -33,6 +33,9 @@ public class a_projections_manager_grain : Specification
     protected IProjectionsServiceClient _projectionsServiceClient;
     protected IProjectionDefinitionComparer _definitionComparer;
     protected IProjection _projectionGrain;
+    protected IProjectionFactory _projectionFactory;
+    protected Engine.IProjection _engineProjection;
+    protected AdvancingClock _clock;
     protected IReadModelsManager _readModelsManager;
     protected Observation.IObserver _observerGrain;
     protected readonly Dictionary<string, Observation.IObserver> _observersByKey = [];
@@ -56,10 +59,10 @@ public class a_projections_manager_grain : Specification
         _definitionComparer = Substitute.For<IProjectionDefinitionComparer>();
         _silo.AddService(_definitionComparer);
 
-        var engineProjection = Substitute.For<Engine.IProjection>();
+        var engineProjection = _engineProjection = Substitute.For<Engine.IProjection>();
         engineProjection.EventTypes.Returns([]);
         engineProjection.IsEventSourceKeyed.Returns(true);
-        var projectionFactory = Substitute.For<IProjectionFactory>();
+        var projectionFactory = _projectionFactory = Substitute.For<IProjectionFactory>();
         projectionFactory
             .Create(
                 Arg.Any<EventStoreName>(),
@@ -69,6 +72,9 @@ public class a_projections_manager_grain : Specification
                 Arg.Any<IEnumerable<EventTypeSchema>>())
             .Returns(engineProjection);
         _silo.AddService(projectionFactory);
+
+        _clock = new AdvancingClock();
+        _silo.AddService<TimeProvider>(_clock);
 
         _projectionsServiceClient = Substitute.For<IProjectionsServiceClient>();
         _projectionsServiceClient
