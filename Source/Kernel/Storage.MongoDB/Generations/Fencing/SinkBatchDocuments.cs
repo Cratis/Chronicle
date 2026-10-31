@@ -42,18 +42,17 @@ internal sealed class SinkBatchDocuments(int cap)
     internal static void RequireRetrySafe(IMongoCollection<BsonDocument> collection, UpdateDefinition<BsonDocument> update, int maxBatchSize)
     {
         var rendered = update.Render(new(collection.DocumentSerializer, collection.Settings.SerializerRegistry));
-        var name = collection.CollectionNamespace.CollectionName;
         if (rendered is not BsonDocument document)
         {
-            throw new NonIdempotentWriteCannotBeSplit(name, ["(pipeline update)"], maxBatchSize);
+            throw new NonIdempotentWriteCannotBeSplit(collection.CollectionNamespace.CollectionName, ["(pipeline update)"], maxBatchSize);
         }
         if (document.ElementCount == 0)
         {
-            throw new NonIdempotentWriteCannotBeSplit(name, ["(empty update)"], maxBatchSize);
+            throw new NonIdempotentWriteCannotBeSplit(collection.CollectionNamespace.CollectionName, ["(empty update)"], maxBatchSize);
         }
         if (document.Names.Any(IsBlocking))
         {
-            throw new NonIdempotentWriteCannotBeSplit(name, document.Names.Where(IsBlocking).ToArray(), maxBatchSize);
+            throw new NonIdempotentWriteCannotBeSplit(collection.CollectionNamespace.CollectionName, document.Names.Where(IsBlocking).ToArray(), maxBatchSize);
         }
     }
 

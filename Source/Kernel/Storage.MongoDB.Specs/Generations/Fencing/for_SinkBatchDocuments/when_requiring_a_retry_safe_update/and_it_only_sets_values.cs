@@ -9,16 +9,20 @@ namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing.for_SinkBatchDocu
 
 public class and_it_only_sets_values : Specification
 {
+    IMongoCollection<BsonDocument> _collection = null!;
     Exception? _error;
 
-    void Because()
+    void Establish()
     {
-        var collection = Substitute.For<IMongoCollection<BsonDocument>>();
-        collection.DocumentSerializer.Returns(BsonDocumentSerializer.Instance);
-        collection.Settings.Returns(new MongoCollectionSettings());
-        collection.CollectionNamespace.Returns(new CollectionNamespace("specs", "orders"));
-        _error = Catch.Exception(() => SinkBatchDocuments.RequireRetrySafe(collection, Builders<BsonDocument>.Update.Set("name", "x").Unset("old"), 2));
+        _collection = Substitute.For<IMongoCollection<BsonDocument>>();
+        _collection.DocumentSerializer.Returns(BsonDocumentSerializer.Instance);
+        _collection.Settings.Returns(new MongoCollectionSettings());
+        _collection.CollectionNamespace.Returns(new CollectionNamespace("specs", "orders"));
+        _collection.ClearReceivedCalls();
     }
 
+    void Because() => _error = Catch.Exception(() => SinkBatchDocuments.RequireRetrySafe(_collection, Builders<BsonDocument>.Update.Set("name", "x").Unset("old"), 2));
+
     [Fact] void should_not_refuse() => _error.ShouldBeNull();
+    [Fact] void should_not_look_up_the_collection_name() => _ = _collection.DidNotReceive().CollectionNamespace;
 }
