@@ -40,16 +40,28 @@ internal sealed class ExplicitRegistrationEvidence
     /// <returns>The shared explicit registrations.</returns>
     internal static ExplicitRegistrationEvidence For(Compilation compilation, CancellationToken cancellationToken)
     {
-        cancellationToken.ThrowIfCancellationRequested();
-        var evidence = _cache.GetValue(compilation, key => new Lazy<ExplicitRegistrationEvidence>(() => Create(key, cancellationToken)));
-        try
+        while (true)
         {
-            return evidence.Value;
-        }
-        catch (OperationCanceledException)
-        {
-            _cache.Remove(compilation);
-            throw;
+            cancellationToken.ThrowIfCancellationRequested();
+            var evidence = _cache.GetValue(compilation, key => new Lazy<ExplicitRegistrationEvidence>(() => Create(key, cancellationToken)));
+            try
+            {
+                return evidence.Value;
+            }
+            catch (OperationCanceledException)
+            {
+                // The shared Lazy caches the cancellation of whichever caller created it. Drop that entry
+                // (only if it is still the one we observed) and let a caller whose own token is live rebuild it.
+                if (_cache.TryGetValue(compilation, out var current) && ReferenceEquals(current, evidence))
+                {
+                    _cache.Remove(compilation);
+                }
+
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    throw;
+                }
+            }
         }
     }
 
