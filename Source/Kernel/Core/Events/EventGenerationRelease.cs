@@ -83,10 +83,11 @@ public class EventGenerationRelease(
 
             if (!@event.IsRevised && @event.GenerationalContent.TryGetValue((int)pin.Generation.Value, out var storedContent))
             {
-                var content = converter.ToExpandoObject(JsonNode.Parse(storedContent)!.AsObject(), schema.Schema);
+                var effective = GenerationProtectionSchemas.For(definition, pin.Generation);
+                var content = converter.ToExpandoObject(JsonNode.Parse(storedContent)!.AsObject(), effective);
                 var hash = @event.GenerationalHashes.GetValueOrDefault((int)pin.Generation.Value, EventHash.NotSet);
                 var selected = @event with { Content = content, Context = @event.Context with { EventType = pin, Hash = hash } };
-                releasedEvents.Add(await eventCompliance.Release(selected, schema.Schema));
+                releasedEvents.Add(await eventCompliance.Release(selected, effective));
                 continue;
             }
 

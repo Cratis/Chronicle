@@ -48,6 +48,12 @@ internal class ProtectedEventTypeMigrations(
         var sourceSchema = definition is null
             ? (await eventTypes.GetFor(eventType.Id, eventType.Generation)).Schema
             : definition.Generations.Single(_ => _.Generation == eventType.Generation).Schema;
+        var sourceDefinition = definition ?? await eventTypes.GetDefinition(eventType.Id);
+        if (sourceDefinition is not null)
+        {
+            sourceSchema = GenerationProtectionSchemas.For(sourceDefinition, eventType.Generation);
+        }
+
         var plaintext = protectedContent;
         if (sourceSchema.HasSchemaMetadata())
         {
@@ -90,6 +96,19 @@ internal class ProtectedEventTypeMigrations(
         var generations = definition is null
             ? await migrations.MigrateToAllGenerations(eventStore, eventType, plaintext, plaintextEvent)
             : await migrations.MigrateToAllGenerations(definition, eventType, plaintext, plaintextEvent);
+        var ownSchemas = new List<(EventTypeGeneration Generation, JsonSchema Schema)>();
+        foreach (var generation in generations.Keys)
+        {
+            var own = sourceSchema;
+            if (generation != eventType.Generation)
+            {
+                own = definition is null
+                    ? (await eventTypes.GetFor(eventType.Id, generation)).Schema
+                    : definition.Generations.Single(_ => _.Generation == generation).Schema;
+            }
+            ownSchemas.Add((generation, own));
+        }
+
         var protectedGenerations = new Dictionary<EventTypeGeneration, ExpandoObject>();
         foreach (var (generation, content) in generations)
         {
@@ -100,9 +119,7 @@ internal class ProtectedEventTypeMigrations(
                 continue;
             }
 
-            var schema = definition is null
-                ? (await eventTypes.GetFor(eventType.Id, generation)).Schema
-                : definition.Generations.Single(_ => _.Generation == generation).Schema;
+            var schema = GenerationProtectionSchemas.For(generation, ownSchemas);
             if (!schema.HasSchemaMetadata())
             {
                 protectedGenerations[generation] = content;
@@ -140,7 +157,7 @@ internal class ProtectedEventTypeMigrations(
         string subject,
         EventTypeGeneration target)
     {
-        var sourceSchema = definition.Generations.Single(_ => _.Generation == source.Generation).Schema;
+        var sourceSchema = GenerationProtectionSchemas.For(definition, source.Generation);
         var plaintext = await metadataManager.ReleaseStrict(eventStore, @namespace, sourceSchema, subject, protectedContent);
         NormalizeEnumValues(plaintext, sourceSchema);
         var content = converter.ToExpandoObject(plaintext, sourceSchema);

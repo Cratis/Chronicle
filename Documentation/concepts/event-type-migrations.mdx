@@ -174,8 +174,16 @@ values rather than ciphertext.
 Before storing a generated generation, Chronicle applies that generation's protection
 metadata under the original event's subject, falling back to its event source when no
 subject was supplied. This also protects default values in classified target properties.
-Keep the appropriate metadata on every target property that carries personal or
-confidential data; a migration does not replace that schema declaration.
+A lower generation's stored copy also inherits `[PII]` or `[Encrypted]` from a higher
+generation that classifies the same plain-string property path. Pinned delivery releases
+these inherited protected values. This does not apply to non-string or formatted
+properties; keep the appropriate metadata on every generation for those properties.
+Already stored copies are not re-encrypted; use [Event redaction](../events/redaction)
+when historical plaintext must be removed.
+
+`Compatibility` delivery of an older generation now receives ciphertext for these
+inherited protected properties. Use `EventGenerationDelivery.Pinned` to receive released
+values in the pinned generation's shape.
 
 When a new generation is registered, backfill covers the **default namespace's event log only**.
 It migrates from the known appended generation's base content, not a separate revision. For
