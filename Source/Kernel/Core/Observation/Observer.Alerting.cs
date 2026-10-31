@@ -96,7 +96,7 @@ public partial class Observer
                     return false;
                 }
 
-                var configuration = await configurationProvider.GetFor(_observerKey);
+                var retryConfiguration = await GetRetryConfiguration();
                 var committedFailures = await namespaceStorage.FailedPartitions.GetFor(_observerId);
                 var quarantineDesired = source.RunningState == ObserverRunningState.Quarantined;
                 if (!_subscription.IsSubscribed && Definition.Type == ObserverType.Projection)
@@ -120,7 +120,7 @@ public partial class Observer
                         latest.Kind,
                         latest.Messages.FirstOrDefault() ?? string.Empty);
                 }).ToArray();
-                snapshot = new(_observerKey, partitions, quarantineDesired, source.AlertDisposition, configuration.MaxRetryAttempts)
+                snapshot = new(_observerKey, partitions, quarantineDesired, source.AlertDisposition, retryConfiguration.MaxRetryAttempts)
                 {
                     LifecycleId = source.AlertLifecycleId,
                     Revision = source.AlertRevision,
