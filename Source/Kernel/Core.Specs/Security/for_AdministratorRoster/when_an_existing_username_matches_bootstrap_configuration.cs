@@ -19,13 +19,15 @@ public class when_an_existing_username_matches_bootstrap_configuration : given.a
         await AddUser(_first, "root");
         _coordinator = Substitute.For<IAdministratorRoster>();
         _grainFactory.GetGrain<IAdministratorRoster>(Concepts.Security.AdministratorRoster.Key).Returns(_coordinator);
+        var tokens = Substitute.For<IInitialAdminSetupTokens>();
+        tokens.Issue(Arg.Any<UserId>()).Returns((InitialAdminSetupToken)"issued-token");
         _authentication = new AuthenticationService(
             _storage.System.Users,
             Substitute.For<IApplicationStorage>(),
             _grainFactory,
             Options.Create(_options),
             _serializer,
-            Substitute.For<IInitialAdminSetupTokens>(),
+            tokens,
             NullLogger<AuthenticationService>.Instance);
     }
 
