@@ -74,5 +74,14 @@ public class a_token_protected_only_in_the_latest_generation : Specification
         _protectedSource = _converter.ToExpandoObject(_protectedContent, _schemas[2]);
     }
 
-    protected string StoredGeneration(uint generation) => _converter.ToJsonObject(_migrated[(EventTypeGeneration)generation], _schemas[generation - 1]).ToJsonString();
+    protected string StoredGeneration(uint generation) => Generation(generation).ToJsonString();
+
+    protected JsonObject Generation(uint generation) => _converter.ToJsonObject(_migrated[(EventTypeGeneration)generation], _schemas[generation - 1]);
+
+    protected async Task<string> ReleasedToken(uint generation, string subject)
+    {
+        var schema = GenerationProtectionSchemas.For(_definition, generation);
+        var released = await _manager.ReleaseStrict(Store, Namespace, schema, subject, Generation(generation));
+        return released["token"]!.GetValue<string>();
+    }
 }
