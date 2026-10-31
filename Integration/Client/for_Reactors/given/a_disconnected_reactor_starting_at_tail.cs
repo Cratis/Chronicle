@@ -13,4 +13,12 @@ public class a_disconnected_reactor_starting_at_tail(ChronicleFixture chronicleF
         Reactor = new();
         services.AddSingleton(Reactor);
     }
+
+    public override void Dispose()
+    {
+        Reactor?.Dispose();
+        base.Dispose();
+    }
+
+    void Destroy() => Reactor?.Dispose();
 }
