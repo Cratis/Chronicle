@@ -73,6 +73,7 @@ public class EventStoreForTesting : IEventStore, IDisposable
     internal const string DefaultNamespaceName = "default";
 
     readonly ReadModelsForTesting _readModelsForTesting;
+    readonly IReadModels _innerReadModels;
     readonly IEventLog? _scenarioEventLog;
     readonly INamingPolicy _namingPolicy;
     readonly JsonSerializerOptions _jsonSerializerOptions;
@@ -279,6 +280,7 @@ public class EventStoreForTesting : IEventStore, IDisposable
             NullLogger<Chronicle.ReadModels.ReadModels>.Instance);
 
         _constraintProvider = TestingEventStore.DiscoverConstraints(ClientArtifactsProvider, _eventTypes, _artifactActivator);
+        _innerReadModels = realReadModels;
         _readModelsForTesting = CreateReadModelsForStorage(realReadModels, testingStore);
         ReadModels = _readModelsForTesting;
         DecisionReads.RegisterTesting(this, new DecisionReadsForTesting(
@@ -487,6 +489,34 @@ public class EventStoreForTesting : IEventStore, IDisposable
     /// </summary>
     internal IServiceProvider ServiceProvider { get; }
 
+    /// <summary>
+    /// Creates a <see cref="ReadModelScenario{TReadModel}"/> that folds through this store's artifacts instead of building a store of its own.
+    /// </summary>
+    /// <typeparam name="TReadModel">The type of read model to fold.</typeparam>
+    /// <param name="serviceProvider">Optional <see cref="IServiceProvider"/> for activating the reducer or projection; defaults to this store's.</param>
+    /// <returns>A scenario that owns its input, seeds, instances and <see cref="ReadModelScenario{TReadModel}.ReadModels"/> surface.</returns>
+    /// <remarks>
+    /// <para>
+    /// This is for test infrastructure that folds many read models against one store, such as a command
+    /// scenario materializing each read model its command reads. Constructing a <see cref="ReadModelScenario{TReadModel}"/>
+    /// builds a whole in-memory store for every fold; this scenario borrows the discovered artifacts, event types,
+    /// serialization and event type schemas of this store instead. Specs that test one read model should keep
+    /// constructing <see cref="ReadModelScenario{TReadModel}"/> directly.
+    /// </para>
+    /// <para>
+    /// The scenario behaves like one constructed with this store's artifacts: its input is folded on its own and never
+    /// read from this store's event log, its seeds and results stay in the scenario, and
+    /// <see cref="ReadModelScenario{TReadModel}.WithProjection"/> applies to the scenario alone. Disposing it releases
+    /// only what the scenario created; this store and its service provider remain usable. Serialization and compliance
+    /// always come from this store, so a <paramref name="serviceProvider"/> or registered
+    /// <see cref="ReadModelScenario{TReadModel}.Services"/> changes how the handler is activated, not how events are
+    /// serialized.
+    /// </para>
+    /// </remarks>
+    public ReadModelScenario<TReadModel> CreateReadModelScenario<TReadModel>(IServiceProvider? serviceProvider = null)
+        where TReadModel : class =>
+        ReadModelScenario<TReadModel>.Borrowing(this, serviceProvider);
+
     /// <inheritdoc/>
     public void Dispose()
     {
@@ -531,6 +561,17 @@ public class EventStoreForTesting : IEventStore, IDisposable
     internal void RegisterReadModelInstance<TReadModel>(EventSourceId eventSourceId, TReadModel instance)
         where TReadModel : class =>
         _readModelsForTesting.RegisterInstance(eventSourceId, instance);
+
+    /// <summary>
+    /// Creates a read model surface for one borrowing scenario, sharing nothing mutable with this store's own surface.
+    /// </summary>
+    /// <returns>A surface that refuses observation and does not read this store's event log.</returns>
+    internal ReadModelsForTesting CreateScopedReadModels()
+    {
+        var readModels = new ReadModelsForTesting(_innerReadModels, EventLog, this) { IgnoresStoreLog = true };
+        readModels.DisableObservation();
+        return readModels;
+    }
 
     Chronicle.Occurrences.Occurrences CreateOccurrences()
     {
