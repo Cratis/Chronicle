@@ -140,6 +140,9 @@ jobs:
           python3 .github/scripts/test-pr-artifact-handoff.py
           python3 .github/scripts/test-sparse-integration-workflows.py
 
+      - name: Spec the analyzer ownership map
+        run: python3 .github/scripts/test-analyzer-ownership.py
+
       - name: Setup .Net
         uses: actions/setup-dotnet@v4
         with:
@@ -232,9 +235,11 @@ jobs:
       - name: Build development Docker image
         if: github.event_name != 'pull_request' || inputs.integration_requested
         run: |
+          # Debug analyzers never gate (warnings are not errors). The Release Build step owns them; generators still run.
           dotnet publish Source/Kernel/Server/Server.csproj \
             --configuration Debug \
             --no-restore \
+            -p:RunAnalyzers=false \
             -o Source/Kernel/Server/out
           docker build -t "${{ env.CRATIS_CHRONICLE_LOCAL_IMAGE }}" -f Docker/Local/Dockerfile .
 
@@ -912,11 +917,13 @@ jobs:
           # temp directory, and the generator's own path-combine logic assumes a
           # project-relative OutputPath - fed an absolute one it double-roots the assembly
           # path and crashes before benchmarks ever need a proxy.
+          # Analyzers are warnings-only here (TreatWarningsAsErrors=false), so they can never gate; the Release
+          # Build step owns them. Generators still run.
           dotnet build Benchmarks/Chronicle.Benchmarks/Chronicle.Benchmarks.csproj \
-            -c Release /p:TreatWarningsAsErrors=false /p:DisableDockerBuild=true \
+            -c Release /p:TreatWarningsAsErrors=false /p:RunAnalyzers=false /p:DisableDockerBuild=true \
             /p:CratisProxiesOutputPath= \
             /p:ArtifactsPath="${RUNNER_TEMP}/benchmark-artifacts"
           dotnet build Benchmarks/Chronicle.Benchmarks.Clustering/Chronicle.Benchmarks.Clustering.csproj \
-            -c Release /p:TreatWarningsAsErrors=false /p:DisableDockerBuild=true \
+            -c Release /p:TreatWarningsAsErrors=false /p:RunAnalyzers=false /p:DisableDockerBuild=true \
             /p:CratisProxiesOutputPath= \
             /p:ArtifactsPath="${RUNNER_TEMP}/benchmark-artifacts-clustering"
