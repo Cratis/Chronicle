@@ -29,6 +29,15 @@ public interface ISink
     bool SupportsIsolatedReplace => false;
 
     /// <summary>
+    /// Gets a stamp telling whether this sink may hold writes in memory before they reach storage.
+    /// </summary>
+    /// <remarks>
+    /// The default is <see cref="SinkBufferingWindow.Unknown"/>, which is fail-safe: a sink that does not opt in
+    /// is treated as possibly buffering, so no caller may claim a write was persisted on its account.
+    /// </remarks>
+    SinkBufferingWindow BufferingWindow => SinkBufferingWindow.Unknown;
+
+    /// <summary>
     /// Replaces an isolated instance unless its stored watermark is beyond the supplied watermark.
     /// </summary>
     /// <param name="key">The instance to replace.</param>

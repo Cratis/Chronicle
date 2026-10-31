@@ -74,6 +74,9 @@ public class EventSequenceSink(
     public SinkTypeId TypeId => WellKnownSinkTypes.EventSequence;
 
     /// <inheritdoc/>
+    public SinkBufferingWindow BufferingWindow => SinkBufferingWindow.Closed;
+
+    /// <inheritdoc/>
     public async Task<ExpandoObject?> FindOrDefault(Key key)
     {
         var last = await FindLast(key);

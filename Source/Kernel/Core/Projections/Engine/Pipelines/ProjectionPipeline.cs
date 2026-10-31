@@ -62,6 +62,9 @@ public partial class ProjectionPipeline(
     /// </remarks>
     readonly ProjectionHandleLock _handleLock = handleLock;
 
+    /// <inheritdoc/>
+    SinkBufferingWindow IProjectionPipeline.BufferingWindow => sink.BufferingWindow;
+
     ReadModelContainerName ChangesetContainer => generation?.Destination ?? projection.ReadModel.ContainerName;
 
     /// <inheritdoc/>

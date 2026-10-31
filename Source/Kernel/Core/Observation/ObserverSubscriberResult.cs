@@ -37,6 +37,15 @@ public record ObserverSubscriberResult(ObserverSubscriberState State, EventSeque
     public WebhookDeliveryFailurePolicy FailurePolicy { get; init; } = WebhookDeliveryFailurePolicy.Retry;
 
     /// <summary>
+    /// Gets a value indicating whether the subscriber proved that every write of this delivery reached storage.
+    /// </summary>
+    /// <remarks>
+    /// True only when proven; the default is false, so a result from a subscriber or an older silo that does not
+    /// provide the evidence never counts as persisted. Only projection subscribers set it.
+    /// </remarks>
+    public bool WritesPersisted { get; init; }
+
+    /// <summary>
     /// Gets a value indicating whether the <see cref="ObserverSubscriberResult"/> indicates that any event was successfully handled.
     /// </summary>
     public bool HandledAnyEvents => LastSuccessfulObservation != EventSequenceNumber.Unavailable;

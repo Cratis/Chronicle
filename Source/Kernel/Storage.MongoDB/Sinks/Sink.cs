@@ -145,6 +145,7 @@ public partial class Sink(
     SinkMultiDocumentWrites? _directWrites;
     int _currentBulkSize;
     volatile bool _isBulkMode;
+    long _bufferingWindow;
     volatile CollectionState? _primaryState;
     BulkWindowId? _bulkWindowId;
     bool _bulkWindowIsReplay;
@@ -162,6 +163,18 @@ public partial class Sink(
 
     /// <inheritdoc/>
     public SinkTypeId TypeId => WellKnownSinkTypes.MongoDB;
+
+    /// <inheritdoc/>
+    public SinkBufferingWindow BufferingWindow
+    {
+        get
+        {
+            lock (_bulkLock)
+            {
+                return new(_bufferingWindow);
+            }
+        }
+    }
 
     /// <inheritdoc/>
     public void Dispose() => _bulkCancellation.Dispose();
@@ -818,6 +831,13 @@ public partial class Sink(
 
     void OpenBulkWindow(bool isReplay)
     {
+        if (!_isBulkMode)
+        {
+            // Both stamp reads and transitions hold _bulkLock; no atomic increment is needed.
+            // Odd from here on: stamped before buffering is admitted.
+            _bufferingWindow++;
+        }
+
         _isBulkMode = true;
         _bulkWindowId = new(Guid.NewGuid());
         _bulkWindowIsReplay = isReplay;
@@ -940,7 +960,13 @@ public partial class Sink(
 
             lock (_bulkLock)
             {
-                _isBulkMode = false;
+                if (_isBulkMode)
+                {
+                    // Even only after the final flush attempt: stamped after buffering stopped.
+                    _isBulkMode = false;
+                    _bufferingWindow++;
+                }
+
                 _bulkWindowId = null;
                 _bulkWindowIsReplay = false;
                 _bulkWindowHasFailedWrites = false;

@@ -28,6 +28,9 @@ public class NullSink : ISink
     public SinkTypeId TypeId => SinkTypeId.None;
 
     /// <inheritdoc/>
+    public SinkBufferingWindow BufferingWindow => SinkBufferingWindow.Closed;
+
+    /// <inheritdoc/>
     public Task<IEnumerable<FailedPartition>> ApplyChanges(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset, EventSequenceNumber eventSequenceNumber) =>
         Task.FromResult<IEnumerable<FailedPartition>>([]);
 

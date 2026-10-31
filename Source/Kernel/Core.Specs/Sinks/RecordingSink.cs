@@ -44,6 +44,9 @@ public class RecordingSink : ISink
     public SinkTypeId TypeId => WellKnownSinkTypes.InMemory;
 
     /// <inheritdoc/>
+    public SinkBufferingWindow BufferingWindow => SinkBufferingWindow.Closed;
+
+    /// <inheritdoc/>
     public Task<ExpandoObject?> FindOrDefault(Key key) => Task.FromResult(Existing);
 
     /// <inheritdoc/>

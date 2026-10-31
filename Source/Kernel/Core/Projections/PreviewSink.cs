@@ -36,6 +36,9 @@ internal sealed class PreviewSink(PropertyPath identifierProperty) : ISink
     /// <inheritdoc/>
     public SinkTypeId TypeId => SinkTypeId.None;
 
+    /// <inheritdoc/>
+    public SinkBufferingWindow BufferingWindow => SinkBufferingWindow.Closed;
+
     /// <summary>
     /// Gets the read models built, in the order they were first created.
     /// </summary>

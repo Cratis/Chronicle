@@ -18,6 +18,7 @@ using Cratis.Chronicle.Projections.Engine.Pipelines;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
+using Cratis.Chronicle.Storage.Sinks;
 using Microsoft.Extensions.Logging;
 
 using EngineProjection = Cratis.Chronicle.Projections.Engine.IProjection;
@@ -102,7 +103,7 @@ public class ProjectionObserverSubscriber(
     /// <inheritdoc/>
     public async Task<ObserverSubscriberResult> OnNext(Key partition, IEnumerable<AppendedEvent> events, ObserverSubscriberContext context)
     {
-        var (result, notification) = await HandleRun(partition, events);
+        var (result, notification) = await HandleRun(partition, events, context.TrackPersistence);
         if (result.State != ObserverSubscriberState.Ok)
         {
             return result;
@@ -148,7 +149,7 @@ public class ProjectionObserverSubscriber(
                 }
 
                 var run = page[start..offset];
-                var (result, notification) = await HandleRun(partition, run);
+                var (result, notification) = await HandleRun(partition, run, context.TrackPersistence);
                 if (result.State != ObserverSubscriberState.Ok)
                 {
                     var failedEvent = result.HandledAnyEvents
@@ -227,7 +228,7 @@ public class ProjectionObserverSubscriber(
         }
     }
 
-    async Task<(ObserverSubscriberResult Result, ReadModelChangeNotification? Notification)> HandleRun(Key partition, IEnumerable<AppendedEvent> events)
+    async Task<(ObserverSubscriberResult Result, ReadModelChangeNotification? Notification)> HandleRun(Key partition, IEnumerable<AppendedEvent> events, bool trackPersistence)
     {
         if (_pipeline is null)
         {
@@ -261,6 +262,10 @@ public class ProjectionObserverSubscriber(
             ReadModelChangeNotification? notification = null;
             IChangeset<AppendedEvent, ExpandoObject>? changeset = null;
             var isNewInstance = false;
+
+            // Persistence evidence is bound to the pipeline instance each event is actually handled by: the
+            // pipeline can be replaced mid-delivery, so every invocation is bracketed on its own captured instance.
+            var writesPersisted = trackPersistence;
 
             var staleFailure = await RefreshWhenEngineHasNewerDefinition();
             if (staleFailure is not null)
@@ -298,7 +303,19 @@ public class ProjectionObserverSubscriber(
                 var eventToHandle = pin is not null && pin != @event.Context.EventType
                     ? await _projection!.ReleaseEvent(pin, @event)
                     : @event;
-                var pipelineContext = await _pipeline.Handle(eventToHandle);
+                ProjectionEventContext pipelineContext;
+                if (trackPersistence)
+                {
+                    var pipeline = _pipeline!;
+                    var bufferingWindowBefore = pipeline.BufferingWindow;
+                    pipelineContext = await pipeline.Handle(eventToHandle);
+                    writesPersisted &= SinkBufferingWindow.IsUnchangedAndClosed(bufferingWindowBefore, pipeline.BufferingWindow) &&
+                        !pipelineContext.FailedPartitions.Any();
+                }
+                else
+                {
+                    pipelineContext = await _pipeline!.Handle(eventToHandle);
+                }
                 changeset = pipelineContext.Changeset;
 
                 // Accumulate across the batch: a single OnNext delivers all events for one partition
@@ -364,7 +381,10 @@ public class ProjectionObserverSubscriber(
                 notification = new(partition.ToString(), model, change);
             }
 
-            return (ObserverSubscriberResult.Ok(lastSuccessfullyObservedEvent!.Context.SequenceNumber), notification);
+            return (new ObserverSubscriberResult(ObserverSubscriberState.Ok, lastSuccessfullyObservedEvent!.Context.SequenceNumber, [], string.Empty)
+            {
+                WritesPersisted = writesPersisted
+            }, notification);
         }
         catch (Exception ex)
         {

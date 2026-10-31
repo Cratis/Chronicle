@@ -10,6 +10,15 @@ namespace Cratis.Chronicle.Observation;
 public record ObserverSubscriberContext(object? Metadata)
 {
     /// <summary>
+    /// Gets a value indicating whether a caller registered to wait for this delivery's partition.
+    /// </summary>
+    /// <remarks>
+    /// False by default, so a delivery nobody waits for does no persistence bookkeeping at all. The observer sets it
+    /// only for a partition with a live registered waiter; the subscriber then brackets its writes.
+    /// </remarks>
+    public bool TrackPersistence { get; init; }
+
+    /// <summary>
     /// Gets the deadline after which the caller no longer accepts a result.
     /// </summary>
     public DateTimeOffset? DeliverBy { get; init; }

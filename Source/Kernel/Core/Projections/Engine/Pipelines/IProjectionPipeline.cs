@@ -13,6 +13,11 @@ namespace Cratis.Chronicle.Projections.Engine.Pipelines;
 public interface IProjectionPipeline
 {
     /// <summary>
+    /// Gets the buffering window stamp of the sink this pipeline writes to.
+    /// </summary>
+    SinkBufferingWindow BufferingWindow { get; }
+
+    /// <summary>
     /// Notifies about the beginning of a replay.
     /// </summary>
     /// <param name="context">The <see cref="ReplayContext"/> for the replay.</param>

@@ -131,6 +131,9 @@ public partial class Sink : ISink, ICanReconcileIndexes, ISinkCompositeKeyLookup
     /// <inheritdoc/>
     public SinkTypeId TypeId => WellKnownSinkTypes.SQL;
 
+    /// <inheritdoc/>
+    public SinkBufferingWindow BufferingWindow => SinkBufferingWindow.Closed;
+
     /// <summary>
     /// Gets the table name the projection pipeline currently reads and writes through the sink. Resolves to
     /// <c language="csharp">replay-{tableName}</c> while a replay is in progress, and to the primary table name

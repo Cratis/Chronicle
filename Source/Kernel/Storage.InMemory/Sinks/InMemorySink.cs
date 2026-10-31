@@ -47,6 +47,9 @@ public partial class InMemorySink(
     /// <inheritdoc/>
     public SinkTypeId TypeId => WellKnownSinkTypes.InMemory;
 
+    /// <inheritdoc/>
+    public SinkBufferingWindow BufferingWindow => SinkBufferingWindow.Closed;
+
     /// <summary>
     /// Gets the current collection for the sink represented as a key value of key to <see cref="ExpandoObject"/>.
     /// </summary>
