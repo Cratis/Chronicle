@@ -12,9 +12,9 @@ Look at these in order. Each step narrows the question from "something is wrong"
 
 Traces and alerts give the same signal earlier. See [Alerting on observer failures](/chronicle/hosting/alerting-on-observer-failures/) and [Troubleshooting](/chronicle/troubleshooting/) for missing spans.
 
-## The Workbench is for inspection
+## Using the Workbench
 
-The [Workbench](/chronicle/workbench/) shows runtime state in a local browser. Use it to look. Choose and run a recovery from the path in [Recovering from failures](/chronicle/operations/recovering-from-failures/), which links every action to its CLI page.
+The [Workbench](/chronicle/workbench/) shows observer and failed-partition state in a local browser. It also offers some recovery actions: retry on a failed partition, and replay, fast-forward, clear quarantine and remove on an observer. Before you use any of them, decide which recovery fits from [Recovering from failures](/chronicle/operations/recovering-from-failures/). That page explains when each action is appropriate and links it to its CLI page, which is the scriptable path.
 
 ## Next
 
