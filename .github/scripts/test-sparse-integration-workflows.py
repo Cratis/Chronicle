@@ -336,15 +336,35 @@ class SparseIntegrationWorkflows(unittest.TestCase):
         self.assertIn('--filter "$filter"', run)
         self.assertTrue(any(step.get("uses") == "./.github/actions/assert-tests-ran" for step in steps))
         self.assertEqual("coverage-results-specs-sql-${{ matrix.shard }}", steps[-1]["with"]["name"])
+        self.assertIn('--coverage', run)
+        download = next(step for step in jobs["coverage-merge-and-cache"]["steps"]
+                        if step["name"] == "Download all coverage artifacts")
+        self.assertEqual("coverage-results-*", download["with"]["pattern"])
+
+    def test_ordinary_shards_keep_runtime_guards_and_unique_artifacts(self):
+        jobs = self.build["jobs"]
         ordinary = next(step["run"] for step in jobs["specs-other"]["steps"]
                         if step["name"] == "Run tests with coverage")
-        self.assertEqual("node .github/scripts/run-mixed-specs.mjs", ordinary)
+        self.assertEqual("node .github/scripts/run-mixed-specs.mjs --shard ${{ matrix.shard }} --shards 2", ordinary)
+        other = jobs["specs-other"]
+        self.assertEqual(["1", "2"], other["strategy"]["matrix"]["shard"])
+        self.assertEqual("false", other["strategy"]["fail-fast"])
+        self.assertNotIn("continue-on-error", other)
+        self.assertEqual("coverage-results-specs-other-${{ matrix.shard }}", other["steps"][-1]["with"]["name"])
+        self.assertTrue(any(step.get("uses") == "./.github/actions/assert-tests-ran" for step in other["steps"]))
+        names = [step.get("name") for step in other["steps"]]
+        for name in ("Restore mixed runner evaluation inputs", "Restore pinned coverage tool",
+                     "Verify real collector exit and deadline cleanup"):
+            self.assertLess(names.index(name), names.index("Run tests with coverage"))
+        contracts = next(step["run"] for step in jobs["dotnet-build"]["steps"]
+                         if step.get("name") == "Spec executable runner contracts and forbid test-host dispatch")
+        self.assertIn("test-spec-shards.mjs", contracts)
+        self.assertIn("spec-shards.mjs --dry-run", contracts)
         selection = subprocess.run(
             ["node", "--input-type=module", "-e", """
-                import { ordinaryProjects, v3Projects, shippingProjects }
-                    from './.github/scripts/mixed-specs-selection.mjs';
-                const infos = [...v3Projects, ...shippingProjects].map(project => ({ project }));
-                console.log(JSON.stringify(ordinaryProjects(infos).map(info => info.project)));
+                import { validateSourceProjects } from './.github/scripts/mixed-specs-selection.mjs';
+                const source = await validateSourceProjects(process.cwd());
+                console.log(JSON.stringify(source.ordinary));
             """], cwd=WORKFLOWS.parents[1], check=True, capture_output=True, text=True, timeout=30)
         projects = json.loads(selection.stdout)
         self.assertNotIn("Source/Kernel/Storage.Sql.Specs/Storage.Sql.Specs.csproj", projects)
@@ -360,10 +380,6 @@ class SparseIntegrationWorkflows(unittest.TestCase):
         self.assertIn("dotnet build Source/Kernel/Storage.AzureKeyVault.Specs/Storage.AzureKeyVault.Specs.csproj --configuration Release", prepare)
         self.assertIn("Source/Kernel/Storage.MongoDB.Specs/Storage.MongoDB.Specs.csproj", projects)
         self.assertFalse(any(project.startswith("Integration/") for project in projects))
-        self.assertIn('--coverage', run)
-        download = next(step for step in jobs["coverage-merge-and-cache"]["steps"]
-                        if step["name"] == "Download all coverage artifacts")
-        self.assertEqual("coverage-results-*", download["with"]["pattern"])
 
     def test_every_job_is_skipped_when_the_workflow_already_succeeded_on_this_commit(self):
         jobs = self.build["jobs"]
@@ -385,6 +401,17 @@ class SparseIntegrationWorkflows(unittest.TestCase):
         aggregate = self.build["jobs"]["specs"]
         self.assertEqual("${{ needs.already-ran.outputs.skip != 'true' && (always()) }}", aggregate["if"])
         self.assertEqual(["specs-other", "specs-sql"], prerequisites_of(aggregate))
+        self.assertEqual({"contents": "read", "actions": "read"}, aggregate["permissions"])
+        self.assertEqual("Checkout shard contract", aggregate["steps"][1]["name"])
+        self.assertEqual("false", aggregate["steps"][1]["with"]["persist-credentials"])
+        for action in aggregate["steps"][1:3]:
+            self.assertRegex(action["uses"], r"@[a-f0-9]{40}$")
+        download = aggregate["steps"][2]
+        self.assertEqual("coverage-results-specs-other-*", download["with"]["pattern"])
+        self.assertEqual("false", download["with"]["merge-multiple"])
+        self.assertEqual("node .github/scripts/spec-shards.mjs --verify-results .ai-work/5501/spec-shard-receipts",
+                         aggregate["steps"][3]["run"])
+        self.assertFalse(any("continue-on-error" in step for step in aggregate["steps"]))
         step = aggregate["steps"][0]
         self.assertEqual("${{ needs.specs-other.result }}", step["env"]["OTHER_RESULT"])
         self.assertEqual("${{ needs.specs-sql.result }}", step["env"]["SQL_RESULT"])

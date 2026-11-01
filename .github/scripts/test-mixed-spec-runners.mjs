@@ -11,11 +11,16 @@ import { v3Projects, shippingProjects, shippingRunners, ordinaryFilter, childCom
 import { collectorArgs, verifyExit, verifyDeadline, main as verifyCollector } from './verify-mixed-specs-collector.mjs';
 import './spec-project-contracts.mjs';
 import { benchmarkProject, inventory, ordinaryProjects, validateSolutionProjects } from './mixed-specs-selection.mjs';
+import { sourcePlan } from './spec-shards.mjs';
 
 const scratch = path.resolve('.ai-work/chronicle-spec5-runners/mock-contracts');
 async function fixture() {
     await mkdir(scratch, { recursive: true });
     const root = await mkdtemp(path.join(scratch, 'case-'));
+    for (const project of [...v3Projects, ...shippingProjects]) {
+        await mkdir(path.dirname(path.join(root, project)), { recursive: true });
+        await writeFile(path.join(root, project), '<Project/>');
+    }
     await mkdir(path.join(root, 'Source', 'Library'), { recursive: true });
     await writeFile(path.join(root, 'Source', 'Library', 'Decision.cs'), '// mock production source');
     const directory = path.join(root, 'output');
@@ -219,12 +224,12 @@ test('MOCK stale results are rejected before launch', async () => {
     await assert.rejects(runProject({ project: v3Projects[0], runner: 'v3', dll: options.dll }, options, async () => assert.fail('must not launch')), /fresh and empty/);
 });
 
-test('MOCK whole ordinary dispatch validates all 34, launches 24 once, keeps SQL/integration separate', async () => {
+async function ordinaryDispatch(mode) {
     const { root } = await fixture();
     await writeFile(path.join(root, 'Chronicle.slnx'), `<Solution>${v3Projects.filter(project => !project.includes('Storage.AzureKeyVault.Specs/')).map(project => `<Project Path="${project}" />`).join('')}</Solution>`);
     await mkdir(path.join(root, 'Benchmarks/Chronicle.Benchmarks.Clustering'), { recursive: true });
     await writeFile(path.join(root, 'Benchmarks/Chronicle.Benchmarks.Clustering/RebuildBaselineMath.cs'), '// mock benchmark production source');
-    await mkdir(path.join(root, 'Integration'));
+    await mkdir(path.join(root, 'Integration'), { recursive: true });
     await writeFile(path.join(root, 'specs.runsettings'), '<RunSettings><TestSessionTimeout>1234</TestSessionTimeout><TestCaseFilter>Name!~excluded&amp;Name!~also</TestCaseFilter></RunSettings>');
     const queried = [], launched = [];
     let benchmarkDll;
@@ -243,6 +248,7 @@ test('MOCK whole ordinary dispatch validates all 34, launches 24 once, keeps SQL
         }
         assert.equal(queried.length, 34, 'validate every selection before any child');
         launched.push(args);
+        if (mode === 'failed-shard') return { code: 7 };
         assert.equal(options.timeout, 1234);
         const directory = path.dirname(args[8]);
         const filter = args[9];
@@ -253,13 +259,37 @@ test('MOCK whole ordinary dispatch validates all 34, launches 24 once, keeps SQL
         await writeFile(path.join(directory, 'coverage.cobertura.xml'), coverage(source));
         return { code: 0 };
     };
-    await main([], { root, execute });
+    const shardId = mode === 'shard-2' ? 2 : 1;
+    const args = mode === 'whole' ? [] : ['--shard', String(shardId), '--shards', '2'];
+    const receiptPath = path.join(root, 'coverage-results', 'shard-receipt.json');
+    if (mode === 'failed-shard') {
+        await mkdir(path.dirname(receiptPath), { recursive: true });
+        await writeFile(receiptPath, 'stale receipt must not survive failure');
+        await assert.rejects(main(args, { root, execute }), error => error.exitCode === 7);
+        assert.deepEqual(queried, [...v3Projects, ...shippingProjects]);
+        await assert.rejects(readFile(receiptPath), error => error.code === 'ENOENT');
+        return;
+    }
+    await main(args, { root, execute });
     assert.deepEqual(queried, [...v3Projects, ...shippingProjects]);
-    assert.equal(launched.length, 24);
-    assert.equal(launched.filter(args => args[0] === 'tool').length, 24);
-    assert.equal(new Set(launched.map(args => args[8])).size, 24);
-    assert.ok(launched.some(args => args[9].includes(benchmarkDll)));
-});
+    const shard = (await sourcePlan(root)).find(s => s.shard === shardId);
+    const expectedProjects = mode === 'whole' ? ordinaryProjects(queried.map(project => ({ project }))).map(x => x.project) : shard.projects;
+    const actualProjects = launched.map(args => queried.find((project, index) => args[9].includes(path.join(root, `Assembly${index + 1}.dll`))));
+    assert.deepEqual([...actualProjects].sort(), [...expectedProjects].sort());
+    const expected = expectedProjects.length;
+    assert.equal(launched.length, expected);
+    assert.equal(launched.filter(args => args[0] === 'tool').length, expected);
+    assert.equal(new Set(launched.map(args => args[8])).size, expected);
+    if (mode === 'whole') assert.ok(launched.some(args => args[9].includes(benchmarkDll)));
+    else {
+        const receipt = JSON.parse(await readFile(receiptPath, 'utf8'));
+        assert.deepEqual(receipt.completed, shard.projects);
+        assert.deepEqual(receipt.projects, shard.projects);
+    }
+}
+for (const mode of ['whole', 'shard-1', 'shard-2', 'failed-shard']) {
+    test(`MOCK ${mode} dispatch validates all 34 before children and preserves coverage guards`, () => ordinaryDispatch(mode));
+}
 
 test('MOCK missing executable and missing DLL never succeed', async () => {
     await assert.rejects(runProcess('/nonexistent/mock-collector', [], { timeout: 2000 }), /ENOENT/);
