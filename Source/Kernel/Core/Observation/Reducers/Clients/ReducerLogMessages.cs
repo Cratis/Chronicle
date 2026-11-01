@@ -12,6 +12,9 @@ namespace Cratis.Chronicle.Observation.Reducers.Clients;
 
 internal static partial class ReducerLogMessages
 {
+    [LoggerMessage(LogLevel.Warning, "Registration of reducer '{ReducerId}' on sequence '{IncomingSequence}' from client '{IncomingVersion}' was ignored because client '{OwnerVersion}' owns sequence '{OwnerSequence}'")]
+    internal static partial void RegistrationIgnored(this ILogger<Reducer> logger, ReducerId reducerId, EventSequenceId incomingSequence, string incomingVersion, EventSequenceId ownerSequence, string ownerVersion);
+
     [LoggerMessage(LogLevel.Information, "Client subscription for reducer '{ReducerId}' is waiting for the webhook to leave")]
     internal static partial void WaitingForWebhook(this ILogger<Reducer> logger, ReducerId reducerId);
 

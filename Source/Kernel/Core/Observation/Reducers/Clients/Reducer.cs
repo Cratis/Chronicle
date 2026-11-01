@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Clients;
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.Reducers;
@@ -41,6 +42,7 @@ public class Reducer(
 {
     IObserver? _observer;
     ReducerDefinition? _deferredDefinition;
+    ObserverRegistrationConflictRequest? _standbyFor;
     bool _subscribed;
     ConnectedObserverKey? _observerKey;
     IConnectedClients? _connectedClients;
@@ -63,6 +65,16 @@ public class Reducer(
         {
             return;
         }
+
+        var connectedClient = await _connectedClients!.GetConnectedClient(_observerKey!.ConnectionId);
+        var owning = await ObserverTransportSubscriptions.OnOtherSequence(storage, GrainFactory, new ObserverKey(key.ReducerId, key.EventStore, key.Namespace, key.EventSequenceId));
+        var precedence = ObserverRegistrationPrecedence.Evaluate(connectedClient, owning);
+        if (precedence.Outcome == RegistrationPrecedenceOutcome.OwnerIsNewer)
+        {
+            await EnterStandby(definition, precedence, connectedClient.Version);
+            return;
+        }
+
         var previousDefinition = State;
         var compareResult = await reducerDefinitionComparer.Compare(key, previousDefinition, definition);
 
@@ -83,7 +95,7 @@ public class Reducer(
 
         if (!_subscribed && definition.IsActive)
         {
-            await SubscribeToObserver(key, definition);
+            await SubscribeToObserver(key, definition, connectedClient);
         }
         else if (_subscribed && !definition.IsActive)
         {
@@ -163,6 +175,11 @@ public class Reducer(
                     filters: definition.Filters,
                     generationDelivery: definition.GenerationDelivery);
             }
+            catch (ObserverOwnedByNewerClientVersion exception)
+            {
+                await EnterStandby(definition, new(RegistrationPrecedenceOutcome.OwnerIsNewer, exception.OwnerSequence, exception.OwnerVersion), exception.IncomingVersion);
+                return;
+            }
             catch (ObserverServedByAnotherTransport)
             {
                 WaitForWebhook();
@@ -171,6 +188,30 @@ public class Reducer(
         }
 
         _subscribed = true;
+        _standbyFor = null;
+    }
+
+    async Task EnterStandby(ReducerDefinition definition, RegistrationPrecedence precedence, string incomingVersion)
+    {
+        _deferredDefinition = definition;
+        _subscribed = false;
+        if (_standbyFor is { } previous && previous.OwnerEventSequenceId == precedence.OwnerSequence &&
+            previous.OwnerVersion == precedence.OwnerVersion && previous.IncomingVersion == incomingVersion)
+        {
+            return;
+        }
+
+        _standbyFor = new()
+        {
+            ObserverId = _observerKey!.ObserverId,
+            IncomingEventSequenceId = _observerKey.EventSequenceId,
+            OwnerEventSequenceId = precedence.OwnerSequence!,
+            IncomingVersion = incomingVersion,
+            OwnerVersion = precedence.OwnerVersion!,
+            Outcome = "standby"
+        };
+        logger.RegistrationIgnored(_observerKey.ObserverId, _observerKey.EventSequenceId, incomingVersion, precedence.OwnerSequence!, precedence.OwnerVersion!);
+        await ObserverRegistrationConflicts.Report(GrainFactory, _observerKey.EventStore, [_observerKey.Namespace], _standbyFor);
     }
 
     async Task<bool> DeferRegistrationIfServedByWebhook(ReducerDefinition definition)
@@ -208,10 +249,9 @@ public class Reducer(
         logger.WaitingForWebhook(_observerKey!.ObserverId);
     }
 
-    async Task SubscribeToObserver(ReducerKey key, ReducerDefinition definition)
+    async Task SubscribeToObserver(ReducerKey key, ReducerDefinition definition, ConnectedClient connectedClient)
     {
         _observer = GrainFactory.GetGrain<IObserver>(new ObserverKey(key.ReducerId, key.EventStore, key.Namespace, key.EventSequenceId));
-        var connectedClient = await _connectedClients!.GetConnectedClient(_observerKey!.ConnectionId!);
 
         try
         {
@@ -236,6 +276,11 @@ public class Reducer(
             }
 
             _subscribed = true;
+            _standbyFor = null;
+        }
+        catch (ObserverOwnedByNewerClientVersion exception)
+        {
+            await EnterStandby(definition, new(RegistrationPrecedenceOutcome.OwnerIsNewer, exception.OwnerSequence, exception.OwnerVersion), exception.IncomingVersion);
         }
         catch (ObserverServedByAnotherTransport)
         {

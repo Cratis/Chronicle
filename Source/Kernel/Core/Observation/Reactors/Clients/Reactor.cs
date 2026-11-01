@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Clients;
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.Reactors;
 using Cratis.Chronicle.Concepts.Observation.Replaying;
@@ -10,6 +11,7 @@ using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Observation.States;
 using Cratis.Chronicle.Recommendations;
+using Cratis.Chronicle.Storage;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Orleans.Placement;
@@ -23,6 +25,7 @@ namespace Cratis.Chronicle.Observation.Reactors.Clients;
 /// <param name="reactorDefinitionComparer"><see cref="IReactorDefinitionComparer"/> for comparing reactor definitions.</param>
 /// <param name="localSiloDetails"><see cref="ILocalSiloDetails"/> for getting information about the silo this grain is on.</param>
 /// <param name="options"><see cref="IOptions{ChronicleOptions}"/> for accessing Chronicle configuration.</param>
+/// <param name="storage"><see cref="IStorage"/> containing observer definitions.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.Reactors)]
 [PreferLocalPlacement]
@@ -30,12 +33,14 @@ public class Reactor(
     IReactorDefinitionComparer reactorDefinitionComparer,
     ILocalSiloDetails localSiloDetails,
     IOptions<ChronicleOptions> options,
+    IStorage storage,
     ILogger<Reactor> logger) : Grain<ReactorDefinition>, IReactor
 {
     IConnectedClients? _connectedClients;
     ConnectedObserverKey? _observerKey;
     IObserver? _observer;
     ReactorDefinition? _deferredDefinition;
+    ObserverRegistrationConflictRequest? _standbyFor;
     bool _subscribed;
 
     /// <inheritdoc/>
@@ -58,6 +63,16 @@ public class Reactor(
         {
             return;
         }
+
+        var connectedClient = await _connectedClients!.GetConnectedClient(_observerKey.ConnectionId);
+        var owning = await ObserverTransportSubscriptions.OnOtherSequence(storage, GrainFactory, new ObserverKey(key.ReactorId, key.EventStore, key.Namespace, key.EventSequenceId));
+        var precedence = ObserverRegistrationPrecedence.Evaluate(connectedClient, owning);
+        if (precedence.Outcome == RegistrationPrecedenceOutcome.OwnerIsNewer)
+        {
+            await EnterStandby(definition, precedence, connectedClient.Version);
+            return;
+        }
+
         var compareResult = await reactorDefinitionComparer.Compare(key, State, definition);
 
         State = definition;
@@ -86,7 +101,7 @@ public class Reactor(
 
         if (!_subscribed)
         {
-            await SubscribeToObserver(key, definition);
+            await SubscribeToObserver(key, definition, connectedClient);
         }
     }
 
@@ -147,6 +162,11 @@ public class Reactor(
                     definition.Filters,
                     definition.GenerationDelivery);
             }
+            catch (ObserverOwnedByNewerClientVersion exception)
+            {
+                await EnterStandby(definition, new(RegistrationPrecedenceOutcome.OwnerIsNewer, exception.OwnerSequence, exception.OwnerVersion), exception.IncomingVersion);
+                return;
+            }
             catch (ObserverServedByAnotherTransport)
             {
                 WaitForWebhook();
@@ -155,6 +175,30 @@ public class Reactor(
         }
 
         _subscribed = true;
+        _standbyFor = null;
+    }
+
+    async Task EnterStandby(ReactorDefinition definition, RegistrationPrecedence precedence, string incomingVersion)
+    {
+        _deferredDefinition = definition;
+        _subscribed = false;
+        if (_standbyFor is { } previous && previous.OwnerEventSequenceId == precedence.OwnerSequence &&
+            previous.OwnerVersion == precedence.OwnerVersion && previous.IncomingVersion == incomingVersion)
+        {
+            return;
+        }
+
+        _standbyFor = new()
+        {
+            ObserverId = _observerKey!.ObserverId,
+            IncomingEventSequenceId = _observerKey.EventSequenceId,
+            OwnerEventSequenceId = precedence.OwnerSequence!,
+            IncomingVersion = incomingVersion,
+            OwnerVersion = precedence.OwnerVersion!,
+            Outcome = "standby"
+        };
+        logger.RegistrationIgnored(_observerKey.ObserverId, _observerKey.EventSequenceId, incomingVersion, precedence.OwnerSequence!, precedence.OwnerVersion!);
+        await ObserverRegistrationConflicts.Report(GrainFactory, _observerKey.EventStore, [_observerKey.Namespace], _standbyFor);
     }
 
     async Task<bool> DeferRegistrationIfServedByWebhook(ReactorDefinition definition)
@@ -192,10 +236,9 @@ public class Reactor(
         logger.WaitingForWebhook(_observerKey!.ObserverId);
     }
 
-    async Task SubscribeToObserver(ReactorKey key, ReactorDefinition definition)
+    async Task SubscribeToObserver(ReactorKey key, ReactorDefinition definition, ConnectedClient connectedClient)
     {
         _observer = GrainFactory.GetGrain<IObserver>(key);
-        var connectedClient = await _connectedClients!.GetConnectedClient(_observerKey!.ConnectionId!);
         var eventTypes = definition.EventTypes.Select(e => e.EventType).ToArray();
         if (definition.StartAtTail)
         {
@@ -226,6 +269,11 @@ public class Reactor(
                     definition.Filters);
             }
             _subscribed = true;
+            _standbyFor = null;
+        }
+        catch (ObserverOwnedByNewerClientVersion exception)
+        {
+            await EnterStandby(definition, new(RegistrationPrecedenceOutcome.OwnerIsNewer, exception.OwnerSequence, exception.OwnerVersion), exception.IncomingVersion);
         }
         catch (ObserverServedByAnotherTransport)
         {

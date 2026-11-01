@@ -66,6 +66,26 @@ recognize a persisted reason cannot safely replay that history. Do not roll back
 writing those grants. A roster without active administrators must be recovered through the server-local
 recovery configuration, not by disabling policy enforcement on a reachable node.
 
+## Roll out client observer registrations
+
+For connected .NET reactors and reducers that register the same observer ID on different event sequences,
+set `Cratis:Chronicle:ApplicationVersion` (`Cratis__Chronicle__ApplicationVersion`) to an increasing SemVer
+for each deployment. This client option is distinct from projection `SoftwareVersion`; if unset, it sends
+the entry-assembly version. A higher known application version owns the observer. A lower version remains
+connected in standby, without changing definitions or replaying, and emits a warning and recommendation.
+When the newer owner's last client disconnects, standby retries on keep-alive and can take over within
+`reviseIntervalSeconds` (default 2 seconds).
+
+Equal or unknown versions keep last-wins behavior and warn/recommend on each sequence switch. Unknown includes
+empty, invalid, four-part assembly versions and `0.0.0`; other client types are not ordered yet. Build metadata
+does not order versions, and prereleases precede releases. For a rollback, either deploy the old code with a
+higher application version or stop the newer pods so standby can take over. There is no operator take-ownership
+action yet. A mistakenly high version keeps ownership while connected.
+
+The same-sequence last-wins policy and webhook exclusivity are unchanged. Concurrent first registrations can
+briefly both claim; the next keep-alive heals toward the newer version. Cursor and failed-partition hand-over
+on a sequence move (#5368) is not part of this policy. See [observer registration ownership](configuration/observers.md#registrations-on-different-event-sequences).
+
 ## Know what a starting node does
 
 Every node runs the same startup. Nothing in it is specific to the first node, so the order of your rollout decides which node does the work:

@@ -60,6 +60,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     readonly SemaphoreSlim _connectLock = new(1, 1);
     readonly ConnectionWatchdog _watchDog;
     readonly TimeProvider _timeProvider;
+    readonly string _clientVersion;
     ChronicleServerAddress? _currentServerAddress;
     GrpcChannel? _channel;
     IConnectionService? _connectionService;
@@ -91,6 +92,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     /// <param name="serverAddressResolver">Optional <see cref="IChronicleServerAddressResolver"/> for resolving server addresses. Defaults to <see cref="ChronicleServerAddressResolver"/>.</param>
     /// <param name="loadBalancerStrategy">Optional <see cref="ILoadBalancerStrategy"/> for selecting among multiple servers. Defaults to the strategy named by the connection string, or least-connections.</param>
     /// <param name="timeProvider">Optional <see cref="TimeProvider"/> used to time the back-off after a failed connect. Defaults to the system clock.</param>
+    /// <param name="clientVersion">Explicit application version for observer ownership. Defaults to the entry-assembly version.</param>
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
 #pragma warning disable CA1068 // CancellationToken parameters must come last
     public ChronicleConnection(
@@ -112,13 +114,15 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         bool skipKeepAlive = false,
         IChronicleServerAddressResolver? serverAddressResolver = null,
         ILoadBalancerStrategy? loadBalancerStrategy = null,
-        TimeProvider? timeProvider = null)
+        TimeProvider? timeProvider = null,
+        string? clientVersion = null)
     {
         if (connectionString.DisableTls && connectionString.AuthenticationMode == AuthenticationMode.ClientCredentials)
         {
             throw new ClientCredentialsRequireTls();
         }
 
+        _clientVersion = clientVersion ?? ClientProcess.Version;
         _timeProvider = timeProvider ?? TimeProvider.System;
         _skipTlsValidation = skipTlsValidation;
         _skipCompatibilityCheck = skipCompatibilityCheck;
@@ -241,6 +245,21 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     /// reachable again.
     /// </remarks>
     internal async Task Reconnect() => await Connect(respectFailureBackoff: false);
+
+    /// <summary>
+    /// Creates the request this client sends when it connects to the server.
+    /// </summary>
+    /// <returns>The <see cref="ConnectRequest"/> describing this client, including the application version used for observer ownership.</returns>
+    internal ConnectRequest CreateConnectRequest() => new()
+    {
+        ConnectionId = Lifecycle.ConnectionId,
+        ClientVersion = _clientVersion,
+        IsRunningWithDebugger = Debugger.IsAttached,
+        ProcessId = ClientProcess.Id,
+        ProcessPath = ClientProcess.Path,
+        MachineName = ClientProcess.MachineName,
+        ClientType = ChronicleClientIdentity.Type,
+    };
 
     async Task Connect(bool respectFailureBackoff)
     {
@@ -391,17 +410,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         _watchDog.NotifyKeepAlive();
         _connectTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        _keepAliveSubscription = _connectionService.Connect(
-            new()
-            {
-                ConnectionId = Lifecycle.ConnectionId,
-                ClientVersion = ClientProcess.Version,
-                IsRunningWithDebugger = Debugger.IsAttached,
-                ProcessId = ClientProcess.Id,
-                ProcessPath = ClientProcess.Path,
-                MachineName = ClientProcess.MachineName,
-                ClientType = ChronicleClientIdentity.Type,
-            }).Subscribe(HandleConnection);
+        _keepAliveSubscription = _connectionService.Connect(CreateConnectRequest()).Subscribe(HandleConnection);
 
         try
         {

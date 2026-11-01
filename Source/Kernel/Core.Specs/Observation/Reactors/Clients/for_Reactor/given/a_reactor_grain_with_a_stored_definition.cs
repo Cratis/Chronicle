@@ -10,6 +10,7 @@ using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.Reactors;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Namespaces;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Orleans.Core;
 using Orleans.TestKit;
@@ -21,7 +22,9 @@ public class a_reactor_grain_with_a_stored_definition : Specification
     protected const string TheConnection = "the-connection";
     protected Reactor _grain;
     protected TestKitSilo _silo;
+    protected const string OwnerSequenceMarker = "the-owner-sequence";
     protected IObserver _observer;
+    protected IObserver? _ownerObserver;
     protected IReactorDefinitionComparer _definitionComparer;
     protected IConnectedClients _connectedClients;
     protected ConnectedClient _client;
@@ -30,6 +33,8 @@ public class a_reactor_grain_with_a_stored_definition : Specification
     protected ReactorDefinition _connectionDefinition;
     protected ReactorDefinition _storedDefinition;
     protected IStorage<ReactorDefinition> _stateStorage;
+    protected Storage.IStorage _storage;
+    protected ILogger<Reactor> _logger;
 
     async Task Establish()
     {
@@ -45,6 +50,11 @@ public class a_reactor_grain_with_a_stored_definition : Specification
         localSiloDetails.SiloAddress.Returns(SiloAddress.FromParsableString("127.0.0.1:11111@1"));
         _silo.AddService(localSiloDetails);
         _silo.AddService(Options.Create(new ChronicleOptions()));
+        _storage = Substitute.For<Storage.IStorage>();
+        _silo.AddService(_storage);
+        _logger = Substitute.For<ILogger<Reactor>>();
+        _logger.IsEnabled(Arg.Any<LogLevel>()).Returns(true);
+        _silo.AddService(_logger);
 
         _silo.AddProbe(_ => Substitute.For<INamespaces>());
 
@@ -56,7 +66,7 @@ public class a_reactor_grain_with_a_stored_definition : Specification
 
         _observer = Substitute.For<IObserver>();
         _observer.GetSubscription().Returns(ObserverSubscription.Unsubscribed);
-        _silo.AddProbe(_ => _observer);
+        _silo.AddProbe<IObserver>(identity => _ownerObserver is not null && identity.ToString().Contains(OwnerSequenceMarker) ? _ownerObserver : _observer);
 
         // The stored definition is shared by every connection registering the reactor; here another connection - another
         // client version, as during a rolling deployment - registered last, with different event types.

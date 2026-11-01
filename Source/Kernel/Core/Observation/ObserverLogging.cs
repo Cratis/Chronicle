@@ -281,6 +281,12 @@ internal static partial class ObserverLogMessages
     [LoggerMessage(LogLevel.Information, "Catch-up backoff after catch-up jobs that produced no work has elapsed. Routing the observer again")]
     internal static partial void CatchUpBackoffElapsed(this ILogger<Observer> logger);
 
+    [LoggerMessage(LogLevel.Information, "Observer '{ObserverId}' registration moved from sequence '{From}' to '{To}' ({Outcome})")]
+    internal static partial void RegistrationSwitchedSequence(this ILogger<Observer> logger, ObserverId observerId, EventSequenceId from, EventSequenceId to, RegistrationPrecedenceOutcome outcome);
+
+    [LoggerMessage(LogLevel.Warning, "Observer '{ObserverId}' registration moved from sequence '{From}' to '{To}' without version ordering: incoming '{IncomingVersion}', owner '{OwnerVersion}'")]
+    internal static partial void UnorderedRegistrationSwitchedSequence(this ILogger<Observer> logger, ObserverId observerId, EventSequenceId from, EventSequenceId to, string incomingVersion, string ownerVersion);
+
     [LoggerMessage(LogLevel.Warning, "Observer '{ObserverId}' moved from event sequence '{KeyEventSequenceId}' to '{DefinitionEventSequenceId}'. The old activation relinquishes ownership and deactivates")]
     internal static partial void LostOwnershipToAnotherEventSequence(this ILogger<Observer> logger, ObserverId observerId, EventSequenceId keyEventSequenceId, EventSequenceId definitionEventSequenceId);
 

@@ -25,8 +25,9 @@ public partial class Observer
     /// Only a registration - a subscription - may do this. Registering an observer on another event sequence is how
     /// it legitimately moves, and the subscription persists the definition on the new sequence.
     /// </remarks>
-    async Task ClaimDefinitionForKey()
+    async Task<DefinitionOwnershipSwitch?> ClaimDefinitionForKey()
     {
+        var from = Definition.EventSequenceId;
         var ownershipChanged = !KeyOwnsDefinition;
         observerDefinition.State = observerDefinition.State with { EventSequenceId = _observerKey.EventSequenceId };
         if (ownershipChanged)
@@ -34,11 +35,26 @@ public partial class Observer
             // Failed-partition cleanup checks the stored definition, not this activation's claimed copy.
             await observerDefinition.WriteStateAsync();
             var eventStore = storage.GetEventStore(_observerKey.EventStore);
-            foreach (var @namespace in await eventStore.Namespaces.GetAll())
+            var namespaces = await eventStore.Namespaces.GetAll();
+            foreach (var @namespace in namespaces)
             {
                 await eventStore.GetNamespace(@namespace.Name).Observers.ClaimOwnership(_observerId, _observerKey.EventSequenceId);
             }
+
+            var change = new DefinitionOwnershipSwitch(
+                _observerId,
+                from,
+                _observerKey.EventSequenceId,
+                _pendingPrecedence?.Outcome ?? RegistrationPrecedenceOutcome.NoConflict,
+                _incomingRegistrationVersion,
+                _pendingPrecedence?.OwnerVersion ?? string.Empty);
+            await ReportOwnershipSwitch(change, namespaces.Select(@namespace => @namespace.Name));
+            _pendingPrecedence = null;
+            return change;
         }
+
+        _pendingPrecedence = null;
+        return null;
     }
 
     /// <summary>

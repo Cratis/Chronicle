@@ -11,6 +11,9 @@ namespace Cratis.Chronicle.Observation.Reactors.Clients;
 
 internal static partial class ReactorLogMessages
 {
+    [LoggerMessage(LogLevel.Warning, "Registration of reactor '{ReactorId}' on sequence '{IncomingSequence}' from client '{IncomingVersion}' was ignored because client '{OwnerVersion}' owns sequence '{OwnerSequence}'")]
+    internal static partial void RegistrationIgnored(this ILogger<Reactor> logger, ReactorId reactorId, EventSequenceId incomingSequence, string incomingVersion, EventSequenceId ownerSequence, string ownerVersion);
+
     [LoggerMessage(LogLevel.Information, "Client subscription for reactor '{ReactorId}' is waiting for the webhook to leave")]
     internal static partial void WaitingForWebhook(this ILogger<Reactor> logger, ReactorId reactorId);
 
