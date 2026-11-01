@@ -20,6 +20,7 @@ public class and_a_catch_up_job_already_holds_the_partition : given.a_partition_
     async Task Because() => await CompleteReplay();
 
     [Fact] void should_not_start_a_duplicate_successor() => CheckDidNotStartCatchupJob();
+    [Fact] void should_clear_the_persisted_intent() => _completionStorage.PersistedState.PartitionReplayCompletions.ShouldBeNull();
     [Fact] void should_swap_the_replay_marker_for_the_catch_up_marker() => _completionStorage.PersistedState.CatchingUpPartitions.ShouldContain(_partition);
     [Fact] void should_release_the_replay_marker() => _completionStorage.PersistedState.ReplayingPartitions.ShouldNotContain(_partition);
     [Fact] void should_resolve_the_failure_once() => _completionStorage.PersistedState.FailedPartitionCount.ShouldEqual(FailedPartitionCount.Zero);

@@ -11,6 +11,7 @@ public class and_a_new_replay_starts_after_a_failed_completion : given.a_partiti
     bool _replayHeldAfterWatchdog;
     bool _catchupHeldAfterWatchdog;
     bool _failureRetainedAfterWatchdog;
+    bool _completionClearedAfterSupersession;
 
     void Establish()
     {
@@ -22,6 +23,7 @@ public class and_a_new_replay_starts_after_a_failed_completion : given.a_partiti
     {
         await CompleteWithFault();
         await _observer.ReplayPartition(_partition);
+        _completionClearedAfterSupersession = _completionStorage.PersistedState.PartitionReplayCompletions is null;
         await _observer.RunWatchdogAsync();
         _replayHeldAfterWatchdog = _completionStorage.PersistedState.ReplayingPartitions.Contains(_partition);
         _catchupHeldAfterWatchdog = _completionStorage.PersistedState.CatchingUpPartitions.Contains(_partition);
@@ -29,6 +31,7 @@ public class and_a_new_replay_starts_after_a_failed_completion : given.a_partiti
         await _observer.PartitionReplayed(_partition, 62UL, 70UL, [_eventType]);
     }
 
+    [Fact] void should_clear_the_superseded_persisted_intent() => _completionClearedAfterSupersession.ShouldBeTrue();
     [Fact] void should_have_failed_the_original_completion() => _exception.ShouldBeOfExactType<InvalidOperationException>();
     [Fact] void should_keep_the_new_replay_marker_during_the_watchdog() => _replayHeldAfterWatchdog.ShouldBeTrue();
     [Fact] void should_not_record_a_stale_successor_during_the_watchdog() => _catchupHeldAfterWatchdog.ShouldBeFalse();

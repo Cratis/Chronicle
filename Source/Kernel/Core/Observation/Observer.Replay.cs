@@ -6,6 +6,7 @@ using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Chronicle.Observation.States;
+using Cratis.Chronicle.Storage.Observation;
 using Cratis.Orleans.Jobs;
 using Microsoft.Extensions.Logging;
 namespace Cratis.Chronicle.Observation;
@@ -13,6 +14,7 @@ namespace Cratis.Chronicle.Observation;
 public partial class Observer
 {
     readonly Dictionary<Key, PartitionReplayCompletion> _partitionReplayCompletions = [];
+    bool _reapplyRestoredCompletions;
 
     /// <inheritdoc/>
     /// <remarks>
@@ -113,6 +115,43 @@ public partial class Observer
     [LoggerMessage(LogLevel.Warning, "Could not complete partition replay for {Partition}")]
     static partial void FailedCompletingPartitionReplay(ILogger logger, Exception exception, Key partition);
 
+    [LoggerMessage(LogLevel.Warning, "Dropping stale partition replay completion for {Partition} because its replay marker is gone")]
+    static partial void DroppedStalePartitionReplayCompletion(ILogger logger, Key partition);
+
+    IEnumerable<PartitionReplayCompletionState>? PartitionReplayCompletionSnapshot()
+    {
+        if (_partitionReplayCompletions.Count == 0)
+        {
+            return null;
+        }
+
+        var completions = _partitionReplayCompletions
+            .Where(entry => !entry.Value.SuccessorStarted && State.ReplayingPartitions.Contains(entry.Key))
+            .Select(entry => new PartitionReplayCompletionState(entry.Key, entry.Value.LastHandled, entry.Value.Boundary, entry.Value.CoveredEpisode, entry.Value.Recorded))
+            .ToArray();
+        return completions.Length == 0 ? null : completions;
+    }
+
+    void RestorePartitionReplayCompletions()
+    {
+        if (State.PartitionReplayCompletions is null)
+        {
+            return;
+        }
+
+        foreach (var completion in State.PartitionReplayCompletions)
+        {
+            if (!State.ReplayingPartitions.Contains(completion.Partition))
+            {
+                DroppedStalePartitionReplayCompletion(logger, completion.Partition);
+                continue;
+            }
+
+            _partitionReplayCompletions.TryAdd(completion.Partition, new(completion));
+            _reapplyRestoredCompletions = true;
+        }
+    }
+
     async Task CompleteReplay(EventSequenceNumber lastHandledEventSequenceNumber, IReadOnlyDictionary<Key, EventSequenceNumber> replayedPartitions, EventType[] replayedEventTypes, DateTimeOffset replayStartedAt)
     {
         if (IsRetired || _removed) return;
@@ -171,6 +210,7 @@ public partial class Observer
         };
         State.CatchingUpPartitions.Clear();
         State.ReplayingPartitions.Clear();
+        _partitionReplayCompletions.Clear();
         _partitionHoldsVersion++;
         await WriteStateAsync();
         if (!IsQuarantined)
@@ -201,7 +241,7 @@ public partial class Observer
         {
             if (!State.ReplayingPartitions.Contains(partition)) return;
             var coveredEpisode = await FailureCoveredByPartitionReplay(partition, lastHandledEventSequenceNumber, replayedEventTypes);
-            completion = new(lastHandledEventSequenceNumber, FurthestOf(lastHandledEventSequenceNumber, lastScannedEventSequenceNumber), coveredEpisode);
+            completion = new(lastHandledEventSequenceNumber, FurthestOf(lastHandledEventSequenceNumber, lastScannedEventSequenceNumber), coveredEpisode, _clock.GetUtcNow());
             _partitionReplayCompletions.Add(partition, completion);
         }
 
@@ -407,11 +447,17 @@ public partial class Observer
         return true;
     }
 
-    sealed class PartitionReplayCompletion(EventSequenceNumber lastHandled, EventSequenceNumber boundary, FailedPartitionId? coveredEpisode)
+    sealed class PartitionReplayCompletion(EventSequenceNumber lastHandled, EventSequenceNumber boundary, FailedPartitionId? coveredEpisode, DateTimeOffset recorded)
     {
+        public PartitionReplayCompletion(PartitionReplayCompletionState state)
+            : this(state.LastHandled, state.Boundary, state.CoveredEpisode, state.Recorded)
+        {
+        }
+
         public EventSequenceNumber LastHandled { get; } = lastHandled;
         public EventSequenceNumber Boundary { get; } = boundary;
         public FailedPartitionId? CoveredEpisode { get; } = coveredEpisode;
+        public DateTimeOffset Recorded { get; } = recorded;
         public bool SuccessorStarted { get; set; }
     }
 }
