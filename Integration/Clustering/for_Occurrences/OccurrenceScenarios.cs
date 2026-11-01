@@ -92,6 +92,47 @@ public static class OccurrenceScenarios
         }
     }
 
+    public static async Task KillingTheKernelMidLease(OccurrenceFixture fixture)
+    {
+        var signals = new OccurrenceSignals { PauseFirstWork = true };
+        var holder = await OccurrenceApp.Start(fixture.SiloServices, signals, "no-lifecycle", lifecycle: false);
+        try
+        {
+            var id = (await holder.Store.Occurrences.Record(new OccurrenceWork("kernel-kill"), Guid.NewGuid().ToString("N"))).Id.Value;
+            var entered = await signals.Entered.Task.WaitAsync(TimeSpan.FromSeconds(90));
+            signals.Effects(id).ShouldEqual(1);
+            await fixture.CrashAndRestart();
+            await fixture.Rehydrate();
+            await using var recovery = await OccurrenceApp.Start(fixture.SiloServices, signals, "no-lifecycle", lifecycle: false);
+            var completed = (await recovery.WaitFor("p3c-work", rows => rows.Any(row => row.Id == id && row.State == OccurrenceState.Completed))).Single(row => row.Id == id);
+            completed.Epoch.ShouldEqual(entered.Lease.Epoch + 1);
+            completed.Receipts.Count().ShouldEqual(1);
+            signals.Effects(id).ShouldEqual(1);
+            var events = await recovery.Store.EventLog.GetFromSequenceNumber(Events.EventSequenceNumber.First, id);
+            Assert.True(events.Count == 1, $"Settlements: {signals.Settlements}. Events: {string.Join("; ", events.Select(e => $"{e.Context.SequenceNumber}:{e.Context.EventType.Id}:{e.Context.CorrelationId}:{e.Context.Occurred:O}"))}");
+            var stale = await recovery.Service.CompleteOccurrence(new()
+            {
+                EventStore = Constants.EventStore,
+                Namespace = EventStoreNamespaceName.Default.Value,
+                Trigger = "p3c-work",
+                OccurrenceId = id,
+                Epoch = entered.Lease.Epoch
+            }).EnsureSuccess();
+            stale.Status.ShouldEqual(OccurrenceLeaseResult.OccurrenceLeaseLost);
+        }
+        finally
+        {
+            try
+            {
+                await holder.DisposeAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(30));
+            }
+            catch (Exception exception) when (exception is not TimeoutException)
+            {
+                // The holder's in-process transport points at the abruptly terminated silo.
+            }
+        }
+    }
+
     public static async Task FanOutAfterMidwayCrash(OccurrenceFixture fixture)
     {
         var signals = new OccurrenceSignals();
