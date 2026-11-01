@@ -58,7 +58,7 @@ Creating an event store or a namespace at runtime adds databases to this list. T
 | createCollection | | | | Yes |
 | dropCollection | | | | Yes |
 | renameCollection (same database only) | | | | Yes |
-| Change streams (database-level watch) | Yes | | | Yes |
+| Change streams (database-level watch) | Yes | Yes | Yes | Yes |
 | Sessions and multi-document transactions | | Yes | Yes | Yes |
 | dropDatabase | | | Only when a namespace is removed | |
 
@@ -107,27 +107,63 @@ db.createUser({
 
 ### 3. One identity per kind of database
 
-With [storage connection resolution](storage-connection-resolution.md), a resolver can return a different identity for each kind of database: cluster, event store, namespace and read models. Each identity needs the privileges for its own kind of database, as listed in the matrix above.
+With [storage connection resolution](storage-connection-resolution.md), a resolver can return a different identity for each kind of database: cluster, event store, namespace and read models. Each identity needs the privileges for its own kind of database, as listed in the matrix above. Every kind needs `changeStream` and `killCursors`, because the kernel watches collections in all four. The cluster database holds the event store, user and application collections; the event store database holds event types, namespaces, captures, event sources, webhook and external service definitions and sequence queries; the namespace database holds observer state, failed partitions, recommendations and identities; read model databases are watched for live queries.
 
 ## A minimal custom role
 
-A custom role can grant only the actions in the matrix. It is per-database, so it has the same maintenance cost as `readWrite`: you add a privilege for every new event store and namespace. It is an illustrative `mongosh` example, derived from the operations above. The actions are checked against the MongoDB manual, but the role has not been validated against a running Chronicle with authentication enabled. Use `readWriteAnyDatabase` when in doubt.
+A custom role can grant only the actions in the matrix for each kind of database. It is per-database, so it has the same maintenance cost as `readWrite`: you add a privilege for every new event store and namespace. It is an illustrative `mongosh` example, derived from the operations above. The actions are checked against the MongoDB manual, but the role has not been validated against a running Chronicle with authentication enabled. Use `readWriteAnyDatabase` when in doubt.
+
+The example has one privilege block per kind, shown for the `Orders` event store with prefix `chr_`. Repeat a block for every database of that kind:
+
+- **Cluster**: `chr_chronicle+main`.
+- **Event store**: `chr_System+es` and `chr_Orders+es`.
+- **Namespace**: `chr_System+es+Default`, `chr_Orders+es+Default` and `chr_Orders+es+tenant-a`.
+- **Read models**: `chr_System`, `chr_Orders` and `chr_Orders+tenant-a`.
+
+Change streams are database-level watches, so `changeStream` and `killCursors` appear in every block.
 
 ```javascript
 use admin
 db.createRole({
   role: "chronicleKernel",
   privileges: [
+    // Cluster database
     {
-      resource: { db: "chr_System", collection: "" },
+      resource: { db: "chr_chronicle+main", collection: "" },
       actions: [
         "find", "insert", "update", "remove",
-        "createCollection", "dropCollection",
+        "createIndex", "dropIndex", "listIndexes",
+        "changeStream", "killCursors"
+      ]
+    },
+    // Event store databases: chr_System+es, chr_Orders+es (repeat the block for each)
+    {
+      resource: { db: "chr_Orders+es", collection: "" },
+      actions: [
+        "find", "insert", "update", "remove",
+        "createIndex", "dropIndex", "listIndexes",
+        "changeStream", "killCursors"
+      ]
+    },
+    // Namespace databases: chr_System+es+Default, chr_Orders+es+Default, chr_Orders+es+tenant-a
+    {
+      resource: { db: "chr_Orders+es+Default", collection: "" },
+      actions: [
+        "find", "insert", "update", "remove",
         "createIndex", "dropIndex", "listIndexes", "listCollections",
-        "renameCollectionSameDB", "changeStream", "killCursors"
+        "changeStream", "killCursors"
+      ]
+    },
+    // Read model databases: chr_System, chr_Orders, chr_Orders+tenant-a
+    {
+      resource: { db: "chr_Orders", collection: "" },
+      actions: [
+        "find", "insert", "update", "remove",
+        "createCollection", "dropCollection", "renameCollectionSameDB",
+        "createIndex", "dropIndex", "listIndexes", "listCollections",
+        "changeStream", "killCursors"
       ]
     }
-    // Repeat for every database in the list, including the other System databases.
     // Optional, only when you remove namespaces:
     // { resource: { db: "chr_Orders+es+tenant-a", collection: "" }, actions: ["dropDatabase"] }
     // Optional, so event store discovery sees every database:
