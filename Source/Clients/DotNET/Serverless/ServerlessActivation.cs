@@ -26,7 +26,7 @@ internal static class ServerlessActivation
     /// <exception cref="InvalidServerlessConfiguration">Thrown when the serverless configuration is not valid.</exception>
     internal static void Apply(ChronicleOptions options, string environmentName)
     {
-        if (!IsOn(options))
+        if (!IsOn(options) && Enum.IsDefined(options.Serverless.Mode))
         {
             return;
         }

@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.Serverless;
 internal static class ServerlessConfigurationValidation
 {
     /// <summary>
-    /// Validates the options. Only meaningful when serverless mode is on.
+    /// Validates the options. Only meaningful when serverless mode is on, except that an undefined mode is always reported.
     /// </summary>
     /// <param name="options">The <see cref="ChronicleOptions"/> to validate.</param>
     /// <param name="environmentName">The name of the hosting environment.</param>
@@ -22,6 +22,12 @@ internal static class ServerlessConfigurationValidation
         var serverless = options.Serverless;
         var isDevelopment = ServerlessEnvironment.IsDevelopment(environmentName);
 
+        if (!Enum.IsDefined(serverless.Mode))
+        {
+            failures.Add($"Mode (Cratis:Chronicle:Serverless:Mode) has the undefined value {(int)serverless.Mode}.");
+            return failures;
+        }
+
         if (string.IsNullOrWhiteSpace(options.ProgramIdentifier) || options.ProgramIdentifier == ChronicleOptions.DefaultProgramIdentifier)
         {
             failures.Add("Serverless mode requires ProgramIdentifier (Cratis:Chronicle:ProgramIdentifier) to be set to a stable name for this program.");
@@ -30,12 +36,14 @@ internal static class ServerlessConfigurationValidation
         if (serverless.ReceiverUrl is not null &&
             (!serverless.ReceiverUrl.IsAbsoluteUri || (serverless.ReceiverUrl.Scheme != Uri.UriSchemeHttp && serverless.ReceiverUrl.Scheme != Uri.UriSchemeHttps)))
         {
-            failures.Add($"ReceiverUrl (Cratis:Chronicle:Serverless:ReceiverUrl) must be an absolute http or https URL, but was '{Describe(serverless.ReceiverUrl)}'.");
+            failures.Add($"ReceiverUrl (Cratis:Chronicle:Serverless:ReceiverUrl) must be an absolute http or https URL, but was {Describe(serverless.ReceiverUrl)}.");
         }
         else if (serverless.ReceiverUrl is not null && serverless.ReceiverUrl.Scheme == Uri.UriSchemeHttp && !isDevelopment)
         {
-            failures.Add($"ReceiverUrl (Cratis:Chronicle:Serverless:ReceiverUrl) must use https outside Development, but was '{Describe(serverless.ReceiverUrl)}'.");
+            failures.Add($"ReceiverUrl (Cratis:Chronicle:Serverless:ReceiverUrl) must use https outside Development, but was {Describe(serverless.ReceiverUrl)}.");
         }
+
+        AddUndefinedEnumFailures(serverless, failures);
 
         if (serverless.Delivery.Timeout <= TimeSpan.Zero)
         {
@@ -76,6 +84,26 @@ internal static class ServerlessConfigurationValidation
         return builder.ToString();
     }
 
+    static void AddUndefinedEnumFailures(ChronicleServerlessOptions serverless, List<string> failures)
+    {
+        AddWhenUndefined(serverless.Registration, "Registration", "Registration", failures);
+        AddWhenUndefined(serverless.Auth.Type, "Auth.Type", "Auth:Type", failures);
+        AddWhenUndefined(serverless.DefaultDelivery, "DefaultDelivery", "DefaultDelivery", failures);
+    }
+
+    static void AddWhenUndefined<TEnum>(TEnum value, string name, string path, List<string> failures)
+        where TEnum : struct, Enum
+    {
+        if (!Enum.IsDefined(value))
+        {
+            failures.Add($"{name} (Cratis:Chronicle:Serverless:{path}) has the undefined value {Convert.ToInt64(value)}.");
+        }
+    }
+
+    /// <summary>
+    /// Describes a URL for a failure message. Relative or invalid URLs are not echoed, since their text can hold a secret such as a function key.
+    /// Absolute URLs are echoed without query, fragment or user info.
+    /// </summary>
     static string Describe(Uri url) =>
-        url.IsAbsoluteUri ? url.GetComponents(UriComponents.SchemeAndServer | UriComponents.Path, UriFormat.SafeUnescaped) : url.OriginalString;
+        url.IsAbsoluteUri ? $"'{url.GetComponents(UriComponents.SchemeAndServer | UriComponents.Path, UriFormat.SafeUnescaped)}'" : "a relative or invalid URL";
 }

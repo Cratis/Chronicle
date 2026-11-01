@@ -124,6 +124,8 @@ An injected connection must also skip keep-alive.
 
 With `Deploy`, another process registered the artifacts when the application was deployed, and the function registers nothing. Set `DeploymentGeneration` to the generation that deployment used; see [explicit artifact registration](./explicit-artifacts.md). With `OnColdStart` the client registers the artifacts itself when it starts cold, which is meant for Development.
 
+`DeploymentGeneration` is only validated in this version: nothing consumes it yet. Enforcement comes with the lazy fingerprint and generation check (#5111).
+
 ## Unsupported APIs and limitations
 
 Serverless mode opens no keep-alive stream or watchdog. It skips client-hosted stream delivery for reactors and reducers, read model reactor registration, and occurrence lifecycle registration.

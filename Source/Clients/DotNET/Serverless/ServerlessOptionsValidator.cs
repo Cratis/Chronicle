@@ -16,7 +16,7 @@ internal sealed class ServerlessOptionsValidator<TOptions>(IServiceProvider serv
     /// <inheritdoc/>
     public ValidateOptionsResult Validate(string? name, TOptions options)
     {
-        if (!ServerlessActivation.IsOn(options))
+        if (!ServerlessActivation.IsOn(options) && Enum.IsDefined(options.Serverless.Mode))
         {
             return ValidateOptionsResult.Success;
         }

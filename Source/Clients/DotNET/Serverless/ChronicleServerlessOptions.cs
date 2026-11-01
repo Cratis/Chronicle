@@ -59,7 +59,7 @@ public class ChronicleServerlessOptions
     /// Gets or sets the generation the deployment registered its artifacts under. Zero means it is not set.
     /// </summary>
     /// <remarks>
-    /// Required when <see cref="Registration"/> is <see cref="ServerlessRegistration.Deploy"/>, except in Development.
+    /// Required when <see cref="Registration"/> is <see cref="ServerlessRegistration.Deploy"/>, except in Development. This version only validates the value; nothing consumes it yet. Enforcement arrives with the lazy fingerprint and generation check (#5111).
     /// </remarks>
     public ulong DeploymentGeneration { get; set; }
 
