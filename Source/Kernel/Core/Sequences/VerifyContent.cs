@@ -106,8 +106,9 @@ public record VerifyContent(
 
             schemas = ResolveProtectionSchemas(schemas);
 
+            // Append protects inherited boundaries before migration, just like explicitly classified ones.
             var expected = await metadataManager.TryPrepareGenerationsForComparison(
-                schema.Schema,
+                schemas[(int)EventType.Generation],
                 attempted,
                 async masked =>
                 {

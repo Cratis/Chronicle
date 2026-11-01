@@ -7,6 +7,8 @@ using Cratis.Chronicle.Concepts.Identities;
 
 namespace Cratis.Chronicle.EventSequences.for_EventSequence.when_appending_many;
 
+// Erasure facts deliberately delete the key; each fact needs its own subject state.
+[PerFactSpecificationLifecycle]
 public class and_a_lower_generation_inherits_protection : given.an_event_sequence_with_inherited_protection
 {
     AppendManyResult _result;
