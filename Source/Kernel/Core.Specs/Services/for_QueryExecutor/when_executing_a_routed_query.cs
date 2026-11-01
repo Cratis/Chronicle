@@ -94,6 +94,31 @@ public class when_executing_a_routed_query : given.a_routed_query
     }
 
     [Theory]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    public async Task should_apply_authentication_configuration_without_a_server_context(bool authenticationEnabled, bool allowed)
+    {
+        _authentication = new global::Cratis.Chronicle.Configuration.Authentication { Enabled = authenticationEnabled };
+        var previous = SystemStoreGuard.InProcessServices;
+        SystemStoreGuard.InProcessServices = CreateServices();
+        try
+        {
+            var probe = new Probe();
+            var result = await QueryExecutor.Execute(default, new QueryRouting("System"), probe.Run);
+            var observed = await QueryExecutor.Execute(default, new QueryRouting("System"), probe.Observe).FirstAsync();
+
+            result.IsAuthorized.ShouldEqual(allowed);
+            observed.IsAuthorized.ShouldEqual(allowed);
+            probe.Invocations.ShouldEqual(allowed ? 2 : 0);
+            _privileges.ReceivedCalls().ShouldBeEmpty();
+        }
+        finally
+        {
+            SystemStoreGuard.InProcessServices = previous;
+        }
+    }
+
+    [Theory]
     [MemberData(nameof(SeparatorValues))]
     public async Task should_refuse_a_routing_value_with_the_separator_for_an_administrator(string store, string first, string? second)
     {

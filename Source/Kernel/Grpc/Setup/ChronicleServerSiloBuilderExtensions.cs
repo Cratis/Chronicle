@@ -162,6 +162,7 @@ public static class ChronicleServerSiloBuilderExtensions
 
         builder.Services.AddSingleton<IServices>(sp =>
         {
+            Cratis.Chronicle.Services.SystemStoreGuard.InProcessServices = sp;
             var grainFactory = sp.GetRequiredService<IGrainFactory>();
             var storage = sp.GetRequiredService<IStorage>();
             var expandoObjectConverter = sp.GetRequiredService<IExpandoObjectConverter>();

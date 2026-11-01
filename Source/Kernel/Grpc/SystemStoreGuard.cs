@@ -16,6 +16,11 @@ namespace Cratis.Chronicle.Services;
 internal static class SystemStoreGuard
 {
     /// <summary>
+    /// Gets or sets the services of the in-process server, initialized when its service facade is created.
+    /// </summary>
+    internal static IServiceProvider? InProcessServices { get; set; }
+
+    /// <summary>
     /// Checks whether the caller of a call may access the System event store.
     /// </summary>
     /// <param name="callContext">The <see cref="CallContext"/> of the call.</param>
@@ -23,10 +28,17 @@ internal static class SystemStoreGuard
     internal static async Task<bool> IsCallerAllowed(CallContext callContext)
     {
         var httpContext = HttpContextFor(callContext);
-        if (httpContext is null) return false;
+        if (httpContext is not null)
+        {
+            var access = httpContext.RequestServices.GetRequiredService<ISystemStoreAccess>();
+            return await access.IsAllowed(httpContext.User);
+        }
 
-        var access = httpContext.RequestServices.GetRequiredService<ISystemStoreAccess>();
-        return await access.IsAllowed(httpContext.User);
+        // A server call without its HTTP request remains fail-closed. Only direct in-process calls
+        // consult the server's services, with no identity (allowed only while authentication is disabled).
+        if (callContext.ServerCallContext is not null || InProcessServices is not { } services) return false;
+        await using var scope = services.CreateAsyncScope();
+        return await scope.ServiceProvider.GetRequiredService<ISystemStoreAccess>().IsAllowed(null);
     }
 
     /// <summary>
