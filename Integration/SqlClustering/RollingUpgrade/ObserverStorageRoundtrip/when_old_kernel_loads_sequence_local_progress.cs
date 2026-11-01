@@ -86,7 +86,7 @@ public class when_old_kernel_loads_sequence_local_progress : Specification
     [Fact] void should_pass_the_released_observer_readiness_wait() => _ready.ShouldBeTrue();
     [Fact] void should_leave_the_checkpoint_row_unchanged() => _checkpointAfter.ShouldEqual(_checkpointBefore);
 
-    async Task Cleanup()
+    async Task Destroy()
     {
         if (_fixture is not null) await _fixture.DisposeAsync();
     }
