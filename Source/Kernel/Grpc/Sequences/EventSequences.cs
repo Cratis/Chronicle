@@ -176,6 +176,8 @@ internal sealed class EventSequences(
     /// <inheritdoc/>
     public Task<global::Cratis.Chronicle.Contracts.Queries.QueryResult<IEnumerable<global::Cratis.Chronicle.Contracts.Sequences.AppendedEventResponse>>> FromSequenceNumberWithErasedProperties(global::Cratis.Chronicle.Contracts.Sequences.FromSequenceNumberWithErasedPropertiesRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         QueryExecutor.Execute<IEnumerable<global::Cratis.Chronicle.Contracts.Sequences.AppendedEventResponse>>(
+            callContext,
+            new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, request.Namespace, request.EventSequenceId),
             async () =>
             {
                 var result = await global::Cratis.Chronicle.Sequences.AppendedEvent.FromSequenceNumberWithErasedProperties(storage, eventCompliance, jsonSerializerOptions, (global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, (global::Cratis.Chronicle.Concepts.EventSequences.EventSequenceId)request.EventSequenceId, request.FromEventSequenceNumber, (request.EventSourceId is null ? null : (global::Cratis.Chronicle.Concepts.Events.EventSourceId)request.EventSourceId), request.EventTypeIds);
