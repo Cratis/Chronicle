@@ -24,7 +24,7 @@ public class a_stored_generation_with_inherited_protection : Specification
     protected JsonSchema _own;
     protected JsonSchema _classified;
     protected EventTypeDefinition _definition;
-    protected EventTypeSchemaCache _cache;
+    protected IEventTypeSchemaCache _cache;
     protected EventCompliance _compliance;
     protected JsonSchemaMetadataManager _manager;
     protected InMemoryEncryptionKeyStorage _keys;
