@@ -207,7 +207,18 @@ jobs:
         run: node .github/scripts/check-workbench-proxies.mjs check --generated "$WORKBENCH_PROXIES"
 
       - name: Build
-        run: dotnet build --configuration Release -p:DisableProxyGenerator=true -p:DisableDockerBuild=true
+        run: dotnet build --configuration Release -p:DisableProxyGenerator=true -p:DisableDockerBuild=true -p:ForceCodeGeneration=true
+
+      - name: Verify generated contracts and services are up to date
+        run: |
+          set -euo pipefail
+          status="$(git status --porcelain -- Source/Kernel/Protobuf Source/Kernel/Contracts Source/Kernel/Grpc Source/Kernel/Server/GeneratedGrpcServices.cs)"
+          if [ -n "$status" ]; then
+            printf '%s\n' "$status"
+            git diff --stat -- Source/Kernel/Protobuf Source/Kernel/Contracts Source/Kernel/Grpc Source/Kernel/Server/GeneratedGrpcServices.cs
+            echo "::error::Generated contracts or services are stale. Regenerate them and commit the result."
+            exit 1
+          fi
 
       - name: Assert the build carries the stamped version
         run: |

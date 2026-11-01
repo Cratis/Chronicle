@@ -161,12 +161,11 @@ jobs:
           echo "skip=false" >> "$GITHUB_OUTPUT"
           echo "major=$MAJOR" >> "$GITHUB_OUTPUT"
 
-      # Building Contracts regenerates the proto files and the descriptor set - the GenerateProtoFiles target
-      # deletes the previous ones and writes them again - so this both produces what is compared below and
-      # reveals a hand-patched generated file as a diff.
+      # Force regeneration even with cached outputs: stale files are removed and hand edits overwritten, while
+      # unchanged files keep their timestamps. This produces what is compared below and reveals hand patches.
       - name: Build Contracts, regenerating the wire contract
         if: steps.baseline.outputs.skip == 'false'
-        run: dotnet build Source/Kernel/Contracts/Contracts.csproj -c Release
+        run: dotnet build Source/Kernel/Contracts/Contracts.csproj -c Release -p:ForceCodeGeneration=true
 
       # A descriptor set that no longer describes the contracts source would make the comparison below meaningless -
       # it would pass by comparing the released contract against a stale copy of itself. The generated files are

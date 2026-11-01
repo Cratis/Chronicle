@@ -91,7 +91,7 @@ public class ServiceImplementationGenerator(int skipNamespaceSegments, string co
         var folder = Path.Combine([outputDirectory, .. segments]);
         Directory.CreateDirectory(folder);
         var path = Path.Combine(folder, $"{serviceDefinition.ServiceName}.cs");
-        File.WriteAllText(path, code);
+        GeneratedFile.WriteIfChanged(path, code);
 
         return new(serviceDefinition.ServiceName, contractTypeName, typeName, path);
     }
