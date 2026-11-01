@@ -28,7 +28,7 @@ public class when_migrating_an_index_with_a_conflicting_definition(MongoDBFixtur
     async Task Because()
     {
         _report = await _provisioner.Migrate([Store]);
-        _scope = _report.Scopes.Single(scope => scope.Database == _namespace.DatabaseNamespace.DatabaseName);
+        _scope = _report.Scopes.Single(scope => scope.Scope == $"namespace:{Store}/{Namespace}" && scope.Database == _namespace.DatabaseNamespace.DatabaseName);
         _index = (await Indexes(_namespace, "event-log")).Single(index => index["name"] == "publication_identity");
     }
 

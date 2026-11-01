@@ -27,7 +27,7 @@ public class when_verifying_an_index_with_a_conflicting_definition(MongoDBFixtur
     async Task Because()
     {
         _report = await _provisioner.Verify([Store]);
-        _scope = _report.Scopes.Single(scope => scope.Database == _namespace.DatabaseNamespace.DatabaseName);
+        _scope = _report.Scopes.Single(scope => scope.Scope == $"namespace:{Store}/{Namespace}" && scope.Database == _namespace.DatabaseNamespace.DatabaseName);
     }
 
     [Fact] void should_not_be_current() => _report.IsCurrent.ShouldBeFalse();
