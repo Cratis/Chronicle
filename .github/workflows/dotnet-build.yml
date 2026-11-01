@@ -126,6 +126,11 @@ jobs:
       - name: Spec executable runner contracts and forbid test-host dispatch
         run: node --test .github/scripts/test-mixed-spec-runners.mjs
 
+      # Runs the real entrypoint against a fake server: no image is needed to prove that a container stop
+      # reaches the server and that the container reports the server's own exit status (#5361).
+      - name: Spec container entrypoint signal forwarding
+        run: node --test .github/scripts/test-entrypoint-signals.mjs
+
       # The publish workflow's Docker verification logic is release-only, so this checkout-only spec run is
       # where a pull request proves the tag expansion, retry and failure behavior before any publication occurs.
       - name: Spec the published Docker tag verifier
