@@ -223,7 +223,7 @@ test('ordinary PR exact steps run Node fixtures, isolated Debug generation and c
             '          -p:DisableProtoGeneration=true -p:DisableDockerBuild=true\n' +
             '          -p:CratisProxiesIncremental=false "-p:CratisProxiesOutputPath=$WORKBENCH_PROXIES"'),
         exactStep(steps, 'Check Workbench proxy freshness', '        run: node .github/scripts/check-workbench-proxies.mjs check --generated "$WORKBENCH_PROXIES"'),
-        exactStep(steps, 'Build', '        run: dotnet build --configuration Release -p:DisableProxyGenerator=true -p:DisableDockerBuild=true')
+        exactStep(steps, 'Build', '        run: dotnet build --configuration Release -p:DisableProxyGenerator=true -p:DisableDockerBuild=true -p:ForceCodeGeneration=true')
     ];
     assert.deepEqual(selected, [...selected].sort((a, b) => a - b));
 });
