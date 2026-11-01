@@ -13,7 +13,7 @@ public class with_default_configuration_on_every_silo : given.a_director
         _siloRoles.GetRoles(_unknown).Returns(new ClusterRoles());
     }
 
-    async Task Because() => _selected = await _director.OnAddActivation(new JobWorkerPlacementStrategy(), default, _context);
+    async Task Because() => _selected = await _director.OnAddActivation(new Cratis.Orleans.Jobs.Placement.JobStepsPlacementStrategy(), default, _context);
 
     [Fact] void should_place_on_an_eligible_silo() => new[] { _local, _remote, _unknown }.ShouldContain(_selected);
 }

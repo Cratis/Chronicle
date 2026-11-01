@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Cluster;
 using Cratis.Chronicle.Configuration;
+using Cratis.Orleans.Jobs.Placement;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Orleans.Runtime.Placement;
@@ -20,14 +21,14 @@ public class JobWorkerPlacementDirector(IRoleEligibility eligibility, IOptions<C
     int _usingFallback;
 
     /// <inheritdoc/>
-    /// <exception cref="InvalidOperationException">No compatible silo is eligible for job worker placement.</exception>
+    /// <exception cref="NoEligibleJobWorker">No compatible silo is eligible for job worker placement.</exception>
     public Task<SiloAddress> OnAddActivation(PlacementStrategy strategy, PlacementTarget target, IPlacementContext context)
     {
         var eligible = eligibility.Select(context.GetCompatibleSilos(target), roles => roles.Jobs, includeLackingRole: options.Value.Clustering.JobsFallback == JobsFallback.AnySilo);
         var selected = eligible.Silos.OrderBy(_ => Random.Shared.Next()).FirstOrDefault()
-            ?? throw new InvalidOperationException(
-                "No compatible silo is eligible for the Jobs role; " +
-                "enable Cratis:Chronicle:Clustering:Roles:Jobs on at least one compatible silo.");
+            ?? throw new NoEligibleJobWorker(
+                target.GrainIdentity,
+                "No compatible silo is eligible for the Jobs role; enable Cratis:Chronicle:Clustering:Roles:Jobs on at least one compatible silo.");
         ReportFallback(eligible.Tier);
 
         return Task.FromResult(selected);

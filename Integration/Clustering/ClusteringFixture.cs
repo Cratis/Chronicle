@@ -126,6 +126,13 @@ public class ClusteringFixture : IAsyncLifetime
     protected virtual void ConfigureFixtureServices(IServiceCollection services) { }
 
     /// <summary>
+    /// Configures fixture-specific services for an individual silo.
+    /// </summary>
+    /// <param name="services">The silo services.</param>
+    /// <param name="isFirstSilo">Whether this is the first silo.</param>
+    protected virtual void ConfigureSiloServices(IServiceCollection services, bool isFirstSilo) { }
+
+    /// <summary>
     /// Abruptly terminates every kernel silo, retaining the backing database, then deploys fresh silos.
     /// </summary>
     /// <param name="afterSilosStopped">Releases test-only barriers after all old silos have terminated.</param>
@@ -262,6 +269,7 @@ public class ClusteringFixture : IAsyncLifetime
                 {
                     RemoveChronicleServerStartupTask(services);
                     ConfigureFixtureServices(services);
+                    ConfigureSiloServices(services, siloOptions.SiloName == EventSequencesSiloName);
 
                     // Both silos co-host an instance of the same logical client application - two
                     // instances of every reactor and reducer - so the specs exercise the fan out

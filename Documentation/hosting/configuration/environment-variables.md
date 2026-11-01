@@ -66,6 +66,7 @@ the same way (`compliance.encryption.migrateFromDefaultStorage` becomes
 | Cratis__Chronicle__Clustering__ClusterId | Orleans cluster id, identical on every node |
 | Cratis__Chronicle__Clustering__ServiceId | Orleans service id, identical on every node |
 | Cratis__Chronicle__Clustering__Roles__Jobs | Whether this node has the jobs role (default `true`) |
+| Cratis__Chronicle__Clustering__EnforceJobsRole | Cluster-wide opt-in to Jobs role placement for job steps (default `false`); keep identical on all silos and enable only after all run a release containing it; controllers remain unconstrained |
 | Cratis__Chronicle__Clustering__JobsFallback | Fallback when no Jobs silo is available (default `AnySilo`; `Wait` is rejected) |
 | Cratis__Chronicle__Clustering__SiloPort | Orleans silo port (default 11111) |
 | Cratis__Chronicle__Clustering__GatewayPort | Orleans gateway port (default 30000) |

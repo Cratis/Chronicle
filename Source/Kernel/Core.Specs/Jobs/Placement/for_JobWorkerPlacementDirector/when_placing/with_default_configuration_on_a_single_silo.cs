@@ -12,7 +12,7 @@ public class with_default_configuration_on_a_single_silo : given.a_director
         _context.GetCompatibleSilos(Arg.Any<PlacementTarget>()).Returns([_local]);
     }
 
-    async Task Because() => _selected = await _director.OnAddActivation(new JobWorkerPlacementStrategy(), default, _context);
+    async Task Because() => _selected = await _director.OnAddActivation(new Cratis.Orleans.Jobs.Placement.JobStepsPlacementStrategy(), default, _context);
 
     [Fact] void should_place_on_an_eligible_silo() => _selected.ShouldEqual(_local);
 }

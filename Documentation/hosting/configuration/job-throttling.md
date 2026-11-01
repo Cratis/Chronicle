@@ -35,7 +35,9 @@ instead, still capped by `Observers:MaxConcurrentPartitions`. When unset, this i
 effective `Jobs:MaxParallelSteps`, rounded down and never less than one. For example, an effective
 maximum of 20 gives a non-Jobs silo a budget of 5. Silos with the Jobs role keep the existing limit,
 regardless of the non-Jobs override. All silos have the Jobs role by default, so existing deployments
-keep their current throttling. The role does not restrict step placement yet.
+keep their current throttling. The role restricts step placement only when the cluster opts in
+with `Clustering:EnforceJobsRole=true`. With enforcement enabled, the reduced non-Jobs budget
+still applies when `AnySilo` fallback sends steps to a non-Jobs silo.
 
 Set `Cratis__Chronicle__Jobs__MaxParallelStepsWithoutJobsRole` to override the reduced budget.
 
@@ -76,6 +78,12 @@ This ensures that the job system never uses more than the configured number of C
 ```
 
 **Dedicated job processing**: Use more CPU cores for job processing:
+
+To place job steps on Jobs role silos, opt in with `clustering.enforceJobsRole: true`.
+It defaults to `false`, must be identical on every silo, and must only be enabled after
+all silos run a release containing the setting. Controllers remain unconstrained.
+If no Jobs silo is available, `clustering.jobsFallback: AnySilo` uses compatible silos;
+`Wait` is rejected until durable waiting is supported.
 
 ```json
 {

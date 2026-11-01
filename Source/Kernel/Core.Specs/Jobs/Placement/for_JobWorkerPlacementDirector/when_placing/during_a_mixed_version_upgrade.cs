@@ -13,7 +13,7 @@ public class during_a_mixed_version_upgrade : given.a_director
         _siloRoles.GetRoles(_remote).Returns(new ClusterRoles { Jobs = false });
     }
 
-    async Task Because() => _selected = await _director.OnAddActivation(new JobWorkerPlacementStrategy(), default, _context);
+    async Task Because() => _selected = await _director.OnAddActivation(new Cratis.Orleans.Jobs.Placement.JobStepsPlacementStrategy(), default, _context);
 
     [Fact] void should_place_on_an_eligible_silo() => _selected.ShouldEqual(_unknown);
 }

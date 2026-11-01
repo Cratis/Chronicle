@@ -14,6 +14,13 @@ public class Clustering
     public ClusterRoles Roles { get; set; } = new();
 
     /// <summary>
+    /// Gets or sets whether job steps are placed on Jobs role silos. Defaults to false.
+    /// This cluster-wide setting must be identical on every silo and may only be enabled
+    /// once every silo runs a release containing it. Job controllers are not constrained.
+    /// </summary>
+    public bool EnforceJobsRole { get; set; }
+
+    /// <summary>
     /// Gets or sets the single-writer lease for Localhost clustering.
     /// </summary>
     public SingleWriterLease SingleWriterLease { get; set; } = new();
