@@ -31,6 +31,7 @@ public partial class Observer
         // Refuse before resetting progress, entering replay, or starting a job. The handler also guards
         // persisted jobs that resume without coming through this observer entry point.
         await GlobalProjectionReplay.EnsureSupported(storage, _observerKey, Definition.Type);
+        await GenerationInitializationReplay.EnsureStartAllowed(storage, _observerKey, Definition.Type);
 
         while (_catchUpHandoversSettled is { } settled)
         {

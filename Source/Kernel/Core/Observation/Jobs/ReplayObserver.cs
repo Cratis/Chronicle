@@ -97,7 +97,7 @@ public class ReplayObserver(
         {
             await EnsureReplaySupported();
         }
-        catch (GlobalProjectionReplayNotSupported)
+        catch (ReplayNotSupported)
         {
             return Result.Failed<ResumeJobSuccess, ResumeJobError>(CannotResumeJobError.JobCannotBeResumed);
         }
@@ -450,8 +450,9 @@ public class ReplayObserver(
         try
         {
             await GlobalProjectionReplay.EnsureSupported(storage, request.ObserverKey, request.ObserverType, State, WriteStateAsync);
+            await GenerationInitializationReplay.EnsureContinueAllowed(storage, request, State, WriteStateAsync);
         }
-        catch (GlobalProjectionReplayNotSupported)
+        catch (ReplayNotSupported)
         {
             if (!_refusalNotificationScheduled)
             {

@@ -13,6 +13,7 @@ using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Dynamic;
+using Cratis.Chronicle.Generations.Enablement;
 using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Observation.States;
@@ -633,6 +634,9 @@ public class Projection(
         }
 
         var policy = options.Value.Observers.DefinitionEvolution;
+        var initializationProgress = namespacePlans.Exists(_ => _.Plan.Operation == DefinitionEvolutionOperation.FullReplay)
+            ? await storage.GetEventStore(key.EventStore).GenerationInitialization.GetProgress()
+            : GenerationInitializationProgress.NotStarted;
         foreach (var (@namespace, plan) in namespacePlans)
         {
             switch (plan.Operation)
@@ -640,8 +644,11 @@ public class Projection(
                 case DefinitionEvolutionOperation.NoAction:
                     logger.ProjectionEvolutionNeedsNoAction(key.ProjectionId, @namespace);
                     break;
-                case DefinitionEvolutionOperation.FullReplay when policy.Allows(plan.Operation) && currentDefinition.Scope != ProjectionScope.Global:
+                case DefinitionEvolutionOperation.FullReplay when policy.Allows(plan.Operation) && currentDefinition.Scope != ProjectionScope.Global && initializationProgress == GenerationInitializationProgress.NotStarted:
                     this.ScheduleInSeparateTurn(() => ReplayProjectionWhenSubscribed(key, @namespace, 0));
+                    break;
+                case DefinitionEvolutionOperation.FullReplay when policy.Allows(plan.Operation) && currentDefinition.Scope != ProjectionScope.Global:
+                    await AddReplayRecommendation(key, @namespace, currentDefinition, GenerationInitializationReplayNotSupported.StartRefusedReason);
                     break;
                 default:
                     await AddReplayRecommendation(key, @namespace, currentDefinition);
@@ -691,7 +698,8 @@ public class Projection(
     async Task AddReplayRecommendation(
         ProjectionKey key,
         EventStoreNamespaceName @namespace,
-        ProjectionDefinition currentDefinition)
+        ProjectionDefinition currentDefinition,
+        string? refusal = null)
     {
         var readModelDefinitions = storage.GetEventStore(key.EventStore).ReadModels;
         var readModelDefinition = await readModelDefinitions.Get(currentDefinition.ReadModel);
@@ -701,6 +709,9 @@ public class Projection(
         {
             _ when currentDefinition.Scope == ProjectionScope.Global => (
                 GlobalProjectionReplay.RefusalReason,
+                new ProjectionDefinitionChangedReplayCandidateReason()),
+            _ when refusal is not null => (
+                refusal,
                 new ProjectionDefinitionChangedReplayCandidateReason()),
             ProjectionReadModelMigrationRecommendation.UpdateAvailable => (
                 "Projection definition has changed. Update available.",

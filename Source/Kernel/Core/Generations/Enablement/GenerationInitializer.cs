@@ -156,6 +156,10 @@ public sealed class GenerationInitializer(
         }
         await audit.ResolveBlocker(GenerationInitializationBlockerKind.ContradictoryLegacyState, "store", DateTimeOffset.UtcNow);
         await audit.ResolveBlocker(GenerationInitializationBlockerKind.CatalogUnavailable, "store", DateTimeOffset.UtcNow);
+        if (await InspectLateLegacyWork(audit, eventStore) is { } late)
+        {
+            return late;
+        }
         var unresolved = (await audit.GetBlockers()).Where(_ => _.ResolvedAt is null).ToArray();
         if (unresolved.Length != 0)
         {
@@ -183,5 +187,23 @@ public sealed class GenerationInitializer(
     {
         await audit.RecordBlocker(new(store, kind, subject, detail, DateTimeOffset.UtcNow, null));
         return new GenerationInitializationBlocked((await audit.GetBlockers()).Where(_ => _.ResolvedAt is null).ToArray());
+    }
+
+    async Task<GenerationInitializationResult?> InspectLateLegacyWork(IGenerationInitializationStorage audit, EventStoreName eventStore)
+    {
+        IReadOnlyList<GenerationInitializationBlocker> blockers;
+        try
+        {
+            blockers = await legacyWork.Inspect(eventStore);
+        }
+        catch (InvalidOperationException error)
+        {
+            return await Block(audit, eventStore, GenerationInitializationBlockerKind.UnknownLegacyState, "legacy-work", error.Message);
+        }
+        foreach (var blocker in blockers)
+        {
+            await audit.RecordBlocker(blocker);
+        }
+        return blockers.Count == 0 ? null : new GenerationInitializationBlocked(blockers);
     }
 }
