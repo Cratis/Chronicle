@@ -44,21 +44,24 @@ The exception beneath it is a `TypeLoadException` such as `Unable to resolve typ
 ## Roll out administrator authorization
 
 Keep `Authentication.EnforceAdministratorPolicyForOperations=false` on every node while replacing nodes
-with the administrator-policy release. Existing operational calls then remain in audit mode. The new
+with the administrator-policy release. Existing operational calls other than System-store operations then remain in audit mode.
+System-store reads and operations always require an administrator on upgraded nodes, regardless of this flag.
+Nodes that have not been upgraded retain their earlier behaviour. The new
 administrator-management service is always enforced on upgraded nodes when authentication is enabled;
 old nodes do not expose that service.
 
 After every node has been upgraded, review the would-deny warnings for user/application management,
-System job recovery and System observer recovery. Confirm that the operators who need those operations
+and other administrator-policy operations. Confirm that the operators who need those operations
 are active administrators, and obtain fresh user sessions carrying `chronicle_principal=user`. Refresh
 OpenIddict user tokens or sign in again for existing cookie and Identity bearer sessions. Applications
 cannot acquire administrator privilege, even if their token subject matches an administrator's identifier.
 
 Only then set `Authentication.EnforceAdministratorPolicyForOperations=true` consistently across the
 cluster. During a staggered configuration change, a call can still be audited rather than denied on a
-node that retains audit mode; enforcement is not cluster-wide until every node has the setting. Application-store
+node that retains audit mode. This does not apply to System-store operations, which are always enforced on upgraded nodes.
+For other administrator-policy operations, enforcement is not cluster-wide until every node has the setting. Application-store
 operations are unaffected. See [Administrator authorization](configuration/authentication.md#administrator-authorization)
-for the configuration and external-authority limitations.
+for the configuration and external-authority limitations, and [The System event store](system-event-store.md) for recovery guidance.
 
 Every release that includes the administrator roster must recognize `GrantReason.AdministratorGrant`
 (value `3`) before administrator-management grants are written. A node whose enum converter does not

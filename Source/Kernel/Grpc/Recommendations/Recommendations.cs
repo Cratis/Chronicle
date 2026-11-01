@@ -34,6 +34,8 @@ internal sealed class Recommendations(
     /// <inheritdoc/>
     public IObservable<global::Cratis.Chronicle.Contracts.Queries.QueryResult<IEnumerable<global::Cratis.Chronicle.Contracts.Recommendations.RecommendationDetailsResponse>>> AllRecommendations(global::Cratis.Chronicle.Contracts.Recommendations.AllRecommendationsRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         QueryExecutor.Execute<IEnumerable<global::Cratis.Chronicle.Contracts.Recommendations.RecommendationDetailsResponse>>(
+            callContext,
+            new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, request.Namespace),
             () => global::Cratis.Chronicle.Recommendations.RecommendationDetails.AllRecommendations((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, storage)
                 .CompletedBy(callContext.CancellationToken)
                 .Select(_ => (IEnumerable<global::Cratis.Chronicle.Contracts.Recommendations.RecommendationDetailsResponse>)_.Select(ToRecommendationDetailsResponse).ToList()),
@@ -42,6 +44,8 @@ internal sealed class Recommendations(
     /// <inheritdoc/>
     public Task<global::Cratis.Chronicle.Contracts.Queries.QueryResult<IEnumerable<global::Cratis.Chronicle.Contracts.Recommendations.RecommendationDetailsResponse>>> GetRecommendations(global::Cratis.Chronicle.Contracts.Recommendations.GetRecommendationsRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         QueryExecutor.Execute<IEnumerable<global::Cratis.Chronicle.Contracts.Recommendations.RecommendationDetailsResponse>>(
+            callContext,
+            new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, request.Namespace),
             async () =>
             {
                 var result = await global::Cratis.Chronicle.Recommendations.RecommendationDetails.GetRecommendations((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, storage);
