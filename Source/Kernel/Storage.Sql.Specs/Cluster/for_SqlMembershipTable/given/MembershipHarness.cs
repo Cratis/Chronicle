@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Arc.Connections;
-using Cratis.Arc.EntityFrameworkCore.Concepts;
 using Cratis.Chronicle.Storage.Sql.Connections;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
@@ -33,9 +32,7 @@ public sealed class MembershipHarness(Func<Task<string>> createDatabase, Func<st
 
     public ClusterDbContext CreateContext(params IInterceptor[] interceptors)
     {
-        var builder = sqlServer
-            ? new DbContextOptionsBuilder<ClusterDbContext>(SpecDbContextOptions.Kernel<ClusterDbContext>(_connectionString))
-            : new DbContextOptionsBuilder<ClusterDbContext>(SpecDbContextOptions.Kernel<ClusterDbContext>(_connectionString));
+        var builder = new DbContextOptionsBuilder<ClusterDbContext>(SpecDbContextOptions.Kernel<ClusterDbContext>(_connectionString));
         builder.AddInterceptors(interceptors);
         if (sqlServer)
         {
