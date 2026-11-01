@@ -8,7 +8,7 @@ description: Watch a read model rebuild, know what readers see, deal with one th
 ## Before you start
 
 - A rebuild reprocesses **all** matching events, so the time it takes grows with the size of the history.
-- While it runs, the observer handles no live events and readers keep getting the pre-rebuild read model. Decide whether your readers can live with that for the whole run. See [What readers see during a rebuild](./rebuild-a-read-model.md#what-readers-see-during-a-rebuild).
+- While it runs, the observer handles no live events and on the sinks that use a replay container (MongoDB, SQL and in-memory) readers keep getting the pre-rebuild read model. The event-sequence sink has no replay container, so what it publishes during the replay is visible at once. Decide whether your readers can live with that for the whole run. See [What readers see during a rebuild](./rebuild-a-read-model.md#what-readers-see-during-a-rebuild).
 - Observers that Chronicle owns itself cannot be replayed. The Workbench disables the action for them and the Kernel refuses the request.
 - Replaying a **global-scope** projection is refused. See [Observers](../concepts/observers.mdx).
 
@@ -34,7 +34,7 @@ Fast forwarding is not available for an observer while it replays. It has to fin
 
 ## A rebuild that stalls or fails
 
-A replay that does not complete successfully is not promoted: readers keep the pre-rebuild model. Work through these in order:
+A replay that does not complete successfully is not promoted. On the sinks that use a replay container (MongoDB, SQL and in-memory), readers keep the pre-rebuild model. The event-sequence sink has no replay container and no rollback, so facts it already published during the replay stay published. See [Reads during a replay](../read-models/getting-single-instance.mdx#reads-during-a-replay). Work through these in order:
 
 1. **Look at the job.** In the Workbench jobs view or through the [jobs API](../jobs/index.mdx), check the replay job's status and steps. Jobs can be stopped, resumed and deleted there.
 2. **Look at failed partitions.** Use [`cratis chronicle failed-partitions list`](/cli/chronicle/failed-partitions/#list) and [`cratis chronicle failed-partitions show`](/cli/chronicle/failed-partitions/#show) for the error and the failing sequence number. The Workbench shows the same under the event store's failed partitions.
