@@ -51,7 +51,7 @@ public class an_observer : Specification
     protected IObserverServiceClient _observerServiceClient;
     protected FailedPartitions _failedPartitionsState;
     protected virtual ObserverId _observerId => "d2a138a2-6ca5-4bff-8a2f-ffd8534cc80e";
-    protected ObserverKey _observerKey => new(_observerId, EventStoreName.NotSet, EventStoreNamespaceName.NotSet, EventSequenceId.Log);
+    protected virtual ObserverKey _observerKey => new(_observerId, EventStoreName.NotSet, EventStoreNamespaceName.NotSet, EventSequenceId.Log);
     protected TestKitSilo _silo = new();
     protected IStorage<ObserverState> _stateStorage;
     protected TestStorageStats _storageStats => _silo.StorageStats<Observer, ObserverState>()!;

@@ -62,6 +62,7 @@ internal sealed class Projections(
     /// <inheritdoc/>
     public async Task Register(RegisterRequest request, CallContext context = default)
     {
+        SystemStoreGuard.EnsureNotSystem(new(request.EventStore));
         var projectionsManager = grainFactory.GetGrain<IProjectionsManager>(request.EventStore);
         var owner = (Concepts.Projections.ProjectionOwner)(int)request.Owner;
         var projections = request.Projections.Select(_ => _.ToChronicle(owner)).ToArray();
@@ -95,6 +96,7 @@ internal sealed class Projections(
     /// <inheritdoc/>
     public async Task<IEnumerable<ProjectionDefinition>> GetAllDefinitions(GetAllDefinitionsRequest request, CallContext context = default)
     {
+        await SystemStoreGuard.Ensure(context, new(request.EventStore));
         var projectionsManager = grainFactory.GetGrain<IProjectionsManager>(request.EventStore);
         var definitions = await projectionsManager.GetProjectionDefinitions();
         return definitions.Select(p => p.ToContract()).ToArray();
@@ -103,6 +105,7 @@ internal sealed class Projections(
     /// <inheritdoc/>
     public async Task<IEnumerable<Contracts.Projections.ProjectionWithDeclaration>> GetAllDeclarations(GetAllDeclarationsRequest request, CallContext context = default)
     {
+        await SystemStoreGuard.Ensure(context, new(request.EventStore));
         var projectionsManager = grainFactory.GetGrain<IProjectionsManager>(request.EventStore);
         var definitions = await projectionsManager.GetProjectionDeclarations();
         return definitions.Select(p => new Contracts.Projections.ProjectionWithDeclaration
@@ -116,6 +119,7 @@ internal sealed class Projections(
     /// <inheritdoc/>
     public async Task<OneOf<ContractProjectionPreview, ContractProjectionDefinitionParsingErrors>> Preview(PreviewProjectionRequest request, CallContext context = default)
     {
+        await SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace, request.EventSequenceId));
         var storage = serviceProvider.GetRequiredService<IStorage>();
         var eventSequenceStorage = storage
             .GetEventStore(request.EventStore)
@@ -234,6 +238,7 @@ internal sealed class Projections(
     /// <inheritdoc/>
     public async Task<SaveProjectionResult> Save(SaveProjectionRequest request, CallContext context = default)
     {
+        SystemStoreGuard.EnsureNotSystem(new(request.EventStore, request.Namespace));
         var storage = serviceProvider.GetRequiredService<IStorage>();
         var allReadModels = await storage.GetEventStore(request.EventStore).ReadModels.GetAll();
 

@@ -79,6 +79,12 @@ internal sealed class Reducers(
             switch (message.Content.Value)
             {
                 case RegisterReducer register:
+                    if (SystemStoreGuard.RegistrationRefusal(new(register.EventStore, register.Namespace, register.Reducer.ReducerId, register.Reducer.EventSequenceId)) is { } refusal)
+                    {
+                        registrationTcs.TrySetException(refusal);
+                        break;
+                    }
+
                     logger.Registering(
                         register.Reducer.ReducerId,
                         register.EventStore,

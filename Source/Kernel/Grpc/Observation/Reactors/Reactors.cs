@@ -59,6 +59,12 @@ internal sealed class Reactors(
             switch (message.Content.Value)
             {
                 case RegisterReactor register:
+                    if (SystemStoreGuard.RegistrationRefusal(new(register.EventStore, register.Namespace, register.Reactor.ReactorId, register.Reactor.EventSequenceId)) is { } refusal)
+                    {
+                        registrationTcs.TrySetException(refusal);
+                        break;
+                    }
+
                     logger.Registering(
                         register.Reactor.ReactorId,
                         register.EventStore,
@@ -211,6 +217,7 @@ internal sealed class Reactors(
     /// <inheritdoc/>
     public async Task<HasReactorResponse> HasReactor(HasReactorRequest request, CallContext context = default)
     {
+        await SystemStoreGuard.Ensure(context, new(request.EventStore, request.ReactorId));
         var eventStore = storage.GetEventStore(request.EventStore);
         var exists = await eventStore.Reactors.Has(new(request.ReactorId));
 
