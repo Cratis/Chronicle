@@ -20,7 +20,7 @@ namespace Cratis.Chronicle.Generations.Enablement;
 /// <param name="legacyWork">Legacy work inspection.</param>
 /// <param name="materializations">Existing materializations.</param>
 /// <param name="binarySupport">The executing binary support, defaulting to the bridge contract through DI.</param>
-/// <param name="catalog">A1's optional catalog seam.</param>
+/// <param name="catalog">A1's optional catalog seam. It is absent when the storage provider cannot adopt; initialization is then refused before any receipt or floor read.</param>
 public sealed class GenerationInitializer(
     IGenerationEnablement enablement,
     IStorage storage,
@@ -40,6 +40,10 @@ public sealed class GenerationInitializer(
         }
         var store = storage.GetEventStore(eventStore);
         var audit = store.GenerationInitialization;
+        if (catalog is null)
+        {
+            return await Block(audit, eventStore, GenerationInitializationBlockerKind.CatalogUnavailable, "store", "This storage provider does not support generation adoption; the generation catalog is unavailable.");
+        }
         var floor = await store.GenerationFloor.Get();
         if (floor is null || floor.Revision == 0 || floor.Incarnation.Value == Guid.Empty ||
             floor.MinimumStorageProtocol.Value == 0 || floor.MinimumWriterProtocol.Value == 0 ||
@@ -93,10 +97,6 @@ public sealed class GenerationInitializer(
             await audit.ResolveBlocker(blocker.Kind, blocker.Subject, DateTimeOffset.UtcNow);
         }
         await Record(audit, eventStore, floor, GenerationInitializationStep.LegacyWorkReconciled, "store", "No unresolved legacy replay work.");
-        if (catalog is null)
-        {
-            return await Block(audit, eventStore, GenerationInitializationBlockerKind.CatalogUnavailable, "store", "The generation catalog is unavailable.");
-        }
         LegacyMaterialization[] snapshot;
         try
         {
