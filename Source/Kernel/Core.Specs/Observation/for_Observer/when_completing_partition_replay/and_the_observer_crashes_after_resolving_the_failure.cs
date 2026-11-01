@@ -16,6 +16,7 @@ public class and_the_observer_crashes_after_resolving_the_failure : given.a_part
     void Establish()
     {
         _failureStorage.LoseAcknowledgement = true;
+
         // 5383a relies on the surviving replay job to report completion again after an observer crash.
         HasOutstandingJobs(new JobState
         {
