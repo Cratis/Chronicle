@@ -15,6 +15,9 @@ namespace Cratis.Chronicle.XUnit.Integration;
 /// collections include every contributor. Unsafe open-generic collection contributors are rejected
 /// conservatively, even when their constraints would make DI skip them for a particular closed type.
 /// Explicit collection registrations are direct selections, not synthesized collections.
+/// Explicit non-collection factory and instance singletons belong to the host configuration and
+/// retain their host lifetime. Dependency-taking type bindings and explicit collections still
+/// require a current-context registration.
 /// </remarks>
 internal sealed class ContainerFallbackPolicy
 {
@@ -44,7 +47,8 @@ internal sealed class ContainerFallbackPolicy
         var contributors = new HashSet<Type>();
         foreach (var descriptor in descriptors.Where(descriptor => !descriptor.IsKeyedService))
         {
-            var unsafeFallback = IsProtected(descriptor, testAssembly) && !IsDependencyFreeSelfBinding(descriptor);
+            var unsafeFallback = IsProtected(descriptor, testAssembly) &&
+                !IsExplicitHostSingleton(descriptor) && !IsDependencyFreeSelfBinding(descriptor);
             selections[descriptor.ServiceType] = unsafeFallback;
             if (unsafeFallback)
             {
@@ -84,6 +88,11 @@ internal sealed class ContainerFallbackPolicy
         type.Assembly == testAssembly ||
         (type.IsConstructedGenericType && type.GetGenericTypeDefinition() == typeof(IEnumerable<>) &&
             IsProtectedType(type.GetGenericArguments()[0], testAssembly));
+
+    static bool IsExplicitHostSingleton(ServiceDescriptor descriptor) =>
+        descriptor.Lifetime == ServiceLifetime.Singleton &&
+        !(descriptor.ServiceType.IsConstructedGenericType && descriptor.ServiceType.GetGenericTypeDefinition() == typeof(IEnumerable<>)) &&
+        (descriptor.ImplementationFactory is not null || descriptor.ImplementationInstance is not null);
 
     static bool IsDependencyFreeSelfBinding(ServiceDescriptor descriptor) =>
         descriptor.ImplementationFactory is null &&
