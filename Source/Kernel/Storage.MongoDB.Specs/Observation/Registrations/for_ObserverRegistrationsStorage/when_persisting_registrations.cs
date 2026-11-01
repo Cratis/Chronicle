@@ -34,7 +34,7 @@ public class when_persisting_registrations(ReplicaSetMongoDBFixture fixture) : O
         using var cursor = await _database.GetCollection<BsonDocument>(WellKnownCollectionNames.ObserverRegistrations).Indexes.ListAsync();
         var index = (await cursor.ToListAsync()).Single(item => item["name"] == "observer-sequence");
         index["unique"].AsBoolean.ShouldBeTrue();
-        index["key"].AsBsonDocument.Names.ShouldEqual(new[] { "observerId", "eventSequenceId" });
+        index["key"].AsBsonDocument.Names.ShouldEqual(["observerId", "eventSequenceId"]);
     }
 
     protected override IObserverRegistrationsStorage Open() => new ObserverRegistrationsStorage(Store(_database), SerializerOptions);

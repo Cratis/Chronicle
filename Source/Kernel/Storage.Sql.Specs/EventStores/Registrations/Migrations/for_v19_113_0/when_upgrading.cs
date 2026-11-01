@@ -18,7 +18,7 @@ public class when_upgrading : Specification
     }
 
     [Fact] void should_create_the_event_store_registration_table() => _table.Name.ShouldEqual("ObserverRegistrations");
-    [Fact] void should_use_a_unique_identity() => _table.PrimaryKey.Columns.ShouldEqual(new[] { "Id" });
+    [Fact] void should_use_a_unique_identity() => _table.PrimaryKey.Columns.ShouldEqual(["Id"]);
     [Fact] void should_include_compare_and_set_revision() => _table.Columns.Any(column => column.Name == "Revision" && !column.IsNullable).ShouldBeTrue();
     [Fact] void should_include_the_complete_payload() => _table.Columns.Any(column => column.Name == "Data" && !column.IsNullable).ShouldBeTrue();
     [Fact] void should_leave_existing_tables_untouched() => _operations.All(operation => operation is CreateTableOperation or CreateIndexOperation).ShouldBeTrue();
