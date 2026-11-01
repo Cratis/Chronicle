@@ -33,7 +33,7 @@ public class when_another_session_holds_a_schema_lock_on_postgresql(PostgreSqlFi
         _harness = new PostgreSqlSinkHarness { Fixture = fixture };
         var schema = await JsonSchema.FromJsonAsync("""{"type":"object","properties":{"id":{"type":"string"},"status":{"type":"string"}}}""");
         _harness.CreateSink(new ReadModelDefinition("marker", TableName, "Marker", ReadModelOwner.Client, ReadModelSource.Code, ReadModelObserverType.Projection, "marker", SinkDefinition.None, new Dictionary<ReadModelGeneration, JsonSchema> { [ReadModelGeneration.First] = schema }, []));
-        var options = new DbContextOptionsBuilder<ReadModelDbContext>().UseNpgsql(_harness.ConnectionString).WithoutServiceProviderCaching().Options;
+        var options = SpecDbContextOptions.Kernel<ReadModelDbContext>(_harness.ConnectionString);
         var migrator = new ReadModelMigrator(new TableMigrator<ReadModelDbContext>(Substitute.For<ILogger<TableMigrator<ReadModelDbContext>>>()), _logger);
         _context = new ReadModelDbContext(options, TableName, ProjectedColumns.ForSchema(schema), migrator);
         await _context.EnsureTableExists();
