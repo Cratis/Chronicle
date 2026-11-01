@@ -206,6 +206,14 @@ public class AppendGenerationProtectionBenchmark
 
         public Task<AppendedEvent[]> Release() => _release.Release(_store, [], _schemas, _events);
 
+        static void AddSchemaFields(JsonSchema schema, int fieldCount)
+        {
+            for (var index = 0; index < fieldCount; index++)
+            {
+                schema.Properties.Add($"field{index}", new JsonSchemaProperty { Type = JsonObjectType.String });
+            }
+        }
+
         async Task Initialize(uint generations, bool latestPii, bool appendFirst, int fieldCount)
         {
             var storage = new Storage.InMemory.Storage(Registry, new SystemStorage());
@@ -252,14 +260,6 @@ public class AppendGenerationProtectionBenchmark
             _events = [new(EventContext.Empty with { EventStore = _store, Namespace = _namespace, EventType = _eventType, Subject = Subject }, _source)];
         }
 
-        static void AddSchemaFields(JsonSchema schema, int fieldCount)
-        {
-            for (var index = 0; index < fieldCount; index++)
-            {
-                schema.Properties.Add($"field{index}", new JsonSchemaProperty { Type = JsonObjectType.String });
-            }
-        }
-
         void AddPayloadFields(int fieldCount)
         {
             for (var index = 0; index < fieldCount; index++)
@@ -285,6 +285,7 @@ public class AppendGenerationProtectionBenchmark
         async Task VerifyGeneration(EventTypeDefinition definition, EventTypeGeneration generation, ExpandoObject content, string marker)
         {
             var json = JsonSerializer.SerializeToNode(content)!.AsObject();
+
             // Only the pre-fix baseline permits the known plaintext source bug. The candidate must remove this allowance.
             if (_allowRawSource && generation == _eventType.Generation)
             {
