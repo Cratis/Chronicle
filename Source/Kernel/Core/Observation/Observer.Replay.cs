@@ -231,37 +231,44 @@ public partial class Observer
         }
     }
 
+    bool IsCurrentPartitionReplayCompletion(Key partition, PartitionReplayCompletion completion) =>
+        _partitionReplayCompletions.TryGetValue(partition, out var current) && ReferenceEquals(current, completion);
+
     async Task ApplyPartitionReplayCompletion(Key partition, PartitionReplayCompletion completion)
     {
+        if (!IsCurrentPartitionReplayCompletion(partition, completion)) return;
         Skips.Completing(partition, completion.Boundary);
         logger.FinishedReplayForPartition(partition);
         HandleNewLastHandledEventForPartition(partition, completion.LastHandled);
         await WriteStateAsync();
+        if (!IsCurrentPartitionReplayCompletion(partition, completion)) return;
         if (completion.CoveredEpisode is { } episode)
         {
             await ResolveFailedPartition(partition, episodeId: episode, persistObserverState: false);
+            if (!IsCurrentPartitionReplayCompletion(partition, completion)) return;
         }
 
         var ownership = Skips.OwnershipTicket(partition);
-        if (!completion.SuccessorStarted)
-        {
-            await StartPartitionReplaySuccessor(partition, completion.Boundary, () =>
-            {
-                completion.SuccessorStarted = true;
-                State.ReplayingPartitions.Remove(partition);
-                _partitionHoldsVersion++;
-            });
-            if (!completion.SuccessorStarted)
-            {
-                State.ReplayingPartitions.Remove(partition);
-                _partitionHoldsVersion++;
-                await WriteStateAsync();
-            }
-        }
-
+        await EnsurePartitionReplaySuccessor(partition, completion);
+        if (!IsCurrentPartitionReplayCompletion(partition, completion)) return;
         _partitionReplayCompletions.Remove(partition);
         Skips.Release(partition, ownership);
         EvaluateSuspectedSkips();
+    }
+
+    async Task EnsurePartitionReplaySuccessor(Key partition, PartitionReplayCompletion completion)
+    {
+        if (completion.SuccessorStarted) return;
+        await StartPartitionReplaySuccessor(partition, completion.Boundary, () =>
+        {
+            completion.SuccessorStarted = true;
+            State.ReplayingPartitions.Remove(partition);
+            _partitionHoldsVersion++;
+        }, () => IsCurrentPartitionReplayCompletion(partition, completion));
+        if (!IsCurrentPartitionReplayCompletion(partition, completion) || completion.SuccessorStarted) return;
+        State.ReplayingPartitions.Remove(partition);
+        _partitionHoldsVersion++;
+        await WriteStateAsync();
     }
 
     async Task ApplyOutstandingPartitionReplayCompletions()
@@ -322,6 +329,7 @@ public partial class Observer
         // failure/catch-up work; events from here on cannot reach this partition while its replay marker is set.
         var heldBackFrom = State.NextEventSequenceNumber;
         State.ReplayingPartitions.Add(partition);
+        _partitionReplayCompletions.Remove(partition);
         _partitionHoldsVersion++;
         Skips.JobStarted(partition);
         RecordedHandlingState();
