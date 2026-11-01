@@ -18,7 +18,7 @@ public class ObserverRegistrationsStorage(JsonSerializerOptions? serializerOptio
 {
     readonly object _gate = new();
     readonly JsonSerializerOptions _options = serializerOptions ?? new() { Converters = { new ConceptAsJsonConverterFactory() } };
-    readonly Dictionary<(ObserverId, EventSequenceId), string> _registrations = [];
+    readonly Dictionary<(ObserverId, EventSequenceId), (ulong Revision, bool IsDeleted, string Data)> _registrations = [];
     readonly Dictionary<ProgramIdentifier, ObserverOwnerSettings> _settings = [];
     ObserverGenerationFloor? _floor;
 
@@ -27,7 +27,7 @@ public class ObserverRegistrationsStorage(JsonSerializerOptions? serializerOptio
     {
         lock (_gate)
         {
-            return Task.FromResult(_registrations.TryGetValue((observerId, eventSequenceId), out var data) ? Read(data) : null);
+            return Task.FromResult(_registrations.TryGetValue((observerId, eventSequenceId), out var entry) && !entry.IsDeleted ? Read(entry.Data) : null);
         }
     }
 
@@ -43,13 +43,13 @@ public class ObserverRegistrationsStorage(JsonSerializerOptions? serializerOptio
         lock (_gate)
         {
             var key = (registration.ObserverId, registration.EventSequenceId);
-            var revision = _registrations.TryGetValue(key, out var data) ? Read(data).Revision.Value : 0;
+            var revision = _registrations.TryGetValue(key, out var entry) ? entry.Revision : 0;
             if (!IsNext(registration.Revision.Value, expectedRevision.Value) || revision != expectedRevision.Value)
             {
                 return Task.FromResult(false);
             }
 
-            _registrations[key] = JsonSerializer.Serialize(registration, _options);
+            _registrations[key] = (registration.Revision.Value, false, JsonSerializer.Serialize(registration, _options));
             return Task.FromResult(true);
         }
     }
@@ -60,7 +60,18 @@ public class ObserverRegistrationsStorage(JsonSerializerOptions? serializerOptio
         lock (_gate)
         {
             var key = (observerId, eventSequenceId);
-            return Task.FromResult(_registrations.TryGetValue(key, out var data) && Read(data).Revision == expectedRevision && _registrations.Remove(key));
+            if (!_registrations.TryGetValue(key, out var entry) || entry.IsDeleted)
+            {
+                return Task.FromResult(false);
+            }
+
+            if (entry.Revision != expectedRevision.Value || entry.Revision == ulong.MaxValue)
+            {
+                return Task.FromResult(false);
+            }
+
+            _registrations[key] = (entry.Revision + 1, true, string.Empty);
+            return Task.FromResult(true);
         }
     }
 
@@ -122,7 +133,7 @@ public class ObserverRegistrationsStorage(JsonSerializerOptions? serializerOptio
     {
         lock (_gate)
         {
-            return Task.FromResult<IEnumerable<ObserverRegistration>>(_registrations.Values.Select(Read).Where(predicate).ToArray());
+            return Task.FromResult<IEnumerable<ObserverRegistration>>(_registrations.Values.Where(entry => !entry.IsDeleted).Select(entry => Read(entry.Data)).Where(predicate).ToArray());
         }
     }
 

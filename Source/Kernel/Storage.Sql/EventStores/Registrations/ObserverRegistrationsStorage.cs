@@ -45,10 +45,23 @@ public class ObserverRegistrationsStorage(Func<Task<DbContextScope<EventStoreDbC
     /// <inheritdoc/>
     public async Task<bool> TryDelete(ObserverId observerId, EventSequenceId eventSequenceId, ObserverRegistrationRevision expectedRevision)
     {
+        if (expectedRevision.Value is 0 or ulong.MaxValue)
+        {
+            return false;
+        }
+
         await using var scope = await open();
         var id = Identity(observerId, eventSequenceId);
         var revision = Number(expectedRevision.Value);
-        return await scope.DbContext.Set<ObserverRegistrationEntry>().Where(row => row.Id == id && row.Revision == revision).ExecuteDeleteAsync() == 1;
+        var nextRevision = Number(expectedRevision.Value + 1);
+        return await scope.DbContext.Set<ObserverRegistrationEntry>()
+            .Where(row => row.Id == id && row.Kind == "registration" && row.Revision == revision)
+            .ExecuteUpdateAsync(set => set
+                .SetProperty(row => row.Kind, "deleted")
+                .SetProperty(row => row.Revision, nextRevision)
+                .SetProperty(row => row.Owner, string.Empty)
+                .SetProperty(row => row.IsActive, false)
+                .SetProperty(row => row.Data, string.Empty)) == 1;
     }
 
     /// <inheritdoc/>
@@ -94,7 +107,7 @@ public class ObserverRegistrationsStorage(Func<Task<DbContextScope<EventStoreDbC
     async Task<T?> Read<T>(string id)
     {
         await using var scope = await open();
-        var row = await scope.DbContext.Set<ObserverRegistrationEntry>().AsNoTracking().SingleOrDefaultAsync(row => row.Id == id);
+        var row = await scope.DbContext.Set<ObserverRegistrationEntry>().AsNoTracking().SingleOrDefaultAsync(row => row.Id == id && row.Kind != "deleted");
         return row is null ? default : JsonSerializer.Deserialize<T>(row.Data, serializerOptions);
     }
 
@@ -120,6 +133,7 @@ public class ObserverRegistrationsStorage(Func<Task<DbContextScope<EventStoreDbC
             }
 
             return await rows.ExecuteUpdateAsync(set => set
+                .SetProperty(row => row.Kind, entry.Kind)
                 .SetProperty(row => row.Data, entry.Data)
                 .SetProperty(row => row.Revision, entry.Revision)
                 .SetProperty(row => row.Generation, entry.Generation)

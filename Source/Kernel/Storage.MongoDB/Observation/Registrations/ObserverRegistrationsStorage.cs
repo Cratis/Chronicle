@@ -47,13 +47,29 @@ public class ObserverRegistrationsStorage(IEventStoreDatabase database, JsonSeri
         document["observerId"] = registration.ObserverId.Value;
         document["eventSequenceId"] = registration.EventSequenceId.Value;
         document["active"] = registration.IsActive;
+        document["deleted"] = false;
         document["owner"] = registration.Owner.Value;
         return await Write(Registrations, document, expectedRevision.Value);
     }
 
     /// <inheritdoc/>
-    public async Task<bool> TryDelete(ObserverId observerId, EventSequenceId eventSequenceId, ObserverRegistrationRevision expectedRevision) =>
-        (await Registrations.DeleteOneAsync(Builders<BsonDocument>.Filter.Eq("_id", Identity(observerId, eventSequenceId)) & Builders<BsonDocument>.Filter.Eq("revision", Number(expectedRevision.Value)))).DeletedCount == 1;
+    public async Task<bool> TryDelete(ObserverId observerId, EventSequenceId eventSequenceId, ObserverRegistrationRevision expectedRevision)
+    {
+        if (expectedRevision.Value is 0 or ulong.MaxValue)
+        {
+            return false;
+        }
+
+        var tombstone = new BsonDocument
+        {
+            ["_id"] = Identity(observerId, eventSequenceId),
+            ["observerId"] = observerId.Value,
+            ["eventSequenceId"] = eventSequenceId.Value,
+            ["revision"] = Number(expectedRevision.Value + 1),
+            ["deleted"] = true
+        };
+        return await Write(Registrations, tombstone, expectedRevision.Value, Builders<BsonDocument>.Filter.Ne("deleted", true));
+    }
 
     /// <inheritdoc/>
     public Task<ObserverGenerationFloor?> GetGenerationFloor() => Read<ObserverGenerationFloor>(Floor, new BsonString("floor"));
@@ -100,13 +116,13 @@ public class ObserverRegistrationsStorage(IEventStoreDatabase database, JsonSeri
 
     async Task<T?> Read<T>(IMongoCollection<BsonDocument> collection, BsonValue id)
     {
-        var document = await collection.Find(Builders<BsonDocument>.Filter.Eq("_id", id)).SingleOrDefaultAsync();
+        var document = await collection.Find(Builders<BsonDocument>.Filter.Eq("_id", id) & Builders<BsonDocument>.Filter.Ne("deleted", true)).SingleOrDefaultAsync();
         return document is null ? default : JsonSerializer.Deserialize<T>(document["data"].AsString, serializerOptions);
     }
 
     async Task<IEnumerable<ObserverRegistration>> Find(FilterDefinition<BsonDocument> filter)
     {
-        var documents = await Registrations.Find(filter).ToListAsync();
+        var documents = await Registrations.Find(filter & Builders<BsonDocument>.Filter.Ne("deleted", true)).ToListAsync();
         return documents.Select(document => JsonSerializer.Deserialize<ObserverRegistration>(document["data"].AsString, serializerOptions)!).ToArray();
     }
 

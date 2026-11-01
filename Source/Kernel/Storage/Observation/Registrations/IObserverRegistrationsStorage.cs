@@ -10,6 +10,7 @@ namespace Cratis.Chronicle.Storage.Observation.Registrations;
 /// <summary>
 /// Stores registrations, owner settings and the deployment generation floor for one event store.
 /// Reads never create records; missing registrations retain legacy behavior.
+/// Deleted registrations retain a revision tombstone that is absent from every read and query.
 /// </summary>
 public interface IObserverRegistrationsStorage
 {
@@ -36,14 +37,18 @@ public interface IObserverRegistrationsStorage
 
     /// <summary>
     /// Atomically saves a registration if its revision is exactly one greater than the expected revision.
+    /// Recreating a deleted registration requires the tombstone revision: the last live revision plus one.
+    /// The recreated revision must advance that tombstone by one; zero never replaces a tombstone.
     /// </summary>
     /// <param name="registration">The complete registration.</param>
-    /// <param name="expectedRevision">The stored revision; zero requires an absent record.</param>
+    /// <param name="expectedRevision">The stored live or tombstone revision; zero requires a never-created record.</param>
     /// <returns>Whether the write succeeded.</returns>
     Task<bool> TrySave(ObserverRegistration registration, ObserverRegistrationRevision expectedRevision);
 
     /// <summary>
-    /// Deletes a registration only if its revision matches.
+    /// Deletes a live registration only if its revision matches, retaining a tombstone at revision plus one.
+    /// The successful caller can use that tombstone revision to recreate the registration.
+    /// Missing or already deleted registrations and revisions that cannot advance are rejected.
     /// </summary>
     /// <param name="observerId">The observer identifier.</param>
     /// <param name="eventSequenceId">The event sequence identifier.</param>
