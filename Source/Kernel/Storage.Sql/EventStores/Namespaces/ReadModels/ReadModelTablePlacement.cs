@@ -51,12 +51,46 @@ internal readonly record struct ReadModelTablePlacement(DatabaseType Provider, s
                 return null;
             }
 
-            return new(provider, server, Value(builder, "Port"), database, schema);
+            var (host, port) = Endpoint(provider, server, Value(builder, "Port"));
+            return new(provider, host, port, database, schema);
         }
         catch (Exception error) when (error is ArgumentException or NotSupportedException or InvalidOperationException or UnsupportedDatabaseType)
         {
             return null;
         }
+    }
+
+    /// <summary>
+    /// Normalizes a server address and port so every spelling of the same endpoint compares equal.
+    /// </summary>
+    /// <param name="provider">The <see cref="DatabaseType"/>.</param>
+    /// <param name="server">The server as written.</param>
+    /// <param name="port">The port as written, empty when omitted.</param>
+    /// <returns>The host and the effective port.</returns>
+    /// <remarks>
+    /// An omitted PostgreSQL port is 5432. SQL Server writes the port as host,port, may prefix tcp:, and
+    /// uses 1433 for a default instance; a named instance keeps its name and has no fixed port.
+    /// </remarks>
+    static (string Host, string Port) Endpoint(DatabaseType provider, string server, string port)
+    {
+        if (provider == DatabaseType.PostgreSql)
+        {
+            return (server, port.Length == 0 ? "5432" : port);
+        }
+
+        if (provider != DatabaseType.SqlServer)
+        {
+            return (server, port);
+        }
+
+        var host = server.StartsWith("tcp:", StringComparison.OrdinalIgnoreCase) ? server[4..] : server;
+        var comma = host.IndexOf(',');
+        if (comma >= 0)
+        {
+            return (host[..comma].Trim(), host[(comma + 1)..].Trim());
+        }
+
+        return (host.Trim(), host.Contains('\\') ? string.Empty : "1433");
     }
 
     static string Value(DbConnectionStringBuilder builder, params string[] keys)

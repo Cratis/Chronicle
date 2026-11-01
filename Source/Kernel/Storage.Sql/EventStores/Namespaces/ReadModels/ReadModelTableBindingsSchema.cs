@@ -84,7 +84,7 @@ internal static class ReadModelTableBindingsSchema
                 + "JOIN pg_catalog.pg_namespace n ON n.oid = t.relnamespace "
                 + "JOIN pg_catalog.pg_attribute a ON a.attrelid = t.oid AND a.attnum = i.indkey[0] "
                 + "JOIN pg_catalog.pg_collation c ON c.oid = i.indcollation[0] "
-                + "WHERE n.nspname::text = @schema::text AND t.relname::text = @table::text "
+                + "WHERE n.nspname::text = COALESCE(NULLIF(@schema::text, ''), current_schema()::text) AND t.relname::text = @table::text "
                 + "AND a.attname::text = @column::text AND i.indisunique AND i.indisvalid "
                 + "AND i.indnkeyatts = 1 AND i.indpred IS NULL AND c.collname::text = 'C'",
             DatabaseType.SqlServer => "SELECT count(*) FROM sys.indexes i "
@@ -92,7 +92,7 @@ internal static class ReadModelTableBindingsSchema
                 + "JOIN sys.schemas s ON s.schema_id = t.schema_id "
                 + "JOIN sys.index_columns k ON k.object_id = i.object_id AND k.index_id = i.index_id AND k.key_ordinal = 1 "
                 + "JOIN sys.columns c ON c.object_id = t.object_id AND c.column_id = k.column_id "
-                + "WHERE s.name = @schema COLLATE DATABASE_DEFAULT AND t.name = @table COLLATE DATABASE_DEFAULT "
+                + "WHERE s.name = COALESCE(NULLIF(@schema, N''), SCHEMA_NAME()) COLLATE DATABASE_DEFAULT AND t.name = @table COLLATE DATABASE_DEFAULT "
                 + "AND c.name = @column COLLATE DATABASE_DEFAULT AND i.is_unique = 1 AND i.is_disabled = 0 AND i.has_filter = 0 "
                 + "AND (SELECT count(*) FROM sys.index_columns x WHERE x.object_id = i.object_id AND x.index_id = i.index_id AND x.key_ordinal > 0) = 1 "
                 + "AND c.collation_name = CASE WHEN @column = 'Id' THEN 'Latin1_General_100_BIN2' ELSE CONVERT(nvarchar(128), DATABASEPROPERTYEX(DB_NAME(), 'Collation')) END",

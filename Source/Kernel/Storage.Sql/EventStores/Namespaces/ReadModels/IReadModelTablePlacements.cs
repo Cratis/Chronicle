@@ -17,5 +17,5 @@ internal interface IReadModelTablePlacements
     /// <param name="namespaceName">The namespace name.</param>
     /// <param name="purpose">The connection purpose.</param>
     /// <returns>The <see cref="ReadModelTablePlace"/>.</returns>
-    Task<ReadModelTablePlace> Locate(string eventStore, string namespaceName, ConnectionPurpose purpose);
+    ValueTask<ReadModelTablePlace> Locate(string eventStore, string namespaceName, ConnectionPurpose purpose);
 }

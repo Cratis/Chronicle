@@ -57,10 +57,10 @@ internal sealed class SinkReadModelTablePlacements(Action<DbContextOptionsBuilde
     IReadModelMigrator Migrator => migrator;
 
     /// <inheritdoc/>
-    public Task<ReadModelTablePlace> Locate(string eventStore, string namespaceName, ConnectionPurpose purpose)
+    public ValueTask<ReadModelTablePlace> Locate(string eventStore, string namespaceName, ConnectionPurpose purpose)
     {
         Targets++;
-        return Task.FromResult<ReadModelTablePlace>(new Place(this, eventStore, namespaceName));
+        return new ValueTask<ReadModelTablePlace>(new Place(this, eventStore, namespaceName));
     }
 
     internal void FailNextOpen(Exception error) => _nextOpenFailure = error;

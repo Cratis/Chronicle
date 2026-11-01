@@ -75,7 +75,17 @@ internal sealed class ReadModelTables(IReadModelTablePlacements placements) : IR
     {
         var place = await placements.Locate(handle.EventStore, handle.Namespace, ConnectionPurpose.Schema);
         await using var ledger = await place.OpenLedger();
-        var bindings = await new ReadModelTableNameBindings(ledger, place.Schema, place.LedgerMigrator).Read();
+        IReadOnlyList<ReadModelTableNameBinding> bindings;
+        try
+        {
+            bindings = await new ReadModelTableNameBindings(ledger, place.Schema, place.LedgerMigrator).Read();
+        }
+        catch (Exception error) when (SqlErrors.IsMissingTable(error))
+        {
+            // A database that never bound a table has no ledger yet; a backup can then only be a legacy one.
+            bindings = [];
+        }
+
         var matches = bindings.Where(binding => SameBackupOccurrence(handle, binding.Owner)).ToArray();
         if (matches.Length > 1)
         {

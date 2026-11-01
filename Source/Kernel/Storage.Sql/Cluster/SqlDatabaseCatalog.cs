@@ -17,6 +17,20 @@ namespace Cratis.Chronicle.Storage.Sql.Cluster;
 internal sealed class SqlDatabaseCatalog(string connectionString, Func<DbConnection, Task>? prepareConnection = null)
 {
     /// <summary>
+    /// The statement that shows a PostgreSQL catalog lists every database.
+    /// </summary>
+    internal const string PostgreSqlVisibilitySql = "SELECT has_table_privilege('pg_catalog.pg_database', 'SELECT') AND NOT c.relrowsecurity FROM pg_catalog.pg_class c WHERE c.oid = 'pg_catalog.pg_database'::regclass";
+
+    /// <summary>
+    /// The statement that shows a SQL Server catalog lists every database.
+    /// </summary>
+    /// <remarks>
+    /// SQL Server hides offline databases from principals that merely hold VIEW ANY DATABASE, so only the sysadmin role,
+    /// which sees every database, establishes complete visibility. Anything else leaves the answer Unknown.
+    /// </remarks>
+    internal const string SqlServerVisibilitySql = "SELECT CASE WHEN IS_SRVROLEMEMBER('sysadmin') = 1 THEN 1 ELSE 0 END";
+
+    /// <summary>
     /// Gets the SQL provider.
     /// </summary>
     internal DatabaseType Provider { get; } = connectionString.GetDatabaseType();
@@ -72,10 +86,7 @@ internal sealed class SqlDatabaseCatalog(string connectionString, Func<DbConnect
             }
         }
 
-        var visibility = Provider == DatabaseType.PostgreSql
-            ? "SELECT has_table_privilege('pg_catalog.pg_database', 'SELECT') AND NOT c.relrowsecurity FROM pg_catalog.pg_class c WHERE c.oid = 'pg_catalog.pg_database'::regclass"
-            : "SELECT CASE WHEN HAS_PERMS_BY_NAME(NULL, NULL, 'VIEW ANY DATABASE') = 1 OR HAS_PERMS_BY_NAME(NULL, NULL, 'ALTER ANY DATABASE') = 1 OR HAS_PERMS_BY_NAME('master', 'DATABASE', 'CREATE DATABASE') = 1 THEN 1 ELSE 0 END";
-        await using var probe = Command(connection, visibility);
+        await using var probe = Command(connection, Provider == DatabaseType.PostgreSql ? PostgreSqlVisibilitySql : SqlServerVisibilitySql);
         var result = await probe.ExecuteScalarAsync();
         if (result is null or DBNull)
         {

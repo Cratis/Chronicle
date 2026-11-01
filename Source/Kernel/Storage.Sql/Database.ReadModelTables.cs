@@ -20,6 +20,7 @@ namespace Cratis.Chronicle.Storage.Sql;
 public partial class Database : IReadModelTablePlacements
 {
     readonly ConcurrentDictionary<(string EventStore, string Namespace, string Container), Task<ReadModelTableHandle>> _liveHandles = new();
+    readonly ConcurrentDictionary<(string EventStore, string Namespace, ConnectionPurpose Purpose), DatabaseTablePlace> _tablePlaces = new();
     ReadModelTables? _tables;
 
     /// <summary>
@@ -33,10 +34,24 @@ public partial class Database : IReadModelTablePlacements
     internal IReadModelTables Tables => LazyInitializer.EnsureInitialized(ref _tables, () => new ReadModelTables(this));
 
     /// <inheritdoc/>
-    async Task<ReadModelTablePlace> IReadModelTablePlacements.Locate(string eventStore, string namespaceName, ConnectionPurpose purpose)
+    async ValueTask<ReadModelTablePlace> IReadModelTablePlacements.Locate(string eventStore, string namespaceName, ConnectionPurpose purpose)
     {
+        // The target is always resolved afresh, as it is for every other context, so a re-resolved connection is never missed.
+        // The place built from it is reused while the target is unchanged, so a warm lookup allocates nothing of its own.
+        var key = (eventStore, namespaceName, purpose);
+        if (_tablePlaces.TryGetValue(key, out var cached))
+        {
+            var current = await Target(cached.Identity, purpose);
+            if (cached.IsAt(current))
+            {
+                return cached;
+            }
+
+            return _tablePlaces[key] = new DatabaseTablePlace(this, cached.Identity, current, purpose);
+        }
+
         var identity = new DatabaseIdentity(DatabaseKind.ReadModels, eventStore, namespaceName);
-        return new DatabaseTablePlace(this, identity, await Target(identity, purpose), purpose);
+        return _tablePlaces[key] = new DatabaseTablePlace(this, identity, await Target(identity, purpose), purpose);
     }
 
     async Task<DbContextScope<ReadModelDbContext>> OpenLiveReadModelTable(EventStoreName eventStore, EventStoreNamespaceName @namespace, string containerName, IReadOnlyList<ProjectedColumn> columns, ConnectionPurpose purpose)
@@ -96,12 +111,16 @@ public partial class Database : IReadModelTablePlacements
 
     sealed class DatabaseTablePlace(Database database, DatabaseIdentity identity, SqlTarget target, ConnectionPurpose purpose) : ReadModelTablePlace
     {
+        internal DatabaseIdentity Identity => identity;
+
         internal override ReadModelTablePlacement? Placement { get; } = ReadModelTablePlacement.Of(target.ConnectionString, target.Schema);
 
         internal override string Schema => target.Schema;
 
         internal override ITableMigrator<ReadModelTableBindingsDbContext> LedgerMigrator =>
             database.Services.GetRequiredService<ITableMigrator<ReadModelTableBindingsDbContext>>();
+
+        internal bool IsAt(SqlTarget other) => string.Equals(other.ConnectionString, target.ConnectionString, StringComparison.Ordinal) && string.Equals(other.Schema, target.Schema, StringComparison.Ordinal);
 
         internal override Task<ReadModelDbContext> OpenTable(string physicalName, IReadOnlyList<ProjectedColumn> columns, bool requireExisting) =>
             database.OpenReadModelContext(target, identity, physicalName, columns, requireExisting, purpose);

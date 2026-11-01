@@ -21,13 +21,7 @@ internal sealed class ReadModelTableCatalog(DbContext context, string schema) : 
     /// <inheritdoc/>
     public async Task<string?> Find(string name)
     {
-        var sql = Provider switch
-        {
-            DatabaseType.PostgreSql => "SELECT c.relname::text FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname::text = @schema::text AND c.relname::text COLLATE \"C\" = @name::text COLLATE \"C\"",
-            DatabaseType.SqlServer => "SELECT o.name FROM sys.objects o JOIN sys.schemas s ON s.schema_id = o.schema_id WHERE s.name = @schema COLLATE DATABASE_DEFAULT AND o.name = @name COLLATE DATABASE_DEFAULT",
-            DatabaseType.Sqlite => "SELECT name FROM sqlite_schema WHERE name = @name COLLATE NOCASE",
-            _ => throw new NotSupportedException("Unsupported read model table catalog provider")
-        };
+        var sql = FindSql(Provider);
         return await Scalar(sql, ("schema", schema), ("name", name)) as string;
     }
 
@@ -44,6 +38,34 @@ internal sealed class ReadModelTableCatalog(DbContext context, string schema) : 
         }
         return Convert.ToInt32(await Scalar("SELECT CASE WHEN @left COLLATE DATABASE_DEFAULT = @right COLLATE DATABASE_DEFAULT THEN 1 ELSE 0 END", ("left", left), ("right", right)), System.Globalization.CultureInfo.InvariantCulture) == 1;
     }
+
+    /// <summary>
+    /// Gets the statement that finds a catalog object. An empty schema means the connection's default schema.
+    /// </summary>
+    /// <param name="provider">The <see cref="DatabaseType"/>.</param>
+    /// <returns>The statement.</returns>
+    /// <exception cref="NotSupportedException">The provider is not supported.</exception>
+    internal static string FindSql(DatabaseType provider) => provider switch
+    {
+        DatabaseType.PostgreSql => "SELECT c.relname::text FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname::text = COALESCE(NULLIF(@schema::text, ''), current_schema()::text) AND c.relname::text COLLATE \"C\" = @name::text COLLATE \"C\"",
+        DatabaseType.SqlServer => "SELECT o.name FROM sys.objects o JOIN sys.schemas s ON s.schema_id = o.schema_id WHERE s.name = COALESCE(NULLIF(@schema, N''), SCHEMA_NAME()) COLLATE DATABASE_DEFAULT AND o.name = @name COLLATE DATABASE_DEFAULT",
+        DatabaseType.Sqlite => "SELECT name FROM sqlite_schema WHERE name = @name COLLATE NOCASE",
+        _ => throw new NotSupportedException("Unsupported read model table catalog provider")
+    };
+
+    /// <summary>
+    /// Gets the statement that counts the primary key columns of a table. An empty schema means the connection's default schema.
+    /// </summary>
+    /// <param name="provider">The <see cref="DatabaseType"/>.</param>
+    /// <returns>The statement.</returns>
+    /// <exception cref="NotSupportedException">The provider is not supported.</exception>
+    internal static string PrimaryKeySql(DatabaseType provider) => provider switch
+    {
+        DatabaseType.PostgreSql => "SELECT COUNT(*) FROM pg_catalog.pg_index i JOIN pg_catalog.pg_class c ON c.oid = i.indrelid JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace WHERE i.indisprimary AND n.nspname::text = COALESCE(NULLIF(@schema::text, ''), current_schema()::text) AND c.relname::text COLLATE \"C\" = @name::text COLLATE \"C\"",
+        DatabaseType.SqlServer => "SELECT COUNT(*) FROM sys.indexes WHERE is_primary_key = 1 AND object_id = OBJECT_ID(QUOTENAME(COALESCE(NULLIF(@schema, N''), SCHEMA_NAME())) + N'.' + QUOTENAME(@name))",
+        DatabaseType.Sqlite => "SELECT COUNT(*) FROM pragma_table_info(@name) WHERE pk > 0",
+        _ => throw new NotSupportedException("Unsupported read model table catalog provider")
+    };
 
     /// <summary>
     /// Compares SQLite identifiers with native NOCASE's ASCII-only folding, without allocating or opening a connection.
@@ -75,13 +97,7 @@ internal sealed class ReadModelTableCatalog(DbContext context, string schema) : 
     /// <exception cref="NotSupportedException">The provider has no supported catalog.</exception>
     internal async Task<bool> HasPrimaryKey(string name)
     {
-        var sql = Provider switch
-        {
-            DatabaseType.PostgreSql => "SELECT COUNT(*) FROM pg_catalog.pg_index i JOIN pg_catalog.pg_class c ON c.oid = i.indrelid JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace WHERE i.indisprimary AND n.nspname::text = @schema::text AND c.relname::text COLLATE \"C\" = @name::text COLLATE \"C\"",
-            DatabaseType.SqlServer => "SELECT COUNT(*) FROM sys.indexes WHERE is_primary_key = 1 AND object_id = OBJECT_ID(QUOTENAME(@schema) + N'.' + QUOTENAME(@name))",
-            DatabaseType.Sqlite => "SELECT COUNT(*) FROM pragma_table_info(@name) WHERE pk > 0",
-            _ => throw new NotSupportedException("Unsupported read model table catalog provider")
-        };
+        var sql = PrimaryKeySql(Provider);
         var count = Provider == DatabaseType.Sqlite ? await Scalar(sql, ("name", name)) : await Scalar(sql, ("schema", schema), ("name", name));
         return Convert.ToInt64(count, System.Globalization.CultureInfo.InvariantCulture) > 0;
     }
