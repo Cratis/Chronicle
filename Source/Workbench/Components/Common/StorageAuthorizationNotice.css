@@ -1,0 +1,17 @@
+/* Copyright (c) Cratis. All rights reserved. */
+/* Licensed under the MIT license. See LICENSE file in the project root for full license information. */
+
+.workbench-storage-authorization-notice {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--cratis-error-color, #e24c4c);
+    border-radius: 6px;
+    color: var(--cratis-text-color);
+}
+
+.workbench-storage-authorization-notice ul {
+    margin: 0;
+    padding-left: 1.25rem;
+}

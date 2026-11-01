@@ -4,6 +4,7 @@
 import { useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import { Page } from 'Components/Common/Page';
+import { StorageAuthorizationNotice } from 'Components/Common/StorageAuthorizationNotice';
 import { StatisticsForEventStore } from 'Features/Statistics';
 import { ObserveNamespaces } from 'Features/Namespaces';
 import { type EventStoreAndNamespaceParams } from 'Shared';
@@ -58,6 +59,7 @@ export const Dashboard = () => {
                     : <div className='dashboard__wide' />}
 
                 <ObserversOverTimeWidget observers={health?.observers} scope={eventStore} />
+                {statistics.isReady && !statistics.isSuccess && <StorageAuthorizationNotice className='dashboard__full' />}
                 <TopEventTypesWidget
                     perEventType={statistics.isReady && statistics.isSuccess ? statistics.data.perEventType ?? [] : undefined}
                     failed={statistics.isReady && !statistics.isSuccess} />
