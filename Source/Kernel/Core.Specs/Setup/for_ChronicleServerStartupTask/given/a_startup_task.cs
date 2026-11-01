@@ -205,7 +205,9 @@ public class a_startup_task : Specification
     protected async Task ExecuteAndSettle()
     {
         await Execute();
-        await RecoverableWork.WaitAsync(TimeSpan.FromSeconds(10));
+
+        // Real time on purpose: the fixture's fake clock never advances on its own, so it could not bound the wait.
+        await RecoverableWork.WaitAsync(TimeSpan.FromSeconds(10), TimeProvider.System);
     }
 
     protected Task Stop() => _startupTask.OnStop(CancellationToken.None);

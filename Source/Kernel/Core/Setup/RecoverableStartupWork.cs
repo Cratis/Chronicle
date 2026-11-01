@@ -124,6 +124,7 @@ internal sealed class RecoverableStartupWork(
         var ceiling = TimeSpan.FromTicks((long)Math.Min(MaxDelay.Ticks, BaseDelay.Ticks * Math.Pow(2, Math.Min(failures - 1, 10))));
 
         // Never less than half the ceiling, so an unlucky draw cannot turn the retry into a tight spin.
-        return ceiling / 2 + (ceiling / 2 * Math.Clamp(_jitter(), 0d, 1d));
+        var half = ceiling / 2;
+        return half + (half * Math.Clamp(_jitter(), 0d, 1d));
     }
 }

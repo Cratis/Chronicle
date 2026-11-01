@@ -11,17 +11,23 @@ public class and_the_same_item_is_already_in_flight : given.a_recoverable_startu
 
     async Task Because()
     {
-        _first = _work.Run(_item, _ =>
-        {
-            Interlocked.Increment(ref _calls);
-            return _release.Task;
-        }, CancellationToken.None);
+        _first = _work.Run(
+            _item,
+            _ =>
+            {
+                Interlocked.Increment(ref _calls);
+                return _release.Task;
+            },
+            CancellationToken.None);
 
-        await _work.Run(_item, _ =>
-        {
-            Interlocked.Increment(ref _calls);
-            return Task.CompletedTask;
-        }, CancellationToken.None);
+        await _work.Run(
+            _item,
+            _ =>
+            {
+                Interlocked.Increment(ref _calls);
+                return Task.CompletedTask;
+            },
+            CancellationToken.None);
 
         _release.SetResult();
         await _first;

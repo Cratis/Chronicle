@@ -86,7 +86,7 @@ internal sealed class ChronicleServerStartupTask(
     ILogger<ChronicleServerStartupTask> logger,
     TimeProvider? timeProvider = null,
     IGenerationFloorAdmission? generationFloorAdmission = null,
-    IStartupWorkEscalation? startupWorkEscalation = null) : ILifecycleParticipant<ISiloLifecycle>
+    IStartupWorkEscalation? startupWorkEscalation = null) : ILifecycleParticipant<ISiloLifecycle>, IDisposable
 {
     /// <summary>
     /// The exact Orleans placement-failure prefix for this grain and interface.
@@ -132,6 +132,9 @@ internal sealed class ChronicleServerStartupTask(
             OnStop);
     }
 
+    /// <inheritdoc/>
+    public void Dispose() => _stopping.Dispose();
+
     /// <summary>
     /// Recognizes only the patch manager's no-compatible-node response during manifest convergence.
     /// </summary>
@@ -139,17 +142,6 @@ internal sealed class ChronicleServerStartupTask(
     /// <returns>Whether the bounded patch-manager relocation loop should retry.</returns>
     internal static bool IsPatchManagerAwaitingManifest(OrleansException exception) =>
         exception.Message.StartsWith(PatchManagerPlacementFailure, StringComparison.Ordinal);
-
-    /// <summary>
-    /// Determines whether an observer's activation is required for startup.
-    /// </summary>
-    /// <param name="identifier">The observer identifier.</param>
-    /// <returns>Whether the observer must activate successfully.</returns>
-    /// <remarks>
-    /// Pattern capture is optional. Its subscription/recovery path begins the alert lifecycle, so neither
-    /// rehydration nor alert bootstrap may turn capture activation into a required startup step.
-    /// </remarks>
-    static bool IsRequiredObserver(ObserverId identifier) => identifier != PatternCapture.ObserverIdentifier;
 
     /// <summary>
     /// Cancels the background pass when the silo stops and waits for it to wind down.
@@ -168,6 +160,17 @@ internal sealed class ChronicleServerStartupTask(
             // The pass observes the same cancellation and never outlives the silo's own shutdown.
         }
     }
+
+    /// <summary>
+    /// Determines whether an observer's activation is required for startup.
+    /// </summary>
+    /// <param name="identifier">The observer identifier.</param>
+    /// <returns>Whether the observer must activate successfully.</returns>
+    /// <remarks>
+    /// Pattern capture is optional. Its subscription/recovery path begins the alert lifecycle, so neither
+    /// rehydration nor alert bootstrap may turn capture activation into a required startup step.
+    /// </remarks>
+    static bool IsRequiredObserver(ObserverId identifier) => identifier != PatternCapture.ObserverIdentifier;
 
     async Task Execute(CancellationToken cancellationToken)
     {
