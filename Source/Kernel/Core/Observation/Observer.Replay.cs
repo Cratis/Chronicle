@@ -14,13 +14,6 @@ public partial class Observer
 {
     readonly Dictionary<Key, PartitionReplayCompletion> _partitionReplayCompletions = [];
 
-    /// <summary>
-    /// Gets whether this activation still owns a partition replay handover.
-    /// </summary>
-    /// <param name="partition">The partition.</param>
-    /// <returns>Whether its completion still needs to be persisted.</returns>
-    internal bool IsCompletingPartitionReplay(Key partition) => _partitionReplayCompletions.ContainsKey(partition);
-
     /// <inheritdoc/>
     /// <remarks>
     /// A transition requested while another is in progress is only scheduled, and a later request replaces it. The only
@@ -107,8 +100,18 @@ public partial class Observer
     public Task PartitionReplayed(Key partition, EventSequenceNumber lastHandledEventSequenceNumber, EventSequenceNumber lastScannedEventSequenceNumber, EventType[] replayedEventTypes) =>
         CompletePartitionReplay(partition, lastHandledEventSequenceNumber, replayedEventTypes, lastScannedEventSequenceNumber);
 
+    /// <summary>
+    /// Gets whether this activation still owns a partition replay handover.
+    /// </summary>
+    /// <param name="partition">The partition.</param>
+    /// <returns>Whether its completion still needs to be persisted.</returns>
+    internal bool IsCompletingPartitionReplay(Key partition) => _partitionReplayCompletions.ContainsKey(partition);
+
     [LoggerMessage(LogLevel.Warning, "Could not flush handled-event counts while completing replay; counts remain pending")]
     static partial void FailedFlushingHandledCountsOnReplay(ILogger logger, Exception exception);
+
+    [LoggerMessage(LogLevel.Warning, "Could not complete partition replay for {Partition}")]
+    static partial void FailedCompletingPartitionReplay(ILogger logger, Exception exception, Key partition);
 
     async Task CompleteReplay(EventSequenceNumber lastHandledEventSequenceNumber, IReadOnlyDictionary<Key, EventSequenceNumber> replayedPartitions, EventType[] replayedEventTypes, DateTimeOffset replayStartedAt)
     {
@@ -208,7 +211,11 @@ public partial class Observer
     async Task<FailedPartitionId?> FailureCoveredByPartitionReplay(Key partition, EventSequenceNumber lastHandled, EventType[] replayedEventTypes)
     {
         if (replayedEventTypes.Length == 0 || !lastHandled.IsActualValue ||
-            !Failures.TryGet(partition, out var failure) || failure.Deferral is not null || failure.LastAttempt.SequenceNumber > lastHandled) return null;
+            !Failures.TryGet(partition, out var failure) || failure.Deferral is not null || failure.LastAttempt.SequenceNumber > lastHandled)
+        {
+            return null;
+        }
+
         var eventSequenceStorage = storage.GetEventStore(_observerKey.EventStore).GetNamespace(_observerKey.Namespace).GetEventSequence(_observerKey.EventSequenceId);
         try
         {
@@ -271,17 +278,6 @@ public partial class Observer
                 FailedCompletingPartitionReplay(logger, exception, partition);
             }
         }
-    }
-
-    [LoggerMessage(LogLevel.Warning, "Could not complete partition replay for {Partition}")]
-    static partial void FailedCompletingPartitionReplay(ILogger logger, Exception exception, Key partition);
-
-    sealed class PartitionReplayCompletion(EventSequenceNumber lastHandled, EventSequenceNumber boundary, FailedPartitionId? coveredEpisode)
-    {
-        public EventSequenceNumber LastHandled { get; } = lastHandled;
-        public EventSequenceNumber Boundary { get; } = boundary;
-        public FailedPartitionId? CoveredEpisode { get; } = coveredEpisode;
-        public bool SuccessorStarted { get; set; }
     }
 
     async Task ReplayPartitionTo(Key partition, EventSequenceNumber sequenceNumber, IEnumerable<EventType> eventTypes, bool retainOtherCounts)
@@ -396,5 +392,13 @@ public partial class Observer
         logger.NeedsToReplay();
         await TransitionTo<Replay>();
         return true;
+    }
+
+    sealed class PartitionReplayCompletion(EventSequenceNumber lastHandled, EventSequenceNumber boundary, FailedPartitionId? coveredEpisode)
+    {
+        public EventSequenceNumber LastHandled { get; } = lastHandled;
+        public EventSequenceNumber Boundary { get; } = boundary;
+        public FailedPartitionId? CoveredEpisode { get; } = coveredEpisode;
+        public bool SuccessorStarted { get; set; }
     }
 }

@@ -31,7 +31,11 @@ public class a_partition_replay_covering_a_failure : an_observer
             FailedPartitionCount = _failureStorage.PersistedState.Partitions.Count()
         });
         _silo.Options.StorageFactory = type =>
-            type == typeof(ObserverState) ? _completionStorage : type == typeof(FailedPartitions) ? _failureStorage : null!;
+        {
+            if (type == typeof(ObserverState)) return _completionStorage;
+            if (type == typeof(FailedPartitions)) return _failureStorage;
+            return null!;
+        };
     }
 
     async Task Establish()
@@ -58,7 +62,11 @@ public class a_partition_replay_covering_a_failure : an_observer
     protected override ObserverState PersistedObserverState => _completionStorage.PersistedState;
 
     protected override void ConfigureStorage(TestKitSilo silo, ObserverState persistedState) => silo.Options.StorageFactory = type =>
-        type == typeof(ObserverState) ? _completionStorage : type == typeof(FailedPartitions) ? _failureStorage : null!;
+    {
+        if (type == typeof(ObserverState)) return _completionStorage;
+        if (type == typeof(FailedPartitions)) return _failureStorage;
+        return null!;
+    };
 
     protected Task CompleteReplay() => _observer.PartitionReplayed(_partition, 42UL, 50UL, [_eventType]);
 

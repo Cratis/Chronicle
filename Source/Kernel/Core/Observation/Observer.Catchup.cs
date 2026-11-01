@@ -469,10 +469,11 @@ public partial class Observer
         ShadowGrantPartition(partition, ClaimHolderKind.PartitionCatchUp, null, nextEventSequenceNumber);
         Skips.JobStarted(partition);
         var result = await _jobsManager.Start<ICatchUpObserverPartition, CatchUpObserverPartitionRequest>(new(_observerKey, Definition.Type, partition, nextEventSequenceNumber, Definition.EventTypes) { ReaderScope = ReaderScope });
-        if (onStarted is not null && (result is null || !result.TryGetResult(out _)))
+        if (onStarted is not null && result?.TryGetResult(out _) != true)
         {
             throw new InvalidOperationException("Could not start the partition replay successor");
         }
+
         onStarted?.Invoke();
         await WriteStateAsync();
     }
