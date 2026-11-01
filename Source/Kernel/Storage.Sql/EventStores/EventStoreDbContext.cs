@@ -166,6 +166,18 @@ public class EventStoreDbContext(DbContextOptions<EventStoreDbContext> options) 
         modelBuilder.Entity<Generations.GenerationFloorHistoryEntry>().Property(_ => _.Revision).ValueGeneratedNever();
 
         base.OnModelCreating(modelBuilder);
+        modelBuilder.Entity<Registrations.ObserverRegistrationEntry>(entity =>
+        {
+            entity.ToTable(WellKnownTableNames.ObserverRegistrations);
+            entity.HasKey(row => row.Id);
+            entity.Property(row => row.Id).HasMaxLength(80);
+            entity.Property(row => row.Kind).HasMaxLength(16);
+            entity.Property(row => row.Owner).HasMaxLength(64);
+            entity.Property(row => row.Revision).HasMaxLength(20);
+            entity.Property(row => row.Generation).HasMaxLength(20);
+            entity.HasIndex(row => new { row.Kind, row.Owner }).HasDatabaseName("IX_ObserverRegistrations_Owner");
+            entity.HasIndex(row => new { row.Kind, row.IsActive }).HasDatabaseName("IX_ObserverRegistrations_IsActive");
+        });
         Occurrences.OccurrenceModel.Configure(modelBuilder);
         modelBuilder.Entity<Occurrences.LifecycleFanOutEntry>(entity =>
         {

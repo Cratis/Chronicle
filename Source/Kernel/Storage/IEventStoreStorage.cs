@@ -12,6 +12,7 @@ using Cratis.Chronicle.Storage.Observation;
 using Cratis.Chronicle.Storage.Observation.EventStoreSubscriptions;
 using Cratis.Chronicle.Storage.Observation.Reactors;
 using Cratis.Chronicle.Storage.Observation.Reducers;
+using Cratis.Chronicle.Storage.Observation.Registrations;
 using Cratis.Chronicle.Storage.Observation.Webhooks;
 using Cratis.Chronicle.Storage.Projections;
 using Cratis.Chronicle.Storage.ReadModels;
@@ -81,6 +82,11 @@ public interface IEventStoreStorage
     /// Gets the <see cref="IUniqueConstraintsStorage"/> for the event store.
     /// </summary>
     IConstraintsStorage Constraints { get; }
+
+    /// <summary>
+    /// Gets the durable observer registrations storage.
+    /// </summary>
+    IObserverRegistrationsStorage ObserverRegistrations { get; }
 
     /// <summary>
     /// Gets the <see cref="IObserverDefinitionsStorage"/> for the event store.

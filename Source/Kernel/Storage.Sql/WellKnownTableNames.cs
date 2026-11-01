@@ -14,6 +14,11 @@ public static class WellKnownTableNames
     public const string Administrators = "Administrators";
 
     /// <summary>
+    /// The table of registrations and independently versioned observer owner and floor records.
+    /// </summary>
+    public const string ObserverRegistrations = "ObserverRegistrations";
+
+    /// <summary>
     /// The kernel single-writer lease.
     /// </summary>
     public const string SingleWriterLeases = "SingleWriterLeases";

@@ -56,6 +56,21 @@ public static class WellKnownCollectionNames
     public const string Observers = "observers";
 
     /// <summary>
+    /// The collection of durable event-store observer registrations.
+    /// </summary>
+    public const string ObserverRegistrations = "observer-registrations";
+
+    /// <summary>
+    /// The collection of independently versioned owner HTTP delivery settings.
+    /// </summary>
+    public const string ObserverOwnerSettings = "observer-owner-settings";
+
+    /// <summary>
+    /// The collection holding the event-store observer deployment generation floor.
+    /// </summary>
+    public const string ObserverGenerationFloor = "observer-generation-floor";
+
+    /// <summary>
     /// The collection holding durable definition-change step progress.
     /// </summary>
     public const string ObserverDefinitionChangeProgress = ObserverDefinitionChangeRowFamilies.Progress;

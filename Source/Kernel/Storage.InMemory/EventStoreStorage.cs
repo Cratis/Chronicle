@@ -28,6 +28,7 @@ using Cratis.Chronicle.Storage.Observation;
 using Cratis.Chronicle.Storage.Observation.EventStoreSubscriptions;
 using Cratis.Chronicle.Storage.Observation.Reactors;
 using Cratis.Chronicle.Storage.Observation.Reducers;
+using Cratis.Chronicle.Storage.Observation.Registrations;
 using Cratis.Chronicle.Storage.Observation.Webhooks;
 using Cratis.Chronicle.Storage.Projections;
 using Cratis.Chronicle.Storage.ReadModels;
@@ -87,6 +88,9 @@ public sealed class EventStoreStorage(
 
     /// <inheritdoc/>
     public Chronicle.Storage.Generations.IGenerationFloorStorage GenerationFloor { get; internal set; } = new Generations.GenerationFloorStorage();
+
+    /// <inheritdoc/>
+    public IObserverRegistrationsStorage ObserverRegistrations { get; } = new Observation.Registrations.ObserverRegistrationsStorage();
 
     /// <inheritdoc/>
     public EventStoreName EventStore { get; } = eventStore;
