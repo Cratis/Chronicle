@@ -19,8 +19,8 @@ so complete the upgrade before relying on it.
 
 ## Recovery of a quarantined System observer
 
-Restart the kernel. The kernel subscribes its own System reactors again at startup, and a fresh subscription ends the
-observer's quarantine.
+The kernel re-registers its own System reactors at startup. This new registration releases an observer-level quarantine;
+it does not establish recovery of quarantined partitions.
 
 When the kernel uses an external authority, no caller is an administrator. In that setup the following System
 operations are therefore unavailable until administrator mapping for external authorities is available:
