@@ -19,11 +19,8 @@ public class and_the_last_consumer_disposes : Specification
     int _stateSubscriptionsBeforeObserving;
     int _definitionDisposals;
     int _stateDisposals;
-    int _definitionDisposalsAfterFirst;
-    int _stateDisposalsAfterFirst;
     ISubject<IEnumerable<ObserverInformation>> _result;
     IDisposable _first;
-    IDisposable _second;
 
     void Establish()
     {
@@ -54,30 +51,23 @@ public class and_the_last_consumer_disposes : Specification
         _definitionSubscriptionsBeforeObserving = _definitionSubscriptions;
         _stateSubscriptionsBeforeObserving = _stateSubscriptions;
         _first = _result.Subscribe(_ => { });
-        _second = _result.Subscribe(_ => { });
     }
 
     void Because()
     {
         _first.Dispose();
-        _definitionDisposalsAfterFirst = _definitionDisposals;
-        _stateDisposalsAfterFirst = _stateDisposals;
-        _second.Dispose();
     }
 
     [Fact] void should_not_subscribe_to_definitions_before_observing() => _definitionSubscriptionsBeforeObserving.ShouldEqual(0);
     [Fact] void should_not_subscribe_to_states_before_observing() => _stateSubscriptionsBeforeObserving.ShouldEqual(0);
-    [Fact] void should_share_one_definitions_subscription() => _definitionSubscriptions.ShouldEqual(1);
-    [Fact] void should_share_one_state_subscription() => _stateSubscriptions.ShouldEqual(1);
-    [Fact] void should_keep_definitions_alive_for_the_second_consumer() => _definitionDisposalsAfterFirst.ShouldEqual(0);
-    [Fact] void should_keep_states_alive_for_the_second_consumer() => _stateDisposalsAfterFirst.ShouldEqual(0);
-    [Fact] void should_dispose_definitions_after_the_last_consumer() => _definitionDisposals.ShouldEqual(1);
-    [Fact] void should_dispose_states_after_the_last_consumer() => _stateDisposals.ShouldEqual(1);
+    [Fact] void should_subscribe_once_to_definitions() => _definitionSubscriptions.ShouldEqual(1);
+    [Fact] void should_subscribe_once_to_states() => _stateSubscriptions.ShouldEqual(1);
+    [Fact] void should_dispose_definitions_when_the_consumer_disposes() => _definitionDisposals.ShouldEqual(1);
+    [Fact] void should_dispose_states_when_the_consumer_disposes() => _stateDisposals.ShouldEqual(1);
 
     void Destroy()
     {
         _first.Dispose();
-        _second.Dispose();
         _states.Dispose();
         _definitions.Dispose();
     }

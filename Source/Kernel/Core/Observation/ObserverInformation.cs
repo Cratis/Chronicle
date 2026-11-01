@@ -98,9 +98,7 @@ public record ObserverInformation(
             .ObserveAll()
             .CombineLatest(
                 storage.GetEventStore(eventStore).Observers.ObserveAll(),
-                (states, definitions) => ObserverInformationConverters.Join(definitions, states).ToArray()))
-            .Replay(1)
-            .RefCount();
+                (states, definitions) => ObserverInformationConverters.Join(definitions, states).ToArray()));
         return Subject.Create<IEnumerable<ObserverInformation>>(
             System.Reactive.Observer.Create<IEnumerable<ObserverInformation>>(_ => { }),
             observable);
