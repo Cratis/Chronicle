@@ -87,6 +87,8 @@ public class an_observer : Specification
 
     protected virtual Observers CreateObserversConfig() => new() { WriteCoalescingInterval = 0 };
 
+    protected virtual IActivitySource<Observer> CreateActivitySource() => new ActivitySource<Observer>();
+
     void AddServices(TestKitSilo silo)
     {
         var options = Substitute.For<IOptionsMonitor<ChronicleOptions>>();
@@ -100,7 +102,7 @@ public class an_observer : Specification
         silo.AddService(_eventGenerationRelease);
         silo.AddService<IObserverSubscriberSelector>(new RoundRobinObserverSubscriberSelector());
         silo.AddService(_observerServiceClient);
-        silo.AddKeyedService<IActivitySource<Observer>>(WellKnown.MeterName, new ActivitySource<Observer>());
+        silo.AddKeyedService(WellKnown.MeterName, CreateActivitySource());
         silo.AddService(_logger);
         silo.AddService(_loggerFactory);
 

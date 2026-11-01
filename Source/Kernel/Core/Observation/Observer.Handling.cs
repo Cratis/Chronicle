@@ -80,10 +80,7 @@ public partial class Observer
     /// <inheritdoc/>
     public async Task Handle(Key partition, IEnumerable<AppendedEvent> events)
     {
-        using var span = activitySource.Handle();
-        span?.Activity?.Tag(_observerKey);
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
-
         if (!events.Any())
         {
             return;
@@ -93,6 +90,14 @@ public partial class Observer
         {
             NoteHeldBackEvents(partition, events);
             return;
+        }
+
+        using var span = activitySource.Handle();
+        span?.Activity?.Tag(_observerKey);
+        span?.Activity?.Tag(Definition.Type);
+        if (span?.Activity is { IsAllDataRequested: true } activity && events.TryGetNonEnumeratedCount(out var eventCount))
+        {
+            activity.TagEventCount(eventCount);
         }
 
         try

@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Diagnostics;
 using System.Dynamic;
 using System.Reactive.Linq;
 using System.Text.Json;
@@ -200,19 +201,25 @@ internal sealed class Reducers(
                         (replayState, partition) => observer.OnNext(new ReduceOperationMessage { Partition = partition, ReplayState = (Contracts.Observation.ReplayState)replayState }));
 
                     var reducerDefinition = registration.Reducer.ToChronicle();
-                    using (var span = activitySource.Register())
+
+                    // The parent is the long-lived Observe request, which the server deliberately does not trace.
+                    var requestActivity = Activity.Current;
+                    Activity.Current = null;
+                    try
                     {
+                        using var span = activitySource.Register();
                         span?.Activity?.Tag(key, ObserverType.Reducer);
 
                         clientObserver = grainFactory.GetGrain<IReducer>(key);
-                        try
-                        {
-                            await clientObserver.SetDefinitionAndSubscribe(reducerDefinition);
-                        }
-                        catch (Exception exception)
-                        {
-                            throw CreateRegistrationFailure(registration, exception);
-                        }
+                        await clientObserver.SetDefinitionAndSubscribe(reducerDefinition);
+                    }
+                    catch (Exception exception)
+                    {
+                        throw CreateRegistrationFailure(registration, exception);
+                    }
+                    finally
+                    {
+                        Activity.Current = requestActivity;
                     }
 
                     await ClientSubscriptionKeeper.KeepWhileConnected(

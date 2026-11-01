@@ -7,7 +7,6 @@ using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Observation;
 using Cratis.Metrics;
-using Cratis.Traces;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -48,7 +47,6 @@ public class and_channel_capacity_is_exceeded : given.all_dependencies
             _taskFactory,
             _grainFactory,
             Substitute.For<IMeter<AppendedEventsQueue>>(),
-            new ActivitySource<AppendedEventsQueue>(),
             Options.Create(new ChronicleOptions
             {
                 Events = new Configuration.Events { QueueBoundedCapacity = ChannelCapacity }
@@ -88,12 +86,15 @@ public class and_channel_capacity_is_exceeded : given.all_dependencies
         await _thirdEnqueueTask;
     }
 
-    [Fact] void should_complete_the_overflowing_enqueue_without_blocking() =>
+    [Fact]
+    void should_complete_the_overflowing_enqueue_without_blocking() =>
         _thirdEnqueueCompletedWhileChannelWasFull.ShouldBeTrue();
 
-    [Fact] void should_spill_the_subscribed_observer_to_catchup() =>
+    [Fact]
+    void should_spill_the_subscribed_observer_to_catchup() =>
         _observer.Received().CatchUp();
 
-    [Fact] async Task should_remove_the_subscription_so_no_later_batch_advances_past_the_gap() =>
+    [Fact]
+    async Task should_remove_the_subscription_so_no_later_batch_advances_past_the_gap() =>
         (await _queue.GetSubscriptions()).ShouldBeEmpty();
 }

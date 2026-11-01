@@ -217,5 +217,37 @@ Chronicle traces the following activity sources:
 | `Microsoft.Orleans.Runtime` | Orleans runtime activities |
 | `Microsoft.Orleans.Application` | Orleans application activities |
 | HTTP client | Outgoing HTTP requests |
-| ASP.NET Core | Incoming HTTP and gRPC requests |
-| gRPC client | Outgoing gRPC calls |
+| ASP.NET Core | Incoming HTTP and unary gRPC requests, excluding health checks and connection keep-alive |
+| gRPC client | Outgoing gRPC calls (opt-in) |
+
+### Trace volume defaults
+
+Chronicle excludes connection keep-alive requests, the configured health endpoint (including its `/live`
+and `/ready` routes), and all client-streaming, server-streaming, or duplex gRPC requests from server
+traces. Streaming calls can remain open for the lifetime of a client; tracing them would produce
+long-running spans rather than useful delivery traces. Reactor and reducer registration is traced
+as a separate root operation, without the untraced stream request as its parent.
+
+Queue enqueue and dispatch operations do not create spans. Accepted, non-empty observer deliveries
+produce `cratis.chronicle.observer.handle` spans with `cratis.observer.id`, `cratis.eventstore.name`,
+`cratis.eventstore.namespace`, `cratis.eventsequence.id`, `cratis.observer.type`, and the numeric
+`cratis.event.count` tags.
+
+Kernel gRPC client instrumentation is disabled by default to reduce trace volume. To opt in, set
+`Cratis:Chronicle:Telemetry:GrpcClientTracing` to `true`:
+
+```json
+{
+    "cratis": {
+        "chronicle": {
+            "telemetry": {
+                "grpcClientTracing": true
+            }
+        }
+    }
+}
+```
+
+The equivalent environment variable is `Cratis__Chronicle__Telemetry__GrpcClientTracing=true`.
+HTTP client tracing remains enabled. These exclusions do not disable metrics or change OTLP
+exporter, endpoint, or resource configuration.
