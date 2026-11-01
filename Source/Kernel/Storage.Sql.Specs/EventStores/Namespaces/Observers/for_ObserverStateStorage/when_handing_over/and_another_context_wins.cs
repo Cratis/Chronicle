@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Data.Common;
+using Cratis.Arc.EntityFrameworkCore.Concepts;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Storage.Observation;
@@ -29,7 +30,12 @@ public class and_another_context_wins : given.an_observer_state_storage
             await context.Observers.Where(row => row.Id == "observer")
                 .ExecuteUpdateAsync(set => set.SetProperty(row => row.AlertRevision, 31L));
         });
-        var options = new DbContextOptionsBuilder<NamespaceDbContext>(_options).AddInterceptors(interceptor).Options;
+        var options = new DbContextOptionsBuilder<NamespaceDbContext>()
+            .UseSqlite(_connection)
+            .AddConceptAsSupport()
+            .WithoutServiceProviderCaching()
+            .AddInterceptors(interceptor)
+            .Options;
         var database = Substitute.For<IDatabase>();
         database.Namespace(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>())
             .Returns(_ => Task.FromResult(new DbContextScope<NamespaceDbContext>(new NamespaceDbContext(options), () => { })));
