@@ -61,12 +61,6 @@ internal sealed class ReadModelTableNameResolver(
         }
 
         var read = await ownership.Read();
-        if (read.Unknown.Count > 0)
-        {
-            // A possible owner we cannot read: reserve, adopt and create nothing.
-            throw new ReadModelTableMetadataUnavailable(owner, read.Unknown);
-        }
-
         var claims = read.Known;
         var existingBindings = await bindings.Read();
         var candidate = ReadModelTableNames.Candidate(catalog.Provider, owner.LogicalName);
@@ -74,6 +68,12 @@ internal sealed class ReadModelTableNameResolver(
         await _conflicts.Check(owner, candidate, claims, existingBindings);
         var selected = await Select(owner, candidate, legacy, claims, requireExisting);
         await _conflicts.Check(owner, selected.PhysicalName, claims, existingBindings);
+        if (read.Unknown.Count > 0 && selected.State != ReadModelTableBindingState.Ready)
+        {
+            // A possible owner we cannot read: reserve and create nothing. Adopting an already existing relation
+            // on the owner's own proof is what the base did, so it stays available.
+            throw new ReadModelTableMetadataUnavailable(owner, read.Unknown);
+        }
         if (selected.State == ReadModelTableBindingState.Ready && !await ownership.HasExpectedShape(selected.PhysicalName))
         {
             throw new ReadModelTableNameBindingFailure(owner, selected.PhysicalName, "existing relation has an unexpected read-model shape");

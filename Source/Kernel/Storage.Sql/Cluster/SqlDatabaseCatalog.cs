@@ -26,9 +26,10 @@ internal sealed class SqlDatabaseCatalog(string connectionString, Func<DbConnect
     /// </summary>
     /// <remarks>
     /// SQL Server hides offline databases from principals that merely hold VIEW ANY DATABASE, so only the sysadmin role,
-    /// which sees every database, establishes complete visibility. Anything else leaves the answer Unknown.
+    /// ALTER ANY DATABASE, or CREATE DATABASE in master, which see every database, establish complete visibility.
+    /// Anything else leaves the answer Unknown.
     /// </remarks>
-    internal const string SqlServerVisibilitySql = "SELECT CASE WHEN IS_SRVROLEMEMBER('sysadmin') = 1 THEN 1 ELSE 0 END";
+    internal const string SqlServerVisibilitySql = "SELECT CASE WHEN IS_SRVROLEMEMBER('sysadmin') = 1 OR HAS_PERMS_BY_NAME(NULL, NULL, 'ALTER ANY DATABASE') = 1 OR HAS_PERMS_BY_NAME('master', 'DATABASE', 'CREATE DATABASE') = 1 THEN 1 ELSE 0 END";
 
     /// <summary>
     /// Gets the SQL provider.

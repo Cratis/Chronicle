@@ -7,7 +7,6 @@ public class and_a_possible_owner_is_unknown : given.a_table_name_resolver
 {
     void Establish()
     {
-        _catalog.Names.Add("orders");
         _metadata.UnknownScopes.Add(ReadModelTableMetadataScope.Unknown("other-store", null, "visibility", "catalog visibility not established"));
     }
 
@@ -17,5 +16,5 @@ public class and_a_possible_owner_is_unknown : given.a_table_name_resolver
     [Fact] void should_name_the_unknown_scope() => _error.Message.ShouldContain("other-store");
     [Fact] void should_not_reserve_or_adopt() => _bindings.Rows.ShouldBeEmpty();
     [Fact] void should_not_read_the_user_table() => _metadata.ShapeChecks.ShouldEqual(0);
-    [Fact] void should_leave_the_catalog_unchanged() => _catalog.Names.ShouldContainOnly("orders");
+    [Fact] void should_leave_the_catalog_unchanged() => _catalog.Names.ShouldBeEmpty();
 }

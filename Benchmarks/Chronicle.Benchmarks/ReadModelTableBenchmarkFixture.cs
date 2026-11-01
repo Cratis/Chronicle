@@ -181,7 +181,7 @@ public sealed class ReadModelTableBenchmarkFixture : IDisposable
         ReadModelSource.Code,
         ReadModelObserverType.Projection,
         ReadModelObserverIdentifier.Unspecified,
-        SinkDefinition.None,
+        new SinkDefinition(SinkConfigurationId.None, WellKnownSinkTypes.SQL),
         new Dictionary<ReadModelGeneration, JsonSchema> { { ReadModelGeneration.First, JsonSchema.FromJson(SchemaJson) } },
         []);
 
@@ -194,7 +194,7 @@ public sealed class ReadModelTableBenchmarkFixture : IDisposable
 
     static string StoreFor(int index) => $"bench-store-{index}";
 
-    static string NamespaceFor(int index) => $"ns-{index}";
+    static string NamespaceFor(int index) => index == 0 ? "Default" : $"ns-{index}";
 
     static Changeset<Concepts.Events.AppendedEvent, ExpandoObject> Changeset(int from, int to)
     {
@@ -241,7 +241,10 @@ public sealed class ReadModelTableBenchmarkFixture : IDisposable
     {
         public Task<ResolvedConnection> Resolve(ConnectionRequest request, CancellationToken cancellationToken = default) =>
             Task.FromResult(request.Scope[Cratis.Chronicle.Configuration.StorageConnectionRequests.Kind] == "readModels"
-                ? new ResolvedConnection(ConnectionString: connectionString)
+                ? new ResolvedConnection(ConnectionString: new SqliteConnectionStringBuilder(connectionString)
+                {
+                    DataSource = new SqliteConnectionStringBuilder(connectionString).DataSource + "." + request.Scope[StorageConnectionRequests.Namespace] + ".db"
+                }.ConnectionString)
                 : ResolvedConnection.Unchanged);
     }
 
