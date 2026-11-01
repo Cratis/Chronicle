@@ -5,6 +5,20 @@ description: Record the fact that a book arrived at the library, and meet Chroni
 
 Every library starts the same way: a book shows up. So that's where we'll start too — by recording that fact. By the end of this chapter you'll have written your first event to Chronicle and understood why we reach for an *event* instead of a database row.
 
+## Set up a separate tutorial project
+
+Use the .NET 10 SDK and [start the local kernel](/chronicle/get-started/#start-chronicle) with `cratis/chronicle:19.115.3-development`. Wait for `Healthy` and leave the container running for both chapters. These commands and the complete file layout are for .NET; other tabs show client-owned equivalents.
+
+From a directory outside `ChronicleQuickstart`, create a new project:
+
+```shell
+dotnet new console --framework net10.0 --name LibraryTutorial
+cd LibraryTutorial
+dotnet add package Cratis.Chronicle --version 19.115.3
+```
+
+If you followed the console quickstart, keep its files there. This project uses `BookAdded` and `BookId` in the **`LibraryTutorial` event store**, not the quickstart's `GetStarted*` types in `Quickstart`. All files below go beside `LibraryTutorial.csproj`, without a namespace.
+
 ## Think in facts, not rows
 
 Your instinct, coming from most databases, is probably to create a `Book` row and `INSERT` it. Hold that thought — because it throws away the most interesting thing: *that the book arrived, and when*. In event sourcing we record what **happened**. The book arriving is a fact, and facts have a few properties: they're immutable (it happened; you can't un-happen it), and they're named in the past tense.
@@ -12,6 +26,8 @@ Your instinct, coming from most databases, is probably to create a `Book` row an
 So let's name it. A `BookAdded` event, as a `record` marked with `[EventType]`:
 
 <ChronicleClientTabs snippet="tutorial/first-event/book-added" />
+
+Save that declaration as **`BookAdded.cs`**.
 
 A couple of things worth noticing here:
 
@@ -24,7 +40,7 @@ Every event is about *something* — here, a specific book. Chronicle calls that
 
 <ChronicleClientTabs snippet="tutorial/first-event/book-id" />
 
-By inheriting from `EventSourceId<Guid>`, `BookId` becomes a specialized concept — a `ConceptAs<>` targeting `EventSourceId` — so it converts to and from the stream key automatically: you hand a `BookId` straight to Chronicle, no ceremony. And because the *type itself* says "I am an event source id", conventions elsewhere in the stack pick it up — [Arc](/arc/), for instance, recognizes an `EventSourceId`-derived parameter on a command and resolves which stream to write to without any wiring from you. One small record, and the whole stack knows what a book's identity is. The [event source concept](../concepts/event-source.md) goes deeper on how these per-thing streams of facts work.
+Save this as **`BookId.cs`**. By inheriting from `EventSourceId<Guid>`, `BookId` becomes a specialized concept — a `ConceptAs<>` targeting `EventSourceId` — so it converts to and from the stream key automatically: you hand a `BookId` straight to Chronicle, no ceremony. And because the *type itself* says "I am an event source id", conventions elsewhere in the stack pick it up — [Arc](/arc/), for instance, recognizes an `EventSourceId`-derived parameter on a command and resolves which stream to write to without any wiring from you. One small record, and the whole stack knows what a book's identity is. The [event source concept](../concepts/event-source.md) goes deeper on how these per-thing streams of facts work.
 
 Kotlin, Java, and TypeScript don't currently have an equivalent typed-id wrapper — event source ids in those clients are plain strings, so the compiler can't stop you from mixing up a book's id and a member's the way it can in C#. Elixir marks a `Chronicle.Concept` with `event_source_id: true` to mark a type as an event source id.
 
@@ -34,10 +50,30 @@ Now the moment itself. With a `ChronicleClient` connected to your event store, a
 
 <ChronicleClientTabs snippet="tutorial/first-event/append" />
 
-Run it. Nothing dramatic appears on screen — and that's exactly right. Behind that one line, Chronicle validated the event against its registered schema, assigned it the next sequence number, and committed it to the **event log** — permanently, and in order. The fact is now part of your system's history; nothing will ever quietly overwrite it.
+Save that helper as **`TutorialFirstEventAppend.cs`**. It needs a caller: replace the entire generated **`Program.cs`**, including its `Hello, World!` statement, with this entrypoint:
+
+<ChronicleClientTabs snippet="tutorial/first-event/program" />
+
+`Main` creates and keeps the client alive, opens `LibraryTutorial` in the default namespace, calls the append helper, then disposes the client when the program exits. The client discovers the event declarations in this project and registers them with the kernel.
+
+Run it from the `LibraryTutorial` directory:
+
+```shell
+dotnet run --configuration Release
+```
+
+You should see:
+
+```text
+Appended BookAdded for <book-id>
+```
+
+That line means the append returned. Chronicle validated the event against its registered schema, assigned it a sequence number, and committed it to the **event log**. Open [Workbench](https://localhost:35000), accept the local development certificate and sign in as `Admin` / `ChangeMeNow!`. Select `LibraryTutorial`, open **Sequences**, and find `BookAdded` with the printed event source id. There is no `Book` read model yet.
+
+If connection or append fails, check the container health and `docker logs chronicle` before continuing. The [console guide's failure checks](/chronicle/get-started/console/#if-you-dont-see-the-projected-book) also explain local port conflicts and safe recovery. Each successful rerun generates a new id and appends another book; don't rerun as a substitute for checking an uncertain append.
 
 :::note[Where did it go?]
-The event log is the source of truth — an append-only sequence of everything that has happened. You just wrote position `0`. Every projection, reducer, and reactor you build from here on is, in the end, just a different way of *reading* this log.
+The event log is the source of truth — an append-only sequence of everything that has happened. The sequence starts at position `0` in a fresh store, but previous runs may already occupy that position. Every projection, reducer, and reactor you build from here on is, in the end, just a different way of *reading* this log.
 :::
 
 ## What you did
@@ -46,4 +82,4 @@ The event log is the source of truth — an append-only sequence of everything t
 - Gave the book a **strongly-typed event source id** so its events form one stream.
 - **Appended** that event to the log — your first permanent fact.
 
-A fact you can't query, though, isn't much use yet — right now the book exists only as history. In the [next chapter](./read-model) we'll fix that: we'll teach Chronicle to fold this stream of events into a `Books` read model you can actually query, and watch it update itself as more events arrive. [Onward →](./read-model)
+A fact you can't query, though, isn't much use yet — right now the book exists only as history. In the [next chapter](./read-model) we'll fix that: we'll teach Chronicle to fold this stream of events into a `Books` read model you can actually query, and observe its first materialized result. Keep all four source files for that chapter; only `Program.cs` will be replaced. [Onward →](./read-model)

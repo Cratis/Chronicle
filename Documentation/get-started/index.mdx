@@ -7,7 +7,7 @@ import { Aside } from '@astrojs/starlight/components';
 
 The fastest way to understand Chronicle is to watch one fact travel through it. Chronicle stores the fact as an event, projections fold it into read models, and reactors respond to it. That loop is the same no matter which client SDK you use.
 
-This page is the shared Chronicle starting point. It explains the common model and shows the same examples in every supported client. Use the client-specific setup guides for package installation, project scaffolding, host integration, and runtime idioms.
+This page explains the shared Chronicle model. For a complete .NET program with exact file placement, follow [Add Chronicle to a console app](./console) after starting the kernel below. It appends one book and polls for its first read-model result. The conceptual snippets on this page illustrate the loop; they aren't a complete application entrypoint.
 
 <Aside type="note" title="Never done event sourcing?">
 You don't need any event-sourcing background to follow the loop below. If you'd rather understand the *why* before the *how*, read [Why Event Sourcing](/chronicle/why-event-sourcing/) first, then come back. Either order is fine.
@@ -37,18 +37,23 @@ Chronicle application code connects to a running Chronicle kernel. For local dev
 docker run -d --name chronicle \
   -p 127.0.0.1:35000:35000 \
   -p 127.0.0.1:27017:27017 \
-  cratis/chronicle:latest-development
+  cratis/chronicle:19.115.3-development
 ```
+
+This pins the development image to the version used with `Cratis.Chronicle` 19.115.3 in the console path. Don't start a second container if you already have this version running from another guide; check `docker ps` first.
 
 The `127.0.0.1:` prefixes publish both ports on this machine only. The development image's workbench accepts well-known credentials and its MongoDB has no authentication, so keep both off shared networks.
 
 The kernel listens on `chronicle://localhost:35000`, and the workbench runs on `https://localhost:35000`, the same TLS-secured port. The bundled MongoDB on port `27017` stores the materialized read models; the guides below query it directly. Startup takes a few seconds. This command waits until the kernel reports itself ready and prints `Healthy`:
 
 ```shell
-curl --insecure --fail --retry 30 --retry-all-errors --retry-delay 1 https://localhost:35000/health
+curl --insecure --fail --retry 30 --retry-all-errors --retry-delay 1 \
+  --max-time 3 --retry-max-time 60 https://localhost:35000/health
 ```
 
-`--insecure` is there because the development image serves a self-signed certificate. Remove the container with `docker rm -f chronicle` when you are done; its data goes with it.
+`--insecure` is there because the development image serves a self-signed certificate. `Healthy` confirms kernel readiness, not that a particular projection has caught up. If startup fails, inspect `docker logs chronicle` and check for a container-name or port conflict before retrying.
+
+Keep the container running while following the console path and tutorial. When you are done with this **disposable development data**, stop and remove it with `docker stop chronicle` followed by `docker rm chronicle`; its data goes with it.
 
 If you need Docker Compose, Aspire, a separate database, or production-style hosting, use [Choose an application host model](./choose-hosting-model).
 
