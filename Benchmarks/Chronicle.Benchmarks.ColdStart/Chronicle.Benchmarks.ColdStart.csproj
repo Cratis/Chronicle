@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <DisableProxyGenerator>true</DisableProxyGenerator>
+    <RootNamespace>Cratis.Chronicle.Benchmarks.ColdStart</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BenchmarkDotNet" />
+    <PackageReference Include="Testcontainers" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../Source/Clients/DotNET/DotNET.csproj" />
+    <ProjectReference Include="../../Source/Clients/Connections/Connections.csproj" />
+    <ProjectReference Include="../../Source/Infrastructure/Infrastructure.csproj" />
+    <ProjectReference Include="../../Source/Kernel/Contracts/Contracts.csproj" />
+  </ItemGroup>
+
+  <!-- The kernel container and the artifacts the auto scenario discovers are shared with Chronicle.Benchmarks.
+       The kernel image itself is built by that project (its BuildDocker target); this project never builds one. -->
+  <ItemGroup>
+    <Compile Include="../Chronicle.Benchmarks/ChronicleBenchmarkFixture.cs" Link="Shared/ChronicleBenchmarkFixture.cs" />
+    <Compile Include="../Chronicle.Benchmarks/BenchmarkCertificateGenerator.cs" Link="Shared/BenchmarkCertificateGenerator.cs" />
+    <Compile Include="../Chronicle.Benchmarks/HttpsHealthWait.cs" Link="Shared/HttpsHealthWait.cs" />
+    <Compile Include="../Chronicle.Benchmarks/BenchmarkRunOutcome.cs" Link="Shared/BenchmarkRunOutcome.cs" />
+    <Compile Include="../Chronicle.Benchmarks/BenchmarkEvent.cs" Link="Shared/BenchmarkEvent.cs" />
+    <Compile Include="../Chronicle.Benchmarks/BenchmarkReactor.cs" Link="Shared/BenchmarkReactor.cs" />
+    <Compile Include="../Chronicle.Benchmarks/BenchmarkReducer.cs" Link="Shared/BenchmarkReducer.cs" />
+    <Compile Include="../Chronicle.Benchmarks/BenchmarkReadModel.cs" Link="Shared/BenchmarkReadModel.cs" />
+  </ItemGroup>
+
+</Project>

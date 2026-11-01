@@ -377,6 +377,10 @@ above and the `CATCHUP_PATTERNS_WAIT_SECONDS` bound. `PatternsElapsedMillisecond
 confirmation delay. Unacknowledged appends, observer or patterns timeouts, and snapshot mismatches fail
 the run with a non-zero exit.
 
+## Client cold start (on demand)
+
+`Chronicle.Benchmarks.ColdStart` measures process start to client ready and to the first append, cold allocations, and how much of that is gRPC service proxy creation. It is not in the solution or the nightly run. See its README for the commands.
+
 ## Results
 
 Benchmark results are exported in JSON format compatible with BenchmarkDotNet and GitHub Actions benchmark visualization.
