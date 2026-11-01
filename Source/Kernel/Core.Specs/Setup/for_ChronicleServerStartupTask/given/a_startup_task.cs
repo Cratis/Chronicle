@@ -60,6 +60,7 @@ public class a_startup_task : Specification
     protected IPatchManager _patchManager = null!;
     readonly an_immediate_time_provider _timeProvider = new();
     protected IClusterReleases _clusterReleases = null!;
+    protected RecordingStartupWorkEscalation _escalation = null!;
     protected ILocalSiloDetails _localSiloDetails = null!;
     readonly List<string> _logMessages = [];
     protected INamespaces _systemNamespaces = null!;
@@ -84,6 +85,7 @@ public class a_startup_task : Specification
 
     void EstablishStartupTask()
     {
+        _escalation = new RecordingStartupWorkEscalation();
         _startupTask = new(
             _storage,
             _eventTypes,
@@ -97,7 +99,8 @@ public class a_startup_task : Specification
             _localSiloDetails,
             _clusterReleases,
             new StartupLogger(_logMessages),
-            _timeProvider);
+            _timeProvider,
+            startupWorkEscalation: _escalation);
     }
 
     void Establish()
@@ -188,7 +191,24 @@ public class a_startup_task : Specification
         _namespaces.GetAll().Returns(Task.FromResult<IEnumerable<EventStoreNamespaceName>>([_namespace]));
     }
 
+    /// <summary>
+    /// Gets the background pass the startup task started after its prerequisites.
+    /// </summary>
+    protected Task RecoverableWork => _startupTask.RecoverableWork;
+
     protected Task Execute() => Execute(CancellationToken.None);
+
+    /// <summary>
+    /// Runs startup and then waits, bounded, for the background pass to finish. Only for work that eventually succeeds.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    protected async Task ExecuteAndSettle()
+    {
+        await Execute();
+        await RecoverableWork.WaitAsync(TimeSpan.FromSeconds(10));
+    }
+
+    protected Task Stop() => _startupTask.OnStop(CancellationToken.None);
 
     protected Task Execute(CancellationToken cancellationToken)
     {

@@ -12,7 +12,7 @@ public class and_the_namespace_has_no_data : given.a_startup_task
 {
     void Establish() => _namespaceStorage.HasData().Returns(Task.FromResult(false));
 
-    Task Because() => Execute();
+    Task Because() => ExecuteAndSettle();
 
     [Fact] void should_check_whether_the_namespace_has_data() => _namespaceStorage.Received(1).HasData();
     [Fact] void should_not_discover_and_register_reactors_for_the_namespace() => _reactors.DidNotReceive().DiscoverAndRegister(_eventStore, _namespace);
