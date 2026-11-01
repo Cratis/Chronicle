@@ -3,7 +3,9 @@
 
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
+using Cratis.Chronicle.Projections.Engine;
 using Cratis.Chronicle.Storage;
+using Cratis.Chronicle.Storage.Projections;
 using Orleans.Storage;
 
 namespace Cratis.Chronicle.Projections;
@@ -15,8 +17,17 @@ namespace Cratis.Chronicle.Projections;
 /// Initializes a new instance of the <see cref="ProjectionDefinitionStorageProvider"/> class.
 /// </remarks>
 /// <param name="storage"><see cref="IStorage"/> for accessing underlying storage.</param>
-public class ProjectionDefinitionStorageProvider(IStorage storage) : IGrainStorage
+/// <param name="timeProvider">The clock for first-registration metadata.</param>
+public class ProjectionDefinitionStorageProvider(IStorage storage, TimeProvider timeProvider) : IGrainStorage
 {
+    /// <summary>
+    /// Initializes a provider using the system clock.
+    /// </summary>
+    /// <param name="storage">The storage.</param>
+    public ProjectionDefinitionStorageProvider(IStorage storage) : this(storage, TimeProvider.System)
+    {
+    }
+
     /// <inheritdoc/>
     public Task ClearStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState)
     {
@@ -46,6 +57,14 @@ public class ProjectionDefinitionStorageProvider(IStorage storage) : IGrainStora
             return;
         }
         var eventStore = storage.GetEventStore(projectionKey.EventStore);
-        await eventStore.Projections.Save(actualGrainState.State!);
+        var definition = actualGrainState.State!;
+        await eventStore.ProjectionDefinitionHistory.Record(new ProjectionDefinitionHistoryEntry(
+            definition.Identifier,
+            ProjectionFactory.DefinitionDigestFor(definition),
+            ProjectionFactory.DefinitionDigestAlgorithm,
+            definition.Version,
+            timeProvider.GetUtcNow(),
+            definition));
+        await eventStore.Projections.Save(definition);
     }
 }
