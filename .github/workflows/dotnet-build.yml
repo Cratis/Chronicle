@@ -129,6 +129,9 @@ jobs:
       - name: Spec integration bundles
         run: node --test .github/scripts/test-integration-bundles.mjs
 
+      - name: Spec the zero-test guard
+        run: python3 .github/scripts/test-assert-tests-ran.py
+
       # Runs the real entrypoint against a fake server: no image is needed to prove that a container stop
       # reaches the server and that the container reports the server's own exit status (#5361).
       - name: Spec container entrypoint signal forwarding

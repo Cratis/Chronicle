@@ -152,7 +152,7 @@ class for_generating_the_matrix(unittest.TestCase):
     def test_every_entry_carries_the_fields_the_workflow_reads(self):
         for entry in _run():
             self.assertEqual(
-                {"namespace", "shard", "filter", "mode", "database", "needs-docker"},
+                {"namespace", "shard", "filter", "members", "mode", "database", "needs-docker"},
                 set(entry))
 
     def test_an_unknown_backend_fails_the_run(self):
@@ -163,6 +163,103 @@ class for_generating_the_matrix(unittest.TestCase):
             text=True,
             check=False)
         self.assertNotEqual(0, completed.returncode)
+
+
+
+def _directories(root):
+    return sorted(entry for entry in os.listdir(os.path.join(REPOSITORY_ROOT, root))
+                  if os.path.isdir(os.path.join(REPOSITORY_ROOT, root, entry)) and entry not in ("bin", "obj"))
+
+
+def _build(suite, batches=None):
+    """Generate in-process, so a spec can swap the batch table without touching the generator's own."""
+    return matrix.build_include(suite, matrix.PULL_REQUEST_DATABASES, matrix.BATCHES if batches is None else batches)
+
+
+def _members(entry):
+    return [member for member in entry["members"].split(",") if member]
+
+
+class for_batched_namespaces(unittest.TestCase):
+    """Short namespaces share a job; nothing may be dropped, duplicated or silently joined."""
+
+    CONFIG_RESTRICTED = ("SqlServerAlertIncidents", "for_KernelTlsLifecycle", "for_ContainerStartup")
+
+    def test_the_kernel_and_clustering_suites_cover_every_directory_exactly_once(self):
+        for suite, root in (("kernel", "Integration/Kernel"), ("clustering", "Integration/Clustering")):
+            with self.subTest(suite=suite):
+                prefix = matrix.SUITES[suite]["prefix"]
+                covered = []
+                for entry in _run("--suite", suite):
+                    covered += _members(entry) or [entry["namespace"]]
+                self.assertEqual(sorted(prefix + name for name in _directories(root)), sorted(covered))
+
+    def test_the_kernel_and_clustering_suites_have_the_expected_job_counts(self):
+        self.assertEqual(4, len(_run("--suite", "kernel")))
+        self.assertEqual(2, len(_run("--suite", "clustering")))
+
+    def test_kernel_and_clustering_filters_end_with_a_dot_so_a_namespace_is_not_a_prefix(self):
+        for suite in ("kernel", "clustering"):
+            for entry in _run("--suite", suite):
+                for part in entry["filter"].split("|"):
+                    self.assertRegex(part, r"^FullyQualifiedName~[\w.]+\.$")
+
+    def test_batch_members_exist_are_disjoint_and_are_not_sharded_or_config_restricted(self):
+        seen = set()
+        for suite, batches in matrix.BATCHES.items():
+            root = matrix.SUITES[suite]["root"]
+            for batch in batches:
+                self.assertGreater(len(batch), 1)
+                for name in batch:
+                    with self.subTest(suite=suite, member=name):
+                        self.assertTrue(os.path.isdir(os.path.join(REPOSITORY_ROOT, root, name)))
+                        self.assertNotIn((suite, name), seen)
+                        seen.add((suite, name))
+                        if suite == "client":
+                            self.assertNotIn(name, matrix.SHARD_COUNTS)
+                            self.assertNotIn(name, self.CONFIG_RESTRICTED)
+
+    def test_every_client_batch_member_has_a_plain_namespace_filter(self):
+        # The parity-wrapper union path is not a plain namespace filter, so a member there cannot be batched.
+        for entry in _run():
+            if entry["members"]:
+                for member in _members(entry):
+                    self.assertIn(f"FullyQualifiedName~{member}", entry["filter"].split("|"))
+
+    def test_the_filters_in_a_batched_run_equal_the_filters_of_the_unbatched_run(self):
+        for suite in ("client", "kernel", "clustering"):
+            with self.subTest(suite=suite):
+                solo = _build(suite, {})
+                batched = _build(suite)
+                configs = {(e.get("mode"), e.get("database")) for e in solo}
+                self.assertEqual(configs, {(e.get("mode"), e.get("database")) for e in batched})
+                for config in configs:
+                    def union(include):
+                        return {part for e in include if (e.get("mode"), e.get("database")) == config
+                                for part in e["filter"].split("|")}
+                    self.assertEqual(union(solo), union(batched))
+
+    def test_every_entry_has_members_and_labels_are_unique_per_configuration(self):
+        for suite in ("client", "kernel", "clustering"):
+            include = _run("--suite", suite)
+            labels = set()
+            for entry in include:
+                self.assertIn("members", entry)
+                label = (entry["namespace"], entry["shard"], entry.get("mode"), entry.get("database"))
+                self.assertNotIn(label, labels)
+                labels.add(label)
+                if entry["members"]:
+                    self.assertEqual(
+                        matrix.SUITES[suite]["prefix"] + "+".join(m[len(matrix.SUITES[suite]["prefix"]):] for m in _members(entry)),
+                        entry["namespace"])
+                    self.assertEqual("all", entry["shard"])
+
+    def test_batching_removes_twelve_client_jobs_from_a_pull_request_run(self):
+        self.assertEqual(len(_build("client", {})) - 12, len(_build("client")))
+
+    def test_a_namespace_in_a_batch_that_is_sharded_is_rejected(self):
+        with self.assertRaises(ValueError):
+            _build("client", {"client": [["Projections", "for_Reactors"]]})
 
 
 if __name__ == "__main__":

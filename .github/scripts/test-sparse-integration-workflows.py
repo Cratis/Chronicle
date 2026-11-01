@@ -591,6 +591,14 @@ class IntegrationSingleBuildContracts(unittest.TestCase):
             self.assertEqual({"retention-days": 1, "compression-level": 0, "if-no-files-found": "error"},
                              {key: step["with"][key] for key in ("retention-days", "compression-level", "if-no-files-found")})
 
+    def test_every_batched_lane_keeps_a_per_member_zero_test_guard(self):
+        jobs = workflow("integration.yml")["jobs"]
+        for lane in ("client", "kernel", "clustering"):
+            with self.subTest(lane=lane):
+                steps = jobs[f"{lane}-integration-specs"]["steps"]
+                guard = next(step for step in steps if step.get("uses") == "./.github/actions/assert-tests-ran")
+                self.assertEqual("${{ matrix.members }}", guard["with"]["prefixes"])
+
     def test_hot_core_producer_prefix_matches_the_artifact_the_integration_call_consumes(self):
         hot_core = workflow("hot-core-gate.yml")["jobs"]
         steps = hot_core["build"]["steps"]
@@ -610,9 +618,8 @@ class IntegrationSingleBuildContracts(unittest.TestCase):
             command = next(step["run"] for step in steps
                            if step["name"].startswith(("Run Client", "Run Kernel", "Run Clustering", "Run SQL clustering")))
             command = re.sub(r"\$\{\{ (.*?) \}\}", lambda match: bindings[match[1]], command)
-            expected_filter = (union if lane == "client" else
-                               "FullyQualifiedName~Cratis.Chronicle.Integration.SqlClustering.PostgreSql"
-                               if lane == "sql-clustering" else "FullyQualifiedName~Example.Namespace")
+            expected_filter = ("FullyQualifiedName~Cratis.Chronicle.Integration.SqlClustering.PostgreSql"
+                               if lane == "sql-clustering" else union)
             for missing in (False, True):
                 with self.subTest(lane=lane, missing=missing), tempfile.TemporaryDirectory() as directory:
                     path = Path(directory)
