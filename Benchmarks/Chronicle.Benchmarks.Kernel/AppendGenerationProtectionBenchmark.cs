@@ -15,6 +15,7 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences.Migrations;
+using Cratis.Chronicle.EventTypes;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.ProtectedValues;
 using Cratis.Chronicle.Schemas;
@@ -167,7 +168,7 @@ public class AppendGenerationProtectionBenchmark
         JsonSchemaMetadataManager _manager = null!;
         ExpandoObjectConverter _converter = null!;
         JsonSchema _sourceSchema = null!;
-        bool _allowRawSource;
+        IEventTypeSchemaCache _schemaCache = null!;
         EventGenerationRelease _release = null!;
         EventType _eventType = null!;
         ExpandoObject _source = null!;
@@ -188,8 +189,9 @@ public class AppendGenerationProtectionBenchmark
 
         public async Task<IDictionary<EventTypeGeneration, ExpandoObject>> ProtectAndMigrate()
         {
-            var protectedContent = await _manager.Apply(_store, _namespace, _sourceSchema, Subject, _plaintext);
-            var source = _converter.ToExpandoObject(protectedContent, _sourceSchema);
+            var effective = await _schemaCache.GetProtectionSchemaFor(_store, _eventType.Id, _eventType.Generation, _sourceSchema);
+            var protectedContent = await _manager.Apply(_store, _namespace, effective, Subject, _plaintext);
+            var source = _converter.ToExpandoObject(protectedContent, effective);
             return await _migrations.MigratePlaintext(_store, _namespace, _eventType, _plaintext, source, Subject);
         }
 
@@ -246,16 +248,17 @@ public class AppendGenerationProtectionBenchmark
             _manager = manager;
             _converter = converter;
             _sourceSchema = sourceSchema;
-            _allowRawSource = appendFirst && !sourceSchema.HasSchemaMetadata();
-            var protectedContent = await manager.Apply(_store, _namespace, sourceSchema, Subject, _plaintext);
-            _source = converter.ToExpandoObject(protectedContent, sourceSchema);
+            _schemaCache = new EventTypeSchemaCache(storage);
+            var effective = await _schemaCache.GetProtectionSchemaFor(_store, _eventType.Id, _eventType.Generation, sourceSchema);
+            var protectedContent = await manager.Apply(_store, _namespace, effective, Subject, _plaintext);
+            _source = converter.ToExpandoObject(protectedContent, effective);
             var engine = new EventTypeMigrations(storage, converter);
             _migrations = new(eventTypes, engine, manager, converter);
             if (latestPii)
             {
                 await VerifyProtection(definition);
             }
-            _release = new(storage, new EventCompliance(manager, converter), engine, manager, converter);
+            _release = new(storage, new EventCompliance(manager, converter, _schemaCache), engine, manager, converter, _schemaCache);
             _schemas = new() { [_eventType] = new(_eventType, EventTypeOwner.Server, EventTypeSource.Code, sourceSchema) };
             _events = [new(EventContext.Empty with { EventStore = _store, Namespace = _namespace, EventType = _eventType, Subject = Subject }, _source)];
         }
@@ -273,7 +276,8 @@ public class AppendGenerationProtectionBenchmark
             foreach (var marker in new[] { "first-personal-marker", "second-personal-marker" })
             {
                 var plaintext = new JsonObject { ["token"] = marker };
-                var protectedSource = _converter.ToExpandoObject(await _manager.Apply(_store, _namespace, _sourceSchema, Subject, plaintext), _sourceSchema);
+                var effective = await _schemaCache.GetProtectionSchemaFor(_store, _eventType.Id, _eventType.Generation, _sourceSchema);
+                var protectedSource = _converter.ToExpandoObject(await _manager.Apply(_store, _namespace, effective, Subject, plaintext), effective);
                 var protectedGenerations = await _migrations.MigratePlaintext(_store, _namespace, _eventType, plaintext, protectedSource, Subject);
                 foreach (var (generation, content) in protectedGenerations)
                 {
@@ -285,17 +289,6 @@ public class AppendGenerationProtectionBenchmark
         async Task VerifyGeneration(EventTypeDefinition definition, EventTypeGeneration generation, ExpandoObject content, string marker)
         {
             var json = JsonSerializer.SerializeToNode(content)!.AsObject();
-
-            // Only the pre-fix baseline permits the known plaintext source bug. The candidate must remove this allowance.
-            if (_allowRawSource && generation == _eventType.Generation)
-            {
-                if (json["token"]!.GetValue<string>() != marker)
-                {
-                    throw new InvalidOperationException("The baseline source must retain its own call's marker.");
-                }
-
-                return;
-            }
 
             var released = await _manager.ReleaseStrict(_store, _namespace, GenerationProtectionSchemas.For(definition, generation), Subject, json);
             if (json.ToJsonString().Contains(marker, StringComparison.Ordinal) || released["token"]!.GetValue<string>() != marker)

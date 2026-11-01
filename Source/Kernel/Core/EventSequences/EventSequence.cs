@@ -21,6 +21,7 @@ using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.EventSequences.Concurrency;
 using Cratis.Chronicle.EventSequences.Migrations;
 using Cratis.Chronicle.EventSequences.Placement;
+using Cratis.Chronicle.EventTypes;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Patterns;
@@ -62,6 +63,7 @@ namespace Cratis.Chronicle.EventSequences;
 /// <param name="options"><see cref="IOptions{T}"/> for <see cref="ChronicleOptions"/>.</param>
 /// <param name="logger"><see cref="ILogger{T}"/> for logging.</param>
 /// <param name="concurrencyValidatorLogger"><see cref="ILogger{T}"/> for the <see cref="ConcurrencyValidator"/> created per append.</param>
+/// <param name="schemaCache">The effective protection schema cache.</param>
 /// <param name="constraintIndexReplayLogger">The constraint replay logger.</param>
 /// <param name="encryptionKeyStorage">The read-only key lookup used to compare keyed retries.</param>
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.EventSequences)]
@@ -81,6 +83,7 @@ public partial class EventSequence(
     IOptions<ChronicleOptions> options,
     ILogger<EventSequence> logger,
     ILogger<ConcurrencyValidator> concurrencyValidatorLogger,
+    IEventTypeSchemaCache schemaCache,
     ILogger<ConstraintIndexReplay>? constraintIndexReplayLogger = null,
     IEncryptionKeyStorage? encryptionKeyStorage = null) : Grain<EventSequenceState>, IEventSequence, IOnBroadcastChannelSubscribed
 {
@@ -389,7 +392,7 @@ public partial class EventSequence(
         }
 
         var eventSchema = await EventTypesStorage.GetFor(eventType.Id, eventType.Generation);
-        var (contentAsExpandoObject, _) = await MakeEventCompliant(@event.Context.EventSourceId, eventSchema, content, @event.Context.Subject);
+        var (contentAsExpandoObject, _) = await MakeEventCompliant(@event.Context.EventSourceId, eventSchema.Schema, content, @event.Context.Subject);
         var hash = eventHashCalculator.Calculate(eventType.Id, @event.Context.EventSourceId, contentAsExpandoObject);
 
         await PrepareConstraintIndexesForRevision(@event);
@@ -1054,7 +1057,8 @@ public partial class EventSequence(
                 return schemaError;
             }
 
-            var (compliantEventAsExpandoObject, compliantContent) = await MakeEventCompliant(eventSourceId, eventSchema, content, subject, keyUses);
+            var protectionSchema = await schemaCache.GetProtectionSchemaFor(_eventSequenceKey.EventStore, eventType.Id, eventType.Generation, eventSchema.Schema);
+            var (compliantEventAsExpandoObject, compliantContent) = await MakeEventCompliant(eventSourceId, protectionSchema, content, subject, keyUses);
 
             // Constraint validation and index updates must operate on the ORIGINAL, pre-compliance content.
             // PII encryption is non-deterministic (a fresh data key and nonce per value), so hashing the
@@ -1068,7 +1072,7 @@ public partial class EventSequence(
                 : expandoObjectConverter.ToExpandoObject(content, eventSchema.Schema);
             var personalData = new ConstraintPersonalDataOfEvent(
                 subject?.IsSet == true ? subject : new Subject(eventSourceId.Value),
-                ConstraintPersonalData.PropertiesOf(eventSchema.Schema));
+                ConstraintPersonalData.PropertiesOf(protectionSchema));
             var constraintContext = await EstablishConstraintContext(eventSourceId, eventType, correlationId, plaintextEventAsExpandoObject, eventSourceType, eventStreamType, eventStreamId, batchClaims, personalData);
             if (constraintContext.TryGetError(out var error))
             {
@@ -1142,21 +1146,21 @@ public partial class EventSequence(
         return AppendResult.Failed(correlationId, [ex is EventPublicationConflict ? AppendError.EventPublicationConflict : ex.Message]);
     }
 
-    async Task<(ExpandoObject ExpandoObject, JsonObject CompliantContent)> MakeEventCompliant(EventSourceId eventSourceId, EventTypeSchema eventSchema, JsonObject content, Subject? subject = null, List<ProtectedValueUse>? keyUses = null)
+    async Task<(ExpandoObject ExpandoObject, JsonObject CompliantContent)> MakeEventCompliant(EventSourceId eventSourceId, JsonSchema schema, JsonObject content, Subject? subject = null, List<ProtectedValueUse>? keyUses = null)
     {
         var complianceIdentifier = subject?.IsSet == true ? subject.Value : eventSourceId.Value;
         JsonObject compliantEvent;
         if (keyUses is null)
         {
-            compliantEvent = await jsonComplianceManagerProvider.Apply(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, eventSchema.Schema, complianceIdentifier, content);
+            compliantEvent = await jsonComplianceManagerProvider.Apply(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, schema, complianceIdentifier, content);
         }
         else
         {
-            var reported = await jsonComplianceManagerProvider.ApplyReportingKeys(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, eventSchema.Schema, complianceIdentifier, content);
+            var reported = await jsonComplianceManagerProvider.ApplyReportingKeys(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, schema, complianceIdentifier, content);
             compliantEvent = reported.Value;
             keyUses.AddRange(reported.Uses);
         }
-        var expandoObject = expandoObjectConverter.ToExpandoObject(compliantEvent, eventSchema.Schema);
+        var expandoObject = expandoObjectConverter.ToExpandoObject(compliantEvent, schema);
         return (expandoObject, compliantEvent);
     }
 

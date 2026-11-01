@@ -104,7 +104,7 @@ public record VerifyContent(
                 schemas[generation] = (await eventStore.EventTypes.GetFor(EventType.Id, (uint)generation)).Schema;
             }
 
-            schemas = ResolveProtectionSchemas(schemas, stored.Context.AppendedGeneration);
+            schemas = ResolveProtectionSchemas(schemas);
 
             var expected = await metadataManager.TryPrepareGenerationsForComparison(
                 schema.Schema,
@@ -197,11 +197,11 @@ public record VerifyContent(
             return new(ContentVerificationResult.Unavailable);
         }
     }
-    static Dictionary<int, JsonSchema> ResolveProtectionSchemas(Dictionary<int, JsonSchema> own, EventTypeGeneration? appendedGeneration)
+    static Dictionary<int, JsonSchema> ResolveProtectionSchemas(Dictionary<int, JsonSchema> own)
     {
         var generations = own.Select(_ => ((EventTypeGeneration)(uint)_.Key, _.Value)).ToArray();
         return own.ToDictionary(
             _ => _.Key,
-            _ => (uint)_.Key == appendedGeneration?.Value ? _.Value : GenerationProtectionSchemas.For((uint)_.Key, generations));
+            _ => GenerationProtectionSchemas.For((uint)_.Key, generations));
     }
 }

@@ -11,6 +11,7 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Identities;
 using Cratis.Chronicle.EventSequences.Migrations;
+using Cratis.Chronicle.EventTypes;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.ProtectedValues;
 using Cratis.Chronicle.Schemas;
@@ -34,8 +35,8 @@ public class an_event_sequence_with_inherited_protection : an_event_sequence
 
     async Task Establish()
     {
-        var sourceSchema = await JsonSchema.FromJsonAsync("""{"type":"object","properties":{"name":{"type":"string"}}}""");
-        var targetSchema = await JsonSchema.FromJsonAsync("""{"type":"object","properties":{"name":{"type":"string","compliance":[{"metadataType":"PII","details":""}]}}}""");
+        var sourceSchema = await JsonSchema.FromJsonAsync(FirstSchemaJson);
+        var targetSchema = await JsonSchema.FromJsonAsync(SecondSchemaJson);
         _definition = new EventTypeDefinition(
             _eventType.Id,
             EventTypeOwner.Client,
@@ -43,6 +44,7 @@ public class an_event_sequence_with_inherited_protection : an_event_sequence
             [new(1, sourceSchema), new(2, targetSchema)],
             [new EventTypeMigrationDefinition(1, 2, [], new JsonObject(), new JsonObject())]);
         _eventTypesStorage.GetDefinition(_eventType.Id).Returns(_definition);
+        _schemaCache = new EventTypeSchemaCache(_storage);
         _eventTypesStorage.GetFor(_eventType.Id, _eventType.Generation)
             .Returns(new EventTypeSchema(_eventType, EventTypeOwner.Client, EventTypeSource.Code, sourceSchema));
 
@@ -50,7 +52,7 @@ public class an_event_sequence_with_inherited_protection : an_event_sequence
         var encryption = new Encryption();
         var provisioner = new ManagedEncryptionKeyProvisioner(_keys, encryption);
         _metadataManager = new JsonSchemaMetadataManager(
-            new KnownInstancesOf<IJsonSchemaMetadataValueHandler>(new PIICompliancePropertyValueHandler(provisioner, _keys, encryption)),
+            new KnownInstancesOf<IJsonSchemaMetadataValueHandler>(new PIICompliancePropertyValueHandler(provisioner, _keys, encryption), new EncryptedSubjectValueHandler(provisioner, _keys, encryption)),
             NullLogger<JsonSchemaMetadataManager>.Instance);
         _converter = new ExpandoObjectConverter(new TypeFormats());
         _hashCalculator = new EventHashCalculator();
@@ -94,9 +96,14 @@ public class an_event_sequence_with_inherited_protection : an_event_sequence
                 call.Arg<IEnumerable<EventToAppendToStorage>>().Select(Capture).ToArray()));
     }
 
+    protected virtual string FirstSchemaJson => """{"type":"object","properties":{"name":{"type":"string"}}}""";
+    protected virtual string SecondSchemaJson => """{"type":"object","properties":{"name":{"type":"string","compliance":[{"metadataType":"PII","details":""}]}}}""";
+
+    protected virtual JsonObject CreatePlaintext(string marker) => new() { ["name"] = marker };
+
     protected JsonObject Plaintext(string marker)
     {
-        var content = new JsonObject { ["name"] = marker };
+        var content = CreatePlaintext(marker);
         _plaintextInputs.Add(content);
         return content;
     }

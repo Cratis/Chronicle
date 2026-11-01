@@ -7,6 +7,7 @@ using Cratis.Chronicle.Concepts.Events.Constraints;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.EventTypes;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
@@ -75,6 +76,7 @@ public class a_closing_constraint_reindex_step : Specification
         silo.AddService(Substitute.For<IJsonSchemaMetadataManager>());
         silo.AddService(Substitute.For<IExpandoObjectConverter>());
         silo.AddService(Substitute.For<IJobStepThrottle>());
+        silo.AddService<IEventTypeSchemaCache>(new OwnGenerationSchemaCache());
         silo.AddService(NullLogger<ReindexConstraintsStep>.Instance);
         silo.AddPersistentStateStorage<ReindexConstraintsStepState>(nameof(ReindexConstraintsStepState), Cratis.Orleans.WellKnownGrainStorageProviders.JobSteps);
         _step = await silo.CreateGrainAsync<ReindexConstraintsStep>(_runId.Value, new JobStepKey(JobId.New(), "store", "ns"));
