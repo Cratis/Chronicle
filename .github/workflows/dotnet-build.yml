@@ -172,6 +172,9 @@ jobs:
       - name: Spec the gRPC generator targeting
         run: node --test .github/scripts/test-grpc-generator-targeting.mjs
 
+      - name: Spec the generator stamp paths
+        run: node --test .github/scripts/test-generator-stamp-paths.mjs
+
       # Shared org cache: pull requests restore only; the nightly build and default-branch runs save (Cratis/Workflows#164).
       - name: Cache NuGet packages
         uses: Cratis/Workflows/.github/actions/dotnet-cache@main

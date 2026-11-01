@@ -67,7 +67,7 @@
          NonDerivedGrpcServices is left alone, so a hand-written contract for one of those survives a run. -->
     <Target Name="_PrepareGrpcContractGeneration" Condition=" '$(TargetFramework)' != '' AND '$(RuntimeIdentifier)' == '' AND '$(DisableGrpcContractGeneration)' != 'true' ">
         <PropertyGroup>
-            <_GrpcContractGenerationStamp>$(MSBuildProjectDirectory)/$(IntermediateOutputPath)GenerateGrpcContracts.stamp</_GrpcContractGenerationStamp>
+            <_GrpcContractGenerationStamp>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '$(IntermediateOutputPath)', 'GenerateGrpcContracts.stamp'))</_GrpcContractGenerationStamp>
         </PropertyGroup>
         <Delete Files="$(_GrpcContractGenerationStamp)" Condition="'$(ForceCodeGeneration)' == 'true'" />
         <ItemGroup>
