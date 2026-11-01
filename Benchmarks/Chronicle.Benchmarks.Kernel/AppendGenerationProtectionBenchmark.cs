@@ -235,12 +235,18 @@ public class AppendGenerationProtectionBenchmark
 
         public Task<AppendedEvent[]> PinnedRelease() => _release.Release(_store, [_eventType], _schemas, _events);
 
-        static void AddSchemaFields(JsonSchema schema, int fieldCount)
+        static Task<JsonSchema> CreateSchema(bool protectToken, int fieldCount)
         {
+            var document = JsonNode.Parse(protectToken
+                ? """{"type":"object","properties":{"token":{"type":"string","compliance":[{"metadataType":"PII","details":""}]}}}"""
+                : """{"type":"object","properties":{"token":{"type":"string"}}}""")!.AsObject();
+            var properties = document["properties"]!.AsObject();
             for (var index = 0; index < fieldCount; index++)
             {
-                schema.Properties.Add($"field{index}", new JsonSchemaProperty { Type = JsonObjectType.String });
+                properties.Add($"field{index}", new JsonObject { ["type"] = "string" });
             }
+
+            return JsonSchema.FromJsonAsync(document.ToJsonString());
         }
 
         async Task Initialize(uint generations, bool latestPii, bool appendFirst, int fieldCount)
@@ -259,10 +265,7 @@ public class AppendGenerationProtectionBenchmark
             var schemas = new List<EventTypeGenerationDefinition>();
             for (uint generation = 1; generation <= generations; generation++)
             {
-                var schema = await JsonSchema.FromJsonAsync(latestPii && generation == generations
-                    ? """{"type":"object","properties":{"token":{"type":"string","compliance":[{"metadataType":"PII","details":""}]}}}"""
-                    : """{"type":"object","properties":{"token":{"type":"string"}}}""");
-                AddSchemaFields(schema, fieldCount);
+                var schema = await CreateSchema(latestPii && generation == generations, fieldCount);
                 schemas.Add(new(generation, schema));
             }
 
