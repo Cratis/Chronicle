@@ -22,6 +22,7 @@ public class ends_after_connecting : given.a_connection_with_several_endpoints
         _streams[_a] = () => ++streams == 1 ? Observable.Return(new ConnectionKeepAlive()).Concat(first) : Healthy();
         await StartConnecting().WaitAsync(TimeSpan.FromSeconds(10), TimeProvider.System);
         first.OnCompleted();
+        await TickWatchdog();
         await WaitUntil(() => _servedBy.Count == 2 && _isConnected);
     }
 

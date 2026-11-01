@@ -18,6 +18,7 @@ public class and_the_dropped_endpoint_is_tried_last : given.a_connection_with_se
         _streams[_b] = Healthy;
         await StartConnecting().WaitAsync(TimeSpan.FromSeconds(10), TimeProvider.System);
         first.OnCompleted();
+        await TickWatchdog();
         await WaitUntil(() => _servedBy.Count == 2 && _isConnected);
     }
 

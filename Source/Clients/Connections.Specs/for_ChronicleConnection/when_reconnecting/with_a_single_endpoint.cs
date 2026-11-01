@@ -15,8 +15,7 @@ public class with_a_single_endpoint : given.a_connection_with_several_endpoints
         _connecting = StartConnecting();
         await _time.WhenNextTimer();
         _time.Advance(TimeSpan.FromSeconds(5));
-        await Task.Delay(100);
-        _completedAfterTheHandshakeCap = _connecting.IsCompleted;
+        _completedAfterTheHandshakeCap = _time.TimerDueTimes.Exists(due => due <= TimeSpan.FromSeconds(5)) || _connecting.IsCompleted;
         _time.Advance(TimeSpan.FromSeconds(ConnectTimeoutSeconds - 5));
         await _connecting.WaitAsync(TimeSpan.FromSeconds(10), TimeProvider.System);
     }
