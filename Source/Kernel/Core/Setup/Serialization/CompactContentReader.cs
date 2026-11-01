@@ -24,13 +24,27 @@ internal ref struct CompactContentReader(ReadOnlySpan<byte> content)
     /// <exception cref="InvalidDataException">The content is incomplete, invalid or has trailing bytes.</exception>
     internal ExpandoObject Read()
     {
-        var result = ReadNode(0) as ExpandoObject ?? throw new InvalidDataException("Compact content must be an object.");
+        var result = ReadRoot();
         if (!_remaining.IsEmpty) throw new InvalidDataException("Trailing compact content.");
         return result;
     }
 
+    static InvalidDataException Invalid(Exception exception) => new("Invalid compact scalar value.", exception);
+
     static object Box<T>(T value)
         where T : struct => value;
+
+    ExpandoObject ReadRoot()
+    {
+        try
+        {
+            return ReadNode(0) as ExpandoObject ?? throw new InvalidDataException("Compact content must be an object.");
+        }
+        catch (Exception ex) when (ex is ArgumentException or OverflowException)
+        {
+            throw Invalid(ex);
+        }
+    }
 
     object? ReadNode(int depth)
     {
