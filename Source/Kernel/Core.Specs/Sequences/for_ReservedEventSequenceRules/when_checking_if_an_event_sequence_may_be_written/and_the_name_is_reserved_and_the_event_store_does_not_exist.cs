@@ -12,7 +12,7 @@ public class and_the_name_is_reserved_and_the_event_store_does_not_exist : given
     void Establish()
     {
         Reserve("observers");
-        _storage.HasEventStore(Arg.Any<EventStoreName>()).Returns(false);
+        _storage.GetEventStores().Returns(Task.FromResult<IEnumerable<EventStoreName>>([]));
     }
 
     async Task Because() => _result = await Check("observers");

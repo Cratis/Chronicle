@@ -25,7 +25,7 @@ public class a_reserved_name_check : Specification
         _namespaceStorage = Substitute.For<IEventStoreNamespaceStorage>();
         _reservedEventSequenceIds = Substitute.For<IReservedEventSequenceIds>();
 
-        _storage.HasEventStore(Arg.Any<EventStoreName>()).Returns(true);
+        _storage.GetEventStores().Returns(Task.FromResult<IEnumerable<EventStoreName>>([(EventStoreName)EventStore]));
         _storage.GetEventStore(Arg.Any<EventStoreName>()).Returns(_eventStoreStorage);
         _eventStoreStorage.GetNamespace(Arg.Any<EventStoreNamespaceName>()).Returns(_namespaceStorage);
         _namespaceStorage.GetEventSequences().Returns(Task.FromResult<IEnumerable<EventSequenceId>>([]));

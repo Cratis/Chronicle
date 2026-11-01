@@ -16,8 +16,7 @@ public class and_the_name_is_a_built_in_event_sequence : given.a_reserved_name_c
         await Check("event-log"),
         await Check("system"),
         await Check("outbox"),
-        await Check("inbox"),
-        await Check("inbox-other-store")
+        await Check("inbox")
     ];
 
     [Fact] void should_allow_all_of_them() => _results.All(_ => _).ShouldBeTrue();

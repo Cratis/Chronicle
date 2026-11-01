@@ -24,6 +24,7 @@ public class and_the_event_sequence_name_is_reserved_for_a_new_sequence : Specif
         eventStoreStorage.GetNamespace(Arg.Any<EventStoreNamespaceName>()).Returns(namespaceStorage);
         var storage = Substitute.For<IStorage>();
         storage.HasEventStore(Arg.Any<EventStoreName>()).Returns(true);
+        storage.GetEventStores().Returns(Task.FromResult<IEnumerable<EventStoreName>>([(EventStoreName)"some-event-store"]));
         storage.GetEventStore(Arg.Any<EventStoreName>()).Returns(eventStoreStorage);
         var reserved = Substitute.For<IReservedEventSequenceIds>();
         reserved.IsReserved(new EventSequenceId("observers")).Returns(true);

@@ -66,10 +66,17 @@ internal static class ReservedEventSequenceRules
             return true;
         }
 
-        var storeName = (EventStoreName)eventStore;
-        if (!await storage.HasEventStore(storeName))
+        var stores = (await storage.GetEventStores()).ToArray();
+        var storeName = stores.FirstOrDefault(_ => string.Equals(_.Value, eventStore, StringComparison.Ordinal));
+        if (storeName is null)
         {
-            return false;
+            var matches = stores.Where(_ => string.Equals(_.Value, eventStore, StringComparison.OrdinalIgnoreCase)).ToArray();
+            if (matches.Length != 1)
+            {
+                return false;
+            }
+
+            storeName = matches[0];
         }
 
         var existing = await storage.GetEventStore(storeName).GetNamespace((EventStoreNamespaceName)@namespace).GetEventSequences();
@@ -80,6 +87,5 @@ internal static class ReservedEventSequenceRules
         string.Equals(eventSequenceId, EventSequenceId.Log.Value, StringComparison.Ordinal) ||
         string.Equals(eventSequenceId, EventSequenceId.System.Value, StringComparison.Ordinal) ||
         string.Equals(eventSequenceId, EventSequenceId.Outbox.Value, StringComparison.Ordinal) ||
-        string.Equals(eventSequenceId, EventSequenceId.Inbox.Value, StringComparison.Ordinal) ||
-        eventSequenceId.StartsWith(EventSequenceId.InboxPrefix, StringComparison.Ordinal);
+        string.Equals(eventSequenceId, EventSequenceId.Inbox.Value, StringComparison.Ordinal);
 }
