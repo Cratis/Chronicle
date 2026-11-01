@@ -1,13 +1,13 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Threading.Channels;
 using Cratis.Chronicle.Diagnostics;
 using Cratis.Chronicle.Storage.Sql.Diagnostics;
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
-using System.Threading.Channels;
 
 namespace Cratis.Chronicle.Storage.Sql.Sinks;
 
