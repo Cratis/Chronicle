@@ -13,8 +13,8 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ObserverSequenceCh
 /// Adds dormant sequence-local observer checkpoints without backfilling existing observers.
 /// </summary>
 [DbContext(typeof(NamespaceDbContext))]
-[Migration($"NS-{WellKnownTableNames.ObserverSequenceCheckpoints}-{nameof(v19_112_0_4)}")]
-public class v19_112_0_4 : Migration
+[Migration($"NS-{WellKnownTableNames.ObserverSequenceCheckpoints}-{nameof(v19_116_0)}")]
+public class v19_116_0 : Migration
 {
     /// <inheritdoc/>
     protected override void Up(MigrationBuilder migrationBuilder)
