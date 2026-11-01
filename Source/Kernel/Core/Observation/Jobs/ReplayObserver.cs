@@ -322,8 +322,10 @@ public class ReplayObserver(
             finalized = false;
             release = true;
         }
-        catch (Exception exception)
+        catch (Exception exception) when (exception is not ReplayNotSupported)
         {
+            // A refusal is not a failed finalization: it propagates, its notification already scheduled, so nothing
+            // reports the replay as completed and the observer does not advance past work that was never promoted.
             logger.ReplayFinalizationFailed(exception);
             finalized = false;
         }

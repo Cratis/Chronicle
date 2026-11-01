@@ -44,6 +44,32 @@ internal static class GenerationInitializationReplay
     }
 
     /// <summary>
+    /// Refuses a new full replay once any initialization receipt exists, but lets an existing replay job be resumed
+    /// until a materialization is adopted, so replay work started before initialization can drain.
+    /// </summary>
+    /// <param name="storage">The storage.</param>
+    /// <param name="key">The observer being replayed.</param>
+    /// <param name="type">The kind of observer.</param>
+    /// <param name="hasExistingReplayJob">Looks up whether the observer already owns an unfinished replay job; only called while quiescing.</param>
+    /// <returns>A task representing the check.</returns>
+    /// <exception cref="GenerationInitializationReplayNotSupported">A new replay would start, or a materialization was adopted.</exception>
+    internal static async Task EnsureStartOrResumeAllowed(IStorage storage, ObserverKey key, ObserverType type, Func<Task<bool>> hasExistingReplayJob)
+    {
+        var progress = await GetProgress(storage, key, type);
+        if (progress == GenerationInitializationProgress.NotStarted)
+        {
+            return;
+        }
+
+        if (progress == GenerationInitializationProgress.Quiescing && await hasExistingReplayJob())
+        {
+            return;
+        }
+
+        throw new GenerationInitializationReplayNotSupported(GenerationInitializationReplayNotSupported.StartRefusedReason);
+    }
+
+    /// <summary>
     /// Refuses to continue or complete a persisted replay once a materialization has been adopted.
     /// </summary>
     /// <param name="storage">The storage.</param>
