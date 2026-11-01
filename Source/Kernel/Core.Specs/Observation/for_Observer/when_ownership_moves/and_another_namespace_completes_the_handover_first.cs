@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Storage.Namespaces;
 using Cratis.Chronicle.Storage.Observation;
 
 namespace Cratis.Chronicle.Observation.for_Observer.when_ownership_moves;
@@ -20,7 +19,7 @@ public class and_another_namespace_completes_the_handover_first : given.an_obser
         _eventStoreStorage.Namespaces.GetAll().Returns(async _ =>
         {
             await _guarded.HandOver(_observerId, _otherSequence, ObserverSequenceCheckpoint.Fresh(_observerId, _observerKey.EventSequenceId));
-            return (IEnumerable<NamespaceState>)[new(_observerKey.Namespace, DateTimeOffset.UnixEpoch)];
+            return [new(_observerKey.Namespace, DateTimeOffset.UnixEpoch)];
         });
     }
 

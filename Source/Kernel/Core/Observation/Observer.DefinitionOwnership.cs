@@ -86,6 +86,7 @@ public partial class Observer
     /// </summary>
     /// <param name="result">The outcome of the handover for this activation's namespace.</param>
     /// <returns>Awaitable task.</returns>
+    /// <exception cref="ObserverSequenceHandoverDidNotComplete">The handover did not complete because the stored owner kept changing.</exception>
     /// <remarks>
     /// The progress loaded before the handover is stale once the target sequence's progress is selected, also when a
     /// concurrent registration through another namespace selected it first. A handover that did not complete leaves the
