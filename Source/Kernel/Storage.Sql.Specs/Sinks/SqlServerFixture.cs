@@ -97,6 +97,9 @@ public sealed class SqlServerFixture : IAsyncLifetime
                 wait => wait.WithTimeout(TimeSpan.FromSeconds(90))))
             .Build();
         await Timings.Run("sql-container-start", () => _container.StartAsync());
+
+        // New databases inherit model's options. Only crash durability changes, and the spec container is never crashed.
+        await Timings.Run("sql-model-durability", () => Execute("ALTER DATABASE model SET DELAYED_DURABILITY = FORCED"));
         _dropWorker = StartDetached(RunDrops);
         _producer = StartDetached(ProduceDatabases);
     }
