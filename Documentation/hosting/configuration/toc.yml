@@ -8,6 +8,8 @@
   href: features.md
 - name: Storage
   href: storage.mdx
+- name: MongoDB Permissions
+  href: mongodb-permissions.md
 - name: Storage Connection Resolution
   href: storage-connection-resolution.md
 - name: SQL Schema Operations

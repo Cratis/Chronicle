@@ -42,6 +42,7 @@ Chronicle Server can be configured using a `chronicle.json` file or environment 
 - [Root Properties](root-properties.md) - Ports and health check settings.
 - [Features](features.md) - Toggle API, Workbench, and OAuth authority.
 - [Storage](storage) - Configure the storage provider and connection details.
+- [MongoDB Permissions](mongodb-permissions.md) - Databases Chronicle uses and the MongoDB roles it needs.
 - [Compliance Storage](compliance-storage.md) - Give compliance encryption keys their own storage backend.
 - [Clustering](clustering.md) - Orleans clustering provider, cluster identity, and silo/gateway ports.
 - [Observers](observers.md) - Retry and timeout settings for observer subscriptions.

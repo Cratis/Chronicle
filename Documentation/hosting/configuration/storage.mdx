@@ -52,6 +52,8 @@ The default is an empty string: existing database names remain unchanged. Changi
 
 For environment-variable configuration, use `Cratis__Chronicle__Storage__DatabaseNamePrefix`. The development-only kernel reset preserves the global cluster database and, when a prefix is set, drops only other databases starting with that exact, case-sensitive prefix. Use a unique prefix when sharing a server; a prefix is a naming boundary, not a substitute for database permissions.
 
+For the databases Chronicle uses and the permissions it needs, including on managed tiers such as MongoDB Atlas Flex, see [MongoDB permissions](mongodb-permissions.md).
+
 ## PostgreSQL
 
 ```json
