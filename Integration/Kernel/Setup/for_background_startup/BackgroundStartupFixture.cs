@@ -11,6 +11,7 @@ public class BackgroundStartupFixture : ClusteringFixture
 {
     public const string EventStore = Constants.EventStore;
     public static readonly TimeSpan OperationDeadline = TimeSpan.FromSeconds(90);
+    public static readonly TimeSpan HoldDeadline = TimeSpan.FromMinutes(10);
     public static readonly TimeSpan BarrierDeadline = TimeSpan.FromSeconds(30);
     object _startup = null!;
     bool _enableStartup;

@@ -16,6 +16,7 @@ public class StartupStorageGate
 
     public Task Entered => _entered.Task;
     public bool IsReleased => _released.Task.IsCompleted;
+    public bool Expired { get; private set; }
     public void Arm() => _armed = true;
     public void Release() => _released.TrySetResult();
 
@@ -39,7 +40,16 @@ public class StartupStorageGate
         // Materialize the real pre-registration snapshot, not a deferred or fabricated enumeration.
         var snapshot = (await read.WaitAsync(BackgroundStartupFixture.BarrierDeadline)).ToArray();
         _entered.TrySetResult();
-        await _released.Task.WaitAsync(BackgroundStartupFixture.BarrierDeadline);
+        try
+        {
+            await _released.Task.WaitAsync(BackgroundStartupFixture.HoldDeadline);
+        }
+        catch (TimeoutException)
+        {
+            Expired = true;
+            throw;
+        }
+
         return snapshot;
     }
 

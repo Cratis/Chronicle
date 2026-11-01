@@ -48,12 +48,27 @@ public class when_clients_register_and_append_while_recovery_is_blocked(Backgrou
             fixture.Gate.IsReleased.ShouldBeFalse();
             fixture.RecoverableWork.IsCompleted.ShouldBeFalse();
 
+            fixture.Gate.Expired.ShouldBeFalse();
             fixture.Gate.Release();
             await fixture.RecoverableWork.WaitAsync(BackgroundStartupFixture.OperationDeadline);
             await AppendBatch(ingress, "final-marker");
             var finalSequence = inputs[^1].Sequence;
-            await handlerA.WaitTillReachesEventSequenceNumber(new(finalSequence), BackgroundStartupFixture.OperationDeadline);
-            await handlerB.WaitTillReachesEventSequenceNumber(new(finalSequence), BackgroundStartupFixture.OperationDeadline);
+            await WaitUntil(() => callbacks.Count(row => row.InputToken.StartsWith("final-marker", StringComparison.Ordinal)) == 4);
+            await WaitUntil(async () => (await Read(ingress)).Count(row => row.Content is StartupDeliveryRecorded) >= 2 * inputs.Count);
+            var storage = fixture.SiloServices.GetRequiredService<IStorage>()
+                .GetEventStore(new(BackgroundStartupFixture.EventStore)).GetNamespace(new(EventStoreNamespaceName.Default.Value));
+            foreach (var observer in new[] { observerA, observerB })
+            {
+                await WaitUntil(async () =>
+                {
+                    var pending = await storage.Observers.Get(new(observer));
+                    return pending.CatchingUpPartitions.Count == 0 && pending.ReplayingPartitions.Count == 0;
+                });
+            }
+
+            fixture.Gate.Expired.ShouldBeFalse();
+            handlerA.ShouldNotBeNull();
+            handlerB.ShouldNotBeNull();
 
             var persisted = await Read(ingress);
             var persistedInputs = persisted.Where(row => row.Content is StartupEvent)
@@ -65,8 +80,6 @@ public class when_clients_register_and_append_while_recovery_is_blocked(Backgrou
             callbacks.OrderBy(row => row.ObserverId).ThenBy(row => row.InputToken).ToArray().ShouldEqual(expected);
             persisted.Select(row => row.Content).OfType<StartupDeliveryRecorded>()
                 .OrderBy(row => row.ObserverId).ThenBy(row => row.InputToken).ToArray().ShouldEqual(expected);
-            var storage = fixture.SiloServices.GetRequiredService<IStorage>()
-                .GetEventStore(new(BackgroundStartupFixture.EventStore)).GetNamespace(new(EventStoreNamespaceName.Default.Value));
             foreach (var observer in new[] { observerA, observerB })
             {
                 var state = await storage.Observers.Get(new(observer))
@@ -100,6 +113,17 @@ public class when_clients_register_and_append_while_recovery_is_blocked(Backgrou
                 result.IsSuccess.ShouldBeTrue();
                 inputs.Add((token, result.SequenceNumber.Value));
             }
+        }
+    }
+
+    static async Task WaitUntil(Func<bool> condition) => await WaitUntil(() => Task.FromResult(condition()));
+
+    static async Task WaitUntil(Func<Task<bool>> condition)
+    {
+        using var cts = new CancellationTokenSource(BackgroundStartupFixture.OperationDeadline);
+        while (!await condition())
+        {
+            await Task.Delay(TimeSpan.FromMilliseconds(100), cts.Token);
         }
     }
 
