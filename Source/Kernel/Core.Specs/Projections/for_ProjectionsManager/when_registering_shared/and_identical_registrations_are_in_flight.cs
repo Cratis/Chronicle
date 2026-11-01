@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Orleans.TestKit;
 
@@ -19,6 +21,10 @@ public class and_identical_registrations_are_in_flight : given.a_projections_man
     Task _joiner;
     Task _anotherJoiner;
     Task _different;
+    Task _differentOwner;
+    Task _differentGenerationDelivery;
+    bool _equalRequestsPendingBeforeRelease;
+    int _registrationsQueuedBeforeRelease;
 
     void Establish()
     {
@@ -33,15 +39,26 @@ public class and_identical_registrations_are_in_flight : given.a_projections_man
     {
         static ProjectionDefinition[] Definitions() => [CreateDefinition("the-projection", "the-read-model")];
 
-        _leader = _grain.RegisterShared("the-signature", Definitions(), registrant: "the-app");
-        _joiner = _grain.RegisterShared("the-signature", Definitions(), registrant: "the-app");
-        _anotherJoiner = _grain.RegisterShared("the-signature", Definitions(), registrant: "the-app");
-        _different = _grain.RegisterShared("another-signature", Definitions(), registrant: "another-app");
+        Task Register(ProjectionDefinition[] definitions, ProjectionOwner? fullSetOwner = null) =>
+            _grain.RegisterShared(ProjectionRegistrationSignature.For(definitions, fullSetOwner, "the-app", null), definitions, fullSetOwner, "the-app");
+
+        _leader = Register(Definitions());
+        _joiner = Register(Definitions());
+        _anotherJoiner = Register(Definitions());
+        _different = Register([CreateDefinition("the-projection", "another-read-model")]);
+        _differentOwner = Register(Definitions(), ProjectionOwner.Client);
+        _differentGenerationDelivery = Register([Definitions()[0] with { GenerationDelivery = EventGenerationDelivery.Pinned }]);
+        _equalRequestsPendingBeforeRelease = !_leader.IsCompleted && !_joiner.IsCompleted && !_anotherJoiner.IsCompleted;
+        _registrationsQueuedBeforeRelease = _queuedRegistrations.ReceivedCalls().Count();
         _firstFinishes.SetResult();
-        await Task.WhenAll(_leader, _joiner, _anotherJoiner, _different);
+        await Task.WhenAll(_leader, _joiner, _anotherJoiner, _different, _differentOwner, _differentGenerationDelivery);
     }
 
-    [Fact] void should_queue_the_work_once_for_identical_registrations() => _queuedRegistrations.Received(1).Register(Arg.Any<IEnumerable<ProjectionDefinition>>(), null, "the-app", null);
-    [Fact] void should_queue_a_different_registration_separately() => _queuedRegistrations.Received(1).Register(Arg.Any<IEnumerable<ProjectionDefinition>>(), null, "another-app", null);
+    [Fact] void should_queue_the_work_once_for_identical_registrations() => _queuedRegistrations.Received(1).Register(Arg.Is<IEnumerable<ProjectionDefinition>>(definitions => definitions.Single().ReadModel == "the-read-model" && definitions.Single().GenerationDelivery != EventGenerationDelivery.Pinned), null, "the-app", null);
+    [Fact] void should_keep_equal_requests_pending_before_the_leader_is_released() => _equalRequestsPendingBeforeRelease.ShouldBeTrue();
+    [Fact] void should_queue_all_distinct_registrations_before_the_leader_is_released() => _registrationsQueuedBeforeRelease.ShouldEqual(4);
+    [Fact] void should_queue_changed_content_for_the_same_projection_separately() => _queuedRegistrations.Received(1).Register(Arg.Is<IEnumerable<ProjectionDefinition>>(definitions => definitions.Single().Identifier == "the-projection" && definitions.Single().ReadModel == "another-read-model"), null, "the-app", null);
+    [Fact] void should_queue_a_different_full_set_owner_separately() => _queuedRegistrations.Received(1).Register(Arg.Any<IEnumerable<ProjectionDefinition>>(), ProjectionOwner.Client, "the-app", null);
+    [Fact] void should_queue_a_different_generation_delivery_separately() => _queuedRegistrations.Received(1).Register(Arg.Is<IEnumerable<ProjectionDefinition>>(definitions => definitions.Single().GenerationDelivery == EventGenerationDelivery.Pinned), null, "the-app", null);
     [Fact] void should_complete_the_joiners_with_the_leader() => (_joiner.IsCompletedSuccessfully && _anotherJoiner.IsCompletedSuccessfully).ShouldBeTrue();
 }

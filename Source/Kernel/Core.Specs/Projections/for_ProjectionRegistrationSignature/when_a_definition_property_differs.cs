@@ -59,6 +59,8 @@ public class when_a_definition_property_differs : a_registration
 
     string[] _unlistedProperties;
     string[] _unchangingProperties;
+    string _original;
+    string _anotherEventGeneration;
 
     void Because()
     {
@@ -69,14 +71,24 @@ public class when_a_definition_property_differs : a_registration
 
         _unlistedProperties = [.. properties.Where(name => !_changes.ContainsKey(name) && !_excluded.ContainsKey(name))];
 
-        var original = SignatureOf(Definition());
+        var definition = Definition();
+        _original = SignatureOf(definition);
+        _anotherEventGeneration = SignatureOf(definition with
+        {
+            From = new Dictionary<EventType, FromDefinition>
+            {
+                [FirstEvent with { Generation = 2 }] = definition.From[FirstEvent],
+                [SecondEvent] = definition.From[SecondEvent]
+            }
+        });
         _unchangingProperties = [.. _changes
-            .Where(change => properties.Contains(change.Key) && SignatureOf(change.Value(Definition())) == original)
+            .Where(change => properties.Contains(change.Key) && SignatureOf(change.Value(Definition())) == _original)
             .Select(change => change.Key)];
     }
 
     [Fact] void should_list_every_property_of_a_definition() => _unlistedProperties.ShouldBeEmpty();
     [Fact] void should_change_the_signature_for_every_listed_property() => _unchangingProperties.ShouldBeEmpty();
+    [Fact] void should_differ_for_another_generation_of_the_same_event_type() => _anotherEventGeneration.ShouldNotEqual(_original);
 
     static ChildrenDefinition Child() => new(
         (PropertyPath)"id",
