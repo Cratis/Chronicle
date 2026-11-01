@@ -97,8 +97,7 @@ internal sealed class Reactors(
         var eventStoreName = EventStoreName.NotSet;
         var namespaceName = EventStoreNamespaceName.NotSet;
         IObserver<EventsToObserve>? observableObserver = null;
-        ReactorEventsObserver? deliver = null;
-        ReactorReplayObserver? replay = null;
+        (ReactorEventsObserver? deliver, ReactorReplayObserver? replay) = (null, null);
         var observable = Observable.Create<EventsToObserve>(async (observer, cancellationToken) =>
         {
             observableObserver = observer;
@@ -189,21 +188,10 @@ internal sealed class Reactors(
             finally
             {
                 messagesSubscription.Dispose();
-                var ownsRegistration = deliver is null || replay is null || reactorMediator.Disconnected(observerId, connectionId, eventStoreName, namespaceName, deliver, replay);
+                var ownsRegistration = DisconnectStream((observerId, connectionId, eventStoreName, namespaceName), deliver, replay);
                 pendingDeliveries.Disconnect(ObserverSubscriberResult.Disconnected());
-                if (clientObserver is not null)
-                {
-                    if (ownsRegistration)
-                    {
-                        await clientObserver.Unsubscribe();
-                    }
-                    else
-                    {
-                        logger.StreamReplacedKeepingSubscription(observerId, connectionId);
-                    }
-
-                    clientObserver = null!;
-                }
+                await ReleaseRegistration(clientObserver, observerId, connectionId, ownsRegistration);
+                clientObserver = null!;
             }
         });
 
@@ -214,10 +202,7 @@ internal sealed class Reactors(
             logger.ObserverStreamDisconnected(observerId, connectionId);
             pendingDeliveries.Disconnect(ObserverSubscriberResult.Disconnected());
             observableObserver?.OnCompleted();
-            if (deliver is not null && replay is not null)
-            {
-                reactorMediator.Disconnected(observerId, connectionId, eventStoreName, namespaceName, deliver, replay);
-            }
+            DisconnectStream((observerId, connectionId, eventStoreName, namespaceName), deliver, replay);
 
             register?.Dispose();
         });
@@ -238,5 +223,27 @@ internal sealed class Reactors(
 
         var definition = await eventStore.Reactors.Get(new(request.ReactorId));
         return new HasReactorResponse { Exists = true, EventSequenceId = definition.EventSequenceId.Value };
+    }
+
+    bool DisconnectStream(
+        (ObserverId ObserverId, ConnectionId ConnectionId, EventStoreName EventStore, EventStoreNamespaceName Namespace) key,
+        ReactorEventsObserver? deliver,
+        ReactorReplayObserver? replay) =>
+        deliver is null || replay is null || reactorMediator.Disconnected(key.ObserverId, key.ConnectionId, key.EventStore, key.Namespace, deliver, replay);
+
+    async Task ReleaseRegistration(IReactor? clientObserver, ObserverId observerId, ConnectionId connectionId, bool ownsRegistration)
+    {
+        if (clientObserver is null)
+        {
+            return;
+        }
+
+        if (ownsRegistration)
+        {
+            await clientObserver.Unsubscribe();
+            return;
+        }
+
+        logger.StreamReplacedKeepingSubscription(observerId, connectionId);
     }
 }

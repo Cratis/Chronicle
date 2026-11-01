@@ -144,8 +144,7 @@ internal sealed class Reducers(
         var eventStoreName = EventStoreName.NotSet;
         var namespaceName = EventStoreNamespaceName.NotSet;
         IObserver<ReduceOperationMessage>? observableObserver = null;
-        ReducerEventsObserver? deliver = null;
-        ReducerReplayObserver? replay = null;
+        (ReducerEventsObserver? deliver, ReducerReplayObserver? replay) = (null, null);
 
         var observable = Observable.Create<ReduceOperationMessage>(
             async (observer, cancellationToken) =>
@@ -248,21 +247,10 @@ internal sealed class Reducers(
                 finally
                 {
                     messagesSubscription.Dispose();
-                    var ownsRegistration = deliver is null || replay is null || reducerMediator.Disconnected(observerId, connectionId, eventStoreName, namespaceName, deliver, replay);
+                    var ownsRegistration = DisconnectStream((observerId, connectionId, eventStoreName, namespaceName), deliver, replay);
                     pendingDeliveries.Disconnect(new(ObserverSubscriberResult.Disconnected(), new ExpandoObject()));
-                    if (clientObserver is not null)
-                    {
-                        if (ownsRegistration)
-                        {
-                            await clientObserver.Unsubscribe();
-                        }
-                        else
-                        {
-                            logger.StreamReplacedKeepingSubscription(observerId, connectionId);
-                        }
-
-                        clientObserver = null;
-                    }
+                    await ReleaseRegistration(clientObserver, observerId, connectionId, ownsRegistration);
+                    clientObserver = null;
                 }
             });
 
@@ -273,10 +261,7 @@ internal sealed class Reducers(
             logger.ObserverStreamDisconnected(observerId, connectionId);
             pendingDeliveries.Disconnect(new(ObserverSubscriberResult.Disconnected(), new ExpandoObject()));
             observableObserver?.OnCompleted();
-            if (deliver is not null && replay is not null)
-            {
-                reducerMediator.Disconnected(observerId, connectionId, eventStoreName, namespaceName, deliver, replay);
-            }
+            DisconnectStream((observerId, connectionId, eventStoreName, namespaceName), deliver, replay);
 
             register?.Dispose();
         });
@@ -329,5 +314,27 @@ internal sealed class Reducers(
                 registration,
                 new InvalidReadModelDefinitionForReducer(readModel.Identifier, "No key property could be inferred from the read model schema."));
         }
+    }
+
+    bool DisconnectStream(
+        (ObserverId ObserverId, ConnectionId ConnectionId, EventStoreName EventStore, EventStoreNamespaceName Namespace) key,
+        ReducerEventsObserver? deliver,
+        ReducerReplayObserver? replay) =>
+        deliver is null || replay is null || reducerMediator.Disconnected(key.ObserverId, key.ConnectionId, key.EventStore, key.Namespace, deliver, replay);
+
+    async Task ReleaseRegistration(IReducer? clientObserver, ObserverId observerId, ConnectionId connectionId, bool ownsRegistration)
+    {
+        if (clientObserver is null)
+        {
+            return;
+        }
+
+        if (ownsRegistration)
+        {
+            await clientObserver.Unsubscribe();
+            return;
+        }
+
+        logger.StreamReplacedKeepingSubscription(observerId, connectionId);
     }
 }
