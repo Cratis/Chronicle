@@ -41,7 +41,14 @@ public class ObserverHandledCountsStorage(IEventStoreNamespaceDatabase database)
             return;
         }
 
-        await _collection.BulkWriteAsync(models, new BulkWriteOptions { IsOrdered = true }).ConfigureAwait(false);
+        try
+        {
+            await _collection.BulkWriteAsync(models, new BulkWriteOptions { IsOrdered = true }).ConfigureAwait(false);
+        }
+        catch (MongoBulkWriteException<ObserverPartitionCounts> exception) when (IsConfirmedPrefix(exception, models))
+        {
+            throw new ObserverHandledCountsPartiallyIncremented(InputPositionOf(countsPerPartition, exception.WriteErrors[0].Index), exception);
+        }
     }
 
     /// <inheritdoc/>
@@ -83,6 +90,42 @@ public class ObserverHandledCountsStorage(IEventStoreNamespaceDatabase database)
     /// <inheritdoc/>
     public async Task RemoveAllFor(ObserverId observerId) =>
         await _collection.DeleteManyAsync(_ => _.Id.ObserverId == observerId).ConfigureAwait(false);
+
+    static bool IsConfirmedPrefix(MongoBulkWriteException<ObserverPartitionCounts> exception, WriteModel<ObserverPartitionCounts>[] models)
+    {
+        if (exception.WriteConcernError is not null || exception.WriteErrors.Count != 1 || exception.Result?.IsAcknowledged != true)
+        {
+            return false;
+        }
+
+        var failedIndex = exception.WriteErrors[0].Index;
+        if (failedIndex < 0 || failedIndex >= models.Length)
+        {
+            return false;
+        }
+
+        // ProcessedRequests includes the failed request, as well as the applied prefix.
+        var processed = exception.Result.ProcessedRequests;
+        return processed.Count == failedIndex + 1 &&
+            processed.SequenceEqual(models.Take(processed.Count)) &&
+            exception.UnprocessedRequests.SequenceEqual(models.Skip(processed.Count));
+    }
+
+    static int InputPositionOf(IReadOnlyCollection<KeyValuePair<Key, IReadOnlyDictionary<EventTypeId, EventCount>>> countsPerPartition, int modelIndex)
+    {
+        var inputIndex = 0;
+        foreach (var entry in countsPerPartition)
+        {
+            if (entry.Value.Count > 0 && modelIndex-- == 0)
+            {
+                return inputIndex;
+            }
+
+            inputIndex++;
+        }
+
+        return inputIndex;
+    }
 
     static UpdateOneModel<ObserverPartitionCounts> CreateIncrement(ObserverId observerId, Key partition, IReadOnlyDictionary<EventTypeId, EventCount> countsPerEventType)
     {

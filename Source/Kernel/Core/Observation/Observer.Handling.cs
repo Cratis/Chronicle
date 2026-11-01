@@ -266,15 +266,19 @@ public partial class Observer
                 var countsStorage = GetObserverHandledCountsStorage();
                 foreach (var chunk in pending.Chunk(MaxPendingHandledCountPartitions))
                 {
-                    await countsStorage.Increment(_observerId, chunk
-                        .Select(_ => new KeyValuePair<Key, IReadOnlyDictionary<EventTypeId, EventCount>>(_.Key, _.Value))
-                        .ToArray());
-                    foreach (var (partition, counts) in chunk)
+                    try
                     {
-                        written.Add(partition);
-                        State = WithIncrementedRunningTotals(State, counts);
-                        RecordedHandlingState();
+                        await countsStorage.Increment(_observerId, chunk
+                            .Select(_ => new KeyValuePair<Key, IReadOnlyDictionary<EventTypeId, EventCount>>(_.Key, _.Value))
+                            .ToArray());
                     }
+                    catch (ObserverHandledCountsPartiallyIncremented partial)
+                    {
+                        MarkWritten(this, written, chunk.AsSpan(0, Math.Clamp(partial.AppliedCount, 0, chunk.Length)));
+                        throw;
+                    }
+
+                    MarkWritten(this, written, chunk);
                 }
 
                 await WriteStateAsync();
@@ -289,6 +293,16 @@ public partial class Observer
         finally
         {
             _alertMutationLock.Release();
+        }
+
+        static void MarkWritten(Observer observer, HashSet<Key> written, ReadOnlySpan<KeyValuePair<Key, Dictionary<EventTypeId, EventCount>>> entries)
+        {
+            foreach (var (partition, counts) in entries)
+            {
+                written.Add(partition);
+                observer.State = WithIncrementedRunningTotals(observer.State, counts);
+                observer.RecordedHandlingState();
+            }
         }
     }
 

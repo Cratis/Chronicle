@@ -19,7 +19,9 @@ namespace Cratis.Chronicle.Storage.Observation;
 /// totals when that partition is replayed. They are derived statistics: a crash between an increment here and
 /// the subsequent <see cref="ObserverState"/> write may cause a minor drift that a full replay resets. They
 /// are never part of the exactly-once event-delivery bookkeeping, which is driven by the sequence numbers on
-/// <see cref="ObserverState"/> and the in-flight events store.
+/// <see cref="ObserverState"/> and the in-flight events store. A bulk failure reported as
+/// <see cref="ObserverHandledCountsPartiallyIncremented"/> identifies the confirmed applied prefix. Other failures
+/// mean the outcome is unknown, so callers may retry the whole call; counts can then over-count (at-least-once).
 /// </remarks>
 public interface IObserverHandledCountsStorage
 {
@@ -38,6 +40,7 @@ public interface IObserverHandledCountsStorage
     /// <param name="observerId">The <see cref="ObserverId"/> the counts are for.</param>
     /// <param name="countsPerPartition">The counts per event type for each partition.</param>
     /// <returns>Awaitable task.</returns>
+    /// <exception cref="ObserverHandledCountsPartiallyIncremented">Only the first AppliedCount entries, in input enumeration order, are confirmed applied; the rest are confirmed not applied.</exception>
     Task Increment(ObserverId observerId, IReadOnlyCollection<KeyValuePair<Key, IReadOnlyDictionary<EventTypeId, EventCount>>> countsPerPartition);
 
     /// <summary>
