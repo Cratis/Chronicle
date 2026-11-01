@@ -46,9 +46,32 @@ describe('when using the controlled recommendation selection', () => {
         props.selectionMode!.should.equal('multiple');
         props.onSelectedItemsChange!(data);
         table().selectedItems!.should.deep.equal(data);
-        actions().every(action => !action.disabled).should.be.true;
+        actions().slice(0, 2).every(action => !action.disabled).should.be.true;
         props.onSelectedItemsChange!([]);
+        actions().slice(0, 3).every(action => action.disabled).should.be.true;
+    });
+
+    it('should clear selection when toggling the ignored view', () => {
+        context.viewModel.selectedRecommendations = data;
+        actions()[3].command!();
+        context.viewModel.showIgnored.should.be.true;
+        context.viewModel.selectedRecommendations.should.have.lengthOf(0);
+    });
+
+    it('should restore captured ignored selections with the busy guard and partial notifications', async () => {
+        context.viewModel.showIgnored = true;
+        context.viewModel.selectedRecommendations = data;
+        actions()[0].disabled!.should.be.true;
+        actions()[1].disabled!.should.be.true;
+        actions()[2].disabled!.should.be.false;
+        const unignore = vi.spyOn(context.viewModel, 'unignoreRecommendations').mockResolvedValue({ total: 2, failed: 1, failures: ['Denied'] });
+        const pending = actions()[2].command!();
         actions().every(action => action.disabled).should.be.true;
+        await actions()[2].command!();
+        await pending;
+        unignore.mock.calls.should.deep.equal([[data.map(item => item.id)]]);
+        mocks.error.mock.lastCall![0].description.should.contain('1 failed of 2 attempted');
+        context.viewModel.isBusy.should.be.false;
     });
 
     it('should execute nothing when unselected', async () => {
@@ -118,7 +141,7 @@ describe('when using the controlled recommendation selection', () => {
         table();
         (mocks.effect.mock.lastCall![0] as () => void)();
         context.viewModel.selectedRecommendations.should.have.lengthOf(0);
-        actions().every(action => action.disabled).should.be.true;
+        actions().slice(0, 3).every(action => action.disabled).should.be.true;
     });
 
     for (const unavailable of ['isReady', 'isSuccess', 'isAuthorized'] as const) {

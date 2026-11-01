@@ -550,17 +550,19 @@ class [GrainType("readmodelreplaymanager")] Cratis.Chronicle.ReadModels.ReadMode
 
 class [GrainType("readmodelsmanager")] Cratis.Chronicle.ReadModels.ReadModelsManager
 
-interface [GrainInterfaceType("Cratis.Chronicle.Recommendations.IRecommendation")] Cratis.Chronicle.Recommendations.IRecommendation [Version(0)]
+interface [GrainInterfaceType("Cratis.Chronicle.Recommendations.IRecommendation")] Cratis.Chronicle.Recommendations.IRecommendation [Version(1)]
   AB0F8587: Ignore() -> Task
   33A190FF: Perform() -> Task
+  D73AD743: Unignore() -> Task
 
 interface [GrainInterfaceType("Cratis.Chronicle.Recommendations.IRecommendation`1")] Cratis.Chronicle.Recommendations.IRecommendation<TRequest> [Version(0)]
   F26C5DBC: Initialize(Cratis.Chronicle.Concepts.Recommendations.RecommendationDescription, TRequest) -> Task
 
-interface [GrainInterfaceType("Cratis.Chronicle.Recommendations.IRecommendationsManager")] Cratis.Chronicle.Recommendations.IRecommendationsManager [Version(0)]
+interface [GrainInterfaceType("Cratis.Chronicle.Recommendations.IRecommendationsManager")] Cratis.Chronicle.Recommendations.IRecommendationsManager [Version(1)]
   36E95E73: Add`2(Cratis.Chronicle.Concepts.Recommendations.RecommendationDescription, TRequest) -> Task<Cratis.Chronicle.Concepts.Recommendations.RecommendationId>
   1485AC13: Ignore(Cratis.Chronicle.Concepts.Recommendations.RecommendationId) -> Task
   4B1755BB: Perform(Cratis.Chronicle.Concepts.Recommendations.RecommendationId) -> Task
+  CBBE9EA0: Unignore(Cratis.Chronicle.Concepts.Recommendations.RecommendationId) -> Task
 
 class [GrainType("recommendation`1")] Cratis.Chronicle.Recommendations.Recommendation<TRequest>
 

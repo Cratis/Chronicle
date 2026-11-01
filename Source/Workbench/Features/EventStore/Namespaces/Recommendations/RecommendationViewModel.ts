@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { RecommendationDetails, IgnoreRecommendation, PerformRecommendation } from 'Features/Recommendations';
+import { RecommendationDetails, IgnoreRecommendation, PerformRecommendation, UnignoreRecommendation } from 'Features/Recommendations';
 import { inject, injectable } from 'tsyringe';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import { Guid } from '@cratis/fundamentals';
@@ -15,6 +15,12 @@ export class RecommendationsViewModel {
 
     selectedRecommendations: RecommendationDetails[] = [];
     isBusy = false;
+    showIgnored = false;
+
+    toggleIgnoredView() {
+        this.showIgnored = !this.showIgnored;
+        this.selectedRecommendations = [];
+    }
 
     reconcileSelection(recommendations: RecommendationDetails[]) {
         this.selectedRecommendations = this.selectedRecommendations.filter(selected =>
@@ -25,12 +31,15 @@ export class RecommendationsViewModel {
         return this.applyToEach([...recommendationIds], PerformRecommendation);
     }
 
-    // Ignore retains the existing backend clear/deactivate behavior; this is not durable suppression.
     ignoreRecommendations(recommendationIds: Guid[]) {
         return this.applyToEach([...recommendationIds], IgnoreRecommendation);
     }
 
-    private async applyToEach(recommendationIds: Guid[], Command: typeof PerformRecommendation | typeof IgnoreRecommendation)
+    unignoreRecommendations(recommendationIds: Guid[]) {
+        return this.applyToEach([...recommendationIds], UnignoreRecommendation);
+    }
+
+    private async applyToEach(recommendationIds: Guid[], Command: typeof PerformRecommendation | typeof IgnoreRecommendation | typeof UnignoreRecommendation)
         : Promise<{ total: number; failed: number; failures: string[] }> {
         const failures: string[] = [];
         for (const recommendationId of recommendationIds) {
