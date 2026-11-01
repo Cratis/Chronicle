@@ -23,6 +23,7 @@ public class a_reactor_grain_with_replay_on_definition_change : Specification
     async Task Establish()
     {
         _silo = new TestKitSilo();
+        _silo.AddService(Substitute.For<Storage.IStorage>());
 
         var definitionComparer = Substitute.For<IReactorDefinitionComparer>();
         definitionComparer

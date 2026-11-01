@@ -283,6 +283,8 @@ interface [GrainInterfaceType("Cratis.Chronicle.Observation.IObserver")] Cratis.
 interface [GrainInterfaceType("Cratis.Chronicle.Observation.IObserverPageSubscriber")] Cratis.Chronicle.Observation.IObserverPageSubscriber [Version(1)]
   50EF116D: OnNextPage(System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Events.AppendedEvent>, Cratis.Chronicle.Observation.ObserverSubscriberContext) -> Task<Cratis.Chronicle.Observation.ObserverSubscriberResult>
 
+interface [GrainInterfaceType("Cratis.Chronicle.Observation.IObserverRegistrationConflictRecommendation")] Cratis.Chronicle.Observation.IObserverRegistrationConflictRecommendation [Version(1)]
+
 interface [GrainInterfaceType("Cratis.Chronicle.Observation.IObserverService")] Cratis.Chronicle.Observation.IObserverService [Version(0)]
   6CB341E4: AbandonReplayFor(Cratis.Chronicle.Observation.ObserverDetails) -> Task
   481C0382: BeginCatchupFor(Cratis.Chronicle.Observation.ObserverDetails) -> Task
@@ -337,6 +339,8 @@ class [GrainType("retryfailedpartition")] Cratis.Chronicle.Observation.Jobs.Retr
 class [GrainType("nullobserversubscriber")] Cratis.Chronicle.Observation.NullObserverSubscriber
 
 class [GrainType("observer")] Cratis.Chronicle.Observation.Observer
+
+class [GrainType("observerregistrationconflictrecommendation")] Cratis.Chronicle.Observation.ObserverRegistrationConflictRecommendation
 
 class [GrainType("observerservice")] Cratis.Chronicle.Observation.ObserverService
 

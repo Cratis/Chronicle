@@ -29,6 +29,7 @@ public class and_no_values_are_configured : Specification
     [Fact] void should_have_no_approved_hosts_by_default() => _options.Webhooks.AllowedHosts.ShouldBeEmpty();
     [Fact] void should_have_no_event_store_host_overrides_by_default() => _options.Webhooks.EventStoreAllowedHosts.ShouldBeEmpty();
     [Fact] void should_default_the_revise_interval() => _options.ConnectedClients.ReviseIntervalSeconds.ShouldEqual(2);
+    [Fact] void should_default_the_owner_check_interval() => _options.ConnectedClients.OwnerCheckIntervalSeconds.ShouldEqual(30);
     [Fact] void should_default_the_reservation_ttl() => _options.ConnectedClients.ReservationTtlSeconds.ShouldEqual(30);
     [Fact] void should_default_the_stale_threshold() => _options.ConnectedClients.StaleThresholdSeconds.ShouldEqual(5);
     [Fact] void should_default_the_observe_interval() => _options.ConnectedClients.ObserveIntervalSeconds.ShouldEqual(1);

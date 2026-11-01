@@ -16,6 +16,8 @@ public partial class Observer
 
     async Task ThrowIfServedByAnotherTransport(Type subscriberType, object? arguments)
     {
+        _pendingPrecedence = null;
+        _incomingRegistrationVersion = (arguments as ConnectedClient)?.Version ?? string.Empty;
         ThrowIfTransportConflicts(subscriberType, arguments, _subscription);
         if (!subscriberType.IsAssignableTo(typeof(IWebhookObserverSubscriber)) && arguments is not ConnectedClient)
         {
@@ -26,6 +28,16 @@ public partial class Observer
         if (owningSubscription is not null)
         {
             ThrowIfTransportConflicts(subscriberType, arguments, owningSubscription);
+            if (arguments is ConnectedClient client)
+            {
+                var precedence = ObserverRegistrationPrecedence.Evaluate(client, owningSubscription);
+                if (precedence.Outcome == RegistrationPrecedenceOutcome.OwnerIsNewer)
+                {
+                    throw new ObserverOwnedByNewerClientVersion(_observerKey, precedence.OwnerSequence!, precedence.OwnerVersion!, client.Version);
+                }
+
+                _pendingPrecedence = precedence;
+            }
         }
     }
 

@@ -35,6 +35,10 @@ During a rolling deploy an old pod can reconnect, or retry a registration, after
 registered. Without a guard the older definitions would overwrite the newer ones, and an older full set
 would retire projections the newer version added.
 
+Projection registration uses `SoftwareVersion`; connected reactor and reducer ownership across event sequences
+uses the separate [`ApplicationVersion`](../configuration/chronicle-options.mdx#applicationversion) policy.
+See [observer ownership](../hosting/configuration/observers.md#registrations-on-different-event-sequences).
+
 Every registration carries the client's [`SoftwareVersion`](../configuration/chronicle-options.mdx#softwareversion)
 and Chronicle stores it with each projection definition. When a registration arrives, Chronicle compares
 its version with the stored one by [semantic version](https://semver.org) precedence, ignoring build metadata:

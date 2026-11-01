@@ -172,7 +172,8 @@ public class ChronicleClient : IChronicleClient, IDisposable
             tokenProvider,
             skipCompatibilityCheck: skipCompatibilityCheck,
             skipKeepAlive: options.SkipKeepAlive,
-            loadBalancerStrategy: options.LoadBalancerStrategy);
+            loadBalancerStrategy: options.LoadBalancerStrategy,
+            clientVersion: options.ApplicationVersion);
         _servicesAccessor = (_connection as IChronicleServicesAccessor)!;
         _connection.Lifecycle.OnDisconnected += _globalSeedRegistration.Reset;
     }

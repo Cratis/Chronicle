@@ -10,6 +10,8 @@ using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.Reducers;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Namespaces;
+using Cratis.Chronicle.Observation.given;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Orleans.Core;
 using Orleans.TestKit;
@@ -20,7 +22,9 @@ public class a_reducer_grain_with_a_stored_definition : Specification
 {
     protected TestKitSilo _silo;
     protected Reducer _grain;
+    protected const string OwnerSequenceMarker = "the-owner-sequence";
     protected IObserver _observer;
+    protected IObserver? _ownerObserver;
     protected IReducerDefinitionComparer _definitionComparer;
     protected IConnectedClients _connectedClients;
     protected ConnectedClient _client;
@@ -28,6 +32,9 @@ public class a_reducer_grain_with_a_stored_definition : Specification
     protected ReducerDefinition _connectionDefinition;
     protected ReducerDefinition _storedDefinition;
     protected IStorage<ReducerDefinition> _stateStorage;
+    protected Storage.IStorage _storage;
+    protected ILogger<Reducer> _logger;
+    protected DeliveryClock _clock;
 
     async Task Establish()
     {
@@ -43,7 +50,13 @@ public class a_reducer_grain_with_a_stored_definition : Specification
         localSiloDetails.SiloAddress.Returns(SiloAddress.FromParsableString("127.0.0.1:11111@1"));
         _silo.AddService(localSiloDetails);
         _silo.AddService(Options.Create(new ChronicleOptions()));
-        _silo.AddService(Substitute.For<Storage.IStorage>());
+        _storage = Substitute.For<Storage.IStorage>();
+        _silo.AddService(_storage);
+        _logger = Substitute.For<ILogger<Reducer>>();
+        _logger.IsEnabled(Arg.Any<LogLevel>()).Returns(true);
+        _silo.AddService(_logger);
+        _clock = new DeliveryClock();
+        _silo.AddService<TimeProvider>(_clock);
         _silo.AddProbe(_ => Substitute.For<INamespaces>());
 
         _client = new ConnectedClient { ConnectionId = "the-connection", Version = "1.0.0" };
@@ -55,7 +68,7 @@ public class a_reducer_grain_with_a_stored_definition : Specification
         _observer = Substitute.For<IObserver>();
         _observer.GetSubscription().Returns(ObserverSubscription.Unsubscribed);
         _observer.KnowsClient(_client.ConnectionId).Returns(false);
-        _silo.AddProbe(_ => _observer);
+        _silo.AddProbe<IObserver>(identity => _ownerObserver is not null && identity.ToString().Contains(OwnerSequenceMarker) ? _ownerObserver : _observer);
 
         // The stored definition is shared by every connection registering the reducer; here another connection - another
         // client version, as during a rolling deployment - registered last, with different event types.

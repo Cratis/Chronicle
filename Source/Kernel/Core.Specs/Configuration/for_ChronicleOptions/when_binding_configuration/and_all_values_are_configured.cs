@@ -16,6 +16,7 @@ public class and_all_values_are_configured : Specification
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["Cratis:Chronicle:ConnectedClients:ReviseIntervalSeconds"] = "11",
+                ["Cratis:Chronicle:ConnectedClients:OwnerCheckIntervalSeconds"] = "45",
                 ["Cratis:Chronicle:ConnectedClients:ReservationTtlSeconds"] = "42",
                 ["Cratis:Chronicle:ConnectedClients:StaleThresholdSeconds"] = "9",
                 ["Cratis:Chronicle:ConnectedClients:ObserveIntervalSeconds"] = "3",
@@ -44,6 +45,7 @@ public class and_all_values_are_configured : Specification
     }
 
     [Fact] void should_bind_the_revise_interval() => _options.ConnectedClients.ReviseIntervalSeconds.ShouldEqual(11);
+    [Fact] void should_bind_the_owner_check_interval() => _options.ConnectedClients.OwnerCheckIntervalSeconds.ShouldEqual(45);
     [Fact] void should_bind_the_reservation_ttl() => _options.ConnectedClients.ReservationTtlSeconds.ShouldEqual(42);
     [Fact] void should_bind_the_stale_threshold() => _options.ConnectedClients.StaleThresholdSeconds.ShouldEqual(9);
     [Fact] void should_bind_the_observe_interval() => _options.ConnectedClients.ObserveIntervalSeconds.ShouldEqual(3);

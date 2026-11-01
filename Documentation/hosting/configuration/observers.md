@@ -216,8 +216,8 @@ last instance is gone.
 ### Concurrent client versions
 
 During a rolling deployment, two versions of an application can be connected at once and register the same
-observer with different event types. The last registration wins: the observer follows the definition of the
-client that registered last, and the earlier client stops receiving events for it.
+observer with different event types. **On the same event sequence**, the last registration wins: the observer
+follows the definition of the client that registered last, and the earlier client stops receiving events for it.
 
 When the client that won leaves, Chronicle hands the observer over to the most recently superseded client that
 is still connected, exactly as if that client had registered again. The hand-over happens when the connection
@@ -227,3 +227,44 @@ retired observer. When no earlier client remains, the observer unsubscribes.
 Events of types that only the departed client handled are not replayed to the client that takes over; that
 belongs to the planned union of the event types of concurrent clients. Serving both sets of event types at the
 same time is not supported yet.
+
+### Registrations on different event sequences
+
+When connected .NET reactors or reducers register the same observer ID on different event sequences,
+Chronicle compares their application versions. A higher known version takes ownership; a lower version waits
+in standby without overwriting the definition or replaying. The client stays connected. A warning and a
+recommendation identify the observer, both sequences and both versions.
+
+Each registration checks for an owner on another sequence on its first keep-alive and then at most once per
+`connectedClients:ownerCheckIntervalSeconds` (default 30 seconds). Keep-alives run every
+`connectedClients:reviseIntervalSeconds` (default 2 seconds); those in between read nothing from storage. A newer
+owner on another sequence, or its last client disconnecting, is noticed within `ownerCheckIntervalSeconds` plus
+`reviseIntervalSeconds` (32 seconds by default). Standby retries taking over at the same pace. `0` or less checks on
+every keep-alive, at the cost of one storage read per registration and connected client per keep-alive.
+
+```json
+{
+  "connectedClients": {
+    "reviseIntervalSeconds": 2,
+    "ownerCheckIntervalSeconds": 30
+  }
+}
+```
+
+Set the .NET client's `Cratis:Chronicle:ApplicationVersion` (environment variable
+`Cratis__Chronicle__ApplicationVersion`) to a monotonic SemVer such as `2.4.0`. If unset, the client sends its
+entry-assembly version, not `SoftwareVersion`. Prereleases sort before their release (`2.4.0-rc.1 < 2.4.0`),
+and build metadata does not order versions. Empty, invalid, four-part assembly versions and `0.0.0` are unknown.
+Other client types are currently unordered because they may report a library version rather than an application version.
+
+Equal or unknown versions retain last-wins behavior, with a warning and recommendation on every sequence switch.
+Use explicit, increasing versions to avoid repeated switches. Version comparison uses the highest known .NET
+version among the active owner's connected instances; no version is persisted to block a rollback after they leave.
+To roll back to a lower version, stop the newer pods and let standby take over. An operator take-ownership action
+is planned separately and is not available yet.
+
+This changes neither same-sequence behavior nor webhook exclusivity. Cursor and failed-partition hand-over
+on a sequence move is separate work (#5368); it is not provided by version ordering. Simultaneous first
+registrations can briefly both claim an observer; the first keep-alive after registration heals ownership toward
+the newer version, within `reviseIntervalSeconds`. A later claim is healed within the owner check bound above. See [Roll out a new version](../rolling-deploy.md#roll-out-client-observer-registrations)
+and [client options](../../configuration/chronicle-options.mdx#applicationversion).

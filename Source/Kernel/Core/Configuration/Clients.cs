@@ -17,6 +17,19 @@ public class Clients
     public int ReviseIntervalSeconds { get; init; } = 2;
 
     /// <summary>
+    /// Gets the interval in seconds between checks of whether a reactor or reducer registration is owned on another event sequence.
+    /// </summary>
+    /// <remarks>
+    /// The keep-alive of a client reactor or reducer runs every <see cref="ReviseIntervalSeconds"/>. Reading the stored
+    /// observer definition on every keep-alive costs a storage read per registration and client, even when idle, so the
+    /// check runs at most once per this interval: on the first keep-alive after activation, then once the interval has
+    /// elapsed. A registration waiting in standby retries taking over at the same pace. A newer owner on another sequence,
+    /// or its departure, is therefore noticed within this interval plus <see cref="ReviseIntervalSeconds"/>.
+    /// Zero or less checks on every keep-alive.
+    /// </remarks>
+    public int OwnerCheckIntervalSeconds { get; init; } = 30;
+
+    /// <summary>
     /// Gets the number of seconds a connection reservation is kept before it expires.
     /// </summary>
     /// <remarks>

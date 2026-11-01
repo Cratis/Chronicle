@@ -21,7 +21,7 @@ public class a_connection_factory : Specification
         _lifecycle.Connected().Returns(Task.CompletedTask);
     }
 
-    protected ChronicleConnection CreateConnection(ChronicleConnectionString connectionString)
+    protected ChronicleConnection CreateConnection(ChronicleConnectionString connectionString, string? clientVersion = null)
     {
         var resolver = Substitute.For<IChronicleServerAddressResolver>();
         resolver
@@ -42,7 +42,8 @@ public class a_connection_factory : Specification
             skipTlsValidation: true,
             skipCompatibilityCheck: true,
             skipKeepAlive: false,
-            serverAddressResolver: resolver);
+            serverAddressResolver: resolver,
+            clientVersion: clientVersion);
     }
 
     void Destroy() => _connection?.Dispose();

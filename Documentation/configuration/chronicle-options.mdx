@@ -178,6 +178,19 @@ A human-readable identifier for the running application. Included in root causat
 | Type | `string` |
 | Default | `"[N/A]"` |
 
+### ApplicationVersion
+
+An optional application version for ordering connected .NET reactor and reducer registrations of the same
+observer ID on different event sequences. Set `Cratis:Chronicle:ApplicationVersion` (environment variable
+`Cratis__Chronicle__ApplicationVersion`) to a monotonic SemVer such as `2.4.0`. Unset sends the entry-assembly
+version. A higher known version takes ownership; a lower version stays connected in standby until the owner
+leaves. Equal or unknown versions remain last-wins with a warning and recommendation on every sequence switch.
+Empty, invalid, four-part versions and `0.0.0` are unknown; build metadata is ignored for ordering.
+
+This does not change same-sequence registration or webhook exclusivity. It is separate from `SoftwareVersion`,
+which still orders projection registrations. See [observer ownership](../hosting/configuration/observers.md#registrations-on-different-event-sequences)
+and [rolling deployments](../hosting/rolling-deploy.md#roll-out-client-observer-registrations).
+
 ### SoftwareVersion
 
 The software version of the entry assembly, extracted from `AssemblyInformationalVersion` or `AssemblyVersion`. Included in root causation to track which build produced an event, and sent with every projection registration so the kernel can ignore a registration from an older version than the one it has stored. Set it with the `Cratis:Chronicle:SoftwareVersion` configuration key (environment variable `Cratis__Chronicle__SoftwareVersion`). See [the registration lifecycle](../projections/registration-lifecycle.md#when-an-older-client-registers--the-version-guard).

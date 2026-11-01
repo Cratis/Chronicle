@@ -86,6 +86,12 @@ public class ChronicleOptions(
     public string SoftwareVersion { get; set; } = VersionInformation.GetVersion();
 
     /// <summary>
+    /// Gets or sets an explicit, monotonic application version ordering reactor and reducer ownership across event sequences.
+    /// Unset uses the entry-assembly version. This is not used by projections, which use <see cref="SoftwareVersion"/>.
+    /// </summary>
+    public string? ApplicationVersion { get; set; }
+
+    /// <summary>
     /// Gets or sets the software commit SHA.
     /// Defaults to the commit SHA from the entry assembly's (your application's)
     /// AssemblyInformationalVersion metadata (the portion after the '+' separator).
