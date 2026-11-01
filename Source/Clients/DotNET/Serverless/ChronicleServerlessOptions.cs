@@ -59,9 +59,20 @@ public class ChronicleServerlessOptions
     /// Gets or sets the generation the deployment registered its artifacts under. Zero means it is not set.
     /// </summary>
     /// <remarks>
-    /// Required when <see cref="Registration"/> is <see cref="ServerlessRegistration.Deploy"/>, except in Development. This version only validates the value; nothing consumes it yet. Enforcement arrives with the lazy fingerprint and generation check (#5111).
+    /// Required when <see cref="Registration"/> is <see cref="ServerlessRegistration.Deploy"/>, except in Development.
+    /// The lazy fingerprint check compares this value with the stored deployment metadata; it does not enforce registration.
     /// </remarks>
     public ulong DeploymentGeneration { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether to check deployment definitions in the background. Defaults to true.
+    /// </summary>
+    /// <remarks>
+    /// Only used in serverless <see cref="ServerlessRegistration.Deploy"/> mode. The advisory check runs once per
+    /// client and event-store name, across namespaces. Failures and differences are logged without blocking callers
+    /// or changing registration readiness. Disable this to avoid the metadata query and local fingerprint computation.
+    /// </remarks>
+    public bool CheckArtifactFingerprint { get; set; } = true;
 
     /// <summary>
     /// Gets or sets a value indicating whether <see cref="ServerlessRegistration.OnColdStart"/> is acknowledged as

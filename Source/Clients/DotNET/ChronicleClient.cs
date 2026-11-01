@@ -44,6 +44,9 @@ public class ChronicleClient : IChronicleClient, IDisposable
     const string MachineNameMetadataKey = "machineName";
     const string ProcessMetadataKey = "process";
 
+    readonly object _deploymentCheckLock = new();
+    readonly ConcurrentDictionary<EventStoreName, Lazy<Task>> _deploymentChecks = new();
+
     readonly IChronicleConnection _connection;
     readonly IChronicleServicesAccessor _servicesAccessor;
     readonly IJsonSchemaGenerator _jsonSchemaGenerator;
@@ -70,6 +73,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
     /// then handed the loser a store that was no longer the cached one.
     /// </remarks>
     readonly ConcurrentDictionary<EventStoreKey, Lazy<Task<IEventStore>>> _eventStores = new();
+    CancellationTokenSource? _deploymentCheckCancellation;
     int _isDisposed;
     int _serverlessReported;
 
@@ -248,6 +252,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
             return;
         }
 
+        CancelDeploymentFingerprintChecks();
         foreach (var eventStore in CreatedEventStores())
         {
             // Disposing the connection raises no disconnect, so the background registration retry must be stopped here.
@@ -448,6 +453,47 @@ public class ChronicleClient : IChronicleClient, IDisposable
         }
     }
 
+    void ScheduleDeploymentFingerprintCheck(EventStore eventStore)
+    {
+        if (!DeploymentFingerprintCheck.IsEnabled(Options)) return;
+        lock (_deploymentCheckLock)
+        {
+            if (Volatile.Read(ref _isDisposed) != 0) return;
+            _deploymentCheckCancellation ??= new();
+            var token = _deploymentCheckCancellation.Token;
+            var generation = Options.Serverless.DeploymentGeneration;
+            var check = _deploymentChecks.GetOrAdd(
+                eventStore.Name,
+                static (_, state) => new(
+                    () =>
+                    {
+                        // Do not inherit preparation's AsyncLocal lease ownership.
+                        if (ExecutionContext.IsFlowSuppressed())
+                        {
+                            return Task.Run(() => DeploymentFingerprintCheck.Run(state.eventStore, state.generation, state.loggerFactory, state.token));
+                        }
+                        Task task;
+                        using (ExecutionContext.SuppressFlow())
+                        {
+                            task = Task.Run(() => DeploymentFingerprintCheck.Run(state.eventStore, state.generation, state.loggerFactory, state.token));
+                        }
+                        return task;
+                    },
+                    LazyThreadSafetyMode.ExecutionAndPublication),
+                (eventStore, generation, loggerFactory: _loggerFactory, token));
+            _ = check.Value;
+        }
+    }
+
+    void CancelDeploymentFingerprintChecks()
+    {
+        lock (_deploymentCheckLock)
+        {
+            _deploymentCheckCancellation?.Cancel();
+            _deploymentCheckCancellation?.Dispose();
+        }
+    }
+
     async Task<IEventStore> CreateEventStore(EventStoreKey key)
     {
         var reactorSideEffectHandlers = new ReactorSideEffectHandlers(
@@ -491,6 +537,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
                 await eventStore.RegisterAll();
             }
 
+            ScheduleDeploymentFingerprintCheck(eventStore);
             return eventStore;
         }
         catch

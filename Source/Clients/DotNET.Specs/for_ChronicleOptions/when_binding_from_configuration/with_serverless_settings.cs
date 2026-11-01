@@ -24,6 +24,7 @@ public class with_serverless_settings : Specification
             ["Chronicle:Serverless:Delivery:Timeout"] = "00:00:45",
             ["Chronicle:Serverless:DefaultDelivery"] = "Stream",
             ["Chronicle:Serverless:DeploymentGeneration"] = "7",
+            ["Chronicle:Serverless:CheckArtifactFingerprint"] = "false",
             ["Chronicle:Serverless:AllowOnColdStartOutsideDevelopment"] = "true",
             ["Chronicle:Serverless:Observers:Some.Reactor:Delivery"] = "Stream"
         };
@@ -45,6 +46,7 @@ public class with_serverless_settings : Specification
     [Fact] void should_bind_the_delivery_timeout() => _result.Serverless.Delivery.Timeout.ShouldEqual(TimeSpan.FromSeconds(45));
     [Fact] void should_bind_default_delivery() => _result.Serverless.DefaultDelivery.ShouldEqual(ObserverDelivery.Stream);
     [Fact] void should_bind_deployment_generation() => _result.Serverless.DeploymentGeneration.ShouldEqual(7UL);
+    [Fact] void should_bind_the_lazy_fingerprint_switch() => _result.Serverless.CheckArtifactFingerprint.ShouldBeFalse();
     [Fact] void should_bind_the_cold_start_acknowledgement() => _result.Serverless.AllowOnColdStartOutsideDevelopment.ShouldBeTrue();
     [Fact] void should_bind_the_observer_override() => _result.Serverless.Observers["Some.Reactor"].Delivery.ShouldEqual(ObserverDelivery.Stream);
 }
