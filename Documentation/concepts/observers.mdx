@@ -21,6 +21,8 @@ with remaining events and resume live observation, unless it is quarantined.
 
 Observer information exposes nullable `RunningStateChangedAt`, the UTC time the observer last entered its current running state (for example, "disconnected since"); legacy records remain unknown until a real state change occurs.
 
+If a projection or reducer replay cannot prepare its job steps, the kernel keeps the existing read model, quarantines the observer and leaves the replay pending; clearing the quarantine runs the replay again.
+
 Kernel projection declarations support only namespaced materialization. Store-wide event statistics read
 each namespace's statistics and concatenate the rows instead of maintaining a shared global sink.
 

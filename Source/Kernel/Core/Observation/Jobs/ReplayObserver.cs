@@ -257,8 +257,8 @@ public class ReplayObserver(
     {
         await TransientTimeouts.ReportPartitionFailedWhenAttemptsAreExhausted(GrainFactory.GetGrain<IObserver>(Request.ObserverKey), result, jsonSerializerOptions);
         State.HandleResult(result, jsonSerializerOptions);
-        if (result.TryGetFullResult<HandleEventsForPartitionResult>(out var handled, out _, jsonSerializerOptions) &&
-            handled?.LastHandledEventSequenceNumber.IsActualValue == true)
+        var handled = result.TryGetError(out _) ? null : HandleEventsStepResults.ReadProgress(result, jsonSerializerOptions);
+        if (handled?.LastHandledEventSequenceNumber.IsActualValue == true)
         {
             for (var index = 0; index < State.ReplayPartitionSteps.Count; index++)
             {
@@ -288,7 +288,7 @@ public class ReplayObserver(
     {
         await EnsureReplaySupported();
         using var scope = logger.BeginJobScope(JobId, JobKey);
-        var release = ReleasesAbandonedReplayAtRetainedCursor;
+        var quarantine = ReleasesAbandonedReplayAtRetainedCursor;
         try
         {
             await FinalizeOrAbandon(promote: false);
@@ -300,9 +300,9 @@ public class ReplayObserver(
 
         var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
 
-        // Preparing failed; never report a successful replay. Avoid waiting on Replay()'s own turn.
-        CompletionNotification = release
-            ? NotifyObserverOfRefusal(observer)
+        // Preparation failure never releases the replay intent. Avoid waiting on Replay()'s own turn.
+        CompletionNotification = quarantine
+            ? NotifyObserverOfUnpreparedReplay(observer)
             : NotifyObserverOfCompletion(observer, false, new Dictionary<Key, EventSequenceNumber>(), [], EventSequenceNumber.Unavailable);
     }
 
@@ -404,6 +404,8 @@ public class ReplayObserver(
     }
 
     Task NotifyObserverOfRefusal(IObserver observer) => NotifyObserverWithRetry(observer.ReleaseRefusedReplay);
+
+    Task NotifyObserverOfUnpreparedReplay(IObserver observer) => NotifyObserverWithRetry(observer.ReplayStepsCouldNotBePrepared);
 
     Task NotifyObserverOfCompletion(IObserver observer, bool canResolve, IReadOnlyDictionary<Key, EventSequenceNumber> coveredPartitions, EventType[] eventTypes, EventSequenceNumber lastHandledEventSequenceNumber) =>
         NotifyObserverWithRetry(() => canResolve
