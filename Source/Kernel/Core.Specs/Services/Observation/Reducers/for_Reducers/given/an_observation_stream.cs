@@ -31,6 +31,7 @@ public class an_observation_stream : Specification
     {
         var subscribed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var mediator = Substitute.For<IReducerMediator>();
+        mediator.Disconnected(Arg.Any<ReducerId>(), Arg.Any<ConnectionId>(), Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<ReducerEventsObserver>(), Arg.Any<ReducerReplayObserver>()).Returns(true);
         mediator.When(_ => _.Subscribe(Arg.Any<ReducerId>(), Arg.Any<ConnectionId>(), Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<ReducerEventsObserver>()))
             .Do(call =>
             {

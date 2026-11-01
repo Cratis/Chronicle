@@ -97,6 +97,8 @@ internal sealed class Reactors(
         var eventStoreName = EventStoreName.NotSet;
         var namespaceName = EventStoreNamespaceName.NotSet;
         IObserver<EventsToObserve>? observableObserver = null;
+        ReactorEventsObserver? deliver = null;
+        ReactorReplayObserver? replay = null;
         var observable = Observable.Create<EventsToObserve>(async (observer, cancellationToken) =>
         {
             observableObserver = observer;
@@ -123,30 +125,33 @@ internal sealed class Reactors(
                     registration.Reactor.EventSequenceId,
                     registration.ConnectionId);
 
+                deliver = (partition, events, tcs, deliverWithin) =>
+                {
+                    var deliveryId = pendingDeliveries.Add(partition, tcs);
+                    var eventsToObserve = events.Select(_ => _.ToContract(jsonSerializerOptions)).ToArray();
+                    observer.OnNext(new EventsToObserve
+                    {
+                        Partition = partition.Value.ToString()!,
+                        Events = eventsToObserve,
+                        DeliveryId = deliveryId,
+                        DeliverWithinMilliseconds = DeliveryDeadlines.ToMilliseconds(deliverWithin)
+                    });
+                };
+                replay = (replayState, partition) => observer.OnNext(new EventsToObserve { Partition = partition, ReplayState = (Contracts.Observation.ReplayState)replayState });
+
                 reactorMediator.Subscribe(
                     registration.Reactor.ReactorId,
                     registration.ConnectionId,
                     registration.EventStore,
                     registration.Namespace,
-                    (partition, events, tcs, deliverWithin) =>
-                    {
-                        var deliveryId = pendingDeliveries.Add(partition, tcs);
-                        var eventsToObserve = events.Select(_ => _.ToContract(jsonSerializerOptions)).ToArray();
-                        observer.OnNext(new EventsToObserve
-                        {
-                            Partition = partition.Value.ToString()!,
-                            Events = eventsToObserve,
-                            DeliveryId = deliveryId,
-                            DeliverWithinMilliseconds = DeliveryDeadlines.ToMilliseconds(deliverWithin)
-                        });
-                    });
+                    deliver);
 
                 reactorMediator.SubscribeReplayNotifications(
                     registration.Reactor.ReactorId,
                     registration.ConnectionId,
                     registration.EventStore,
                     registration.Namespace,
-                    (replayState, partition) => observer.OnNext(new EventsToObserve { Partition = partition, ReplayState = (Contracts.Observation.ReplayState)replayState }));
+                    replay);
 
                 var definition = registration.Reactor.ToChronicle();
                 using (var span = activitySource.Register())
@@ -184,11 +189,19 @@ internal sealed class Reactors(
             finally
             {
                 messagesSubscription.Dispose();
-                reactorMediator.Disconnected(observerId, connectionId, eventStoreName, namespaceName);
+                var ownsRegistration = deliver is null || replay is null || reactorMediator.Disconnected(observerId, connectionId, eventStoreName, namespaceName, deliver, replay);
                 pendingDeliveries.Disconnect(ObserverSubscriberResult.Disconnected());
                 if (clientObserver is not null)
                 {
-                    await clientObserver.Unsubscribe();
+                    if (ownsRegistration)
+                    {
+                        await clientObserver.Unsubscribe();
+                    }
+                    else
+                    {
+                        logger.StreamReplacedKeepingSubscription(observerId, connectionId);
+                    }
+
                     clientObserver = null!;
                 }
             }
@@ -201,7 +214,11 @@ internal sealed class Reactors(
             logger.ObserverStreamDisconnected(observerId, connectionId);
             pendingDeliveries.Disconnect(ObserverSubscriberResult.Disconnected());
             observableObserver?.OnCompleted();
-            reactorMediator.Disconnected(observerId, connectionId, eventStoreName, namespaceName);
+            if (deliver is not null && replay is not null)
+            {
+                reactorMediator.Disconnected(observerId, connectionId, eventStoreName, namespaceName, deliver, replay);
+            }
+
             register?.Dispose();
         });
 
