@@ -256,8 +256,8 @@ public class ReplayObserver(
     {
         await TransientTimeouts.ReportPartitionFailedWhenAttemptsAreExhausted(GrainFactory.GetGrain<IObserver>(Request.ObserverKey), result, jsonSerializerOptions);
         State.HandleResult(result, jsonSerializerOptions);
-        if (result.TryGetFullResult<HandleEventsForPartitionResult>(out var handled, out _, jsonSerializerOptions) &&
-            handled?.LastHandledEventSequenceNumber.IsActualValue == true)
+        var handled = result.TryGetError(out _) ? null : HandleEventsStepResults.ReadProgress(result, jsonSerializerOptions);
+        if (handled?.LastHandledEventSequenceNumber.IsActualValue == true)
         {
             for (var index = 0; index < State.ReplayPartitionSteps.Count; index++)
             {
