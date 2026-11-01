@@ -75,7 +75,7 @@ internal static class AppendedEventConverters
         IEventTypes eventTypes,
         JsonSerializerOptions jsonSerializerOptions)
     {
-        var context = @event.Context.ToClient(eventStore, @namespace);
+        var context = @event.Context.ToClient(eventStore, @namespace, SnapshotErasedProperties(@event.ErasedProperties));
         object content;
 
         if (eventTypes.HasFor(context.EventType.Id))
@@ -140,4 +140,17 @@ internal static class AppendedEventConverters
 
         return new(clientContext, clientContent);
     }
+
+    /// <summary>
+    /// Snapshots the erased paths once; the common case of none allocates nothing.
+    /// </summary>
+    /// <param name="erasedProperties">The erased paths as carried on the contract.</param>
+    /// <returns>The shared empty instance when there are none, otherwise a snapshot array.</returns>
+    static string[] SnapshotErasedProperties(IEnumerable<string>? erasedProperties) => erasedProperties switch
+    {
+        null => [],
+        ICollection<string> { Count: 0 } => [],
+        ICollection<string> collection => collection.ToArray(),
+        _ => erasedProperties.ToArray()
+    };
 }

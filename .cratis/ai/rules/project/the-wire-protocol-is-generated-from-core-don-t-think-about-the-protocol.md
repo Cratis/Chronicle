@@ -188,5 +188,5 @@ produce what you need, fix the generator (`Source/Tools/ProtoGenerator`) — do 
 Two gates back this up, both in `.github/workflows/wire-compatibility.yml`, which runs before anything else builds:
 
 - The committed generated files must match what the contracts produce, or the build fails as stale.
-- The wire contract must still serve every released minor of the current major (`Source/Tools/WireCompatibility`).
+- The wire contract must still serve every released minor of the current major, up to the release being cut (on a maintenance branch: that line's newest release) (`Source/Tools/WireCompatibility`).
   Breaking it deliberately means labeling the pull request `major`.

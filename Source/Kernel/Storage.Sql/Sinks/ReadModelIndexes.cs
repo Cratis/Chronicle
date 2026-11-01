@@ -69,7 +69,7 @@ internal static class ReadModelIndexes
     }
 
     /// <summary>
-    /// Drops undeclared Chronicle-owned indexes following a definition change.
+    /// Drops undeclared nonunique Chronicle-owned indexes following a definition change.
     /// </summary>
     /// <param name="context">The read-model context.</param>
     /// <param name="table">The table name.</param>
@@ -83,9 +83,9 @@ internal static class ReadModelIndexes
         var storedTable = PrimaryKeyNames.TableIdentifier(type, table);
         var names = type switch
         {
-            DatabaseType.PostgreSql => await database.SqlQuery<string>($"SELECT indexname AS \"Value\" FROM pg_indexes WHERE schemaname=current_schema() AND tablename={storedTable}").ToListAsync(),
-            DatabaseType.SqlServer => await database.SqlQuery<string>($"SELECT name AS [Value] FROM sys.indexes WHERE object_id=OBJECT_ID(QUOTENAME(SCHEMA_NAME()) + N'.' + QUOTENAME({storedTable})) AND name IS NOT NULL").ToListAsync(),
-            _ => await database.SqlQuery<string>($"SELECT name AS Value FROM sqlite_master WHERE type='index' AND tbl_name={storedTable}").ToListAsync()
+            DatabaseType.PostgreSql => await database.SqlQuery<string>($"SELECT i.relname AS \"Value\" FROM pg_index x JOIN pg_class t ON t.oid=x.indrelid JOIN pg_namespace n ON n.oid=t.relnamespace JOIN pg_class i ON i.oid=x.indexrelid WHERE n.nspname=current_schema() AND t.relname={storedTable} AND NOT x.indisunique").ToListAsync(),
+            DatabaseType.SqlServer => await database.SqlQuery<string>($"SELECT name AS [Value] FROM sys.indexes WHERE object_id=OBJECT_ID(QUOTENAME(SCHEMA_NAME()) + N'.' + QUOTENAME({storedTable})) AND name IS NOT NULL AND is_unique=0").ToListAsync(),
+            _ => await database.SqlQuery<string>($"SELECT name AS Value FROM pragma_index_list({storedTable}) WHERE \"unique\"=0").ToListAsync()
         };
         foreach (var name in names.Where(name => name.StartsWith(ReadModelIndexNames.Prefix, StringComparison.Ordinal) && !expected.Contains(name)))
         {

@@ -15,7 +15,7 @@ public sealed class SqlCluster(bool postgres, string? image = null) : IAsyncDisp
     /// <summary>
     /// The image of the build under test, from the environment when CI supplies one.
     /// </summary>
-    public static readonly string CurrentImage = Environment.GetEnvironmentVariable("CRATIS_CHRONICLE_LOCAL_IMAGE") ?? "cratis/chronicle:latest-development";
+    public static readonly string CurrentImage = Environment.GetEnvironmentVariable("CRATIS_CHRONICLE_LOCAL_IMAGE") ?? "cratis/chronicle:local-development-slim";
 
     readonly string _image = image ?? CurrentImage;
     readonly INetwork _network = new NetworkBuilder().Build();

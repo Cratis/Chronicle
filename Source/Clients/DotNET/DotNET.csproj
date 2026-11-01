@@ -39,7 +39,7 @@
         <Compile Include="../../Kernel/Concepts/Patterns/*.cs" Link="Concepts/Patterns/%(Filename)%(Extension)" />
     </ItemGroup>
 
-    <Target Name="GrpcClients" BeforeTargets="Build" Condition=" '$(TargetFramework)' != '' AND '$(RuntimeIdentifier)' == '' AND '$(NoBuild)' != 'true' ">
+    <Target Name="GrpcClients" BeforeTargets="Build" Inputs="$(TargetDir)Cratis.Chronicle.Contracts.dll;@(GrpcClientGeneratorAssembly)" Outputs="$(TargetDir)Cratis.Chronicle.Contracts.Implementations.dll" Condition=" '$(TargetFramework)' != '' AND '$(RuntimeIdentifier)' == '' AND '$(NoBuild)' != 'true' ">
         <Message Text="Generating gRPC clients" Importance="high" />
         <Exec Command="dotnet &quot;@(GrpcClientGeneratorAssembly)&quot; &quot;$(TargetDir)Cratis.Chronicle.Contracts.dll&quot; $(ContractsImplementationAssembly)" />
     </Target>

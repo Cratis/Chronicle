@@ -71,6 +71,35 @@ public interface IObserverStateStorage
     Task ClaimOwnership(ObserverId observerId, EventSequenceId owner);
 
     /// <summary>
+    /// Gets when the running state of an observer last changed.
+    /// </summary>
+    /// <param name="observerId">The <see cref="ObserverId"/> to get for.</param>
+    /// <returns>The time of the last settled running-state change, or null when unknown or no record exists.</returns>
+    /// <remarks>
+    /// Kept outside <see cref="ObserverState"/> so the per-batch state copies do not carry it.
+    /// </remarks>
+    Task<DateTimeOffset?> GetRunningStateChangedAt(ObserverId observerId);
+
+    /// <summary>
+    /// Gets when the running state last changed for all observers with a known value.
+    /// </summary>
+    /// <returns>The known times keyed by observer; observers without a known value are absent.</returns>
+    Task<IReadOnlyDictionary<ObserverId, DateTimeOffset>> GetRunningStatesChangedAt();
+
+    /// <summary>
+    /// Saves when the running state of an existing observer last changed.
+    /// </summary>
+    /// <param name="observerId">The observer whose running state changed.</param>
+    /// <param name="runningStateChangedAt">The time of the change, or null to clear it.</param>
+    /// <param name="owner">The event sequence addressed by the writing activation.</param>
+    /// <returns>Whether an existing record was updated. False means no record exists or another sequence owns it.</returns>
+    /// <remarks>
+    /// Never creates a record and never changes any other field. The owner guard is the same as for <see cref="Save"/>:
+    /// a record owned by another sequence is refused, an unowned legacy record is accepted.
+    /// </remarks>
+    Task<bool> SaveRunningStateChangedAt(ObserverId observerId, DateTimeOffset? runningStateChangedAt, EventSequenceId owner);
+
+    /// <summary>
     /// Delete the state of an observer.
     /// </summary>
     /// <param name="observerId">The <see cref="ObserverId"/> to delete the state for.</param>

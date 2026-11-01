@@ -152,7 +152,7 @@ jobs:
               docker pull postgres:16
             fi
             if [ "${{ matrix.database }}" = "mssql" ]; then
-              docker pull mcr.microsoft.com/mssql/server:2025-latest
+              docker pull mcr.microsoft.com/mssql/server:2025-CU10-ubuntu-24.04
             fi
 
       - name: Run Client integration tests (${{ matrix.namespace }} ${{ matrix.shard }} | ${{ matrix.mode }} | ${{ matrix.database }})
@@ -447,7 +447,7 @@ jobs:
             if [ "${{ matrix.provider }}" != "SqlServer" ]; then
               docker pull postgres:16
             else
-              docker pull mcr.microsoft.com/mssql/server:2022-CU20-ubuntu-22.04
+              docker pull mcr.microsoft.com/mssql/server:2025-CU10-ubuntu-24.04
             fi
 
       # Three kernel containers from the image the Client shards use. No retries: an append that

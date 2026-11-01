@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
+using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Orleans.Jobs;
 using Microsoft.Extensions.DependencyInjection;
@@ -45,6 +46,9 @@ public partial class Observer
     [LoggerMessage(LogLevel.Warning, "Clamping live subscriber timeout from {ConfiguredTimeout} to {LiveTimeout} to leave Orleans response headroom")]
     static partial void LogLiveTimeoutClamped(ILogger logger, TimeSpan configuredTimeout, TimeSpan liveTimeout);
 
+    static bool ExceedsLiveBudget(Observers configuration, int eventCount) =>
+        configuration.LiveDeliveryBudget > 0 && eventCount > configuration.LiveDeliveryBudget;
+
     /// <summary>
     /// Gets the partition holds version that hold reconciliation compares before and after its job lookup.
     /// </summary>
@@ -56,10 +60,17 @@ public partial class Observer
     /// </remarks>
     int CurrentPartitionHoldsVersion() => _liveHandOversInFlight > 0 ? ++_partitionHoldsVersion : _partitionHoldsVersion;
 
-    async Task<bool> ExceedsLiveBudget(int eventCount)
+    TimeSpan ResponseTimeout()
     {
-        var configuration = await configurationProvider.GetFor(_observerKey);
-        return configuration.LiveDeliveryBudget > 0 && eventCount > configuration.LiveDeliveryBudget;
+        if (_responseTimeout is { } cached)
+        {
+            return cached;
+        }
+
+        var messaging = ServiceProvider.GetService<IOptions<SiloMessagingOptions>>()?.Value ?? new SiloMessagingOptions();
+        var responseTimeout = messaging.ResponseTimeout > messaging.SystemResponseTimeout ? messaging.ResponseTimeout : messaging.SystemResponseTimeout;
+        _responseTimeout = responseTimeout;
+        return responseTimeout;
     }
 
     /// <summary>
@@ -132,9 +143,7 @@ public partial class Observer
 
     TimeSpan GetLiveSubscriberTimeout(TimeSpan subscriberTimeout)
     {
-        var messaging = ServiceProvider.GetService<IOptions<SiloMessagingOptions>>()?.Value ?? new SiloMessagingOptions();
-        var responseTimeout = messaging.ResponseTimeout > messaging.SystemResponseTimeout ? messaging.ResponseTimeout : messaging.SystemResponseTimeout;
-        var liveTimeout = ClampLiveSubscriberTimeout(subscriberTimeout, responseTimeout);
+        var liveTimeout = ClampLiveSubscriberTimeout(subscriberTimeout, ResponseTimeout());
         if (liveTimeout != subscriberTimeout && Interlocked.Exchange(ref _liveTimeoutClampLogged, 1) == 0)
         {
             LogLiveTimeoutClamped(logger, subscriberTimeout, liveTimeout);
