@@ -30,7 +30,8 @@ using Microsoft.Extensions.Logging.Abstractions;
 namespace Cratis.Chronicle.Benchmarks.Kernel;
 
 /// <summary>
-/// Measures append-time generation protection and unpinned delivery without external infrastructure.
+/// Measures source compliance plus generation migration, and unpinned delivery, without external infrastructure.
+/// This excludes append validation, hashing, constraints and storage.
 /// </summary>
 [MemoryDiagnoser]
 [Config(typeof(BenchmarkConfiguration))]
@@ -57,6 +58,7 @@ public class AppendGenerationProtectionBenchmark
         _inherited = await Fixture.Create(3, true, appendFirst: true, fieldCount: 24);
         _wideNoPii = await Fixture.Create(3, false, appendFirst: true, fieldCount: 24);
         await _single.Migrate();
+        await _single.ProtectAndMigrate();
         await _plain.Migrate();
         await _protected.Migrate();
         await _singleProtected.ProtectAndMigrate();
@@ -86,6 +88,13 @@ public class AppendGenerationProtectionBenchmark
     /// <returns>The protected generations.</returns>
     [Benchmark]
     public Task<IDictionary<EventTypeGeneration, ExpandoObject>> ThreeGenerationsLatestPii() => _protected.Migrate();
+
+    /// <summary>
+    /// Measures the same source compliance and migration boundary for a single generation without PII.
+    /// </summary>
+    /// <returns>The unchanged generation.</returns>
+    [Benchmark]
+    public Task<IDictionary<EventTypeGeneration, ExpandoObject>> OneGenerationFullAppendNoPii() => _single.ProtectAndMigrate();
 
     /// <summary>
     /// Measures source protection and migration for a single generation with PII.
@@ -254,10 +263,7 @@ public class AppendGenerationProtectionBenchmark
             _source = converter.ToExpandoObject(protectedContent, effective);
             var engine = new EventTypeMigrations(storage, converter);
             _migrations = new(eventTypes, engine, manager, converter);
-            if (latestPii)
-            {
-                await VerifyProtection(definition);
-            }
+            await VerifyProtection(definition);
 
             _release = new(storage, new EventCompliance(manager, converter, _schemaCache), engine, manager, converter, _schemaCache);
             _schemas = new() { [_eventType] = new(_eventType, EventTypeOwner.Server, EventTypeSource.Code, sourceSchema) };
@@ -276,23 +282,26 @@ public class AppendGenerationProtectionBenchmark
         {
             foreach (var marker in new[] { "first-personal-marker", "second-personal-marker" })
             {
-                var plaintext = new JsonObject { ["token"] = marker };
+                var plaintext = _plaintext.DeepClone().AsObject();
+                plaintext["token"] = marker;
                 var effective = await _schemaCache.GetProtectionSchemaFor(_store, _eventType.Id, _eventType.Generation, _sourceSchema);
                 var protectedSource = _converter.ToExpandoObject(await _manager.Apply(_store, _namespace, effective, Subject, plaintext), effective);
                 var protectedGenerations = await _migrations.MigratePlaintext(_store, _namespace, _eventType, plaintext, protectedSource, Subject);
                 foreach (var (generation, content) in protectedGenerations)
                 {
-                    await VerifyGeneration(definition, generation, content, marker);
+                    await VerifyGeneration(definition, generation, content, plaintext);
                 }
             }
         }
 
-        async Task VerifyGeneration(EventTypeDefinition definition, EventTypeGeneration generation, ExpandoObject content, string marker)
+        async Task VerifyGeneration(EventTypeDefinition definition, EventTypeGeneration generation, ExpandoObject content, JsonObject plaintext)
         {
             var json = JsonSerializer.SerializeToNode(content)!.AsObject();
-
-            var released = await _manager.ReleaseStrict(_store, _namespace, GenerationProtectionSchemas.For(definition, generation), Subject, json);
-            if (json.ToJsonString().Contains(marker, StringComparison.Ordinal) || released["token"]!.GetValue<string>() != marker)
+            var schema = GenerationProtectionSchemas.For(definition, generation);
+            var released = await _manager.ReleaseStrict(_store, _namespace, schema, Subject, json);
+            var marker = plaintext["token"]!.GetValue<string>();
+            var plaintextLeaked = schema.HasSchemaMetadata() && json.ToJsonString().Contains(marker, StringComparison.Ordinal);
+            if (plaintextLeaked || !JsonNode.DeepEquals(released, plaintext))
             {
                 throw new InvalidOperationException("Generation protection must encrypt and release each call's own marker.");
             }
