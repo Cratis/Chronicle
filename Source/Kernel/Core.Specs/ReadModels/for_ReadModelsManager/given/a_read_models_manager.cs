@@ -59,7 +59,7 @@ public class a_read_models_manager : Specification
         new Dictionary<Concepts.Events.EventType, RemovedWithDefinition>(),
         new Dictionary<Concepts.Events.EventType, RemovedWithJoinDefinition>());
 
-    protected static ReadModelDefinition DefinitionFor(ReadModelIdentifier identifier, ReadModelDisplayName displayName) => new(
+    protected internal static ReadModelDefinition DefinitionFor(ReadModelIdentifier identifier, ReadModelDisplayName displayName) => new(
         identifier,
         identifier.Value,
         displayName,

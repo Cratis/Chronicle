@@ -28,6 +28,18 @@ handling.
 `JsonSchemaType` is currently C#-only.
 :::
 
+## Null, absent, and default values
+
+For a nullable property, explicit `null` and an absent property are equivalent: reading either
+back into the event type gives `null`. Chronicle can omit nullable nulls from stored content.
+A non-null value is retained, including a nullable value type holding its type default, such as
+`decimal?` with `0` or `int?` with `0`. Missing non-nullable values materialize as their type defaults
+where the schema permits them; omission does not make a value nullable.
+
+Compare appended and stored content through Chronicle's schema-aware `ContentComparison` /
+`VerifyContent` path, not raw JSON equality. That path accounts for schema defaults and the
+stored representation. Property presence in raw JSON is not a separate event fact.
+
 ## Defaulted concept properties
 
 The .NET schema generator describes a defaulted concept property with its underlying type, format

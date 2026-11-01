@@ -67,6 +67,21 @@ public record ObserverState(
     public EventSequenceId? Owner { get; init; }
 
     /// <summary>
+    /// Gets the partition claims. Shadow (DR 0018 increment 4): written, never read for decisions.
+    /// </summary>
+    public IEnumerable<PartitionClaim>? PartitionClaims { get; init; }
+
+    /// <summary>
+    /// Gets the observer-wide claim. Shadow (DR 0018 increment 4): written, never read for decisions.
+    /// </summary>
+    public ObserverWideClaim? ObserverWideClaim { get; init; }
+
+    /// <summary>
+    /// Gets the ownership revision. Shadow (DR 0018 increment 4): written, never read for decisions.
+    /// </summary>
+    public OwnershipRevision? OwnershipRevision { get; init; }
+
+    /// <summary>
     /// Gets the namespace observer's type-set control, or null before initialization.
     /// </summary>
     public ObserverTypeSetControl? TypeSetControl { get; init; }

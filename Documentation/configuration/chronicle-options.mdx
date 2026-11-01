@@ -143,7 +143,7 @@ Settings for running the .NET client in a function or another scaled-to-zero hos
 | Type | `ChronicleServerlessOptions` |
 | Default | `Mode` is `Off` |
 
-Set `Mode` to `Serverless` to skip keep-alive and validate the serverless configuration at start. HTTP delivery is not available yet, so an observer that resolves to it fails at startup. See [Serverless mode](../clients/dotnet/serverless-mode.md).
+Set `Mode` to `Serverless` to skip keep-alive and validate the serverless configuration at start. HTTP delivery is not available yet, so an observer that resolves to it fails at startup. `Delivery:Timeout` (30 seconds by default, must be greater than zero) is the delivery timeout for HTTP reactors and reducers; it has no effect until HTTP delivery ships and does not change the kernel's 60 second webhook timeout. See [Serverless mode](../clients/dotnet/serverless-mode.md).
 
 The delivery receiver and its body-limit settings are internal and unavailable to applications. HTTP delivery fails closed until the kernel delivery envelope (#5116) and signing (#5117) ship. See [Receiving deliveries](../clients/dotnet/serverless-mode.md#receiving-deliveries).
 
@@ -388,7 +388,7 @@ options above. Set these keys under `webhooks` in the Kernel's `chronicle.json`,
 
 | Key | Default | Purpose |
 |---|---|---|
-| `Validation` | `Warn` | Log violations during rollout; `Enforce` rejects them. Enforce is planned as the next major release's default. |
+| `Validation` | `Warn` in Development builds; `BlockLocalAddresses` otherwise | `BlockLocalAddresses` blocks local ranges, `BlockPrivateAddresses` blocks all private/special ranges, and `Enforce` rejects every violation. Other violations warn. Metadata requires explicit approval in every mode. Enforce is reserved as the next-major default. |
 | `AllowInsecureHttp` | `false` | Permit HTTP in Development. Ignored with a startup warning outside Development. Loopback HTTP is automatically permitted in Development. |
 | `AllowedHosts` | `[]` | Exact receiver/OAuth hosts or wildcard subdomains such as `*.example.com`. In Enforce mode unlisted hosts are rejected; approving a host also permits its private addresses. |
 | `EventStoreAllowedHosts` | `{}` | Map of event-store names to host arrays. An entry replaces the global array, including when empty. Requests without an event-store option use the global list. |
@@ -439,7 +439,9 @@ for configuration-error pauses, immediate `410` parking, and manual recovery.
 For example, `Cratis__Chronicle__Webhooks__Validation=Enforce` enables blocking, and
 `Cratis__Chronicle__Webhooks__AllowedHosts__0=hooks.example.com` approves one host. OAuth authorities
 and discovered token endpoint hosts must also be approved. Cloud metadata addresses need explicit
-approval even in Warn. Redirects are rejected in both modes.
+approval even in Warn. Redirects are rejected in every mode. See the linked validation guidance
+before upgrading deployments with local receivers; explicitly approve trusted hosts or select `Warn`
+as a migration setting.
 
 See [Webhook target validation](../webhooks#target-validation) for rollout, Docker/tunnel examples,
 DNS/address restrictions, and the distinction between warnings and blocking.
@@ -468,3 +470,13 @@ no explicit receiver policy, and unrelated watchdog quarantines need an operator
 Disable checks to keep all automatic delivery paused while investigating a receiver.
 See [automatic recovery](../webhooks/index.mdx#automatic-recovery-from-quarantine)
 for progress, at-least-once semantics, observability, and manual overrides.
+
+## ExternalServices (Kernel)
+
+The Kernel's top-level `externalServices` section in `chronicle.json` independently validates HTTP
+capture destinations. It accepts `Validation`, `AllowInsecureHttp`, `AllowedHosts`, and
+`EventStoreAllowedHosts` with the same defaults and matching rules as `Webhooks`. It has no
+managed-identity options and never inherits webhook approvals. Environment variables use
+`Cratis__Chronicle__ExternalServices__` followed by the key. See
+[HTTP capture destination policy](../external-services/index.md#http-capture-destination-policy)
+for modes, private-network approvals, metadata protection, and migration guidance.

@@ -82,6 +82,9 @@ public class ObserverStateStorage(IEventStoreNamespaceDatabase namespaceDatabase
         var document = state.ToMongoDB();
         var update = Builders<ObserverState>.Update
             .Set(_ => _.Owner, owner)
+            .Set(_ => _.PartitionClaims, document.PartitionClaims)
+            .Set(_ => _.ObserverWideClaim, document.ObserverWideClaim)
+            .Set(_ => _.OwnershipRevision, document.OwnershipRevision)
             .Set(_ => _.AlertLifecycleId, document.AlertLifecycleId)
             .Set(_ => _.AlertRevision, document.AlertRevision)
             .Set(_ => _.DeliveryFences, document.DeliveryFences)

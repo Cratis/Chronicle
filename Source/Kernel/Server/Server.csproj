@@ -3,7 +3,9 @@
         <OutputType>Exe</OutputType>
         <AssemblyName>Cratis.Chronicle.Server</AssemblyName>
         <RootNamespace>Cratis.Chronicle.Server</RootNamespace>
-        <InvariantGlobalization>true</InvariantGlobalization>
+        <!-- Full globalization: Microsoft.Data.SqlClient refuses to open a connection in invariant mode, and the
+             published runtimeconfig is what every image and non-container deployment runs with (#4508). -->
+        <InvariantGlobalization>false</InvariantGlobalization>
         <PublishReadyToRunShowWarnings>false</PublishReadyToRunShowWarnings>
         <ServerGarbageCollection>true</ServerGarbageCollection>
         <NoWarn>$(NoWarn);RCS1093;CS0436</NoWarn>

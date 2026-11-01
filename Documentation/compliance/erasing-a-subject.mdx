@@ -85,6 +85,24 @@ Chronicle erases keys. It does not know what else your system did with the data.
 - **Chase the copies outside Chronicle.** Read models exported to a warehouse, search indexes, and anything a reactor sent to a third party are outside the key store and outside the erasure.
 - **Keep erasures from coming back with a restore.** A backup of the key store taken before the erasure still holds the key, and restoring it brings the key back without any error. Plan a restore-and-re-erase step, and restore the key store at the same point in time as the rest of the storage — see [what the fence cannot protect against](key-lifecycle.mdx#not-stopped) and [backup and restore ordering](../hosting/configuration/compliance-storage.md#backup-and-restore-ordering).
 
+### Data delivered to webhooks and HTTP receivers
+
+An erasure destroys the key. It does not reach into a receiver, so a receiver that stored what Chronicle delivered keeps it until you remove it.
+
+- **Delivery is plaintext.** Webhooks and, once it ships, HTTP delivery to a serverless receiver send event content in plaintext after Chronicle has released it from compliance protection, over HTTPS. Erasing the key later does not make a delivered copy unreadable.
+- **Chronicle does not take the copy back.** It does not re-push or erase anything at a receiver. HTTP delivery is live-only: it delivers new events, catch-up and retries, and never replays, revises or re-sends earlier events. See [decision 0020](https://github.com/Cratis/Chronicle/blob/main/decisions/0020-kernel-http-delivery-contract.md).
+- **The receiver gets no signal from the erasure.** Erasing a subject fences and deletes the key, removes unique-constraint claims, evicts cached keys and writes a log entry. It appends no event and calls no receiver, so nothing tells a receiver that the subject was erased.
+- **A redaction reaches the receiver only as a live event.** The redaction is delivered as an ordinary event of the redaction type when it happens. Data the receiver stored earlier is not corrected.
+
+Erasure at the receiver is therefore your job, in the same erasure workflow that deletes the key:
+
+1. Map the subject to the rows the receiver stored, by the subject identifier or by the event source id of the delivered events.
+2. Erase or anonymize those rows in the receiver's store, and in any read model or index built from them.
+3. Purge the receiver's logs, traces and dead-letter or retry storage of that subject's payloads.
+4. Record that the receiver was covered, next to the record of the key erasure.
+
+Delivering encrypted or redacted content instead of plaintext is tracked in [#5132](https://github.com/Cratis/Chronicle/issues/5132) and is not available yet.
+
 ## See also
 
 | Topic | Description |

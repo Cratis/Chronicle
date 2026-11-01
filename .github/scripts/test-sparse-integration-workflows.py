@@ -14,13 +14,23 @@ import shlex
 import subprocess
 import tempfile
 import unittest
+from unittest.mock import patch
 
+import integration_lane_exclusions as exclusions
 import yaml
 
 WORKFLOWS = Path(__file__).resolve().parents[1] / "workflows"
 EFFECTIVE_LABEL = ("(github.event.action == 'labeled' && github.event.label.name || "
                    "contains(github.event.pull_request.labels.*.name, 'run-integration') && "
                    "'run-integration' || 'none')")
+
+
+GATE = "already-ran"
+
+
+def prerequisites_of(job):
+    """The job's needs without the already-ran gate, which every job carries."""
+    return [name for name in job["needs"] if name != GATE]
 
 
 def workflow(filename):
@@ -36,6 +46,7 @@ class ConditionContext:
     results: dict
     cancelled: bool = False
     actor: str = "contributor"
+    gate_skip: str = "false"
 
     def bindings(self):
         values = {
@@ -43,8 +54,11 @@ class ConditionContext:
             "github.actor": self.actor,
             "inputs.integration_requested": self.requested,
             "cancelled()": self.cancelled,
+            "always()": True,
         }
         values.update({f"needs.{name}.result": result for name, result in self.results.items()})
+        # The already-ran gate only skips a prior-success schedule run; every context here is a normal run.
+        values["needs.already-ran.outputs.skip"] = self.gate_skip
         return values
 
 
@@ -74,7 +88,8 @@ def condition_allows(job, context):
     assertions below prove which jobs must complete before DEVELOPMENT is eligible.
     """
     expression = job["if"].removeprefix("${{").removesuffix("}}").strip()
-    if not implicit_success_allows(expression, job["needs"], context.results):
+    results = {GATE: "success", **context.results}
+    if not implicit_success_allows(expression, job["needs"], results):
         return False
     return evaluate_boolean_condition(expression, context.bindings())
 
@@ -350,10 +365,26 @@ class SparseIntegrationWorkflows(unittest.TestCase):
                         if step["name"] == "Download all coverage artifacts")
         self.assertEqual("coverage-results-*", download["with"]["pattern"])
 
+    def test_every_job_is_skipped_when_the_workflow_already_succeeded_on_this_commit(self):
+        jobs = self.build["jobs"]
+        gate = jobs[GATE]
+        self.assertEqual({"actions": "read"}, gate["permissions"])
+        self.assertEqual("Cratis/Workflows/.github/actions/skip-if-already-ran@main", gate["steps"][0]["uses"])
+        self.assertNotIn("with", gate["steps"][0])  # default events: schedule only
+        for job_id, job in jobs.items():
+            if job_id == GATE:
+                continue
+            with self.subTest(job=job_id):
+                self.assertIn(GATE, job["needs"])
+                self.assertIn("needs.already-ran.outputs.skip != 'true'", job["if"])
+                everything_else = ConditionContext("schedule", True, {n: "success" for n in prerequisites_of(job)},
+                                                   gate_skip="true")
+                self.assertFalse(condition_allows(job, everything_else))
+
     def test_stable_specs_check_requires_every_shard_to_succeed(self):
         aggregate = self.build["jobs"]["specs"]
-        self.assertEqual("always()", aggregate["if"])
-        self.assertEqual(["specs-other", "specs-sql"], aggregate["needs"])
+        self.assertEqual("${{ needs.already-ran.outputs.skip != 'true' && (always()) }}", aggregate["if"])
+        self.assertEqual(["specs-other", "specs-sql"], prerequisites_of(aggregate))
         step = aggregate["steps"][0]
         self.assertEqual("${{ needs.specs-other.result }}", step["env"]["OTHER_RESULT"])
         self.assertEqual("${{ needs.specs-sql.result }}", step["env"]["SQL_RESULT"])
@@ -367,19 +398,22 @@ class SparseIntegrationWorkflows(unittest.TestCase):
         jobs = self.build["jobs"]
         parallel = jobs["dotnet-build-development"]
         requested = jobs["dotnet-build-development-requested"]
-        self.assertEqual("github.event_name != 'pull_request'", parallel["if"])
-        self.assertEqual("github.event_name == 'pull_request' && inputs.integration_requested",
+        self.assertEqual("needs.already-ran.outputs.skip != 'true' && (github.event_name != 'pull_request')",
+                         parallel["if"])
+        self.assertEqual("needs.already-ran.outputs.skip != 'true' && "
+                         "(github.event_name == 'pull_request' && inputs.integration_requested)",
                          requested["if"])
-        self.assertEqual(["wire-compatibility", "grain-compatibility"], parallel["needs"])
-        self.assertEqual(["wire-compatibility", "grain-compatibility", "specs"], requested["needs"])
-        self.assertEqual(["specs-other", "specs-sql"], jobs["specs"]["needs"])
+        self.assertEqual(["wire-compatibility", "grain-compatibility"], prerequisites_of(parallel))
+        # The requested PR build runs in parallel with the specs; the integration job keeps the specs gate.
+        self.assertEqual(["wire-compatibility", "grain-compatibility"], prerequisites_of(requested))
+        self.assertEqual(["specs-other", "specs-sql"], prerequisites_of(jobs["specs"]))
         for job_id in ("specs-other", "specs-sql"):
-            self.assertEqual(["dotnet-build"], jobs[job_id]["needs"])
-        self.assertEqual(["wire-compatibility", "grain-compatibility"], jobs["dotnet-build"]["needs"])
+            self.assertEqual(["dotnet-build"], prerequisites_of(jobs[job_id]))
+        self.assertEqual(["wire-compatibility", "grain-compatibility"], prerequisites_of(jobs["dotnet-build"]))
         for key in ("steps", "permissions", "runs-on", "timeout-minutes"):
             self.assertEqual(parallel[key], requested[key], key)
         steps = requested["steps"]
-        self.assertEqual(8, len(steps))
+        self.assertEqual(9, len(steps))
         build = next(step for step in steps if step.get("name") == "Build with DEVELOPMENT symbol")
         self.assertEqual("dotnet build --configuration Release -p:EnableDevelopmentSymbol=true "
                          "-p:DisableProxyGenerator=true -p:DisableDockerBuild=true", build["run"])
@@ -389,6 +423,25 @@ class SparseIntegrationWorkflows(unittest.TestCase):
         self.assertEqual("build-output-development", jobs["integration"]["with"]["build-output-artifact"])
         self.assertEqual("${{ needs.dotnet-build.outputs.chronicle-image }}",
                          jobs["integration"]["with"]["chronicle-image"])
+
+    def test_ci_builds_are_stamped_before_their_first_dotnet_build(self):
+        build_jobs = {
+            "dotnet-build": self.build["jobs"]["dotnet-build"],
+            "dotnet-build-development": self.build["jobs"]["dotnet-build-development"],
+            "dotnet-build-development-requested": self.build["jobs"]["dotnet-build-development-requested"],
+            "hot-core build": self.hot_core["jobs"]["build"],
+        }
+        for name, job in build_jobs.items():
+            with self.subTest(job=name):
+                steps = job["steps"]
+                stamp = next(i for i, step in enumerate(steps) if step.get("name") == "Stamp the build version")
+                first_build = next(i for i, step in enumerate(steps) if "dotnet build" in step.get("run", ""))
+                self.assertLess(stamp, first_build)
+                self.assertEqual('python3 .github/scripts/derive-build-version.py >> "$GITHUB_ENV"',
+                                 steps[stamp]["run"])
+        steps = build_jobs["dotnet-build"]["steps"]
+        names = [step.get("name") for step in steps]
+        self.assertLess(names.index("Build"), names.index("Assert the build carries the stamped version"))
 
     def test_development_eligibility_for_specs_success_failure_cancel_and_skip(self):
         jobs = self.build["jobs"]
@@ -401,14 +454,13 @@ class SparseIntegrationWorkflows(unittest.TestCase):
                 gates = wire == "success" and grain == "success"
                 self.assertEqual(event != "pull_request" and gates,
                                  condition_allows(jobs["dotnet-build-development"], context))
-                self.assertEqual(event == "pull_request" and requested and
-                                 specs == "success" and gates,
+                self.assertEqual(event == "pull_request" and requested and gates,
                                  condition_allows(jobs["dotnet-build-development-requested"], context))
 
     def test_integration_requires_selected_output_but_allows_skipped_sibling(self):
         job = self.build["jobs"]["integration"]
         self.assertEqual({"dotnet-build", "specs", "dotnet-build-development",
-                          "dotnet-build-development-requested"}, set(job["needs"]))
+                          "dotnet-build-development-requested"}, set(prerequisites_of(job)))
         states = ("success", "failure", "cancelled", "skipped")
         for event, requested, specs, development, release, cancelled in product(
                 ("pull_request", "schedule", "workflow_dispatch"), (False, True),
@@ -422,16 +474,16 @@ class SparseIntegrationWorkflows(unittest.TestCase):
             with self.subTest(event=event, requested=requested, results=results, cancelled=cancelled):
                 context = ConditionContext(event, requested, results, cancelled)
                 self.assertEqual(expected, condition_allows(job, context))
-        dependabot = ConditionContext("schedule", False, {name: "success" for name in job["needs"]},
+        dependabot = ConditionContext("schedule", False, {name: "success" for name in prerequisites_of(job)},
                                       actor="dependabot[bot]")
         self.assertFalse(condition_allows(job, dependabot))
 
     def test_coverage_cannot_be_cached_if_any_integration_dependency_failed_or_was_skipped(self):
         coverage = self.build["jobs"]["coverage-merge-and-cache"]
-        self.assertEqual({"specs", "integration", "integration-api", "mongodb"}, set(coverage["needs"]))
+        self.assertEqual({"specs", "integration", "integration-api", "mongodb"}, set(prerequisites_of(coverage)))
         self.assertIn("github.event_name != 'pull_request_target'", coverage["if"])
         self.assertIn("!cancelled()", coverage["if"])
-        for dependency in coverage["needs"]:
+        for dependency in prerequisites_of(coverage):
             self.assertIn(f"needs.{dependency}.result == 'success'", coverage["if"])
 
     def test_coverage_allows_successful_paths_despite_skipped_development_ancestor(self):
@@ -460,8 +512,8 @@ class SparseIntegrationWorkflows(unittest.TestCase):
         states = ("success", "failure", "cancelled", "skipped", "")
         for event, cancelled, results in product(
                 ("pull_request", "schedule", "workflow_dispatch", "pull_request_target"),
-                (False, True), product(states, repeat=len(coverage["needs"]))):
-            prerequisites = dict(zip(coverage["needs"], results))
+                (False, True), product(states, repeat=len(prerequisites_of(coverage)))):
+            prerequisites = dict(zip(prerequisites_of(coverage), results))
             context = ConditionContext(event, True, prerequisites, cancelled)
             expected = (event != "pull_request_target" and not cancelled
                         and all(result == "success" for result in results))
@@ -470,7 +522,7 @@ class SparseIntegrationWorkflows(unittest.TestCase):
         # Ordinary PRs skip integration; Dependabot also skips the matrix. Keep
         # their existing coverage behavior through immediate prerequisite results.
         for actor in ("contributor", "dependabot[bot]"):
-            results = dict.fromkeys(coverage["needs"], "success")
+            results = dict.fromkeys(prerequisites_of(coverage), "success")
             results["integration"] = "skipped"
             context = ConditionContext("pull_request", False, results, actor=actor)
             self.assertFalse(condition_allows(coverage, context))
@@ -578,6 +630,65 @@ sys.exit(1 if failed else 0)
             self.assertIn("--results-directory", args)
             self.assertEqual(expected_filter if index == 0 else "FullyQualifiedName=Example.A.should_work",
                              args[args.index("--filter") + 1])
+
+    def test_only_rolling_upgrade_is_gated_and_other_sql_lanes_are_unchanged(self):
+        jobs = workflow("integration.yml")["jobs"]
+        ordinary = jobs["sql-clustering-integration-specs"]
+        rolling = jobs["sql-clustering-rolling-upgrade"]
+        self.assertEqual(["PostgreSql", "SqlServer"], ordinary["strategy"]["matrix"]["provider"])
+        self.assertNotIn("if", ordinary)
+        self.assertEqual(["RollingUpgrade"], rolling["strategy"]["matrix"]["provider"])
+        self.assertEqual("needs.discover.outputs.rolling-upgrade-enabled == 'true'", rolling["if"])
+        self.assertEqual(["discover"], rolling["needs"])
+        self.assertEqual(ordinary["steps"], rolling["steps"])
+        self.assertEqual(ordinary["timeout-minutes"], rolling["timeout-minutes"])
+        self.assertEqual("${{ steps.exclusions.outputs.rolling-upgrade-enabled }}",
+                         jobs["discover"]["outputs"]["rolling-upgrade-enabled"])
+        report = next(step for step in jobs["discover"]["steps"] if step.get("id") == "exclusions")
+        self.assertEqual("python3 .github/scripts/integration_lane_exclusions.py", report["run"])
+
+    def test_declaration_is_visible_and_one_line_removal_reenables_the_job(self):
+        for declarations in (exclusions.EXCLUDED_LANES.copy(), {}):
+            with self.subTest(declarations=declarations), tempfile.TemporaryDirectory() as directory:
+                summary, output = Path(directory) / "summary", Path(directory) / "output"
+                with patch.dict(exclusions.EXCLUDED_LANES, declarations, clear=True), \
+                        patch.dict(os.environ, GITHUB_STEP_SUMMARY=str(summary), GITHUB_OUTPUT=str(output)):
+                    exclusions.main()
+                self.assertEqual(f"rolling-upgrade-enabled={str('RollingUpgrade' not in declarations).lower()}\n",
+                                 output.read_text())
+                for lane, reason in declarations.items():
+                    self.assertIn(f"Skipped integration lane {lane} (explicitly excluded): {reason}",
+                                  summary.read_text())
+                    for issue in (5300, 5350):
+                        self.assertIn(f"https://github.com/Cratis/Chronicle/issues/{issue}", reason)
+
+    def test_declaration_must_be_removed_when_its_specs_are_reenabled(self):
+        self.assertLessEqual(set(exclusions.EXCLUDED_LANES), {"RollingUpgrade"})
+        for lane in exclusions.EXCLUDED_LANES:
+            files = (WORKFLOWS.parents[1] / "Integration/SqlClustering" / lane).glob("*.cs")
+            attributes = [attribute for file in files for attribute in
+                          re.findall(r"\[(?:Fact|Theory)([^\]]*)\]", file.read_text())]
+            self.assertTrue(attributes, "An exclusion must still refer to actual specs")
+            self.assertTrue(all(re.search(r'Skip\s*=\s*"[^\"]+"', attribute) for attribute in attributes),
+                            "Remove the lane exclusion when its specs are re-enabled")
+
+    def test_undeclared_zero_execution_still_fails_for_every_sql_lane(self):
+        root = WORKFLOWS.parents[1]
+        for lane in ("PostgreSql", "SqlServer", "RollingUpgrade"):
+            for executed in (0, 1):
+                with self.subTest(lane=lane, executed=executed):
+                    outcome = "Passed" if executed else "NotExecuted"
+                    trx = ('<TestRun xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">'
+                           f'<UnitTestResult testId="1" testName="{lane}.should_work" outcome="{outcome}" />'
+                           f'<Counters total="1" executed="{executed}" passed="{executed}" failed="0" error="0" />'
+                           f'<UnitTest id="1"><TestMethod className="{lane}" name="should_work" /></UnitTest></TestRun>')
+                    result = subprocess.run(["node", "--input-type=module", "-e",
+                                             "import { validateTrx } from './.github/scripts/mixed-specs-results.mjs';"
+                                             "validateTrx(process.argv[1]);", trx],
+                                            cwd=root, capture_output=True, text=True, check=False)
+                    self.assertEqual(0 if executed else 1, result.returncode, result.stderr)
+                    if not executed:
+                        self.assertIn("TRX executed no tests", result.stderr)
 
 
 if __name__ == "__main__":

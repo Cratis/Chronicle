@@ -28,6 +28,24 @@ public class ObserverState
     public EventSequenceId? Owner { get; set; }
 
     /// <summary>
+    /// Gets or sets the shadow partition claims, absent on legacy state.
+    /// </summary>
+    [BsonIgnoreIfNull]
+    public IEnumerable<PartitionClaim>? PartitionClaims { get; set; }
+
+    /// <summary>
+    /// Gets or sets the shadow observer-wide claim, absent on legacy state.
+    /// </summary>
+    [BsonIgnoreIfNull]
+    public ObserverWideClaim? ObserverWideClaim { get; set; }
+
+    /// <summary>
+    /// Gets or sets the shadow ownership revision, absent on legacy state.
+    /// </summary>
+    [BsonIgnoreIfNull]
+    public OwnershipRevision? OwnershipRevision { get; set; }
+
+    /// <summary>
     /// Gets or sets the type-set control, absent before initialization.
     /// </summary>
     [BsonElement("typeSetControl")]

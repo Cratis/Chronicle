@@ -28,6 +28,24 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.UniqueConstraints;
 public class UniqueConstraintsStorage(EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId, IDatabase database) : IUniqueConstraintsStorage
 {
     /// <inheritdoc/>
+    public async Task<(long PerEventSource, long PerValue)> RemoveUnhashedValues(CancellationToken cancellationToken = default)
+    {
+        await using var scope = await database.Namespace(eventStore, @namespace);
+        var tables = await UniqueConstraintTables.For(scope.DbContext, eventSequenceId, cancellationToken);
+        long sources = 0;
+        long values = 0;
+        foreach (var table in tables.PerEventSource)
+        {
+            sources += await UnhashedUniqueConstraintValues.RemoveFrom(scope.DbContext, table, repairValueIndex: true, cancellationToken);
+        }
+        foreach (var table in tables.PerValue)
+        {
+            values += await UnhashedUniqueConstraintValues.RemoveFrom(scope.DbContext, table, repairValueIndex: false, cancellationToken);
+        }
+        return (sources, values);
+    }
+
+    /// <inheritdoc/>
     public async Task ClearValues(UniqueConstraintDefinition definition, string scopeKey = "", CancellationToken cancellationToken = default)
     {
         if (definition.Mode != UniqueConstraintMode.PerValue)

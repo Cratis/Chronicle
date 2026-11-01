@@ -19,6 +19,21 @@ public sealed class RecordingObserverLogger : ILogger<Observer>
     public Func<string, bool> ThrowWhen { get; set; } = _ => false;
 
     /// <summary>
+    /// Gets the information messages that were logged.
+    /// </summary>
+    public IEnumerable<string> Information => _entries.Where(_ => _.Level == LogLevel.Information).Select(_ => _.Message);
+
+    /// <summary>
+    /// Gets all recorded entries.
+    /// </summary>
+    public IEnumerable<(LogLevel Level, string Message)> Entries => _entries;
+
+    /// <summary>
+    /// Gets the debug messages that were logged.
+    /// </summary>
+    public IEnumerable<string> Debugs => _entries.Where(_ => _.Level == LogLevel.Debug).Select(_ => _.Message);
+
+    /// <summary>
     /// Gets the warnings that were logged.
     /// </summary>
     public IEnumerable<string> Warnings => _entries.Where(_ => _.Level == LogLevel.Warning).Select(_ => _.Message);

@@ -21,20 +21,23 @@ public class a_reducer_grain_with_a_stored_definition : Specification
     protected TestKitSilo _silo;
     protected Reducer _grain;
     protected IObserver _observer;
+    protected IReducerDefinitionComparer _definitionComparer;
     protected IConnectedClients _connectedClients;
     protected ConnectedClient _client;
     protected EventType _connectionEventType;
     protected ReducerDefinition _connectionDefinition;
+    protected ReducerDefinition _storedDefinition;
+    protected IStorage<ReducerDefinition> _stateStorage;
 
     async Task Establish()
     {
         _silo = new TestKitSilo();
 
-        var definitionComparer = Substitute.For<IReducerDefinitionComparer>();
-        definitionComparer
+        _definitionComparer = Substitute.For<IReducerDefinitionComparer>();
+        _definitionComparer
             .Compare(Arg.Any<ReducerKey>(), Arg.Any<ReducerDefinition>(), Arg.Any<ReducerDefinition>())
             .Returns(ReducerDefinitionCompareResult.Same);
-        _silo.AddService(definitionComparer);
+        _silo.AddService(_definitionComparer);
 
         var localSiloDetails = Substitute.For<ILocalSiloDetails>();
         localSiloDetails.SiloAddress.Returns(SiloAddress.FromParsableString("127.0.0.1:11111@1"));
@@ -50,6 +53,7 @@ public class a_reducer_grain_with_a_stored_definition : Specification
         _silo.AddProbe(_ => _connectedClients);
 
         _observer = Substitute.For<IObserver>();
+        _observer.GetSubscription().Returns(ObserverSubscription.Unsubscribed);
         _observer.KnowsClient(_client.ConnectionId).Returns(false);
         _silo.AddProbe(_ => _observer);
 
@@ -57,17 +61,24 @@ public class a_reducer_grain_with_a_stored_definition : Specification
         // client version, as during a rolling deployment - registered last, with different event types.
         var storedEventType = new EventType("stored-event-type", EventTypeGeneration.First);
         _connectionEventType = new EventType("connection-event-type", EventTypeGeneration.First);
-        var storedDefinition = new ReducerDefinition("the-reducer", EventSequenceId.Log, [new(storedEventType, WellKnownExpressions.EventSourceId)], "the-read-model", true, []);
+        _storedDefinition = new ReducerDefinition("the-reducer", EventSequenceId.Log, [new(storedEventType, WellKnownExpressions.EventSourceId)], "the-read-model", true, []);
         _connectionDefinition = new ReducerDefinition("the-reducer", EventSequenceId.Log, [new(_connectionEventType, WellKnownExpressions.EventSourceId)], "the-read-model", true, []);
-        var storage = Substitute.For<IStorage<ReducerDefinition>>();
-        storage.State = storedDefinition;
-        _silo.Options.StorageFactory = _ => storage;
+        _stateStorage = Substitute.For<IStorage<ReducerDefinition>>();
+        _stateStorage.State = _storedDefinition;
+        _silo.Options.StorageFactory = _ => _stateStorage;
 
         var key = new ConnectedObserverKey("the-reducer", "the-event-store", "the-namespace", EventSequenceId.Log, _client.ConnectionId);
 
         // A fresh activation, as after losing the one the client registered with.
         _grain = await _silo.CreateGrainAsync<Reducer>(key.ToString());
     }
+
+    protected Task WasSubscribed(ReducerDefinition definition) => _observer.Received(1).Subscribe<IReducerObserverSubscriber>(
+        ObserverType.Reducer,
+        Arg.Is<IEnumerable<EventType>>(eventTypes => eventTypes.SequenceEqual(definition.EventTypes.Select(_ => _.EventType))),
+        Arg.Any<SiloAddress>(),
+        _client,
+        filters: definition.Filters);
 
     protected Task WasRestored(int times) => _observer.Received(times).RestoreClientSubscription<IReducerObserverSubscriber>(
         ObserverType.Reducer,

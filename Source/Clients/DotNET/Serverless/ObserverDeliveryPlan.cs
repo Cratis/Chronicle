@@ -45,6 +45,15 @@ internal sealed record ObserverDeliveryPlan(
     /// <summary>
     /// Throws when an observer is delivered over HTTP, which this client cannot register yet.
     /// </summary>
+    /// <remarks>
+    /// The client fails closed: it does not register HTTP-delivered observers whatever the kernel advertises. Lifting this takes all of:
+    /// <list type="number">
+    /// <item>The kernel advertises an HTTP-delivery capability (added to <c language="csharp">KernelCapabilities</c> by #5116), and the client requires
+    /// <c language="csharp">CapabilitiesAreKnown</c> together with that capability.</item>
+    /// <item>The kernel drains replay and recovery state before an observer switches from stream to HTTP delivery (#5115, decision 0018).</item>
+    /// <item>The receiver exists (#5119).</item>
+    /// </list>
+    /// </remarks>
     /// <param name="options">The <see cref="ChronicleOptions"/> holding the serverless settings.</param>
     /// <exception cref="InvalidServerlessConfiguration">Thrown when an observer is delivered over HTTP and no receiver URL is configured.</exception>
     /// <exception cref="HttpDeliveryNotAvailable">Thrown when an observer is delivered over HTTP.</exception>

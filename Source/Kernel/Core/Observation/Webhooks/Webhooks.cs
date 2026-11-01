@@ -237,25 +237,35 @@ public class Webhooks(
         // Always call Subscribe — for [KeepAlive] grains the in-memory
         // subscription state can be stale after databases are dropped.
         logger.Subscribing(definition.Identifier, namespaceName);
-        if (definition.GenerationDelivery == EventGenerationDelivery.Pinned)
+        try
         {
-            await observer.SubscribeWithGenerationDelivery<IWebhookObserverSubscriber>(
-                ObserverType.External,
-                definition.EventTypes.ToArray(),
-                localSiloDetails.SiloAddress,
-                definition.GenerationDelivery,
-                subscriberArgs: EventGenerationDelivery.Pinned,
-                reactivateRetired: !automatic,
-                automatic: automatic);
+            if (definition.GenerationDelivery == EventGenerationDelivery.Pinned)
+            {
+                await observer.SubscribeWithGenerationDelivery<IWebhookObserverSubscriber>(
+                    ObserverType.External,
+                    definition.EventTypes.ToArray(),
+                    localSiloDetails.SiloAddress,
+                    definition.GenerationDelivery,
+                    subscriberArgs: EventGenerationDelivery.Pinned,
+                    reactivateRetired: !automatic,
+                    automatic: automatic);
+            }
+            else
+            {
+                await observer.Subscribe<IWebhookObserverSubscriber>(
+                    ObserverType.External,
+                    definition.EventTypes.ToArray(),
+                    localSiloDetails.SiloAddress,
+                    reactivateRetired: !automatic,
+                    automatic: automatic);
+            }
         }
-        else
+        catch (ObserverServedByAnotherTransport)
         {
-            await observer.Subscribe<IWebhookObserverSubscriber>(
-                ObserverType.External,
-                definition.EventTypes.ToArray(),
-                localSiloDetails.SiloAddress,
-                reactivateRetired: !automatic,
-                automatic: automatic);
+            logger.WaitingForConnectedClient(definition.Identifier, namespaceName);
+            var retry = retryDelay ?? TimeSpan.FromMinutes(1);
+            await this.RegisterOrUpdateReminder($"{SubscriptionReminderPrefix}{definition.Identifier}", retry, retry);
+            return false;
         }
 
         if (!await observer.NeedsSubscriptionRecovery(definition.EventTypes)) return true;

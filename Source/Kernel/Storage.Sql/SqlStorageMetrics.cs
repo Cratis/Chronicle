@@ -15,6 +15,9 @@ internal static partial class SqlStorageMetrics
     [Histogram<double>("chronicle-sql-schema-lock-wait", "Time spent waiting for a database schema lock", "s")]
     internal static partial void SchemaLockWait(this IMeter<SqlStorageTelemetry> meter, double seconds, string provider, string outcome);
 
+    [Counter<int>("chronicle-sql-live-query-poll-failures", "Failed SQL live-query polls; each is retried")]
+    internal static partial void LiveQueryPollFailed(this IMeter<SqlStorageTelemetry> meter, string query, string kind);
+
     [Counter<int>("chronicle-sql-upsert-collisions-recovered", "Concurrent SQL insert collisions recovered by storage")]
     internal static partial void UpsertCollisionRecovered(this IMeter<SqlStorageTelemetry> meter, string operation, int count);
 }

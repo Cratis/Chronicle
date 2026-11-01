@@ -39,7 +39,8 @@ public class PIIMetadataProvider : ICanProvideComplianceMetadataForType, ICanPro
             throw new NoComplianceMetadataForType(type);
         }
 
-        return new ComplianceMetadata(ComplianceMetadataType.PII, type.GetComplianceMetadataDetails());
+        var details = type.GetComplianceMetadataDetails();
+        return new ComplianceMetadata(ComplianceMetadataType.PII, string.IsNullOrEmpty(details) ? type.GetCustomAttribute<PIIAttribute>()?.Details ?? string.Empty : details);
     }
 
     /// <inheritdoc/>
@@ -50,17 +51,28 @@ public class PIIMetadataProvider : ICanProvideComplianceMetadataForType, ICanPro
             throw new NoComplianceMetadataForProperty(property);
         }
 
-        return new ComplianceMetadata(ComplianceMetadataType.PII, property.GetComplianceMetadataDetails());
+        var details = property.GetComplianceMetadataDetails();
+        return new ComplianceMetadata(ComplianceMetadataType.PII, string.IsNullOrEmpty(details) ? PIIDetailsFor(property) : details);
     }
 
-    static bool HasPIIOnConstructorParameter(PropertyInfo property)
-    {
-        if (property.DeclaringType is null) return false;
-        var ctor = property.DeclaringType.GetConstructors().MaxBy(c => c.GetParameters().Length);
-        var param = ctor?.GetParameters().FirstOrDefault(p =>
-            string.Equals(p.Name, property.Name, StringComparison.OrdinalIgnoreCase));
+    static string PIIDetailsFor(PropertyInfo property) =>
+        new[]
+        {
+            property.GetCustomAttribute<PIIAttribute>(),
+            ConstructorParameterFor(property)?.GetCustomAttribute<PIIAttribute>(),
+            property.DeclaringType?.GetCustomAttribute<PIIAttribute>(),
+            property.PropertyType.GetCustomAttribute<PIIAttribute>()
+        }.Select(attribute => attribute?.Details).FirstOrDefault(details => !string.IsNullOrEmpty(details)) ?? string.Empty;
 
-        return param is not null && Attribute.IsDefined(param, typeof(PIIAttribute));
+    static bool HasPIIOnConstructorParameter(PropertyInfo property) =>
+        ConstructorParameterFor(property) is { } parameter && Attribute.IsDefined(parameter, typeof(PIIAttribute));
+
+    static ParameterInfo? ConstructorParameterFor(PropertyInfo property)
+    {
+        if (property.DeclaringType is null) return null;
+        var ctor = property.DeclaringType.GetConstructors().MaxBy(c => c.GetParameters().Length);
+        return ctor?.GetParameters().FirstOrDefault(p =>
+            string.Equals(p.Name, property.Name, StringComparison.OrdinalIgnoreCase));
     }
 
     static void ThrowIfEventSourceId(Type type)

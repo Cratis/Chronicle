@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Security.Claims;
-using Cratis.Chronicle.Storage.Security;
+using Cratis.Chronicle.Security;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
 
@@ -12,11 +12,13 @@ namespace Cratis.Chronicle.Server.Authentication;
 /// Transforms claims to include Chronicle-specific claims like the user ID as the "sub" claim.
 /// </summary>
 /// <param name="userManager">The user manager.</param>
-public class ChronicleClaimsTransformation(UserManager<User> userManager) : IClaimsTransformation
+public class ChronicleClaimsTransformation(UserManager<Storage.Security.User> userManager) : IClaimsTransformation
 {
     /// <inheritdoc/>
     public Task<ClaimsPrincipal> TransformAsync(ClaimsPrincipal principal)
     {
+        MarkIdentityCookiePrincipals(principal);
+
         if (principal.Identity?.IsAuthenticated ?? false)
         {
             var claimsIdentity = (ClaimsIdentity)principal.Identity;
@@ -53,5 +55,19 @@ public class ChronicleClaimsTransformation(UserManager<User> userManager) : ICla
         }
 
         return Task.FromResult(principal);
+    }
+
+    static void MarkIdentityCookiePrincipals(ClaimsPrincipal principal)
+    {
+        // Application cookies issued before the principal kind marker existed do not carry it.
+        foreach (var identity in principal.Identities)
+        {
+            if (identity.IsAuthenticated &&
+                string.Equals(identity.AuthenticationType, IdentityConstants.ApplicationScheme, StringComparison.Ordinal) &&
+                !identity.HasClaim(ChronicleClaims.PrincipalKind, ChronicleClaims.User))
+            {
+                identity.AddClaim(new Claim(ChronicleClaims.PrincipalKind, ChronicleClaims.User));
+            }
+        }
     }
 }

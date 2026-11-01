@@ -8,6 +8,8 @@
              which does not compile for FrozenDictionary (CS0144). Only surfaces when `dotnet pack`
              builds the down-level targets (regular builds are net10.0), so suppress it here. -->
         <NoWarn>$(NoWarn);IDE0301</NoWarn>
+        <!-- The serverless surface is public and [Experimental("CHRX0001")]; the library itself uses it. -->
+        <NoWarn>$(NoWarn);CHRX0001</NoWarn>
     </PropertyGroup>
 
     <ItemGroup>

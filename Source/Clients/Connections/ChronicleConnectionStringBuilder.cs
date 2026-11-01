@@ -28,6 +28,7 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
     const string AuthKey = "auth";
     const string NoAuthenticationValue = "none";
     const string SkipTlsValidationKey = "skipTlsValidation";
+    const string DisableTlsKey = "disableTls";
     const string SkipCompatibilityCheckKey = "skipCompatibilityCheck";
     const string SkipKeepAliveKey = "skipKeepAlive";
     const string ServerlessKey = "serverless";
@@ -58,6 +59,7 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
         SchemeKey,
         ApiKeyKey,
         SkipTlsValidationKey,
+        DisableTlsKey,
         SkipCompatibilityCheckKey,
         SkipKeepAliveKey,
         ServerlessKey,
@@ -215,6 +217,13 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
                 throw new AmbiguousAuthenticationMode();
             }
 
+            // Without TLS the development credentials have nowhere to go: Chronicle serves its token endpoint over
+            // TLS only. A cleartext connection with no credentials therefore authenticates with nothing.
+            if (hasNoAuthentication && DisableTls)
+            {
+                return AuthenticationMode.None;
+            }
+
             if (hasClientCredentials || hasNoAuthentication)
             {
                 return AuthenticationMode.ClientCredentials;
@@ -290,6 +299,34 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
     }
 
     /// <summary>
+    /// Gets or sets whether the client connects without TLS, expressed as <c language="csharp">disableTls=true</c> in the
+    /// connection string.
+    /// </summary>
+    /// <remarks>
+    /// For a Chronicle server running with <c language="csharp">tls.enabled=false</c>, typically reached through a
+    /// port-forward or behind a proxy that forwards cleartext HTTP/2 (h2c). The client then speaks HTTP/2 without TLS.
+    /// Chronicle never serves its token endpoint without TLS, so client credentials cannot be exchanged on such a
+    /// connection: use <c language="csharp">auth=none</c> against a server with authentication turned off, or
+    /// <c language="csharp">apiKey=</c> with a token from the server's external authority. A connection string with no
+    /// credentials at all connects without authentication.
+    /// </remarks>
+    public bool DisableTls
+    {
+        get => ContainsKey(DisableTlsKey) && Convert.ToBoolean(this[DisableTlsKey]);
+        set
+        {
+            if (value)
+            {
+                this[DisableTlsKey] = true;
+            }
+            else
+            {
+                Remove(DisableTlsKey);
+            }
+        }
+    }
+
+    /// <summary>
     /// Gets or sets whether to skip the server compatibility check on connect.
     /// </summary>
     /// <remarks>
@@ -330,6 +367,7 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
     /// Serverless mode implies skipping the keep-alive connection. It is equal to setting
     /// <c language="json">Cratis:Chronicle:Serverless:Mode</c> to <c language="csharp">Serverless</c> in the .NET client. Other clients ignore the key.
     /// </remarks>
+    [Experimental("CHRX0001", UrlFormat = "https://www.cratis.io/docs/chronicle/clients/dotnet/serverless-mode")]
     public bool Serverless
     {
         get => ContainsKey(ServerlessKey) && Convert.ToBoolean(this[ServerlessKey]);
@@ -451,6 +489,11 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
         if (!SkipTlsValidation)
         {
             queryParams.Add("skipTlsValidation=false");
+        }
+
+        if (DisableTls)
+        {
+            queryParams.Add("disableTls=true");
         }
 
         if (SkipCompatibilityCheck)
@@ -603,7 +646,9 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
 
     void AddServerless(List<string> queryParams)
     {
+#pragma warning disable CHRX0001 // The serverless switch is experimental; the builder serialises it internally.
         if (Serverless)
+#pragma warning restore CHRX0001
         {
             queryParams.Add("serverless=true");
         }

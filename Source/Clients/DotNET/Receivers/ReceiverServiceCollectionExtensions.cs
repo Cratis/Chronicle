@@ -19,7 +19,7 @@ internal static class ReceiverServiceCollectionExtensions
     /// <returns>The service collection for further configuration.</returns>
     internal static IServiceCollection AddChronicleReceiver(this IServiceCollection services, Func<IServiceProvider, ChronicleOptions> options)
     {
-        services.TryAddSingleton<IDeliveryDecoder>(provider => new WebhookBodyDecoder(options(provider).Serverless.Delivery));
+        services.TryAddSingleton<IDeliveryDecoder>(provider => new WebhookBodyDecoder(options(provider).Serverless.ReceiverLimits));
         services.TryAddSingleton<DeliveryTargetValidation>();
         services.TryAddSingleton<IChronicleReceiver, ChronicleReceiver>();
         services.TryAddSingleton<IDeliveryStatusCodes, ProvisionalDeliveryStatusCodes>();

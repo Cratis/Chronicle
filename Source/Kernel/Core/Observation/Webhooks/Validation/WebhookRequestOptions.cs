@@ -14,4 +14,9 @@ public static class WebhookRequestOptions
     /// The event store whose host allow-list applies to this request.
     /// </summary>
     public static readonly HttpRequestOptionsKey<EventStoreName> EventStore = new("Chronicle.Webhooks.EventStore");
+
+    /// <summary>
+    /// Whether the validated request must use a connection that cannot be pooled for another request.
+    /// </summary>
+    internal static readonly HttpRequestOptionsKey<bool> DedicatedConnection = new("Chronicle.Webhooks.DedicatedConnection");
 }

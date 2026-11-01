@@ -45,8 +45,8 @@ public partial class EventSequenceStorage
                 _metadata[e.SequenceNumber] = metadata[index];
                 _appendedGenerations[e.SequenceNumber] = e.EventType.Generation.Value;
                 _generationHashes[e.SequenceNumber] = (Dictionary<EventTypeGeneration, EventHash>)e.ContentHashes;
+                AddEvent(stored[index]);
             }
-            _events.AddRange(stored);
             if (persistIdentities)
             {
                 foreach (var item in eventsToAppend.Where(item => item.Identity is not null))

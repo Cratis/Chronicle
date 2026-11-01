@@ -27,7 +27,9 @@ internal static class ChronicleReceiverEndpointRouteBuilderExtensions
     /// </remarks>
     internal static IEndpointConventionBuilder MapChronicleReceiver(this IEndpointRouteBuilder endpoints, string? path = null)
     {
+#pragma warning disable CHRX0001 // Internal receiver uses the experimental serverless settings without exposing them.
         path ??= endpoints.ServiceProvider.GetRequiredService<IOptions<ChronicleAspNetCoreOptions>>().Value.Serverless.ReceiverPath;
+#pragma warning restore CHRX0001
         return endpoints.MapPost(ChronicleReceiverRoute.Pattern(path), RefuseUnsigned).WithDisplayName("Chronicle receiver");
     }
 

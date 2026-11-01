@@ -634,7 +634,7 @@ public class Projections(
         var result = new Dictionary<Type, ProjectionDefinition>();
         var failures = new Dictionary<Type, Exception>();
         var variantDeclarations = new Dictionary<Type, FluentVariantDeclaration>();
-        var containerNames = new Dictionary<Type, string>();
+        var declaredContainerNames = new Dictionary<Type, string>();
         foreach (var projectionType in clientArtifacts.Projections)
         {
             var modelType = projectionType.GetInterface(typeof(IProjectionFor<>).Name)!.GetGenericArguments()[0]!;
@@ -649,7 +649,7 @@ public class Projections(
                     artifactsActivator,
                     jsonSerializerOptions,
                     variantDeclarations,
-                    containerNames,
+                    declaredContainerNames,
                     GenerationDelivery
                 ]) as Catch<ProjectionDefinition>)!;
             if (createProjectionDefinitionResult.TryGetException(out var exception))
@@ -663,6 +663,14 @@ public class Projections(
 
         VariantReclassifier.CrossWireGroups(result, variantDeclarations);
         ApplyGenerationDelivery(result, failures);
+
+        // An override only means something while the projection that declared it is still defined. Revalidation may have
+        // removed that projection, and a stale override must neither leak into the composed container map nor be skipped
+        // over when the handler for the read model reports its container.
+        var containerNames = result.Keys
+            .Where(declaredContainerNames.ContainsKey)
+            .GroupBy(type => type.GetReadModelType(), type => declaredContainerNames[type])
+            .ToDictionary(group => group.Key, group => group.First());
 
         return (result, failures, containerNames);
     }
@@ -698,7 +706,7 @@ public class Projections(
             IClientArtifactsActivator artifactsActivator,
             JsonSerializerOptions jsonSerializerOptions,
             IDictionary<Type, FluentVariantDeclaration> variantDeclarations,
-            IDictionary<Type, string> containerNames,
+            IDictionary<Type, string> declaredContainerNames,
             Observation.EventGenerationDelivery generationDelivery)
         {
             try
@@ -715,12 +723,13 @@ public class Projections(
 
                 if (builder.ContainerNameOverride is { } containerName)
                 {
-                    if (containerNames.TryGetValue(typeof(TReadModel), out var existing) && existing != containerName)
+                    var existing = declaredContainerNames.Where(declared => declared.Key.GetReadModelType() == typeof(TReadModel)).Select(declared => declared.Value).FirstOrDefault();
+                    if (existing is not null && existing != containerName)
                     {
                         throw new ConflictingContainerNamesForReadModel(typeof(TReadModel), existing, containerName);
                     }
 
-                    containerNames[typeof(TReadModel)] = containerName;
+                    declaredContainerNames[type] = containerName;
                 }
 
                 if (builder.VariantDeclaration is not null)

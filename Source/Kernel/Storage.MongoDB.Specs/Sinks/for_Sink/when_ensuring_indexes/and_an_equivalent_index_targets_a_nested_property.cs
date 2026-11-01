@@ -22,7 +22,7 @@ public class and_an_equivalent_index_targets_a_nested_property : given.a_sink_wi
 
     [Fact] void should_not_create_the_index() =>
         _indexManager.DidNotReceive().CreateOneAsync(
-            Arg.Any<CreateIndexModel<BsonDocument>>(),
+            Arg.Is<CreateIndexModel<BsonDocument>>(model => model.Options.Name != "chronicle_idx___initialized"),
             Arg.Any<CreateOneIndexOptions>(),
             Arg.Any<CancellationToken>());
 }

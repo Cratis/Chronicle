@@ -29,6 +29,7 @@ namespace Cratis.Chronicle.Observation;
 /// </para>
 /// </remarks>
 [Command]
+[Cratis.Arc.Authorization.Authorize(Policy = Security.WellKnownAuthorizationPolicies.AdministratorOperations)]
 [BelongsTo(WellKnownServices.Observers)]
 public record RetryFailedPartitions(string EventStore, string Namespace, string ObserverId, string EventSequenceId)
 {

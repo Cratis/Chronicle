@@ -1,11 +1,14 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Diagnostics.CodeAnalysis;
+
 namespace Cratis.Chronicle.Serverless;
 
 /// <summary>
 /// Defines when a serverless client registers its artifacts with the kernel.
 /// </summary>
+[Experimental("CHRX0001", UrlFormat = "https://www.cratis.io/docs/chronicle/clients/dotnet/serverless-mode")]
 public enum ServerlessRegistration
 {
     /// <summary>

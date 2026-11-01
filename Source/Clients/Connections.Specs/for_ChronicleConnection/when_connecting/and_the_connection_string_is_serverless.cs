@@ -5,10 +5,17 @@ namespace Cratis.Chronicle.Connections.for_ChronicleConnection.when_connecting;
 
 public class and_the_connection_string_is_serverless : given.a_connection_factory
 {
-    void Establish() => _connection = CreateConnection(new ChronicleConnectionString("chronicle://localhost:35000/?serverless=true"));
+    Cratis.Tasks.ITaskFactory _tasks;
+
+    void Establish()
+    {
+        _tasks = Substitute.For<Cratis.Tasks.ITaskFactory>();
+        _connection = CreateConnection(new ChronicleConnectionString("chronicle://localhost:35000/?serverless=true"), _tasks);
+    }
 
     Task Because() => _connection.Connect();
 
     [Fact] void should_report_keep_alive_as_skipped() => ((IConnectionKeepAlive)_connection).IsSkipped.ShouldBeTrue();
     [Fact] void should_mark_the_lifecycle_as_connected() => _lifecycle.Received(1).Connected();
+    [Fact] void should_not_start_the_watchdog() => _tasks.ReceivedCalls().Count(_ => _.GetMethodInfo().Name == "Run").ShouldEqual(0);
 }

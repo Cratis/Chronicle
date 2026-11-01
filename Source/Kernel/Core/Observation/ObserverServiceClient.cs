@@ -112,20 +112,32 @@ public class ObserverServiceClient(IGrainFactory grainFactory, IServiceProvider 
     /// <param name="silos">The <see cref="IObserverService"/> of every silo in the cluster.</param>
     /// <param name="observerDetails">The <see cref="ObserverDetails"/> for the observer.</param>
     /// <returns>True once the replay has been finalized.</returns>
-    /// <exception cref="ReplayFinalizationFailed">No silo finalized the replay, or a silo flushed with failed partitions.</exception>
+    /// <exception cref="ReplayFinalizationFailed">No silo finalized the replay.</exception>
+    /// <exception cref="ReplayAbandoned">A silo flushed with failed partitions, so the replay was abandoned instead of promoted.</exception>
     internal static async Task<bool> FinalizeProjectionReplay(IReadOnlyCollection<IObserverService> silos, ObserverDetails observerDetails)
     {
-        var flushed = await Task.WhenAll(silos.Select(silo => silo.FlushReplayFor(observerDetails)));
-        var results = await Task.WhenAll(silos.Select(silo => silo.TryFinalizeReplayFor(observerDetails)));
-        EnsureProjectionReplayFinalized(results);
-
-        // A final flush that left failed partitions has recorded them for retry, and the replay is still promoted, as
-        // it was when each silo flushed while ending. The replay is still not reported as cleanly finalized.
-        if (flushed.Any(cleanly => !cleanly))
+        bool[] flushedCleanly = [];
+        Exception? flushError = null;
+        try
         {
-            throw new ReplayFinalizationFailed(ICanHandleReplayForObserver.Error.Unknown);
+            flushedCleanly = await Task.WhenAll(silos.Select(silo => silo.FlushReplayFor(observerDetails)));
+        }
+        catch (Exception exception)
+        {
+            flushError = exception;
         }
 
+        // A final flush that left failed partitions - or that could not complete at all - means what the replay rebuilt
+        // may be incomplete. Nothing is promoted: every silo leaves replay mode and the read model keeps the state it had
+        // before the replay started.
+        if (flushError is not null || Array.Exists(flushedCleanly, cleanly => !cleanly))
+        {
+            await AbandonProjectionReplay(silos, observerDetails, flushError);
+            throw flushError is null ? new ReplayAbandoned() : new ReplayAbandoned(flushError);
+        }
+
+        var results = await Task.WhenAll(silos.Select(silo => silo.TryFinalizeReplayFor(observerDetails)));
+        EnsureProjectionReplayFinalized(results);
         return true;
     }
 
@@ -139,6 +151,19 @@ public class ObserverServiceClient(IGrainFactory grainFactory, IServiceProvider 
         if (!results.Any(_ => _))
         {
             throw new ReplayFinalizationFailed(ICanHandleReplayForObserver.Error.CouldNotGetReplayContext);
+        }
+    }
+
+    static async Task AbandonProjectionReplay(IReadOnlyCollection<IObserverService> silos, ObserverDetails observerDetails, Exception? flushError)
+    {
+        try
+        {
+            await Task.WhenAll(silos.Select(silo => silo.AbandonReplayFor(observerDetails)));
+        }
+        catch (Exception exception)
+        {
+            // Keep the reason the flush failed as well as the reason abandoning it failed.
+            throw new ReplayAbandoned(flushError is null ? exception : new AggregateException(flushError, exception));
         }
     }
 

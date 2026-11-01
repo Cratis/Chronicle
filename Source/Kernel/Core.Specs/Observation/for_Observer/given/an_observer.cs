@@ -129,6 +129,8 @@ public class an_observer : Specification
         _configurationProvider.GetFor(Arg.Any<string>()).Returns(_observersConfig);
         _subscriber = Substitute.For<IObserverSubscriber>();
         _jobsManager = Substitute.For<IJobsManager>();
+        _jobsManager.Start<IRetryFailedPartition, RetryFailedPartitionRequest>(Arg.Any<RetryFailedPartitionRequest>())
+            .Returns(Task.FromResult(Result<JobId, StartJobError>.Success(JobId.New())));
         _observerAlerts = Substitute.For<IObserverAlerts>();
         ApplyAlertReports();
         _eventSequence = Substitute.For<IEventSequence>();
@@ -172,11 +174,7 @@ public class an_observer : Specification
         // By default, every job looked up individually is still running - so nothing it concluded is forgotten.
         _jobStorage = Substitute.For<IJobStorage>();
         _eventStoreNamespaceStorage.Jobs.Returns(_jobStorage);
-        _jobStorage.GetJob(Arg.Any<JobId>()).Returns(call => Task.FromResult<Catch<JobState, Cratis.Orleans.Storage.Jobs.JobError>>(new JobState
-        {
-            Id = call.Arg<JobId>(),
-            Status = JobStatus.Running
-        }));
+        ConfigureDefaultJobStorage();
         _observerHandledCountsStorage.GetFor(Arg.Any<ObserverId>(), Arg.Any<Key>()).Returns(new Dictionary<EventTypeId, EventCount>());
 
         // By default, no schemas are known — events pass through unchanged.
@@ -238,6 +236,36 @@ public class an_observer : Specification
         await _observer.OnDeactivateAsync(new DeactivationReason(DeactivationReasonCode.ApplicationRequested, "Spec"), default);
 
         return await Crash();
+    }
+
+    void ConfigureDefaultJobStorage()
+    {
+        _jobStorage.GetJob(Arg.Any<JobId>()).Returns(call => Task.FromResult<Catch<JobState, Cratis.Orleans.Storage.Jobs.JobError>>(new JobState
+        {
+            Id = call.Arg<JobId>(),
+            Status = JobStatus.Running
+        }));
+
+        // By default the namespace has no outstanding jobs. It is a separate stub from the jobs manager's lookup, which some
+        // specs block, and it reports success: a failed listing is distinguishable from an empty one.
+        _jobStorage.GetJobs(Arg.Any<JobQuery>()).Returns(_ => Task.FromResult(Catch<IImmutableList<JobState>>.Success(ImmutableList<JobState>.Empty)));
+    }
+
+    /// <summary>
+    /// Makes both the jobs manager and the job storage list the given jobs, whatever the query.
+    /// </summary>
+    /// <param name="jobs">The jobs to list.</param>
+    protected void HasOutstandingJobs(params JobState[] jobs)
+    {
+        // A deleted job is gone from the next listing.
+        var listed = jobs.ToList();
+        _jobsManager.GetJobs(Arg.Any<JobQuery>()).Returns(_ => Task.FromResult<IImmutableList<JobState>>(listed.ToImmutableList()));
+        _jobStorage.GetJobs(Arg.Any<JobQuery>()).Returns(_ => Task.FromResult(Catch<IImmutableList<JobState>>.Success(listed.ToImmutableList())));
+        _jobsManager.Delete(Arg.Any<JobId>()).Returns(call =>
+        {
+            listed.RemoveAll(_ => _.Id == call.Arg<JobId>());
+            return Task.CompletedTask;
+        });
     }
 
     protected void ApplyAlertReports() => _observerAlerts.Configure().Reconcile(Arg.Any<ObserverAlertSnapshot>()).Returns(call =>

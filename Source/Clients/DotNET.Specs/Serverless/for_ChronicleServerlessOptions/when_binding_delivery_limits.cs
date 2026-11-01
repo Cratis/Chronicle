@@ -12,10 +12,11 @@ public class when_binding_delivery_limits : Specification
     {
         var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
         {
-            ["Cratis:Chronicle:Serverless:Delivery:MaximumBodySize"] = "1024"
+            ["Cratis:Chronicle:Serverless:Delivery:MaximumBodySize"] = "1024",
+            ["Cratis:Chronicle:Serverless:ReceiverLimits:MaximumBodySize"] = "1024"
         }).Build();
         using var lifetime = configuration as IDisposable;
         _options = configuration.GetSection("Cratis:Chronicle:Serverless").Get<ChronicleServerlessOptions>();
     }
-    [Fact] void should_not_bind_the_internal_delivery_limit() => _options.Delivery.MaximumBodySize.ShouldEqual(16L * 1024 * 1024);
+    [Fact] void should_not_bind_the_internal_delivery_limit() => _options.ReceiverLimits.MaximumBodySize.ShouldEqual(16L * 1024 * 1024);
 }

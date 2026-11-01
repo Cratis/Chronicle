@@ -39,6 +39,14 @@ public static class ChronicleClientServiceCollectionExtensions
         services.AddHttpContextAccessor();
         services.AddChronicleReceiver(provider => provider.GetRequiredService<IOptions<ChronicleAspNetCoreOptions>>().Value);
         services.TryAddSingleton<IDeliveryTargetResolver, RouteValuesDeliveryTargetResolver>();
+        services.AddOptions<ChronicleAspNetCoreOptions>()
+            .Configure<IEnumerable<ChronicleTelemetryConfiguration>>((options, configurations) =>
+            {
+                foreach (var configuration in configurations)
+                {
+                    configuration.Configure(options.Telemetry);
+                }
+            });
 
         services.AddSingleton(sp =>
         {

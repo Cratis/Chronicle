@@ -17,9 +17,6 @@ public record RejectProduct(string Name)
     /// Handles the command.
     /// </summary>
     /// <returns>A validation error for an empty name, otherwise null.</returns>
-    public async Task<ValidationResult?> Handle()
-    {
-        await Task.Yield();
-        return string.IsNullOrEmpty(Name) ? ValidationResult.Error("Name is required.", [nameof(Name)]) : null;
-    }
+    public ValidationResult? Handle() =>
+        string.IsNullOrEmpty(Name) ? ValidationResult.Error("Name is required.", [nameof(Name)]) : null;
 }

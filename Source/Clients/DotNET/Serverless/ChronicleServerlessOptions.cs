@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Diagnostics.CodeAnalysis;
 using Cratis.Chronicle.Observation;
 
 namespace Cratis.Chronicle.Serverless;
@@ -12,6 +13,7 @@ namespace Cratis.Chronicle.Serverless;
 /// Bound from <c language="json">Cratis:Chronicle:Serverless</c>. Receiver runtime settings, such as the timestamp tolerance, the
 /// delivery limits and the signing algorithm, are added to this type when the receiver is introduced.
 /// </remarks>
+[Experimental("CHRX0001", UrlFormat = "https://www.cratis.io/docs/chronicle/clients/dotnet/serverless-mode")]
 public class ChronicleServerlessOptions
 {
     /// <summary>
@@ -40,6 +42,11 @@ public class ChronicleServerlessOptions
     public ServerlessAuthOptions Auth { get; set; } = new();
 
     /// <summary>
+    /// Gets or sets the settings for how the kernel delivers events to the receiver.
+    /// </summary>
+    public ServerlessDeliveryOptions Delivery { get; set; } = new();
+
+    /// <summary>
     /// Gets or sets the delivery used by observers that declare none. Defaults to <see cref="ObserverDelivery.Http"/>.
     /// </summary>
     /// <remarks>
@@ -52,7 +59,7 @@ public class ChronicleServerlessOptions
     /// Gets or sets the generation the deployment registered its artifacts under. Zero means it is not set.
     /// </summary>
     /// <remarks>
-    /// Required when <see cref="Registration"/> is <see cref="ServerlessRegistration.Deploy"/>, except in Development.
+    /// Required when <see cref="Registration"/> is <see cref="ServerlessRegistration.Deploy"/>, except in Development. This version only validates the value; nothing consumes it yet. Enforcement arrives with the lazy fingerprint and generation check (#5111).
     /// </remarks>
     public ulong DeploymentGeneration { get; set; }
 
@@ -73,5 +80,5 @@ public class ChronicleServerlessOptions
     /// <summary>
     /// Gets or sets the internal delivery limits, unavailable to application configuration.
     /// </summary>
-    internal ServerlessDeliveryLimits Delivery { get; set; } = new();
+    internal ServerlessDeliveryLimits ReceiverLimits { get; set; } = new();
 }

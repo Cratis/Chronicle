@@ -9,6 +9,11 @@ namespace Cratis.Chronicle.Configuration;
 public class Authentication
 {
     /// <summary>
+    /// Gets the server-local, single-use administrator recovery request.
+    /// </summary>
+    public AdministratorRecoveryOptions AdministratorRecovery { get; init; } = new();
+
+    /// <summary>
     /// Gets whether authentication is enforced. Defaults to <see langword="true"/>.
     /// </summary>
     /// <remarks>
@@ -20,6 +25,12 @@ public class Authentication
     /// server, leaving this off publishes the whole event store to anyone who can open a socket.
     /// </remarks>
     public bool Enabled { get; init; } = true;
+
+    /// <summary>
+    /// Gets whether to enforce administrator authorization for System-store operational recovery.
+    /// Defaults to audit-only; administrator management is always enforced.
+    /// </summary>
+    public bool EnforceAdministratorPolicyForOperations { get; init; }
 
     /// <summary>
     /// Gets the authentication authority URL. If not configured, uses the internal OAuth authority.
@@ -64,6 +75,18 @@ public class Authentication
     /// setup flow in the Workbench.
     /// </summary>
     public AdminUserBootstrapConfig? AdminUser { get; init; }
+
+    /// <summary>
+    /// Gets an optional operator-provided token for initial administrator setup.
+    /// When absent, a token is issued and logged while the administrator has no credentials.
+    /// Store this value as a secret and remove it after setup.
+    /// </summary>
+    public string? InitialAdminSetupToken { get; init; }
+
+    /// <summary>
+    /// Gets the per-node password sign-in throttling settings.
+    /// </summary>
+    public SignInThrottling SignInThrottling { get; init; } = new();
 
 #if DEVELOPMENT
     /// <summary>

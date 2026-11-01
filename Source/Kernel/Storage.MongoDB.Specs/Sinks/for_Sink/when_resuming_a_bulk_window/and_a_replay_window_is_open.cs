@@ -5,6 +5,7 @@ using System.Dynamic;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Storage.ReadModels;
 using Cratis.Chronicle.Storage.Sinks;
+using Microsoft.Extensions.Logging;
 using MongoDB.Bson;
 using MongoDB.Driver;
 
@@ -35,6 +36,10 @@ public class and_a_replay_window_is_open : given.a_sink_with_gated_bulk_writes
         _afterResuming = await _sink.FlushBulk();
     }
 
+    [Fact] void should_warn_that_the_replay_window_was_replaced() => _logger.Entries.Single().Level.ShouldEqual(LogLevel.Warning);
+    [Fact] void should_log_the_previous_window() => _logger.Entries.Single().Values["PreviousWindow"].ShouldEqual(_opened.WindowId!.Value);
+    [Fact] void should_log_the_new_window() => _logger.Entries.Single().Values["Window"].ShouldEqual(_afterResuming.WindowId!.Value);
+    [Fact] void should_log_the_mode() => _logger.Entries.Single().Values["Mode"].ShouldEqual("catch-up");
     [Fact] void should_replace_the_replay_window() => _afterResuming.WindowId.ShouldNotEqual(_opened.WindowId);
     [Fact] void should_not_carry_replay_writes_into_catchup() => WrittenValuesFor(_firstKey).ShouldBeEmpty();
     [Fact] void should_clear_the_replay_bulk_state() => _cachedState.ShouldBeNull();

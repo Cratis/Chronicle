@@ -6,6 +6,7 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
+using Orleans.Concurrency;
 
 namespace Cratis.Chronicle.Projections;
 
@@ -25,6 +26,7 @@ public interface IProjection : IGrainWithStringKey
     /// Get the projection definition.
     /// </summary>
     /// <returns>The current <see cref="ProjectionDefinition"/>.</returns>
+    [AlwaysInterleave]
     Task<ProjectionDefinition> GetDefinition();
 
     /// <summary>

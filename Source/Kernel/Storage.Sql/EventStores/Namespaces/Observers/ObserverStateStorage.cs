@@ -28,7 +28,7 @@ public class ObserverStateStorage(EventStoreName eventStore, EventStoreNamespace
     }
 
     /// <inheritdoc/>
-    public ISubject<IEnumerable<Observation.ObserverState>> ObserveAll() => LiveQuery.Observe(GetAll, database.LiveQueryPollingInterval);
+    public ISubject<IEnumerable<Observation.ObserverState>> ObserveAll() => LiveQuery.Observe(GetAll, database, "observer-states");
 
     /// <inheritdoc/>
     public async Task<Observation.ObserverState> Get(ObserverId observerId)
@@ -142,6 +142,9 @@ public class ObserverStateStorage(EventStoreName eventStore, EventStoreNamespace
         {
             Id = newId,
             Owner = existing.Owner,
+            PartitionClaims = existing.PartitionClaims,
+            ObserverWideClaim = existing.ObserverWideClaim,
+            OwnershipRevision = existing.OwnershipRevision,
             TypeSetControl = existing.TypeSetControl,
             Initialization = existing.Initialization,
             DeliveryFences = existing.DeliveryFences,

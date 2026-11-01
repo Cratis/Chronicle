@@ -123,7 +123,6 @@ internal static class ChronicleClientServiceCollectionExtensions
     static void RegisterDefaultDependencies(IServiceCollection services)
     {
         services.TryAddSingleton<IClientArtifactsActivator, ClientArtifactsActivator>();
-        services.TryAddSingleton(serviceProvider => serviceProvider.GetRequiredService<IOptions<ChronicleOptions>>().Value.JsonSerializerOptions);
     }
 
     sealed class KeyedActivitySource<T>(IServiceProvider serviceProvider, [ServiceKey] string? key = null) : IActivitySource<T>
