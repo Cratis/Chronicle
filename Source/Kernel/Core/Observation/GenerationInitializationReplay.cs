@@ -44,29 +44,21 @@ internal static class GenerationInitializationReplay
     }
 
     /// <summary>
-    /// Refuses a new full replay once any initialization receipt exists, but lets an existing replay job be resumed
-    /// until a materialization is adopted, so replay work started before initialization can drain.
+    /// Admits a replay request unless a materialization was adopted. Quiescing admits it, because a replay job that can
+    /// still be resumed must be able to drain; the request that would start a new replay job is refused at the job
+    /// boundary by <see cref="EnsureStartAllowed"/>, after the live job has been selected.
     /// </summary>
     /// <param name="storage">The storage.</param>
     /// <param name="key">The observer being replayed.</param>
     /// <param name="type">The kind of observer.</param>
-    /// <param name="hasExistingReplayJob">Looks up whether the observer already owns an unfinished replay job; only called while quiescing.</param>
     /// <returns>A task representing the check.</returns>
-    /// <exception cref="GenerationInitializationReplayNotSupported">A new replay would start, or a materialization was adopted.</exception>
-    internal static async Task EnsureStartOrResumeAllowed(IStorage storage, ObserverKey key, ObserverType type, Func<Task<bool>> hasExistingReplayJob)
+    /// <exception cref="GenerationInitializationReplayNotSupported">A materialization was adopted.</exception>
+    internal static async Task EnsureReplayAdmitted(IStorage storage, ObserverKey key, ObserverType type)
     {
-        var progress = await GetProgress(storage, key, type);
-        if (progress == GenerationInitializationProgress.NotStarted)
+        if (await GetProgress(storage, key, type) == GenerationInitializationProgress.Adopted)
         {
-            return;
+            throw new GenerationInitializationReplayNotSupported(GenerationInitializationReplayNotSupported.StartRefusedReason);
         }
-
-        if (progress == GenerationInitializationProgress.Quiescing && await hasExistingReplayJob())
-        {
-            return;
-        }
-
-        throw new GenerationInitializationReplayNotSupported(GenerationInitializationReplayNotSupported.StartRefusedReason);
     }
 
     /// <summary>

@@ -74,10 +74,12 @@ public class Replay(
                 logger.ResumingReplayJob();
                 return Task.CompletedTask;
             },
-            () =>
+            async () =>
             {
+                // The only place a replay job is created, reached after live and resumable jobs were selected: while
+                // generation initialization has begun a replay may be resumed, never started.
+                await GenerationInitializationReplay.EnsureStartAllowed(storage, observerKey, definitionState.State.Type);
                 logger.StartReplayJob();
-                return Task.CompletedTask;
             });
 
         await storage
