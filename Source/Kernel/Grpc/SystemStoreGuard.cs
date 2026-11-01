@@ -18,6 +18,10 @@ internal static class SystemStoreGuard
     /// <summary>
     /// Gets or sets the services of the in-process server, initialized when its service facade is created.
     /// </summary>
+    /// <remarks>
+    /// The in-process facade assumes a single host per process. Resolving another host's facade replaces
+    /// this process-wide provider; it must not be shared by hosts with different authentication configurations.
+    /// </remarks>
     internal static IServiceProvider? InProcessServices { get; set; }
 
     /// <summary>
