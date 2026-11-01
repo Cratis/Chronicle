@@ -7,7 +7,6 @@ using System.Text.Json.Nodes;
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Compliance.GDPR;
 using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Events.EventSequences;
 using Cratis.Chronicle.ProtectedValues;
 using Cratis.Chronicle.Schemas;

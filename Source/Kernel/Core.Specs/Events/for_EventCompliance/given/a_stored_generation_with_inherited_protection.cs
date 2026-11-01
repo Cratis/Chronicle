@@ -5,7 +5,6 @@ using System.Text.Json.Nodes;
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Compliance.GDPR;
 using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.EventTypes;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.ProtectedValues;
@@ -45,9 +44,11 @@ public class a_stored_generation_with_inherited_protection : Specification
         _keys = new();
         var encryption = new Encryption();
         var provisioner = new ManagedEncryptionKeyProvisioner(_keys, encryption);
-        _manager = new(new KnownInstancesOf<IJsonSchemaMetadataValueHandler>(
-            new PIICompliancePropertyValueHandler(provisioner, _keys, encryption),
-            new EncryptedSubjectValueHandler(provisioner, _keys, encryption)), NullLogger<JsonSchemaMetadataManager>.Instance);
+        _manager = new(
+            new KnownInstancesOf<IJsonSchemaMetadataValueHandler>(
+                new PIICompliancePropertyValueHandler(provisioner, _keys, encryption),
+                new EncryptedSubjectValueHandler(provisioner, _keys, encryption)),
+            NullLogger<JsonSchemaMetadataManager>.Instance);
         _converter = new(new TypeFormats());
         _compliance = new(_manager, _converter, _cache);
     }

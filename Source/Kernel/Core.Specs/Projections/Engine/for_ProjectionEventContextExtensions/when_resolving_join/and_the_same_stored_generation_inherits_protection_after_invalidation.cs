@@ -5,7 +5,6 @@ using System.Dynamic;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Events.for_EventCompliance.given;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Storage.EventSequences;

@@ -10,7 +10,6 @@ using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
 using Microsoft.Extensions.Logging.Abstractions;
-using Orleans;
 
 namespace Cratis.Chronicle.EventSequences.for_EventSequencesReactor.when_revising;
 
