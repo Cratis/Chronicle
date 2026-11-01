@@ -12,6 +12,7 @@ using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.Sinks;
 using Microsoft.Extensions.Logging;
+using Orleans.Concurrency;
 using Orleans.Providers;
 using Orleans.Serialization.Invocation;
 
@@ -28,6 +29,7 @@ namespace Cratis.Chronicle.Projections;
 /// <param name="visibilities"><see cref="IReadModelInstanceVisibilities"/> deciding whether roots stored as uninitialized are returned.</param>
 /// <param name="logger">Logger for logging.</param>
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.Projections)]
+[MayInterleave(nameof(IsDefinitionChangeNotification))]
 public class ImmediateProjection(
     IStorage storage,
     IExpandoObjectConverter expandoObjectConverter,
@@ -55,6 +57,8 @@ public class ImmediateProjection(
     ImmediateProjectionKey? _projectionKey;
     ReadModelDefinition? _readModelDefinition;
     IProjection? _projection;
+    ProjectionDefinition? _pendingDefinition;
+    bool _readInProgress;
 
     /// <summary>
     /// Determines whether an incoming request is a projection definition notification.
@@ -107,7 +111,17 @@ public class ImmediateProjection(
     /// <inheritdoc/>
     public Task OnProjectionDefinitionsChanged(ProjectionDefinition definition)
     {
-        ApplyDefinition(definition);
+        // Acknowledging a notification must not invalidate the metadata held by an active read.
+        // Notifications arrive in grain-turn order; only the latest one needs to be applied on exit.
+        if (_readInProgress)
+        {
+            _pendingDefinition = definition;
+        }
+        else
+        {
+            ApplyDefinition(definition);
+        }
+
         return Task.CompletedTask;
     }
 
@@ -118,6 +132,7 @@ public class ImmediateProjection(
 
         logger.GettingModelInstance();
 
+        _readInProgress = true;
         try
         {
             // The Projection grain is the single, authoritative holder of the definition. The snapshot taken at activation
@@ -184,6 +199,15 @@ public class ImmediateProjection(
         {
             logger.FailedGettingModelInstance(ex);
             throw;
+        }
+        finally
+        {
+            _readInProgress = false;
+            if (_pendingDefinition is { } pending)
+            {
+                _pendingDefinition = null;
+                ApplyDefinition(pending);
+            }
         }
     }
 
