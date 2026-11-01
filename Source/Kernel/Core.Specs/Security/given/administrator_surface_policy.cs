@@ -47,6 +47,7 @@ public static class administrator_surface_policy
         ["Cratis.Chronicle.ProjectionEditor.PreviewProjection"] = "read-only preview without persisted definitions",
         ["Cratis.Chronicle.Recommendations.PerformRecommendation"] = "existing recommendation workflow; not in the P3 administrator rollout",
         ["Cratis.Chronicle.Recommendations.IgnoreRecommendation"] = "existing recommendation workflow; not in the P3 administrator rollout",
+        ["Cratis.Chronicle.Recommendations.UnignoreRecommendation"] = "existing recommendation workflow; not in the P3 administrator rollout",
         ["Cratis.Chronicle.Security.ChangeUserPassword"] = "self-service password change retains its existing checks",
         ["Cratis.Chronicle.Security.SetInitialAdminPassword"] = "anonymous bootstrap retains its existing checks",
         ["Cratis.Chronicle.Sequences.VerifyContent"] = "read-only content comparison"
