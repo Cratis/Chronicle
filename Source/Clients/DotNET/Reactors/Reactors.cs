@@ -186,7 +186,7 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
 
             foreach (var registration in _handlers.Values.Where(_ => !_.IsRegistered))
             {
-                RegisterReactor(registration);
+                RegisterReactor(registration, _servicesAccessor.Services);
                 registration.IsRegistered = true;
             }
             _registered = true;
@@ -512,7 +512,7 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
 
         try
         {
-            RegisterReactor(registration);
+            RegisterReactor(registration, _servicesAccessor.Services);
             registration.IsRegistered = true;
             _handlers = _handlers.Append(new KeyValuePair<ReactorId, ReactorRegistration>(registration.Handler.Id, registration))
                 .ToFrozenDictionary();
@@ -557,6 +557,10 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
     void ReconnectIfCurrent(ReactorRegistration registration, CancellationToken cancellationToken)
     {
         var handler = registration.Handler;
+
+        // Resolving the services connects synchronously when disconnected, so do it
+        // outside the static lock that other event stores' connection callbacks need.
+        var services = _servicesAccessor.Services;
         lock (_registerLock)
         {
             if (cancellationToken.IsCancellationRequested || !IsCurrentHandler(handler))
@@ -566,11 +570,11 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
             }
 
             _logger.ReconnectingReactor(handler.Id);
-            RegisterReactor(registration);
+            RegisterReactor(registration, services);
         }
     }
 
-    void RegisterReactor(ReactorRegistration registration)
+    void RegisterReactor(ReactorRegistration registration, IServices services)
     {
         var handler = registration.Handler;
         ClientObserverHosting.ThrowIfUnavailable(_eventStore.Connection, "Reactor", () => handler.Id.Value);
@@ -611,7 +615,7 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
 #pragma warning disable CA2000 // Dispose objects before losing scope
         var scheduler = new PartitionedDeliveryScheduler(MaxConcurrentPartitions);
 #pragma warning restore CA2000 // Dispose objects before losing scope
-        var eventsToObserve = _servicesAccessor.Services.Reactors.Observe(messages.Messages, cancellationToken);
+        var eventsToObserve = services.Reactors.Observe(messages.Messages, cancellationToken);
 
         // Re-establish the observation after the stream ends. A cross-store
         // (inbox) reactor's stream can be CLOSED by the kernel rather than tailed
