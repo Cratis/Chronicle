@@ -73,6 +73,21 @@ public class when_executing_a_routed_query : given.a_routed_query
         probe.Invocations.ShouldEqual(0);
     }
 
+    [Theory]
+    [InlineData("System+es+Default")]
+    [InlineData("system+es")]
+    public async Task should_refuse_physical_system_database_names(string store)
+    {
+        var probe = new Probe();
+        var context = CallFor(probe, CallerNamed(OrdinaryUser));
+        var result = await QueryExecutor.Execute(context, new QueryRouting(store, "Default"), probe.Run);
+        var observed = await QueryExecutor.Execute(context, new QueryRouting(store, "Default"), probe.Observe).FirstAsync();
+
+        result.IsAuthorized.ShouldBeFalse();
+        observed.IsAuthorized.ShouldBeFalse();
+        probe.Invocations.ShouldEqual(0);
+    }
+
     [Fact]
     public async Task should_refuse_a_system_query_without_a_request()
     {

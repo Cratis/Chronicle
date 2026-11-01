@@ -28,5 +28,11 @@ public class when_checking_for_the_system_event_store : Specification
     [MemberData(nameof(OtherNames))]
     public void should_not_recognize_other_names(string name) => SystemStoreAccess.IsSystem(name).ShouldBeFalse();
 
+    [Theory]
+    [InlineData("System+es+Default")]
+    [InlineData("system+es")]
+    [InlineData("SYSTEM+x")]
+    public void should_recognize_physical_system_database_names(string name) => SystemStoreAccess.IsSystem(name).ShouldBeTrue();
+
     [Fact] void should_not_recognize_a_missing_name() => SystemStoreAccess.IsSystem(null).ShouldBeFalse();
 }

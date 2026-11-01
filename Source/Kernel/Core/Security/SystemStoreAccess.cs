@@ -22,12 +22,13 @@ public static class SystemStoreAccess
     public const string SeparatorRefused = "The value must not contain '#'.";
 
     /// <summary>
-    /// Checks whether an event store name addresses the System event store, using the same comparison as the storage layer.
+    /// Checks whether an event store name addresses the System event store or one of its physical databases.
     /// </summary>
     /// <param name="eventStore">The event store name.</param>
     /// <returns>True if it is the System event store; false otherwise.</returns>
     public static bool IsSystem(string? eventStore) =>
-        string.Equals(eventStore, EventStoreName.System.Value, StringComparison.OrdinalIgnoreCase);
+        string.Equals(eventStore, EventStoreName.System.Value, StringComparison.OrdinalIgnoreCase) ||
+        eventStore?.StartsWith("System+", StringComparison.OrdinalIgnoreCase) == true;
 
     /// <summary>
     /// Checks whether a routing value contains the grain key separator.
