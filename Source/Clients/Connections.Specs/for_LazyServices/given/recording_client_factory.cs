@@ -15,6 +15,8 @@ public class recording_client_factory : ClientFactory
 
     public Type? FailingServiceType { get; set; }
 
+    public Action? OnCreated { get; set; }
+
     protected override BinderConfiguration BinderConfiguration => BinderConfiguration.Default;
 
     public override TService CreateClient<TService>(CallInvoker channel)
@@ -26,6 +28,7 @@ public class recording_client_factory : ClientFactory
 
         var service = Substitute.For<TService>();
         Creations.Enqueue((typeof(TService), channel, service));
+        OnCreated?.Invoke();
         return service;
     }
 }
