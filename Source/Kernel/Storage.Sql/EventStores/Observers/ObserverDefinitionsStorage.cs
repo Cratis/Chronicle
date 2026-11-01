@@ -114,6 +114,6 @@ public class ObserverDefinitionsStorage(EventStoreName eventStore, IDatabase dat
     async Task<IEnumerable<ObserverDefinition>> GetAllRows()
     {
         await using var scope = await database.EventStore(eventStore);
-        return await scope.DbContext.Observers.ToListAsync();
+        return await scope.DbContext.Observers.OrderBy(observer => observer.Id).ToListAsync();
     }
 }
