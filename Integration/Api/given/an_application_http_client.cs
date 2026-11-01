@@ -13,17 +13,38 @@ namespace Cratis.Chronicle.Integration.Api.given;
 public class an_application_http_client(ChronicleOutOfProcessFixtureWithLocalImage fixture) : an_http_client(fixture)
 {
     /// <inheritdoc/>
+    /// <remarks>
+    /// The dev client is registered by the kernel's startup task, which can still be running when the container's
+    /// health check already reports healthy - the same race <see cref="ChronicleOutOfProcessFixtureWithLocalImage.GetAccessToken"/>
+    /// retries for the administrator. Retry here until the dev client exists or the deadline passes.
+    /// </remarks>
     protected override async Task<string> GetAccessToken()
     {
-        using var request = new FormUrlEncodedContent(new Dictionary<string, string>
+        var deadline = DateTimeOffset.UtcNow.AddSeconds(30);
+        HttpResponseMessage response;
+        while (true)
         {
-            ["grant_type"] = "client_credentials",
-            ["client_id"] = ChronicleConnectionString.DevelopmentClient,
-            ["client_secret"] = ChronicleConnectionString.DevelopmentClientSecret
-        });
-        using var response = await Client.PostAsync("/connect/token", request);
-        response.EnsureSuccessStatusCode();
-        var token = await response.Content.ReadFromJsonAsync<JsonElement>();
-        return token.GetProperty("access_token").GetString()!;
+            using var request = new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                ["grant_type"] = "client_credentials",
+                ["client_id"] = ChronicleConnectionString.DevelopmentClient,
+                ["client_secret"] = ChronicleConnectionString.DevelopmentClientSecret
+            });
+            response = await Client.PostAsync("/connect/token", request);
+            if (response.IsSuccessStatusCode || DateTimeOffset.UtcNow >= deadline)
+            {
+                break;
+            }
+
+            response.Dispose();
+            await Task.Delay(TimeSpan.FromMilliseconds(500));
+        }
+
+        using (response)
+        {
+            response.EnsureSuccessStatusCode();
+            var token = await response.Content.ReadFromJsonAsync<JsonElement>();
+            return token.GetProperty("access_token").GetString()!;
+        }
     }
 }
