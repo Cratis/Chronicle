@@ -50,6 +50,15 @@ public class a_connection_with_several_endpoints : Specification
             _streams[server] = Observable.Never<ConnectionKeepAlive>;
         }
 
+        CreateLifecycle();
+        var resolver = CreateResolver();
+        CreateLoadBalancer();
+        CreateTaskFactory();
+        CreateConnection(resolver);
+    }
+
+    void CreateLifecycle()
+    {
         _lifecycle = Substitute.For<IConnectionLifecycle>();
         _lifecycle.IsConnected.Returns(_ => _isConnected);
         _lifecycle.ConnectionId.Returns(ConnectionId.New());
@@ -64,11 +73,19 @@ public class a_connection_with_several_endpoints : Specification
             _disconnectedCalls++;
             return Task.CompletedTask;
         });
+    }
 
+    IChronicleServerAddressResolver CreateResolver()
+    {
         var resolver = Substitute.For<IChronicleServerAddressResolver>();
         resolver.Resolve(Arg.Any<ChronicleConnectionString>())
             .Returns(_ => Task.FromResult<IReadOnlyList<ChronicleServerAddress>>(Servers));
 
+        return resolver;
+    }
+
+    void CreateLoadBalancer()
+    {
         // Picks the first candidate offered, so a spec sees the order the connection chose without the balancer's own preference.
         _loadBalancer = Substitute.For<ILoadBalancerStrategy>();
         _loadBalancer.Next(Arg.Any<IReadOnlyList<ChronicleServerAddress>>())
@@ -78,14 +95,20 @@ public class a_connection_with_several_endpoints : Specification
                 _candidatesOffered.Add(offered);
                 return Task.FromResult(offered[0]);
             });
+    }
 
+    void CreateTaskFactory()
+    {
         // The watchdog judges staleness by the manual clock. Unless a spec is about it, its monitor never ticks, so it cannot interfere.
         _tasks = Substitute.For<ITaskFactory>();
         _tasks.Run(Arg.Any<Func<Task>>(), Arg.Any<CancellationToken>())
             .Returns(call => Task.Run(call.Arg<Func<Task>>()));
         _tasks.Delay(Arg.Any<int>(), Arg.Any<CancellationToken>())
             .Returns(call => Task.Delay(WatchdogTicksQuickly ? 1 : Timeout.Infinite, call.Arg<CancellationToken>()));
+    }
 
+    void CreateConnection(IChronicleServerAddressResolver resolver)
+    {
         _connection = new ChronicleConnection(
             ChronicleConnectionString.Default,
             ConnectTimeoutSeconds,

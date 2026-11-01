@@ -344,26 +344,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         DisposeCurrentAttempt();
 
         var untried = (await _serverAddressResolver.Resolve(_connectionString)).ToList();
-        var budget = TimeSpan.FromSeconds(_connectTimeout);
-        var started = _timeProvider.GetUtcNow();
-        var connected = false;
-
-        // A single endpoint that never answers must not take the whole budget while another one is up, so each
-        // endpoint but the last gets a bounded handshake. The last one gets whatever remains, which for a single
-        // address is the full connect timeout - exactly what it always was.
-        while (!connected)
-        {
-            var address = await TakeNextCandidate(untried);
-            var remaining = budget - (_timeProvider.GetUtcNow() - started);
-            var attemptBudget = untried.Count == 0 ? remaining : TimeSpan.FromTicks(Math.Min(EndpointHandshakeTimeout.Ticks, remaining.Ticks));
-            connected = await TryConnectTo(address, attemptBudget);
-            if (connected || untried.Count == 0 || _timeProvider.GetUtcNow() - started >= budget)
-            {
-                break;
-            }
-
-            DisposeCurrentAttempt();
-        }
+        var connected = await TryConnectToAnyCandidate(untried);
 
         if (_skipKeepAlive)
         {
@@ -381,18 +362,55 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
 
         if (!connected)
         {
-            // Returning normally here reported success while the lifecycle stayed disconnected, so there was no
-            // failure state to observe and no back-off to apply - the next call simply re-entered and paid the
-            // timeout again (#3948). The watchdog keeps reconnecting in the background.
-            //
-            // Only once a connection has been established, though. A kernel that has not come up yet while its
-            // client starts is ordinary, and a host that cannot boot through it is worse than one that keeps
-            // trying - so the first connect keeps waiting on the watchdog rather than failing its caller.
-            _logger.TimedOut();
-            if (_hasEverConnected)
+            ThrowIfFirstConnectHasEverSucceeded();
+        }
+    }
+
+    /// <summary>
+    /// Tries the untried servers in turn until one completes its handshake or the connect budget is spent.
+    /// </summary>
+    /// <param name="untried">The servers not yet tried. Picked ones are removed.</param>
+    /// <returns>True if a server completed its handshake.</returns>
+    async Task<bool> TryConnectToAnyCandidate(List<ChronicleServerAddress> untried)
+    {
+        var budget = TimeSpan.FromSeconds(_connectTimeout);
+        var started = _timeProvider.GetUtcNow();
+
+        // A single endpoint that never answers must not take the whole budget while another one is up, so each
+        // endpoint but the last gets a bounded handshake. The last one gets whatever remains, which for a single
+        // address is the full connect timeout - exactly what it always was.
+        while (true)
+        {
+            var address = await TakeNextCandidate(untried);
+            var remaining = budget - (_timeProvider.GetUtcNow() - started);
+            var attemptBudget = untried.Count == 0 ? remaining : TimeSpan.FromTicks(Math.Min(EndpointHandshakeTimeout.Ticks, remaining.Ticks));
+            if (await TryConnectTo(address, attemptBudget))
             {
-                throw new ConnectionTimedOut();
+                return true;
             }
+
+            if (untried.Count == 0 || _timeProvider.GetUtcNow() - started >= budget)
+            {
+                return false;
+            }
+
+            DisposeCurrentAttempt();
+        }
+    }
+
+    void ThrowIfFirstConnectHasEverSucceeded()
+    {
+        // Returning normally here reported success while the lifecycle stayed disconnected, so there was no
+        // failure state to observe and no back-off to apply - the next call simply re-entered and paid the
+        // timeout again (#3948). The watchdog keeps reconnecting in the background.
+        //
+        // Only once a connection has been established, though. A kernel that has not come up yet while its
+        // client starts is ordinary, and a host that cannot boot through it is worse than one that keeps
+        // trying - so the first connect keeps waiting on the watchdog rather than failing its caller.
+        _logger.TimedOut();
+        if (_hasEverConnected)
+        {
+            throw new ConnectionTimedOut();
         }
     }
 
@@ -462,7 +480,22 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
             }
         }
 
-        _services = new Services(
+        _services = CreateServices(callInvoker, clientFactory);
+
+        if (_skipKeepAlive)
+        {
+            _logger.Connected();
+            _hasEverConnected = true;
+            await Lifecycle.Connected();
+            return true;
+        }
+
+        return await AwaitHandshake(address, callInvoker, clientFactory, budget);
+    }
+
+    Services CreateServices(CallInvoker callInvoker, InProcessAwareGrpcClientProxiesClientFactory clientFactory)
+    {
+        return new Services(
             callInvoker.CreateGrpcService<ICompliance>(clientFactory),
             callInvoker.CreateGrpcService<IEventStores>(clientFactory),
             callInvoker.CreateGrpcService<INamespaces>(clientFactory),
@@ -495,15 +528,10 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
             Administrators = callInvoker.CreateGrpcService<Contracts.Security.IAdministrators>(clientFactory),
             Occurrences = callInvoker.CreateGrpcService<Contracts.Occurrences.IOccurrences>(clientFactory)
         };
+    }
 
-        if (_skipKeepAlive)
-        {
-            _logger.Connected();
-            _hasEverConnected = true;
-            await Lifecycle.Connected();
-            return true;
-        }
-
+    async Task<bool> AwaitHandshake(ChronicleServerAddress address, CallInvoker callInvoker, InProcessAwareGrpcClientProxiesClientFactory clientFactory, TimeSpan budget)
+    {
         _connectionService = ConnectionServiceFactory?.Invoke(address, callInvoker) ?? callInvoker.CreateGrpcService<IConnectionService>(clientFactory);
         _watchDog.NotifyKeepAlive();
         var handshake = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
