@@ -31,7 +31,16 @@ public static class ObserverSequenceCheckpointConverters
     /// <param name="checkpoint">The document.</param>
     /// <returns>The checkpoint.</returns>
     public static KernelCheckpoint ToKernel(this ObserverSequenceCheckpoint checkpoint) =>
-        new(checkpoint.Id.ObserverId, checkpoint.Id.EventSequenceId, checkpoint.NextEventSequenceNumber,
-            checkpoint.LastHandledEventSequenceNumber, checkpoint.TailEventSequenceNumber, checkpoint.FailedPartitionCount,
-            checkpoint.IsReplaying, checkpoint.PartitionClaims, checkpoint.ObserverWideClaim, checkpoint.DeliveryFences, checkpoint.Parked);
+        new(
+            checkpoint.Id.ObserverId,
+            checkpoint.Id.EventSequenceId,
+            checkpoint.NextEventSequenceNumber,
+            checkpoint.LastHandledEventSequenceNumber,
+            checkpoint.TailEventSequenceNumber,
+            checkpoint.FailedPartitionCount,
+            checkpoint.IsReplaying,
+            checkpoint.PartitionClaims,
+            checkpoint.ObserverWideClaim,
+            checkpoint.DeliveryFences,
+            checkpoint.Parked);
 }

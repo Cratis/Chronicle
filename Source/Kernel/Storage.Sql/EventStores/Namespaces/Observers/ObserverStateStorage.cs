@@ -116,6 +116,7 @@ public class ObserverStateStorage(EventStoreName eventStore, EventStoreNamespace
         var expected = expectedOwner?.Value;
         var checkpoint = target.ToEntity();
         ISet<string> emptyPartitions = new HashSet<string>();
+
         // One conditional UPDATE changes only sequence-local fields. No tracked snapshot can
         // overwrite concurrent alert, membership, initialization or count changes.
         var updated = await scope.DbContext.Observers

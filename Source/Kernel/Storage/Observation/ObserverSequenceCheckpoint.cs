@@ -42,8 +42,18 @@ public record ObserverSequenceCheckpoint(
     /// <param name="eventSequenceId">The sequence.</param>
     /// <returns>A checkpoint starting at the first event, without claims or failures.</returns>
     public static ObserverSequenceCheckpoint Fresh(ObserverId observerId, EventSequenceId eventSequenceId) =>
-        new(observerId, eventSequenceId, EventSequenceNumber.First, EventSequenceNumber.Unavailable,
-            EventSequenceNumber.Unavailable, FailedPartitionCount.Zero, false, null, null, null, DateTimeOffset.UtcNow);
+        new(
+            observerId,
+            eventSequenceId,
+            EventSequenceNumber.First,
+            EventSequenceNumber.Unavailable,
+            EventSequenceNumber.Unavailable,
+            FailedPartitionCount.Zero,
+            false,
+            null,
+            null,
+            null,
+            DateTimeOffset.UtcNow);
 
     /// <summary>
     /// Takes only the sequence-local progress from an observer state.
@@ -52,7 +62,16 @@ public record ObserverSequenceCheckpoint(
     /// <param name="eventSequenceId">The sequence that owns this progress.</param>
     /// <returns>The parked sequence-local snapshot.</returns>
     public static ObserverSequenceCheckpoint ParkedFrom(ObserverState state, EventSequenceId eventSequenceId) =>
-        new(state.Identifier, eventSequenceId, state.NextEventSequenceNumber, state.LastHandledEventSequenceNumber,
-            state.TailEventSequenceNumber, state.FailedPartitionCount, state.IsReplaying, state.PartitionClaims,
-            state.ObserverWideClaim, state.DeliveryFences, DateTimeOffset.UtcNow);
+        new(
+            state.Identifier,
+            eventSequenceId,
+            state.NextEventSequenceNumber,
+            state.LastHandledEventSequenceNumber,
+            state.TailEventSequenceNumber,
+            state.FailedPartitionCount,
+            state.IsReplaying,
+            state.PartitionClaims,
+            state.ObserverWideClaim,
+            state.DeliveryFences,
+            DateTimeOffset.UtcNow);
 }

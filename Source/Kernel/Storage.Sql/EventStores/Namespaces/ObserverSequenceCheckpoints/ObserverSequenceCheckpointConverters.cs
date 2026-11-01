@@ -34,8 +34,13 @@ public static class ObserverSequenceCheckpointConverters
     /// <param name="checkpoint">The SQL entity.</param>
     /// <returns>The checkpoint.</returns>
     public static ObserverSequenceCheckpoint ToKernel(this ObserverSequenceCheckpointEntry checkpoint) =>
-        new(new(checkpoint.ObserverId), new(checkpoint.EventSequenceId), new(checkpoint.NextEventSequenceNumber),
-            new(checkpoint.LastHandledEventSequenceNumber), new(checkpoint.TailEventSequenceNumber), new(checkpoint.FailedPartitionCount),
+        new(
+            new(checkpoint.ObserverId),
+            new(checkpoint.EventSequenceId),
+            new(checkpoint.NextEventSequenceNumber),
+            new(checkpoint.LastHandledEventSequenceNumber),
+            new(checkpoint.TailEventSequenceNumber),
+            new(checkpoint.FailedPartitionCount),
             checkpoint.IsReplaying,
             checkpoint.PartitionClaims is null ? null : JsonSerializer.Deserialize<PartitionClaim[]>(checkpoint.PartitionClaims, ObserverStateJson.Options),
             checkpoint.ObserverWideClaim is null ? null : JsonSerializer.Deserialize<ObserverWideClaim>(checkpoint.ObserverWideClaim, ObserverStateJson.Options),

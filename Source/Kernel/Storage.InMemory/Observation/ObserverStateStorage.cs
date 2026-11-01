@@ -4,6 +4,7 @@
 using System.Collections.Concurrent;
 using System.Reactive.Subjects;
 using Cratis.Chronicle.Concepts.EventSequences;
+using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Storage.Observation;
 
@@ -97,9 +98,9 @@ public sealed class ObserverStateStorage : IObserverStateStorage, IDisposable
                 PartitionClaims = target.PartitionClaims,
                 ObserverWideClaim = target.ObserverWideClaim,
                 DeliveryFences = target.DeliveryFences,
-                ReplayingPartitions = [],
-                CatchingUpPartitions = [],
-                InFlightPartitions = []
+                ReplayingPartitions = new HashSet<Key>(),
+                CatchingUpPartitions = new HashSet<Key>(),
+                InFlightPartitions = new HashSet<Key>()
             };
             if (!_states.TryUpdate(observerId, incoming, existing)) continue;
             _allSubject.OnNext(Snapshot());

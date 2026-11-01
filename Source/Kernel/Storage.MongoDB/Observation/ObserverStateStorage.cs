@@ -144,7 +144,7 @@ public class ObserverStateStorage(IEventStoreNamespaceDatabase namespaceDatabase
             .Set(_ => _.NextEventSequenceNumber, target.NextEventSequenceNumber)
             .Set(_ => _.LastHandledEventSequenceNumber, target.LastHandledEventSequenceNumber)
             .Set(_ => _.TailEventSequenceNumber, target.TailEventSequenceNumber)
-            .Set(_ => _.FailedPartitionCount, target.FailedPartitionCount)
+            .Set(_ => _.FailedPartitionCount, target.FailedPartitionCount.Value)
             .Set(_ => _.IsReplaying, target.IsReplaying)
             .Set(_ => _.PartitionClaims, target.PartitionClaims)
             .Set(_ => _.ObserverWideClaim, target.ObserverWideClaim)
