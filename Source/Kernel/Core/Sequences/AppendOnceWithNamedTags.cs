@@ -52,7 +52,7 @@ public record AppendOnceWithNamedTags(
     IEnumerable<Causation>? Causation = default,
     Identity? CausedBy = default,
     ConcurrencyScope? ConcurrencyScope = default,
-    string? EventSource = default)
+    string? EventSource = default) : IEventSequenceWriteCommand
 {
     /// <summary>
     /// Handles the command by appending the event once for its key.

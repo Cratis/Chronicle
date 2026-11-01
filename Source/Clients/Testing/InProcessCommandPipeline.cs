@@ -10,6 +10,8 @@ using Cratis.Arc.Commands;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
+using Cratis.Chronicle.Storage.EventSequences;
+using Cratis.Chronicle.Storage.InMemory;
 using Cratis.Chronicle.Testing.EventSequences;
 using KernelCore::Cratis.Chronicle.Setup;
 using Microsoft.AspNetCore.Http;
@@ -60,6 +62,7 @@ internal static class InProcessCommandPipeline
         services.AddKernelSideCommandExtensionPoints();
         services.AddSingleton(grainFactory);
         services.AddSingleton(storage);
+        services.AddSingleton<IReservedEventSequenceIds, InMemoryReservedEventSequenceIds>();
         services.AddSingleton(jsonSerializerOptions);
         services.AddSingleton<IExpandoObjectConverter>(new ExpandoObjectConverter(new TypeFormats()));
 

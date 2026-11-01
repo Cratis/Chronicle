@@ -36,7 +36,7 @@ public record AppendManyForEventSources(
     IEnumerable<Causation>? Causation = default,
     Identity? CausedBy = default,
     IEnumerable<EventSourceConcurrencyScope>? ConcurrencyScopes = default,
-    Occurrences.EffectReceipt? EffectReceipt = default)
+    Occurrences.EffectReceipt? EffectReceipt = default) : IEventSequenceWriteCommand
 {
     /// <summary>
     /// Handles the command by appending every event in one transaction.

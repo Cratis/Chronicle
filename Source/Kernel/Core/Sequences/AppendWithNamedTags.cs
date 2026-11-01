@@ -53,7 +53,7 @@ public record AppendWithNamedTags(
     Identity? CausedBy = default,
     ConcurrencyScope? ConcurrencyScope = default,
     string? EventSource = default,
-    Occurrences.EffectReceipt? EffectReceipt = default)
+    Occurrences.EffectReceipt? EffectReceipt = default) : IEventSequenceWriteCommand
 {
     /// <summary>
     /// Handles the named-tag append through the existing append pipeline.

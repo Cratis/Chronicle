@@ -52,8 +52,8 @@ public static class ChronicleCommandScenario
         // failure the validator lookup above exists to prevent. Kernel validators read the event store to answer
         // ownership questions, so IStorage has to be resolvable for a scenario to exercise the rule set the
         // server actually runs. The substitute answers "nothing registered", which is the right starting point;
-        // a spec that needs stored state registers its own on its scenario. The append validators also ask the
-        // storage provider which event sequence names are reserved; the substitute reserves nothing.
+        // a spec that needs stored state registers its own on its scenario. The reserved event sequence names filter
+        // asks the storage provider which names are reserved; the substitute reserves nothing.
         scenario.Services.AddSingleton(Substitute.For<IStorage>());
         scenario.Services.AddSingleton(Substitute.For<IReservedEventSequenceIds>());
         ConfigureAuthorization(scenario.Services, isAdministrator);

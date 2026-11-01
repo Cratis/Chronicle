@@ -2,8 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts;
-using Cratis.Chronicle.Storage;
-using Cratis.Chronicle.Storage.EventSequences;
 using FluentValidation;
 
 namespace Cratis.Chronicle.Sequences;
@@ -47,25 +45,6 @@ internal static class AppendRules
     public static IRuleBuilderOptions<T, string> NoKeySeparator<T>(this IRuleBuilder<T, string> rule) =>
         rule.Must(static value => value is null || value.AsSpan().IndexOf(KeyHelper.Separator) < 0)
             .WithMessage("The value must not contain '#'.");
-
-    /// <summary>
-    /// Refuses a name the storage provider keeps for itself when it would create a new event sequence.
-    /// </summary>
-    /// <typeparam name="T">Type being validated.</typeparam>
-    /// <param name="rule">The rule builder.</param>
-    /// <param name="storage">The <see cref="IStorage"/> used to tell whether the event sequence already exists.</param>
-    /// <param name="reservedEventSequenceIds">The <see cref="IReservedEventSequenceIds"/> of the active storage provider.</param>
-    /// <param name="eventStore">Gets the event store name of the validated instance.</param>
-    /// <param name="namespace">Gets the namespace name of the validated instance.</param>
-    /// <returns>The rule builder options for continuation.</returns>
-    public static IRuleBuilderOptions<T, string> NotReservedForNewEventSequence<T>(
-        this IRuleBuilder<T, string> rule,
-        IStorage storage,
-        IReservedEventSequenceIds reservedEventSequenceIds,
-        Func<T, string> eventStore,
-        Func<T, string> @namespace) =>
-        rule.MustAsync((instance, id, _) => ReservedEventSequenceRules.MayBeWritten(storage, reservedEventSequenceIds, eventStore(instance), @namespace(instance), id))
-            .WithMessage((_, id) => ReservedEventSequenceRules.Message(id));
 
     /// <summary>
     /// Requires a namespace name.

@@ -39,7 +39,7 @@ public record AppendManyOnce(
     IEnumerable<string>? Tags = default,
     IEnumerable<Causation>? Causation = default,
     Identity? CausedBy = default,
-    IEnumerable<EventSourceConcurrencyScope>? ConcurrencyScopes = default)
+    IEnumerable<EventSourceConcurrencyScope>? ConcurrencyScopes = default) : IEventSequenceWriteCommand
 {
     /// <summary>
     /// Handles the command by settling the batch.

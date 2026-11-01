@@ -40,7 +40,7 @@ public record AppendMany(
     IEnumerable<Causation>? Causation = default,
     Identity? CausedBy = default,
     ConcurrencyScope? ConcurrencyScope = default,
-    Occurrences.EffectReceipt? EffectReceipt = default)
+    Occurrences.EffectReceipt? EffectReceipt = default) : IEventSequenceWriteCommand
 {
     /// <summary>
     /// Handles the command by appending every event in one transaction.
