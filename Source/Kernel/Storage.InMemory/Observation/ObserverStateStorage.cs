@@ -99,6 +99,7 @@ public sealed class ObserverStateStorage : IObserverStateStorage, IDisposable
                 ObserverWideClaim = target.ObserverWideClaim,
                 DeliveryFences = target.DeliveryFences,
                 ReplayingPartitions = new HashSet<Key>(),
+                PartitionReplayCompletions = null,
                 CatchingUpPartitions = new HashSet<Key>(),
                 InFlightPartitions = new HashSet<Key>()
             };

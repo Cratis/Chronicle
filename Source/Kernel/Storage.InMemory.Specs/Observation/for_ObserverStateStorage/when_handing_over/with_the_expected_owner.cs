@@ -25,6 +25,7 @@ public class with_the_expected_owner : Specification
             SubscribesToAllEvents = true,
             NextEventSequenceNumber = new(999),
             ReplayingPartitions = ["replaying"],
+            PartitionReplayCompletions = [new("replaying", new(10), new(20), null, DateTimeOffset.UnixEpoch)],
             CatchingUpPartitions = ["catching-up"],
             InFlightPartitions = ["in-flight"],
             OwnershipRevision = new(19),
@@ -69,6 +70,7 @@ public class with_the_expected_owner : Specification
     [Fact] void should_restore_the_wide_claim() => _result.ObserverWideClaim.ShouldEqual(_target.ObserverWideClaim);
     [Fact] void should_restore_delivery_fences() => _result.DeliveryFences.ShouldEqual(_target.DeliveryFences);
     [Fact] void should_clear_replaying_partitions() => _result.ReplayingPartitions.ShouldBeEmpty();
+    [Fact] void should_clear_partition_replay_completions() => _result.PartitionReplayCompletions.ShouldBeNull();
     [Fact] void should_clear_catching_up_partitions() => _result.CatchingUpPartitions.ShouldBeEmpty();
     [Fact] void should_clear_in_flight_partitions() => _result.InFlightPartitions.ShouldBeEmpty();
     [Fact] void should_preserve_the_running_state() => _result.RunningState.ShouldEqual(_original.RunningState);

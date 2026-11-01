@@ -132,6 +132,7 @@ public class ObserverStateStorage(EventStoreName eventStore, EventStoreNamespace
                 .SetProperty(observer => observer.ObserverWideClaim, checkpoint.ObserverWideClaim)
                 .SetProperty(observer => observer.DeliveryFences, checkpoint.DeliveryFences)
                 .SetProperty(observer => observer.ReplayingPartitions, emptyPartitions)
+                .SetProperty(observer => observer.PartitionReplayCompletions, (string?)null)
                 .SetProperty(observer => observer.CatchingUpPartitions, emptyPartitions));
         return updated > 0;
     }

@@ -151,6 +151,7 @@ public class ObserverStateStorage(IEventStoreNamespaceDatabase namespaceDatabase
             .Set(_ => _.ObserverWideClaim, target.ObserverWideClaim)
             .Set(_ => _.DeliveryFences, target.DeliveryFences)
             .Set(_ => _.ReplayingPartitions, [])
+            .Set(_ => _.PartitionReplayCompletions, null)
             .Set(_ => _.CatchingUpPartitions, [])
             .Set(_ => _.InFlightPartitions, []);
         var result = await _collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
