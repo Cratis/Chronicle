@@ -49,6 +49,12 @@ public class Clustering
     public string ClusterId { get; set; } = "chronicle";
 
     /// <summary>
+    /// Gets or sets the cluster-internal appended-event wire format. Keep JSON during rolling upgrades;
+    /// enable compact only when every node supports reading it, and return to JSON before rolling back.
+    /// </summary>
+    public EventWireFormat EventWireFormat { get; set; } = EventWireFormat.Json;
+
+    /// <summary>
     /// Gets the service id - all nodes that should form one cluster must share it.
     /// </summary>
     public string ServiceId { get; set; } = "chronicle";

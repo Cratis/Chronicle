@@ -2,9 +2,13 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Buffers;
+using System.Dynamic;
+using System.Text.Json;
 using BenchmarkDotNet.Attributes;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Orleans.Serialization;
 
 namespace Cratis.Chronicle.Benchmarks.Serialization;
@@ -38,9 +42,16 @@ public class AppendedEventCodecBenchmarks
     public int BatchSize { get; set; }
 
     /// <summary>
-    /// Gets or sets the wire format; the baseline uses the released JSON encoding.
+    /// Gets or sets the wire format for identical producer-normalized payloads.
     /// </summary>
+    [Params("Json", "Compact")]
     public string Format { get; set; } = "Json";
+
+    /// <summary>
+    /// Gets or sets the repetition within one controlled comparison session.
+    /// </summary>
+    [Params(1, 2)]
+    public int Sample { get; set; }
 
     /// <summary>
     /// Initializes serialization and warms both schema caches outside measurement.
@@ -54,8 +65,17 @@ public class AppendedEventCodecBenchmarks
         {
             Context = appendedEvent.Context with { SequenceNumber = (ulong)index }
         }).ToList();
+        var legacy = _serializer.Deserialize(_serializer.SerializeToArray(_events))!;
+        _provider.GetRequiredService<IOptions<ChronicleOptions>>().Value.Clustering.EventWireFormat = Enum.Parse<EventWireFormat>(Format);
         _serialized = _serializer.SerializeToArray(_events);
-        _ = _serializer.Deserialize(_serialized);
+        var decoded = _serializer.Deserialize(_serialized)!;
+        var options = _provider.GetRequiredService<JsonSerializerOptions>();
+        if (JsonSerializer.Serialize(decoded, options) != JsonSerializer.Serialize(legacy, options) ||
+            !decoded.SelectMany(item => ContentTypes(item.Content)).SequenceEqual(legacy.SelectMany(item => ContentTypes(item.Content))))
+        {
+            throw new InvalidOperationException("JSON and compact benchmark values or CLR types differ.");
+        }
+        Console.WriteLine($"Wire bytes: Format={Format}, Sample={Sample}, Shape={Shape}, BatchSize={BatchSize}, Bytes={_serialized.Length}");
     }
 
     /// <summary>
@@ -94,4 +114,12 @@ public class AppendedEventCodecBenchmarks
         _serializer.Serialize(_events, _buffer);
         return _serializer.Deserialize(_buffer.WrittenMemory)!;
     }
+
+    static IEnumerable<Type?> ContentTypes(object? content) => content switch
+    {
+        ExpandoObject nested => nested.SelectMany(property => ContentTypes(property.Value)).Prepend(content.GetType()),
+        object[] array => array.SelectMany(ContentTypes).Prepend(content.GetType()),
+        null => [null],
+        _ => [content.GetType()]
+    };
 }

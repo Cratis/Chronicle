@@ -3,6 +3,7 @@
 
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Identities;
@@ -58,6 +59,7 @@ internal static class AppendedEventPayloads
         storage.GetEventStore(Arg.Any<EventStoreName>()).Returns(eventStore);
 
         var services = new ServiceCollection();
+        services.AddOptions<ChronicleOptions>();
         services.AddSingleton<IExpandoObjectConverter>(converter);
         services.AddSingleton(storage);
         var siloBuilder = Substitute.For<ISiloBuilder>();

@@ -41,6 +41,14 @@ Startup step 'DiscoverAndRegisterKernelProjections' failed because a silo in thi
 
 The exception beneath it is a `TypeLoadException` such as `Unable to resolve type alias "("inv",[Orleans.Runtime.GrainReference],[Cratis.Chronicle.Projections.IProjectionsManager,Cratis.Chronicle.Core],"F436C56F")"`. Versions before 19.107.0 show only the exception. Either way, roll back the new node, then stop every node and start the new version.
 
+## Roll out compact appended-event transport
+
+`clustering.eventWireFormat` defaults to `Json`, which retains the released appended-event wire bytes. Keep it at `Json` on every node throughout a mixed-version rollout. Upgraded nodes read both formats regardless of their write setting; older nodes cannot read compact messages.
+
+Only after every node supports compact decoding, including replacement-node images and autoscaling templates, opt in with `clustering.eventWireFormat=Compact` (`Cratis__Chronicle__Clustering__EventWireFormat=Compact`). There is no cluster-wide format negotiation. Unsupported content still uses JSON for that event. This setting does not change the event store's persisted content or durable hashes.
+
+Before rolling back to an older reader, return every upgraded node to `Json` and drain compact messages before introducing any older node. If you cannot establish that all in-flight compact calls have drained, stop every node and restart with `Json` before rolling back. Changing the writer setting alone does not make an already-sent compact message readable by an older node.
+
 ## Roll out administrator authorization
 
 Keep `Authentication.EnforceAdministratorPolicyForOperations=false` on every node while replacing nodes

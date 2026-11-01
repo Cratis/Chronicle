@@ -5,6 +5,7 @@ using System.Dynamic;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.EventTypes;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Schemas;
@@ -118,6 +119,7 @@ public class a_normalized_event : Specification
         silo.ConfigureSerialization();
         var cache = Substitute.For<IEventTypeSchemaCache>();
         cache.GetSchemaJsonFor(context.EventStore, context.EventType.Id, context.EventType.Generation).Returns(schema.ToJson());
+        services.AddOptions<ChronicleOptions>();
         services.AddSingleton(cache);
         services.AddSingleton<IExpandoObjectConverter>(converter);
         service_provider = services.BuildServiceProvider();
