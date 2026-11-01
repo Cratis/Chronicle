@@ -26,55 +26,6 @@ internal static class ServerlessConfigurationValidation
         {
             failures.Add($"Mode (Cratis:Chronicle:Serverless:Mode) has the undefined value {(int)serverless.Mode}.");
             return failures;
-        }
-
-        AddProgramIdentifierFailure(options, failures);
-        AddReceiverUrlFailures(serverless.ReceiverUrl, isDevelopment, failures);
-        AddUndefinedEnumFailures(serverless, failures);
-        AddDeliveryAndAuthFailures(serverless, failures);
-        AddRegistrationFailures(serverless, isDevelopment, failures);
-
-        return failures;
-        }
-
-        if (string.IsNullOrWhiteSpace(options.ProgramIdentifier) || options.ProgramIdentifier == ChronicleOptions.DefaultProgramIdentifier)
-        {
-            failures.Add("Serverless mode requires ProgramIdentifier (Cratis:Chronicle:ProgramIdentifier) to be set to a stable name for this program.");
-        }
-
-        if (serverless.ReceiverUrl is not null &&
-            (!serverless.ReceiverUrl.IsAbsoluteUri || (serverless.ReceiverUrl.Scheme != Uri.UriSchemeHttp && serverless.ReceiverUrl.Scheme != Uri.UriSchemeHttps)))
-        {
-            failures.Add($"ReceiverUrl (Cratis:Chronicle:Serverless:ReceiverUrl) must be an absolute http or https URL, but was {Describe(serverless.ReceiverUrl)}.");
-        }
-        else if (serverless.ReceiverUrl is not null && serverless.ReceiverUrl.Scheme == Uri.UriSchemeHttp && !isDevelopment)
-        {
-            failures.Add($"ReceiverUrl (Cratis:Chronicle:Serverless:ReceiverUrl) must use https outside Development, but was {Describe(serverless.ReceiverUrl)}.");
-        }
-
-        AddUndefinedEnumFailures(serverless, failures);
-
-        if (serverless.Delivery.Timeout <= TimeSpan.Zero)
-        {
-            failures.Add($"Delivery.Timeout (Cratis:Chronicle:Serverless:Delivery:Timeout) must be greater than zero, but was '{serverless.Delivery.Timeout}'.");
-        }
-
-        if (serverless.Auth.Type == ReceiverAuthenticationType.None && !serverless.Auth.AllowUnauthenticated)
-        {
-            failures.Add("Auth.Type None (Cratis:Chronicle:Serverless:Auth:Type) requires Cratis:Chronicle:Serverless:Auth:AllowUnauthenticated to be true.");
-        }
-
-        if (serverless.Registration == ServerlessRegistration.Deploy && serverless.DeploymentGeneration == 0 && !isDevelopment)
-        {
-            failures.Add("Registration Deploy requires Cratis:Chronicle:Serverless:DeploymentGeneration outside Development. Set the generation the deployment registered the artifacts under.");
-        }
-
-        if (serverless.Registration == ServerlessRegistration.OnColdStart && !isDevelopment && !serverless.AllowOnColdStartOutsideDevelopment)
-        {
-            failures.Add("Registration OnColdStart outside Development requires Cratis:Chronicle:Serverless:AllowOnColdStartOutsideDevelopment to be true, or use Registration Deploy.");
-        }
-
-        return failures;
     }
 
     /// <summary>
