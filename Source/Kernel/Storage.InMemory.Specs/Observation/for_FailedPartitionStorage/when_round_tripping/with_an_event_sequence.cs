@@ -3,7 +3,6 @@
 
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation;
-using Cratis.Chronicle.Storage.Observation;
 
 namespace Cratis.Chronicle.Storage.InMemory.Observation.for_FailedPartitionStorage.when_round_tripping;
 

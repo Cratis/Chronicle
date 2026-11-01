@@ -12,16 +12,20 @@ public class with_a_fresh_target : given.an_observer_state_storage
     KernelState _result;
     bool _accepted;
 
-    async Task Establish() => await _storage.Save(new()
+    async Task Establish()
     {
-        Identifier = "observer",
-        NextEventSequenceNumber = new(999),
-        IsReplaying = true,
-        FailedPartitionCount = new(2),
-        PartitionClaims = [new("partition", ClaimHolderKind.PartitionCatchUp, new(Guid.NewGuid()), new(3), 42, [])],
-        ObserverWideClaim = new(ClaimHolderKind.ObserverCatchUp, new(Guid.NewGuid()), new(7), 50, []),
-        DeliveryFences = [new("partition", DateTimeOffset.UnixEpoch.AddMinutes(5), [])]
-    }, "A");
+        var state = new KernelState
+        {
+            Identifier = "observer",
+            NextEventSequenceNumber = new(999),
+            IsReplaying = true,
+            FailedPartitionCount = new(2),
+            PartitionClaims = [new("partition", ClaimHolderKind.PartitionCatchUp, new(Guid.NewGuid()), new(3), 42, [])],
+            ObserverWideClaim = new(ClaimHolderKind.ObserverCatchUp, new(Guid.NewGuid()), new(7), 50, []),
+            DeliveryFences = [new("partition", DateTimeOffset.UnixEpoch.AddMinutes(5), [])]
+        };
+        await _storage.Save(state, "A");
+    }
 
     async Task Because()
     {

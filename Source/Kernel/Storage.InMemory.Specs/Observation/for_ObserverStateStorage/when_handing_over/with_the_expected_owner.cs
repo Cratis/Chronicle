@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Storage.Observation;
 
@@ -24,10 +25,10 @@ public class with_the_expected_owner : Specification
             RunningState = ObserverRunningState.Suspended,
             SubscribesToAllEvents = true,
             NextEventSequenceNumber = new(999),
-            ReplayingPartitions = ["replaying"],
+            ReplayingPartitions = new HashSet<Key> { "replaying" },
             PartitionReplayCompletions = [new("replaying", new(10), new(20), null, DateTimeOffset.UnixEpoch)],
-            CatchingUpPartitions = ["catching-up"],
-            InFlightPartitions = ["in-flight"],
+            CatchingUpPartitions = new HashSet<Key> { "catching-up" },
+            InFlightPartitions = new HashSet<Key> { "in-flight" },
             OwnershipRevision = new(19),
             AlertLifecycleId = Guid.NewGuid(),
             AlertRevision = 4,

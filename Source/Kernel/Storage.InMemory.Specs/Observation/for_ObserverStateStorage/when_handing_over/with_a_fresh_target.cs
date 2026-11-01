@@ -15,7 +15,7 @@ public class with_a_fresh_target : Specification
     async Task Establish()
     {
         _storage = new();
-        await _storage.Save(new()
+        var state = new ObserverState
         {
             Identifier = "observer",
             NextEventSequenceNumber = new(999),
@@ -24,7 +24,8 @@ public class with_a_fresh_target : Specification
             PartitionClaims = [new("partition", ClaimHolderKind.PartitionCatchUp, new(Guid.NewGuid()), new(3), 42, [])],
             ObserverWideClaim = new(ClaimHolderKind.ObserverCatchUp, new(Guid.NewGuid()), new(7), 50, []),
             DeliveryFences = [new("partition", DateTimeOffset.UnixEpoch.AddMinutes(5), [])]
-        }, "A");
+        };
+        await _storage.Save(state, "A");
     }
 
     async Task Because()
