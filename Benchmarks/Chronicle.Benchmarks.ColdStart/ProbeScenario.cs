@@ -53,6 +53,15 @@ public static class ProbeScenario
         var p2 = Stopwatch.GetElapsedTime(mainStart).TotalMilliseconds;
         var allocatedAtReady = GC.GetTotalAllocatedBytes(precise: true);
 
+        if (scenario != Auto)
+        {
+            // Without auto discovery the client knows no event types; an application in this mode discovers and registers its own before appending.
+            await eventStore.EventTypes.Discover();
+            await eventStore.EventTypes.Register();
+        }
+
+        var p2b = Stopwatch.GetElapsedTime(mainStart).TotalMilliseconds;
+
         await eventStore.EventLog.Append(EventSourceId.New(), new BenchmarkEvent("Test", 42, DateTimeOffset.UtcNow));
         var p3 = Stopwatch.GetElapsedTime(mainStart).TotalMilliseconds;
         var allocatedAtAppend = GC.GetTotalAllocatedBytes(precise: true);
@@ -62,6 +71,7 @@ public static class ProbeScenario
             ["p0RuntimeStartMs"] = runtimeStartMs,
             ["p1ClientCreatedMs"] = p1,
             ["p2ClientReadyMs"] = p2,
+            ["p2bEventTypesReadyMs"] = p2b,
             ["p3FirstAppendMs"] = p3,
             ["allocatedAtReadyBytes"] = allocatedAtReady - allocatedAtMain,
             ["allocatedAtFirstAppendBytes"] = allocatedAtAppend - allocatedAtMain,
