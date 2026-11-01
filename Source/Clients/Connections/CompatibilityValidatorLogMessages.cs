@@ -16,6 +16,9 @@ internal static partial class CompatibilityValidatorLogMessages
     [LoggerMessage(LogLevel.Information, "Compatibility check passed - client {ClientVersion} speaking protocol {ProtocolVersion} against server {ServerVersion} speaking protocol {ServerProtocolVersion}")]
     internal static partial void CompatibilityCheckPassed(this ILogger<ChronicleConnection> logger, string clientVersion, string protocolVersion, string serverVersion, string serverProtocolVersion);
 
+    [LoggerMessage(LogLevel.Debug, "Could not reach the server to check compatibility: {Message}")]
+    internal static partial void CompatibilityCheckUnreachable(this ILogger<ChronicleConnection> logger, string message);
+
     [LoggerMessage(LogLevel.Warning, "Could not ask the server to check compatibility: {Message}")]
     internal static partial void FailedToCheckCompatibility(this ILogger<ChronicleConnection> logger, string message);
 
