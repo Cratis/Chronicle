@@ -28,3 +28,13 @@ The benchmarks use a short in-process job (`Job.ShortRun` with `InProcessEmitToo
 2. Build the kernel objects in `[GlobalSetup]` with the same real collaborators the specs use: the in-memory storage, `JsonSchemaMetadataManager` and the compliance value handlers. Don't use mocks: they allocate and distort the measurement.
 3. Return the result from each benchmark method so the JIT can't eliminate the work.
 4. Include the common case (for example a single-generation event type or an event without classified properties) next to the case your change targets. Regressions on the common path matter most.
+
+## ReplayChildLookupBenchmark
+
+Measures `Sink.TryFindRootKeyByChildValue` in a MongoDB sink bulk window (the replay and catch-up cache), resolving a root key from a child value across many cached roots that each hold many children. It replays root events, child additions and child updates, and reports time and `Allocated` per scenario, with an `OracleLookup` arm (a plain dictionary) as the upper bound of what any index can save.
+
+The MongoDB collection is a hand-written no-op fake (`NoOpMongoCollection`): bulk writes succeed and a cache miss busy-waits a configurable round trip before returning nothing, so the result does not depend on a server.
+
+```sh
+dotnet Benchmarks/Chronicle.Benchmarks.Kernel/bin/Release/net10.0/Chronicle.Benchmarks.Kernel.dll --filter "*ReplayChildLookupBenchmark*"
+```

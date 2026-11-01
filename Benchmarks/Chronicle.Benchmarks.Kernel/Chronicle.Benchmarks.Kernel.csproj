@@ -13,11 +13,13 @@
     <PackageReference Include="Cratis.Orleans" />
     <PackageReference Include="Cratis.Orleans.Storage" />
     <PackageReference Include="Cratis.Fundamentals" />
+    <PackageReference Include="MongoDB.Driver" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="../../Source/Kernel/Core/Core.csproj" />
     <ProjectReference Include="../../Source/Kernel/Concepts/Concepts.csproj" />
     <ProjectReference Include="../../Source/Kernel/Storage.InMemory/Storage.InMemory.csproj" />
+    <ProjectReference Include="../../Source/Kernel/Storage.MongoDB/Storage.MongoDB.csproj" />
   </ItemGroup>
 </Project>
