@@ -459,6 +459,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     /// <returns>True if the connection was established, false if the handshake failed or ran out of time.</returns>
     async Task<bool> TryConnectTo(ChronicleServerAddress address, TimeSpan budget)
     {
+        var attemptStarted = _timeProvider.GetTimestamp();
         _currentServerAddress = address;
         _channel = CreateGrpcChannel(address);
         var clientFactory = new InProcessAwareGrpcClientProxiesClientFactory();
@@ -471,7 +472,9 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         {
             try
             {
-                await CheckCompatibility(callInvoker.CreateGrpcService<IConnectionService>(clientFactory)).WaitAsync(budget, _timeProvider);
+                var compatibilityBudget = budget - _timeProvider.GetElapsedTime(attemptStarted);
+                await CheckCompatibility(CreateConnectionService(address, callInvoker, clientFactory))
+                    .WaitAsync(compatibilityBudget > TimeSpan.Zero ? compatibilityBudget : TimeSpan.Zero, _timeProvider);
             }
             catch (TimeoutException)
             {
@@ -490,8 +493,13 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
             return true;
         }
 
-        return await AwaitHandshake(address, callInvoker, clientFactory, budget);
+        // The compatibility check and the handshake share one budget, so a slow check cannot double the time spent on an endpoint.
+        var remaining = budget - _timeProvider.GetElapsedTime(attemptStarted);
+        return await AwaitHandshake(address, callInvoker, clientFactory, remaining > TimeSpan.Zero ? remaining : TimeSpan.Zero);
     }
+
+    IConnectionService CreateConnectionService(ChronicleServerAddress address, CallInvoker callInvoker, InProcessAwareGrpcClientProxiesClientFactory clientFactory) =>
+        ConnectionServiceFactory?.Invoke(address, callInvoker) ?? callInvoker.CreateGrpcService<IConnectionService>(clientFactory);
 
     Services CreateServices(CallInvoker callInvoker, InProcessAwareGrpcClientProxiesClientFactory clientFactory)
     {
@@ -532,7 +540,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
 
     async Task<bool> AwaitHandshake(ChronicleServerAddress address, CallInvoker callInvoker, InProcessAwareGrpcClientProxiesClientFactory clientFactory, TimeSpan budget)
     {
-        _connectionService = ConnectionServiceFactory?.Invoke(address, callInvoker) ?? callInvoker.CreateGrpcService<IConnectionService>(clientFactory);
+        _connectionService = CreateConnectionService(address, callInvoker, clientFactory);
         _watchDog.NotifyKeepAlive();
         var handshake = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         _connectTcs = handshake;
@@ -795,6 +803,9 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     {
         if (_connectTcs?.Task.IsCompletedSuccessfully == true)
         {
+            // The session went silent rather than ending, so the stream never reports it: remember the node here
+            // so the next connect tries the others first.
+            _lastDroppedAddress = _currentServerAddress;
             _logger.Disconnected();
             await Lifecycle.Disconnected();
         }

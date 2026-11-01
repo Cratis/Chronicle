@@ -32,10 +32,12 @@ public class a_connection_with_several_endpoints : Specification
     protected List<ChronicleServerAddress> _servedBy;
     protected Dictionary<ChronicleServerAddress, Func<IObservable<ConnectionKeepAlive>>> _streams;
     protected Dictionary<ChronicleServerAddress, int> _connectsPerServer;
+    protected Dictionary<ChronicleServerAddress, Func<Task<CompatibilityResponse>>> _compatibility;
     protected int _disconnectedCalls;
 
     protected virtual IReadOnlyList<ChronicleServerAddress> Servers => [_a, _b];
     protected virtual bool WatchdogTicksQuickly => false;
+    protected virtual bool SkipCompatibilityCheck => true;
 
     void Establish()
     {
@@ -45,6 +47,7 @@ public class a_connection_with_several_endpoints : Specification
         _servedBy = [];
         _connectsPerServer = [];
         _streams = [];
+        _compatibility = [];
         foreach (var server in new[] { _a, _b, _c })
         {
             _streams[server] = Observable.Never<ConnectionKeepAlive>;
@@ -121,7 +124,7 @@ public class a_connection_with_several_endpoints : Specification
             _cancellation.Token,
             NullLogger<ChronicleConnection>.Instance,
             skipTlsValidation: true,
-            skipCompatibilityCheck: true,
+            skipCompatibilityCheck: SkipCompatibilityCheck,
             skipKeepAlive: false,
             serverAddressResolver: resolver,
             loadBalancerStrategy: _loadBalancer,
@@ -130,6 +133,10 @@ public class a_connection_with_several_endpoints : Specification
             ConnectionServiceFactory = (address, _) =>
             {
                 var service = Substitute.For<IConnectionService>();
+                service.CheckCompatibility(Arg.Any<CompatibilityRequest>())
+                    .Returns(_ => _compatibility.TryGetValue(address, out var check)
+                        ? check()
+                        : Task.FromResult(new CompatibilityResponse { IsCompatible = true }));
                 service.Connect(Arg.Any<ConnectRequest>(), Arg.Any<ProtoBuf.Grpc.CallContext>())
                     .Returns(_ =>
                     {
