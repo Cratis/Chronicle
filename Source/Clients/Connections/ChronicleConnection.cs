@@ -122,7 +122,9 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         _timeProvider = timeProvider ?? TimeProvider.System;
         _skipTlsValidation = skipTlsValidation;
         _skipCompatibilityCheck = skipCompatibilityCheck;
+#pragma warning disable CHRX0001 // The serverless switch is experimental; the connection honours it internally.
         _skipKeepAlive = skipKeepAlive || connectionString.SkipKeepAlive || connectionString.Serverless;
+#pragma warning restore CHRX0001
         _connectionString = connectionString;
         _connectTimeout = connectTimeout;
         _maxReceiveMessageSize = maxReceiveMessageSize;

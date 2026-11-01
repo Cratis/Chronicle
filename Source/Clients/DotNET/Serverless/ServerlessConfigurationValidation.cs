@@ -30,7 +30,16 @@ internal static class ServerlessConfigurationValidation
         if (serverless.ReceiverUrl is not null &&
             (!serverless.ReceiverUrl.IsAbsoluteUri || (serverless.ReceiverUrl.Scheme != Uri.UriSchemeHttp && serverless.ReceiverUrl.Scheme != Uri.UriSchemeHttps)))
         {
-            failures.Add($"ReceiverUrl (Cratis:Chronicle:Serverless:ReceiverUrl) must be an absolute http or https URL, but was '{serverless.ReceiverUrl}'.");
+            failures.Add($"ReceiverUrl (Cratis:Chronicle:Serverless:ReceiverUrl) must be an absolute http or https URL, but was '{Describe(serverless.ReceiverUrl)}'.");
+        }
+        else if (serverless.ReceiverUrl is not null && serverless.ReceiverUrl.Scheme == Uri.UriSchemeHttp && !isDevelopment)
+        {
+            failures.Add($"ReceiverUrl (Cratis:Chronicle:Serverless:ReceiverUrl) must use https outside Development, but was '{Describe(serverless.ReceiverUrl)}'.");
+        }
+
+        if (serverless.Delivery.Timeout <= TimeSpan.Zero)
+        {
+            failures.Add($"Delivery.Timeout (Cratis:Chronicle:Serverless:Delivery:Timeout) must be greater than zero, but was '{serverless.Delivery.Timeout}'.");
         }
 
         if (serverless.Auth.Type == ReceiverAuthenticationType.None && !serverless.Auth.AllowUnauthenticated)
@@ -66,4 +75,7 @@ internal static class ServerlessConfigurationValidation
 
         return builder.ToString();
     }
+
+    static string Describe(Uri url) =>
+        url.IsAbsoluteUri ? url.GetComponents(UriComponents.SchemeAndServer | UriComponents.Path, UriFormat.SafeUnescaped) : url.OriginalString;
 }

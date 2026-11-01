@@ -143,7 +143,7 @@ Settings for running the .NET client in a function or another scaled-to-zero hos
 | Type | `ChronicleServerlessOptions` |
 | Default | `Mode` is `Off` |
 
-Set `Mode` to `Serverless` to skip keep-alive and validate the serverless configuration at start. HTTP delivery is not available yet, so an observer that resolves to it fails at startup. See [Serverless mode](../clients/dotnet/serverless-mode.md).
+Set `Mode` to `Serverless` to skip keep-alive and validate the serverless configuration at start. HTTP delivery is not available yet, so an observer that resolves to it fails at startup. `Delivery:Timeout` (30 seconds by default, must be greater than zero) is the delivery timeout for HTTP reactors and reducers; it has no effect until HTTP delivery ships and does not change the kernel's 60 second webhook timeout. See [Serverless mode](../clients/dotnet/serverless-mode.md).
 
 ### DefaultSinkTypeId
 

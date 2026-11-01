@@ -42,6 +42,11 @@ public class ChronicleServerlessOptions
     public ServerlessAuthOptions Auth { get; set; } = new();
 
     /// <summary>
+    /// Gets or sets the settings for how the kernel delivers events to the receiver.
+    /// </summary>
+    public ServerlessDeliveryOptions Delivery { get; set; } = new();
+
+    /// <summary>
     /// Gets or sets the delivery used by observers that declare none. Defaults to <see cref="ObserverDelivery.Http"/>.
     /// </summary>
     /// <remarks>

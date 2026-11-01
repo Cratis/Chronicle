@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.ComponentModel;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Cratis.Chronicle.Connections;
 
@@ -159,6 +160,7 @@ public class ChronicleConnectionString
     /// <remarks>
     /// See <see cref="ChronicleConnectionStringBuilder.Serverless"/> for what this does.
     /// </remarks>
+    [Experimental("CHRX0001", UrlFormat = "https://www.cratis.io/docs/chronicle/clients/dotnet/serverless-mode")]
     public bool Serverless => _builder.Serverless;
 
     /// <summary>

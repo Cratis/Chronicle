@@ -9,7 +9,13 @@ namespace Cratis.Chronicle.Serverless;
 /// Exception that gets thrown when an observer resolves to HTTP delivery, which this client cannot register yet.
 /// </summary>
 /// <remarks>
-/// A later version replaces this with a check of what the kernel supports.
+/// The client fails closed: it does not register HTTP-delivered observers whatever the kernel advertises. Lifting this takes all of:
+/// <list type="number">
+/// <item>The kernel advertises an HTTP-delivery capability (added to <c language="csharp">KernelCapabilities</c> by #5116), and the client requires
+/// <c language="csharp">CapabilitiesAreKnown</c> together with that capability.</item>
+/// <item>The kernel drains replay and recovery state before an observer switches from stream to HTTP delivery (#5115, decision 0018).</item>
+/// <item>The receiver exists (#5119).</item>
+/// </list>
 /// </remarks>
 /// <param name="observerIds">The identifiers of the observers that resolve to HTTP delivery.</param>
 [Experimental("CHRX0001", UrlFormat = "https://www.cratis.io/docs/chronicle/clients/dotnet/serverless-mode")]

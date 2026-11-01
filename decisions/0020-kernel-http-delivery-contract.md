@@ -142,7 +142,7 @@ Why unknown data kinds are not ignored: this is the one part of the envelope tha
 - Each event has one canonical, deterministic dedup key (event store, namespace, observer id, event sequence id, sequence number) with one fixed encoding, shared with the broker sinks and separate from the partition or ordering key ([Q21](#q21-canonical-per-event-identity)). Receivers deduplicate side effects per event on it, not per request, because a partial acknowledgement or a halved batch changes batch boundaries. Reactor side-effect appends are keyed `{observerId}:{sourceSequenceNumber}` once the client exposes keyed appends (epic decision 1; [decision 0012](0012-keyed-appends-travel-on-their-own-rpcs.md)).
 - Replay receipts do not apply in v1 ([amendment](#amendment-http-delivery-v1-is-live-only)). A persistent side-effect receipt is keyed on the per-event dedup key. A rebuild receipt scoped to a replay epoch is for a later record that enables replay over HTTP.
 - `2xx` with an empty body or `204` acknowledges the whole batch. `200` with a JSON result `{results: [{partition, state, lastSuccessfulObservation, exceptionMessages, exceptionStackTrace, readModelState}]}` has one entry per batch of the request and acknowledges each partition up to its `lastSuccessfulObservation`, failing from the next event. v1 requests have one batch, so one entry. The kernel ignores unknown fields in that result. The kernel reads no response body today (`WebhookMediator.cs` L59-L65), so this is a requirement on the new result parser.
-- `413` halves the batch instead of pausing the observer; a single event over the size limit parks the partition with reason `PayloadTooLarge`. Batches are bounded by an event count and a byte size (proposed 100 events and 4 MiB).
+- `413` halves the batch instead of pausing the observer, and honours `Retry-After` ([amendment](#amendment-delivery-defaults-and-timeouts)); a single event over the size limit parks the partition with reason `PayloadTooLarge`. Batches are bounded by an event count and a byte size (proposed 100 events and 4 MiB).
 - `429`, and `503` with `Retry-After`, defer the partition that got the answer today (`WebhookMediator.cs` L123-L127). Platforms throttle per function, not per partition: a Lambda function URL answers `429` when the function exceeds its reserved concurrency ([function URLs](https://docs.aws.amazon.com/lambda/latest/dg/urls-configuration.html)), and the CloudEvents webhook specification requires the sender to "refrain from sending further requests until the indicated time" ([spec](https://github.com/cloudevents/spec/blob/main/cloudevents/http-webhook.md)). Decided by [Q17](#q17-target-wide-back-off) as recommended: such an answer makes the whole target authority back off, not one partition.
 - All other classifications, the retry schedule, the 24-hour budget, park and quarantine stay as shipped in [#5108](https://github.com/Cratis/Chronicle/issues/5108) and documented in `Documentation/webhooks/index.mdx`.
 - A `Cratis-Delivery-Deadline` header (UTC) tells the receiver when the kernel abandons the request. The function's execution timeout (Azure Functions `functionTimeout`, the Lambda function timeout) must be at most the delivery timeout. An HTTP front's timeout is not enough: the Azure Functions load balancer answers `502` after 230 seconds while the function keeps running, and an API Gateway HTTP API answers after 30 seconds while the Lambda runs on. The kernel classifies both as transient failures and retries while the first execution is still running.
@@ -348,6 +348,24 @@ Decided on 2026-10-30 by woksin (Q-146). HTTP delivery v1 delivers live events o
 - Redactions are not pushed. A redaction event reaches the receiver only as a live event. Data the receiver already stored is not corrected by the kernel, so removing or redacting it is the receiver's responsibility. Encrypted or redacted delivery is [#5132](https://github.com/Cratis/Chronicle/issues/5132). This record makes no compliance claim.
 - Verify the signature on every request, take the event store and namespace from the signed body and not from the route, and take the public key from configuration. A proxy that strips identity headers does not authenticate the body; see [decision 0021](0021-delivery-signing-key-custody.md).
 
+## Amendment: delivery defaults and timeouts
+
+Decided on 2026-10-30 by woksin (Q-146, "all recommended"), and confirmed by L0's acceptance of the #5115 recommendation. The values below are the accepted defaults for HTTP delivery v1, with the part that owns each one. Where a value is owned by a later issue, the setting is not added before that issue ships, because nothing would bind it yet.
+
+| Setting | Default | Owner |
+|---|---|---|
+| HTTP reactor and reducer delivery timeout | 30 seconds, configurable | The client option `Serverless:Delivery:Timeout` ([#5118](https://github.com/Cratis/Chronicle/issues/5118)). The kernel enforces it and sends the `Cratis-Delivery-Deadline` header ([#5116](https://github.com/Cratis/Chronicle/issues/5116)) |
+| Webhook request timeout | 60 seconds | The kernel, unchanged (`Source/Kernel/Core/Configuration/Webhooks.cs`, `RequestTimeoutSeconds`, key `Cratis:Chronicle:Webhooks:RequestTimeoutSeconds`) |
+| Timestamp tolerance | 5 minutes | The receiver ([#5119](https://github.com/Cratis/Chronicle/issues/5119)) |
+| Signature algorithm | Ed25519 `v1a`, HMAC opt-in | [#5117](https://github.com/Cratis/Chronicle/issues/5117) and [#5119](https://github.com/Cratis/Chronicle/issues/5119), per [decision 0021](0021-delivery-signing-key-custody.md) |
+| Batch limit | 100 events and 4 MiB | The kernel ([#5116](https://github.com/Cratis/Chronicle/issues/5116)) |
+| Concurrency caps | 8 partitions per observer, 16 requests per target | The kernel ([#5116](https://github.com/Cratis/Chronicle/issues/5116)) |
+| Drain before an observer switches from stream to HTTP | Required | The kernel, until the ownership protocol of [decision 0018](0018-partition-ownership-protocol.md) is implemented. The client keeps its fail-closed fuse until then |
+
+**Timeout precedence.** The delivery timeout applies to HTTP reactors and reducers only. Webhook observers keep `RequestTimeoutSeconds`. There is one global setting and no per-observer override in v1; a per-observer override can be added later without changing the contract. The function's execution timeout must be at most the delivery timeout.
+
+**`413` and `Retry-After`.** A `413` halves the batch and also honours `Retry-After`: the kernel waits at least that long before it sends the first half. A single event over the size limit still parks the partition with reason `PayloadTooLarge`. The earlier recommendation was to ignore `Retry-After` on `413`; the acceptance of #5115 states that it is honoured, and this record follows the acceptance.
+
 ## Questions and the decider's verdict
 
 Each question below keeps the recommendation it was put with. The verdict covers only the points marked in the table; every other question is decided as recommended. Where the verdict differs from a recommendation, the Decision section and the affected sections above follow the verdict.
@@ -362,7 +380,8 @@ Each question below keeps the recommendation it was put with. The verdict covers
 | Q7 | Decided as recommended | |
 | Q8 | Decided by the verdict | Ed25519 by default, HMAC opt-in; mandatory signing and the verifier code as recommended. |
 | Q9 | Decided as recommended | The key id travels in the `Cratis-Key-Id` header; custody details follow the Q1 split. |
-| Q10, Q11, Q12, Q13 | Decided as recommended | The timeout conflict in Q13 stays under Unknowns. |
+| Q10, Q11, Q12 | Decided as recommended | |
+| Q13 | Decided as recommended | The timeout conflict is settled by the [defaults amendment](#amendment-delivery-defaults-and-timeouts): 30 seconds for HTTP reactors and reducers, 60 seconds for webhooks. |
 | Q14 | Decided differently | The fencing field is reserved in v1 instead of deferred to a follow-up record. |
 | Q15, Q16, Q17 | Decided as recommended | |
 | Q18 | Decided differently | The envelope is a list of per-partition batches with per-partition results; v1 sends one partition per request. |
@@ -425,7 +444,7 @@ Is catch-up after downtime delivered without boundaries (not a replay), and is a
 
 Is `Cratis-Delivery-Deadline` the header name, and is "the platform request timeout must be at most the delivery timeout" a documented requirement or something the kernel checks at registration? **Recommendation:** document it in v1; check at registration later if adapters can report their platform limit.
 
-**Notes:** the function's execution timeout governs, not the HTTP front (a front can answer `502` or time out while the function keeps running), so the documented requirement is about execution timeout. The 60 second webhook request timeout default conflicts with the 30 seconds [#5118](https://github.com/Cratis/Chronicle/issues/5118) proposes; which one applies to HTTP reactors and reducers is undecided.
+**Notes:** the function's execution timeout governs, not the HTTP front (a front can answer `502` or time out while the function keeps running), so the documented requirement is about execution timeout. The 60 second webhook request timeout default conflicts with the 30 seconds [#5118](https://github.com/Cratis/Chronicle/issues/5118) proposes; the [defaults amendment](#amendment-delivery-defaults-and-timeouts) settles it: 30 seconds applies to HTTP reactors and reducers, and webhooks keep 60 seconds.
 
 ### Q14. Receiver-enforced fencing
 
@@ -503,8 +522,8 @@ Without the event sequence id, two event sequences of one store with the same se
 - Platform limits (Azure Functions HTTP trigger limit, Lambda Function URL timeout and payload, Cloud Run timeout) are taken from vendor documentation in [#5114](https://github.com/Cratis/Chronicle/issues/5114) and were not measured.
 - Resolved: the `StandardWebhooks` .NET package named in [#5117](https://github.com/Cratis/Chronicle/issues/5117) is MIT-licensed and verifies `v1` only (`codefactors/StandardWebhooks`, `src/StandardWebhooks/StandardWebhook.cs` L130). None of the official Standard Webhooks libraries verifies `v1a`.
 - Which Ed25519 library the kernel and receiver use, and whether it runs on the Azure Functions isolated worker and on Lambda with SnapStart (including any native binaries), is not verified.
-- Which timeout governs an HTTP reactor or reducer is not settled: the webhook request timeout defaults to 60 seconds (`Source/Kernel/Core/Configuration/Webhooks.cs` L67) while [#5118](https://github.com/Cratis/Chronicle/issues/5118) proposes `Serverless:Delivery:Timeout` of 30 seconds.
-- RFC 9110 allows a `413` with `Retry-After` for a temporary condition; halving ignores it. Whether to honor `Retry-After` on `413` is not decided.
+- Resolved: the delivery timeout of an HTTP reactor or reducer is `Serverless:Delivery:Timeout`, 30 seconds by default, while webhook observers keep the 60 second request timeout (`Source/Kernel/Core/Configuration/Webhooks.cs`). See the [defaults amendment](#amendment-delivery-defaults-and-timeouts).
+- Resolved: a `413` halves the batch and honours `Retry-After`, per the [defaults amendment](#amendment-delivery-defaults-and-timeouts).
 - For the record that enables replay: behavior with several receiver instances during a replay, and live deliveries interleaved with a replay, were not measured.
 - For the record that enables replay: whether concurrent replays of one partition (whole-observer and partition replay) can overlap, and how a replay epoch relates to them, is not verified.
 - Whether the observation flag is `Initial` on every catch-up path is not verified from code.

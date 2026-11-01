@@ -367,6 +367,7 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
     /// Serverless mode implies skipping the keep-alive connection. It is equal to setting
     /// <c language="json">Cratis:Chronicle:Serverless:Mode</c> to <c language="csharp">Serverless</c> in the .NET client. Other clients ignore the key.
     /// </remarks>
+    [Experimental("CHRX0001", UrlFormat = "https://www.cratis.io/docs/chronicle/clients/dotnet/serverless-mode")]
     public bool Serverless
     {
         get => ContainsKey(ServerlessKey) && Convert.ToBoolean(this[ServerlessKey]);
@@ -645,7 +646,9 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
 
     void AddServerless(List<string> queryParams)
     {
+#pragma warning disable CHRX0001 // The serverless switch is experimental; the builder serialises it internally.
         if (Serverless)
+#pragma warning restore CHRX0001
         {
             queryParams.Add("serverless=true");
         }

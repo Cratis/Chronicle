@@ -13,13 +13,23 @@ HTTP delivery is not available yet. In this version serverless mode suits functi
 
 ## Compatibility
 
-The serverless surface is experimental and marked with `[Experimental("CHRX0001")]`: the options (`ChronicleOptions.Serverless`, `UseServerless`, `ForServerless`), the serverless settings types, `DeliveryAttribute`, `ObserverDelivery`, `HttpDeliveryNotAvailable` and `InvalidServerlessConfiguration`.
+The serverless surface is experimental and marked with `[Experimental("CHRX0001")]`. It consists of:
 
-- It may change in a minor release until HTTP delivery ships.
-- Changes to it are listed in the release notes.
+- the options: `ChronicleOptions.Serverless`, `UseServerless` and `ForServerless`
+- the settings types, including `ChronicleServerlessOptions` and `ServerlessDeliveryOptions`
+- `DeliveryAttribute`, `ObserverDelivery`, `HttpDeliveryNotAvailable` and `InvalidServerlessConfiguration`
+- the connection members `ChronicleConnectionStringBuilder.Serverless`, `ChronicleConnectionString.Serverless` and `WithServerless()`
+- the `serverless=true` connection string key, which follows the same rule
+
+The policy:
+
+- The surface may change in a minor release until it graduates.
+- It graduates when HTTP delivery ships (#5116 and #5119) and the partition fencing of decision 0018 has shipped, and one minor release has passed with no breaking change to the surface. Then `CHRX0001` is removed.
+- Every change to it is listed in the release notes, marked `(part of #5118)`.
+- A kernel that is older than the client serves append and read. HTTP delivery fails closed whatever version the kernel is, because the client refuses to register HTTP-delivered observers.
 - With serverless mode off, which is the default, the client is covered by the normal compatibility rules.
 
-HTTP delivery in its first version is live-only: it delivers new events, catch-up and retries, and does not replay. See [decision 0020](https://github.com/Cratis/Chronicle/blob/main/decisions/0020-kernel-http-delivery-contract.md).
+HTTP delivery in its first version is live-only: it delivers new events, catch-up and retries, and does not replay. See [decision 0020](https://github.com/Cratis/Chronicle/blob/main/decisions/0020-kernel-http-delivery-contract.md). Because Chronicle does not re-push or erase what a receiver stored, see [Data delivered to webhooks and HTTP receivers](../../compliance/erasing-a-subject.mdx#data-delivered-to-webhooks-and-http-receivers) for the erasure procedure.
 
 ## What the switch does
 
@@ -89,12 +99,21 @@ HTTP delivery fails closed until the kernel delivery envelope (#5116) and signin
 
 `DefaultDelivery` is `Http` by default, so set it to `Stream` if the host also contains observers you want skipped rather than refused. Observer identifiers that contain a colon cannot be used as configuration keys. A configured key that matches no observer is logged as a warning.
 
+## Delivery timeout
+
+HTTP reactors and reducers use `Serverless:Delivery:Timeout`, 30 seconds by default, bound from `Cratis:Chronicle:Serverless:Delivery:Timeout`. The kernel will send the deadline in the `Cratis-Delivery-Deadline` header. Webhook observers keep the kernel's `Cratis:Chronicle:Webhooks:RequestTimeoutSeconds`, 60 seconds by default. Neither setting applies to the other kind of observer, and there is no per-observer override in this version.
+
+Set the function's execution timeout at or below the delivery timeout. A front door can answer before the function stops: an API Gateway HTTP API answers after about 30 seconds and the Azure Functions load balancer after 230 seconds, while the function keeps running. The kernel retries those answers while the first execution is still running.
+
+The option has no effect until HTTP delivery ships.
+
 ## Startup validation
 
 Serverless mode lists every problem at once as an `InvalidServerlessConfiguration`:
 
 - `ProgramIdentifier` must be set to a stable name.
-- `ReceiverUrl`, when set, must be an absolute `http` or `https` URL.
+- `ReceiverUrl`, when set, must be an absolute URL. It must use `https` outside Development.
+- `Delivery:Timeout` must be greater than zero.
 - `Auth:Type` of `None` requires `Auth:AllowUnauthenticated` to be `true`.
 - `Registration` of `Deploy` requires `DeploymentGeneration` outside Development.
 - `Registration` of `OnColdStart` outside Development requires `AllowOnColdStartOutsideDevelopment`.
