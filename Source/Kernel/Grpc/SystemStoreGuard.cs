@@ -67,7 +67,7 @@ internal static class SystemStoreGuard
     internal static IObservable<T> Ensure<T>(CallContext callContext, QueryRouting routing, Func<IObservable<T>> source)
     {
         if (!routing.HasSeparator && !routing.TargetsSystem) return source();
-        return Observable.FromAsync(() => Ensure(callContext, routing)).SelectMany(_ => source());
+        return EnsureObservableForSystem(callContext, routing, source);
     }
 
     /// <summary>
@@ -90,6 +90,9 @@ internal static class SystemStoreGuard
         if (routing.HasSeparator) return SeparatorRefused();
         return routing.TargetsSystem ? Refused() : null;
     }
+
+    static IObservable<T> EnsureObservableForSystem<T>(CallContext callContext, QueryRouting routing, Func<IObservable<T>> source) =>
+        Observable.FromAsync(() => Ensure(callContext, routing)).SelectMany(_ => source());
 
     static RpcException Refused() => new(new Status(StatusCode.PermissionDenied, SystemStoreAccess.Refused));
 

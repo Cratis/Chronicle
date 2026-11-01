@@ -73,8 +73,7 @@ internal static class QueryExecutor
         if (routing.HasSeparator) return Observable.Return(SeparatorRefused<TData>());
         if (!routing.TargetsSystem) return Execute(query, onError);
 
-        return Observable.FromAsync(() => SystemStoreGuard.IsCallerAllowed(callContext))
-            .SelectMany(allowed => allowed ? Execute(query, onError) : Observable.Return(SystemRefused<TData>()));
+        return ExecuteObservableForSystem(callContext, query, onError);
     }
 
     /// <summary>
@@ -94,6 +93,10 @@ internal static class QueryExecutor
 
         return ExecuteForSystem(callContext, query, onError);
     }
+
+    static IObservable<QueryResult<TData>> ExecuteObservableForSystem<TData>(CallContext callContext, Func<IObservable<TData>> query, Action<Exception>? onError) =>
+        Observable.FromAsync(() => SystemStoreGuard.IsCallerAllowed(callContext))
+            .SelectMany(allowed => allowed ? Execute(query, onError) : Observable.Return(SystemRefused<TData>()));
 
     static async Task<QueryResult<TData>> ExecuteForSystem<TData>(CallContext callContext, Func<Task<TData>> query, Action<Exception>? onError) =>
         await SystemStoreGuard.IsCallerAllowed(callContext) ? await Execute(query, onError) : SystemRefused<TData>();

@@ -1,10 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Reactive.Linq;
 using BenchmarkDotNet.Attributes;
 using Cratis.Chronicle.Contracts.Queries;
 using Cratis.Chronicle.Services;
-using ProtoBuf.Grpc;
 
 namespace Cratis.Chronicle.Benchmarks.SystemStoreGuard;
 
@@ -21,8 +21,9 @@ namespace Cratis.Chronicle.Benchmarks.SystemStoreGuard;
 public class QueryPathBenchmark
 {
     readonly IEnumerable<int> _items = Enumerable.Range(0, 100).ToArray();
-    internal readonly QueryRouting _routing = new("bench", "Default", "event-log");
+    readonly QueryRouting _routing = new("bench", "Default", "event-log");
     Task<IEnumerable<int>> _items100 = null!;
+    Func<IObservable<IEnumerable<int>>> _observe = null!;
 
     /// <summary>
     /// Gets or sets a value indicating whether the routed overload is used.
@@ -34,7 +35,11 @@ public class QueryPathBenchmark
     /// Creates the query result the delegates return.
     /// </summary>
     [GlobalSetup]
-    public void Setup() => _items100 = Task.FromResult(_items);
+    public void Setup()
+    {
+        _items100 = Task.FromResult(_items);
+        _observe = Observe;
+    }
 
     /// <summary>
     /// Executes a query that returns 100 items.
@@ -42,7 +47,25 @@ public class QueryPathBenchmark
     /// <returns>The query result.</returns>
     [Benchmark]
     public Task<QueryResult<IEnumerable<int>>> Query() =>
-        Guarded ? QueryExecutor.Execute(default(CallContext), _routing, Read) : QueryExecutor.Execute(Read);
+        Guarded ? QueryExecutor.Execute(default, _routing, Read) : QueryExecutor.Execute(Read);
+
+    /// <summary>
+    /// Executes an observable application-store query.
+    /// </summary>
+    /// <returns>The query stream.</returns>
+    [Benchmark]
+    public IObservable<QueryResult<IEnumerable<int>>> ObservableQuery() =>
+        Guarded ? QueryExecutor.Execute(default, _routing, Observe) : QueryExecutor.Execute(Observe);
+
+    /// <summary>
+    /// Creates a guarded or unguarded hand-written application-store stream with the same preallocated source delegate.
+    /// </summary>
+    /// <returns>The stream.</returns>
+    [Benchmark]
+    public IObservable<IEnumerable<int>> ObservableGuard() =>
+        Guarded ? global::Cratis.Chronicle.Services.SystemStoreGuard.Ensure(default, _routing, _observe) : _observe();
+
+    IObservable<IEnumerable<int>> Observe() => Observable.Return(_items);
 
     Task<IEnumerable<int>> Read() => _items100;
 }
