@@ -2,12 +2,15 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Text.RegularExpressions;
 using Cratis.Chronicle.Connections;
+using Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Reactors;
 using Cratis.Chronicle.Reducers;
+using Cratis.Traces;
 using Grpc.Core;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -58,7 +61,15 @@ public sealed partial class ClusterLoad(int transitions = 1, TimeProvider? timeP
         if (verifyReconnect)
         {
             options.ExplicitArtifacts.RegisterReducer<ClusterReconnectReducer>();
-            _services = new ServiceCollection().AddSingleton(_reconnectReducer).BuildServiceProvider();
+
+            // EventStore's constructor requires a keyed IActivitySource<T> for EventSequence, Reactors and
+            // Reducers. A host-supplied service provider gets no graceful fallback the way the client's own
+            // DefaultServiceProvider has, so this stands in for the client-side tracing registration a real
+            // application host would add.
+            _services = new ServiceCollection()
+                .AddSingleton(_reconnectReducer)
+                .AddKeyedSingleton(typeof(IActivitySource<>), ClientActivity.SourceName, typeof(FallbackActivitySource<>))
+                .BuildServiceProvider();
         }
         _client = new(options, serviceProvider: _services);
 
@@ -167,7 +178,14 @@ public sealed partial class ClusterLoad(int transitions = 1, TimeProvider? timeP
         var storedEvents = stored.Select(@event => (((ClusterEventAppended)@event.Content).Id, @event.Context.SequenceNumber)).ToArray();
         try
         {
-            await _reactor.WaitTillReachesEventSequenceNumber(stored.Max(@event => @event.Context.SequenceNumber), TimeSpan.FromSeconds(90));
+            // Three restarts' worth of queued load can leave a sizeable backlog for the observer to drain; give it
+            // more headroom than a single restart would need, especially on a loaded CI runner.
+            await _reactor.WaitTillReachesEventSequenceNumber(stored.Max(@event => @event.Context.SequenceNumber), TimeSpan.FromSeconds(180));
+
+            // Reaching the sequence number only proves the observer's position advanced; the handler's own
+            // enqueue onto _observed can still be a few scheduler ticks behind under load. Give it a bounded
+            // grace period to settle before asserting, rather than a sleep with no signal behind it.
+            await WaitForObservationsToSettle(storedEvents, TimeSpan.FromSeconds(15));
             var storedIds = stored.Select(@event => ((ClusterEventAppended)@event.Content).Id).ToArray();
             var storedSequences = stored.Select(@event => @event.Context.SequenceNumber.Value).Order().ToArray();
             Console.WriteLine($"Acknowledged={acknowledged.Length}, failed={_failures}, unknown={_unknown.Count}, stored={stored.Count}, observed={_observed.Count}");
@@ -200,6 +218,24 @@ public sealed partial class ClusterLoad(int transitions = 1, TimeProvider? timeP
                 await _services.DisposeAsync();
             }
             _stop.Dispose();
+        }
+    }
+
+    async Task WaitForObservationsToSettle(IEnumerable<(Guid Id, EventSequenceNumber Sequence)> stored, TimeSpan timeout)
+    {
+        var storedEvents = stored.ToHashSet();
+        using var deadline = new CancellationTokenSource(timeout);
+        using var poll = new PeriodicTimer(TimeSpan.FromMilliseconds(100));
+        while (!storedEvents.All(_observed.Contains))
+        {
+            try
+            {
+                await poll.WaitForNextTickAsync(deadline.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                return;
+            }
         }
     }
 
@@ -353,4 +389,9 @@ public sealed partial class ClusterLoad(int transitions = 1, TimeProvider? timeP
 
     [GeneratedRegex(@"Unable to connect to (?:endpoint )?S(?<address>[^:\s]+):\d+:(?<generation>-?\d+)[.,]", RegexOptions.CultureInvariant, 1000)]
     private static partial Regex DepartedEndpoint { get; }
+
+    sealed class FallbackActivitySource<T> : IActivitySource<T>
+    {
+        public ActivitySource ActualSource { get; } = new(typeof(T).FullName ?? typeof(T).Name);
+    }
 }
