@@ -11,9 +11,6 @@ using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Observation.Webhooks;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Orleans.Jobs;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
-using Orleans.Configuration;
 
 namespace Cratis.Chronicle.Observation;
 
@@ -474,7 +471,8 @@ public partial class Observer
 
         var eventsToHandle = events.Where(_ => _.Context.SequenceNumber >= tailEventSequenceNumber).ToArray();
         NoteDiscardedEvents(partition, events, tailEventSequenceNumber);
-        if (await ExceedsLiveBudget(eventsToHandle.Length) && await HandOverLargeLiveBatchToCatchUp(partition, eventsToHandle))
+        var configuration = await configurationProvider.GetFor(_observerKeyText);
+        if (ExceedsLiveBudget(configuration, eventsToHandle.Length) && await HandOverLargeLiveBatchToCatchUp(partition, eventsToHandle))
         {
             return;
         }
@@ -502,7 +500,7 @@ public partial class Observer
                     tailEventSequenceNumber = firstEvent.Context.SequenceNumber;
                     var decryptedEvents = await DecryptEvents(eventsToHandle);
 
-                    var subscriberTimeout = GetLiveSubscriberTimeout(await configurationProvider.GetSubscriberTimeoutForObserver(_observerKey));
+                    var subscriberTimeout = GetLiveSubscriberTimeout(configuration.GetSubscriberTimeout());
                     var hold = await GetClientDeliveryHold();
 
                     ObserverSubscriberResult result;
@@ -762,8 +760,6 @@ public partial class Observer
 
     void RememberHandledEventsReportsForTheResponseTimeout()
     {
-        var messaging = ServiceProvider.GetService<IOptions<SiloMessagingOptions>>()?.Value ?? new SiloMessagingOptions();
-        var responseTimeout = messaging.ResponseTimeout > messaging.SystemResponseTimeout ? messaging.ResponseTimeout : messaging.SystemResponseTimeout;
-        _handledEventsReports.Window = HandledEventsReportDeduplication.WindowFor(responseTimeout);
+        _handledEventsReports.Window = HandledEventsReportDeduplication.WindowFor(ResponseTimeout());
     }
 }

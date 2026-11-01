@@ -84,6 +84,8 @@ public partial class Observer(
 
     ObserverId _observerId = ObserverId.Unspecified;
     ObserverKey _observerKey = ObserverKey.NotSet;
+    string _observerKeyText = string.Empty;
+    TimeSpan? _responseTimeout;
     ObserverSubscription _subscription = ObserverSubscription.Unsubscribed;
     IJobsManager _jobsManager = null!;
     bool _stateWritingSuspended;
@@ -191,6 +193,7 @@ public partial class Observer(
     public override async Task OnActivation(CancellationToken cancellationToken)
     {
         _observerKey = ObserverKey.Parse(this.GetPrimaryKeyString());
+        _observerKeyText = _observerKey.ToString();
         _observerId = _observerKey.ObserverId;
         State = State with { Identifier = _observerId };
         await SeedRunningStateHistory();
