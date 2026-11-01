@@ -26,7 +26,12 @@ public class FailedPartitionGrainStorageProvider(IStorage storage) : IGrainStora
         var observerKey = ObserverKey.Parse(grainId.Key.ToString()!);
 
         var failedPartitions = storage.GetEventStore(observerKey.EventStore).GetNamespace(observerKey.Namespace).FailedPartitions;
-        actualGrainState.State = await failedPartitions.GetFor(observerKey.ObserverId);
+        var stored = await failedPartitions.GetFor(observerKey.ObserverId);
+
+        // Failures tagged with another event sequence belong to the progress parked for that sequence.
+        var partitions = stored.Partitions.ToArray();
+        var visible = partitions.Where(partition => partition.EventSequenceId is null || partition.EventSequenceId == observerKey.EventSequenceId).ToArray();
+        actualGrainState.State = visible.Length == partitions.Length ? stored : new() { Partitions = visible };
     }
 
     /// <inheritdoc/>

@@ -370,6 +370,7 @@ public partial class Observer(
             await RemoveFailedPartitionReminders();
             var namespaceStorage = storage.GetEventStore(_observerKey.EventStore).GetNamespace(_observerKey.Namespace);
             await namespaceStorage.FailedPartitions.RemoveAllFor(_observerId);
+            await namespaceStorage.ObserverSequenceCheckpoints.RemoveAllFor(_observerId);
             await namespaceStorage.ObserverHandledCounts.RemoveAllFor(_observerId);
             foreach (var inFlight in await namespaceStorage.InFlightEvents.GetFor(_observerId))
             {

@@ -29,6 +29,7 @@ public partial class Observer
     {
         var from = Definition.EventSequenceId;
         var ownershipChanged = !KeyOwnsDefinition;
+        var handedOver = false;
         observerDefinition.State = observerDefinition.State with { EventSequenceId = _observerKey.EventSequenceId };
         if (ownershipChanged)
         {
@@ -38,7 +39,18 @@ public partial class Observer
             var namespaces = await eventStore.Namespaces.GetAll();
             foreach (var @namespace in namespaces)
             {
-                await eventStore.GetNamespace(@namespace.Name).Observers.ClaimOwnership(_observerId, _observerKey.EventSequenceId);
+                var result = await ObserverSequenceHandover.HandOver(
+                    eventStore.GetNamespace(@namespace.Name),
+                    _observerId,
+                    from,
+                    _observerKey.EventSequenceId,
+                    logger);
+                handedOver |= result == SequenceHandoverResult.HandedOver && @namespace.Name == _observerKey.Namespace;
+            }
+
+            if (handedOver)
+            {
+                await RefreshAfterHandover();
             }
 
             var change = new DefinitionOwnershipSwitch(
@@ -54,7 +66,36 @@ public partial class Observer
         }
 
         _pendingPrecedence = null;
+
+        // The definition already moved, so a stored owner on another sequence is a handover that was interrupted.
+        if (State.Owner is { } owner && owner != _observerKey.EventSequenceId)
+        {
+            var interrupted = await ObserverSequenceHandover.HandOver(
+                storage.GetEventStore(_observerKey.EventStore).GetNamespace(_observerKey.Namespace),
+                _observerId,
+                owner,
+                _observerKey.EventSequenceId,
+                logger);
+            if (interrupted == SequenceHandoverResult.HandedOver)
+            {
+                await RefreshAfterHandover();
+            }
+        }
+
         return null;
+    }
+
+    /// <summary>
+    /// Re-reads everything derived from the progress and failures of the sequence that was just selected.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    async Task RefreshAfterHandover()
+    {
+        await ReloadObserverState();
+        await failures.ReadStateAsync();
+        _deliveryFences.Clear();
+        await RestoreDeliveryFences();
+        RestoreShadowClaims();
     }
 
     /// <summary>

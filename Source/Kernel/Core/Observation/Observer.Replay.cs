@@ -66,6 +66,9 @@ public partial class Observer
             }
         }
 
+        // A rebuilt read model invalidates the progress parked for the sequences this observer left.
+        await storage.GetEventStore(_observerKey.EventStore).GetNamespace(_observerKey.Namespace).ObserverSequenceCheckpoints.RemoveAllFor(_observerId);
+
         var states = await GetStates();
         return states.OfType<Replay>().First().LastStartedJobId;
     }

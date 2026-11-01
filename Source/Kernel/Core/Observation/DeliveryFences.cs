@@ -29,6 +29,11 @@ public class DeliveryFences
     }
 
     /// <summary>
+    /// Drops every fence, so the fences of another event sequence can be restored.
+    /// </summary>
+    public void Clear() => _fences.Clear();
+
+    /// <summary>
     /// Releases only the version that was drained.
     /// </summary>
     /// <param name="partition">The partition.</param>
