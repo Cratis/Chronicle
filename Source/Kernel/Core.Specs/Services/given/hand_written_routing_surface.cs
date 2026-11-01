@@ -38,7 +38,7 @@ public static class hand_written_routing_surface
     [
         typeof(Observers), typeof(FailedPartitions), typeof(MaterializedReadModels), typeof(ReadModels.ReadModels),
         typeof(Projections.Projections), typeof(ComplianceService), typeof(Reactors), typeof(Reducers),
-        typeof(EventStoreSubscriptions), typeof(ConnectionService)
+        typeof(EventStoreSubscriptions), typeof(ConnectionService), typeof(Events.Constraints.Constraints)
     ];
 
     /// <summary>
@@ -46,6 +46,7 @@ public static class hand_written_routing_surface
     /// </summary>
     public static readonly IReadOnlyDictionary<string, string> Classification = new Dictionary<string, string>(StringComparer.Ordinal)
     {
+        ["Constraints.Register"] = Refused,
         ["Observers.RetryPartition"] = Admin,
         ["Observers.ClearPartitionQuarantine"] = Admin,
         ["Observers.FastForward"] = Admin,
