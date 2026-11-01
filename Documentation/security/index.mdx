@@ -53,7 +53,7 @@ On such a kernel, any authenticated application can:
 
 - **Run a separate kernel per trust boundary.** Applications that must not see each other's data should not share a kernel.
 - **Isolate the network.** Use network rules and mutual TLS so that only trusted applications can reach the kernel. See [Production hosting](../hosting/production.md#security-considerations) and [TLS](../hosting/configuration/tls.md).
-- **Enforce the administrator policy for operations.** Set `enforceAdministratorPolicyForOperations` to `true` in the `authentication` configuration. See [Authentication](../hosting/configuration/authentication.md).
+- **Enforce the administrator policy for operations.** Set `enforceAdministratorPolicyForOperations` to `true` in the `authentication` configuration so that only administrators can run operations on the System store. This protects the System store; it does not restrict access to other event stores. During a rolling deploy, follow [Rolling deploy](../hosting/rolling-deploy.md) before switching it on. See [Authentication](../hosting/configuration/authentication.md).
 
 Per-application event store entitlement is planned.
 
