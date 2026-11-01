@@ -21,7 +21,12 @@ namespace Cratis.Chronicle.XUnit.Integration;
 /// Represents an implementation of <see cref="IChronicleConnection"/> for Orleans in-process.
 /// </summary>
 /// <remarks>
+/// It advertises the in-process kernel's own capabilities, taken from the same compatibility check the gRPC
+/// endpoint serves, so integration specs exercise the capability routes a current production kernel would take.
+/// A spec can withhold a capability for its own lifetime to exercise the fallback route.
+/// <para>
 /// Initializes a new instance of the <see cref="ChronicleConnection"/> class.
+/// </para>
 /// </remarks>
 /// <param name="lifecycle"><see cref="IConnectionLifecycle"/> for managing lifecycle.</param>
 /// <param name="grainFactory"><see cref="IGrainFactory"/> for working with grains.</param>
@@ -31,7 +36,7 @@ internal class ChronicleConnection(
     IConnectionLifecycle lifecycle,
     IGrainFactory grainFactory,
     ILocalSiloDetails localSiloDetails,
-    ILoggerFactory loggerFactory) : IChronicleConnection, IChronicleServicesAccessor
+    ILoggerFactory loggerFactory) : IChronicleConnection, IChronicleServicesAccessor, IKernelCapabilities
 {
     /// <summary>
     /// In-process test clients share the silo process and cannot network-drop, so they are flagged as
@@ -39,8 +44,13 @@ internal class ChronicleConnection(
     /// </summary>
     const bool KeepAliveExempt = true;
 
+    readonly object _capabilitiesLock = new();
     IServices? _services;
     ConnectionService? _connectionService;
+    string[] _advertised = [];
+    string[] _withheld = [];
+    string[] _capabilities = [];
+    bool _capabilitiesKnown;
 
     /// <inheritdoc/>
     IConnectionLifecycle IChronicleConnection.Lifecycle => lifecycle;
@@ -52,6 +62,26 @@ internal class ChronicleConnection(
         {
             ConnectIfNotConnected().GetAwaiter().GetResult();
             return _services!;
+        }
+    }
+
+    /// <inheritdoc/>
+    IReadOnlyCollection<string> IKernelCapabilities.Capabilities
+    {
+        get
+        {
+            EnsureCapabilities();
+            return _capabilities;
+        }
+    }
+
+    /// <inheritdoc/>
+    bool IKernelCapabilities.CapabilitiesAreKnown
+    {
+        get
+        {
+            EnsureCapabilities();
+            return _capabilitiesKnown;
         }
     }
 
@@ -78,6 +108,67 @@ internal class ChronicleConnection(
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     internal Task Reconnect() => Connect();
+
+    /// <summary>
+    /// Withholds capabilities from the advertised set until the returned scope is disposed, so a spec can
+    /// exercise the route a kernel without them would force. The withholding survives a reconnect.
+    /// </summary>
+    /// <param name="capabilities">The capabilities to withhold.</param>
+    /// <returns>An <see cref="IDisposable"/> that restores the previous withholding when disposed.</returns>
+    internal IDisposable WithholdCapabilities(params string[] capabilities)
+    {
+        string[] previous;
+        lock (_capabilitiesLock)
+        {
+            previous = _withheld;
+            _withheld = [.. previous.Union(capabilities)];
+            Recompute();
+        }
+
+        return new Withholding(() =>
+        {
+            lock (_capabilitiesLock)
+            {
+                _withheld = previous;
+                Recompute();
+            }
+        });
+    }
+
+    void EnsureCapabilities()
+    {
+        if (!_capabilitiesKnown && !lifecycle.IsConnected)
+        {
+            ConnectIfNotConnected().GetAwaiter().GetResult();
+        }
+    }
+
+    void Recompute() => _capabilities = [.. _advertised.Except(_withheld)];
+
+    async Task FetchCapabilities()
+    {
+        _capabilitiesKnown = false;
+        var response = await _connectionService!.CheckCompatibility(new CompatibilityRequest
+        {
+            ClientType = ".NET",
+            ClientVersion = typeof(ChronicleConnection).Assembly.GetName().Version?.ToString() ?? "0.0.0",
+            ProtocolVersion = Contracts.ProtocolVersion.Current,
+            DescriptorSet = Contracts.WireContractDescriptorSet.Bytes.ToArray()
+        });
+
+        if (!response.IsCompatible)
+        {
+            throw new IncompatibleServerException(
+                $"The in-process kernel {response.ServerVersion} (protocol {response.ServerProtocolVersion}) is incompatible with this client: {string.Join("; ", response.Incompatibilities)}");
+        }
+
+        lock (_capabilitiesLock)
+        {
+            _advertised = [.. response.Capabilities];
+            Recompute();
+            _capabilitiesKnown = true;
+        }
+    }
 
     async Task ConnectIfNotConnected()
     {
@@ -121,6 +212,8 @@ internal class ChronicleConnection(
             ClientType = ".NET",
         }).Subscribe(HandleConnection);
 
+        // The capabilities must be known before the OnConnected callbacks fire, because they read them.
+        await FetchCapabilities();
         await lifecycle.Connected();
     }
 
@@ -152,6 +245,19 @@ internal class ChronicleConnection(
         }
         catch
         {
+        }
+    }
+
+    sealed class Withholding(Action restore) : IDisposable
+    {
+        int _disposed;
+
+        public void Dispose()
+        {
+            if (Interlocked.Exchange(ref _disposed, 1) == 0)
+            {
+                restore();
+            }
         }
     }
 }
