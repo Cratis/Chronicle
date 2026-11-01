@@ -19,6 +19,8 @@ See [Observer configuration](../hosting/configuration/observers.md) and
 During a full replay, the observer is inactive. When replay completes, it routes again to catch up
 with remaining events and resume live observation, unless it is quarantined.
 
+If a projection or reducer replay cannot prepare its job steps, the kernel keeps the existing read model, quarantines the observer and leaves the replay pending; clearing the quarantine runs the replay again.
+
 Kernel projection declarations support only namespaced materialization. Store-wide event statistics read
 each namespace's statistics and concatenate the rows instead of maintaining a shared global sink.
 
