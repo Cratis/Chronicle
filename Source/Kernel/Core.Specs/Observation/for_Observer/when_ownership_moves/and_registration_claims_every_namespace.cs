@@ -20,6 +20,7 @@ public class and_registration_claims_every_namespace : given.a_live_observer_wit
         await _other.Save(new() { Identifier = _observerId, LastHandledEventSequenceNumber = 42 }, EventSequenceId.Inbox);
         var otherNamespace = Substitute.For<Storage.IEventStoreNamespaceStorage>();
         otherNamespace.Observers.Returns(_other);
+        otherNamespace.FailedPartitions.GetFor(_observerId).Returns(new FailedPartitions());
         var emptyNamespace = Substitute.For<Storage.IEventStoreNamespaceStorage>();
         emptyNamespace.Observers.Returns(_empty);
         _eventStoreStorage.GetNamespace("other").Returns(otherNamespace);
