@@ -27,6 +27,8 @@ public class and_observation_stream_completes : given.all_dependencies
     bool _registrationResumed;
     int _observeCalls;
 
+    protected override TimeSpan ReconnectDelay => TimeSpan.Zero;
+
     void Establish()
     {
         _eventStore.Connection.Lifecycle.ConnectionId.Returns(Connections.ConnectionId.New());
