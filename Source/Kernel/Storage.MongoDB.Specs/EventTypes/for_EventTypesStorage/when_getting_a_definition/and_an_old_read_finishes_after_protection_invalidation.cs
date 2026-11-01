@@ -3,7 +3,6 @@
 
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.EventTypes;
 using Cratis.Chronicle.Schemas;
 using MongoDB.Bson;
@@ -40,6 +39,7 @@ public class and_an_old_read_finishes_after_protection_invalidation : given.a_mo
     {
         var pending = _cache.GetProtectionSchemaFor(EventStoreName.NotSet, _eventTypeId, _firstGeneration, _retainedOwn).AsTask();
         _eventTypesInDatabase[0] = DocumentFor("""{"type":"object","properties":{"name":{"type":"string","compliance":[{"metadataType":"PII","details":""}]}}}""");
+
         // Match the cache grain service's storage-then-schema invalidation order.
         _storage.Invalidate(_eventTypeId);
         _cache.Invalidate(EventStoreName.NotSet, _eventTypeId);
