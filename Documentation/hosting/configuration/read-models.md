@@ -1,9 +1,9 @@
 ---
-description: Configure how many replay-generated read model versions Chronicle Server keeps and how many documents one fenced sink transaction may hold.
+description: Configure replay retention and fenced sink transaction batch sizes in Chronicle Server.
 ---
 # Read Models
 
-Read model configuration controls how many replay-generated read model versions Chronicle keeps when projections are replayed, and the batch size read-model writes are split at.
+Read model configuration controls how many revert containers Chronicle keeps after a read model is replayed, and the batch size read-model writes are split at. This page describes what Chronicle does today, including what it does not do.
 
 ## Example configuration
 
@@ -18,25 +18,53 @@ Read model configuration controls how many replay-generated read model versions 
 
 | Property | Type | Default | Description |
 | --- | --- | --- | --- |
-| replayedVersionsToKeep | number | 1 | Number of replay-generated read model versions to keep per read model |
+| replayedVersionsToKeep | number | 1 | Number of replay occurrences to keep per read model. `snapshotsToKeep` is an alias that sets the same value. |
 | maxBatchSize | number | 500 | Maximum number of items per read-model batch. Must be greater than zero |
+
+There is no age-based setting. Chronicle counts occurrences; it does not look at how old they are.
+
+## What a revert container is
+
+A replay builds the new read model in a temporary `replay-<container>` container. When the replay completes, Chronicle promotes it to the real container and renames the previous one to a revert container. The container is a MongoDB collection or a SQL table, depending on the sink.
+
+A revert container is named `<container>-<yyyyMMddHHmmss>-<guid8>`, where the timestamp is when the replay started. Chronicle records each replay as an occurrence in the namespace: the `replayed-read-models` collection on MongoDB, or the `ReplayedReadModels` table on SQL.
 
 ## Replay retention behavior
 
-When a new replay starts, Chronicle applies retention before creating the next replay context:
+Retention is counted per event store, namespace and read model. It keeps the newest `replayedVersionsToKeep` occurrences, ordered by when the replay started, and deletes the revert container of every older one, followed by its occurrence record.
 
-- Keeps the latest `replayedVersionsToKeep` replay versions for each read model.
-- Removes older replay versions.
-- Deletes the associated sink container for each removed version (for example, a MongoDB collection or SQL table).
+Chronicle applies retention at the start of the next replay of that read model, before it creates the new replay context. The occurrence for a replay is recorded when that replay ends. As a result, up to `replayedVersionsToKeep` + 1 tracked revert containers exist between replays:
 
-Set `replayedVersionsToKeep` to:
+- `0` removes every previous occurrence when the next replay starts, so one revert container exists after a replay.
+- `1` (default) keeps the previous occurrence while the next replay runs. Once that replay ends there are two revert containers, and the older one is deleted when the replay after that starts.
+- A higher number keeps more history for diagnostics or rollback workflows, at the cost of storage.
 
-- `0` to remove all previous replay versions on each new replay.
-- `1` (default) to keep only the most recent replay version.
-- A higher number to keep more superseded versions for inspection and manual recovery.
+Read models owned by the Chronicle kernel itself apply `0` at the start of a replay and again after promotion, so they keep no revert container once a replay has finished.
 
-Kept versions stop receiving events once a newer version replaces them. Chronicle has no command to restore one. Kernel-owned read models keep no previous versions, regardless of this setting.
+Apart from that extra pass for kernel-owned read models, retention runs only at the start of a replay. There is no pass at startup, on a schedule or based on age. A revert container for a read model that is never replayed again stays where it is.
 
+The `rollbackWindow` and `maxFollowingRetiredGenerations` settings belong to projection generations, which are off by default. They are separate and do not change this retention.
+
+## What Chronicle never removes
+
+These are not cleaned up automatically today:
+
+- **Revert containers without an occurrence record.** If a replay finishes with failed partitions, the new container is still promoted and the previous one is renamed, but the replay is not recorded. Nothing then knows about that revert container.
+- **A leftover `replay-<container>` container.** Chronicle does not report or delete it. Only the next replay of the same read model clears it, and Chronicle refuses to delete it as a revert container.
+
+An empty replay creates no revert container but still records an occurrence. That occurrence takes up a retention slot, so retention can delete the previous real revert container sooner than the count suggests.
+
+## Checking for leftovers
+
+To see what Chronicle tracks, open the Read Models page in the Workbench. The occurrence selector lists the tracked occurrences with their date and generation, and lets you browse each one. The CLI lists the same occurrences, including the container and revert container names:
+
+```shell
+cratis chronicle read-models occurrences <READ_MODEL_TYPE>
+```
+
+On MongoDB, you can find containers Chronicle does not track by comparing the collection names in the database with the `containerName` and `revertContainerName` values in the `replayed-read-models` collection. A collection named like a revert container but missing from that collection is untracked. On SQL, the occurrences are in the `ReplayedReadModels` table, but some databases shorten long table names, so a physical table name may not match the recorded name exactly. Check such tables by hand rather than by exact name. Do not delete a `replay-<container>` container while its read model is replaying.
+
+Chronicle makes no promise about how long a revert container exists. Do not rely on it for data retention or legal requirements.
 
 ## Fenced sink writes
 
