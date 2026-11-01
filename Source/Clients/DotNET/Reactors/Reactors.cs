@@ -551,6 +551,25 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
         };
     }
 
+    bool IsCurrentHandler(ReactorHandler handler) =>
+        _handlers.TryGetValue(handler.Id, out var current) && ReferenceEquals(current.Handler, handler);
+
+    void ReconnectIfCurrent(ReactorRegistration registration, CancellationToken cancellationToken)
+    {
+        var handler = registration.Handler;
+        lock (_registerLock)
+        {
+            if (cancellationToken.IsCancellationRequested || !IsCurrentHandler(handler))
+            {
+                _logger.SkippingStaleReactorReconnect(handler.Id);
+                return;
+            }
+
+            _logger.ReconnectingReactor(handler.Id);
+            RegisterReactor(registration);
+        }
+    }
+
     void RegisterReactor(ReactorRegistration registration)
     {
         var handler = registration.Handler;
@@ -613,8 +632,7 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
                 {
                     await scheduler.DrainAndDispose();
                     await Task.Delay(TimeSpan.FromSeconds(2), cancellationToken);
-                    _logger.ReconnectingReactor(handler.Id);
-                    RegisterReactor(registration);
+                    ReconnectIfCurrent(registration, cancellationToken);
                 }
                 catch (OperationCanceledException ex)
                 {
