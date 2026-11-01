@@ -21,11 +21,11 @@ public class when_resolving_a_framework_service_implemented_in_the_test_assembly
 
     void Establish()
     {
-        Build(_typeBinding, ServiceDescriptor.Transient(typeof(ICloneable), typeof(cloneable)));
+        Build(_typeBinding, ServiceDescriptor.Transient<ICloneable, cloneable>());
         Build(_instance, ServiceDescriptor.Singleton<ICloneable>(new cloneable(new())));
-        Build(_framework, ServiceDescriptor.Transient(typeof(ICloneable), typeof(ArrayList)));
-        Build(_nonShared, ServiceDescriptor.Transient(typeof(ICloneable), typeof(cloneable)), shared: false);
-        Build(_dependency, ServiceDescriptor.Transient(typeof(ICloneable), typeof(cloneable)), dependency: true);
+        Build(_framework, ServiceDescriptor.Transient<ICloneable, ArrayList>());
+        Build(_nonShared, ServiceDescriptor.Transient<ICloneable, cloneable>(), shared: false);
+        Build(_dependency, ServiceDescriptor.Transient<ICloneable, cloneable>(), dependency: true);
         _typeBinding.Advance();
         _instance.Advance();
         _framework.Advance();
@@ -63,7 +63,7 @@ public class when_resolving_a_framework_service_implemented_in_the_test_assembly
     static void Build(fallback_context context, ServiceDescriptor descriptor, bool shared = true, bool dependency = false)
     {
         ServiceDescriptor[] captured = [descriptor];
-        context.Build((services, _) =>
+        void Configure(IServiceCollection services, fallback_context.tracker _)
         {
             context.Registry.Update(captured);
             services.AddContextServiceForwarders(captured, shared ? typeof(fallback_context).Assembly : null);
@@ -71,7 +71,9 @@ public class when_resolving_a_framework_service_implemented_in_the_test_assembly
             {
                 services.AddTransient<IComparable>(sp => new comparer(sp.GetRequiredService<ICloneable>()));
             }
-        }, shared);
+        }
+
+        context.Build(Configure, shared);
     }
 
     sealed class cloneable : ICloneable
