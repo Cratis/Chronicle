@@ -53,6 +53,7 @@ public partial class Observer
 
         if (await RelinquishOwnershipIfMoved()) return;
 
+        await ApplyOutstandingPartitionReplayCompletions();
         if (_webhookProbe is not null || _armWebhookProbe) await ReconcileWebhookProbe();
         await CheckConnectedClient();
         await RecoverIfStuck();

@@ -4,6 +4,9 @@
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Observation.for_Observer.given;
+using Cratis.Chronicle.Observation.Jobs;
+using Cratis.Monads;
+using Cratis.Orleans.Jobs;
 
 namespace Cratis.Chronicle.Observation.for_Observer.when_partition_replayed.given;
 
@@ -15,6 +18,8 @@ public class an_observer_with_replaying_partition : an_observer
 
     void Establish()
     {
+        _jobsManager.Start<ICatchUpObserverPartition, CatchUpObserverPartitionRequest>(Arg.Any<CatchUpObserverPartitionRequest>())
+            .Returns(Task.FromResult(Result<JobId, StartJobError>.Success(JobId.New())));
         _partition = "some-partition";
         _lastHandledEventSequenceNumber = 42UL;
         _nextEventSequenceNumber = 45UL;

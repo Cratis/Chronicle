@@ -31,6 +31,8 @@ public class an_observer_completing_an_empty_partition_replay : for_Observer.giv
 
     async Task Establish()
     {
+        _jobsManager.Start<ICatchUpObserverPartition, CatchUpObserverPartitionRequest>(Arg.Any<CatchUpObserverPartitionRequest>())
+            .Returns(Task.FromResult(Result<JobId, StartJobError>.Success(JobId.New())));
         _definitionStorage.State = _definitionStorage.State with { EventTypes = [event_type] };
         _stateStorage.State = _stateStorage.State with
         {
