@@ -68,10 +68,20 @@ public class Defaults
     /// <param name="eventStore">The event store name.</param>
     /// <param name="namespace">The event store namespace.</param>
     public Defaults(IClientArtifactsProvider clientArtifactsProvider, IServiceProvider? serviceProvider, ChronicleOptions? options, ScenarioTime? time, EventStoreName eventStore, EventStoreNamespaceName @namespace)
+        : this(new EventStoreForTesting(serviceProvider, clientArtifactsProvider, options, time ?? new ScenarioTime(), eventStore, @namespace), options, time)
+    {
+    }
+
+    /// <summary>
+    /// Initializes services that use an existing store.
+    /// </summary>
+    /// <param name="testingStore">The store to use.</param>
+    /// <param name="options">The Chronicle settings the store was created with.</param>
+    /// <param name="time">The occurrence clock; null creates isolated clocks per scenario.</param>
+    Defaults(EventStoreForTesting testingStore, ChronicleOptions? options, ScenarioTime? time)
     {
         ScenarioTime = time;
-        EventStore = new EventStoreForTesting(serviceProvider, clientArtifactsProvider, options, time ?? new ScenarioTime(), eventStore, @namespace);
-        var testingStore = (EventStoreForTesting)EventStore;
+        EventStore = testingStore;
         JsonSchemaGenerator = testingStore.JsonSchemaGenerator;
         ClientArtifactsProvider = testingStore.ClientArtifactsProvider;
         Options = testingStore.ClientOptions;
@@ -119,4 +129,11 @@ public class Defaults
     /// Gets an explicitly shared scenario clock, if supplied.
     /// </summary>
     internal ScenarioTime? ScenarioTime { get; }
+
+    /// <summary>
+    /// Creates services that use an existing store instead of creating one.
+    /// </summary>
+    /// <param name="testingStore">The store to use.</param>
+    /// <returns>Services backed by <paramref name="testingStore"/>.</returns>
+    internal static Defaults For(EventStoreForTesting testingStore) => new(testingStore, testingStore.ClientOptions, null);
 }

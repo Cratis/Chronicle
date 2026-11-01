@@ -221,8 +221,9 @@ public class ReplayObserver(
     /// and adopt this job before the sinks are switched and the steps start. That cannot deadlock: the observer then finds
     /// this job already running and does not call back into it. If the observer does not enter replay with this job, the
     /// resume fails rather than run steps beside live handling. <see cref="CanResume"/> already refuses an observer that
-    /// cannot replay, so this is left for an observer that changed state in between; the job is then left running with no
-    /// steps until the job framework reverts a failed resume (Cratis/Orleans#62).
+    /// cannot replay, so this is left for an observer that changed state in between; the job framework then holds
+    /// window fills and due step retries while the resume is owed. The job's watchdog retries the hook with a growing
+    /// delay until it succeeds (Cratis/Chronicle#5401).
     /// </para>
     /// </remarks>
     /// <exception cref="ObserverDidNotEnterReplay">The observer did not enter replay with this job.</exception>

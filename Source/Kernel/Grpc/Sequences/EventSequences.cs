@@ -168,6 +168,16 @@ internal sealed class EventSequences(
             exception => logger.QueryFailed(exception, "EventSequences", "FromSequenceNumber"));
 
     /// <inheritdoc/>
+    public Task<global::Cratis.Chronicle.Contracts.Queries.QueryResult<IEnumerable<global::Cratis.Chronicle.Contracts.Sequences.AppendedEventResponse>>> FromSequenceNumberWithErasedProperties(global::Cratis.Chronicle.Contracts.Sequences.FromSequenceNumberWithErasedPropertiesRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
+        QueryExecutor.Execute<IEnumerable<global::Cratis.Chronicle.Contracts.Sequences.AppendedEventResponse>>(
+            async () =>
+            {
+                var result = await global::Cratis.Chronicle.Sequences.AppendedEvent.FromSequenceNumberWithErasedProperties(storage, eventCompliance, jsonSerializerOptions, (global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, (global::Cratis.Chronicle.Concepts.EventSequences.EventSequenceId)request.EventSequenceId, request.FromEventSequenceNumber, (request.EventSourceId is null ? null : (global::Cratis.Chronicle.Concepts.Events.EventSourceId)request.EventSourceId), request.EventTypeIds);
+                return result.Select(ToAppendedEventResponse).ToList();
+            },
+            exception => logger.QueryFailed(exception, "EventSequences", "FromSequenceNumberWithErasedProperties"));
+
+    /// <inheritdoc/>
     public Task<global::Cratis.Chronicle.Contracts.Queries.QueryResult<IEnumerable<global::Cratis.Chronicle.Contracts.Sequences.AppendedEventResponse>>> QueryEvents(global::Cratis.Chronicle.Contracts.Sequences.QueryEventsRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         QueryExecutor.Execute<IEnumerable<global::Cratis.Chronicle.Contracts.Sequences.AppendedEventResponse>>(
             async () =>
@@ -405,7 +415,8 @@ internal sealed class EventSequences(
             OriginalContent = source.OriginalContent,
             Revisions = source.Revisions.Select(element0 => element0.ToContract()).ToList(),
             GenerationalContent = source.GenerationalContent,
-            RevisedGeneration = source.RevisedGeneration
+            RevisedGeneration = source.RevisedGeneration,
+            ErasedProperties = source.ErasedProperties
         };
 
     static global::Cratis.Chronicle.Contracts.Sequences.ClosedStreamResponse ToClosedStreamResponse(global::Cratis.Chronicle.Sequences.ClosedStream source) =>

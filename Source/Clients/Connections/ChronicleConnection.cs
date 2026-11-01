@@ -383,7 +383,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         {
             _logger.Connected();
             _hasEverConnected = true;
-            await Lifecycle.Connected();
+            await ExecutionContextDetached.Start(() => Task.Run(Lifecycle.Connected));
             return;
         }
 
@@ -391,7 +391,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         _watchDog.NotifyKeepAlive();
         _connectTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        _keepAliveSubscription = _connectionService.Connect(
+        await ExecutionContextDetached.Start(() => Task.Run(() => _keepAliveSubscription = _connectionService.Connect(
             new()
             {
                 ConnectionId = Lifecycle.ConnectionId,
@@ -401,14 +401,14 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
                 ProcessPath = ClientProcess.Path,
                 MachineName = ClientProcess.MachineName,
                 ClientType = ChronicleClientIdentity.Type,
-            }).Subscribe(HandleConnection);
+            }).Subscribe(HandleConnection)));
 
         try
         {
             await _connectTcs.Task.WaitAsync(TimeSpan.FromSeconds(_connectTimeout), _timeProvider);
             _logger.Connected();
             _hasEverConnected = true;
-            await Lifecycle.Connected();
+            await ExecutionContextDetached.Start(() => Task.Run(Lifecycle.Connected));
         }
         catch (TimeoutException)
         {
@@ -436,7 +436,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
             // here gives whatever comes out of this attempt a full staleness window from when monitoring actually
             // begins, rather than one that was already partly spent waiting for the attempt itself.
             _watchDog.NotifyKeepAlive();
-            _watchDog.Start();
+            await ExecutionContextDetached.Start(() => Task.Run(_watchDog.Start));
         }
     }
 

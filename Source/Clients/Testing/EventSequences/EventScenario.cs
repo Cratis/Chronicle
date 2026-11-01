@@ -126,7 +126,7 @@ public class EventScenario(
     public IEventSequence EventSequence => _created.Log;
 
     /// <summary>
-    /// Gets the scenario's explicitly driven occurrence clock. Event append timestamps still use kernel system time.
+    /// Gets the scenario's clock for occurrence leases, default event occurrence times and effect receipt timestamps.
     /// </summary>
     public ScenarioTime Time => _created.Root.Time;
 

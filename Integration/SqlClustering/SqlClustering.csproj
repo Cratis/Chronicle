@@ -3,7 +3,7 @@
         <AssemblyName>Cratis.Chronicle.Integration.SqlClustering</AssemblyName>
         <RootNamespace>Cratis.Chronicle.Integration.SqlClustering</RootNamespace>
         <LocalImageName>$(CRATIS_CHRONICLE_LOCAL_IMAGE)</LocalImageName>
-        <LocalImageName Condition="'$(LocalImageName)' == ''">cratis/chronicle:latest-development</LocalImageName>
+        <LocalImageName Condition="'$(LocalImageName)' == ''">cratis/chronicle:local-development-slim</LocalImageName>
     </PropertyGroup>
     <ItemGroup>
         <ProjectReference Include="../../Source/Kernel/Storage.Sql/Storage.Sql.csproj" />

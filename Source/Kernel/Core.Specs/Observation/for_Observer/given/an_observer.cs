@@ -43,6 +43,12 @@ namespace Cratis.Chronicle.Observation.for_Observer.given;
 public class an_observer : Specification
 {
     protected Observer _observer;
+    protected TimeProvider _timeProvider = TimeProvider.System;
+
+    /// <summary>
+    /// Gets or sets the running-state change time held by the substituted observer state storage.
+    /// </summary>
+    protected DateTimeOffset? _persistedRunningStateChangedAt;
     protected IStreamProvider _streamProvider;
     protected IStreamProvider _sequenceStreamProvider;
     protected IObserverSubscriber _subscriber;
@@ -88,7 +94,7 @@ public class an_observer : Specification
         silo.AddService(options);
         silo.AddService(_configurationProvider);
         silo.AddService(_storage);
-        silo.AddService<TimeProvider>(TimeProvider.System);
+        silo.AddService(_timeProvider);
         silo.AddService(_webhookTargetPolicy);
         silo.AddService(_eventCompliance);
         silo.AddService(_eventGenerationRelease);
@@ -209,6 +215,12 @@ public class an_observer : Specification
         _failedPartitionsStorage.State = _failedPartitionsState;
         _eventStoreNamespaceStorage.Observers.Get(_observerId).Returns(_ => _stateStorage.State with { Identifier = _observerId });
         _eventStoreNamespaceStorage.Observers.Save(Arg.Any<ObserverState>(), Arg.Any<EventSequenceId>()).Returns(true);
+        _eventStoreNamespaceStorage.Observers.GetRunningStateChangedAt(Arg.Any<ObserverId>()).Returns(_ => _persistedRunningStateChangedAt);
+        _eventStoreNamespaceStorage.Observers.SaveRunningStateChangedAt(Arg.Any<ObserverId>(), Arg.Any<DateTimeOffset?>(), Arg.Any<EventSequenceId>()).Returns(call =>
+        {
+            _persistedRunningStateChangedAt = call.ArgAt<DateTimeOffset?>(1);
+            return true;
+        });
         _eventStoreNamespaceStorage.FailedPartitions.GetFor(_observerId).Returns(_ => _failedPartitionsStorage.State);
 
         _eventSequence.GetTailSequenceNumber().Returns(EventSequenceNumber.Unavailable);

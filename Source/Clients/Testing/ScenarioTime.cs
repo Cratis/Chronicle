@@ -5,7 +5,7 @@ namespace Cratis.Chronicle.Testing;
 
 /// <summary>
 /// Drives occurrence lease expiry and retry eligibility explicitly. Advancing it never delivers work or fires timers.
-/// Event append timestamps still use the kernel's system clock.
+/// Also supplies default event occurrence times and effect receipt timestamps for in-process scenarios.
 /// </summary>
 /// <param name="now">The initial instant.</param>
 public sealed class ScenarioTime(DateTimeOffset now) : TimeProvider
