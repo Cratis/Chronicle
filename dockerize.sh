@@ -14,8 +14,9 @@ yarn build
 popd
 
 # Build images
-docker build -t cratis/chronicle -f ./Docker/Production/Dockerfile .
-docker build -t cratis/chronicle:development -f ./Docker/Development/Dockerfile .
+# Local tags only; publishing is publish.yml's job.
+docker build -t cratis/chronicle:local-production -f ./Docker/Production/Dockerfile .
+docker build -t cratis/chronicle:local-development-image -f ./Docker/Development/Dockerfile .
 
 # For building multiple CPU architectures (PS: this automatically pushes to Docker Hub):
 #docker buildx build -t cratis/chronicle:development -f ./Docker/Development/Dockerfile --platform linux/amd64,linux/arm64 --push .

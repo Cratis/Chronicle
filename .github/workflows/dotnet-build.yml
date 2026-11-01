@@ -134,6 +134,13 @@ jobs:
       - name: Spec the build version derivation
         run: python3 .github/scripts/test-derive-build-version.py
 
+      # Docker resolves a local image before the registry, so a local build that tags a published name
+      # silently replaces it for everything on the machine (#3795). Checkout-only, so it runs before compiling.
+      - name: Assert local builds never tag a published image name
+        run: |
+          python3 .github/scripts/assert-local-image-tags.py
+          python3 -B .github/scripts/test-assert-local-image-tags.py
+
       - name: Spec prerelease artifact handoff without caches
         run: |
           python3 -m pip install PyYAML==6.0.3
