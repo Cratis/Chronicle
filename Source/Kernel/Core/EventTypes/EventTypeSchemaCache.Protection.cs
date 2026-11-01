@@ -39,9 +39,9 @@ internal sealed partial class EventTypeSchemaCache
 
             var definition = await storage.GetEventStore(key.EventStore).EventTypes.GetDefinition(key.EventTypeId);
             var effective = GenerationProtectionSchemas.For(definition, key.Generation);
+
             // ownSchema is only a warm-path identity hint. It may predate invalidation, so even a
             // negative inheritance decision must return the owning schema from this definition.
-
             lock (_protectionInvalidation)
             {
                 // A registration during the load must not republish the old definition.

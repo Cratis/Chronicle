@@ -1026,7 +1026,7 @@ public class ProjectionFactory(
         var joinEventSchema = context.EventTypeSchemas.SchemaFor(joinEventType, level.Projection.GenerationDelivery)?.Schema;
         var mergedJoinProperties = GetMergedJoinProperties(joinDefinition, level.Schema, joinEventSchema, autoMap.AutoMap, autoMap.NoAutoMapProperties);
         var joinPropertyMappers = mergedJoinProperties.Select(kvp => ResolvePropertyMapper(level.Projection, level.AccessorPath + kvp.Key, kvp.Value)).ToArray();
-        var resolvedJoin = fromObservable.ResolveJoin(context.EventSequenceStorage, joinEventType, level.AccessorPath + joinDefinition.On, logger, eventCompliance, joinEventSchema, context.EventTypesStorage, level.Projection.GenerationDelivery == EventGenerationDelivery.Pinned ? storedEvent => level.Projection.ReleaseEvent(joinEventType, storedEvent) : null);
+        var resolvedJoin = fromObservable.ResolveJoin(context.EventSequenceStorage, joinEventType, level.AccessorPath + joinDefinition.On, logger, eventCompliance, joinEventSchema, level.Projection.GenerationDelivery == EventGenerationDelivery.Pinned ? storedEvent => level.Projection.ReleaseEvent(joinEventType, storedEvent) : null);
         ProjectJoined(level, resolvedJoin, joinPropertyMappers);
     }
 

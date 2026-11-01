@@ -12,7 +12,6 @@ using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.EventSequences;
-using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Reflection;
 using Microsoft.Extensions.Logging;
 
@@ -88,7 +87,6 @@ public static class ProjectionEventContextExtensions
     /// <param name="logger">The logger.</param>
     /// <param name="eventCompliance">Optional handler for releasing a stored join event's compliance and security fields before projecting it.</param>
     /// <param name="joinEventSchema">Optional schema for the stored join event.</param>
-    /// <param name="eventTypesStorage">Optional event type storage retained for compatibility; release resolves current effective protection through <paramref name="eventCompliance"/>.</param>
     /// <param name="releasePinnedEvent">Optional pinned-generation release boundary, replacing compatibility release.</param>
     /// <returns>A new observable for the ResolveJoin operation.</returns>
     public static IObservable<ProjectionEventContext> ResolveJoin(
@@ -99,7 +97,6 @@ public static class ProjectionEventContextExtensions
         ILogger logger,
         IEventCompliance? eventCompliance = null,
         JsonSchema? joinEventSchema = null,
-        IEventTypesStorage? eventTypesStorage = null,
         Func<AppendedEvent, Task<AppendedEvent>>? releasePinnedEvent = null)
     {
         // Note: TryGetLastEventBefore is awaited synchronously here because this runs inside the

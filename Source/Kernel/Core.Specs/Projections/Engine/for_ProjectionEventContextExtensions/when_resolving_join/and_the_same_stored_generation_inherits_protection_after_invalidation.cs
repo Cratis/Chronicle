@@ -36,7 +36,7 @@ public class and_the_same_stored_generation_inherits_protection_after_invalidati
         _changeset.CurrentState.Returns((ExpandoObject)state);
         _changeset.ResolvedJoin(Arg.Any<PropertyPath>(), Arg.Any<object>(), Arg.Any<AppendedEvent>(), Arg.Any<ArrayIndexers>()).Returns(_changeset);
         _subject = new();
-        _subject.ResolveJoin(_sequenceStorage, _type, new PropertyPath("joinId"), NullLogger.Instance, _compliance, _own, _eventTypes).Subscribe(_results.Add);
+        _subject.ResolveJoin(_sequenceStorage, _type, new PropertyPath("joinId"), NullLogger.Instance, _compliance, _own).Subscribe(_results.Add);
         _definition = currentDefinition;
         _cache.Invalidate("store", _type.Id);
     }
