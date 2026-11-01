@@ -17,11 +17,12 @@ public class and_a_stale_subscription_reports_an_error : given.a_connection_with
         _streams[_a] = () => ++streams == 1 ? first : Healthy();
         await StartConnecting().WaitAsync(TimeSpan.FromSeconds(10), TimeProvider.System);
         first.Observer!.OnCompleted();
+        await TickWatchdog();
         await WaitUntil(() => _servedBy.Count == 2 && _isConnected);
 
         // The replaced attempt reports a failure after the connection has moved on.
         first.Observer!.OnError(Unavailable());
-        await Task.Delay(200);
+        await TickWatchdog();
     }
 
     [Fact] void should_still_be_connected() => _isConnected.ShouldBeTrue();

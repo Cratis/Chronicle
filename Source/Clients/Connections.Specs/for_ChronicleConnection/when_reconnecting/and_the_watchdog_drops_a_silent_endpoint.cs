@@ -19,6 +19,7 @@ public class and_the_watchdog_drops_a_silent_endpoint : given.a_connection_with_
 
         // Time passes with no keep-alive, so the watchdog declares the session dropped.
         _time.Advance(TimeSpan.FromMinutes(5));
+        await TickWatchdog();
         await WaitUntil(() => _servedBy.Count == 2 && _isConnected);
     }
 

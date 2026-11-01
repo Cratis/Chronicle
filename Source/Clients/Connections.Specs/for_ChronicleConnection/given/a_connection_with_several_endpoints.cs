@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reactive.Linq;
+using System.Threading.Channels;
 using Cratis.Chronicle.Contracts.Clients;
 using Cratis.Tasks;
 using Grpc.Core;
@@ -34,10 +35,14 @@ public class a_connection_with_several_endpoints : Specification
     protected Dictionary<ChronicleServerAddress, int> _connectsPerServer;
     protected Dictionary<ChronicleServerAddress, Func<Task<CompatibilityResponse>>> _compatibility;
     protected int _disconnectedCalls;
+    readonly Channel<TaskCompletionSource> _watchdogDelays = Channel.CreateUnbounded<TaskCompletionSource>();
+    readonly object _changeGate = new();
+    TaskCompletionSource _changed = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
     protected virtual IReadOnlyList<ChronicleServerAddress> Servers => [_a, _b];
     protected virtual bool WatchdogTicksQuickly => false;
     protected virtual bool SkipCompatibilityCheck => true;
+    protected virtual bool SkipKeepAlive => false;
 
     void Establish()
     {
@@ -68,12 +73,14 @@ public class a_connection_with_several_endpoints : Specification
         _lifecycle.Connected().Returns(_ =>
         {
             _isConnected = true;
+            SignalChange();
             return Task.CompletedTask;
         });
         _lifecycle.Disconnected().Returns(_ =>
         {
             _isConnected = false;
             _disconnectedCalls++;
+            SignalChange();
             return Task.CompletedTask;
         });
     }
@@ -107,7 +114,18 @@ public class a_connection_with_several_endpoints : Specification
         _tasks.Run(Arg.Any<Func<Task>>(), Arg.Any<CancellationToken>())
             .Returns(call => Task.Run(call.Arg<Func<Task>>()));
         _tasks.Delay(Arg.Any<int>(), Arg.Any<CancellationToken>())
-            .Returns(call => Task.Delay(WatchdogTicksQuickly ? 1 : Timeout.Infinite, call.Arg<CancellationToken>()));
+            .Returns(call =>
+            {
+                // A delay never elapses by itself; it ends when the spec ticks the watchdog (or the connection is cancelled).
+                var tick = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+                call.Arg<CancellationToken>().Register(() => tick.TrySetCanceled());
+                if (WatchdogTicksQuickly)
+                {
+                    _watchdogDelays.Writer.TryWrite(tick);
+                }
+
+                return tick.Task;
+            });
     }
 
     void CreateConnection(IChronicleServerAddressResolver resolver)
@@ -125,7 +143,7 @@ public class a_connection_with_several_endpoints : Specification
             NullLogger<ChronicleConnection>.Instance,
             skipTlsValidation: true,
             skipCompatibilityCheck: SkipCompatibilityCheck,
-            skipKeepAlive: false,
+            skipKeepAlive: SkipKeepAlive,
             serverAddressResolver: resolver,
             loadBalancerStrategy: _loadBalancer,
             timeProvider: _time)
@@ -142,6 +160,7 @@ public class a_connection_with_several_endpoints : Specification
                     {
                         _connectsPerServer[address] = _connectsPerServer.GetValueOrDefault(address) + 1;
                         _servedBy.Add(address);
+                        SignalChange();
                         return _streams[address]();
                     });
                 return service;
@@ -174,22 +193,47 @@ public class a_connection_with_several_endpoints : Specification
         Observable.Return(new ConnectionKeepAlive { ConnectionId = "connection" }).Concat(Observable.Never<ConnectionKeepAlive>());
 
     /// <summary>
-    /// Waits for something to happen on another thread, failing the spec rather than hanging it.
+    /// Ends the watchdog's current monitor delay and returns once the watchdog has acted on that tick and is waiting again.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    protected async Task TickWatchdog()
+    {
+        var tick = await _watchdogDelays.Reader.ReadAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(10), TimeProvider.System);
+        tick.TrySetResult();
+        await _watchdogDelays.Reader.WaitToReadAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(10), TimeProvider.System);
+    }
+
+    /// <summary>
+    /// Waits for something to happen on another thread, failing the spec rather than hanging it. The condition is
+    /// re-evaluated whenever the connection reports progress.
     /// </summary>
     /// <param name="condition">The condition to wait for.</param>
     /// <returns>Awaitable task.</returns>
-    /// <exception cref="TimeoutException">Thrown when the condition is not met in time.</exception>
-    protected static async Task WaitUntil(Func<bool> condition)
+    protected async Task WaitUntil(Func<bool> condition)
     {
-        var deadline = DateTime.UtcNow.AddSeconds(10);
-        while (!condition())
+        while (true)
         {
-            if (DateTime.UtcNow > deadline)
+            Task changed;
+            lock (_changeGate)
             {
-                throw new TimeoutException("The condition was never met");
+                changed = _changed.Task;
             }
 
-            await Task.Delay(10);
+            if (condition())
+            {
+                return;
+            }
+
+            await changed.WaitAsync(TimeSpan.FromSeconds(10), TimeProvider.System);
+        }
+    }
+
+    void SignalChange()
+    {
+        lock (_changeGate)
+        {
+            _changed.TrySetResult();
+            _changed = new(TaskCreationOptions.RunContinuationsAsynchronously);
         }
     }
 
