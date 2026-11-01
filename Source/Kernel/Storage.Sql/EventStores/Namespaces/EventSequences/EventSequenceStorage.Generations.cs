@@ -94,8 +94,9 @@ public partial class EventSequenceStorage
         var merged = JsonSerializer.Serialize(content);
         var mergedHashes = JsonSerializer.Serialize(hashes);
         var mergedProvenance = JsonSerializer.Serialize(provenance);
+        var revisedGeneration = observed.RevisedGeneration?.Value;
         var rows = await scope.DbContext.Events
-            .Where(_ => _.SequenceNumber == number && _.Type == type && _.Content == tokenContent && _.ContentHashes == tokenHashes)
+            .Where(_ => _.SequenceNumber == number && _.Type == type && _.Content == tokenContent && _.ContentHashes == tokenHashes && _.RevisedGeneration == revisedGeneration)
             .ExecuteUpdateAsync(setters => setters
                 .SetProperty(_ => _.Content, merged)
                 .SetProperty(_ => _.ContentHashes, mergedHashes)
