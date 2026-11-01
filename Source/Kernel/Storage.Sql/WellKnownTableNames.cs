@@ -164,6 +164,11 @@ public static class WellKnownTableNames
     public const string ReplayPromotions = "chronicle_replay_promotions";
 
     /// <summary>
+    /// The durable ownership ledger for dynamic read model table names.
+    /// </summary>
+    public const string ReadModelTableNames = "chronicle_read_model_table_names";
+
+    /// <summary>
     /// The table that holds read model definitions.
     /// </summary>
     public const string ReadModelDefinitions = "ReadModelDefinitions";
