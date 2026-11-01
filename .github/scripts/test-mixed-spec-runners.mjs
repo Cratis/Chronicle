@@ -249,6 +249,28 @@ test('API evidence selects retained and mixed successful producer attempts, not 
         assert.deepEqual(evidence.producers.map(p => p.artifactId), [100, 101]);
     }
 });
+test('API evidence accepts reusable workflow caller names, including retained and mixed attempts', () => {
+    for (const attempts of [[1, 1], [1, 2]]) {
+        const [jobs, artifacts] = producerFixture(attempts);
+        for (const job of jobs[0].jobs) job.name = `requested-integration-5501 / ${job.name}`;
+        assert.deepEqual(selectProducerArtifacts(jobs, artifacts, retryContext).producers.map(p => p.runAttempt), attempts.map(String));
+    }
+});
+test('API evidence rejects ambiguous caller prefixes, including direct/reusable and disjoint attempts', () => {
+    for (const prefix of ['', 'other-caller / ']) {
+        const [jobs, artifacts] = producerFixture([1, 2]);
+        const duplicate = { ...jobs[0].jobs[0], id: 999, name: `${prefix}specs-other (1)`, run_attempt: 2 };
+        for (const job of jobs[0].jobs) job.name = `requested-integration-5501 / ${job.name}`;
+        jobs[0].jobs.push(duplicate);
+        jobs[0].total_count++;
+        assert.throws(() => selectProducerArtifacts(jobs, artifacts, retryContext), /Ambiguous producer caller/);
+    }
+});
+test('API evidence does not match unrelated job-name suffixes', () => {
+    const [jobs, artifacts] = producerFixture();
+    jobs[0].jobs[0].name = 'caller / xspecs-other (1)';
+    assert.throws(() => selectProducerArtifacts(jobs, artifacts, retryContext), /Missing successful latest producer/);
+});
 test('API evidence rejects unsuccessful latest jobs and stale, wrong-run/SHA, incomplete or duplicate provenance', () => {
     const reject = mutate => {
         const [jobs, artifacts] = producerFixture([1, 2]);

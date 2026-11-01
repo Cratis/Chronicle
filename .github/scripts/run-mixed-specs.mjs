@@ -65,8 +65,15 @@ function apiRecords(pages, key) {
     if (!validIds) fail(`Invalid/duplicate producer API identities: ${key}`);
     return records;
 }
+function producerCandidates(jobs, shard) {
+    const base = `specs-other (${shard})`;
+    const candidates = jobs.filter(job => typeof job.name === 'string' && (job.name === base || job.name.endsWith(` / ${base}`)));
+    // With the same base suffix, distinct full names identify distinct caller prefixes.
+    if (new Set(candidates.map(job => job.name)).size > 1) fail(`Ambiguous producer caller: shard ${shard}`);
+    return candidates;
+}
 function producerJob(jobs, shard, context) {
-    const candidates = jobs.filter(job => job.name === `specs-other (${shard})`);
+    const candidates = producerCandidates(jobs, shard);
     for (const job of candidates) {
         const valid = [job.run_id === Number(context.runId), positiveId(job.run_attempt),
             job.run_attempt <= Number(context.runAttempt), typeof job.head_sha === 'string', Boolean(job.head_sha)].every(Boolean);
