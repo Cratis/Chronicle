@@ -14,6 +14,7 @@ using Cratis.Chronicle.Sinks;
 using Cratis.Traces;
 using Grpc.Core;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Integration.SqlClustering;
 
@@ -39,6 +40,8 @@ public sealed partial class ClusterLoad(int transitions = 1, TimeProvider? timeP
     readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
     readonly string _source = Guid.NewGuid().ToString();
     readonly ClusterReconnectReducer _reconnectReducer = new();
+    readonly ClusterLoadDeliveryDiagnostics _deliveryDiagnostics = new();
+    ILoggerFactory? _diagnosticLoggerFactory;
     ServiceProvider? _services;
     ChronicleClient _client = null!;
     IEventStore _store = null!;
@@ -72,7 +75,11 @@ public sealed partial class ClusterLoad(int transitions = 1, TimeProvider? timeP
                 .AddKeyedSingleton(typeof(IActivitySource<>), ClientActivity.SourceName, typeof(FallbackActivitySource<>))
                 .BuildServiceProvider();
         }
-        _client = new(options, serviceProvider: _services);
+        _diagnosticLoggerFactory = LoggerFactory.Create(builder => builder
+            .SetMinimumLevel(LogLevel.Trace)
+            .AddFilter((category, level) => category == ClusterLoadDeliveryDiagnosticsLogging.Category && level == LogLevel.Trace)
+            .AddProvider(new ClusterLoadDeliveryDiagnosticsLogging(_deliveryDiagnostics)));
+        _client = new(options, serviceProvider: _services, loggerFactory: _diagnosticLoggerFactory);
 
         // Automatic registration is what re-registers the reactor after the client reconnects to another node, the
         // way an application does; a manually registered store stays unregistered once its node goes away.
@@ -82,7 +89,8 @@ public sealed partial class ClusterLoad(int transitions = 1, TimeProvider? timeP
             builder => builder.WithEventType(_store.EventTypes.GetEventTypeFor(typeof(ClusterEventAppended))),
             (@event, _) =>
             {
-                _observed.Enqueue((@event.Content[nameof(ClusterEventAppended.Id)]!.GetValue<Guid>(), @event.Context.SequenceNumber));
+                var id = @event.Content[nameof(ClusterEventAppended.Id)]!.GetValue<Guid>();
+                _deliveryDiagnostics.Callback(id, @event.Context.SequenceNumber.Value, () => _observed.Enqueue((id, @event.Context.SequenceNumber)));
                 return Task.CompletedTask;
             });
         await _reactor.WaitTillActive(TimeSpan.FromSeconds(60));
@@ -199,7 +207,7 @@ public sealed partial class ClusterLoad(int transitions = 1, TimeProvider? timeP
         }
         catch
         {
-            await ClusterLoadDiagnostics.Dump(_reactor, storedEvents, _observed, Console.Out);
+            await ClusterLoadDiagnostics.DumpSafely(_reactor, storedEvents, _observed, Console.Out, _deliveryDiagnostics);
             throw;
         }
     }
@@ -213,7 +221,14 @@ public sealed partial class ClusterLoad(int transitions = 1, TimeProvider? timeP
         }
         finally
         {
-            _client?.Dispose();
+            try
+            {
+                _client?.Dispose();
+            }
+            finally
+            {
+                DisposeDeliveryDiagnostics();
+            }
             if (_services is not null)
             {
                 await _services.DisposeAsync();
@@ -238,6 +253,19 @@ public sealed partial class ClusterLoad(int transitions = 1, TimeProvider? timeP
                 return;
             }
         }
+    }
+
+    void DisposeDeliveryDiagnostics()
+    {
+        try
+        {
+            _diagnosticLoggerFactory?.Dispose();
+        }
+        catch
+        {
+            // Diagnostic teardown must not replace a workload failure or preservation assertion.
+        }
+        _deliveryDiagnostics.Dispose();
     }
 
     internal static void VerifyObservations(IEnumerable<(Guid Id, EventSequenceNumber Sequence)> stored, IEnumerable<(Guid Id, EventSequenceNumber Sequence)> observed)

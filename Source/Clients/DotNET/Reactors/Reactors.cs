@@ -624,6 +624,9 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
 #pragma warning disable CA2000 // Dispose objects before losing scope
         var scheduler = new PartitionedDeliveryScheduler(MaxConcurrentPartitions);
 #pragma warning restore CA2000 // Dispose objects before losing scope
+#if CHRONICLE_ROLLING_DIAGNOSTICS
+        var diagnostic = ReactorsDeliveryDiagnosticsLogging.Open(_logger);
+#endif
         var eventsToObserve = _servicesAccessor.Services.Reactors.Observe(messages.Messages, cancellationToken);
 
         // Re-establish the observation after the stream ends. A cross-store
@@ -663,9 +666,16 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
         eventsToObserve
             .Select(events =>
             {
+#if CHRONICLE_ROLLING_DIAGNOSTICS
+                var batch = ReactorsDeliveryDiagnosticsLogging.NextBatch(_logger, diagnostic.Stream, ref diagnostic.Batch, events);
+#endif
                 async Task Deliver()
                 {
+#if CHRONICLE_ROLLING_DIAGNOSTICS
+                    await ObserverMethod(messages, registration, (events, diagnostic.Stream, batch), cancellationToken);
+#else
                     await ObserverMethod(messages, registration, events, cancellationToken);
+#endif
                     _logger.EventHandlingCompleted(handler.Id);
                 }
 
@@ -679,6 +689,9 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
                 {
                     scheduler.Stop();
                     var errorKind = cancellationToken.IsCancellationRequested ? KernelConnectionErrorKind.Cancelled : ex.ClassifyStreamError();
+#if CHRONICLE_ROLLING_DIAGNOSTICS
+                    ReactorsDeliveryDiagnosticsLogging.StreamError(_logger, diagnostic.Stream, errorKind == KernelConnectionErrorKind.Cancelled);
+#endif
                     if (errorKind == KernelConnectionErrorKind.Cancelled)
                     {
                         _logger.RegisteringReactorStreamCancelled(handler.Id, ex);
@@ -716,14 +729,22 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
                 () =>
                 {
                     scheduler.Stop();
+#if CHRONICLE_ROLLING_DIAGNOSTICS
+                    ReactorsDeliveryDiagnosticsLogging.Record(_logger, 2, diagnostic.Stream);
+#endif
                     _logger.RegisteringReactorStreamCompleted(handler.Id);
                     messages.Dispose();
                     ScheduleReconnect();
                 });
     }
 
+#if CHRONICLE_ROLLING_DIAGNOSTICS
+    Task ObserverMethod(SerializedMessages<ReactorMessage> messages, ReactorRegistration registration, (EventsToObserve Events, Guid Stream, long Batch) delivery, CancellationToken cancellationToken) =>
+        _dispatcher.Dispatch(registration.Handler, registration.Handle, delivery.Events, _eventStore.Namespace, result => messages.Publish(new(new(result))), cancellationToken, delivery.Stream, delivery.Batch);
+#else
     Task ObserverMethod(SerializedMessages<ReactorMessage> messages, ReactorRegistration registration, EventsToObserve events, CancellationToken cancellationToken) =>
         _dispatcher.Dispatch(registration.Handler, registration.Handle, events, _eventStore.Namespace, result => messages.Publish(new(new(result))), cancellationToken);
+#endif
 
     sealed record ReactorRegistration(
         ReactorHandler Handler,

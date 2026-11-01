@@ -433,6 +433,25 @@ jobs:
           -p:EnableDevelopmentSymbol=true -p:DisableProxyGenerator=true -p:DisableDockerBuild=true
           -p:Version="$CRATIS_CHRONICLE_CLIENT_VERSION"
 
+      # Only this candidate test shard consumes instrumentation. SDK artifacts layout isolates the
+      # entire dependency graph outside the checkout, so shipping bin/obj, packages and images cannot
+      # pick up enabled outputs. Keep the ordinary stamped build above for the absence comparison.
+      - name: Build isolated rolling delivery diagnostic candidate
+        if: matrix.provider == 'RollingUpgrade'
+        run: |
+          set -euo pipefail
+          printf 'diagnostic-source=%s client-version=%s artifacts=%s\n' "$(git rev-parse HEAD)" "$CRATIS_CHRONICLE_CLIENT_VERSION" "$RUNNER_TEMP/rolling-delivery-diagnostics"
+          dotnet build .github/scripts/rolling-delivery-il/RollingDeliveryIl.csproj -c Release -warnaserror \
+            --artifacts-path "$RUNNER_TEMP/rolling-il-verifier" -o "$RUNNER_TEMP/rolling-il-tool"
+          dotnet build Integration/SqlClustering/SqlClustering.csproj -c Release -warnaserror \
+            -p:EnableDevelopmentSymbol=true -p:DisableProxyGenerator=true -p:DisableDockerBuild=true \
+            -p:Version="$CRATIS_CHRONICLE_CLIENT_VERSION" -p:EnableRollingDeliveryDiagnostics=true \
+            --artifacts-path "$RUNNER_TEMP/rolling-delivery-diagnostics"
+          dotnet "$RUNNER_TEMP/rolling-il-tool/RollingDeliveryIl.dll" \
+            Source/Clients/DotNET/bin/Release/net10.0/Cratis.Chronicle.dll \
+            --enabled "$RUNNER_TEMP/rolling-delivery-diagnostics/bin/DotNET/release/Cratis.Chronicle.dll"
+          grep -a -F -q -- "$CRATIS_CHRONICLE_CLIENT_VERSION" "$RUNNER_TEMP/rolling-delivery-diagnostics/bin/DotNET/release/Cratis.Chronicle.dll"
+
       - name: Pre-pull images
         uses: nick-fields/retry@v3
         with:
@@ -456,10 +475,15 @@ jobs:
         env:
           CRATIS_CHRONICLE_LOCAL_IMAGE: ${{ inputs.chronicle-image }}
           TESTCONTAINERS_RYUK_DISABLED: true
-        run: >-
-          node .github/scripts/run-spec-project.mjs --project Integration/SqlClustering/SqlClustering.csproj
-          --filter "FullyQualifiedName~Cratis.Chronicle.Integration.SqlClustering.${{ matrix.provider }}"
-          --results-directory coverage-results
+        run: |
+          set -euo pipefail
+          if [ "${{ matrix.provider }}" = "RollingUpgrade" ]; then
+            export EnableRollingDeliveryDiagnostics=true
+            export ArtifactsPath="$RUNNER_TEMP/rolling-delivery-diagnostics"
+          fi
+          node .github/scripts/run-spec-project.mjs --project Integration/SqlClustering/SqlClustering.csproj \
+            --filter "FullyQualifiedName~Cratis.Chronicle.Integration.SqlClustering.${{ matrix.provider }}" \
+            --results-directory coverage-results
 
       - name: Assert SQL clustering specifications ran
         uses: ./.github/actions/assert-tests-ran

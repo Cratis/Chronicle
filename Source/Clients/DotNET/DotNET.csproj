@@ -10,6 +10,37 @@
         <NoWarn>$(NoWarn);IDE0301</NoWarn>
     </PropertyGroup>
 
+    <!-- Candidate-only instrumentation. The SDK's artifacts layout isolates the entire project graph,
+         not merely this assembly. Never enable this in a package, image or release build. -->
+    <PropertyGroup Condition="'$(EnableRollingDeliveryDiagnostics)' == 'true'">
+        <DefineConstants>$(DefineConstants);CHRONICLE_ROLLING_DIAGNOSTICS</DefineConstants>
+        <IsPackable>false</IsPackable>
+        <IsPublishable>false</IsPublishable>
+    </PropertyGroup>
+
+    <Target Name="ValidateRollingDeliveryDiagnostics" BeforeTargets="PrepareForBuild;CoreCompile">
+        <PropertyGroup Condition="'$(EnableRollingDeliveryDiagnostics)' == 'true' AND '$(ArtifactsPath)' != ''">
+            <DiagnosticRepositoryRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../../..'))/</DiagnosticRepositoryRoot>
+            <DiagnosticArtifactsRoot>$([System.IO.Path]::GetFullPath('$(ArtifactsPath)'))/</DiagnosticArtifactsRoot>
+        </PropertyGroup>
+        <Error Condition="'$(EnableRollingDeliveryDiagnostics)' != 'true' AND $([System.String]::Copy('$(DefineConstants)').Contains('CHRONICLE_ROLLING_DIAGNOSTICS'))"
+               Text="Rolling delivery diagnostics require EnableRollingDeliveryDiagnostics and isolated artifacts output." />
+        <Error Condition="'$(EnableRollingDeliveryDiagnostics)' == 'true' AND ('$(ArtifactsPath)' == '' OR '$(UseArtifactsOutput)' != 'true' OR !$([System.IO.Path]::IsPathFullyQualified('$(ArtifactsPath)')))"
+               Text="Rolling delivery diagnostics require an absolute ArtifactsPath and UseArtifactsOutput=true." />
+        <Error Condition="'$(EnableRollingDeliveryDiagnostics)' == 'true' AND !$([System.String]::Copy('$(ArtifactsPath)').EndsWith('/rolling-delivery-diagnostics'))"
+               Text="Diagnostic ArtifactsPath must end in /rolling-delivery-diagnostics; do not reuse shipping outputs." />
+        <Error Condition="'$(EnableRollingDeliveryDiagnostics)' == 'true' AND $([System.String]::Copy('$(DiagnosticArtifactsRoot)').StartsWith('$(DiagnosticRepositoryRoot)')) AND !$([System.String]::Copy('$(DiagnosticArtifactsRoot)').StartsWith('$(DiagnosticRepositoryRoot).ai-work/'))"
+               Text="Diagnostic artifacts must be outside the checkout or under ignored .ai-work, never in shipping artifact inputs." />
+        <Error Condition="'$(EnableRollingDeliveryDiagnostics)' == 'true' AND (!$([System.IO.Path]::GetFullPath('$(TargetPath)').StartsWith('$(DiagnosticArtifactsRoot)')) OR !$([System.IO.Path]::GetFullPath('$(IntermediateOutputPath)').StartsWith('$(DiagnosticArtifactsRoot)')))"
+               Text="Diagnostic output and intermediate paths must remain inside the isolated ArtifactsPath." />
+        <Error Condition="'$(EnableRollingDeliveryDiagnostics)' == 'true' AND ('$(IsPackaging)' == 'true' OR '$(GeneratePackageOnBuild)' == 'true')"
+               Text="Rolling delivery diagnostics cannot be packaged." />
+    </Target>
+
+    <Target Name="ForbidRollingDeliveryDiagnosticsDistribution" BeforeTargets="Pack;Publish;PublishContainer" Condition="'$(EnableRollingDeliveryDiagnostics)' == 'true'">
+        <Error Text="Rolling delivery diagnostics cannot be packed, published or put in an image." />
+    </Target>
+
     <ItemGroup>
         <InternalsVisibleTo Include="Cratis.Chronicle.AspNetCore" />
         <InternalsVisibleTo Include="Cratis.Chronicle.Api" />

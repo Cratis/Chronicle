@@ -6,6 +6,7 @@
 using System.Reflection.Metadata;
 using System.Reflection.Metadata.Ecma335;
 using System.Reflection.PortableExecutable;
+using System.Security.Cryptography;
 
 if (args.Length == 0)
 {
@@ -15,6 +16,7 @@ if (args.Length == 0)
 using var normalStream = File.OpenRead(args[0]);
 using var normal = new PEReader(normalStream);
 AssertDiagnostics(normal, false);
+PrintArtifact(args[0], normal);
 var index = 1;
 if (index < args.Length && args[index] != "--enabled")
 {
@@ -31,6 +33,15 @@ if (index < args.Length)
     using var enabledStream = File.OpenRead(args[index]);
     using var enabled = new PEReader(enabledStream);
     AssertDiagnostics(enabled, true);
+    PrintArtifact(args[index], enabled);
+}
+
+static void PrintArtifact(string path, PEReader assembly)
+{
+    using var stream = File.OpenRead(path);
+    var hash = Convert.ToHexString(SHA256.HashData(stream));
+    var version = assembly.GetMetadataReader().GetAssemblyDefinition().Version;
+    Console.WriteLine($"Artifact: {Path.GetFullPath(path)} version={version} sha256={hash}");
 }
 
 static void AssertEquivalent(PEReader baseline, PEReader normal)
