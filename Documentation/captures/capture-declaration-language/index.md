@@ -92,7 +92,7 @@ Source properties:
 - Message: `topic`
 - Events: `from` (repeatable)
 
-For API sources, `api` identifies a configured **[External Service](../../external-services/index.md)** by name. The External Service holds the base URL and the authentication for the connection. `route` is optional and is appended to that base URL; if omitted, the base URL is used as-is.
+For API sources, `api` identifies a configured **[External Service](../../external-services/index.md)** by name. The External Service holds the base URL and the authentication for the connection. `route` is optional and is appended to that base URL; if omitted, the base URL is used as-is. An absolute route is accepted only when it has the External Service's scheme, host and port.
 
 > [!NOTE]
 > Authentication is **not** part of the CDL. For API sources it is configured on the referenced External Service; for webhook sources it is configured in code on the source builder. Either way, secrets and tokens never live in capture text. See [Configuring authentication](#configuring-authentication) below.
