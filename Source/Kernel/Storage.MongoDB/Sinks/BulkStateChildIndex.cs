@@ -23,10 +23,20 @@ sealed class BulkStateChildIndex
     readonly Dictionary<string, PathIndex> _paths = [];
 
     /// <summary>
-    /// Marks a cached document as possibly changed. Lock-free.
+    /// Marks a cached document as possibly changed.
     /// </summary>
     /// <param name="cacheKey">The cache key of the document.</param>
-    public void MarkDirty(string cacheKey) => _dirty[cacheKey] = 0;
+    /// <remarks>
+    /// A document that is already marked is left alone: the lock-free read keeps the hot path (every cached
+    /// lookup and write) off the dictionary's bucket locks, and only the first mark after a re-index writes.
+    /// </remarks>
+    public void MarkDirty(string cacheKey)
+    {
+        if (!_dirty.ContainsKey(cacheKey))
+        {
+            _dirty.TryAdd(cacheKey, 0);
+        }
+    }
 
     /// <summary>
     /// Forgets a document that left the cache.
