@@ -19,7 +19,7 @@ public class and_an_old_read_finishes_after_protection_invalidation : given.an_e
     async Task Establish()
     {
         _oldContext = CreateContext();
-        var oldDocument = await _oldContext.EventTypes.FindAsync(_eventTypeId.Value);
+        var oldDocument = await _oldContext.EventTypes.FindAsync(_eventTypeId);
         _retainedOwn = await JsonSchema.FromJsonAsync(oldDocument!.Schemas[_firstGeneration]);
         _pendingRead = new(TaskCreationOptions.RunContinuationsAsynchronously);
         var reads = 0;
@@ -35,7 +35,7 @@ public class and_an_old_read_finishes_after_protection_invalidation : given.an_e
         var pending = _cache.GetProtectionSchemaFor(EventStoreName.NotSet, _eventTypeId, _firstGeneration, _retainedOwn).AsTask();
         await using (var context = CreateContext())
         {
-            var document = await context.EventTypes.FindAsync(_eventTypeId.Value);
+            var document = await context.EventTypes.FindAsync(_eventTypeId);
             document!.Schemas = new Dictionary<uint, string>
             {
                 { _firstGeneration, "{\"type\":\"object\",\"properties\":{\"" + FirstGenerationProperty + "\":{\"type\":\"string\",\"compliance\":[{\"metadataType\":\"PII\",\"details\":\"\"}]}}}" }
