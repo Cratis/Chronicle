@@ -45,9 +45,9 @@ internal static class ReservedEventSequenceRules
         string @namespace,
         string eventSequenceId)
     {
-        if (string.IsNullOrEmpty(eventStore) ||
-            string.IsNullOrEmpty(@namespace) ||
-            string.IsNullOrEmpty(eventSequenceId) ||
+        if (string.IsNullOrWhiteSpace(eventStore) ||
+            string.IsNullOrWhiteSpace(@namespace) ||
+            string.IsNullOrWhiteSpace(eventSequenceId) ||
             eventStore.Contains(KeyHelper.Separator) ||
             @namespace.Contains(KeyHelper.Separator) ||
             eventSequenceId.Contains(KeyHelper.Separator))
