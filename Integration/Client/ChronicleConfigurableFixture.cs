@@ -3,9 +3,7 @@
 
 using System.Runtime.ExceptionServices;
 using System.Runtime.InteropServices;
-using System.Text;
 using Cratis.Chronicle.Diagnostics;
-using Docker.DotNet.Models;
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Configurations;
 using DotNet.Testcontainers.Containers;
@@ -588,23 +586,16 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
             builder = builder.WithCreateParameterModifier(parameters => parameters.Platform = "linux/amd64");
         }
 
-        _databaseContainer = builder.Build();
-        LifecycleHooks?.ContainerBuilt?.Invoke(_databaseContainer);
-        try
-        {
-            _databaseContainer.StartAsync().GetAwaiter().GetResult();
-        }
-        catch (ContainerNotRunningException) when (_databaseContainer.State == TestcontainersStates.Exited)
-        {
-            timing?.Retry();
-
-            // Only a process that exited during startup warrants another attempt. Build a new
-            // container so Testcontainers does not reuse the failed instance or its host port.
-            _databaseContainer.DisposeAsync().AsTask().GetAwaiter().GetResult();
-            _databaseContainer = builder.Build();
-            LifecycleHooks?.ContainerBuilt?.Invoke(_databaseContainer);
-            _databaseContainer.StartAsync().GetAwaiter().GetResult();
-        }
+        _databaseContainer = ContainerStartup.ForDocker(builder.Build)
+            .Start(
+                c =>
+                {
+                    _databaseContainer = c;
+                    LifecycleHooks?.ContainerBuilt?.Invoke(c);
+                },
+                _ => timing?.Retry(),
+                CancellationToken.None)
+            .GetAwaiter().GetResult();
 
         timing?.Success();
         return $"Server={MsSqlHostName},1433;Database={_outOfProcessSqlDatabaseName};User Id=sa;Password={MsSqlPassword};TrustServerCertificate=True";
@@ -692,34 +683,11 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
     {
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeout.CancelAfter(TimeSpan.FromSeconds(2));
-        using var client = TestcontainersSettings.OS.DockerEndpointAuthConfig.GetDockerClientBuilder(Guid.NewGuid()).Build();
-        var response = await client.Containers.InspectContainerAsync(container.Id, timeout.Token);
-        return response.State is { Running: false } state &&
-            (string.Equals(state.Status, "exited", StringComparison.Ordinal) || string.Equals(state.Status, "dead", StringComparison.Ordinal))
-            ? state.ExitCode
-            : null;
+        return (await DockerContainerEvidence.Inspect(container, timeout.Token))?.ExitCode;
     }
 
-    static async Task<string> ReadKernelTail(IContainer container, CancellationToken cancellationToken)
-    {
-        using var client = TestcontainersSettings.OS.DockerEndpointAuthConfig.GetDockerClientBuilder(Guid.NewGuid()).Build();
-        using var stream = await client.Containers.GetContainerLogsAsync(
-            container.Id,
-            new ContainerLogsParameters { ShowStdout = true, ShowStderr = true, Tail = "64", Follow = false },
-            cancellationToken);
-        var bytes = new byte[16384];
-        var count = 0;
-        while (count < bytes.Length)
-        {
-            var result = await stream.ReadOutputAsync(bytes, count, bytes.Length - count, cancellationToken);
-            if (result.EOF)
-            {
-                break;
-            }
-            count += result.Count;
-        }
-        return Encoding.UTF8.GetString(bytes, 0, count);
-    }
+    static Task<string> ReadKernelTail(IContainer container, CancellationToken cancellationToken) =>
+        DockerContainerEvidence.ReadTail(container, 64, cancellationToken);
 
     static async Task WaitForOutOfProcessMongoDbPrimary(IContainer container)
     {

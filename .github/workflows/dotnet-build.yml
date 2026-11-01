@@ -136,6 +136,9 @@ jobs:
       - name: Spec the published Docker tag verifier
         run: python3 .github/scripts/test-verify-published-docker-tags.py
 
+      - name: Spec the pinned SQL Server image
+        run: python3 .github/scripts/test-sql-server-image-pin.py
+
       - name: Spec the build version derivation
         run: python3 .github/scripts/test-derive-build-version.py
 
@@ -500,6 +503,15 @@ jobs:
       # remains unproven until Linux CI runs this mandatory acceptance.
       - name: Verify real collector exit and deadline cleanup
         run: node .github/scripts/verify-mixed-specs-collector.mjs
+
+      - name: Run container startup unit specs without Docker
+        run: node .github/scripts/run-spec-project.mjs --project Integration/Client/Client.csproj --filter 'FullyQualifiedName~Cratis.Chronicle.Integration.for_ContainerStartup' --results-directory ./container-startup-results
+
+      - name: Assert container startup unit specs ran
+        uses: ./.github/actions/assert-tests-ran
+        with:
+          path: ./container-startup-results
+          name: The container startup unit specs
 
       - name: Run tests with coverage
         # Integration and SQL retain their shard/retry selection. Ordinary dispatch excludes

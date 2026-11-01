@@ -21,6 +21,11 @@
         <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
         <PackageReference Include="NSubstitute" />
         <Compile Include="../Client/SqlServerContainerImage.cs" Link="SqlServerContainerImage.cs" />
+        <Compile Include="../Client/ContainerStartup.cs" Link="ContainerStartup.cs" />
+        <Compile Include="../Client/ContainerStartupAttempt.cs" Link="ContainerStartupAttempt.cs" />
+        <Compile Include="../Client/ContainerStartupFailed.cs" Link="ContainerStartupFailed.cs" />
+        <Compile Include="../Client/ContainerExit.cs" Link="ContainerExit.cs" />
+        <Compile Include="../Client/DockerContainerEvidence.cs" Link="DockerContainerEvidence.cs" />
     </ItemGroup>
     <PropertyGroup Condition="'$(DisableDockerBuild)' != 'true'">
         <_IsOSX>$([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform($([System.Runtime.InteropServices.OSPlatform]::OSX)))</_IsOSX>

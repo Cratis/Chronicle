@@ -121,6 +121,14 @@ For SQLite, you can optionally set:
 export CHRONICLE_SQLITE_CONNECTION_DETAILS="Data Source=/tmp/chronicle.db"
 ```
 
+### SQL Server image pin and startup crashes
+
+All SQL Server fixtures, both CI pre-pulls and the local compose service use the explicit SQL Server 2025 CU image in `Integration/Client/SqlServerContainerImage.cs`. Moving to an older major or CU is not an acceptable startup-flake mitigation. The earlier image-pin workaround was not supported by a bounded repeat-start measurement; the SQL Server 2025 startup failure reported in [#4282](https://github.com/Cratis/Chronicle/issues/4282) is not assumed fixed merely by pinning an image.
+
+When updating the pin, choose a newer CU, update both SQL Server pre-pulls in `.github/workflows/integration.yml` and the service in `Source/Kernel/Server/docker-compose.yml` to match, then run `python3 .github/scripts/test-sql-server-image-pin.py`. CI rejects drifting literals, floating tags and older majors. Confirm the candidate with repeated fresh-container starts and the SQL Server client, storage and clustering shards before landing it.
+
+SQL Server fixtures allow at most three fresh-container startup attempts. Only a fresh Docker inspection showing an exited/dead process, or a `ContainerNotRunningException` when inspection is unavailable, permits a retry. Readiness timeouts with a still-running process are not retried. Before removal, each crashed attempt captures exit code, OOM/error state and up to 64 log lines / 16 KiB within a ten-second evidence deadline. Retry warnings and the final `ContainerStartupFailed` include this evidence, so an `IsPreemptiveOnEntry()` assert remains visible even when a later attempt succeeds. This bounded mitigation does not fix that SQL Server assert.
+
 ### Running against an external MongoDB
 
 Set `CHRONICLE_MONGODB_CONNECTION_DETAILS` to a MongoDB connection string to run `Storage.MongoDB.Specs` against an external service instead of starting MongoDB containers. The client, kernel, API, MongoDB integration, and clustering suites do not support this external mode.
