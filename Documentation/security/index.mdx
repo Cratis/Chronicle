@@ -29,10 +29,41 @@ Without a dedicated mechanism, a team reaches for one of two wrong tools:
 
 The two attributes cannot both apply to the same value — see [Encrypting operational secrets](encrypted-values) and [CHR0053](/chronicle/code-analysis/CHR0053/).
 
+## Trust model
+
+Chronicle trusts every authenticated application with every event store on the same kernel, except the System store, which is reserved. Namespaces separate data, but Chronicle does not check whether a caller may use a given namespace or event store. Your application is responsible for that today.
+
+This matters for:
+
+- A shared kernel that serves applications that do not trust each other.
+- Workbench users who have access to a shared kernel.
+- Multi-tenant setups where tenants hold their own credentials.
+
+It does not matter when every application that can authenticate to the kernel belongs to the same trust boundary.
+
+On such a kernel, any authenticated application can:
+
+- Append events to any non-System event store.
+- Read events from any non-System event store, including releasing protected and encrypted values through compliance.
+- Register deployments.
+- Create namespaces.
+- Set up subscriptions across event stores.
+
+### Mitigations available today
+
+- **Run a separate kernel per trust boundary.** Applications that must not see each other's data should not share a kernel.
+- **Isolate the network.** Use network rules and mutual TLS so that only trusted applications can reach the kernel. See [Production hosting](../hosting/production.md#security-considerations) and [TLS](../hosting/configuration/tls.md).
+- **Enforce the administrator policy for operations.** Set `enforceAdministratorPolicyForOperations` to `true` in the `authentication` configuration. See [Authentication](../hosting/configuration/authentication.md).
+
+Per-application event store entitlement is planned.
+
+For how tenants map to namespaces, see [Tenancy](../tenancy/index.md).
+
 ## Related topics
 
 | Topic | Description |
 |---|---|
 | [Encrypting operational secrets](encrypted-values) | The `[Encrypted]` attribute — rules, usage, and constraints |
 | [Releasing PII and encrypted values](/chronicle/read-models/releasing-pii/) | How an `[Encrypted]` value is decrypted for you automatically, and how to release one manually |
+| [Tenancy](../tenancy/index.md) | How tenants map to namespaces, and what Chronicle does not authorize |
 | [Compliance](/chronicle/compliance/) | `[PII]` and GDPR right-to-erasure — the mechanism `[Encrypted]` deliberately does not share |
