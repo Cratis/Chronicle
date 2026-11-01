@@ -245,6 +245,25 @@ public class JsonSchemaMetadataManager(
         return result;
     }
 
+    /// <summary>
+    /// Classifies metadata per immutable schema instance, separately for actions and comparisons.
+    /// </summary>
+    /// <param name="schema">The schema to classify.</param>
+    /// <param name="forComparison">Whether to include all comparison categories.</param>
+    /// <param name="cacheable">Whether the traversal comes from a stable schema node.</param>
+    /// <returns>A shared array that must never be modified.</returns>
+    internal (SchemaMetadataCategory Category, ComplianceSchemaMetadata Metadata)[] MetadataFor(JsonSchema schema, bool forComparison, bool cacheable = true)
+    {
+        if (!cacheable) return Classify(schema, forComparison);
+        var entry = ClassificationFor(schema);
+        if (!entry.Cacheable) return Classify(schema, forComparison);
+        var cached = entry.Get(forComparison);
+        if (cached is not null) return cached;
+        var classified = Classify(schema, forComparison);
+        entry.Set(forComparison, classified);
+        return classified;
+    }
+
     static ProtectionKeyLocation ProtectionLocation(string path, IJsonSchemaMetadataValueHandler[] handlers, string identifier)
     {
         if (handlers.Length != 1 || handlers[0].KeyLocationFor(identifier) is not { } location)
@@ -337,65 +356,12 @@ public class JsonSchemaMetadataManager(
     static bool CanInspectReference(JsonSchema schema, int depth) =>
         schema.Reference is { } reference && CanInspectReferencedType(reference, depth + 1);
 
-    IJsonSchemaMetadataValueHandler[] RegisteredHandlers((SchemaMetadataCategory Category, ComplianceSchemaMetadata Metadata)[] metadata) =>
-        metadata.Where(_ => _propertyValueHandlers.ContainsKey((_.Category, _.Metadata.metadataType)))
-            .Select(_ => _propertyValueHandlers[(_.Category, _.Metadata.metadataType)]).ToArray();
-
-    async Task<JsonObject?> TryTransformForComparison(JsonSchema schema, JsonObject json, Func<JsonSchema, IJsonSchemaMetadataValueHandler, JsonNode, Task<JsonNode?>> transform)
-    {
-        var result = (JsonObject)json.DeepClone();
-        try
-        {
-            // Reuse the append traversal and its protected boundaries, but do not apply display-release
-            // fallbacks or provision keys. A failed boundary invalidates the complete comparison.
-            await HandleActionFor(schema, string.Empty, result, SchemaMetadataActionFailed.ApplyAction, (_, _, node) => Task.FromResult(node), comparisonTransform: transform);
-            return result;
-        }
-        catch (Exception)
-        {
-            return null;
-        }
-    }
-
-    void ValidateComparisonBoundary(JsonSchema schema, (SchemaMetadataCategory Category, ComplianceSchemaMetadata Metadata)[] metadata)
-    {
-        if (metadata.Length == 0)
-        {
-            return;
-        }
-
-        // Overlapping handlers have no proven inverse. Unknown handlers and ambiguous scalar kinds
-        // must fail closed even when the normal append traversal would skip an unknown metadata type.
-        if (metadata.Length != 1 || !_propertyValueHandlers.ContainsKey((metadata[0].Category, metadata[0].Metadata.metadataType)) ||
-            !StrictJsonSchemaRelease.HasSupportedType(schema))
-        {
-            throw new InvalidOperationException("Protected boundary cannot be compared.");
-        }
-    }
-
     /// <summary>
-    /// Classifies metadata per immutable schema instance, separately for actions and comparisons.
+    /// Checks immutable schema topology, excluding dynamic/inferred descendants, cycles and unresolved references.
     /// </summary>
-    /// <param name="schema">The schema to classify.</param>
-    /// <param name="forComparison">Whether to include all comparison categories.</param>
-    /// <param name="cacheable">Whether the traversal comes from a stable schema node.</param>
-    /// <returns>A shared array that must never be modified.</returns>
-    internal (SchemaMetadataCategory Category, ComplianceSchemaMetadata Metadata)[] MetadataFor(JsonSchema schema, bool forComparison, bool cacheable = true)
-    {
-        if (!cacheable) return Classify(schema, forComparison);
-        var entry = ClassificationFor(schema);
-        if (!entry.Cacheable) return Classify(schema, forComparison);
-        var cached = entry.Get(forComparison);
-        if (cached is not null) return cached;
-        var classified = Classify(schema, forComparison);
-        entry.Set(forComparison, classified);
-        return classified;
-    }
-
-    ClassifiedMetadata ClassificationFor(JsonSchema schema) => _classified.GetValue(schema, static current => new(CanCacheClassification(current)));
-
-    // Eligibility follows the immutable schema topology, not runtime metadata/type answers. A dynamic or
-    // inferred descendant makes its ancestors ineligible too. Cycles and unresolved references fail closed.
+    /// <param name="schema">The schema to inspect.</param>
+    /// <param name="depth">The current traversal depth.</param>
+    /// <returns>Whether classification is stable for this schema and its descendants.</returns>
     static bool CanCacheClassification(JsonSchema schema, int depth = 0)
     {
         if (depth > 32 || schema.IsDynamic()) return false;
@@ -407,6 +373,7 @@ public class JsonSchemaMetadataManager(
         }
 
         if (schema.Item is { } item && !CanCacheClassification(item, depth + 1)) return false;
+
         // Additional-properties schemas are recreated on access, so neither they nor their ancestors
         // participate in classification caching.
         return schema.AdditionalPropertiesSchema is null;
@@ -448,6 +415,44 @@ public class JsonSchemaMetadataManager(
 
         return merged.ToArray();
     }
+
+    IJsonSchemaMetadataValueHandler[] RegisteredHandlers((SchemaMetadataCategory Category, ComplianceSchemaMetadata Metadata)[] metadata) =>
+        metadata.Where(_ => _propertyValueHandlers.ContainsKey((_.Category, _.Metadata.metadataType)))
+            .Select(_ => _propertyValueHandlers[(_.Category, _.Metadata.metadataType)]).ToArray();
+
+    async Task<JsonObject?> TryTransformForComparison(JsonSchema schema, JsonObject json, Func<JsonSchema, IJsonSchemaMetadataValueHandler, JsonNode, Task<JsonNode?>> transform)
+    {
+        var result = (JsonObject)json.DeepClone();
+        try
+        {
+            // Reuse the append traversal and its protected boundaries, but do not apply display-release
+            // fallbacks or provision keys. A failed boundary invalidates the complete comparison.
+            await HandleActionFor(schema, string.Empty, result, SchemaMetadataActionFailed.ApplyAction, (_, _, node) => Task.FromResult(node), comparisonTransform: transform);
+            return result;
+        }
+        catch (Exception)
+        {
+            return null;
+        }
+    }
+
+    void ValidateComparisonBoundary(JsonSchema schema, (SchemaMetadataCategory Category, ComplianceSchemaMetadata Metadata)[] metadata)
+    {
+        if (metadata.Length == 0)
+        {
+            return;
+        }
+
+        // Overlapping handlers have no proven inverse. Unknown handlers and ambiguous scalar kinds
+        // must fail closed even when the normal append traversal would skip an unknown metadata type.
+        if (metadata.Length != 1 || !_propertyValueHandlers.ContainsKey((metadata[0].Category, metadata[0].Metadata.metadataType)) ||
+            !StrictJsonSchemaRelease.HasSupportedType(schema))
+        {
+            throw new InvalidOperationException("Protected boundary cannot be compared.");
+        }
+    }
+
+    ClassifiedMetadata ClassificationFor(JsonSchema schema) => _classified.GetValue(schema, static current => new(CanCacheClassification(current)));
 
     (SchemaMetadataCategory Category, ComplianceSchemaMetadata Metadata)[] Classify(JsonSchema schema, bool forComparison)
     {
@@ -691,28 +696,6 @@ public class JsonSchemaMetadataManager(
         return RestoreReleasedContainerShape(JsonValue.Create(string.Empty), schema);
     }
 
-    sealed class ClassifiedMetadata(bool cacheable)
-    {
-        (SchemaMetadataCategory Category, ComplianceSchemaMetadata Metadata)[]? _forAction;
-        (SchemaMetadataCategory Category, ComplianceSchemaMetadata Metadata)[]? _forComparison;
-
-        public bool Cacheable { get; } = cacheable;
-
-        public (SchemaMetadataCategory Category, ComplianceSchemaMetadata Metadata)[]? Get(bool forComparison) => forComparison ? Volatile.Read(ref _forComparison) : Volatile.Read(ref _forAction);
-
-        public void Set(bool forComparison, (SchemaMetadataCategory Category, ComplianceSchemaMetadata Metadata)[] value)
-        {
-            if (forComparison)
-            {
-                Volatile.Write(ref _forComparison, value);
-            }
-            else
-            {
-                Volatile.Write(ref _forAction, value);
-            }
-        }
-    }
-
     readonly struct MetadataWalk
     {
         public required string Identifier { get; init; }
@@ -747,5 +730,27 @@ public class JsonSchemaMetadataManager(
             JsonSchema schema,
             JsonNode value) =>
             await comparisonTransform(schema, handler, value) ?? throw new InvalidOperationException("Protected value cannot be compared.");
+    }
+
+    sealed class ClassifiedMetadata(bool cacheable)
+    {
+        (SchemaMetadataCategory Category, ComplianceSchemaMetadata Metadata)[]? _forAction;
+        (SchemaMetadataCategory Category, ComplianceSchemaMetadata Metadata)[]? _forComparison;
+
+        public bool Cacheable { get; } = cacheable;
+
+        public (SchemaMetadataCategory Category, ComplianceSchemaMetadata Metadata)[]? Get(bool forComparison) => forComparison ? Volatile.Read(ref _forComparison) : Volatile.Read(ref _forAction);
+
+        public void Set(bool forComparison, (SchemaMetadataCategory Category, ComplianceSchemaMetadata Metadata)[] value)
+        {
+            if (forComparison)
+            {
+                Volatile.Write(ref _forComparison, value);
+            }
+            else
+            {
+                Volatile.Write(ref _forAction, value);
+            }
+        }
     }
 }
