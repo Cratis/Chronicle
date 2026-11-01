@@ -23,24 +23,25 @@ namespace Cratis.Chronicle.Storage.MongoDB;
 /// <param name="mongoDBOptions">The <see cref="IOptions{TOptions}"/> for <see cref="MongoDBOptions"/>.</param>
 /// <param name="resolution">The <see cref="IStorageConnectionResolution"/>.</param>
 /// <param name="clientManager">The <see cref="IMongoDBClientManager"/>.</param>
-/// <param name="purpose">The purpose of the connection identity.</param>
 public class MongoDBStorageConnections(
     IOptions<MongoDBOptions> mongoDBOptions,
     IStorageConnectionResolution resolution,
-    IMongoDBClientManager clientManager,
-    ConnectionPurpose purpose = ConnectionPurpose.Runtime) : IMongoDBStorageConnections
+    IMongoDBClientManager clientManager) : IMongoDBStorageConnections
 {
     readonly ConcurrentDictionary<string, MongoDBConnectionResolutionHooks> _hooks = new();
+    readonly ConnectionPurpose _purpose = ConnectionPurpose.Runtime;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="MongoDBStorageConnections"/> class for runtime connections.
+    /// Initializes a new instance of the <see cref="MongoDBStorageConnections"/> class for an explicit connection purpose.
     /// </summary>
     /// <param name="mongoDBOptions">The MongoDB options.</param>
     /// <param name="resolution">The storage connection resolution.</param>
     /// <param name="clientManager">The MongoDB client manager.</param>
-    public MongoDBStorageConnections(IOptions<MongoDBOptions> mongoDBOptions, IStorageConnectionResolution resolution, IMongoDBClientManager clientManager)
-        : this(mongoDBOptions, resolution, clientManager, ConnectionPurpose.Runtime)
+    /// <param name="purpose">The purpose of the connection identity.</param>
+    internal MongoDBStorageConnections(IOptions<MongoDBOptions> mongoDBOptions, IStorageConnectionResolution resolution, IMongoDBClientManager clientManager, ConnectionPurpose purpose)
+        : this(mongoDBOptions, resolution, clientManager)
     {
+        _purpose = purpose;
     }
 
     /// <inheritdoc/>
@@ -53,10 +54,10 @@ public class MongoDBStorageConnections(
         }
 
         var resolver = resolution.Resolver;
-        var request = resolution.RequestFor(purpose, kind, eventStore, @namespace);
+        var request = resolution.RequestFor(_purpose, kind, eventStore, @namespace);
 
         // Databases are opened from synchronous paths. The resolution is cached, so this only waits when it is not.
-        var resolved = resolution.Resolve(purpose, kind, eventStore, @namespace).GetAwaiter().GetResult();
+        var resolved = resolution.Resolve(_purpose, kind, eventStore, @namespace).GetAwaiter().GetResult();
 
         var hooks = _hooks.GetOrAdd(request.ToKey(), static (_, state) => new(state.Resolver, state.Request, TimeProvider.System), (Resolver: resolver, Request: request));
         var settings = WithDirectConnection(resolved.ToMongoClientSettings(configured, hooks));

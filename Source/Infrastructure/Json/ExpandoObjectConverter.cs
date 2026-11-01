@@ -29,7 +29,7 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
     /// </summary>
     /// <param name="typeFormats"><see cref="ITypeFormats"/> for mapping type formats in a schema.</param>
     /// <param name="jsonSerializerOptions">The options to use for formatted values.</param>
-    public ExpandoObjectConverter(ITypeFormats typeFormats, JsonSerializerOptions jsonSerializerOptions)
+    internal ExpandoObjectConverter(ITypeFormats typeFormats, JsonSerializerOptions jsonSerializerOptions)
         : this(typeFormats)
     {
         _jsonSerializerOptions = jsonSerializerOptions;
