@@ -10,6 +10,7 @@ using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.Reducers;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Namespaces;
+using Cratis.Chronicle.Observation.given;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Orleans.Core;
@@ -33,6 +34,7 @@ public class a_reducer_grain_with_a_stored_definition : Specification
     protected IStorage<ReducerDefinition> _stateStorage;
     protected Storage.IStorage _storage;
     protected ILogger<Reducer> _logger;
+    protected DeliveryClock _clock;
 
     async Task Establish()
     {
@@ -53,6 +55,8 @@ public class a_reducer_grain_with_a_stored_definition : Specification
         _logger = Substitute.For<ILogger<Reducer>>();
         _logger.IsEnabled(Arg.Any<LogLevel>()).Returns(true);
         _silo.AddService(_logger);
+        _clock = new DeliveryClock();
+        _silo.AddService<TimeProvider>(_clock);
         _silo.AddProbe(_ => Substitute.For<INamespaces>());
 
         _client = new ConnectedClient { ConnectionId = "the-connection", Version = "1.0.0" };

@@ -74,7 +74,8 @@ for each deployment. This client option is distinct from projection `SoftwareVer
 the entry-assembly version. A higher known application version owns the observer. A lower version remains
 connected in standby, without changing definitions or replaying, and emits a warning and recommendation.
 When the newer owner's last client disconnects, standby retries on keep-alive and can take over within
-`reviseIntervalSeconds` (default 2 seconds).
+`connectedClients:ownerCheckIntervalSeconds` plus `connectedClients:reviseIntervalSeconds` (default 30 + 2 = 32
+seconds). Lower `ownerCheckIntervalSeconds` for a faster takeover; each check reads the observer definition from storage.
 
 Equal or unknown versions keep last-wins behavior and warn/recommend on each sequence switch. Unknown includes
 empty, invalid, four-part assembly versions and `0.0.0`; other client types are not ordered yet. Build metadata
@@ -83,7 +84,8 @@ higher application version or stop the newer pods so standby can take over. Ther
 action yet. A mistakenly high version keeps ownership while connected.
 
 The same-sequence last-wins policy and webhook exclusivity are unchanged. Concurrent first registrations can
-briefly both claim; the next keep-alive heals toward the newer version. Cursor and failed-partition hand-over
+briefly both claim; the first keep-alive after registration heals toward the newer version. A newer client that
+claims later is noticed by the older registration within the same 32-second default bound. Cursor and failed-partition hand-over
 on a sequence move (#5368) is not part of this policy. See [observer registration ownership](configuration/observers.md#registrations-on-different-event-sequences).
 
 ## Know what a starting node does

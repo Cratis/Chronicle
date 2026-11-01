@@ -27,6 +27,7 @@ namespace Cratis.Chronicle.Observation.Reactors.Clients;
 /// <param name="options"><see cref="IOptions{ChronicleOptions}"/> for accessing Chronicle configuration.</param>
 /// <param name="storage"><see cref="IStorage"/> containing observer definitions.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
+/// <param name="timeProvider">Optional <see cref="TimeProvider"/> spacing out the checks for an owner on another sequence; defaults to <see cref="TimeProvider.System"/>.</param>
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.Reactors)]
 [PreferLocalPlacement]
 public class Reactor(
@@ -34,9 +35,11 @@ public class Reactor(
     ILocalSiloDetails localSiloDetails,
     IOptions<ChronicleOptions> options,
     IStorage storage,
-    ILogger<Reactor> logger) : Grain<ReactorDefinition>, IReactor
+    ILogger<Reactor> logger,
+    TimeProvider? timeProvider = null) : Grain<ReactorDefinition>, IReactor
 {
     IConnectedClients? _connectedClients;
+    ObserverOwnerCheckSchedule? _ownerChecks;
     ConnectedObserverKey? _observerKey;
     IObserver? _observer;
     ReactorDefinition? _deferredDefinition;
@@ -49,6 +52,7 @@ public class Reactor(
         _connectedClients = GrainFactory.GetConnectedClients(localSiloDetails.SiloAddress);
 
         _observerKey = ConnectedObserverKey.Parse(this.GetPrimaryKeyString());
+        _ownerChecks = new(timeProvider ?? TimeProvider.System, TimeSpan.FromSeconds(options.Value.ConnectedClients.OwnerCheckIntervalSeconds));
 
         return Task.CompletedTask;
     }
@@ -130,6 +134,12 @@ public class Reactor(
     /// <inheritdoc/>
     public async Task KeepSubscription(ReactorDefinition definition)
     {
+        // Standby retries taking over only when an owner check is due; in between it reads nothing and calls no grain.
+        if (_standbyFor is not null && !_ownerChecks!.TryStart())
+        {
+            return;
+        }
+
         if (await CompleteDeferredRegistration())
         {
             return;
@@ -204,7 +214,13 @@ public class Reactor(
     async Task<bool> FollowDefinitionOnAnotherSequence(ReactorDefinition definition)
     {
         // Another sequence may claim the definition after this registration, or win a concurrent first registration.
-        // An older registration then waits in standby; a newer one claims the definition back.
+        // An older registration then waits in standby; a newer one claims the definition back. The stored definition is
+        // read only when an owner check is due, not on every keep-alive.
+        if (!_ownerChecks!.TryStart())
+        {
+            return false;
+        }
+
         var key = new ObserverKey(_observerKey!.ObserverId, _observerKey.EventStore, _observerKey.Namespace, _observerKey.EventSequenceId);
         var owning = await ObserverTransportSubscriptions.OnOtherSequence(storage, GrainFactory, key);
         if (owning?.IsServedByConnectedClient != true || !await _connectedClients!.IsConnected(_observerKey.ConnectionId))

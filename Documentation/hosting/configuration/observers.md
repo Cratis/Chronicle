@@ -233,8 +233,23 @@ same time is not supported yet.
 When connected .NET reactors or reducers register the same observer ID on different event sequences,
 Chronicle compares their application versions. A higher known version takes ownership; a lower version waits
 in standby without overwriting the definition or replaying. The client stays connected. A warning and a
-recommendation identify the observer, both sequences and both versions. Standby retries on keep-alive and can
-take over within `reviseIntervalSeconds` (default 2 seconds) once the newer owner's last client disconnects.
+recommendation identify the observer, both sequences and both versions.
+
+Each registration checks for an owner on another sequence on its first keep-alive and then at most once per
+`connectedClients:ownerCheckIntervalSeconds` (default 30 seconds). Keep-alives run every
+`connectedClients:reviseIntervalSeconds` (default 2 seconds); those in between read nothing from storage. A newer
+owner on another sequence, or its last client disconnecting, is noticed within `ownerCheckIntervalSeconds` plus
+`reviseIntervalSeconds` (32 seconds by default). Standby retries taking over at the same pace. `0` or less checks on
+every keep-alive, at the cost of one storage read per registration and connected client per keep-alive.
+
+```json
+{
+  "connectedClients": {
+    "reviseIntervalSeconds": 2,
+    "ownerCheckIntervalSeconds": 30
+  }
+}
+```
 
 Set the .NET client's `Cratis:Chronicle:ApplicationVersion` (environment variable
 `Cratis__Chronicle__ApplicationVersion`) to a monotonic SemVer such as `2.4.0`. If unset, the client sends its
@@ -250,6 +265,6 @@ is planned separately and is not available yet.
 
 This changes neither same-sequence behavior nor webhook exclusivity. Cursor and failed-partition hand-over
 on a sequence move is separate work (#5368); it is not provided by version ordering. Simultaneous first
-registrations can briefly both claim an observer; the next keep-alive heals ownership toward the newer version,
-within `reviseIntervalSeconds`. See [Roll out a new version](../rolling-deploy.md#roll-out-client-observer-registrations)
+registrations can briefly both claim an observer; the first keep-alive after registration heals ownership toward
+the newer version, within `reviseIntervalSeconds`. A later claim is healed within the owner check bound above. See [Roll out a new version](../rolling-deploy.md#roll-out-client-observer-registrations)
 and [client options](../../configuration/chronicle-options.mdx#applicationversion).

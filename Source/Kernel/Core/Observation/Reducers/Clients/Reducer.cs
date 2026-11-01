@@ -31,6 +31,7 @@ namespace Cratis.Chronicle.Observation.Reducers.Clients;
 /// <param name="options"><see cref="IOptions{ChronicleOptions}"/> for accessing Chronicle configuration.</param>
 /// <param name="storage"><see cref="IStorage"/> containing event history.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
+/// <param name="timeProvider">Optional <see cref="TimeProvider"/> spacing out the checks for an owner on another sequence; defaults to <see cref="TimeProvider.System"/>.</param>
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.Reducers)]
 [PreferLocalPlacement]
 public class Reducer(
@@ -38,7 +39,8 @@ public class Reducer(
     ILocalSiloDetails localSiloDetails,
     IOptions<ChronicleOptions> options,
     IStorage storage,
-    ILogger<Reducer> logger) : Grain<ReducerDefinition>, IReducer
+    ILogger<Reducer> logger,
+    TimeProvider? timeProvider = null) : Grain<ReducerDefinition>, IReducer
 {
     IObserver? _observer;
     ReducerDefinition? _deferredDefinition;
@@ -46,12 +48,14 @@ public class Reducer(
     bool _subscribed;
     ConnectedObserverKey? _observerKey;
     IConnectedClients? _connectedClients;
+    ObserverOwnerCheckSchedule? _ownerChecks;
 
     /// <inheritdoc/>
     public override Task OnActivateAsync(CancellationToken cancellationToken)
     {
         _observerKey = ConnectedObserverKey.Parse(this.GetPrimaryKeyString());
         _connectedClients = GrainFactory.GetConnectedClients(localSiloDetails.SiloAddress);
+        _ownerChecks = new(timeProvider ?? TimeProvider.System, TimeSpan.FromSeconds(options.Value.ConnectedClients.OwnerCheckIntervalSeconds));
 
         return Task.CompletedTask;
     }
@@ -139,6 +143,12 @@ public class Reducer(
     /// <inheritdoc/>
     public async Task KeepSubscription(ReducerDefinition definition)
     {
+        // Standby retries taking over only when an owner check is due; in between it reads nothing and calls no grain.
+        if (_standbyFor is not null && !_ownerChecks!.TryStart())
+        {
+            return;
+        }
+
         if (await CompleteDeferredRegistration())
         {
             return;
@@ -217,7 +227,13 @@ public class Reducer(
     async Task<bool> FollowDefinitionOnAnotherSequence(ObserverKey key, ReducerDefinition definition)
     {
         // Another sequence may claim the definition after this registration, or win a concurrent first registration.
-        // An older registration then waits in standby; a newer one claims the definition back.
+        // An older registration then waits in standby; a newer one claims the definition back. The stored definition is
+        // read only when an owner check is due, not on every keep-alive.
+        if (!_ownerChecks!.TryStart())
+        {
+            return false;
+        }
+
         var owning = await ObserverTransportSubscriptions.OnOtherSequence(storage, GrainFactory, key);
         if (owning?.IsServedByConnectedClient != true || !await _connectedClients!.IsConnected(_observerKey!.ConnectionId))
         {
