@@ -143,6 +143,7 @@ public class ObserverStateStorage(EventStoreName eventStore, EventStoreNamespace
             Id = newId,
             Owner = existing.Owner,
             PartitionClaims = existing.PartitionClaims,
+            PartitionReplayCompletions = existing.PartitionReplayCompletions,
             ObserverWideClaim = existing.ObserverWideClaim,
             OwnershipRevision = existing.OwnershipRevision,
             TypeSetControl = existing.TypeSetControl,
