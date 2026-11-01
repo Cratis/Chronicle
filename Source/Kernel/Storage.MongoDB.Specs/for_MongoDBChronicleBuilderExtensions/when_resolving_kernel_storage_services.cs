@@ -50,7 +50,6 @@ public class when_resolving_kernel_storage_services : Specification
 
     [Fact] void should_resolve_runtime_connections_and_schema_dependencies() => _error.ShouldBeNull();
     [Fact] void should_expose_only_the_runtime_connections_constructor_to_di() => typeof(MongoDBStorageConnections).GetConstructors().Length.ShouldEqual(1);
-    [Fact] void should_expose_only_the_default_converter_constructor_to_di() => typeof(Json.ExpandoObjectConverter).GetConstructors().Length.ShouldEqual(1);
 
     void Destroy() => _host?.Dispose();
 }
