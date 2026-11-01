@@ -104,7 +104,7 @@ public record VerifyContent(
                 schemas[generation] = (await eventStore.EventTypes.GetFor(EventType.Id, (uint)generation)).Schema;
             }
 
-            schemas = ResolveProtectionSchemas(schemas);
+            schemas = ResolveProtectionSchemas(schemas, await eventStore.EventTypes.GetDefinition(EventType.Id));
 
             // Append protects inherited boundaries before migration, just like explicitly classified ones.
             var expected = await metadataManager.TryPrepareGenerationsForComparison(
@@ -199,9 +199,13 @@ public record VerifyContent(
         }
     }
 
-    static Dictionary<int, JsonSchema> ResolveProtectionSchemas(Dictionary<int, JsonSchema> own)
+    static Dictionary<int, JsonSchema> ResolveProtectionSchemas(Dictionary<int, JsonSchema> own, EventTypeDefinition? definition)
     {
-        var generations = own.Select(_ => ((EventTypeGeneration)(uint)_.Key, _.Value)).ToArray();
+        // Append inherits protection from every registered generation, not only those stored for this event.
+        var registered = (definition?.Generations ?? [])
+            .Where(_ => !own.ContainsKey((int)_.Generation.Value))
+            .Select(_ => (_.Generation, _.Schema));
+        var generations = own.Select(_ => ((EventTypeGeneration)(uint)_.Key, _.Value)).Concat(registered).ToArray();
         return own.ToDictionary(
             _ => _.Key,
             _ => GenerationProtectionSchemas.For((uint)_.Key, generations));
