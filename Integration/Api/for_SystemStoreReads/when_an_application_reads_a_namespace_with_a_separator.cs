@@ -10,7 +10,7 @@ namespace Cratis.Chronicle.Integration.Api.for_SystemStoreReads;
 [Collection(ChronicleCollection.Name)]
 public class when_an_application_reads_a_namespace_with_a_separator(context context) : Given<context>(context)
 {
-    public class context(ChronicleOutOfProcessFixtureWithLocalImage fixture) : given.an_http_client(fixture)
+    public class context(ChronicleOutOfProcessFixtureWithLocalImage fixture) : given.an_application_http_client(fixture)
     {
         public QueryResult Result;
 
