@@ -10,6 +10,12 @@ namespace Cratis.Chronicle.Security;
 /// Represents an XML repository for Data Protection keys that uses an Orleans grain for storage.
 /// This ensures consistent key management across cluster nodes.
 /// </summary>
+/// <remarks>
+/// Data Protection reads and writes its key ring synchronously, and it does so wherever a key is first needed - including
+/// inside a grain turn, such as when a node signs a kernel event with a key another node created. Blocking on a grain
+/// call from inside a turn deadlocks: the outgoing call's filters continue on the calling activation's scheduler, which
+/// the blocked thread holds. The grain is therefore called from the thread pool, outside any grain context.
+/// </remarks>
 /// <param name="grainFactory">The <see cref="IGrainFactory"/> for accessing grains.</param>
 public class GrainBasedXmlRepository(IGrainFactory grainFactory) : IXmlRepository
 {
@@ -19,7 +25,7 @@ public class GrainBasedXmlRepository(IGrainFactory grainFactory) : IXmlRepositor
     public IReadOnlyCollection<XElement> GetAllElements()
     {
         var grain = grainFactory.GetGrain<IDataProtectionKeys>(GrainId);
-        var xmlStrings = grain.GetAllKeys().GetAwaiter().GetResult();
+        var xmlStrings = OutsideGrainTurn(grain.GetAllKeys);
         return xmlStrings.Select(XElement.Parse).ToList().AsReadOnly();
     }
 
@@ -27,6 +33,13 @@ public class GrainBasedXmlRepository(IGrainFactory grainFactory) : IXmlRepositor
     public void StoreElement(XElement element, string friendlyName)
     {
         var grain = grainFactory.GetGrain<IDataProtectionKeys>(GrainId);
-        grain.StoreKey(friendlyName, element.ToString()).GetAwaiter().GetResult();
+        var xml = element.ToString();
+        OutsideGrainTurn(async () =>
+        {
+            await grain.StoreKey(friendlyName, xml);
+            return true;
+        });
     }
+
+    static T OutsideGrainTurn<T>(Func<Task<T>> call) => Task.Run(call).GetAwaiter().GetResult();
 }

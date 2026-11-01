@@ -35,6 +35,9 @@ internal static partial class AppendedEventsQueueLogMessages
     [LoggerMessage(LogLevel.Warning, "Dispatch to observer {ObserverKey} failed for sequence range {FirstEventSequenceNumber}-{LastEventSequenceNumber}; spilling it to catch-up")]
     internal static partial void DispatchFailedSpillingToCatchup(this ILogger<AppendedEventsQueue> logger, ObserverKey observerKey, EventSequenceNumber firstEventSequenceNumber, EventSequenceNumber lastEventSequenceNumber);
 
+    [LoggerMessage(LogLevel.Information, "Observer {ObserverKey} has fallen too far behind on its appended-events queue; spilling it to catch-up recovery")]
+    internal static partial void SpillingLaggingObserverToCatchup(this ILogger<AppendedEventsQueue> logger, ObserverKey observerKey);
+
     [LoggerMessage(LogLevel.Warning, "Failed to start catch-up for spilled observer {ObserverKey} (attempt {Attempt}); will retry")]
     internal static partial void SpillCatchupTriggerFailed(this ILogger<AppendedEventsQueue> logger, ObserverKey observerKey, int attempt, Exception exception);
 
