@@ -51,6 +51,64 @@ export async function runProject(info, options, execute = runProcess) {
     const production = await validateCoverage(await readFile(files[0], 'utf8'), options.root, info.coverageRoots);
     console.log(`${info.project}: ${identities.length} results; production hit ${production}`);
 }
+function positiveId(value) { return Number.isSafeInteger(value) && value > 0; }
+function apiPageRecords(page, key) {
+    if (!Array.isArray(page?.[key])) fail(`Malformed producer API page: ${key}`);
+    return page[key];
+}
+function apiRecords(pages, key) {
+    if (!Array.isArray(pages) || !pages.length) fail(`Missing producer API pages: ${key}`);
+    const records = pages.flatMap(page => apiPageRecords(page, key));
+    if (pages.some(page => page.total_count !== records.length)) fail(`Incomplete producer API pagination: ${key}`);
+    const ids = records.map(record => record?.id);
+    const validIds = [ids.every(positiveId), new Set(ids).size === ids.length].every(Boolean);
+    if (!validIds) fail(`Invalid/duplicate producer API identities: ${key}`);
+    return records;
+}
+function producerJob(jobs, shard, context) {
+    const candidates = jobs.filter(job => job.name === `specs-other (${shard})`);
+    for (const job of candidates) {
+        const valid = [job.run_id === Number(context.runId), positiveId(job.run_attempt),
+            job.run_attempt <= Number(context.runAttempt), typeof job.head_sha === 'string', Boolean(job.head_sha)].every(Boolean);
+        if (!valid) fail(`Invalid producer job context: shard ${shard}`);
+    }
+    const attempts = candidates.map(job => job.run_attempt);
+    if (new Set(attempts).size !== attempts.length) fail(`Duplicate producer attempts: shard ${shard}`);
+    const latest = candidates.find(job => job.run_attempt === Math.max(...attempts));
+    if (latest?.status !== 'completed' || latest.conclusion !== 'success') fail(`Missing successful latest producer: shard ${shard}`);
+    return latest;
+}
+function producerArtifact(artifacts, job, shard, context) {
+    const artifactName = `coverage-results-specs-other-${shard}`;
+    const matches = artifacts.filter(artifact => artifact.name === artifactName);
+    if (matches.length !== 1) fail(`Missing/duplicate producer artifact: ${artifactName}`);
+    const artifact = matches[0];
+    const created = Date.parse(artifact.created_at);
+    const valid = [artifact.expired === false, artifact.workflow_run?.id === Number(context.runId),
+        artifact.workflow_run?.head_sha === job.head_sha, Number.isFinite(created),
+        created >= Date.parse(job.started_at), created <= Date.parse(job.completed_at)].every(Boolean);
+    if (!valid) fail(`Stale or invalid producer artifact: ${artifactName}`);
+    return { shard, runAttempt: String(job.run_attempt), artifactId: artifact.id, artifactName };
+}
+export function selectProducerArtifacts(jobPages, artifactPages, context) {
+    const jobs = apiRecords(jobPages, 'jobs');
+    const artifacts = apiRecords(artifactPages, 'artifacts');
+    return { context, producers: [1, 2].map(shard => producerArtifact(artifacts, producerJob(jobs, shard, context), shard, context)) };
+}
+async function producerApiPages(endpoint, context, env, execute) {
+    const result = await execute('gh', ['api', '--paginate', '--slurp', `repos/${env.GITHUB_REPOSITORY}/actions/runs/${context.runId}/${endpoint}`], { capture: true, timeout: 60000 });
+    if (result.code !== 0) fail(`Producer evidence API failed (${result.code})`);
+    return JSON.parse(result.stdout);
+}
+export async function loadProducerEvidence(context, { env = process.env, execute = runProcess } = {}) {
+    if (!/^[\w.-]+\/[\w.-]+$/.test(env.GITHUB_REPOSITORY ?? '')) fail('Missing/invalid producer repository');
+    if (!/^[1-9]\d*$/.test(context.runId) || !/^[1-9]\d*$/.test(context.runAttempt)) fail('Invalid producer run/attempt');
+    const pages = [];
+    for (const endpoint of ['jobs?filter=all&per_page=100', 'artifacts?per_page=100']) {
+        pages.push(await producerApiPages(endpoint, context, env, execute));
+    }
+    return selectProducerArtifacts(...pages, context);
+}
 export async function main(args = process.argv.slice(2), { root = process.cwd(), execute = runProcess } = {}) {
     const shardId = parseShardArgs(args);
     const receiptPath = path.join(root, 'coverage-results', 'shard-receipt.json');

@@ -12,6 +12,7 @@ import { collectorArgs, verifyExit, verifyDeadline, main as verifyCollector } fr
 import './spec-project-contracts.mjs';
 import { benchmarkProject, inventory, ordinaryProjects, validateSolutionProjects } from './mixed-specs-selection.mjs';
 import { sourcePlan } from './spec-shards.mjs';
+import { selectProducerArtifacts, loadProducerEvidence } from './run-mixed-specs.mjs';
 
 const scratch = path.resolve('.ai-work/chronicle-spec5-runners/mock-contracts');
 async function fixture() {
@@ -222,6 +223,69 @@ test('MOCK stale results are rejected before launch', async () => {
     const options = await fixture();
     await writeFile(path.join(options.directory, 'results.trx'), trx());
     await assert.rejects(runProject({ project: v3Projects[0], runner: 'v3', dll: options.dll }, options, async () => assert.fail('must not launch')), /fresh and empty/);
+});
+
+const retryContext = { sha: 'merge-sha', runId: '123', runAttempt: '2' };
+function producerFixture(attempts = [1, 1]) {
+    const jobs = attempts.flatMap((attempt, index) => Array.from({ length: attempt }, (_, i) => ({
+        id: (index + 1) * 10 + i, name: `specs-other (${index + 1})`, run_id: 123, run_attempt: i + 1,
+        head_sha: 'head-sha', status: 'completed', conclusion: 'success',
+        started_at: `2026-11-01T00:0${i + 1}:00Z`, completed_at: `2026-11-01T00:0${i + 1}:30Z`
+    })));
+    const artifacts = attempts.map((attempt, index) => ({
+        id: index + 100, name: `coverage-results-specs-other-${index + 1}`, expired: false,
+        created_at: `2026-11-01T00:0${attempt}:15Z`, workflow_run: { id: 123, head_sha: 'head-sha' }
+    }));
+    return [[{ jobs, total_count: jobs.length }], [{ artifacts, total_count: artifacts.length }]];
+}
+test('API evidence selects retained and mixed successful producer attempts, not aggregate attempt', () => {
+    for (const attempts of [[1, 1], [1, 2], [2, 1], [2, 2]]) {
+        const pages = producerFixture(attempts);
+        for (const job of pages[0][0].jobs) {
+            if (job.run_attempt < attempts[Number(job.name.match(/\d/)[0]) - 1]) job.conclusion = 'failure';
+        }
+        const evidence = selectProducerArtifacts(...pages, retryContext);
+        assert.deepEqual(evidence.producers.map(p => p.runAttempt), attempts.map(String));
+        assert.deepEqual(evidence.producers.map(p => p.artifactId), [100, 101]);
+    }
+});
+test('API evidence rejects unsuccessful latest jobs and stale, wrong-run/SHA, incomplete or duplicate provenance', () => {
+    const reject = mutate => {
+        const [jobs, artifacts] = producerFixture([1, 2]);
+        mutate(jobs[0], artifacts[0]);
+        assert.throws(() => selectProducerArtifacts(jobs, artifacts, retryContext), /producer/i);
+    };
+    for (const conclusion of ['failure', 'cancelled', 'skipped', null]) reject(j => { j.jobs[2].conclusion = conclusion; });
+    reject(j => { j.jobs[2].status = 'in_progress'; });
+    reject(j => { j.jobs[2].run_attempt = 3; });
+    reject(j => { j.jobs[0].run_id = 999; });
+    reject((j, a) => { a.artifacts[0].workflow_run.id = 999; });
+    reject((j, a) => { a.artifacts[0].workflow_run.head_sha = 'wrong-sha'; });
+    reject((j, a) => { a.artifacts[1].created_at = '2026-11-01T00:01:15Z'; });
+    reject((j, a) => { a.artifacts[0].expired = true; });
+    reject((j, a) => { a.artifacts[0].created_at = 'invalid'; });
+    reject((j, a) => { a.artifacts[0].created_at = '2026-11-01T00:03:00Z'; });
+    reject(j => { j.jobs = j.jobs.filter(job => job.name !== 'specs-other (1)'); j.total_count = j.jobs.length; });
+    reject((j, a) => { a.artifacts.pop(); a.total_count--; });
+    reject(j => { j.jobs.pop(); });
+    reject(j => { j.jobs.push({ ...j.jobs[0], id: 999 }); j.total_count++; });
+    reject((j, a) => { a.artifacts.push({ ...a.artifacts[0], id: 999 }); a.total_count++; });
+});
+test('producer API acquisition paginates all attempts and propagates unavailable/malformed evidence', async () => {
+    const pages = producerFixture([1, 2]);
+    const jobs = pages[0][0].jobs;
+    pages[0] = [{ jobs: jobs.slice(0, 1), total_count: 3 }, { jobs: jobs.slice(1), total_count: 3 }];
+    let calls = 0;
+    const options = { env: { GITHUB_REPOSITORY: 'Cratis/Chronicle' }, execute: async (command, args) => {
+        assert.equal(command, 'gh');
+        assert.deepEqual(args.slice(0, 3), ['api', '--paginate', '--slurp']);
+        if (calls === 0) assert.ok(args[3].endsWith('/123/jobs?filter=all&per_page=100'));
+        return { code: 0, stdout: JSON.stringify(pages[calls++]) };
+    } };
+    assert.equal((await loadProducerEvidence(retryContext, options)).producers[1].runAttempt, '2');
+    assert.equal(calls, 2);
+    await assert.rejects(loadProducerEvidence(retryContext, { ...options, execute: async () => ({ code: 1 }) }), /API failed/);
+    await assert.rejects(loadProducerEvidence(retryContext, { ...options, execute: async () => ({ code: 0, stdout: '{}' }) }), /pages/);
 });
 
 async function ordinaryDispatch(mode) {

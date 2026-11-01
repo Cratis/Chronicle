@@ -394,6 +394,7 @@ jobs:
           if-no-files-found: error
 
   specs-other:
+    name: specs-other (${{ matrix.shard }})
     if: needs.already-ran.outputs.skip != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 120
@@ -476,6 +477,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: coverage-results-specs-other-${{ matrix.shard }}
+          # A retried worker replaces its prior upload; retained successful workers do not run.
+          overwrite: true
           path: ./coverage-results/
           retention-days: 1
 
@@ -569,15 +572,21 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Select successful producer artifacts across reruns
+        id: producers
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node .github/scripts/spec-shards.mjs --select-producers .ai-work/5501/producers.json
+
       - name: Download ordinary shard receipts
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
-          pattern: coverage-results-specs-other-*
+          artifact-ids: ${{ steps.producers.outputs.artifact_ids }}
           path: .ai-work/5501/spec-shard-receipts
           merge-multiple: false
 
       - name: Verify exact-once completed ordinary specs
-        run: node .github/scripts/spec-shards.mjs --verify-results .ai-work/5501/spec-shard-receipts
+        run: node .github/scripts/spec-shards.mjs --verify-results .ai-work/5501/spec-shard-receipts --producers .ai-work/5501/producers.json
 
   # Dependabot's read-only token cannot push the image these shards pull. A bump needing
   # the full matrix must be reopened as an ordinary PR, where the token can push.

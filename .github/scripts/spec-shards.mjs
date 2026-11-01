@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { readFile, readdir } from 'node:fs/promises';
+import { readFile, readdir, mkdir, writeFile, appendFile } from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { validateSourceProjects } from './mixed-specs-selection.mjs';
@@ -98,11 +98,22 @@ function verifyReceipt(receipt, plan, context) {
     sameProjects(receipt.projects, expected, `Shard ${receipt.shard} receipt plan`);
     sameProjects(receipt.completed, expected, `Shard ${receipt.shard} receipt completion`);
 }
-export function verifyReceipts(receipts, plan, context = receiptContext()) {
+function producerContexts(producers, context) {
+    if (!Array.isArray(producers) || producers.length !== 2) fail('Expected two successful producer attempts');
+    if (new Set(producers.map(p => p?.shard)).size !== 2) fail('Duplicate producer shard');
+    return producers.map(producer => {
+        const valid = [[1, 2].includes(producer?.shard), /^[1-9]\d*$/.test(producer?.runAttempt ?? ''),
+            Number(producer?.runAttempt) <= Number(context.runAttempt)].every(Boolean);
+        if (!valid) fail('Invalid/stale producer attempt');
+        return { shard: producer.shard, ...context, runAttempt: producer.runAttempt };
+    });
+}
+export function verifyReceipts(receipts, plan, context = receiptContext(), producers) {
     if (!Array.isArray(receipts) || receipts.length !== 2) fail('Expected exactly two shard receipts');
+    const contexts = producers ? producerContexts(producers, context) : [1, 2].map(shard => ({ shard, ...context }));
     const seen = new Set();
     for (const receipt of receipts) {
-        verifyReceipt(receipt, plan, context);
+        verifyReceipt(receipt, plan, contexts.find(c => c.shard === receipt?.shard) ?? context);
         if (seen.has(receipt.shard)) fail(`Duplicate shard receipt ${receipt.shard}`);
         seen.add(receipt.shard);
     }
@@ -118,17 +129,45 @@ async function receiptFiles(directory) {
     }
     return files;
 }
-export async function verifyResults(directory, plan, context = receiptContext()) {
+function verifyEvidencePaths(evidence, context, directory, files) {
+    if (!contextMatches(evidence?.context, context)) fail('Stale producer evidence context');
+    producerContexts(evidence.producers, context);
+    const expected = evidence.producers.map(p => path.join(directory, p.artifactName, 'shard-receipt.json'));
+    if (files.some(file => !expected.includes(file))) fail('Unexpected producer artifact receipt path');
+}
+export async function verifyResults(directory, plan, context = receiptContext(), evidence) {
     const files = await receiptFiles(directory);
     if (files.length !== 2) fail(`Expected exactly two shard receipt files; found ${files.length}`);
+    if (evidence !== undefined) verifyEvidencePaths(evidence, context, directory, files);
     const receipts = await Promise.all(files.map(async file => JSON.parse(await readFile(file, 'utf8'))));
-    verifyReceipts(receipts, plan, context);
+    verifyReceipts(receipts, plan, context, evidence?.producers);
     console.log(`Verified 2 completed shard receipts: ${receipts.flatMap(r => r.completed).length} ordinary projects exactly once`);
 }
+async function selectArtifacts(file, context) {
+    // API evidence is fetched afresh by the aggregate, never accepted from worker artifacts.
+    const { loadProducerEvidence } = await import('./run-mixed-specs.mjs');
+    const evidence = await loadProducerEvidence(context);
+    await mkdir(path.dirname(file), { recursive: true });
+    await writeFile(file, JSON.stringify(evidence) + '\n');
+    if (process.env.GITHUB_OUTPUT) await appendFile(process.env.GITHUB_OUTPUT, `artifact_ids=${evidence.producers.map(p => p.artifactId).join(',')}\n`);
+}
+async function readProducerEvidence(args, root) {
+    if (args.length === 4 && args[2] !== '--producers') fail('Expected --producers FILE');
+    if (process.env.GITHUB_ACTIONS === 'true' && args.length !== 4) fail('Missing successful producer evidence');
+    return args.length === 4 ? JSON.parse(await readFile(path.resolve(root, args[3]), 'utf8')) : undefined;
+}
+async function verifyArtifactResults(args, root, plan, context) {
+    const evidence = await readProducerEvidence(args, root);
+    return verifyResults(path.resolve(root, args[1]), plan, context, evidence);
+}
 export async function main(args = process.argv.slice(2), { root = process.cwd() } = {}) {
-    if (!(args.length === 1 && args[0] === '--dry-run') && !(args.length === 2 && args[0] === '--verify-results' && args[1])) fail('Usage: spec-shards.mjs --dry-run | --verify-results DIRECTORY');
+    const context = receiptContext();
+    if (args.length === 2 && args[0] === '--select-producers') return selectArtifacts(path.resolve(root, args[1]), context);
+    const dryRun = args.length === 1 && args[0] === '--dry-run';
+    const verify = args[0] === '--verify-results' && [2, 4].includes(args.length);
+    if (!dryRun && !verify) fail('Usage: spec-shards.mjs --dry-run | --select-producers FILE | --verify-results DIRECTORY [--producers FILE]');
     const plan = await sourcePlan(root);
-    if (args[0] === '--verify-results') return verifyResults(path.resolve(root, args[1]), plan);
+    if (verify) return verifyArtifactResults(args, root, plan, context);
     const source = await validateSourceProjects(root);
     console.log(`Discovered/classified executable=${source.executable.length}; ordinary=${source.ordinary.length}; SQL=${source.sql.length}; integration=${source.integration.length}; shipping=${source.shipping.length}`);
     for (const shard of plan) {

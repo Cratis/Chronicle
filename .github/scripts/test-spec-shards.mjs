@@ -110,6 +110,7 @@ test('completed receipts prove each shard and the global multiset, not merely to
     reject(r => { r[0].shards = 3; });
     reject(r => { r[0].version = 0; });
     reject(r => { r[0].context.sha = 'stale'; });
+    reject(r => { r[0].context.runId = 'another-run'; });
     reject(r => { r[0].context.runAttempt = '0'; });
     reject(r => { r[0].completed = []; });
     reject(r => { r[0].completed.pop(); });
@@ -120,6 +121,34 @@ test('completed receipts prove each shard and the global multiset, not merely to
     reject(r => { r[0] = null; });
 });
 
+test('SQL-only failed-jobs retry retains both successful attempt-1 ordinary receipts', () => {
+    const plan = planShards(ordinary, weights);
+    const receipts = plan.map(s => receiptFor(s, s.projects, context));
+    const retry = { ...context, runAttempt: '2' };
+    // SQL failed in attempt 1; only SQL and the aggregate rerun in attempt 2.
+    const producers = [1, 2].map(shard => ({ shard, runAttempt: '1' }));
+    assert.doesNotThrow(() => verifyReceipts(receipts, plan, retry, producers));
+});
+
+test('mixed producer attempts keep exact receipt freshness and complete unique execution', () => {
+    const plan = planShards(ordinary, weights);
+    const retry = { ...context, runAttempt: '2' };
+    const producers = [{ shard: 1, runAttempt: '1' }, { shard: 2, runAttempt: '2' }];
+    const receipts = plan.map(s => receiptFor(s, s.projects, { ...context, runAttempt: producers[s.shard - 1].runAttempt }));
+    assert.doesNotThrow(() => verifyReceipts(receipts, plan, retry, producers));
+    for (const field of ['runAttempt', 'runId', 'sha']) {
+        const bad = structuredClone(receipts);
+        bad[1].context[field] = 'stale';
+        assert.throws(() => verifyReceipts(bad, plan, retry, producers), /context/);
+    }
+    for (const bad of [[], [producers[0], producers[0]], [{ shard: 1, runAttempt: '3' }, producers[1]]]) {
+        assert.throws(() => verifyReceipts(receipts, plan, retry, bad), /producer/i);
+    }
+    const incomplete = structuredClone(receipts);
+    incomplete[1].completed.pop();
+    assert.throws(() => verifyReceipts(incomplete, plan, retry, producers), /completion/);
+});
+
 test('result-directory verifier rejects absent, extra and malformed receipt files', async () => {
     const root = await fixture();
     const plan = await sourcePlan(root, weights);
@@ -127,11 +156,18 @@ test('result-directory verifier rejects absent, extra and malformed receipt file
     await mkdir(results);
     await assert.rejects(verifyResults(results, plan, context), /receipt/i);
     for (const shard of plan) {
-        const directory = path.join(results, `artifact-${shard.shard}`);
+        const directory = path.join(results, `coverage-results-specs-other-${shard.shard}`);
         await mkdir(directory);
         await writeFile(path.join(directory, 'shard-receipt.json'), JSON.stringify(receiptFor(shard, shard.projects, context)));
     }
     await verifyResults(results, plan, context);
+    const retry = { ...context, runAttempt: '2' };
+    const evidence = { context: retry, producers: plan.map(s => ({ shard: s.shard, runAttempt: '1', artifactName: `coverage-results-specs-other-${s.shard}` })) };
+    await verifyResults(results, plan, retry, evidence);
+    await assert.rejects(verifyResults(results, plan, { ...retry, runAttempt: '3' }, evidence), /evidence context/);
+    const wrongArtifact = structuredClone(evidence);
+    wrongArtifact.producers[0].artifactName = 'unexpected-artifact';
+    await assert.rejects(verifyResults(results, plan, retry, wrongArtifact), /artifact receipt path/);
     await writeFile(path.join(results, 'shard-receipt.json'), '{broken');
     await assert.rejects(verifyResults(results, plan, context));
     await writeFile(path.join(results, 'shard-receipt.json'), JSON.stringify(receiptFor(plan[0], plan[0].projects, context)));

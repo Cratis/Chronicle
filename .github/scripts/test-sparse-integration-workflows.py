@@ -350,7 +350,9 @@ class SparseIntegrationWorkflows(unittest.TestCase):
         self.assertEqual(["1", "2"], other["strategy"]["matrix"]["shard"])
         self.assertEqual("false", other["strategy"]["fail-fast"])
         self.assertNotIn("continue-on-error", other)
+        self.assertEqual("specs-other (${{ matrix.shard }})", other["name"])
         self.assertEqual("coverage-results-specs-other-${{ matrix.shard }}", other["steps"][-1]["with"]["name"])
+        self.assertEqual("true", other["steps"][-1]["with"]["overwrite"])
         self.assertTrue(any(step.get("uses") == "./.github/actions/assert-tests-ran" for step in other["steps"]))
         names = [step.get("name") for step in other["steps"]]
         for name in ("Restore mixed runner evaluation inputs", "Restore pinned coverage tool",
@@ -404,13 +406,18 @@ class SparseIntegrationWorkflows(unittest.TestCase):
         self.assertEqual({"contents": "read", "actions": "read"}, aggregate["permissions"])
         self.assertEqual("Checkout shard contract", aggregate["steps"][1]["name"])
         self.assertEqual("false", aggregate["steps"][1]["with"]["persist-credentials"])
-        for action in aggregate["steps"][1:3]:
-            self.assertRegex(action["uses"], r"@[a-f0-9]{40}$")
-        download = aggregate["steps"][2]
-        self.assertEqual("coverage-results-specs-other-*", download["with"]["pattern"])
+        for index in (1, 3):
+            self.assertRegex(aggregate["steps"][index]["uses"], r"@[a-f0-9]{40}$")
+        producer = aggregate["steps"][2]
+        self.assertEqual("producers", producer["id"])
+        self.assertEqual({"GH_TOKEN": "${{ github.token }}"}, producer["env"])
+        self.assertEqual("node .github/scripts/spec-shards.mjs --select-producers .ai-work/5501/producers.json", producer["run"])
+        download = aggregate["steps"][3]
+        self.assertEqual("${{ steps.producers.outputs.artifact_ids }}", download["with"]["artifact-ids"])
+        self.assertNotIn("pattern", download["with"])
         self.assertEqual("false", download["with"]["merge-multiple"])
-        self.assertEqual("node .github/scripts/spec-shards.mjs --verify-results .ai-work/5501/spec-shard-receipts",
-                         aggregate["steps"][3]["run"])
+        self.assertEqual("node .github/scripts/spec-shards.mjs --verify-results .ai-work/5501/spec-shard-receipts --producers .ai-work/5501/producers.json",
+                         aggregate["steps"][4]["run"])
         self.assertFalse(any("continue-on-error" in step for step in aggregate["steps"]))
         step = aggregate["steps"][0]
         self.assertEqual("${{ needs.specs-other.result }}", step["env"]["OTHER_RESULT"])
