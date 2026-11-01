@@ -34,10 +34,21 @@ internal static class GenerationInitializationReplay
     /// <param name="key">The observer being replayed.</param>
     /// <param name="type">The kind of observer.</param>
     /// <returns>A task representing the check.</returns>
-    /// <exception cref="GenerationInitializationReplayNotSupported">Initialization has begun.</exception>
+    /// <exception cref="GenerationInitializationReplayNotSupported">Initialization has begun, or its progress could not be read.</exception>
     internal static async Task EnsureStartAllowed(IStorage storage, ObserverKey key, ObserverType type)
     {
-        if (await GetProgress(storage, key, type) != GenerationInitializationProgress.NotStarted)
+        GenerationInitializationProgress progress;
+        try
+        {
+            progress = await GetProgress(storage, key, type);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            // Fail closed: progress that cannot be read never admits a new replay job.
+            throw new GenerationInitializationReplayNotSupported(GenerationInitializationReplayNotSupported.StartUnverifiedReason, exception);
+        }
+
+        if (progress != GenerationInitializationProgress.NotStarted)
         {
             throw new GenerationInitializationReplayNotSupported(GenerationInitializationReplayNotSupported.StartRefusedReason);
         }

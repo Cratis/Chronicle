@@ -7,4 +7,5 @@ namespace Cratis.Chronicle.Observation;
 /// Base for refusals of a replay that must not run.
 /// </summary>
 /// <param name="message">The explanation of the refusal.</param>
-internal abstract class ReplayNotSupported(string message) : InvalidOperationException(message);
+/// <param name="innerException">The failure that caused the refusal, if any.</param>
+internal abstract class ReplayNotSupported(string message, Exception? innerException = null) : InvalidOperationException(message, innerException);

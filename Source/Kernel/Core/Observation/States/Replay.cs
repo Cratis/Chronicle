@@ -37,6 +37,16 @@ public class Replay(
     /// </summary>
     public JobId LastStartedJobId { get; private set; } = JobId.NotSet;
 
+    /// <summary>
+    /// Gets why starting a replay job was refused when this state was last entered, or null when it was not.
+    /// </summary>
+    /// <remarks>
+    /// A refusal is only known at the job boundary, inside <see cref="OnEnter"/>, and nothing may throw out of a
+    /// state's entry: the observer would be left recorded as replaying with nothing driving the replay. The observer
+    /// settles a refused start once the state has been entered, through the same release a refused completion uses.
+    /// </remarks>
+    internal GenerationInitializationReplayNotSupported? StartRefusal { get; private set; }
+
     /// <inheritdoc/>
     protected override IImmutableList<Type> AllowedTransitions => new[]
     {
@@ -49,15 +59,43 @@ public class Replay(
     /// <inheritdoc/>
     public override async Task<ObserverState> OnEnter(ObserverState state)
     {
-        // Cleared first, so a start that throws or fails never leaves an earlier replay's job id to be reported.
+        // Cleared first, so a start that throws or fails never leaves an earlier replay's job id or refusal to be reported.
         LastStartedJobId = JobId.NotSet;
+        StartRefusal = null;
 
         using var scope = logger.BeginReplayScope(state.Identifier, observerKey);
         logger.Entering();
 
-        var subscription = await Observer.GetSubscription();
+        try
+        {
+            LastStartedJobId = await StartOrResumeReplayJob(state);
+        }
+        catch (GenerationInitializationReplayNotSupported refusal)
+        {
+            // Nothing was started and nothing was reset: the observer releases the replay after entering this state.
+            StartRefusal = refusal;
+            return state;
+        }
 
-        LastStartedJobId = await jobsManager.StartOrResumeObserverJobFor<IReplayObserver, ReplayObserverRequest>(
+        await storage
+            .GetEventStore(observerKey.EventStore)
+            .GetNamespace(observerKey.Namespace)
+            .ObserverHandledCounts
+            .RemoveAllFor(state.Identifier);
+
+        return state with
+        {
+            IsReplaying = true,
+            HandledEventCount = EventCount.Zero,
+            HandledEventCountPerEventType = ImmutableDictionary<EventTypeId, EventCount>.Empty
+        };
+    }
+
+    async Task<JobId> StartOrResumeReplayJob(ObserverState state)
+    {
+        await Observer.GetSubscription();
+
+        return await jobsManager.StartOrResumeObserverJobFor<IReplayObserver, ReplayObserverRequest>(
             logger,
             new ReplayObserverRequest(observerKey, definitionState.State.Type, definitionState.State.EventTypes)
             {
@@ -81,18 +119,5 @@ public class Replay(
                 await GenerationInitializationReplay.EnsureStartAllowed(storage, observerKey, definitionState.State.Type);
                 logger.StartReplayJob();
             });
-
-        await storage
-            .GetEventStore(observerKey.EventStore)
-            .GetNamespace(observerKey.Namespace)
-            .ObserverHandledCounts
-            .RemoveAllFor(state.Identifier);
-
-        return state with
-        {
-            IsReplaying = true,
-            HandledEventCount = EventCount.Zero,
-            HandledEventCountPerEventType = ImmutableDictionary<EventTypeId, EventCount>.Empty
-        };
     }
 }

@@ -67,6 +67,12 @@ public partial class Observer
         EvaluateSuspectedSkips();
     }
 
+    async Task SettleRefusedReplayStart(GenerationInitializationReplayNotSupported refusal)
+    {
+        await ReleaseRefusedReplay();
+        logger.ReleasedRefusedReplayStart(refusal.InnerException, refusal.Message);
+    }
+
     async Task QuarantineRefusedPartitionWithoutPosition(Key partition)
     {
         const string reason = "Refused legacy partition replay has no persisted held-back position. The unchanged sink cannot be caught up safely; reconcile the sink and select a recovery position before clearing partition quarantine.";
