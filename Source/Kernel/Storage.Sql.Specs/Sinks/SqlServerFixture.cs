@@ -18,14 +18,17 @@ public sealed class SqlServerFixture : IAsyncLifetime
 {
     const int Port = 1433;
     const int DatabaseInUse = 3702;
+    static readonly TimeSpan _prefetchTimeout = TimeSpan.FromSeconds(60);
     const string Password = "Chronicle4476!Test";
     readonly Channel<(string? Name, TaskCompletionSource? Flush)> _drops = Channel.CreateUnbounded<(string? Name, TaskCompletionSource? Flush)>(new() { SingleReader = true });
+    readonly Channel<string> _ready = Channel.CreateBounded<string>(2);
     readonly CancellationTokenSource _stop = new();
 #pragma warning disable CA2213 // DisposeAsync disposes the container through Timings.Run, which the analyzer cannot follow.
     IContainer _container;
 #pragma warning restore CA2213
     SqlCommandTimings? _commandTimings;
     Task _dropWorker = Task.CompletedTask;
+    Task _producer = Task.CompletedTask;
     int _dropFallbacks;
     int _dropFailures;
 
@@ -51,8 +54,8 @@ public sealed class SqlServerFixture : IAsyncLifetime
     /// <returns>The database connection string.</returns>
     public async Task<string> CreateDatabase()
     {
-        var name = $"spec_{Guid.NewGuid():N}";
-        await Timings.Run("sql-database-create", () => Execute($"CREATE DATABASE [{name}]"));
+        var name = string.Empty;
+        await Timings.Run("sql-database-wait", async () => name = await TakePrefetched());
         return new SqlConnectionStringBuilder(ConnectionString) { InitialCatalog = name }.ConnectionString;
     }
 
@@ -95,6 +98,7 @@ public sealed class SqlServerFixture : IAsyncLifetime
             .Build();
         await Timings.Run("sql-container-start", () => _container.StartAsync());
         _dropWorker = StartDetached(RunDrops);
+        _producer = StartDetached(ProduceDatabases);
     }
 
     /// <inheritdoc/>
@@ -103,10 +107,11 @@ public sealed class SqlServerFixture : IAsyncLifetime
         try
         {
             _drops.Writer.TryComplete();
+            _ready.Writer.TryComplete();
             await _stop.CancelAsync();
             try
             {
-                await _dropWorker;
+                await Task.WhenAll(_dropWorker, _producer);
             }
             catch (OperationCanceledException)
             {
@@ -133,6 +138,42 @@ public sealed class SqlServerFixture : IAsyncLifetime
         using (ExecutionContext.SuppressFlow())
         {
             return Task.Run(work);
+        }
+    }
+
+    async Task<string> TakePrefetched()
+    {
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(_stop.Token);
+        timeout.CancelAfter(_prefetchTimeout);
+        try
+        {
+            return await _ready.Reader.ReadAsync(timeout.Token);
+        }
+        catch (OperationCanceledException) when (!_stop.IsCancellationRequested)
+        {
+            throw new TimeoutException($"No prefetched SQL Server database became ready within {_prefetchTimeout.TotalSeconds} seconds; the producer task is {_producer.Status}.");
+        }
+    }
+
+    async Task ProduceDatabases()
+    {
+        try
+        {
+            while (!_stop.IsCancellationRequested)
+            {
+                var name = $"spec_{Guid.NewGuid():N}";
+                await Timings.Run("sql-database-create", () => Execute($"CREATE DATABASE [{name}]", cancellationToken: _stop.Token));
+                await _ready.Writer.WriteAsync(name, _stop.Token);
+            }
+        }
+        catch (Exception) when (_stop.IsCancellationRequested)
+        {
+            // Disposing; prefetched databases are discarded together with the container.
+        }
+        catch (Exception ex)
+        {
+            // Faults the next CreateDatabase so specs fail loudly instead of waiting for a database that never comes.
+            _ready.Writer.TryComplete(ex);
         }
     }
 
