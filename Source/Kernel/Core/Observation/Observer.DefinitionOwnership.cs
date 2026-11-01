@@ -29,7 +29,7 @@ public partial class Observer
     {
         var from = Definition.EventSequenceId;
         var ownershipChanged = !KeyOwnsDefinition;
-        var handedOver = false;
+        var currentNamespaceResult = SequenceHandoverResult.Claimed;
         observerDefinition.State = observerDefinition.State with { EventSequenceId = _observerKey.EventSequenceId };
         if (ownershipChanged)
         {
@@ -45,12 +45,10 @@ public partial class Observer
                     from,
                     _observerKey.EventSequenceId,
                     logger);
-                handedOver |= result == SequenceHandoverResult.HandedOver && @namespace.Name == _observerKey.Namespace;
-            }
-
-            if (handedOver)
-            {
-                await RefreshAfterHandover();
+                if (@namespace.Name == _observerKey.Namespace)
+                {
+                    currentNamespaceResult = result;
+                }
             }
 
             var change = new DefinitionOwnershipSwitch(
@@ -62,6 +60,7 @@ public partial class Observer
                 _pendingPrecedence?.OwnerVersion ?? string.Empty);
             await ReportOwnershipSwitch(change, namespaces.Select(@namespace => @namespace.Name));
             _pendingPrecedence = null;
+            await ApplyHandoverResult(currentNamespaceResult);
             return change;
         }
 
@@ -76,13 +75,33 @@ public partial class Observer
                 owner,
                 _observerKey.EventSequenceId,
                 logger);
-            if (interrupted == SequenceHandoverResult.HandedOver)
-            {
-                await RefreshAfterHandover();
-            }
+            await ApplyHandoverResult(interrupted);
         }
 
         return null;
+    }
+
+    /// <summary>
+    /// Brings this activation in line with the outcome of handing its namespace's progress over to the key's sequence.
+    /// </summary>
+    /// <param name="result">The outcome of the handover for this activation's namespace.</param>
+    /// <returns>Awaitable task.</returns>
+    /// <remarks>
+    /// The progress loaded before the handover is stale once the target sequence's progress is selected, also when a
+    /// concurrent registration through another namespace selected it first. A handover that did not complete leaves the
+    /// stored progress with another sequence, so the subscription must not continue on this one.
+    /// </remarks>
+    async Task ApplyHandoverResult(SequenceHandoverResult result)
+    {
+        if (result == SequenceHandoverResult.NotHandedOver)
+        {
+            throw new ObserverSequenceHandoverDidNotComplete(_observerKey);
+        }
+
+        if (result is SequenceHandoverResult.HandedOver or SequenceHandoverResult.AlreadyOnTarget)
+        {
+            await RefreshAfterHandover();
+        }
     }
 
     /// <summary>

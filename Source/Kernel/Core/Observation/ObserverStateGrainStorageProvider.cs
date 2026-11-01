@@ -31,7 +31,7 @@ public class ObserverStateGrainStorageProvider(IStorage storage, ILogger<Observe
         var observers = eventStoreNamespace.Observers;
         var failedPartitionsStorage = eventStoreNamespace.FailedPartitions;
         var failedPartitions = await failedPartitionsStorage.GetFor(observerKey.ObserverId);
-        var actualFailedPartitions = failedPartitions.Partitions.ToArray();
+        var actualFailedPartitions = failedPartitions.Partitions.VisibleTo(observerKey.EventSequenceId);
         var storedState = await observers.Get(observerKey.ObserverId);
         try
         {

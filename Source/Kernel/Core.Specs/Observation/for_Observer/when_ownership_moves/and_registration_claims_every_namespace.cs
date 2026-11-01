@@ -11,6 +11,7 @@ public class and_registration_claims_every_namespace : given.a_live_observer_wit
 {
     readonly Storage.InMemory.Observation.ObserverStateStorage _other = new();
     readonly Storage.InMemory.Observation.ObserverStateStorage _empty = new();
+    Storage.Observation.IObserverSequenceCheckpointsStorage _otherCheckpoints;
 
     async Task Establish()
     {
@@ -20,6 +21,7 @@ public class and_registration_claims_every_namespace : given.a_live_observer_wit
         await _other.Save(new() { Identifier = _observerId, LastHandledEventSequenceNumber = 42 }, EventSequenceId.Inbox);
         var otherNamespace = Substitute.For<Storage.IEventStoreNamespaceStorage>();
         otherNamespace.Observers.Returns(_other);
+        _otherCheckpoints = otherNamespace.ObserverSequenceCheckpoints;
         otherNamespace.FailedPartitions.GetFor(_observerId).Returns(new FailedPartitions());
         var emptyNamespace = Substitute.For<Storage.IEventStoreNamespaceStorage>();
         emptyNamespace.Observers.Returns(_empty);
@@ -36,7 +38,8 @@ public class and_registration_claims_every_namespace : given.a_live_observer_wit
 
     [Fact] async Task should_claim_the_current_namespace() => (await _guarded.Get(_observerId)).Owner.ShouldEqual(EventSequenceId.Log);
     [Fact] async Task should_claim_the_other_namespace() => (await _other.Get(_observerId)).Owner.ShouldEqual(EventSequenceId.Log);
-    [Fact] async Task should_preserve_the_other_namespaces_progress() => (await _other.Get(_observerId)).LastHandledEventSequenceNumber.ShouldEqual((Concepts.Events.EventSequenceNumber)42);
+    [Fact] async Task should_start_the_other_namespace_fresh_on_the_new_sequence() => (await _other.Get(_observerId)).LastHandledEventSequenceNumber.ShouldEqual(Concepts.Events.EventSequenceNumber.Unavailable);
+    [Fact] void should_park_the_other_namespaces_progress_on_the_sequence_it_left() => _otherCheckpoints.Received(1).Save(Arg.Is<Storage.Observation.ObserverSequenceCheckpoint>(checkpoint => checkpoint.EventSequenceId == EventSequenceId.Inbox && checkpoint.LastHandledEventSequenceNumber.Value == 42UL));
     [Fact] async Task should_not_create_state_in_the_empty_namespace() => (await _empty.GetAll()).ShouldBeEmpty();
 
     void Destroy()
