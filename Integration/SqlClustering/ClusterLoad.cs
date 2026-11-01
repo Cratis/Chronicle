@@ -14,7 +14,9 @@ using Cratis.Chronicle.Sinks;
 using Cratis.Traces;
 using Grpc.Core;
 using Microsoft.Extensions.DependencyInjection;
+#if CHRONICLE_ROLLING_DIAGNOSTICS
 using Microsoft.Extensions.Logging;
+#endif
 
 namespace Cratis.Chronicle.Integration.SqlClustering;
 
@@ -40,8 +42,10 @@ public sealed partial class ClusterLoad(int transitions = 1, TimeProvider? timeP
     readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
     readonly string _source = Guid.NewGuid().ToString();
     readonly ClusterReconnectReducer _reconnectReducer = new();
+#if CHRONICLE_ROLLING_DIAGNOSTICS
     readonly ClusterLoadDeliveryDiagnostics _deliveryDiagnostics = new();
     ILoggerFactory? _diagnosticLoggerFactory;
+#endif
     ServiceProvider? _services;
     ChronicleClient _client = null!;
     IEventStore _store = null!;
@@ -75,11 +79,15 @@ public sealed partial class ClusterLoad(int transitions = 1, TimeProvider? timeP
                 .AddKeyedSingleton(typeof(IActivitySource<>), ClientActivity.SourceName, typeof(FallbackActivitySource<>))
                 .BuildServiceProvider();
         }
+#if CHRONICLE_ROLLING_DIAGNOSTICS
         _diagnosticLoggerFactory = LoggerFactory.Create(builder => builder
             .SetMinimumLevel(LogLevel.Trace)
             .AddFilter((category, level) => category == ClusterLoadDeliveryDiagnosticsLogging.Category && level == LogLevel.Trace)
             .AddProvider(new ClusterLoadDeliveryDiagnosticsLogging(_deliveryDiagnostics)));
         _client = new(options, serviceProvider: _services, loggerFactory: _diagnosticLoggerFactory);
+#else
+        _client = new(options, serviceProvider: _services);
+#endif
 
         // Automatic registration is what re-registers the reactor after the client reconnects to another node, the
         // way an application does; a manually registered store stays unregistered once its node goes away.
@@ -89,8 +97,12 @@ public sealed partial class ClusterLoad(int transitions = 1, TimeProvider? timeP
             builder => builder.WithEventType(_store.EventTypes.GetEventTypeFor(typeof(ClusterEventAppended))),
             (@event, _) =>
             {
+#if CHRONICLE_ROLLING_DIAGNOSTICS
                 var id = @event.Content[nameof(ClusterEventAppended.Id)]!.GetValue<Guid>();
                 _deliveryDiagnostics.Callback(id, @event.Context.SequenceNumber.Value, () => _observed.Enqueue((id, @event.Context.SequenceNumber)));
+#else
+                _observed.Enqueue((@event.Content[nameof(ClusterEventAppended.Id)]!.GetValue<Guid>(), @event.Context.SequenceNumber));
+#endif
                 return Task.CompletedTask;
             });
         await _reactor.WaitTillActive(TimeSpan.FromSeconds(60));
@@ -207,7 +219,11 @@ public sealed partial class ClusterLoad(int transitions = 1, TimeProvider? timeP
         }
         catch
         {
+#if CHRONICLE_ROLLING_DIAGNOSTICS
             await ClusterLoadDiagnostics.DumpSafely(_reactor, storedEvents, _observed, Console.Out, _deliveryDiagnostics);
+#else
+            await ClusterLoadDiagnostics.Dump(_reactor, storedEvents, _observed, Console.Out);
+#endif
             throw;
         }
     }
@@ -221,6 +237,7 @@ public sealed partial class ClusterLoad(int transitions = 1, TimeProvider? timeP
         }
         finally
         {
+#if CHRONICLE_ROLLING_DIAGNOSTICS
             try
             {
                 _client?.Dispose();
@@ -229,6 +246,9 @@ public sealed partial class ClusterLoad(int transitions = 1, TimeProvider? timeP
             {
                 DisposeDeliveryDiagnostics();
             }
+#else
+            _client?.Dispose();
+#endif
             if (_services is not null)
             {
                 await _services.DisposeAsync();
@@ -255,6 +275,7 @@ public sealed partial class ClusterLoad(int transitions = 1, TimeProvider? timeP
         }
     }
 
+#if CHRONICLE_ROLLING_DIAGNOSTICS
     void DisposeDeliveryDiagnostics()
     {
         try
@@ -267,6 +288,7 @@ public sealed partial class ClusterLoad(int transitions = 1, TimeProvider? timeP
         }
         _deliveryDiagnostics.Dispose();
     }
+#endif
 
     internal static void VerifyObservations(IEnumerable<(Guid Id, EventSequenceNumber Sequence)> stored, IEnumerable<(Guid Id, EventSequenceNumber Sequence)> observed)
     {

@@ -5,6 +5,9 @@
         <LocalImageName>$(CRATIS_CHRONICLE_LOCAL_IMAGE)</LocalImageName>
         <LocalImageName Condition="'$(LocalImageName)' == ''">cratis/chronicle:local-development-slim</LocalImageName>
     </PropertyGroup>
+    <PropertyGroup Condition="'$(EnableRollingDeliveryDiagnostics)' == 'true'">
+        <DefineConstants>$(DefineConstants);CHRONICLE_ROLLING_DIAGNOSTICS</DefineConstants>
+    </PropertyGroup>
     <ItemGroup>
         <ProjectReference Include="../../Source/Kernel/Storage.Sql/Storage.Sql.csproj" />
         <ProjectReference Include="../../Source/Kernel/Concepts/Concepts.csproj">

@@ -37,10 +37,6 @@
                Text="Rolling delivery diagnostics cannot be packaged." />
     </Target>
 
-    <Target Name="ForbidRollingDeliveryDiagnosticsDistribution" BeforeTargets="Pack;Publish;PublishContainer" Condition="'$(EnableRollingDeliveryDiagnostics)' == 'true'">
-        <Error Text="Rolling delivery diagnostics cannot be packed, published or put in an image." />
-    </Target>
-
     <ItemGroup>
         <InternalsVisibleTo Include="Cratis.Chronicle.AspNetCore" />
         <InternalsVisibleTo Include="Cratis.Chronicle.Api" />
