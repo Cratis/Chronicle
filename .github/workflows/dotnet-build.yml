@@ -208,8 +208,14 @@ jobs:
         run: node .github/scripts/check-workbench-proxies.mjs prepare --output "$WORKBENCH_PROXIES"
 
       - name: Generate native Debug Workbench proxies
+        # Pinned to the unstamped default Version (see Directory.Build.props): a generic type's
+        # proxy header embeds its generic arguments' AssemblyQualifiedName, including the
+        # assembly version, so comparing against a build carrying the CI-stamped version here
+        # would make every such proxy appear stale on every run that derives a different one.
+        # The regenerate instructions in check-workbench-proxies.mjs assume this same default.
         run: >-
           dotnet build Source/Kernel/Core/Core.csproj --configuration Debug
+          -p:Version=1.0.0
           -p:DisableProxyGenerator=false -p:DisableGrpcContractGeneration=true
           -p:DisableProtoGeneration=true -p:DisableDockerBuild=true
           -p:CratisProxiesIncremental=false "-p:CratisProxiesOutputPath=$WORKBENCH_PROXIES"
