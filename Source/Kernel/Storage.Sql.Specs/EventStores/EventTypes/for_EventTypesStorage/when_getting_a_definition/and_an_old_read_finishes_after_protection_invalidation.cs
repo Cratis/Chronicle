@@ -38,7 +38,7 @@ public class and_an_old_read_finishes_after_protection_invalidation : given.an_e
             var document = await context.EventTypes.FindAsync(_eventTypeId.Value);
             document!.Schemas = new Dictionary<uint, string>
             {
-                { _firstGeneration, $$"""{"type":"object","properties":{"{{FirstGenerationProperty}}":{"type":"string","compliance":[{"metadataType":"PII","details":""}]}}}""" }
+                { _firstGeneration, $$$"""{"type":"object","properties":{"{{{FirstGenerationProperty}}}":{"type":"string","compliance":[{"metadataType":"PII","details":""}]}}}""" }
             };
             await context.SaveChangesAsync();
         }
