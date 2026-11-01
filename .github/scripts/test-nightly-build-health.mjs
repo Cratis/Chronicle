@@ -182,7 +182,6 @@ test('pagination uses Link, including empty intermediate pages, for runs/issues/
 
 test('ambiguous issues, tampered markers and incomplete history fail before writing', async () => {
     for (const alteration of [
-        f => f.issues.push({ number: 1, title: trackerTitle, body: 'human', user: { login: 'person' } }),
         f => f.pages.set(`${root}/actions/workflows/42/runs?event=schedule&branch=main&status=completed&per_page=100&page=1`, { data: { total_count: 2, workflow_runs: [run()] } }),
         f => f.pages.set(`${root}/actions/workflows/42/runs?event=schedule&branch=main&status=completed&per_page=100&page=1`, { data: { total_count: 1001, workflow_runs: [run()] } }),
         f => f.pages.set(`${root}/issues?state=all&per_page=100&page=1`, { data: [], link: '<https://evil.invalid/>; rel="next"' })
@@ -199,6 +198,41 @@ test('ambiguous issues, tampered markers and incomplete history fail before writ
     f.issues.pop();
     f.issues[0].body = f.issues[0].body.replace('"failing"', '"tampered"');
     assert.equal((await f.check()).status, 'failed');
+});
+
+const hostile = (number, extra = {}) => ({ number, title: trackerTitle, body: 'hostile', state: 'open', user: { login: 'person', type: 'User' }, ...extra });
+
+test('hostile same-title or copied-marker issues are ignored, never modified, and cannot suppress reporting', async () => {
+    const only = fixture();
+    only.issues.push(hostile(1));
+    assert.equal((await only.check()).status, 'ok');
+    assert.equal(only.issues.length, 2);
+    assert.equal(only.issues[0].body, 'hostile');
+    assert.equal(only.issues[1].user.login, 'github-actions[bot]');
+    assert.match(only.issues[1].body, /Failing/);
+
+    const seed = fixture();
+    await seed.check();
+    const marker = seed.issues[0].body;
+    const copied = fixture();
+    copied.issues.push(hostile(1, { title: 'unrelated', body: marker }));
+    assert.equal((await copied.check()).status, 'ok');
+    assert.equal(copied.issues[0].body, marker);
+    assert.equal(copied.issues.length, 2);
+    assert.equal(copied.issues[1].user.login, 'github-actions[bot]');
+
+    const mixed = fixture();
+    await mixed.check();
+    const original = mixed.issues[0].body;
+    mixed.issues.unshift(hostile(7), hostile(8, { title: 'x', body: original }));
+    mixed.runs.push(run(2, 'success'));
+    assert.equal((await mixed.check()).status, 'ok');
+    assert.equal(mixed.issues.length, 3);
+    assert.equal(mixed.issues[0].body, 'hostile');
+    assert.equal(mixed.issues[1].body, original);
+    assert.match(mixed.issues[2].body, /Recovered/);
+    assert.equal(mixed.mutations.length, 2);
+    assert.ok(mixed.mutations[1].path.endsWith('/issues/1') && mixed.mutations[1].method === 'PATCH');
 });
 
 test('required failures and ambiguous writes are sanitized, not retried; jobs failure is degraded', async () => {

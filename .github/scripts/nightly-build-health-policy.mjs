@@ -121,15 +121,19 @@ export function managedState(issue, scope) {
 const isTrackerCandidate = issue => !issue.pull_request && (issue.title === trackerTitle || issue.body?.includes(start));
 const isBotOwned = issue => issue.user?.login === 'github-actions[bot]' && issue.user?.type === 'Bot';
 
-export function selectTracker(issues, scope) {
-    const candidates = issues.filter(isTrackerCandidate);
-    requireEvidence(candidates.length <= 1, 'ambiguous-trackers');
-    if (!candidates.length) return undefined;
-    const issue = candidates[0];
+// Strict validation of an issue that must be our own bot-owned tracker.
+export function validateTracker(issue, scope) {
     requireEvidence(positive(issue.number) && isBotOwned(issue), 'tracker-owner');
     requireEvidence(['open', 'closed'].includes(issue.state), 'tracker-state');
     managedState(issue, scope);
     return issue;
+}
+
+export function selectTracker(issues, scope) {
+    // Issues not authored by the trusted bot are untrusted input: never candidates, never modified.
+    const candidates = issues.filter(issue => isBotOwned(issue) && isTrackerCandidate(issue));
+    requireEvidence(candidates.length <= 1, 'ambiguous-trackers');
+    return candidates.length ? validateTracker(candidates[0], scope) : undefined;
 }
 
 function unchanged(latest, prior, issue) {

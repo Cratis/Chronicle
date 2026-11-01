@@ -5,7 +5,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
 import path from 'node:path';
 import { workflowPath, trackerTitle, requireEvidence, positive, scopeFor, eligible, historyFor,
-    selectTracker, transition, runMetadata, jobsMetadata, renderBody } from './nightly-build-health-policy.mjs';
+    selectTracker, validateTracker, transition, runMetadata, jobsMetadata, renderBody } from './nightly-build-health-policy.mjs';
 
 class ReportingError extends Error {}
 
@@ -141,7 +141,7 @@ function validateWrite(written, issue, body, reopen) {
 async function assertNoDrift({ transport, root, scope }, issue) {
     // Re-read under the workflow lock, immediately before PATCH. Drift never permits overwriting.
     const { data: current } = await transport('GET', `${root}/issues/${issue.number}`);
-    selectTracker([current], scope);
+    validateTracker(current, scope);
     const same = current.number === issue.number && current.body === issue.body && current.state === issue.state;
     requireEvidence(same, 'tracker-drift');
 }
@@ -159,7 +159,7 @@ async function writeTracker(context, issue, state, result) {
     result.attempted++;
     const { data: written } = await transport(...writeRequest(root, issue, body, reopen));
     validateWrite(written, issue, body, reopen);
-    selectTracker([written], scope);
+    validateTracker(written, scope);
     result.succeeded++;
     result.summary.incidentUrl = `https://github.com/${scope.repo}/issues/${written.number}`;
 }
