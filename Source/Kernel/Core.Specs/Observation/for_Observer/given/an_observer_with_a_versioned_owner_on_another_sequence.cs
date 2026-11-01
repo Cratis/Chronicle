@@ -2,9 +2,11 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Clients;
+using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Recommendations;
 using Cratis.Chronicle.Recommendations;
+using Cratis.Chronicle.Storage.Observation;
 using Microsoft.Extensions.Logging;
 using Orleans.TestKit;
 
@@ -22,6 +24,10 @@ public class an_observer_with_a_versioned_owner_on_another_sequence : an_observe
             Targets = [new(SiloAddress.Zero, new ConnectedClient { ClientType = ".NET", Version = "1.0.0" })]
         });
         _eventStoreStorage.Namespaces.GetAll().Returns([new(_observerKey.Namespace, DateTimeOffset.UtcNow)]);
+        _eventStoreNamespaceStorage.Observers.HandOver(
+            _observerId,
+            Arg.Any<EventSequenceId?>(),
+            Arg.Any<ObserverSequenceCheckpoint>()).Returns(true);
         _recommendations = Substitute.For<IRecommendationsManager>();
         _silo.AddProbe(_ => _recommendations);
     }
