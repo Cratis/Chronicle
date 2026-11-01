@@ -22,8 +22,8 @@ public class DeliveryEnvelopeWriter(JsonSerializerOptions options) : IDeliveryEn
     {
         var partition = request.Partition.ToString();
         var events = request.Events.Select(@event => DeliveredEvent.From(@event, DeliveryIdentity.Event(request.EventStore, request.Namespace, request.ObserverId, request.EventSequenceId, @event.Context.SequenceNumber))).ToArray();
-        var first = request.Events.FirstOrDefault()?.Context.SequenceNumber ?? EventSequenceNumber.Unavailable;
-        var last = request.Events.LastOrDefault()?.Context.SequenceNumber ?? EventSequenceNumber.Unavailable;
+        var first = request.Events.Count > 0 ? request.Events[0].Context.SequenceNumber : EventSequenceNumber.Unavailable;
+        var last = request.Events.Count > 0 ? request.Events[^1].Context.SequenceNumber : EventSequenceNumber.Unavailable;
         var id = DeliveryIdentity.Delivery(request.EventStore, request.Namespace, request.ObserverId, request.EventSequenceId, DeliveryKind.Events, [(partition, first.Value, last.Value)]);
         return new(DeliveryKind.Events, request.ObserverType, request.ObserverId, request.EventStore, request.Namespace, request.EventSequenceId, id, [new(partition, events)]);
     }

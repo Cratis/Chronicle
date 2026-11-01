@@ -15,23 +15,23 @@ public enum DeliveryKind
     /// Live events.
     /// </summary>
     [JsonStringEnumMemberName("events")]
-    Events,
+    Events = 0,
 
     /// <summary>
     /// Reserved replay boundary; not enabled in v1.
     /// </summary>
     [JsonStringEnumMemberName("replay-started")]
-    ReplayStarted,
+    ReplayStarted = 1,
 
     /// <summary>
     /// Reserved replay boundary; not enabled in v1.
     /// </summary>
     [JsonStringEnumMemberName("replay-ended")]
-    ReplayEnded,
+    ReplayEnded = 2,
 
     /// <summary>
     /// A control probe.
     /// </summary>
     [JsonStringEnumMemberName("ping")]
-    Ping
+    Ping = 3
 }
