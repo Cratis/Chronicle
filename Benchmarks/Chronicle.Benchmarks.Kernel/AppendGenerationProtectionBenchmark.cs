@@ -168,7 +168,7 @@ public class AppendGenerationProtectionBenchmark
         JsonSchemaMetadataManager _manager = null!;
         ExpandoObjectConverter _converter = null!;
         JsonSchema _sourceSchema = null!;
-        IEventTypeSchemaCache _schemaCache = null!;
+        EventTypeSchemaCache _schemaCache = null!;
         EventGenerationRelease _release = null!;
         EventType _eventType = null!;
         ExpandoObject _source = null!;
