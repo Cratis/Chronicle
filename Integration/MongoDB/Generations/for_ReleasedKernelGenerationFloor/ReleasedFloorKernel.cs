@@ -175,12 +175,38 @@ public sealed class ReleasedFloorKernel : IAsyncDisposable
     /// <inheritdoc/>
     public async ValueTask DisposeAsync()
     {
+        List<Exception> errors = [];
         foreach (var kernel in _kernels)
         {
-            await kernel.DisposeAsync();
+            try
+            {
+                await kernel.DisposeAsync();
+            }
+            catch (Exception error)
+            {
+                errors.Add(error);
+            }
         }
-        await _mongoDB.DisposeAsync();
-        await _network.DisposeAsync();
+        try
+        {
+            await _mongoDB.DisposeAsync();
+        }
+        catch (Exception error)
+        {
+            errors.Add(error);
+        }
+        try
+        {
+            await _network.DisposeAsync();
+        }
+        catch (Exception error)
+        {
+            errors.Add(error);
+        }
+        if (errors.Count > 0)
+        {
+            throw new AggregateException("Released kernel fixture cleanup failed.", errors);
+        }
     }
 
     async Task<string> Describe(IContainer kernel)
@@ -216,9 +242,22 @@ public sealed class ReleasedFloorKernel : IAsyncDisposable
     {
         // Only the status field is read; the container configuration is never printed.
         using var inspect = Process.Start(new ProcessStartInfo("docker", ["inspect", "--format", "{{.State.Status}}", kernel.Id]) { RedirectStandardOutput = true, UseShellExecute = false });
-        var status = (await inspect.StandardOutput.ReadToEndAsync()).Trim();
-        await inspect.WaitForExitAsync();
-        return string.Equals(status, "exited", StringComparison.Ordinal) || string.Equals(status, "dead", StringComparison.Ordinal);
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        try
+        {
+            var status = (await inspect.StandardOutput.ReadToEndAsync(timeout.Token)).Trim();
+            await inspect.WaitForExitAsync(timeout.Token);
+            return string.Equals(status, "exited", StringComparison.Ordinal) || string.Equals(status, "dead", StringComparison.Ordinal);
+        }
+        catch (OperationCanceledException) when (timeout.IsCancellationRequested)
+        {
+            if (!inspect.HasExited)
+            {
+                inspect.Kill(entireProcessTree: true);
+            }
+            await inspect.WaitForExitAsync(CancellationToken.None);
+            throw new TimeoutException("Docker status inspection exceeded its deadline.");
+        }
     }
 
     IContainer Build(IWaitForContainerOS wait)
