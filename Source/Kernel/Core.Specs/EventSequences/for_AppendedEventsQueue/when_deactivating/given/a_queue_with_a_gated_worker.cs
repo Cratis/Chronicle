@@ -4,7 +4,6 @@
 using Cratis.Chronicle.Configuration;
 using Cratis.Metrics;
 using Cratis.Tasks;
-using Cratis.Traces;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
@@ -27,7 +26,6 @@ public class a_queue_with_a_gated_worker : Specification
             tasks,
             Substitute.For<IGrainFactory>(),
             Substitute.For<IMeter<AppendedEventsQueue>>(),
-            Substitute.For<IActivitySource<AppendedEventsQueue>>(),
             Options.Create(new ChronicleOptions()),
             NullLogger<AppendedEventsQueue>.Instance,
             budget);

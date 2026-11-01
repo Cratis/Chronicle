@@ -60,6 +60,10 @@ public class and_the_event_store_is_the_system_event_store(context context) : Gi
     [Fact] void should_not_throw_on_append() => Context.AppendResult.HasExceptions.ShouldBeFalse();
     [Fact] void should_not_throw_on_append_many() => Context.AppendManyResult.HasExceptions.ShouldBeFalse();
     [Fact] void should_not_throw_on_revise() => Context.ReviseResult.HasExceptions.ShouldBeFalse();
-    [Fact] void should_allow_reading_the_system_event_store() => Context.Stored.IsSuccess.ShouldBeTrue();
-    [Fact] void should_not_append_any_events() => Context.Stored.Data.ShouldBeEmpty();
+    [Fact]
+    void should_refuse_reading_the_system_event_store()
+    {
+        Context.Stored.IsSuccess.ShouldBeFalse();
+        Context.Stored.IsAuthorized.ShouldBeFalse();
+    }
 }

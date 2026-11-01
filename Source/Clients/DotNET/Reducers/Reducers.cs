@@ -45,6 +45,7 @@ public partial class Reducers : IReducers
     IReadOnlyDictionary<Type, IReducerHandler> _handlersByModelType = FrozenDictionary<Type, IReducerHandler>.Empty;
 
     bool _registered;
+    bool _released;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Reducers"/> class.
@@ -75,16 +76,6 @@ public partial class Reducers : IReducers
         IActivitySource<Reducers> activitySource,
         ILogger<Reducers> logger)
     {
-        eventStore.Connection.Lifecycle.OnDisconnected += () =>
-        {
-            lock (ReadModelBuilderOwnership.SyncFor(eventStore, ReadModelOwnershipSync))
-            {
-                _registered = false;
-                RecreateHandlersForReconnect();
-            }
-
-            return Task.CompletedTask;
-        };
         _eventStore = eventStore;
         _servicesAccessor = (eventStore.Connection as IChronicleServicesAccessor)!;
         _clientArtifacts = clientArtifacts;
@@ -105,6 +96,7 @@ public partial class Reducers : IReducers
             identityProvider,
             activitySource,
             logger);
+        _eventStore.Connection.Lifecycle.OnDisconnected += ConnectionDisconnected;
     }
 
     /// <summary>
@@ -147,7 +139,7 @@ public partial class Reducers : IReducers
     {
         lock (ReadModelBuilderOwnership.SyncFor(_eventStore, ReadModelOwnershipSync))
         {
-            if (_registered)
+            if (_registered || _released)
             {
                 return;
             }
@@ -348,6 +340,20 @@ public partial class Reducers : IReducers
     }
 
     /// <summary>
+    /// Releases the reducers of an event store whose creation failed and that no caller holds: stops reacting to the
+    /// connection lifecycle, closes the observe streams and makes a registration that is still in flight a no-op.
+    /// </summary>
+    internal void Release()
+    {
+        lock (ReadModelBuilderOwnership.SyncFor(_eventStore, ReadModelOwnershipSync))
+        {
+            _released = true;
+            _eventStore.Connection.Lifecycle.OnDisconnected -= ConnectionDisconnected;
+            DisconnectHandlers();
+        }
+    }
+
+    /// <summary>
     /// Get snapshots for a reduced read model by its key.
     /// </summary>
     /// <typeparam name="TReadModel">Type of the read model.</typeparam>
@@ -427,6 +433,22 @@ public partial class Reducers : IReducers
         });
 
         return handler;
+    }
+
+    Task ConnectionDisconnected()
+    {
+        lock (ReadModelBuilderOwnership.SyncFor(_eventStore, ReadModelOwnershipSync))
+        {
+            if (_released)
+            {
+                return Task.CompletedTask;
+            }
+
+            _registered = false;
+            RecreateHandlersForReconnect();
+        }
+
+        return Task.CompletedTask;
     }
 
     void DisconnectHandlers()

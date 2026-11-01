@@ -45,6 +45,13 @@ public class a_replay_observer_job : Specification
 
     protected static IObserverKeys CreateKeys(params Key[] keys) => new ObserverKeysForTesting(keys);
 
+    /// <summary>
+    /// Gives derived specifications a chance to register services before the job grain is created.
+    /// </summary>
+    protected virtual void ConfigureSilo()
+    {
+    }
+
     async Task Establish()
     {
         _jobId = Guid.Parse("44444444-4444-4444-4444-444444444444");
@@ -99,6 +106,7 @@ public class a_replay_observer_job : Specification
         _stateStorage = _silo.StorageManager.GetStorage<JobStateWithLastHandledEvent>(
             typeof(TestableReplayObserver).FullName!);
 
+        ConfigureSilo();
         _job = await _silo.CreateGrainAsync<TestableReplayObserver>(_jobId, _jobKey);
     }
 }

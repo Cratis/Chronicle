@@ -30,6 +30,9 @@ internal static partial class ChronicleConnectionLogMessages
     [LoggerMessage(LogLevel.Warning, "The keep-alive stream from Chronicle server {Server} ended, reconnecting")]
     internal static partial void KeepAliveStreamEnded(this ILogger<ChronicleConnection> logger, string server);
 
+    [LoggerMessage(LogLevel.Warning, "Chronicle at {Server} did not accept the connection within {TimeoutSeconds} seconds - it may still be starting; retrying in the background")]
+    internal static partial void NotAcceptingConnectionsYet(this ILogger<ChronicleConnection> logger, string server, int timeoutSeconds);
+
     [LoggerMessage(LogLevel.Warning, "Server certificate validation is disabled for {Servers}; any certificate is accepted. Set skipTlsValidation=false once the server certificate is trusted.")]
     internal static partial void ServerCertificateValidationDisabled(this ILogger<ChronicleConnection> logger, string servers);
 

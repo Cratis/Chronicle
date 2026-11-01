@@ -113,7 +113,7 @@ public class ServiceInterfaceGenerator(int skipNamespaceSegments, string baseNam
 
         var code = CopyrightHeader + compilationUnit.ToFullString();
 
-        File.WriteAllText(interfaceFilePath, code);
+        GeneratedFile.WriteIfChanged(interfaceFilePath, code);
 
         return code;
     }
@@ -180,7 +180,7 @@ public class ServiceInterfaceGenerator(int skipNamespaceSegments, string baseNam
 
         var code = CopyrightHeader + compilationUnit.ToFullString();
 
-        File.WriteAllText(filePath, code);
+        GeneratedFile.WriteIfChanged(filePath, code);
 
         return code;
     }

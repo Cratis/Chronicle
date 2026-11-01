@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Diagnostics.Identifiers;
 using Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
 using Microsoft.Extensions.Configuration;
@@ -58,6 +59,7 @@ public static class OpenTelemetryConfigurationExtensions
     /// <returns>The builder for continuation.</returns>
     public static IServiceCollection AddChronicleTelemetry(this IServiceCollection services, IConfiguration configuration, string serviceName = "Chronicle")
     {
+        var chronicle = configuration.GetSection(ChronicleOptions.SectionPath).Get<ChronicleOptions>() ?? new();
         var otlpOptions = configuration.GetSection("OTEL_EXPORTER_OTLP").Get<OtlpExporterOptions>();
         MaybeSetHttp2Unencrypted(otlpOptions);
 
@@ -67,13 +69,19 @@ public static class OpenTelemetryConfigurationExtensions
             .WithLogging(logger => logger.AddOtlpExporter())
             .WithTracing(tracing =>
             {
-                tracing
+                var tracingBuilder = tracing
                     .AddChronicleInstrumentation()
                     .AddProcessor(new IdentifierSpanProcessor())
                     .AddHttpClientInstrumentation()
-                    .AddAspNetCoreInstrumentation()
-                    .AddGrpcClientInstrumentation()
-                    .AddOtlpExporter();
+                    .AddAspNetCoreInstrumentation(options => options.Filter = context =>
+                        ServerRequestTraceFilter.ShouldTrace(chronicle.HealthCheckEndpoint, context.Request.Path.Value));
+
+                if (chronicle.Telemetry.GrpcClientTracing)
+                {
+                    tracingBuilder.AddGrpcClientInstrumentation();
+                }
+
+                tracingBuilder.AddOtlpExporter();
             })
                 .WithMetrics(metrics =>
             {

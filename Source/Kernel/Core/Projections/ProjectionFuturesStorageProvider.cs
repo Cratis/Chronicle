@@ -21,7 +21,7 @@ public class ProjectionFuturesStorageProvider(IStorage storage) : IGrainStorage
         var eventStore = storage.GetEventStore(projectionKey.EventStore);
         var futuresStorage = eventStore.GetNamespace(projectionKey.Namespace).ProjectionFutures;
         await futuresStorage.RemoveAllForProjection(projectionKey.ProjectionId);
-        actualGrainState.State = ProjectionFuturesState.Empty;
+        actualGrainState.State = new ProjectionFuturesState();
     }
 
     /// <inheritdoc/>

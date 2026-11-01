@@ -6,7 +6,6 @@ using Cratis.Chronicle.Transactions;
 using Cratis.Execution;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -147,17 +146,10 @@ public class UnitOfWorkMiddleware(RequestDelegate next, ILogger<UnitOfWorkMiddle
         var options = context.RequestServices?.GetService<IOptions<ChronicleAspNetCoreOptions>>()?.Value;
         if (options?.UnitOfWork.ReportFailuresBeforeResponseStarts != true || context.Response.HasStarted) return;
 
-        var (status, title) = (concurrencyViolations.Length + decisionConflicts.Length, constraintViolations.Length) switch
-        {
-            (> 0, _) => (StatusCodes.Status409Conflict, "The request conflicts with a concurrent change."),
-            (_, > 0) => (StatusCodes.Status400BadRequest, "The request violates a constraint."),
-            _ => (StatusCodes.Status500InternalServerError, "The request could not be committed.")
-        };
-        var problem = new ProblemDetails { Status = status, Title = title };
-        problem.Extensions["correlationId"] = unitOfWork.CorrelationId.ToString();
+        var problem = UnitOfWorkFailureDetails.Create(UnitOfWorkCompletionResults.FromCommit(unitOfWork));
         context.Response.Clear();
-        context.Response.StatusCode = status;
+        context.Response.StatusCode = problem.Status!.Value;
         context.Response.ContentType = "application/problem+json";
-        await context.Response.WriteAsync(JsonSerializer.Serialize(problem));
+        await context.Response.WriteAsync(JsonSerializer.Serialize(problem, problem.GetType()));
     }
 }

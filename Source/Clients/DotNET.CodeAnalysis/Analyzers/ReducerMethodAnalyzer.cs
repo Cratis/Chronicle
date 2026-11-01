@@ -41,26 +41,22 @@ public class ReducerMethodAnalyzer : DiagnosticAnalyzer
         context.EnableConcurrentExecution();
         context.RegisterCompilationStartAction(start =>
         {
-            var evidence = new Lazy<ExplicitRegistrationEvidence>(() => ExplicitRegistrationEvidence.Create(start.Compilation, start.CancellationToken));
+            var evidence = new Lazy<ExplicitRegistrationEvidence>(() => ExplicitRegistrationEvidence.For(start.Compilation, start.CancellationToken));
             var eventTypes = new Lazy<ImmutableArray<INamedTypeSymbol>>(() =>
                 GetTypes(start.Compilation.GlobalNamespace).Where(HasEventTypeAttribute)
                     .Concat(evidence.Value.EventTypes.OfType<INamedTypeSymbol>()).Distinct<INamedTypeSymbol>(SymbolEqualityComparer.Default).ToImmutableArray());
-            start.RegisterSymbolAction(symbol => AnalyzeMethod(symbol, eventTypes, evidence.Value), SymbolKind.Method);
+            start.RegisterSymbolAction(symbol => AnalyzeMethod(symbol, eventTypes, evidence), SymbolKind.Method);
         });
     }
 
-    static void AnalyzeMethod(SymbolAnalysisContext context, Lazy<ImmutableArray<INamedTypeSymbol>> eventTypes, ExplicitRegistrationEvidence evidence)
+    static void AnalyzeMethod(SymbolAnalysisContext context, Lazy<ImmutableArray<INamedTypeSymbol>> eventTypes, Lazy<ExplicitRegistrationEvidence> registrations)
     {
         var methodSymbol = (IMethodSymbol)context.Symbol;
+        if (!IsPublicInstanceMethod(methodSymbol) || methodSymbol.Parameters.Length == 0) return;
+        var evidence = registrations.Value;
 
         // Check if the containing type implements IReducer
         if (!WellKnownTypes.ImplementsIReducer(methodSymbol.ContainingType, context.Compilation) && !evidence.IsReducer(methodSymbol.ContainingType))
-        {
-            return;
-        }
-
-        // Non-public and static methods can be ordinary helpers, not intended reducer methods.
-        if (!IsPublicInstanceMethod(methodSymbol))
         {
             return;
         }

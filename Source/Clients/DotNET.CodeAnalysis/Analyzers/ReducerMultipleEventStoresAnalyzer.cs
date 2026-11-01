@@ -30,20 +30,16 @@ public class ReducerMultipleEventStoresAnalyzer : DiagnosticAnalyzer
     {
         context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
         context.EnableConcurrentExecution();
-        context.RegisterCompilationStartAction(start =>
-        {
-            var evidence = new Lazy<ExplicitRegistrationEvidence>(() => ExplicitRegistrationEvidence.Create(start.Compilation, start.CancellationToken));
-            start.RegisterSymbolAction(symbol => AnalyzeNamedType(symbol, evidence), SymbolKind.NamedType);
-        });
+        context.RegisterSymbolAction(AnalyzeNamedType, SymbolKind.NamedType);
     }
 
-    static void AnalyzeNamedType(SymbolAnalysisContext context, Lazy<ExplicitRegistrationEvidence> evidence)
+    static void AnalyzeNamedType(SymbolAnalysisContext context)
     {
         var namedTypeSymbol = (INamedTypeSymbol)context.Symbol;
 
         if (SelfReducerPolicy.IsSelf(namedTypeSymbol, context.Compilation))
         {
-            AnalyzeSelf(context, namedTypeSymbol, evidence.Value);
+            AnalyzeSelf(context, namedTypeSymbol);
             return;
         }
         if (!WellKnownTypes.ImplementsIReducer(namedTypeSymbol, context.Compilation))
@@ -74,10 +70,12 @@ public class ReducerMultipleEventStoresAnalyzer : DiagnosticAnalyzer
         }
     }
 
-    static void AnalyzeSelf(SymbolAnalysisContext context, INamedTypeSymbol model, ExplicitRegistrationEvidence evidence)
+    static void AnalyzeSelf(SymbolAnalysisContext context, INamedTypeSymbol model)
     {
         if (SelfReducerPolicy.Attributes(model).Any(attribute => attribute.AttributeClass?.ToDisplayString() == WellKnownTypes.EventStoreAttributeName)) return;
         var handlers = SelfReducerPolicy.Methods(model).Where(method => SelfReducerPolicy.IsValid(method, model, context.Compilation)).ToArray();
+        if (handlers.Length == 0) return;
+        var evidence = ExplicitRegistrationEvidence.For(context.Compilation, context.CancellationToken);
         var events = SelfReducerPolicy.Types(context.Compilation.Assembly.GlobalNamespace)
             .Where(type => WellKnownTypes.HasEventTypeAttribute(type) || WellKnownTypes.HasEventTypeGenerationForAttribute(type))
             .Concat(evidence.EventTypes.OfType<INamedTypeSymbol>());

@@ -64,7 +64,10 @@ public partial class EventSequenceStorage
                 stored.Revisions.Count(),
                 string.Empty,
                 latest?.EventTypeGeneration,
-                latest?.Content));
+                latest?.Content)
+            {
+                DerivedGenerations = GetDerivedGenerations(sequenceNumber)
+            });
         }
     }
 

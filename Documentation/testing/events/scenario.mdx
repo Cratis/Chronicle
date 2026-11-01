@@ -109,7 +109,17 @@ A `[PII]` value on an appended event passes through the kernel's encryption hand
 
 Your specs can use the public append-result and event-sequence assertions, or read through `EventLog` and `EventSequence`, to verify successful appends and released values. Chronicle's own harness regressions also inspect the protected in-memory content; that raw-content inspection is internal, **not a public consumer assertion API**. A plaintext round trip alone does not prove encryption at rest.
 
-Keys are held only in memory and are not shared between scenario instances. This exercises event encryption and release, not production database persistence, read-model sink encryption, key-store durability, or subject erasure. **Erasure is unsupported in `EventScenario`**; test it against a running kernel and the intended storage provider.
+Keys are held only in memory and are not shared between scenario instances. This exercises event encryption and release, not production database persistence, read-model sink encryption, key-store durability, or subject erasure. **Erasure is unsupported in `EventScenario`** (event [redaction](#redacting-events) is covered below); test it against a running kernel and the intended storage provider.
+
+## Redacting events
+
+`EventSequence.Redact(sequenceNumber, reason)` and `EventSequence.Redact(eventSourceId, reason, eventTypes)` run synchronously inside the scenario, through the same System-sequence reactor the kernel uses. When the call returns, the targeted events are `EventRedacted` in their original slots with their original event source. The stored payload keeps the reason and the original event type.
+
+<ChronicleClientTabs snippet="testing/events/scenario/redact" />
+
+Passing event types limits an event-source redaction to those types; passing none redacts every event of the source. Redaction works on the event log and on named sequences, and each scenario instance is isolated. See [Redaction](../../events/redaction.mdx) for the production behavior.
+
+Only the two redaction requests are served. Other operations that run through the System sequence, such as `Revise`, fail with "… is not available in test scenarios". The redaction request itself is not recorded in a System sequence, and observers are not replayed because the scenario hosts none.
 
 ## Per-run artifacts and constraints
 
