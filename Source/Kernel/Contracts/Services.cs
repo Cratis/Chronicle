@@ -90,6 +90,7 @@ public sealed record Services(
 {
     Security.IAdministrators? _administrators;
     Occurrences.IOccurrences? _occurrences;
+    Observation.TypeSets.IObserverTypeSets? _observerTypeSets;
 
     /// <inheritdoc/>
     public Security.IAdministrators Administrators
@@ -103,5 +104,12 @@ public sealed record Services(
     {
         get => _occurrences ?? throw new NotSupportedException("Occurrences are not supported by this service container.");
         init => _occurrences = value;
+    }
+
+    /// <inheritdoc/>
+    public Observation.TypeSets.IObserverTypeSets ObserverTypeSets
+    {
+        get => _observerTypeSets ?? throw new NotSupportedException("Observer type sets are not supported by this service container.");
+        init => _observerTypeSets = value;
     }
 }

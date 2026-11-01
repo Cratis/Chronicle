@@ -42,4 +42,9 @@ public static class KernelCapabilities
     /// The kernel supports structured composite-key reads of materialized read models.
     /// </summary>
     public const string CompositeKeyLookups = "composite-key-lookups";
+
+    /// <summary>
+    /// The kernel exposes observer type-set management contracts, including availability outcomes.
+    /// </summary>
+    public const string ObserverTypeSets = "observer-type-sets";
 }

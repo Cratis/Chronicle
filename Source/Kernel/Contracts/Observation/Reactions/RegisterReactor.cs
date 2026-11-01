@@ -32,4 +32,10 @@ public class RegisterReactor
     /// </summary>
     [ProtoMember(4)]
     public ReactorDefinition Reactor { get; set; }
+
+    /// <summary>
+    /// Gets or sets the optional registration identity. It correlates warnings only.
+    /// </summary>
+    [ProtoMember(5)]
+    public Guid? RegistrationId { get; set; }
 }

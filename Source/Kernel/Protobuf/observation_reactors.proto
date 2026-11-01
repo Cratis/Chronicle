@@ -127,6 +127,7 @@ message RegisterReactor {
    string EventStore = 2;
    string Namespace = 3;
    ReactorDefinition Reactor = 4;
+   .bcl.Guid RegistrationId = 5;
 }
 enum ReplayState {
    REPLAY_STATE_None = 0;
