@@ -392,7 +392,8 @@ public partial class EventSequence(
         }
 
         var eventSchema = await EventTypesStorage.GetFor(eventType.Id, eventType.Generation);
-        var (contentAsExpandoObject, _) = await MakeEventCompliant(@event.Context.EventSourceId, eventSchema.Schema, content, @event.Context.Subject);
+        var protectionSchema = await schemaCache.GetProtectionSchemaFor(_eventSequenceKey.EventStore, eventType.Id, eventType.Generation, eventSchema.Schema);
+        var (contentAsExpandoObject, _) = await MakeEventCompliant(@event.Context.EventSourceId, protectionSchema, content, @event.Context.Subject);
         var hash = eventHashCalculator.Calculate(eventType.Id, @event.Context.EventSourceId, contentAsExpandoObject);
 
         await PrepareConstraintIndexesForRevision(@event);

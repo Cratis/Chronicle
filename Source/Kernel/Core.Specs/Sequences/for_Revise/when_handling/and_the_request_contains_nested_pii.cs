@@ -37,6 +37,8 @@ public class and_the_request_contains_nested_pii : Specification
     protected JsonObject _erased;
     protected Exception? _errorAfterErasure;
 
+    protected virtual bool InheritsProtection => false;
+    uint RevisionGeneration => InheritsProtection ? 1u : 2u;
     protected virtual Subject? OriginalSubject => (Subject)"owner-not-source";
     protected string Identifier => OriginalSubject?.IsSet == true ? OriginalSubject.Value : "source";
 
@@ -52,15 +54,22 @@ public class and_the_request_contains_nested_pii : Specification
         var encryption = new Encryption();
         _manager = new(new KnownInstancesOf<IJsonSchemaMetadataValueHandler>(new PIICompliancePropertyValueHandler(new ManagedEncryptionKeyProvisioner(_keys, encryption), _keys, encryption)), NullLogger<JsonSchemaMetadataManager>.Instance);
         _schema = await JsonSchema.FromJsonAsync("""{"type":"object","properties":{"profile":{"type":"object","properties":{"name":{"type":"string","compliance":[{"metadataType":"PII","details":""}]}}}}}""");
-        var eventType = new Concepts.Events.EventType("event", 2);
+        var eventType = new Concepts.Events.EventType("event", RevisionGeneration);
         _context = Concepts.Events.EventContext.From("store", "namespace", eventType, EventSourceType.Default, "source", EventStreamType.All, EventStreamId.Default, 0UL, CorrelationId.New(), subject: OriginalSubject);
-        _storage.GetEventStore("store").EventTypes.GetFor(eventType.Id, eventType.Generation).Returns(new EventTypeSchema(eventType, EventTypeOwner.Server, EventTypeSource.Code, _schema));
+        var own = InheritsProtection ? await JsonSchema.FromJsonAsync("""{"type":"object","properties":{"profile":{"type":"object","properties":{"name":{"type":"string"}}}}}""") : _schema;
+        var generations = new List<EventTypeGenerationDefinition> { new(eventType.Generation, own) };
+        if (InheritsProtection)
+        {
+            generations.Add(new(2, _schema));
+        }
+
+        _storage.GetEventStore("store").EventTypes.GetDefinition(eventType.Id).Returns(new EventTypeDefinition(eventType.Id, EventTypeOwner.Server, false, generations, []));
         _storage.GetEventStore("store").GetNamespace("namespace").GetEventSequence(EventSequenceId.Log).GetEventAt(0UL).Returns(new Concepts.Events.AppendedEvent(_context, new ExpandoObject()));
     }
 
     async Task Because()
     {
-        await new Revise("store", "namespace", EventSequenceId.Log, 0, new EventType("event", 2, false), """{"profile":{"name":"revised name"}}""", CausedBy: new Identity("system", "system", "system", null))
+        await new Revise("store", "namespace", EventSequenceId.Log, 0, new EventType("event", RevisionGeneration, false), """{"profile":{"name":"revised name"}}""", CausedBy: new Identity("system", "system", "system", null))
             .Handle(_grainFactory, new RequestCausation(new HttpContextAccessor()), Substitute.For<ICurrentPrincipalAccessor>(), _storage, _manager, _correlationId);
         _request = (EventRevised)_systemSequence.ReceivedCalls().Single(call => call.GetMethodInfo().Name == nameof(IEventSequence.Append)).GetArguments()[1]!;
         await new EventSequencesReactor(_grainFactory, new JsonSerializerOptions(), NullLogger<EventSequencesReactor>.Instance, _storage, _manager).Revised(_request, _context);
@@ -68,7 +77,7 @@ public class and_the_request_contains_nested_pii : Specification
         await _keys.RecordErasureFor("store", "namespace", Identifier);
         await _keys.DeleteFor("store", "namespace", Identifier);
         _erased = await _manager.Release("store", "namespace", _schema, Identifier, JsonNode.Parse(_request.Content)!.AsObject());
-        _errorAfterErasure = await Catch.Exception(() => new Revise("store", "namespace", EventSequenceId.Log, 0, new EventType("event", 2, false), """{"profile":{"name":"new personal value"}}""", CausedBy: new Identity("system", "system", "system", null))
+        _errorAfterErasure = await Catch.Exception(() => new Revise("store", "namespace", EventSequenceId.Log, 0, new EventType("event", RevisionGeneration, false), """{"profile":{"name":"new personal value"}}""", CausedBy: new Identity("system", "system", "system", null))
             .Handle(_grainFactory, new RequestCausation(new HttpContextAccessor()), Substitute.For<ICurrentPrincipalAccessor>(), _storage, _manager, _correlationId));
     }
 

@@ -7,6 +7,7 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Events.EventSequences;
+using Cratis.Chronicle.EventSequences.Migrations;
 using Cratis.Chronicle.Observation.Reactors.Kernel;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
@@ -103,11 +104,12 @@ public class EventSequencesReactor(IGrainFactory grainFactory, JsonSerializerOpt
             .AsObject();
         var eventStore = storage.GetEventStore(context.EventStore);
         var original = await eventStore.GetNamespace(context.Namespace).GetEventSequence(@event.Sequence).GetEventAt(@event.SequenceNumber);
-        var schema = await eventStore.EventTypes.GetFor(@event.EventType.Id, @event.EventType.Generation);
+        var definition = await eventStore.EventTypes.GetDefinition(@event.EventType.Id);
+        var protectionSchema = GenerationProtectionSchemas.For(definition, @event.EventType.Generation);
         var subject = original.Context.Subject?.IsSet == true ? original.Context.Subject.Value : original.Context.EventSourceId.Value;
 
         // Revision requests own protected content. Release it here; Revise owns protection for storage.
-        var releasedContent = await metadataManager.ReleaseStrict(context.EventStore, context.Namespace, schema.Schema, subject, content);
+        var releasedContent = await metadataManager.ReleaseStrict(context.EventStore, context.Namespace, protectionSchema, subject, content);
         await eventSequence.Revise(
             @event.SequenceNumber,
             @event.EventType,
