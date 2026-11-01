@@ -29,7 +29,7 @@ public class and_a_new_replay_starts_while_completion_is_applying : given.a_part
     async Task Because()
     {
         var completion = CompleteReplay();
-        await _probeEntered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await _probeEntered.Task.WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
         await _observer.ReplayPartition(_partition);
         _probe.SetResult((EventSequenceNumber)51UL);
         await completion;
