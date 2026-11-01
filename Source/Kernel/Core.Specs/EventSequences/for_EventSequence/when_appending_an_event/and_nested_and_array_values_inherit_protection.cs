@@ -31,11 +31,12 @@ public class and_nested_and_array_values_inherit_protection : given.an_event_seq
     [Fact]
     async Task should_protect_each_leaf_once_in_every_copy()
     {
-        foreach (var generation in StoredEvents().Single().GenerationalContent!)
+        foreach (var generation in _storedEvents.Single().GenerationalContent)
         {
-            generation.Value.ShouldNotContain(Marker);
-            var schema = GenerationProtectionSchemas.For(_definition, (uint)generation.Key);
-            var released = await _metadataManager.ReleaseStrict(EventStore, EventStoreNamespace, schema, SubjectIdentifier, JsonNode.Parse(generation.Value)!.AsObject());
+            var schema = GenerationProtectionSchemas.For(_definition, generation.Key);
+            var content = _converter.ToJsonObject(generation.Value, schema);
+            content.ToJsonString().ShouldNotContain(Marker);
+            var released = await _metadataManager.ReleaseStrict(EventStore, EventStoreNamespace, schema, SubjectIdentifier, content);
             released.ToJsonString().ShouldEqual(_plaintextInputs.Single().ToJsonString());
         }
     }
@@ -44,10 +45,10 @@ public class and_nested_and_array_values_inherit_protection : given.an_event_seq
     async Task should_remove_every_marker_after_erasure()
     {
         await _keys.DeleteFor(EventStore, EventStoreNamespace, SubjectIdentifier);
-        foreach (var generation in StoredEvents().Single().GenerationalContent!)
+        foreach (var generation in _storedEvents.Single().GenerationalContent)
         {
-            var schema = GenerationProtectionSchemas.For(_definition, (uint)generation.Key);
-            var released = await _metadataManager.Release(EventStore, EventStoreNamespace, schema, SubjectIdentifier, JsonNode.Parse(generation.Value)!.AsObject());
+            var schema = GenerationProtectionSchemas.For(_definition, generation.Key);
+            var released = await _metadataManager.Release(EventStore, EventStoreNamespace, schema, SubjectIdentifier, _converter.ToJsonObject(generation.Value, schema));
             released.ToJsonString().ShouldNotContain(Marker);
         }
     }

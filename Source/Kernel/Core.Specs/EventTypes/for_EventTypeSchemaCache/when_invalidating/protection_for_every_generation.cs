@@ -14,7 +14,7 @@ public class protection_for_every_generation : given.a_protection_schema_cache
     {
         await Resolve();
         await _cache.GetProtectionSchemaFor(_eventStore, _eventTypeId, _secondGeneration, _higher);
-        _definition = _definition with { Generations = [new(_firstGeneration, _own), new(_secondGeneration, JsonSchema.FromJson(_own.ToJson()))] };
+        _definition = _definition with { Generations = [new(_firstGeneration, _own), new(_secondGeneration, await JsonSchema.FromJsonAsync(_own.ToJson()))] };
     }
 
     async Task Because()

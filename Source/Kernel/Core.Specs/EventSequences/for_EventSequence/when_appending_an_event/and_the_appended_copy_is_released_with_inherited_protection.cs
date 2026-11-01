@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
-using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences.Concurrency;
 using Cratis.Chronicle.Concepts.EventTypes;
@@ -25,9 +24,11 @@ public class and_the_appended_copy_is_released_with_inherited_protection : given
     async Task Establish()
     {
         await _eventSequence.Append(EventSourceType.Default, _eventSourceId, EventStreamType.All, EventStreamId.Default, _eventType, Plaintext(Marker), CorrelationId.New(), [], Identity.System, [], ConcurrencyScope.None, subject: new Subject(SubjectIdentifier));
-        var stored = StoredEvents().Single();
+        var stored = _storedEvents.Single();
         _own = _definition.Generations.Single(_ => _.Generation == _eventType.Generation).Schema;
-        _appended = new(stored.Context with { Subject = SubjectIdentifier }, _converter.ToExpandoObject(JsonNode.Parse(stored.GenerationalContent![1])!.AsObject(), _own));
+        _appended = new(
+            EventContext.From(EventStore, EventStoreNamespace, stored.EventType, stored.EventSourceType, stored.EventSourceId, stored.EventStreamType, stored.EventStreamId, stored.SequenceNumber, stored.CorrelationId, subject: SubjectIdentifier),
+            stored.GenerationalContent[_eventType.Generation]);
         _compliance = new(_metadataManager, _converter, _schemaCache);
     }
 

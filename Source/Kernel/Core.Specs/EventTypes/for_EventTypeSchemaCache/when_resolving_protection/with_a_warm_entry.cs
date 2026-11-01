@@ -14,15 +14,15 @@ public class with_a_warm_entry : given.a_protection_schema_cache
     async Task Establish()
     {
         _effective = await Resolve();
-        Resolve().GetAwaiter().GetResult();
+        await Resolve();
     }
 
-    void Because()
+    async Task Because()
     {
         var before = GC.GetAllocatedBytesForCurrentThread();
         for (var index = 0; index < 1000; index++)
         {
-            _again = Resolve().GetAwaiter().GetResult();
+            _again = await Resolve();
         }
 
         _allocations = GC.GetAllocatedBytesForCurrentThread() - before;

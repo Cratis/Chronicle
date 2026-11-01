@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences.Concurrency;
 using Cratis.Chronicle.Concepts.Identities;
@@ -26,9 +25,11 @@ public class and_a_lower_generation_inherits_encryption : given.an_event_sequenc
     async Task should_release_the_appended_copy_through_central_compliance_after_pii_erasure()
     {
         await _keys.DeleteFor(EventStore, EventStoreNamespace, SubjectIdentifier);
-        var stored = StoredEvents().Single();
+        var stored = _storedEvents.Single();
         var ownSchema = _definition.Generations.Single(_ => _.Generation == _eventType.Generation).Schema;
-        var appended = new AppendedEvent(stored.Context with { Subject = SubjectIdentifier }, _converter.ToExpandoObject(JsonNode.Parse(stored.GenerationalContent![1])!.AsObject(), ownSchema));
+        var appended = new AppendedEvent(
+            EventContext.From(EventStore, EventStoreNamespace, stored.EventType, stored.EventSourceType, stored.EventSourceId, stored.EventStreamType, stored.EventStreamId, stored.SequenceNumber, stored.CorrelationId, subject: SubjectIdentifier),
+            stored.GenerationalContent[_eventType.Generation]);
         var compliance = new EventCompliance(_metadataManager, _converter, _schemaCache);
         var released = await compliance.Release(appended, ownSchema);
         _converter.ToJsonObject(released.Content, ownSchema)["name"]!.GetValue<string>().ShouldEqual(Marker);

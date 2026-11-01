@@ -11,10 +11,10 @@ public class without_inherited_metadata : given.a_protection_schema_cache
     JsonSchema _result;
     long _allocations;
 
-    void Establish()
+    async Task Establish()
     {
         _definition = _definition with { Generations = [new(_firstGeneration, _own)] };
-        _callerSchema = JsonSchema.FromJson(_own.ToJson());
+        _callerSchema = await JsonSchema.FromJsonAsync(_own.ToJson());
     }
 
     async Task Because()
@@ -23,7 +23,7 @@ public class without_inherited_metadata : given.a_protection_schema_cache
         var before = GC.GetAllocatedBytesForCurrentThread();
         for (var index = 0; index < 1000; index++)
         {
-            _cache.GetProtectionSchemaFor(_eventStore, _eventTypeId, _firstGeneration, _callerSchema).GetAwaiter().GetResult();
+            await _cache.GetProtectionSchemaFor(_eventStore, _eventTypeId, _firstGeneration, _callerSchema);
         }
 
         _allocations = GC.GetAllocatedBytesForCurrentThread() - before;
