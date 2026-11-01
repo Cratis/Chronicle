@@ -11,7 +11,11 @@ public class when_reading_the_released_json_format : given.a_normalized_event
 {
     AppendedEvent _result;
 
-    void Because() => _result = serializer.Deserialize(released_format)!;
+    void Because() => _result = serializer.Deserialize(Convert.FromBase64String(given.LegacyWireFixtures.Single))!;
+
+    [Fact] void should_preserve_the_envelope() => JsonSerializer.Serialize(_result, options).ShouldEqual(JsonSerializer.Serialize(appended_event, options));
+
+    [Fact] void should_preserve_nested_runtime_types() => ContentTypes(_result.Content).ShouldEqual(ContentTypes(appended_event.Content));
 
     [Fact] void should_preserve_context() => JsonSerializer.Serialize(_result.Context, options).ShouldEqual(JsonSerializer.Serialize(appended_event.Context, options));
 

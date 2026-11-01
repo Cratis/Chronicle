@@ -1,16 +1,14 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Dynamic;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.EventTypes;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Schemas;
-using Cratis.Json;
 using Microsoft.Extensions.DependencyInjection;
-using Orleans.Hosting;
 using Orleans.Serialization;
 
 namespace Cratis.Chronicle.Setup.Serialization.for_AppendedEventSerializer.given;
@@ -90,6 +88,7 @@ public class a_normalized_event : Specification
     protected ExpandoObjectConverter converter;
     protected JsonSchema schema;
     protected AppendedEvent appended_event;
+    protected AppendedEvent[] event_batch;
     protected byte[] released_format;
 
     void Establish()
@@ -108,13 +107,17 @@ public class a_normalized_event : Specification
             Tags = ["orders", "codec"]
         };
         appended_event = new(context, converter.ToExpandoObject(document, schema));
+        event_batch = [
+            appended_event,
+            new(context with { SequenceNumber = 1 }, converter.ToExpandoObject(JsonNode.Parse("""{"text":"sparse","nested":{"value":"second"},"payload":{"Name":"upper","name":"lower"}}""")!.AsObject(), schema)),
+            new(context with { SequenceNumber = 2 }, converter.ToExpandoObject(new JsonObject(), schema))];
 
         var services = new ServiceCollection();
         var silo = Substitute.For<ISiloBuilder>();
         silo.Services.Returns(services);
         silo.ConfigureSerialization();
         var cache = Substitute.For<IEventTypeSchemaCache>();
-        cache.Get(context.EventStore, context.EventType.Id, context.EventType.Generation).Returns(schema);
+        cache.GetSchemaJsonFor(context.EventStore, context.EventType.Id, context.EventType.Generation).Returns(schema.ToJson());
         services.AddSingleton(cache);
         services.AddSingleton<IExpandoObjectConverter>(converter);
         service_provider = services.BuildServiceProvider();
@@ -122,15 +125,23 @@ public class a_normalized_event : Specification
         serializer = service_provider.GetRequiredService<Serializer<AppendedEvent>>();
 
         // Reference the unchanged v19.115.0 writer (16564234a898b79ffc6eb69fcbec9f148b0d56ca):
-        // normalize content through JSON, serialize { appendedEvent, schema }, then StringCodec.
+        // serialize { appendedEvent, schema }, then StringCodec.
         var releasedEnvelope = new
         {
-            AppendedEvent = appended_event with { Content = converter.ToJsonObject(appended_event.Content, schema).ToExpandoObject() },
+            AppendedEvent = appended_event,
             Schema = schema.ToJson()
         };
         var json = JsonSerializer.Serialize(releasedEnvelope, options);
         released_format = service_provider.GetRequiredService<Serializer<string>>().SerializeToArray(json);
     }
+
+    protected static IEnumerable<Type?> ContentTypes(object? content) => content switch
+    {
+        ExpandoObject nested => nested.SelectMany(property => ContentTypes(property.Value)).Prepend(content.GetType()),
+        object[] array => array.SelectMany(ContentTypes).Prepend(content.GetType()),
+        null => [null],
+        _ => [content.GetType()]
+    };
 
     void Destroy() => service_provider.Dispose();
 }

@@ -13,7 +13,6 @@ using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventTypes;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
-using Orleans.Hosting;
 
 namespace Cratis.Chronicle.Benchmarks.Serialization;
 
