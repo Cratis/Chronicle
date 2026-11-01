@@ -12,6 +12,7 @@ using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.Properties;
+using Cratis.Chronicle.Storage.Diagnostics;
 using Cratis.Chronicle.Storage.MongoDB.Generations.Fencing;
 using Cratis.Chronicle.Storage.ReadModels;
 using Cratis.Chronicle.Storage.Sinks;
@@ -40,6 +41,7 @@ namespace Cratis.Chronicle.Storage.MongoDB.Sinks;
 /// <param name="changeStreams"><see cref="IReadModelChangeStreams"/> for observing the collections of the read model.</param>
 /// <param name="logger"><see cref="ILogger{TCategoryName}"/> for logging.</param>
 /// <param name="writes"><see cref="ISinkWrites"/> executing the data writes, fenced or not.</param>
+/// <param name="authorizationDiagnostics">The storage authorization diagnostics.</param>
 public partial class Sink(
     ReadModelDefinition readModel,
     IMongoDBConverter converter,
@@ -48,8 +50,33 @@ public partial class Sink(
     IExpandoObjectConverter expandoObjectConverter,
     IReadModelChangeStreams changeStreams,
     ILogger<Sink> logger,
-    ISinkWrites writes) : ISink, ISinkCompositeKeyLookup, ISinkPagePrefetch, IDisposable
+    ISinkWrites writes,
+    IStorageAuthorizationDiagnostics authorizationDiagnostics) : ISink, ISinkCompositeKeyLookup, ISinkPagePrefetch, IDisposable
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Sink"/> class with local authorization diagnostics.
+    /// </summary>
+    /// <param name="readModel">The <see cref="ReadModelDefinition"/> the sink is for.</param>
+    /// <param name="converter"><see cref="IMongoDBConverter"/> for dealing with conversion.</param>
+    /// <param name="collections">Provider for <see cref="ISinkCollections"/> to use.</param>
+    /// <param name="changesetConverter">Provider for <see cref="IChangesetConverter"/> for converting changesets.</param>
+    /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting documents.</param>
+    /// <param name="changeStreams"><see cref="IReadModelChangeStreams"/> for observing collections.</param>
+    /// <param name="logger"><see cref="ILogger{TCategoryName}"/> for logging.</param>
+    /// <param name="writes"><see cref="ISinkWrites"/> executing the data writes.</param>
+    public Sink(
+        ReadModelDefinition readModel,
+        IMongoDBConverter converter,
+        ISinkCollections collections,
+        IChangesetConverter changesetConverter,
+        IExpandoObjectConverter expandoObjectConverter,
+        IReadModelChangeStreams changeStreams,
+        ILogger<Sink> logger,
+        ISinkWrites writes)
+        : this(readModel, converter, collections, changesetConverter, expandoObjectConverter, changeStreams, logger, writes, new StorageAuthorizationDiagnostics(NullLogger<StorageAuthorizationDiagnostics>.Instance))
+    {
+    }
+
     /// <summary>
     /// Initializes a new instance of the <see cref="Sink"/> class writing without a fence.
     /// </summary>
@@ -1157,32 +1184,43 @@ public partial class Sink(
     public async Task EnsureIndexes()
     {
         var collection = Collection;
-        using var cursor = await collection.Indexes.ListAsync();
-        var existingIndexes = await cursor.ToListAsync();
-        var collation = new Lazy<Task<BsonValue>>(() => GetCollectionCollation(collection));
-
-        var initializedIndex = new IndexDefinition(WellKnownProperties.ReadModelInstanceInitialized);
-        var indexes = readModel.Indexes.Any(index => index.Signature == initializedIndex.Signature)
-            ? readModel.Indexes
-            : readModel.Indexes.Append(initializedIndex);
-        foreach (var indexDefinition in indexes)
+        try
         {
-            ReadModelIndexKeys.Validate(indexDefinition, readModel.GetSchemaForLatestGeneration());
-            var indexName = ReadModelIndexKeys.Name(indexDefinition);
-            var keys = ReadModelIndexKeys.For(indexDefinition);
+            using var cursor = await collection.Indexes.ListAsync();
+            var existingIndexes = await cursor.ToListAsync();
+            var collation = new Lazy<Task<BsonValue>>(() => GetCollectionCollation(collection));
 
-            var candidates = existingIndexes.FindAll(index => HasMatchingKeyAndOptions(index, keys));
-            if (await IsIndexPresent(candidates, indexName, collation))
+            var initializedIndex = new IndexDefinition(WellKnownProperties.ReadModelInstanceInitialized);
+            var indexes = readModel.Indexes.Any(index => index.Signature == initializedIndex.Signature)
+                ? readModel.Indexes
+                : readModel.Indexes.Append(initializedIndex);
+            foreach (var indexDefinition in indexes)
             {
-                continue;
+                ReadModelIndexKeys.Validate(indexDefinition, readModel.GetSchemaForLatestGeneration());
+                var indexName = ReadModelIndexKeys.Name(indexDefinition);
+                var keys = ReadModelIndexKeys.For(indexDefinition);
+
+                var candidates = existingIndexes.FindAll(index => HasMatchingKeyAndOptions(index, keys));
+                if (await IsIndexPresent(candidates, indexName, collation))
+                {
+                    continue;
+                }
+
+                var indexModel = new CreateIndexModel<BsonDocument>(
+                    keys,
+                    new CreateIndexOptions { Name = indexName, Background = true });
+
+                await collection.Indexes.CreateOneAsync(indexModel);
             }
-
-            var indexModel = new CreateIndexModel<BsonDocument>(
-                keys,
-                new CreateIndexOptions { Name = indexName, Background = true });
-
-            await collection.Indexes.CreateOneAsync(indexModel);
         }
+        catch (Exception exception) when (MongoDBAuthorizationErrors.IsUnauthorized(exception, out var operation))
+        {
+            var ns = collection.CollectionNamespace;
+            authorizationDiagnostics.Record(new(ns.DatabaseNamespace.DatabaseName, ns.CollectionName, operation ?? nameof(EnsureIndexes)));
+            throw;
+        }
+
+        authorizationDiagnostics.Clear(collection.CollectionNamespace.DatabaseNamespace.DatabaseName, collection.CollectionNamespace.CollectionName);
     }
 
     static async Task<bool> IsIndexPresent(List<BsonDocument> candidates, string indexName, Lazy<Task<BsonValue>> collation)

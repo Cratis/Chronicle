@@ -71,6 +71,12 @@ shutdown. It is not registered for `MongoDB` clustering, `InMemory` storage or a
 A node still waiting for acquisition has not completed silo startup and is not ready. The lease does not
 bind an early health listener or advertise a ready standby. See [Clustering](clustering.md#single-writer-lease).
 
+## Storage authorization
+
+The `storage-authorization` check (tagged `ready`) reports `Degraded` while a storage permission failure is recorded. HTTP stays **200**, keeping the kernel in rotation. The log entry names the database, collection, and refused operation without exposing connection details.
+
+The failure clears after the next successful access completes index setup for that collection. If database names differ from those granted to the storage user, check [the database-name prefix](storage.mdx).
+
 ## Restricting the dedicated port to health only
 
 The dedicated port is an additional listener on the same application rather than a separate, health-only server. By default the other HTTP/1.1 endpoints (Workbench, REST API, OAuth) are therefore reachable on it too, so the default posture is to treat it as an internal, cluster-local probe port and not expose it publicly, especially with TLS disabled.
