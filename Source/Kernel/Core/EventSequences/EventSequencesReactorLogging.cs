@@ -18,4 +18,7 @@ internal static partial class EventSequencesReactorLogging
 
     [LoggerMessage(LogLevel.Information, "Revising event @ {SequenceNumber} in event sequence '{EventSequenceId}' with event type '{EventType}' for event store '{EventStore}' on namespace '{Namespace}'")]
     internal static partial void Revising(this ILogger<EventSequencesReactor> logger, EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId, EventSequenceNumber sequenceNumber, EventType eventType);
+
+    [LoggerMessage(LogLevel.Warning, "Skipping request in event sequence '{EventSequenceId}' for event store '{EventStore}' on namespace '{Namespace}' because its target is reserved for the kernel")]
+    internal static partial void SkippingSystemEventStoreRequest(this ILogger<EventSequencesReactor> logger, EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId);
 }

@@ -6,6 +6,7 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Identities;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Observation.Webhooks.Validation;
 using Cratis.Chronicle.Security;
 using Cratis.Chronicle.Storage;
@@ -27,6 +28,9 @@ public class a_webhook_registrar : Specification
     void Establish()
     {
         _grainFactory = Substitute.For<IGrainFactory>();
+        var namespaces = Substitute.For<INamespaces>();
+        namespaces.GetAll().Returns([]);
+        _grainFactory.GetGrain<INamespaces>(Arg.Any<string>()).Returns(namespaces);
         _storage = Substitute.For<IStorage>();
         _webhookDefinitionComparer = Substitute.For<IWebhookDefinitionComparer>();
         _encryption = Substitute.For<IEncryption>();

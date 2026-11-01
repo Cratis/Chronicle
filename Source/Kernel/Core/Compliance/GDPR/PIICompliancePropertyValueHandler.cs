@@ -110,7 +110,14 @@ public class PIICompliancePropertyValueHandler(
     }
 
     /// <inheritdoc/>
-    public async Task<JsonNode> Release(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, string identifier, JsonNode value)
+    public Task<(JsonNode Value, bool IsErased)> ReleaseReportingErasure(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, string identifier, JsonNode value) =>
+        ReleaseValue(value, () => encryptionKeyStore.TryGetFor(eventStore, eventStoreNamespace, identifier), async () => await encryptionKeyStore.GetErasureFor(eventStore, eventStoreNamespace, identifier) is not null);
+
+    /// <inheritdoc/>
+    public async Task<JsonNode> Release(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, string identifier, JsonNode value) =>
+        (await ReleaseValue(value, () => encryptionKeyStore.TryGetFor(eventStore, eventStoreNamespace, identifier), () => Task.FromResult(false))).Value;
+
+    async Task<(JsonNode Value, bool IsErased)> ReleaseValue(JsonNode value, Func<Task<EncryptionKey?>> getKey, Func<Task<bool>> onMissingKey)
     {
         // Only a value this encryption produced can be released. One that carries none of its shape was never
         // encrypted under this subject — it is resolved in memory at the query edge for display, or it predates
@@ -126,19 +133,20 @@ public class PIICompliancePropertyValueHandler(
         // here, still falls through to the key lookup, and still blanks.
         if (!ProtectedValueCodec.TryDecodeCipherText(encryption, value.ToString(), out var encrypted))
         {
-            return value;
+            return (value, false);
         }
 
-        var key = await encryptionKeyStore.TryGetFor(eventStore, eventStoreNamespace, identifier);
+        var key = await getKey();
 
         // When the encryption key has been deleted (GDPR right-to-erasure / crypto-shredding),
         // the PII is permanently unreadable. Surface it as empty rather than throwing so that
         // queries and read models for an erased subject keep working instead of crashing.
         if (key is null)
         {
-            return JsonValue.Create(string.Empty);
+            var isErased = await onMissingKey();
+            return (JsonValue.Create(string.Empty), isErased);
         }
 
-        return ProtectedValueCodec.Decrypt(encryption, key, encrypted);
+        return (ProtectedValueCodec.Decrypt(encryption, key, encrypted), false);
     }
 }

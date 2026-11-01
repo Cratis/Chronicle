@@ -14,5 +14,6 @@ These are recipes: "I need to do X — how?" Each is short and assumes you've be
 | [Test a slice](./test-a-slice) | You want to verify event appends and derived read model state in-process |
 | [Evolve an event's shape](./evolve-an-event) | An event type needs to change without rewriting history |
 | [Close the books](./close-the-books) | A period or version is finished and further events must go to the next one |
+| [Recover a failed partition](../operations/recover-a-failed-partition) | An observer stopped on a failing partition and you need to choose between retry, replay and clearing quarantine |
 
 Missing a recipe you expected? The [feature guides](../events/) and [Troubleshooting](../troubleshooting/) cover the long tail.

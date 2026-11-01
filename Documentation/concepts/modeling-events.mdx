@@ -25,6 +25,13 @@ This is the rule that trips up newcomers most, and it's the most important. An e
 
 <ChronicleClientTabs snippet="concepts/modeling-events/no-nullable" />
 
+For existing schemas that allow nullable properties, explicit `null` and absence are equivalent
+and read back as `null`; missing non-nullable values use the type default where the schema permits it.
+A present nullable value such as `decimal?` holding `0` stays a value. Do not use JSON property
+presence to model a separate fact, and use schema-aware `ContentComparison` / `VerifyContent`
+rather than raw JSON equality to compare appended and stored content. See
+[Schema representation](../events/schema-representation.mdx#null-absent-and-default-values).
+
 ## Capture the decision, not the field write
 
 The temptation coming from CRUD is to mirror table columns: a `Customer` changed, so emit `CustomerUpdated`. But the value of event sourcing is in the *meaning*. `AddressChanged` tells you a customer moved; a generic update tells you nothing. Model the business decision or transition, and the audit trail, analytics, and reactions have something precise to work from.

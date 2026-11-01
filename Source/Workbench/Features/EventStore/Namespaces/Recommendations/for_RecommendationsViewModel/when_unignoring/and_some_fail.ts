@@ -12,9 +12,12 @@ describe('when unignoring and some fail', given(a_view_model_with_ignored_recomm
     });
     afterAll(() => sinon.restore());
 
-    it('should still attempt every recommendation', () => context.viewModel.commands.length.should.equal(2));
-    it('should throw an aggregate error', () => context.error!.message.should.contain('Failed to unignore 1 of 2 recommendation(s)'));
-    it('should name the failed recommendation', () => context.error!.message.should.contain(`${context.firstRecommendationId.toString()}: boom`));
-    it('should not name the succeeded recommendation', () => context.error!.message.should.not.contain(context.secondRecommendationId.toString()));
-    it('should clear the selection', () => context.viewModel.selectedRecommendationIds.length.should.equal(0));
+    it('should still attempt every recommendation', () => context.commands.length.should.equal(2));
+    it('should report a partial result', () => {
+        context.outcome.total.should.equal(2);
+        context.outcome.failed.should.equal(1);
+    });
+    it('should name the failed recommendation', () => context.outcome.failures[0].should.contain(`${context.firstRecommendationId.toString()}: boom`));
+    it('should not name the succeeded recommendation', () => context.outcome.failures.join().should.not.contain(context.secondRecommendationId.toString()));
+    it('should retain the failed selection', () => context.viewModel.selectedRecommendations.map(item => item.id).should.deep.equal([context.firstRecommendationId]));
 }));

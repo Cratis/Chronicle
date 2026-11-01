@@ -18,6 +18,9 @@ internal static partial class ImmediateProjectionsLogMessages
     [LoggerMessage(LogLevel.Trace, "Projection definition has not been set yet; resolving as no read model.")]
     internal static partial void NoDefinitionSetYet(this ILogger<ImmediateProjection> logger);
 
+    [LoggerMessage(LogLevel.Debug, "Silo is shutting down; skipping definition change unsubscribe.")]
+    internal static partial void SkippingDefinitionUnsubscribeDuringShutdown(this ILogger<ImmediateProjection> logger);
+
     [LoggerMessage(LogLevel.Error, "Failed getting model instance for projection.")]
     internal static partial void FailedGettingModelInstance(this ILogger<ImmediateProjection> logger, Exception exception);
 }

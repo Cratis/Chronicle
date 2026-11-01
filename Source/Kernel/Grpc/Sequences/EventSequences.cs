@@ -168,6 +168,16 @@ internal sealed class EventSequences(
             exception => logger.QueryFailed(exception, "EventSequences", "FromSequenceNumber"));
 
     /// <inheritdoc/>
+    public Task<global::Cratis.Chronicle.Contracts.Queries.QueryResult<IEnumerable<global::Cratis.Chronicle.Contracts.Sequences.AppendedEventResponse>>> FromSequenceNumberWithErasedProperties(global::Cratis.Chronicle.Contracts.Sequences.FromSequenceNumberWithErasedPropertiesRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
+        QueryExecutor.Execute<IEnumerable<global::Cratis.Chronicle.Contracts.Sequences.AppendedEventResponse>>(
+            async () =>
+            {
+                var result = await global::Cratis.Chronicle.Sequences.AppendedEvent.FromSequenceNumberWithErasedProperties(storage, eventCompliance, jsonSerializerOptions, (global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, (global::Cratis.Chronicle.Concepts.EventSequences.EventSequenceId)request.EventSequenceId, request.FromEventSequenceNumber, (request.EventSourceId is null ? null : (global::Cratis.Chronicle.Concepts.Events.EventSourceId)request.EventSourceId), request.EventTypeIds);
+                return result.Select(ToAppendedEventResponse).ToList();
+            },
+            exception => logger.QueryFailed(exception, "EventSequences", "FromSequenceNumberWithErasedProperties"));
+
+    /// <inheritdoc/>
     public Task<global::Cratis.Chronicle.Contracts.Queries.QueryResult<IEnumerable<global::Cratis.Chronicle.Contracts.Sequences.AppendedEventResponse>>> QueryEvents(global::Cratis.Chronicle.Contracts.Sequences.QueryEventsRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         QueryExecutor.Execute<IEnumerable<global::Cratis.Chronicle.Contracts.Sequences.AppendedEventResponse>>(
             async () =>
@@ -218,11 +228,21 @@ internal sealed class EventSequences(
             exception => logger.QueryFailed(exception, "EventSequences", "AllEventSequences"));
 
     /// <inheritdoc/>
+    public Task<global::Cratis.Chronicle.Contracts.Queries.QueryResult<global::Cratis.Chronicle.Contracts.Sequences.EventSequencePageResponse>> Page(global::Cratis.Chronicle.Contracts.Sequences.PageRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
+        QueryExecutor.Execute<global::Cratis.Chronicle.Contracts.Sequences.EventSequencePageResponse>(
+            async () =>
+            {
+                var result = await global::Cratis.Chronicle.Sequences.EventSequencePage.Page(storage, eventCompliance, jsonSerializerOptions, (global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, (global::Cratis.Chronicle.Concepts.EventSequences.EventSequenceId)request.EventSequenceId, request.From, request.Count, request.Backward, request.Until, request.EventSourceId, request.EventSourceType, request.EventStreamType, request.EventStreamId, request.EventTypeIds, request.Tags);
+                return ToEventSequencePageResponse(result);
+            },
+            exception => logger.QueryFailed(exception, "EventSequences", "Page"));
+
+    /// <inheritdoc/>
     public Task<global::Cratis.Chronicle.Contracts.Queries.QueryResult<global::Cratis.Chronicle.Contracts.Sequences.EventSequenceTailResponse>> TailSequenceNumber(global::Cratis.Chronicle.Contracts.Sequences.TailSequenceNumberRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         QueryExecutor.Execute<global::Cratis.Chronicle.Contracts.Sequences.EventSequenceTailResponse>(
             async () =>
             {
-                var result = await global::Cratis.Chronicle.Sequences.EventSequenceTail.TailSequenceNumber(storage, (global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, (global::Cratis.Chronicle.Concepts.EventSequences.EventSequenceId)request.EventSequenceId, request.EventTypeIds, request.EventSourceId, request.EventSourceType, request.EventStreamId, request.EventStreamType);
+                var result = await global::Cratis.Chronicle.Sequences.EventSequenceTail.TailSequenceNumber(storage, (global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, (global::Cratis.Chronicle.Concepts.EventSequences.EventSequenceId)request.EventSequenceId, request.EventTypeIds, request.EventSourceId, request.EventSourceType, request.EventStreamId, request.EventStreamType, request.IncludeMutationEpoch);
                 return ToEventSequenceTailResponse(result);
             },
             exception => logger.QueryFailed(exception, "EventSequences", "TailSequenceNumber"));
@@ -395,7 +415,8 @@ internal sealed class EventSequences(
             OriginalContent = source.OriginalContent,
             Revisions = source.Revisions.Select(element0 => element0.ToContract()).ToList(),
             GenerationalContent = source.GenerationalContent,
-            RevisedGeneration = source.RevisedGeneration
+            RevisedGeneration = source.RevisedGeneration,
+            ErasedProperties = source.ErasedProperties
         };
 
     static global::Cratis.Chronicle.Contracts.Sequences.ClosedStreamResponse ToClosedStreamResponse(global::Cratis.Chronicle.Sequences.ClosedStream source) =>
@@ -437,10 +458,18 @@ internal sealed class EventSequences(
             Name = source.Name
         };
 
+    static global::Cratis.Chronicle.Contracts.Sequences.EventSequencePageResponse ToEventSequencePageResponse(global::Cratis.Chronicle.Sequences.EventSequencePage source) =>
+        new()
+        {
+            Events = source.Events.Select(ToAppendedEventResponse).ToList(),
+            Next = source.Next
+        };
+
     static global::Cratis.Chronicle.Contracts.Sequences.EventSequenceTailResponse ToEventSequenceTailResponse(global::Cratis.Chronicle.Sequences.EventSequenceTail source) =>
         new()
         {
-            SequenceNumber = (ulong)source.SequenceNumber
+            SequenceNumber = (ulong)source.SequenceNumber,
+            MutationEpoch = source.MutationEpoch
         };
 
     static global::Cratis.Chronicle.Contracts.Sequences.EventSourceEventsResponse ToEventSourceEventsResponse(global::Cratis.Chronicle.Sequences.EventSourceEvents source) =>

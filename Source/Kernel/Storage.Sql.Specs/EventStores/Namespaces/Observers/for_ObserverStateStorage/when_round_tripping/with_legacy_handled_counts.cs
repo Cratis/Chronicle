@@ -13,7 +13,7 @@ public class with_legacy_handled_counts : given.an_observer_state_storage
 
     async Task Because()
     {
-        await _storage.Save(new() { Identifier = "observer" });
+        await _storage.Save(new() { Identifier = "observer" }, Concepts.EventSequences.EventSequenceId.Log);
         await using var context = CreateContext();
         await context.Database.ExecuteSqlRawAsync("UPDATE Observers SET HandledEventCountPerEventType = NULL, HandledEventCount = 0 WHERE Id = 'observer'");
         _saved = await _storage.Get("observer");

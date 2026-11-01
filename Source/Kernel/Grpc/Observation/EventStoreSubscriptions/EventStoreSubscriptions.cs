@@ -10,6 +10,7 @@ using Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Observation.EventStoreSubscriptions;
 using Cratis.Chronicle.Storage;
+using Grpc.Core;
 using Microsoft.Extensions.Options;
 using ProtoBuf.Grpc;
 using ConceptsEventStoreSubscriptionDefinition = Cratis.Chronicle.Concepts.Observation.EventStoreSubscriptions.EventStoreSubscriptionDefinition;
@@ -32,6 +33,12 @@ internal sealed class EventStoreSubscriptions(
     /// <inheritdoc/>
     public async Task Add(AddEventStoreSubscriptions request, CallContext context = default)
     {
+        EnsureNotReserved(request.TargetEventStore);
+        foreach (var subscription in request.Subscriptions)
+        {
+            EnsureNotReserved(subscription.SourceEventStore);
+        }
+
         // Validate every pinned registration before reserving or appending any definition in this request.
         foreach (var subscription in request.Subscriptions.Where(_ => _.GenerationDelivery == Contracts.Observation.EventGenerationDelivery.Pinned))
         {
@@ -103,6 +110,7 @@ internal sealed class EventStoreSubscriptions(
     /// </remarks>
     public async Task Remove(RemoveEventStoreSubscriptions request, CallContext context = default)
     {
+        EnsureNotReserved(request.TargetEventStore);
         var eventSequence = grainFactory.GetSystemEventSequence(request.TargetEventStore);
         await Task.WhenAll(request.SubscriptionIds.Select(subscriptionId => eventSequence.Append(subscriptionId, new EventStoreSubscriptionRemoved())));
     }
@@ -118,6 +126,15 @@ internal sealed class EventStoreSubscriptions(
             EventTypes = definition.EventTypes.Select(et => new Contracts.Events.EventType { Id = et.Id, Generation = et.Generation }).ToList(),
             GenerationDelivery = (Contracts.Observation.EventGenerationDelivery)definition.GenerationDelivery
         });
+    }
+
+    static void EnsureNotReserved(string eventStore)
+    {
+        if (string.Equals(eventStore, EventStoreName.System.Value, StringComparison.OrdinalIgnoreCase)
+            || eventStore.AsSpan().IndexOf(KeyHelper.Separator) >= 0)
+        {
+            throw new RpcException(new Status(StatusCode.InvalidArgument, "The event store is reserved for the kernel."));
+        }
     }
 
     static bool HasSameDefinition(ConceptsEventStoreSubscriptionDefinition existing, ConceptsEventStoreSubscriptionDefinition incoming)

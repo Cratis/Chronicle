@@ -2,52 +2,30 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import sinon from 'sinon';
-import { Guid } from '@cratis/fundamentals';
+import { CommandResult } from '@cratis/arc/commands';
 import { UnignoreRecommendation } from 'Features/Recommendations';
-import { RecommendationsViewModel } from '../../../RecommendationViewModel';
+import { a_view_model } from '../../when_managing_selection/given/a_view_model';
 
-class TestableRecommendationsViewModel extends RecommendationsViewModel {
+export class a_view_model_with_ignored_recommendations extends a_view_model {
     commands: UnignoreRecommendation[] = [];
-
-    protected createUnignoreRecommendation(): UnignoreRecommendation {
-        const command = new UnignoreRecommendation();
-        this.commands.push(command);
-        return command;
-    }
-}
-
-export class a_view_model_with_ignored_recommendations {
-    firstRecommendationId = Guid.parse('11111111-1111-1111-1111-111111111111');
-    secondRecommendationId = Guid.parse('22222222-2222-2222-2222-222222222222');
-    viewModel = new TestableRecommendationsViewModel({ eventStore: 'some-event-store', namespace: 'some-namespace' });
-    error: Error | undefined;
+    outcome!: { total: number; failed: number; failures: string[] };
 
     constructor() {
+        super();
         this.viewModel.showIgnored = true;
-        this.viewModel.selectAllRecommendations([this.firstRecommendationId, this.secondRecommendationId]);
+        this.viewModel.selectedRecommendations = this.recommendations;
     }
 
-    // The command at the given position in the call order fails with the message when failing is set.
     answerWith(failure: { index: number; message: string } | undefined) {
-        let call = 0;
-        sinon.stub(UnignoreRecommendation.prototype, 'execute').callsFake(() => {
-            const index = call++;
-            const failed = failure?.index === index;
-            return Promise.resolve({
-                validationResults: [],
-                exceptionMessages: failed ? [failure.message] : [],
-                onFailed: (callback: () => void) => {
-                    if (failed) callback();
-                }
-            } as never);
+        const commands = this.commands;
+        sinon.stub(UnignoreRecommendation.prototype, 'execute').callsFake(function (this: UnignoreRecommendation) {
+            const index = commands.length;
+            commands.push(this);
+            return Promise.resolve(failure?.index === index ? CommandResult.failed([failure.message]) : CommandResult.empty);
         });
     }
 
     async unignore() {
-        try {
-            await this.viewModel.unignoreRecommendations([this.firstRecommendationId, this.secondRecommendationId]);
-        } catch (error) {
-            this.error = error as Error;
-        }
+        this.outcome = await this.viewModel.unignoreRecommendations([this.firstRecommendationId, this.secondRecommendationId]);
     }
 }

@@ -177,4 +177,10 @@ public interface IServices
     /// </summary>
     /// <exception cref="NotSupportedException">This container predates occurrence support.</exception>
     Occurrences.IOccurrences Occurrences => throw new NotSupportedException("Occurrences are not supported by this service container.");
+
+    /// <summary>
+    /// Gets the administrator management service when supported by this service container.
+    /// </summary>
+    /// <exception cref="NotSupportedException">This container predates administrator management.</exception>
+    Security.IAdministrators Administrators => throw new NotSupportedException("Administrators are not supported by this service container.");
 }

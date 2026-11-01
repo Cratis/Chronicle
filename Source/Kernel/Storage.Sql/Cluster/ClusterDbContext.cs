@@ -30,6 +30,11 @@ public class ClusterDbContext(DbContextOptions<ClusterDbContext> options) : Base
     public DbSet<UserEntity> Users { get; set; }
 
     /// <summary>
+    /// Gets or sets the separately persisted administrator privileges.
+    /// </summary>
+    public DbSet<AdministratorEntity> Administrators { get; set; }
+
+    /// <summary>
     /// Gets or sets the DbSet for OAuth applications.
     /// </summary>
     public DbSet<ApplicationEntity> Applications { get; set; }

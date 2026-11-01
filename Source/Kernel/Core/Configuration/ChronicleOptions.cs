@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.ComponentModel.DataAnnotations;
+using Cratis.Chronicle.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -49,7 +50,7 @@ public class ChronicleOptions : IValidatableObject
     /// Gets the dedicated port to expose the health endpoint on, or <see langword="null"/> when it is served on the main <see cref="Port"/>.
     /// </summary>
     /// <remarks>
-    /// Resolves to <see cref="Configuration.Health.Port"/> only when it is set and differs from the main
+    /// Resolves to <see cref="Health.Port"/> only when it is set and differs from the main
     /// <see cref="Port"/>. A value equal to the main port would collide with the main listener, so it falls
     /// back to serving the health endpoint on the main port.
     /// </remarks>
@@ -106,9 +107,28 @@ public class ChronicleOptions : IValidatableObject
     public Compliance Compliance { get; init; } = new Compliance();
 
     /// <summary>
+    /// Gets the telemetry configuration.
+    /// </summary>
+    public Telemetry Telemetry { get; init; } = new();
+
+    /// <summary>
     /// Gets the observers configuration.
     /// </summary>
     public Observers Observers { get; init; } = new Observers();
+
+    /// <summary>
+    /// Gets the retry overrides for individual observers, keyed by the full observer key.
+    /// </summary>
+    /// <remarks>
+    /// The key is an exact, case-sensitive match on <c language="csharp">ObserverId#EventStore#Namespace#EventSequenceId</c>.
+    /// Settings an entry leaves out inherit the global <see cref="Observers"/> values. Webhooks use <see cref="Webhooks"/> retry settings and ignore these overrides.
+    /// </remarks>
+    public IDictionary<string, ObserverRetryOverride> ObserverRetryOverrides { get; init; } = new Dictionary<string, ObserverRetryOverride>(StringComparer.Ordinal);
+
+    /// <summary>
+    /// Gets the constraint-index repair configuration: retries, time budgets, cadence and memory caps.
+    /// </summary>
+    public ConstraintIndexRepairOptions ConstraintIndexRepair { get; init; } = new();
 
     /// <summary>
     /// Gets the durable occurrence delivery configuration.
@@ -134,6 +154,11 @@ public class ChronicleOptions : IValidatableObject
     /// Gets the webhooks configuration.
     /// </summary>
     public Webhooks Webhooks { get; init; } = new Webhooks();
+
+    /// <summary>
+    /// Gets the HTTP capture source destination validation configuration.
+    /// </summary>
+    public ExternalServices ExternalServices { get; init; } = new();
 
     /// <summary>
     /// Gets the clustering configuration.
@@ -221,6 +246,14 @@ public class ChronicleOptions : IValidatableObject
     /// <inheritdoc/>
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
+        if (Telemetry.EventSourceIdTracing == EventSourceIdTracing.Hashed &&
+            (string.IsNullOrEmpty(Telemetry.EventSourceIdHashKey) || Telemetry.EventSourceIdHashKey.Length < IdentifierHasher.MinimumKeyLength))
+        {
+            yield return new ValidationResult(
+                "Telemetry:EventSourceIdHashKey must be at least 32 characters when Hashed is used",
+                [$"{nameof(Telemetry)}.{nameof(Telemetry.EventSourceIdHashKey)}"]);
+        }
+
         if (ReadModels.MaxBatchSize <= 0)
         {
             yield return new ValidationResult(
@@ -234,6 +267,8 @@ public class ChronicleOptions : IValidatableObject
                 $"Alerts.Conditions['{_.Key}'].RaiseAfter must be non-negative; zero raises immediately.",
                 [$"{nameof(Alerts)}.{nameof(Alerts.Conditions)}[{_.Key}].{nameof(AlertConditionOptions.RaiseAfter)}"]));
         foreach (var error in ValidateSingleWriterLease().Concat(alertErrors)) yield return error;
+        foreach (var error in ObserverRetryOverrides.SelectMany(_ => _.Value.Validate(_.Key))) yield return error;
+        foreach (var error in ConstraintIndexRepair.Validate()) yield return error;
         if (!Webhooks.Probe.HasValidTiming)
         {
             yield return new ValidationResult("Invalid webhook probe timing settings.", [$"{nameof(Webhooks)}.{nameof(Configuration.Webhooks.Probe)}"]);

@@ -19,7 +19,7 @@ public class when_reading_missing_state : given.the_provider
     [Fact] void should_preserve_the_missing_record_identifier() => _state.State.Identifier.ShouldEqual(ObserverId.Unspecified);
     [Fact] void should_load_default_running_state() => _state.State.RunningState.ShouldEqual(ObserverRunningState.Unknown);
     [Fact] async Task should_check_the_store_initialization_marker() => await eventStoreStorage.Received(1).AreObserversInitialized();
-    [Fact] async Task should_not_write_observer_state() => await observerStateStorage.DidNotReceive().Save(Arg.Any<ObserverState>());
+    [Fact] async Task should_not_write_observer_state() => await observerStateStorage.DidNotReceive().Save(Arg.Any<ObserverState>(), Arg.Any<Concepts.EventSequences.EventSequenceId>());
     [Fact] void should_leave_initialization_absent() => _state.State.Initialization.ShouldBeNull();
     [Fact] void should_leave_control_absent() => _state.State.TypeSetControl.ShouldBeNull();
 }

@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts;
-using Cratis.Chronicle.Concepts.Events;
 using Cratis.Metrics;
 
 namespace Cratis.Chronicle.EventSequences;
@@ -13,17 +12,33 @@ namespace Cratis.Chronicle.EventSequences;
 
 internal static partial class EventSequenceMetrics
 {
+    /// <summary>
+    /// Records the number of constraints held as rebuilding and refusing governed appends.
+    /// </summary>
+    /// <param name="scope">The scope.</param>
+    /// <param name="count">The number of held constraints.</param>
+    [Gauge<long>("chronicle-event-sequences-constraint-indexes-rebuilding", "Constraints whose index is held as rebuilding and refuses governed appends")]
+    internal static partial void ConstraintIndexesRebuilding(this IMeterScope<EventSequence> scope, long count);
+
+    /// <summary>
+    /// Records a rebuild ending with its handoff reason.
+    /// </summary>
+    /// <param name="scope">The scope.</param>
+    /// <param name="reason">The handoff reason.</param>
+    [Counter<int>("chronicle-event-sequences-constraint-index-rebuild-ends", "Ended constraint index rebuilds by handoff reason")]
+    internal static partial void ConstraintIndexRebuildEnded(this IMeterScope<EventSequence> scope, string reason);
+
     [Counter<int>("chronicle-event-sequences-appended-events", "Number of events appended to the event sequence")]
-    internal static partial void AppendedEvent(this IMeterScope<EventSequence> scope, EventSourceId eventSourceId, string eventName);
+    internal static partial void AppendedEvent(this IMeterScope<EventSequence> scope, string eventName);
 
     [Counter<int>("chronicle-event-sequences-duplicate-event-sequence-numbers", "Number of duplicate event sequence numbers")]
-    internal static partial void DuplicateEventSequenceNumber(this IMeterScope<EventSequence> scope, EventSourceId eventSourceId, string eventName);
+    internal static partial void DuplicateEventSequenceNumber(this IMeterScope<EventSequence> scope, string eventName);
 
     [Counter<int>("chronicle-event-sequences-failed-appended-events", "Number of events that failed to be appended to the event sequence")]
-    internal static partial void FailedAppending(this IMeterScope<EventSequence> scope, EventSourceId eventSourceId, string eventName);
+    internal static partial void FailedAppending(this IMeterScope<EventSequence> scope, string eventName);
 
     [Counter<int>("chronicle-event-sequences-constraint-violations", "Number of constraint violations")]
-    internal static partial void ConstraintViolation(this IMeterScope<EventSequence> scope, EventSourceId eventSourceId, string eventName);
+    internal static partial void ConstraintViolation(this IMeterScope<EventSequence> scope, string eventName);
 
     [Counter<int>("chronicle-event-sequences-constraint-index-update-failures", "Number of failed constraint index attempts")]
     internal static partial void ConstraintIndexUpdateFailed(this IMeterScope<EventSequence> scope);

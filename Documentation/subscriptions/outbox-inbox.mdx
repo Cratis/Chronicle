@@ -47,6 +47,8 @@ Source event store               Target event store
 
 The `EventStoreSubscriptionObserverSubscriber` grain on the Kernel side observes the source outbox and appends forwarded events to the corresponding target inbox.
 
+A fresh subscription forwards matching retained outbox history from sequence number zero. Reconnecting the same subscription identity can instead resume from its saved forwarding progress. Replaying that source forwarding observer can append events to the inbox again; replaying a consumer inbox observer reprocesses rows already there. See [Subscription recovery](recovery) before choosing an operation.
+
 ## Reactors, Projections, and Reducers on the Inbox
 
 Client-side observers (reactors, projections, reducers) can target `EventSequenceId.Inbox` to process all events arriving from subscribed sources. The client SDK automatically routes inbox-targeted observers to the correct per-source inbox sequence.
@@ -54,6 +56,8 @@ Client-side observers (reactors, projections, reducers) can target `EventSequenc
 <ChronicleClientTabs snippet="subscriptions/outbox-inbox/inbox-reactor" />
 
 ## See Also
+
+- [Subscription recovery](recovery)
 
 - [Implicit Event Store Subscriptions](implicit-subscriptions)
 - [Explicit Event Store Subscriptions](explicit-subscriptions)

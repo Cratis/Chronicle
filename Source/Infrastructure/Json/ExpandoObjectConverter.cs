@@ -22,6 +22,21 @@ namespace Cratis.Chronicle.Json;
 /// <param name="typeFormats"><see cref="ITypeFormats"/> for mapping type formats in a schema.</param>
 public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectConverter
 {
+    readonly JsonSerializerOptions? _jsonSerializerOptions;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ExpandoObjectConverter"/> class with provider-specific serializer options.
+    /// </summary>
+    /// <param name="typeFormats"><see cref="ITypeFormats"/> for mapping type formats in a schema.</param>
+    /// <param name="jsonSerializerOptions">The options to use for formatted values.</param>
+    public ExpandoObjectConverter(ITypeFormats typeFormats, JsonSerializerOptions jsonSerializerOptions)
+        : this(typeFormats)
+    {
+        _jsonSerializerOptions = jsonSerializerOptions;
+    }
+
+    JsonSerializerOptions SerializerOptions => _jsonSerializerOptions ?? Globals.JsonSerializerOptions;
+
     /// <inheritdoc/>
     public JsonObject ToJsonObject(ExpandoObject expandoObject, JsonSchema schema)
     {
@@ -122,7 +137,9 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
     }
 
     static bool HasProtectedValueMetadata(JsonSchema schema) =>
-        schema.GetComplianceMetadata().Any() || schema.GetSecurityMetadata().Any();
+        schema.GetComplianceMetadata().Any() || schema.GetSecurityMetadata().Any() ||
+        (schema.Reference is { } reference &&
+            (reference.GetComplianceMetadata().Any() || reference.GetSecurityMetadata().Any()));
 
     JsonNode? ConvertToJsonNode(object? value, JsonSchema schemaProperty)
     {
@@ -173,7 +190,7 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
             // A complex formatted value (e.g. a geospatial type) serializes to a JSON object/array
             // through its registered converter (GeoJSON); a scalar formatted value (guid, date, ...)
             // serializes to a JSON value and goes through the scalar conversion path below.
-            var node = JsonSerializer.SerializeToNode(value, Globals.JsonSerializerOptions);
+            var node = JsonSerializer.SerializeToNode(value, SerializerOptions);
             if (node is JsonObject or JsonArray)
             {
                 return node;
@@ -213,7 +230,7 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
             {
                 return jsonNode.Deserialize(
                     typeFormats.GetTypeForFormat(schemaProperty.Format ?? schemaProperty.ActualTypeSchema.Format!),
-                    Globals.JsonSerializerOptions);
+                    SerializerOptions);
             }
 
             return ToExpandoObject(

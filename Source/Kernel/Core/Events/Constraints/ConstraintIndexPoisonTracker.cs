@@ -35,14 +35,15 @@ internal sealed class ConstraintIndexPoisonTracker(IStorageErrorClassifier class
     /// </summary>
     /// <param name="failures">The first failure per constraint.</param>
     /// <param name="storageSucceeded">Whether another storage call succeeded in this attempt.</param>
-    /// <returns>The event-local failures that have reached five consecutive identical attempts.</returns>
-    internal IReadOnlyDictionary<ConstraintName, ConstraintIndexReplayFailure> Observe(IReadOnlyDictionary<ConstraintName, ConstraintIndexReplayFailure> failures, bool storageSucceeded)
+    /// <param name="threshold">The number of consecutive identical attempts after which a failure is settled as poison.</param>
+    /// <returns>The event-local failures that have reached the threshold of consecutive identical attempts.</returns>
+    internal IReadOnlyDictionary<ConstraintName, ConstraintIndexReplayFailure> Observe(IReadOnlyDictionary<ConstraintName, ConstraintIndexReplayFailure> failures, bool storageSucceeded, int threshold)
     {
         foreach (var name in _runs.Keys.Except(failures.Keys).ToArray()) _runs.Remove(name);
         var poisoned = new Dictionary<ConstraintName, ConstraintIndexReplayFailure>();
         foreach (var (name, failure) in failures)
         {
-            if (RecordFailure(name, failure, storageSucceeded)) poisoned.Add(name, failure);
+            if (RecordFailure(name, failure, storageSucceeded, threshold)) poisoned.Add(name, failure);
         }
         return poisoned;
     }
@@ -67,7 +68,7 @@ internal sealed class ConstraintIndexPoisonTracker(IStorageErrorClassifier class
         .Select(property => $"{error.GetType().FullName}:{property.Name}:{property.Code}")
         .FirstOrDefault();
 
-    bool RecordFailure(ConstraintName name, ConstraintIndexReplayFailure failure, bool storageSucceeded)
+    bool RecordFailure(ConstraintName name, ConstraintIndexReplayFailure failure, bool storageSucceeded, int threshold)
     {
         // Returns true when the failure has now repeated enough to be settled as poison.
         if (!storageSucceeded || failure.Position is not { } position || classifier.IsTransient(failure.Error))
@@ -79,7 +80,7 @@ internal sealed class ConstraintIndexPoisonTracker(IStorageErrorClassifier class
         var identity = FailureIdentity(failure.Error);
         var count = _runs.TryGetValue(name, out var previous) && previous.Position == position && previous.ErrorType == type && previous.Identity == identity ? previous.Count + 1 : 1;
         _runs[name] = new(position, type, identity, count);
-        if (count < 5) return false;
+        if (count < threshold) return false;
         _settled.Add((name, position));
         _runs.Remove(name);
         return true;

@@ -39,7 +39,7 @@ namespace Cratis.Chronicle.Connections;
 /// <summary>
 /// Represents an implementation of <see cref="IChronicleConnection"/>.
 /// </summary>
-public sealed class ChronicleConnection : IChronicleConnection, IChronicleServicesAccessor, IGetServicesAsynchronously, IKernelCapabilities
+public sealed class ChronicleConnection : IChronicleConnection, IChronicleServicesAccessor, IGetServicesAsynchronously, IKernelCapabilities, IConnectionKeepAlive
 {
     readonly ChronicleConnectionString _connectionString;
     readonly int _connectTimeout;
@@ -122,7 +122,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         _timeProvider = timeProvider ?? TimeProvider.System;
         _skipTlsValidation = skipTlsValidation;
         _skipCompatibilityCheck = skipCompatibilityCheck;
-        _skipKeepAlive = skipKeepAlive;
+        _skipKeepAlive = skipKeepAlive || connectionString.SkipKeepAlive;
         _connectionString = connectionString;
         _connectTimeout = connectTimeout;
         _maxReceiveMessageSize = maxReceiveMessageSize;
@@ -132,6 +132,11 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         _cancellationToken = cancellationToken;
         _logger = logger;
         _loggerFactory = loggerFactory;
+        if (ServerCertificateValidationWarning.AppliesTo(skipTlsValidation, connectionString))
+        {
+            _logger.ServerCertificateValidationDisabled(string.Join(", ", connectionString.ServerAddresses));
+        }
+
         _certificatePath = certificatePath;
         _certificatePassword = certificatePassword;
         _tokenProvider = tokenProvider ?? new NoOpTokenProvider();
@@ -169,6 +174,9 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     /// first configured address when no connection has been established yet.
     /// </summary>
     public ChronicleServerAddress CurrentServerAddress => _currentServerAddress ?? _connectionString.ServerAddress;
+
+    /// <inheritdoc/>
+    bool IConnectionKeepAlive.IsSkipped => _skipKeepAlive;
 
     /// <inheritdoc/>
     IServices IChronicleServicesAccessor.Services
@@ -367,6 +375,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
             callInvoker.CreateGrpcService<IConnectionService>(clientFactory),
             callInvoker.CreateGrpcService<IEventSources>(clientFactory))
         {
+            Administrators = callInvoker.CreateGrpcService<Contracts.Security.IAdministrators>(clientFactory),
             Occurrences = callInvoker.CreateGrpcService<Contracts.Occurrences.IOccurrences>(clientFactory)
         };
 
@@ -374,7 +383,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         {
             _logger.Connected();
             _hasEverConnected = true;
-            await Lifecycle.Connected();
+            await ExecutionContextDetached.Start(() => Task.Run(Lifecycle.Connected));
             return;
         }
 
@@ -382,7 +391,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         _watchDog.NotifyKeepAlive();
         _connectTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        _keepAliveSubscription = _connectionService.Connect(
+        await ExecutionContextDetached.Start(() => Task.Run(() => _keepAliveSubscription = _connectionService.Connect(
             new()
             {
                 ConnectionId = Lifecycle.ConnectionId,
@@ -392,14 +401,14 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
                 ProcessPath = ClientProcess.Path,
                 MachineName = ClientProcess.MachineName,
                 ClientType = ChronicleClientIdentity.Type,
-            }).Subscribe(HandleConnection);
+            }).Subscribe(HandleConnection)));
 
         try
         {
             await _connectTcs.Task.WaitAsync(TimeSpan.FromSeconds(_connectTimeout), _timeProvider);
             _logger.Connected();
             _hasEverConnected = true;
-            await Lifecycle.Connected();
+            await ExecutionContextDetached.Start(() => Task.Run(Lifecycle.Connected));
         }
         catch (TimeoutException)
         {
@@ -427,7 +436,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
             // here gives whatever comes out of this attempt a full staleness window from when monitoring actually
             // begins, rather than one that was already partly spent waiting for the attempt itself.
             _watchDog.NotifyKeepAlive();
-            _watchDog.Start();
+            await ExecutionContextDetached.Start(() => Task.Run(_watchDog.Start));
         }
     }
 
@@ -455,7 +464,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
                 ClientType = ChronicleClientIdentity.Type,
                 ClientVersion = ChronicleClientIdentity.Version,
                 ProtocolVersion = ChronicleClientIdentity.ProtocolVersion,
-                DescriptorSet = Contracts.WireContractDescriptorSet.Bytes.ToArray()
+                DescriptorSet = WireContractDescriptorSet.Bytes.ToArray()
             });
         }
         catch (RpcException ex) when (ex.StatusCode == StatusCode.Unimplemented)

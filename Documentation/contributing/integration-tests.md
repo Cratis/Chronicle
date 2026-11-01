@@ -28,6 +28,26 @@ For a labeled event, the image-push guard checks `github.actor`—the account th
 - .NET SDK (version matches `global.json`)
 - Built binaries — run `dotnet build` from the repository root before running tests for the first time, or after any source change
 
+## Local kernel images
+
+Building the repository without `-p:DisableDockerBuild=true` also builds the kernel images the suites run. Build first so the tests use your working tree:
+
+| Image | Built by | Dockerfile | MongoDB |
+| ----- | -------- | ---------- | ------- |
+| `cratis/chronicle:local-development-slim` | `Integration/Client` and `Integration/SqlClustering` | `Docker/LocalSlim` | Not embedded |
+| `cratis/chronicle:local-development` | `Integration/Api` and `Benchmarks` | `Docker/Local` | Embedded |
+
+A local build never produces a published name (`latest*` or `<version>*`), so it cannot replace the registry image other projects on the machine use. CI enforces this. `CRATIS_CHRONICLE_LOCAL_IMAGE` overrides the image name for both the build and the tests. Use `-p:DisableDockerBuild=true` to skip the image build.
+
+Builds made before this change may have left `cratis/chronicle:latest-development` built from a working tree. Remove that stale local image and pull the published image again:
+
+```bash
+docker image rm cratis/chronicle:latest-development
+docker pull cratis/chronicle:latest-development
+```
+
+Also remove `cratis/chronicle:latest` if you ever ran `dockerize.sh`.
+
 ## Test Suites
 
 | Suite | Project | Description |

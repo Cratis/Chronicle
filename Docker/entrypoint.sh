@@ -6,9 +6,11 @@ set -e
 # need the embedded mongod — starting it wastes memory and can crash under the
 # extra load of running alongside heavy containers such as SQL Server.
 STORAGE_TYPE="${Cratis__Chronicle__Storage__Type:-MongoDB}"
+mongod_pid=""
 
 if [ "${STORAGE_TYPE,,}" = "mongodb" ]; then
   /usr/bin/mongod --replSet "rs0" --bind_ip 0.0.0.0 > /dev/null &
+  mongod_pid=$!
 
   # Wait for MongoDB to start
   until mongosh --quiet --eval "db.adminCommand('ping')" > /dev/null 2>&1; do
@@ -47,13 +49,64 @@ else
   report_all_listening_sockets() { echo "  (port diagnostics unavailable)"; }
 fi
 
-./Cratis.Chronicle.Server &
+server_pid=""
+shutdown_requested=false
+signal_count=0
+pending_signal=""
 
+forward_signal() {
+  shutdown_requested=true
+  signal_count=$((signal_count + 1))
+  # Before the launch there is no server to signal; the launch forwards the pending signal.
+  # The server may also have exited just before the signal arrived.
+  if [ -n "$server_pid" ]; then
+    kill -s "$1" "$server_pid" 2>/dev/null || true
+  else
+    pending_signal=$1
+  fi
+}
+# Install the traps before the launch so a stop request that arrives in between is not lost.
+trap 'forward_signal TERM' TERM
+# Bash starts a background command with SIGINT ignored, so the server cannot act on an interrupt;
+# forward it as TERM, which the server handles as a stop request.
+trap 'forward_signal TERM' INT
+
+./Cratis.Chronicle.Server &
+server_pid=$!
+if [ -n "$pending_signal" ]; then
+  kill -s "$pending_signal" "$server_pid" 2>/dev/null || true
+fi
+
+# Allow at least 30 seconds of container stop grace for the host's 10-second shutdown
+# timeout and the subsequent embedded MongoDB shutdown.
 # wait -n decides the exit status exactly as it did before; it is captured rather than left to
 # set -e only so the failure can be described on the way out.
 set +e
 wait -n
 exit_status=$?
+
+if [ "$shutdown_requested" = true ]; then
+  # A trap interrupts wait with 128 + signal, not the server's exit status. Re-wait
+  # after every interruption, even if the server exited while the trap was running.
+  # Keep the wait -n status as it is: when wait -n already reaped the server, the re-wait
+  # returns 127 and the server's own status must stand.
+  while :; do
+    wait_signal_count=$signal_count
+    wait "$server_pid"
+    wait_status=$?
+    # A late signal can cause another iteration after the server was already reaped.
+    [ "$wait_status" -eq 127 ] && break
+    exit_status=$wait_status
+    [ "$signal_count" -eq "$wait_signal_count" ] && break
+  done
+
+  if [ -n "$mongod_pid" ]; then
+    # Keep storage available until the server has drained. Cleanup must not replace
+    # the server's exit status, including when mongod has already exited.
+    kill -TERM "$mongod_pid" 2>/dev/null || true
+    wait "$mongod_pid" || true
+  fi
+fi
 set -e
 
 if [ "$exit_status" -ne 0 ]; then

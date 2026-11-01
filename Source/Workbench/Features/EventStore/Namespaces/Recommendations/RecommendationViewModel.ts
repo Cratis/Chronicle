@@ -1,11 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { RecommendationDetails } from 'Features/Recommendations';
+import { RecommendationDetails, IgnoreRecommendation, PerformRecommendation, UnignoreRecommendation } from 'Features/Recommendations';
 import { inject, injectable } from 'tsyringe';
 import { type EventStoreAndNamespaceParams } from 'Shared';
-import { IgnoreRecommendation, PerformRecommendation, UnignoreRecommendation } from 'Features/Recommendations';
 import { Guid } from '@cratis/fundamentals';
+import strings from 'Strings';
 
 @injectable()
 export class RecommendationsViewModel {
@@ -13,108 +13,53 @@ export class RecommendationsViewModel {
     constructor(@inject('params') private readonly _params: EventStoreAndNamespaceParams) {
     }
 
-    selectedRecommendation: RecommendationDetails | undefined;
-    selectedRecommendationIds: Guid[] = [];
+    selectedRecommendations: RecommendationDetails[] = [];
+    isBusy = false;
     showIgnored = false;
-
-    isRecommendationSelected(id: Guid): boolean {
-        return this.selectedRecommendationIds.some(_ => _.equals(id));
-    }
-
-    toggleRecommendationSelection(id: Guid) {
-        this.selectedRecommendationIds = this.isRecommendationSelected(id)
-            ? this.selectedRecommendationIds.filter(_ => !_.equals(id))
-            : [...this.selectedRecommendationIds, id];
-    }
-
-    selectAllRecommendations(ids: Guid[]) {
-        this.selectedRecommendationIds = [...ids];
-    }
-
-    clearRecommendationSelection() {
-        this.selectedRecommendationIds = [];
-    }
 
     toggleIgnoredView() {
         this.showIgnored = !this.showIgnored;
-        this.selectedRecommendation = undefined;
-        this.clearRecommendationSelection();
+        this.selectedRecommendations = [];
     }
 
-    protected createUnignoreRecommendation(): UnignoreRecommendation {
-        return new UnignoreRecommendation();
+    reconcileSelection(recommendations: RecommendationDetails[]) {
+        this.selectedRecommendations = this.selectedRecommendations.filter(selected =>
+            recommendations.some(recommendation => recommendation.id.equals(selected.id)));
     }
 
-    async perform() {
-        if (this.selectedRecommendation) {
-            const command = new PerformRecommendation();
-            command.eventStore = this._params.eventStore!;
-            command.namespace = this._params.namespace!;
-            command.recommendationId = this.selectedRecommendation.id;
-            await command.execute();
-        }
+    performRecommendations(recommendationIds: Guid[]) {
+        return this.applyToEach([...recommendationIds], PerformRecommendation);
     }
 
-    /**
-     * Ignores every recommendation in the given selection. The identifiers are passed in explicitly
-     * rather than read from {@link selectedRecommendation}/{@link selectedRecommendationIds} at call
-     * time, because the caller captures them before awaiting a confirmation dialog - by the time the
-     * user responds, the live selection could have moved on. Partial failures are collected and thrown
-     * as a single aggregate error once every ignore has been attempted, so one failure among many does
-     * not swallow the others - and does not swallow itself either.
-     * @param recommendationIds The identifiers of the recommendations to ignore.
-     */
-    async ignoreRecommendations(recommendationIds: Guid[]) {
+    ignoreRecommendations(recommendationIds: Guid[]) {
+        return this.applyToEach([...recommendationIds], IgnoreRecommendation);
+    }
+
+    unignoreRecommendations(recommendationIds: Guid[]) {
+        return this.applyToEach([...recommendationIds], UnignoreRecommendation);
+    }
+
+    private async applyToEach(recommendationIds: Guid[], Command: typeof PerformRecommendation | typeof IgnoreRecommendation | typeof UnignoreRecommendation)
+        : Promise<{ total: number; failed: number; failures: string[] }> {
         const failures: string[] = [];
-
         for (const recommendationId of recommendationIds) {
-            const command = new IgnoreRecommendation();
-            command.eventStore = this._params.eventStore!;
-            command.namespace = this._params.namespace!;
-            command.recommendationId = recommendationId;
-
-            // eslint-disable-next-line no-await-in-loop
-            const result = await command.execute();
-            result.onFailed(() => {
-                const messages = [...result.validationResults.map(_ => _.message), ...result.exceptionMessages];
-                failures.push(`${recommendationId.toString()}: ${messages.join(', ') || 'Unknown error'}`);
-            });
+            try {
+                const command = new Command();
+                command.eventStore = this._params.eventStore!;
+                command.namespace = this._params.namespace!;
+                command.recommendationId = recommendationId;
+                const result = await command.execute();
+                if (!result.isSuccess) {
+                    const messages = [...result.validationResults.map(validation => validation.message), ...result.exceptionMessages];
+                    failures.push(`${recommendationId}: ${messages.join(', ') || result.authorizationFailureReason || strings.eventStore.namespaces.recommendations.notifications.unknownError}`);
+                } else {
+                    // Remove only successful targets, never a newer unrelated selection or a failed target.
+                    this.selectedRecommendations = this.selectedRecommendations.filter(selected => !selected.id.equals(recommendationId));
+                }
+            } catch (error) {
+                failures.push(`${recommendationId}: ${error instanceof Error ? error.message : strings.eventStore.namespaces.recommendations.notifications.unknownError}`);
+            }
         }
-
-        this.clearRecommendationSelection();
-
-        if (failures.length > 0) {
-            throw new Error(`Failed to ignore ${failures.length} of ${recommendationIds.length} recommendation(s):\n${failures.join('\n')}`);
-        }
-    }
-
-    /**
-     * Restores every ignored recommendation in the given selection, so it is offered again as an active
-     * recommendation. Identifiers are passed explicitly for the same reason as in {@link ignoreRecommendations};
-     * partial failures are collected and thrown as one aggregate error after every unignore was attempted.
-     * @param recommendationIds The identifiers of the recommendations to unignore.
-     */
-    async unignoreRecommendations(recommendationIds: Guid[]) {
-        const failures: string[] = [];
-
-        for (const recommendationId of recommendationIds) {
-            const command = this.createUnignoreRecommendation();
-            command.eventStore = this._params.eventStore!;
-            command.namespace = this._params.namespace!;
-            command.recommendationId = recommendationId;
-
-            // eslint-disable-next-line no-await-in-loop
-            const result = await command.execute();
-            result.onFailed(() => {
-                const messages = [...result.validationResults.map(_ => _.message), ...result.exceptionMessages];
-                failures.push(`${recommendationId.toString()}: ${messages.join(', ') || 'Unknown error'}`);
-            });
-        }
-
-        this.clearRecommendationSelection();
-
-        if (failures.length > 0) {
-            throw new Error(`Failed to unignore ${failures.length} of ${recommendationIds.length} recommendation(s):\n${failures.join('\n')}`);
-        }
+        return { total: recommendationIds.length, failed: failures.length, failures };
     }
 }
