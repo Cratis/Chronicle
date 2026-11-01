@@ -11,23 +11,22 @@ namespace Cratis.Chronicle.EventTypes;
 
 internal sealed partial class EventTypeSchemaCache
 {
-    readonly ConcurrentDictionary<EventTypeSchemaKey, ProtectionSchema> _protectionSchemas = new();
+    readonly ConcurrentDictionary<EventTypeSchemaKey, JsonSchema> _protectionSchemas = new();
     readonly object _protectionInvalidation = new();
     long _protectionRevision;
 
     /// <inheritdoc/>
     public ValueTask<JsonSchema> GetProtectionSchemaFor(EventStoreName eventStore, EventTypeId eventTypeId, EventTypeGeneration generation, JsonSchema ownSchema)
     {
+        // Validity depends only on the key: Invalidate and the revision fence keep entries fresh. Callers may
+        // hold different (or older) schema instances for the same generation, so the instance never decides.
         var key = new EventTypeSchemaKey(eventStore, eventTypeId, generation);
-        if (_protectionSchemas.TryGetValue(key, out var cached) && ReferenceEquals(cached.Own, ownSchema))
-        {
-            return new(cached.Effective);
-        }
-
-        return ResolveProtectionSchema(key, ownSchema);
+        return _protectionSchemas.TryGetValue(key, out var effective)
+            ? new(effective)
+            : ResolveProtectionSchema(key);
     }
 
-    async ValueTask<JsonSchema> ResolveProtectionSchema(EventTypeSchemaKey key, JsonSchema ownSchema)
+    async ValueTask<JsonSchema> ResolveProtectionSchema(EventTypeSchemaKey key)
     {
         while (true)
         {
@@ -40,8 +39,6 @@ internal sealed partial class EventTypeSchemaCache
             var definition = await storage.GetEventStore(key.EventStore).EventTypes.GetDefinition(key.EventTypeId);
             var effective = GenerationProtectionSchemas.For(definition, key.Generation);
 
-            // ownSchema is only a warm-path identity hint. It may predate invalidation, so even a
-            // negative inheritance decision must return the owning schema from this definition.
             lock (_protectionInvalidation)
             {
                 // A registration during the load must not republish the old definition.
@@ -50,11 +47,9 @@ internal sealed partial class EventTypeSchemaCache
                     continue;
                 }
 
-                _protectionSchemas[key] = new(ownSchema, effective);
+                _protectionSchemas[key] = effective;
                 return effective;
             }
         }
     }
-
-    sealed record ProtectionSchema(JsonSchema Own, JsonSchema Effective);
 }

@@ -21,10 +21,13 @@ public class EventCompliance(
     IEventTypeSchemaCache schemaCache) : IEventCompliance
 {
     /// <inheritdoc/>
-    public async Task<AppendedEvent> Release(AppendedEvent @event, JsonSchema schema)
+    public Task<AppendedEvent> Release(AppendedEvent @event, JsonSchema schema)
     {
-        var effective = await schemaCache.GetProtectionSchemaFor(@event.Context.EventStore, @event.Context.EventType.Id, @event.Context.EventType.Generation, schema);
-        return await ReleaseResolved(@event, effective);
+        // Not async: a warm lookup completes synchronously and must not add a task on the delivery path.
+        var lookup = schemaCache.GetProtectionSchemaFor(@event.Context.EventStore, @event.Context.EventType.Id, @event.Context.EventType.Generation, schema);
+        return lookup.IsCompletedSuccessfully
+            ? ReleaseWithEffective(@event, lookup.Result)
+            : ReleaseAfterLookup(@event, lookup);
     }
 
     /// <inheritdoc/>
@@ -54,6 +57,15 @@ public class EventCompliance(
         }
 
         return releasedEvents.ToArray();
+    }
+
+    async Task<AppendedEvent> ReleaseAfterLookup(AppendedEvent @event, ValueTask<JsonSchema> lookup) =>
+        await ReleaseWithEffective(@event, await lookup);
+
+    Task<AppendedEvent> ReleaseWithEffective(AppendedEvent @event, JsonSchema effective)
+    {
+        // Same rule as the batch overload: content without effective protection is returned untouched.
+        return effective.HasSchemaMetadata() ? ReleaseResolved(@event, effective) : Task.FromResult(@event);
     }
 
     async Task<AppendedEvent> ReleaseResolved(AppendedEvent @event, JsonSchema schema)

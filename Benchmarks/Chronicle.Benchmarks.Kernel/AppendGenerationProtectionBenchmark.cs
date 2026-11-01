@@ -64,6 +64,8 @@ public class AppendGenerationProtectionBenchmark
         await _singleProtected.ProtectAndMigrate();
         await _protected.ProtectAndMigrate();
         await _single.Release();
+        await _single.PinnedRelease();
+        await _singleProtected.PinnedRelease();
         await _inherited.ProtectAndMigrate();
         await _wideNoPii.ProtectAndMigrate();
     }
@@ -146,6 +148,20 @@ public class AppendGenerationProtectionBenchmark
     public Task<AppendedEvent[]> UnpinnedRelease() => _single.Release();
 
     /// <summary>
+    /// Measures warm pinned release of one event at its own generation with no classified properties.
+    /// </summary>
+    /// <returns>The released events.</returns>
+    [Benchmark]
+    public Task<AppendedEvent[]> PinnedRelease() => _single.PinnedRelease();
+
+    /// <summary>
+    /// Measures warm pinned release of one event at its own generation with PII.
+    /// </summary>
+    /// <returns>The released events.</returns>
+    [Benchmark]
+    public Task<AppendedEvent[]> PinnedReleasePii() => _singleProtected.PinnedRelease();
+
+    /// <summary>
     /// Releases the in-memory registries after the measurements.
     /// </summary>
     [GlobalCleanup]
@@ -216,6 +232,8 @@ public class AppendGenerationProtectionBenchmark
         }
 
         public Task<AppendedEvent[]> Release() => _release.Release(_store, [], _schemas, _events);
+
+        public Task<AppendedEvent[]> PinnedRelease() => _release.Release(_store, [_eventType], _schemas, _events);
 
         static void AddSchemaFields(JsonSchema schema, int fieldCount)
         {

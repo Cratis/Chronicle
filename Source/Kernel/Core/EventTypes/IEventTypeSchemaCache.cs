@@ -32,7 +32,7 @@ public interface IEventTypeSchemaCache
     /// <param name="eventStore">The event store.</param>
     /// <param name="eventTypeId">The event type.</param>
     /// <param name="generation">The content generation.</param>
-    /// <param name="ownSchema">The caller's own generation schema, used only as a warm-cache identity hint.</param>
+    /// <param name="ownSchema">The caller's own generation schema. It never decides the result, which always comes from the definition snapshot.</param>
     /// <returns>The effective protection schema.</returns>
     ValueTask<JsonSchema> GetProtectionSchemaFor(EventStoreName eventStore, EventTypeId eventTypeId, EventTypeGeneration generation, JsonSchema ownSchema);
 
