@@ -96,7 +96,7 @@ public class ObserverRegistrationsStorage(IEventStoreDatabase database, JsonSeri
             ? Write(Settings, Document(new BsonString(settings.Owner.Value), settings.Revision, settings), expectedRevision)
             : Task.FromResult(false);
 
-    static Task CreateIndexes(IEventStoreDatabase database) => database.GetCollection<BsonDocument>(WellKnownCollectionNames.ObserverRegistrations).Indexes.CreateOneAsync(
+    static Task<string> CreateIndexes(IEventStoreDatabase database) => database.GetCollection<BsonDocument>(WellKnownCollectionNames.ObserverRegistrations).Indexes.CreateOneAsync(
         new CreateIndexModel<BsonDocument>(
             Builders<BsonDocument>.IndexKeys.Ascending("observerId").Ascending("eventSequenceId"),
             new CreateIndexOptions { Unique = true, Name = "observer-sequence" }));
@@ -106,25 +106,6 @@ public class ObserverRegistrationsStorage(IEventStoreDatabase database, JsonSeri
     static string Number(ulong number) => number.ToString("D20", CultureInfo.InvariantCulture);
 
     static BsonDocument Identity(ObserverId observerId, EventSequenceId eventSequenceId) => new() { ["observer"] = observerId.Value, ["sequence"] = eventSequenceId.Value };
-
-    BsonDocument Document<T>(BsonValue id, ulong revision, T value) => new()
-    {
-        ["_id"] = id,
-        ["revision"] = Number(revision),
-        ["data"] = JsonSerializer.Serialize(value, serializerOptions)
-    };
-
-    async Task<T?> Read<T>(IMongoCollection<BsonDocument> collection, BsonValue id)
-    {
-        var document = await collection.Find(Builders<BsonDocument>.Filter.Eq("_id", id) & Builders<BsonDocument>.Filter.Ne("deleted", true)).SingleOrDefaultAsync();
-        return document is null ? default : JsonSerializer.Deserialize<T>(document["data"].AsString, serializerOptions);
-    }
-
-    async Task<IEnumerable<ObserverRegistration>> Find(FilterDefinition<BsonDocument> filter)
-    {
-        var documents = await Registrations.Find(filter & Builders<BsonDocument>.Filter.Ne("deleted", true)).ToListAsync();
-        return documents.Select(document => JsonSerializer.Deserialize<ObserverRegistration>(document["data"].AsString, serializerOptions)!).ToArray();
-    }
 
     static async Task<bool> Write(IMongoCollection<BsonDocument> collection, BsonDocument document, ulong expectedRevision, FilterDefinition<BsonDocument>? additionalFilter = null)
     {
@@ -143,5 +124,24 @@ public class ObserverRegistrationsStorage(IEventStoreDatabase database, JsonSeri
         {
             return false;
         }
+    }
+
+    BsonDocument Document<T>(BsonValue id, ulong revision, T value) => new()
+    {
+        ["_id"] = id,
+        ["revision"] = Number(revision),
+        ["data"] = JsonSerializer.Serialize(value, serializerOptions)
+    };
+
+    async Task<T?> Read<T>(IMongoCollection<BsonDocument> collection, BsonValue id)
+    {
+        var document = await collection.Find(Builders<BsonDocument>.Filter.Eq("_id", id) & Builders<BsonDocument>.Filter.Ne("deleted", true)).SingleOrDefaultAsync();
+        return document is null ? default : JsonSerializer.Deserialize<T>(document["data"].AsString, serializerOptions);
+    }
+
+    async Task<IEnumerable<ObserverRegistration>> Find(FilterDefinition<BsonDocument> filter)
+    {
+        var documents = await Registrations.Find(filter & Builders<BsonDocument>.Filter.Ne("deleted", true)).ToListAsync();
+        return documents.Select(document => JsonSerializer.Deserialize<ObserverRegistration>(document["data"].AsString, serializerOptions)!).ToArray();
     }
 }
