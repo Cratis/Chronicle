@@ -9,7 +9,6 @@ using Cratis.Chronicle.EventSequences.Migrations;
 
 namespace Cratis.Chronicle.EventSequences.for_EventSequence.when_appending_an_event;
 
-// Erasure facts deliberately delete the key; each fact needs its own subject state.
 [PerFactSpecificationLifecycle]
 public class and_nested_and_array_values_inherit_protection : given.an_event_sequence_with_inherited_protection
 {
