@@ -3,6 +3,7 @@
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels;
 
@@ -27,6 +28,38 @@ internal sealed class ReadModelTableBindingsDbContext(DbContextOptions<ReadModel
     /// Gets the resolved schema included in the EF model cache identity.
     /// </summary>
     internal string? Schema => schema;
+
+    /// <summary>
+    /// Builds a ledger context on the same connection and transaction as a model context,
+    /// so ledger changes commit or roll back with the table DDL they accompany.
+    /// </summary>
+    /// <param name="context">The model context whose transaction is current.</param>
+    /// <param name="schema">The resolved schema of the ledger.</param>
+    /// <returns>The enlisted ledger context, owned by the caller.</returns>
+    /// <exception cref="InvalidOperationException">The model context has no current transaction.</exception>
+    internal static async Task<ReadModelTableBindingsDbContext> Enlist(DbContext context, string? schema)
+    {
+        var connection = context.Database.GetDbConnection();
+        var builder = new DbContextOptionsBuilder<ReadModelTableBindingsDbContext>();
+        switch (context.Database.ProviderName)
+        {
+            case "Npgsql.EntityFrameworkCore.PostgreSQL":
+                builder.UseNpgsql(connection);
+                break;
+            case "Microsoft.EntityFrameworkCore.SqlServer":
+                builder.UseSqlServer(connection);
+                break;
+            default:
+                builder.UseSqlite(connection);
+                break;
+        }
+
+        var enlisted = new ReadModelTableBindingsDbContext(builder.Options, schema);
+        var transaction = context.Database.CurrentTransaction?.GetDbTransaction()
+            ?? throw new InvalidOperationException("Enlisting a ledger context requires a current transaction.");
+        await enlisted.Database.UseTransactionAsync(transaction);
+        return enlisted;
+    }
 
     /// <inheritdoc/>
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder) =>

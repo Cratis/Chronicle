@@ -579,7 +579,7 @@ public partial class Database(IServiceProvider serviceProvider, IOptions<Chronic
                     throw new InvalidOperationException("Kernel state reset is refused for an initialized generation store.");
                 }
             }
-            catch (Exception error) when (MissingGenerationTable(error))
+            catch (Exception error) when (SqlErrors.IsMissingTable(error))
             {
                 // The legacy store has never been initialized.
             }

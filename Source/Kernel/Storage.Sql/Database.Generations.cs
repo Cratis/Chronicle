@@ -9,12 +9,10 @@ using Cratis.Chronicle.Concepts.Projections.Generations.Enablement;
 using Cratis.Chronicle.Storage.Sql.Cluster;
 using Cratis.Chronicle.Storage.Sql.Connections;
 using Cratis.Chronicle.Storage.Sql.EventStores;
-using Microsoft.Data.SqlClient;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage;
-using Npgsql;
 
 namespace Cratis.Chronicle.Storage.Sql;
 
@@ -51,7 +49,7 @@ public partial class Database
                     result.Add(pair.Key, floor);
                 }
             }
-            catch (Exception error) when (MissingGenerationTable(error))
+            catch (Exception error) when (SqlErrors.IsMissingTable(error))
             {
                 // A legacy database without the floor table imposes no generation requirement.
             }
@@ -88,14 +86,6 @@ public partial class Database
         return builder.Options;
     }
 
-    static bool MissingGenerationTable(Exception error) => error switch
-    {
-        PostgresException postgres => postgres.SqlState == PostgresErrorCodes.UndefinedTable,
-        SqlException sql => sql.Number == 208,
-        SqliteException sqlite => sqlite.SqliteErrorCode == 1 && sqlite.Message.Contains("no such table", StringComparison.Ordinal),
-        _ => false
-    };
-
     async Task<Dictionary<EventStoreName, SqlTarget>> GenerationStoreTargets()
     {
         var result = new Dictionary<EventStoreName, SqlTarget>();
@@ -110,7 +100,7 @@ public partial class Database
                     result[new(binding.EventStore)] = await GenerationTarget(binding.Identity, binding.PhysicalName);
                 }
             }
-            catch (Exception error) when (MissingGenerationTable(error))
+            catch (Exception error) when (SqlErrors.IsMissingTable(error))
             {
                 // Pre-binding installations have no advanced floors outside their existing registry.
             }
@@ -123,7 +113,7 @@ public partial class Database
                         result[new(store.Name)] = await Target(DatabaseIdentity.Store(store.Name), ConnectionPurpose.Runtime);
                     }
                 }
-                catch (Exception error) when (MissingGenerationTable(error))
+                catch (Exception error) when (SqlErrors.IsMissingTable(error))
                 {
                     // A fresh cluster has no registry yet.
                 }

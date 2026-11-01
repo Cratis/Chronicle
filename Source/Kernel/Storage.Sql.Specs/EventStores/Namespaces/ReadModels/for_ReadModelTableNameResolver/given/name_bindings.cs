@@ -25,6 +25,22 @@ internal sealed class name_bindings(name_catalog catalog) : IReadModelTableNameB
     public Task<ReadModelTableNameBinding?> Find(string id) => Task.FromResult(Rows.SingleOrDefault(row => row.Id == id));
     public Task<IReadOnlyList<ReadModelTableNameBinding>> Read() => Task.FromResult<IReadOnlyList<ReadModelTableNameBinding>>(Rows.ToArray());
 
+    public Task<bool> Transition(string id, ReadModelTableBindingState expected, ReadModelTableBindingState next)
+    {
+        var row = Rows.SingleOrDefault(candidate => candidate.Id == id && candidate.State == expected);
+        row?.State = next;
+
+        return Task.FromResult(row is not null);
+    }
+
+    public Task<bool> SetReplayAttempt(string id, string? expected, string? attempt)
+    {
+        var row = Rows.SingleOrDefault(candidate => candidate.Id == id && candidate.ReplayAttempt == expected);
+        row?.ReplayAttempt = attempt;
+
+        return Task.FromResult(row is not null);
+    }
+
     public async Task<bool> TryInsert(ReadModelTableNameBinding binding)
     {
         BeforeInsert?.Invoke(binding);

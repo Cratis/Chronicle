@@ -11,7 +11,12 @@ public class and_metadata_scopes_share_a_model_identifier : given.persisted_meta
         _scopes.Add(new("another-store", "default", _definitions, _history));
     }
 
-    async Task Because() => _claims = await _ownership.Read();
+    async Task Because()
+    {
+        var read = await _ownership.Read();
+        _claims = read.Known;
+        _unknown = read.Unknown;
+    }
 
     [Fact] void should_preserve_three_distinct_owners() => _claims.Where(claim => claim.Registered).Select(claim => claim.Owner.Id).Distinct().Count().ShouldEqual(3);
     [Fact] void should_keep_the_originating_namespace() => _claims.Any(claim => claim.Owner.Namespace == "another-namespace" && claim.Owner.EventStoreId == "store").ShouldBeTrue();

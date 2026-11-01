@@ -7,7 +7,12 @@ public class and_a_container_was_renamed : given.persisted_metadata
 {
     async Task Establish() => await AddOccurrence();
 
-    async Task Because() => _claims = await _ownership.Read();
+    async Task Because()
+    {
+        var read = await _ownership.Read();
+        _claims = read.Known;
+        _unknown = read.Unknown;
+    }
 
     [Fact] void should_keep_the_original_backup_owner() => _claims.Single(claim => claim.Occurred).Owner.ShouldEqual(
         new ReadModelTableOwner("store", "default", "model", "original-orders", ReadModelTableRole.Backup, "original-orders-old"));

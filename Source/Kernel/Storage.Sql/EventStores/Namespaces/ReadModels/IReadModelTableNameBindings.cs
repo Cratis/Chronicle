@@ -30,4 +30,22 @@ internal interface IReadModelTableNameBindings
     /// <param name="binding">The assignment to commit.</param>
     /// <returns>Whether this operation inserted the row.</returns>
     Task<bool> TryInsert(ReadModelTableNameBinding binding);
+
+    /// <summary>
+    /// Compare-and-set of the lifecycle state; only a row in the expected state changes.
+    /// </summary>
+    /// <param name="id">The complete tuple's digest.</param>
+    /// <param name="expected">The state the row must currently be in.</param>
+    /// <param name="next">The state to move it to.</param>
+    /// <returns>Whether the row was in the expected state and was updated.</returns>
+    Task<bool> Transition(string id, ReadModelTableBindingState expected, ReadModelTableBindingState next);
+
+    /// <summary>
+    /// Compare-and-set of the replay attempt marker on a row.
+    /// </summary>
+    /// <param name="id">The complete tuple's digest.</param>
+    /// <param name="expected">The attempt the row must currently carry, or null when none is set.</param>
+    /// <param name="attempt">The attempt to store, or null to clear it.</param>
+    /// <returns>Whether the row carried the expected attempt and was updated.</returns>
+    Task<bool> SetReplayAttempt(string id, string? expected, string? attempt);
 }

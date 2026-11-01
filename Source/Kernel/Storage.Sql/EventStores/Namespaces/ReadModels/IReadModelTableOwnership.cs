@@ -5,15 +5,15 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels;
 
 /// <summary>
 /// Reads ownership metadata without opening, migrating or altering a dynamic model table.
-/// Unavailable or unattributable metadata must throw, never masquerade as an empty claimant set.
+/// Metadata of a neighbouring scope that cannot be read is reported as an unknown scope, never as an empty claimant set.
 /// </summary>
 internal interface IReadModelTableOwnership
 {
     /// <summary>
     /// Reads all potentially competing owners sharing the resolved target and schema.
     /// </summary>
-    /// <returns>The complete scoped claimant set.</returns>
-    Task<IReadOnlyList<ReadModelTableClaim>> Read();
+    /// <returns>The known claims and the scopes that could not be read.</returns>
+    Task<ReadModelTableClaims> Read();
 
     /// <summary>
     /// Corroborates metadata ownership with expected key and column shape, without migration.

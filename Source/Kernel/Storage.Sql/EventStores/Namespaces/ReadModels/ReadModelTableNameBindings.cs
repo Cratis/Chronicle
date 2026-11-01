@@ -70,6 +70,18 @@ internal sealed class ReadModelTableNameBindings(
         }
     }
 
+    /// <inheritdoc/>
+    public async Task<bool> Transition(string id, ReadModelTableBindingState expected, ReadModelTableBindingState next) =>
+        await context.Bindings
+            .Where(binding => binding.Id == id && binding.State == expected)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(binding => binding.State, next)) == 1;
+
+    /// <inheritdoc/>
+    public async Task<bool> SetReplayAttempt(string id, string? expected, string? attempt) =>
+        await context.Bindings
+            .Where(binding => binding.Id == id && binding.ReplayAttempt == expected)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(binding => binding.ReplayAttempt, attempt)) == 1;
+
     static bool IsUniqueConflict(DbUpdateException exception) => exception.InnerException switch
     {
         PostgresException postgres => postgres.SqlState == PostgresErrorCodes.UniqueViolation,

@@ -60,7 +60,14 @@ internal sealed class ReadModelTableNameResolver(
             return await Validate(owner, bound, requireExisting);
         }
 
-        var claims = await ownership.Read();
+        var read = await ownership.Read();
+        if (read.Unknown.Count > 0)
+        {
+            // A possible owner we cannot read: reserve, adopt and create nothing.
+            throw new ReadModelTableMetadataUnavailable(owner, read.Unknown);
+        }
+
+        var claims = read.Known;
         var existingBindings = await bindings.Read();
         var candidate = ReadModelTableNames.Candidate(catalog.Provider, owner.LogicalName);
         var legacy = ReadModelTableNames.Legacy(catalog.Provider, owner.LogicalName);
@@ -106,7 +113,19 @@ internal sealed class ReadModelTableNameResolver(
         {
             throw new ReadModelTableNameBindingFailure(owner, binding.PhysicalName, "removed or invalid binding requires explicit owner recovery");
         }
-        await _conflicts.Check(owner, binding.PhysicalName, await ownership.Read(), await bindings.Read());
+        if (binding.State == ReadModelTableBindingState.Reserved)
+        {
+            // Finishing a reservation creates a table, so it needs the same proof as a new reservation.
+            // A Ready binding was proved when it committed and the unique physical key keeps it, so it needs no scan.
+            var read = await ownership.Read();
+            if (read.Unknown.Count > 0)
+            {
+                throw new ReadModelTableMetadataUnavailable(owner, read.Unknown);
+            }
+
+            await _conflicts.Check(owner, binding.PhysicalName, read.Known, await bindings.Read());
+        }
+
         var physical = await catalog.Find(binding.PhysicalName);
         if (binding.State == ReadModelTableBindingState.Ready && physical is null)
         {

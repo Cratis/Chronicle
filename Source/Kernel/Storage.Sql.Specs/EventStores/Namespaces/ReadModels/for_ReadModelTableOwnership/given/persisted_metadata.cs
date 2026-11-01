@@ -13,6 +13,7 @@ public class persisted_metadata : for_ReadModelTableNameBindings.given.a_sqlite_
     private protected readonly List<ReadModelTableMetadataScope> _scopes = [];
     private protected ReadModelTableOwnership _ownership;
     private protected IReadOnlyList<ReadModelTableClaim> _claims;
+    private protected IReadOnlyList<ReadModelTableMetadataScope> _unknown;
 
     async Task Establish()
     {

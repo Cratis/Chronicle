@@ -6,17 +6,20 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels.for_Rea
 internal sealed class ownership_metadata : IReadModelTableOwnership
 {
     internal readonly List<ReadModelTableClaim> Claims = [];
+    internal readonly List<ReadModelTableMetadataScope> UnknownScopes = [];
+    internal int Reads;
     internal bool ShapeMatches = true;
     internal int ShapeChecks;
     internal Exception? Failure;
 
-    public Task<IReadOnlyList<ReadModelTableClaim>> Read()
+    public Task<ReadModelTableClaims> Read()
     {
+        Reads++;
         if (Failure is not null)
         {
             throw Failure;
         }
-        return Task.FromResult<IReadOnlyList<ReadModelTableClaim>>(Claims.ToArray());
+        return Task.FromResult(new ReadModelTableClaims(Claims.ToArray(), UnknownScopes.ToArray()));
     }
 
     public Task<bool> HasExpectedShape(string physicalName)
