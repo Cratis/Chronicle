@@ -21,5 +21,5 @@ public class when_reading_state_without_sequence_tags : given.the_provider
     Task Because() => provider.ReadStateAsync("name", GrainId.Create("type", _observerKey.ToString()), _state);
 
     [Fact] void should_load_every_partition() => _state.State!.Partitions.Count().ShouldEqual(2);
-    [Fact] void should_load_the_stored_state_as_is() => _state.State.ShouldBeSameAs(_stored);
+    [Fact] void should_load_the_stored_state_as_is() => _state.State.ShouldBeSame(_stored);
 }
