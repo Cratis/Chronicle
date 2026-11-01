@@ -22,6 +22,9 @@ internal static partial class SinkLogging
     [LoggerMessage(LogLevel.Warning, "SQL replay for {EventStore}/{Namespace}/{ReadModel} preserved markerless backup {OriginalTable} as {RecoveryTable} because the revert identifier was truncated. The recovery table may hold an older backup or the previous read-model state from an interrupted pre-upgrade promotion. It is not subject to replay retention; inspect it before removing it manually.")]
     internal static partial void PreservedLegacyReplayBackup(this ILogger<Sink> logger, string eventStore, string @namespace, string readModel, string originalTable, string recoveryTable);
 
+    [LoggerMessage(LogLevel.Information, "SQL read model table {ReadModel} keeps the synthesized key column {KeyColumn}; the identifier {Identifier} is stored as a regular column")]
+    internal static partial void LegacyKeyKept(this ILogger<Sink> logger, string readModel, string keyColumn, string identifier);
+
     [LoggerMessage(LogLevel.Warning, "SQL read model {ReadModel} has a composite key that cannot be rebuilt from its stored id ({Reason}); instances are returned without their key. Rows whose key parts contain '_' or are empty may also share a row with another key; replaying the read model does not change this until the key format changes (#5335).")]
     internal static partial void CompositeKeyNotRebuilt(this ILogger<Sink> logger, string readModel, string reason);
 }
