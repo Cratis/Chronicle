@@ -32,6 +32,8 @@ public interface IObserverStateStorage
     /// <returns>The <see cref="ObserverState"/>, or <see cref="ObserverState.Empty"/> when no record exists.</returns>
     /// <remarks>
     /// Unlike <see cref="Get"/> this never migrates legacy data, so it is safe for read models and queries.
+    /// It never writes observer state, events or domain data. The storage may still provision its schema on
+    /// first access, as it does for any storage access.
     /// </remarks>
     Task<ObserverState> GetReadOnly(ObserverId observerId);
 
