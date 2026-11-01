@@ -66,6 +66,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     IServices _services;
     IDisposable? _keepAliveSubscription;
     TaskCompletionSource? _connectTcs;
+    ChronicleServerAddress? _lastDroppedAddress;
     DateTimeOffset? _lastConnectFailure;
     bool _hasEverConnected;
 
@@ -147,7 +148,8 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
             OnSessionDropped,
             Reconnect,
             loggerFactory.CreateLogger<ConnectionWatchdog>(),
-            cancellationToken);
+            cancellationToken,
+            _timeProvider);
 
         _cancellationToken.Register(() =>
         {
@@ -163,17 +165,17 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     /// <inheritdoc/>
     public IConnectionLifecycle Lifecycle { get; }
 
-    /// <inheritdoc/>
-    public IReadOnlyCollection<string> Capabilities { get; private set; } = [];
-
-    /// <inheritdoc/>
-    public bool CapabilitiesAreKnown { get; private set; }
-
     /// <summary>
     /// Gets the <see cref="ChronicleServerAddress"/> the connection is currently using, or the
     /// first configured address when no connection has been established yet.
     /// </summary>
     public ChronicleServerAddress CurrentServerAddress => _currentServerAddress ?? _connectionString.ServerAddress;
+
+    /// <inheritdoc/>
+    public IReadOnlyCollection<string> Capabilities { get; private set; } = [];
+
+    /// <inheritdoc/>
+    public bool CapabilitiesAreKnown { get; private set; }
 
     /// <inheritdoc/>
     bool IConnectionKeepAlive.IsSkipped => _skipKeepAlive;
@@ -187,6 +189,17 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
             return _services;
         }
     }
+
+    /// <summary>
+    /// Gets the longest a connect attempt waits for one server to complete its handshake while another server is
+    /// still untried. The last untried server gets whatever remains of the connect timeout.
+    /// </summary>
+    internal TimeSpan EndpointHandshakeTimeout { get; init; } = TimeSpan.FromSeconds(5);
+
+    /// <summary>
+    /// Gets how the connection service for a server is created. Specs replace this to fake the keep-alive stream per server.
+    /// </summary>
+    internal Func<ChronicleServerAddress, CallInvoker, IConnectionService>? ConnectionServiceFactory { get; init; }
 
     /// <inheritdoc/>
     public async ValueTask<IServices> GetServices(CancellationToken cancellationToken)
@@ -328,12 +341,108 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     async Task ConnectInternal()
     {
         _logger.Connecting(_connectionString.Redacted);
+        DisposeCurrentAttempt();
+
+        var untried = (await _serverAddressResolver.Resolve(_connectionString)).ToList();
+        var budget = TimeSpan.FromSeconds(_connectTimeout);
+        var started = _timeProvider.GetUtcNow();
+        var connected = false;
+
+        // A single endpoint that never answers must not take the whole budget while another one is up, so each
+        // endpoint but the last gets a bounded handshake. The last one gets whatever remains, which for a single
+        // address is the full connect timeout - exactly what it always was.
+        while (!connected)
+        {
+            var address = await TakeNextCandidate(untried);
+            var remaining = budget - (_timeProvider.GetUtcNow() - started);
+            var attemptBudget = untried.Count == 0 ? remaining : TimeSpan.FromTicks(Math.Min(EndpointHandshakeTimeout.Ticks, remaining.Ticks));
+            connected = await TryConnectTo(address, attemptBudget);
+            if (connected || untried.Count == 0 || _timeProvider.GetUtcNow() - started >= budget)
+            {
+                break;
+            }
+
+            DisposeCurrentAttempt();
+        }
+
+        if (_skipKeepAlive)
+        {
+            return;
+        }
+
+        // Re-arm the staleness clock right before the watchdog starts evaluating it. The clock was last set
+        // when the keep-alive stream was subscribed - potentially a full connect timeout ago if the wait timed
+        // out. Starting the watchdog on that stale a timestamp let it declare the session dropped on its very
+        // first tick, against a connection that never finished establishing (or, on a kernel slow to answer
+        // during its own restart, one still legitimately coming up) - tearing the channel down and immediately
+        // reconnecting on top of an attempt that might still have succeeded.
+        _watchDog.NotifyKeepAlive();
+        _watchDog.Start();
+
+        if (!connected)
+        {
+            // Returning normally here reported success while the lifecycle stayed disconnected, so there was no
+            // failure state to observe and no back-off to apply - the next call simply re-entered and paid the
+            // timeout again (#3948). The watchdog keeps reconnecting in the background.
+            //
+            // Only once a connection has been established, though. A kernel that has not come up yet while its
+            // client starts is ordinary, and a host that cannot boot through it is worse than one that keeps
+            // trying - so the first connect keeps waiting on the watchdog rather than failing its caller.
+            _logger.TimedOut();
+            if (_hasEverConnected)
+            {
+                throw new ConnectionTimedOut();
+            }
+        }
+    }
+
+    void DisposeCurrentAttempt()
+    {
         _channel?.Dispose();
         _keepAliveSubscription?.Dispose();
+    }
 
-        var serverAddresses = await _serverAddressResolver.Resolve(_connectionString);
-        _currentServerAddress = await _loadBalancerStrategy.Next(serverAddresses);
-        _channel = CreateGrpcChannel(_currentServerAddress);
+    /// <summary>
+    /// Picks the next server to try, asking the load balancer among those not yet tried in this connect.
+    /// </summary>
+    /// <param name="untried">The servers not yet tried. The picked one is removed.</param>
+    /// <returns>The server to try.</returns>
+    /// <remarks>
+    /// The server whose session just ended is left for last while others remain - it is the one most likely to be
+    /// restarting, and a node that has just come back reports no connections, which the least-connections
+    /// strategy would otherwise prefer.
+    /// </remarks>
+    async Task<ChronicleServerAddress> TakeNextCandidate(List<ChronicleServerAddress> untried)
+    {
+        var pool = untried;
+        if (untried.Count > 1 && _lastDroppedAddress is not null)
+        {
+            var others = untried.Where(address => address != _lastDroppedAddress).ToList();
+            if (others.Count > 0)
+            {
+                pool = others;
+            }
+        }
+
+        var next = await _loadBalancerStrategy.Next(pool);
+        if (!untried.Remove(next))
+        {
+            untried.Clear();
+        }
+
+        return next;
+    }
+
+    /// <summary>
+    /// Tries to establish the connection against one server.
+    /// </summary>
+    /// <param name="address">The server to connect to.</param>
+    /// <param name="budget">How long to wait for the server to complete its handshake.</param>
+    /// <returns>True if the connection was established, false if the handshake failed or ran out of time.</returns>
+    async Task<bool> TryConnectTo(ChronicleServerAddress address, TimeSpan budget)
+    {
+        _currentServerAddress = address;
+        _channel = CreateGrpcChannel(address);
         var clientFactory = new InProcessAwareGrpcClientProxiesClientFactory();
         var callInvoker = _channel
             .Intercept(new AuthenticationClientInterceptor(_tokenProvider, _loggerFactory.CreateLogger<AuthenticationClientInterceptor>()))
@@ -342,7 +451,15 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         // Perform compatibility check before establishing connection
         if (!_skipCompatibilityCheck)
         {
-            await CheckCompatibility(callInvoker.CreateGrpcService<IConnectionService>(clientFactory));
+            try
+            {
+                await CheckCompatibility(callInvoker.CreateGrpcService<IConnectionService>(clientFactory)).WaitAsync(budget, _timeProvider);
+            }
+            catch (TimeoutException)
+            {
+                _logger.EndpointHandshakeFailed(address.ToString(), "the compatibility check timed out");
+                return false;
+            }
         }
 
         _services = new Services(
@@ -384,12 +501,13 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
             _logger.Connected();
             _hasEverConnected = true;
             await Lifecycle.Connected();
-            return;
+            return true;
         }
 
-        _connectionService = callInvoker.CreateGrpcService<IConnectionService>(clientFactory);
+        _connectionService = ConnectionServiceFactory?.Invoke(address, callInvoker) ?? callInvoker.CreateGrpcService<IConnectionService>(clientFactory);
         _watchDog.NotifyKeepAlive();
-        _connectTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var handshake = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        _connectTcs = handshake;
 
         _keepAliveSubscription = _connectionService.Connect(
             new()
@@ -401,42 +519,23 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
                 ProcessPath = ClientProcess.Path,
                 MachineName = ClientProcess.MachineName,
                 ClientType = ChronicleClientIdentity.Type,
-            }).Subscribe(HandleConnection);
+            }).Subscribe(
+                keepAlive => HandleConnection(handshake, keepAlive),
+                error => HandleStreamEnded(handshake, address, error),
+                () => HandleStreamEnded(handshake, address, null));
 
         try
         {
-            await _connectTcs.Task.WaitAsync(TimeSpan.FromSeconds(_connectTimeout), _timeProvider);
+            await handshake.Task.WaitAsync(budget, _timeProvider);
             _logger.Connected();
             _hasEverConnected = true;
             await Lifecycle.Connected();
+            return true;
         }
-        catch (TimeoutException)
+        catch (Exception ex) when (ex is TimeoutException or ConnectionUnavailable or RpcException)
         {
-            // Returning normally here reported success while the lifecycle stayed disconnected, so there was no
-            // failure state to observe and no back-off to apply - the next call simply re-entered and paid the
-            // timeout again (#3948). The watchdog still starts below and keeps reconnecting in the background.
-            //
-            // Only once a connection has been established, though. A kernel that has not come up yet while its
-            // client starts is ordinary, and a host that cannot boot through it is worse than one that keeps
-            // trying - so the first connect keeps waiting on the watchdog rather than failing its caller.
-            _logger.TimedOut();
-            if (_hasEverConnected)
-            {
-                throw new ConnectionTimedOut();
-            }
-        }
-        finally
-        {
-            // Re-arm the staleness clock right before the watchdog starts evaluating it. The clock was last set
-            // when the keep-alive stream was subscribed, above - potentially a full connect timeout ago if the wait
-            // just above timed out. Starting the watchdog on that stale a timestamp let it declare the session
-            // dropped on its very first tick, against a connection that never finished establishing (or, on a
-            // kernel slow to answer during its own restart, one still legitimately coming up) - tearing the channel
-            // down and immediately reconnecting on top of an attempt that might still have succeeded. Refreshing it
-            // here gives whatever comes out of this attempt a full staleness window from when monitoring actually
-            // begins, rather than one that was already partly spent waiting for the attempt itself.
-            _watchDog.NotifyKeepAlive();
-            _watchDog.Start();
+            _logger.EndpointHandshakeFailed(address.ToString(), ex.Message);
+            return false;
         }
     }
 
@@ -616,12 +715,15 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         }
     }
 
-    void HandleConnection(ConnectionKeepAlive keepAlive)
+    void HandleConnection(TaskCompletionSource handshake, ConnectionKeepAlive keepAlive)
     {
-        if (_connectTcs?.Task.IsCompleted == false)
+        // A late callback from an attempt that has since been replaced must not touch the current one.
+        if (!ReferenceEquals(_connectTcs, handshake))
         {
-            _connectTcs?.SetResult();
+            return;
         }
+
+        handshake.TrySetResult();
         _watchDog.NotifyKeepAlive();
 
         if (!Debugger.IsAttached)
@@ -630,9 +732,40 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         }
     }
 
+    /// <summary>
+    /// Reacts to the keep-alive stream ending, whether it failed or completed.
+    /// </summary>
+    /// <param name="handshake">The attempt the stream belongs to.</param>
+    /// <param name="address">The server the stream was opened against.</param>
+    /// <param name="error">The failure, or null when the stream completed.</param>
+    /// <remarks>
+    /// Before the first keep-alive this fails the handshake at once so the next server is tried without waiting
+    /// out the timeout. After it, the session is gone, so the watchdog is asked to reconnect now rather than
+    /// after the keep-alive has gone stale.
+    /// </remarks>
+    void HandleStreamEnded(TaskCompletionSource handshake, ChronicleServerAddress address, Exception? error)
+    {
+        if (!ReferenceEquals(_connectTcs, handshake))
+        {
+            return;
+        }
+
+        if (handshake.TrySetException(error ?? new ConnectionUnavailable(_connectionString.Redacted)))
+        {
+            return;
+        }
+
+        if (handshake.Task.IsCompletedSuccessfully)
+        {
+            _lastDroppedAddress = address;
+            _logger.KeepAliveStreamEnded(address.ToString());
+            _watchDog.RequestReconnect();
+        }
+    }
+
     async Task OnSessionDropped()
     {
-        if (_connectTcs?.Task.IsCompleted == true)
+        if (_connectTcs?.Task.IsCompletedSuccessfully == true)
         {
             _logger.Disconnected();
             await Lifecycle.Disconnected();

@@ -24,6 +24,12 @@ internal static partial class ChronicleConnectionLogMessages
     [LoggerMessage(LogLevel.Error, "Timed out during connecting to Chronicle")]
     internal static partial void TimedOut(this ILogger<ChronicleConnection> logger);
 
+    [LoggerMessage(LogLevel.Warning, "Could not complete the handshake with Chronicle server {Server}: {Reason}")]
+    internal static partial void EndpointHandshakeFailed(this ILogger<ChronicleConnection> logger, string server, string reason);
+
+    [LoggerMessage(LogLevel.Warning, "The keep-alive stream from Chronicle server {Server} ended, reconnecting")]
+    internal static partial void KeepAliveStreamEnded(this ILogger<ChronicleConnection> logger, string server);
+
     [LoggerMessage(LogLevel.Warning, "Server certificate validation is disabled for {Servers}; any certificate is accepted. Set skipTlsValidation=false once the server certificate is trusted.")]
     internal static partial void ServerCertificateValidationDisabled(this ILogger<ChronicleConnection> logger, string servers);
 
