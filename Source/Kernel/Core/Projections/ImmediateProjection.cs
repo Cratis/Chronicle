@@ -13,6 +13,7 @@ using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.Sinks;
 using Microsoft.Extensions.Logging;
 using Orleans.Providers;
+using Orleans.Serialization.Invocation;
 
 namespace Cratis.Chronicle.Projections;
 
@@ -54,6 +55,13 @@ public class ImmediateProjection(
     ImmediateProjectionKey? _projectionKey;
     ReadModelDefinition? _readModelDefinition;
     IProjection? _projection;
+
+    /// <summary>
+    /// Determines whether an incoming request is a projection definition notification.
+    /// </summary>
+    /// <param name="request">The incoming request.</param>
+    /// <returns>Whether the request may interleave with this grain's work.</returns>
+    public static bool IsDefinitionChangeNotification(IInvokable request) => request?.GetInterfaceType() == typeof(INotifyProjectionDefinitionsChanged);
 
     /// <inheritdoc/>
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
@@ -99,8 +107,7 @@ public class ImmediateProjection(
     /// <inheritdoc/>
     public Task OnProjectionDefinitionsChanged(ProjectionDefinition definition)
     {
-        State = definition;
-        _readModelDefinition = null;
+        ApplyDefinition(definition);
         return Task.CompletedTask;
     }
 
@@ -185,6 +192,16 @@ public class ImmediateProjection(
     {
         DeactivateSession();
         return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Applies a projection definition and invalidates the cached read model metadata.
+    /// </summary>
+    /// <param name="definition">The definition to apply.</param>
+    protected virtual void ApplyDefinition(ProjectionDefinition definition)
+    {
+        State = definition;
+        _readModelDefinition = null;
     }
 
     /// <summary>
