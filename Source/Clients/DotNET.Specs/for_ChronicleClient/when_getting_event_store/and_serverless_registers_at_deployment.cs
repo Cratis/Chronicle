@@ -40,6 +40,8 @@ public class and_serverless_registers_at_deployment : Specification
     [Fact] void should_connect_once_when_the_event_store_is_requested() => _connection.Received(1).Connect();
     [Fact] void should_not_ensure_the_event_store() => _services.EventStores.DidNotReceive().EnsureEventStore(Arg.Any<EnsureEventStoreRequest>());
     [Fact] void should_not_register_event_types() => _services.EventTypes.DidNotReceive().RegisterEventTypes(Arg.Any<RegisterEventTypesRequest>());
+    [Fact] void should_not_observe_reactors() => _services.Reactors.DidNotReceiveWithAnyArgs().Observe(default!);
+    [Fact] void should_not_observe_reducers() => _services.Reducers.DidNotReceiveWithAnyArgs().Observe(default!);
 
     public record PlainEvent(string Name);
 }
