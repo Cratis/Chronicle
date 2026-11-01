@@ -130,7 +130,7 @@
     <PackageVersion Include="Castle.Core" Version="5.1.1" />
     <!-- Not categorized -->
     <PackageVersion Include="DnsClient" Version="1.8.0" />
-    <PackageVersion Include="MongoDB.Driver" Version="3.12.0" />
+    <PackageVersion Include="MongoDB.Driver" Version="3.13.0" />
     <PackageVersion Include="protobuf-net.Grpc.AspNetCore.Reflection" Version="1.3.14" />
     <PackageVersion Include="protobuf-net.Grpc.Reflection" Version="1.3.14" />
     <PackageVersion Include="OpenIddict.AspNetCore" Version="7.7.2" />
