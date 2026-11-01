@@ -37,7 +37,6 @@ public static class ReleasedFailedPartition
         deadline.CancelAfter(TimeSpan.FromSeconds(90));
         try
         {
-            await client.Connect().WaitAsync(deadline.Token);
             var eventStore = await client.GetEventStore(eventStoreName).WaitAsync(deadline.Token);
             var handled = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
             await eventStore.Reactors.Register(observerId, builder => builder.On<ReleasedPartitionRecorded>((_, context) =>
