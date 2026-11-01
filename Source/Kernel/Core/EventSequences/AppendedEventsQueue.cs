@@ -58,9 +58,11 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     readonly Lock _subscriptionsLock = new();
     readonly List<AppendedEventsQueueObserverSubscription> _subscriptions = [];
     readonly List<Task> _catchupTriggers = [];
+    readonly Dictionary<ObserverKey, AppendedEventsQueueObserverLane> _lanes = [];
     readonly Dictionary<ObserverKey, CatchupTrigger> _catchupTriggersByObserver = [];
     readonly CancellationTokenSource _catchupCancellation = new();
     readonly CancellationToken _catchupCancellationToken;
+    readonly int _laneCapacity;
     readonly SuspectedSkipWarningLimiter _suspectedUndeliveredLimiter = new();
     int _pendingItems;
     Task _queueTask = Task.CompletedTask;
@@ -97,6 +99,7 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
         var eventsConfig = options.Value.Events;
         _queueDepletionWaitTimeoutMs = eventsConfig.QueueDepletionWaitTimeoutMilliseconds;
         var capacity = eventsConfig.QueueBoundedCapacity;
+        _laneCapacity = capacity;
         _channel = capacity > 0
             ? Channel.CreateBounded<IReadOnlyList<AppendedEvent>>(new BoundedChannelOptions(capacity)
             {
@@ -143,6 +146,7 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
         try
         {
             await _queueTask.WaitAsync(deadline.Token);
+            await Task.WhenAll(StopLanes(discard: false)).WaitAsync(deadline.Token);
         }
         catch (OperationCanceledException) when (deadline.IsCancellationRequested)
         {
@@ -209,6 +213,7 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
         // The worker owns the channel reader. It discards the backlog, but must settle any delivery already in flight
         // before storage can be wiped. A reset failure propagates; a deadline must not turn an unfinished reset green.
         await _queueTask;
+        await Task.WhenAll(StopLanes(discard: true));
         await Task.WhenAll(catchupTriggers);
     }
 
@@ -269,6 +274,7 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
         lock (_subscriptionsLock)
         {
             _subscriptions.RemoveAll(subscription => subscription.ObserverKey == observerKey);
+            CloseLane(observerKey);
         }
 
         return Task.CompletedTask;
@@ -298,6 +304,7 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
             _catchupCancellation.Dispose();
         }
         _channel.Writer.TryComplete();
+        StopLanes(discard: true);
 
         _metrics?.Dispose();
     }
@@ -520,7 +527,7 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
                 {
                     if (!_isResetting)
                     {
-                        await Dispatch(coalesced);
+                        Route(coalesced, batchesDrained);
                         _metrics?.EventsHandled(coalesced.Count);
                     }
                 }
@@ -544,55 +551,190 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
         }
     }
 
-    async Task Dispatch(IReadOnlyList<AppendedEvent> events)
+    /// <summary>
+    /// Routes a coalesced batch to the lane of every observer it holds events for, without waiting for any of them.
+    /// </summary>
+    /// <param name="events">The coalesced events.</param>
+    /// <param name="batches">The number of queued batches the events came from.</param>
+    void Route(List<AppendedEvent> events, int batches)
     {
-        // Sort events by sequence number and deliver consecutive same-partition batches. Parallelism is across
-        // observers within a partition, never across partitions: handling a higher-numbered partition first would
-        // advance an observer's NextEventSequenceNumber past lower-numbered events from another partition and drop them.
-        var sorted = events.OrderBy(e => e.Context.SequenceNumber).ToList();
-        var runs = SplitIntoPartitionRuns(sorted);
+        // A stable sort: events sharing a sequence number keep the order they were enqueued in.
+        var sorted = events.OrderBy(@event => @event.Context.SequenceNumber).ToList();
 
-        // Spill decided before any delivery: an observer whose share of this dispatch would cost too many sequential Handle
-        // calls is moved to catch-up before anything is handed to it, so its cursor can never pass an event it skipped.
-        // Every event here was durable before Enqueue, hence before the spill and the CatchUp() call that follows it, so
-        // catch-up covers them all. Skipping it for the rest of the dispatch, including a replacement subscription that
-        // appears mid-dispatch, is safe for that reason (delivering would also be harmless: Handle discards anything below
-        // the cursor).
-        var spilled = SpillFragmentedSubscriptions(runs);
+        // An observer whose share of this batch alone would cost too many sequential Handle calls is moved to catch-up
+        // before anything is routed to it, so its cursor can never pass an event it skipped.
+        var spilled = SpillFragmentedSubscriptions(SplitIntoPartitionRuns(sorted));
+        foreach (var subscription in GetSubscriptionsSnapshot())
+        {
+            if (spilled.Contains(subscription.ObserverKey))
+            {
+                continue;
+            }
+
+            var matching = GetFilteredEvents(sorted, subscription);
+            if (matching.Length > 0)
+            {
+                RouteToLane(subscription, matching, batches);
+            }
+        }
+    }
+
+    void RouteToLane(AppendedEventsQueueObserverSubscription subscription, AppendedEvent[] events, int batches)
+    {
+        var observerKey = subscription.ObserverKey;
+        lock (_subscriptionsLock)
+        {
+            // The subscription may have been removed or replaced since the snapshot was taken.
+            if (_isDisposed || _isResetting || !_subscriptions.Exists(candidate => ReferenceEquals(candidate, subscription)))
+            {
+                return;
+            }
+
+            if (!_lanes.TryGetValue(observerKey, out var lane) || lane.IsClosed)
+            {
+                // Resolved once, under the lock, rather than for every partition run.
+                var observer = _grainFactory.GetGrain<IObserver>(observerKey);
+                lane = new AppendedEventsQueueObserverLane(subscription, observer, DeliverToObserver, LaneSettled, LaneFailed, work => _taskFactory.Run(work));
+                _lanes[observerKey] = lane;
+            }
+
+            // A re-subscription keeps the lane and what it holds; it delivers on behalf of the current subscription.
+            lane.Subscription = subscription;
+
+            if (_laneCapacity > 0 && lane.PendingBatches + batches > _laneCapacity)
+            {
+                SpillLaggingSubscriptionToCatchup(subscription);
+                Observe(() => _metrics?.EventsSpilledToCatchup(events.Length));
+                return;
+            }
+
+            // Counted before the queue settles the batches it drained, so the queue never looks empty in between.
+            Interlocked.Add(ref _pendingItems, batches);
+            if (!lane.TryRoute(events, batches))
+            {
+                LaneSettled(batches);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Delivers one observer's events in consecutive same-partition runs, in sequence order. Never across partitions
+    /// in parallel: handling a higher-numbered partition first would advance the observer's NextEventSequenceNumber
+    /// past lower-numbered events from another partition and drop them.
+    /// </summary>
+    /// <param name="lane">The <see cref="AppendedEventsQueueObserverLane"/> of the observer.</param>
+    /// <param name="events">The events, in sequence order.</param>
+    /// <returns>Awaitable task.</returns>
+    async Task DeliverToObserver(AppendedEventsQueueObserverLane lane, IReadOnlyList<AppendedEvent> events)
+    {
+        var runs = SplitIntoPartitionRuns(events as List<AppendedEvent> ?? [.. events]);
+        if (runs.Count > MaxPartitionRunsPerLiveDispatch && SpillFragmentedSubscriptionToCatchup(CurrentSubscriptionOf(lane)))
+        {
+            return;
+        }
 
         foreach (var (partition, partitionEvents) in runs)
         {
-            var subscriptions = GetSubscriptionsSnapshot();
-
-            var tasks = new List<Task>();
-            foreach (var subscription in subscriptions)
+            // A spill or unsubscribe closes the lane: nothing after a hole may reach the observer.
+            if (_isResetting || lane.IsClosed)
             {
-                if (spilled.Contains(subscription.ObserverKey))
-                {
-                    continue;
-                }
-
-                var actualEvents = GetFilteredEvents(partitionEvents, subscription);
-                if (actualEvents.Length == 0)
-                {
-                    continue;
-                }
-
-                tasks.Add(Dispatch(partition, actualEvents, subscription));
+                return;
             }
 
             try
             {
-                await Task.WhenAll(tasks);
+                await Dispatch(lane.Observer, partition, [.. partitionEvents], CurrentSubscriptionOf(lane));
             }
             catch (Exception ex)
             {
-                // Only the failed subscription is spilled: other observers keep receiving the remaining partitions.
-                // The spilled observer must catch up before any later live batch can advance its cursor past the hole.
-                _logger.NotifyingObserversFailed(ex);
-                _metrics?.EventsHandlingFailures();
+                // Dispatch has spilled the subscription, which closes the lane for the runs after this one.
+                LaneFailed(ex);
             }
         }
+    }
+
+    AppendedEventsQueueObserverSubscription CurrentSubscriptionOf(AppendedEventsQueueObserverLane lane)
+    {
+        lock (_subscriptionsLock)
+        {
+            return lane.Subscription;
+        }
+    }
+
+    void LaneSettled(int batches)
+    {
+        if (Interlocked.Add(ref _pendingItems, -batches) == 0)
+        {
+            _queueEmptyEvent.Set();
+        }
+    }
+
+    void LaneFailed(Exception exception)
+    {
+        _logger.NotifyingObserversFailed(exception);
+        _metrics?.EventsHandlingFailures();
+    }
+
+    /// <summary>
+    /// Closes an observer's lane, discarding what it has not delivered yet. Must be called holding the subscriptions lock.
+    /// </summary>
+    /// <param name="observerKey">The <see cref="ObserverKey"/> of the observer.</param>
+    void CloseLane(ObserverKey observerKey)
+    {
+        if (_lanes.Remove(observerKey, out var lane))
+        {
+            lane.Close();
+        }
+    }
+
+    /// <summary>
+    /// Stops every lane.
+    /// </summary>
+    /// <param name="discard">True to discard what the lanes have not delivered yet; false to let them drain.</param>
+    /// <returns>The lanes' completions.</returns>
+    Task[] StopLanes(bool discard)
+    {
+        lock (_subscriptionsLock)
+        {
+            var lanes = _lanes.Values.ToArray();
+            foreach (var lane in lanes)
+            {
+                if (discard)
+                {
+                    lane.Close();
+                }
+                else
+                {
+                    lane.Complete();
+                }
+            }
+
+            if (discard)
+            {
+                _lanes.Clear();
+            }
+
+            return [.. lanes.Select(lane => lane.Completion)];
+        }
+    }
+
+    /// <summary>
+    /// Relieves one observer that has fallen too far behind: removes its subscription, discards its lane and drives it
+    /// through its catch-up path, which re-reads what it missed from its persisted cursor. The other observers on the
+    /// queue are not affected. Must be called holding the subscriptions lock.
+    /// </summary>
+    /// <param name="subscription">The lagging <see cref="AppendedEventsQueueObserverSubscription"/>.</param>
+    void SpillLaggingSubscriptionToCatchup(AppendedEventsQueueObserverSubscription subscription)
+    {
+        if (_subscriptions.RemoveAll(candidate => ReferenceEquals(candidate, subscription)) == 0)
+        {
+            return;
+        }
+
+        CloseLane(subscription.ObserverKey);
+        StartCatchupTrigger(subscription.ObserverKey);
+        Observe(() => _logger.SpillingLaggingObserverToCatchup(subscription.ObserverKey));
+        ReportSpill(subscription.ObserverKey, AppendedEventsQueueSpillReasons.LaggingBacklog);
     }
 
     /// <summary>
@@ -616,6 +758,10 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
 
             observerKeys = _subscriptions.Select(subscription => subscription.ObserverKey).ToArray();
             _subscriptions.Clear();
+            foreach (var observerKey in observerKeys)
+            {
+                CloseLane(observerKey);
+            }
         }
 
         _logger.SpillingToCatchup(observerKeys.Length);
@@ -664,6 +810,7 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
                 return false;
             }
 
+            CloseLane(subscription.ObserverKey);
             StartCatchupTrigger(subscription.ObserverKey);
         }
 
@@ -683,6 +830,7 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
                 return;
             }
 
+            CloseLane(subscription.ObserverKey);
             StartCatchupTrigger(subscription.ObserverKey);
         }
 
@@ -837,11 +985,10 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     }
 #pragma warning restore RCS1075
 
-    async Task Dispatch(EventSourceId partition, AppendedEvent[] events, AppendedEventsQueueObserverSubscription subscription)
+    async Task Dispatch(IObserver observer, EventSourceId partition, AppendedEvent[] events, AppendedEventsQueueObserverSubscription subscription)
     {
         try
         {
-            var observer = _grainFactory.GetGrain<IObserver>(subscription.ObserverKey);
             await observer.Handle(partition, events);
         }
         catch (Exception ex) when (ObservationOnlyFailures.CanBeContained(ex))
