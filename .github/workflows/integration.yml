@@ -111,15 +111,13 @@ jobs:
         with:
           dotnet-version: 10.0.x
 
-      - name: Download build output
+      - name: Download Client integration bundle
         uses: actions/download-artifact@v4
         with:
-          name: ${{ inputs.build-output-artifact }}
+          name: ${{ inputs.build-output-artifact }}-client
 
-      - name: Extract build output
-        env:
-          BUILD_OUTPUT_ARTIFACT: ${{ inputs.build-output-artifact }}
-        run: tar -I zstd -xf "${BUILD_OUTPUT_ARTIFACT}.tar.zst"
+      - name: Extract Client integration bundle
+        run: tar -I zstd -xf integration-bundle-client.tar.zst
 
       - name: Login to GitHub Docker Registry
         if: matrix.needs-docker == true
@@ -128,9 +126,6 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Restore Client project
-        run: dotnet restore Integration/Client/Client.csproj
 
       - name: Restore pinned coverage tool
         run: dotnet tool restore
@@ -181,13 +176,14 @@ jobs:
         #
         # --no-build: the downloaded artifact is the DEVELOPMENT-symbol build
         # from dotnet-build-development (or a labeled hot-core run), so the shard runs
-        # it directly instead of recompiling the kernel from source. The restore
-        # step above still regenerates project.assets.json for the test host.
+        # it directly instead of recompiling the kernel from source. The bundle carries a
+        # producer-validated selection record, so the shard needs no restore or evaluation.
         run: |
           .github/scripts/run-tests-with-retry.sh \
             Integration/Client/Client.csproj \
             "${{ matrix.filter }}" \
-            --coverage
+            --coverage \
+            --selection .integration-bundles/client.selection.json
 
       # run-tests-with-retry.sh already writes a TRX per attempt into TEST_RESULTS_DIR.
       - name: Assert Client integration tests ran
@@ -225,18 +221,13 @@ jobs:
         with:
           dotnet-version: 10.0.x
 
-      - name: Download build output
+      - name: Download Kernel integration bundle
         uses: actions/download-artifact@v4
         with:
-          name: ${{ inputs.build-output-artifact }}
+          name: ${{ inputs.build-output-artifact }}-kernel
 
-      - name: Extract build output
-        env:
-          BUILD_OUTPUT_ARTIFACT: ${{ inputs.build-output-artifact }}
-        run: tar -I zstd -xf "${BUILD_OUTPUT_ARTIFACT}.tar.zst"
-
-      - name: Restore Kernel project
-        run: dotnet restore Integration/Kernel/Kernel.csproj
+      - name: Extract Kernel integration bundle
+        run: tar -I zstd -xf integration-bundle-kernel.tar.zst
 
       - name: Restore pinned coverage tool
         run: dotnet tool restore
@@ -263,7 +254,8 @@ jobs:
           .github/scripts/run-tests-with-retry.sh \
             Integration/Kernel/Kernel.csproj \
             "FullyQualifiedName~${{ matrix.namespace }}" \
-            --coverage
+            --coverage \
+            --selection .integration-bundles/kernel.selection.json
 
       # run-tests-with-retry.sh already writes a TRX per attempt into TEST_RESULTS_DIR.
       - name: Assert Kernel integration tests ran
@@ -298,18 +290,13 @@ jobs:
         with:
           dotnet-version: 10.0.x
 
-      - name: Download build output
+      - name: Download Clustering integration bundle
         uses: actions/download-artifact@v4
         with:
-          name: ${{ inputs.build-output-artifact }}
+          name: ${{ inputs.build-output-artifact }}-clustering
 
-      - name: Extract build output
-        env:
-          BUILD_OUTPUT_ARTIFACT: ${{ inputs.build-output-artifact }}
-        run: tar -I zstd -xf "${BUILD_OUTPUT_ARTIFACT}.tar.zst"
-
-      - name: Restore Clustering project
-        run: dotnet restore Integration/Clustering/Clustering.csproj
+      - name: Extract Clustering integration bundle
+        run: tar -I zstd -xf integration-bundle-clustering.tar.zst
 
       - name: Restore pinned coverage tool
         run: dotnet tool restore
@@ -326,7 +313,8 @@ jobs:
           .github/scripts/run-tests-with-retry.sh \
             Integration/Clustering/Clustering.csproj \
             "FullyQualifiedName~${{ matrix.namespace }}" \
-            --coverage
+            --coverage \
+            --selection .integration-bundles/clustering.selection.json
 
       # run-tests-with-retry.sh already writes a TRX per attempt into TEST_RESULTS_DIR.
       - name: Assert Clustering integration tests ran
