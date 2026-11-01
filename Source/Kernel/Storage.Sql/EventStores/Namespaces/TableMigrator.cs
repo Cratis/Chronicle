@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
+using System.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
@@ -97,7 +98,11 @@ public class TableMigrator<TContext>(ILogger<TableMigrator<TContext>> logger) : 
         var commands = sqlGenerator.Generate(operations, context.Model);
 
         var connection = context.Database.GetDbConnection();
-        await connection.OpenAsync();
+        var opened = connection.State != ConnectionState.Open;
+        if (opened)
+        {
+            await connection.OpenAsync();
+        }
 
         try
         {
@@ -122,7 +127,10 @@ public class TableMigrator<TContext>(ILogger<TableMigrator<TContext>> logger) : 
         }
         finally
         {
-            await connection.CloseAsync();
+            if (opened)
+            {
+                await connection.CloseAsync();
+            }
         }
     }
 
@@ -130,7 +138,11 @@ public class TableMigrator<TContext>(ILogger<TableMigrator<TContext>> logger) : 
     public async Task<bool> ColumnExists(TContext context, string tableName, string columnName)
     {
         var connection = context.Database.GetDbConnection();
-        await connection.OpenAsync();
+        var opened = connection.State != ConnectionState.Open;
+        if (opened)
+        {
+            await connection.OpenAsync();
+        }
 
         try
         {
@@ -154,7 +166,10 @@ public class TableMigrator<TContext>(ILogger<TableMigrator<TContext>> logger) : 
         }
         finally
         {
-            await connection.CloseAsync();
+            if (opened)
+            {
+                await connection.CloseAsync();
+            }
         }
     }
 
@@ -180,7 +195,11 @@ public class TableMigrator<TContext>(ILogger<TableMigrator<TContext>> logger) : 
     static async Task<bool> TableExists(TContext context, string tableName)
     {
         var connection = context.Database.GetDbConnection();
-        await connection.OpenAsync();
+        var opened = connection.State != ConnectionState.Open;
+        if (opened)
+        {
+            await connection.OpenAsync();
+        }
 
         try
         {
@@ -204,7 +223,10 @@ public class TableMigrator<TContext>(ILogger<TableMigrator<TContext>> logger) : 
         }
         finally
         {
-            await connection.CloseAsync();
+            if (opened)
+            {
+                await connection.CloseAsync();
+            }
         }
     }
 
