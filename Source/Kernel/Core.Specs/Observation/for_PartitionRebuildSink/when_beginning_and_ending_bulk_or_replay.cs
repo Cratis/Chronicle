@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Storage.ReadModels;
-using Cratis.Chronicle.Storage.Sinks;
 
 namespace Cratis.Chronicle.Observation.for_PartitionRebuildSink;
 
@@ -24,5 +23,5 @@ public class when_beginning_and_ending_bulk_or_replay : given.a_partition_rebuil
     }
 
     [Fact] void should_not_throw() => _error.ShouldBeNull();
-    [Fact] void should_not_support_isolated_replace() => ((ISink)_sink).SupportsIsolatedReplace.ShouldBeFalse();
+    [Fact] void should_not_support_isolated_replace() => _sink.SupportsIsolatedReplace.ShouldBeFalse();
 }

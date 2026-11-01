@@ -32,6 +32,9 @@ internal sealed class PartitionRebuildSink(Key partition) : ISink
     /// <inheritdoc/>
     public SinkTypeId TypeId => SinkTypeId.None;
 
+    /// <inheritdoc/>
+    public bool SupportsIsolatedReplace => false;
+
     /// <summary>
     /// Gets the state rebuilt so far, or null when nothing was written or the instance was removed.
     /// </summary>
@@ -74,7 +77,7 @@ internal sealed class PartitionRebuildSink(Key partition) : ISink
         }
         else
         {
-            var current = (State ?? changeset.InitialState).Clone();
+            var current = State ?? changeset.InitialState.Clone();
             State = InMemoryChanges.Apply(key, changeset.Changes, current);
             IsRemoved = false;
         }
