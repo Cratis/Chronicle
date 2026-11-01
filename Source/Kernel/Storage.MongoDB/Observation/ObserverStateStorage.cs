@@ -83,6 +83,7 @@ public class ObserverStateStorage(IEventStoreNamespaceDatabase namespaceDatabase
         var update = Builders<ObserverState>.Update
             .Set(_ => _.Owner, owner)
             .Set(_ => _.PartitionClaims, document.PartitionClaims)
+            .Set(_ => _.PartitionReplayCompletions, document.PartitionReplayCompletions)
             .Set(_ => _.ObserverWideClaim, document.ObserverWideClaim)
             .Set(_ => _.OwnershipRevision, document.OwnershipRevision)
             .Set(_ => _.AlertLifecycleId, document.AlertLifecycleId)

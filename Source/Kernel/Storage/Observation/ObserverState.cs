@@ -72,6 +72,11 @@ public record ObserverState(
     public IEnumerable<PartitionClaim>? PartitionClaims { get; init; }
 
     /// <summary>
+    /// Gets partition replay completions awaiting settlement, or null when none are owed.
+    /// </summary>
+    public IEnumerable<PartitionReplayCompletionState>? PartitionReplayCompletions { get; init; }
+
+    /// <summary>
     /// Gets the observer-wide claim. Shadow (DR 0018 increment 4): written, never read for decisions.
     /// </summary>
     public ObserverWideClaim? ObserverWideClaim { get; init; }

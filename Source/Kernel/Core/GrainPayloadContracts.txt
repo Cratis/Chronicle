@@ -1149,6 +1149,7 @@ json Cratis.Chronicle.Storage.Observation.ObserverState
   owner: Cratis.Chronicle.Concepts.EventSequences.EventSequenceId
   ownershipRevision: Cratis.Chronicle.Storage.Observation.OwnershipRevision
   partitionClaims: System.Collections.Generic.IEnumerable<Cratis.Chronicle.Storage.Observation.PartitionClaim>
+  partitionReplayCompletions: System.Collections.Generic.IEnumerable<Cratis.Chronicle.Storage.Observation.PartitionReplayCompletionState>
   quarantineEpisodeId: System.Guid?
   replayingPartitions: System.Collections.Generic.ISet<Cratis.Chronicle.Concepts.Keys.Key>
   runningState: Cratis.Chronicle.Concepts.Observation.ObserverRunningState
@@ -1187,6 +1188,12 @@ json Cratis.Chronicle.Storage.Observation.PartitionClaim
   partition: Cratis.Chronicle.Concepts.Keys.Key
   pendingWork: System.Collections.Generic.IReadOnlyList<Cratis.Chronicle.Storage.Observation.PendingPartitionWork>
   resumePosition: Cratis.Chronicle.Concepts.Events.EventSequenceNumber
+json Cratis.Chronicle.Storage.Observation.PartitionReplayCompletionState
+  boundary: Cratis.Chronicle.Concepts.Events.EventSequenceNumber
+  coveredEpisode: Cratis.Chronicle.Concepts.Observation.FailedPartitionId
+  lastHandled: Cratis.Chronicle.Concepts.Events.EventSequenceNumber
+  partition: Cratis.Chronicle.Concepts.Keys.Key
+  recorded: System.DateTimeOffset
 json Cratis.Chronicle.Storage.Observation.PendingPartitionWork
   from: Cratis.Chronicle.Concepts.Events.EventSequenceNumber
   holder: Cratis.Chronicle.Storage.Observation.ClaimHolderKind

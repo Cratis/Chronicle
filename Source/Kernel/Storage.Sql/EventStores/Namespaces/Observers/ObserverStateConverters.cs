@@ -22,6 +22,7 @@ public static class ObserverStateConverters
             Id = definition.Identifier,
             Owner = definition.Owner?.Value,
             PartitionClaims = definition.PartitionClaims is null ? null : JsonSerializer.Serialize(definition.PartitionClaims, ObserverStateJson.Options),
+            PartitionReplayCompletions = definition.PartitionReplayCompletions is null ? null : JsonSerializer.Serialize(definition.PartitionReplayCompletions, ObserverStateJson.Options),
             ObserverWideClaim = definition.ObserverWideClaim is null ? null : JsonSerializer.Serialize(definition.ObserverWideClaim, ObserverStateJson.Options),
             OwnershipRevision = definition.OwnershipRevision?.Value,
             TypeSetControl = ObserverTypeSetControlJson.Serialize(definition.TypeSetControl),
@@ -109,6 +110,7 @@ public static class ObserverStateConverters
         {
             Owner = state.Owner is null ? null : new Concepts.EventSequences.EventSequenceId(state.Owner),
             PartitionClaims = state.PartitionClaims is null ? null : JsonSerializer.Deserialize<Observation.PartitionClaim[]>(state.PartitionClaims, ObserverStateJson.Options),
+            PartitionReplayCompletions = DeserializePartitionReplayCompletions(state.PartitionReplayCompletions),
             ObserverWideClaim = state.ObserverWideClaim is null ? null : JsonSerializer.Deserialize<Observation.ObserverWideClaim>(state.ObserverWideClaim, ObserverStateJson.Options),
             OwnershipRevision = state.OwnershipRevision is null ? null : new Observation.OwnershipRevision(state.OwnershipRevision.Value),
             TypeSetControl = ObserverTypeSetControlJson.Deserialize(state.TypeSetControl),
@@ -124,4 +126,7 @@ public static class ObserverStateConverters
             HandledEventCount = state.HandledEventCount,
             HandledEventCountPerEventType = state.HandledEventCountPerEventType?.ToDictionary(kvp => (Concepts.Events.EventTypeId)kvp.Key, kvp => (Concepts.Events.EventCount)kvp.Value) ?? new Dictionary<Concepts.Events.EventTypeId, Concepts.Events.EventCount>()
         };
+
+    static Observation.PartitionReplayCompletionState[]? DeserializePartitionReplayCompletions(string? completions) =>
+        completions is null ? null : JsonSerializer.Deserialize<Observation.PartitionReplayCompletionState[]>(completions, ObserverStateJson.Options);
 }

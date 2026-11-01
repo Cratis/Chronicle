@@ -418,7 +418,51 @@ public partial class Observer
             });
     }
 
-    async Task StartCatchupJob(Key partition, EventSequenceNumber nextEventSequenceNumber)
+    async Task StartPartitionReplaySuccessor(Key partition, EventSequenceNumber boundary, Action onStarted, Func<bool> isCurrent)
+    {
+        if (State.RunningState == ObserverRunningState.Replaying)
+        {
+            logger.SkippingPartitionCatchUpBecauseObserverIsReplaying();
+            return;
+        }
+        if (failures.State.IsFailed(partition))
+        {
+            logger.PartitionToCatchUpIsFailing(partition);
+            return;
+        }
+        var result = await storage.GetEventStore(_observerKey.EventStore).GetNamespace(_observerKey.Namespace).Jobs.GetOutstandingJobs();
+        if (!isCurrent()) return;
+        if (!result.TryGetResult(out var jobs)) throw new InvalidOperationException("Could not look up the partition replay successor");
+        if (jobs.PartitionsHeldBy<CatchUpObserverPartitionRequest>(_observerKey, DateTimeOffset.UtcNow).Contains(partition))
+        {
+            State.CatchingUpPartitions.Add(partition);
+            _partitionHoldsVersion++;
+            onStarted();
+            await WriteStateAsync();
+            return;
+        }
+
+        // No read (including legacy jobs) preserves the inclusive partition-start fallback.
+        var from = boundary.IsActualValue ? boundary.Next() : EventSequenceNumber.First;
+        Skips.ProbedFrom(partition, from);
+        var needed = await NeedsCatchup(partition, from);
+        if (!isCurrent()) return;
+        await needed.Match(
+            catchup => catchup ? StartCatchupJob(partition, from, onStarted, isCurrent) : Task.CompletedTask,
+            error =>
+            {
+                switch (error)
+                {
+                    case GetSequenceNumberError.NotFound:
+                        logger.LastHandledEventForPartitionUnavailable(partition);
+                        return Task.CompletedTask;
+                    default:
+                        return PartitionFailed(partition, from, ["Event Sequence storage error caused partition to try recover"], string.Empty);
+                }
+            });
+    }
+
+    async Task StartCatchupJob(Key partition, EventSequenceNumber nextEventSequenceNumber, Action? onStarted = null, Func<bool>? isCurrent = null)
     {
         if (IsRetired || _removed) return;
         logger.StartingCatchUpForPartition(partition, nextEventSequenceNumber);
@@ -426,7 +470,14 @@ public partial class Observer
         _partitionHoldsVersion++;
         ShadowGrantPartition(partition, ClaimHolderKind.PartitionCatchUp, null, nextEventSequenceNumber);
         Skips.JobStarted(partition);
-        await _jobsManager.Start<ICatchUpObserverPartition, CatchUpObserverPartitionRequest>(new(_observerKey, Definition.Type, partition, nextEventSequenceNumber, Definition.EventTypes) { ReaderScope = ReaderScope });
+        var result = await _jobsManager.Start<ICatchUpObserverPartition, CatchUpObserverPartitionRequest>(new(_observerKey, Definition.Type, partition, nextEventSequenceNumber, Definition.EventTypes) { ReaderScope = ReaderScope });
+        if (isCurrent is not null && !isCurrent()) return;
+        if (onStarted is not null && result?.TryGetResult(out _) != true)
+        {
+            throw new InvalidOperationException("Could not start the partition replay successor");
+        }
+
+        onStarted?.Invoke();
         await WriteStateAsync();
     }
 

@@ -544,12 +544,18 @@ public partial class Observer
         }
     }
 
-    async Task<bool> ResolveFailedPartition(Key partition, EventSequenceNumber? lastHandled = null, FailedPartitionId? episodeId = null, Guid? deferralId = null)
+    async Task<bool> ResolveFailedPartition(Key partition, EventSequenceNumber? lastHandled = null, FailedPartitionId? episodeId = null, Guid? deferralId = null, bool persistObserverState = true)
     {
         await _alertMutationLock.WaitAsync();
         try
         {
-            if (IsRetired || _removed || !IsCurrentRecovery(partition, episodeId, deferralId)) return false;
+            if (IsRetired || _removed) return false;
+            if (!IsCurrentRecovery(partition, episodeId, deferralId))
+            {
+                // A preceding removal may have lost its write acknowledgement. Flush without touching a newer episode.
+                if (!persistObserverState) await WriteFailedPartitions();
+                return false;
+            }
             if (lastHandled is not null)
             {
                 HandleNewLastHandledEventForPartition(partition, lastHandled);
@@ -564,7 +570,7 @@ public partial class Observer
             }
 
             ChangeAlertState();
-            await WriteStateAsync();
+            if (persistObserverState) await WriteStateAsync();
             await WriteFailedPartitions();
             return true;
         }

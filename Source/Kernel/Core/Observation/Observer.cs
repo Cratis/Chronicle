@@ -216,6 +216,7 @@ public partial class Observer(
         RegisterWatchdog(config.WatchdogInterval);
         _webhookProbe = State.WebhookProbe;
         RestoreShadowClaims();
+        RestorePartitionReplayCompletions();
         await InitializeAlertState();
         if (!KeyOwnsDefinition)
         {
@@ -775,6 +776,7 @@ public partial class Observer(
                 QuarantineEpisodeId = _quarantineEpisodeId,
                 WebhookProbe = _webhookProbe,
                 DeliveryFences = DeliveryFenceSnapshot(),
+                PartitionReplayCompletions = PartitionReplayCompletionSnapshot(),
                 PartitionClaims = shadowClaims.Claims,
                 ObserverWideClaim = shadowClaims.Wide,
                 OwnershipRevision = shadowClaims.Revision
@@ -908,6 +910,8 @@ public partial class Observer(
         {
             State = State with { RunningState = ObserverRunningState.Quarantined };
         }
+
+        RestorePartitionReplayCompletions();
 
         // A reload during a transition hook is newer than the snapshot the hook was handed; keep it from being reverted.
         RecordedHandlingState();
@@ -1276,6 +1280,13 @@ public partial class Observer(
         }
 
         await RecoverSubscribedObserver();
+        if (_reapplyRestoredCompletions)
+        {
+            _reapplyRestoredCompletions = false;
+
+            // Reapplying after recovery is idempotent; the watchdog remains the backstop.
+            await ApplyOutstandingPartitionReplayCompletions();
+        }
     }
 
     Task RecoverAfterQuarantine()

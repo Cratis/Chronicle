@@ -58,6 +58,18 @@ public abstract class ObserverStorageCompatibilityContract : Specification
         await OpenObservers().ClaimOwnership("observer", "another-sequence");
         (await OpenObservers().GetAll()).ShouldBeEmpty();
     }
+    [Fact] public async Task should_round_trip_partition_replay_completions()
+    {
+        PartitionReplayCompletionState[] completions = [new("partition", 42, 50, new(Guid.NewGuid()), DateTimeOffset.UnixEpoch)];
+        await OpenObservers().Save(new() { Identifier = "observer", PartitionReplayCompletions = completions }, EventSequenceId.Log);
+        (await OpenObservers().Get("observer")).PartitionReplayCompletions.ShouldEqual(completions);
+    }
+    [Fact] public async Task should_clear_partition_replay_completions()
+    {
+        await OpenObservers().Save(new() { Identifier = "observer", PartitionReplayCompletions = [new("partition", 42, 50, null, DateTimeOffset.UnixEpoch)] }, EventSequenceId.Log);
+        await OpenObservers().Save(new() { Identifier = "observer" }, EventSequenceId.Log);
+        (await OpenObservers().Get("observer")).PartitionReplayCompletions.ShouldBeNull();
+    }
     [Fact] public async Task should_allow_a_missing_legacy_observer() => (await Check()).ShouldBeNull();
     [Fact] public async Task should_not_treat_shadow_claims_as_a_downgrade_floor()
     {

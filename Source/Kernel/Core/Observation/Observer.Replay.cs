@@ -6,12 +6,16 @@ using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Chronicle.Observation.States;
+using Cratis.Chronicle.Storage.Observation;
 using Cratis.Orleans.Jobs;
 using Microsoft.Extensions.Logging;
 namespace Cratis.Chronicle.Observation;
 
 public partial class Observer
 {
+    readonly Dictionary<Key, PartitionReplayCompletion> _partitionReplayCompletions = [];
+    bool _reapplyRestoredCompletions;
+
     /// <inheritdoc/>
     /// <remarks>
     /// A transition requested while another is in progress is only scheduled, and a later request replaces it. The only
@@ -98,8 +102,55 @@ public partial class Observer
     public Task PartitionReplayed(Key partition, EventSequenceNumber lastHandledEventSequenceNumber, EventSequenceNumber lastScannedEventSequenceNumber, EventType[] replayedEventTypes) =>
         CompletePartitionReplay(partition, lastHandledEventSequenceNumber, replayedEventTypes, lastScannedEventSequenceNumber);
 
+    /// <summary>
+    /// Gets whether this activation still owns a partition replay handover.
+    /// </summary>
+    /// <param name="partition">The partition.</param>
+    /// <returns>Whether its completion still needs to be persisted.</returns>
+    internal bool IsCompletingPartitionReplay(Key partition) => _partitionReplayCompletions.ContainsKey(partition);
+
     [LoggerMessage(LogLevel.Warning, "Could not flush handled-event counts while completing replay; counts remain pending")]
     static partial void FailedFlushingHandledCountsOnReplay(ILogger logger, Exception exception);
+
+    [LoggerMessage(LogLevel.Warning, "Could not complete partition replay for {Partition}")]
+    static partial void FailedCompletingPartitionReplay(ILogger logger, Exception exception, Key partition);
+
+    [LoggerMessage(LogLevel.Warning, "Dropping stale partition replay completion for {Partition} because its replay marker is gone")]
+    static partial void DroppedStalePartitionReplayCompletion(ILogger logger, Key partition);
+
+    PartitionReplayCompletionState[]? PartitionReplayCompletionSnapshot()
+    {
+        if (_partitionReplayCompletions.Count == 0)
+        {
+            return null;
+        }
+
+        var completions = _partitionReplayCompletions
+            .Where(entry => !entry.Value.SuccessorStarted && State.ReplayingPartitions.Contains(entry.Key))
+            .Select(entry => new PartitionReplayCompletionState(entry.Key, entry.Value.LastHandled, entry.Value.Boundary, entry.Value.CoveredEpisode, entry.Value.Recorded))
+            .ToArray();
+        return completions.Length == 0 ? null : completions;
+    }
+
+    void RestorePartitionReplayCompletions()
+    {
+        if (State.PartitionReplayCompletions is null)
+        {
+            return;
+        }
+
+        foreach (var completion in State.PartitionReplayCompletions)
+        {
+            if (!State.ReplayingPartitions.Contains(completion.Partition))
+            {
+                DroppedStalePartitionReplayCompletion(logger, completion.Partition);
+                continue;
+            }
+
+            _partitionReplayCompletions.TryAdd(completion.Partition, new(completion));
+            _reapplyRestoredCompletions = true;
+        }
+    }
 
     async Task CompleteReplay(EventSequenceNumber lastHandledEventSequenceNumber, IReadOnlyDictionary<Key, EventSequenceNumber> replayedPartitions, EventType[] replayedEventTypes, DateTimeOffset replayStartedAt)
     {
@@ -159,6 +210,7 @@ public partial class Observer
         };
         State.CatchingUpPartitions.Clear();
         State.ReplayingPartitions.Clear();
+        _partitionReplayCompletions.Clear();
         _partitionHoldsVersion++;
         await WriteStateAsync();
         if (!IsQuarantined)
@@ -185,37 +237,99 @@ public partial class Observer
     {
         if (IsRetired || _removed) return;
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
-        Skips.Completing(partition, FurthestOf(lastHandledEventSequenceNumber, lastScannedEventSequenceNumber));
+        if (!_partitionReplayCompletions.TryGetValue(partition, out var completion))
+        {
+            if (!State.ReplayingPartitions.Contains(partition)) return;
+            var coveredEpisode = await FailureCoveredByPartitionReplay(partition, lastHandledEventSequenceNumber, replayedEventTypes);
+            completion = new(lastHandledEventSequenceNumber, FurthestOf(lastHandledEventSequenceNumber, lastScannedEventSequenceNumber), coveredEpisode, _clock.GetUtcNow());
+            _partitionReplayCompletions.Add(partition, completion);
+        }
+
+        await ApplyPartitionReplayCompletion(partition, completion);
+    }
+
+    async Task<FailedPartitionId?> FailureCoveredByPartitionReplay(Key partition, EventSequenceNumber lastHandled, EventType[] replayedEventTypes)
+    {
+        if (replayedEventTypes.Length == 0 || !lastHandled.IsActualValue ||
+            !Failures.TryGet(partition, out var failure) || failure.Deferral is not null || failure.LastAttempt.SequenceNumber > lastHandled)
+        {
+            return null;
+        }
+
+        var eventSequenceStorage = storage.GetEventStore(_observerKey.EventStore).GetNamespace(_observerKey.Namespace).GetEventSequence(_observerKey.EventSequenceId);
+        try
+        {
+            var failedEvent = await eventSequenceStorage.GetEventAt(failure.LastAttempt.SequenceNumber);
+            return failedEvent.Context.SequenceNumber == failure.LastAttempt.SequenceNumber &&
+                failedEvent.Context.EventSourceId == partition.ToString() && replayedEventTypes.Any(_ => _.Id == failedEvent.Context.EventType.Id)
+                ? failure.Id : null;
+        }
+        catch (Exception exception)
+        {
+            logger.FailedLookingUpReplayFailure(exception, partition, failure.LastAttempt.SequenceNumber);
+            return null;
+        }
+    }
+
+    bool IsCurrentPartitionReplayCompletion(Key partition, PartitionReplayCompletion completion) =>
+        _partitionReplayCompletions.TryGetValue(partition, out var current) && ReferenceEquals(current, completion);
+
+    async Task ApplyPartitionReplayCompletion(Key partition, PartitionReplayCompletion completion)
+    {
+        if (!IsCurrentPartitionReplayCompletion(partition, completion)) return;
+        Skips.Completing(partition, completion.Boundary);
         logger.FinishedReplayForPartition(partition);
+        HandleNewLastHandledEventForPartition(partition, completion.LastHandled);
+        await WriteStateAsync();
+        if (!IsCurrentPartitionReplayCompletion(partition, completion)) return;
+        if (completion.CoveredEpisode is { } episode)
+        {
+            await ResolveFailedPartition(partition, episodeId: episode, persistObserverState: false);
+            if (!IsCurrentPartitionReplayCompletion(partition, completion)) return;
+        }
+
+        var ownership = Skips.OwnershipTicket(partition);
+        await EnsurePartitionReplaySuccessor(partition, completion);
+        if (!IsCurrentPartitionReplayCompletion(partition, completion)) return;
+        _partitionReplayCompletions.Remove(partition);
+        Skips.Release(partition, ownership);
+        EvaluateSuspectedSkips();
+    }
+
+    async Task EnsurePartitionReplaySuccessor(Key partition, PartitionReplayCompletion completion)
+    {
+        if (completion.SuccessorStarted) return;
+
+        void OnSuccessorStarted()
+        {
+            completion.SuccessorStarted = true;
+            State.ReplayingPartitions.Remove(partition);
+            _partitionHoldsVersion++;
+        }
+
+        bool IsCurrent() => IsCurrentPartitionReplayCompletion(partition, completion);
+
+        await StartPartitionReplaySuccessor(partition, completion.Boundary, OnSuccessorStarted, IsCurrent);
+        if (!IsCurrentPartitionReplayCompletion(partition, completion) || completion.SuccessorStarted) return;
         State.ReplayingPartitions.Remove(partition);
         _partitionHoldsVersion++;
-        if (replayedEventTypes.Length > 0 && lastHandledEventSequenceNumber.IsActualValue &&
-            Failures.TryGet(partition, out var failure) && failure.LastAttempt.SequenceNumber <= lastHandledEventSequenceNumber)
+        await WriteStateAsync();
+    }
+
+    async Task ApplyOutstandingPartitionReplayCompletions()
+    {
+        if (_partitionReplayCompletions.Count == 0) return;
+        foreach (var (partition, completion) in _partitionReplayCompletions.ToArray())
         {
-            var eventSequenceStorage = storage.GetEventStore(_observerKey.EventStore).GetNamespace(_observerKey.Namespace).GetEventSequence(_observerKey.EventSequenceId);
-            AppendedEvent? failedEvent = null;
             try
             {
-                failedEvent = await eventSequenceStorage.GetEventAt(failure.LastAttempt.SequenceNumber);
+                await ApplyPartitionReplayCompletion(partition, completion);
             }
             catch (Exception exception)
             {
-                logger.FailedLookingUpReplayFailure(exception, partition, failure.LastAttempt.SequenceNumber);
-            }
-
-            if (failedEvent is not null && failedEvent.Context.SequenceNumber == failure.LastAttempt.SequenceNumber &&
-                failedEvent.Context.EventSourceId == partition.ToString() && replayedEventTypes.Any(_ => _.Id == failedEvent.Context.EventType.Id))
-            {
-                await ResolveFailedPartition(partition);
+                FailedCompletingPartitionReplay(logger, exception, partition);
             }
         }
-
-        HandleNewLastHandledEventForPartition(partition, lastHandledEventSequenceNumber);
-        await WriteStateAsync();
-
-        // Empty partial replays report the position before held-back delivery when known; otherwise preserve the legacy fallback.
-        await StartCatchupJobIfNeeded(partition, FurthestOf(lastHandledEventSequenceNumber, lastScannedEventSequenceNumber), fromStartWhenNothingRead: true);
-        EvaluateSuspectedSkips();
     }
 
     async Task ReplayPartitionTo(Key partition, EventSequenceNumber sequenceNumber, IEnumerable<EventType> eventTypes, bool retainOtherCounts)
@@ -260,6 +374,7 @@ public partial class Observer
         // failure/catch-up work; events from here on cannot reach this partition while its replay marker is set.
         var heldBackFrom = State.NextEventSequenceNumber;
         State.ReplayingPartitions.Add(partition);
+        _partitionReplayCompletions.Remove(partition);
         _partitionHoldsVersion++;
         Skips.JobStarted(partition);
         RecordedHandlingState();
@@ -330,5 +445,19 @@ public partial class Observer
         logger.NeedsToReplay();
         await TransitionTo<Replay>();
         return true;
+    }
+
+    sealed class PartitionReplayCompletion(EventSequenceNumber lastHandled, EventSequenceNumber boundary, FailedPartitionId? coveredEpisode, DateTimeOffset recorded)
+    {
+        public PartitionReplayCompletion(PartitionReplayCompletionState state)
+            : this(state.LastHandled, state.Boundary, state.CoveredEpisode, state.Recorded)
+        {
+        }
+
+        public EventSequenceNumber LastHandled { get; } = lastHandled;
+        public EventSequenceNumber Boundary { get; } = boundary;
+        public FailedPartitionId? CoveredEpisode { get; } = coveredEpisode;
+        public DateTimeOffset Recorded { get; } = recorded;
+        public bool SuccessorStarted { get; set; }
     }
 }

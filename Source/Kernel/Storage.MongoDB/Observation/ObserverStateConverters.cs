@@ -17,6 +17,7 @@ public static class ObserverStateConverters
         new()
         {
             Id = state.Identifier,
+            PartitionReplayCompletions = state.PartitionReplayCompletions,
             Owner = state.Owner,
             PartitionClaims = state.PartitionClaims,
             ObserverWideClaim = state.ObserverWideClaim,
@@ -62,6 +63,7 @@ public static class ObserverStateConverters
             state.IsReplaying,
             state.SubscribesToAllEvents)
         {
+            PartitionReplayCompletions = state.PartitionReplayCompletions,
             Owner = state.Owner,
             PartitionClaims = state.PartitionClaims,
             ObserverWideClaim = state.ObserverWideClaim,
@@ -100,6 +102,7 @@ public static class ObserverStateConverters
             state.IsReplaying,
             state.SubscribesToAllEvents)
         {
+            PartitionReplayCompletions = state.PartitionReplayCompletions,
             Owner = state.Owner,
             PartitionClaims = state.PartitionClaims,
             ObserverWideClaim = state.ObserverWideClaim,

@@ -30,6 +30,11 @@ public class ObserverState
     public string? PartitionClaims { get; set; }
 
     /// <summary>
+    /// Gets or sets serialized partition replay completions, absent on legacy rows.
+    /// </summary>
+    public string? PartitionReplayCompletions { get; set; }
+
+    /// <summary>
     /// Gets or sets the serialized shadow observer-wide claim, absent on legacy rows.
     /// </summary>
     public string? ObserverWideClaim { get; set; }

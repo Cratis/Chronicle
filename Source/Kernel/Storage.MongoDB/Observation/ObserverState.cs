@@ -34,6 +34,12 @@ public class ObserverState
     public IEnumerable<PartitionClaim>? PartitionClaims { get; set; }
 
     /// <summary>
+    /// Gets or sets partition replay completions awaiting settlement, absent on legacy state.
+    /// </summary>
+    [BsonIgnoreIfNull]
+    public IEnumerable<PartitionReplayCompletionState>? PartitionReplayCompletions { get; set; }
+
+    /// <summary>
     /// Gets or sets the shadow observer-wide claim, absent on legacy state.
     /// </summary>
     [BsonIgnoreIfNull]

@@ -20,6 +20,7 @@ internal static class NamespaceJsonStringColumns
     [
         (typeof(Observers.ObserverDefinitionChangeEntry), nameof(Observers.ObserverDefinitionChangeEntry.Data)),
         (typeof(Observers.ObserverState), nameof(Observers.ObserverState.PartitionClaims)),
+        (typeof(Observers.ObserverState), nameof(Observers.ObserverState.PartitionReplayCompletions)),
         (typeof(Observers.ObserverState), nameof(Observers.ObserverState.ObserverWideClaim)),
         (typeof(Observers.ObserverState), nameof(Observers.ObserverState.TypeSetControl)),
         (typeof(Observers.ObserverState), nameof(Observers.ObserverState.Initialization)),
