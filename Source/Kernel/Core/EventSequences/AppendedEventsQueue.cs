@@ -9,6 +9,7 @@ using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Diagnostics;
+using Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
 using Cratis.Chronicle.Observation;
 using Cratis.Metrics;
 using Cratis.Tasks;
@@ -171,10 +172,6 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
         }
 
         var batch = appendedEvents as AppendedEvent[] ?? appendedEvents.ToArray();
-        using var span = _activitySource.Enqueue();
-        span?.Activity?.Tag(_eventSequenceKey.EventStore);
-        span?.Activity?.Tag(_eventSequenceKey.Namespace);
-        span?.Activity?.Tag(_eventSequenceKey.EventSequenceId);
 
         Interlocked.Increment(ref _pendingItems);
         _queueEmptyEvent.Reset();

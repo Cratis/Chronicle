@@ -232,11 +232,7 @@ read models against one `EventStoreForTesting` (for example a command scenario t
 read model its command reads) pays for a whole in-memory store every time it constructs a
 `ReadModelScenario<TReadModel>`. Ask the store for the scenario instead:
 
-```csharp
-using var scenario = store.CreateReadModelScenario<OrderSummary>();
-await scenario.ProcessAppendedEvents(selectedEvents);
-var summary = scenario.Instance;
-```
+<ChronicleClientTabs snippet="testing/read-models/scenario/borrowed-store" variants="csharp" />
 
 The scenario borrows the store's discovered artifacts, event types, serialization and event type
 schemas, and owns everything else: its input, seeds, `Instance`/`Instances`, `WithProjection` and its
