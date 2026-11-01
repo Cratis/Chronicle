@@ -34,7 +34,7 @@ public static class ProbeScenario
         var connectionString = Environment.GetEnvironmentVariable(ColdStartKernel.EnvironmentVariable);
         if (string.IsNullOrEmpty(connectionString))
         {
-            Console.Error.WriteLine($"{ColdStartKernel.EnvironmentVariable} is not set; run through probe-loop.");
+            await Console.Error.WriteLineAsync($"{ColdStartKernel.EnvironmentVariable} is not set; run through probe-loop.");
             return 2;
         }
 
@@ -66,7 +66,7 @@ public static class ProbeScenario
         var p3 = Stopwatch.GetElapsedTime(mainStart).TotalMilliseconds;
         var allocatedAtAppend = GC.GetTotalAllocatedBytes(precise: true);
 
-        Console.WriteLine(JsonSerializer.Serialize(new Dictionary<string, double>
+        await Console.Out.WriteLineAsync(JsonSerializer.Serialize(new Dictionary<string, double>
         {
             ["p0RuntimeStartMs"] = runtimeStartMs,
             ["p1ClientCreatedMs"] = p1,

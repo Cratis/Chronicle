@@ -9,7 +9,7 @@ On-demand (not in the solution, not in the nightly run). Slice 1 of Cratis/Chron
   - Cold allocations at P2 and P3 (`GC.GetTotalAllocatedBytes(precise: true)`, measured from `Main`).
   - Scenarios: `connect` (auto discovery off, so only the connect) and `auto` (discover and register the shared benchmark artifacts).
   - The loop writes median, p90 and min to `results/probe-<scenario>.json`.
-- **`GrpcServiceProxyCreationBenchmark`** (BenchmarkDotNet): cold (30 launches, no warmup) and warm cost of creating the proxies for `AllServices`, `AppendPath` and `AutoRegisterPath`. No kernel needed. BenchmarkDotNet's Allocated comes from a separate diagnoser run, so the cold job's Allocated is not the first-call allocation; use the probe for that.
+- **`GrpcServiceProxyCreationBenchmark`** (BenchmarkDotNet): cold (30 launches, no warmup) and warm cost of creating proxies: `EagerConnect` (baseline, all 32 as before #5123), `LazyConnect`, `LazyAppendPath` and `LazyAllServices`. No kernel needed. BenchmarkDotNet's Allocated comes from a separate diagnoser run, so the cold job's Allocated is not the first-call allocation; use the probe for that.
 
 ## Running
 

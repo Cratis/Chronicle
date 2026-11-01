@@ -11,8 +11,10 @@ namespace Cratis.Chronicle.Benchmarks.ColdStart;
 /// </summary>
 public static class ProbeLoop
 {
+    static readonly JsonSerializerOptions _indentedOptions = new() { WriteIndented = true };
+
     /// <summary>
-    /// Runs the loop against a warm kernel and writes <c>results/probe-&lt;scenario&gt;.json</c>.
+    /// Runs the loop against a warm kernel and writes results/probe-&lt;scenario&gt;.json.
     /// </summary>
     /// <param name="scenario">The scenario name.</param>
     /// <param name="count">The number of child processes to start.</param>
@@ -31,6 +33,7 @@ public static class ProbeLoop
             {
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
+                UseShellExecute = false,
             };
             using var process = Process.Start(start)!;
             var output = await process.StandardOutput.ReadToEndAsync();
@@ -38,7 +41,7 @@ public static class ProbeLoop
             await process.WaitForExitAsync();
             if (process.ExitCode != 0)
             {
-                Console.Error.WriteLine($"Probe {i} failed with exit code {process.ExitCode}: {error}");
+                await Console.Error.WriteLineAsync($"Probe {i} failed with exit code {process.ExitCode}: {error}");
                 return 1;
             }
 
@@ -58,8 +61,8 @@ public static class ProbeLoop
 
         Directory.CreateDirectory("results");
         var path = Path.Combine("results", $"probe-{scenario}.json");
-        await File.WriteAllTextAsync(path, JsonSerializer.Serialize(summary, new JsonSerializerOptions { WriteIndented = true }));
-        Console.WriteLine($"Wrote {Path.GetFullPath(path)}");
+        await File.WriteAllTextAsync(path, JsonSerializer.Serialize(summary, _indentedOptions));
+        await Console.Out.WriteLineAsync($"Wrote {Path.GetFullPath(path)}");
         return 0;
     }
 
