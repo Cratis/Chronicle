@@ -259,6 +259,7 @@ public partial class Observer
     async Task EnsurePartitionReplaySuccessor(Key partition, PartitionReplayCompletion completion)
     {
         if (completion.SuccessorStarted) return;
+
         void OnSuccessorStarted()
         {
             completion.SuccessorStarted = true;
