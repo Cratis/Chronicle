@@ -6,6 +6,7 @@ using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Commands;
 using Cratis.Chronicle.Contracts.Queries;
 using Cratis.Chronicle.Contracts.Sequences;
+using Cratis.Chronicle.Security;
 using context = Cratis.Chronicle.Integration.for_EventSequence.when_appending.and_the_event_store_is_the_system_event_store.context;
 
 namespace Cratis.Chronicle.Integration.for_EventSequence.when_appending;
@@ -51,18 +52,15 @@ public class and_the_event_store_is_the_system_event_store(context context) : Gi
         }
     }
 
-    [Fact] void should_refuse_append() => AssertRefused(Context.AppendResult.IsSuccess, Context.AppendResult.IsAuthorized);
-    [Fact] void should_refuse_append_many() => AssertRefused(Context.AppendManyResult.IsSuccess, Context.AppendManyResult.IsAuthorized);
-    [Fact] void should_refuse_revise() => AssertRefused(Context.ReviseResult.IsSuccess, Context.ReviseResult.IsAuthorized);
+    [Fact] void should_reject_append() => Context.AppendResult.IsAuthorized.ShouldBeFalse();
+    [Fact] void should_reject_append_many() => Context.AppendManyResult.IsAuthorized.ShouldBeFalse();
+    [Fact] void should_reject_revise() => Context.ReviseResult.IsAuthorized.ShouldBeFalse();
+    [Fact] void should_report_the_append_reason() => Context.AppendResult.AuthorizationFailureReason.ShouldEqual(SystemStoreAccess.Refused);
+    [Fact] void should_report_the_append_many_reason() => Context.AppendManyResult.AuthorizationFailureReason.ShouldEqual(SystemStoreAccess.Refused);
+    [Fact] void should_report_the_revise_reason() => Context.ReviseResult.AuthorizationFailureReason.ShouldEqual(SystemStoreAccess.Refused);
     [Fact] void should_not_throw_on_append() => Context.AppendResult.HasExceptions.ShouldBeFalse();
     [Fact] void should_not_throw_on_append_many() => Context.AppendManyResult.HasExceptions.ShouldBeFalse();
     [Fact] void should_not_throw_on_revise() => Context.ReviseResult.HasExceptions.ShouldBeFalse();
-    static void AssertRefused(bool isSuccess, bool isAuthorized)
-    {
-        isSuccess.ShouldBeFalse();
-        isAuthorized.ShouldBeFalse();
-    }
-
     [Fact]
     void should_refuse_reading_the_system_event_store()
     {
