@@ -43,11 +43,14 @@ public partial class EventTypes
     /// <returns>The prepared wire payload.</returns>
     internal async Task<RegisterEventTypesRequest> PrepareRegistration()
     {
+        using var diagnostic = StartupDiagnostics.Recorder?.Start(StartupOperation.EventTypesPreparation);
         await _schemaVerdict;
         _payloadFailure?.Throw();
         try
         {
-            return BuildRegistrationPayload();
+            var payload = BuildRegistrationPayload();
+            diagnostic?.Complete();
+            return payload;
         }
         catch (Exception exception)
         {
@@ -61,7 +64,8 @@ public partial class EventTypes
     /// </summary>
     /// <param name="payload">The complete event registration payload.</param>
     /// <returns>The wire registration operation.</returns>
-    internal Task RegisterPrepared(RegisterEventTypesRequest payload) => _servicesAccessor.Services.EventTypes.RegisterEventTypes(payload).EnsureSuccess();
+    internal Task RegisterPrepared(RegisterEventTypesRequest payload) =>
+        StartupDiagnostics.Trace(StartupOperation.EventTypesSend, payload, prepared => _servicesAccessor.Services.EventTypes.RegisterEventTypes(prepared).EnsureSuccess());
 
     /// <summary>
     /// Captures what discovery produced so another registry over an equal catalog can adopt it.

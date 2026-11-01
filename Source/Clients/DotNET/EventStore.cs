@@ -537,6 +537,7 @@ public partial class EventStore : IEventStore
                     Func<Task> registerReadModels = ReadModels.Register;
                     try
                     {
+                        using var preparation = StartupDiagnostics.Recorder?.Start(StartupOperation.StorePreparation);
                         if (EventTypes is EventTypes nativeEventTypes)
                         {
                             var payload = await nativeEventTypes.PrepareRegistration();
@@ -547,6 +548,7 @@ public partial class EventStore : IEventStore
                             var payload = nativeReadModels.PrepareRegistration();
                             registerReadModels = () => nativeReadModels.RegisterPrepared(payload);
                         }
+                        preparation?.Complete();
                     }
                     catch (Exception exception)
                     {
@@ -785,11 +787,13 @@ public partial class EventStore : IEventStore
 
     async Task RegisterAllArtifacts(Func<Task> registerEventTypes, Func<Task> registerReadModels)
     {
+        using var diagnostic = StartupDiagnostics.Recorder?.Start(StartupOperation.StoreRegistration);
         Preparation.VerifyRegistrationLease();
 
         // Another process of the application registered the artifacts at deployment time.
         if (_registrationMode == RegistrationMode.AtDeployment)
         {
+            diagnostic?.Complete();
             return;
         }
 
@@ -799,6 +803,7 @@ public partial class EventStore : IEventStore
         if (_registrationMode == RegistrationMode.EventTypesOnly)
         {
             await registerEventTypes();
+            diagnostic?.Complete();
             return;
         }
 
@@ -806,29 +811,46 @@ public partial class EventStore : IEventStore
         LogSkippedClientObservers(hostsClientObservers);
 
         // We need to register event types and read models first, as they are used by the other artifacts
-        await Task.WhenAll(
-            registerEventTypes(),
-            EventSources.Register(),
-            registerReadModels());
+        using (var types = StartupDiagnostics.Recorder?.Start(StartupOperation.ParallelTypes))
+        {
+            await Task.WhenAll(
+                registerEventTypes(),
+                EventSources.Register(),
+                registerReadModels());
+            types?.Complete();
+        }
 
         // Register all observers before seeding to prevent race conditions where
         // seeded events arrive at the kernel before observers are registered
-        await Task.WhenAll(
-            Constraints.Register(),
-            RegisterClientHostedObservers(hostsClientObservers),
-            Projections.Register());
+        using (var observers = StartupDiagnostics.Recorder?.Start(StartupOperation.ParallelObservers))
+        {
+            await Task.WhenAll(
+                Constraints.Register(),
+                RegisterClientHostedObservers(hostsClientObservers),
+                Projections.Register());
+            observers?.Complete();
+        }
 
-        await RegisterExternalSubscriptions(hostsClientObservers);
+        using (var subscriptions = StartupDiagnostics.Recorder?.Start(StartupOperation.Subscriptions))
+        {
+            await RegisterExternalSubscriptions(hostsClientObservers);
+            subscriptions?.Complete();
+        }
 
         // Seed events only after all observers are registered
-        if (Seeding is EventSeeding nativeSeeding)
+        using (var seeding = StartupDiagnostics.Recorder?.Start(StartupOperation.Seeding))
         {
-            await nativeSeeding.RegisterDiscovered();
+            if (Seeding is EventSeeding nativeSeeding)
+            {
+                await nativeSeeding.RegisterDiscovered();
+            }
+            else
+            {
+                await Seeding.Register();
+            }
+            seeding?.Complete();
         }
-        else
-        {
-            await Seeding.Register();
-        }
+        diagnostic?.Complete();
     }
 
     void LogSkippedClientObservers(bool hostsClientObservers)

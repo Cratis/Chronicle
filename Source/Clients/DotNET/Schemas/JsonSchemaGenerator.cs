@@ -121,41 +121,65 @@ public partial class JsonSchemaGenerator : IJsonSchemaGenerator
     /// concurrent readers of a shared instance are safe.
     /// </para>
     /// </remarks>
-    public JsonSchema Generate(Type type) =>
-        _schemasByType.GetOrAdd(
+    public JsonSchema Generate(Type type)
+    {
+        using var diagnostic = StartupDiagnostics.Recorder?.Start(StartupOperation.GenerateEventSchema);
+        var schema = _schemasByType.GetOrAdd(
             type,
             static (typeToGenerate, generator) =>
             {
+                using var factory = StartupDiagnostics.Recorder?.Start(StartupOperation.EventSchemaFactory);
                 var node = generator._serializerOptions.GetJsonSchemaAsNode(typeToGenerate, generator._preciseEventExporterOptions);
-                return new JsonSchema(node.AsObject());
+                var result = new JsonSchema(node.AsObject());
+                factory?.Complete();
+                return result;
             },
             this);
+        diagnostic?.Complete();
+        return schema;
+    }
 
     /// <inheritdoc/>
-    public JsonSchema GenerateForReadModel(Type type) =>
-        _readModelSchemasByType.GetOrAdd(
+    public JsonSchema GenerateForReadModel(Type type)
+    {
+        using var diagnostic = StartupDiagnostics.Recorder?.Start(StartupOperation.GenerateReadModelSchema);
+        var schema = _readModelSchemasByType.GetOrAdd(
             type,
             static (typeToGenerate, generator) =>
             {
+                using var factory = StartupDiagnostics.Recorder?.Start(StartupOperation.ReadModelSchemaFactory);
                 var node = generator._serializerOptions.GetJsonSchemaAsNode(typeToGenerate, generator._readModelExporterOptions);
-                return new JsonSchema(node.AsObject());
+                var result = new JsonSchema(node.AsObject());
+                factory?.Complete();
+                return result;
             },
             this);
+        diagnostic?.Complete();
+        return schema;
+    }
 
     /// <inheritdoc/>
     /// <remarks>
     /// Preserves the default-only shape used by kernels that do not advertise precise event type schemas.
     /// This representation is only used when registering against those kernels, not for read models.
     /// </remarks>
-    public JsonSchema GenerateLegacyEventType(Type type) =>
-        _legacySchemasByType.GetOrAdd(
+    public JsonSchema GenerateLegacyEventType(Type type)
+    {
+        using var diagnostic = StartupDiagnostics.Recorder?.Start(StartupOperation.GenerateLegacySchema);
+        var schema = _legacySchemasByType.GetOrAdd(
             type,
             static (typeToGenerate, generator) =>
             {
+                using var factory = StartupDiagnostics.Recorder?.Start(StartupOperation.LegacySchemaFactory);
                 var node = generator._serializerOptions.GetJsonSchemaAsNode(typeToGenerate, generator._exporterOptions);
-                return new JsonSchema(node.AsObject());
+                var result = new JsonSchema(node.AsObject());
+                factory?.Complete();
+                return result;
             },
             this);
+        diagnostic?.Complete();
+        return schema;
+    }
 
     static FieldInfo GetParameterDefaultValueField(JsonParameterInfo paramInfo)
     {

@@ -15,21 +15,52 @@ public partial class JsonSchemaGenerator
     readonly ConcurrentDictionary<Type, StructuralSchema> _legacyEventStructures = new();
 
     /// <inheritdoc/>
-    public JsonSchema Generate(Type type, IEventTypes eventTypes) => CompensationSchemaBinding.RequiresRegistry(type, eventTypes)
-        ? BindStructure(_preciseEventStructures.GetOrAdd(type, static (clrType, generator) => generator.GenerateStructure(clrType, precise: true), this), eventTypes)
-        : Generate(type);
+    public JsonSchema Generate(Type type, IEventTypes eventTypes)
+    {
+        using var diagnostic = StartupDiagnostics.Recorder?.Start(StartupOperation.GenerateEventSchema);
+        var schema = CompensationSchemaBinding.RequiresRegistry(type, eventTypes)
+            ? BindStructure(_preciseEventStructures.GetOrAdd(type, static (clrType, generator) => CreatePreciseStructure(clrType, generator), this), eventTypes)
+            : Generate(type);
+        diagnostic?.Complete();
+        return schema;
+    }
 
     /// <inheritdoc/>
-    public JsonSchema GenerateLegacyEventType(Type type, IEventTypes eventTypes) => CompensationSchemaBinding.RequiresRegistry(type, eventTypes)
-        ? BindStructure(_legacyEventStructures.GetOrAdd(type, static (clrType, generator) => generator.GenerateStructure(clrType, precise: false), this), eventTypes)
-        : GenerateLegacyEventType(type);
+    public JsonSchema GenerateLegacyEventType(Type type, IEventTypes eventTypes)
+    {
+        using var diagnostic = StartupDiagnostics.Recorder?.Start(StartupOperation.GenerateLegacySchema);
+        var schema = CompensationSchemaBinding.RequiresRegistry(type, eventTypes)
+            ? BindStructure(_legacyEventStructures.GetOrAdd(type, static (clrType, generator) => CreateLegacyStructure(clrType, generator), this), eventTypes)
+            : GenerateLegacyEventType(type);
+        diagnostic?.Complete();
+        return schema;
+    }
+
+    static StructuralSchema CreatePreciseStructure(Type clrType, JsonSchemaGenerator generator)
+    {
+        using var factory = StartupDiagnostics.Recorder?.Start(StartupOperation.PreciseStructureFactory);
+        var structure = generator.GenerateStructure(clrType, precise: true);
+        factory?.Complete();
+        return structure;
+    }
+
+    static StructuralSchema CreateLegacyStructure(Type clrType, JsonSchemaGenerator generator)
+    {
+        using var factory = StartupDiagnostics.Recorder?.Start(StartupOperation.LegacyStructureFactory);
+        var structure = generator.GenerateStructure(clrType, precise: false);
+        factory?.Complete();
+        return structure;
+    }
 
     static JsonSchema BindStructure(StructuralSchema structure, IEventTypes eventTypes)
     {
+        using var diagnostic = StartupDiagnostics.Recorder?.Start(StartupOperation.RegistryBinding);
         var clone = structure.Node.DeepClone();
         Decorate(structure.Node, clone, structure.Compensations, eventTypes);
 
-        return new(clone.AsObject());
+        var schema = new JsonSchema(clone.AsObject());
+        diagnostic?.Complete();
+        return schema;
     }
 
     static void Decorate(JsonNode original, JsonNode clone, FrozenDictionary<JsonObject, Type> compensations, IEventTypes eventTypes)

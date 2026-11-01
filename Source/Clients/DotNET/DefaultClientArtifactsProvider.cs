@@ -325,10 +325,15 @@ public class DefaultClientArtifactsProvider(ICanProvideAssembliesForDiscovery as
             // Only the initializing thread can reenter this lock; other readers wait for it.
             if (_initializing) throw new ReentrantClientArtifactsInitialization();
 
+            using var diagnostic = StartupDiagnostics.Recorder?.Start(StartupOperation.ProviderInitialization);
             _initializing = true;
             try
             {
-                assembliesProvider.Initialize();
+                using (var discovery = StartupDiagnostics.Recorder?.Start(StartupOperation.AssemblyDiscovery))
+                {
+                    assembliesProvider.Initialize();
+                    discovery?.Complete();
+                }
                 _eventTypes = assembliesProvider.DefinedTypes.Where(_ => _.HasAttribute<EventTypeAttribute>() || _.HasAttribute<EventTypeGenerationForAttribute>()).ToArray();
                 _complianceForTypesProviders = assembliesProvider.DefinedTypes.Where(_ => _ != typeof(ICanProvideComplianceMetadataForType) && _.IsAssignableTo(typeof(ICanProvideComplianceMetadataForType))).ToArray();
                 _complianceForPropertiesProviders = assembliesProvider.DefinedTypes.Where(_ => _ != typeof(ICanProvideComplianceMetadataForProperty) && _.IsAssignableTo(typeof(ICanProvideComplianceMetadataForProperty))).ToArray();
@@ -356,6 +361,7 @@ public class DefaultClientArtifactsProvider(ICanProvideAssembliesForDiscovery as
 
                 // Publish all artifact arrays together only after every discovery step succeeds.
                 _initialized = true;
+                diagnostic?.Complete();
             }
             finally
             {

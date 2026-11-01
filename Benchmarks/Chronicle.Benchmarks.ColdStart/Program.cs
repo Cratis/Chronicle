@@ -8,6 +8,11 @@ using Cratis.Chronicle.Benchmarks.ColdStart;
 
 var mainStart = Stopwatch.GetTimestamp();
 
+if (args.FirstOrDefault()?.StartsWith("diagnostic-", StringComparison.Ordinal) == true)
+{
+    return await StartupDiagnosticRunner.Run(args);
+}
+
 if (args is ["probe", var probeScenario])
 {
     return await ProbeScenario.Run(probeScenario, mainStart);
