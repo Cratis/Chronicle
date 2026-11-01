@@ -25,9 +25,11 @@ public class EventCompliance(
     {
         // Not async: a warm lookup completes synchronously and must not add a task on the delivery path.
         var lookup = schemaCache.GetProtectionSchemaFor(@event.Context.EventStore, @event.Context.EventType.Id, @event.Context.EventType.Generation, schema);
+#pragma warning disable MA0042 // Result is only read after IsCompletedSuccessfully, so it never blocks
         return lookup.IsCompletedSuccessfully
             ? ReleaseWithEffective(@event, lookup.Result)
             : ReleaseAfterLookup(@event, lookup);
+#pragma warning restore MA0042
     }
 
     /// <inheritdoc/>
