@@ -42,12 +42,10 @@ fi
 
 server_pid=""
 shutdown_requested=false
-signal_count=0
 pending_signal=""
 
 forward_signal() {
   shutdown_requested=true
-  signal_count=$((signal_count + 1))
   # Before the launch there is no server to signal; the launch forwards the pending signal.
   # The server may also have exited just before the signal arrived.
   if [ -n "$server_pid" ]; then
@@ -62,38 +60,63 @@ trap 'forward_signal TERM' TERM
 # forward it as TERM, which the server handles as a stop request.
 trap 'forward_signal TERM' INT
 
-./Cratis.Chronicle.Server &
-server_pid=$!
+# Reap the server in a shell with no signal traps: Bash can lose a child's status when
+# a trapped signal interrupts wait, even with wait -n -p. Send the PID and status through
+# a pipe instead. The parent forwards signals to the server, not to this waiting shell.
+# The handshake keeps the coprocess alive until its read descriptor has been duplicated;
+# Bash closes the original coprocess descriptors when the coprocess exits.
+exec {server_stdout_fd}>&1
+coproc {
+  IFS= read -r start
+  set +e
+  ./Cratis.Chronicle.Server >&"$server_stdout_fd" &
+  child_pid=$!
+  printf '%s\n' "$child_pid"
+  wait "$child_pid"
+  printf '%s\n' "$?"
+}
+exec {server_status_fd}<&"${COPROC[0]}"
+exec {server_stdout_fd}>&-
+printf 'start\n' >&"${COPROC[1]}"
+
+# read can also be interrupted by a trap. Retain any partial line and resume reading;
+# unlike an interrupted wait, this cannot discard the server's recorded exit status.
+read_server_value() {
+  server_value=""
+  local part read_status
+  while :; do
+    if IFS= read -r part <&"$server_status_fd"; then
+      server_value+=$part
+      return 0
+    else
+      read_status=$?
+      server_value+=$part
+      [ "$read_status" -gt 128 ] || return "$read_status"
+    fi
+  done
+}
+
+read_server_value
+server_pid=$server_value
 if [ -n "$pending_signal" ]; then
   kill -s "$pending_signal" "$server_pid" 2>/dev/null || true
 fi
 
 # Allow at least 30 seconds of container stop grace for the host's 10-second shutdown
 # timeout and the subsequent embedded MongoDB shutdown.
-# A trap firing while "wait" is blocked can make bash report 128 + signal even though it
-# already reaped the server, discarding its real exit status for good (seen under CI
-# scheduling pressure). Poll for the server's own exit first, so the "wait" below rarely has
-# to block where a trap could still interrupt it.
+# Keep reporting an unexpected MongoDB exit, but never use an interrupted wait's status
+# for the server. Its untrapped waiter records the authoritative status in the pipe.
 set +e
-while kill -0 "$server_pid" 2>/dev/null; do
-  sleep 0.02
-done
-wait "$server_pid"
+wait -n -p completed_pid
 exit_status=$?
+if [ "$shutdown_requested" = true ] || [ -z "$mongod_pid" ] || [ "${completed_pid:-}" != "$mongod_pid" ]; then
+  if read_server_value; then
+    exit_status=$server_value
+  fi
+fi
+exec {server_status_fd}<&-
 
 if [ "$shutdown_requested" = true ]; then
-  # A trap can still land in the instant between the poll above finding the server gone and
-  # the "wait" above collecting it, reporting 128 + the forwarded signal instead of the real
-  # status even though the server has definitely already exited by then. The server is gone
-  # either way, so retry until a real status lands.
-  retry_count=0
-  while { [ "$exit_status" -eq 143 ] || [ "$exit_status" -eq 130 ]; } && [ "$retry_count" -lt 100 ]; do
-    wait "$server_pid"
-    exit_status=$?
-    retry_count=$((retry_count + 1))
-    sleep 0.01
-  done
-
   # Keep storage available until the server has drained. Cleanup must not replace
   # the server's exit status, including when mongod has already exited.
   kill -TERM "$mongod_pid" 2>/dev/null || true

@@ -70,6 +70,7 @@ public static class ChronicleServerSiloBuilderExtensions
         });
 
         builder.AddIncomingGrainCallFilter<CorrelationIdIncomingCallFilter>();
+        builder.AddIncomingGrainCallFilter<SerializableFailureIncomingCallFilter>();
         builder.AddOutgoingGrainCallFilter<CorrelationIdOutgoingCallFilter>();
         builder.AddIncomingGrainCallFilter<UserIdentityIncomingCallFilter>();
         builder.AddOutgoingGrainCallFilter<UserIdentityOutgoingCallFilter>();
