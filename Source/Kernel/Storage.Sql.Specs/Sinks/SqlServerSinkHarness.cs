@@ -73,7 +73,7 @@ public class SqlServerSinkHarness : ISqlSinkHarness
     {
         if (Fixture is not null && ConnectionString.Length > 0)
         {
-            Fixture.DropDatabase(ConnectionString).GetAwaiter().GetResult();
+            Fixture.QueueDatabaseDrop(ConnectionString).GetAwaiter().GetResult();
         }
 
         GC.SuppressFinalize(this);

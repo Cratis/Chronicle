@@ -60,11 +60,22 @@ public sealed class SqlServerFixture : IAsyncLifetime
     }
 
     /// <summary>
-    /// Queues the drop of a specification's database and returns without waiting for it; a background worker drops it.
+    /// Drops a specification's database, completing only after deletion and propagating any failure.
+    /// </summary>
+    /// <param name="connectionString">The connection string returned by <see cref="CreateDatabase"/>.</param>
+    /// <returns>A task that completes after the database is dropped.</returns>
+    public Task DropDatabase(string connectionString)
+    {
+        var name = new SqlConnectionStringBuilder(connectionString).InitialCatalog;
+        return Timings.Run("sql-database-drop", () => Drop(name));
+    }
+
+    /// <summary>
+    /// Queues teardown without waiting for deletion. Failures are logged; pending drops are discarded on disposal.
     /// </summary>
     /// <param name="connectionString">The connection string returned by <see cref="CreateDatabase"/>.</param>
     /// <returns>Awaitable task.</returns>
-    public Task DropDatabase(string connectionString)
+    public Task QueueDatabaseDrop(string connectionString)
     {
         var name = new SqlConnectionStringBuilder(connectionString).InitialCatalog;
         _drops.Writer.TryWrite((name, null));

@@ -16,7 +16,7 @@ public class and_sql_server_values_differ_only_in_case(SqlServerFixture fixture)
     async Task Establish()
     {
         var connectionString = await fixture.CreateDatabase();
-        await CreateLegacyTable(connectionString, true, () => fixture.DropDatabase(connectionString));
+        await CreateLegacyTable(connectionString, true, () => fixture.QueueDatabaseDrop(connectionString));
 
         // This table is already indexable; case-only duplicates are judged by the server's collation.
 #pragma warning disable EF1002 // Fixture-owned identifiers delimited by the provider.

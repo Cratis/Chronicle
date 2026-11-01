@@ -54,11 +54,11 @@ public class a_sql_server_database(SqlServerFixture fixture) : Specification
                 var databases = await cluster.DbContext.DatabaseNames.Where(row => row.Kind != DatabaseKind.Cluster).Select(row => row.PhysicalName).ToArrayAsync();
                 foreach (var name in databases)
                 {
-                    await fixture.DropDatabase(new SqlConnectionStringBuilder(ConnectionString) { InitialCatalog = name }.ConnectionString);
+                    await fixture.QueueDatabaseDrop(new SqlConnectionStringBuilder(ConnectionString) { InitialCatalog = name }.ConnectionString);
                 }
             }
 
-            await fixture.DropDatabase(ConnectionString);
+            await fixture.QueueDatabaseDrop(ConnectionString);
         }
 
         await Services.DisposeAsync();

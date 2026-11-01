@@ -23,11 +23,7 @@ public class when_dropping_a_database_with_an_open_connection(SqlServerFixture f
 
     async Task Because()
     {
-        _exception = await Catch.Exception(async () =>
-        {
-            await fixture.DropDatabase(_database);
-            await fixture.FlushDrops();
-        });
+        _exception = await Catch.Exception(() => fixture.DropDatabase(_database));
         _exists = await Exists(_database);
     }
 

@@ -31,8 +31,8 @@ public class when_creating_a_database(SqlServerFixture fixture) : Specification
 
     async Task Destroy()
     {
-        await fixture.DropDatabase(_first);
-        await fixture.DropDatabase(_second);
+        await fixture.QueueDatabaseDrop(_first);
+        await fixture.QueueDatabaseDrop(_second);
     }
 
     static async Task<string> Text(string connectionString, string sql)
