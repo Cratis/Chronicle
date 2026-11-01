@@ -25,6 +25,8 @@ public partial class EventTypesStorage(EventStoreName eventStore, IDatabase data
     const int MaxMigrationVersionAttempts = 5;
     readonly ILogger<EventTypesStorage> _logger = logger ?? NullLogger<EventTypesStorage>.Instance;
     readonly ConcurrentDictionary<EventTypeId, EventTypeDefinition> _definitionsByType = new();
+    readonly object _definitionInvalidation = new();
+    long _definitionRevision;
     ConcurrentBag<EventType> _eventTypes = new();
 
     /// <inheritdoc/>
@@ -59,7 +61,7 @@ public partial class EventTypesStorage(EventStoreName eventStore, IDatabase data
         _eventTypes.Add(eventType);
 
         await scope.DbContext.EventTypes.Upsert(eventType);
-        _definitionsByType.TryRemove(eventType.Id, out _);
+        InvalidateDefinition(eventType.Id);
         return true;
     }
 
@@ -101,7 +103,7 @@ public partial class EventTypesStorage(EventStoreName eventStore, IDatabase data
         _eventTypes.Add(eventType);
 
         await scope.DbContext.EventTypes.Upsert(eventType);
-        _definitionsByType.TryRemove(definition.Id, out _);
+        InvalidateDefinition(definition.Id);
         return true;
     }
 
@@ -121,19 +123,37 @@ public partial class EventTypesStorage(EventStoreName eventStore, IDatabase data
             return cached;
         }
 
-        var eventType = await GetSpecificEventType(eventTypeId);
-        if (eventType is null)
+        while (true)
         {
-            var schema = await GetFor(eventTypeId);
-            return new EventTypeDefinition(
-                eventTypeId,
-                EventTypeOwner.None,
-                false,
-                [new EventTypeGenerationDefinition(schema.Type.Generation, schema.Schema)],
-                []);
-        }
+            long revision;
+            lock (_definitionInvalidation)
+            {
+                revision = _definitionRevision;
+            }
 
-        return _definitionsByType.GetOrAdd(eventTypeId, static (_, document) => document.ToDefinition(), eventType);
+            var eventType = await GetSpecificEventType(eventTypeId);
+            if (eventType is null)
+            {
+                var schema = await GetFor(eventTypeId);
+                return new EventTypeDefinition(
+                    eventTypeId,
+                    EventTypeOwner.None,
+                    false,
+                    [new EventTypeGenerationDefinition(schema.Type.Generation, schema.Schema)],
+                    []);
+            }
+
+            lock (_definitionInvalidation)
+            {
+                // A read started before invalidation cannot repopulate the definition cache.
+                if (revision != _definitionRevision)
+                {
+                    continue;
+                }
+
+                return _definitionsByType.GetOrAdd(eventTypeId, static (_, document) => document.ToDefinition(), eventType);
+            }
+        }
     }
 
     /// <inheritdoc/>
@@ -227,10 +247,19 @@ public partial class EventTypesStorage(EventStoreName eventStore, IDatabase data
     /// <inheritdoc/>
     public void Invalidate(EventTypeId eventTypeId)
     {
-        _definitionsByType.TryRemove(eventTypeId, out _);
+        InvalidateDefinition(eventTypeId);
         if (_eventTypes.Any(_ => _.Id == eventTypeId))
         {
             _eventTypes = new ConcurrentBag<EventType>(_eventTypes.Where(_ => _.Id != eventTypeId));
+        }
+    }
+
+    void InvalidateDefinition(EventTypeId eventTypeId)
+    {
+        lock (_definitionInvalidation)
+        {
+            _definitionRevision++;
+            _definitionsByType.TryRemove(eventTypeId, out _);
         }
     }
 

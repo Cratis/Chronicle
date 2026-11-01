@@ -27,12 +27,12 @@ public interface IEventTypeSchemaCache
     string GetSchemaJsonFor(EventStoreName eventStore, EventTypeId eventTypeId, EventTypeGeneration generation);
 
     /// <summary>
-    /// Gets the effective protection schema, preserving the caller's schema instance when nothing is inherited.
+    /// Gets effective protection from the current definition snapshot, including its owning generation schema.
     /// </summary>
     /// <param name="eventStore">The event store.</param>
     /// <param name="eventTypeId">The event type.</param>
     /// <param name="generation">The content generation.</param>
-    /// <param name="ownSchema">The caller's own generation schema.</param>
+    /// <param name="ownSchema">The caller's own generation schema, used only as a warm-cache identity hint.</param>
     /// <returns>The effective protection schema.</returns>
     ValueTask<JsonSchema> GetProtectionSchemaFor(EventStoreName eventStore, EventTypeId eventTypeId, EventTypeGeneration generation, JsonSchema ownSchema);
 

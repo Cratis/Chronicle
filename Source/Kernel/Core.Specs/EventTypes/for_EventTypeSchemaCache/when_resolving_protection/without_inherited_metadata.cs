@@ -29,6 +29,6 @@ public class without_inherited_metadata : given.a_protection_schema_cache
         _allocations = GC.GetAllocatedBytesForCurrentThread() - before;
     }
 
-    [Fact] void should_preserve_the_callers_exact_schema_instance() => ReferenceEquals(_callerSchema, _result).ShouldBeTrue();
+    [Fact] void should_use_the_owning_schema_from_the_definition_snapshot() => ReferenceEquals(_own, _result).ShouldBeTrue();
     [Fact] void should_allocate_nothing_for_a_warm_negative_decision() => _allocations.ShouldEqual(0);
 }
