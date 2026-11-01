@@ -32,7 +32,7 @@ public class and_the_fold_is_blocked_by_a_constraint_pending_repair : given.a_ca
         await Tick();
         _admittedAfterBlock = WaitingAdmitted();
         _excludedAfterBlock = _eventSequence.ConstraintIndexCatchUpExcludedKeyCount;
-        ConstraintIndexCatchUpSlots.For(_storage).Complete(_waiting);
+        ConstraintIndexCatchUpSlots.For(_storage, ConstraintIndexRepairConfiguration.CatchUpSlots).Complete(_waiting);
         for (var tick = 0; tick < 6 && (await Values(_eventSourceId)).Length == 0; tick++) await Tick();
     }
 

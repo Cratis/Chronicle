@@ -39,7 +39,7 @@ public class and_another_constraint_keeps_failing_repair : given.a_catching_up_s
         _boundaryAfterCatchUp = _stateStorage.State.ConstraintIndexCatchUpBelow;
         _excludedAfterCatchUp = _eventSequence.ConstraintIndexCatchUpExcludedKeyCount;
         _admittedAfterCatchUp = WaitingAdmitted();
-        ConstraintIndexCatchUpSlots.For(_storage).Complete(_waiting);
+        ConstraintIndexCatchUpSlots.For(_storage, ConstraintIndexRepairConfiguration.CatchUpSlots).Complete(_waiting);
         await Tick();
         _savesAfterIdleTick = _otherSaves;
         _clock.Advance(TimeSpan.FromSeconds(5));

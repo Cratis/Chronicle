@@ -37,11 +37,11 @@ public class a_catching_up_sequence_with_a_failing_constraint : a_catching_up_se
 
     protected void OccupySlots()
     {
-        var slots = ConstraintIndexCatchUpSlots.For(_storage);
+        var slots = ConstraintIndexCatchUpSlots.For(_storage, ConstraintIndexRepairConfiguration.CatchUpSlots);
         foreach (var owner in _owners) slots.TryEnter(owner).ShouldBeTrue();
     }
 
-    protected bool WaitingAdmitted() => ConstraintIndexCatchUpSlots.For(_storage).TryEnter(_waiting);
+    protected bool WaitingAdmitted() => ConstraintIndexCatchUpSlots.For(_storage, ConstraintIndexRepairConfiguration.CatchUpSlots).TryEnter(_waiting);
 
     protected async Task AppendOther(EventSourceId source)
     {
@@ -64,7 +64,7 @@ public class a_catching_up_sequence_with_a_failing_constraint : a_catching_up_se
 
     void Destroy()
     {
-        var slots = ConstraintIndexCatchUpSlots.For(_storage);
+        var slots = ConstraintIndexCatchUpSlots.For(_storage, ConstraintIndexRepairConfiguration.CatchUpSlots);
         foreach (var owner in _owners) slots.Complete(owner);
         slots.Complete(_waiting);
     }

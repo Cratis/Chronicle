@@ -24,6 +24,8 @@ public partial class EventSequence
     /// </summary>
     internal int ConstraintIndexCatchUpExcludedKeyCount => _catchUpExcluded.Count;
 
+    ConstraintIndexCatchUpSlots CatchUpSlots => ConstraintIndexCatchUpSlots.For(storage, ConstraintIndexRepair.CatchUpSlots);
+
     /// <summary>
     /// Determines whether an independently scheduled catch-up turn has eligible work.
     /// </summary>
@@ -34,8 +36,6 @@ public partial class EventSequence
         if (State.ConstraintIndexCatchUpBelow is null || now < _nextConstraintCatchUpAttempt || _rebuildOwnsBoundary) return false;
         return _catchUpReplay is not null || CatchUpScopeDefinitions(out _).Any() || !CatchUpDefinitions().Any();
     }
-
-    ConstraintIndexCatchUpSlots CatchUpSlots => ConstraintIndexCatchUpSlots.For(storage, ConstraintIndexRepair.CatchUpSlots);
 
     void ExcludeLiveConstraintKeys(ConstraintValidationContext context, EventSequenceNumber number)
     {

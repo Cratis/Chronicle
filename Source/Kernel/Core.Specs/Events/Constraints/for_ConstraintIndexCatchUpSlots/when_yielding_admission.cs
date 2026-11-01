@@ -12,7 +12,7 @@ public class when_yielding_admission : Specification
     bool _admittedWhileRefusing;
     bool _admittedAfterYield;
 
-    void Establish() => _slots = ConstraintIndexCatchUpSlots.For(Substitute.For<IStorage>());
+    void Establish() => _slots = ConstraintIndexCatchUpSlots.For(Substitute.For<IStorage>(), 4);
 
     void Because()
     {
