@@ -67,7 +67,7 @@ public partial class Observer
     }
 
     /// <inheritdoc/>
-    public Task ReplayPartition(Key partition) => ReplayPartitionTo(partition, EventSequenceNumber.Max, Definition.EventTypes, false);
+    public Task ReplayPartition(Key partition) => ReplayPartitionTo(partition, EventSequenceNumber.Max, MembershipEventTypes, false);
 
     /// <inheritdoc/>
     public Task ReplayPartition(Key partition, IEnumerable<EventType> eventTypes) =>
@@ -75,7 +75,7 @@ public partial class Observer
 
     /// <inheritdoc/>
     public Task ReplayPartitionTo(Key partition, EventSequenceNumber sequenceNumber) =>
-        ReplayPartitionTo(partition, sequenceNumber, Definition.EventTypes, false);
+        ReplayPartitionTo(partition, sequenceNumber, MembershipEventTypes, false);
 
     /// <inheritdoc/>
     public Task Replayed(EventSequenceNumber lastHandledEventSequenceNumber) => CompleteReplay(lastHandledEventSequenceNumber, new Dictionary<Key, EventSequenceNumber>(), [], DateTimeOffset.MinValue);

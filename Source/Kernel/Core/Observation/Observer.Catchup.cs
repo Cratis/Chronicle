@@ -426,7 +426,7 @@ public partial class Observer
         _partitionHoldsVersion++;
         ShadowGrantPartition(partition, ClaimHolderKind.PartitionCatchUp, null, nextEventSequenceNumber);
         Skips.JobStarted(partition);
-        await _jobsManager.Start<ICatchUpObserverPartition, CatchUpObserverPartitionRequest>(new(_observerKey, Definition.Type, partition, nextEventSequenceNumber, Definition.EventTypes) { ReaderScope = ReaderScope });
+        await _jobsManager.Start<ICatchUpObserverPartition, CatchUpObserverPartitionRequest>(new(_observerKey, Definition.Type, partition, nextEventSequenceNumber, MembershipEventTypes) { ReaderScope = ReaderScope });
         await WriteStateAsync();
     }
 

@@ -69,6 +69,8 @@ public partial class HandleEventsForPartition(
     EventStoreName _generationEventStore = EventStoreName.NotSet;
     EventGenerationDelivery _generationDelivery;
     bool _isCollapsingProjection;
+    ObserverSubscription _performSubscription = ObserverSubscription.Unsubscribed;
+    PendingTypeSetHold? _pendingHold;
 
     /// <summary>
     /// Gets or sets how long to wait before a handling attempt that timed out is made again. Exposed for testing.
@@ -181,6 +183,9 @@ public partial class HandleEventsForPartition(
         var lastSuccessfullyHandledEventSequenceNumber = EventSequenceNumber.Unavailable;
         var subscription = await _observer.GetSubscription();
         _generationDelivery = subscription.GenerationDelivery;
+        _performSubscription = subscription;
+        _controlledRunClosed = false;
+        _controlledCountedThrough = EventSequenceNumber.Unavailable;
         try
         {
             lastSuccessfullyHandledEventSequenceNumber = currentState.LastSuccessfullyHandledEventSequenceNumber;
@@ -240,6 +245,8 @@ public partial class HandleEventsForPartition(
                     return JobStepResult.Failed(PerformJobStepError.CancelledWithPartialResult(CreateResult(lastSuccessfullyHandledEventSequenceNumber)));
                 }
                 var handledCount = EventCount.Zero;
+                _pendingHold = null;
+                _controlledRunException = null;
 
                 if ((currentState.EpisodeId is not null || _subscriber is IWebhookObserverSubscriber) && !await _observer.CanResumeFailedPartition(currentState.Partition, currentState.EpisodeId, currentState.DeferralId))
                 {
@@ -259,6 +266,7 @@ public partial class HandleEventsForPartition(
                     return JobStepResult.Failed(PerformJobStepError.CancelledWithPartialResult(CreateResult(lastSuccessfullyHandledEventSequenceNumber)));
                 }
 
+                if (_controlledRunClosed) return ClosedResult(lastSuccessfullyHandledEventSequenceNumber);
                 if (handleEventsResult.TryGetException(out var handleEventsException))
                 {
                     failed = true;
@@ -278,7 +286,7 @@ public partial class HandleEventsForPartition(
                     var (eventObserverResult, handledEvents) = handledEventsResult;
                     if (eventObserverResult.LastSuccessfulObservation.IsActualValue)
                     {
-                        handledCount = events.Current.Count(_ => _.Context.SequenceNumber <= eventObserverResult.LastSuccessfulObservation);
+                        handledCount = (_performSubscription.TypeSetMembers is null ? events.Current : handledEvents).Count(_ => _.Context.SequenceNumber <= eventObserverResult.LastSuccessfulObservation);
                     }
                     switch (eventObserverResult.State)
                     {
@@ -308,7 +316,7 @@ public partial class HandleEventsForPartition(
                             failed = true;
                             exceptionMessages = eventObserverResult.ExceptionMessages.ToArray();
                             exceptionStackTrace = eventObserverResult.ExceptionStackTrace;
-                            failureKind = FailureKind.Handling;
+                            failureKind = _controlledRunException?.ToFailureKind() ?? FailureKind.Handling;
                             failurePolicy = eventObserverResult.FailurePolicy;
                             if (eventObserverResult.HandledAnyEvents)
                             {
@@ -330,6 +338,10 @@ public partial class HandleEventsForPartition(
                                 lastEventSequenceNumberAttempted = handledEvents[0].Context.SequenceNumber;
                             }
 
+                            if (_performSubscription.TypeSetMembers is not null && eventObserverResult.FailedAt.IsActualValue)
+                            {
+                                lastEventSequenceNumberAttempted = eventObserverResult.FailedAt;
+                            }
                             logger.FailedHandlingEvents(currentState.Partition, handledCount, lastEventSequenceNumberAttempted, lastSuccessfullyHandledEventSequenceNumber);
                             break;
                         case ObserverSubscriberState.Disconnected:
@@ -340,6 +352,13 @@ public partial class HandleEventsForPartition(
                             logger.EventHandlerDisconnected(currentState.Partition, lastSuccessfullyHandledEventSequenceNumber);
                             break;
                     }
+                }
+
+                if (!failed && _pendingHold is { } hold)
+                {
+                    _pendingHold = null;
+                    await _observer.PartitionHeld(currentState.Partition, hold.Cursor, hold.AwaitedEventType, currentState.EpisodeId, currentState.DeferralId);
+                    return JobStepResult.Failed(PerformJobStepError.CancelledWithPartialResult(CreateResult(lastSuccessfullyHandledEventSequenceNumber)));
                 }
 
                 if (failed)
@@ -354,13 +373,20 @@ public partial class HandleEventsForPartition(
                         return JobStepResult.Failed(PerformJobStepError.FailedWithPartialResult(
                             CreateResult(lastSuccessfullyHandledEventSequenceNumber) with
                             {
-                                TransientFailure = new(currentState.Partition, failedAt, exceptionMessages) { DeliveryFence = _deliveryFence }
+                                TransientFailure = new(currentState.Partition, failedAt, exceptionMessages) { DeliveryFence = _deliveryFence, RecoveryContext = ControlledFailureContext(currentState, failedAt) }
                             },
                             exceptionMessages,
                             string.Empty));
                     }
 
-                    await _observer.PartitionFailed(_eventSourceId, failedAt, exceptionMessages, exceptionStackTrace, failureKind, currentState.EpisodeId, currentState.DeferralId, failurePolicy);
+                    if (ControlledFailureContext(currentState, failedAt) is { } recoveryContext)
+                    {
+                        await _observer.PartitionFailedWithDeliveryFence(_eventSourceId, failedAt, exceptionMessages, exceptionStackTrace, failureKind, recoveryContext with { Policy = failurePolicy, DeliveryFence = _deliveryFence });
+                    }
+                    else
+                    {
+                        await _observer.PartitionFailed(_eventSourceId, failedAt, exceptionMessages, exceptionStackTrace, failureKind, currentState.EpisodeId, currentState.DeferralId, failurePolicy);
+                    }
                     return JobStepResult.Failed(PerformJobStepError.FailedWithPartialResult(
                         CreateResult(lastSuccessfullyHandledEventSequenceNumber),
                         TransientTimeouts.ShortenForStep(exceptionMessages),
@@ -410,6 +436,11 @@ public partial class HandleEventsForPartition(
                         currentState.Partition,
                         lastSuccessfullyHandledEventSequenceNumber.IsActualValue ? lastSuccessfullyHandledEventSequenceNumber.Next() : currentState.StartEventSequenceNumber,
                         [message])
+                    {
+                        RecoveryContext = ControlledFailureContext(
+                            currentState,
+                            lastSuccessfullyHandledEventSequenceNumber.IsActualValue ? lastSuccessfullyHandledEventSequenceNumber.Next() : currentState.StartEventSequenceNumber)
+                    }
                 },
                 [message],
                 string.Empty));
@@ -420,7 +451,7 @@ public partial class HandleEventsForPartition(
             var failedAt = lastSuccessfullyHandledEventSequenceNumber.IsActualValue ? lastSuccessfullyHandledEventSequenceNumber.Next() : currentState.StartEventSequenceNumber;
             if (!await TryReportPartitionFailed(failedAt, e))
             {
-                return UnreportedFailure(currentState.Partition, failedAt, lastSuccessfullyHandledEventSequenceNumber, e);
+                return UnreportedFailure(currentState.Partition, failedAt, lastSuccessfullyHandledEventSequenceNumber, e, ControlledFailureContext(currentState, failedAt));
             }
 
             if (!lastSuccessfullyHandledEventSequenceNumber.IsActualValue)
@@ -442,12 +473,13 @@ public partial class HandleEventsForPartition(
     /// <param name="failedAt">The sequence number the partition failed at.</param>
     /// <param name="lastSuccessfullyHandled">The last successfully handled event sequence number.</param>
     /// <param name="error">The failure.</param>
+    /// <param name="context">The controlled recovery context, if any.</param>
     /// <returns>The <see cref="JobStepResult"/>.</returns>
-    static JobStepResult UnreportedFailure(Key partition, EventSequenceNumber failedAt, EventSequenceNumber lastSuccessfullyHandled, Exception error)
+    static JobStepResult UnreportedFailure(Key partition, EventSequenceNumber failedAt, EventSequenceNumber lastSuccessfullyHandled, Exception error, PartitionFailureContext? context)
     {
         var messages = TransientTimeouts.ShortenForStep(error.GetAllMessages());
         return JobStepResult.Failed(PerformJobStepError.FailedWithPartialResult(
-            CreateResult(lastSuccessfullyHandled) with { TransientFailure = new(partition, failedAt, messages) },
+            CreateResult(lastSuccessfullyHandled) with { TransientFailure = new(partition, failedAt, messages) { RecoveryContext = context } },
             messages,
             string.Empty));
     }
@@ -471,7 +503,14 @@ public partial class HandleEventsForPartition(
     {
         try
         {
-            await _observer.PartitionFailed(_eventSourceId, failedAt, error.GetAllMessages(), error.StackTrace ?? string.Empty, error.ToFailureKind(), State.EpisodeId, State.DeferralId);
+            if (ControlledFailureContext(State, failedAt) is { } recoveryContext)
+            {
+                await _observer.PartitionFailedWithDeliveryFence(_eventSourceId, failedAt, error.GetAllMessages(), error.StackTrace ?? string.Empty, error.ToFailureKind(), recoveryContext);
+            }
+            else
+            {
+                await _observer.PartitionFailed(_eventSourceId, failedAt, error.GetAllMessages(), error.StackTrace ?? string.Empty, error.ToFailureKind(), State.EpisodeId, State.DeferralId);
+            }
             return true;
         }
         catch (Exception reportError)
@@ -537,6 +576,11 @@ public partial class HandleEventsForPartition(
         try
         {
             var eventsToHandle = ObserverEventPreparation.Prepare(state.EventObservationState, events.Current, nonRedactionEventTypeIds, filters);
+            if (_performSubscription.TypeSetMembers is not null)
+            {
+                return await HandleControlledRuns(state, eventsToHandle, subscriberTimeout, subscriberContext, cancellationToken);
+            }
+
             if (eventsToHandle.Length != 0)
             {
                 var decryptedEvents = await DecryptEvents(eventsToHandle);
@@ -589,11 +633,19 @@ public partial class HandleEventsForPartition(
     IEventSequenceStorage GetEventSequenceStorage(EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId) =>
         _eventSequenceStorage ??= storage.GetEventStore(eventStore).GetNamespace(@namespace).GetEventSequence(eventSequenceId);
 
-    async Task<AppendedEvent[]> DecryptEvents(IEnumerable<AppendedEvent> events)
+    void BindToTarget(Key partition, ObserverSubscriberTarget target)
     {
-        if (_generationDelivery == EventGenerationDelivery.Pinned)
+        _deliveryTarget = target;
+        var siloAddress = typeof(IWebhookObserverSubscriber).IsAssignableFrom(_performSubscription.SubscriberType) ? SiloAddress.Zero : target.SiloAddress;
+        _subscriber = GrainFactory.GetGrain(_performSubscription.SubscriberType, _performSubscription.GetSubscriberKeyFor(partition, siloAddress)) as IObserverSubscriber;
+    }
+
+    async Task<AppendedEvent[]> DecryptEvents(IEnumerable<AppendedEvent> events, ObserverSubscriberTarget? target = null)
+    {
+        if ((target?.GenerationDelivery ?? _generationDelivery) == EventGenerationDelivery.Pinned)
         {
-            return await (eventGenerationRelease ?? throw new EventGenerationDeliveryNotSupported()).Release(_generationEventStore, _generationPins, _eventTypeSchemas, events);
+            var pins = target?.DeclaredEventTypes is { } declared ? declared.ToArray() : _generationPins;
+            return await (eventGenerationRelease ?? throw new EventGenerationDeliveryNotSupported()).Release(_generationEventStore, pins, _eventTypeSchemas, events);
         }
 
         // The schemas read up front are those of the generations the observer subscribes to, while the events carry the
@@ -620,16 +672,19 @@ public partial class HandleEventsForPartition(
         return eventTypes.Length != 0 ? eventTypes : (await _observer.GetEventTypes()).ToArray();
     }
 
-    Task ReportHandledEvents(Key partition, AppendedEvent[] handledEvents, EventSequenceNumber handledUpTo, CancellationToken cancellationToken)
+    async Task ReportHandledEvents(Key partition, AppendedEvent[] handledEvents, EventSequenceNumber handledUpTo, CancellationToken cancellationToken)
     {
+        var controlled = _performSubscription.TypeSetMembers is not null;
+        if (controlled && _controlledCountedThrough.IsActualValue && handledUpTo <= _controlledCountedThrough) return;
         var counts = handledEvents
-            .Where(e => e.Context.SequenceNumber <= handledUpTo)
+            .Where(e => e.Context.SequenceNumber <= handledUpTo && (!controlled || !_controlledCountedThrough.IsActualValue || e.Context.SequenceNumber > _controlledCountedThrough))
             .CountByEventType();
-        return TransientTimeouts.ReportHandledEventsWithoutFailing(
+        await TransientTimeouts.ReportHandledEventsWithoutFailing(
             _observer,
             new(partition, counts, JobStepId, handledUpTo),
             TransientRetryDelay,
             logger,
             cancellationToken);
+        if (controlled) _controlledCountedThrough = handledUpTo;
     }
 }

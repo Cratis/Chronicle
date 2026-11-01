@@ -6,6 +6,7 @@ using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Observation.Webhooks;
 using Cratis.Chronicle.Projections;
+using Cratis.Chronicle.Storage.Observation;
 
 namespace Cratis.Chronicle.Observation;
 
@@ -47,6 +48,16 @@ public record ObserverSubscription(
     /// Gets the event generation delivery policy.
     /// </summary>
     public EventGenerationDelivery GenerationDelivery { get; init; } = EventGenerationDelivery.Compatibility;
+
+    /// <summary>
+    /// Gets the committed type-set revision, or null for a legacy subscription.
+    /// </summary>
+    public ObserverTypeSetRevision? TypeSetRevision { get; init; }
+
+    /// <summary>
+    /// Gets committed membership and live join fences, or null for a legacy subscription.
+    /// </summary>
+    public IDictionary<EventTypeId, ObserverTypeSetMember>? TypeSetMembers { get; init; }
 
     /// <summary>
     /// Check whether the subscription is subscribed.

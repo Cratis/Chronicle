@@ -141,6 +141,8 @@ public class ReplayObserver(
             (await eventStoreStorage.Observers.Get(request.ObserverKey.ObserverId)).EventTypes);
         var index = await observerKeyIndexes.GetFor(request.ObserverKey, readerScope);
 
+        var replayEnd = await GetControlledReplayBoundary(request);
+        if (replayEnd == EventSequenceNumber.Unavailable) return [];
         var keys = index.GetKeys(EventSequenceNumber.First);
         var steps = new List<JobStepDetails>();
         var failedKeys = State.FailedPartitionKeys.ToHashSet();
@@ -153,7 +155,7 @@ public class ReplayObserver(
                     request.ObserverType,
                     key,
                     EventSequenceNumber.First,
-                    EventSequenceNumber.Max,
+                    replayEnd,
                     EventObservationState.Replay,
                     request.EventTypes)
                 {
@@ -468,5 +470,27 @@ public class ReplayObserver(
 
             throw;
         }
+    }
+
+    /// <summary>
+    /// Gets where a replay of a type-set controlled observer ends: the tail captured once and reused when the job is prepared again.
+    /// Anything after it is delivered live, so a replay never reads into events a capable target has not been selected for.
+    /// </summary>
+    /// <param name="request">The replay request.</param>
+    /// <returns>The finite boundary, or <see cref="EventSequenceNumber.Max"/> when the observer is not controlled.</returns>
+    async Task<EventSequenceNumber> GetControlledReplayBoundary(ReplayObserverRequest request)
+    {
+        if (State.ControlledReplayBoundary is { } captured) return captured;
+
+        var subscription = await GrainFactory.GetGrain<IObserver>(request.ObserverKey).GetSubscription();
+        if (request.ObserverType != ObserverType.Reactor || subscription.TypeSetRevision is null) return EventSequenceNumber.Max;
+
+        var tail = await storage.GetEventStore(request.ObserverKey.EventStore).GetNamespace(request.ObserverKey.Namespace).GetEventSequence(request.ObserverKey.EventSequenceId).GetTailSequenceNumber();
+
+        // A sequence without a tail is an empty replay, never an open-ended one.
+        var boundary = tail.IsActualValue ? tail : EventSequenceNumber.Unavailable;
+        State.ControlledReplayBoundary = boundary;
+        await WriteStateAsync();
+        return boundary;
     }
 }

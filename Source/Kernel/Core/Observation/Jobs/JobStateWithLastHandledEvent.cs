@@ -21,6 +21,11 @@ public class JobStateWithLastHandledEvent : JobState
     public EventSequenceNumber LastHandledEventSequenceNumber { get; set; } = EventSequenceNumber.Unavailable;
 
     /// <summary>
+    /// Gets or sets the tail captured durably before preparing a controlled full replay.
+    /// </summary>
+    public EventSequenceNumber? ControlledReplayBoundary { get; set; }
+
+    /// <summary>
     /// Gets or sets the event sequence number of the last event a completed step read, whether it was handled or
     /// excluded by the observer's filters.
     /// </summary>

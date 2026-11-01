@@ -104,7 +104,7 @@ public partial class Observer
             if (!_observerExists) return true;
 
             var startResult = await _jobsManager.Start<ICatchUpObserverPartition, CatchUpObserverPartitionRequest>(
-                new(_observerKey, Definition.Type, partition, sequenceNumber, Definition.EventTypes) { ReaderScope = ReaderScope });
+                new(_observerKey, Definition.Type, partition, sequenceNumber, MembershipEventTypes) { ReaderScope = ReaderScope });
             if (startResult?.TryGetResult(out _) is true)
             {
                 Skips.JobStarted(partition);

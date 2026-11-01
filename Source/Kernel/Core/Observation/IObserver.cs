@@ -20,7 +20,7 @@ namespace Cratis.Chronicle.Observation;
 /// deliberately not part of this grain contract - state transitions are driven from within the observer
 /// implementation, never across a grain reference.
 /// </remarks>
-[Version(5)]
+[Version(6)]
 public interface IObserver : IGrainWithStringKey
 {
     /// <summary>
@@ -487,6 +487,17 @@ public interface IObserver : IGrainWithStringKey
     /// <param name="context">The internal recovery policy and optional original delivery identity and deadline.</param>
     /// <returns>Awaitable task.</returns>
     Task PartitionFailedWithDeliveryFence(Key partition, EventSequenceNumber sequenceNumber, IEnumerable<string> exceptionMessages, string exceptionStackTrace, FailureKind kind, PartitionFailureContext context);
+
+    /// <summary>
+    /// Parks a partition at the first eligible event without a capable subscriber.
+    /// </summary>
+    /// <param name="partition">The partition to park.</param>
+    /// <param name="cursor">The exact undelivered position and delivery mode.</param>
+    /// <param name="awaitedEventType">The event type requiring a capable subscriber.</param>
+    /// <param name="expectedEpisodeId">The owning episode, or null for a new hold.</param>
+    /// <param name="expectedDeferralId">The owning deferral, or null when not deferred.</param>
+    /// <returns>A task that completes when the hold is durable.</returns>
+    Task PartitionHeld(Key partition, FailedPartitionRecoveryCursor cursor, EventTypeId awaitedEventType, FailedPartitionId? expectedEpisodeId = null, Guid? expectedDeferralId = null);
 
     /// <summary>
     /// Persist a delivery deadline without consuming an attempt.

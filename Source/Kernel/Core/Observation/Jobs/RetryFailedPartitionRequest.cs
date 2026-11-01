@@ -23,6 +23,11 @@ public record RetryFailedPartitionRequest(
     IEnumerable<EventType> EventTypes) : ObserverPartitionedJobRequest(ObserverKey, ObserverType, Key)
 {
     /// <summary>
+    /// Gets the controlled recovery position and mode, or null for a legacy job.
+    /// </summary>
+    public FailedPartitionRecoveryCursor? RecoveryCursor { get; init; }
+
+    /// <summary>
     /// Gets the failure episode that owns the recovery, or null for a legacy job.
     /// </summary>
     public FailedPartitionId? EpisodeId { get; init; }

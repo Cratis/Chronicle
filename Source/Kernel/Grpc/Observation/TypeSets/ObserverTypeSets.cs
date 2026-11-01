@@ -41,6 +41,8 @@ internal sealed class ObserverTypeSets(
     /// <inheritdoc/>
     public Task<global::Cratis.Chronicle.Contracts.Queries.QueryResult<IEnumerable<global::Cratis.Chronicle.Contracts.Observation.TypeSets.ObserverEventTypeRetirementResponse>>> GetByOperation(global::Cratis.Chronicle.Contracts.Observation.TypeSets.GetByOperationRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         QueryExecutor.Execute<IEnumerable<global::Cratis.Chronicle.Contracts.Observation.TypeSets.ObserverEventTypeRetirementResponse>>(
+            callContext,
+            new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore),
             () =>
             {
                 var result = global::Cratis.Chronicle.Observation.TypeSets.ObserverEventTypeRetirement.GetByOperation(request.EventStore, request.OperationId, storage);
@@ -51,6 +53,8 @@ internal sealed class ObserverTypeSets(
     /// <inheritdoc/>
     public Task<global::Cratis.Chronicle.Contracts.Queries.QueryResult<global::Cratis.Chronicle.Contracts.Observation.TypeSets.ObserverTypeSetResponse>> GetForObserver(global::Cratis.Chronicle.Contracts.Observation.TypeSets.GetForObserverRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         QueryExecutor.Execute<global::Cratis.Chronicle.Contracts.Observation.TypeSets.ObserverTypeSetResponse>(
+            callContext,
+            new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, request.Namespace, request.ObserverId),
             async () =>
             {
                 var result = await global::Cratis.Chronicle.Observation.TypeSets.ObserverTypeSet.GetForObserver(request.EventStore, request.Namespace, request.ObserverId, storage);

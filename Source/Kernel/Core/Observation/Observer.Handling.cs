@@ -403,6 +403,17 @@ public partial class Observer
 
     async Task HandleEventsForPartition(Key partition, IEnumerable<AppendedEvent> events, Activity? activity)
     {
+        if (IsTypeSetControlled)
+        {
+            await HandleControlledLiveRuns(partition, events, activity);
+            return;
+        }
+
+        await HandleSelectedEventsForPartition(partition, events, activity);
+    }
+
+    async Task HandleSelectedEventsForPartition(Key partition, IEnumerable<AppendedEvent> events, Activity? activity, ObserverSubscriberTarget? controlledTarget = null)
+    {
         var observedTailEventSequenceNumber = events.Last().Context.SequenceNumber;
 
         // An observer subscribed to all events has no fixed event type list to match against - every event is
@@ -501,7 +512,7 @@ public partial class Observer
                 {
                     var firstEvent = eventsToHandle[0];
                     tailEventSequenceNumber = firstEvent.Context.SequenceNumber;
-                    var decryptedEvents = await DecryptEvents(eventsToHandle);
+                    var decryptedEvents = await DecryptEvents(eventsToHandle, controlledTarget);
 
                     var subscriberTimeout = GetLiveSubscriberTimeout(configuration.GetSubscriberTimeout());
                     var hold = await GetClientDeliveryHold();
@@ -509,7 +520,7 @@ public partial class Observer
                     ObserverSubscriberResult result;
                     while (true)
                     {
-                        var target = subscriberSelector.Select(_subscription, partition);
+                        var target = controlledTarget ?? subscriberSelector.Select(_subscription, partition);
 
                         // A webhook partition has one non-interleavable activation across live delivery and jobs,
                         // independent of which silo owns the observer or executes the job.
@@ -526,7 +537,7 @@ public partial class Observer
                         // A disconnected result from one client instance only removes that instance —
                         // the batch is retried against the remaining instances. Only when the last
                         // instance is gone does the observer unsubscribe (below).
-                        if (result.State == ObserverSubscriberState.Disconnected &&
+                        if (controlledTarget is null && result.State == ObserverSubscriberState.Disconnected &&
                             target.ConnectedClient is not null &&
                             _subscription.Targets.Count > 1)
                         {
@@ -554,14 +565,24 @@ public partial class Observer
                         failurePolicy = result.FailurePolicy;
                         exceptionMessages = result.ExceptionMessages;
                         exceptionStackTrace = result.ExceptionStackTrace;
-                        tailEventSequenceNumber = result.HandledAnyEvents
-                            ? result.LastSuccessfulObservation
-                            : firstEvent.Context.SequenceNumber;
+                        tailEventSequenceNumber = result.HandledAnyEvents ? result.LastSuccessfulObservation : firstEvent.Context.SequenceNumber;
+                        if (controlledTarget is not null)
+                        {
+                            tailEventSequenceNumber = ControlledFailurePosition(result, eventsToHandle);
+                        }
                     }
                     else if (result.State == ObserverSubscriberState.Disconnected)
                     {
                         // The batch is not advanced, so whatever subscription takes over catches up from the same position.
-                        await PromoteSupersededRegistrationOrUnsubscribe();
+                        if (controlledTarget is not null)
+                        {
+                            RemoveSubscriberTarget(controlledTarget);
+                            await PartitionHeld(partition, new(firstEvent.Context.SequenceNumber, FailedPartitionRecoveryMode.Live, null), firstEvent.Context.EventType.Id);
+                        }
+                        else
+                        {
+                            await PromoteSupersededRegistrationOrUnsubscribe();
+                        }
                         stateChanged = true;
                     }
 
@@ -639,7 +660,10 @@ public partial class Observer
 
                 if (failureException is not null) activity?.RecordFailure(failureException);
                 else activity?.RecordFailure(FailureKindCode(failureKind));
-                return RecordPartitionFailure(partition, tailEventSequenceNumber, exceptionMessages, exceptionStackTrace, failureKind, null, null, new(failurePolicy, deliveryFence));
+                return RecordPartitionFailure(partition, tailEventSequenceNumber, exceptionMessages, exceptionStackTrace, failureKind, null, null, new(failurePolicy, deliveryFence)
+                {
+                    RecoveryCursor = IsTypeSetControlled ? new(tailEventSequenceNumber, FailedPartitionRecoveryMode.Live, null) : null
+                });
             }
         }
     }
@@ -650,11 +674,11 @@ public partial class Observer
             .GetNamespace(_observerKey.Namespace)
             .ObserverHandledCounts;
 
-    async Task<AppendedEvent[]> DecryptEvents(IEnumerable<AppendedEvent> events)
+    async Task<AppendedEvent[]> DecryptEvents(IEnumerable<AppendedEvent> events, ObserverSubscriberTarget? target = null)
     {
-        if (_subscription.GenerationDelivery == EventGenerationDelivery.Pinned)
+        if ((target?.GenerationDelivery ?? _subscription.GenerationDelivery) == EventGenerationDelivery.Pinned)
         {
-            return await (eventGenerationRelease ?? throw new EventGenerationDeliveryNotSupported()).Release(_observerKey.EventStore, _subscription.EventTypes, _eventTypeSchemas, events);
+            return await (eventGenerationRelease ?? throw new EventGenerationDeliveryNotSupported()).Release(_observerKey.EventStore, target?.DeclaredEventTypes ?? _subscription.EventTypes, _eventTypeSchemas, events);
         }
 
         var eventsToDecrypt = events as AppendedEvent[] ?? events.ToArray();

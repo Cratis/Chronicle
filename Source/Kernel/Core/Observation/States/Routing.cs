@@ -264,7 +264,9 @@ public class Routing(
             }
 
             var failedPartitions = (await Observer.GetFailedPartitionKeys()).ToHashSet();
-            var readerScope = ObserverReaderScope.For(state.SubscribesToAllEvents, definitionState.State.EventTypes);
+            var readerScope = state.TypeSetControl is not null
+                ? ObserverReaderScope.Explicit(_subscription.EventTypes)
+                : ObserverReaderScope.For(state.SubscribesToAllEvents, definitionState.State.EventTypes);
             var index = await storage
                 .GetEventStore(observerKey.EventStore)
                 .GetNamespace(observerKey.Namespace)

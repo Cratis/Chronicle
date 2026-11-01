@@ -40,7 +40,7 @@ public partial class Observer
         string exceptionStackTrace,
         FailureKind kind,
         PartitionFailureContext context) =>
-        RecordPartitionFailure(partition, sequenceNumber, exceptionMessages, exceptionStackTrace, kind, null, null, context);
+        RecordPartitionFailure(partition, sequenceNumber, exceptionMessages, exceptionStackTrace, kind, context.EpisodeId, context.DeferralId, context);
 
     /// <inheritdoc/>
     public Task FailedPartitionRecovered(Key partition, EventSequenceNumber lastHandledEventSequenceNumber) =>
@@ -83,6 +83,11 @@ public partial class Observer
         try
         {
             if (IsRetired || _removed || !IsCurrentRecovery(partition, episodeId, deferralId)) return;
+            if (IsTypeSetControlled && Failures.TryGet(partition, out var current) &&
+                (current.Hold is not null || (current.RecoveryCursor is not null && episodeId is null)))
+            {
+                return;
+            }
             ForgetRecoveryStart(partition);
             using var scope = logger.BeginObserverScope(_observerId, _observerKey);
             logger.FailingPartitionPartiallyRecovered(partition, lastHandledEventSequenceNumber);
@@ -243,6 +248,12 @@ public partial class Observer
         await _alertMutationLock.WaitAsync();
         try
         {
+            if (failure.Hold is not null)
+            {
+                failure.Hold = null;
+                await WriteFailedPartitions();
+            }
+
             if (failure.Deferral is { } deferral)
             {
                 failure.RecoveryCursor = new(deferral.ResumeFrom, FailedPartitionRecoveryMode.Live, null);
@@ -304,11 +315,18 @@ public partial class Observer
         try
         {
             if (!IsCurrentRecovery(partition, episodeId, deferralId)) return;
+            if (IsTypeSetControlled && Failures.TryGet(partition, out var current) &&
+                (current.Hold is not null || (current.RecoveryCursor is not null && episodeId is null)))
+            {
+                return;
+            }
             var config = await GetRetryConfiguration();
             using var scope = logger.BeginObserverScope(_observerId, _observerKey);
             _metrics?.PartitionFailed();
             var partitionWasAlreadyFailed = Failures.IsFailed(partition);
             var failure = failures.State.RegisterAttempt(partition, sequenceNumber, exceptionMessages, exceptionStackTrace, kind);
+            if (context.RecoveryCursor is { } recoveryCursor) failure.RecoveryCursor = recoveryCursor;
+            failure.Hold = null;
             if (partitionWasAlreadyFailed)
             {
                 logger.PartitionFailedAgain(partition, sequenceNumber, failure.AttemptsInCurrentBudget);
@@ -502,6 +520,7 @@ public partial class Observer
 
     async Task RegisterRetryReminder(FailedPartition failure)
     {
+        if (failure.Hold is not null) return;
         if (!_observerExists || !KeyOwnsDefinition) return;
 
         if (failure.Deferral is { } deferral)
@@ -554,6 +573,11 @@ public partial class Observer
         try
         {
             if (IsRetired || _removed || !IsCurrentRecovery(partition, episodeId, deferralId)) return false;
+            if (IsTypeSetControlled && Failures.TryGet(partition, out var current) &&
+                (current.Hold is not null || (lastHandled is not null && current.RecoveryCursor is not null && episodeId is null)))
+            {
+                return false;
+            }
             if (lastHandled is not null)
             {
                 HandleNewLastHandledEventForPartition(partition, lastHandled);
@@ -588,6 +612,7 @@ public partial class Observer
         }
 
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
+        if (failedPartition.Hold is not null) return JobId.NotSet;
         if (failedPartition.IsQuarantined ||
             await ParkExpiredWebhookRetry(failedPartition, await GetRetryConfiguration()) ||
             !await IsDeferralDue(failedPartition))
@@ -596,7 +621,7 @@ public partial class Observer
         }
 
         var usesDeferrals = typeof(IWebhookObserverSubscriber).IsAssignableFrom(_subscription.SubscriberType);
-        if (usesDeferrals && await RecoveryInFlight(failedPartition))
+        if ((usesDeferrals || IsTypeSetControlled) && await RecoveryInFlight(failedPartition))
         {
             logger.FailedPartitionRetryDidNotStart(failedPartition.Partition, "RecoveryInFlight");
             return JobId.NotSet;
@@ -604,7 +629,7 @@ public partial class Observer
 
         logger.TryingToRecoverFailedPartition(failedPartition.Partition);
         var request = CreateRetryFailedPartitionRequest(failedPartition, usesDeferrals);
-        if (usesDeferrals)
+        if (usesDeferrals || IsTypeSetControlled)
         {
             return await StartTrackedRecoveryJob(failedPartition, request, onStartAttempted);
         }
@@ -613,10 +638,11 @@ public partial class Observer
     }
 
     RetryFailedPartitionRequest CreateRetryFailedPartitionRequest(FailedPartition failedPartition, bool usesDeferrals) =>
-        new(_observerKey, Definition.Type, failedPartition.Partition, failedPartition.Deferral?.ResumeFrom ?? (usesDeferrals ? failedPartition.RecoveryCursor?.Position : null) ?? failedPartition.LastAttempt.SequenceNumber, Definition.EventTypes)
+        new(_observerKey, Definition.Type, failedPartition.Partition, failedPartition.Deferral?.ResumeFrom ?? (usesDeferrals || IsTypeSetControlled ? failedPartition.RecoveryCursor?.Position : null) ?? failedPartition.LastAttempt.SequenceNumber, MembershipEventTypes)
         {
             ReaderScope = ReaderScope,
-            EpisodeId = usesDeferrals ? failedPartition.Id : null,
+            RecoveryCursor = IsTypeSetControlled ? failedPartition.RecoveryCursor : null,
+            EpisodeId = usesDeferrals || IsTypeSetControlled ? failedPartition.Id : null,
             DeferralId = failedPartition.Deferral?.Id
         };
 

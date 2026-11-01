@@ -48,7 +48,7 @@ public class ReplayEvaluator(
     }
 
     static bool CanReplay(ReplayEvaluationContext context) =>
-        context.Definition.IsReplayable && NeedsToReplay(context);
+        context.State.TypeSetControl is null && context.Definition.IsReplayable && NeedsToReplay(context);
 
     static bool NeedsToReplay(ReplayEvaluationContext context) =>
         HasDefinitionChanged(context) && HasEventsInSequence(context) && HasHistoryForAddedEventTypes(context);

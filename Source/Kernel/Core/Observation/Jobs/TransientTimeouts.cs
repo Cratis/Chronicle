@@ -111,7 +111,7 @@ internal static class TransientTimeouts
     {
         if (TryGetTransientFailure(result, jsonSerializerOptions, out var failure))
         {
-            await observer.PartitionFailedWithDeliveryFence(failure.Partition, failure.FailedAt, failure.Messages, string.Empty, FailureKind.Timeout, context: new(DeliveryFence: failure.DeliveryFence));
+            await observer.PartitionFailedWithDeliveryFence(failure.Partition, failure.FailedAt, failure.Messages, string.Empty, FailureKind.Timeout, context: (failure.RecoveryContext ?? default) with { DeliveryFence = failure.DeliveryFence });
         }
     }
 

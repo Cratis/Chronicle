@@ -42,7 +42,15 @@ public class TestableRetryFailedPartition(JsonSerializerOptions jsonSerializerOp
     /// <returns>Whether the observer permits resuming.</returns>
     public Task<bool> CheckCanResume() => CanResume();
 
+    /// <summary>Gets or sets the hook used to provide real step probes for lifecycle specs.</summary>
+    public Action<IImmutableList<JobStepDetails>>? BeforePreparingSteps { get; set; }
+
     /// <inheritdoc/>
-    protected override Task<IImmutableList<JobStepDetails>> PrepareSteps(RetryFailedPartitionRequest request) =>
-        Task.FromResult<IImmutableList<JobStepDetails>>(ImmutableList<JobStepDetails>.Empty);
+    protected override async Task<IImmutableList<JobStepDetails>> PrepareSteps(RetryFailedPartitionRequest request)
+    {
+        if (BeforePreparingSteps is null) return [];
+        var steps = await base.PrepareSteps(request);
+        BeforePreparingSteps(steps);
+        return steps;
+    }
 }

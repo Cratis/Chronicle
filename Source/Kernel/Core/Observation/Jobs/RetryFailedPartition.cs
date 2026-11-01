@@ -8,6 +8,7 @@ using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Observation.Webhooks;
 using Cratis.Chronicle.Storage;
 using Cratis.Orleans.Jobs;
+using Cratis.Orleans.Jobs.Stages;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Observation.Jobs;
@@ -38,6 +39,7 @@ public class RetryFailedPartition(
         using var scope = logger.BeginJobScope(JobId, JobKey);
         var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
         if (Request.EpisodeId is not null && !await observer.CanResumeFailedPartition(Request.Key, Request.EpisodeId, Request.DeferralId)) return;
+        if (Request.RecoveryCursor is not null && !AllStepsCompletedSuccessfully) return;
 
         if (!State.LastHandledEventSequenceNumber.IsActualValue)
         {
@@ -102,7 +104,7 @@ public class RetryFailedPartition(
         var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
         if (!await observer.IsSubscribed()) return false;
         var subscription = await observer.GetSubscription();
-        return !typeof(IWebhookObserverSubscriber).IsAssignableFrom(subscription.SubscriberType) ||
+        return (subscription.TypeSetMembers is null && !typeof(IWebhookObserverSubscriber).IsAssignableFrom(subscription.SubscriberType)) ||
             await observer.CanResumeFailedPartition(Request.Key, Request.EpisodeId, Request.DeferralId);
     }
 
@@ -124,26 +126,34 @@ public class RetryFailedPartition(
     /// <inheritdoc/>
     protected override Task<IImmutableList<JobStepDetails>> PrepareSteps(RetryFailedPartitionRequest request)
     {
-        var steps = new[]
+        var cursor = request.RecoveryCursor;
+        var start = cursor?.Position ?? request.FromSequenceNumber;
+        var steps = ImmutableList.CreateBuilder<JobStepDetails>();
+        if (cursor is { Mode: FailedPartitionRecoveryMode.Replay, ReplayBoundary: { } boundary })
         {
-            CreateStep<IHandleEventsForPartition>(
-                new HandleEventsForPartitionArguments(
-                    request.ObserverKey,
-                    request.ObserverType,
-                    request.Key,
-                    request.FromSequenceNumber,
-                    EventSequenceNumber.Max,
-                    EventObservationState.None,
-                    request.EventTypes)
-                {
-                    ReaderScope = request.ReaderScope,
-                    EpisodeId = request.EpisodeId,
-                    DeferralId = request.DeferralId
-                })
-        }.ToImmutableList();
-
-        return Task.FromResult<IImmutableList<JobStepDetails>>(steps);
+            if (!boundary.IsActualValue) throw new InvalidOperationException("Controlled recovery requires a finite replay boundary.");
+            if (start <= boundary)
+            {
+                steps.Add(CreateRecoveryStep(request, start, boundary, EventObservationState.Replay, JobStepStage.First));
+            }
+            steps.Add(CreateRecoveryStep(request, boundary + 1, EventSequenceNumber.Max, EventObservationState.None, (JobStepStage)1));
+        }
+        else
+        {
+            steps.Add(CreateRecoveryStep(request, start, EventSequenceNumber.Max, EventObservationState.None, JobStepStage.First));
+        }
+        return Task.FromResult<IImmutableList<JobStepDetails>>(steps.ToImmutable());
     }
+
+    JobStepDetails CreateRecoveryStep(RetryFailedPartitionRequest request, EventSequenceNumber start, EventSequenceNumber end, EventObservationState mode, JobStepStage stage) =>
+        CreateStep<IHandleEventsForPartition>(
+            new HandleEventsForPartitionArguments(request.ObserverKey, request.ObserverType, request.Key, start, end, mode, request.EventTypes)
+            {
+                ReaderScope = request.ReaderScope,
+                EpisodeId = request.EpisodeId,
+                DeferralId = request.DeferralId
+            },
+            stage);
 
     /// <summary>
     /// Check whether the event sequence still holds an event the failed partition has not handled.

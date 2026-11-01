@@ -221,6 +221,9 @@ internal static partial class ObserverLogMessages
     [LoggerMessage(LogLevel.Warning, "Client instance {ConnectionId} reported disconnected while handling partition {Partition}. Retrying with the remaining instances.")]
     internal static partial void ClientInstanceDisconnectedRetryingWithRemaining(this ILogger<Observer> logger, ConnectionId connectionId, Key partition);
 
+    [LoggerMessage(LogLevel.Warning, "Ignoring {Count} declared event types that are not members of the observer's type set.")]
+    internal static partial void IgnoringNonMemberEventTypes(this ILogger<Observer> logger, int count);
+
     [LoggerMessage(LogLevel.Warning, "Watchdog detected that the replay job is missing while observer is in replaying state. Re-routing observer.")]
     internal static partial void WatchdogReplayJobMissing(this ILogger<Observer> logger);
 

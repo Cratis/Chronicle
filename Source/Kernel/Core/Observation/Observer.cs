@@ -176,7 +176,7 @@ public partial class Observer(
     /// rather than everything; until then it is mapped to <see cref="ObserverReaderScope.Wildcard"/>, which is what
     /// its readers have always done with an empty type list.
     /// </remarks>
-    ObserverReaderScope ReaderScope => ObserverReaderScope.For(State.SubscribesToAllEvents, Definition.EventTypes);
+    ObserverReaderScope ReaderScope => IsTypeSetControlled ? ObserverReaderScope.Explicit(MembershipEventTypes) : ObserverReaderScope.For(State.SubscribesToAllEvents, MembershipEventTypes);
 
     FailedPartitions Failures => failures.State;
 
@@ -404,13 +404,13 @@ public partial class Observer(
         // An observer subscribed to all events has no fixed event type list to return - the whole
         // point is that it also covers types that did not exist when it subscribed. Resolve the full,
         // current set from storage each time rather than a snapshot captured at subscribe time.
-        if (State.SubscribesToAllEvents)
+        if (!IsTypeSetControlled && State.SubscribesToAllEvents)
         {
             var schemas = await storage.GetEventStore(_observerKey.EventStore).EventTypes.GetLatestForAllEventTypes();
             return schemas.Select(_ => _.Type);
         }
 
-        return Definition.EventTypes;
+        return MembershipEventTypes;
     }
 
     /// <inheritdoc/>
@@ -1074,17 +1074,25 @@ public partial class Observer(
             EventSequenceId = _observerKey.EventSequenceId,
             Type = type,
             Owner = owner,
-            EventTypes = eventTypes,
+            EventTypes = IsTypeSetControlled ? observerDefinition.State.EventTypes : eventTypes,
             IsReplayable = isReplayable,
             GenerationDelivery = generationDelivery
         };
         await observerDefinition.WriteStateAsync();
 
         if (reconcile && CannotReconcileSubscription(typeof(Webhooks.IWebhookObserverSubscriber).IsAssignableFrom(typeof(TObserverSubscriber)))) return;
-        ApplySubscription<TObserverSubscriber>(eventTypes, siloAddress, subscriberArgs, isReplayable, filters, generationDelivery);
+        var controlledTarget = ApplyControlledSubscription<TObserverSubscriber>(eventTypes, siloAddress, subscriberArgs, isReplayable, filters, generationDelivery);
+        if (controlledTarget is null)
+        {
+            ApplySubscription<TObserverSubscriber>(eventTypes, siloAddress, subscriberArgs, isReplayable, filters, generationDelivery);
+        }
 
         State = State with { SubscribesToAllEvents = false };
         await WriteStateAsync();
+        if (controlledTarget is not null)
+        {
+            await ResumeHeldPartitionsFor(controlledTarget);
+        }
     }
 
     async Task SetUpAllEventsSubscription<TObserverSubscriber>(

@@ -21,4 +21,10 @@ public record TransientPartitionFailure(Key Partition, EventSequenceNumber Faile
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public DeliveryFenceContext? DeliveryFence { get; init; }
+
+    /// <summary>
+    /// Gets the controlled recovery context, or null for a legacy timeout.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public PartitionFailureContext? RecoveryContext { get; init; }
 }

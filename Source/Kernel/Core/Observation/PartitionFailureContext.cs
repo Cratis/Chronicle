@@ -12,4 +12,20 @@ namespace Cratis.Chronicle.Observation;
 /// <param name="DeliveryFence">The optional original delivery identity and deadline.</param>
 public readonly record struct PartitionFailureContext(
     WebhookDeliveryFailurePolicy Policy = WebhookDeliveryFailurePolicy.Retry,
-    DeliveryFenceContext? DeliveryFence = null);
+    DeliveryFenceContext? DeliveryFence = null)
+{
+    /// <summary>
+    /// Gets the controlled recovery position and mode, or null for a legacy failure.
+    /// </summary>
+    public FailedPartitionRecoveryCursor? RecoveryCursor { get; init; }
+
+    /// <summary>
+    /// Gets the expected recovery episode, or null for a new failure.
+    /// </summary>
+    public FailedPartitionId? EpisodeId { get; init; }
+
+    /// <summary>
+    /// Gets the expected deferral, or null when not deferred.
+    /// </summary>
+    public Guid? DeferralId { get; init; }
+}

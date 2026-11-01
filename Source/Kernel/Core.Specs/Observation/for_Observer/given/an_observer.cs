@@ -340,7 +340,8 @@ public class an_observer : Specification
                 WebhookRecoveryId = partition.WebhookRecoveryId,
                 AttemptsBeforeBudgetReset = partition.AttemptsBeforeBudgetReset,
                 Deferral = partition.Deferral,
-                RecoveryCursor = partition.RecoveryCursor
+                RecoveryCursor = partition.RecoveryCursor,
+                Hold = partition.Hold
             }).ToArray()
         };
 

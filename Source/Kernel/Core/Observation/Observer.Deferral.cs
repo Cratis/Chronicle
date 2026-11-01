@@ -52,6 +52,8 @@ public partial class Observer
             return false;
         }
 
+        if (failure.Hold is not null || (IsTypeSetControlled && failure.RecoveryCursor is not null && episodeId is null)) return false;
+
         return IsCurrentRecovery(partition, episodeId, deferralId) && !failure.IsQuarantined &&
             !await ParkExpiredWebhookRetry(failure, await GetRetryConfiguration()) && await IsDeferralDue(failure);
     }
