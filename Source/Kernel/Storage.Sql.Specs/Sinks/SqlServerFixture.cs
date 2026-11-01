@@ -121,7 +121,7 @@ public sealed class SqlServerFixture : IAsyncLifetime
                 // Cancelled on purpose; the container is discarded with whatever was still queued.
             }
 
-            Console.Error.WriteLine($"SqlServerFixture background drops: fallbacks={_dropFallbacks}, failures={_dropFailures}");
+            await Console.Error.WriteLineAsync($"SqlServerFixture background drops: fallbacks={_dropFallbacks}, failures={_dropFailures}");
             if (_container is not null)
             {
                 await Timings.Run("sql-container-disposal", () => _container.DisposeAsync().AsTask());
@@ -135,13 +135,20 @@ public sealed class SqlServerFixture : IAsyncLifetime
         }
     }
 
-    // Runs detached from the caller's execution context so the worker's timing phases are not parented to whichever spec phase is current.
+    /// <summary>
+    /// Runs work detached from the caller's execution context so the worker's timing phases are not parented to whichever spec phase is current.
+    /// </summary>
+    /// <param name="work">The work to run.</param>
+    /// <returns>The running task.</returns>
     static Task StartDetached(Func<Task> work)
     {
+        Task task;
         using (ExecutionContext.SuppressFlow())
         {
-            return Task.Run(work);
+            task = Task.Run(work);
         }
+
+        return task;
     }
 
     async Task<string> TakePrefetched()
@@ -199,7 +206,7 @@ public sealed class SqlServerFixture : IAsyncLifetime
                 catch (Exception ex) when (!_stop.IsCancellationRequested)
                 {
                     Interlocked.Increment(ref _dropFailures);
-                    Console.Error.WriteLine($"SqlServerFixture could not drop '{name}': {ex.Message}");
+                    await Console.Error.WriteLineAsync($"SqlServerFixture could not drop '{name}': {ex.Message}");
                 }
             }
         }
