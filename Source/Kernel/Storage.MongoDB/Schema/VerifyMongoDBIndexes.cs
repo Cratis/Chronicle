@@ -9,7 +9,7 @@ using Microsoft.Extensions.Options;
 namespace Cratis.Chronicle.Storage.MongoDB.Schema;
 
 /// <summary>
-/// Warns about missing MongoDB indexes in the fixed startup scopes without DDL or failing startup.
+/// Warns about missing or incompatible MongoDB indexes in the fixed startup scopes without DDL or failing startup.
 /// </summary>
 public class VerifyMongoDBIndexes : IStartupTask
 {
@@ -51,6 +51,10 @@ public class VerifyMongoDBIndexes : IStartupTask
             foreach (var scope in report.Scopes.Where(scope => scope.Missing.Count > 0 || scope.Obsolete.Count > 0))
             {
                 _logger.IndexesMissing(scope.Scope, scope.Database, string.Join(", ", scope.Missing), string.Join(", ", scope.Obsolete));
+            }
+            foreach (var scope in report.Scopes.Where(scope => scope.Incompatible.Count > 0))
+            {
+                _logger.IndexesIncompatible(scope.Scope, scope.Database, string.Join(", ", scope.Incompatible));
             }
         }
         catch (Exception exception)

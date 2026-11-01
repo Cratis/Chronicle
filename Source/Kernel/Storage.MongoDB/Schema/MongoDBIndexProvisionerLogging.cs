@@ -13,14 +13,35 @@ internal static partial class MongoDBIndexProvisionerLogging
     /// <summary>
     /// Logs aggregate maintenance counts without connection details.
     /// </summary>
-    [LoggerMessage(LogLevel.Information, "MongoDB indexes for {Scope} ({Database}): {Missing} missing, {Obsolete} obsolete, {Created} created, {Dropped} dropped")]
-    internal static partial void IndexState(this ILogger logger, string scope, string database, int missing, int obsolete, int created, int dropped);
+    [LoggerMessage(LogLevel.Information, "MongoDB indexes for {Scope} ({Database}): {Missing} missing, {Obsolete} obsolete, {Incompatible} incompatible, {Created} created, {Dropped} dropped")]
+    internal static partial void IndexState(this ILogger logger, string scope, string database, int missing, int obsolete, int incompatible, int created, int dropped);
 
     /// <summary>
     /// Warns about scopes requiring offline provisioning.
     /// </summary>
     [LoggerMessage(LogLevel.Warning, "MongoDB indexes are not provisioned for {Scope} ({Database}): missing [{Missing}], obsolete [{Obsolete}]. Run --migrate-only with a schema identity.")]
     internal static partial void IndexesMissing(this ILogger logger, string scope, string database, string missing, string obsolete);
+
+    /// <summary>
+    /// Reports incompatible indexes only when any were found.
+    /// </summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="scope">The logical scope.</param>
+    /// <param name="database">The database name.</param>
+    /// <param name="incompatible">The incompatible index names.</param>
+    internal static void ReportIncompatibleIndexes(this ILogger logger, string scope, string database, IReadOnlyList<string> incompatible)
+    {
+        if (incompatible.Count > 0)
+        {
+            logger.IndexesIncompatible(scope, database, string.Join(", ", incompatible));
+        }
+    }
+
+    /// <summary>
+    /// Warns about existing indexes requiring operator review rather than automatic rebuilding.
+    /// </summary>
+    [LoggerMessage(LogLevel.Warning, "MongoDB indexes for {Scope} ({Database}) do not match Chronicle's definitions: [{Incompatible}]. Chronicle does not rebuild existing indexes; drop them after review and run --migrate-only with a schema identity.")]
+    internal static partial void IndexesIncompatible(this ILogger logger, string scope, string database, string incompatible);
 
     /// <summary>
     /// Warns about constraint collections skipped because their stored definitions cannot classify them.
