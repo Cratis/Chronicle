@@ -88,25 +88,28 @@ fi
 
 # Allow at least 30 seconds of container stop grace for the host's 10-second shutdown
 # timeout and the subsequent embedded MongoDB shutdown.
-# wait -n decides the exit status exactly as it did before; it is captured rather than left to
-# set -e only so the failure can be described on the way out.
+# A trap firing while "wait" is blocked can make bash report 128 + signal even though it
+# already reaped the server, discarding its real exit status for good (seen under CI
+# scheduling pressure). Poll for the server's own exit first, so the "wait" below rarely has
+# to block where a trap could still interrupt it.
 set +e
-wait -n
+while kill -0 "$server_pid" 2>/dev/null; do
+  sleep 0.02
+done
+wait "$server_pid"
 exit_status=$?
 
 if [ "$shutdown_requested" = true ]; then
-  # A trap interrupts wait with 128 + signal, not the server's exit status. Re-wait
-  # after every interruption, even if the server exited while the trap was running.
-  # Keep the wait -n status as it is: when wait -n already reaped the server, the re-wait
-  # returns 127 and the server's own status must stand.
-  while :; do
-    wait_signal_count=$signal_count
+  # A trap can still land in the instant between the poll above finding the server gone and
+  # the "wait" above collecting it, reporting 128 + the forwarded signal instead of the real
+  # status even though the server has definitely already exited by then. The server is gone
+  # either way, so retry until a real status lands.
+  retry_count=0
+  while { [ "$exit_status" -eq 143 ] || [ "$exit_status" -eq 130 ]; } && [ "$retry_count" -lt 100 ]; do
     wait "$server_pid"
-    wait_status=$?
-    # A late signal can cause another iteration after the server was already reaped.
-    [ "$wait_status" -eq 127 ] && break
-    exit_status=$wait_status
-    [ "$signal_count" -eq "$wait_signal_count" ] && break
+    exit_status=$?
+    retry_count=$((retry_count + 1))
+    sleep 0.01
   done
 
   if [ -n "$mongod_pid" ]; then
