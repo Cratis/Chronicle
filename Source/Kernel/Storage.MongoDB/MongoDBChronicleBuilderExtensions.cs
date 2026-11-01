@@ -5,7 +5,9 @@ using Cratis.Arc.Connections;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Compliance;
+using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.MongoDB;
+using Cratis.Chronicle.Storage.MongoDB.EventSequences;
 using Cratis.Chronicle.Storage.MongoDB.Sinks;
 using Cratis.Chronicle.Storage.SingleWriter;
 using Cratis.Compliance.MongoDB;
@@ -133,6 +135,7 @@ public static class MongoDBChronicleBuilderExtensions
             services.AddSingleton<JobStateSerializer>();
             services.AddSingleton<IStorage, Storage.Storage>();
             services.AddSingleton<IStorageErrorClassifier, MongoDBStorageErrorClassifier>();
+            services.AddSingleton<IReservedEventSequenceIds, MongoDBReservedEventSequenceIds>();
             services.AddSingleton<Cratis.Chronicle.Storage.Generations.Bindings.IMaterializationBindingStorage, Cratis.Chronicle.Storage.MongoDB.Generations.Bindings.MongoDBMaterializationBindingStorage>();
             services.AddGenerationCatalog();
             services.AddSingleton<Cratis.Chronicle.Storage.MongoDB.Generations.Gates.IGenerationGateWrites, Cratis.Chronicle.Storage.MongoDB.Generations.Gates.MongoDBGenerationGateWrites>();

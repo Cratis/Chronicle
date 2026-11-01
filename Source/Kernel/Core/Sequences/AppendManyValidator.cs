@@ -2,6 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Arc.Commands;
+using Cratis.Chronicle.Storage;
+using Cratis.Chronicle.Storage.EventSequences;
 using FluentValidation;
 
 namespace Cratis.Chronicle.Sequences;
@@ -14,7 +16,9 @@ internal class AppendManyValidator : CommandValidator<AppendMany>
     /// <summary>
     /// Initializes a new instance of the <see cref="AppendManyValidator"/> class.
     /// </summary>
-    public AppendManyValidator()
+    /// <param name="storage">The <see cref="IStorage"/> used to tell whether an event sequence already exists.</param>
+    /// <param name="reservedEventSequenceIds">The <see cref="IReservedEventSequenceIds"/> of the active storage provider.</param>
+    public AppendManyValidator(IStorage storage, IReservedEventSequenceIds reservedEventSequenceIds)
     {
         RuleFor(_ => _.EventStore).RequiredEventStore();
         RuleFor(_ => _.EventStore).NotSystemEventStore();
@@ -23,6 +27,7 @@ internal class AppendManyValidator : CommandValidator<AppendMany>
         RuleFor(_ => _.Namespace).NoKeySeparator();
         RuleFor(_ => _.EventSequenceId).RequiredEventSequence();
         RuleFor(_ => _.EventSequenceId).NoKeySeparator();
+        RuleFor(_ => _.EventSequenceId).NotReservedForNewEventSequence(storage, reservedEventSequenceIds, _ => _.EventStore, _ => _.Namespace);
         RuleFor(_ => _.EventSourceId).RequiredEventSource();
         RuleFor(_ => _.Events)
             .Must((command, events) => events is not null && (events.Any() || (command.ConcurrencyScope is { } scope && (scope.ExpectsNoMatchingEvent || scope.SequenceNumber < Concepts.Events.EventSequenceNumber.BeforeFirst.Value))))

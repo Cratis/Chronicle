@@ -82,7 +82,7 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
         IOptions<ChronicleOptions> options,
         ILoggerFactory loggerFactory)
     {
-        _occurrences = new(eventStoreNamespaceDatabase.GetCollection<BsonDocument>("occurrences").Database);
+        _occurrences = new(eventStoreNamespaceDatabase.GetCollection<BsonDocument>(WellKnownCollectionNames.Occurrences).Database);
         _eventStore = eventStore;
         _namespace = @namespace;
         _eventStoreNamespaceDatabase = eventStoreNamespaceDatabase;

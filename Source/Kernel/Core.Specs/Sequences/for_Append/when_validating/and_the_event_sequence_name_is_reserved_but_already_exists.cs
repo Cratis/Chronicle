@@ -1,0 +1,46 @@
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+using Cratis.Arc.Commands;
+using Cratis.Arc.Testing.Commands;
+using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.EventSequences;
+using Cratis.Chronicle.Storage;
+using Cratis.Chronicle.Storage.EventSequences;
+using Microsoft.Extensions.DependencyInjection;
+
+namespace Cratis.Chronicle.Sequences.for_Append.when_validating;
+
+public class and_the_event_sequence_name_is_reserved_but_already_exists : Specification
+{
+    readonly CommandScenario<Append> _scenario = ChronicleCommandScenario.For<Append>();
+    CommandResult _result;
+
+    void Establish()
+    {
+        var namespaceStorage = Substitute.For<IEventStoreNamespaceStorage>();
+        namespaceStorage.GetEventSequences().Returns(Task.FromResult<IEnumerable<EventSequenceId>>([new EventSequenceId("observers")]));
+        var eventStoreStorage = Substitute.For<IEventStoreStorage>();
+        eventStoreStorage.GetNamespace(Arg.Any<EventStoreNamespaceName>()).Returns(namespaceStorage);
+        var storage = Substitute.For<IStorage>();
+        storage.HasEventStore(Arg.Any<EventStoreName>()).Returns(true);
+        storage.GetEventStore(Arg.Any<EventStoreName>()).Returns(eventStoreStorage);
+        var reserved = Substitute.For<IReservedEventSequenceIds>();
+        reserved.IsReserved(new EventSequenceId("observers")).Returns(true);
+        _scenario.Services.AddSingleton(storage);
+        _scenario.Services.AddSingleton(reserved);
+    }
+
+    async Task Because() => _result = await _scenario.Validate(new Append(
+        "some-event-store",
+        "some-namespace",
+        "observers",
+        "some-event-source",
+        "Default",
+        "All",
+        "Default",
+        new EventType("SomeEvent", 1, false),
+        "{}"));
+
+    [Fact] void should_be_valid() => _result.ShouldBeValid();
+}

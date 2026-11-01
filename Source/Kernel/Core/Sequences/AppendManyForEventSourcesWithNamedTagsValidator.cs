@@ -2,6 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Arc.Commands;
+using Cratis.Chronicle.Storage;
+using Cratis.Chronicle.Storage.EventSequences;
 using FluentValidation;
 
 namespace Cratis.Chronicle.Sequences;
@@ -19,7 +21,9 @@ internal class AppendManyForEventSourcesWithNamedTagsValidator : CommandValidato
     /// <summary>
     /// Initializes a new instance of the <see cref="AppendManyForEventSourcesWithNamedTagsValidator"/> class.
     /// </summary>
-    public AppendManyForEventSourcesWithNamedTagsValidator()
+    /// <param name="storage">The <see cref="IStorage"/> used to tell whether an event sequence already exists.</param>
+    /// <param name="reservedEventSequenceIds">The <see cref="IReservedEventSequenceIds"/> of the active storage provider.</param>
+    public AppendManyForEventSourcesWithNamedTagsValidator(IStorage storage, IReservedEventSequenceIds reservedEventSequenceIds)
     {
         RuleFor(_ => _.EventStore).RequiredEventStore();
         RuleFor(_ => _.EventStore).NotSystemEventStore();
@@ -28,6 +32,7 @@ internal class AppendManyForEventSourcesWithNamedTagsValidator : CommandValidato
         RuleFor(_ => _.Namespace).NoKeySeparator();
         RuleFor(_ => _.EventSequenceId).RequiredEventSequence();
         RuleFor(_ => _.EventSequenceId).NoKeySeparator();
+        RuleFor(_ => _.EventSequenceId).NotReservedForNewEventSequence(storage, reservedEventSequenceIds, _ => _.EventStore, _ => _.Namespace);
 
         RuleFor(_ => _.Events).RequiredEvents();
 

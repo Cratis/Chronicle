@@ -10,9 +10,9 @@ namespace Cratis.Chronicle.Storage.MongoDB.Occurrences;
 
 public partial class OccurrencesStorage
 {
-    readonly IMongoCollection<BsonDocument> _definitions = database.GetCollection<BsonDocument>("schedule-definitions");
-    readonly IMongoCollection<BsonDocument> _cursors = database.GetCollection<BsonDocument>("schedule-cursors");
-    readonly IMongoCollection<BsonDocument> _skipped = database.GetCollection<BsonDocument>("skipped-ranges");
+    readonly IMongoCollection<BsonDocument> _definitions = database.GetCollection<BsonDocument>(WellKnownCollectionNames.ScheduleDefinitions);
+    readonly IMongoCollection<BsonDocument> _cursors = database.GetCollection<BsonDocument>(WellKnownCollectionNames.ScheduleCursors);
+    readonly IMongoCollection<BsonDocument> _skipped = database.GetCollection<BsonDocument>(WellKnownCollectionNames.SkippedRanges);
 
     /// <inheritdoc/>
     public async Task<ScheduleDefinition?> GetDefinition(ScheduleToken token)

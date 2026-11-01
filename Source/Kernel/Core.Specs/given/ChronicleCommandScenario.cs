@@ -9,6 +9,7 @@ using Cratis.Chronicle.Concepts.Security;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Security;
 using Cratis.Chronicle.Storage;
+using Cratis.Chronicle.Storage.EventSequences;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -51,8 +52,10 @@ public static class ChronicleCommandScenario
         // failure the validator lookup above exists to prevent. Kernel validators read the event store to answer
         // ownership questions, so IStorage has to be resolvable for a scenario to exercise the rule set the
         // server actually runs. The substitute answers "nothing registered", which is the right starting point;
-        // a spec that needs stored state registers its own on its scenario.
+        // a spec that needs stored state registers its own on its scenario. The append validators also ask the
+        // storage provider which event sequence names are reserved; the substitute reserves nothing.
         scenario.Services.AddSingleton(Substitute.For<IStorage>());
+        scenario.Services.AddSingleton(Substitute.For<IReservedEventSequenceIds>());
         ConfigureAuthorization(scenario.Services, isAdministrator);
 
         return scenario;
