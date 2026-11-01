@@ -1160,6 +1160,7 @@ public partial class EventSequence(
             compliantEvent = reported.Value;
             keyUses.AddRange(reported.Uses);
         }
+
         var expandoObject = expandoObjectConverter.ToExpandoObject(compliantEvent, schema);
         return (expandoObject, compliantEvent);
     }

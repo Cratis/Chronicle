@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Schemas;
+
 namespace Cratis.Chronicle.EventTypes.for_EventTypeSchemaCache.when_resolving_protection;
 
 public class with_own_protection : given.a_protection_schema_cache

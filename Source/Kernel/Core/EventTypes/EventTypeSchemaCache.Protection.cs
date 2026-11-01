@@ -5,6 +5,7 @@ using System.Collections.Concurrent;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.EventSequences.Migrations;
+using Cratis.Chronicle.Schemas;
 
 namespace Cratis.Chronicle.EventTypes;
 

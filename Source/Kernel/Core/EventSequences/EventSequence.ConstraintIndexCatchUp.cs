@@ -189,5 +189,5 @@ public partial class EventSequence
     /// <returns>The definitions eligible for this activation's historical catch-up.</returns>
     IEnumerable<UniqueConstraintDefinition> CatchUpDefinitions() => _indexedDefinitions.Values.OfType<UniqueConstraintDefinition>().Where(definition => _catchUpDefinitionNames.Contains(definition.Name) && !_rebuildingConstraintIndexes.ContainsKey(definition.Name));
 
-    StoredConstraintEventContent CatchUpContent() => new(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, EventTypesStorage, jsonComplianceManagerProvider, expandoObjectConverter);
+    StoredConstraintEventContent CatchUpContent() => new(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, EventTypesStorage, jsonComplianceManagerProvider, expandoObjectConverter, schemaCache);
 }

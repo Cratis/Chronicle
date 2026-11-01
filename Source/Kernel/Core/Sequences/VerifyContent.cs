@@ -197,6 +197,7 @@ public record VerifyContent(
             return new(ContentVerificationResult.Unavailable);
         }
     }
+
     static Dictionary<int, JsonSchema> ResolveProtectionSchemas(Dictionary<int, JsonSchema> own)
     {
         var generations = own.Select(_ => ((EventTypeGeneration)(uint)_.Key, _.Value)).ToArray();

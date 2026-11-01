@@ -25,7 +25,7 @@ public class and_a_lower_generation_inherits_encryption : given.an_event_sequenc
     [Fact]
     async Task should_release_the_appended_copy_through_central_compliance_after_pii_erasure()
     {
-        await _keys.DeleteFor(_eventStore, _namespace, SubjectIdentifier);
+        await _keys.DeleteFor(EventStore, EventStoreNamespace, SubjectIdentifier);
         var stored = StoredEvents().Single();
         var ownSchema = _definition.Generations.Single(_ => _.Generation == _eventType.Generation).Schema;
         var appended = new AppendedEvent(stored.Context with { Subject = SubjectIdentifier }, _converter.ToExpandoObject(JsonNode.Parse(stored.GenerationalContent![1])!.AsObject(), ownSchema));

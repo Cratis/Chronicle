@@ -16,7 +16,7 @@ public class protection_while_a_cold_load_is_pending : given.a_protection_schema
     void Establish()
     {
         _old = _definition with { Generations = [new(_firstGeneration, _own)] };
-        _eventTypes.GetDefinition(_eventTypeId).Returns(_pending.Task, Task.FromResult(_definition));
+        _eventTypesStorage.GetDefinition(_eventTypeId).Returns(_pending.Task, Task.FromResult(_definition));
         _load = Resolve().AsTask();
     }
 

@@ -13,7 +13,7 @@ public class after_a_failed_load : given.a_protection_schema_cache
 
     async Task Establish()
     {
-        _eventTypes.GetDefinition(_eventTypeId).Returns(Task.FromException<EventTypeDefinition>(new InvalidOperationException("lookup failed")), Task.FromResult(_definition));
+        _eventTypesStorage.GetDefinition(_eventTypeId).Returns(Task.FromException<EventTypeDefinition>(new InvalidOperationException("lookup failed")), Task.FromResult(_definition));
         try
         {
             await Resolve();

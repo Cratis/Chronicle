@@ -258,6 +258,7 @@ public class AppendGenerationProtectionBenchmark
             {
                 await VerifyProtection(definition);
             }
+
             _release = new(storage, new EventCompliance(manager, converter, _schemaCache), engine, manager, converter, _schemaCache);
             _schemas = new() { [_eventType] = new(_eventType, EventTypeOwner.Server, EventTypeSource.Code, sourceSchema) };
             _events = [new(EventContext.Empty with { EventStore = _store, Namespace = _namespace, EventType = _eventType, Subject = Subject }, _source)];

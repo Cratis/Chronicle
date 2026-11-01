@@ -133,6 +133,7 @@ internal static class InProcessEventSequence
                 Options.Create(new KernelConfiguration::ChronicleOptions()),
                 NullLogger<KernelEventSequences::EventSequence>.Instance,
                 NullLogger<KernelEventSequences::Concurrency.ConcurrencyValidator>.Instance,
+                new KernelCore::Cratis.Chronicle.EventTypes.EventTypeSchemaCache(storage),
                 encryptionKeyStorage: compliance.KeyStorage);
         }
 

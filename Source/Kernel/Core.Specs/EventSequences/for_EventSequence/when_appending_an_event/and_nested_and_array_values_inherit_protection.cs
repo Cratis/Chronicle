@@ -35,7 +35,7 @@ public class and_nested_and_array_values_inherit_protection : given.an_event_seq
         {
             generation.Value.ShouldNotContain(Marker);
             var schema = GenerationProtectionSchemas.For(_definition, (uint)generation.Key);
-            var released = await _metadataManager.ReleaseStrict(_eventStore, _namespace, schema, SubjectIdentifier, JsonNode.Parse(generation.Value)!.AsObject());
+            var released = await _metadataManager.ReleaseStrict(EventStore, EventStoreNamespace, schema, SubjectIdentifier, JsonNode.Parse(generation.Value)!.AsObject());
             released.ToJsonString().ShouldEqual(_plaintextInputs.Single().ToJsonString());
         }
     }
@@ -43,11 +43,11 @@ public class and_nested_and_array_values_inherit_protection : given.an_event_seq
     [Fact]
     async Task should_remove_every_marker_after_erasure()
     {
-        await _keys.DeleteFor(_eventStore, _namespace, SubjectIdentifier);
+        await _keys.DeleteFor(EventStore, EventStoreNamespace, SubjectIdentifier);
         foreach (var generation in StoredEvents().Single().GenerationalContent!)
         {
             var schema = GenerationProtectionSchemas.For(_definition, (uint)generation.Key);
-            var released = await _metadataManager.Release(_eventStore, _namespace, schema, SubjectIdentifier, JsonNode.Parse(generation.Value)!.AsObject());
+            var released = await _metadataManager.Release(EventStore, EventStoreNamespace, schema, SubjectIdentifier, JsonNode.Parse(generation.Value)!.AsObject());
             released.ToJsonString().ShouldNotContain(Marker);
         }
     }

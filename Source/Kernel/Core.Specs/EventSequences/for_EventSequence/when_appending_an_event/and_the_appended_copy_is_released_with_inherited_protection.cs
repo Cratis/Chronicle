@@ -9,6 +9,7 @@ using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Identities;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Constraints;
+using Cratis.Chronicle.Schemas;
 
 namespace Cratis.Chronicle.EventSequences.for_EventSequence.when_appending_an_event;
 
@@ -43,7 +44,7 @@ public class and_the_appended_copy_is_released_with_inherited_protection : given
     [Fact]
     async Task should_not_release_the_appended_marker_after_erasure()
     {
-        await _keys.DeleteFor(_eventStore, _namespace, SubjectIdentifier);
+        await _keys.DeleteFor(EventStore, EventStoreNamespace, SubjectIdentifier);
         ReleasedName(await _compliance.Release(_appended, _own)).ShouldBeEmpty();
     }
 
@@ -59,7 +60,7 @@ public class and_the_appended_copy_is_released_with_inherited_protection : given
     [Fact]
     async Task should_release_and_classify_the_stored_constraint_input()
     {
-        var content = new StoredConstraintEventContent(_eventStore, _namespace, _eventTypesStorage, _metadataManager, _converter, _schemaCache);
+        var content = new StoredConstraintEventContent(EventStore, EventStoreNamespace, _eventTypesStorage, _metadataManager, _converter, _schemaCache);
         var released = await content.Release(_appended);
         _converter.ToJsonObject(released, _own)["name"]!.GetValue<string>().ShouldEqual(Marker);
         (await content.PersonalPropertiesOf(_appended)).ShouldContain("name");
