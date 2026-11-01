@@ -15,11 +15,13 @@ public class an_observing_observer_definitions_storage : Specification
 {
     protected ObserverDefinitionsStorage _storage;
     protected ConcurrentQueue<IEnumerable<KernelObserverDefinition>> _emissions = new();
+    protected readonly SemaphoreSlim _scopesReleased = new(0);
+    protected IDisposable _subscription;
+    protected Action _onScopeCompleted;
+    protected int _completedScopes;
     readonly SemaphoreSlim _connectionGate = new(1, 1);
-    readonly SemaphoreSlim _scopesReleased = new(0);
     readonly SemaphoreSlim _emitted = new(0);
     SqliteConnection _connection;
-    IDisposable _subscription;
 
     void Establish()
     {
@@ -80,7 +82,9 @@ public class an_observing_observer_definitions_storage : Specification
         return new DbContextScope<EventStoreDbContext>(CreateContext(), () =>
         {
             _connectionGate.Release();
+            Interlocked.Increment(ref _completedScopes);
             _scopesReleased.Release();
+            _onScopeCompleted?.Invoke();
         });
     }
 

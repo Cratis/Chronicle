@@ -24,7 +24,10 @@ public sealed class ObserverDefinitionsStorage : IObserverDefinitionsStorage, ID
     public ObserverDefinitionsStorage() => _allSubject.OnNext(Snapshot());
 
     /// <inheritdoc/>
-    public ISubject<IEnumerable<ObserverDefinition>> ObserveAll() => _allSubject;
+    public ISubject<IEnumerable<ObserverDefinition>> ObserveAll() =>
+        System.Reactive.Subjects.Subject.Create<IEnumerable<ObserverDefinition>>(
+            System.Reactive.Observer.Create<IEnumerable<ObserverDefinition>>(_ => { }),
+            _allSubject);
 
     /// <inheritdoc/>
     public Task<IEnumerable<ObserverDefinition>> GetAll() =>

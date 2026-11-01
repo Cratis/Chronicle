@@ -1,11 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Storage.Observation;
-using Cratis.Reactive;
 using MongoDB.Driver;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Observation;
@@ -20,9 +20,10 @@ public class ObserverDefinitionsStorage(IEventStoreDatabase eventStoreDatabase) 
 
     /// <inheritdoc/>
     public ISubject<IEnumerable<Chronicle.Storage.Observation.ObserverDefinition>> ObserveAll() =>
-        new TransformingSubject<IEnumerable<ObserverDefinition>, IEnumerable<Chronicle.Storage.Observation.ObserverDefinition>>(
-            _collection.Observe(),
-            definitions => definitions.Select(definition => definition.ToKernel()).ToArray());
+        System.Reactive.Subjects.Subject.Create<IEnumerable<Chronicle.Storage.Observation.ObserverDefinition>>(
+            System.Reactive.Observer.Create<IEnumerable<Chronicle.Storage.Observation.ObserverDefinition>>(_ => { }),
+            Observable.Defer(() => _collection.Observe()
+                .Select(definitions => definitions.Select(definition => definition.ToKernel()).ToArray())));
 
     /// <inheritdoc/>
     public async Task<IEnumerable<Chronicle.Storage.Observation.ObserverDefinition>> GetAll()

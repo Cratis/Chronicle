@@ -92,15 +92,17 @@ public record ObserverInformation(
     /// <returns>An observable subject emitting collections of observer information.</returns>
     public static ISubject<IEnumerable<ObserverInformation>> ObserveObservers(EventStoreName eventStore, EventStoreNamespaceName @namespace, IStorage storage)
     {
-        var subject = new ReplaySubject<IEnumerable<ObserverInformation>>(1);
-        storage
+        var observable = Observable.Defer(() => storage
             .GetEventStore(eventStore)
             .GetNamespace(@namespace).Observers
             .ObserveAll()
             .CombineLatest(
                 storage.GetEventStore(eventStore).Observers.ObserveAll(),
-                (states, definitions) => ObserverInformationConverters.Join(definitions, states).ToArray())
-            .Subscribe(subject);
-        return subject;
+                (states, definitions) => ObserverInformationConverters.Join(definitions, states).ToArray()))
+            .Replay(1)
+            .RefCount();
+        return Subject.Create<IEnumerable<ObserverInformation>>(
+            System.Reactive.Observer.Create<IEnumerable<ObserverInformation>>(_ => { }),
+            observable);
     }
 }

@@ -15,7 +15,7 @@ public interface IObserverDefinitionsStorage
     /// <summary>
     /// Observe all definitions; emits the current set on subscription and again whenever a definition is saved or deleted.
     /// </summary>
-    /// <returns>A subject emitting collections of observer definitions.</returns>
+    /// <returns>A read-only subject emitting collections of observer definitions; dispose the subscription to stop observing.</returns>
     ISubject<IEnumerable<ObserverDefinition>> ObserveAll();
 
     /// <summary>

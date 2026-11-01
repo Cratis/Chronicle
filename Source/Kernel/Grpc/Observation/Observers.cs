@@ -9,7 +9,6 @@ using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Security;
 using Cratis.Chronicle.Services.Events;
 using Cratis.Chronicle.Storage;
-using Cratis.Reactive;
 using Grpc.Core;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -363,7 +362,6 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage, IO
             var changedAt = new RunningStatesChangedAtCache(observerStateStorage);
             var enrichedStates = observerStateStorage
                 .ObserveAll()
-                .CompletedBy(context.CancellationToken)
                 .Select(observerStates => Observable.FromAsync(async () =>
                 {
                     var snapshot = observerStates as IReadOnlyCollection<Storage.Observation.ObserverState> ?? observerStates.ToArray();
@@ -373,7 +371,7 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage, IO
                 .Concat();
 
             return enrichedStates.CombineLatest(
-                storage.GetEventStore(request.EventStore).Observers.ObserveAll().CompletedBy(context.CancellationToken),
+                storage.GetEventStore(request.EventStore).Observers.ObserveAll(),
                 (enriched, definitions) =>
                 {
                     var observers =
@@ -382,7 +380,9 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage, IO
                         from state in stateGroup.DefaultIfEmpty(Storage.Observation.ObserverState.Empty)
                         select (definition, state);
                     return observers.ToContract(enriched.RunningStatesChangedAt).ToArray();
-                });
+                })
+                .TakeUntil(Observable.Create<bool>(observer =>
+                    context.CancellationToken.Register(() => observer.OnNext(true))));
         });
     }
 
