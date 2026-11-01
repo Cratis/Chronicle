@@ -28,7 +28,12 @@ public class ObserverStateStorage(EventStoreName eventStore, EventStoreNamespace
     }
 
     /// <inheritdoc/>
-    public ISubject<IEnumerable<Observation.ObserverState>> ObserveAll() => LiveQuery.Observe(GetAll, database, "observer-states");
+    /// <remarks>
+    /// Polls the SQL rows and compares them structurally, including the running state timestamp column, so a
+    /// timestamp-only write emits (#5483) and an unchanged poll does not. States are mapped only on emission.
+    /// </remarks>
+    public ISubject<IEnumerable<Observation.ObserverState>> ObserveAll() =>
+        LiveQuery.Observe(GetAllRows, database, "observer-states", ObserverStateRowComparer.Instance, MapAll);
 
     /// <inheritdoc/>
     public async Task<Observation.ObserverState> Get(ObserverId observerId)
@@ -237,6 +242,8 @@ public class ObserverStateStorage(EventStoreName eventStore, EventStoreNamespace
         }
     }
 
+    static Observation.ObserverState[] MapAll(ObserverState[] rows) => rows.Select(row => row.ToKernel()).ToArray();
+
     static async Task<bool> SaveState(NamespaceDbContext context, ObserverState entity, ObserverState? existing)
     {
         if (existing is null)
@@ -287,5 +294,11 @@ public class ObserverStateStorage(EventStoreName eventStore, EventStoreNamespace
         }
 
         entity.Initialization ??= existing.Initialization;
+    }
+
+    async Task<IEnumerable<ObserverState>> GetAllRows()
+    {
+        await using var scope = await database.Namespace(eventStore, @namespace);
+        return await scope.DbContext.Observers.ToListAsync();
     }
 }
