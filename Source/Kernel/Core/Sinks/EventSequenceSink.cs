@@ -15,9 +15,11 @@ using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Storage;
+using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.ReadModels;
 using Cratis.Chronicle.Storage.Sinks;
 using Cratis.Monads;
+using ReservedEventSequenceRules = Cratis.Chronicle.Sequences.ReservedEventSequenceRules;
 
 namespace Cratis.Chronicle.Sinks;
 
@@ -44,6 +46,7 @@ namespace Cratis.Chronicle.Sinks;
 /// <param name="grainFactory">The <see cref="IGrainFactory"/> for reaching the destination sequence.</param>
 /// <param name="storage">The <see cref="IStorage"/> used for reading published state.</param>
 /// <param name="expandoObjectConverter">The <see cref="IExpandoObjectConverter"/>.</param>
+/// <param name="reservedEventSequenceIds">The <see cref="IReservedEventSequenceIds"/> of the active storage provider.</param>
 public class EventSequenceSink(
     EventStoreName eventStore,
     EventStoreNamespaceName @namespace,
@@ -51,7 +54,8 @@ public class EventSequenceSink(
     EventSequenceSinkConfiguration configuration,
     IGrainFactory grainFactory,
     IStorage storage,
-    IExpandoObjectConverter expandoObjectConverter) : ISink
+    IExpandoObjectConverter expandoObjectConverter,
+    IReservedEventSequenceIds reservedEventSequenceIds) : ISink
 {
     /// <summary>
     /// The occurrence used when no replay has happened.
@@ -69,6 +73,7 @@ public class EventSequenceSink(
     const string ObserverProperty = "observer";
 
     string? _replayOccurrence;
+    bool _destinationVerified;
 
     /// <inheritdoc/>
     public SinkTypeId TypeId => WellKnownSinkTypes.EventSequence;
@@ -110,6 +115,11 @@ public class EventSequenceSink(
         }
 
         if (!changeset.HasChanges) return [];
+
+        if (!await DestinationMayBeWritten())
+        {
+            return [Failed(key, eventSequenceNumber, ReservedEventSequenceRules.Message(configuration.Destination.Value))];
+        }
 
         var last = await FindLast(key);
         var occurrence = _replayOccurrence ?? (last is null ? InitialOccurrence : OccurrenceOf(last));
@@ -246,6 +256,18 @@ public class EventSequenceSink(
                 .Concat(result.HasConcurrencyViolations ? ["Concurrency violation"] : []));
 
     static FailedPartition Failed(Key key, EventSequenceNumber sequenceNumber, string reason) => new(key, sequenceNumber) { Reason = reason };
+
+    /// <summary>
+    /// Checks the destination against the reserved names once; only a verified destination is remembered, so the append path pays nothing per event afterwards.
+    /// </summary>
+    /// <returns>True when the destination may be written to.</returns>
+    async Task<bool> DestinationMayBeWritten()
+    {
+        if (_destinationVerified) return true;
+
+        _destinationVerified = await ReservedEventSequenceRules.MayBeWritten(storage, reservedEventSequenceIds, eventStore.Value, @namespace.Value, configuration.Destination.Value);
+        return _destinationVerified;
+    }
 
     string ObserverName() => $"{definition.ObserverType}/{definition.ObserverIdentifier}/{definition.Identifier}";
 

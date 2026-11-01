@@ -23,7 +23,7 @@ public class and_a_replay_resumes_after_a_restart : given.a_sink
         await _sink.ApplyChanges("customer-1", Fold(new(), 11, 1, 5), 5);
 
         // The silo crashed after the append; a new sink resumes with the context as read back from storage.
-        var resumed = new EventSequenceSink(Store, Tenant, _definition, _configuration, _destinations.Grains, _destinations.Storage, _destinations.Converter);
+        var resumed = new EventSequenceSink(Store, Tenant, _definition, _configuration, _destinations.Grains, _destinations.Storage, _destinations.Converter, _destinations.ReservedIds);
         await resumed.ResumeReplay(reloaded);
         await resumed.ApplyChanges("customer-1", Fold(new(), 11, 1, 5), 5);
     }

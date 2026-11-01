@@ -12,7 +12,7 @@ public class and_a_step_is_retried : given.a_sink
         await _sink.ApplyChanges("customer-1", Fold(new(), 10, 1, 5), 5);
 
         // The same processing step after a crash, in a different sink instance (e.g. another silo).
-        var other = new EventSequenceSink(Store, Tenant, _definition, _configuration, _destinations.Grains, _destinations.Storage, _destinations.Converter);
+        var other = new EventSequenceSink(Store, Tenant, _definition, _configuration, _destinations.Grains, _destinations.Storage, _destinations.Converter, _destinations.ReservedIds);
         await other.ApplyChanges("customer-1", Fold(new(), 10, 1, 5), 5);
         await other.ApplyChanges("customer-1", Fold(new(), 10, 1, 5), 5, Storage.Sinks.SinkWriteMode.OnlyWhenAdvancingWatermark);
     }

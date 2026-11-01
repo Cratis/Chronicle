@@ -30,7 +30,9 @@ public class destinations
         _schema = JsonSchema.FromJson("{\"type\":\"object\",\"properties\":{\"Total\":{\"type\":\"integer\"},\"Count\":{\"type\":\"integer\"}}}");
         Grains = Substitute.For<IGrainFactory>();
         Grains.GetGrain<IEventSequence>(Arg.Any<string>()).Returns(call => SequenceFor(call.ArgAt<string>(0)));
+        ReservedIds = Substitute.For<IReservedEventSequenceIds>();
         Storage = Substitute.For<IStorage>();
+        Storage.GetEventStores().Returns(_ => Task.FromResult<IEnumerable<EventStoreName>>(["store"]));
         Storage.GetEventStore(Arg.Any<EventStoreName>()).Returns(call =>
         {
             var store = call.Arg<EventStoreName>();
@@ -38,6 +40,7 @@ public class destinations
             eventStore.GetNamespace(Arg.Any<EventStoreNamespaceName>()).Returns(ns =>
             {
                 var namespaceStorage = Substitute.For<IEventStoreNamespaceStorage>();
+                namespaceStorage.GetEventSequences().Returns(_ => Task.FromResult<IEnumerable<EventSequenceId>>([.. ExistingSequences]));
                 namespaceStorage.GetEventSequence(Arg.Any<EventSequenceId>()).Returns(seq => StorageFor(Key(store, ns.Arg<EventStoreNamespaceName>(), seq.Arg<EventSequenceId>())));
                 return namespaceStorage;
             });
@@ -48,6 +51,10 @@ public class destinations
     public IGrainFactory Grains { get; }
 
     public IStorage Storage { get; }
+
+    public IReservedEventSequenceIds ReservedIds { get; }
+
+    public List<EventSequenceId> ExistingSequences { get; } = [];
 
     public IExpandoObjectConverter Converter => _converter;
 
