@@ -3,7 +3,7 @@
 
 using Cratis.Chronicle.Configuration;
 
-namespace Cratis.Chronicle.Security.for_SystemStoreCommandFilter;
+namespace Cratis.Chronicle.Security.for_SystemStoreAuthorizationCommandFilter;
 
 public class when_authentication_is_disabled : given.a_command_filter
 {

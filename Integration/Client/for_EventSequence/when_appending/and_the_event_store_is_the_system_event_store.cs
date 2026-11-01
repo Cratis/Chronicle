@@ -51,15 +51,18 @@ public class and_the_event_store_is_the_system_event_store(context context) : Gi
         }
     }
 
-    [Fact] void should_reject_append() => Context.AppendResult.IsValid.ShouldBeFalse();
-    [Fact] void should_reject_append_many() => Context.AppendManyResult.IsValid.ShouldBeFalse();
-    [Fact] void should_reject_revise() => Context.ReviseResult.IsValid.ShouldBeFalse();
-    [Fact] void should_report_the_append_member() => Context.AppendResult.ValidationResults.SelectMany(result => result.Members).ShouldContain("eventStore");
-    [Fact] void should_report_the_append_many_member() => Context.AppendManyResult.ValidationResults.SelectMany(result => result.Members).ShouldContain("eventStore");
-    [Fact] void should_report_the_revise_member() => Context.ReviseResult.ValidationResults.SelectMany(result => result.Members).ShouldContain("eventStore");
+    [Fact] void should_refuse_append() => AssertRefused(Context.AppendResult.IsSuccess, Context.AppendResult.IsAuthorized);
+    [Fact] void should_refuse_append_many() => AssertRefused(Context.AppendManyResult.IsSuccess, Context.AppendManyResult.IsAuthorized);
+    [Fact] void should_refuse_revise() => AssertRefused(Context.ReviseResult.IsSuccess, Context.ReviseResult.IsAuthorized);
     [Fact] void should_not_throw_on_append() => Context.AppendResult.HasExceptions.ShouldBeFalse();
     [Fact] void should_not_throw_on_append_many() => Context.AppendManyResult.HasExceptions.ShouldBeFalse();
     [Fact] void should_not_throw_on_revise() => Context.ReviseResult.HasExceptions.ShouldBeFalse();
+    static void AssertRefused(bool isSuccess, bool isAuthorized)
+    {
+        isSuccess.ShouldBeFalse();
+        isAuthorized.ShouldBeFalse();
+    }
+
     [Fact]
     void should_refuse_reading_the_system_event_store()
     {
