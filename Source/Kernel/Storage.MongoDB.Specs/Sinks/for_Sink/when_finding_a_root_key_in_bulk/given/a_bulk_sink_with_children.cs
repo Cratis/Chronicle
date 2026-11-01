@@ -6,6 +6,7 @@ using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Properties;
+using Cratis.Chronicle.Storage.MongoDB.EventSequences;
 using Cratis.Chronicle.Storage.MongoDB.Generations.Fencing.for_Sink.given;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Sinks.for_Sink.when_finding_a_root_key_in_bulk.given;
@@ -44,6 +45,7 @@ public abstract class a_bulk_sink_with_children(ReplicaSetMongoDBFixture fixture
     {
         var changeset = Changes(changes);
         changeset.InitialState.Returns(state);
+        changeset.CurrentState.Returns(state);
         return changeset;
     }
 }

@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Properties;
+using Cratis.Chronicle.Storage.MongoDB.EventSequences;
 using Cratis.Chronicle.Storage.MongoDB.Sinks.for_Sink.when_finding_a_root_key_in_bulk.given;
 using Cratis.Monads;
 

@@ -44,6 +44,12 @@ public class an_index_over_a_cache : Specification
         index.Remove(cacheKey);
     }
 
+    protected void ClearAll()
+    {
+        cache.Clear();
+        index.Clear();
+    }
+
     protected string[] Find(string path, object value) => [.. index.Find(new PropertyPath(path), value, cache)];
 
     protected string[] Scan(string path, object value)

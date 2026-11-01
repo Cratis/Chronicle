@@ -37,8 +37,7 @@ public class when_the_cache_changes : an_index_over_a_cache
     {
         Put("a", Doc(("joinKey", "j")));
         Find("joinKey", "j").ShouldEqual(["a"]);
-        cache.Clear();
-        index.Clear();
+        ClearAll();
         Find("joinKey", "j").ShouldBeEmpty();
     }
 
