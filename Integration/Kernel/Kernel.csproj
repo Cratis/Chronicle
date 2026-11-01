@@ -13,6 +13,9 @@
         <ProjectReference Include="../Clustering/Clustering.csproj" />
         <ProjectReference Include="../../Source/Kernel/Concepts/Concepts.csproj" />
         <ProjectReference Include="../../Source/Kernel/Contracts/Contracts.csproj" />
+        <ProjectReference Include="../../Source/Kernel/Core/Core.csproj">
+            <Aliases>global,KernelCore</Aliases>
+        </ProjectReference>
     </ItemGroup>
     <ItemGroup>
         <PackageReference Include="Cratis.Arc.Core" />

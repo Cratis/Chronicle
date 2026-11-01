@@ -6,6 +6,7 @@ extern alias KernelCore;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
+using Cratis.Chronicle.Registrations;
 using Cratis.Chronicle.Setup;
 using KernelProjection = KernelCore::Cratis.Chronicle.Projections.IProjection;
 
