@@ -201,6 +201,7 @@ public class EventStoreForTesting : IEventStore, IDisposable
         // A catalog that already carries explicit artifacts, from these options or from another store, is never shared.
         Metadata = ShareApplicationMetadata && shareGenerator && ReferenceEquals(ClientArtifactsProvider, clientArtifactsProvider)
             && clientArtifactsProvider is not (StoreClientArtifactsProvider or ExplicitArtifactCatalog)
+            && SchemaProviderSharing.AreMigratorsSafe(ServiceProvider, ClientArtifactsProvider)
             ? TestingArtifactCatalogs.GetOrCreate(generator, _namingPolicy, TestingStore.Name.Value, ClientArtifactsProvider)
             : null;
 

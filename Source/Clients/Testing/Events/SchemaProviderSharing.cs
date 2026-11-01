@@ -28,4 +28,23 @@ internal static class SchemaProviderSharing
             .Concat(artifacts.SecurityForPropertiesProviders)
             .Any(type => registrations.IsService(type) || type.GetConstructors().Any(constructor => constructor.GetParameters().Length > 0));
     }
+
+    /// <summary>
+    /// Determines whether the migration seed is independent of the store's services.
+    /// </summary>
+    /// <param name="services">The store's services.</param>
+    /// <param name="artifacts">The artifact catalog.</param>
+    /// <returns>Whether migrations can be built once and shared.</returns>
+    /// <remarks>
+    /// Migrators are activated with the store's services, so a migrator that takes dependencies
+    /// can produce different migrations in stores with different providers.
+    /// </remarks>
+    internal static bool AreMigratorsSafe(IServiceProvider? services, IClientArtifactsProvider artifacts)
+    {
+        if (services is null || services.GetType() == typeof(DefaultServiceProvider)) return true;
+        var registrations = services as IServiceProviderIsService ?? services.GetService<IServiceProviderIsService>();
+        if (registrations is null) return !artifacts.EventTypeMigrators.Any();
+        return !artifacts.EventTypeMigrators
+            .Any(type => registrations.IsService(type) || type.GetConstructors().Any(constructor => constructor.GetParameters().Length > 0));
+    }
 }
