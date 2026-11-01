@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 
 namespace Cratis.Chronicle.Observation.for_Observer.when_completing_partition_replay;
@@ -13,7 +14,7 @@ public class and_a_stale_intent_is_restored : given.a_partition_replay_covering_
     {
         _completionStorage.State = _completionStorage.PersistedState with
         {
-            ReplayingPartitions = [],
+            ReplayingPartitions = new HashSet<Key>(),
             PartitionReplayCompletions = [new(_partition, 42UL, 50UL, null, DateTimeOffset.UnixEpoch)]
         };
         await _completionStorage.WriteStateAsync();

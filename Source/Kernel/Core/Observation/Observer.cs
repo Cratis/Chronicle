@@ -1280,6 +1280,7 @@ public partial class Observer(
         if (_reapplyRestoredCompletions)
         {
             _reapplyRestoredCompletions = false;
+
             // Reapplying after recovery is idempotent; the watchdog remains the backstop.
             await ApplyOutstandingPartitionReplayCompletions();
         }

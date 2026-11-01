@@ -118,7 +118,7 @@ public partial class Observer
     [LoggerMessage(LogLevel.Warning, "Dropping stale partition replay completion for {Partition} because its replay marker is gone")]
     static partial void DroppedStalePartitionReplayCompletion(ILogger logger, Key partition);
 
-    IEnumerable<PartitionReplayCompletionState>? PartitionReplayCompletionSnapshot()
+    PartitionReplayCompletionState[]? PartitionReplayCompletionSnapshot()
     {
         if (_partitionReplayCompletions.Count == 0)
         {
