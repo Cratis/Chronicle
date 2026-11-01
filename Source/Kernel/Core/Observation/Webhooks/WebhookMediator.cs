@@ -43,8 +43,9 @@ public class WebhookMediator(IWebhookHttpClientFactory webhookHttpClientFactory,
     /// <inheritdoc/>
     public async Task<WebhookDeliveryResult> Deliver(EventStoreName? eventStore, WebhookTarget webhookTarget, Key partition, IEnumerable<AppendedEvent> events, string? accessToken = null, TimeSpan? timeout = null, CancellationToken cancellationToken = default)
     {
+        using var deadline = CreateDeadline(timeout, cancellationToken);
         var batch = events.ToArray();
-        return await Send(eventStore, webhookTarget, batch, accessToken, timeout, cancellationToken, () => new HttpRequestMessage(HttpMethod.Post, string.Empty)
+        return await Send(eventStore, webhookTarget, batch, accessToken, deadline.Token, () => new HttpRequestMessage(HttpMethod.Post, string.Empty)
         {
             Content = JsonContent.Create(new EventsToObserve(partition.ToString(), batch), options: jsonSerializerOptions)
         });
@@ -71,7 +72,7 @@ public class WebhookMediator(IWebhookHttpClientFactory webhookHttpClientFactory,
             deadline.Cancel();
         }
 
-        return await Send(delivery.EventStore, delivery.Target, batch, delivery.AccessToken, null, deadline.Token, () => CreateEnvelopeRequest(delivery, trace.TraceParent));
+        return await Send(delivery.EventStore, delivery.Target, batch, delivery.AccessToken, deadline.Token, () => CreateEnvelopeRequest(delivery, trace.TraceParent));
     }
 
     HttpRequestMessage CreateEnvelopeRequest(HttpDeliveryRequest delivery, string traceParent)
@@ -87,16 +88,14 @@ public class WebhookMediator(IWebhookHttpClientFactory webhookHttpClientFactory,
         return request;
     }
 
-    async Task<WebhookDeliveryResult> Send(EventStoreName? eventStore, WebhookTarget webhookTarget, AppendedEvent[] batch, string? accessToken, TimeSpan? timeout, CancellationToken cancellationToken, Func<HttpRequestMessage> createRequest)
+    async Task<WebhookDeliveryResult> Send(EventStoreName? eventStore, WebhookTarget webhookTarget, AppendedEvent[] batch, string? accessToken, CancellationToken cancellationToken, Func<HttpRequestMessage> createRequest)
     {
-        using var deadline = CreateDeadline(timeout, cancellationToken);
-
         try
         {
             var httpClient = webhookHttpClientFactory.Create(webhookTarget, accessToken);
             using var request = createRequest();
             if (eventStore is not null) request.Options.Set(WebhookRequestOptions.EventStore, eventStore);
-            using var response = await httpClient.SendAsync(request, deadline.Token);
+            using var response = await httpClient.SendAsync(request, cancellationToken);
             if (!response.IsSuccessStatusCode)
             {
                 return DeliveryRejected(response, webhookTarget, batch);
