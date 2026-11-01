@@ -284,6 +284,7 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage, IO
         var observer = await grainFactory.GetObserver(request, storage);
         var definition = await observer.GetDefinition();
         var state = await observer.GetState();
+        var runningStateChangedAt = await storage.GetEventStore(request.EventStore).GetNamespace(request.Namespace).Observers.GetRunningStateChangedAt(request.ObserverId);
         var subscribed = await observer.IsSubscribed();
         return new ObserverInformation
         {
@@ -297,6 +298,7 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage, IO
             TailEventSequenceNumber = state.TailEventSequenceNumber,
             HandledEventCount = state.HandledEventCount,
             RunningState = state.RunningState.ToContract(),
+            RunningStateChangedAt = runningStateChangedAt,
             IsSubscribed = subscribed,
             IsReplayable = definition.IsReplayable
         };
@@ -340,36 +342,46 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage, IO
     public async Task<IEnumerable<ObserverInformation>> GetObservers(AllObserversRequest request, CallContext context = default)
     {
         var observerDefinitions = await storage.GetEventStore(request.EventStore).Observers.GetAll();
-        var observerStates = await storage.GetEventStore(request.EventStore).GetNamespace(request.Namespace).Observers.GetAll();
+        var observerStateStorage = storage.GetEventStore(request.EventStore).GetNamespace(request.Namespace).Observers;
+        var observerStates = await observerStateStorage.GetAll();
+        var runningStatesChangedAt = await observerStateStorage.GetRunningStatesChangedAt();
         var observers =
             from definition in observerDefinitions
             join state in observerStates on definition.Identifier equals state.Identifier into stateGroup
             from state in stateGroup.DefaultIfEmpty(Storage.Observation.ObserverState.Empty)
             select (definition, state);
 
-        return observers.ToContract();
+        return observers.ToContract(runningStatesChangedAt);
     }
 
     /// <inheritdoc/>
     public IObservable<IEnumerable<ObserverInformation>> ObserveObservers(AllObserversRequest request, CallContext context = default)
     {
-        return storage
-            .GetEventStore(request.EventStore)
-            .GetNamespace(request.Namespace).Observers
-            .ObserveAll()
-            .CompletedBy(context.CancellationToken)
-            .SelectMany(async observerStates =>
-            {
-                // TODO: We will be formalizing these things in Grains, until then this is less than optimal.
-                var observerDefinitions = await storage.GetEventStore(request.EventStore).Observers.GetAll();
-                var observers =
-                    from definition in observerDefinitions
-                    join state in observerStates on definition.Identifier equals state.Identifier into stateGroup
-                    from state in stateGroup.DefaultIfEmpty(Storage.Observation.ObserverState.Empty)
-                    select (definition, state);
+        var observerStateStorage = storage.GetEventStore(request.EventStore).GetNamespace(request.Namespace).Observers;
+        return Observable.Defer(() =>
+        {
+            var changedAt = new RunningStatesChangedAtCache(observerStateStorage);
+            return observerStateStorage
+                .ObserveAll()
+                .CompletedBy(context.CancellationToken)
+                .Select(observerStates => Observable.FromAsync(async () =>
+                {
+                    var snapshot = observerStates as IReadOnlyCollection<Storage.Observation.ObserverState> ?? observerStates.ToArray();
 
-                return observers.ToContract();
-            });
+                    // TODO: We will be formalizing these things in Grains, until then this is less than optimal.
+                    // Definitions are still read per emission because IObserverDefinitionsStorage has no change source.
+                    var observerDefinitions = await storage.GetEventStore(request.EventStore).Observers.GetAll();
+                    var runningStatesChangedAt = await changedAt.GetFor(snapshot);
+                    var observers =
+                        from definition in observerDefinitions
+                        join state in snapshot on definition.Identifier equals state.Identifier into stateGroup
+                        from state in stateGroup.DefaultIfEmpty(Storage.Observation.ObserverState.Empty)
+                        select (definition, state);
+
+                    return observers.ToContract(runningStatesChangedAt);
+                }))
+                .Concat();
+        });
     }
 
     /// <inheritdoc/>
@@ -377,7 +389,9 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage, IO
     {
         var eventTypes = request.EventTypes.ToChronicle();
         var observerDefinitions = await storage.GetEventStore(request.EventStore).Observers.GetReplayableObserversForEventTypes(eventTypes);
-        var observerStates = await storage.GetEventStore(request.EventStore).GetNamespace(request.Namespace).Observers.GetAll();
+        var observerStateStorage = storage.GetEventStore(request.EventStore).GetNamespace(request.Namespace).Observers;
+        var observerStates = await observerStateStorage.GetAll();
+        var runningStatesChangedAt = await observerStateStorage.GetRunningStatesChangedAt();
 
         // Inner join on purpose: only replayable observers that already have state are candidates for
         // replay. Unlike the all-observers listing — where an observer should appear even before it has
@@ -387,7 +401,7 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage, IO
             join state in observerStates on definition.Identifier equals state.Identifier
             select (definition, state);
 
-        return observers.ToContract();
+        return observers.ToContract(runningStatesChangedAt);
     }
 
     static bool NeedsSubscription(
