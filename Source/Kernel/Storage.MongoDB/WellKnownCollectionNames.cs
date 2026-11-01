@@ -106,6 +106,11 @@ public static class WellKnownCollectionNames
     public const string ObserverHandledCounts = "observer-handled-counts";
 
     /// <summary>
+    /// The collection that holds parked sequence-local observer checkpoints.
+    /// </summary>
+    public const string ObserverSequenceCheckpoints = "observer-sequence-checkpoints";
+
+    /// <summary>
     /// The collection that holds identities.
     /// </summary>
     public const string Identities = "identities";

@@ -62,6 +62,11 @@ public interface IEventStoreNamespaceStorage
     IObserverStateStorage Observers { get; }
 
     /// <summary>
+    /// Gets the sequence-local checkpoints parked by observer ownership changes.
+    /// </summary>
+    IObserverSequenceCheckpointsStorage ObserverSequenceCheckpoints { get; }
+
+    /// <summary>
     /// Gets the independently paged definition-change progress, successor and inventory stores.
     /// </summary>
     ObserverDefinitionChangeStorage ObserverDefinitionChanges { get; }

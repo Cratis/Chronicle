@@ -96,6 +96,9 @@ public sealed class EventStoreNamespaceStorage(
     public IObserverHandledCountsStorage ObserverHandledCounts { get; } = new ObserverHandledCountsStorage();
 
     /// <inheritdoc/>
+    public IObserverSequenceCheckpointsStorage ObserverSequenceCheckpoints { get; } = new ObserverSequenceCheckpointsStorage();
+
+    /// <inheritdoc/>
     public IRecommendationStorage Recommendations { get; } = new RecommendationStorage();
 
     /// <inheritdoc/>

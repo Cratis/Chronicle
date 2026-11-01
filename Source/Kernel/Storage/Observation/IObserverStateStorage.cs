@@ -59,6 +59,16 @@ public interface IObserverStateStorage
     Task ClaimOwnership(ObserverId observerId, EventSequenceId owner);
 
     /// <summary>
+    /// Atomically selects the target sequence's progress if the stored owner still matches.
+    /// No row is created, and a failed comparison leaves every field unchanged.
+    /// </summary>
+    /// <param name="observerId">The observer to hand over.</param>
+    /// <param name="expectedOwner">The required current owner, or null for legacy unowned state.</param>
+    /// <param name="target">The target sequence's checkpoint.</param>
+    /// <returns>True when the existing row was handed over, otherwise false.</returns>
+    Task<bool> HandOver(ObserverId observerId, EventSequenceId? expectedOwner, ObserverSequenceCheckpoint target);
+
+    /// <summary>
     /// Delete the state of an observer.
     /// </summary>
     /// <param name="observerId">The <see cref="ObserverId"/> to delete the state for.</param>

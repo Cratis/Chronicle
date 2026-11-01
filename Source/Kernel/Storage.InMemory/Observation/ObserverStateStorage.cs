@@ -81,6 +81,35 @@ public sealed class ObserverStateStorage : IObserverStateStorage, IDisposable
     }
 
     /// <inheritdoc/>
+    public Task<bool> HandOver(ObserverId observerId, EventSequenceId? expectedOwner, ObserverSequenceCheckpoint target)
+    {
+        while (_states.TryGetValue(observerId, out var existing))
+        {
+            if (existing.Owner != expectedOwner) return Task.FromResult(false);
+            var incoming = existing with
+            {
+                Owner = target.EventSequenceId,
+                NextEventSequenceNumber = target.NextEventSequenceNumber,
+                LastHandledEventSequenceNumber = target.LastHandledEventSequenceNumber,
+                TailEventSequenceNumber = target.TailEventSequenceNumber,
+                FailedPartitionCount = target.FailedPartitionCount,
+                IsReplaying = target.IsReplaying,
+                PartitionClaims = target.PartitionClaims,
+                ObserverWideClaim = target.ObserverWideClaim,
+                DeliveryFences = target.DeliveryFences,
+                ReplayingPartitions = [],
+                CatchingUpPartitions = [],
+                InFlightPartitions = []
+            };
+            if (!_states.TryUpdate(observerId, incoming, existing)) continue;
+            _allSubject.OnNext(Snapshot());
+            return Task.FromResult(true);
+        }
+
+        return Task.FromResult(false);
+    }
+
+    /// <inheritdoc/>
     public Task Delete(ObserverId observerId)
     {
         if (_states.TryRemove(observerId, out _))

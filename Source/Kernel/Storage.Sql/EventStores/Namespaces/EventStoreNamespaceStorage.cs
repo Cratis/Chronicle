@@ -82,6 +82,9 @@ public class EventStoreNamespaceStorage(EventStoreName eventStore, EventStoreNam
     public IObserverHandledCountsStorage ObserverHandledCounts { get; } = new ObserverHandledCounts.ObserverHandledCountsStorage(eventStore, @namespace, database);
 
     /// <inheritdoc/>
+    public IObserverSequenceCheckpointsStorage ObserverSequenceCheckpoints { get; } = new ObserverSequenceCheckpoints.ObserverSequenceCheckpointsStorage(eventStore, @namespace, database);
+
+    /// <inheritdoc/>
     public IRecommendationStorage Recommendations { get; } = new Recommendations.RecommendationStorage(eventStore, @namespace, database);
 
     /// <inheritdoc/>

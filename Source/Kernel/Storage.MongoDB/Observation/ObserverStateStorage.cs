@@ -135,6 +135,28 @@ public class ObserverStateStorage(IEventStoreNamespaceDatabase namespaceDatabase
         await _collection.UpdateOneAsync(_ => _.Id == observerId, Builders<ObserverState>.Update.Set(_ => _.Owner, owner)).ConfigureAwait(false);
 
     /// <inheritdoc/>
+    public async Task<bool> HandOver(ObserverId observerId, EventSequenceId? expectedOwner, Chronicle.Storage.Observation.ObserverSequenceCheckpoint target)
+    {
+        var filter = Builders<ObserverState>.Filter.Eq(_ => _.Id, observerId) &
+            Builders<ObserverState>.Filter.Eq(_ => _.Owner, expectedOwner);
+        var update = Builders<ObserverState>.Update
+            .Set(_ => _.Owner, target.EventSequenceId)
+            .Set(_ => _.NextEventSequenceNumber, target.NextEventSequenceNumber)
+            .Set(_ => _.LastHandledEventSequenceNumber, target.LastHandledEventSequenceNumber)
+            .Set(_ => _.TailEventSequenceNumber, target.TailEventSequenceNumber)
+            .Set(_ => _.FailedPartitionCount, target.FailedPartitionCount)
+            .Set(_ => _.IsReplaying, target.IsReplaying)
+            .Set(_ => _.PartitionClaims, target.PartitionClaims)
+            .Set(_ => _.ObserverWideClaim, target.ObserverWideClaim)
+            .Set(_ => _.DeliveryFences, target.DeliveryFences)
+            .Set(_ => _.ReplayingPartitions, [])
+            .Set(_ => _.CatchingUpPartitions, [])
+            .Set(_ => _.InFlightPartitions, []);
+        var result = await _collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
+        return result.MatchedCount > 0;
+    }
+
+    /// <inheritdoc/>
     public async Task Delete(ObserverId observerId) =>
         await _collection.DeleteOneAsync(os => os.Id == observerId).ConfigureAwait(false);
 

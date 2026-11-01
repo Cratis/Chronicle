@@ -107,6 +107,7 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
         FailedPartitions = new FailedPartitionStorage(eventStoreNamespaceDatabase);
         InFlightEvents = new InFlightEventsStorage(eventStoreNamespaceDatabase);
         ObserverHandledCounts = new ObserverHandledCountsStorage(eventStoreNamespaceDatabase);
+        ObserverSequenceCheckpoints = new ObserverSequenceCheckpointsStorage(eventStoreNamespaceDatabase);
         Recommendations = new RecommendationStorage(eventStoreNamespaceDatabase);
         Patterns = new BehaviorPatternStorage(eventStoreNamespaceDatabase);
         ObserverKeyIndexes = new ObserverKeyIndexes(eventStoreNamespaceDatabase);
@@ -159,6 +160,9 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
 
     /// <inheritdoc/>
     public IObserverHandledCountsStorage ObserverHandledCounts { get; }
+
+    /// <inheritdoc/>
+    public IObserverSequenceCheckpointsStorage ObserverSequenceCheckpoints { get; }
 
     /// <inheritdoc/>
     public IRecommendationStorage Recommendations { get; }

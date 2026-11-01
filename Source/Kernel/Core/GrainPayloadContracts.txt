@@ -258,6 +258,7 @@ json Cratis.Chronicle.Concepts.Observation.FailedPartition
   attemptsBeforeBudgetReset: int
   attemptsInCurrentBudget: int
   deferral: Cratis.Chronicle.Concepts.Observation.PartitionDeferral
+  eventSequenceId: Cratis.Chronicle.Concepts.EventSequences.EventSequenceId
   hold: Cratis.Chronicle.Concepts.Observation.FailedPartitionHold
   id: Cratis.Chronicle.Concepts.Observation.FailedPartitionId
   isQuarantined: bool

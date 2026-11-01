@@ -304,6 +304,11 @@ public static class WellKnownTableNames
     public const string ObserverHandledCounts = "ObserverHandledCounts";
 
     /// <summary>
+    /// The table that holds parked sequence-local observer checkpoints.
+    /// </summary>
+    public const string ObserverSequenceCheckpoints = "ObserverSequenceCheckpoints";
+
+    /// <summary>
     /// The table that holds durable application and schedule occurrences.
     /// </summary>
     public const string Occurrences = "Occurrences";

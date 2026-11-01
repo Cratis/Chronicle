@@ -98,6 +98,11 @@ public class NamespaceDbContext(DbContextOptions<NamespaceDbContext> options) : 
     /// </summary>
     public DbSet<ObserverHandledCounts.ObserverHandledCountEntry> ObserverHandledCounts { get; set; } = null!;
 
+    /// <summary>
+    /// Gets or sets the parked sequence-local observer checkpoints.
+    /// </summary>
+    public DbSet<ObserverSequenceCheckpoints.ObserverSequenceCheckpointEntry> ObserverSequenceCheckpoints { get; set; } = null!;
+
     /// <inheritdoc/>
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -141,6 +146,19 @@ public class NamespaceDbContext(DbContextOptions<NamespaceDbContext> options) : 
                 entity.ToTable(WellKnownTableNames.ObserverHandledCounts);
                 entity.HasKey(e => e.Id);
                 entity.HasIndex(e => new { e.ObserverId, e.Partition, e.EventTypeId }).IsUnique();
+            })
+            .Entity<ObserverSequenceCheckpoints.ObserverSequenceCheckpointEntry>(entity =>
+            {
+                entity.ToTable(WellKnownTableNames.ObserverSequenceCheckpoints);
+                entity.HasKey(row => new { row.ObserverId, row.EventSequenceId });
+                entity.Property(row => row.ObserverId).HasMaxLength(200);
+                entity.Property(row => row.EventSequenceId).HasMaxLength(200);
+                if (Database.IsNpgsql())
+                {
+                    entity.Property(row => row.PartitionClaims).HasColumnType("jsonb");
+                    entity.Property(row => row.ObserverWideClaim).HasColumnType("jsonb");
+                    entity.Property(row => row.DeliveryFences).HasColumnType("jsonb");
+                }
             })
             .Entity<Patterns.BehaviorPattern>(entity =>
             {

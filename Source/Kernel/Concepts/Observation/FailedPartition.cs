@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json.Serialization;
+using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Keys;
 
 namespace Cratis.Chronicle.Concepts.Observation;
@@ -12,6 +13,12 @@ namespace Cratis.Chronicle.Concepts.Observation;
 public class FailedPartition
 {
     List<FailedPartitionAttempt> _attempts = [];
+
+    /// <summary>
+    /// Gets or sets the sequence this failure belongs to, absent on legacy failures.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public EventSequenceId? EventSequenceId { get; set; }
 
     /// <summary>
     /// Gets or sets the explicit webhook receiver policy, absent on legacy failures.

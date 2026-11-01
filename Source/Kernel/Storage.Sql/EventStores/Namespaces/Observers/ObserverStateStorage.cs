@@ -6,6 +6,7 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Storage.Observation;
+using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ObserverSequenceCheckpoints;
 using Cratis.Chronicle.Storage.Sql.EventStores.Occurrences;
 using Microsoft.EntityFrameworkCore;
 
@@ -106,6 +107,32 @@ public class ObserverStateStorage(EventStoreName eventStore, EventStoreNamespace
         await using var scope = await database.Namespace(eventStore, @namespace);
         await scope.DbContext.Observers.Where(observer => observer.Id == observerId)
             .ExecuteUpdateAsync(set => set.SetProperty(observer => observer.Owner, owner.Value));
+    }
+
+    /// <inheritdoc/>
+    public async Task<bool> HandOver(ObserverId observerId, EventSequenceId? expectedOwner, ObserverSequenceCheckpoint target)
+    {
+        await using var scope = await database.Namespace(eventStore, @namespace);
+        var expected = expectedOwner?.Value;
+        var checkpoint = target.ToEntity();
+        ISet<string> emptyPartitions = new HashSet<string>();
+        // One conditional UPDATE changes only sequence-local fields. No tracked snapshot can
+        // overwrite concurrent alert, membership, initialization or count changes.
+        var updated = await scope.DbContext.Observers
+            .Where(observer => observer.Id == observerId && observer.Owner == expected)
+            .ExecuteUpdateAsync(set => set
+                .SetProperty(observer => observer.Owner, checkpoint.EventSequenceId)
+                .SetProperty(observer => observer.NextEventSequenceNumber, checkpoint.NextEventSequenceNumber)
+                .SetProperty(observer => observer.LastHandledEventSequenceNumber, checkpoint.LastHandledEventSequenceNumber)
+                .SetProperty(observer => observer.TailEventSequenceNumber, checkpoint.TailEventSequenceNumber)
+                .SetProperty(observer => observer.FailedPartitionCount, checkpoint.FailedPartitionCount)
+                .SetProperty(observer => observer.IsReplaying, checkpoint.IsReplaying)
+                .SetProperty(observer => observer.PartitionClaims, checkpoint.PartitionClaims)
+                .SetProperty(observer => observer.ObserverWideClaim, checkpoint.ObserverWideClaim)
+                .SetProperty(observer => observer.DeliveryFences, checkpoint.DeliveryFences)
+                .SetProperty(observer => observer.ReplayingPartitions, emptyPartitions)
+                .SetProperty(observer => observer.CatchingUpPartitions, emptyPartitions));
+        return updated > 0;
     }
 
     /// <inheritdoc/>
