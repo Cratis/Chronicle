@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
-using System.Collections.Frozen;
+using System.Runtime.CompilerServices;
 
 namespace Cratis.Chronicle.Events;
 
@@ -10,10 +10,14 @@ namespace Cratis.Chronicle.Events;
 /// Shares immutable discovery results that depend only on CLR types, not registry identities.
 /// </summary>
 /// <typeparam name="TValue">The immutable discovery result.</typeparam>
+/// <remarks>
+/// Entries never keep a type alive: results hang off the artifact through a <see cref="ConditionalWeakTable{TKey, TValue}"/>
+/// and event type sets are held weakly, so collectible assemblies and test hosts can unload.
+/// </remarks>
 internal sealed class EventTypeSetCache<TValue>
     where TValue : class
 {
-    readonly ConcurrentDictionary<CacheKey, Lazy<TValue>> _entries = new();
+    readonly ConditionalWeakTable<Type, ArtifactEntries> _artifacts = new();
 
     /// <summary>
     /// Gets the result for an artifact, model and unordered event type set.
@@ -23,33 +27,113 @@ internal sealed class EventTypeSetCache<TValue>
     /// <param name="model">The artifact's model.</param>
     /// <param name="build">The discovery operation.</param>
     /// <returns>The shared result.</returns>
-    internal TValue Get(IEnumerable<Type> types, Type artifact, Type model, Func<IEnumerable<Type>, TValue> build)
+    internal TValue Get(IEnumerable<Type> types, Type artifact, Type model, Func<IEnumerable<Type>, TValue> build) =>
+        _artifacts.GetValue(artifact, static _ => new()).Get(model, [.. types], build);
+
+    sealed class ArtifactEntries
     {
-        var snapshot = types.ToArray();
-        var key = new CacheKey(snapshot.ToFrozenSet(), artifact, model);
-        var entry = _entries.GetOrAdd(key, static (_, state) => new Lazy<TValue>(() => state.Build(state.Types)), (Build: build, Types: snapshot));
-        try
+        readonly ConcurrentDictionary<TypeSetKey, Lazy<TValue>> _entries = new(TypeSetKey.Comparer);
+
+        public TValue Get(Type model, HashSet<Type> types, Func<IEnumerable<Type>, TValue> build)
         {
-            return entry.Value;
+            var probe = TypeSetKey.Probe(model, types);
+            if (!_entries.TryGetValue(probe, out var entry))
+            {
+                RemoveCollected();
+                entry = _entries.GetOrAdd(TypeSetKey.Weak(model, types), static (_, state) => new Lazy<TValue>(() => state.Build(state.Types)), (Build: build, Types: types));
+            }
+
+            try
+            {
+                return entry.Value;
+            }
+            catch
+            {
+                RemoveFailed(entry);
+                throw;
+            }
         }
-        catch
+
+        void RemoveFailed(Lazy<TValue> failed)
         {
-            _entries.TryRemove(new KeyValuePair<CacheKey, Lazy<TValue>>(key, entry));
-            throw;
+            foreach (var pair in _entries.Where(pair => ReferenceEquals(pair.Value, failed)))
+            {
+                _entries.TryRemove(pair);
+            }
+        }
+
+        void RemoveCollected()
+        {
+            foreach (var pair in _entries.Where(pair => pair.Key.IsCollected))
+            {
+                _entries.TryRemove(pair);
+            }
         }
     }
 
-    sealed class CacheKey(FrozenSet<Type> types, Type artifact, Type model) : IEquatable<CacheKey>
+    /// <summary>
+    /// An unordered type set compared by membership; stored keys hold their types weakly, lookups probe with a set.
+    /// </summary>
+    sealed class TypeSetKey
     {
-        readonly FrozenSet<Type> _types = types;
-        readonly Type _artifact = artifact;
-        readonly Type _model = model;
-        readonly int _hash = HashCode.Combine(artifact, model, types.Count, types.Aggregate(0, (hash, type) => hash ^ type.GetHashCode()));
+        readonly Type _model;
+        readonly int _hash;
+        readonly HashSet<Type>? _probe;
+        readonly WeakReference<Type>[] _weak = [];
 
-        public bool Equals(CacheKey? other) => other is not null && _artifact == other._artifact && _model == other._model && _types.SetEquals(other._types);
+        TypeSetKey(Type model, HashSet<Type> types, bool weak)
+        {
+            _model = model;
+            _hash = HashCode.Combine(model, types.Count, types.Aggregate(0, (hash, type) => hash ^ type.GetHashCode()));
+            if (weak)
+            {
+                _weak = [.. types.Select(type => new WeakReference<Type>(type))];
+            }
+            else
+            {
+                _probe = types;
+            }
+        }
 
-        public override bool Equals(object? obj) => obj is CacheKey other && Equals(other);
+        public static IEqualityComparer<TypeSetKey> Comparer { get; } = new KeyComparer();
 
-        public override int GetHashCode() => _hash;
+        public bool IsCollected => _weak.Any(reference => !reference.TryGetTarget(out _));
+
+        int Count => _probe?.Count ?? _weak.Length;
+
+        public static TypeSetKey Probe(Type model, HashSet<Type> types) => new(model, types, weak: false);
+
+        public static TypeSetKey Weak(Type model, HashSet<Type> types) => new(model, types, weak: true);
+
+        bool Contains(Type type)
+        {
+            if (_probe is not null) return _probe.Contains(type);
+            foreach (var reference in _weak)
+            {
+                if (reference.TryGetTarget(out var target) && target == type) return true;
+            }
+
+            return false;
+        }
+
+        bool HasSameMembersAs(TypeSetKey other)
+        {
+            if (_model != other._model || Count != other.Count) return false;
+            if (_probe is not null) return other._probe is not null ? _probe.SetEquals(other._probe) : other.HasSameMembersAs(this);
+            foreach (var reference in _weak)
+            {
+                if (!reference.TryGetTarget(out var type) || !other.Contains(type)) return false;
+            }
+
+            return true;
+        }
+
+        sealed class KeyComparer : IEqualityComparer<TypeSetKey>
+        {
+            public bool Equals(TypeSetKey? x, TypeSetKey? y) =>
+                ReferenceEquals(x, y) || (x is not null && y is not null && x.HasSameMembersAs(y));
+
+            public int GetHashCode(TypeSetKey obj) => obj._hash;
+        }
     }
 }
