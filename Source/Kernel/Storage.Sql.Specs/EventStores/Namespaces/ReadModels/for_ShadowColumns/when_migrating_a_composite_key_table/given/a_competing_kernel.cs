@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Arc.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Migrations.Operations;
@@ -25,9 +24,8 @@ internal sealed class a_competing_kernel(ITableMigrator<ReadModelDbContext> inne
         if (migrationBuilder.Operations.Exists(IsShadowAddition) && Interlocked.CompareExchange(ref _added, 1, 0) == 0)
         {
             // An older kernel does not take our advisory lock. It wins the DDL race on another connection.
-            var builder = new DbContextOptionsBuilder<ReadModelDbContext>();
-            builder.UseDatabaseFromConnectionString(context.Database.GetConnectionString()!);
-            await using var competing = new ReadModelDbContext(builder.Options, context.TableName, context.Columns, Substitute.For<IReadModelMigrator>());
+            var options = SpecDbContextOptions.ForConnection<ReadModelDbContext>(context.Database.GetConnectionString()!);
+            await using var competing = new ReadModelDbContext(options, context.TableName, context.Columns, Substitute.For<IReadModelMigrator>());
             await inner.ExecuteMigrationOperations(competing, migrationBuilder);
         }
         try

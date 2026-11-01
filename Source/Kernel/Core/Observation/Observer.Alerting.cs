@@ -209,7 +209,9 @@ public partial class Observer
             await UnregisterReminderNamed(LegacyAlertReminderName);
         }
 
-        if (source.Identifier != _observerId)
+        // An activation under another event sequence than the definition's is not this observer, even though it
+        // loads its record. It must neither keep the reminder that reactivates it nor count as existing.
+        if (source.Identifier != _observerId || !KeyOwnsDefinition)
         {
             await UnregisterReminderNamed(AlertReminderName);
             return;

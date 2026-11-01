@@ -90,7 +90,8 @@ public static class ImplementationMethods
             ? $"global::{context.ContractsNamespace}.{method.Name}Request request, {CallContextType} callContext = default"
             : $"{CallContextType} callContext = default";
 
-        var source = QueryDispatch(method.Name, method.Method, invocation, parameters, readModelType, serviceName, context);
+        var source = QueryDispatch(method.Name, method.Method, invocation, parameters, readModelType, serviceName, context)
+            .Replace("    public ", AuthorizationAttributes(readModelType, method.Method) + "    public ", StringComparison.Ordinal);
         return AllowsAnonymous(readModelType) || AllowsAnonymous(method.Method)
             ? source.Replace("    public ", "    [global::Microsoft.AspNetCore.Authorization.AllowAnonymous]\n    public ", StringComparison.Ordinal)
             : source;
@@ -338,6 +339,17 @@ public static class ImplementationMethods
     static bool AllowsAnonymous(MemberInfo member) => member.GetCustomAttributesData().Any(attribute =>
         string.Equals(attribute.AttributeType.FullName, "Cratis.Arc.Authorization.AllowAnonymousAttribute", StringComparison.Ordinal) ||
         string.Equals(attribute.AttributeType.FullName, "Microsoft.AspNetCore.Authorization.AllowAnonymousAttribute", StringComparison.Ordinal));
+
+    static string AuthorizationAttributes(params MemberInfo[] members) => string.Concat(members
+        .SelectMany(member => member.GetCustomAttributesData())
+        .Where(attribute =>
+            string.Equals(attribute.AttributeType.FullName, "Cratis.Arc.Authorization.AuthorizeAttribute", StringComparison.Ordinal) ||
+            string.Equals(attribute.AttributeType.FullName, "Microsoft.AspNetCore.Authorization.AuthorizeAttribute", StringComparison.Ordinal))
+        .SelectMany(attribute => attribute.NamedArguments.Where(argument => argument.MemberName == "Policy"))
+        .Select(argument => argument.TypedValue.Value as string)
+        .Where(policy => !string.IsNullOrEmpty(policy))
+        .Distinct(StringComparer.Ordinal)
+        .Select(policy => $"    [global::Microsoft.AspNetCore.Authorization.Authorize(Policy = {System.Text.Json.JsonSerializer.Serialize(policy)})]\n"));
 
     static string Method(string returnType, string name, string parameters, string body, bool allowsAnonymous = false)
     {

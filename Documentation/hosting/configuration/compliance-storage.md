@@ -93,6 +93,9 @@ When `migrateFromDefaultStorage` is on, both stores are live and both are part o
 
 Vault and Azure Key Vault both keep every key revision as a distinct secret, so their own backup and point-in-time restore facilities cover this; when the keys live in the general storage backend instead, the database backup already carries them and steps 2 and 3 are the same restore.
 
+> [!NOTE]
+> What deleting a key guarantees differs per store. Read [what key erasure guarantees on each key store](../../compliance/key-store-erasure-guarantees.md) before you choose one.
+
 ## Vault
 
 HashiCorp Vault provides a purpose-built secrets backend that is well-suited for storing PII encryption keys. Chronicle uses the [KV v2 secrets engine](https://developer.hashicorp.com/vault/docs/secrets/kv/kv-v2) to store each key revision at a distinct path.
@@ -157,7 +160,7 @@ Chronicle authenticates to Azure Key Vault using [`DefaultAzureCredential`](http
 - Azure CLI credentials
 - Visual Studio / VS Code credentials
 
-Ensure that the identity used has the **Key Vault Secrets Officer** role (or at minimum **Get**, **List**, **Set**, and **Delete** secret permissions) on the target Key Vault.
+The identity needs **Get**, **List**, **Set**, **Delete** and **Purge** secret permissions on the target Key Vault, and permission to list deleted secrets. Erasing a key soft-deletes and then purges it, and a vault that refuses the purge fails the erasure. Purge protection therefore cannot be enabled on this vault. See [what key erasure guarantees on each key store](../../compliance/key-store-erasure-guarantees.md).
 
 ### Configuration
 

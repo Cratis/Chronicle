@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Text.Json;
 using Cratis.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -30,13 +29,14 @@ public class when_convention_binding_ran_before_it_is_registered : Specification
         services.AddScoped(_ => Substitute.For<IEventTypes>());
         services.AddSingleton(_ => Substitute.For<IClientArtifactsProvider>());
         services.AddSingleton(_ => Substitute.For<IClientArtifactsActivator>());
-        services.AddSingleton(_ => new JsonSerializerOptions());
         services.AddTypeDiscovery();
         services.AddSingleton<EventSerializer>();
         services.AddSingleton<IEventSerializer, EventSerializer>();
         services.AddBindingsByConvention();
         services.AddSelfBindings();
         services.AddEventSerializer();
+
+        services.AddSingleton(_ => ChronicleClientWithDefaultOptions());
 
         _serializerRegistrations = services
             .Where(descriptor => descriptor.ServiceType == typeof(EventSerializer) || descriptor.ServiceType == typeof(IEventSerializer))
@@ -61,4 +61,11 @@ public class when_convention_binding_ran_before_it_is_registered : Specification
     [Fact] void should_register_the_concrete_and_contract_once_each() => _serializerRegistrations.Length.ShouldEqual(2);
     [Fact] void should_build_the_serializer_once_per_scope() => _secondInTheScope.ShouldEqual(_firstInTheScope);
     [Fact] void should_build_a_new_serializer_for_the_next_scope() => _inAnotherScope.ShouldNotEqual(_firstInTheScope);
+
+    static IChronicleClient ChronicleClientWithDefaultOptions()
+    {
+        var client = Substitute.For<IChronicleClient>();
+        client.Options.Returns(new ChronicleOptions());
+        return client;
+    }
 }

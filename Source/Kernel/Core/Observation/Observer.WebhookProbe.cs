@@ -434,7 +434,7 @@ public partial class Observer
             failure.WebhookDisposition = WebhookFailureDisposition.Gone;
             failure.IsQuarantined = true;
             ChangeAlertState();
-            await failures.WriteStateAsync();
+            await WriteFailedPartitions();
         }
         finally
         {
@@ -459,7 +459,7 @@ public partial class Observer
                 ResetWebhookProbeBudget(eligible, control.Id);
             }
             ChangeAlertState();
-            await failures.WriteStateAsync();
+            await WriteFailedPartitions();
             await WriteStateAsync();
             return true;
         }
@@ -522,7 +522,7 @@ public partial class Observer
             var cursor = failure.EffectiveRecoveryCursor;
             failure.RecoveryCursor = new(next, cursor.Mode, cursor.ReplayBoundary);
             failure.RecoveryOwner = null;
-            await failures.WriteStateAsync();
+            await WriteFailedPartitions();
         }
         finally
         {

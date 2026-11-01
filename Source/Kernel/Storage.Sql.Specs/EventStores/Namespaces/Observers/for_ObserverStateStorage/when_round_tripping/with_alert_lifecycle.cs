@@ -23,7 +23,7 @@ public class with_alert_lifecycle : given.an_observer_state_storage
 
     async Task Because()
     {
-        await _storage.Save(_original);
+        await _storage.Save(_original, Concepts.EventSequences.EventSequenceId.Log);
         _saved = await _storage.Get(_original.Identifier);
         await _storage.Rename(_original.Identifier, "renamed");
         _renamed = await _storage.Get("renamed");

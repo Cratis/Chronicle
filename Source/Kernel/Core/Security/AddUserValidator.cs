@@ -21,6 +21,6 @@ internal class AddUserValidator : CommandValidator<AddUser>
         RuleFor(_ => _.UserId).IgnoreConceptRules().NotEmpty().WithMessage("User identifier is required.");
         RuleFor(_ => _.Username).NotEmpty().WithMessage("Username is required.");
         RuleFor(_ => _.Email).NotEmpty().EmailAddress().WithMessage("A valid email address is required.");
-        RuleFor(_ => _.Password).NotEmpty().MinimumLength(8).WithMessage("Password must be at least 8 characters long.");
+        RuleFor(_ => _.Password).NotEmpty().MinimumLength(PasswordPolicy.MinimumLength).WithMessage("Password must be at least 8 characters long.");
     }
 }

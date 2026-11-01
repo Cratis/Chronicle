@@ -121,6 +121,9 @@ jobs:
           dotnet nuget add source --name github --username cratis --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text https://nuget.pkg.github.com/cratis/index.json
 
       # The integration shards run `--no-build` against this DEVELOPMENT-symbol build.
+      - name: Stamp the build version
+        run: python3 .github/scripts/derive-build-version.py >> "$GITHUB_ENV"
+
       - name: Build with DEVELOPMENT symbol
         run: dotnet build --configuration Release -p:EnableDevelopmentSymbol=true -p:DisableProxyGenerator=true -p:DisableDockerBuild=true
 
