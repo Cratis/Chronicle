@@ -53,8 +53,17 @@ public class when_clients_register_and_append_while_recovery_is_blocked(Backgrou
             await fixture.RecoverableWork.WaitAsync(BackgroundStartupFixture.OperationDeadline);
             await AppendBatch(ingress, "final-marker");
             var finalSequence = inputs[^1].Sequence;
-            await WaitUntil(() => callbacks.Count(row => row.InputToken.StartsWith("final-marker", StringComparison.Ordinal)) == 4);
-            await WaitUntil(async () => (await Read(ingress)).Count(row => row.Content is StartupDeliveryRecorded) >= 2 * inputs.Count);
+            var expected = new[] { observerA, observerB }
+                .SelectMany(observer => inputs.Select(input => new StartupDeliveryRecorded(observer, input.Token, input.Sequence)))
+                .OrderBy(row => row.ObserverId).ThenBy(row => row.InputToken).ToArray();
+
+            // Wait for every expected (observer, input) individually, so a duplicate can never stand in for a missing delivery.
+            await WaitUntil(() => Task.FromResult(expected.All(callbacks.Contains)));
+            await WaitUntil(async () =>
+            {
+                var recorded = (await Read(ingress)).Select(row => row.Content).OfType<StartupDeliveryRecorded>().ToArray();
+                return expected.All(recorded.Contains);
+            });
             var storage = fixture.SiloServices.GetRequiredService<IStorage>()
                 .GetEventStore(new(BackgroundStartupFixture.EventStore)).GetNamespace(new(EventStoreNamespaceName.Default.Value));
             foreach (var observer in new[] { observerA, observerB })
@@ -74,9 +83,6 @@ public class when_clients_register_and_append_while_recovery_is_blocked(Backgrou
             var persistedInputs = persisted.Where(row => row.Content is StartupEvent)
                 .Select(row => (((StartupEvent)row.Content).Token, row.Context.SequenceNumber.Value)).ToArray();
             persistedInputs.ShouldEqual(inputs.ToArray());
-            var expected = new[] { observerA, observerB }
-                .SelectMany(observer => inputs.Select(input => new StartupDeliveryRecorded(observer, input.Token, input.Sequence)))
-                .OrderBy(row => row.ObserverId).ThenBy(row => row.InputToken).ToArray();
             callbacks.OrderBy(row => row.ObserverId).ThenBy(row => row.InputToken).ToArray().ShouldEqual(expected);
             persisted.Select(row => row.Content).OfType<StartupDeliveryRecorded>()
                 .OrderBy(row => row.ObserverId).ThenBy(row => row.InputToken).ToArray().ShouldEqual(expected);
@@ -116,12 +122,10 @@ public class when_clients_register_and_append_while_recovery_is_blocked(Backgrou
         }
     }
 
-    static async Task WaitUntil(Func<bool> condition) => await WaitUntil(() => Task.FromResult(condition()));
-
     static async Task WaitUntil(Func<Task<bool>> condition)
     {
         using var cts = new CancellationTokenSource(BackgroundStartupFixture.OperationDeadline);
-        while (!await condition())
+        while (!await condition().WaitAsync(cts.Token))
         {
             await Task.Delay(TimeSpan.FromMilliseconds(100), cts.Token);
         }
