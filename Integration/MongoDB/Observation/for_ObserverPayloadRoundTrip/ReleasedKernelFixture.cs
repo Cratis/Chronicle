@@ -70,6 +70,11 @@ public sealed class ReleasedKernelFixture : IAsyncDisposable
     });
 
     /// <summary>
+    /// Gets the released kernel's mapped TLS endpoint.
+    /// </summary>
+    public string KernelAddress => $"chronicle://{_kernel.Hostname}:{_kernel.GetMappedPublicPort(35000)}";
+
+    /// <summary>
     /// Gets the persisted old-kernel observer selected by the readiness signal.
     /// </summary>
     /// <exception cref="InvalidOperationException">The old kernel is not ready.</exception>
