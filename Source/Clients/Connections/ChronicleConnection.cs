@@ -4,27 +4,7 @@
 using System.Diagnostics;
 using System.Security.Cryptography.X509Certificates;
 using Cratis.Chronicle.Contracts;
-using Cratis.Chronicle.Contracts.Captures;
 using Cratis.Chronicle.Contracts.Clients;
-using Cratis.Chronicle.Contracts.Compliance;
-using Cratis.Chronicle.Contracts.Events.Constraints;
-using Cratis.Chronicle.Contracts.EventSources;
-using Cratis.Chronicle.Contracts.EventStores;
-using Cratis.Chronicle.Contracts.EventTypes;
-using Cratis.Chronicle.Contracts.ExternalServices;
-using Cratis.Chronicle.Contracts.Host;
-using Cratis.Chronicle.Contracts.Identities;
-using Cratis.Chronicle.Contracts.Jobs;
-using Cratis.Chronicle.Contracts.Namespaces;
-using Cratis.Chronicle.Contracts.Observation;
-using Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions;
-using Cratis.Chronicle.Contracts.Observation.Reactors;
-using Cratis.Chronicle.Contracts.Observation.Reducers;
-using Cratis.Chronicle.Contracts.Observation.Webhooks;
-using Cratis.Chronicle.Contracts.Projections;
-using Cratis.Chronicle.Contracts.Recommendations;
-using Cratis.Chronicle.Contracts.Security;
-using Cratis.Chronicle.Contracts.Seeding;
 using Cratis.Execution;
 using Cratis.Tasks;
 using Grpc.Core;
@@ -32,7 +12,6 @@ using Grpc.Core.Interceptors;
 using Grpc.Net.Client;
 using Grpc.Net.Client.Configuration;
 using Microsoft.Extensions.Logging;
-using ProtoBuf.Grpc.Client;
 
 namespace Cratis.Chronicle.Connections;
 
@@ -339,45 +318,15 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
             .Intercept(new AuthenticationClientInterceptor(_tokenProvider, _loggerFactory.CreateLogger<AuthenticationClientInterceptor>()))
             .Intercept(new CorrelationIdClientInterceptor(_correlationIdAccessor));
 
+        var services = new LazyServices(callInvoker, clientFactory);
+
         // Perform compatibility check before establishing connection
         if (!_skipCompatibilityCheck)
         {
-            await CheckCompatibility(callInvoker.CreateGrpcService<IConnectionService>(clientFactory));
+            await CheckCompatibility(services.Connections);
         }
 
-        _services = new Services(
-            callInvoker.CreateGrpcService<ICompliance>(clientFactory),
-            callInvoker.CreateGrpcService<IEventStores>(clientFactory),
-            callInvoker.CreateGrpcService<INamespaces>(clientFactory),
-            callInvoker.CreateGrpcService<IRecommendations>(clientFactory),
-            callInvoker.CreateGrpcService<Contracts.Patterns.IPatterns>(clientFactory),
-            callInvoker.CreateGrpcService<IIdentities>(clientFactory),
-            callInvoker.CreateGrpcService<Contracts.Sequences.IEventSequences>(clientFactory),
-            callInvoker.CreateGrpcService<IEventTypes>(clientFactory),
-            callInvoker.CreateGrpcService<IConstraints>(clientFactory),
-            callInvoker.CreateGrpcService<IObservers>(clientFactory),
-            callInvoker.CreateGrpcService<IFailedPartitions>(clientFactory),
-            callInvoker.CreateGrpcService<IReactors>(clientFactory),
-            callInvoker.CreateGrpcService<IReducers>(clientFactory),
-            callInvoker.CreateGrpcService<IProjections>(clientFactory),
-            callInvoker.CreateGrpcService<IWebhooks>(clientFactory),
-            callInvoker.CreateGrpcService<IExternalServices>(clientFactory),
-            callInvoker.CreateGrpcService<ICaptures>(clientFactory),
-            callInvoker.CreateGrpcService<IEventStoreSubscriptions>(clientFactory),
-            callInvoker.CreateGrpcService<Contracts.ReadModels.IReadModels>(clientFactory),
-            callInvoker.CreateGrpcService<Contracts.ReadModels.IMaterializedReadModels>(clientFactory),
-            callInvoker.CreateGrpcService<Contracts.ReadModelExplorer.IReadModelExplorer>(clientFactory),
-            callInvoker.CreateGrpcService<IJobs>(clientFactory),
-            callInvoker.CreateGrpcService<IEventSeeding>(clientFactory),
-            callInvoker.CreateGrpcService<IUsers>(clientFactory),
-            callInvoker.CreateGrpcService<IApplications>(clientFactory),
-            callInvoker.CreateGrpcService<IServer>(clientFactory),
-            callInvoker.CreateGrpcService<IConnectionService>(clientFactory),
-            callInvoker.CreateGrpcService<IEventSources>(clientFactory))
-        {
-            Administrators = callInvoker.CreateGrpcService<Contracts.Security.IAdministrators>(clientFactory),
-            Occurrences = callInvoker.CreateGrpcService<Contracts.Occurrences.IOccurrences>(clientFactory)
-        };
+        _services = services;
 
         if (_skipKeepAlive)
         {
@@ -387,7 +336,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
             return;
         }
 
-        _connectionService = callInvoker.CreateGrpcService<IConnectionService>(clientFactory);
+        _connectionService = services.Connections;
         _watchDog.NotifyKeepAlive();
         _connectTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
