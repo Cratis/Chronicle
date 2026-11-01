@@ -78,15 +78,40 @@ test('equal content passes with only valid timestamp and newline differences', c
     }
 });
 
-test('generic Source metadata retains assembly identity', context => {
+const generic = 'Example.OneOf`2[[Example.Command, Example, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null],' +
+    '[Example.Other, Example, Version=2.0.0.0, Culture=neutral, PublicKeyToken=null]]';
+
+test('generic Source metadata ignores build versions on both sides', context => {
     const f = fixture(context);
     generate(f);
-    const generic = 'Example.OneOf`1[[Example.Command, Example, Version=1.0.0.0]]';
-    for (const directory of [f.source, f.output]) put(directory, sentinels[0], proxy().replace('Example.Command', generic));
+    put(f.source, sentinels[0], proxy().replace('Example.Command', generic));
+    put(f.output, sentinels[0], proxy().replace('Example.Command', generic.replaceAll(/Version=[\d.]+/g, 'Version=19.116.0.0')));
     assert.equal(verdict(f).code, 0);
-    put(f.output, sentinels[0], proxy().replace('Example.Command', generic.replace('1.0.0.0', '2.0.0.0')));
-    assertFailure(f, sentinels[0]);
+    put(f.source, sentinels[0], proxy().replace('Example.Command', generic.replaceAll(/Version=[\d.]+/g, 'Version=19.117.0.0')));
+    assert.equal(verdict(f).code, 0);
 });
+
+for (const [old, replacement] of [['Example.Command', 'Other.Command'], ['Example, Version', 'Other, Version'],
+    ['Culture=neutral', 'Culture=en-US'], ['PublicKeyToken=null', 'PublicKeyToken=0123456789abcdef']]) {
+    test(`generic Source metadata retains ${old} identity`, context => {
+        const f = fixture(context);
+        generate(f);
+        put(f.source, sentinels[0], proxy().replace('Example.Command', generic));
+        put(f.output, sentinels[0], proxy().replace('Example.Command', generic.replaceAll(old, replacement)));
+        assertFailure(f, sentinels[0]);
+    });
+}
+
+for (const [location, content] of [['proxy content', proxy("version: 'Version=1.0.0.0';")],
+    ['other header lines', proxy().replace('Copyright', 'Version=1.0.0.0 Copyright')]]) {
+    test(`build versions in ${location} are compared`, context => {
+        const f = fixture(context);
+        generate(f);
+        put(f.source, sentinels[0], content);
+        put(f.output, sentinels[0], content.replace('Version=1.0.0.0', 'Version=19.116.0.0'));
+        assertFailure(f, sentinels[0]);
+    });
+}
 
 test('prepare copies only handwritten TS/TSX and mixed barrels, with exact bytes', context => {
     const f = fixture(context);
