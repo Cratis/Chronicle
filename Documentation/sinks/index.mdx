@@ -95,6 +95,14 @@ A composite key is stored as one value, its parts joined with `_`, and reads ret
 
 Updates from the projection engine touch only the columns that changed. Tables are created automatically on first use via `IReadModelMigrator`. You do not need to write migrations by hand.
 
+### Physical table names
+
+Logical container names are bound to physical table names in the read-model database's `ReadModelTableNames` ledger. PostgreSQL names fit in 63 UTF-8 bytes; SQL Server names fit in 128 UTF-16 code units. Names within the limit remain unchanged. Longer names keep a readable prefix followed by `~` and 16 hexadecimal SHA-256 characters derived from the **full** logical name. Replay shadows and backups are bound independently, including their full replay occurrence name. SQLite names remain unchanged.
+
+Existing tables are adopted only when their ownership is unambiguous. A legacy PostgreSQL table whose name was truncated is not silently replaced with an empty hashed table. Ambiguous metadata, conflicting bindings, or a missing table behind a Ready binding cause a named failure instead of redirecting reads or creating replacement data. Keep the ledger with the tables when backing up or restoring a database; never edit a binding to point at another table.
+
+Cold resolution inspects possible owners without creating their metadata databases. When catalog visibility cannot establish absence, new reservations and adoption fail closed with `ReadModelTableMetadataUnavailable`; already-Ready bindings remain usable. PostgreSQL requires visibility of `pg_catalog.pg_database`. SQL Server requires database-catalog visibility (`VIEW ANY DATABASE`, `ALTER ANY DATABASE`, or `CREATE DATABASE` in `master`), and `VIEW DEFINITION` to distinguish an absent metadata table from a hidden one. SQLite requires permission to list the metadata directory. Restore visibility or repair ambiguous ownership before retrying; do not drop existing tables or the ledger to bypass the refusal.
+
 Declared top-level scalar indexes are ensured idempotently. Populated primary tables use background
 online builds (`CONCURRENTLY` on PostgreSQL and `ONLINE = ON` on SQL Server); empty and replay-shadow
 tables can build synchronously. Per-table locks serialize builders across kernels without waiting
