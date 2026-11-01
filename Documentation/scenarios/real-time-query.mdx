@@ -25,7 +25,7 @@ Getting a single instance (below) is real in every client. Kotlin and Java curre
 
 ## Page through materialized state
 
-For list views and grids, skip the replay: `Materialized` reads the instances the projection has already persisted to the sink — eventually consistent (typically milliseconds behind), fast regardless of history, and paged:
+For list views and grids, skip the replay: `Materialized` reads the instances the projection has already persisted to the sink — eventually consistent (typically milliseconds behind, but [while the read model is being rebuilt](rebuild-a-read-model.md#what-readers-see-during-a-rebuild) it serves the pre-rebuild state, so it lags by the length of the rebuild), fast regardless of history, and paged:
 
 <ChronicleClientTabs snippet="scenarios/real-time-query/materialized-page" />
 

@@ -23,13 +23,25 @@ Read models are **derived data** — the [event log](../concepts/event-sequence.
 3. Query the read model and confirm it reflects the new logic.
 
 :::tip
-Rebuilds are safe to run as often as you like — they don't touch the events, only the derived read model. This is also how you recover a read model that drifted or whose sink was wiped.
+A rebuild never touches the events, only the derived read model, so it is safe to repeat. This is also how you recover a read model that drifted or whose sink was wiped. It is not free: while the rebuild runs, the read model does not follow new events, so readers lag by at least the length of the rebuild. See [What readers see during a rebuild](#what-readers-see-during-a-rebuild).
 :::
+
+## What readers see during a rebuild
+
+While the replay runs, the observer handles no live events. It writes the rebuilt model to a separate container and readers keep getting the **pre-rebuild model**, as it was when the replay started. This holds for lookups by key and, on the MongoDB and SQL sinks, for materialized pages. [Reads during a replay](../read-models/getting-single-instance.mdx#reads-during-a-replay) describes the key lookups and the short window around promotion.
+
+When the replay finishes, the rebuilt model replaces the old one. The observer then catches up on the events appended during the rebuild. A single read therefore returns either the old model or the rebuilt one. Chronicle does not offer point-in-time snapshot reads across a rebuild. The longer the rebuild runs, the staler the read model gets, and the more events remain to catch up on afterwards.
+
+## A rebuild that produces nothing
+
+If a rebuild writes no instances, Chronicle discards the empty result and keeps the existing read model unchanged. This protects the read model from a race that would otherwise replace it with nothing. The consequence is that a read model which should legitimately become empty is **not** cleared by a rebuild.
 
 ## Notes
 
 - A rebuild reprocesses **all** matching events, so for very large streams it takes time proportional to the history. Plan rebuilds of big projections accordingly.
 - Reducers rebuild the same way — they're also derived from events.
+- Replaying a projection with **global** scope is refused, whether full or per partition. Kernel projections cannot be declared global. See [Observers](../concepts/observers.mdx) and the [scope decision](https://github.com/Cratis/Chronicle/blob/main/decisions/0015-global-projection-scope-is-restricted.md).
+- A projection definition change that needs history means a full rebuild, or a recommendation to replay when the observer configuration says not to rebuild automatically. See [definition evolution](../hosting/configuration/observers.md#definition-evolution).
 
 ## See also
 
