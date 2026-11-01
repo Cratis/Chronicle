@@ -28,7 +28,7 @@ public class a_host_adding_the_client : Specification
         _services.AddSingleton(Options.Create(new ChronicleClientOptions()));
         _services.AddSingleton(Options.Create(_chronicleOptions));
         _services.AddLogging();
-        _services.AddCratisChronicleClient();
+        _services.AddStandaloneChronicleClient();
         _services.AddSingleton(_client);
         _services.AddScoped(_ => _eventTypes);
         return _services.BuildServiceProvider();
