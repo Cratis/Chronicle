@@ -312,11 +312,10 @@ public class ReactorScenario<TReactor> : IDisposable
 
         await using var activatedReactor = activationResult.AsT0;
 
+        await using var middlewares = new ReactorMiddlewares([]);
         var invoker = new ReactorInvoker(
             _eventTypes,
-#pragma warning disable CA2000 // Dispose objects before losing scope — ownership transfers to ReactorInvoker
-            new ReactorMiddlewares([]),
-#pragma warning restore CA2000
+            middlewares,
             typeof(TReactor),
             activatedReactor,
             NullLogger<ReactorInvoker>.Instance,

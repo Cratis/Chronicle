@@ -86,6 +86,11 @@ public class Projections(
     internal IModelBoundProjectionsSource ModelBoundSource { get; set; } = ModelBoundProjectionsSource.Default;
 
     /// <summary>
+    /// Gets or sets the optional source of independent fluent definitions.
+    /// </summary>
+    internal IFluentProjectionDefinitionsSource? FluentSource { get; set; }
+
+    /// <summary>
     /// Gets the software version of the application, sent with every registration so the kernel can ignore one that
     /// is older than what it has stored. Left unset, registrations carry no version and are never ignored.
     /// </summary>
@@ -387,11 +392,7 @@ public class Projections(
     {
         var (modelBoundDefinitions, modelBoundFailures) = ModelBoundSource.Discover(clientArtifacts, namingPolicy, eventTypes, logger, eventStore.Name?.Value);
         ApplyGenerationDelivery(modelBoundDefinitions, modelBoundFailures);
-        var (definitionsByType, failures, containerNames) = FindAllProjectionDefinitions(
-            eventTypes,
-            clientArtifacts,
-            artifactsActivator,
-            jsonSerializerOptions);
+        var (definitionsByType, failures, containerNames) = DiscoverFluentDefinitions();
 
         foreach (var (projectionType, definition) in definitionsByType)
         {
@@ -726,6 +727,10 @@ public class Projections(
 
         return (result, failures, containerNames);
     }
+
+    (Dictionary<Type, ProjectionDefinition> Definitions, Dictionary<Type, Exception> Failures, Dictionary<Type, string> ContainerNames) DiscoverFluentDefinitions() =>
+        FluentSource?.Get(GenerationDelivery, () => FindAllProjectionDefinitions(eventTypes, clientArtifacts, artifactsActivator, jsonSerializerOptions)) ??
+        FindAllProjectionDefinitions(eventTypes, clientArtifacts, artifactsActivator, jsonSerializerOptions);
 
     void ApplyGenerationDelivery(IDictionary<Type, ProjectionDefinition> definitions, IDictionary<Type, Exception> failures)
     {

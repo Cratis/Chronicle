@@ -20,7 +20,6 @@ using Cratis.Chronicle.Identities;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.InMemory;
-using Cratis.Chronicle.Storage.InMemory.Events.EventTypes;
 using Cratis.Chronicle.Storage.InMemory.Sinks;
 using Cratis.Chronicle.Storage.Sinks;
 using Cratis.Chronicle.Testing.Compliance;
@@ -69,7 +68,7 @@ internal sealed class TestingEventStore : IDisposable
         _storages = new EventStoreStorages(
             new KnownInstancesOf<ISinkFactory>([new InMemorySinkFactory(new TypeFormats())]),
             new InMemoryJobsStorage(new NoJobTypes()),
-            _ => new DiscoveredEventTypesStorage(new EventTypesStorage(), eventTypes));
+            _ => new DiscoveredEventTypesStorage(new SeededEventTypesStorage(), eventTypes));
         Storage = new Storage.InMemory.Storage(_storages, new SystemStorage());
         Time = time ?? new ScenarioTime();
         Capabilities = capabilities ?? new KernelCapabilitiesForTesting();
@@ -166,7 +165,7 @@ internal sealed class TestingEventStore : IDisposable
     /// <param name="eventSources">The discovered event sources.</param>
     /// <param name="metadata">The shared application metadata, or <see langword="null"/> to compute the seed from the inputs.</param>
     /// <returns>Awaitable task.</returns>
-    internal async Task Seed(ICanProvideConstraints? constraints, IJsonSchemaGenerator schemas, IEventTypeMigrators migrators, IEnumerable<EventSources.EventSourceDefinition> eventSources, ApplicationMetadata? metadata = null)
+    internal async Task Seed(ICanProvideConstraints? constraints, IJsonSchemaGenerator schemas, IEventTypeMigrators migrators, IEnumerable<EventSources.EventSourceDefinition> eventSources, TestingArtifactCatalog? metadata = null)
     {
         foreach (var definition in ClosesStreamDeclarations.Merge(constraints?.Provide() ?? []))
         {

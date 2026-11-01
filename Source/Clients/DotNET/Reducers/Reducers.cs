@@ -44,6 +44,7 @@ public partial class Reducers : IReducers
     IReadOnlyDictionary<Type, IReducerHandler> _handlersByType = FrozenDictionary<Type, IReducerHandler>.Empty;
     IReadOnlyDictionary<Type, IReducerHandler> _handlersByModelType = FrozenDictionary<Type, IReducerHandler>.Empty;
 
+    HashSet<IReducerHandler>? _cancelledHandlersDuringRelease;
     bool _registered;
     bool _released;
 
@@ -109,6 +110,11 @@ public partial class Reducers : IReducers
     /// Gets the generation delivery policy supplied by the event store.
     /// </summary>
     internal Observation.EventGenerationDelivery GenerationDelivery { get; init; }
+
+    /// <summary>
+    /// Gets the optional immutable descriptor source used by scenario stores.
+    /// </summary>
+    internal IReducerDescriptorsSource? DescriptorsSource { get; init; }
 
     /// <summary>
     /// Gets how many partitions of one reducer are handled at the same time.
@@ -347,9 +353,10 @@ public partial class Reducers : IReducers
     {
         lock (ReadModelBuilderOwnership.SyncFor(_eventStore, ReadModelOwnershipSync))
         {
+            if (_cancelledHandlersDuringRelease is not null) return;
             _released = true;
             _eventStore.Connection.Lifecycle.OnDisconnected -= ConnectionDisconnected;
-            DisconnectHandlers();
+            ReleaseHandlers();
         }
     }
 
@@ -384,21 +391,19 @@ public partial class Reducers : IReducers
     Task DiscoverCore()
     {
         DisconnectHandlers();
-        _handlersByType = _clientArtifacts.Reducers
-                            .Where(IsDiscoverable)
-                            .ToFrozenDictionary(
-                                _ => _,
-                                reducerType =>
-                                {
-                                    var readModelType = ResolveReadModel(reducerType);
-                                    return CreateHandlerFor(reducerType, readModelType) as IReducerHandler;
-                                });
+        var descriptors = DescriptorsSource?.Get(DiscoverDescriptors) ?? DiscoverDescriptors();
+        _handlersByType = descriptors.ToFrozenDictionary(descriptor => descriptor.ReducerType, descriptor => CreateHandlerFor(descriptor.ReducerType, descriptor.ReadModelType) as IReducerHandler);
 
         _handlersByModelType = _handlersByType.ToFrozenDictionary(
             _ => _.Value.ReadModelType,
             _ => _.Value);
         return Task.CompletedTask;
     }
+
+    IReadOnlyList<ReducerDescriptor> DiscoverDescriptors() => _clientArtifacts.Reducers
+        .Where(IsDiscoverable)
+        .Select(type => new ReducerDescriptor(type, ResolveReadModel(type), ReducerCatalog.IsSelfReducer(type)))
+        .ToArray();
 
     ReducerHandler CreateHandlerFor(Type reducerType, Type readModelType)
     {
@@ -426,8 +431,7 @@ public partial class Reducers : IReducers
         {
             lock (ReadModelBuilderOwnership.SyncFor(_eventStore, ReadModelOwnershipSync))
             {
-                _handlersByType = _handlersByType.Where(_ => !ReferenceEquals(_.Value, handler)).ToFrozenDictionary();
-                _handlersByModelType = _handlersByModelType.Where(_ => !ReferenceEquals(_.Value, handler)).ToFrozenDictionary();
+                RemoveCancelledHandler(handler);
                 register?.Dispose();
             }
         });
@@ -449,6 +453,45 @@ public partial class Reducers : IReducers
         }
 
         return Task.CompletedTask;
+    }
+
+    void ReleaseHandlers()
+    {
+        var handlers = new HashSet<IReducerHandler>(_handlersByType.Values, ReferenceEqualityComparer.Instance);
+        _cancelledHandlersDuringRelease = new(ReferenceEqualityComparer.Instance);
+        try
+        {
+            DisconnectHandlers();
+            handlers.UnionWith(_cancelledHandlersDuringRelease);
+            RemoveHandlers(handlers);
+        }
+        catch
+        {
+            // Preserve the partial removal performed by cancellation before a teardown failure.
+            RemoveHandlers(_cancelledHandlersDuringRelease);
+            throw;
+        }
+        finally
+        {
+            _cancelledHandlersDuringRelease = null;
+        }
+    }
+
+    void RemoveHandlers(HashSet<IReducerHandler> handlers)
+    {
+        _handlersByType = _handlersByType.Where(_ => !handlers.Contains(_.Value)).ToFrozenDictionary();
+        _handlersByModelType = _handlersByModelType.Where(_ => !handlers.Contains(_.Value)).ToFrozenDictionary();
+    }
+
+    void RemoveCancelledHandler(IReducerHandler handler)
+    {
+        if (_cancelledHandlersDuringRelease is not null)
+        {
+            _cancelledHandlersDuringRelease.Add(handler);
+            return;
+        }
+        _handlersByType = _handlersByType.Where(_ => !ReferenceEquals(_.Value, handler)).ToFrozenDictionary();
+        _handlersByModelType = _handlersByModelType.Where(_ => !ReferenceEquals(_.Value, handler)).ToFrozenDictionary();
     }
 
     void DisconnectHandlers()

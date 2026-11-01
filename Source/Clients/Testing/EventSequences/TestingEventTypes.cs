@@ -35,19 +35,27 @@ internal static class TestingEventTypes
     /// The definitions are templates when they come from shared metadata, so every store registers copies of them and
     /// registers the whole set as one batch.
     /// </remarks>
-    internal static async Task Seed(IEventTypesStorage storage, IEventTypes eventTypes, IJsonSchemaGenerator schemas, IEventTypeMigrators migrators, ApplicationMetadata? metadata = null)
+    internal static async Task Seed(IEventTypesStorage storage, IEventTypes eventTypes, IJsonSchemaGenerator schemas, IEventTypeMigrators migrators, TestingArtifactCatalog? metadata = null)
     {
-        var templates = metadata is null
-            ? CreateDefinitions(eventTypes, schemas, migrators)
-            : metadata.GetSeedDefinitions(() => CreateDefinitions(eventTypes, schemas, migrators));
-        var definitions = templates.Select(Copy).ToArray();
-
-        var latestById = eventTypes.All.GroupBy(type => type.Id.Value).ToDictionary(group => group.Key, group => group.MaxBy(type => type.Generation.Value)!);
-        await storage.Register(definitions.Select(definition => WithVisibility(eventTypes, definition, latestById[definition.Id.Value])).ToArray());
-        foreach (var definition in definitions)
+        if (metadata is not null && storage is DiscoveredEventTypesStorage discovered)
         {
+            discovered.Seed(metadata.GetSeed(() => new EventTypeSeed(Registrations(eventTypes, schemas, migrators))));
+            return;
+        }
+
+        var definitions = Registrations(eventTypes, schemas, migrators).ToArray();
+        await storage.Register(definitions);
+        foreach (var registration in definitions)
+        {
+            var definition = registration.Definition;
             await storage.RecordMigrationsVersion(definition.Id, KernelEvents::EventTypeMigrationsVersion.For(definition.Migrations), definition.Migrations);
         }
+    }
+
+    static IEnumerable<KernelEvents::EventTypeToRegister> Registrations(IEventTypes eventTypes, IJsonSchemaGenerator schemas, IEventTypeMigrators migrators)
+    {
+        var latestById = eventTypes.All.GroupBy(type => type.Id.Value).ToDictionary(group => group.Key, group => group.MaxBy(type => type.Generation.Value)!);
+        return CreateDefinitions(eventTypes, schemas, migrators).Select(definition => WithVisibility(eventTypes, definition, latestById[definition.Id.Value]));
     }
 
     static KernelEvents::EventTypeToRegister WithVisibility(IEventTypes eventTypes, KernelEvents::EventTypeDefinition definition, EventType latest) =>
@@ -80,19 +88,6 @@ internal static class TestingEventTypes
 
         return definitions;
     }
-
-    static KernelEvents::EventTypeDefinition Copy(KernelEvents::EventTypeDefinition definition) => definition with
-    {
-        Generations = definition.Generations
-            .Select(generation => generation with { Schema = new JsonSchema(generation.Schema.Node.DeepClone().AsObject()) })
-            .ToArray(),
-        Migrations = definition.Migrations.Select(migration => migration with
-        {
-            Operations = migration.Operations.ToArray(),
-            UpcastJmesPath = migration.UpcastJmesPath.DeepClone().AsObject(),
-            DowncastJmesPath = migration.DowncastJmesPath.DeepClone().AsObject()
-        }).ToArray()
-    };
 
     static KernelEvents::EventTypeMigrationDefinition CreateMigration(IEventTypeMigration migration)
     {

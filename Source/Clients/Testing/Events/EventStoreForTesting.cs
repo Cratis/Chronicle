@@ -99,6 +99,9 @@ public class EventStoreForTesting : IEventStore, IDisposable
     readonly Lazy<IPIIManager> _pii;
     readonly Lazy<IIdentityManager> _identities;
     readonly Lazy<Chronicle.Occurrences.Occurrences> _occurrences;
+    readonly ActivitySource<Reducers.Reducers> _reducerActivitySource = new();
+    readonly Lazy<ActivitySource<ReactorsImpl>> _reactorActivitySource = new(() => new());
+    bool _disposed;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventStoreForTesting"/> class.
@@ -184,7 +187,7 @@ public class EventStoreForTesting : IEventStore, IDisposable
         _namingPolicy = new CamelCaseNamingPolicy();
         var loggerFactory = new NullLoggerFactory();
         _artifactActivator = new ClientArtifactsActivator(ServiceProvider, loggerFactory);
-        var shareGenerator = ShareSchemaGenerator && ServiceProvider.GetType() == typeof(DefaultServiceProvider);
+        var shareGenerator = ShareSchemaGenerator && SchemaProviderSharing.IsSafe(ServiceProvider, ClientArtifactsProvider);
         var generator = shareGenerator
             ? SchemaGeneratorsForTesting.GetOrCreate(_namingPolicy, ClientArtifactsProvider, CreateJsonSchemaGenerator)
             : CreateJsonSchemaGenerator();
@@ -198,7 +201,7 @@ public class EventStoreForTesting : IEventStore, IDisposable
         // A catalog that already carries explicit artifacts, from these options or from another store, is never shared.
         Metadata = ShareApplicationMetadata && shareGenerator && ReferenceEquals(ClientArtifactsProvider, clientArtifactsProvider)
             && clientArtifactsProvider is not (StoreClientArtifactsProvider or ExplicitArtifactCatalog)
-            ? ApplicationMetadataForTesting.GetOrCreate(generator, _namingPolicy, TestingStore.Name.Value, ClientArtifactsProvider)
+            ? TestingArtifactCatalogs.GetOrCreate(generator, _namingPolicy, TestingStore.Name.Value, ClientArtifactsProvider)
             : null;
 
         var eventTypeMigrators = new EventTypeMigrators(ClientArtifactsProvider, ServiceProvider);
@@ -234,6 +237,7 @@ public class EventStoreForTesting : IEventStore, IDisposable
         if (Metadata is not null)
         {
             _projections.ModelBoundSource = Metadata.ModelBoundSource;
+            if (ServiceProvider.GetType() == typeof(DefaultServiceProvider)) _projections.FluentSource = Metadata.FluentSource;
         }
 
         ExplicitSnapshot.ApplyTo(_projections);
@@ -250,8 +254,11 @@ public class EventStoreForTesting : IEventStore, IDisposable
             _jsonSerializerOptions,
             new BaseIdentityProvider(),
             reducerObservers,
-            new ActivitySource<Reducers.Reducers>(),
-            NullLogger<Reducers.Reducers>.Instance);
+            _reducerActivitySource,
+            NullLogger<Reducers.Reducers>.Instance)
+        {
+            DescriptorsSource = Metadata?.ReducerDescriptors
+        };
         _reducers.Discover().GetAwaiter().GetResult();
 
         var readModelWatcherManager = new ReadModelWatcherManager(new ReadModelWatcherFactory(this, _jsonSerializerOptions));
@@ -345,8 +352,9 @@ public class EventStoreForTesting : IEventStore, IDisposable
     /// regardless of this setting.
     /// </summary>
     /// <remarks>
-    /// Custom service providers, explicit artifacts and <see cref="ShareSchemaGenerator"/> set to <see langword="false"/>
-    /// always disable sharing. Changing this setting does not affect existing stores.
+    /// Service-dependent metadata, uninspectable service providers, explicit artifacts and
+    /// <see cref="ShareSchemaGenerator"/> set to <see langword="false"/> disable sharing.
+    /// Changing this setting does not affect existing stores.
     /// </remarks>
     public static bool ShareApplicationMetadata { get; set; } = true;
 
@@ -452,7 +460,7 @@ public class EventStoreForTesting : IEventStore, IDisposable
     /// <summary>
     /// Gets the application metadata shared with equivalent stores, or <see langword="null"/> when this store discovers its own.
     /// </summary>
-    internal ApplicationMetadata? Metadata { get; }
+    internal TestingArtifactCatalog? Metadata { get; }
 
     /// <summary>
     /// Gets the original immutable recipes for this scenario store.
@@ -520,8 +528,14 @@ public class EventStoreForTesting : IEventStore, IDisposable
     /// <inheritdoc/>
     public void Dispose()
     {
+        if (_disposed) return;
+        _disposed = true;
+        if (_reactors.IsValueCreated && _reactors.Value is ReactorsImpl reactors) reactors.Release();
+        _reducers.Release();
         if (_occurrences.IsValueCreated) _occurrences.Value.Dispose();
         TestingStore.Dispose();
+        if (_reactorActivitySource.IsValueCreated) _reactorActivitySource.Value.ActualSource.Dispose();
+        _reducerActivitySource.ActualSource.Dispose();
         GC.SuppressFinalize(this);
     }
 
@@ -631,7 +645,7 @@ public class EventStoreForTesting : IEventStore, IDisposable
             EventSerializer,
             new CausationManager(),
             new BaseIdentityProvider(),
-            new ActivitySource<ReactorsImpl>(),
+            _reactorActivitySource.Value,
             new ReactorSideEffectHandlers(new KnownInstancesOf<IReactorSideEffectHandler>(
             [
                 new EventResultHandler(),

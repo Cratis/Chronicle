@@ -13,7 +13,7 @@ namespace Cratis.Chronicle.Testing.Events;
 /// The key holds the content of the catalogs rather than the identity of the provider, so a provider that changes
 /// later gets a new entry instead of stale metadata.
 /// </remarks>
-internal sealed class ApplicationMetadataKey : IEquatable<ApplicationMetadataKey>
+internal sealed class TestingArtifactCatalogKey : IEquatable<TestingArtifactCatalogKey>
 {
     readonly JsonSchemaGenerator _generator;
     readonly Type _namingPolicy;
@@ -22,13 +22,13 @@ internal sealed class ApplicationMetadataKey : IEquatable<ApplicationMetadataKey
     readonly int _hash;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="ApplicationMetadataKey"/> class.
+    /// Initializes a new instance of the <see cref="TestingArtifactCatalogKey"/> class.
     /// </summary>
     /// <param name="generator">The shared schema generator, compared by reference.</param>
     /// <param name="namingPolicy">The naming policy.</param>
     /// <param name="eventStoreName">The name of the event store when an event type in the catalog declares it, otherwise <see langword="null"/>.</param>
     /// <param name="artifacts">The artifacts the metadata is discovered from.</param>
-    internal ApplicationMetadataKey(JsonSchemaGenerator generator, INamingPolicy namingPolicy, string? eventStoreName, IClientArtifactsProvider artifacts)
+    internal TestingArtifactCatalogKey(JsonSchemaGenerator generator, INamingPolicy namingPolicy, string? eventStoreName, IClientArtifactsProvider artifacts)
     {
         _generator = generator;
         _namingPolicy = namingPolicy.GetType();
@@ -37,7 +37,15 @@ internal sealed class ApplicationMetadataKey : IEquatable<ApplicationMetadataKey
         [
             [.. artifacts.EventTypes],
             [.. artifacts.ModelBoundProjections],
-            [.. artifacts.EventTypeMigrators]
+            [.. artifacts.EventTypeMigrators],
+            [.. artifacts.Projections],
+            [.. artifacts.Reducers],
+            [.. artifacts.ConstraintTypes],
+            [.. artifacts.UniqueConstraints],
+            [.. artifacts.UniqueEventTypeConstraints],
+            [.. artifacts.RemoveConstraintEventTypes],
+            [.. artifacts.ClosesStreamEventTypes],
+            [.. artifacts.EventSources]
         ];
 
         var hash = default(HashCode);
@@ -57,7 +65,7 @@ internal sealed class ApplicationMetadataKey : IEquatable<ApplicationMetadataKey
     }
 
     /// <inheritdoc/>
-    public bool Equals(ApplicationMetadataKey? other) =>
+    public bool Equals(TestingArtifactCatalogKey? other) =>
         other is not null &&
         _hash == other._hash &&
         ReferenceEquals(_generator, other._generator) &&
@@ -66,7 +74,7 @@ internal sealed class ApplicationMetadataKey : IEquatable<ApplicationMetadataKey
         _catalogs.Zip(other._catalogs).All(pair => pair.First.SequenceEqual(pair.Second));
 
     /// <inheritdoc/>
-    public override bool Equals(object? obj) => obj is ApplicationMetadataKey other && Equals(other);
+    public override bool Equals(object? obj) => obj is TestingArtifactCatalogKey other && Equals(other);
 
     /// <inheritdoc/>
     public override int GetHashCode() => _hash;

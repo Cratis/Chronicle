@@ -78,6 +78,12 @@ The resulting store's `Name`, `Namespace`, event log and unit-of-work operations
 
 Each store instance has isolated in-memory storage, even when identities match. Existing `EventStoreForTesting` and `Defaults` overloads still create their store as `testing` in namespace `default`.
 
+### Shared discovery, isolated runs
+
+Equivalent artifact catalogs reuse structural discovery, not live stores. Events, sequence numbers, handlers, observers and service providers remain local to each store. Schemas and projection definitions exposed to a run are independent copies; changing one does not change another run or a later store.
+
+An inspectable service provider can use this sharing when it has no registered schema metadata providers or provider constructor dependencies. Service-dependent metadata, unknown service-provider implementations and explicit artifact overrides keep local discovery. Provider activation errors still fail setup. To diagnose discovery differences, disable `EventStoreForTesting.ShareApplicationMetadata` or `EventStoreForTesting.ShareSchemaGenerator` before constructing the stores, then restore the setting after the test; these settings are process-wide.
+
 ## Topics
 
 | Guide | Description |

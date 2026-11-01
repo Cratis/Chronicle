@@ -16,8 +16,11 @@ namespace Cratis.Chronicle.Testing.EventSequences;
 /// </summary>
 /// <param name="storage">The production event type storage.</param>
 /// <param name="eventTypes">The discovered client registry.</param>
-internal sealed class DiscoveredEventTypesStorage(IEventTypesStorage storage, Func<Cratis.Chronicle.Events.IEventTypes> eventTypes) : IEventTypesStorage
+internal sealed class DiscoveredEventTypesStorage(IEventTypesStorage storage, Func<Cratis.Chronicle.Events.IEventTypes> eventTypes) : IEventTypesStorage, IDisposable
 {
+    /// <inheritdoc/>
+    public void Dispose() => (storage as IDisposable)?.Dispose();
+
     /// <inheritdoc/>
     public Task<bool> Register(EventType type, JsonSchema schema, EventTypeOwner owner = EventTypeOwner.Client, EventTypeSource source = EventTypeSource.Code, EventTypeVisibility visibility = EventTypeVisibility.Unspecified, string origin = "") =>
         storage.Register(type, schema, owner, source, visibility, origin);
@@ -88,6 +91,12 @@ internal sealed class DiscoveredEventTypesStorage(IEventTypesStorage storage, Fu
 
     /// <inheritdoc/>
     public void Invalidate(EventTypeId eventTypeId) => storage.Invalidate(eventTypeId);
+
+    /// <summary>
+    /// Attaches an immutable seed behind the discovery guard.
+    /// </summary>
+    /// <param name="seed">The discovered seed.</param>
+    internal void Seed(EventTypeSeed seed) => ((SeededEventTypesStorage)storage).Seed(seed);
 
     bool IsDiscovered(EventTypeId id, EventTypeGeneration? generation) =>
         eventTypes().All.Any(type => type.Id.Value == id.Value && (generation is null || type.Generation.Value == generation.Value));

@@ -12,9 +12,9 @@ namespace Cratis.Chronicle.Testing.Events;
 /// <summary>
 /// Shares the immutable application metadata of equivalent catalogs between testing event stores.
 /// </summary>
-internal static class ApplicationMetadataForTesting
+internal static class TestingArtifactCatalogs
 {
-    static readonly ConcurrentDictionary<ApplicationMetadataKey, ApplicationMetadata> _metadata = new();
+    static readonly ConcurrentDictionary<TestingArtifactCatalogKey, TestingArtifactCatalog> _metadata = new();
 
     /// <summary>
     /// Gets or creates the metadata for the generator, naming policy, event store and catalogs.
@@ -23,16 +23,16 @@ internal static class ApplicationMetadataForTesting
     /// <param name="namingPolicy">The naming policy.</param>
     /// <param name="eventStoreName">The name of the event store.</param>
     /// <param name="artifacts">The artifacts the metadata is discovered from.</param>
-    /// <returns>The shared <see cref="ApplicationMetadata"/>. Nothing is discovered until a store asks for it, so a failure is never cached.</returns>
+    /// <returns>The shared <see cref="TestingArtifactCatalog"/>. Nothing is discovered until a store asks for it, so a failure is never cached.</returns>
     /// <remarks>
     /// The event store name only changes the metadata when an event type in the catalog declares that store, so stores
     /// with any other name share one entry. Scenarios that give every store a unique name therefore still share, and do
     /// not grow the cache.
     /// </remarks>
-    internal static ApplicationMetadata GetOrCreate(JsonSchemaGenerator generator, INamingPolicy namingPolicy, string eventStoreName, IClientArtifactsProvider artifacts) =>
+    internal static TestingArtifactCatalog GetOrCreate(JsonSchemaGenerator generator, INamingPolicy namingPolicy, string eventStoreName, IClientArtifactsProvider artifacts) =>
         _metadata.GetOrAdd(
-            new ApplicationMetadataKey(generator, namingPolicy, IsDeclaredBy(artifacts, eventStoreName) ? eventStoreName : null, artifacts),
-            static _ => new ApplicationMetadata());
+            new TestingArtifactCatalogKey(generator, namingPolicy, IsDeclaredBy(artifacts, eventStoreName) ? eventStoreName : null, artifacts),
+            static _ => new TestingArtifactCatalog());
 
     static bool IsDeclaredBy(IClientArtifactsProvider artifacts, string eventStoreName)
     {

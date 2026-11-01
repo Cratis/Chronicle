@@ -37,6 +37,7 @@ internal sealed class CachedModelBoundProjectionsSource : IModelBoundProjections
             if (_definitions is null || _failures is null)
             {
                 var (discovered, failures) = ModelBoundProjectionsSource.Default.Discover(clientArtifactsProvider, namingPolicy, eventTypes, logger, currentEventStoreName);
+                if (failures.Count > 0) return (discovered, failures);
                 _definitions = discovered.ToDictionary(_ => _.Key, _ => Serialize(_.Value));
                 _failures = new Dictionary<Type, Exception>(failures);
             }
