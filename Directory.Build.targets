@@ -18,6 +18,13 @@
         <RunAnalyzers>false</RunAnalyzers>
     </PropertyGroup>
 
+    <!-- A build of a project that is not in Chronicle.slnx (the benchmarks) passes -p:AnalyzeOnlyProject=<its name>: -->
+    <!-- that project keeps its analyzers, while its project references, which the CI Release build already -->
+    <!-- analyzes, skip them. Source generators keep running. -->
+    <PropertyGroup Condition="'$(AnalyzeOnlyProject)' != '' AND '$(MSBuildProjectName)' != '$(AnalyzeOnlyProject)'">
+        <RunAnalyzers>false</RunAnalyzers>
+    </PropertyGroup>
+
     <!--
         Use only the .globalconfig that sits beside this file.
 

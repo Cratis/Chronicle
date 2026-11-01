@@ -55,10 +55,28 @@ class AnalyzerOwnership(unittest.TestCase):
         self.assertIn("dotnet publish", run)
         self.assertIn(f"-p:{SKIP}", run)
 
-    def test_benchmark_builds_skip_analyzers(self):
+    def test_benchmark_builds_analyze_only_the_benchmark_project(self):
         run = without_comments(step_run(self.build, "benchmarks-build", "Build benchmarks the way BenchmarkDotNet does"))
         self.assertEqual(2, len(re.findall(r"dotnet build", run)))
-        self.assertEqual(2, run.count(f"/p:{SKIP}"))
+        self.assertNotIn(SKIP, run)
+        for project in ("Chronicle.Benchmarks", "Chronicle.Benchmarks.Clustering"):
+            self.assertRegex(run, rf"Benchmarks/{re.escape(project)}/{re.escape(project)}\.csproj[^\n]*\n[^\n]*/p:AnalyzeOnlyProject={re.escape(project)} ")
+
+    def test_benchmark_projects_are_only_analyzed_by_the_benchmark_build(self):
+        # Not in the solution, so the Release Build cannot own them; their references must be in it.
+        solution = (ROOT / "Chronicle.slnx").read_text(encoding="utf-8")
+        for project in ("Chronicle.Benchmarks", "Chronicle.Benchmarks.Clustering"):
+            path = ROOT / "Benchmarks" / project / f"{project}.csproj"
+            self.assertNotIn(f"Benchmarks/{project}/{project}.csproj", solution)
+            for reference in re.findall(r'<ProjectReference Include="\.\./\.\./([^"]+)"', path.read_text(encoding="utf-8")):
+                self.assertIn(reference, solution, f"{project} references {reference}, which the Release Build does not analyze")
+
+    def test_analyze_only_project_skips_every_other_project(self):
+        targets = (ROOT / "Directory.Build.targets").read_text(encoding="utf-8")
+        match = re.search(r'<PropertyGroup Condition="([^"]*AnalyzeOnlyProject[^"]*)">\s*<RunAnalyzers>false</RunAnalyzers>', targets)
+        self.assertIsNotNone(match)
+        self.assertIn("'$(AnalyzeOnlyProject)' != ''", match.group(1))
+        self.assertIn("'$(MSBuildProjectName)' != '$(AnalyzeOnlyProject)'", match.group(1))
 
     def test_legacy_contracts_build_skips_analyzers(self):
         run = step_run(self.legacy, "legacy-contracts", "Build the matrix evaluator")
@@ -75,7 +93,8 @@ class AnalyzerOwnership(unittest.TestCase):
         match = re.search(r'<PropertyGroup Condition="([^"]*SkipAnalyzersForTargetFramework[^"]*)">\s*<RunAnalyzers>false</RunAnalyzers>', targets)
         self.assertIsNotNone(match)
         self.assertIn("'$(TargetFramework)' == '$(SkipAnalyzersForTargetFramework)'", match.group(1))
-        self.assertEqual(1, targets.count("<RunAnalyzers>false</RunAnalyzers>"))
+        # Only the two opt-in groups (this one and AnalyzeOnlyProject) may turn analyzers off.
+        self.assertEqual(2, targets.count("<RunAnalyzers>false</RunAnalyzers>"))
 
     def test_analyzers_are_never_removed(self):
         files = list(WORKFLOWS.glob("*.yml")) + [ROOT / "Directory.Build.props", ROOT / "Directory.Build.targets"]
