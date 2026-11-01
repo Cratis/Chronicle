@@ -169,6 +169,9 @@ jobs:
             ${{ env.DOTNET9_VERSION }}
             ${{ env.DOTNET_VERSION }}
 
+      - name: Spec the gRPC generator targeting
+        run: node --test .github/scripts/test-grpc-generator-targeting.mjs
+
       # Shared org cache: pull requests restore only; the nightly build and default-branch runs save (Cratis/Workflows#164).
       - name: Cache NuGet packages
         uses: Cratis/Workflows/.github/actions/dotnet-cache@main
