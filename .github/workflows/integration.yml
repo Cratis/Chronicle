@@ -364,10 +364,16 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          release_tag=$(git tag --merged HEAD --sort=version:refname --list 'v*' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | tail -n 1) || {
-            echo "::error::No release tag is an ancestor of $(git rev-parse HEAD)."
+          # A release that cannot start a cluster cannot be upgraded from; the lane starts from the newest one that can.
+          unusable=$(sed -E 's/#.*//; s/[[:space:]]+//g; /^$/d' .github/rolling-upgrade-unusable-releases.txt)
+          release_tag=$(git tag --merged HEAD --sort=version:refname --list 'v*' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' \
+            | grep -vxF -e "${unusable:-^}" | tail -n 1) || {
+            echo "::error::No usable release tag is an ancestor of $(git rev-parse HEAD)."
             exit 1
           }
+          if [ -n "$unusable" ]; then
+            echo "Skipping releases listed in .github/rolling-upgrade-unusable-releases.txt: $(tr '\n' ' ' <<< "$unusable")"
+          fi
           image_tag="${release_tag#v}-development-slim"
           metadata=$(curl --fail --silent --show-error --location --max-time 60 \
             "https://hub.docker.com/v2/repositories/cratis/chronicle/tags/${image_tag}") || {

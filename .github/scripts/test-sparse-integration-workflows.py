@@ -647,6 +647,30 @@ sys.exit(1 if failed else 0)
         report = next(step for step in jobs["discover"]["steps"] if step.get("id") == "exclusions")
         self.assertEqual("python3 .github/scripts/integration_lane_exclusions.py", report["run"])
 
+    def test_rolling_upgrade_skips_only_listed_releases_and_each_names_why(self):
+        root = WORKFLOWS.parents[1]
+        listed = root / ".github/rolling-upgrade-unusable-releases.txt"
+        step = next(step for step in workflow("integration.yml")["jobs"]["sql-clustering-rolling-upgrade"]["steps"]
+                    if step.get("name") == "Resolve previous release image")
+        self.assertIn(".github/rolling-upgrade-unusable-releases.txt", step["run"])
+        for line in listed.read_text().splitlines():
+            if not line.strip() or line.startswith("#"):
+                continue
+            with self.subTest(line=line):
+                self.assertRegex(line, r"^v\d+\.\d+\.\d+ # .*\(#\d+\)$",
+                                 "Each unusable release is one tag with the reason and its issue")
+        tags = "v19.114.4\nv19.115.0\n"
+        for contents, expected in (("v19.115.0 # broken (#1)\n", "v19.114.4"), ("# none\n", "v19.115.0")):
+            with self.subTest(contents=contents), tempfile.TemporaryDirectory() as directory:
+                (Path(directory) / ".github").mkdir()
+                (Path(directory) / ".github/rolling-upgrade-unusable-releases.txt").write_text(contents)
+                selection = step["run"].split("\nimage_tag=")[0]
+                script = "git() { printf '%s' \"$TAGS\"; }\n" + selection + "\necho \"$release_tag\""
+                result = subprocess.run(["bash", "-c", "set -euo pipefail\n" + script], cwd=directory,
+                                        env={**os.environ, "TAGS": tags}, capture_output=True, text=True, check=False)
+                self.assertEqual(0, result.returncode, result.stderr)
+                self.assertEqual(expected, result.stdout.strip().splitlines()[-1])
+
     def test_declaration_is_visible_and_one_line_removal_reenables_the_job(self):
         for declarations in (exclusions.EXCLUDED_LANES.copy(), {}):
             with self.subTest(declarations=declarations), tempfile.TemporaryDirectory() as directory:
