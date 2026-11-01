@@ -24,7 +24,7 @@ internal sealed class ReadModelExplorer(
     public Task<global::Cratis.Chronicle.Contracts.Queries.QueryResult<IEnumerable<global::Cratis.Chronicle.Contracts.ReadModelExplorer.ReadModelSnapshotResponse>>> AllSnapshotsForReadModel(global::Cratis.Chronicle.Contracts.ReadModelExplorer.AllSnapshotsForReadModelRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         QueryExecutor.Execute<IEnumerable<global::Cratis.Chronicle.Contracts.ReadModelExplorer.ReadModelSnapshotResponse>>(
             callContext,
-            new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, request.Namespace, request.EventSequenceId),
+            new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, request.Namespace, request.ReadModel, request.EventSequenceId),
             async () =>
             {
                 var result = await global::Cratis.Chronicle.ReadModelExplorer.ReadModelSnapshot.AllSnapshotsForReadModel(grainFactory, storage, eventCompliance, expandoObjectConverter, jsonSerializerOptions, (global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, request.ReadModel, request.ReadModelKey, request.EventSequenceId, request.Grouping);

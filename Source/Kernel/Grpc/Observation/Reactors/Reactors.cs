@@ -59,7 +59,7 @@ internal sealed class Reactors(
             switch (message.Content.Value)
             {
                 case RegisterReactor register:
-                    if (SystemStoreGuard.RegistrationRefusal(new(register.EventStore, register.Namespace, register.Reactor.ReactorId, register.Reactor.EventSequenceId)) is { } refusal)
+                    if (SystemStoreGuard.RegistrationRefusal(new(register.EventStore, register.Namespace, register.Reactor.ReactorId, register.Reactor.EventSequenceId, register.ConnectionId)) is { } refusal)
                     {
                         registrationTcs.TrySetException(refusal);
                         break;

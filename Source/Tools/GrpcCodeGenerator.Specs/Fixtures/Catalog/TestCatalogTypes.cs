@@ -101,8 +101,10 @@ public record Product(ProductId Id, ProductName Name)
     /// <summary>Returns the products of an event store.</summary>
     /// <param name="eventStore">The event store.</param>
     /// <param name="id">The product identifier.</param>
+    /// <param name="readModel">The read model name.</param>
+    /// <param name="readModelIdentifier">The read model identifier.</param>
     /// <returns>The product, or null if not found.</returns>
-    public static Product? FindInStore(Cratis.Chronicle.Concepts.EventStoreName eventStore, ProductId id) => null;
+    public static Product? FindInStore(Cratis.Chronicle.Concepts.EventStoreName eventStore, ProductId id, string readModel, Cratis.Chronicle.Concepts.ReadModels.ReadModelIdentifier readModelIdentifier) => null;
 
     /// <summary>Observes the products of an event store.</summary>
     /// <param name="eventStore">The event store.</param>

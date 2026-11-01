@@ -61,6 +61,10 @@ internal sealed class ReadModels(
     public async Task RegisterMany(RegisterManyRequest request, CallContext context = default)
     {
         SystemStoreGuard.EnsureNotSystem(new(request.EventStore));
+        foreach (var definition in request.ReadModels)
+        {
+            SystemStoreGuard.EnsureNotSystem(new(request.EventStore, definition.Type.Identifier, definition.ObserverIdentifier));
+        }
         var readModelsManager = grainFactory.GetReadModelsManager(request.EventStore);
         var readModelDefinitions = request.ReadModels.Select(definition => definition.ToChronicle(request.Owner, request.Source)).ToArray();
         await readModelsManager.Register(readModelDefinitions);
@@ -70,6 +74,7 @@ internal sealed class ReadModels(
     public async Task RegisterSingle(RegisterSingleRequest request, CallContext context = default)
     {
         SystemStoreGuard.EnsureNotSystem(new(request.EventStore));
+        SystemStoreGuard.EnsureNotSystem(new(request.EventStore, request.ReadModel.Type.Identifier, request.ReadModel.ObserverIdentifier));
         var readModelsManager = grainFactory.GetReadModelsManager(request.EventStore);
         var readModelDefinition = request.ReadModel.ToChronicle(request.Owner, request.Source);
         await readModelsManager.RegisterSingle(readModelDefinition);
@@ -79,6 +84,7 @@ internal sealed class ReadModels(
     public async Task UpdateDefinition(UpdateDefinitionRequest request, CallContext context = default)
     {
         SystemStoreGuard.EnsureNotSystem(new(request.EventStore));
+        SystemStoreGuard.EnsureNotSystem(new(request.EventStore, request.ReadModel.Type.Identifier, request.ReadModel.ObserverIdentifier));
         var readModelsManager = grainFactory.GetReadModelsManager(request.EventStore);
         var existingDefinitions = await readModelsManager.GetDefinitions();
         var existingDefinition = existingDefinitions.FirstOrDefault(d => d.Identifier == request.ReadModel.Type.Identifier) ??

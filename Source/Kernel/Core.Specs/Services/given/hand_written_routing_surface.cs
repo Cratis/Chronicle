@@ -85,7 +85,7 @@ public static class hand_written_routing_surface
         ["ComplianceService.AllowNewEncryptionKey"] = Admin,
         ["Reactors.Observe"] = Exempt + "registration stream; the registration message is refused for System (see the registration spec)",
         ["Reactors.HasReactor"] = Admin,
-        ["Reducers.Observe"] = Exempt + "registration stream; the registration message is refused for System (see the registration spec)",
+        ["Reducers.Observe"] = Exempt + "registration stream; the registration message is refused for System (see when_a_reducer_registers_for_the_system_store)",
         ["EventStoreSubscriptions.Add"] = Exempt + "refuses the reserved System store already",
         ["EventStoreSubscriptions.Remove"] = Exempt + "refuses the reserved System store already",
         ["EventStoreSubscriptions.GetSubscriptions"] = Refused,

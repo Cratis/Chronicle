@@ -63,6 +63,10 @@ internal sealed class Projections(
     public async Task Register(RegisterRequest request, CallContext context = default)
     {
         SystemStoreGuard.EnsureNotSystem(new(request.EventStore));
+        foreach (var definition in request.Projections)
+        {
+            SystemStoreGuard.EnsureNotSystem(new(request.EventStore, definition.Identifier, definition.ReadModel, definition.EventSequenceId));
+        }
         var projectionsManager = grainFactory.GetGrain<IProjectionsManager>(request.EventStore);
         var owner = (Concepts.Projections.ProjectionOwner)(int)request.Owner;
         var projections = request.Projections.Select(_ => _.ToChronicle(owner)).ToArray();
@@ -119,7 +123,7 @@ internal sealed class Projections(
     /// <inheritdoc/>
     public async Task<OneOf<ContractProjectionPreview, ContractProjectionDefinitionParsingErrors>> Preview(PreviewProjectionRequest request, CallContext context = default)
     {
-        await SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace, request.EventSequenceId));
+        await SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace, request.EventSequenceId, request.DraftReadModel?.Identifier));
         var storage = serviceProvider.GetRequiredService<IStorage>();
         var eventSequenceStorage = storage
             .GetEventStore(request.EventStore)
@@ -150,6 +154,7 @@ internal sealed class Projections(
         return await compileResult.Match(
             async definition =>
             {
+                await SystemStoreGuard.Ensure(context, new(request.EventStore, definition.Identifier, definition.ReadModel, definition.EventSequenceId));
                 ReadModelDefinition? readModelDefinition;
                 var isInferredReadModel = definition.ReadModel == ReadModelIdentifier.Inferred;
 
@@ -238,7 +243,7 @@ internal sealed class Projections(
     /// <inheritdoc/>
     public async Task<SaveProjectionResult> Save(SaveProjectionRequest request, CallContext context = default)
     {
-        SystemStoreGuard.EnsureNotSystem(new(request.EventStore, request.Namespace));
+        SystemStoreGuard.EnsureNotSystem(new(request.EventStore, request.Namespace, request.EventSequenceId, request.DraftReadModel?.Identifier));
         var storage = serviceProvider.GetRequiredService<IStorage>();
         var allReadModels = await storage.GetEventStore(request.EventStore).ReadModels.GetAll();
 
@@ -265,6 +270,7 @@ internal sealed class Projections(
         return await compileResult.Match(
             async definition =>
             {
+                SystemStoreGuard.EnsureNotSystem(new(request.EventStore, definition.Identifier, definition.ReadModel, definition.EventSequenceId));
                 var readModelDefinition = allReadModels.FirstOrDefault(r => r.Identifier == definition.ReadModel);
 
                 // When the declaration has no explicit => ReadModel, the compiler returns ReadModelIdentifier.Inferred.

@@ -19,13 +19,13 @@ public static class ImplementationMethods
     static readonly HashSet<string> _routingConceptNames =
     [
         "EventStoreNamespaceName", "EventSequenceId", "ObserverId", "ProjectionId", "ReactorId", "ReducerId",
-        "WebhookId", "ExternalServiceId", "SubscriptionId"
+        "WebhookId", "ExternalServiceId", "SubscriptionId", "ReadModelIdentifier"
     ];
 
     static readonly HashSet<string> _routingParameterNames =
     [
         "namespace", "eventSequenceId", "observerId", "projectionId", "reactorId", "reducerId",
-        "webhookId", "externalServiceId", "subscriptionId"
+        "webhookId", "externalServiceId", "subscriptionId", "readModel", "readModelIdentifier"
     ];
 
     /// <summary>
