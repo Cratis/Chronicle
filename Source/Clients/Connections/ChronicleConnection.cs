@@ -430,6 +430,13 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
 
         if (_skipKeepAlive)
         {
+            // Nothing keeps retrying without the watchdog, so a connect that reached no endpoint has to fail its
+            // caller; returning normally would report success with no services and no connected lifecycle (#3948).
+            if (!connected)
+            {
+                throw new ConnectionTimedOut();
+            }
+
             return;
         }
 
