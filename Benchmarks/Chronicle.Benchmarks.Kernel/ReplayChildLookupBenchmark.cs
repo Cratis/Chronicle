@@ -47,6 +47,7 @@ public class ReplayChildLookupBenchmark
     /// <summary>
     /// Gets the scenarios.
     /// </summary>
+    /// <exception cref="InvalidOperationException">The Flat-only selector has an unsupported value.</exception>
     public IEnumerable<ReplayChildLookupScenario> Scenarios
     {
         get
