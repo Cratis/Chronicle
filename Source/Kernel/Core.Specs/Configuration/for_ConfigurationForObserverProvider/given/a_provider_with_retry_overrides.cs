@@ -20,6 +20,7 @@ public class a_provider_with_retry_overrides : Specification
         {
             MaxConcurrentPartitions = 7,
             SubscriberTimeout = 11,
+            LiveDeliveryBudget = 47,
             AbandonedDeliveryHold = 13,
             MaxEventsPerSubscriberCall = 17,
             SubscriptionReadyTimeout = 19,

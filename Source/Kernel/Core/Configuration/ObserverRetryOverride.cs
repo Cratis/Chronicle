@@ -47,6 +47,7 @@ public class ObserverRetryOverride
     {
         MaxConcurrentPartitions = observers.MaxConcurrentPartitions,
         SubscriberTimeout = observers.SubscriberTimeout,
+        LiveDeliveryBudget = observers.LiveDeliveryBudget,
         AbandonedDeliveryHold = observers.AbandonedDeliveryHold,
         MaxEventsPerSubscriberCall = observers.MaxEventsPerSubscriberCall,
         SubscriptionReadyTimeout = observers.SubscriptionReadyTimeout,
