@@ -52,7 +52,7 @@ public class when_resolving_a_framework_service_implemented_in_the_test_assembly
     }
 
     [Fact] void should_reject_a_test_implementation_type() => _typeBindingError.ShouldBeOfExactType<InvalidOperationException>();
-    [Fact] void should_name_the_rejected_service() => Assert.Contains(typeof(ICloneable).FullName!, _typeBindingError?.Message ?? string.Empty);
+    [Fact] void should_name_the_rejected_service() => Assert.Contains(typeof(ICloneable).FullName, _typeBindingError?.Message ?? string.Empty);
     [Fact] void should_explain_the_current_context_registration() => Assert.Contains("ConfigureServices", _typeBindingError?.Message ?? string.Empty);
     [Fact] void should_not_construct_the_first_context_implementation() => _typeBinding.First.Constructions.ShouldEqual(0);
     [Fact] void should_reject_a_test_implementation_instance() => _instanceError.ShouldBeOfExactType<InvalidOperationException>();
