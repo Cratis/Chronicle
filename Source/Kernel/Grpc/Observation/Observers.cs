@@ -358,22 +358,30 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage, IO
     public IObservable<IEnumerable<ObserverInformation>> ObserveObservers(AllObserversRequest request, CallContext context = default)
     {
         var observerStateStorage = storage.GetEventStore(request.EventStore).GetNamespace(request.Namespace).Observers;
-        return observerStateStorage
-            .ObserveAll()
-            .CompletedBy(context.CancellationToken)
-            .SelectMany(async observerStates =>
-            {
-                // TODO: We will be formalizing these things in Grains, until then this is less than optimal.
-                var observerDefinitions = await storage.GetEventStore(request.EventStore).Observers.GetAll();
-                var runningStatesChangedAt = await observerStateStorage.GetRunningStatesChangedAt();
-                var observers =
-                    from definition in observerDefinitions
-                    join state in observerStates on definition.Identifier equals state.Identifier into stateGroup
-                    from state in stateGroup.DefaultIfEmpty(Storage.Observation.ObserverState.Empty)
-                    select (definition, state);
+        return Observable.Defer(() =>
+        {
+            var changedAt = new RunningStatesChangedAtCache(observerStateStorage);
+            return observerStateStorage
+                .ObserveAll()
+                .CompletedBy(context.CancellationToken)
+                .Select(observerStates => Observable.FromAsync(async () =>
+                {
+                    var snapshot = observerStates as IReadOnlyCollection<Storage.Observation.ObserverState> ?? observerStates.ToArray();
 
-                return observers.ToContract(runningStatesChangedAt);
-            });
+                    // TODO: We will be formalizing these things in Grains, until then this is less than optimal.
+                    // Definitions are still read per emission because IObserverDefinitionsStorage has no change source.
+                    var observerDefinitions = await storage.GetEventStore(request.EventStore).Observers.GetAll();
+                    var runningStatesChangedAt = await changedAt.GetFor(snapshot);
+                    var observers =
+                        from definition in observerDefinitions
+                        join state in snapshot on definition.Identifier equals state.Identifier into stateGroup
+                        from state in stateGroup.DefaultIfEmpty(Storage.Observation.ObserverState.Empty)
+                        select (definition, state);
+
+                    return observers.ToContract(runningStatesChangedAt);
+                }))
+                .Concat();
+        });
     }
 
     /// <inheritdoc/>
