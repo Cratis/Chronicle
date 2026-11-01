@@ -151,7 +151,7 @@ public class Reducer(
 
         var key = new ObserverKey(_observerKey!.ObserverId, _observerKey.EventStore, _observerKey.Namespace, _observerKey.EventSequenceId);
         _observer ??= GrainFactory.GetGrain<IObserver>(key);
-        if (await WaitIfServedByWebhook())
+        if (await WaitIfServedByWebhook() || await FollowDefinitionOnAnotherSequence(key, definition))
         {
             return;
         }
@@ -212,6 +212,35 @@ public class Reducer(
         };
         logger.RegistrationIgnored(_observerKey.ObserverId, _observerKey.EventSequenceId, incomingVersion, precedence.OwnerSequence!, precedence.OwnerVersion!);
         await ObserverRegistrationConflicts.Report(GrainFactory, _observerKey.EventStore, [_observerKey.Namespace], _standbyFor);
+    }
+
+    async Task<bool> FollowDefinitionOnAnotherSequence(ObserverKey key, ReducerDefinition definition)
+    {
+        // Another sequence may claim the definition after this registration, or win a concurrent first registration.
+        // An older registration then waits in standby; a newer one claims the definition back.
+        var owning = await ObserverTransportSubscriptions.OnOtherSequence(storage, GrainFactory, key);
+        if (owning?.IsServedByConnectedClient != true || !await _connectedClients!.IsConnected(_observerKey!.ConnectionId))
+        {
+            return false;
+        }
+
+        var connectedClient = await _connectedClients.GetConnectedClient(_observerKey.ConnectionId);
+        var precedence = ObserverRegistrationPrecedence.Evaluate(connectedClient, owning);
+        switch (precedence.Outcome)
+        {
+            case RegistrationPrecedenceOutcome.OwnerIsNewer:
+                await _observer!.UnsubscribeIfMatchesClient(_observerKey.ConnectionId);
+                await EnterStandby(definition, precedence, connectedClient.Version);
+                return true;
+
+            case RegistrationPrecedenceOutcome.IncomingIsNewer:
+                _subscribed = false;
+                await SetDefinitionAndSubscribe(definition);
+                return true;
+
+            default:
+                return false;
+        }
     }
 
     async Task<bool> DeferRegistrationIfServedByWebhook(ReducerDefinition definition)
