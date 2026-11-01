@@ -118,7 +118,7 @@ public class EventSequenceSink(
 
         if (!await DestinationMayBeWritten())
         {
-            return [Failed(key, eventSequenceNumber, ReservedEventSequenceRules.Message(configuration.Destination.Value))];
+            return [Failed(key, eventSequenceNumber, RefusalFor(configuration.Destination.Value))];
         }
 
         var last = await FindLast(key);
@@ -257,6 +257,11 @@ public class EventSequenceSink(
 
     static FailedPartition Failed(Key key, EventSequenceNumber sequenceNumber, string reason) => new(key, sequenceNumber) { Reason = reason };
 
+    static string RefusalFor(string destination) =>
+        destination.Contains(KeyHelper.Separator)
+            ? $"The event sequence sink destination '{destination}' contains '{KeyHelper.Separator}', which is reserved as a key separator. Choose a different name."
+            : ReservedEventSequenceRules.Message(destination);
+
     /// <summary>
     /// Checks the destination against the reserved names once; only a verified destination is remembered, so the append path pays nothing per event afterwards.
     /// </summary>
@@ -264,6 +269,9 @@ public class EventSequenceSink(
     async Task<bool> DestinationMayBeWritten()
     {
         if (_destinationVerified) return true;
+
+        // The grain key is split on the separator, so such a name would address another sequence than the one checked.
+        if (configuration.Destination.Value.Contains(KeyHelper.Separator)) return false;
 
         _destinationVerified = await ReservedEventSequenceRules.MayBeWritten(storage, reservedEventSequenceIds, eventStore.Value, @namespace.Value, configuration.Destination.Value);
         return _destinationVerified;
@@ -282,6 +290,9 @@ public class EventSequenceSink(
     /// <returns>The last event this observer published for the key, or null.</returns>
     async Task<AppendedEvent?> FindLast(Key key)
     {
+        // A refused destination is never opened: opening sequence storage can provision tables.
+        if (!await DestinationMayBeWritten()) return null;
+
         var sequenceStorage = storage.GetEventStore(eventStore).GetNamespace(@namespace).GetEventSequence(configuration.Destination);
         var eventSourceId = new EventSourceId(key.Value?.ToString() ?? string.Empty);
         var observer = ObserverName();

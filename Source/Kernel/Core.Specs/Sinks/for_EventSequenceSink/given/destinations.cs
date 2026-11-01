@@ -41,7 +41,11 @@ public class destinations
             {
                 var namespaceStorage = Substitute.For<IEventStoreNamespaceStorage>();
                 namespaceStorage.GetEventSequences().Returns(_ => Task.FromResult<IEnumerable<EventSequenceId>>([.. ExistingSequences]));
-                namespaceStorage.GetEventSequence(Arg.Any<EventSequenceId>()).Returns(seq => StorageFor(Key(store, ns.Arg<EventStoreNamespaceName>(), seq.Arg<EventSequenceId>())));
+                namespaceStorage.GetEventSequence(Arg.Any<EventSequenceId>()).Returns(seq =>
+                {
+                    OpenedSequences.Add(seq.Arg<EventSequenceId>());
+                    return StorageFor(Key(store, ns.Arg<EventStoreNamespaceName>(), seq.Arg<EventSequenceId>()));
+                });
                 return namespaceStorage;
             });
             return eventStore;
@@ -53,6 +57,8 @@ public class destinations
     public IStorage Storage { get; }
 
     public IReservedEventSequenceIds ReservedIds { get; }
+
+    public List<EventSequenceId> OpenedSequences { get; } = [];
 
     public List<EventSequenceId> ExistingSequences { get; } = [];
 
