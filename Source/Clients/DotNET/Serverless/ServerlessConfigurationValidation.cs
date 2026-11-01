@@ -26,6 +26,15 @@ internal static class ServerlessConfigurationValidation
         {
             failures.Add($"Mode (Cratis:Chronicle:Serverless:Mode) has the undefined value {(int)serverless.Mode}.");
             return failures;
+        }
+
+        AddProgramIdentifierFailure(options, failures);
+        AddReceiverUrlFailures(serverless.ReceiverUrl, isDevelopment, failures);
+        AddUndefinedEnumFailures(serverless, failures);
+        AddDeliveryAndAuthFailures(serverless, failures);
+        AddRegistrationFailures(serverless, isDevelopment, failures);
+
+        return failures;
     }
 
     /// <summary>
