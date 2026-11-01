@@ -124,26 +124,13 @@ public class JsonSchemaMetadataManager(
     public async Task<(JsonObject Value, IReadOnlyList<string> ErasedPaths)> ReleaseReportingErasedProperties(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, JsonSchema schema, string identifier, JsonObject json)
     {
         var result = (JsonObject)json.DeepClone();
-        var erasedPaths = new HashSet<string>(StringComparer.Ordinal);
+        var erasure = new ErasedPathCollector(eventStore, eventStoreNamespace);
         if (schema.HasSchemaMetadata())
         {
-            await WalkActionFor(
-                schema,
-                identifier,
-                result,
-                SchemaMetadataActionFailed.ReleaseAction,
-                async (_, handler, subject, value, path, complete) =>
-                {
-                    erasedPaths.Remove(path);
-                    var reported = await handler.ReleaseReportingErasure(eventStore, eventStoreNamespace, subject, value);
-                    complete(reported.Value);
-                    if (reported.IsErased)
-                    {
-                        erasedPaths.Add(path);
-                    }
-                });
+            await WalkObject(new MetadataWalk { Identifier = identifier, ActionName = SchemaMetadataActionFailed.ReleaseAction, Action = static (_, _, value) => Task.FromResult(value), Erasure = erasure }, schema, result, string.Empty);
         }
-        return (result, erasedPaths.Order(StringComparer.Ordinal).ToArray());
+
+        return (result, erasure.Paths.Order(StringComparer.Ordinal).ToArray());
     }
 
     /// <inheritdoc/>
@@ -408,126 +395,71 @@ public class JsonSchemaMetadataManager(
         string path = "",
         bool strictRelease = false,
         Func<JsonSchema, IJsonSchemaMetadataValueHandler, JsonNode, Task<JsonNode?>>? comparisonTransform = null,
-        Func<string, IJsonSchemaMetadataValueHandler[], string, JsonNode, Task<JsonNode>>? boundaryTransform = null)
+        Func<string, IJsonSchemaMetadataValueHandler[], string, JsonNode, Task<JsonNode>>? boundaryTransform = null) =>
+        WalkObject(new MetadataWalk { Identifier = identifier, ActionName = actionName, Action = action, StrictRelease = strictRelease, ComparisonTransform = comparisonTransform, BoundaryTransform = boundaryTransform }, schema, json, path);
+
+    async Task WalkObject(MetadataWalk walk, JsonSchema schema, JsonObject json, string path)
     {
-        Func<JsonSchema, IJsonSchemaMetadataValueHandler, string, JsonNode, string, Action<JsonNode>, Task> operation;
-        if (comparisonTransform is null)
+        var metadataForContainer = MetadataAcrossCategories(schema, walk.Comparing).ToArray();
+        if (schema.Properties is null)
         {
-            operation = async (_, handler, subject, value, _, complete) => complete(await action(handler, subject, value));
-        }
-        else
-        {
-            operation = async (current, handler, _, value, _, complete) =>
-                complete(await comparisonTransform(current, handler, value) ?? throw new InvalidOperationException("Protected value cannot be compared."));
+            return;
         }
 
-        return WalkActionFor(schema, identifier, json, actionName, operation, path, strictRelease, comparisonTransform, boundaryTransform);
-    }
-
-    async Task WalkActionFor(
-        JsonSchema schema,
-        string identifier,
-        JsonObject json,
-        string actionName,
-        Func<JsonSchema, IJsonSchemaMetadataValueHandler, string, JsonNode, string, Action<JsonNode>, Task> action,
-        string path = "",
-        bool strictRelease = false,
-        Func<JsonSchema, IJsonSchemaMetadataValueHandler, JsonNode, Task<JsonNode?>>? comparisonTransform = null,
-        Func<string, IJsonSchemaMetadataValueHandler[], string, JsonNode, Task<JsonNode>>? boundaryTransform = null)
-    {
-        var metadataForContainer = MetadataAcrossCategories(schema, comparisonTransform is not null).ToArray();
         foreach (var (property, value) in json.ToArray())
         {
-            if (schema.Properties is not null && value is not null)
+            if (value is null)
             {
-                var propertyPath = string.IsNullOrEmpty(path) ? property : $"{path}.{property}";
-                var flattenedProperties = schema.GetFlattenedProperties();
+                continue;
+            }
 
-                // FirstOrDefault rather than Single: a schema flattened across inheritance can declare the same
-                // property name more than once, and the duplicate is not a reason to fail the whole walk.
-                var propertySchema = (JsonSchema?)flattenedProperties.FirstOrDefault(_ => _.Name == property) ??
-                    schema.AdditionalPropertiesSchema?.ActualSchema ??
-                    throw new SchemaPropertyNotFoundInSchema(actionName, propertyPath, identifier, flattenedProperties.Select(_ => _.Name));
+            var propertyPath = string.IsNullOrEmpty(path) ? property : $"{path}.{property}";
+            var propertySchema = ResolvePropertySchema(walk, schema, property, propertyPath);
+            var propertyMetadata = MetadataAcrossCategories(propertySchema, walk.Comparing).Concat(metadataForContainer).DistinctBy(_ => (_.Category, _.Metadata.metadataType)).ToArray();
+            if (walk.Comparing)
+            {
+                ValidateComparisonBoundary(propertySchema, propertyMetadata);
+            }
 
-                var propertyMetadata = MetadataAcrossCategories(propertySchema, comparisonTransform is not null).Concat(metadataForContainer).DistinctBy(_ => (_.Category, _.Metadata.metadataType)).ToArray();
-                if (comparisonTransform is not null)
+            if (walk.BoundaryTransform is not null && RegisteredHandlers(propertyMetadata) is { Length: > 0 } handlers)
+            {
+                json[property] = await walk.BoundaryTransform(propertyPath, handlers, walk.Identifier, value);
+                continue;
+            }
+
+            var handlerApplied = false;
+            foreach (var (category, metadata) in propertyMetadata)
+            {
+                if (!_propertyValueHandlers.TryGetValue((category, metadata.metadataType), out var handler))
                 {
-                    ValidateComparisonBoundary(propertySchema, propertyMetadata);
-                }
-
-                if (boundaryTransform is not null && RegisteredHandlers(propertyMetadata) is { Length: > 0 } handlers)
-                {
-                    json[property] = await boundaryTransform(propertyPath, handlers, identifier, value);
                     continue;
                 }
 
-                var handlerApplied = false;
-                foreach (var (category, metadata) in propertyMetadata)
+                try
                 {
-                    if (_propertyValueHandlers.TryGetValue((category, metadata.metadataType), out var handler))
-                    {
-                        try
-                        {
-                            await action(propertySchema, handler, identifier, value, propertyPath, handled =>
-                                json[property] = actionName == SchemaMetadataActionFailed.ReleaseAction ? RestoreReleasedContainerShape(handled, propertySchema) : handled);
-                            handlerApplied = true;
-                        }
-                        catch (Exception ex)
-                        {
-                            var failure = new SchemaMetadataActionFailed(actionName, propertyPath, identifier, ex);
-
-                            // Applying has to fail loudly — storing a value that was never protected is never
-                            // acceptable. Releasing must not: a single unreadable property is no reason to fail an
-                            // entire query, so surface it as empty — the shape an erased subject already produces
-                            // — and keep the diagnostic, which names the property, the identifier and the likely
-                            // cause, in the log.
-                            if (actionName != SchemaMetadataActionFailed.ReleaseAction || strictRelease)
-                            {
-                                throw failure;
-                            }
-
-                            logger.FailedToReleaseProperty(propertyPath, identifier, failure);
-                            json[property] = RestoreReleasedContainerShape(JsonValue.Create(string.Empty), propertySchema);
-                            handlerApplied = true;
-                        }
-                    }
+                    var handled = await walk.Handle(handler, propertySchema, value, propertyPath);
+                    json[property] = RestoreForAction(walk, handled, propertySchema);
+                }
+                catch (Exception ex)
+                {
+                    json[property] = DegradeOrThrow(walk, propertyPath, propertySchema, ex);
                 }
 
-                if (!handlerApplied && value is JsonObject jsonObjectValue && !propertySchema.DescribesGeospatialValue())
-                {
-                    // Only descend when the property was not handled as a whole. A handled container has already
-                    // been replaced by its ciphertext, so recursing would mutate the detached original — the work
-                    // is thrown away on apply, and on release it would decrypt members that were never separately
-                    // encrypted.
-                    //
-                    // A geospatial value is an object on the wire but not a container: the schema emits it as a leaf
-                    // carrying only its format, so its GeoJSON members are the converter's and there is no schema
-                    // property under them for a marker to sit on. Descending would report every one of them as drift
-                    // and fail a document that matches its schema. Only the descent is skipped — a value marked
-                    // [PII] or [Encrypted] is still handled as a whole above, like any other container.
-                    await WalkActionFor(propertySchema.ActualTypeSchema, identifier, jsonObjectValue, actionName, action, propertyPath, strictRelease, comparisonTransform, boundaryTransform);
-                }
-                else if (!handlerApplied && value is JsonArray jsonArrayValue)
-                {
-                    // The property itself was not encrypted as a whole, so descend into the array and handle
-                    // schema metadata that lives on the element type — a [PII]/[Encrypted] scalar concept (e.g.
-                    // IReadOnlyList<Email>) or a member marked that way inside element objects.
-                    await HandleActionForArray(propertySchema.ActualTypeSchema, identifier, jsonArrayValue, actionName, action, propertyPath, strictRelease, comparisonTransform, boundaryTransform);
-                }
+                handlerApplied = true;
+            }
+
+            // Only descend when the property was not handled as a whole. A handled container has already
+            // been replaced by its ciphertext, so recursing would mutate the detached original — the work
+            // is thrown away on apply, and on release it would decrypt members that were never separately
+            // encrypted.
+            if (!handlerApplied && value is JsonObject or JsonArray)
+            {
+                await DescendIntoProperty(walk, propertySchema, value, propertyPath);
             }
         }
     }
 
-    async Task HandleActionForArray(
-        JsonSchema arraySchema,
-        string identifier,
-        JsonArray array,
-        string actionName,
-        Func<JsonSchema, IJsonSchemaMetadataValueHandler, string, JsonNode, string, Action<JsonNode>, Task> action,
-        string path,
-        bool strictRelease = false,
-        Func<JsonSchema, IJsonSchemaMetadataValueHandler, JsonNode, Task<JsonNode?>>? comparisonTransform = null,
-        Func<string, IJsonSchemaMetadataValueHandler[], string, JsonNode, Task<JsonNode>>? boundaryTransform = null)
+    async Task WalkArray(MetadataWalk walk, JsonSchema arraySchema, JsonArray array, string path)
     {
         var itemSchema = arraySchema.Item?.ActualSchema;
         if (itemSchema is null)
@@ -535,7 +467,7 @@ public class JsonSchemaMetadataManager(
             return;
         }
 
-        var itemMetadata = MetadataAcrossCategories(itemSchema, comparisonTransform is not null).DistinctBy(_ => (_.Category, _.Metadata.metadataType)).ToArray();
+        var itemMetadata = MetadataAcrossCategories(itemSchema, walk.Comparing).DistinctBy(_ => (_.Category, _.Metadata.metadataType)).ToArray();
         for (var i = 0; i < array.Count; i++)
         {
             var element = array[i];
@@ -550,70 +482,157 @@ public class JsonSchemaMetadataManager(
                 // Declared object members have historically been protected individually, including
                 // projection child writes. Only arrays and objects without declared properties need
                 // whole-element protection; preserve the persisted member-level representation.
-                await WalkActionFor(itemSchema, identifier, declaredObject, actionName, action, elementPath, strictRelease, comparisonTransform, boundaryTransform);
+                await WalkObject(walk, itemSchema, declaredObject, elementPath);
                 continue;
             }
 
-            if (comparisonTransform is not null)
+            if (walk.Comparing)
             {
                 ValidateComparisonBoundary(itemSchema, itemMetadata);
             }
 
-            if (boundaryTransform is not null && RegisteredHandlers(itemMetadata) is { Length: > 0 } handlers)
+            if (walk.BoundaryTransform is not null && RegisteredHandlers(itemMetadata) is { Length: > 0 } handlers)
             {
-                var transformed = await boundaryTransform(elementPath, handlers, identifier, element);
+                var transformed = await walk.BoundaryTransform(elementPath, handlers, walk.Identifier, element);
                 if (!ReferenceEquals(transformed, element))
                 {
                     array[i] = transformed;
                 }
+
                 continue;
             }
 
-            var handlerApplied = false;
-            foreach (var (category, metadata) in itemMetadata)
+            if (!await WalkElementHandlers(walk, itemSchema, itemMetadata, array, i, elementPath))
             {
-                if (_propertyValueHandlers.TryGetValue((category, metadata.metadataType), out var handler))
-                {
-                    try
-                    {
-                        await action(itemSchema, handler, identifier, element, elementPath, handled =>
-                        {
-                            var restored = actionName == SchemaMetadataActionFailed.ReleaseAction ? RestoreReleasedContainerShape(handled, itemSchema) : handled;
-                            if (!ReferenceEquals(restored, element))
-                            {
-                                array[i] = restored;
-                            }
-                        });
-                        handlerApplied = true;
-                    }
-                    catch (Exception ex)
-                    {
-                        var failure = new SchemaMetadataActionFailed(actionName, elementPath, identifier, ex);
-
-                        // Same asymmetry as the property walk above — apply fails, release degrades the
-                        // single element so the rest of the array, and the query, still come back.
-                        if (actionName != SchemaMetadataActionFailed.ReleaseAction || strictRelease)
-                        {
-                            throw failure;
-                        }
-
-                        logger.FailedToReleaseProperty(elementPath, identifier, failure);
-                        array[i] = RestoreReleasedContainerShape(JsonValue.Create(string.Empty), itemSchema);
-                        handlerApplied = true;
-                    }
-                }
-            }
-
-            // A classified element is protected as a whole, including collection-valued elements. Never
-            // descend into the detached original or decrypt members that were not separately encrypted.
-            if (!handlerApplied && element is JsonObject elementObject && !itemSchema.DescribesGeospatialValue())
-            {
-                await WalkActionFor(itemSchema, identifier, elementObject, actionName, action, elementPath, strictRelease, comparisonTransform, boundaryTransform);
-            }
-            else if (!handlerApplied && element is JsonArray elementArray)
-            {
-                await HandleActionForArray(itemSchema, identifier, elementArray, actionName, action, elementPath, strictRelease, comparisonTransform, boundaryTransform);
+                // A classified element is protected as a whole, including collection-valued elements. Never
+                // descend into the detached original or decrypt members that were not separately encrypted.
+                await DescendIntoElement(walk, itemSchema, element, elementPath);
             }
         }
+    }
+
+    async Task<bool> WalkElementHandlers(
+        MetadataWalk walk,
+        JsonSchema itemSchema,
+        (SchemaMetadataCategory Category, ComplianceSchemaMetadata Metadata)[] itemMetadata,
+        JsonArray array,
+        int index,
+        string elementPath)
+    {
+        var element = array[index]!;
+        var handlerApplied = false;
+        foreach (var (category, metadata) in itemMetadata)
+        {
+            if (!_propertyValueHandlers.TryGetValue((category, metadata.metadataType), out var handler))
+            {
+                continue;
+            }
+
+            try
+            {
+                var handled = await walk.Handle(handler, itemSchema, element, elementPath);
+                var restored = RestoreForAction(walk, handled, itemSchema);
+                if (!ReferenceEquals(restored, element))
+                {
+                    array[index] = restored;
+                }
+            }
+            catch (Exception ex)
+            {
+                // Same asymmetry as the property walk — apply fails, release degrades the single element
+                // so the rest of the array, and the query, still come back.
+                array[index] = DegradeOrThrow(walk, elementPath, itemSchema, ex);
+            }
+
+            handlerApplied = true;
+        }
+
+        return handlerApplied;
+    }
+
+    Task DescendIntoProperty(MetadataWalk walk, JsonSchema propertySchema, JsonNode node, string path) =>
+        node is JsonObject && propertySchema.DescribesGeospatialValue() ? Task.CompletedTask : DescendInto(walk, propertySchema.ActualTypeSchema, node, path);
+
+    Task DescendIntoElement(MetadataWalk walk, JsonSchema itemSchema, JsonNode node, string path) =>
+        node is JsonObject && itemSchema.DescribesGeospatialValue() ? Task.CompletedTask : DescendInto(walk, itemSchema, node, path);
+
+    Task DescendInto(MetadataWalk walk, JsonSchema descentSchema, JsonNode node, string path) => node switch
+    {
+        // A geospatial value is an object on the wire but not a container (the callers skip it): the schema
+        // emits it as a leaf, so there is no schema property under its GeoJSON members for a marker to sit on.
+        JsonObject jsonObject => WalkObject(walk, descentSchema, jsonObject, path),
+
+        // The array itself was not encrypted as a whole, so handle schema metadata that lives on the element
+        // type — a [PII]/[Encrypted] scalar concept (e.g. IReadOnlyList<Email>) or a member marked that way.
+        JsonArray jsonArray => WalkArray(walk, descentSchema, jsonArray, path),
+        _ => Task.CompletedTask
+    };
+
+    JsonSchema ResolvePropertySchema(MetadataWalk walk, JsonSchema schema, string property, string propertyPath)
+    {
+        var flattenedProperties = schema.GetFlattenedProperties();
+
+        // FirstOrDefault rather than Single: a schema flattened across inheritance can declare the same
+        // property name more than once, and the duplicate is not a reason to fail the whole walk.
+        return (JsonSchema?)flattenedProperties.FirstOrDefault(_ => _.Name == property) ??
+            schema.AdditionalPropertiesSchema?.ActualSchema ??
+            throw new SchemaPropertyNotFoundInSchema(walk.ActionName, propertyPath, walk.Identifier, flattenedProperties.Select(_ => _.Name));
+    }
+
+    JsonNode? RestoreForAction(MetadataWalk walk, JsonNode handled, JsonSchema schema) =>
+        walk.ActionName == SchemaMetadataActionFailed.ReleaseAction ? RestoreReleasedContainerShape(handled, schema) : handled;
+
+    JsonNode? DegradeOrThrow(MetadataWalk walk, string path, JsonSchema schema, Exception exception)
+    {
+        var failure = new SchemaMetadataActionFailed(walk.ActionName, path, walk.Identifier, exception);
+
+        // Applying has to fail loudly — storing a value that was never protected is never
+        // acceptable. Releasing must not: a single unreadable property is no reason to fail an
+        // entire query, so surface it as empty — the shape an erased subject already produces
+        // — and keep the diagnostic, which names the property, the identifier and the likely
+        // cause, in the log.
+        if (walk.ActionName != SchemaMetadataActionFailed.ReleaseAction || walk.StrictRelease)
+        {
+            throw failure;
+        }
+
+        logger.FailedToReleaseProperty(path, walk.Identifier, failure);
+        return RestoreReleasedContainerShape(JsonValue.Create(string.Empty), schema);
+    }
+
+    readonly struct MetadataWalk
+    {
+        public required string Identifier { get; init; }
+
+        public required string ActionName { get; init; }
+
+        public required Func<IJsonSchemaMetadataValueHandler, string, JsonNode, Task<JsonNode>> Action { get; init; }
+
+        public bool StrictRelease { get; init; }
+
+        public Func<JsonSchema, IJsonSchemaMetadataValueHandler, JsonNode, Task<JsonNode?>>? ComparisonTransform { get; init; }
+
+        public Func<string, IJsonSchemaMetadataValueHandler[], string, JsonNode, Task<JsonNode>>? BoundaryTransform { get; init; }
+
+        public ErasedPathCollector? Erasure { get; init; }
+
+        public bool Comparing => ComparisonTransform is not null;
+
+        public Task<JsonNode> Handle(IJsonSchemaMetadataValueHandler handler, JsonSchema schema, JsonNode value, string path)
+        {
+            if (Erasure is not null)
+            {
+                return Erasure.Release(handler, Identifier, value, path);
+            }
+
+            return ComparisonTransform is null ? Action(handler, Identifier, value) : Compare(ComparisonTransform, handler, schema, value);
+        }
+
+        static async Task<JsonNode> Compare(
+            Func<JsonSchema, IJsonSchemaMetadataValueHandler, JsonNode, Task<JsonNode?>> comparisonTransform,
+            IJsonSchemaMetadataValueHandler handler,
+            JsonSchema schema,
+            JsonNode value) =>
+            await comparisonTransform(schema, handler, value) ?? throw new InvalidOperationException("Protected value cannot be compared.");
     }
 }
