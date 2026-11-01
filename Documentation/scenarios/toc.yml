@@ -2,6 +2,8 @@
   href: index.md
 - name: Rebuild a read model
   href: rebuild-a-read-model.md
+- name: Operate a read model rebuild
+  href: operate-a-read-model-rebuild.md
 - name: Enforce a unique value
   href: enforce-a-unique-value.md
 - name: React to an event

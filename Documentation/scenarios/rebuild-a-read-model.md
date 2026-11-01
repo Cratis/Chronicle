@@ -45,5 +45,6 @@ If a rebuild writes no instances, Chronicle discards the empty result and keeps 
 
 ## See also
 
+- [Operate a read model rebuild](./operate-a-read-model-rebuild.md) — watch a rebuild, handle one that fails, and roll back.
 - [Read Models](../read-models/) — consistency and how read models are served.
 - [Projections](../projections/) — the full projection model.
