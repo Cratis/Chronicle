@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
+using System.Reactive.Subjects;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Storage.Observation;
@@ -11,9 +12,19 @@ namespace Cratis.Chronicle.Storage.InMemory.Observation;
 /// <summary>
 /// Represents an in-memory implementation of <see cref="IObserverDefinitionsStorage"/>.
 /// </summary>
-public sealed class ObserverDefinitionsStorage : IObserverDefinitionsStorage
+public sealed class ObserverDefinitionsStorage : IObserverDefinitionsStorage, IDisposable
 {
     readonly ConcurrentDictionary<ObserverId, ObserverDefinition> _definitions = new();
+    readonly ReplaySubject<IEnumerable<ObserverDefinition>> _allSubject = new(1);
+    readonly Lock _mutationLock = new();
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ObserverDefinitionsStorage"/> class.
+    /// </summary>
+    public ObserverDefinitionsStorage() => _allSubject.OnNext(Snapshot());
+
+    /// <inheritdoc/>
+    public ISubject<IEnumerable<ObserverDefinition>> ObserveAll() => _allSubject;
 
     /// <inheritdoc/>
     public Task<IEnumerable<ObserverDefinition>> GetAll() =>
@@ -30,16 +41,29 @@ public sealed class ObserverDefinitionsStorage : IObserverDefinitionsStorage
     /// <inheritdoc/>
     public Task Delete(ObserverId id)
     {
-        _definitions.TryRemove(id, out _);
+        lock (_mutationLock)
+        {
+            if (_definitions.TryRemove(id, out _))
+            {
+                _allSubject.OnNext(Snapshot());
+            }
+        }
         return Task.CompletedTask;
     }
 
     /// <inheritdoc/>
     public Task Save(ObserverDefinition definition)
     {
-        _definitions[definition.Identifier] = definition;
+        lock (_mutationLock)
+        {
+            _definitions[definition.Identifier] = definition;
+            _allSubject.OnNext(Snapshot());
+        }
         return Task.CompletedTask;
     }
+
+    /// <inheritdoc/>
+    public void Dispose() => _allSubject.Dispose();
 
     /// <inheritdoc/>
     public Task<IEnumerable<ObserverDefinition>> GetForEventTypes(IEnumerable<EventType> eventTypes)
@@ -60,4 +84,6 @@ public sealed class ObserverDefinitionsStorage : IObserverDefinitionsStorage
             .ToArray();
         return Task.FromResult<IEnumerable<ObserverDefinition>>(result);
     }
+
+    ObserverDefinition[] Snapshot() => _definitions.Values.ToArray();
 }

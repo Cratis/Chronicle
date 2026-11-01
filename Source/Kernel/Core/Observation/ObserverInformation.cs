@@ -97,12 +97,10 @@ public record ObserverInformation(
             .GetEventStore(eventStore)
             .GetNamespace(@namespace).Observers
             .ObserveAll()
-            .SelectMany(async states =>
-            {
-                var definitions = await storage.GetEventStore(eventStore).Observers.GetAll();
-                return ObserverInformationConverters.Join(definitions, states);
-            })
-            .Subscribe(subject.OnNext);
+            .CombineLatest(
+                storage.GetEventStore(eventStore).Observers.ObserveAll(),
+                (states, definitions) => ObserverInformationConverters.Join(definitions, states).ToArray())
+            .Subscribe(subject);
         return subject;
     }
 }

@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Reactive.Subjects;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
 
@@ -11,6 +12,12 @@ namespace Cratis.Chronicle.Storage.Observation;
 /// </summary>
 public interface IObserverDefinitionsStorage
 {
+    /// <summary>
+    /// Observe all definitions; emits the current set on subscription and again whenever a definition is saved or deleted.
+    /// </summary>
+    /// <returns>A subject emitting collections of observer definitions.</returns>
+    ISubject<IEnumerable<ObserverDefinition>> ObserveAll();
+
     /// <summary>
     /// Get all <see cref="ObserverDefinition">definitions</see> registered.
     /// </summary>
