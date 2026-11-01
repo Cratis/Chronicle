@@ -251,7 +251,7 @@ public class ObserverEventTypeRetirementResponse
     /// Gets or sets the Incarnation.
     /// </summary>
     [ProtoMember(4)]
-    public long? Incarnation { get; set; }
+    public global::Cratis.Chronicle.Contracts.Observation.TypeSets.ObserverTypeSetIncarnation? Incarnation { get; set; }
 
     /// <summary>
     /// Gets or sets the DeclaringConnections.

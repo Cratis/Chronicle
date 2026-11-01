@@ -10,9 +10,10 @@ public class and_it_has_no_type_set_state : given.a_type_set_store
 {
     ObserverTypeSet _result;
 
-    void Establish() => _observers.Get(Arg.Any<ObserverId>()).Returns(ObserverState.Empty);
+    void Establish() => _observers.GetReadOnly(Arg.Any<ObserverId>()).Returns(ObserverState.Empty);
     async Task Because() => _result = await ObserverTypeSet.GetForObserver("store", "namespace", "observer", _storage);
 
+    [Fact] void should_not_use_the_migrating_get() => _observers.DidNotReceive().Get(Arg.Any<ObserverId>());
     [Fact] void should_be_not_initialized() => _result.InitializationState.ShouldEqual(ObserverInitializationState.NotInitialized);
     [Fact] void should_have_no_members() => _result.Members.ShouldBeEmpty();
     [Fact] void should_have_no_pending_change() => _result.PendingChange.ShouldBeNull();

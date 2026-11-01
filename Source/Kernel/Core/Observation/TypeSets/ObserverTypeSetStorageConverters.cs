@@ -19,7 +19,7 @@ internal static class ObserverTypeSetStorageConverters
         var initialization = state?.Initialization;
         return new(
             control?.Revision.Value ?? 0,
-            control?.Members.Select(_ => new ObserverTypeSetMember(_.Key.Value, _.Value.Incarnation.Value, _.Value.JoinFence?.Value)).ToArray() ?? [],
+            control?.Members.Select(_ => new ObserverTypeSetMember(_.Key.Value, _.Value.Incarnation.Value, _.Value.JoinFence is { } fence ? new ObserverTypeSetFence(fence.Value) : null)).ToArray() ?? [],
             control?.Registrations.Select(ToReadModel).ToArray() ?? [],
             control?.PendingChange is { } change ? ToReadModel(change) : null,
             control?.RetirementResults?.Select(ToReadModel).ToArray() ?? [],
@@ -43,6 +43,6 @@ internal static class ObserverTypeSetStorageConverters
         result.OperationId,
         result.EventTypeId.Value,
         (ObserverEventTypeRetirementOutcome)result.Outcome,
-        result.Incarnation?.Value,
+        result.Incarnation is { } incarnation ? new ObserverTypeSetIncarnation(incarnation.Value) : null,
         result.DeclaringConnections.Select(_ => _.Value).ToArray());
 }

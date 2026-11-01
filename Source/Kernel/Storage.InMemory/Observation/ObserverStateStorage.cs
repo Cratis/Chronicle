@@ -30,6 +30,9 @@ public sealed class ObserverStateStorage : IObserverStateStorage, IDisposable
         Task.FromResult(_states.TryGetValue(observerId, out var state) ? state : new ObserverState());
 
     /// <inheritdoc/>
+    public Task<ObserverState> GetReadOnly(ObserverId observerId) => Get(observerId);
+
+    /// <inheritdoc/>
     public Task<IEnumerable<ObserverState>> GetAll() => Task.FromResult<IEnumerable<ObserverState>>(Snapshot());
 
     /// <inheritdoc/>

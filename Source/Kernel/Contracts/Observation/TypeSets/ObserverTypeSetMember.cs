@@ -30,5 +30,5 @@ public class ObserverTypeSetMember
     /// Gets or sets the JoinFence.
     /// </summary>
     [ProtoMember(3)]
-    public global::System.UInt64? JoinFence { get; set; }
+    public global::Cratis.Chronicle.Contracts.Observation.TypeSets.ObserverTypeSetFence? JoinFence { get; set; }
 }

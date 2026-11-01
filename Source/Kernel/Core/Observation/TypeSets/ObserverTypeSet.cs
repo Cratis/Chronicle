@@ -38,7 +38,7 @@ public record ObserverTypeSet(
     /// <returns>The stored state, or an uninitialized empty type set.</returns>
     public static async Task<ObserverTypeSet> GetForObserver(string eventStore, string @namespace, string observerId, IStorage storage)
     {
-        var state = await storage.GetEventStore(new(eventStore)).GetNamespace(new(@namespace)).Observers.Get(new(observerId));
+        var state = await storage.GetEventStore(new(eventStore)).GetNamespace(new(@namespace)).Observers.GetReadOnly(new(observerId));
         return ObserverTypeSetStorageConverters.ToReadModel(state);
     }
 }

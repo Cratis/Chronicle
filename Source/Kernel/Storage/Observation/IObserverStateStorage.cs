@@ -26,6 +26,16 @@ public interface IObserverStateStorage
     Task<ObserverState> Get(ObserverId observerId);
 
     /// <summary>
+    /// Get the information for a specific observer without changing anything in storage.
+    /// </summary>
+    /// <param name="observerId">The <see cref="ObserverId"/> to get for.</param>
+    /// <returns>The <see cref="ObserverState"/>, or <see cref="ObserverState.Empty"/> when no record exists.</returns>
+    /// <remarks>
+    /// Unlike <see cref="Get"/> this never migrates legacy data, so it is safe for read models and queries.
+    /// </remarks>
+    Task<ObserverState> GetReadOnly(ObserverId observerId);
+
+    /// <summary>
     /// Get all observers.
     /// </summary>
     /// <returns>Collection of <see cref="ObserverState"/> holding all information about the observers.</returns>

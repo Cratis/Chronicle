@@ -52,6 +52,9 @@ public class ObserverStateStorage(EventStoreName eventStore, EventStoreNamespace
     }
 
     /// <inheritdoc/>
+    public Task<Observation.ObserverState> GetReadOnly(ObserverId observerId) => Get(observerId);
+
+    /// <inheritdoc/>
     public async Task<IEnumerable<ObserverId>> GetRetired(IEnumerable<ObserverId> observerIds)
     {
         var ids = observerIds.Distinct().ToArray();

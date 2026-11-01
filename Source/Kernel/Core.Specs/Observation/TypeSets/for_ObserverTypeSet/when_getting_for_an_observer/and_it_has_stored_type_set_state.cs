@@ -22,7 +22,8 @@ public class and_it_has_stored_type_set_state : given.a_type_set_store
             new Dictionary<EventTypeId, Storage.Observation.ObserverTypeSetMember>
             {
                 ["event-a"] = new(new(3), new(123)),
-                ["event-b"] = new(new(5), null)
+                ["event-b"] = new(new(5), null),
+                ["event-z"] = new(new(1), new(0))
             },
             [new("connection", _registrationId, [new("event-a", 2, true)], EventGenerationDelivery.Compatibility), new("legacy-connection", null, [], EventGenerationDelivery.Compatibility)])
         {
@@ -34,14 +35,16 @@ public class and_it_has_stored_type_set_state : given.a_type_set_store
             TypeSetControl = control,
             Initialization = new(Storage.Observation.ObserverInitializationState.Initializing, ["unsettled handover"])
         };
-        _observers.Get(Arg.Any<ObserverId>()).Returns(state);
+        _observers.GetReadOnly(Arg.Any<ObserverId>()).Returns(state);
     }
 
     async Task Because() => _result = await ObserverTypeSet.GetForObserver("store", "namespace", "observer", _storage);
 
     [Fact] void should_map_revision() => _result.Revision.ShouldEqual(7L);
     [Fact] void should_map_member_incarnation() => _result.Members.Single(_ => _.EventTypeId == "event-a").Incarnation.ShouldEqual(3L);
-    [Fact] void should_map_join_fence() => _result.Members.Single(_ => _.EventTypeId == "event-a").JoinFence.ShouldEqual(123UL);
+    [Fact] void should_not_use_the_migrating_get() => _observers.DidNotReceive().Get(Arg.Any<ObserverId>());
+    [Fact] void should_map_join_fence() => _result.Members.Single(_ => _.EventTypeId == "event-a").JoinFence.ShouldEqual(new ObserverTypeSetFence(123UL));
+    [Fact] void should_keep_a_zero_fence_distinct_from_no_fence() => _result.Members.Single(_ => _.EventTypeId == "event-z").JoinFence.ShouldEqual(new ObserverTypeSetFence(0UL));
     [Fact] void should_preserve_an_unfenced_member() => _result.Members.Single(_ => _.EventTypeId == "event-b").JoinFence.ShouldBeNull();
     [Fact] void should_map_connection() => _result.Registrations.First().ConnectionId.ShouldEqual("connection");
     [Fact] void should_map_registration_identity() => _result.Registrations.First().RegistrationId.ShouldEqual(_registrationId);
@@ -55,7 +58,7 @@ public class and_it_has_stored_type_set_state : given.a_type_set_store
     [Fact] void should_map_retirement_identity() => _result.RetirementResults.Single().OperationId.ShouldEqual(_operationId);
     [Fact] void should_map_retirement_event_type() => _result.RetirementResults.Single().EventTypeId.ShouldEqual("event-d");
     [Fact] void should_map_retirement_outcome() => _result.RetirementResults.Single().Outcome.ShouldEqual(ObserverEventTypeRetirementOutcome.Retired);
-    [Fact] void should_map_retirement_incarnation() => _result.RetirementResults.Single().Incarnation.ShouldEqual(2L);
+    [Fact] void should_map_retirement_incarnation() => _result.RetirementResults.Single().Incarnation.ShouldEqual(new ObserverTypeSetIncarnation(2L));
     [Fact] void should_map_declaring_connections() => _result.RetirementResults.Single().DeclaringConnections.Single().ShouldEqual("declaring-connection");
     [Fact] void should_map_initialization_state() => _result.InitializationState.ShouldEqual(ObserverInitializationState.Initializing);
     [Fact] void should_map_refusal_reasons() => _result.RefusalReasons.Single().ShouldEqual("unsettled handover");

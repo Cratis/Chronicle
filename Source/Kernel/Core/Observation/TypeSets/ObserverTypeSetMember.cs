@@ -9,4 +9,4 @@ namespace Cratis.Chronicle.Observation.TypeSets;
 /// <param name="EventTypeId">The event type identifier.</param>
 /// <param name="Incarnation">The revision at which the identifier joined.</param>
 /// <param name="JoinFence">The first sequence number eligible for non-replay delivery, or null if unfenced.</param>
-public record ObserverTypeSetMember(string EventTypeId, long Incarnation, ulong? JoinFence);
+public record ObserverTypeSetMember(string EventTypeId, long Incarnation, ObserverTypeSetFence? JoinFence);

@@ -32,11 +32,7 @@ public class ObserverStateStorage(IEventStoreNamespaceDatabase namespaceDatabase
     /// <inheritdoc/>
     public async Task<Chronicle.Storage.Observation.ObserverState> Get(ObserverId observerId)
     {
-        var state = await _collection
-            .Aggregate()
-            .Match(_ => _.Id == observerId)
-            .JoinWithFailedPartitions()
-            .FirstOrDefaultAsync().ConfigureAwait(false);
+        var state = await FindState(observerId).ConfigureAwait(false);
 
         if (state is null)
         {
@@ -49,6 +45,13 @@ public class ObserverStateStorage(IEventStoreNamespaceDatabase namespaceDatabase
         }
 
         return state.ToKernel();
+    }
+
+    /// <inheritdoc/>
+    public async Task<Chronicle.Storage.Observation.ObserverState> GetReadOnly(ObserverId observerId)
+    {
+        var state = await FindState(observerId).ConfigureAwait(false);
+        return state?.ToKernel() ?? new Chronicle.Storage.Observation.ObserverState();
     }
 
     /// <inheritdoc/>
@@ -146,6 +149,12 @@ public class ObserverStateStorage(IEventStoreNamespaceDatabase namespaceDatabase
             os => os.Id == currentId,
             update);
     }
+
+    Task<ObserverStateWithFailedPartitions> FindState(ObserverId observerId) => _collection
+        .Aggregate()
+        .Match(_ => _.Id == observerId)
+        .JoinWithFailedPartitions()
+        .FirstOrDefaultAsync();
 
     async Task SplitLegacyPerPartitionCounts(ObserverId observerId, IDictionary<string, IDictionary<string, ulong>> legacyCounts)
     {

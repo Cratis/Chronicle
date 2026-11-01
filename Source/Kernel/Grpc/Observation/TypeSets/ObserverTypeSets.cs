@@ -86,7 +86,7 @@ internal sealed class ObserverTypeSets(
             OperationId = source.OperationId,
             EventTypeId = source.EventTypeId,
             Outcome = (global::Cratis.Chronicle.Contracts.Observation.TypeSets.ObserverEventTypeRetirementOutcome)source.Outcome,
-            Incarnation = source.Incarnation,
+            Incarnation = source.Incarnation is null ? null : source.Incarnation.ToContract(),
             DeclaringConnections = source.DeclaringConnections
         };
 

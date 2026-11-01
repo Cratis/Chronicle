@@ -30,7 +30,7 @@ public static class ObserverTypeSetConverters
     {
         EventTypeId = source.EventTypeId,
         Incarnation = source.Incarnation,
-        JoinFence = source.JoinFence
+        JoinFence = source.JoinFence?.ToContract()
     };
 
     /// <summary>
@@ -80,5 +80,25 @@ public static class ObserverTypeSetConverters
     {
         OperationId = source.OperationId,
         EventTypeId = source.EventTypeId
+    };
+
+    /// <summary>
+    /// Converts a join fence.
+    /// </summary>
+    /// <param name="source">The fence.</param>
+    /// <returns>The wire fence.</returns>
+    public static Contracts.Observation.TypeSets.ObserverTypeSetFence ToContract(this ObserverTypeSetFence source) => new()
+    {
+        Value = source.Value
+    };
+
+    /// <summary>
+    /// Converts an incarnation.
+    /// </summary>
+    /// <param name="source">The incarnation.</param>
+    /// <returns>The wire incarnation.</returns>
+    public static Contracts.Observation.TypeSets.ObserverTypeSetIncarnation ToContract(this ObserverTypeSetIncarnation source) => new()
+    {
+        Value = source.Value
     };
 }

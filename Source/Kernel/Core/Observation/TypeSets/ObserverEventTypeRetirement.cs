@@ -17,7 +17,7 @@ namespace Cratis.Chronicle.Observation.TypeSets;
 /// <param name="DeclaringConnections">The connections that refused retirement.</param>
 [ReadModel]
 [BelongsTo(WellKnownServices.ObserverTypeSets)]
-public record ObserverEventTypeRetirement(Guid OperationId, string EventTypeId, ObserverEventTypeRetirementOutcome Outcome, long? Incarnation, IEnumerable<string> DeclaringConnections)
+public record ObserverEventTypeRetirement(Guid OperationId, string EventTypeId, ObserverEventTypeRetirementOutcome Outcome, ObserverTypeSetIncarnation? Incarnation, IEnumerable<string> DeclaringConnections)
 {
     /// <summary>
     /// Gets the result for an operation, if known. This kernel cannot start retirement operations.

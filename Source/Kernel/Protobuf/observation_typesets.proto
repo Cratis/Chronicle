@@ -77,7 +77,7 @@ message ObserverEventTypeRetirementResponse {
    .bcl.Guid OperationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
    string EventTypeId = 2;
    ObserverEventTypeRetirementOutcome Outcome = 3;
-   int64 Incarnation = 4;
+   ObserverTypeSetIncarnation Incarnation = 4;
    repeated string DeclaringConnections = 5;
 }
 message ObserverInitializationResult {
@@ -99,10 +99,16 @@ message ObserverTypeSetChange {
    repeated string Additions = 4;
    repeated ObserverEventTypeRetirementRequest Retirements = 5;
 }
+message ObserverTypeSetFence {
+   uint64 Value = 1;
+}
+message ObserverTypeSetIncarnation {
+   int64 Value = 1;
+}
 message ObserverTypeSetMember {
    string EventTypeId = 1;
    int64 Incarnation = 2;
-   uint64 JoinFence = 3;
+   ObserverTypeSetFence JoinFence = 3;
 }
 enum ObserverTypeSetOperationOutcome {
    OBSERVER_TYPE_SET_OPERATION_OUTCOME_NotInitialized = 0;
