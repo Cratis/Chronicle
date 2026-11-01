@@ -16,6 +16,9 @@ namespace Cratis.Chronicle.Storage.MongoDB.Sinks;
 /// </remarks>
 internal static partial class SinkLogging
 {
+    [LoggerMessage(LogLevel.Warning, "Bulk window '{PreviousWindow}' for read model '{ReadModel}' was replaced by {Mode} window '{Window}', discarding {QueuedOperationCount} queued operations and {InFlightBatchCount} in-flight write batches; a step that pinned it fails with BulkWindowLost and resumes from its last durable checkpoint")]
+    internal static partial void OpenBulkWindowReplaced(this ILogger<Sink> logger, ReadModelIdentifier readModel, Guid previousWindow, Guid window, string mode, int queuedOperationCount, int inFlightBatchCount);
+
     [LoggerMessage(LogLevel.Warning, "Composite-key lookup in collection '{Collection}' has {PartCount} parts and requires a collection scan")]
     internal static partial void CompositeKeyCollectionScan(this ILogger<Sink> logger, string collection, int partCount);
 

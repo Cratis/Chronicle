@@ -84,8 +84,25 @@ internal static class ReadProtectionPredicate
         EventSourceType = first.EventSourceType == second.EventSourceType ? first.EventSourceType : null,
         EventStreamType = first.EventStreamType == second.EventStreamType ? first.EventStreamType : null,
         EventStreamId = first.EventStreamId == second.EventStreamId ? first.EventStreamId : null,
-        EventTypes = !first.EventTypes!.Any() || !second.EventTypes!.Any() ? ImmutableArray<EventType>.Empty : first.EventTypes!.Concat(second.EventTypes!).DistinctBy(_ => _.Id).ToImmutableArray()
+        EventTypes = !first.EventTypes!.Any() || !second.EventTypes!.Any() ? ImmutableArray<EventType>.Empty : first.EventTypes!.Concat(second.EventTypes!).DistinctBy(_ => _.Id).ToImmutableArray(),
+        MutationEpoch = EarliestEpoch(first.MutationEpoch, second.MutationEpoch)
     };
+
+    /// <summary>
+    /// Retains the earliest mutation epoch. Any epoch older than the current one refuses, so the minimum is the conservative choice.
+    /// </summary>
+    /// <param name="first">The first mutation epoch, if any.</param>
+    /// <param name="second">The second mutation epoch, if any.</param>
+    /// <returns>The smallest epoch present, or null when neither read observed one.</returns>
+    internal static ulong? EarliestEpoch(ulong? first, ulong? second)
+    {
+        if (first is null)
+        {
+            return second;
+        }
+
+        return second is null ? first : Math.Min(first.Value, second.Value);
+    }
 
     /// <summary>
     /// Retains the earliest global boundary, including the negative-read sentinel.

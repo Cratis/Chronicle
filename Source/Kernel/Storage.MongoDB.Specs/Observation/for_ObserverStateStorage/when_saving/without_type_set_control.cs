@@ -5,7 +5,7 @@ namespace Cratis.Chronicle.Storage.MongoDB.Observation.for_ObserverStateStorage.
 
 public class without_type_set_control : given.an_observer_state_storage
 {
-    async Task Because() => await _storage.Save(_state);
+    async Task Because() => await _storage.Save(_state, Concepts.EventSequences.EventSequenceId.Log);
 
     [Fact] void should_not_write_the_new_field_before_initialization() => _set.Contains("typeSetControl").ShouldBeFalse();
     [Fact] void should_not_write_initialization_on_a_legacy_save() => _set.Contains("initialization").ShouldBeFalse();

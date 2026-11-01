@@ -308,6 +308,18 @@ public class JsonSchemaMetadataManager(
         }
     }
 
+    static bool CanInspectReferencedType(JsonSchema schema, int depth = 0)
+    {
+        // The strict type probe follows references recursively. Do not turn an unresolved or cyclic
+        // definition into a new append failure while deciding whether to extend metadata reach.
+        if (depth > 64) return false;
+        if (schema.HasReference && !CanInspectReference(schema, depth)) return false;
+        return schema.AllOf.Concat(schema.AnyOf).Concat(schema.OneOf).All(alternative => CanInspectReferencedType(alternative, depth + 1));
+    }
+
+    static bool CanInspectReference(JsonSchema schema, int depth) =>
+        schema.Reference is { } reference && CanInspectReferencedType(reference, depth + 1);
+
     IJsonSchemaMetadataValueHandler[] RegisteredHandlers((SchemaMetadataCategory Category, ComplianceSchemaMetadata Metadata)[] metadata) =>
         metadata.Where(_ => _propertyValueHandlers.ContainsKey((_.Category, _.Metadata.metadataType)))
             .Select(_ => _propertyValueHandlers[(_.Category, _.Metadata.metadataType)]).ToArray();
@@ -344,9 +356,22 @@ public class JsonSchemaMetadataManager(
         }
     }
 
-    IEnumerable<(SchemaMetadataCategory Category, ComplianceSchemaMetadata Metadata)> MetadataAcrossCategories(JsonSchema schema, bool forComparison = false) =>
-        (forComparison ? _categories.Concat([SchemaMetadataCategory.Compliance, SchemaMetadataCategory.Security]).Distinct() : _categories)
-            .SelectMany(category => schema.GetSchemaMetadata(category).Select(metadata => (category, metadata)));
+    IEnumerable<(SchemaMetadataCategory Category, ComplianceSchemaMetadata Metadata)> MetadataAcrossCategories(JsonSchema schema, bool forComparison = false)
+    {
+        var categories = (forComparison ? _categories.Concat([SchemaMetadataCategory.Compliance, SchemaMetadataCategory.Security]).Distinct() : _categories).ToArray();
+        var own = categories.SelectMany(category => schema.GetSchemaMetadata(category).Select(metadata => (category, metadata)));
+        if (!schema.HasReference || schema.Reference is not { } reference) return own;
+        var referenced = categories.SelectMany(category => reference.GetSchemaMetadata(category).Select(metadata => (category, metadata))).ToArray();
+        if (referenced.Length == 0) return own;
+        if (CanInspectReferencedType(reference) && StrictJsonSchemaRelease.HasSupportedType(reference))
+        {
+            // Referenced containers retain their existing member-level protection boundaries.
+            var type = reference.ActualTypeSchema.Type;
+            return (type & (JsonObjectType.Object | JsonObjectType.Array)) != JsonObjectType.None ? own : own.Concat(referenced);
+        }
+        logger.UnsupportedReferencedMetadata();
+        return own;
+    }
 
     async Task HandleActionFor(
         JsonSchema schema,

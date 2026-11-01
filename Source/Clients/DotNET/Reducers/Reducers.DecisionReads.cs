@@ -38,7 +38,8 @@ public partial class Reducers
             var boundaryTask = services.TailSequenceNumber(
                 new()
                 {
-                    EventStore = _eventStore.Name, Namespace = _eventStore.Namespace, EventSequenceId = EventSequenceId.Log
+                    EventStore = _eventStore.Name, Namespace = _eventStore.Namespace, EventSequenceId = EventSequenceId.Log,
+                    IncludeMutationEpoch = true
                 },
                 call);
             var probeTask = services.TailSequenceNumber(
@@ -49,7 +50,8 @@ public partial class Reducers
                 },
                 call);
             await Task.WhenAll(boundaryTask, probeTask);
-            var boundary = (EventSequenceNumber)(await boundaryTask).EnsureSuccess().SequenceNumber;
+            var boundaryTail = (await boundaryTask).EnsureSuccess();
+            var boundary = (EventSequenceNumber)boundaryTail.SequenceNumber;
             var probe = (EventSequenceNumber)(await probeTask).EnsureSuccess().SequenceNumber;
             var response = await services.ForEventSourceIdAndEventTypes(
                 new ForEventSourceIdAndEventTypesRequest
@@ -92,7 +94,7 @@ public partial class Reducers
                 throw new DecisionReadRefused(DecisionReadRefusalReason.FoldIncomplete, model);
             }
             if (last.IsActualValue && (!boundary.IsActualValue || last.Value > boundary.Value) && attempt < 2) continue;
-            return new(key, result.ReadModelState as T, _eventStore.Name, _eventStore.Namespace, boundary.IsUnavailable ? EventSequenceNumber.BeforeFirst : boundary, types);
+            return new(key, result.ReadModelState as T, _eventStore.Name, _eventStore.Namespace, boundary.IsUnavailable ? EventSequenceNumber.BeforeFirst : boundary, boundaryTail.MutationEpoch, types);
         }
         throw new InvalidOperationException("Unreachable reducer decision read retry state.");
     }

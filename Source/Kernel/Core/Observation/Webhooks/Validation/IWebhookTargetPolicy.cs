@@ -48,6 +48,14 @@ public interface IWebhookTargetPolicy
     WebhookTargetValidation CheckAuthority(Uri target, EventStoreName? eventStore);
 
     /// <summary>
+    /// Determines whether an explicit host allowance requires a dedicated connection.
+    /// </summary>
+    /// <param name="target">The target URI.</param>
+    /// <param name="eventStore">The event store, or null for global host policy.</param>
+    /// <returns>Whether the request must not lend its connection to another request.</returns>
+    bool RequiresDedicatedConnection(Uri target, EventStoreName? eventStore);
+
+    /// <summary>
     /// Evaluates all resolved addresses before any socket is opened.
     /// </summary>
     /// <param name="target">The target URI.</param>

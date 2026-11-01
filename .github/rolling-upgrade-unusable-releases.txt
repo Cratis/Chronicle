@@ -1,0 +1,4 @@
+# Releases the RollingUpgrade integration lane cannot start its cluster from, one tag per line.
+# The lane upgrades from the newest release tag not listed here. Each entry names why; remove an entry only
+# when the release it names is no longer the newest one, or when it turns out to start after all.
+v19.115.0 # Three nodes started together never finish starting: the administrator roster deadlocks on the key ring (#5485)

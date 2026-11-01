@@ -63,6 +63,14 @@ erase identity display names. To make a name unavailable on metadata reads, rena
 identity to an empty name. Its subject and username remain available. Your application owns
 authorization and must enforce it **before** calling the metadata API.
 
+### Caller-derived authorship
+
+For a signed-in Chronicle user (an internal password token, Identity cookie, or protected bearer ticket), sequence commands always record the authenticated user as `CausedBy`. A supplied `causedBy`, including its `onBehalfOf` chain, is ignored. This applies to append, batch append, append-once, revision, and redaction commands.
+
+Application callers using client credentials may still supply an end-user identity and an `onBehalfOf` chain. When omitted, the application principal is recorded. Unmarked external-authority tokens and anonymous requests retain the same supplied-identity behavior; external authorities are responsible for their own identity and delegation policy. The `chronicle_principal_kind=user` claim is reserved for Chronicle user principals, not a delegation permission.
+
+Existing Chronicle user tokens and cookies issued before this claim was introduced retain their previous behavior until renewed by signing in again. In particular, an existing refresh token does not acquire the claim by being refreshed. End existing sessions and sign in again when adopting caller-derived authorship. Newly issued password tokens retain the claim when refreshed. Old and new server nodes may coexist, but uniform authorship requires all request-serving nodes to run the updated version. No request, protobuf, or grain contract changes are required.
+
 ## Causation
 
 <ChronicleClientTabs snippet="concepts/correlation-identity-causation/causation" />

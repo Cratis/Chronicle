@@ -1,8 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Arc.EntityFrameworkCore;
-using Cratis.Arc.EntityFrameworkCore.Concepts;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Storage.Sql.Sinks;
 using Microsoft.EntityFrameworkCore;
@@ -30,7 +28,7 @@ public class without_postgresql_incoming_control(PostgreSqlFixture fixture) : Sp
 
     async Task Because()
     {
-        await _storage.Save(new() { Identifier = "observer", NextEventSequenceNumber = new(123) });
+        await _storage.Save(new() { Identifier = "observer", NextEventSequenceNumber = new(123) }, Concepts.EventSequences.EventSequenceId.Log);
         await using var context = CreateContext();
         _saved = await context.Observers.SingleAsync();
     }
@@ -40,10 +38,5 @@ public class without_postgresql_incoming_control(PostgreSqlFixture fixture) : Sp
 
     async Task Destroy() => await fixture.DropDatabase(_connectionString);
 
-    NamespaceDbContext CreateContext()
-    {
-        var builder = new DbContextOptionsBuilder<NamespaceDbContext>();
-        builder.UseDatabaseFromConnectionString(_connectionString).AddConceptAsSupport().WithoutServiceProviderCaching();
-        return new(builder.Options);
-    }
+    NamespaceDbContext CreateContext() => new(SpecDbContextOptions.Kernel<NamespaceDbContext>(_connectionString));
 }

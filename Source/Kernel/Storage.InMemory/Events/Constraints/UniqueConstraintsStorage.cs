@@ -21,6 +21,13 @@ public class UniqueConstraintsStorage : IUniqueConstraintsStorage
     readonly Dictionary<(string ConstraintName, string ScopeKey, string Value), (string EventSourceId, EventSequenceNumber SequenceNumber, string? Subject)> _values = [];
 
     /// <inheritdoc/>
+    public Task<(long PerEventSource, long PerValue)> RemoveUnhashedValues(CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return Task.FromResult((0L, 0L));
+    }
+
+    /// <inheritdoc/>
     public Task ClearValues(UniqueConstraintDefinition definition, string scopeKey = "", CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();

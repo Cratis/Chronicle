@@ -57,7 +57,20 @@ A grain call carries its arguments and result between silos, so their types are 
 - Add properties; never rename, retype or remove one, and never remove an enum member.
 - Do not move or rename a type a custom codec writes the name of. `ConceptSerializer`, `OneOfSerializer` and `CratisJsonSerializer` in `Cratis.Orleans.Serialization` write their own type name into every value. When `ConceptSerializer` moved from the kernel into `Cratis.Orleans`, a 19.13 node could not read a value from a 19.4 node. The spec `for_SiloWireTypeNames` pins those names.
 
-The comparison described below sees each parameter type by name only, not what is inside it. Review changes to those types by hand.
+`Source/Kernel/Core/GrainPayloadContracts.txt` records the serialized shape of every payload reachable from an active grain interface in `OrleansContracts.txt`. The GrainCompatibility specs generate it from Core using the kernel's custom-converter selection. The gate checks that it is current and compares it with the latest release's snapshot, starting with the first release that carries one.
+
+The snapshot covers JSON property names and types (including JSON naming and ignore attributes), Orleans serializer member IDs, concept underlying types, enum members and values, and OneOf case types. Custom-converted types are recorded as opaque: review changes inside their converters by hand. Abstract JSON payloads include concrete subtypes from the same assembly.
+
+Add types, properties and enum members. Do not remove, rename or retype existing members or change enum values within a major. A type serialized by CLR name must keep its namespace and name. An Orleans-generated type with an explicit alias may retain that wire identity when its CLR name changes.
+
+After a payload change, build and run the inventory specs:
+
+```bash
+dotnet build Source/Tools/GrainCompatibility.Specs/GrainCompatibility.Specs.csproj -c Release -p:CratisProxiesOutputPath=
+dotnet test Source/Tools/GrainCompatibility.Specs/GrainCompatibility.Specs.csproj -c Release --no-build --settings specs.runsettings
+```
+
+On drift, the failing spec writes `GrainPayloadContracts.received.txt` next to the spec assembly. Copy it to `Source/Kernel/Core/GrainPayloadContracts.txt`, review the diff, rebuild and rerun the specs. Commit the regenerated snapshot with the payload change; do not hand-edit it. A first snapshot is not proof of compatibility with older releases that have no snapshot; exercising released binaries belongs to the separate rolling-upgrade checks.
 
 ## The contract manifest
 
@@ -76,7 +89,7 @@ Commit the manifest with the change and read its diff. Lines only added, and a r
 | Check | Where | Fails when |
 | --- | --- | --- |
 | Orleans contract analyzer | every build of `Source/Kernel/Core` | the source and `OrleansContracts.txt` disagree |
-| Grain Compatibility | `.github/workflows/grain-compatibility.yml`, before every build and before publishing | the manifest is not purely additive against the latest release: a method, interface or grain class removed, a signature changed, methods added without a higher version, or a version lowered |
+| Grain Compatibility | `.github/workflows/grain-compatibility.yml`, before every build and before publishing | grain contracts are not purely additive against the latest release, the payload snapshot differs from Core, or released payload types or members were removed or changed |
 | RollingUpgrade | `sql-clustering-integration-specs` in `.github/workflows/integration.yml` | a three-node cluster on the latest release, replaced by this build one node at a time under append load, loses an acknowledged event or fails to observe one |
 
 Run the comparison locally against any manifest, for example one generated from a release tag:
@@ -85,7 +98,9 @@ Run the comparison locally against any manifest, for example one generated from 
 dotnet run --project Source/Tools/GrainCompatibility -- --baseline <previous OrleansContracts.txt> --current Source/Kernel/Core/OrleansContracts.txt
 ```
 
-It exits 0 when the current contracts serve the baseline, 1 when they do not, and 2 when it could not tell. `--self-test` plants each kind of break and fails unless every one is found.
+For payload-only comparison, use `--payload-baseline <previous GrainPayloadContracts.txt> --payload-current Source/Kernel/Core/GrainPayloadContracts.txt`. These options can also be combined with the grain-contract options.
+
+It exits 0 when the current contracts serve the baseline, 1 when they do not, and 2 when it could not tell. `--self-test` plants grain and payload breaks, plus allowed additions, and fails unless every case produces its expected result.
 
 A pull request labeled `major` skips Grain Compatibility, because a major release is upgraded with a full stop. A deliberate break in a minor or patch release is not supported: change the label or keep the old method.
 

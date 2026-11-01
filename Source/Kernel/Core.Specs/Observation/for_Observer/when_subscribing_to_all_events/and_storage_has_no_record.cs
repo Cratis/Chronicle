@@ -29,8 +29,8 @@ public class and_storage_has_no_record : given.an_observer
     async Task Because() => await _observer.SubscribeToAllEvents<ObserverSubscriber>(ObserverType.Projection, SiloAddress.Zero);
 
     [Fact] async Task should_keep_the_activation_identity() => (await _observer.GetState()).Identifier.ShouldEqual(_observerId);
-    [Fact] void should_persist_under_its_own_identity() => _eventStoreNamespaceStorage.Observers.Received().Save(Arg.Is<ObserverState>(state => state.Identifier == _observerId && state.SubscribesToAllEvents));
-    [Fact] void should_never_persist_under_the_unspecified_identity() => _eventStoreNamespaceStorage.Observers.DidNotReceive().Save(Arg.Is<ObserverState>(state => state.Identifier == ObserverId.Unspecified));
+    [Fact] void should_persist_under_its_own_identity() => _eventStoreNamespaceStorage.Observers.Received().Save(Arg.Is<ObserverState>(state => state.Identifier == _observerId && state.SubscribesToAllEvents), _observerKey.EventSequenceId);
+    [Fact] void should_never_persist_under_the_unspecified_identity() => _eventStoreNamespaceStorage.Observers.DidNotReceive().Save(Arg.Is<ObserverState>(state => state.Identifier == ObserverId.Unspecified), Arg.Any<Concepts.EventSequences.EventSequenceId>());
     [Fact] void should_subscribe_to_the_queue_with_its_own_key() => _appendedEventsQueues.Received(1).SubscribeToAllEventTypes(_observerKey, Arg.Any<ObserverFilters?>());
     [Fact] async Task should_be_observing() => (await _observer.GetCurrentState()).ShouldBeOfExactType<Observing>();
 }

@@ -13,6 +13,7 @@ public class when_targeting_a_non_administrator : Specification
     IStorage _storage;
     IUserStorage _users;
     SetInitialAdminPassword _command;
+    IInitialAdminSetupTokens _tokens;
     Exception _exception;
 
     void Establish()
@@ -27,7 +28,9 @@ public class when_targeting_a_non_administrator : Specification
             Username = "someone-else",
             HasLoggedIn = false
         });
-        _command = new(Guid.NewGuid(), "a-secure-password", "a-secure-password");
+        _command = new(Guid.NewGuid(), "a-secure-password", "a-secure-password", "setup-token");
+        _tokens = Substitute.For<IInitialAdminSetupTokens>();
+        _tokens.IsValid(_command.UserId, _command.SetupToken).Returns(true);
     }
 
     async Task Because() =>
@@ -36,6 +39,7 @@ public class when_targeting_a_non_administrator : Specification
             _storage,
             Microsoft.Extensions.Options.Options.Create(new Configuration.ChronicleOptions { Authentication = new() { DefaultAdminUsername = "admin" } }),
             Substitute.For<EventSequences.IEventSerializer>(),
+            _tokens,
             CorrelationId.New()));
 
     [Fact] void should_reject_the_target() => _exception.ShouldBeOfExactType<InitialPasswordCanOnlyBeSetForAdministrator>();
