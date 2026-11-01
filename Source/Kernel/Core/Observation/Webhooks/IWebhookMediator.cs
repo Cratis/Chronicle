@@ -5,6 +5,7 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation.Webhooks;
+using Cratis.Chronicle.Observation.Webhooks.Envelope;
 using Cratis.Monads;
 
 namespace Cratis.Chronicle.Observation.Webhooks;
@@ -39,4 +40,12 @@ public interface IWebhookMediator
     /// <param name="cancellationToken">Cancellation of the entire delivery, including the resilience pipeline.</param>
     /// <returns>The typed delivery outcome, including partial progress and any deadline.</returns>
     Task<WebhookDeliveryResult> Deliver(EventStoreName? eventStore, WebhookTarget webhookTarget, Key partition, IEnumerable<AppendedEvent> events, string? accessToken = null, TimeSpan? timeout = null, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Sends an explicit delivery-v1 envelope; not connected to observer dispatch.
+    /// </summary>
+    /// <param name="delivery">The live delivery inputs and required deadline.</param>
+    /// <param name="cancellationToken">Cancellation for the attempt.</param>
+    /// <returns>The typed delivery outcome.</returns>
+    Task<WebhookDeliveryResult> DeliverEnvelope(HttpDeliveryRequest delivery, CancellationToken cancellationToken = default);
 }

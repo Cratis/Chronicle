@@ -3,6 +3,7 @@
 
 using System.Globalization;
 using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Cratis.Chronicle.Concepts;
@@ -11,6 +12,7 @@ using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.Webhooks;
 using Cratis.Chronicle.Configuration;
+using Cratis.Chronicle.Observation.Webhooks.Envelope;
 using Cratis.Chronicle.Observation.Webhooks.Validation;
 using Cratis.DependencyInjection;
 using Cratis.Monads;
@@ -41,20 +43,58 @@ public class WebhookMediator(IWebhookHttpClientFactory webhookHttpClientFactory,
     /// <inheritdoc/>
     public async Task<WebhookDeliveryResult> Deliver(EventStoreName? eventStore, WebhookTarget webhookTarget, Key partition, IEnumerable<AppendedEvent> events, string? accessToken = null, TimeSpan? timeout = null, CancellationToken cancellationToken = default)
     {
-        using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        if (timeout is { } duration && duration > TimeSpan.Zero)
+        var batch = events.ToArray();
+        return await Send(eventStore, webhookTarget, batch, accessToken, timeout, cancellationToken, () => new HttpRequestMessage(HttpMethod.Post, string.Empty)
         {
-            deadline.CancelAfter(duration);
+            Content = JsonContent.Create(new EventsToObserve(partition.ToString(), batch), options: jsonSerializerOptions)
+        });
+    }
+
+    /// <summary>
+    /// Sends an explicit delivery-v1 envelope. No observer dispatch calls this path yet.
+    /// </summary>
+    /// <param name="delivery">The live delivery inputs and required deadline.</param>
+    /// <param name="cancellationToken">Cancellation for this attempt.</param>
+    /// <returns>The classified delivery result.</returns>
+    public async Task<WebhookDeliveryResult> DeliverEnvelope(HttpDeliveryRequest delivery, CancellationToken cancellationToken = default)
+    {
+        var batch = delivery.Events.ToArray();
+        using var trace = DeliveryTraceContext.Create(batch.LastOrDefault()?.Context.CorrelationId ?? CorrelationId.NotSet);
+        using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        var remaining = delivery.DeliverBy - DateTimeOffset.UtcNow;
+        if (remaining > TimeSpan.Zero)
+        {
+            deadline.CancelAfter(remaining);
+        }
+        else
+        {
+            deadline.Cancel();
         }
 
-        var batch = events.ToArray();
+        return await Send(delivery.EventStore, delivery.Target, batch, delivery.AccessToken, null, deadline.Token, () => CreateEnvelopeRequest(delivery, trace.TraceParent));
+    }
+
+    HttpRequestMessage CreateEnvelopeRequest(HttpDeliveryRequest delivery, string traceParent)
+    {
+        var writer = new DeliveryEnvelopeWriter(jsonSerializerOptions);
+        var envelope = writer.ForEvents(delivery);
+        var bytes = writer.Serialize(envelope);
+        var request = new HttpRequestMessage(HttpMethod.Post, string.Empty) { Content = new ByteArrayContent(bytes) };
+        request.Content.Headers.ContentType = MediaTypeHeaderValue.Parse(DeliveryMediaType.Value);
+        request.Headers.Add(DeliveryHeaders.Id, envelope.DeliveryId.Value);
+        request.Headers.Add(DeliveryHeaders.Deadline, delivery.DeliverBy.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture));
+        request.Headers.Add(DeliveryHeaders.TraceParent, traceParent);
+        return request;
+    }
+
+    async Task<WebhookDeliveryResult> Send(EventStoreName? eventStore, WebhookTarget webhookTarget, AppendedEvent[] batch, string? accessToken, TimeSpan? timeout, CancellationToken cancellationToken, Func<HttpRequestMessage> createRequest)
+    {
+        using var deadline = CreateDeadline(timeout, cancellationToken);
+
         try
         {
             var httpClient = webhookHttpClientFactory.Create(webhookTarget, accessToken);
-            using var request = new HttpRequestMessage(HttpMethod.Post, string.Empty)
-            {
-                Content = JsonContent.Create(new EventsToObserve(partition.ToString(), batch), options: jsonSerializerOptions)
-            };
+            using var request = createRequest();
             if (eventStore is not null) request.Options.Set(WebhookRequestOptions.EventStore, eventStore);
             using var response = await httpClient.SendAsync(request, deadline.Token);
             if (!response.IsSuccessStatusCode)
@@ -66,17 +106,33 @@ public class WebhookMediator(IWebhookHttpClientFactory webhookHttpClientFactory,
         }
         catch (BrokenCircuitException error)
         {
-            var now = DateTimeOffset.UtcNow;
-            var delay = error.RetryAfter ?? TimeSpan.FromSeconds(options?.Value.Webhooks.CircuitBreakerBreakDurationSeconds ?? 15);
-            var authority = new Uri(webhookTarget.Url).GetLeftPart(UriPartial.Authority);
-            WebhookDeliveryMetrics.CircuitRejected(authority);
-            (logger ?? NullLogger<WebhookMediator>.Instance).TargetUnavailable(authority, now + delay);
-            return new(EventSequenceNumber.Unavailable, WebhookDeliveryErrors.SafeError(webhookTarget, error), new(Guid.NewGuid(), PartitionDeferralReason.CircuitOpen, now, now + delay, batch.FirstOrDefault()?.Context.SequenceNumber ?? EventSequenceNumber.First));
+            return CircuitRejected(error, webhookTarget, batch);
         }
         catch (Exception error)
         {
             return WebhookDeliveryErrors.FromException(webhookTarget, error, FindTargetRejection(error));
         }
+    }
+
+    static CancellationTokenSource CreateDeadline(TimeSpan? timeout, CancellationToken cancellationToken)
+    {
+        var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        if (timeout is { } duration && duration > TimeSpan.Zero)
+        {
+            deadline.CancelAfter(duration);
+        }
+
+        return deadline;
+    }
+
+    WebhookDeliveryResult CircuitRejected(BrokenCircuitException error, WebhookTarget target, AppendedEvent[] batch)
+    {
+        var now = DateTimeOffset.UtcNow;
+        var delay = error.RetryAfter ?? TimeSpan.FromSeconds(options?.Value.Webhooks.CircuitBreakerBreakDurationSeconds ?? 15);
+        var authority = new Uri(target.Url).GetLeftPart(UriPartial.Authority);
+        WebhookDeliveryMetrics.CircuitRejected(authority);
+        (logger ?? NullLogger<WebhookMediator>.Instance).TargetUnavailable(authority, now + delay);
+        return new(EventSequenceNumber.Unavailable, WebhookDeliveryErrors.SafeError(target, error), new(Guid.NewGuid(), PartitionDeferralReason.CircuitOpen, now, now + delay, batch.FirstOrDefault()?.Context.SequenceNumber ?? EventSequenceNumber.First));
     }
 
     /// <summary>

@@ -147,6 +147,32 @@ Why unknown data kinds are not ignored: this is the one part of the envelope tha
 - All other classifications, the retry schedule, the 24-hour budget, park and quarantine stay as shipped in [#5108](https://github.com/Cratis/Chronicle/issues/5108) and documented in `Documentation/webhooks/index.mdx`.
 - A `Cratis-Delivery-Deadline` header (UTC) tells the receiver when the kernel abandons the request. The function's execution timeout (Azure Functions `functionTimeout`, the Lambda function timeout) must be at most the delivery timeout. An HTTP front's timeout is not enough: the Azure Functions load balancer answers `502` after 230 seconds while the function keeps running, and an API Gateway HTTP API answers after 30 seconds while the Lambda runs on. The kernel classifies both as transient failures and retries while the first execution is still running.
 
+### Canonical live-delivery identity bytes
+
+For live-only HTTP v1, identities use SHA-256 over the bytes below, rendered as 64 lowercase hexadecimal characters. A delivery id prepends `msg_`; an event dedup key has no prefix. This encoding is shared with future broker sinks. It does not enable replay or define replay identity.
+
+- `S(value)` is the UTF-8 encoding of the string, prefixed by its byte length as an unsigned 32-bit big-endian integer. There is no terminator, BOM, Unicode normalization or case folding; an empty string has a zero length.
+- `U(value)` is an unsigned 64-bit big-endian integer, with no length prefix.
+- An event key hashes `S("cratis.event.v1") || S(eventStore) || S(namespace) || S(observerId) || S(eventSequenceId) || U(sequenceNumber)`.
+- A delivery id hashes `S("cratis.delivery.v1") || S(eventStore) || S(namespace) || S(observerId) || S(eventSequenceId) || S(kind)`, followed, for each batch in envelope order, by `S(partition) || U(firstSequenceNumber) || U(lastSequenceNumber)`. Kind is its lowercase wire name. Control envelopes have no batches and therefore no range bytes. An empty events batch uses `18446744073709551615` (the unavailable sequence sentinel) for both range endpoints. Partition values are the exact strings carried in the envelope, including an empty string when supplied as the partition.
+- There are no separators or batch-count bytes. Length prefixes and the fixed-width endpoints make the ordered batch suffix unambiguous. Deadline, timestamp, attempt number, access token and tracing are excluded. Retrying a range keeps its delivery id; rebatching may change that id but never an individual event's dedup key.
+
+Golden vectors (all input strings are literal, without quotes):
+
+| Identity | Coordinates | SHA-256 / wire value |
+| --- | --- | --- |
+| Event | store=`store`, namespace=`namespace`, observer=`observer`, sequence=`sequence`, number=42 | `8c4e79dad7dbbd6fb6364d0feb82b79fcc7875d88f0ce6ff9b0fa551557aa6ac` |
+| Delivery | same coordinates, kind=`events`, one partition=`partition`, first=42, last=43 | `msg_1857c1f54046f387153746427230b7d8a72a20f3db8c8e6da3165bf86806aa3a` |
+
+The complete preimage bytes, in hexadecimal, are respectively:
+
+```text
+0000000f6372617469732e6576656e742e76310000000573746f7265000000096e616d657370616365000000086f627365727665720000000873657175656e6365000000000000002a
+000000126372617469732e64656c69766572792e76310000000573746f7265000000096e616d657370616365000000086f627365727665720000000873657175656e6365000000066576656e747300000009706172746974696f6e000000000000002a000000000000002b
+```
+
+The envelope writer materializes one UTF-8 payload byte array. A future signer must sign those exact bytes with a fresh attempt timestamp, without reserializing; HTTP content uses the same array. This increment does not enable signing or select a singular key-id header or rotation encoding. The signing owner supplies that wire format under decision 0021; delivery identity remains independent of it.
+
 ### Authentication and signatures
 
 - Every envelope delivery is signed per Standard Webhooks: `webhook-id`, `webhook-timestamp` (Unix seconds) and `webhook-signature` over `id.timestamp.body`. The default is Ed25519 (`v1a`), so a receiver holds only a public key; HMAC-SHA256 (`v1`) is an opt-in alternative for receivers that only support shared secrets. Every delivery carries the id of the signing key in the `Cratis-Key-Id` header, so a receiver picks the right key and keys can be rotated; several signatures can be sent at once for an overlap, and the header then lists every signing key id in signature order ([0021](0021-delivery-signing-key-custody.md)).
