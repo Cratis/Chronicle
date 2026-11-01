@@ -47,6 +47,7 @@ public abstract class a_sql_read_model : Specification
 
     DbConnection _connection;
     protected IDatabase _database;
+    private protected SinkReadModelTablePlacements _placements;
     IReadOnlyList<ProjectedColumn> _columns;
     int _emissions;
 
@@ -63,7 +64,7 @@ public abstract class a_sql_read_model : Specification
     protected virtual Task ReleaseDatabase() => Task.CompletedTask;
 
     protected abstract DbConnection CreateConnection();
-    protected abstract void Configure(DbContextOptionsBuilder<ReadModelDbContext> options, DbConnection connection);
+    protected abstract void Configure(DbContextOptionsBuilder options, DbConnection connection);
 
     async Task Establish()
     {
@@ -81,21 +82,29 @@ public abstract class a_sql_read_model : Specification
         _database.LiveQueryPollingInterval.Returns(TimeSpan.FromMilliseconds(50));
         _database.ReadModelTable(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<string>(), Arg.Any<IReadOnlyList<ProjectedColumn>>(), Arg.Any<ConnectionPurpose>())
             .Returns(_ => Task.FromResult(new DbContextScope<ReadModelDbContext>(CreateContext(), () => { })));
+        var definition = new ReadModelDefinition(
+            "test-read-model",
+            ContainerName,
+            "TestReadModel",
+            ReadModelOwner.Client,
+            ReadModelSource.Code,
+            ReadModelObserverType.Projection,
+            ReadModelObserverIdentifier.Unspecified,
+            SinkDefinition.None,
+            new Dictionary<ReadModelGeneration, JsonSchema> { [ReadModelGeneration.First] = schema },
+            []);
+        _placements = await SinkReadModelTablePlacements.PlacementsForExisting(_connection, definition, builder =>
+        {
+            Configure(builder, _connection);
+            builder.AddConceptAsSupport().WithoutServiceProviderCaching();
+        });
+        var tables = _placements.Tables;
         _sink = new SqlSink(
             "test-event-store",
             "test-namespace",
-            new ReadModelDefinition(
-                "test-read-model",
-                ContainerName,
-                "TestReadModel",
-                ReadModelOwner.Client,
-                ReadModelSource.Code,
-                ReadModelObserverType.Projection,
-                ReadModelObserverIdentifier.Unspecified,
-                SinkDefinition.None,
-                new Dictionary<ReadModelGeneration, JsonSchema> { [ReadModelGeneration.First] = schema },
-                []),
+            definition,
             _database,
+            tables,
             new ExpandoObjectConverter(new TypeFormats()),
             new ReplayingTables());
     }

@@ -2,17 +2,13 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Data.Common;
-using System.Globalization;
-using Cratis.Chronicle.Storage.Sinks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 
-using Contract = Cratis.Chronicle.Storage.Sinks.for_ISink.given;
-
 namespace Cratis.Chronicle.Storage.Sql.Sinks.for_Sink.when_ending_a_replay.given;
 
-public abstract class a_legacy_half_swapped_replay<THarness> : Contract.an_accumulating_read_model<THarness>
-    where THarness : ISinkHarness, new()
+public abstract class a_legacy_half_swapped_replay<THarness> : for_Sink.given.an_accumulating_sql_read_model<THarness>
+    where THarness : ISqlSinkHarness, new()
 {
     protected Exception? _error;
     protected bool _legacyAttemptInterrupted;
@@ -24,7 +20,7 @@ public abstract class a_legacy_half_swapped_replay<THarness> : Contract.an_accum
 
     protected abstract THarness CreateHarnessWithInterceptor(IInterceptor interceptor);
 
-    protected override THarness CreateHarness()
+    protected override THarness CreateSqlHarness()
     {
         _interceptor = new half_swap();
         return CreateHarnessWithInterceptor(_interceptor);
@@ -44,14 +40,8 @@ public abstract class a_legacy_half_swapped_replay<THarness> : Contract.an_accum
     {
         _error = await Catch.Exception(() => _sink.EndReplay(ReplayContext()));
         _primary = await CurrentCountOrNull();
-        _replay = await ReadCount($"replay-{ContainerName}");
-        _backup = await ReadCount(ReplayContext().RevertContainerName.Value);
-    }
-
-    async Task<int?> ReadCount(string table)
-    {
-        var instance = (await _sink.GetInstances(table)).Instances.SingleOrDefault();
-        return instance is null ? null : Convert.ToInt32(((IDictionary<string, object?>)instance)["count"], CultureInfo.InvariantCulture);
+        _replay = await StoredCount($"replay-{ContainerName}");
+        _backup = await StoredCount(ReplayContext().RevertContainerName.Value);
     }
 
     sealed class half_swap : DbCommandInterceptor

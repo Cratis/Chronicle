@@ -53,6 +53,39 @@ internal sealed class SqlDatabaseCatalog(string connectionString, Func<DbConnect
     }
 
     /// <summary>
+    /// Looks for the first of several database names on one catalog connection, without creating anything.
+    /// </summary>
+    /// <param name="names">The names to look for, in order.</param>
+    /// <returns>The first name seen, and, when none is seen, whether the catalog is positively shown to list every database.</returns>
+    internal async Task<(string? Seen, bool? Visible)> Probe(IReadOnlyList<string> names)
+    {
+        await using var connection = await Open(Provider == DatabaseType.PostgreSql ? "postgres" : "master");
+        var exists = Provider == DatabaseType.PostgreSql
+            ? "SELECT COUNT(*) FROM pg_database WHERE datname::text COLLATE \"C\" = @name"
+            : "SELECT COUNT(*) FROM sys.databases WHERE name = @name";
+        foreach (var name in names)
+        {
+            await using var command = Command(connection, exists, ("name", name));
+            if (Convert.ToInt64(await command.ExecuteScalarAsync()) != 0)
+            {
+                return (name, null);
+            }
+        }
+
+        var visibility = Provider == DatabaseType.PostgreSql
+            ? "SELECT has_table_privilege('pg_catalog.pg_database', 'SELECT') AND NOT c.relrowsecurity FROM pg_catalog.pg_class c WHERE c.oid = 'pg_catalog.pg_database'::regclass"
+            : "SELECT CASE WHEN HAS_PERMS_BY_NAME(NULL, NULL, 'VIEW ANY DATABASE') = 1 OR HAS_PERMS_BY_NAME(NULL, NULL, 'ALTER ANY DATABASE') = 1 OR HAS_PERMS_BY_NAME('master', 'DATABASE', 'CREATE DATABASE') = 1 THEN 1 ELSE 0 END";
+        await using var probe = Command(connection, visibility);
+        var result = await probe.ExecuteScalarAsync();
+        if (result is null or DBNull)
+        {
+            return (null, null);
+        }
+
+        return (null, result is bool flag ? flag : Convert.ToInt32(result) == 1);
+    }
+
+    /// <summary>
     /// Compares candidates using the provider's database-name equality.
     /// </summary>
     /// <param name="left">The first name.</param>

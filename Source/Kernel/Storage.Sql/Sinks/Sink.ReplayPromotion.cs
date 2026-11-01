@@ -21,27 +21,25 @@ public partial class Sink
 {
     async Task PerformRenameSwap(ReplayContext context)
     {
-        var replayName = ReplayTableNameFor(_tableName);
+        var revertName = context.RevertContainerName.Value;
+        var backup = BackupHandleFor(revertName);
+        var live = await _tables.Find(_live) ?? throw new ReadModelTableNameBindingFailure(_live.Owner, _tableName, "the live table has no binding to promote into");
 
-        // Open the scope on the replay table so the DbContext we use for DDL is bound to
-        // the rebuilt table. Other scopes may still be reading the primary table. The swap renames
-        // tables, so it connects as the schema identity when connection resolution distinguishes one.
-        await using var scope = await _database.ReadModelTable(_eventStoreName, _namespace, replayName, _columns, ConnectionPurpose.Schema);
-
+        // The swap renames tables, so it connects as the schema identity when connection resolution distinguishes one.
+        await using var scope = await _tables.Open(_replay, _columns, ConnectionPurpose.Schema);
+        var replayPhysical = scope.DbContext.TableName;
         await scope.DbContext.EnsureReplayPromotions();
         var replayHasRows = await scope.DbContext.Entries.AsNoTracking().AnyAsync();
-        var databaseType = scope.DbContext.Database.GetDatabaseType();
-        var revertName = context.RevertContainerName.Value;
-        var physicalRevert = PrimaryKeyNames.TableIdentifier(databaseType, revertName);
-        var marker = new ReplayPromotion(ReplayPromotion.IdentifierFor(_tableName, revertName), _tableName, revertName, physicalRevert);
-        var promotion = new ReplayTablePromotion(replayName, revertName, physicalRevert, databaseType, replayHasRows, marker);
-        var recoveryName = $"chronicle_replay_backup_{Guid.NewGuid():N}";
-        var preservedLegacyBackup = false;
 
-        // Publish both renames and their constraint names in one transaction. Otherwise a concurrent
-        // read can see the primary table missing and recreate it through EnsureTableExists, making
-        // replay -> primary collide. A database transaction also protects readers on other silos
-        // and restores the previous tables if any step of the promotion fails.
+        // An empty replay does not publish or touch a backup. Otherwise reserve its name before anything moves.
+        var backupBinding = replayHasRows ? await _tables.Reserve(backup) : null;
+        var backupPhysical = backupBinding?.PhysicalName ?? string.Empty;
+        var marker = new ReplayPromotion(ReplayPromotion.IdentifierFor(_tableName, revertName), _tableName, revertName, backupPhysical);
+        var promotion = new ReplayTablePromotion(replayPhysical, live.PhysicalName, backupPhysical, replayHasRows, marker, backup, backupBinding?.State == ReadModelTableBindingState.Ready);
+
+        // Publish both renames, their constraint names and the ledger transitions in one transaction. Otherwise a concurrent
+        // read can see the live table missing and recreate it, making replay -> live collide. A database transaction also
+        // protects readers on other silos and restores the previous tables if any step of the promotion fails.
         var strategy = scope.DbContext.Database.CreateExecutionStrategy();
         await DatabaseSchemaLock.Run(scope.DbContext, () => strategy.ExecuteInTransactionAsync(
             async () =>
@@ -54,16 +52,10 @@ public partial class Sink
                     return;
                 }
 
-                preservedLegacyBackup = false;
-                preservedLegacyBackup = await PromoteReplayTable(scope, promotion, recoveryName);
+                await PromoteReplayTable(scope, promotion);
             },
 
             () => SwapHasCommitted(scope.DbContext, marker)));
-
-        if (preservedLegacyBackup)
-        {
-            _logger.PreservedLegacyReplayBackup(_eventStoreName.Value, _namespace.Value, _tableName, physicalRevert, recoveryName);
-        }
     }
 
     /// <summary>
@@ -71,84 +63,56 @@ public partial class Sink
     /// </summary>
     /// <param name="scope">The <see cref="DbContextScope{TContext}"/> bound to the replay table.</param>
     /// <param name="promotion">The <see cref="ReplayTablePromotion"/> describing the tables involved.</param>
-    /// <param name="recoveryName">The name a markerless legacy backup is preserved under.</param>
-    /// <returns>True when a markerless legacy backup was preserved under the recovery name.</returns>
+    /// <returns>Awaitable task.</returns>
     /// <exception cref="ReplayTableBecameEmpty">The rebuilt table lost its rows before the promotion.</exception>
-    /// <exception cref="UnverifiedReplayBackup">An existing backup cannot be distinguished from a legacy half-swap.</exception>
-    async Task<bool> PromoteReplayTable(DbContextScope<ReadModelDbContext> scope, ReplayTablePromotion promotion, string recoveryName)
+    /// <exception cref="ReadModelTableNameBindingFailure">The backup binding changed during promotion.</exception>
+    async Task PromoteReplayTable(DbContextScope<ReadModelDbContext> scope, ReplayTablePromotion promotion)
     {
-        var (replayName, revertName, physicalRevert, databaseType, replayHasRows, marker) = promotion;
+        var (replayPhysical, livePhysical, backupPhysical, replayHasRows, marker, backup, backupWasReady) = promotion;
         if (!replayHasRows)
         {
             // No backup is touched on this path, so its ownership cannot block an empty replay.
-            await ExecuteDdl(scope, BuildDropSql(scope, replayName));
-            return false;
+            await ExecuteDdl(scope, BuildDropSql(scope, replayPhysical));
+            await ReopenReplayTable(scope, marker.RevertContainerName);
+            return;
         }
 
         // Re-check on every attempt before touching the backup. A reader can recreate an empty
-        // replay table after a committed swap; it must never replace the rebuilt primary.
+        // replay table after a committed swap; it must never replace the rebuilt live table.
         if (!await scope.DbContext.Entries.AsNoTracking().AnyAsync())
         {
-            throw new ReplayTableBecameEmpty(replayName);
+            throw new ReplayTableBecameEmpty(replayPhysical);
         }
 
-        // Never move or replace the live or replay table because of identifier truncation.
-        var namesCollide = physicalRevert == PrimaryKeyNames.TableIdentifier(databaseType, _tableName)
-            || physicalRevert == PrimaryKeyNames.TableIdentifier(databaseType, replayName);
-        if (namesCollide)
-        {
-            throw new UnverifiedReplayBackup(_tableName, physicalRevert);
-        }
-
-        var preservedLegacyBackup = await PreserveLegacyBackup(scope, promotion, recoveryName);
-
-        // The old backup is absent, safely preserved, or owned by an earlier identified replay.
-        await ExecuteDdl(scope, BuildDropSql(scope, revertName));
-        await ExecuteDdl(scope, BuildRenameSql(scope, databaseType, _tableName, revertName));
-        await ExecuteDdl(scope, BuildRenameSql(scope, databaseType, replayName, _tableName));
+        var databaseType = scope.DbContext.Database.GetDatabaseType();
+        await ExecuteDdl(scope, BuildDropSql(scope, backupPhysical));
+        await ExecuteDdl(scope, BuildRenameSql(scope, databaseType, livePhysical, backupPhysical));
+        await ExecuteDdl(scope, BuildRenameSql(scope, databaseType, replayPhysical, livePhysical));
 
         // Constraint names must move in the same transaction, before the next replay is created.
-        await PrimaryKeyConstraints.NameAfterTable(scope, revertName);
-        await PrimaryKeyConstraints.NameAfterTable(scope, _tableName);
-        await ReadModelIndexes.NameAfterTable(scope.DbContext, revertName);
-        await ReadModelIndexes.NameAfterTable(scope.DbContext, _tableName);
+        await PrimaryKeyConstraints.NameAfterTable(scope, backupPhysical);
+        await PrimaryKeyConstraints.NameAfterTable(scope, livePhysical);
+        await ReadModelIndexes.NameAfterTable(scope.DbContext, backupPhysical);
+        await ReadModelIndexes.NameAfterTable(scope.DbContext, livePhysical);
         await RecordPromotion(scope.DbContext, marker);
-        return preservedLegacyBackup;
+
+        // The backup now exists under its bound name, and the replay name is free for the next replay.
+        if (!backupWasReady && !await _tables.Transition(backup, ReadModelTableBindingState.Reserved, ReadModelTableBindingState.Ready, scope.DbContext))
+        {
+            throw new ReadModelTableNameBindingFailure(backup.Owner, backupPhysical, "the backup binding changed during the promotion");
+        }
+
+        await ReopenReplayTable(scope, marker.RevertContainerName);
     }
 
-    async Task<bool> PreserveLegacyBackup(DbContextScope<ReadModelDbContext> scope, ReplayTablePromotion promotion, string recoveryName)
+    async Task ReopenReplayTable(DbContextScope<ReadModelDbContext> scope, string attempt)
     {
-        var database = scope.DbContext.Database;
-        var (_, revertName, physicalRevert, databaseType, _, _) = promotion;
-        if (!await TableExists(database, databaseType, revertName) ||
-            await scope.DbContext.ReplayPromotions.AnyAsync(entry => entry.BackupTableName == physicalRevert && entry.ContainerName == _tableName))
+        if (!await _tables.SetReplayAttempt(_replay, attempt, null, scope.DbContext))
         {
-            return false;
+            throw new ReadModelTableNameBindingFailure(_replay.Owner, scope.DbContext.TableName, "the replay attempt changed during promotion");
         }
 
-        // On upgrade a truncated name can collide with an old, markerless backup. Its
-        // identity is unknowable, so preserve it, never drop it or invent a completion marker.
-        // Exact-name half-swaps and tables owned by another read model still need recovery.
-        if (await IsUnverifiableBackup(scope, promotion))
-        {
-            throw new UnverifiedReplayBackup(_tableName, physicalRevert);
-        }
-
-        await ExecuteDdl(scope, BuildRenameSql(scope, databaseType, physicalRevert, recoveryName));
-        await PrimaryKeyConstraints.NameAfterTable(scope, recoveryName);
-        return true;
-    }
-
-    async Task<bool> IsUnverifiableBackup(DbContextScope<ReadModelDbContext> scope, ReplayTablePromotion promotion)
-    {
-        var (_, revertName, physicalRevert, databaseType, _, _) = promotion;
-        if (physicalRevert == revertName || !await TableExists(scope.DbContext.Database, databaseType, _tableName))
-        {
-            return true;
-        }
-
-        return await scope.DbContext.ReplayPromotions.AnyAsync(entry =>
-            entry.BackupTableName == physicalRevert || entry.RevertContainerName == revertName);
+        await _tables.Transition(_replay, ReadModelTableBindingState.Ready, ReadModelTableBindingState.Reserved, scope.DbContext);
     }
 
     static Task<bool> SwapHasCommitted(ReadModelDbContext context, ReplayPromotion marker) =>
@@ -174,26 +138,14 @@ public partial class Sink
         }
     }
 
-    static Task<bool> TableExists(DatabaseFacade database, DatabaseType databaseType, string table)
-    {
-        var name = PrimaryKeyNames.TableIdentifier(databaseType, table);
-        var query = databaseType switch
-        {
-            DatabaseType.PostgreSql => database.SqlQuery<int>($"SELECT 1 AS \"Value\" FROM pg_tables WHERE schemaname = current_schema() AND tablename = {name}"),
-            DatabaseType.SqlServer => database.SqlQuery<int>($"SELECT 1 AS [Value] FROM sys.tables WHERE schema_id = SCHEMA_ID() AND name = {name}"),
-            _ => database.SqlQuery<int>($"SELECT 1 AS \"Value\" FROM sqlite_master WHERE type = 'table' AND name = {name}")
-        };
-        return query.AnyAsync();
-    }
-
     /// <summary>
-    /// Frees the replay table's primary key name before the replay table is created. The primary table of a
+    /// Frees the live table's primary key name before the replay table is created. The live table of a
     /// database that swapped replays before primary keys followed their tables still holds that name.
     /// </summary>
     async Task NamePrimaryKeyAfterPrimaryTable()
     {
-        await using var scope = await _database.ReadModelTable(_eventStoreName, _namespace, _tableName, _columns);
-        await PrimaryKeyConstraints.NameAfterTable(scope, _tableName);
+        await using var scope = await _tables.Open(_live, _columns);
+        await PrimaryKeyConstraints.NameAfterTable(scope, scope.DbContext.TableName);
     }
 
     static async Task ExecuteDdl(DbContextScope<ReadModelDbContext> scope, string sql)
@@ -225,10 +177,11 @@ public partial class Sink
     }
 
     sealed record ReplayTablePromotion(
-        string ReplayName,
-        string RevertName,
-        string PhysicalRevert,
-        DatabaseType DatabaseType,
+        string ReplayPhysical,
+        string LivePhysical,
+        string BackupPhysical,
         bool ReplayHasRows,
-        ReplayPromotion Marker);
+        ReplayPromotion Marker,
+        ReadModelTableHandle Backup,
+        bool BackupWasReady);
 }

@@ -34,6 +34,7 @@ public class SqlSinkHarness : ISqlSinkHarness
     readonly IntegrationTimings _timings = new(nameof(SqlSinkHarness), "sql-specs", "sqlite");
     SqlCommandTimings? _commandTimings;
     IReadOnlyList<ProjectedColumn> _columns = [];
+    SinkReadModelTablePlacements? _placements;
     SqliteConnection? _connection;
     ReadModelDefinition? _definition;
 
@@ -56,6 +57,8 @@ public class SqlSinkHarness : ISqlSinkHarness
     /// Gets interceptors that let concurrency specs arrange an exact command interleaving.
     /// </summary>
     public IEnumerable<IInterceptor> Interceptors { get; init; } = [];
+
+    internal IReadModelTables Tables => _placements!.Tables;
 
     /// <summary>
     /// Gets the logger for sink diagnostics.
@@ -82,6 +85,8 @@ public class SqlSinkHarness : ISqlSinkHarness
         // Honors the container the sink asks for rather than always handing back the main one: a replay
         // writes to its own container and the sink swaps that in when the replay ends, so a harness that
         // ignored the name would fail every replay case for a reason that has nothing to do with the sink.
+        _placements ??= new(builder => builder.UseDatabaseFromConnectionString(ConnectionString).AddConceptAsSupport().AddInterceptors(Interceptors), ConnectionString, _migrator);
+        _placements.Register(definition).GetAwaiter().GetResult();
         var database = Substitute.For<IDatabase>();
         database.LiveQueryPollingInterval.Returns(TimeSpan.FromMilliseconds(50));
         database.ReadModelTable(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<string>(), Arg.Any<IReadOnlyList<ProjectedColumn>>(), Arg.Any<ConnectionPurpose>())
@@ -92,6 +97,7 @@ public class SqlSinkHarness : ISqlSinkHarness
             "test-namespace",
             definition,
             database,
+            _placements.Tables,
             new ExpandoObjectConverter(new TypeFormats()),
             _replayingTables,
             Logger);

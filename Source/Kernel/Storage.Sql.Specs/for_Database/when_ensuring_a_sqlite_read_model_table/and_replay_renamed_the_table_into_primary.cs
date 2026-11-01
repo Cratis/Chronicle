@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels;
 using Microsoft.EntityFrameworkCore;
 
 namespace Cratis.Chronicle.Storage.Sql.for_Database.when_ensuring_a_sqlite_read_model_table;
@@ -16,6 +17,7 @@ public class and_replay_renamed_the_table_into_primary : given.a_sqlite_read_mod
             await original.DbContext.Database.ExecuteSqlRawAsync("ALTER TABLE \"replay-model\" RENAME TO \"model\"");
         }
 
+        await _database.Tables.Transition(_handle, ReadModelTableBindingState.Ready, ReadModelTableBindingState.Reserved);
         await using var recreated = await ReadModelTable();
         _rows = await recreated.DbContext.Entries.CountAsync();
     }

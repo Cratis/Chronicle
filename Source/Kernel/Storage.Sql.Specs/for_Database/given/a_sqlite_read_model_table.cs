@@ -10,6 +10,7 @@ namespace Cratis.Chronicle.Storage.Sql.for_Database.given;
 public class a_sqlite_read_model_table : a_sqlite_database
 {
     readonly ProjectedColumn[] _columns = [new("Id", typeof(string), true, false, false, false)];
+    private protected readonly ReadModelTableHandle _handle = ReadModelTableHandle.For("store", "namespace", "model", "model", ReadModelTableRole.Replay, "replay-model");
 
     async Task Establish()
     {
@@ -23,5 +24,5 @@ public class a_sqlite_read_model_table : a_sqlite_database
     }
 
     protected Task<DbContextScope<ReadModelDbContext>> ReadModelTable() =>
-        _database.ReadModelTable("store", "namespace", "replay-model", _columns);
+        _database.Tables.Open(_handle, _columns);
 }

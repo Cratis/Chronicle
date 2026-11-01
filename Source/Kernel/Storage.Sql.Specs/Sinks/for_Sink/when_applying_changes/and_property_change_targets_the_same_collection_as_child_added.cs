@@ -70,11 +70,14 @@ public class and_property_change_targets_the_same_collection_as_child_added : Sp
         _database.ReadModelTable(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<string>(), Arg.Any<IReadOnlyList<ProjectedColumn>>(), Arg.Any<ConnectionPurpose>())
             .Returns(_ => Task.FromResult(new DbContextScope<ReadModelDbContext>(CreateContext(), () => { })));
 
+        var definition = CreateReadModelDefinition();
+        var tables = SinkReadModelTablePlacements.ForExisting(_connection, definition, builder => builder.UseSqlite(_connection).AddConceptAsSupport()).GetAwaiter().GetResult();
         _sink = new SqlSink(
             _eventStoreName,
             _namespace,
-            CreateReadModelDefinition(),
+            definition,
             _database,
+            tables,
             new ExpandoObjectConverter(new TypeFormats()),
             new ReplayingTables());
 

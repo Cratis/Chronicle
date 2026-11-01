@@ -6,7 +6,8 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels;
 /// <summary>
 /// Refuses a new reservation, adoption or table creation while a possible owner's metadata cannot be read.
 /// </summary>
-public sealed class ReadModelTableMetadataUnavailable : Exception
+#pragma warning disable CA1064 // Internal ownership diagnostic, not a public client contract.
+internal sealed class ReadModelTableMetadataUnavailable : Exception
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="ReadModelTableMetadataUnavailable"/> class.

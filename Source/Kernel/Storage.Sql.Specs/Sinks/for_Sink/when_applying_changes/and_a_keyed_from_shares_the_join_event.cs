@@ -58,7 +58,8 @@ public class and_a_keyed_from_shares_the_join_event : Specification
                 [ReadModelGeneration.First] = _schema
             },
             []);
-        _sink = new SqlSink("test", "test", readModel, database, new ExpandoObjectConverter(new TypeFormats()), new ReplayingTables());
+        var tables = await SinkReadModelTablePlacements.ForExisting(_connection, readModel, builder => builder.UseSqlite(_connection).AddConceptAsSupport());
+        _sink = new SqlSink("test", "test", readModel, database, tables, new ExpandoObjectConverter(new TypeFormats()), new ReplayingTables());
     }
 
     async Task Because()

@@ -9,12 +9,11 @@ namespace Cratis.Chronicle.Storage.Sql.Sinks.for_Sink.when_ending_a_replay;
 
 public class and_the_commit_fails_without_retry_on_sqlite : given.a_replay_with_a_commit_failure<SqlSinkHarness>
 {
-    SqlSinkHarness _sqlHarness;
     int _markerCount;
 
     protected override bool FailAfterCommit => false;
 
-    protected override SqlSinkHarness CreateHarnessWithInterceptor(IInterceptor interceptor) => _sqlHarness = new() { Interceptors = [interceptor] };
+    protected override SqlSinkHarness CreateHarnessWithInterceptor(IInterceptor interceptor) => new() { Interceptors = [interceptor] };
 
     async Task Because()
     {

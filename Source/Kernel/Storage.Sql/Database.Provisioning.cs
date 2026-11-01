@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
-using Cratis.Arc.Connections;
 using Cratis.Arc.EntityFrameworkCore;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Storage.Sql.Cluster;
@@ -400,32 +399,5 @@ public partial class Database
 #pragma warning restore CA2000
 
         return new DbContextScope<TDbContext>(dbContext, static () => { });
-    }
-
-    async Task<DbContextScope<ReadModelDbContext>> GetOrCreateReadModelDbContext(
-        EventStoreName eventStore,
-        EventStoreNamespaceName @namespace,
-        string tableName,
-        Func<DbContextOptions<ReadModelDbContext>, string, ReadModelDbContext> createDbContext,
-        ConnectionPurpose purpose)
-    {
-#pragma warning disable CA2000
-        var dbContext = await CreateContext(
-            new(DatabaseKind.ReadModels, eventStore.Value, @namespace.Value),
-            $"readmodel:{eventStore.Value}:{@namespace.Value}:{tableName}",
-            _readModelOptions,
-            options => createDbContext(options, tableName),
-            async (context, target) =>
-            {
-                // Read models live in their own database (one per event store / non-default namespace
-                // pair), matching the MongoDB layout. PostgreSQL / SQL Server require the database to
-                // exist before any connection succeeds; SQLite creates the file on first connection.
-                await EnsureDatabaseExists(context, target);
-                await EnsureTableMigrated(context, target);
-            },
-            purpose);
-#pragma warning restore CA2000
-
-        return new DbContextScope<ReadModelDbContext>(dbContext, static () => { });
     }
 }

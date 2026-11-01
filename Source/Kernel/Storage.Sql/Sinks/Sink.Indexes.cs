@@ -36,20 +36,21 @@ public partial class Sink
     async Task EnsureIndexes(bool reconcile)
     {
         if (_indexes.Count == 0 && !reconcile) return;
-        var table = ActiveTableName;
+        var handle = ActiveHandle;
+        var table = handle.Owner.LogicalName;
         lock (_indexGate)
         {
             if (_indexedTables.Contains(table)) return;
             if (_indexBuilds.TryGetValue(table, out var running) && !running.IsCompleted) return;
         }
-        await using var scope = await _database.ReadModelTable(_eventStoreName, _namespace, table, _columns, ConnectionPurpose.Schema);
+        await using var scope = await _tables.Open(handle, _columns, ConnectionPurpose.Schema);
         var context = scope.DbContext;
         await context.EnsureTableExists();
         var online = context.Database.GetDatabaseType() != DatabaseType.Sqlite &&
-            table == _tableName && await context.Entries.AnyAsync();
+            handle == _live && await context.Entries.AnyAsync();
         if (!online)
         {
-            await BuildIndexes(table, reconcile, online: false);
+            await BuildIndexes(handle, reconcile, online: false);
             return;
         }
         lock (_indexGate)
@@ -59,15 +60,16 @@ public partial class Sink
 
             // A populated primary table must stay available to the projection and its queries.
             // The worker owns its scope and never retains this call's scoped connection.
-            _indexBuilds[table] = Task.Run(() => BuildIndexesInBackground(table, reconcile));
+            _indexBuilds[table] = Task.Run(() => BuildIndexesInBackground(handle, reconcile));
         }
     }
 
-    async Task BuildIndexesInBackground(string table, bool reconcile)
+    async Task BuildIndexesInBackground(ReadModelTableHandle handle, bool reconcile)
     {
+        var table = handle.Owner.LogicalName;
         try
         {
-            await BuildIndexes(table, reconcile, online: true);
+            await BuildIndexes(handle, reconcile, online: true);
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
@@ -75,10 +77,12 @@ public partial class Sink
         }
     }
 
-    async Task BuildIndexes(string table, bool reconcile, bool online)
+    async Task BuildIndexes(ReadModelTableHandle handle, bool reconcile, bool online)
     {
-        await using var scope = await _database.ReadModelTable(_eventStoreName, _namespace, table, _columns, ConnectionPurpose.Schema);
+        var logical = handle.Owner.LogicalName;
+        await using var scope = await _tables.Open(handle, _columns, ConnectionPurpose.Schema);
         var context = scope.DbContext;
+        var table = context.TableName;
         var database = context.Database;
         var connection = database.GetDbConnection();
         var gate = _indexGates.GetOrAdd($"{connection.ConnectionString}:{table}", _ => new SemaphoreSlim(1, 1));
@@ -96,9 +100,9 @@ public partial class Sink
                 if (reconcile && complete) await ReadModelIndexes.DropUndeclared(context, table, IndexPlans(context.Database.GetDatabaseType()).Select(plan => plan.Name(context.Database.GetDatabaseType(), table)));
 
                 // A replay table name is reused after promotion, so its completion cannot be cached.
-                if (complete && table == _tableName)
+                if (complete && handle == _live)
                 {
-                    lock (_indexGate) _indexedTables.Add(table);
+                    lock (_indexGate) _indexedTables.Add(logical);
                 }
             }
             finally

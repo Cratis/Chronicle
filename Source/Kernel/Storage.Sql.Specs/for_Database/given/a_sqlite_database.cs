@@ -45,7 +45,10 @@ public class a_sqlite_database : Specification
             await connection.OpenAsync();
         }
 
-        _services = new ServiceCollection().AddSingleton(_readModelMigrator).BuildServiceProvider();
+        _services = new ServiceCollection().AddSingleton(_readModelMigrator)
+            .AddSingleton(typeof(ITableMigrator<>), typeof(TableMigrator<>))
+            .AddLogging()
+            .BuildServiceProvider();
         _database = CreateDatabase();
     }
 

@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
+using System.Data;
 using Cratis.Arc.EntityFrameworkCore;
 using Cratis.Arc.EntityFrameworkCore.Json;
 using Cratis.Chronicle.Configuration;
@@ -40,7 +41,7 @@ public class ReadModelMigrator(
     /// <inheritdoc/>
     public async Task EnsureTableMigrated(string tableName, ReadModelDbContext context)
     {
-        await tableMigrator.EnsureTableMigrated(tableName, context, CreateTable);
+        await tableMigrator.EnsureTableMigrated(tableName, context, context.RequireExisting ? RejectMissingTable : CreateTable);
         await EnsureMissingColumnsAdded(tableName, context);
     }
 
@@ -68,6 +69,8 @@ public class ReadModelMigrator(
             _columnMigrations.TryRemove(key, out _);
         }
     }
+
+    static Task RejectMissingTable(ReadModelDbContext context, string tableName) => throw new ReadModelTableMissing(tableName);
 
     async Task CreateReplayPromotions(ReadModelDbContext context, string tableName)
     {
@@ -174,7 +177,12 @@ public class ReadModelMigrator(
     static async Task<HashSet<string>> GetExistingColumnNames(ReadModelDbContext context, string tableName)
     {
         var connection = context.Database.GetDbConnection();
-        await connection.OpenAsync();
+        var opened = connection.State != ConnectionState.Open;
+        if (opened)
+        {
+            await connection.OpenAsync();
+        }
+
         try
         {
             await using var command = connection.CreateCommand();
@@ -208,7 +216,10 @@ public class ReadModelMigrator(
         }
         finally
         {
-            await connection.CloseAsync();
+            if (opened)
+            {
+                await connection.CloseAsync();
+            }
         }
     }
 

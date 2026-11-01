@@ -75,11 +75,14 @@ public class and_a_dictionary_shaped_property_is_set : Specification
         _database.ReadModelTable(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<string>(), Arg.Any<IReadOnlyList<ProjectedColumn>>(), Arg.Any<ConnectionPurpose>())
             .Returns(_ => Task.FromResult(new DbContextScope<ReadModelDbContext>(CreateContext(), () => { })));
 
+        var definition = CreateReadModelDefinition();
+        var tables = await SinkReadModelTablePlacements.ForExisting(_connection, definition, builder => builder.UseSqlite(_connection).AddConceptAsSupport());
         _sink = new SqlSink(
             _eventStoreName,
             _namespace,
-            CreateReadModelDefinition(),
+            definition,
             _database,
+            tables,
             new ExpandoObjectConverter(new TypeFormats()),
             new ReplayingTables());
     }
@@ -150,8 +153,8 @@ public class and_a_dictionary_shaped_property_is_set : Specification
     ReadModelDefinition CreateReadModelDefinition() =>
         new(
             "test-read-model",
-            "TestReadModel",
             ContainerName,
+            "TestReadModel",
             ReadModelOwner.Client,
             ReadModelSource.Code,
             ReadModelObserverType.Projection,

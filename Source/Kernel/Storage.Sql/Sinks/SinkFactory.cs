@@ -6,6 +6,7 @@ using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Storage.Sinks;
+using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -35,6 +36,7 @@ public class SinkFactory(IServiceProvider serviceProvider, IExpandoObjectConvert
     {
         var database = serviceProvider.GetRequiredService<IDatabase>();
         var replayingTables = serviceProvider.GetRequiredService<ReplayingTables>();
-        return new Sink(eventStore, @namespace, readModel, database, expandoObjectConverter, replayingTables, serviceProvider.GetRequiredService<ILogger<Sink>>());
+        var tables = serviceProvider.GetService<IReadModelTables>() ?? (database as Database)?.Tables ?? throw new ReadModelTablesUnavailable();
+        return new Sink(eventStore, @namespace, readModel, database, tables, expandoObjectConverter, replayingTables, serviceProvider.GetRequiredService<ILogger<Sink>>());
     }
 }

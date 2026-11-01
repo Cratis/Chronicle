@@ -2,6 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Arc.Connections;
+using Cratis.Arc.EntityFrameworkCore;
+using Cratis.Arc.EntityFrameworkCore.Concepts;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Json;
@@ -35,6 +37,7 @@ public class PostgreSqlSinkHarness : ISqlSinkHarness
         Substitute.For<ILogger<ReadModelMigrator>>());
 
     IReadOnlyList<ProjectedColumn> _columns = [];
+    SinkReadModelTablePlacements? _placements;
 
     /// <summary>
     /// Gets or sets the <see cref="PostgreSqlFixture"/> supplying the container.
@@ -51,6 +54,8 @@ public class PostgreSqlSinkHarness : ISqlSinkHarness
     /// </summary>
     public IEnumerable<IInterceptor> Interceptors { get; init; } = [];
 
+    internal IReadModelTables Tables => _placements!.Tables;
+
     /// <summary>
     /// Gets the logger for index diagnostics.
     /// </summary>
@@ -65,6 +70,8 @@ public class PostgreSqlSinkHarness : ISqlSinkHarness
             ConnectionString = Fixture!.CreateDatabase().GetAwaiter().GetResult();
         }
 
+        _placements ??= new(builder => builder.UseDatabaseFromConnectionString(ConnectionString).AddConceptAsSupport().AddInterceptors(Interceptors), ConnectionString, _migrator);
+        _placements.Register(definition).GetAwaiter().GetResult();
         var database = Substitute.For<IDatabase>();
         database.LiveQueryPollingInterval.Returns(TimeSpan.FromMilliseconds(50));
         database.ReadModelTable(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<string>(), Arg.Any<IReadOnlyList<ProjectedColumn>>(), Arg.Any<ConnectionPurpose>())
@@ -75,6 +82,7 @@ public class PostgreSqlSinkHarness : ISqlSinkHarness
             "test-namespace",
             definition,
             database,
+            _placements.Tables,
             new ExpandoObjectConverter(new TypeFormats()),
             new ReplayingTables(),
             Logger);

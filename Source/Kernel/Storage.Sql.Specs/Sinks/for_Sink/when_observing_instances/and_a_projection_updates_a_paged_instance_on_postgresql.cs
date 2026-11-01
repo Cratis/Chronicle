@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Data.Common;
-using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels;
 using Cratis.Chronicle.Storage.Sql.Sinks.for_Sink.when_observing_instances.given;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
@@ -34,5 +33,5 @@ public class and_a_projection_updates_a_paged_instance_on_postgresql(PostgreSqlF
     }
 
     protected override DbConnection CreateConnection() => new NpgsqlConnection(_connectionString);
-    protected override void Configure(DbContextOptionsBuilder<ReadModelDbContext> options, DbConnection connection) => options.UseNpgsql(_connectionString);
+    protected override void Configure(DbContextOptionsBuilder options, DbConnection connection) => options.UseNpgsql(_connectionString);
 }

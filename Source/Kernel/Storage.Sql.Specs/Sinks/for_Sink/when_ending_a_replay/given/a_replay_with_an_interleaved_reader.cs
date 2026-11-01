@@ -5,16 +5,12 @@ using System.Data.Common;
 using Cratis.Chronicle.Storage.Sinks;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 
-using Contract = Cratis.Chronicle.Storage.Sinks.for_ISink.given;
-
 namespace Cratis.Chronicle.Storage.Sql.Sinks.for_Sink.when_ending_a_replay.given;
 
-public class a_replay_with_an_interleaved_reader : Contract.an_accumulating_read_model<SqlSinkHarness>
+public class a_replay_with_an_interleaved_reader : for_Sink.given.an_accumulating_sql_read_model<SqlSinkHarness>
 {
     protected ISink _reader;
     protected Func<Task> _afterPrimaryRename = () => Task.CompletedTask;
-
-    SqlSinkHarness _sqlHarness;
 
     async Task Establish()
     {
@@ -24,7 +20,7 @@ public class a_replay_with_an_interleaved_reader : Contract.an_accumulating_read
         await _sink.ApplyChanges(_key, ChangesetSettingCountTo(2), 42UL);
     }
 
-    protected override SqlSinkHarness CreateHarness() => _sqlHarness = new()
+    protected override SqlSinkHarness CreateSqlHarness() => new()
     {
         Interceptors = [new after_primary_rename(() => _afterPrimaryRename())]
     };

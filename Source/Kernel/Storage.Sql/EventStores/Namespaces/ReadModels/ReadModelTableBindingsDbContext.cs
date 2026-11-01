@@ -27,7 +27,7 @@ internal sealed class ReadModelTableBindingsDbContext(DbContextOptions<ReadModel
     /// <summary>
     /// Gets the resolved schema included in the EF model cache identity.
     /// </summary>
-    internal string? Schema => schema;
+    internal string? Schema => string.IsNullOrEmpty(schema) ? null : schema;
 
     /// <summary>
     /// Builds a ledger context on the same connection and transaction as a model context,
@@ -70,12 +70,12 @@ internal sealed class ReadModelTableBindingsDbContext(DbContextOptions<ReadModel
     {
         modelBuilder.Entity<ReplayPromotion>(promotion =>
         {
-            promotion.ToTable(WellKnownTableNames.ReplayPromotions, schema);
+            promotion.ToTable(WellKnownTableNames.ReplayPromotions, Schema);
             promotion.HasKey(row => row.Id);
             promotion.Property(row => row.Id).HasMaxLength(64);
         });
         var entity = modelBuilder.Entity<ReadModelTableNameBinding>();
-        entity.ToTable(WellKnownTableNames.ReadModelTableNames, schema);
+        entity.ToTable(WellKnownTableNames.ReadModelTableNames, Schema);
         entity.HasKey(row => row.Id);
         entity.Ignore(row => row.Owner);
         entity.Property(row => row.Id).HasMaxLength(64);

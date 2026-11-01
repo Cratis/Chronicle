@@ -78,11 +78,14 @@ public class and_property_change_has_leaf_relative_path_with_array_indexers_targ
         _database.ReadModelTable(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<string>(), Arg.Any<IReadOnlyList<ProjectedColumn>>(), Arg.Any<ConnectionPurpose>())
             .Returns(_ => Task.FromResult(new DbContextScope<ReadModelDbContext>(CreateContext(), () => { })));
 
+        var definition = CreateReadModelDefinition();
+        var tables = await SinkReadModelTablePlacements.ForExisting(_connection, definition, builder => builder.UseSqlite(_connection).AddConceptAsSupport());
         _sink = new SqlSink(
             _eventStoreName,
             _namespace,
-            CreateReadModelDefinition(),
+            definition,
             _database,
+            tables,
             new ExpandoObjectConverter(new TypeFormats()),
             new ReplayingTables());
 

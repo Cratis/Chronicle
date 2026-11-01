@@ -27,6 +27,7 @@ public static class SqlSchemaServices
         services.AddSingleton(sp => new SqlConnectionResolution(options.Storage, sp.GetRequiredService<IStorageConnectionResolution>()));
         services.AddSingleton<Database>();
         services.AddSingleton<IDatabase>(sp => sp.GetRequiredService<Database>());
+        services.AddSingleton<IReadModelTables>(sp => sp.GetRequiredService<Database>().Tables);
         services.AddSingleton(typeof(ITableMigrator<>), typeof(TableMigrator<>));
         services.AddSingleton<IEventSequenceMigrator, EventSequenceMigrator>();
         services.AddSingleton<IUniqueConstraintMigrator, UniqueConstraintMigrator>();

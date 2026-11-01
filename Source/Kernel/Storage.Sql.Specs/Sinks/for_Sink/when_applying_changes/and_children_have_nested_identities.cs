@@ -49,7 +49,8 @@ public class and_children_have_nested_identities : Specification
         database.ReadModelTable(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<string>(), Arg.Any<IReadOnlyList<ProjectedColumn>>(), Arg.Any<ConnectionPurpose>())
             .Returns(_ => Task.FromResult(new DbContextScope<ReadModelDbContext>(CreateContext(), () => { })));
         var definition = new ReadModelDefinition("nested-identities", "NestedIdentities", Container, ReadModelOwner.Client, ReadModelSource.Code, ReadModelObserverType.Projection, ReadModelObserverIdentifier.Unspecified, SinkDefinition.None, new Dictionary<ReadModelGeneration, JsonSchema> { [ReadModelGeneration.First] = schema }, []);
-        _sink = new SqlSink("test-store", "test-namespace", definition, database, new ExpandoObjectConverter(new TypeFormats()), new ReplayingTables());
+        var tables = await SinkReadModelTablePlacements.ForExisting(_connection, definition, builder => builder.UseSqlite(_connection).AddConceptAsSupport());
+        _sink = new SqlSink("test-store", "test-namespace", definition, database, tables, new ExpandoObjectConverter(new TypeFormats()), new ReplayingTables());
         await Apply(new ChildAdded(Child("A", "First"), "[children]", "identity.id", "A", ArrayIndexers.NoIndexers), 1);
         await Apply(new ChildAdded(Child("B", "Second"), "[children]", "identity.id", "B", ArrayIndexers.NoIndexers), 2);
     }

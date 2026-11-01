@@ -68,6 +68,25 @@ internal sealed class ReadModelTableCatalog(DbContext context, string schema) : 
     }
 
     /// <summary>
+    /// Tests whether a table carries a primary key, which every table Chronicle creates has.
+    /// </summary>
+    /// <param name="name">The exact physical table name.</param>
+    /// <returns>Whether the table has a primary key.</returns>
+    /// <exception cref="NotSupportedException">The provider has no supported catalog.</exception>
+    internal async Task<bool> HasPrimaryKey(string name)
+    {
+        var sql = Provider switch
+        {
+            DatabaseType.PostgreSql => "SELECT COUNT(*) FROM pg_catalog.pg_index i JOIN pg_catalog.pg_class c ON c.oid = i.indrelid JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace WHERE i.indisprimary AND n.nspname::text = @schema::text AND c.relname::text COLLATE \"C\" = @name::text COLLATE \"C\"",
+            DatabaseType.SqlServer => "SELECT COUNT(*) FROM sys.indexes WHERE is_primary_key = 1 AND object_id = OBJECT_ID(QUOTENAME(@schema) + N'.' + QUOTENAME(@name))",
+            DatabaseType.Sqlite => "SELECT COUNT(*) FROM pragma_table_info(@name) WHERE pk > 0",
+            _ => throw new NotSupportedException("Unsupported read model table catalog provider")
+        };
+        var count = Provider == DatabaseType.Sqlite ? await Scalar(sql, ("name", name)) : await Scalar(sql, ("schema", schema), ("name", name));
+        return Convert.ToInt64(count, System.Globalization.CultureInfo.InvariantCulture) > 0;
+    }
+
+    /// <summary>
     /// Executes a parameterized scalar metadata query.
     /// </summary>
     /// <param name="sql">The statement text.</param>

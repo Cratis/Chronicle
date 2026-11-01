@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Data.Common;
-using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels;
 using Cratis.Chronicle.Storage.Sql.Sinks.for_Sink.when_observing_instances.given;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
@@ -29,5 +28,5 @@ public class and_a_write_outside_the_page_changes_the_total_count : a_sql_read_m
     readonly string _databaseName = Guid.NewGuid().ToString("N");
 
     protected override DbConnection CreateConnection() => new SqliteConnection($"Data Source={_databaseName};Mode=Memory;Cache=Shared");
-    protected override void Configure(DbContextOptionsBuilder<ReadModelDbContext> options, DbConnection connection) => options.UseSqlite(connection.ConnectionString);
+    protected override void Configure(DbContextOptionsBuilder options, DbConnection connection) => options.UseSqlite(connection.ConnectionString);
 }

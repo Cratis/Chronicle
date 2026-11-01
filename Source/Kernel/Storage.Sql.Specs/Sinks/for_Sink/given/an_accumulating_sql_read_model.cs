@@ -44,6 +44,18 @@ public abstract class an_accumulating_sql_read_model<THarness> : Contract.an_acc
             Substitute.For<IReadModelMigrator>());
     }
 
+    protected async Task CreateLegacyTable(string table)
+    {
+        await using var context = OpenInspectionContext();
+        var helper = context.GetService<ISqlGenerationHelper>();
+        var name = helper.DelimitIdentifier(table);
+        var live = helper.DelimitIdentifier(ContainerName);
+        var sql = context.Database.IsSqlServer()
+            ? $"SELECT * INTO {name} FROM {live} WHERE 1 = 0"
+            : $"CREATE TABLE {name} AS SELECT * FROM {live} WHERE 1 = 0";
+        await context.Database.ExecuteSqlRawAsync(sql);
+    }
+
     protected async Task<int?> StoredCount(string table)
     {
         await using var context = OpenInspectionContext();

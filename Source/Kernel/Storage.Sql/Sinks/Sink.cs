@@ -8,7 +8,7 @@ using System.Linq.Expressions;
 using System.Reactive.Linq;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using Cratis.Arc.EntityFrameworkCore;
+using Cratis.Arc.Connections;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
@@ -69,6 +69,11 @@ public partial class Sink : ISink, ICanReconcileIndexes, ISinkCompositeKeyLookup
     readonly IReadOnlyCollection<IndexDefinition> _indexes;
     readonly ReadModelIdentifier _readModelIdentifier;
     readonly string _tableName;
+    readonly IReadModelTables _tables;
+    readonly ReadModelTableHandle _live;
+    readonly ReadModelTableHandle _replay;
+    readonly ConcurrentDictionary<string, ReadModelTableHandle> _backups = new();
+    readonly ConcurrentDictionary<string, Task<ReadModelTableHandle>> _queriedBackups = new();
     readonly IReadOnlyList<ProjectedColumn> _columns;
     readonly ReplayingTables _replayingTables;
     readonly ILogger<Sink> _logger;
@@ -105,6 +110,7 @@ public partial class Sink : ISink, ICanReconcileIndexes, ISinkCompositeKeyLookup
     /// <param name="expandoObjectConverter">The schema-aware converter.</param>
     /// <param name="replayingTables">The shared replay routing state.</param>
     /// <param name="logger">The logger for replay recovery diagnostics.</param>
+    /// <exception cref="ReadModelTablesUnavailable">The database does not resolve read model table names.</exception>
     public Sink(
         Concepts.EventStoreName eventStoreName,
         Concepts.EventStoreNamespaceName @namespace,
@@ -113,8 +119,33 @@ public partial class Sink : ISink, ICanReconcileIndexes, ISinkCompositeKeyLookup
         IExpandoObjectConverter expandoObjectConverter,
         ReplayingTables replayingTables,
         ILogger<Sink> logger)
+        : this(eventStoreName, @namespace, readModel, database, (database as Database)?.Tables ?? throw new ReadModelTablesUnavailable(), expandoObjectConverter, replayingTables, logger)
     {
-        _logger = logger;
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Sink"/> class over an explicit table resolver.
+    /// </summary>
+    /// <param name="eventStoreName">The event store the sink is for.</param>
+    /// <param name="namespace">The namespace the sink is for.</param>
+    /// <param name="readModel">The read model definition.</param>
+    /// <param name="database">The database used for live queries.</param>
+    /// <param name="tables">The <see cref="IReadModelTables"/> that resolve logical tables to physical ones.</param>
+    /// <param name="expandoObjectConverter">The schema-aware converter.</param>
+    /// <param name="replayingTables">The shared replay routing state.</param>
+    /// <param name="logger">The logger for replay recovery diagnostics.</param>
+    internal Sink(
+        Concepts.EventStoreName eventStoreName,
+        Concepts.EventStoreNamespaceName @namespace,
+        ReadModelDefinition readModel,
+        IDatabase database,
+        IReadModelTables tables,
+        IExpandoObjectConverter expandoObjectConverter,
+        ReplayingTables replayingTables,
+        ILogger<Sink>? logger = null)
+    {
+        _tables = tables;
+        _logger = logger ?? NullLogger<Sink>.Instance;
         _replayingTables = replayingTables;
         _eventStoreName = eventStoreName;
         _namespace = @namespace;
@@ -124,6 +155,8 @@ public partial class Sink : ISink, ICanReconcileIndexes, ISinkCompositeKeyLookup
         _indexes = readModel.Indexes;
         _readModelIdentifier = readModel.Identifier;
         _tableName = readModel.ContainerName.Value;
+        _live = HandleFor(ReadModelTableRole.Live, _tableName);
+        _replay = HandleFor(ReadModelTableRole.Replay, ReadModelTableNames.Replay(_tableName));
         _columns = ProjectedColumns.ForSchema(_schema, _indexes);
         _compositeKey = LegacyCompositeKey.For(_schema, _columns.First(c => c.IsKey));
     }
@@ -141,10 +174,10 @@ public partial class Sink : ISink, ICanReconcileIndexes, ISinkCompositeKeyLookup
     /// Only the pipeline's own read-modify-write cycle follows the replay: <see cref="ApplyChanges(Key, IChangeset{AppendedEvent, ExpandoObject}, EventSequenceNumber, SinkWriteMode)"/>,
     /// the <see cref="FindOrDefault"/> that loads the state a change applies to, and the root key lookup of
     /// <see cref="TryFindRootKeyByChildValue"/>. Queries read one instance through <see cref="FindInPrimaryOrDefault"/>
-    /// and collections through <see cref="QueriedTableNameFor"/>, both from the primary table, so readers keep
+    /// and collections through <see cref="QueriedHandleFor"/>, both from the primary table, so readers keep
     /// seeing the previous state until the replay is promoted.
     /// </remarks>
-    string ActiveTableName => IsReplaying ? ReplayTableNameFor(_tableName) : _tableName;
+    ReadModelTableHandle ActiveHandle => IsReplaying ? _replay : _live;
 
     bool IsReplaying => _replayingTables.IsReplaying(_eventStoreName, _namespace, _tableName);
 
@@ -161,7 +194,7 @@ public partial class Sink : ISink, ICanReconcileIndexes, ISinkCompositeKeyLookup
     public async Task<ExpandoObject?> FindInPrimaryOrDefault(Key key)
     {
         var id = GetIdString(key);
-        await using var scope = await _database.ReadModelTable(_eventStoreName, _namespace, _tableName, _columns);
+        await using var scope = await _tables.Open(_live, _columns);
         var entity = await scope.DbContext.Entries.AsNoTracking().FirstOrDefaultAsync(BuildIdPredicate(id));
         return entity is null ? null : MaterializeInstance(entity);
     }
@@ -339,9 +372,11 @@ public partial class Sink : ISink, ICanReconcileIndexes, ISinkCompositeKeyLookup
     /// <inheritdoc/>
     public async Task BeginReplay(ReplayContext context)
     {
+        await ClaimReplayAttempt(context);
+
         // Replay writes go to a shadow table (replay-{tableName}); the primary table is left
         // untouched so reads from the running system keep observing the previous state until
-        // the swap in EndReplay. PrepareInitialRun routes through ActiveTableName, which now
+        // the swap in EndReplay. PrepareInitialRun routes through ActiveHandle, which now
         // resolves to the replay name.
         await NamePrimaryKeyAfterPrimaryTable();
         _replayingTables.Begin(_eventStoreName, _namespace, _tableName);
@@ -353,6 +388,8 @@ public partial class Sink : ISink, ICanReconcileIndexes, ISinkCompositeKeyLookup
     /// <inheritdoc/>
     public async Task ResumeReplay(ReplayContext context)
     {
+        await ClaimReplayAttempt(context);
+
         // Re-enter replay mode after an interruption without wiping the replay table — it
         // already contains the work the previous run produced before it was paused.
         _replayingTables.Begin(_eventStoreName, _namespace, _tableName);
@@ -388,27 +425,31 @@ public partial class Sink : ISink, ICanReconcileIndexes, ISinkCompositeKeyLookup
     /// <inheritdoc/>
     public async Task Remove(ReadModelContainerName containerName)
     {
-        // Do not migrate the backup being removed: a truncated logical name may now address another
-        // replay's backup. Resolve ownership through the marker table on the primary's connection.
-        await using var scope = await _database.ReadModelTable(_eventStoreName, _namespace, _tableName, _columns);
+        if (containerName.Value == _tableName)
+        {
+            await RemoveLiveTable();
+            return;
+        }
+
+        // Lookup by the complete occurrence and model scope also finds backups of a previous container name.
+        var binding = await _tables.FindBackup(BackupHandleFor(containerName.Value));
+        var backup = binding is null ? BackupHandleFor(containerName.Value) : new ReadModelTableHandle(binding.Owner);
+        await using var scope = await _tables.Open(_live, _columns);
         await scope.DbContext.EnsureReplayPromotions();
         var database = scope.DbContext.Database;
-        var physicalName = PrimaryKeyNames.TableIdentifier(database.GetDatabaseType(), containerName.Value);
         var revertName = containerName.Value;
         await database.CreateExecutionStrategy().ExecuteAsync(async () =>
         {
             await using var transaction = await database.BeginTransactionAsync();
-            var belongsToAnotherReplay = await scope.DbContext.ReplayPromotions
-                .AnyAsync(promotion => promotion.BackupTableName == physicalName && promotion.RevertContainerName != revertName);
-            if (!belongsToAnotherReplay)
+            if (binding?.State == ReadModelTableBindingState.Ready)
             {
-                await ExecuteDdl(scope, BuildDropSql(scope, containerName.Value));
+                await ExecuteDdl(scope, BuildDropSql(scope, binding.PhysicalName));
+                await _tables.Transition(backup, ReadModelTableBindingState.Ready, ReadModelTableBindingState.Removed, scope.DbContext);
             }
 
             // Retention calls Remove for each unique logical revert name, even after the read model's
-            // container changes. Keep completion evidence until then, even if PostgreSQL reused the
-            // physical name for a newer replay. Both operations
-            // are idempotent if a commit acknowledgment is lost and the strategy repeats this body.
+            // container changes. Both operations are idempotent if a commit acknowledgment is lost and the
+            // strategy repeats this body.
             await scope.DbContext.ReplayPromotions.Where(promotion => promotion.RevertContainerName == revertName).ExecuteDeleteAsync();
             await transaction.CommitAsync();
         });
@@ -417,19 +458,80 @@ public partial class Sink : ISink, ICanReconcileIndexes, ISinkCompositeKeyLookup
     /// <inheritdoc/>
     public async Task PrepareInitialRun()
     {
-        await using var scope = await _database.ReadModelTable(_eventStoreName, _namespace, ActiveTableName, _columns);
+        await using var scope = await _tables.Open(ActiveHandle, _columns);
         scope.DbContext.Entries.RemoveRange(scope.DbContext.Entries);
         await scope.DbContext.SaveChangesAsync();
     }
 
-    static string ReplayTableNameFor(string baseName) => $"replay-{baseName}";
+    async Task RemoveLiveTable()
+    {
+        await using var scope = await _tables.Open(_live, _columns, ConnectionPurpose.Schema);
+        var database = scope.DbContext.Database;
+        await database.CreateExecutionStrategy().ExecuteAsync(async () =>
+        {
+            await using var transaction = await database.BeginTransactionAsync();
+            await ExecuteDdl(scope, BuildDropSql(scope, scope.DbContext.TableName));
+            if (!await _tables.Transition(_live, ReadModelTableBindingState.Ready, ReadModelTableBindingState.Reserved, scope.DbContext))
+            {
+                throw new ReadModelTableNameBindingFailure(_live.Owner, scope.DbContext.TableName, "the live binding changed while removing its table");
+            }
+
+            await transaction.CommitAsync();
+        });
+    }
+
+    async Task ClaimReplayAttempt(ReplayContext context)
+    {
+        var binding = await _tables.Reserve(_replay);
+        var attempt = context.RevertContainerName.Value;
+        if (binding.ReplayAttempt != attempt && !await _tables.SetReplayAttempt(_replay, null, attempt))
+        {
+            throw new ReadModelTableNameBindingFailure(_replay.Owner, binding.PhysicalName, "the replay table belongs to another replay attempt");
+        }
+    }
+
+    ReadModelTableHandle HandleFor(ReadModelTableRole role, string logicalName) =>
+        ReadModelTableHandle.For(_eventStoreName.Value, _namespace.Value, _readModelIdentifier.Value, _tableName, role, logicalName);
+
+    ReadModelTableHandle BackupHandleFor(string logicalName) =>
+        _backups.GetOrAdd(logicalName, static (name, sink) => sink.HandleFor(ReadModelTableRole.Backup, name), this);
+
+    async ValueTask<ReadModelTableHandle> QueriedHandleFor(ReadModelContainerName? occurrence)
+    {
+        if (occurrence is null || occurrence.Value == _tableName)
+        {
+            return _live;
+        }
+
+        try
+        {
+            return await _queriedBackups.GetOrAdd(occurrence.Value, static (name, sink) => sink.FindQueriedBackup(name), this);
+        }
+        catch
+        {
+            _queriedBackups.TryRemove(occurrence.Value, out _);
+            throw;
+        }
+    }
+
+    async Task<ReadModelTableHandle> FindQueriedBackup(string logicalName)
+    {
+        var requested = BackupHandleFor(logicalName);
+        var binding = await _tables.FindBackup(requested);
+        if (binding?.State != ReadModelTableBindingState.Ready)
+        {
+            throw new ReadModelTableNameBindingFailure(requested.Owner, logicalName, "the backup occurrence has no Ready binding");
+        }
+
+        return new ReadModelTableHandle(binding.Owner);
+    }
 
     /// <summary>
-    /// Opens a fresh scope routed at <see cref="ActiveTableName"/>. Caller owns the scope and
+    /// Opens a fresh scope routed at <see cref="ActiveHandle"/>. Caller owns the scope and
     /// is responsible for saving and disposing it.
     /// </summary>
     Task<DbContextScope<ReadModelDbContext>> OpenActiveScope() =>
-        _database.ReadModelTable(_eventStoreName, _namespace, ActiveTableName, _columns);
+        _tables.Open(ActiveHandle, _columns);
 
     /// <inheritdoc/>
     public async Task<Option<Key>> TryFindRootKeyByChildValue(PropertyPath childPropertyPath, object childValue)
@@ -484,8 +586,7 @@ public partial class Sink : ISink, ICanReconcileIndexes, ISinkCompositeKeyLookup
     /// <inheritdoc/>
     public async Task<ReadModelInstances> GetInstances(ReadModelContainerName? occurrence, int skip, int take, ReadModelInstanceVisibility visibility)
     {
-        var containerName = QueriedTableNameFor(occurrence);
-        await using var scope = await _database.ReadModelTable(_eventStoreName, _namespace, containerName, _columns);
+        await using var scope = await _tables.Open(await QueriedHandleFor(occurrence), _columns);
         var totalCount = await VisibleInstances(scope.DbContext.Entries.AsNoTracking(), visibility).CountAsync();
         var entries = await ReadOrderedPage(scope.DbContext, skip, take, visibility);
         return new ReadModelInstances(entries.Select(MaterializeInstance), totalCount);
@@ -504,8 +605,7 @@ public partial class Sink : ISink, ICanReconcileIndexes, ISinkCompositeKeyLookup
         // never stays bound to a table a replay promotion has renamed away.
         async Task<IEnumerable<ObservedPage>> ReadPage()
         {
-            var containerName = QueriedTableNameFor(occurrence);
-            await using var scope = await _database.ReadModelTable(_eventStoreName, _namespace, containerName, _columns);
+            await using var scope = await _tables.Open(await QueriedHandleFor(occurrence), _columns);
             var totalCount = await VisibleInstances(scope.DbContext.Entries.AsNoTracking(), visibility).CountAsync();
             var entries = (await ReadOrderedPage(scope.DbContext, skip, take, visibility)).ToArray();
             return [new ObservedPage(totalCount, entries)];

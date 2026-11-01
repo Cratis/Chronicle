@@ -26,6 +26,7 @@ public class SqlServerSinkHarness : ISqlSinkHarness
         new TableMigrator<ReadModelDbContext>(Substitute.For<ILogger<TableMigrator<ReadModelDbContext>>>()),
         Substitute.For<ILogger<ReadModelMigrator>>());
     IReadOnlyList<ProjectedColumn> _columns = [];
+    SinkReadModelTablePlacements? _placements;
 
     /// <inheritdoc/>
     public string ConnectionString { get; private set; } = string.Empty;
@@ -39,6 +40,8 @@ public class SqlServerSinkHarness : ISqlSinkHarness
     /// Gets interceptors for deterministic faults during replay promotion.
     /// </summary>
     public IEnumerable<IInterceptor> Interceptors { get; init; } = [];
+
+    internal IReadModelTables Tables => _placements!.Tables;
 
     /// <summary>
     /// Gets the logger for index diagnostics.
@@ -54,6 +57,8 @@ public class SqlServerSinkHarness : ISqlSinkHarness
             ConnectionString = Fixture!.CreateDatabase().GetAwaiter().GetResult();
         }
 
+        _placements ??= new(builder => builder.UseDatabaseFromConnectionString(ConnectionString).AddConceptAsSupport().AddInterceptors(Interceptors), ConnectionString, _migrator);
+        _placements.Register(definition).GetAwaiter().GetResult();
         var database = Substitute.For<IDatabase>();
         database.ReadModelTable(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<string>(), Arg.Any<IReadOnlyList<ProjectedColumn>>(), Arg.Any<ConnectionPurpose>())
             .Returns(callInfo => OpenTable(callInfo.ArgAt<string>(2)));
@@ -63,6 +68,7 @@ public class SqlServerSinkHarness : ISqlSinkHarness
             "test-namespace",
             definition,
             database,
+            _placements.Tables,
             new ExpandoObjectConverter(new TypeFormats()),
             new ReplayingTables(),
             Logger);

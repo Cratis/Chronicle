@@ -3,16 +3,13 @@
 
 using System.Data.Common;
 using System.Globalization;
-using Cratis.Chronicle.Storage.Sinks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 
-using Contract = Cratis.Chronicle.Storage.Sinks.for_ISink.given;
-
 namespace Cratis.Chronicle.Storage.Sql.Sinks.for_Sink.when_ending_a_replay.given;
 
-public abstract class a_replay_with_a_commit_failure<THarness> : Contract.an_accumulating_read_model<THarness>
-    where THarness : ISinkHarness, new()
+public abstract class a_replay_with_a_commit_failure<THarness> : for_Sink.given.an_accumulating_sql_read_model<THarness>
+    where THarness : ISqlSinkHarness, new()
 {
     protected Exception? _error;
     protected int? _primaryCount;
@@ -33,7 +30,7 @@ public abstract class a_replay_with_a_commit_failure<THarness> : Contract.an_acc
 
     protected abstract THarness CreateHarnessWithInterceptor(IInterceptor interceptor);
 
-    protected override THarness CreateHarness()
+    protected override THarness CreateSqlHarness()
     {
         _failure = new commit_failure(FailAfterCommit, AfterCommit, BeforeRetry);
         return CreateHarnessWithInterceptor(_failure);
@@ -47,9 +44,8 @@ public abstract class a_replay_with_a_commit_failure<THarness> : Contract.an_acc
     {
         _error = await Catch.Exception(() => _sink.EndReplay(ReplayContext()));
         _primaryCount = await CurrentCountOrNull();
-        var revert = await _sink.GetInstances(ReplayContext().RevertContainerName);
-        var previous = revert.Instances.SingleOrDefault();
-        _revertCount = previous is null ? null : Convert.ToInt32(((IDictionary<string, object?>)previous)["count"], CultureInfo.InvariantCulture);
+        var revert = ReplayContext().RevertContainerName.Value;
+        _revertCount = await TableExists(revert) ? await StoredCount(revert) : null;
     }
 
     sealed class commit_failure(bool afterCommit, Func<Task> afterFirstCommit, Func<Task> beforeRetry) : DbTransactionInterceptor

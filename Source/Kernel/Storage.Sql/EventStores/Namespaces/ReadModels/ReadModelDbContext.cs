@@ -80,6 +80,11 @@ public class ReadModelDbContext(
     public DbSet<DynamicReadModelEntity> Entries => Set<DynamicReadModelEntity>(tableName);
 
     /// <summary>
+    /// Gets or sets a value indicating whether the table must already exist: a missing table is an error, never created.
+    /// </summary>
+    internal bool RequireExisting { get; init; }
+
+    /// <summary>
     /// Gets the completion markers sharing this context's promotion transaction.
     /// </summary>
     internal DbSet<ReplayPromotion> ReplayPromotions => Set<ReplayPromotion>();

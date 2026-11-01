@@ -215,9 +215,30 @@ public partial class Database
         Func<DbContextOptions<TDbContext>, TDbContext> create,
         Func<TDbContext, SqlTarget, Task> prepare,
         ConnectionPurpose purpose = ConnectionPurpose.Runtime)
+        where TDbContext : DbContext => await CreateContext(await Target(identity, purpose), identity, key, cache, create, prepare, purpose);
+
+    /// <summary>
+    /// Create a database context for data access at a target that is already resolved.
+    /// </summary>
+    /// <typeparam name="TDbContext">The type of database context.</typeparam>
+    /// <param name="target">The resolved <see cref="SqlTarget"/> for <paramref name="purpose"/>.</param>
+    /// <param name="identity">The <see cref="DatabaseIdentity"/>.</param>
+    /// <param name="key">The cache key for what the context is for.</param>
+    /// <param name="cache">The options cache.</param>
+    /// <param name="create">Creates a context from options.</param>
+    /// <param name="prepare">Creates or migrates what the context needs, given a context and where it connects.</param>
+    /// <param name="purpose">The <see cref="ConnectionPurpose"/> of the context that is returned.</param>
+    /// <returns>The context. The caller owns it.</returns>
+    async Task<TDbContext> CreateContext<TDbContext>(
+        SqlTarget target,
+        DatabaseIdentity identity,
+        string key,
+        ConcurrentDictionary<string, CachedDbContextOptions<TDbContext>> cache,
+        Func<DbContextOptions<TDbContext>, TDbContext> create,
+        Func<TDbContext, SqlTarget, Task> prepare,
+        ConnectionPurpose purpose)
         where TDbContext : DbContext
     {
-        var target = await Target(identity, purpose);
         var context = create(OptionsFor(cache, $"{key}:{purpose}", target));
         try
         {

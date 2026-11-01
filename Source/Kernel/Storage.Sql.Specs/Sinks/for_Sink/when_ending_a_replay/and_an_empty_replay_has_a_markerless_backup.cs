@@ -14,7 +14,7 @@ public class and_an_empty_replay_has_a_markerless_backup : for_Sink.given.an_acc
     {
         await _sink.ApplyChanges(_key, ChangesetSettingCountTo(1), 41UL);
         await _sink.BeginReplay(ReplayContext());
-        await _sink.GetInstances(ReplayContext().RevertContainerName);
+        await CreateLegacyTable(ReplayContext().RevertContainerName.Value);
     }
 
     async Task Because()

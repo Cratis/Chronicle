@@ -252,12 +252,7 @@ public partial class Database(IServiceProvider serviceProvider, IOptions<Chronic
 
     /// <inheritdoc/>
     public Task<DbContextScope<ReadModelDbContext>> ReadModelTable(EventStoreName eventStore, EventStoreNamespaceName @namespace, string containerName, IReadOnlyList<ProjectedColumn> columns, ConnectionPurpose purpose = ConnectionPurpose.Runtime) =>
-        GetOrCreateReadModelDbContext(
-            eventStore,
-            @namespace,
-            containerName,
-            (options, name) => new ReadModelDbContext(options, name, columns, serviceProvider.GetRequiredService<IReadModelMigrator>()),
-            purpose);
+        OpenLiveReadModelTable(eventStore, @namespace, containerName, columns, purpose);
 
     /// <inheritdoc/>
     public void ClearTableMigrationCache(string connectionStringPrefix)
@@ -265,6 +260,8 @@ public partial class Database(IServiceProvider serviceProvider, IOptions<Chronic
         eventSequenceMigrator.ClearMigrationCache(connectionStringPrefix);
         uniqueConstraintMigrator.ClearMigrationCache(connectionStringPrefix);
         readModelMigrator.ClearMigrationCache(connectionStringPrefix);
+        _tables?.Clear();
+        _liveHandles.Clear();
 
         // Also clear the per-context migration cache so the next request re-runs EF Core
         // migrations. SQLite tests delete the database file between test classes; without

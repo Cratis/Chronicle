@@ -170,6 +170,56 @@ internal sealed class DatabaseNameResolver(string connectionString, Func<DbConne
         return _catalog.ConnectionString(physical!);
     }
 
+    /// <summary>
+    /// Finds where a database is without writing a binding, creating a database or touching the binding cache.
+    /// </summary>
+    /// <param name="cluster">The cluster metadata.</param>
+    /// <param name="identity">The identity to locate.</param>
+    /// <returns>The <see cref="DatabaseLocation"/>: a binding or a legacy database is Found; Absent only with established visibility.</returns>
+    internal async Task<DatabaseLocation> Locate(ClusterDbContext cluster, DatabaseIdentity identity)
+    {
+        var supported = _catalog.Provider is Cratis.Arc.EntityFrameworkCore.DatabaseType.PostgreSql or Cratis.Arc.EntityFrameworkCore.DatabaseType.SqlServer;
+        var stage = "binding";
+        string? bound = null;
+        string? seen = null;
+        bool? visible = null;
+        try
+        {
+            DatabaseNameBinding? binding = null;
+            try
+            {
+                binding = await Query(cluster, identity).SingleOrDefaultAsync();
+            }
+            catch (Exception error) when (SqlErrors.IsMissingTable(error))
+            {
+                if (!await SqlErrors.MissingTableIsVisible(cluster))
+                {
+                    throw;
+                }
+
+                // The binding ledger did not exist before database-name binding was introduced.
+            }
+
+            if (binding is not null)
+            {
+                bound = _catalog.ConnectionString(binding.PhysicalName);
+            }
+            else if (supported)
+            {
+                stage = "probe";
+                var probe = await _catalog.Probe(LegacyNames(identity));
+                seen = probe.Seen is null ? null : _catalog.ConnectionString(probe.Seen);
+                visible = probe.Visible;
+            }
+        }
+        catch (Exception error)
+        {
+            return DatabaseLocation.Decide(null, null, null, supported, error, stage);
+        }
+
+        return DatabaseLocation.Decide(bound, seen, visible, supported, null);
+    }
+
     static IQueryable<DatabaseNameBinding> Query(ClusterDbContext context, DatabaseIdentity identity) =>
         context.DatabaseNames.AsNoTracking().Where(row => row.Kind == identity.Kind && row.EventStore == identity.EventStore && row.Namespace == identity.Namespace);
 
@@ -179,6 +229,20 @@ internal sealed class DatabaseNameResolver(string connectionString, Func<DbConne
         SqlException sql => sql.Number is 2601 or 2627,
         _ => false
     };
+
+    IReadOnlyList<string> LegacyNames(DatabaseIdentity identity)
+    {
+        var logical = identity.LogicalName(_catalog.ClusterName);
+        if (DatabaseName.Fits(logical, _catalog.Provider))
+        {
+            return [logical];
+        }
+
+        var hashed = DatabaseName.Hashed(logical, _catalog.Provider);
+        return _catalog.Provider == Cratis.Arc.EntityFrameworkCore.DatabaseType.PostgreSql
+            ? [DatabaseName.Clip(logical, _catalog.Provider, DatabaseName.Limit(_catalog.Provider)), hashed]
+            : [hashed];
+    }
 
     async Task<string?> Insert(ClusterDbContext context, DatabaseIdentity identity, string name, bool hashed)
     {
