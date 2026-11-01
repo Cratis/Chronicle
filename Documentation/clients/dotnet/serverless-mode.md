@@ -124,7 +124,11 @@ An injected connection must also skip keep-alive.
 
 With `Deploy`, another process registered the artifacts when the application was deployed, and the function registers nothing. Set `DeploymentGeneration` to the generation that deployment used; see [explicit artifact registration](./explicit-artifacts.md). With `OnColdStart` the client registers the artifacts itself when it starts cold, which is meant for Development.
 
-`DeploymentGeneration` is only validated in this version: nothing consumes it yet. Enforcement comes with the lazy fingerprint and generation check (#5111).
+In serverless `Deploy` mode, `Serverless:CheckArtifactFingerprint` defaults to `true`. After a store is prepared and connected, a background check reads `GetEventStoreDeployment` and compares its metadata with the fingerprint of the local prepared definitions. It runs once per client and event-store name, across namespaces; it does not block the caller or invocation.
+
+A missing deployment, a different fingerprint, or a mismatch with a nonzero configured `DeploymentGeneration` produces a warning suggesting `RegisterDefinitions`. Zero generation in Development leaves only the fingerprint comparison. Matching metadata is logged at Debug. RPC failures (including an older kernel without the query), incomplete local definitions and fingerprint failures are advisory warnings, not readiness failures. The check never registers artifacts, starts observers or seeds events, and client disposal cancels it. An existing failed preparation verdict remains authoritative.
+
+Set `Cratis:Chronicle:Serverless:CheckArtifactFingerprint` to `false` to avoid both the query and local computation. The switch has no effect outside serverless `Deploy` mode. With automatic discovery disabled, the check only examines artifacts already prepared locally; it does not discover missing artifacts. Non-native registry implementations retain their existing empty fingerprint contribution. This is a one-shot diagnostic, not registration enforcement, a retry loop or a guarantee that deployment remains current. Deployment tooling remains responsible for registering definitions.
 
 ## Unsupported APIs and limitations
 

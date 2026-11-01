@@ -145,6 +145,8 @@ Settings for running the .NET client in a function or another scaled-to-zero hos
 
 Set `Mode` to `Serverless` to skip keep-alive and validate the serverless configuration at start. HTTP delivery is not available yet, so an observer that resolves to it fails at startup. `Delivery:Timeout` (30 seconds by default, must be greater than zero) is the delivery timeout for HTTP reactors and reducers; it has no effect until HTTP delivery ships and does not change the kernel's 60 second webhook timeout. See [Serverless mode](../clients/dotnet/serverless-mode.md).
 
+`Serverless:CheckArtifactFingerprint` defaults to `true`. In serverless `Deploy` mode only, it schedules one background deployment-metadata query and a local prepared-definition fingerprint comparison per client and event-store name, shared across namespaces. It warns about missing or stale deployment metadata without blocking callers, registering artifacts or changing readiness. A nonzero `DeploymentGeneration` is compared too; zero leaves only the fingerprint comparison. Set `Cratis:Chronicle:Serverless:CheckArtifactFingerprint` to `false` to avoid the query and computation. This is a best-effort diagnostic, not enforcement or automatic repair; manual discovery mode checks only current prepared artifacts. Deployment tooling remains responsible for [registering definitions](../clients/dotnet/explicit-artifacts.md), and non-native registries retain their existing empty fingerprint contribution.
+
 ### DefaultSinkTypeId
 
 Controls which sink type is used when registering projections and reducers with the Kernel. Chronicle supports two built-in sink types:
