@@ -920,3 +920,7 @@ jobs:
             -c Release /p:TreatWarningsAsErrors=false /p:DisableDockerBuild=true \
             /p:CratisProxiesOutputPath= \
             /p:ArtifactsPath="${RUNNER_TEMP}/benchmark-artifacts-clustering"
+          dotnet build Benchmarks/Chronicle.Benchmarks.Serialization/Chronicle.Benchmarks.Serialization.csproj \
+            -c Release /p:TreatWarningsAsErrors=false /p:DisableDockerBuild=true \
+            /p:CratisProxiesOutputPath= \
+            /p:ArtifactsPath="${RUNNER_TEMP}/benchmark-artifacts-serialization"

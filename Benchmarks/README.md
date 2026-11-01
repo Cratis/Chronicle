@@ -27,6 +27,17 @@ This will:
 3. Generate results in `results/` directory
 4. Clean up infrastructure automatically
 
+## Appended-event serialization benchmarks
+
+`Chronicle.Benchmarks.Serialization` measures Orleans serialization, deserialization, and round trips
+for producer-normalized small, medium, and large appended-event batches (1 or 100 events). It runs
+in process without Docker; `Allocated` is the primary codec comparison, not client-side allocations
+from the Append benchmarks. Setup warms schema caches outside measurement.
+
+```bash
+dotnet run -c Release --project Chronicle.Benchmarks.Serialization -- --filter '*AppendedEventCodec*' --memory --exporters json markdown
+```
+
 ## Infrastructure
 
 The benchmarks use **TestContainers** to automatically manage the Chronicle infrastructure:
