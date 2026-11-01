@@ -133,6 +133,8 @@ internal static class ServerlessConfigurationValidation
     /// Describes a URL for a failure message. Relative or invalid URLs are not echoed, since their text can hold a secret such as a function key.
     /// Absolute URLs are echoed without query, fragment or user info.
     /// </summary>
+    /// <param name="url">The URL to describe.</param>
+    /// <returns>The description to put in a failure message.</returns>
     static string Describe(Uri url) =>
         url.IsAbsoluteUri ? $"'{url.GetComponents(UriComponents.SchemeAndServer | UriComponents.Path, UriFormat.SafeUnescaped)}'" : "a relative or invalid URL";
 }
