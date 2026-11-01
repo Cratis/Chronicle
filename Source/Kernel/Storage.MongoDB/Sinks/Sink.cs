@@ -116,7 +116,12 @@ public partial class Sink(
     readonly ConcurrentDictionary<string, Key> _prefetchedCacheKeys = new();
     readonly ConcurrentDictionary<string, ExpandoObject> _bulkStateCache = new();
     readonly ConcurrentDictionary<string, Key> _bulkKeysByCacheKey = new();
-    readonly BulkStateChildIndex _bulkChildIndex = new();
+
+    /// <summary>
+    /// Serializes index activation, eviction and reset, not mutations of lent documents.
+    /// Lock order: _bulkLock -> lifecycle -> index lock. Never acquire _bulkLock inside it.
+    /// </summary>
+    readonly object _bulkChildIndexLifecycleLock = new();
 
     /// <summary>
     /// Highest event sequence number known to be applied to each document while a bulk window is open.
@@ -142,6 +147,7 @@ public partial class Sink(
     /// that a queued delete has logically discarded.
     /// </remarks>
     readonly ConcurrentDictionary<string, long> _bulkPendingDeletes = new();
+    volatile BulkStateChildIndex? _bulkChildIndex;
     long _pendingDeleteVersion;
     SinkMultiDocumentWrites? _directWrites;
     int _currentBulkSize;
@@ -199,7 +205,7 @@ public partial class Sink(
         if (!_bulkPendingDeletes.ContainsKey(cacheKey) &&
             _bulkStateCache.TryAdd(cacheKey, expandoObjectConverter.ToExpandoObject(instance, readModel.GetSchemaForLatestGeneration())))
         {
-            _bulkChildIndex.MarkDirty(cacheKey);
+            _bulkChildIndex?.MarkDirty(cacheKey);
             _bulkKeysByCacheKey[cacheKey] = key;
             _prefetchedCacheKeys[cacheKey] = key;
             SeedBulkWatermark(key, instance);
@@ -300,7 +306,7 @@ public partial class Sink(
         var cacheKey = SinkCacheKey.For(converter.ToBsonValue(key));
         if (_bulkStateCache.TryGetValue(cacheKey, out var cachedState))
         {
-            _bulkChildIndex.MarkDirty(cacheKey);
+            _bulkChildIndex?.MarkDirty(cacheKey);
             answer = cachedState;
             return true;
         }
@@ -615,12 +621,15 @@ public partial class Sink(
 
     void EvictBulkCache(string cacheKey)
     {
-        _pagePrefetch.Forget(cacheKey);
-        _prefetchedCacheKeys.TryRemove(cacheKey, out _);
-        _bulkStateCache.TryRemove(cacheKey, out _);
-        _bulkChildIndex.Remove(cacheKey);
-        _bulkKeysByCacheKey.TryRemove(cacheKey, out _);
-        _bulkWatermarks.TryRemove(cacheKey, out _);
+        lock (_bulkChildIndexLifecycleLock)
+        {
+            _pagePrefetch.Forget(cacheKey);
+            _prefetchedCacheKeys.TryRemove(cacheKey, out _);
+            _bulkStateCache.TryRemove(cacheKey, out _);
+            _bulkChildIndex?.Remove(cacheKey);
+            _bulkKeysByCacheKey.TryRemove(cacheKey, out _);
+            _bulkWatermarks.TryRemove(cacheKey, out _);
+        }
     }
 
     void EvictDrainedCache(IEnumerable<BulkBatch> batches)
@@ -770,7 +779,7 @@ public partial class Sink(
         {
             _prefetchedCacheKeys.TryRemove(cacheKey, out _);
             _bulkStateCache[cacheKey] = changeset.CurrentState;
-            _bulkChildIndex.MarkDirty(cacheKey);
+            _bulkChildIndex?.MarkDirty(cacheKey);
             _bulkKeysByCacheKey[cacheKey] = key;
             _bulkPendingDeletes.TryRemove(cacheKey, out _);
             if (eventSequenceNumber.IsActualValue)
@@ -902,13 +911,17 @@ public partial class Sink(
 
     void ClearBulkState()
     {
-        ClearPrefetchPage();
-        _bulkHasGuardedWrites = false;
-        _bulkStateCache.Clear();
-        _bulkChildIndex.Clear();
-        _bulkKeysByCacheKey.Clear();
-        _bulkWatermarks.Clear();
-        _bulkPendingDeletes.Clear();
+        lock (_bulkChildIndexLifecycleLock)
+        {
+            ClearPrefetchPage();
+            _bulkHasGuardedWrites = false;
+            _bulkStateCache.Clear();
+            _bulkChildIndex?.Clear();
+            _bulkChildIndex = null;
+            _bulkKeysByCacheKey.Clear();
+            _bulkWatermarks.Clear();
+            _bulkPendingDeletes.Clear();
+        }
     }
 
     /// <inheritdoc/>
@@ -1102,13 +1115,25 @@ public partial class Sink(
     /// <inheritdoc/>
     public Task Remove(ReadModelContainerName containerName) => collections.Remove(containerName);
 
+    IReadOnlyList<string> FindBulkChildCacheKeys(PropertyPath path, object value)
+    {
+        lock (_bulkChildIndexLifecycleLock)
+        {
+            // Publish before scanning: concurrent writes notify this instance, and marks arriving
+            // after Reindex survive for the next Find. Inactive history comes from the full scan.
+            // Eviction/reset cannot straddle this scan; reset detaches the cleared generation.
+            _bulkChildIndex ??= new BulkStateChildIndex();
+            return _bulkChildIndex.Find(path, value, _bulkStateCache);
+        }
+    }
+
     /// <inheritdoc/>
     public async Task<Option<Key>> TryFindRootKeyByChildValue(PropertyPath childPropertyPath, object childValue)
     {
         await SettleGuardedBulkReads();
         if (_isBulkMode)
         {
-            foreach (var cacheKey in _bulkChildIndex.Find(childPropertyPath, childValue, _bulkStateCache))
+            foreach (var cacheKey in FindBulkChildCacheKeys(childPropertyPath, childValue))
             {
                 if (_bulkKeysByCacheKey.TryGetValue(cacheKey, out var rootKey))
                 {

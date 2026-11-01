@@ -15,6 +15,9 @@ namespace Cratis.Chronicle.Storage.MongoDB.Sinks;
 /// not been told about: whoever inserts, replaces or lends a document calls <see cref="MarkDirty"/>, and the
 /// next <see cref="Find"/> re-indexes it. Every candidate is then confirmed against the current document, so a
 /// stale bucket entry can never produce an answer the scan over the cache would not.
+/// Every new path scans the entire current cache, independently of dirty history. The owner can therefore
+/// omit notifications before activation, but must publish this instance before its first scan so marks
+/// arriving during that scan survive for the next lookup.
 /// </remarks>
 sealed class BulkStateChildIndex
 {

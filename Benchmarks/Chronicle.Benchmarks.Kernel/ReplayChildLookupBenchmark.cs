@@ -47,14 +47,26 @@ public class ReplayChildLookupBenchmark
     /// <summary>
     /// Gets the scenarios.
     /// </summary>
-    public IEnumerable<ReplayChildLookupScenario> Scenarios =>
-    [
-        new("Flat-R1000", 1000, 0, false, 0),
-        new("R250xC20", 250, 20, false, 0),
-        new("R1000xC20", 1000, 20, false, 0),
-        new("R1000xC20-rt250", 1000, 20, false, 250),
-        new("R500xC20-guid-rt250", 500, 20, true, 250)
-    ];
+    public IEnumerable<ReplayChildLookupScenario> Scenarios
+    {
+        get
+        {
+            var flatOnly = Environment.GetEnvironmentVariable("CRATIS_REPLAY_CHILD_LOOKUP_FLAT_ONLY");
+            return flatOnly switch
+            {
+                "1" => [new("Flat-R1000", 1000, 0, false, 0)],
+                null or "" =>
+                [
+                    new("Flat-R1000", 1000, 0, false, 0),
+                    new("R250xC20", 250, 20, false, 0),
+                    new("R1000xC20", 1000, 20, false, 0),
+                    new("R1000xC20-rt250", 1000, 20, false, 250),
+                    new("R500xC20-guid-rt250", 500, 20, true, 250)
+                ],
+                _ => throw new InvalidOperationException("Unsupported CRATIS_REPLAY_CHILD_LOOKUP_FLAT_ONLY value: " + flatOnly)
+            };
+        }
+    }
 
     /// <summary>
     /// Opens a fresh bulk window on a fresh sink, because a replay is stateful.
