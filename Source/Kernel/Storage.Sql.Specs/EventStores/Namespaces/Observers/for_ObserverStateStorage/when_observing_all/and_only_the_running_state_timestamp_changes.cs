@@ -15,7 +15,7 @@ public class and_only_the_running_state_timestamp_changes : given.an_observing_o
         await Subscribe();
         await _storage.SaveRunningStateChangedAt(_observerId, _changedAt, EventSequenceId.Log);
         await WaitForEmission();
-        await Task.Delay(_pollingInterval * 6);
+        await WaitForCompletedScopes(6);
         _timestamps = await _storage.GetRunningStatesChangedAt();
     }
 

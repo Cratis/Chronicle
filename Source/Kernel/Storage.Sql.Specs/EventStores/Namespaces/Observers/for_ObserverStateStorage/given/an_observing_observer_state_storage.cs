@@ -21,6 +21,7 @@ public class an_observing_observer_state_storage : an_observer_state_storage
     protected SemaphoreSlim _emitted;
     protected IDisposable _subscription;
     readonly SemaphoreSlim _connectionGate = new(1, 1);
+    readonly SemaphoreSlim _scopesReleased = new(0);
 
     async Task Establish()
     {
@@ -53,10 +54,31 @@ public class an_observing_observer_state_storage : an_observer_state_storage
     {
         await _connectionGate.WaitAsync();
         await _load.Task;
-        return new DbContextScope<NamespaceDbContext>(CreateContext(), () => _connectionGate.Release());
+        return new DbContextScope<NamespaceDbContext>(CreateContext(), () =>
+        {
+            _connectionGate.Release();
+            _scopesReleased.Release();
+        });
     }
 
     protected Task WaitForEmission() => _emitted.WaitAsync(TimeSpan.FromSeconds(5));
+
+    /// <summary>
+    /// Waits until the given number of database scopes have been completed, each poll completing one scope.
+    /// </summary>
+    /// <param name="count">Number of completed scopes to wait for.</param>
+    /// <returns>Awaitable task.</returns>
+    protected async Task WaitForCompletedScopes(int count)
+    {
+        while (_scopesReleased.Wait(0))
+        {
+        }
+
+        for (var i = 0; i < count; i++)
+        {
+            (await _scopesReleased.WaitAsync(TimeSpan.FromSeconds(5))).ShouldBeTrue();
+        }
+    }
 
     void Destroy() => _subscription?.Dispose();
 }

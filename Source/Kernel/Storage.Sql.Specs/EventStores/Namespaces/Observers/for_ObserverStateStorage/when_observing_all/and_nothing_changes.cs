@@ -8,7 +8,7 @@ public class and_nothing_changes : given.an_observing_observer_state_storage
     async Task Because()
     {
         await Subscribe();
-        await Task.Delay(_pollingInterval * 10);
+        await WaitForCompletedScopes(10);
     }
 
     [Fact] void should_emit_only_the_initial_snapshot() => _emissions.Count.ShouldEqual(1);
