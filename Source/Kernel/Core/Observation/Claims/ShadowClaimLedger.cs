@@ -251,8 +251,13 @@ internal sealed class ShadowClaimLedger
 
     bool RemoveClaim(Key partition)
     {
+        if (!_claims.Remove(partition))
+        {
+            return false;
+        }
+
         _orderedClaims = null;
-        return _claims.Remove(partition);
+        return true;
     }
 
     void AddMissingClaims(ISet<Key> partitions, ClaimHolderKind coveringKind, List<(Key? Partition, ShadowClaimDivergence Divergence)> divergences)
