@@ -20,7 +20,7 @@ public class entering_and_leaving_fallback : given.a_director
         foreach (var roles in new ClusterRoles?[] { new() { Jobs = false }, new() { Jobs = false }, new(), new(), new() { Jobs = false }, new() { Jobs = false }, null, null })
         {
             _siloRoles.GetRoles(_remote).Returns(roles ?? Cratis.Monads.Option<ClusterRoles>.None());
-            await _director.OnAddActivation(new JobWorkerPlacementStrategy(), default, _context);
+            await _director.OnAddActivation(new Cratis.Orleans.Jobs.Placement.JobStepsPlacementStrategy(), default, _context);
         }
     }
 

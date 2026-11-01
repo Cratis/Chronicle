@@ -76,12 +76,35 @@ membership. Use an isolated `Localhost` cluster for development resets. To repla
 
 After a node is lost, observers can lag behind the event log until the observer watchdog catches them up. This applies to every clustering type and is tracked in [Chronicle#5246](https://github.com/Cratis/Chronicle/issues/5246).
 
+## Dedicated job silos
+
+Job step placement is opt-in. Set `clustering.enforceJobsRole` to `true` to prefer compatible
+silos with `clustering.roles.jobs: true`. It defaults to `false`, leaving existing job step
+placement unchanged. Job controllers remain unconstrained.
+
+Enable this setting only after every silo runs a release containing it, and set it identically
+on every silo. While settings differ within that release, placement is mixed but never fails
+because of the setting mismatch: every silo registers the job step placement director.
+
+A dedicated worker can have `jobs: true`, `observers: false` and `eventSequences: false`, while
+other silos have `jobs: false` and host observers and event sequences. If no Jobs silo is alive,
+`clustering.jobsFallback: AnySilo` places steps on any compatible silo. Those silos use their
+[non-Jobs step budget](job-throttling.md). `Wait` is rejected at startup; durable waiting is not
+supported.
+
+If no compatible silo is eligible, placement throws `NoEligibleJobWorker`. When starting a job,
+this makes the job Failed; starting a prepared step makes that step fail. When resuming a job,
+it stays Running and the watchdog retries. This is not a durable wait queue.
+
+Dedicated job silos trade replay locality for isolation until subscriber locality lands.
+
 ## Properties
 
 | Property | Type | Default | Description |
 | --- | --- | --- | --- |
 | type | string | Localhost | Cluster membership. `Localhost` is single node development clustering. `MongoDB` keeps membership in MongoDB storage. `Sql` keeps membership in the SQL Server or PostgreSQL cluster database. Multi-node clustering is explicit opt-in; all nodes must share the cluster database and cluster identity. |
-| jobsFallback | string | AnySilo | Fallback when no Jobs silo is available. Only `AnySilo` is currently supported; `Wait` is rejected at startup until durable waiting is supported. This option does not change placement yet. |
+| enforceJobsRole | boolean | false | Cluster-wide opt-in to placing job steps on Jobs role silos. Keep identical on every silo. Enable only after every silo runs a release containing this setting. Job controllers remain unconstrained. |
+| jobsFallback | string | AnySilo | Fallback when enforcement is enabled and no Jobs silo is available. `AnySilo` selects a compatible silo; `Wait` is rejected at startup until durable waiting is supported. |
 | siloPort | number | 11111 | Port for silo to silo communication. Must differ per node when multiple nodes run on one machine. |
 | gatewayPort | number | 30000 | Port for the silo's client gateway when enabled. Must differ per node when multiple nodes run on one machine. |
 | gatewayEnabled | boolean | true | Set to `false` to disable the Orleans client gateway on this node. HTTP and gRPC remain available. |

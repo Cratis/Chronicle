@@ -32,6 +32,7 @@ using Cratis.Chronicle.Setup.Execution;
 using Cratis.Chronicle.Setup.Serialization;
 using Cratis.Chronicle.Storage;
 using Cratis.Orleans.Jobs;
+using Cratis.Orleans.Jobs.Placement;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
@@ -113,6 +114,7 @@ public static class ChronicleServerSiloBuilderExtensions
         builder.Services.TryAddSingleton<IMaterializedReadModelStore, MaterializedReadModelStore>();
         builder.Services.TryAddSingleton<IEventTypeMigrations, EventTypeMigrations>();
         builder.Services.TryAddSingleton<IObserverSubscriberSelector, ObserverSubscriberSelector>();
+        builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IGrainPropertiesProvider, JobStepPlacementProperties>());
         builder
             .AddChronicleServicesAsInMemory()
             .AddPlacementDirector<ConnectedClientsPlacementStrategy, ConnectedClientsPlacementDirector>()
@@ -121,9 +123,8 @@ public static class ChronicleServerSiloBuilderExtensions
             .AddPlacementDirector<EventSequencePlacementStrategy, EventSequencePlacementDirector>()
             .AddPlacementDirector<ObserverPlacementStrategy, ObserverPlacementDirector>()
 
-            // Register at least one release before applying to job steps: the calling silo resolves placement,
-            // independently of the grain interface versioning configured above.
-            .AddPlacementDirector<JobWorkerPlacementStrategy, JobWorkerPlacementDirector>()
+            // Every silo must be able to resolve placement, even while opt-in settings differ.
+            .AddPlacementDirector<JobStepsPlacementStrategy, JobWorkerPlacementDirector>()
             .AddBroadcastChannel(WellKnownBroadcastChannelNames.NamespaceAdded, _ => _.FireAndForgetDelivery = true)
             .AddBroadcastChannel(WellKnownBroadcastChannelNames.ConstraintsChanged, _ => _.FireAndForgetDelivery = true)
             .AddReplayStateManagement()

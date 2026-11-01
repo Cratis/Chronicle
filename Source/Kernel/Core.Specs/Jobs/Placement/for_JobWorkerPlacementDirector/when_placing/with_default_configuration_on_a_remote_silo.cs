@@ -14,7 +14,7 @@ public class with_default_configuration_on_a_remote_silo : given.a_director
         _context.GetCompatibleSilos(Arg.Any<PlacementTarget>()).Returns([_remote]);
     }
 
-    async Task Because() => _selected = await _director.OnAddActivation(new JobWorkerPlacementStrategy(), default, _context);
+    async Task Because() => _selected = await _director.OnAddActivation(new Cratis.Orleans.Jobs.Placement.JobStepsPlacementStrategy(), default, _context);
 
     [Fact] void should_place_on_an_eligible_silo() => _selected.ShouldEqual(_remote);
 }

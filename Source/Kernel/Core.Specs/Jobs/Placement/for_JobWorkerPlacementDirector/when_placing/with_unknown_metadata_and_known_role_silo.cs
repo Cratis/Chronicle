@@ -13,7 +13,7 @@ public class with_unknown_metadata_and_known_role_silo : given.a_director
         _siloRoles.GetRoles(_remote).Returns(new ClusterRoles());
     }
 
-    async Task Because() => _selected = await _director.OnAddActivation(new JobWorkerPlacementStrategy(), default, _context);
+    async Task Because() => _selected = await _director.OnAddActivation(new Cratis.Orleans.Jobs.Placement.JobStepsPlacementStrategy(), default, _context);
 
     [Fact] void should_place_on_an_eligible_silo() => _selected.ShouldEqual(_remote);
 }

@@ -15,7 +15,7 @@ public class without_jobs_silos_and_any_silo_fallback : given.a_director
         _context.GetCompatibleSilos(Arg.Any<PlacementTarget>()).Returns([_local, _remote]);
     }
 
-    async Task Because() => _selected = await _director.OnAddActivation(new JobWorkerPlacementStrategy(), default, _context);
+    async Task Because() => _selected = await _director.OnAddActivation(new Cratis.Orleans.Jobs.Placement.JobStepsPlacementStrategy(), default, _context);
 
     [Fact] void should_place_on_an_eligible_silo() => new[] { _local, _remote }.ShouldContain(_selected);
 }
