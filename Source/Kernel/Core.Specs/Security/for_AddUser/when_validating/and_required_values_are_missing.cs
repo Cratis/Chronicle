@@ -13,6 +13,7 @@ public class and_required_values_are_missing : Specification
 
     async Task Because() => _result = await _scenario.Validate(new AddUser(Guid.Empty, string.Empty, string.Empty, string.Empty));
 
+    [Fact] void should_authorize_the_administrator() => _result.ShouldBeAuthorized();
     [Fact] void should_not_be_successful() => _result.ShouldNotBeSuccessful();
     [Fact] void should_have_validation_errors() => _result.ShouldHaveValidationErrors();
 }

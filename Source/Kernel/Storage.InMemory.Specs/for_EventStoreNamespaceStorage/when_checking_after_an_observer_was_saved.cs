@@ -12,7 +12,7 @@ public class when_checking_after_an_observer_was_saved : given.a_namespace_stora
 
     async Task Because()
     {
-        await _storage.Observers.Save(ObserverState.Empty with { Identifier = new ObserverId("some-observer") });
+        await _storage.Observers.Save(ObserverState.Empty with { Identifier = new ObserverId("some-observer") }, Concepts.EventSequences.EventSequenceId.Log);
         _hasData = await _storage.HasData();
     }
 

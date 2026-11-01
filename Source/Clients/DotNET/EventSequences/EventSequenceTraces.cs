@@ -18,8 +18,7 @@ internal static partial class EventSequenceTraces
         string eventStoreName,
         string namespaceName,
         string eventSequenceId,
-        string eventSourceType,
-        string eventSourceId);
+        string eventSourceType);
 
     [Span("client.event_sequence.append_many", ActivityKind.Client)]
     internal static partial IActivityScope<EventSequence> AppendMany(

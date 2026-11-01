@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.ComponentModel.DataAnnotations;
+using Cratis.Chronicle.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -49,7 +50,7 @@ public class ChronicleOptions : IValidatableObject
     /// Gets the dedicated port to expose the health endpoint on, or <see langword="null"/> when it is served on the main <see cref="Port"/>.
     /// </summary>
     /// <remarks>
-    /// Resolves to <see cref="Configuration.Health.Port"/> only when it is set and differs from the main
+    /// Resolves to <see cref="Health.Port"/> only when it is set and differs from the main
     /// <see cref="Port"/>. A value equal to the main port would collide with the main listener, so it falls
     /// back to serving the health endpoint on the main port.
     /// </remarks>
@@ -106,6 +107,11 @@ public class ChronicleOptions : IValidatableObject
     public Compliance Compliance { get; init; } = new Compliance();
 
     /// <summary>
+    /// Gets the telemetry configuration.
+    /// </summary>
+    public Telemetry Telemetry { get; init; } = new();
+
+    /// <summary>
     /// Gets the observers configuration.
     /// </summary>
     public Observers Observers { get; init; } = new Observers();
@@ -134,6 +140,11 @@ public class ChronicleOptions : IValidatableObject
     /// Gets the webhooks configuration.
     /// </summary>
     public Webhooks Webhooks { get; init; } = new Webhooks();
+
+    /// <summary>
+    /// Gets the HTTP capture source destination validation configuration.
+    /// </summary>
+    public ExternalServices ExternalServices { get; init; } = new();
 
     /// <summary>
     /// Gets the clustering configuration.
@@ -221,6 +232,14 @@ public class ChronicleOptions : IValidatableObject
     /// <inheritdoc/>
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
+        if (Telemetry.EventSourceIdTracing == EventSourceIdTracing.Hashed &&
+            (string.IsNullOrEmpty(Telemetry.EventSourceIdHashKey) || Telemetry.EventSourceIdHashKey.Length < IdentifierHasher.MinimumKeyLength))
+        {
+            yield return new ValidationResult(
+                "Telemetry:EventSourceIdHashKey must be at least 32 characters when Hashed is used",
+                [$"{nameof(Telemetry)}.{nameof(Telemetry.EventSourceIdHashKey)}"]);
+        }
+
         if (ReadModels.MaxBatchSize <= 0)
         {
             yield return new ValidationResult(

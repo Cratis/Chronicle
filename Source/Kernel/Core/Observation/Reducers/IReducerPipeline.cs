@@ -53,6 +53,6 @@ public interface IReducerPipeline
     /// </summary>
     /// <param name="context">The <see cref="ReducerContext"/> being reduced.</param>
     /// <param name="reducer"><see cref="ReducerDelegate"/> delegate.</param>
-    /// <returns>Awaitable task.</returns>
-    Task Reduce(ReducerContext context, ReducerDelegate reducer);
+    /// <returns>The committed change to notify watchers of, or null if there was no change.</returns>
+    Task<ReadModelChangeNotification?> Reduce(ReducerContext context, ReducerDelegate reducer);
 }

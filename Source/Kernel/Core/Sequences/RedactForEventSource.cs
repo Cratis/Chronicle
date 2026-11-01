@@ -21,7 +21,7 @@ namespace Cratis.Chronicle.Sequences;
 /// <param name="Reason">Why the events are being redacted.</param>
 /// <param name="EventTypes">The event types to redact. Empty redacts every type for the event source.</param>
 /// <param name="Causation">Optional caller-supplied causation chain. Defaults to the request causation when not provided.</param>
-/// <param name="CausedBy">Optional caller-supplied identity. Defaults to the current principal when not provided.</param>
+/// <param name="CausedBy">Optional identity for application callers. Chronicle users are always recorded as the current principal.</param>
 [Command]
 [BelongsTo(WellKnownServices.EventSequences)]
 public record RedactForEventSource(
@@ -62,6 +62,6 @@ public record RedactForEventSource(
                 Reason),
             correlationId: correlationId,
             causation: Causation?.ToChronicle() ?? causation.GetCurrentChain(),
-            causedBy: CausedBy?.ToChronicle() ?? principalAccessor.Current.ToIdentity());
+            causedBy: principalAccessor.Current.ResolveCausedBy(CausedBy));
     }
 }

@@ -33,6 +33,15 @@ choose reducer code when transitions are clearer; a self-reducing model is the d
 reducers. **[Choose how to build a read model](../projections/choosing-a-read-model-style.mdx)** gives you
 one decision path with scenarios, the same view four ways, and the cost of switching later.
 
+## When an instance becomes visible
+
+A projection can retain an internal root placeholder while children or joined data arrive before
+its creating event. Public keyed reads, collection pages (including their total count), all-instance
+reads, previews, and live observations exclude roots explicitly marked `__initialized: false`.
+Roots of projections with only child clauses are never hidden.
+The placeholder stays available to the projection, so its earlier data is retained when the root
+is created. Initialized roots and older stored roots without the marker remain visible.
+
 ## What to read next
 
 | Topic | What it covers |

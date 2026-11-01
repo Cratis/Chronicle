@@ -3,7 +3,6 @@
 
 using System.Xml.Linq;
 using Cratis.Chronicle.Security;
-using Cratis.Chronicle.Server.Authentication.OpenIddict;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.DataProtection.KeyManagement;
 using Microsoft.AspNetCore.DataProtection.Repositories;
@@ -12,12 +11,13 @@ using Microsoft.Extensions.Options;
 
 namespace Cratis.Chronicle.Server.Authentication.for_ServiceCollectionExtensions.given;
 
-public class chronicle_authentication_services : Cratis.Chronicle.Server.for_CertificateLoader.given.a_certificate_file
+public class chronicle_authentication_services : for_CertificateLoader.given.a_certificate_file
 {
     protected ChronicleAuthenticationServices BuildServices(
         SharedDataProtectionKeys? sharedKeys = null,
         bool authenticationEnabled = false,
-        bool useInternalAuthority = false)
+        bool useInternalAuthority = false,
+        Action<IServiceCollection>? configureServices = null)
     {
         sharedKeys ??= new();
         var dataProtectionKeys = sharedKeys.CreateGrain();
@@ -33,20 +33,22 @@ public class chronicle_authentication_services : Cratis.Chronicle.Server.for_Cer
         var services = new ServiceCollection();
         services.AddLogging();
         services.AddSingleton(grainFactory);
-        services.AddChronicleAuthentication(new Cratis.Chronicle.Configuration.ChronicleOptions
+        services.AddSingleton(Substitute.For<Storage.ISystemStorage>());
+        services.AddChronicleAuthentication(new Configuration.ChronicleOptions
         {
-            Storage = new() { Type = Cratis.Chronicle.Storage.StorageType.InMemory },
+            Storage = new() { Type = Storage.StorageType.InMemory },
             EncryptionCertificate = new()
             {
                 CertificatePath = authenticationEnabled && useInternalAuthority ? _certificatePath : null
             },
-            Authentication = new Cratis.Chronicle.Configuration.Authentication
+            Authentication = new Configuration.Authentication
             {
                 Enabled = authenticationEnabled,
                 Authority = authenticationEnabled && !useInternalAuthority ? "https://identity.example" : null
             }
         });
 
+        configureServices?.Invoke(services);
         var serviceProvider = services.BuildServiceProvider();
 
         return new(
@@ -57,7 +59,8 @@ public class chronicle_authentication_services : Cratis.Chronicle.Server.for_Cer
             serviceProvider.GetRequiredService<GrainBasedXmlRepository>(),
             serviceProvider.GetRequiredService<IXmlRepository>(),
             serviceProvider.GetRequiredService<IOptions<KeyManagementOptions>>(),
-            serviceProvider.GetRequiredService<IDataProtectionProvider>());
+            serviceProvider.GetRequiredService<IDataProtectionProvider>(),
+            services);
     }
 
     protected sealed record ChronicleAuthenticationServices(
@@ -68,7 +71,8 @@ public class chronicle_authentication_services : Cratis.Chronicle.Server.for_Cer
         GrainBasedXmlRepository ConcreteRepository,
         IXmlRepository XmlRepository,
         IOptions<KeyManagementOptions> KeyManagementOptions,
-        IDataProtectionProvider DataProtectionProvider);
+        IDataProtectionProvider DataProtectionProvider,
+        IServiceCollection Services);
 
     protected sealed class SharedDataProtectionKeys
     {

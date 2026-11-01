@@ -34,14 +34,13 @@ public abstract class a_legacy_server_table : Specification
         var builder = new DbContextOptionsBuilder<UniqueConstraintDbContext>();
         if (sqlServer)
         {
-            builder.UseSqlServer(connectionString);
+            builder.UseSqlServer(connectionString).WithoutServiceProviderCaching();
         }
         else
         {
-            builder.UseNpgsql(connectionString);
+            builder = new(SpecDbContextOptions.Kernel<UniqueConstraintDbContext>(connectionString));
         }
 
-        builder.WithoutServiceProviderCaching();
         _options = builder.Options;
         _context = new(_options, _tableName, _migrator);
         await _context.Database.OpenConnectionAsync();

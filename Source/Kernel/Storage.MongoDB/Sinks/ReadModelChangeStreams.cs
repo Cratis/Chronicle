@@ -4,6 +4,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Reactive.Linq;
 using System.Threading.Channels;
+using Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
 using Cratis.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using MongoDB.Bson;
@@ -151,7 +152,7 @@ public class ReadModelChangeStreams(ILogger<ReadModelChangeStreams> logger, Time
             {
                 stream = new ContainerChangeStream(key, database, logger, _timeProvider);
                 _streams[key] = stream;
-                _ = stream.Start();
+                _ = DetachedExecution.Run(stream.Start);
             }
 
             stream.Add(subscriber);

@@ -3,6 +3,7 @@
 
 using Cratis.Arc.Commands;
 using Cratis.Chronicle.Concepts.Observation.Webhooks;
+using Cratis.Chronicle.Sequences;
 using FluentValidation;
 
 namespace Cratis.Chronicle.Observation.Webhooks;
@@ -18,6 +19,7 @@ internal class RemoveWebhooksValidator : CommandValidator<RemoveWebhooks>
     public RemoveWebhooksValidator()
     {
         RuleFor(_ => _.EventStore).NotEmpty().WithMessage("Event store name is required.");
+        RuleFor(_ => _.EventStore).NotSystemEventStore();
         RuleFor(_ => _.Webhooks).NotEmpty().WithMessage("At least one webhook is required.");
 
         // RuleForEach's own NotEmpty() checks the element reference against null/default, not the wrapped

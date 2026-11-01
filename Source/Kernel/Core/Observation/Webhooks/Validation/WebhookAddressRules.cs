@@ -23,6 +23,24 @@ internal static class WebhookAddressRules
     }
 
     /// <summary>
+    /// Determines whether an address belongs to a local range.
+    /// </summary>
+    /// <param name="address">The resolved address.</param>
+    /// <returns>Whether the address must be blocked in local-address mode.</returns>
+    internal static bool IsLocal(IPAddress address)
+    {
+        address = Normalize(address);
+        if (IPAddress.IsLoopback(address)) return true;
+        if (address.AddressFamily == AddressFamily.InterNetworkV6)
+        {
+            return address.Equals(IPAddress.IPv6Any) || address.IsIPv6LinkLocal;
+        }
+
+        var bytes = address.GetAddressBytes();
+        return bytes[0] == 0 || (bytes[0] == 169 && bytes[1] == 254);
+    }
+
+    /// <summary>
     /// Determines whether an address is private, reserved, or special-purpose.
     /// </summary>
     /// <param name="address">The resolved address.</param>

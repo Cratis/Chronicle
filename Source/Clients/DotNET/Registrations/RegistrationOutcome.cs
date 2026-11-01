@@ -80,6 +80,11 @@ public record RegistrationOutcome(bool HasRun, IImmutableList<ArtifactRegistrati
     public bool IsRegistering { get; init; }
 
     /// <summary>
+    /// Gets the fingerprint set by <see cref="IEventStore.RegisterDefinitions"/>; <see cref="ArtifactFingerprint.NotSet"/> after <see cref="IEventStore.RegisterAll"/>.
+    /// </summary>
+    public ArtifactFingerprint Fingerprint { get; init; } = ArtifactFingerprint.NotSet;
+
+    /// <summary>
     /// Gets the likely identity changes detected before this registration run, retained across background retries.
     /// These are heuristic findings, not per-artifact registration failures.
     /// Only reactor and event type findings prevent registration under the Fail policy.
@@ -106,6 +111,7 @@ public record RegistrationOutcome(bool HasRun, IImmutableList<ArtifactRegistrati
         other is not null &&
         HasRun == other.HasRun &&
         IsRegistering == other.IsRegistering &&
+        Equals(Fingerprint, other.Fingerprint) &&
         Equals(Failure, other.Failure) &&
         Artifacts.SequenceEqual(other.Artifacts) &&
         IdentityDrift.SequenceEqual(other.IdentityDrift);
@@ -116,6 +122,7 @@ public record RegistrationOutcome(bool HasRun, IImmutableList<ArtifactRegistrati
         var hashCode = default(HashCode);
         hashCode.Add(HasRun);
         hashCode.Add(IsRegistering);
+        hashCode.Add(Fingerprint);
         hashCode.Add(Failure);
         foreach (var artifact in Artifacts)
         {

@@ -23,6 +23,9 @@ public class SystemStorage(IDatabase database) : ISystemStorage
     public IUserStorage Users { get; } = new UserStorage(database);
 
     /// <inheritdoc/>
+    public IAdministratorStorage Administrators { get; } = new AdministratorStorage(database);
+
+    /// <inheritdoc/>
     public IApplicationStorage Applications { get; } = new ApplicationStorage(database);
 
     /// <inheritdoc/>

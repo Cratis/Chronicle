@@ -33,7 +33,8 @@ public static class EventSequenceStateConverter
             ConstraintIndexCatchUpBelow = state.ConstraintIndexCatchUpBelow?.Value,
             ConstraintIndexCatchUpRefusing = state.ConstraintIndexCatchUpRefusing?.Any() == true
                 ? JsonSerializer.Serialize(state.ConstraintIndexCatchUpRefusing.Select(_ => _.Value).ToArray())
-                : null
+                : null,
+            MutationEpoch = state.MutationEpoch.Value
         };
     }
 
@@ -61,7 +62,8 @@ public static class EventSequenceStateConverter
             ConstraintIndexCatchUpBelow = entry.ConstraintIndexCatchUpBelow is { } boundary ? new EventSequenceNumber(boundary) : null,
             ConstraintIndexCatchUpRefusing = entry.ConstraintIndexCatchUpRefusing is { } refusing
                 ? JsonSerializer.Deserialize<string[]>(refusing)?.Select(_ => new Concepts.Events.Constraints.ConstraintName(_)).ToArray()
-                : null
+                : null,
+            MutationEpoch = entry.MutationEpoch is { } epoch ? new EventSequenceMutationEpoch(epoch) : EventSequenceMutationEpoch.Initial
         };
     }
 

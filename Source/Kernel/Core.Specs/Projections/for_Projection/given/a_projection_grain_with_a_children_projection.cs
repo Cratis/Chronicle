@@ -39,6 +39,7 @@ public class a_projection_grain_with_a_children_projection : Specification
     protected const string ReadModel = "Comments.Associations";
 
     protected static readonly EventType _associated = new("CommentAssociated", EventTypeGeneration.First);
+    protected static readonly EventType _removed = new("CommentRemoved", EventTypeGeneration.First);
 
     protected Projection _grain;
     protected TestKitSilo _silo;
@@ -127,6 +128,11 @@ public class a_projection_grain_with_a_children_projection : Specification
             ? children.Cast<IDictionary<string, object?>>()
             : [];
 
+    protected static AppendedEvent Removed(EventSourceId eventSourceId, ulong sequenceNumber, string comment) =>
+        new(
+            EventContext.EmptyWithEventSourceId(eventSourceId) with { EventType = _removed, SequenceNumber = sequenceNumber },
+            new { comment }.AsExpandoObject());
+
     protected virtual PropertyPath ChildIdentity => "id";
 
     ProjectionDefinition CreateDefinition() => new(
@@ -150,7 +156,10 @@ public class a_projection_grain_with_a_children_projection : Specification
                 new Dictionary<EventType, JoinDefinition>(),
                 new Dictionary<PropertyPath, ChildrenDefinition>(),
                 new FromEveryDefinition(new Dictionary<PropertyPath, string>(), false),
-                new Dictionary<EventType, RemovedWithDefinition>(),
+                new Dictionary<EventType, RemovedWithDefinition>
+                {
+                    [_removed] = new("comment", WellKnownExpressions.EventSourceId)
+                },
                 new Dictionary<EventType, RemovedWithJoinDefinition>(),
                 AutoMap: AutoMap.Enabled)
         },

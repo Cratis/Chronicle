@@ -1,9 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Arc.EntityFrameworkCore.Concepts;
 using Cratis.Chronicle.Storage.Sql.Sinks;
-using Microsoft.EntityFrameworkCore;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.Alerts;
 
@@ -25,9 +23,8 @@ public class PostgreSqlAlertIncidentsHarness : SqlAlertIncidentsHarness
     }
 
     /// <inheritdoc/>
-    protected override NamespaceDbContext Context() => new(new DbContextOptionsBuilder<NamespaceDbContext>()
-        .UseNpgsql(_connectionString).AddConceptAsSupport().WithoutServiceProviderCaching().Options);
+    protected override NamespaceDbContext Context() => new(SpecDbContextOptions.Kernel<NamespaceDbContext>(_connectionString));
 
     /// <inheritdoc/>
-    protected override Task<string> ConnectionString() => Fixture.CreateDatabase();
+    protected override Task<string> ConnectionString() => Fixture.CreateMigratedDatabase<NamespaceDbContext>();
 }
