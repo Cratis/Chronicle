@@ -47,6 +47,7 @@ public sealed class ContainerStartup(
         var attempts = new List<ContainerStartupAttempt>();
         for (var number = 1; ; number++)
         {
+            ct.ThrowIfCancellationRequested();
             var container = build();
             built(container);
             try
@@ -96,6 +97,8 @@ public sealed class ContainerStartup(
                 {
                     attempt = attempt with { LogTail = $"{attempt.LogTail}{Environment.NewLine}<dispose unavailable: {disposeFailure.GetType().Name}>" };
                 }
+
+                ct.ThrowIfCancellationRequested();
                 attempts.Add(attempt);
 
                 if (number == MaxAttempts)

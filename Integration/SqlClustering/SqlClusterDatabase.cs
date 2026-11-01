@@ -29,7 +29,17 @@ public sealed class SqlClusterDatabase(bool postgres, INetwork network) : IAsync
             return;
         }
 
-        _container = await ContainerStartup.ForDocker(() => Build(postgres, network)).Start(c => _container = c, null, token);
+        var firstAttempt = true;
+        _container = await ContainerStartup.ForDocker(() =>
+        {
+            if (firstAttempt)
+            {
+                firstAttempt = false;
+                return _container;
+            }
+
+            return Build(postgres, network);
+        }).Start(c => _container = c, null, token);
     }
 
     public async Task<IReadOnlyList<MembershipEntry>> Membership(string clusterId, CancellationToken token)
