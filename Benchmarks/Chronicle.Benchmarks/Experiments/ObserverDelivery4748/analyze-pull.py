@@ -119,7 +119,7 @@ def map_results(directory, through):
             when = record_time(row)
             if signature(row) != key or row.get("deliberateDrop"):
                 continue
-            if when and ((previous and when <= previous) or when > end):
+            if when and ((previous and when <= previous) or when > end + dt.timedelta(seconds=2)):
                 continue
             candidates.append(offset)
         if not candidates:
