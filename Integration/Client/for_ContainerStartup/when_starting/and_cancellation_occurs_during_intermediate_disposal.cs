@@ -2,6 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using NSubstitute;
+using NSubstitute.Core;
+using NSubstitute.Extensions;
 
 namespace Cratis.Chronicle.Integration.for_ContainerStartup.when_starting;
 
@@ -13,11 +15,7 @@ public class and_cancellation_occurs_during_intermediate_disposal : given.a_cont
         Fail(_containers[0], Crash(_containers[0]));
         _inspect = (_, _) => Task.FromResult<ContainerExit?>(new(1, false, ""));
 #pragma warning disable CA2012 // Configures a substitute; no real ValueTask is being consumed.
-        _containers[0].DisposeAsync().Returns(_ =>
-        {
-            cancellation.Cancel();
-            return ValueTask.CompletedTask;
-        });
+        _containers[0].Configure().DisposeAsync().Returns(new Func<CallInfo, ValueTask>(async _ => await cancellation.CancelAsync()));
 #pragma warning restore CA2012
         _failure = await Catch.Exception(() => Start(cancellation.Token));
     }
