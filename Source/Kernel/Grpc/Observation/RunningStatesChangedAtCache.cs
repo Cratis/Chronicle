@@ -53,6 +53,17 @@ internal sealed class RunningStatesChangedAtCache(IObserverStateStorage storage)
         }
 
         _changedAt = await storage.GetRunningStatesChangedAt();
+        if (previous is null)
+        {
+            // A subscription can start between the state save and its first timestamp write.
+            foreach (var (id, runningState) in _runningStates)
+            {
+                if (runningState != ObserverRunningState.Unknown && !_changedAt.ContainsKey(id))
+                {
+                    _unconfirmed[id] = (null, FollowUpRefreshes + 1);
+                }
+            }
+        }
         foreach (var (id, (before, remaining)) in _unconfirmed.ToArray())
         {
             DateTimeOffset? current = _changedAt.TryGetValue(id, out var timestamp) ? timestamp : null;
