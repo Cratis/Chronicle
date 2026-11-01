@@ -36,7 +36,7 @@ public abstract partial class ObserverRegistrationsStorageContract : Specificati
         var filters = new ObserverFilters(["paid"], "order", "public");
         ObserverRegistrationDefinition definition = reducer
             ? new ReducerRegistrationDefinition(new ReducerDefinition("observer", sequence, events, "orders", true, ["sales"], filters, "fingerprint") { GenerationDelivery = EventGenerationDelivery.Pinned })
-            : new ReactorRegistrationDefinition(new ReactorDefinition("observer", "client", sequence, events, false, ["sales"], filters) { GenerationDelivery = EventGenerationDelivery.Pinned, StartAtTail = true });
+            : new ReactorRegistrationDefinition(new ReactorDefinition("observer", ReactorOwner.Client, sequence, events, false, ["sales"], filters) { GenerationDelivery = EventGenerationDelivery.Pinned, StartAtTail = true });
         return new("observer", sequence, reducer ? ObserverType.Reducer : ObserverType.Reactor, definition)
         {
             Owner = new("program"),

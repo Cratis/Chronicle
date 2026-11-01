@@ -30,8 +30,8 @@ public class v19_113_0 : Migration
                 Data = table.StringColumn(migrationBuilder, nullable: false)
             },
             constraints: table => table.PrimaryKey("PK_ObserverRegistrations", row => row.Id));
-        migrationBuilder.CreateIndex("IX_ObserverRegistrations_Owner", WellKnownTableNames.ObserverRegistrations, new[] { "Kind", "Owner" });
-        migrationBuilder.CreateIndex("IX_ObserverRegistrations_IsActive", WellKnownTableNames.ObserverRegistrations, new[] { "Kind", "IsActive" });
+        migrationBuilder.CreateIndex("IX_ObserverRegistrations_Owner", WellKnownTableNames.ObserverRegistrations, ["Kind", "Owner"]);
+        migrationBuilder.CreateIndex("IX_ObserverRegistrations_IsActive", WellKnownTableNames.ObserverRegistrations, ["Kind", "IsActive"]);
     }
 
     /// <inheritdoc/>
