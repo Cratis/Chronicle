@@ -24,6 +24,8 @@
     <ProjectReference Include="../../Source/Clients/DotNET/DotNET.csproj" />
     <ProjectReference Include="../../Source/Clients/Connections/Connections.csproj" />
     <ProjectReference Include="../../Source/Infrastructure/Infrastructure.csproj" />
+    <!-- Referenced directly for in-process storage micro-benchmarks such as SinkCacheKeyBenchmark, which must keep
+         compiling when BenchmarkDotNet drops the server reference. -->
     <ProjectReference Include="../../Source/Kernel/Storage.MongoDB/Storage.MongoDB.csproj" />
     <ProjectReference Include="../../Source/Kernel/Server/Server.csproj" Condition="'$(ArtifactsPath)' == ''" />
   </ItemGroup>

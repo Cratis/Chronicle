@@ -12,17 +12,66 @@ namespace Cratis.Chronicle.Storage.MongoDB.Sinks;
 /// </summary>
 internal static class SinkCacheKey
 {
+    const string DecimalIdentityMarker = "$sinkDecimalIdentity";
+
     /// <summary>
-    /// Encodes a BSON key with scale-independent decimal parts and type-preserving structure.
+    /// Creates the cache identity of a BSON key. Keys without a Decimal128 keep the BSON value's string form;
+    /// keys containing one get a scale-independent, type-preserving encoding.
     /// </summary>
     /// <param name="value">The original BSON key.</param>
     /// <returns>The cache identity.</returns>
-    public static string For(BsonValue value) => Convert.ToBase64String(new BsonDocument("key", Normalize(value)).ToBson());
+    public static string For(BsonValue value) => ContainsDecimal(value)
+        ? Convert.ToBase64String(new BsonDocument("key", NormalizeDecimals(value)).ToBson())
+        : value.ToString()!;
 
-    static BsonValue Normalize(BsonValue value) => value switch
+    /// <summary>
+    /// Gets an equality identity for grouping and matching keys: the BSON value itself when it contains no Decimal128
+    /// (no allocation, same comparison as before), otherwise a marker document holding its <see cref="For"/> string.
+    /// The marker name starts with '$', which MongoDB does not allow in an _id document, so it cannot equal a stored key.
+    /// </summary>
+    /// <param name="value">The original BSON key.</param>
+    /// <returns>The identity value.</returns>
+    public static BsonValue Identity(BsonValue value) => ContainsDecimal(value) ? new BsonDocument(DecimalIdentityMarker, For(value)) : value;
+
+    /// <summary>
+    /// Gets the cache identity string for a value produced by <see cref="Identity"/>.
+    /// </summary>
+    /// <param name="identity">The identity value.</param>
+    /// <returns>The cache identity, equal to <see cref="For"/> of the original key.</returns>
+    public static string ForIdentity(BsonValue identity) =>
+        identity is BsonDocument { ElementCount: 1 } document && document.GetElement(0).Name == DecimalIdentityMarker
+            ? document[0].AsString
+            : identity.ToString()!;
+
+    static bool ContainsDecimal(BsonValue value)
     {
-        BsonDocument document => new BsonDocument(document.Select(element => new BsonElement(element.Name, Normalize(element.Value)))),
-        BsonArray array => new BsonArray(array.Select(Normalize)),
+        switch (value)
+        {
+            case BsonDecimal128:
+                return true;
+            case BsonDocument document:
+                for (var i = 0; i < document.ElementCount; i++)
+                {
+                    if (ContainsDecimal(document.GetElement(i).Value)) return true;
+                }
+
+                return false;
+            case BsonArray array:
+                for (var i = 0; i < array.Count; i++)
+                {
+                    if (ContainsDecimal(array[i])) return true;
+                }
+
+                return false;
+            default:
+                return false;
+        }
+    }
+
+    static BsonValue NormalizeDecimals(BsonValue value) => value switch
+    {
+        BsonDocument document => new BsonDocument(document.Select(element => new BsonElement(element.Name, NormalizeDecimals(element.Value)))),
+        BsonArray array => new BsonArray(array.Select(NormalizeDecimals)),
         BsonDecimal128 number => NormalizeDecimal(number.Value),
         _ => value
     };

@@ -44,7 +44,7 @@ internal sealed class SinkPagePrefetch(IMongoDBConverter converter)
     public async Task Prefetch(IMongoCollection<BsonDocument> collection, IEnumerable<Key> keys, Action<Key, BsonDocument> seed)
     {
         Clear();
-        var keysById = keys.GroupBy(key => SinkCacheKey.For(converter.ToBsonValue(key)))
+        var keysById = keys.GroupBy(key => SinkCacheKey.Identity(converter.ToBsonValue(key)))
             .ToDictionary(group => group.Key, group => group.First());
         foreach (var page in keysById.Chunk(1000))
         {
@@ -55,7 +55,7 @@ internal sealed class SinkPagePrefetch(IMongoDBConverter converter)
             {
                 foreach (var document in cursor.Current)
                 {
-                    if (missing.Remove(SinkCacheKey.For(document["_id"]), out var key))
+                    if (missing.Remove(SinkCacheKey.Identity(document["_id"]), out var key))
                     {
                         seed(key, document);
                     }
@@ -68,7 +68,7 @@ internal sealed class SinkPagePrefetch(IMongoDBConverter converter)
 
             if (allReturnedIdsMatched)
             {
-                foreach (var id in missing.Keys) _knownMisses.TryAdd(id, 0);
+                foreach (var id in missing.Keys) _knownMisses.TryAdd(SinkCacheKey.ForIdentity(id), 0);
             }
         }
     }
