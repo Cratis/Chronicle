@@ -23,6 +23,7 @@
 # Regenerate after a rename with `python3 .github/scripts/assert-timing-coupling-ratchet.py
 # --report`, then carry the annotations back over - `--report` prints counts only.
 
+1 Integration/Api/given/an_application_http_client.cs  # readiness: dev client registration backoff
 2 Integration/Client/ChronicleConfigurableFixture.cs  # readiness
 1 Integration/Client/Projections/Scenarios/ModelBound/when_projecting_with_nested_in_children/clearing_the_nested_object.cs
 1 Integration/Client/Projections/Scenarios/given/a_projection_and_events_appended_to_it.cs

@@ -37,6 +37,9 @@ public class an_application_http_client(ChronicleOutOfProcessFixtureWithLocalIma
             }
 
             response.Dispose();
+
+            // Readiness backoff: retrying a connect-like call (the token endpoint) that can legitimately
+            // fail while the kernel's own startup task is still registering the dev client.
             await Task.Delay(TimeSpan.FromMilliseconds(500));
         }
 
