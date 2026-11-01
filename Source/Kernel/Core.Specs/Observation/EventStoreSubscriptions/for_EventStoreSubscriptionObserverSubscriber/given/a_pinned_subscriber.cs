@@ -24,7 +24,7 @@ public class a_pinned_subscriber : a_subscriber_with_events
 
     void Establish()
     {
-        _schema = JsonSchema.FromJson("{\"type\":\"object\",\"properties\":{\"message\":{\"type\":\"string\"}}}");
+        _schema = JsonSchema.FromJson("""{"type":"object","properties":{"message":{"type":"string","compliance":[{"metadataType":"PII","details":""}]}}}""");
         _definition = new("subscription", "Admin", [new EventType("event-type-1", 1)]) { GenerationDelivery = EventGenerationDelivery.Pinned };
         _storage.GetEventStore("Lobby").EventStoreSubscriptions.GetAll().Returns(_ => [_definition]);
         RegisterGenerations("Admin", 1, 2);
