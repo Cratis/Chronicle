@@ -10,6 +10,7 @@ using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Reactors;
 using Cratis.Chronicle.Reducers;
+using Cratis.Chronicle.Sinks;
 using Cratis.Traces;
 using Grpc.Core;
 using Microsoft.Extensions.DependencyInjection;
@@ -56,7 +57,7 @@ public sealed partial class ClusterLoad(int transitions = 1, TimeProvider? timeP
 
     public async Task Start(SqlCluster cluster, bool verifyReconnect = false)
     {
-        var options = new ChronicleOptions(cluster.ConnectionString) { ConnectTimeout = 30 };
+        var options = new ChronicleOptions(cluster.ConnectionString) { ConnectTimeout = 30, DefaultSinkTypeId = WellKnownSinkTypes.SQL };
         options.ExplicitArtifacts.RegisterEventType<ClusterEventAppended>();
         if (verifyReconnect)
         {
