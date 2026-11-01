@@ -39,6 +39,8 @@ public class AppendGenerationProtectionBenchmark
     Fixture _singleProtected = null!;
     Fixture _plain = null!;
     Fixture _protected = null!;
+    Fixture _inherited = null!;
+    Fixture _wideNoPii = null!;
 
     /// <summary>
     /// Prepares schemas, warms metadata caches, and provisions the subject's encryption key outside measurements.
@@ -51,12 +53,16 @@ public class AppendGenerationProtectionBenchmark
         _singleProtected = await Fixture.Create(1, true);
         _plain = await Fixture.Create(3, false);
         _protected = await Fixture.Create(3, true);
+        _inherited = await Fixture.Create(3, true, appendFirst: true, fieldCount: 24);
+        _wideNoPii = await Fixture.Create(3, false, appendFirst: true, fieldCount: 24);
         await _single.Migrate();
         await _plain.Migrate();
         await _protected.Migrate();
         await _singleProtected.ProtectAndMigrate();
         await _protected.ProtectAndMigrate();
         await _single.Release();
+        await _inherited.ProtectAndMigrate();
+        await _wideNoPii.ProtectAndMigrate();
     }
 
     /// <summary>
@@ -95,6 +101,34 @@ public class AppendGenerationProtectionBenchmark
     public Task<IDictionary<EventTypeGeneration, ExpandoObject>> ThreeGenerationsFullAppendLatestPii() => _protected.ProtectAndMigrate();
 
     /// <summary>
+    /// Measures source protection and migration from generation one with inherited PII and a 25-property schema.
+    /// </summary>
+    /// <returns>The protected generations.</returns>
+    [Benchmark]
+    public Task<IDictionary<EventTypeGeneration, ExpandoObject>> AppendedOlderGeneration() => _inherited.ProtectAndMigrate();
+
+    /// <summary>
+    /// Measures the same wide-schema append boundary without any classified properties.
+    /// </summary>
+    /// <returns>The unchanged generations.</returns>
+    [Benchmark]
+    public Task<IDictionary<EventTypeGeneration, ExpandoObject>> WideSchemaFullAppendNoPii() => _wideNoPii.ProtectAndMigrate();
+
+    /// <summary>
+    /// Measures 100 sequential lower-generation append protection and migration boundaries.
+    /// </summary>
+    /// <returns>The total generation count.</returns>
+    [Benchmark]
+    public Task<int> Batch100AppendedOlderGeneration() => _inherited.ProtectAndMigrateBatch();
+
+    /// <summary>
+    /// Measures 100 sequential wide-schema non-PII append protection and migration boundaries.
+    /// </summary>
+    /// <returns>The total generation count.</returns>
+    [Benchmark]
+    public Task<int> Batch100WideSchemaNoPii() => _wideNoPii.ProtectAndMigrateBatch();
+
+    /// <summary>
     /// Measures release of one unpinned event with no classified properties.
     /// </summary>
     /// <returns>The released events.</returns>
@@ -111,6 +145,8 @@ public class AppendGenerationProtectionBenchmark
         _singleProtected.Registry.Dispose();
         _plain.Registry.Dispose();
         _protected.Registry.Dispose();
+        _inherited.Registry.Dispose();
+        _wideNoPii.Registry.Dispose();
     }
 
     /// <summary>
@@ -131,6 +167,7 @@ public class AppendGenerationProtectionBenchmark
         JsonSchemaMetadataManager _manager = null!;
         ExpandoObjectConverter _converter = null!;
         JsonSchema _sourceSchema = null!;
+        bool _allowRawSource;
         EventGenerationRelease _release = null!;
         EventType _eventType = null!;
         ExpandoObject _source = null!;
@@ -139,10 +176,10 @@ public class AppendGenerationProtectionBenchmark
 
         public EventStoreStorages Registry { get; } = new(new KnownInstancesOf<ISinkFactory>(), new InMemoryJobsStorage(JobTypes.Instance));
 
-        public static async Task<Fixture> Create(uint generations, bool latestPii)
+        public static async Task<Fixture> Create(uint generations, bool latestPii, bool appendFirst = false, int fieldCount = 0)
         {
             var fixture = new Fixture();
-            await fixture.Initialize(generations, latestPii);
+            await fixture.Initialize(generations, latestPii, appendFirst, fieldCount);
             return fixture;
         }
 
@@ -156,9 +193,20 @@ public class AppendGenerationProtectionBenchmark
             return await _migrations.MigratePlaintext(_store, _namespace, _eventType, _plaintext, source, Subject);
         }
 
+        public async Task<int> ProtectAndMigrateBatch()
+        {
+            var count = 0;
+            for (var index = 0; index < 100; index++)
+            {
+                count += (await ProtectAndMigrate()).Count;
+            }
+
+            return count;
+        }
+
         public Task<AppendedEvent[]> Release() => _release.Release(_store, [], _schemas, _events);
 
-        async Task Initialize(uint generations, bool latestPii)
+        async Task Initialize(uint generations, bool latestPii, bool appendFirst, int fieldCount)
         {
             var storage = new Storage.InMemory.Storage(Registry, new SystemStorage());
             var eventTypes = storage.GetEventStore(_store).EventTypes;
@@ -169,13 +217,15 @@ public class AppendGenerationProtectionBenchmark
                 new KnownInstancesOf<IJsonSchemaMetadataValueHandler>(new PIICompliancePropertyValueHandler(provisioner, keys, encryption)),
                 NullLogger<JsonSchemaMetadataManager>.Instance);
             var converter = new ExpandoObjectConverter(new TypeFormats());
-            _eventType = new("token-issued", generations);
+            _eventType = new("token-issued", appendFirst ? 1u : generations);
+            AddPayloadFields(fieldCount);
             var schemas = new List<EventTypeGenerationDefinition>();
             for (uint generation = 1; generation <= generations; generation++)
             {
                 var schema = await JsonSchema.FromJsonAsync(latestPii && generation == generations
                     ? """{"type":"object","properties":{"token":{"type":"string","compliance":[{"metadataType":"PII","details":""}]}}}"""
                     : """{"type":"object","properties":{"token":{"type":"string"}}}""");
+                AddSchemaFields(schema, fieldCount);
                 schemas.Add(new(generation, schema));
             }
 
@@ -184,39 +234,72 @@ public class AppendGenerationProtectionBenchmark
                 : [new(1, 2, [], new JsonObject(), new JsonObject()), new(2, 3, [], new JsonObject(), new JsonObject())];
             var definition = new EventTypeDefinition(_eventType.Id, EventTypeOwner.None, false, schemas, migrations);
             await eventTypes.Register(definition);
-            var sourceSchema = schemas[^1].Schema;
+            var sourceSchema = schemas.Single(_ => _.Generation == _eventType.Generation).Schema;
             _manager = manager;
             _converter = converter;
             _sourceSchema = sourceSchema;
+            _allowRawSource = appendFirst && !sourceSchema.HasSchemaMetadata();
             var protectedContent = await manager.Apply(_store, _namespace, sourceSchema, Subject, _plaintext);
             _source = converter.ToExpandoObject(protectedContent, sourceSchema);
             var engine = new EventTypeMigrations(storage, converter);
             _migrations = new(eventTypes, engine, manager, converter);
             if (latestPii)
             {
-                await VerifyProtection(definition, manager, converter, sourceSchema);
+                await VerifyProtection(definition);
             }
             _release = new(storage, new EventCompliance(manager, converter), engine, manager, converter);
             _schemas = new() { [_eventType] = new(_eventType, EventTypeOwner.Server, EventTypeSource.Code, sourceSchema) };
             _events = [new(EventContext.Empty with { EventStore = _store, Namespace = _namespace, EventType = _eventType, Subject = Subject }, _source)];
         }
 
-        async Task VerifyProtection(EventTypeDefinition definition, JsonSchemaMetadataManager manager, ExpandoObjectConverter converter, JsonSchema sourceSchema)
+        static void AddSchemaFields(JsonSchema schema, int fieldCount)
+        {
+            for (var index = 0; index < fieldCount; index++)
+            {
+                schema.Properties.Add($"field{index}", new JsonSchemaProperty { Type = JsonObjectType.String });
+            }
+        }
+
+        void AddPayloadFields(int fieldCount)
+        {
+            for (var index = 0; index < fieldCount; index++)
+            {
+                _plaintext[$"field{index}"] = $"representative-value-{index}";
+            }
+        }
+
+        async Task VerifyProtection(EventTypeDefinition definition)
         {
             foreach (var marker in new[] { "first-personal-marker", "second-personal-marker" })
             {
                 var plaintext = new JsonObject { ["token"] = marker };
-                var protectedSource = converter.ToExpandoObject(await manager.Apply(_store, _namespace, sourceSchema, Subject, plaintext), sourceSchema);
+                var protectedSource = _converter.ToExpandoObject(await _manager.Apply(_store, _namespace, _sourceSchema, Subject, plaintext), _sourceSchema);
                 var protectedGenerations = await _migrations.MigratePlaintext(_store, _namespace, _eventType, plaintext, protectedSource, Subject);
                 foreach (var (generation, content) in protectedGenerations)
                 {
-                    var json = JsonSerializer.SerializeToNode(content)!.AsObject();
-                    var released = await manager.ReleaseStrict(_store, _namespace, GenerationProtectionSchemas.For(definition, generation), Subject, json);
-                    if (json.ToJsonString().Contains(marker, StringComparison.Ordinal) || released["token"]!.GetValue<string>() != marker)
-                    {
-                        throw new InvalidOperationException("Generation protection must encrypt and release each call's own marker.");
-                    }
+                    await VerifyGeneration(definition, generation, content, marker);
                 }
+            }
+        }
+
+        async Task VerifyGeneration(EventTypeDefinition definition, EventTypeGeneration generation, ExpandoObject content, string marker)
+        {
+            var json = JsonSerializer.SerializeToNode(content)!.AsObject();
+            // Only the pre-fix baseline permits the known plaintext source bug. The candidate must remove this allowance.
+            if (_allowRawSource && generation == _eventType.Generation)
+            {
+                if (json["token"]!.GetValue<string>() != marker)
+                {
+                    throw new InvalidOperationException("The baseline source must retain its own call's marker.");
+                }
+
+                return;
+            }
+
+            var released = await _manager.ReleaseStrict(_store, _namespace, GenerationProtectionSchemas.For(definition, generation), Subject, json);
+            if (json.ToJsonString().Contains(marker, StringComparison.Ordinal) || released["token"]!.GetValue<string>() != marker)
+            {
+                throw new InvalidOperationException("Generation protection must encrypt and release each call's own marker.");
             }
         }
     }
