@@ -60,7 +60,7 @@ public class a_startup_task : Specification
     protected IPatchManager _patchManager = null!;
     readonly an_immediate_time_provider _timeProvider = new();
     protected IClusterReleases _clusterReleases = null!;
-    protected RecordingStartupWorkEscalation _escalation = null!;
+    private protected RecordingStartupWorkEscalation _escalation = null!;
     protected ILocalSiloDetails _localSiloDetails = null!;
     readonly List<string> _logMessages = [];
     protected INamespaces _systemNamespaces = null!;

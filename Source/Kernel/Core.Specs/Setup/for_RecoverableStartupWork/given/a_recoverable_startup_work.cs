@@ -8,9 +8,9 @@ namespace Orleans.Hosting.for_RecoverableStartupWork.given;
 
 public class a_recoverable_startup_work : Specification
 {
-    protected RecoverableStartupWork _work;
-    protected RecordingStartupWorkEscalation _escalation;
-    protected StartupWorkItem _item;
+    private protected RecoverableStartupWork _work;
+    private protected RecordingStartupWorkEscalation _escalation;
+    private protected StartupWorkItem _item;
     protected double _jitter;
 
     void Establish()

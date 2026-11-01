@@ -21,10 +21,10 @@ public class and_observer_activation_keeps_failing_across_a_restart : given.a_st
 
     async Task Because()
     {
-        _firstError = await Catch.Exception(() => Execute().WaitAsync(TimeSpan.FromSeconds(5)));
+        _firstError = await Catch.Exception(Execute);
         _readyAfterFirstStartup = _bootstrapClientsEnsured;
         _bootstrapClientsEnsured = false;
-        _secondError = await Catch.Exception(() => Execute().WaitAsync(TimeSpan.FromSeconds(5)));
+        _secondError = await Catch.Exception(Execute);
     }
 
     void Destroy() => Stop().GetAwaiter().GetResult();

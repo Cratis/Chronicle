@@ -11,6 +11,7 @@ public class and_job_rehydration_never_completes_across_a_restart : given.a_star
 {
     readonly TaskCompletionSource _neverCompletes = new(TaskCreationOptions.RunContinuationsAsynchronously);
     bool _readyAfterFirstStartup;
+    Task _firstBackgroundPass = Task.CompletedTask;
     Exception _firstError;
     Exception _secondError;
 
@@ -18,10 +19,11 @@ public class and_job_rehydration_never_completes_across_a_restart : given.a_star
 
     async Task Because()
     {
-        _firstError = await Catch.Exception(() => Execute().WaitAsync(TimeSpan.FromSeconds(5)));
+        _firstError = await Catch.Exception(Execute);
         _readyAfterFirstStartup = _bootstrapClientsEnsured;
+        _firstBackgroundPass = RecoverableWork;
         _bootstrapClientsEnsured = false;
-        _secondError = await Catch.Exception(() => Execute().WaitAsync(TimeSpan.FromSeconds(5)));
+        _secondError = await Catch.Exception(Execute);
     }
 
     void Destroy()
@@ -34,5 +36,5 @@ public class and_job_rehydration_never_completes_across_a_restart : given.a_star
     [Fact] void should_be_ready_after_the_first_startup() => _readyAfterFirstStartup.ShouldBeTrue();
     [Fact] void should_complete_the_second_startup() => _secondError.ShouldBeNull();
     [Fact] void should_be_ready_after_the_second_startup() => _bootstrapClientsEnsured.ShouldBeTrue();
-    [Fact] void should_still_have_the_backlog_pending() => RecoverableWork.IsCompleted.ShouldBeFalse();
+    [Fact] void should_still_have_the_first_backlog_pass_pending() => _firstBackgroundPass.IsCompleted.ShouldBeFalse();
 }

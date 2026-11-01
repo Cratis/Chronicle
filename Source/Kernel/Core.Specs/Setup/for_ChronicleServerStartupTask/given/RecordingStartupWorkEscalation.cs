@@ -6,13 +6,13 @@ namespace Orleans.Hosting.for_ChronicleServerStartupTask.given;
 /// <summary>
 /// Records what the background startup pass escalated, so specs assert through the seam instead of through logs.
 /// </summary>
-public class RecordingStartupWorkEscalation : IStartupWorkEscalation
+internal class RecordingStartupWorkEscalation : IStartupWorkEscalation
 {
     readonly List<(StartupWorkItem Item, int Attempts, TimeSpan NextDelay)> _escalations = [];
     readonly List<(StartupWorkItem Item, int Attempts)> _recoveries = [];
 
     /// <summary>Gets the escalations recorded so far.</summary>
-    public IReadOnlyList<(StartupWorkItem Item, int Attempts, TimeSpan NextDelay)> Escalations
+    internal IReadOnlyList<(StartupWorkItem Item, int Attempts, TimeSpan NextDelay)> Escalations
     {
         get
         {
@@ -24,7 +24,7 @@ public class RecordingStartupWorkEscalation : IStartupWorkEscalation
     }
 
     /// <summary>Gets the recoveries recorded so far.</summary>
-    public IReadOnlyList<(StartupWorkItem Item, int Attempts)> Recoveries
+    internal IReadOnlyList<(StartupWorkItem Item, int Attempts)> Recoveries
     {
         get
         {
