@@ -49,6 +49,15 @@ So fix the underlying error (and make the reactor resilient), and redeploy. Then
 - [`cratis chronicle observers retry-partition`](/cli/chronicle/observers/#retry-partition) retries the partition after you've fixed the bug.
 - [`cratis chronicle observers replay-partition`](/cli/chronicle/observers/#replay-partition) replays the partition from the beginning if the state is corrupt.
 
+### Recover in this order
+
+A retry does nothing while the observer is quarantined, so the order matters:
+
+1. Fix the cause and redeploy. Connecting the application's client subscribes its reactors and reducers again, which ends their observer quarantine. Projections and the Kernel's own reactors are subscribed again when the Kernel starts. Event store subscriptions stay quarantined until an operator clears them.
+2. Check whether the observer is still **Quarantined**, with `cratis chronicle observers list` or the Workbench **Observers** view. If it is, clear it with `cratis chronicle observers clear-quarantine`, or with **Clear quarantine** in the Workbench **Observers** view.
+3. Recover each failed partition. For a partition that is not quarantined, use `observers retry-partition`. For a quarantined partition, clear that partition's quarantine and retry it, as described below.
+4. Check the outcome. Only `Started` means recovery began. `ObserverQuarantined`, `PartitionQuarantined` and `PartitionNotFound` mean nothing was attempted. The Kernel logs a warning naming the observer, the partition and the outcome, so check the Kernel log and `failed-partitions show` rather than trusting a success message alone.
+
 ### Retry one reactor partition from a client
 
 After fixing the cause of a failure, an application can inspect a typed reactor's failed partitions and retry one without supplying the observer or event-sequence identifiers:
@@ -59,7 +68,7 @@ A retry request is not proof that recovery finished. Inspect the partition befor
 
 To find out about a stuck partition when it happens rather than when someone notices, see [Get alerted when observers stop processing](/chronicle/hosting/alerting-on-observer-failures/).
 
-A partition that ran out of retries before your fix was deployed is quarantined, and does **not** resume on its own. Inspect it with `failed-partitions show` first. An ordinary retry is refused for a quarantined partition, so recover it by clearing the quarantine of that one partition. Clearing starts a new retry budget for the partition, keeps its attempt history, and — when you ask for it — retries it straight away. A quarantined *observer* is a different state: it needs `observers clear-quarantine` first, and clearing a partition while the observer is quarantined reports that the retry was not started.
+A partition that ran out of retries before your fix was deployed is quarantined, and does **not** resume on its own. Inspect it with `failed-partitions show` first. An ordinary retry is refused for a quarantined partition, so recover it by clearing the quarantine of that one partition. Clearing starts a new retry budget for the partition, keeps its attempt history, and — when you ask for it — retries it straight away. A quarantined *observer* is a different state: it needs `observers clear-quarantine` first (see [recover in this order](#recover-in-this-order)), and clearing a partition while the observer is quarantined reports that the retry was not started.
 
 `replay-partition` is not a way out for a reactor handler marked [`[OnceOnly]`](/chronicle/reactors/once-only/): the client skips those handlers for replayed events, so a replay never runs the handler that failed. Remember that every retry runs the handler again, so a side effect the handler completed before it failed happens again unless you guard it; see [Delivery identity](/chronicle/reactors/delivery-identity/).
 
