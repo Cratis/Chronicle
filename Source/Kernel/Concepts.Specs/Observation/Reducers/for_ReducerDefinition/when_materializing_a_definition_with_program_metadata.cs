@@ -9,13 +9,15 @@ namespace Cratis.Chronicle.Concepts.Observation.Reducers.for_ReducerDefinition;
 
 public class when_materializing_a_definition_with_program_metadata : Specification
 {
+    static readonly JsonSerializerOptions _options = new() { Converters = { new ConceptAsJsonConverterFactory() } };
+
     ReducerDefinition _definition;
 
     void Because() => _definition = JsonSerializer.Deserialize<ReducerDefinition>(
         """
         { "Identifier": "reducer", "EventSequenceId": "event-log", "EventTypes": [], "ReadModel": "model", "ProgramIdentifier": "orders" }
         """,
-        new JsonSerializerOptions { Converters = { new ConceptAsJsonConverterFactory() } })!;
+        _options)!;
 
     [Fact] void should_retain_the_program() => _definition.ProgramIdentifier.ShouldEqual(new ProgramIdentifier("orders"));
 }
