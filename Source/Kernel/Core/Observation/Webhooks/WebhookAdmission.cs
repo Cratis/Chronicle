@@ -7,7 +7,6 @@ using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.EventSequences.Concurrency;
 using Cratis.Chronicle.Concepts.Identities;
 using Cratis.Chronicle.EventSequences;
-using Cratis.Chronicle.Observation.Webhooks.Validation;
 using Cratis.Chronicle.Storage;
 using Microsoft.Extensions.Logging;
 using ContractWebhookDefinition = Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookDefinition;

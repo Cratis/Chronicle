@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Auditing;
 using Cratis.Chronicle.Concepts.Events;
@@ -15,7 +16,6 @@ using Cratis.Chronicle.Security;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Monads;
-using System.Text.Json.Nodes;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
@@ -68,7 +68,7 @@ public class a_webhook_registrar : Specification
 
     protected static Option<AppendedEvent> ALifecycleEvent<TEvent>(EventSequenceNumber sequenceNumber)
         where TEvent : class =>
-        new Option<AppendedEvent>(new AppendedEvent(
+        new(new AppendedEvent(
             EventContext.Empty with { EventType = typeof(TEvent).GetEventType(), SequenceNumber = sequenceNumber },
             new System.Dynamic.ExpandoObject()));
 
