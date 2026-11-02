@@ -224,7 +224,10 @@ with the grain type, and selects the first nonempty tier:
 2. Silos with unknown roles, including older silos without metadata.
 3. No eligible silo: placement fails with `InvalidOperationException`.
 
-Within the selected tier, placement is random. The local silo's roles come from its own configuration,
+Within the selected tier, observer placement prefers silos at least as new as the silo making the
+decision, when any exist, so older silos do not receive subscriber types they cannot load; otherwise
+it uses the whole tier. The role is a hard constraint and the release preference is soft. Placement is
+random among the remaining silos. The local silo's roles come from its own configuration,
 not its cached metadata. With the default configuration (all roles enabled on every silo), every
 compatible silo remains eligible and random placement is unchanged.
 

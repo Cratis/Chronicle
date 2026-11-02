@@ -1,0 +1,23 @@
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+using Cratis.Chronicle.Configuration;
+using Orleans.Runtime.Placement;
+
+namespace Cratis.Chronicle.Observation.Placement.for_ObserverPlacementDirector.when_placing;
+
+public class with_an_older_release_holding_the_role_and_a_newer_one_without : given.a_director
+{
+    void Establish()
+    {
+        _siloRoles.GetRoles(_remote).Returns(new ClusterRoles { Observers = true });
+        _siloRoles.GetRoles(_unknown).Returns(new ClusterRoles { Observers = false });
+        _options.Clustering.Roles.Observers = false;
+        _context.GetCompatibleSilos(Arg.Any<PlacementTarget>()).Returns([_remote, _unknown]);
+        _releases.AtLeastAsNewAsThisSilo(Arg.Any<IEnumerable<SiloAddress>>()).Returns(call => call.Arg<IEnumerable<SiloAddress>>().Where(silo => silo.Equals(_unknown)).ToArray());
+    }
+
+    async Task Because() => _selected = await _director.OnAddActivation(new ObserverPlacementStrategy(), default, _context);
+
+    [Fact] void should_choose_the_older_silo_holding_the_role() => _selected.ShouldEqual(_remote);
+}

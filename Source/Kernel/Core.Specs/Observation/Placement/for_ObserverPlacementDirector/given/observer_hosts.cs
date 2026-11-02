@@ -3,6 +3,7 @@
 
 using System.Net;
 using Cratis.Chronicle.Configuration;
+using Cratis.Chronicle.Cluster;
 using Cratis.Chronicle.Releases;
 using Microsoft.Extensions.Options;
 using Orleans.Runtime.Placement;
@@ -28,9 +29,11 @@ public class observer_hosts : Specification
         _releases = Substitute.For<IClusterReleases>();
         _options = new();
         _options.Clustering.Roles.Observers = true;
+        var siloRoles = Substitute.For<ISiloRoles>();
+        siloRoles.GetRoles(_other).Returns(new ClusterRoles());
         var local = Substitute.For<ILocalSiloDetails>();
         local.SiloAddress.Returns(_local);
-        _director = new(Options.Create(_options), local, _releases);
+        _director = new(new RoleEligibility(siloRoles, local, Options.Create(_options)), _releases);
     }
 
     protected async Task Place() => _result = await _director.OnAddActivation(null!, default, _context);
