@@ -7,7 +7,6 @@ using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.EventSequences.Concurrency;
 using Cratis.Chronicle.Concepts.Identities;
 using Cratis.Chronicle.EventSequences;
-using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Observation.Webhooks.Validation;
 using Cratis.Chronicle.Storage;
 using Microsoft.Extensions.Logging;
@@ -44,6 +43,10 @@ class WebhookAdmission(
     /// <param name="eventStore">The <see cref="EventStoreName"/> the webhooks belong to.</param>
     /// <param name="webhooks">The requested webhook definitions.</param>
     /// <returns>The <see cref="WebhookAdmissionContext"/> to admit the registrations with.</returns>
+    /// <exception cref="ConflictingWebhookDeliveryFormatsInRequest">One webhook appears with different delivery formats in the request.</exception>
+    /// <exception cref="WebhookDeliveryFormatCannotBeChanged">The delivery format of an existing webhook is changed.</exception>
+    /// <exception cref="EnvelopeWebhookIdentifierHasObserverHistory">An envelope webhook is added under an identifier with observer history.</exception>
+    /// <exception cref="WebhookLifecycleChangedDuringRegistration">The lifecycle of an envelope webhook is already registered but not yet applied.</exception>
     public async Task<WebhookAdmissionContext> Validate(EventStoreName eventStore, IEnumerable<ContractWebhookDefinition> webhooks)
     {
         var context = new WebhookAdmissionContext(eventStore);
@@ -196,26 +199,4 @@ class WebhookAdmission(
 
     Storage.EventSequences.IEventSequenceStorage GetSystemLog(EventStoreName eventStore) =>
         storage.GetEventStore(eventStore).GetNamespace(EventStoreNamespaceName.Default).GetEventSequence(EventSequenceId.System);
-}
-
-/// <summary>
-/// The state of the delivery format validation of one registration request.
-/// </summary>
-/// <param name="eventStore">The <see cref="EventStoreName"/> the request is for.</param>
-class WebhookAdmissionContext(EventStoreName eventStore)
-{
-    /// <summary>
-    /// Gets the <see cref="EventStoreName"/> the request is for.
-    /// </summary>
-    public EventStoreName EventStore { get; } = eventStore;
-
-    /// <summary>
-    /// Gets the lifecycle position captured during validation for every new envelope webhook, keyed by identifier.
-    /// </summary>
-    public Dictionary<string, EventSequenceNumber> Positions { get; } = [];
-
-    /// <summary>
-    /// Gets the identifiers of the envelope webhooks already admitted in this request.
-    /// </summary>
-    public HashSet<string> Admitted { get; } = [];
 }
