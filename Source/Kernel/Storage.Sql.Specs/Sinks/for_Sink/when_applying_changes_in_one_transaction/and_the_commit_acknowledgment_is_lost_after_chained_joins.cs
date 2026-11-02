@@ -39,5 +39,5 @@ public abstract class and_the_commit_acknowledgment_is_lost_after_chained_joins<
     [Fact] public void should_succeed() => _error.ShouldBeNull();
     [Fact] public void should_move_the_first_row_to_b() => _first!["group"].ShouldEqual("B");
     [Fact] public void should_move_the_second_row_to_a() => _second!["group"].ShouldEqual("A");
-    [Fact] public void should_write_each_join_once() => ReadModelWrites.Where(IsReadModelUpdate).Sum(command => command.Split("UPDATE ", StringSplitOptions.None).Length - 1).ShouldEqual(2);
+    [Fact] public void should_write_each_join_once() => _capture.WriteCommands.Sum(command => command.Split("UPDATE ", StringSplitOptions.None).Length - 1).ShouldEqual(2);
 }
