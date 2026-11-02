@@ -28,6 +28,8 @@ internal static class WebhookSignatureVerification
     /// <param name="trustedSecrets">The raw secrets the receiver trusts.</param>
     /// <param name="keyIdHeader">The advisory <c language="text">Cratis-Key-Id</c> header value; ignored.</param>
     /// <returns>True when any entry is a valid signature from a trusted secret; otherwise false.</returns>
+    /// <exception cref="InvalidWebhookMessageId">The message identifier contains a framing delimiter; the delivery cannot be verified and must be rejected.</exception>
+    /// <exception cref="System.Text.EncoderFallbackException">The message identifier cannot be encoded losslessly as UTF-8.</exception>
     internal static bool Verify(
         string messageId,
         long unixTimestamp,

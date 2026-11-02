@@ -32,7 +32,7 @@ It does not decide which transport owns an observer (stream or HTTP) or how an o
 
 ## Amendment (2026-11-01): Cratis-Key-Id is advisory
 
-Decided on 2026-11-01 during [#5117](https://github.com/Cratis/Chronicle/issues/5117) work; this supersedes only the key-selection role of the `Cratis-Key-Id` header. The rest of the accepted text stands.
+Decided on 2026-11-01 by L0 (agent coordinator) under the user's standing delegation for agent-decidable decisions, during [#5117](https://github.com/Cratis/Chronicle/issues/5117) work, and flagged for maintainer review in the pull request; this supersedes only the key-selection role of the `Cratis-Key-Id` header. The rest of the accepted text stands.
 
 [Standard Webhooks](https://github.com/standard-webhooks/standard-webhooks/blob/main/spec/standard-webhooks.md) sends space-separated signatures during key rotation and defines no key id header, so one header value cannot pick the verification key during an overlap.
 
