@@ -126,7 +126,7 @@ The environment-variable form is `Cratis__Chronicle__Authentication__ExternalAdm
 - The mapping applies to user and application (client-credentials) tokens alike.
 - The claim is evaluated per request from the token, so revocation takes effect when the token expires. Keep token lifetimes short and use an administrator-controlled role claim.
 - Mapped administrators are not roster members: they do not appear in `AllAdministrators`, cannot be granted or revoked there, and do not count for the last-administrator rule.
-- A malformed mapping, or a mapping without `authority`, fails startup. With authentication disabled the mapping has no effect and the server logs a warning.
+- A malformed mapping, or a mapping without `authority`, fails startup, even when authentication is disabled. A valid mapping has no effect while authentication is disabled, and the server logs a warning.
 - A configuration change requires a restart.
 - Workbench browser sessions use Chronicle's cookie login, so they gain administrator privilege only when requests carry the external bearer token, for example through an authenticating reverse proxy.
 
