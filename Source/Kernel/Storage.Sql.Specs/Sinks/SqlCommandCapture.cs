@@ -87,6 +87,7 @@ public partial class SqlCommandCapture : IDbCommandInterceptor, IDbTransactionIn
     public void Clear()
     {
         _commands.Clear();
+        _operations.Clear();
         _started = 0;
         _committed = 0;
         _rolledBack = 0;
@@ -136,19 +137,20 @@ public partial class SqlCommandCapture : IDbCommandInterceptor, IDbTransactionIn
 
     /// <inheritdoc/>
     public ValueTask<InterceptionResult<DbDataReader>> ReaderExecutingAsync(DbCommand command, CommandEventData eventData, InterceptionResult<DbDataReader> result, CancellationToken cancellationToken = default) =>
-        Executing(command, result);
+        Executing(command, eventData, result);
 
     /// <inheritdoc/>
     public ValueTask<InterceptionResult<int>> NonQueryExecutingAsync(DbCommand command, CommandEventData eventData, InterceptionResult<int> result, CancellationToken cancellationToken = default) =>
-        Executing(command, result);
+        Executing(command, eventData, result);
 
     /// <inheritdoc/>
     public ValueTask<InterceptionResult<object>> ScalarExecutingAsync(DbCommand command, CommandEventData eventData, InterceptionResult<object> result, CancellationToken cancellationToken = default) =>
-        Executing(command, result);
+        Executing(command, eventData, result);
 
     /// <inheritdoc/>
     public async ValueTask<DbDataReader> ReaderExecutedAsync(DbCommand command, CommandExecutedEventData eventData, DbDataReader result, CancellationToken cancellationToken = default)
     {
+        RecordCommand("command.executed-reader-not-drained", command, eventData);
         await Executed(command);
         return result;
     }
@@ -156,6 +158,7 @@ public partial class SqlCommandCapture : IDbCommandInterceptor, IDbTransactionIn
     /// <inheritdoc/>
     public async ValueTask<int> NonQueryExecutedAsync(DbCommand command, CommandExecutedEventData eventData, int result, CancellationToken cancellationToken = default)
     {
+        RecordCommand("command.executed", command, eventData);
         await Executed(command);
         return result;
     }
@@ -163,6 +166,7 @@ public partial class SqlCommandCapture : IDbCommandInterceptor, IDbTransactionIn
     /// <inheritdoc/>
     public async ValueTask<object?> ScalarExecutedAsync(DbCommand command, CommandExecutedEventData eventData, object? result, CancellationToken cancellationToken = default)
     {
+        RecordCommand("command.executed", command, eventData);
         await Executed(command);
         return result;
     }
@@ -171,6 +175,7 @@ public partial class SqlCommandCapture : IDbCommandInterceptor, IDbTransactionIn
     public async ValueTask<DbTransaction> TransactionStartedAsync(DbConnection connection, TransactionEndEventData eventData, DbTransaction result, CancellationToken cancellationToken = default)
     {
         Interlocked.Increment(ref _started);
+        RecordTransaction("transaction.started", eventData);
         var hook = Interlocked.Exchange(ref _afterTransactionStarted, null);
         if (hook is not null)
         {
@@ -183,12 +188,15 @@ public partial class SqlCommandCapture : IDbCommandInterceptor, IDbTransactionIn
     /// <inheritdoc/>
     public ValueTask<InterceptionResult> TransactionCommittingAsync(DbTransaction transaction, TransactionEventData eventData, InterceptionResult result, CancellationToken cancellationToken = default)
     {
+        RecordTransaction("commit.requested", eventData);
         var failing = _afterCommit;
         if (failing?.BeforeSending == true && ReferenceEquals(Interlocked.CompareExchange(ref _afterCommit, null, failing), failing))
         {
+            RecordTransaction("commit.before-hook-failed-not-sent", eventData);
             throw new TimeoutException("Simulated failure before the commit was sent");
         }
 
+        RecordTransaction("commit.dispatch-boundary-not-wire-proof", eventData);
         return ValueTask.FromResult(result);
     }
 
@@ -196,6 +204,7 @@ public partial class SqlCommandCapture : IDbCommandInterceptor, IDbTransactionIn
     public async Task TransactionCommittedAsync(DbTransaction transaction, TransactionEndEventData eventData, CancellationToken cancellationToken = default)
     {
         Interlocked.Increment(ref _committed);
+        RecordTransaction("commit.completed", eventData);
         var hook = Interlocked.Exchange(ref _afterCommit, null);
         if (hook is null)
         {
@@ -206,6 +215,7 @@ public partial class SqlCommandCapture : IDbCommandInterceptor, IDbTransactionIn
         if (hook.LoseAcknowledgment)
         {
             Interlocked.Increment(ref _lost);
+            RecordTransaction("commit.acknowledgment-lost-injected", eventData);
             throw new TimeoutException("Simulated lost commit acknowledgment");
         }
     }
@@ -214,6 +224,7 @@ public partial class SqlCommandCapture : IDbCommandInterceptor, IDbTransactionIn
     public Task TransactionRolledBackAsync(DbTransaction transaction, TransactionEndEventData eventData, CancellationToken cancellationToken = default)
     {
         Interlocked.Increment(ref _rolledBack);
+        RecordTransaction("rollback.completed", eventData);
         return Task.CompletedTask;
     }
 
@@ -221,6 +232,7 @@ public partial class SqlCommandCapture : IDbCommandInterceptor, IDbTransactionIn
     public ValueTask<InterceptionResult> CreatingSavepointAsync(DbTransaction transaction, TransactionEventData eventData, InterceptionResult result, CancellationToken cancellationToken = default)
     {
         Interlocked.Increment(ref _savepoints);
+        RecordTransaction("savepoint.requested", eventData);
         return ValueTask.FromResult(result);
     }
 
@@ -236,15 +248,25 @@ public partial class SqlCommandCapture : IDbCommandInterceptor, IDbTransactionIn
 
     void AfterNextCommit(Func<Task> action, bool loseAcknowledgment, bool beforeSending) => _afterCommit = new(action, loseAcknowledgment) { BeforeSending = beforeSending };
 
-    async ValueTask<InterceptionResult<T>> Executing<T>(DbCommand command, InterceptionResult<T> result)
+    async ValueTask<InterceptionResult<T>> Executing<T>(DbCommand command, CommandEventData eventData, InterceptionResult<T> result)
     {
         _commands.Enqueue(command.CommandText);
+        RecordCommand("command.requested", command, eventData);
         var hook = _beforeCommand;
         if (hook?.Match(command.CommandText) == true && ReferenceEquals(Interlocked.CompareExchange(ref _beforeCommand, null, hook), hook))
         {
-            await hook.Action(command);
+            try
+            {
+                await hook.Action(command);
+            }
+            catch
+            {
+                RecordCommand("command.before-hook-failed-not-sent", command, eventData);
+                throw;
+            }
         }
 
+        RecordCommand("command.dispatch-boundary-not-wire-proof", command, eventData);
         return result;
     }
 

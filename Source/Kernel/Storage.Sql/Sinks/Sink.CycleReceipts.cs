@@ -46,12 +46,15 @@ public partial class Sink
         }
     }
 
-    static async Task<long> DatabaseNow(ReadModelDbContext context)
+    static void ClearReadModelTracking(ReadModelDbContext context)
     {
-        var sql = $"SELECT {SinkCycleReceipt.NowSql(context.Database.GetDatabaseType())} AS \"Value\"";
-#pragma warning disable EF1002 // The expression is a constant of this assembly.
-        return await context.Database.SqlQueryRaw<long>(sql).SingleAsync();
-#pragma warning restore EF1002
+        // An unsaved receipt must ride on the first real save, even when a guarded CAS clears row state.
+        var pending = context.ChangeTracker.Entries<SinkCycleReceipt>()
+            .Where(entry => entry.State == EntityState.Added)
+            .Select(entry => entry.Entity)
+            .ToArray();
+        context.ChangeTracker.Clear();
+        context.SinkCycleReceipts.AddRange(pending);
     }
 
     static bool IsMissingReceiptTable(Exception exception)
@@ -139,14 +142,25 @@ public partial class Sink
         try
         {
             context.ChangeTracker.Clear();
-            await context.SinkCycleReceipts.Where(receipt => receipt.Id == receiptId).ExecuteDeleteAsync();
             var now = Environment.TickCount64;
             var last = Interlocked.Read(ref _lastSweep);
-            if ((last == long.MinValue || now - last >= _sweepIntervalTicks) && Interlocked.CompareExchange(ref _lastSweep, now, last) == last)
+            var sweep = (last == long.MinValue || now - last >= _sweepIntervalTicks) && Interlocked.CompareExchange(ref _lastSweep, now, last) == last;
+            if (!sweep)
             {
-                var oldest = await DatabaseNow(context) - (long)OrphanRetention.TotalMilliseconds;
-                await context.SinkCycleReceipts.Where(receipt => receipt.CreatedAt < oldest).ExecuteDeleteAsync();
+                await context.SinkCycleReceipts.Where(receipt => receipt.Id == receiptId).ExecuteDeleteAsync();
+                return;
             }
+
+            // Only scheduling uses process time. Expiry is evaluated once on the database, with owner cleanup.
+            var databaseType = context.Database.GetDatabaseType();
+            var quote = databaseType == DatabaseType.SqlServer ? ("[", "]") : ("\"", "\"");
+            var table = $"{quote.Item1}{WellKnownTableNames.SinkCycleReceipts}{quote.Item2}";
+            var id = $"{quote.Item1}Id{quote.Item2}";
+            var createdAt = $"{quote.Item1}CreatedAt{quote.Item2}";
+            var sql = $"DELETE FROM {table} WHERE {id} = {{0}} OR {createdAt} < {SinkCycleReceipt.NowSql(databaseType)} - {{1}}";
+#pragma warning disable EF1002 // Identifiers and clock are assembly constants; values are parameters.
+            await context.Database.ExecuteSqlRawAsync(sql, receiptId, (long)OrphanRetention.TotalMilliseconds);
+#pragma warning restore EF1002
         }
         catch (Exception exception)
         {

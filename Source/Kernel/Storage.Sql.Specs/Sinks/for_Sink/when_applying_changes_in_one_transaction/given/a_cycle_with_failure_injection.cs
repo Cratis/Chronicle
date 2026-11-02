@@ -165,15 +165,13 @@ public abstract class a_cycle_with_failure_injection<THarness> : Specification
 
     protected IEnumerable<string> ReceiptInserts => ReceiptCommands.Where(command => command.Contains("INSERT", StringComparison.OrdinalIgnoreCase));
 
-    protected IEnumerable<string> ReadModelWrites => _capture.WriteCommands.Where(command => !command.Contains(ReceiptTable, StringComparison.Ordinal));
+    protected IEnumerable<string> ReadModelWrites => _capture.WriteCommands.Where(command => IsReadModelInsert(command) || IsReadModelUpdate(command));
 
-    protected static bool IsReadModelInsert(string command) =>
-        command.Contains("INSERT INTO", StringComparison.OrdinalIgnoreCase) && !command.Contains(ReceiptTable, StringComparison.Ordinal);
+    protected static bool IsReadModelInsert(string command) => SqlCommandCapture.CountStatements(command, "INSERT INTO", TableName) + SqlCommandCapture.CountStatements(command, "INSERT INTO", $"replay-{TableName}") > 0;
 
-    protected static bool IsReadModelUpdate(string command) =>
-        command.Contains("UPDATE", StringComparison.OrdinalIgnoreCase) && !command.Contains(ReceiptTable, StringComparison.Ordinal);
+    protected static bool IsReadModelUpdate(string command) => SqlCommandCapture.CountStatements(command, "UPDATE", TableName) + SqlCommandCapture.CountStatements(command, "UPDATE", $"replay-{TableName}") > 0;
 
-    ReadModelDbContext OpenInspectionContext()
+    protected ReadModelDbContext OpenInspectionContext()
     {
         var builder = new DbContextOptionsBuilder<ReadModelDbContext>();
         if (_harness.ConnectionString.GetDatabaseType() == DatabaseType.PostgreSql)

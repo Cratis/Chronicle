@@ -32,10 +32,9 @@ public partial class Sink
     /// </summary>
     /// <param name="scope">The scope holding the context.</param>
     /// <param name="sequenceNumber">The sequence number applied.</param>
-    /// <param name="flushReceiptFirst">Whether to write the receipt before the body, for bodies that clear the change tracker.</param>
     /// <param name="body">The writes. Returns whether the direct change was written.</param>
     /// <returns>Whether the direct change was written.</returns>
-    async Task<bool> RunInCycleTransaction(DbContextScope<ReadModelDbContext> scope, EventSequenceNumber sequenceNumber, bool flushReceiptFirst, Func<Task<bool>> body)
+    async Task<bool> RunInCycleTransaction(DbContextScope<ReadModelDbContext> scope, EventSequenceNumber sequenceNumber, Func<Task<bool>> body)
     {
         await EnsureCycleReceiptTable();
         var context = scope.DbContext;
@@ -71,11 +70,6 @@ public partial class Sink
 
                             var receipt = new SinkCycleReceipt(receiptId, ActiveTableName, sequence, 0);
                             context.SinkCycleReceipts.Add(receipt);
-                            if (flushReceiptFirst)
-                            {
-                                await FlushReceiptIfPending(context, receipt);
-                            }
-
                             wroteDirect = await body();
                             await FlushReceiptIfPending(context, receipt);
                             startedAt ??= receipt.CreatedAt;

@@ -3,10 +3,13 @@
 
 using System.Diagnostics;
 using System.Dynamic;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Storage.Sinks;
 using Cratis.Chronicle.Storage.Sql.Sinks.for_Sink.when_applying_changes_in_one_transaction.given;
+using Microsoft.EntityFrameworkCore;
 
 namespace Cratis.Chronicle.Storage.Sql.Sinks.for_Sink.when_measuring_write_cycle_cost.given;
 
@@ -91,10 +94,37 @@ public abstract class a_cost_measurement<THarness> : a_cycle_with_failure_inject
                 _measurements.Add(measurement);
                 if (report is not null)
                 {
-                    await File.AppendAllTextAsync(report, JsonSerializer.Serialize(new { database = Database, measurement.Kind, measurement.Multi, measurement.Run, measurement.Events, measurement.Commands, measurement.Transactions, measurement.Committed, measurement.ElapsedMilliseconds, measurement.Fingerprint }) + "\n");
+                    await WriteReport(report, measurement);
                 }
             }
         }
+    }
+
+    async Task WriteReport(string report, Measurement measurement)
+    {
+        var operations = _capture.Operations;
+        await using var inspection = OpenInspectionContext();
+        var rows = await inspection.Entries.AsNoTracking().ToListAsync();
+        var snapshot = JsonSerializer.Serialize(rows.OrderBy(row => row["id"]?.ToString(), StringComparer.Ordinal).Select(row => row.OrderBy(pair => pair.Key, StringComparer.Ordinal).ToDictionary(pair => pair.Key, pair => pair.Value)));
+        var result = new
+        {
+            database = Database,
+            measurement.Kind,
+            measurement.Multi,
+            measurement.Run,
+            measurement.Events,
+            measurement.Commands,
+            measurement.Transactions,
+            measurement.Committed,
+            measurement.ElapsedMilliseconds,
+            measurement.Fingerprint,
+            RowFingerprint = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(snapshot))),
+            Rows = snapshot,
+            Operations = operations,
+            NetworkTrips = (int?)null,
+            TripEvidence = "Unknown: async EF boundaries are not wire/server evidence; BEGIN may be deferred, readers may stream, opens may be pooled. COMMIT and post-resolution cleanup are included in Operations, not inferred as trips. Transaction disposal is not exposed by the EF interceptor."
+        };
+        await File.AppendAllTextAsync(report, JsonSerializer.Serialize(result) + "\n");
     }
 
     ulong Next() => _sequence++;

@@ -21,7 +21,7 @@ public partial class Sink
         if (!changeset.HasBeenRemoved() && WriteSteps(changeset, changes) >= 2)
         {
             await using var cycleScope = await OpenActiveScope();
-            await RunInCycleTransaction(cycleScope, sequenceNumber, true, async () =>
+            await RunInCycleTransaction(cycleScope, sequenceNumber, async () =>
             {
                 await ApplyJoinsAndChildRemovals(cycleScope, changeset, sequenceNumber);
                 if (changes.Length == 0 || !await ShouldWriteDirectChanges(cycleScope, id, changeset, changes))
@@ -82,7 +82,7 @@ public partial class Sink
         // Compare the value read, not merely < incoming: a concurrent earlier event must be
         // incorporated by recomputing the changes, rather than overwritten with stale state.
         var desired = entry.Entity;
-        scope.DbContext.ChangeTracker.Clear();
+        ClearReadModelTracking(scope.DbContext);
         var updated = await scope.DbContext.Entries.Where(BuildIdPredicate(write.Id))
             .Where(row => EF.Property<long?>(row, WellKnownProperties.LastHandledEventSequenceNumber) == original)
             .ExecuteUpdateAsync(setters => SetReplacementValues(setters, desired));

@@ -26,6 +26,7 @@ public abstract class and_old_receipts_exist<THarness> : given.a_cycle_with_fail
 
     async Task Because()
     {
+        _capture.Clear();
         var fresh = (Sink)AnotherSink();
         fresh.OrphanRetention = TimeSpan.FromMinutes(15);
         await ApplyOn(fresh, "second", 3, KeyedFromJoin("joinId", "J", ("x", 2)), Set(("group", "g")));
@@ -34,5 +35,6 @@ public abstract class and_old_receipts_exist<THarness> : given.a_cycle_with_fail
     }
 
     [Fact] public void should_delete_the_expired_receipt_and_keep_the_recent_one() => _remaining.ShouldEqual(1);
+    [Fact] public void should_combine_owner_cleanup_and_the_due_sweep() => _capture.Commands.Count(command => command.Contains("DELETE", StringComparison.OrdinalIgnoreCase) && command.Contains(ReceiptTable, StringComparison.Ordinal)).ShouldEqual(1);
     [Fact] public void should_keep_the_recent_receipt() => _recentRemaining.ShouldEqual(1);
 }

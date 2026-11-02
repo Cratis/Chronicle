@@ -207,7 +207,7 @@ public partial class Sink : ISink, ICanReconcileIndexes, ISinkCompositeKeyLookup
             .Where(c => c is not Joined and not ChildRemovedFromAll)
             .ToArray();
         var wroteDirect = WriteSteps(changeset, nonJoinedChanges) >= 2
-            ? await RunInCycleTransaction(scope, eventSequenceNumber, false, () => ApplyJoinsThenDirectChanges(scope, key, id, changeset, nonJoinedChanges, eventSequenceNumber, mode))
+            ? await RunInCycleTransaction(scope, eventSequenceNumber, () => ApplyJoinsThenDirectChanges(scope, key, id, changeset, nonJoinedChanges, eventSequenceNumber, mode))
             : await ApplyJoinsThenDirectChanges(scope, key, id, changeset, nonJoinedChanges, eventSequenceNumber, mode);
         if (wroteDirect)
         {
