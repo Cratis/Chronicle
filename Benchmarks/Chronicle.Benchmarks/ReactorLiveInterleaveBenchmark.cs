@@ -89,7 +89,7 @@ public class ReactorLiveInterleaveBenchmark : IDisposable, IAsyncDisposable
     {
         var sources = Enumerable.Range(0, EventSources).Select(_ => EventSourceId.New()).ToArray();
         var before = BenchmarkReactor.TotalEventsProcessed;
-        AppendManyResult? last = null;
+        IAppendResultForObserverCompletion? last = null;
 
         for (var offset = 0; offset < EventCount; offset += TransactionSize)
         {
