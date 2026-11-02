@@ -289,7 +289,7 @@ internal sealed class ConnectionService(
                 // A registration given up on (cancelled or timed out) is deliberately not compensated with a disconnect.
                 // The client retries an uncompleted connect with the same ConnectionId and the registry has no per-attempt
                 // identity, so a late disconnect by id would remove the retry's entry. Entries left behind rely on the
-                // registry's own lifecycle (entries flagged as running with a debugger are not swept - tracked separately).
+                // registry's own lifecycle (an entry flagged as running with a debugger that never pinged is swept as stale too).
                 // This differs from the legacy cancel path, which disconnected after a late success.
                 _ = registration.ContinueWith(
                     static task => _ = task.Exception,
@@ -320,8 +320,8 @@ internal sealed class ConnectionService(
     }
 
     /// <summary>
-    /// Registers a client running with a debugger again if its silo's registry no longer knows it while the connection
-    /// is still open.
+    /// Refreshes a client running with a debugger in its silo's registry, and registers it again if the registry no
+    /// longer knows it while the connection is still open.
     /// </summary>
     /// <remarks>
     /// The registry lives in a grain activation only. Orleans deactivates an activation when the silo owning its
@@ -332,6 +332,11 @@ internal sealed class ConnectionService(
     /// A client running with a debugger does not respond, and is never dropped for not responding either, so the
     /// registry not knowing it can only mean the registry was lost.
     /// </para>
+    /// <para>
+    /// A client running with a debugger does not answer keep-alives, so an open connection is the only proof it is
+    /// alive. Every keep-alive therefore refreshes its registry entry, which keeps the entry from being swept as
+    /// stale. An abandoned registration has no open connection, is never refreshed here and so still expires.
+    /// </para>
     /// </remarks>
     /// <param name="connectedClients">The <see cref="IConnectedClients"/> registry of the silo the client is connected to.</param>
     /// <param name="request">The <see cref="ConnectRequest"/> the client connected with.</param>
@@ -341,7 +346,7 @@ internal sealed class ConnectionService(
     {
         try
         {
-            if (await connectedClients.IsConnected(request.ConnectionId) || cancellationToken.IsCancellationRequested)
+            if (await connectedClients.OnClientPing(request.ConnectionId) || cancellationToken.IsCancellationRequested)
             {
                 return;
             }

@@ -1,17 +1,19 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using MongoDB.Driver;
+
 namespace Cratis.Chronicle.Setup.Execution;
 
 /// <summary>
 /// Makes a failing grain call answer with an exception the Orleans exception codec can carry.
 /// </summary>
 /// <remarks>
-/// The codec only serializes exceptions under its supported namespaces. A driver exception from a
-/// storage provider (for example the MongoDB driver's wait-queue-full failure) has no codec, and
-/// writing that response throws on the connection's outgoing path, where nothing catches it - the
-/// process terminates. Replacing such an exception with a plain one that names the original type
-/// and keeps its message turns a crash into an ordinary failed call.
+/// Exceptions outside the codec's supported namespaces are replaced with ordinary wrappers that
+/// retain the original type name and message without copying arbitrary exception data. Unsupported
+/// inner exceptions are sanitized recursively. Only an exact MongoDB wait-queue-full failure gets a
+/// code-owned storage admission category for bounded startup retries. This category is a trusted-silo
+/// assertion, not authenticated provenance; supported exceptions still pass through unchanged.
 /// </remarks>
 public class SerializableFailureIncomingCallFilter : IIncomingGrainCallFilter
 {
@@ -50,6 +52,13 @@ public class SerializableFailureIncomingCallFilter : IIncomingGrainCallFilter
     /// <returns>The replacement.</returns>
     internal static Exception Replace(Exception exception)
     {
+        if (exception.GetType() == typeof(MongoWaitQueueFullException))
+        {
+            var replacement = new InvalidOperationException($"{exception.GetType().FullName}: {exception.Message}");
+            replacement.Data[SiblingSiloInstability.StorageAdmissionCategoryKey] = SiblingSiloInstability.MongoWaitQueueFullCategory;
+            return replacement;
+        }
+
         var inner = exception.InnerException;
         if (inner is not null && !IsCarried(inner)) inner = Replace(inner);
         return new InvalidOperationException($"{exception.GetType().FullName}: {exception.Message}", inner);

@@ -8,23 +8,23 @@ namespace Cratis.Chronicle.Services.Clients.for_ConnectionService.when_keeping_a
 
 public class and_the_call_ends_while_checking_the_registry_for_a_client_running_with_a_debugger : given.a_connected_client
 {
-    readonly TaskCompletionSource<bool> _isConnected = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    readonly TaskCompletionSource<bool> _pinged = new(TaskCreationOptions.RunContinuationsAsynchronously);
     bool _completedWhileTheRegistryWasPending;
     bool _disconnectedBeforeTheCheckSettled;
 
-    void Establish() => _connectedClients.IsConnected(new ConnectionId(TheConnection)).Returns(_isConnected.Task);
+    void Establish() => _connectedClients.OnClientPing(new ConnectionId(TheConnection)).Returns(_pinged.Task);
 
     async Task Because()
     {
         Connect(isRunningWithDebugger: true);
-        await WaitUntil(() => CallsTo(nameof(IConnectedClients.IsConnected)) >= 1);
+        await WaitUntil(() => CallsTo(nameof(IConnectedClients.OnClientPing)) >= 1);
         await Cancel();
         await WaitUntil(() => Completed);
-        _completedWhileTheRegistryWasPending = Completed && !_isConnected.Task.IsCompleted;
+        _completedWhileTheRegistryWasPending = Completed && !_pinged.Task.IsCompleted;
         _disconnectedBeforeTheCheckSettled = CallsTo(nameof(IConnectedClients.OnClientDisconnected)) > 0;
 
         // The registry answers late that it no longer knows the client.
-        _isConnected.TrySetResult(false);
+        _pinged.TrySetResult(false);
         await WaitUntil(() => CallsTo(nameof(IConnectedClients.OnClientDisconnected)) >= 1);
     }
 
