@@ -2,8 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Storage.Projections;
-using Cratis.Chronicle.Storage.Sql.Sinks;
 using Cratis.Chronicle.Storage.Sql.for_Database.given;
+using Cratis.Chronicle.Storage.Sql.Sinks;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Projections.for_ProjectionDefinitionHistoryStorage.given;
 

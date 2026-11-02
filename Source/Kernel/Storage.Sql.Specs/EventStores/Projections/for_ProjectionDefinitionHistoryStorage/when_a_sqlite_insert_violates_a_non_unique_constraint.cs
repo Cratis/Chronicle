@@ -13,6 +13,6 @@ public class when_a_sqlite_insert_violates_a_non_unique_constraint : given.a_sql
         await using var scope = await _database.EventStore("history-store");
         await scope.DbContext.Database.ExecuteSqlRawAsync("CREATE TRIGGER reject_history BEFORE INSERT ON ProjectionDefinitionHistory BEGIN SELECT RAISE(ABORT, 'history rejected'); END;");
     }
-    async Task Because() => _exception = await Catch.ExceptionAsync(() => _storage.Record(_entry));
+    async Task Because() => _exception = await Catch.Exception(() => _storage.Record(_entry));
     [Fact] void should_propagate_the_failure() => _exception.ShouldBeOfExactType<DbUpdateException>();
 }

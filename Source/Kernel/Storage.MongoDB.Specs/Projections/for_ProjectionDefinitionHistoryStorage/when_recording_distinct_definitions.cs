@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Storage.MongoDB.EventSequences;
 
@@ -24,6 +23,6 @@ public class when_recording_distinct_definitions(ReplicaSetMongoDBFixture fixtur
     [Fact] void should_round_trip_the_original_version() => _entries[0].Definition.Version.ShouldEqual("1.0.0");
     [Fact] void should_preserve_the_original_definition_timestamp() => _entries[0].Definition.LastUpdated.ShouldEqual(_entry.Definition.LastUpdated);
     [Fact] void should_preserve_pinned_delivery() => _entries[0].Definition.GenerationDelivery.ShouldEqual(EventGenerationDelivery.Pinned);
-    [Fact] void should_preserve_both_event_generations() => _entries[0].Definition.From.Keys.ShouldContainOnly(new EventType("event", 1), new EventType("event", 2));
+    [Fact] void should_preserve_both_event_generations() => _entries[0].Definition.From.Keys.ShouldContainOnly(new Cratis.Chronicle.Concepts.Events.EventType("event", 1), new Cratis.Chronicle.Concepts.Events.EventType("event", 2));
     [Fact] void should_keep_the_second_snapshot() => _entries[1].Definition.IsActive.ShouldBeFalse();
 }

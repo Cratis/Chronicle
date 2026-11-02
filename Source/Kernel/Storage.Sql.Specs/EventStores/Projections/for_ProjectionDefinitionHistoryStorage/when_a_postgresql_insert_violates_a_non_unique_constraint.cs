@@ -15,6 +15,6 @@ public class when_a_postgresql_insert_violates_a_non_unique_constraint(PostgreSq
         await using var scope = await Database.EventStore(Store);
         await scope.DbContext.Database.ExecuteSqlRawAsync("ALTER TABLE \"ProjectionDefinitionHistory\" ADD CONSTRAINT reject_history CHECK (\"DigestAlgorithm\" = 'another-algorithm');");
     }
-    async Task Because() => _exception = await Catch.ExceptionAsync(() => _storage.Record(_entry));
+    async Task Because() => _exception = await Catch.Exception(() => _storage.Record(_entry));
     [Fact] void should_propagate_the_failure() => _exception.ShouldBeOfExactType<DbUpdateException>();
 }
