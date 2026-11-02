@@ -5,6 +5,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
+using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Registrations.Migrations.for_v19_117_0_3;
@@ -76,7 +77,8 @@ public class when_upgrading_an_existing_pre_train6_event_store : Specification
             var targetModel = context.GetService<IModelRuntimeInitializer>().Initialize(migration.TargetModel, designTime: true);
             foreach (var command in sqlGenerator.Generate(migration.UpOperations, targetModel))
             {
-                await context.Database.ExecuteSqlRawAsync(command.CommandText);
+                // Execute generated SQL verbatim: JSON defaults can contain braces, not format placeholders.
+                await command.ExecuteNonQueryAsync(context.GetService<IRelationalConnection>());
             }
             await context.Database.ExecuteSqlRawAsync(history.GetInsertScript(new HistoryRow(id, "10.0.0")));
         }
