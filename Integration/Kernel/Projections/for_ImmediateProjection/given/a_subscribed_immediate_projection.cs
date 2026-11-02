@@ -75,7 +75,7 @@ public class a_subscribed_immediate_projection(SubscriberLifecycleFixture fixtur
         var diagnostic = $"{phase}: HasReadModel={hasReadModel}; model null: {model is null}; property count: {model?.Count ?? 0}; first 8 keys (up to 64 characters each): [{keys}]";
         Assert.True(hasReadModel, diagnostic);
         Assert.True(model is not null, diagnostic);
-        var readModel = model!;
+        var readModel = model;
         foreach (var property in new[] { nameof(InterleavedReadModel.Name), nameof(InterleavedReadModel.Seed) })
         {
             Assert.True(readModel.TryGetPropertyValue(property, out var value), $"Expected property '{property}'. {diagnostic}");
@@ -84,7 +84,7 @@ public class a_subscribed_immediate_projection(SubscriberLifecycleFixture fixtur
 
         var typed = readModel.Deserialize<InterleavedReadModel>(ChronicleClient.Options.JsonSerializerOptions);
         Assert.True(typed is not null, diagnostic);
-        Assert.True(typed!.Name == "projected", diagnostic);
+        Assert.True(typed.Name == "projected", diagnostic);
         Assert.True(typed.Seed == expectedSeed, diagnostic);
         return typed;
     }
