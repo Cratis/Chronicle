@@ -11,11 +11,18 @@ using Testcontainers.PostgreSql;
 
 namespace Cratis.Chronicle.Integration.SqlClustering;
 
-public sealed class SqlClusterDatabase(bool postgres, INetwork network) : IAsyncDisposable
+public sealed class SqlClusterDatabase(bool postgres, INetwork network, bool traceStatements = false, string? run = null) : IAsyncDisposable
 {
+    public const string RunLabel = "cratis.chronicle.test-run";
     const string Password = "Clustering-5127-Password!";
     const string Database = "chronicle";
-    readonly IContainer _container = Build(postgres, network);
+    readonly IContainer _container = Build(postgres, network, traceStatements, run);
+
+    public async Task<string> ServerLogs()
+    {
+        var (stdout, stderr) = await _container.GetLogsAsync();
+        return stdout + stderr;
+    }
 
     public string KernelConnection => postgres
         ? $"Host=database;Database={Database};Username=postgres;Password={Password}"
@@ -53,17 +60,25 @@ public sealed class SqlClusterDatabase(bool postgres, INetwork network) : IAsync
 
     public ValueTask DisposeAsync() => _container.DisposeAsync();
 
-    static IContainer Build(bool postgres, INetwork network)
+    static IContainer Build(bool postgres, INetwork network, bool traceStatements, string? run)
     {
         if (postgres)
         {
             // Each node keeps an Npgsql pool per database (cluster, and one per event store and namespace), which
             // holds 30-38 connections per node under this load. Three nodes therefore sit at PostgreSQL's stock
             // limit of 100 and a restarting node is refused (53300). Size the server for the cluster, as production must.
-            return new PostgreSqlBuilder("postgres:16")
-                .WithCommand("-c", "max_connections=300")
+            var postgresBuilder = new PostgreSqlBuilder("postgres:16")
+                .WithCommand(traceStatements
+                    ? ["-c", "max_connections=300", "-c", "log_statement=all", "-c", "log_line_prefix=%m [%p] database=%d user=%u application=%a "]
+                    : ["-c", "max_connections=300"])
                 .WithNetwork(network).WithNetworkAliases("database")
-                .WithDatabase(Database).WithPassword(Password).Build();
+                .WithDatabase(Database).WithPassword(Password);
+            if (run is not null)
+            {
+                postgresBuilder = postgresBuilder.WithName($"{run}-postgres").WithLabel(RunLabel, run);
+            }
+
+            return postgresBuilder.Build();
         }
 
         var builder = new ContainerBuilder(SqlServerContainerImage.Name)
@@ -78,6 +93,11 @@ public sealed class SqlClusterDatabase(bool postgres, INetwork network) : IAsync
         if (System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture == System.Runtime.InteropServices.Architecture.Arm64)
         {
             builder = builder.WithCreateParameterModifier(parameters => parameters.Platform = "linux/amd64");
+        }
+
+        if (run is not null)
+        {
+            builder = builder.WithName($"{run}-postgres").WithLabel(RunLabel, run);
         }
 
         return builder.Build();
