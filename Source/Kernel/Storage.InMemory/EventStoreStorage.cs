@@ -116,6 +116,9 @@ public sealed class EventStoreStorage(
     public IProjectionDefinitionsStorage Projections { get; } = new ProjectionDefinitionsStorage();
 
     /// <inheritdoc/>
+    public IProjectionDefinitionHistoryStorage ProjectionDefinitionHistory { get; } = new ProjectionDefinitionHistoryStorage();
+
+    /// <inheritdoc/>
     public IWebhookDefinitionsStorage Webhooks { get; } = new WebhookDefinitionsStorage();
 
     /// <inheritdoc/>
