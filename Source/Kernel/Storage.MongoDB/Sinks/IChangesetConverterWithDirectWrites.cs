@@ -18,4 +18,13 @@ internal interface IChangesetConverterWithDirectWrites
     /// <param name="directWrites">The owning sink's direct-write boundary.</param>
     /// <returns>The converted keyed update.</returns>
     Task<UpdateDefinitionAndArrayFilters> ToUpdateDefinition(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset, EventSequenceNumber eventSequenceNumber, SinkMultiDocumentWrites directWrites);
+
+    /// <summary>Converts a segment of changes, routing any direct multi-document mutations through the supplied boundary.</summary>
+    /// <param name="key">The changeset key.</param>
+    /// <param name="changes">The changes to convert.</param>
+    /// <param name="initialState">The initial state of the changeset.</param>
+    /// <param name="eventSequenceNumber">The event watermark.</param>
+    /// <param name="directWrites">The owning sink's direct-write boundary.</param>
+    /// <returns>The converted keyed update.</returns>
+    Task<UpdateDefinitionAndArrayFilters> ToUpdateDefinition(Key key, IEnumerable<Change> changes, ExpandoObject? initialState, EventSequenceNumber eventSequenceNumber, SinkMultiDocumentWrites directWrites);
 }

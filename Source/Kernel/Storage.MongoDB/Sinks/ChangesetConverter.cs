@@ -79,11 +79,15 @@ public class ChangesetConverter(
     public Task<UpdateDefinitionAndArrayFilters> ToUpdateDefinition(
         Key key,
         IChangeset<AppendedEvent, ExpandoObject> changeset,
-        EventSequenceNumber eventSequenceNumber) => ToUpdateDefinition(key, changeset, eventSequenceNumber, new SinkMultiDocumentWrites(collections, writes));
+        EventSequenceNumber eventSequenceNumber) => ToUpdateDefinition(key, changeset.Changes, changeset.InitialState, eventSequenceNumber, new SinkMultiDocumentWrites(collections, writes));
 
     /// <inheritdoc/>
     Task<UpdateDefinitionAndArrayFilters> IChangesetConverterWithDirectWrites.ToUpdateDefinition(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset, EventSequenceNumber eventSequenceNumber, SinkMultiDocumentWrites directWrites) =>
-        ToUpdateDefinition(key, changeset, eventSequenceNumber, directWrites);
+        ToUpdateDefinition(key, changeset.Changes, changeset.InitialState, eventSequenceNumber, directWrites);
+
+    /// <inheritdoc/>
+    Task<UpdateDefinitionAndArrayFilters> IChangesetConverterWithDirectWrites.ToUpdateDefinition(Key key, IEnumerable<Change> changes, ExpandoObject? initialState, EventSequenceNumber eventSequenceNumber, SinkMultiDocumentWrites directWrites) =>
+        ToUpdateDefinition(key, changes, initialState, eventSequenceNumber, directWrites);
 
     /// <summary>
     /// Build the property and comparand the <see cref="Joined"/> change filters its update on.
@@ -234,12 +238,12 @@ public class ChangesetConverter(
         return new BsonDocument(arrayPath, new BsonDocument("$elemMatch", elementMatch));
     }
 
-    async Task<UpdateDefinitionAndArrayFilters> ToUpdateDefinition(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset, EventSequenceNumber eventSequenceNumber, SinkMultiDocumentWrites directWrites)
+    async Task<UpdateDefinitionAndArrayFilters> ToUpdateDefinition(Key key, IEnumerable<Change> changes, ExpandoObject? initialState, EventSequenceNumber eventSequenceNumber, SinkMultiDocumentWrites directWrites)
     {
         var hasChanges = false;
         var updateDefinitionBuilder = Builders<BsonDocument>.Update;
         UpdateDefinition<BsonDocument>? updateBuilder = default;
-        var normalizedChanges = NormalizeJoinedChanges(changeset.Changes);
+        var normalizedChanges = NormalizeJoinedChanges(changes);
 
         var arrayFiltersForDocument = new ArrayFilters();
         var nullParentPaths = new HashSet<string>();
@@ -247,7 +251,7 @@ public class ChangesetConverter(
         await ApplyActualChanges(
             key,
             normalizedChanges,
-            changeset.InitialState,
+            initialState,
             nullParentPaths,
             nullArrayParents,
             updateDefinitionBuilder,
