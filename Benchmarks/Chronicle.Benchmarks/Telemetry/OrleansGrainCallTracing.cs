@@ -48,7 +48,7 @@ public enum CallerContext
 /// and set the rpc tags when all data is requested) rather than running a silo.
 /// </summary>
 [MemoryDiagnoser]
-public class OrleansGrainCallTracing
+public class OrleansGrainCallTracing : IDisposable
 {
     static readonly ActivitySource _source = new(OrleansActivitySources.Application);
     static readonly Action<Dictionary<string, string>, string, string> _set = (carrier, name, value) => carrier[name] = value;
@@ -59,6 +59,8 @@ public class OrleansGrainCallTracing
     TracerProvider? _provider;
     OrleansTraceContextPropagation? _propagation;
     Activity? _caller;
+    Activity? _verifiedClient;
+    bool _verifying;
     int _sequence;
 
     /// <summary>
@@ -95,7 +97,9 @@ public class OrleansGrainCallTracing
                 break;
         }
 
+#pragma warning disable CA2000 // Ownership of the processor passes to the TracerProvider, which disposes it.
         _provider = builder.AddProcessor(new SimpleActivityExportProcessor(new NoOpExporter())).Build();
+#pragma warning restore CA2000
 
         if (Configuration == TracingConfiguration.HeadTracingOff)
         {
@@ -103,7 +107,11 @@ public class OrleansGrainCallTracing
             await _propagation.StartAsync(CancellationToken.None);
         }
 
-        if (Caller == CallerContext.Untraced) return;
+        if (Caller == CallerContext.Untraced)
+        {
+            VerifyEntry(default);
+            return;
+        }
 
         var flags = Caller == CallerContext.SampledParent ? ActivityTraceFlags.Recorded : ActivityTraceFlags.None;
         var parent = new ActivityContext(ActivityTraceId.CreateRandom(), ActivitySpanId.CreateRandom(), flags, isRemote: true);
@@ -114,7 +122,7 @@ public class OrleansGrainCallTracing
         };
         ActivitySource.AddActivityListener(_callerListener);
         _caller = _callerSource.StartActivity("caller", ActivityKind.Server, parent);
-
+        VerifyEntry(parent);
     }
 
     /// <summary>
@@ -123,12 +131,16 @@ public class OrleansGrainCallTracing
     [GlobalCleanup]
     public void Cleanup()
     {
+        Activity.Current = null;
         _caller?.Dispose();
         Activity.Current = null;
         _callerListener?.Dispose();
         _propagation?.Dispose();
         _provider?.Dispose();
     }
+
+    /// <inheritdoc/>
+    public void Dispose() => Cleanup();
 
     /// <summary>
     /// One modeled grain call: outgoing filter then incoming filter.
@@ -137,12 +149,16 @@ public class OrleansGrainCallTracing
     [Benchmark]
     public int GrainCall()
     {
-        var current = Activity.Current;
+        // Activity.Current is AsyncLocal and does not flow from the async GlobalSetup to the workload thread,
+        // so establish the caller on the thread that runs the call, as it is on a real grain call. Same cost for every configuration.
+        Activity.Current = _caller;
+        var current = _caller;
         var carrier = new Dictionary<string, string>(2);
 
         // Outgoing filter.
         using (var client = _source.StartActivity("IPing/Ping", ActivityKind.Client))
         {
+            if (_verifying) _verifiedClient = client;
             if (client is not null)
             {
                 if (client.IsAllDataRequested) SetRpcTags(client);
@@ -164,6 +180,47 @@ public class OrleansGrainCallTracing
         finally
         {
             Activity.Current = current;
+        }
+    }
+
+    void VerifyEntry(ActivityContext parent)
+    {
+        Activity.Current = _caller;
+        var current = Activity.Current;
+        var recorded = Caller == CallerContext.SampledParent;
+        if (Caller == CallerContext.Untraced)
+        {
+            if (current is not null) throw new InvalidOperationException("Untraced caller entered GrainCall with a current activity.");
+        }
+        else if (current is null || current.TraceId != parent.TraceId || current.Recorded != recorded)
+        {
+            throw new InvalidOperationException($"{Caller} caller did not enter GrainCall with the intended parent (current={current?.TraceId.ToString() ?? "none"}, recorded={current?.Recorded}, expected recorded={recorded}).");
+        }
+
+        _verifying = true;
+        _verifiedClient = null;
+        try
+        {
+            GrainCall();
+        }
+        finally
+        {
+            _verifying = false;
+        }
+
+        var client = _verifiedClient;
+        _verifiedClient = null;
+        if (Caller == CallerContext.Untraced) return;
+        if (client is null)
+        {
+            if (recorded) throw new InvalidOperationException($"{Configuration}/{Caller}: GrainCall created no client carrier activity.");
+            return;
+        }
+
+        var expectAllData = recorded && Configuration != TracingConfiguration.HeadTracingOff;
+        if (client.TraceId != parent.TraceId || client.Recorded != recorded || (recorded && client.IsAllDataRequested != expectAllData))
+        {
+            throw new InvalidOperationException($"{Configuration}/{Caller}: client carrier activity has TraceId match={client.TraceId == parent.TraceId}, Recorded={client.Recorded} (expected {recorded}), IsAllDataRequested={client.IsAllDataRequested} (expected {expectAllData}).");
         }
     }
 
