@@ -171,11 +171,21 @@ public class SaveChanges(ISink sink, IChangesetStorage changesetStorage, bool gu
     /// monotonic per-document stream; anything that collapses event sources onto one document — a join, a constant
     /// key, a parent hierarchy — is deliberately written out of order and would lose events to the guard. The
     /// event that creates the instance is written unconditionally: there is no document to compare a watermark
-    /// against, and a guarded write never inserts. On a redelivery of that same creating event the instance is
+    /// against, and a guarded write never inserts. A projection marked for applied event markers (event-source-keyed with
+    /// root joins, see <see cref="AppliedEventMarkerClassification"/>) is written with <see cref="SinkWriteMode.OncePerSourceEvent"/>
+    /// instead, including the creating event, because its joins are written out of order by design and the markers, not a
+    /// watermark, decide whether a write was already applied. On a redelivery of that same creating event the instance is
     /// already there, so the write is guarded and correctly does nothing.
     /// </remarks>
-    SinkWriteMode WriteModeFor(IProjection projection, ProjectionEventContext context) =>
-        guardWritesOnWatermark && projection.IsEventSourceKeyed && !context.IsNewInstance
+    SinkWriteMode WriteModeFor(IProjection projection, ProjectionEventContext context)
+    {
+        if (guardWritesOnWatermark && projection.MarkedJoins.Count > 0)
+        {
+            return SinkWriteMode.OncePerSourceEvent;
+        }
+
+        return guardWritesOnWatermark && projection.IsEventSourceKeyed && !context.IsNewInstance
             ? SinkWriteMode.OnlyWhenAdvancingWatermark
             : SinkWriteMode.Always;
+    }
 }

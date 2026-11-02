@@ -49,7 +49,9 @@ public class ReadModels
     /// applied only when it moves the watermark forward, making the redelivery a no-op. It is requested only for
     /// read models whose documents are keyed by event source id, where the per-document event stream is monotonic;
     /// a projection whose key collapses several event sources onto one document (a join, a constant key or a parent
-    /// hierarchy) is deliberately written out of order and is never guarded. Turning this off restores the previous
+    /// hierarchy) is deliberately written out of order and is never guarded, with one exception: a projection keyed by the
+    /// event source id that has root joins keyed by the event source id is written once per source event, tracked by applied
+    /// event markers in the document. Turning this off restores the previous
     /// behavior exactly.
     /// </remarks>
     public bool GuardSinkWritesOnWatermark { get; init; } = true;
