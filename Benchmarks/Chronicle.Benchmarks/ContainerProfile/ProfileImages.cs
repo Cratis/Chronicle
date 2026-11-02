@@ -21,10 +21,10 @@ internal static class ProfileImages
             _ => throw new HarnessFailure("Docker architecture must be arm64 or amd64.")
         };
         var sha = await ProfileRepository.Sha(cancellationToken);
-        var session = Guid.NewGuid().ToString("N");
+        var context = new ImageBuildContext(options.Results, arch, sha, Guid.NewGuid().ToString("N"));
         foreach (var variant in new[] { ImageVariant.R2R, ImageVariant.Jit }.Where(variant => options.Variants.Contains(variant.Name)))
         {
-            await BuildVariant(options, variant, arch, sha, session, cancellationToken);
+            await BuildVariant(context, variant, cancellationToken);
         }
     }
 
@@ -54,14 +54,14 @@ internal static class ProfileImages
         }
     }
 
-    static async Task BuildVariant(ProfileOptions options, ImageVariant variant, string arch, string sha, string session, CancellationToken cancellationToken)
+    static async Task BuildVariant(ImageBuildContext context, ImageVariant variant, CancellationToken cancellationToken)
     {
-        var directory = Path.GetFullPath(Path.Combine(options.Results, "images", variant.Name));
-        var publish = Path.Combine(directory, "Source", "Kernel", "Server", "out", arch);
+        var directory = Path.GetFullPath(Path.Combine(context.Results, "images", variant.Name));
+        var publish = Path.Combine(directory, "Source", "Kernel", "Server", "out", context.Architecture);
         Directory.CreateDirectory(publish);
         var root = ProfileRepository.Root();
         var project = Path.Combine(root, "Source", "Kernel", "Server", "Server.csproj");
-        var arguments = new[] { "publish", project, "-c", "Release", "-f", "net10.0", "-r", $"linux-{arch}", "--self-contained", "-m:2", "-nodeReuse:false", "-o", publish, $"-p:PublishReadyToRun={variant.ReadyToRun.ToString().ToLowerInvariant()}", "-p:DisableProxyGenerator=true" };
+        var arguments = new[] { "publish", project, "-c", "Release", "-f", "net10.0", "-r", $"linux-{context.Architecture}", "--self-contained", "-m:2", "-nodeReuse:false", "-o", publish, $"-p:PublishReadyToRun={variant.ReadyToRun.ToString().ToLowerInvariant()}", "-p:DisableProxyGenerator=true" };
         (await ProcessRunner.Run("dotnet", arguments, TimeSpan.FromSeconds(1800), cancellationToken)).RequireSuccess("publish kernel");
         var headers = ManagedNativeHeader.Read(publish);
         if (!ManagedNativeHeader.Matches(headers, variant.ReadyToRun))
@@ -71,8 +71,8 @@ internal static class ProfileImages
         Directory.CreateDirectory(Path.Combine(directory, "Docker"));
         File.Copy(Path.Combine(root, "Docker", "copy-server-files.sh"), Path.Combine(directory, "Docker", "copy-server-files.sh"), true);
         Directory.CreateDirectory(Path.Combine(directory, "Source", "Workbench", "wwwroot"));
-        await DockerCli.Require(ImageCommands.Build(directory, variant.Reference(sha), session), cancellationToken);
-        var identity = await DockerCli.Require(MetricCommands.Image(variant.Reference(sha)), cancellationToken);
-        await ResultFiles.Write(Path.Combine(directory, "metadata.json"), new { Sha = sha, Runtime = $"linux-{arch}", Variant = variant, Image = identity, Headers = headers, WorkbenchAssets = false }, cancellationToken);
+        await DockerCli.Require(ImageCommands.Build(directory, variant.Reference(context.Sha), context.Session), cancellationToken);
+        var identity = await DockerCli.Require(MetricCommands.Image(variant.Reference(context.Sha)), cancellationToken);
+        await ResultFiles.Write(Path.Combine(directory, "metadata.json"), new { context.Sha, Runtime = $"linux-{context.Architecture}", Variant = variant, Image = identity, Headers = headers, WorkbenchAssets = false }, cancellationToken);
     }
 }

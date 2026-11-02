@@ -19,11 +19,11 @@ internal static class ProfileSweep
             throw new HarnessFailure("Cell filter matched no cells.");
         }
         var sha = await ProfileRepository.Sha(cancellationToken);
-        var session = Guid.NewGuid().ToString("N");
         var mongo = Environment.GetEnvironmentVariable("CHRONICLE_MONGODB_IMAGE") ?? "mongo:8.2";
+        var session = new ProfileSession(Guid.NewGuid().ToString("N"), options.Results, sha, mongo);
         await DockerCli.Require(ImageCommands.Pull(mongo), cancellationToken);
         await DockerCli.Require(ImageCommands.Pull("busybox:1.36"), cancellationToken);
-        var networkContext = ContainerLifecycle.Context(session, "network", options.Results, sha, mongo, false);
+        var networkContext = ContainerLifecycle.Context(session, new RunIdentity("network", 0, false));
         var results = new List<ProfileResult>();
         try
         {
@@ -36,8 +36,8 @@ internal static class ProfileSweep
                     var trace = repetition == options.Repetitions;
                     var id = $"{cell.Id}-{repetition + 1}{(trace ? "-trace" : string.Empty)}";
                     Console.WriteLine($"Running {id}");
-                    var context = ContainerLifecycle.Context(session, id, options.Results, sha, mongo, trace);
-                    results.Add(await ProfileRun.Execute(context, cell, options, repetition + 1, cancellationToken));
+                    var context = ContainerLifecycle.Context(session, new RunIdentity(id, repetition + 1, trace));
+                    results.Add(await ProfileRun.Execute(context, cell, options, cancellationToken));
                     await ResultSummary.Write(options.Results, results, cancellationToken);
                 }
             }

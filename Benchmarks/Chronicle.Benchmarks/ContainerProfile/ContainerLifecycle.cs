@@ -11,15 +11,11 @@ namespace Cratis.Chronicle.Benchmarks.ContainerProfile;
 internal static class ContainerLifecycle
 {
     /// <summary>Creates private identities and random ephemeral credentials.</summary>
-    /// <param name="session">The session identity.</param>
-    /// <param name="id">The run identity.</param>
-    /// <param name="results">The results directory.</param>
-    /// <param name="sha">The source commit.</param>
-    /// <param name="mongoImage">The MongoDB image.</param>
-    /// <param name="trace">Whether this is traced.</param>
+    /// <param name="session">The shared sweep settings.</param>
+    /// <param name="run">The repetition identity.</param>
     /// <returns>The private run context.</returns>
-    public static RunContext Context(string session, string id, string results, string sha, string mongoImage, bool trace) =>
-        new(session, id, Path.GetFullPath(Path.Combine(results, id)), Convert.ToHexString(RandomNumberGenerator.GetBytes(24)), Convert.ToHexString(RandomNumberGenerator.GetBytes(32)), sha, mongoImage, trace);
+    public static RunContext Context(ProfileSession session, RunIdentity run) =>
+        new(session, run, Path.GetFullPath(Path.Combine(session.Results, run.Id)), new RunCredentials(Convert.ToHexString(RandomNumberGenerator.GetBytes(24)), Convert.ToHexString(RandomNumberGenerator.GetBytes(32))));
 
     /// <summary>Creates TLS material and a new writable replica set.</summary>
     /// <param name="context">The private run context.</param>

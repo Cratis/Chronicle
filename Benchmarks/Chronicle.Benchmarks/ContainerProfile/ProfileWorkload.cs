@@ -13,18 +13,17 @@ namespace Cratis.Chronicle.Benchmarks.ContainerProfile;
 internal static class ProfileWorkload
 {
     /// <summary>Registers, seeds, appends and waits for distinct observer deliveries.</summary>
-    /// <param name="context">The private run context.</param>
-    /// <param name="endpoint">The mapped client endpoint.</param>
+    /// <param name="connectionSettings">The private client connection settings.</param>
     /// <param name="settings">The workload scale.</param>
     /// <param name="sample">The phase-boundary sampling callback.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The measured workload result.</returns>
     /// <exception cref="HarnessFailure">Observers do not catch up before the deadline.</exception>
-    public static async Task<WorkloadResult> Run(RunContext context, string endpoint, WorkloadSettings settings, Func<string, Task> sample, CancellationToken cancellationToken)
+    public static async Task<WorkloadResult> Run(WorkloadConnection connectionSettings, WorkloadSettings settings, Func<string, Task> sample, CancellationToken cancellationToken)
     {
         ProfileReactor.Reset();
-        var address = new Uri($"https://{endpoint}");
-        var connection = new ChronicleConnectionStringBuilder { Host = address.Host, Port = address.Port, Username = "container-profile", Password = context.ClientSecret, SkipTlsValidation = true }.Build();
+        var address = new Uri($"https://{connectionSettings.Endpoint}");
+        var connection = new ChronicleConnectionStringBuilder { Host = address.Host, Port = address.Port, Username = connectionSettings.ClientId, Password = connectionSettings.ClientSecret, SkipTlsValidation = true }.Build();
         using var client = new ChronicleClient(new ChronicleOptions(connectionString: new ChronicleConnectionString(connection), connectTimeout: 30), artifactsProvider: new ObserverScopedClientArtifactsProvider(typeof(ProfileReactor)), loggerFactory: NullLoggerFactory.Instance);
         var stores = await Register(client, settings, cancellationToken);
         await Append(stores, settings.SeedEvents, settings, cancellationToken);

@@ -3,17 +3,34 @@
 
 namespace Cratis.Chronicle.Benchmarks.ContainerProfile;
 
-/// <summary>Private, per-run resource identities and ephemeral credentials. Never serialize.</summary>
-/// <param name="Session">The session identity.</param>
-/// <param name="RunId">The repetition identity.</param>
+/// <summary>Private per-run ownership, paths and ephemeral credentials. Never serialize.</summary>
+/// <param name="SessionInfo">The sweep's resource scope and source identity.</param>
+/// <param name="Run">The repetition identity.</param>
 /// <param name="Directory">The run output directory.</param>
-/// <param name="CertificatePassword">The ephemeral PFX password.</param>
-/// <param name="ClientSecret">The ephemeral client credential.</param>
-/// <param name="Sha">The source commit abbreviation.</param>
-/// <param name="MongoImage">The MongoDB image reference.</param>
-/// <param name="Trace">Whether this is a separate traced repetition.</param>
-internal sealed record RunContext(string Session, string RunId, string Directory, string CertificatePassword, string ClientSecret, string Sha, string MongoImage, bool Trace)
+/// <param name="Credentials">The ephemeral credentials.</param>
+internal sealed record RunContext(ProfileSession SessionInfo, RunIdentity Run, string Directory, RunCredentials Credentials)
 {
+    /// <summary>Gets the session identity.</summary>
+    public string Session => SessionInfo.Id;
+
+    /// <summary>Gets the run identity.</summary>
+    public string RunId => Run.Id;
+
+    /// <summary>Gets the source commit abbreviation.</summary>
+    public string Sha => SessionInfo.Sha;
+
+    /// <summary>Gets the selected MongoDB image.</summary>
+    public string MongoImage => SessionInfo.MongoImage;
+
+    /// <summary>Gets whether this is a trace repetition.</summary>
+    public bool Trace => Run.Trace;
+
+    /// <summary>Gets the temporary certificate password.</summary>
+    public string CertificatePassword => Credentials.CertificatePassword;
+
+    /// <summary>Gets the temporary client credential.</summary>
+    public string ClientSecret => Credentials.ClientSecret;
+
     /// <summary>Gets the session network name.</summary>
     public string Network => $"chronicle-cp-{Session}";
 

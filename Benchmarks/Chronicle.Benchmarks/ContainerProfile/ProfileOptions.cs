@@ -8,6 +8,25 @@ namespace Cratis.Chronicle.Benchmarks.ContainerProfile;
 /// <summary>The profiling CLI options and workload defaults.</summary>
 internal sealed record ProfileOptions
 {
+    static readonly string[] _commands = ["plan", "run", "build-images", "r2r-check", "cleanup"];
+
+    static readonly Dictionary<string, Func<ProfileOptions, ProfileOptions>> _flags = new(StringComparer.Ordinal)
+    {
+        ["--gc-trace"] = options => options with { GcTrace = true },
+        ["--verbose"] = options => options with { Verbose = true },
+        ["--allow-noisy-host"] = options => options with { AllowNoisyHost = true }
+    };
+
+    static readonly Dictionary<string, Func<ProfileOptions, ProfileArgument, ProfileOptions?>> _values = new(StringComparer.Ordinal)
+    {
+        ["--matrix"] = WithMatrix,
+        ["--cells"] = (options, argument) => options with { Cells = argument.Value.Split(',', StringSplitOptions.RemoveEmptyEntries) },
+        ["--results"] = (options, argument) => options with { Results = Path.GetFullPath(argument.Value) },
+        ["--image"] = (options, argument) => options with { Image = argument.Value },
+        ["--variants"] = WithVariants,
+        ["--max-host-load"] = WithLoad
+    };
+
     /// <summary>Gets the subcommand.</summary>
     public string Command { get; init; } = "plan";
 
@@ -49,7 +68,7 @@ internal sealed record ProfileOptions
     /// <returns>The parsed options or a safe diagnostic.</returns>
     public static (ProfileOptions? Options, string? Error) Parse(string[] arguments)
     {
-        if (arguments.Length == 0 || arguments[0] is not ("plan" or "run" or "build-images" or "r2r-check" or "cleanup"))
+        if (!HasCommand(arguments))
         {
             return (null, "Expected plan, build-images, run, r2r-check or cleanup.");
         }
@@ -57,54 +76,78 @@ internal sealed record ProfileOptions
         for (var i = 1; i < arguments.Length; i++)
         {
             var key = arguments[i];
-            if (key == "--gc-trace" || key == "--verbose" || key == "--allow-noisy-host")
+            var flag = ApplyFlag(options, key);
+            if (flag is not null)
             {
-                options = options with { GcTrace = options.GcTrace || key == "--gc-trace", Verbose = options.Verbose || key == "--verbose", AllowNoisyHost = options.AllowNoisyHost || key == "--allow-noisy-host" };
+                options = flag;
                 continue;
             }
             if (++i >= arguments.Length)
             {
                 return (null, $"Missing value for {key}.");
             }
-            var updated = Apply(options, key, arguments[i]);
+            var updated = ApplyValue(options, new ProfileArgument(key, arguments[i]));
             if (updated is null)
             {
                 return (null, $"Invalid option or value: {key}.");
             }
             options = updated;
         }
-        return options.Command == "r2r-check" && options.Image.Length == 0
-            ? (null, "r2r-check requires --image <ref>.")
-            : (options, null);
+        return Validate(options);
     }
 
-    static ProfileOptions? Apply(ProfileOptions options, string key, string value) => key switch
-    {
-        "--matrix" when value == "core" || value == "full" => options with { Matrix = value },
-        "--cells" => options with { Cells = value.Split(',', StringSplitOptions.RemoveEmptyEntries) },
-        "--results" => options with { Results = Path.GetFullPath(value) },
-        "--image" => options with { Image = value },
-        "--variants" when value.Split(',').All(variant => variant == "r2r" || variant == "jit") => options with { Variants = value.Split(',').Distinct().ToArray() },
-        "--max-host-load" when double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var load) && double.IsFinite(load) && load > 0 => options with { MaxHostLoad = load },
-        _ => ApplyNumber(options, key, value)
-    };
+    static bool HasCommand(string[] arguments) => arguments.Length > 0 && _commands.Contains(arguments[0]);
 
-    static ProfileOptions? ApplyNumber(ProfileOptions options, string key, string value)
+    static (ProfileOptions? Options, string? Error) Validate(ProfileOptions options) =>
+        options.Command == "r2r-check" && options.Image.Length == 0
+            ? (null, "r2r-check requires --image <ref>.")
+            : (options, null);
+
+    static ProfileOptions? ApplyFlag(ProfileOptions options, string key) =>
+        _flags.TryGetValue(key, out var apply) ? apply(options) : null;
+
+    static ProfileOptions? ApplyValue(ProfileOptions options, ProfileArgument argument) =>
+        _values.TryGetValue(argument.Key, out var apply) ? apply(options, argument) : ApplyNumber(options, argument);
+
+    static ProfileOptions? WithMatrix(ProfileOptions options, ProfileArgument argument) =>
+        argument.Value == "core" || argument.Value == "full" ? options with { Matrix = argument.Value } : null;
+
+    static ProfileOptions? WithVariants(ProfileOptions options, ProfileArgument argument)
     {
-        if (!int.TryParse(value, CultureInfo.InvariantCulture, out var number) || number <= 0)
+        var variants = argument.Value.Split(',');
+        return variants.All(variant => variant == "r2r" || variant == "jit")
+            ? options with { Variants = variants.Distinct().ToArray() }
+            : null;
+    }
+
+    static ProfileOptions? WithLoad(ProfileOptions options, ProfileArgument argument)
+    {
+        if (!double.TryParse(argument.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out var load))
         {
             return null;
         }
-        return key switch
+        if (!double.IsFinite(load))
         {
-            "--repetitions" => options with { Repetitions = number },
-            "--stores" => options with { Workload = options.Workload with { Stores = number } },
-            "--namespaces" => options with { Workload = options.Workload with { Namespaces = number } },
-            "--seed-events" => options with { Workload = options.Workload with { SeedEvents = number } },
-            "--events" => options with { Workload = options.Workload with { Events = number } },
-            "--batch-size" => options with { Workload = options.Workload with { BatchSize = number } },
-            "--appenders" => options with { Workload = options.Workload with { Appenders = number } },
-            _ => null
-        };
+            return null;
+        }
+        return load > 0 ? options with { MaxHostLoad = load } : null;
+    }
+
+    static ProfileOptions? ApplyNumber(ProfileOptions options, ProfileArgument argument)
+    {
+        if (!int.TryParse(argument.Value, CultureInfo.InvariantCulture, out var number))
+        {
+            return null;
+        }
+        if (number <= 0)
+        {
+            return null;
+        }
+        if (argument.Key == "--repetitions")
+        {
+            return options with { Repetitions = number };
+        }
+        var workload = options.Workload.WithOption(argument.Key, number);
+        return workload is null ? null : options with { Workload = workload };
     }
 }

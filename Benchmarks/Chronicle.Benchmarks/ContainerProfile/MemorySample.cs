@@ -7,14 +7,26 @@ using System.Text.Json;
 namespace Cratis.Chronicle.Benchmarks.ContainerProfile;
 
 /// <summary>A timestamped sample with process memory distinct from cgroup memory.</summary>
-/// <param name="Timestamp">The sample time.</param>
-/// <param name="Phase">The measurement phase.</param>
-/// <param name="RssKb">Kernel PID 1 RSS, if available.</param>
-/// <param name="HighWaterKb">Kernel PID 1 high-water RSS, if available.</param>
-/// <param name="CgroupMemory">Docker cgroup memory usage, if available.</param>
-/// <param name="CpuPercent">Docker CPU usage, if available.</param>
-internal sealed record MemorySample(DateTimeOffset Timestamp, string Phase, long? RssKb, long? HighWaterKb, string? CgroupMemory, string? CpuPercent)
+internal sealed record MemorySample
 {
+    /// <summary>Gets the sample time.</summary>
+    public required DateTimeOffset Timestamp { get; init; }
+
+    /// <summary>Gets the measurement phase.</summary>
+    public required string Phase { get; init; }
+
+    /// <summary>Gets kernel PID 1 RSS, if available.</summary>
+    public long? RssKb { get; init; }
+
+    /// <summary>Gets kernel PID 1 high-water RSS, if available.</summary>
+    public long? HighWaterKb { get; init; }
+
+    /// <summary>Gets Docker cgroup memory usage, if available.</summary>
+    public string? CgroupMemory { get; init; }
+
+    /// <summary>Gets Docker CPU usage, if available.</summary>
+    public string? CpuPercent { get; init; }
+
     /// <summary>Collects independent process and cgroup observations.</summary>
     /// <param name="context">The run context.</param>
     /// <param name="phase">The phase name.</param>
@@ -32,7 +44,15 @@ internal sealed record MemorySample(DateTimeOffset Timestamp, string Phase, long
             memory = json.RootElement.GetProperty("MemUsage").GetString();
             cpu = json.RootElement.GetProperty("CPUPerc").GetString();
         }
-        return new MemorySample(DateTimeOffset.UtcNow, phase, ReadKb(status.StandardOutput, "VmRSS:"), ReadKb(status.StandardOutput, "VmHWM:"), memory, cpu);
+        return new MemorySample
+        {
+            Timestamp = DateTimeOffset.UtcNow,
+            Phase = phase,
+            RssKb = ReadKb(status.StandardOutput, "VmRSS:"),
+            HighWaterKb = ReadKb(status.StandardOutput, "VmHWM:"),
+            CgroupMemory = memory,
+            CpuPercent = cpu
+        };
     }
 
     static long? ReadKb(string output, string key)

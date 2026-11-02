@@ -10,17 +10,16 @@ internal static class ProfileRun
     /// <param name="context">The private run context.</param>
     /// <param name="cell">The resource configuration.</param>
     /// <param name="options">The workload options.</param>
-    /// <param name="repetition">The repetition number.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The result, including unavailable fields on failure.</returns>
-    public static async Task<ProfileResult> Execute(RunContext context, MatrixCell cell, ProfileOptions options, int repetition, CancellationToken cancellationToken)
+    public static async Task<ProfileResult> Execute(RunContext context, MatrixCell cell, ProfileOptions options, CancellationToken cancellationToken)
     {
         var result = new ProfileResult
         {
             RunId = context.RunId,
             Cell = cell.Id,
             Sha = context.Sha,
-            Repetition = repetition,
+            Repetition = context.Run.Repetition,
             ImageReference = cell.Image.Reference(context.Sha),
             GcEnvironment = cell.Gc.Environment.ToArray(),
             WorkloadSettings = options.Workload,
@@ -46,7 +45,7 @@ internal static class ProfileRun
             await Task.Delay(TimeSpan.FromSeconds(30), cancellationToken);
             result.Idle = await MemorySample.Capture(context, "idle", cancellationToken);
             result.Memory.Add(result.Idle);
-            await Measure(context, startup.GrpcEndpoint, result, options, cancellationToken);
+            await Measure(context, startup.GrpcEndpoint, result, cancellationToken);
             result.Status = "completed";
         }
         catch (Exception exception) when (exception is not OutOfMemoryException)
@@ -84,14 +83,21 @@ internal static class ProfileRun
 
     static string FailureStatus(Exception exception)
     {
-        if (exception is HarnessFailure && (exception.Message == "notReady" || exception.Message == "notCaughtUp"))
+        if (exception is HarnessFailure)
         {
-            return exception.Message;
+            return KnownFailureStatus(exception.Message);
         }
         return exception is OperationCanceledException ? "deadline-or-cancelled" : "failed";
     }
 
-    static async Task Measure(RunContext context, string endpoint, ProfileResult result, ProfileOptions options, CancellationToken cancellationToken)
+    static string KnownFailureStatus(string message) => message switch
+    {
+        "notReady" => message,
+        "notCaughtUp" => message,
+        _ => "failed"
+    };
+
+    static async Task Measure(RunContext context, string endpoint, ProfileResult result, CancellationToken cancellationToken)
     {
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeout.CancelAfter(TimeSpan.FromMinutes(15));
@@ -103,7 +109,8 @@ internal static class ProfileRun
             {
                 AddSample(result, await MemorySample.Capture(context, phase, timeout.Token));
             }
-            result.Workload = await ProfileWorkload.Run(context, endpoint, options.Workload, SamplePhase, timeout.Token);
+            var connection = new WorkloadConnection(endpoint, "container-profile", context.ClientSecret);
+            result.Workload = await ProfileWorkload.Run(connection, result.WorkloadSettings, SamplePhase, timeout.Token);
         }
         finally
         {

@@ -13,7 +13,10 @@ internal static class CommandValidation
     /// <param name="cell">The expected cell limits.</param>
     /// <param name="session">The expected session label.</param>
     /// <returns>All discovered violations.</returns>
-    public static IEnumerable<string> Validate(DockerCommand command, MatrixCell cell, string session)
+    public static IEnumerable<string> Validate(DockerCommand command, MatrixCell cell, string session) =>
+        ValidateSafety(command).Concat(ValidateLabels(command, session)).Concat(ValidateKernelLimits(command, cell));
+
+    static IEnumerable<string> ValidateSafety(DockerCommand command)
     {
         if (command.Deadline <= TimeSpan.Zero)
         {
@@ -23,23 +26,42 @@ internal static class CommandValidation
         {
             yield return $"{command.Purpose}: forbidden prune argument";
         }
-        if (command.Arguments[0] == "create" || command.Arguments[0] == "run" || command.Arguments.Take(2).SequenceEqual(["network", "create"]))
+    }
+
+    static IEnumerable<string> ValidateLabels(DockerCommand command, string session)
+    {
+        if (!CreatesResource(command))
         {
-            foreach (var label in new[] { "cratis.container-profile=1", $"cratis.container-profile.session={session}" }.Where(label => !Has(command, "--label", label)))
-            {
-                yield return $"{command.Purpose}: missing label {label}";
-            }
+            yield break;
         }
-        if (command.Purpose == "create kernel")
+        foreach (var label in new[] { "cratis.container-profile=1", $"cratis.container-profile.session={session}" }.Where(label => !Has(command, "--label", label)))
         {
-            foreach (var option in _memoryOptions.Where(option => !Has(command, option, cell.Memory)))
-            {
-                yield return $"{cell.Id}: missing or incorrect {option}";
-            }
-            if (!Has(command, "--cpus", cell.Cpus.ToString(System.Globalization.CultureInfo.InvariantCulture)))
-            {
-                yield return $"{cell.Id}: missing or incorrect --cpus";
-            }
+            yield return $"{command.Purpose}: missing label {label}";
+        }
+    }
+
+    static bool CreatesResource(DockerCommand command)
+    {
+        if (command.Arguments[0] == "create" || command.Arguments[0] == "run")
+        {
+            return true;
+        }
+        return command.Arguments.Take(2).SequenceEqual(["network", "create"]);
+    }
+
+    static IEnumerable<string> ValidateKernelLimits(DockerCommand command, MatrixCell cell)
+    {
+        if (command.Purpose != "create kernel")
+        {
+            yield break;
+        }
+        foreach (var option in _memoryOptions.Where(option => !Has(command, option, cell.Memory)))
+        {
+            yield return $"{cell.Id}: missing or incorrect {option}";
+        }
+        if (!Has(command, "--cpus", cell.Cpus.ToString(System.Globalization.CultureInfo.InvariantCulture)))
+        {
+            yield return $"{cell.Id}: missing or incorrect --cpus";
         }
     }
 

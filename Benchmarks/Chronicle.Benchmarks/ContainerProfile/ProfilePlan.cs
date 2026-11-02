@@ -21,20 +21,7 @@ internal static class ProfilePlan
         }
         foreach (var cell in cells)
         {
-            Console.WriteLine(cell.Id);
-            foreach (var trace in options.GcTrace ? (bool[])[false, true] : [false])
-            {
-                var context = new RunContext("plan", "run", "/plan", "<generated>", "<generated>", "<shortsha>", "mongo:8.2", trace);
-                var commands = Commands(context, cell).ToArray();
-                violations.AddRange(commands.SelectMany(command => CommandValidation.Validate(command, cell, context.Session)));
-                if (options.Verbose || cell == cells[0])
-                {
-                    foreach (var command in commands)
-                    {
-                        Console.WriteLine($"  {command.Purpose}: {command.Display}");
-                    }
-                }
-            }
+            violations.AddRange(InspectCell(cell, options, cell == cells[0]));
         }
         var runs = cells.Length * (options.Repetitions + (options.GcTrace ? 1 : 0));
         Console.WriteLine($"Workload: {JsonSerializer.Serialize(options.Workload)}; client and MongoDB unconstrained; Workbench assets absent.");
@@ -46,6 +33,34 @@ internal static class ProfilePlan
         }
         Console.WriteLine($"Invariant violations: {violations.Count}");
         return violations.Count == 0 ? 0 : 1;
+    }
+
+    static IEnumerable<string> InspectCell(MatrixCell cell, ProfileOptions options, bool representative)
+    {
+        Console.WriteLine(cell.Id);
+        foreach (var trace in options.GcTrace ? (bool[])[false, true] : [false])
+        {
+            var session = new ProfileSession("plan", "/plan", "<shortsha>", "mongo:8.2");
+            var context = new RunContext(session, new RunIdentity("run", 1, trace), "/plan", new RunCredentials("<generated>", "<generated>"));
+            var commands = Commands(context, cell).ToArray();
+            var violations = commands.SelectMany(command => CommandValidation.Validate(command, cell, context.Session)).ToArray();
+            if (options.Verbose || representative)
+            {
+                PrintCommands(commands);
+            }
+            foreach (var violation in violations)
+            {
+                yield return violation;
+            }
+        }
+    }
+
+    static void PrintCommands(IEnumerable<DockerCommand> commands)
+    {
+        foreach (var command in commands)
+        {
+            Console.WriteLine($"  {command.Purpose}: {command.Display}");
+        }
     }
 
     static IEnumerable<DockerCommand> Commands(RunContext context, MatrixCell cell) =>
