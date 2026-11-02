@@ -170,12 +170,19 @@ internal static partial class SinkCycleReceiptSchema
         return false;
     }
 
-    static string ExpectedType(DatabaseType databaseType, string column) => databaseType switch
+    static string ExpectedType(DatabaseType databaseType, string column)
     {
-        DatabaseType.PostgreSql => column switch { "Id" => "uuid", "TableName" => "text", _ => "bigint" },
-        DatabaseType.SqlServer => column switch { "Id" => "uniqueidentifier", "TableName" => "nvarchar(max)", _ => "bigint" },
-        _ => string.Equals(column, "Id", StringComparison.Ordinal) || string.Equals(column, "TableName", StringComparison.Ordinal) ? "TEXT" : "INTEGER"
-    };
+        var (id, tableName, number) = databaseType switch
+        {
+            DatabaseType.PostgreSql => ("uuid", "text", "bigint"),
+            DatabaseType.SqlServer => ("uniqueidentifier", "nvarchar(max)", "bigint"),
+            _ => ("TEXT", "TEXT", "INTEGER")
+        };
+        return ExpectedTypes(id, tableName, number).GetValueOrDefault(column, number);
+    }
+
+    static Dictionary<string, string> ExpectedTypes(string id, string tableName, string number) =>
+        new(StringComparer.Ordinal) { ["Id"] = id, ["TableName"] = tableName, ["EventSequenceNumber"] = number, ["CreatedAt"] = number };
 
     /// <summary>
     /// Compares only what catalogs reformat for the unchanged clock expression: case, spacing, parentheses and numeric casts.
