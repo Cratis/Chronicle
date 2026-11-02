@@ -14,8 +14,14 @@ namespace Cratis.Chronicle.Integration.SqlClustering;
 public sealed class SqlClusterDatabase(bool postgres, INetwork network, bool traceStatements = false, string? run = null) : IAsyncDisposable
 {
     public const string RunLabel = "cratis.chronicle.test-run";
-    const string Password = "Clustering-5127-Password!";
     const string Database = "chronicle";
+
+    /// <summary>
+    /// A throwaway password generated per test process for the disposable container; it is never logged or persisted.
+    /// The fixed prefix and suffix satisfy SQL Server's complexity policy (upper, lower, digit and symbol).
+    /// </summary>
+    static readonly string _password = $"Cl{Guid.NewGuid():N}!9";
+
     readonly IContainer _container = Build(postgres, network, traceStatements, run);
 
     public async Task<string> ServerLogs()
@@ -25,8 +31,8 @@ public sealed class SqlClusterDatabase(bool postgres, INetwork network, bool tra
     }
 
     public string KernelConnection => postgres
-        ? $"Host=database;Database={Database};Username=postgres;Password={Password}"
-        : $"Server=database,1433;Database={Database};User Id=sa;Password={Password};TrustServerCertificate=True";
+        ? $"Host=database;Database={Database};Username=postgres;Password={_password}"
+        : $"Server=database,1433;Database={Database};User Id=sa;Password={_password};TrustServerCertificate=True";
 
     public Task Start(CancellationToken token) => _container.StartAsync(token);
 
@@ -72,7 +78,7 @@ public sealed class SqlClusterDatabase(bool postgres, INetwork network, bool tra
                     ? ["-c", "max_connections=300", "-c", "log_statement=all", "-c", "log_line_prefix=%m [%p] database=%d user=%u application=%a "]
                     : ["-c", "max_connections=300"])
                 .WithNetwork(network).WithNetworkAliases("database")
-                .WithDatabase(Database).WithPassword(Password);
+                .WithDatabase(Database).WithPassword(_password);
             if (run is not null)
             {
                 postgresBuilder = postgresBuilder.WithName($"{run}-postgres").WithLabel(RunLabel, run);
@@ -85,11 +91,11 @@ public sealed class SqlClusterDatabase(bool postgres, INetwork network, bool tra
             .WithNetwork(network).WithNetworkAliases("database")
             .WithPortBinding(1433, true)
             .WithEnvironment("ACCEPT_EULA", "Y")
-            .WithEnvironment("MSSQL_SA_PASSWORD", Password)
+            .WithEnvironment("MSSQL_SA_PASSWORD", _password)
             .WithEnvironment("MSSQL_PID", "Developer")
             .WithCreateParameterModifier(parameters => parameters.HostConfig.Memory = 3L * 1024 * 1024 * 1024)
             .WithWaitStrategy(Wait.ForUnixContainer().UntilCommandIsCompleted(
-                "/opt/mssql-tools18/bin/sqlcmd", "-S", "localhost", "-U", "sa", "-P", Password, "-Q", "SELECT 1", "-C"));
+                "/opt/mssql-tools18/bin/sqlcmd", "-S", "localhost", "-U", "sa", "-P", _password, "-Q", "SELECT 1", "-C"));
         if (System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture == System.Runtime.InteropServices.Architecture.Arm64)
         {
             builder = builder.WithCreateParameterModifier(parameters => parameters.Platform = "linux/amd64");
@@ -97,7 +103,7 @@ public sealed class SqlClusterDatabase(bool postgres, INetwork network, bool tra
 
         if (run is not null)
         {
-            builder = builder.WithName($"{run}-postgres").WithLabel(RunLabel, run);
+            builder = builder.WithName($"{run}-sqlserver").WithLabel(RunLabel, run);
         }
 
         return builder.Build();
@@ -110,6 +116,6 @@ public sealed class SqlClusterDatabase(bool postgres, INetwork network, bool tra
     public DbConnection CreateConnection() => Connection();
 
     DbConnection Connection() => postgres
-        ? new NpgsqlConnection($"Host={_container.Hostname};Port={_container.GetMappedPublicPort(5432)};Database={Database};Username=postgres;Password={Password}")
-        : new SqlConnection($"Server={_container.Hostname},{_container.GetMappedPublicPort(1433)};Database={Database};User Id=sa;Password={Password};TrustServerCertificate=True");
+        ? new NpgsqlConnection($"Host={_container.Hostname};Port={_container.GetMappedPublicPort(5432)};Database={Database};Username=postgres;Password={_password}")
+        : new SqlConnection($"Server={_container.Hostname},{_container.GetMappedPublicPort(1433)};Database={Database};User Id=sa;Password={_password};TrustServerCertificate=True");
 }
