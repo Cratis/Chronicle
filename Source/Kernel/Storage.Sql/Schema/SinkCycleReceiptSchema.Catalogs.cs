@@ -178,11 +178,11 @@ internal static partial class SinkCycleReceiptSchema
             DatabaseType.SqlServer => ("uniqueidentifier", "nvarchar(max)", "bigint"),
             _ => ("TEXT", "TEXT", "INTEGER")
         };
-        return ExpectedTypes(id, tableName, number).GetValueOrDefault(column, number);
+        return ExpectedTypes((id, tableName, number)).GetValueOrDefault(column, number);
     }
 
-    static Dictionary<string, string> ExpectedTypes(string id, string tableName, string number) =>
-        new(StringComparer.Ordinal) { ["Id"] = id, ["TableName"] = tableName, ["EventSequenceNumber"] = number, ["CreatedAt"] = number };
+    static Dictionary<string, string> ExpectedTypes((string Id, string TableName, string Number) types) =>
+        new(StringComparer.Ordinal) { ["Id"] = types.Id, ["TableName"] = types.TableName, ["EventSequenceNumber"] = types.Number, ["CreatedAt"] = types.Number };
 
     /// <summary>
     /// Compares only what catalogs reformat for the unchanged clock expression: case, spacing, parentheses and numeric casts.
