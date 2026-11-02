@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Before/after harness for the NORMAL (non-Testing) client: reducer and projection discovery, reducer dispatch and
+       release. It references only the client and compiles unchanged against any commit. The assembly name is one the
+       client already grants internal access to, so no product change is needed to reach Reducers.Release(). -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <AssemblyName>Cratis.Chronicle.Specs</AssemblyName>
+    <RootNamespace>Cratis.Chronicle.Benchmarks.NormalClient</RootNamespace>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <DisableProxyGenerator>true</DisableProxyGenerator>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="NSubstitute" />
+    <ProjectReference Include="../../Source/Clients/DotNET/DotNET.csproj" />
+    <ProjectReference Include="../../Source/Clients/Connections/Connections.csproj" />
+    <ProjectReference Include="../../Source/Kernel/Contracts/Contracts.csproj" />
+  </ItemGroup>
+
+</Project>
