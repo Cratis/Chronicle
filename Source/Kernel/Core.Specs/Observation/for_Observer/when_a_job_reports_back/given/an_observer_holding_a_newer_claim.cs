@@ -6,6 +6,8 @@ using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Chronicle.Storage.Observation;
+using Cratis.Orleans.Jobs;
+using Cratis.Orleans.Storage.Jobs;
 
 namespace Cratis.Chronicle.Observation.for_Observer.when_a_job_reports_back.given;
 
@@ -23,13 +25,21 @@ public class an_observer_holding_a_newer_claim : for_Observer.given.an_observer
     {
         _stateStorage.State = _stateStorage.State with
         {
-            LastHandledEventSequenceNumber = 42UL,
-            NextEventSequenceNumber = 45UL,
             ReplayingPartitions = holder == ClaimHolderKind.PartitionReplay ? new HashSet<Key> { _partition } : new HashSet<Key>(),
             CatchingUpPartitions = holder == ClaimHolderKind.PartitionCatchUp ? new HashSet<Key> { _partition } : new HashSet<Key>(),
             PartitionClaims = [new(_partition, holder, null, new(CurrentEpoch), 43UL, [])],
             OwnershipRevision = new(CurrentEpoch)
         };
+
+        // The newer job is outstanding, so reactivating keeps the partition's hold and claim, as in a running silo.
+        HasOutstandingJobs(new JobState
+        {
+            Id = JobId.New(),
+            Status = JobStatus.Running,
+            Request = holder == ClaimHolderKind.PartitionReplay
+                ? new ReplayObserverPartitionRequest(_observerKey, ObserverType.Reactor, _partition, 43UL, EventSequenceNumber.Max, []) { OwnershipEpoch = CurrentEpoch }
+                : new CatchUpObserverPartitionRequest(_observerKey, ObserverType.Reactor, _partition, 43UL, []) { OwnershipEpoch = CurrentEpoch }
+        });
         await Crash();
     }
 
