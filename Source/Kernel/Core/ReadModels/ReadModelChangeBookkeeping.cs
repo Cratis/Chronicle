@@ -1,7 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Frozen;
 using System.Dynamic;
+using System.Runtime.CompilerServices;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Schemas;
@@ -15,6 +17,8 @@ namespace Cratis.Chronicle.ReadModels;
 /// </summary>
 internal static class ReadModelChangeBookkeeping
 {
+    static readonly ConditionalWeakTable<JsonSchema, FrozenSet<string>> _declaredNames = new();
+
     /// <summary>
     /// Reads the subject lineage of a read model state.
     /// </summary>
@@ -26,9 +30,12 @@ internal static class ReadModelChangeBookkeeping
         var subject = dictionary.TryGetValue(WellKnownProperties.Subject, out var subjectValue) && subjectValue is string text
             ? text
             : null;
-        var subjects = dictionary.TryGetValue(WellKnownProperties.Subjects, out var subjectsValue)
-            ? ReadModelSubjects.From(subjectsValue)
-            : new Dictionary<string, string>();
+        if (!dictionary.TryGetValue(WellKnownProperties.Subjects, out var subjectsValue) || subjectsValue is null)
+        {
+            return (subject, null);
+        }
+
+        var subjects = ReadModelSubjects.From(subjectsValue);
         return (subject, subjects.Count > 0 ? subjects : null);
     }
 
@@ -54,7 +61,11 @@ internal static class ReadModelChangeBookkeeping
     public static void CopyLegacySubjectLineage(ExpandoObject state, JsonObject document)
     {
         // Remove in the next major: silos of the previous release read the subject from the document (Cratis/Chronicle#3588).
-        ReadModelSubjects.CopyToJson(state, document);
+        var dictionary = (IDictionary<string, object?>)state;
+        if (dictionary.ContainsKey(WellKnownProperties.Subject) || dictionary.ContainsKey(WellKnownProperties.Subjects))
+        {
+            ReadModelSubjects.CopyToJson(state, document);
+        }
     }
 
     /// <summary>
@@ -64,7 +75,16 @@ internal static class ReadModelChangeBookkeeping
     /// <param name="property">The property name.</param>
     /// <returns>Whether the property is declared.</returns>
     public static bool DeclaresProperty(JsonSchema schema, string property) =>
-        schema.GetFlattenedProperties().Any(_ => _.Name == property);
+        DeclaredNames(schema).Contains(property);
+
+    /// <summary>
+    /// Gets the names of the properties a schema declares. The set is computed once per schema instance and lives
+    /// as long as the schema does.
+    /// </summary>
+    /// <param name="schema">The read model schema.</param>
+    /// <returns>The declared property names.</returns>
+    public static FrozenSet<string> DeclaredNames(JsonSchema schema) =>
+        _declaredNames.GetValue(schema, static _ => _.GetFlattenedProperties().Select(property => property.Name).ToFrozenSet(StringComparer.Ordinal));
 
     /// <summary>
     /// Copies a document without the kernel bookkeeping properties its schema does not declare. A read model is free
@@ -75,7 +95,7 @@ internal static class ReadModelChangeBookkeeping
     /// <returns>The copy.</returns>
     public static JsonObject WithoutUndeclaredBookkeeping(JsonObject document, JsonSchema schema)
     {
-        var declared = schema.GetFlattenedProperties().Select(_ => _.Name).ToHashSet(StringComparer.Ordinal);
+        var declared = DeclaredNames(schema);
         var copy = (document.DeepClone() as JsonObject)!;
         foreach (var property in WellKnownProperties.All.Where(_ => !declared.Contains(_)))
         {
