@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Observation.Jobs;
+using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Observation.for_Observer;
 
@@ -14,7 +15,10 @@ namespace Cratis.Chronicle.Observation.for_Observer;
 public class when_recovering_a_failed_partition_that_is_healthy : given.an_observer_with_subscription
 {
     const string Partition = "SomePartition";
+    readonly given.RecordingObserverLogger _recordedLogger = new();
     PartitionRecoveryOutcome _outcome;
+
+    protected override ILogger<Observer> CreateLogger() => _recordedLogger;
 
     void Establish() => _failedPartitionsState.Partitions =
     [
@@ -27,6 +31,8 @@ public class when_recovering_a_failed_partition_that_is_healthy : given.an_obser
     async Task Because() => _outcome = await _observer.TryStartRecoverJobForFailedPartition((Key)Partition);
 
     [Fact] void should_report_started() => _outcome.ShouldEqual(PartitionRecoveryOutcome.Started);
+
+    [Fact] void should_not_warn_that_the_retry_did_not_start() => _recordedLogger.Warnings.ShouldNotContain(_ => _.Contains("did not start recovery", StringComparison.Ordinal));
 
     [Fact] void should_start_the_recover_job_with_the_scope_of_the_definition() => _jobsManager.Received(1)
         .Start<IRetryFailedPartition, RetryFailedPartitionRequest>(

@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Observation.Jobs;
+using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Observation.for_Observer;
 
@@ -14,11 +15,19 @@ namespace Cratis.Chronicle.Observation.for_Observer;
 /// </summary>
 public class when_recovering_a_failed_partition_that_does_not_exist : given.an_observer_with_subscription
 {
+    readonly given.RecordingObserverLogger _recordedLogger = new();
     PartitionRecoveryOutcome _outcome;
+
+    protected override ILogger<Observer> CreateLogger() => _recordedLogger;
 
     async Task Because() => _outcome = await _observer.TryStartRecoverJobForFailedPartition((Key)"SomeUnknownPartition");
 
     [Fact] void should_report_partition_not_found() => _outcome.ShouldEqual(PartitionRecoveryOutcome.PartitionNotFound);
+
+    [Fact] void should_warn_that_the_retry_did_not_start() => _recordedLogger.Warnings.ShouldContain(_ =>
+        _.Contains("SomeUnknownPartition", StringComparison.Ordinal) &&
+        _.Contains(_observerId.Value, StringComparison.OrdinalIgnoreCase) &&
+        _.Contains(nameof(PartitionRecoveryOutcome.PartitionNotFound), StringComparison.Ordinal));
 
     [Fact] void should_not_start_a_recover_job() => _jobsManager.DidNotReceive()
         .Start<IRetryFailedPartition, RetryFailedPartitionRequest>(Arg.Any<RetryFailedPartitionRequest>());

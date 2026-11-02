@@ -104,6 +104,12 @@ public partial class Observer
         {
             throw new FailedPartitionRecoveryCouldNotStart(partition, _observerKey);
         }
+
+        if (outcome != PartitionRecoveryOutcome.Started)
+        {
+            logger.ManualPartitionRetryDidNotStart(partition, _observerKey, outcome);
+        }
+
         return outcome;
     }
 

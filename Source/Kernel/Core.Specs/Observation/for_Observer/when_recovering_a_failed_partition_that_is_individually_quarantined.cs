@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Observation.Jobs;
+using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Observation.for_Observer;
 
@@ -15,8 +16,11 @@ namespace Cratis.Chronicle.Observation.for_Observer;
 /// </summary>
 public class when_recovering_a_failed_partition_that_is_individually_quarantined : given.an_observer_with_subscription
 {
+    readonly given.RecordingObserverLogger _recordedLogger = new();
     const string Partition = "SomePartition";
     PartitionRecoveryOutcome _outcome;
+
+    protected override ILogger<Observer> CreateLogger() => _recordedLogger;
 
     void Establish() => _failedPartitionsState.Partitions =
     [
@@ -30,6 +34,11 @@ public class when_recovering_a_failed_partition_that_is_individually_quarantined
     async Task Because() => _outcome = await _observer.TryStartRecoverJobForFailedPartition((Key)Partition);
 
     [Fact] void should_report_partition_quarantined() => _outcome.ShouldEqual(PartitionRecoveryOutcome.PartitionQuarantined);
+
+    [Fact] void should_warn_that_the_retry_did_not_start() => _recordedLogger.Warnings.ShouldContain(_ =>
+        _.Contains(Partition, StringComparison.Ordinal) &&
+        _.Contains(_observerId.Value, StringComparison.OrdinalIgnoreCase) &&
+        _.Contains(nameof(PartitionRecoveryOutcome.PartitionQuarantined), StringComparison.Ordinal));
 
     [Fact] void should_not_start_a_recover_job() => _jobsManager.DidNotReceive()
         .Start<IRetryFailedPartition, RetryFailedPartitionRequest>(Arg.Any<RetryFailedPartitionRequest>());
