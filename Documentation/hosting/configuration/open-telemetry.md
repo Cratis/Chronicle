@@ -214,8 +214,35 @@ Chronicle traces the following activity sources:
 | Source | Description |
 | --- | --- |
 | `Cratis.Chronicle` | Chronicle internal operations |
-| `Microsoft.Orleans.Runtime` | Orleans runtime activities |
-| `Microsoft.Orleans.Application` | Orleans application activities |
+| `Microsoft.Orleans.Runtime` | Orleans runtime activities (opt-in) |
+| `Microsoft.Orleans.Application` | Orleans grain-call activities (opt-in) |
 | HTTP client | Outgoing HTTP requests |
 | ASP.NET Core | Incoming HTTP and gRPC requests |
 | gRPC client | Outgoing gRPC calls |
+
+### Orleans trace volume
+
+Orleans runtime and grain-call spans are **no longer exported by default**. These sources accounted
+for about 99% of kernel spans during replay. Chronicle spans remain enabled, and Orleans
+`AddActivityPropagation()` remains in place: trace context continues across grain calls without
+exporting their carrier activities. Chronicle spans in the called grain keep the caller's trace id,
+but their direct parent is an unexported Orleans span, so a trace viewer may show a missing
+intermediate parent. Calls outside an existing trace do not create carrier activities.
+
+To restore Orleans spans, set `Cratis:Chronicle:Telemetry:OrleansTracing=true`:
+
+```json
+{
+    "cratis": {
+        "chronicle": {
+            "telemetry": {
+                "orleansTracing": true
+            }
+        }
+    }
+}
+```
+
+The equivalent environment variable is `Cratis__Chronicle__Telemetry__OrleansTracing=true`.
+`OTEL_TRACES_SAMPLER` and `OTEL_TRACES_SAMPLER_ARG` retain their OpenTelemetry behavior; Chronicle
+sets no sampler override. Exporter, endpoint, resource, and metric configuration are unchanged.
