@@ -7,7 +7,7 @@ description: Test coverage statistics for the Chronicle project, with the key co
 
 This section contains test coverage statistics for the Chronicle project, tracking key metrics over time.
 
-The measured date and commit identify the last usable coverage report, not the release publication time. A missing or incomplete report leaves that measurement unchanged. The report shows missing coverage when a newer attempt has no usable report, or stale coverage when the measurement is more than seven days old.
+The measured date and commit identify the last usable coverage report, not the release publication time. A missing or incomplete report, including one without a trusted measurement timestamp, leaves that measurement unchanged. The report shows missing coverage when a newer attempt has no usable report, or stale coverage when the measurement is more than seven days old.
 
 <style>
   .coverage-iframe-container {

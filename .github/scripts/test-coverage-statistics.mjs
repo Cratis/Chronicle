@@ -33,22 +33,23 @@ function summary(assemblies, generatedon) {
 
 const goodAssemblies = [{ name: 'Cratis.Chronicle', coverage: 72.5 }, { name: 'Foo.Specs', coverage: 10 }];
 
-function run({ summaryJson, existingData, env = {} }) {
+function run({ summaryJson, existingData, storedText, reportName = 'reports', env = {} }) {
     const dir = mkdtempSync(path.join(tmpdir(), 'coverage-stats-'));
     try {
-        const reports = path.join(dir, 'reports');
+        const reports = path.join(dir, reportName);
         mkdirSync(reports);
         if (summaryJson !== undefined) writeFileSync(path.join(reports, 'Summary.json'), JSON.stringify(summaryJson));
         const out = path.join(dir, 'coverage-data.js');
-        if (existingData) writeFileSync(out, `${PREFIX}${JSON.stringify(existingData, null, 2)};\n`);
+        if (storedText !== undefined) writeFileSync(out, storedText);
+        else if (existingData) writeFileSync(out, `${PREFIX}${JSON.stringify(existingData, null, 2)};\n`);
         const result = spawnSync('bash', [script, reports, out, '19.116.0', SHA, 'msg'], {
             encoding: 'utf8',
             env: { ...process.env, COVERAGE_NOW_MS: String(NOW), COVERAGE_MEASURED_AT_MS: '', ...env }
         });
-        const data = existsSync(out)
-            ? JSON.parse(readFileSync(out, 'utf8').trim().slice(PREFIX.length).replace(/;$/, ''))
-            : null;
-        return { result, data };
+        const outputText = existsSync(out) ? readFileSync(out, 'utf8') : null;
+        const data = result.status === 0 && outputText !== null
+            ? JSON.parse(outputText.trim().slice(PREFIX.length).replace(/;$/, '')) : null;
+        return { result, data, outputText };
     } finally {
         rmSync(dir, { recursive: true, force: true });
     }
@@ -107,13 +108,52 @@ test('valid report records the measurement time from the report, not the publish
     assert.equal(data.entries['Foo.Specs'], undefined);
 });
 
-for (const generatedon of [undefined, 'not a date']) {
-    test(`valid report with generatedon ${generatedon} falls back to the current time`, () => {
-        const { data } = run({ summaryJson: summary(goodAssemblies, generatedon), existingData: existing });
-        assert.equal(data.measurement.measuredAt, NOW);
-        assert.equal(data.entries['Cratis.Chronicle'].some(e => e.date === '2026-11-01'), true);
+for (const generatedon of [undefined, 'not a date', '2026-02-31T10:00:00Z', '2026-07-20T10:00:00+02:00']) {
+    test(`report with untrusted generatedon ${generatedon} preserves measurement as incomplete`, () => {
+        const { result, data } = run({ summaryJson: summary(goodAssemblies, generatedon), existingData: existing });
+        assert.equal(result.status, 0);
+        assert.equal(data.lastUpdate, existing.lastUpdate);
+        assert.deepEqual(data.measurement, existing.measurement);
+        assert.deepEqual(data.entries, existing.entries);
+        assert.equal(data.latestAttempt.state, 'incomplete');
+        assert.equal(data.latestAttempt.attemptedAt, NOW);
     });
 }
+
+for (const generatedon of ['2026-07-20T10:00:00', '2026-07-20T10:00:00.123Z', '2026-07-20T10:00:00+00:00']) {
+    test(`valid UTC report date ${generatedon} supplies measurement time`, () => {
+        const { result, data } = run({ summaryJson: summary(goodAssemblies, generatedon) });
+        assert.equal(result.status, 0);
+        assert.equal(data.measurement.measuredAt, Date.parse('2026-07-20T10:00:00Z'));
+    });
+}
+
+for (const summaryJson of [undefined, summary(goodAssemblies, '2026-07-20T10:00:00Z')]) {
+    test(`malformed stored JSON preserves file on ${summaryJson ? 'measurement' : 'missing'} path`, () => {
+        const storedText = `${PREFIX}{broken;\n`;
+        const { result, outputText } = run({ summaryJson, storedText });
+        assert.notEqual(result.status, 0);
+        assert.equal(outputText, storedText);
+    });
+    for (const name of ['COVERAGE_NOW_MS', 'COVERAGE_MEASURED_AT_MS']) {
+        for (const value of ['not-a-number', 'NaN', '-1', '1.5', '1e999']) {
+            test(`invalid ${name}=${value} preserves file on ${summaryJson ? 'measurement' : 'missing'} path`, () => {
+                const storedText = `${PREFIX}${JSON.stringify(existing, null, 2)};\n`;
+                const { result, outputText } = run({ summaryJson, storedText, env: { [name]: value } });
+                assert.notEqual(result.status, 0);
+                assert.equal(outputText, storedText);
+            });
+        }
+    }
+}
+
+test('warning does not incorporate report paths containing workflow command newlines', () => {
+    const { result, data } = run({ reportName: 'reports\r\n::error::injected' });
+    assert.equal(result.status, 0);
+    assert.equal(data.latestAttempt.state, 'missing');
+    assert.match(result.stdout, /::warning::Coverage missing: no Summary.json found; measurement date unchanged/);
+    assert.doesNotMatch(data.latestAttempt.reason, /[\r\n]/);
+});
 
 test('COVERAGE_MEASURED_AT_MS wins over generatedon', () => {
     const override = Date.parse('2026-06-15T00:00:00Z');
@@ -135,6 +175,18 @@ test('week of month is not read as octal for day 08', () => {
 const require = createRequire(import.meta.url);
 const describeCoverageStatus = (...args) => require(pagePath).describeCoverageStatus(...args);
 const DAY = 24 * 60 * 60 * 1000;
+
+for (const summaryJson of [undefined, summary(goodAssemblies)]) {
+    test(`first ${summaryJson ? 'incomplete' : 'missing'} attempt is visible without any measurement`, () => {
+        const { result, data } = run({ summaryJson });
+        assert.equal(result.status, 0);
+        const status = describeCoverageStatus(data, NOW);
+        assert.equal(status.state, 'missing');
+        assert.equal(status.measuredAt, null);
+        assert.match(status.message, /19\.116\.0/);
+        assert.ok(status.message.includes(data.latestAttempt.state));
+    });
+}
 
 test('status is unavailable without data', () => {
     assert.equal(describeCoverageStatus(null, NOW).state, 'unavailable');

@@ -1,6 +1,7 @@
 #!/bin/bash
 
 set -e
+set -o pipefail
 
 # Default values
 COVERAGE_REPORT_PATH="${1:-./coverage-reports}"
@@ -29,6 +30,16 @@ else
     now_ms=$(($(date +%s) * 1000))
 fi
 
+# Reject invalid clocks before any output can be overwritten. Never evaluate environment values as JSON.
+validate_timestamp() {
+    [[ "$1" =~ ^[0-9]+$ ]] || return 1
+    jq -en --arg value "$1" '$value | tonumber | select(. >= 0 and . <= 8640000000000000 and . == floor)' >/dev/null
+}
+validate_timestamp "$now_ms"
+if [ -n "${COVERAGE_MEASURED_AT_MS:-}" ]; then
+    validate_timestamp "$COVERAGE_MEASURED_AT_MS"
+fi
+
 # Extract commit hash (first 7 chars)
 commit_short="${COMMIT_SHA:0:7}"
 
@@ -40,16 +51,32 @@ else
     existing_json='{"lastUpdate":0,"repoUrl":"https://github.com/Cratis/Chronicle","entries":{}}'
 fi
 
+# Validate stored data before either update path; an empty or multi-value file is not a data object.
+existing_json=$(printf '%s\n' "$existing_json" | jq -es '
+    if length == 1 and (.[0] | type) == "object" then .[0]
+    else error("expected one coverage data object") end
+')
+
+# Complete JSON production and validation before opening the destination file.
+write_data() {
+    local formatted_json
+    formatted_json=$(printf '%s\n' "$1" | jq -e 'if type == "object" then . else error("expected coverage data object") end')
+    printf 'window.COVERAGE_DATA = %s;\n' "$formatted_json" > "$OUTPUT_PATH"
+}
+
 # Record an attempt that did not produce a measurement. Leaves lastUpdate, measurement and entries untouched.
 record_attempt() {
     local state="$1"
     local reason="$2"
-    echo "::warning::Coverage $state: $reason; measurement date unchanged"
-    echo "window.COVERAGE_DATA = $(echo "$existing_json" | jq --arg state "$state" --arg reason "$reason" \
+    local attempt_json
+    attempt_json=$(printf '%s\n' "$existing_json" | jq --arg state "$state" --arg reason "$reason" \
         --arg version "$VERSION" --arg commit "$commit_short" --argjson now "$now_ms" '
         .schemaVersion = 2 |
         .latestAttempt = {state: $state, attemptedAt: $now, version: $version, commit: $commit, reason: $reason}
-    ' | jq .);" > "$OUTPUT_PATH"
+    ')
+    write_data "$attempt_json"
+    # Both arguments are static internal strings, never report paths or other uncontrolled data.
+    echo "::warning::Coverage $state: $reason; measurement date unchanged"
     exit 0
 }
 
@@ -57,7 +84,7 @@ record_attempt() {
 summary_file="$COVERAGE_REPORT_PATH/Summary.json"
 
 if [ ! -f "$summary_file" ]; then
-    record_attempt missing "no Summary.json found in $COVERAGE_REPORT_PATH"
+    record_attempt missing "no Summary.json found"
 fi
 
 echo "Processing coverage report: $summary_file"
@@ -99,21 +126,23 @@ if [ "$production_count" -eq 0 ]; then
     record_attempt incomplete "no production assemblies in Summary.json"
 fi
 
-# Determine when the coverage was measured: explicit override, then the report, then now
+# Determine when the coverage was measured: explicit override, then a validated report date.
 generated_on=$(jq -r '.summary.generatedon // empty' "$summary_file")
 measured_ms=""
 if [[ "${COVERAGE_MEASURED_AT_MS:-}" =~ ^[0-9]+$ ]]; then
     measured_ms="$COVERAGE_MEASURED_AT_MS"
     echo "Measurement time from COVERAGE_MEASURED_AT_MS"
 elif [[ "$generated_on" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2} ]]; then
-    # Only UTC (no offset, Z or +00:00) is trusted; anything else falls back to now
-    if [[ "$generated_on" =~ ^[0-9T:-]{19}(\.[0-9]+)?(Z|[+-]00:?00)?$ ]]; then
-        measured_ms=$(jq -rn --arg v "${generated_on:0:19}Z" 'try (($v | fromdateiso8601) * 1000) catch empty')
+    # Only UTC (no offset, Z or +00:00) is trusted. Reject calendar dates jq normalizes.
+    if [[ "$generated_on" =~ ^[0-9T:-]{19}(\.[0-9]+)?(Z|\+00:00)?$ ]]; then
+        measured_ms=$(jq -rn --arg v "${generated_on:0:19}Z" '
+            try ($v | fromdateiso8601 | select((strftime("%Y-%m-%dT%H:%M:%SZ")) == $v) | . * 1000)
+            catch empty
+        ')
     fi
 fi
 if [ -z "$measured_ms" ]; then
-    measured_ms="$now_ms"
-    echo "Measurement time from current time (no usable generation time in report)"
+    record_attempt incomplete "no trusted measurement timestamp"
 else
     echo "Measurement time: $measured_ms"
 fi
@@ -207,7 +236,7 @@ result_json=$(echo "$existing_json" | jq --slurpfile summary "$summary_file" \
 ')
 
 # Write to file
-echo "window.COVERAGE_DATA = $(echo "$result_json" | jq .);" > "$OUTPUT_PATH"
+write_data "$result_json"
 
 # Count projects and show summary
 project_count=$(echo "$result_json" | jq '.entries | keys | length')

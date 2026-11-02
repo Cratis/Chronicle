@@ -12,12 +12,12 @@
         ? { measuredAt, commit: entry.commit || '', version: entry.version || '' } : latest;
     }, null);
     const measurement = data.measurement || newest;
-    if (!measurement) return { ...status, state: 'none', message: 'No coverage measurement yet.' };
-    Object.assign(status, measurement);
+    if (measurement) Object.assign(status, measurement);
     const attempt = data.latestAttempt;
-    if (attempt && attempt.state !== 'measured' && attempt.attemptedAt > status.measuredAt) {
+    if (attempt && attempt.state !== 'measured' && (!measurement || attempt.attemptedAt > status.measuredAt)) {
       return { ...status, state: 'missing', message: `Coverage missing for version ${attempt.version}: ${attempt.state}.` };
     }
+    if (!measurement) return { ...status, state: 'none', message: 'No coverage measurement yet.' };
     if (nowMs - status.measuredAt > STALE_AFTER_DAYS * 86400000) {
       return { ...status, state: 'stale', message: 'Coverage is stale (more than 7 days old).' };
     }
