@@ -11,6 +11,7 @@ public abstract class and_an_insert_race_happens_inside_the_cycle<THarness> : gi
     where THarness : ISqlSinkHarness
 {
     IDictionary<string, object?>? _row;
+    long _racerRows;
 
     /// <summary>
     /// Inserts the same row as the cycle is about to. SQLite cannot take a second connection while the cycle holds the write lock.
@@ -46,10 +47,12 @@ public abstract class and_an_insert_race_happens_inside_the_cycle<THarness> : gi
         }
 
         _row = await Row("racer");
+        _racerRows = await Scalar($"SELECT CAST(COUNT(*) AS bigint) AS {Quote("Value")} FROM {Quote(TableName)} WHERE {Quote("id")} = 'racer'");
     }
 
     [Fact] public void should_succeed() => _error.ShouldBeNull();
     [Fact] public void should_apply_this_cycle() => _row!["group"].ShouldEqual("direct");
     [Fact] public void should_rerun_in_a_new_transaction() => _capture.Started.ShouldEqual(2);
+    [Fact] public void should_keep_a_single_racer_row() => _racerRows.ShouldEqual(1);
     [Fact] public void should_keep_the_competing_write() => (CompetesOnTheCyclesConnection ? 99 : Convert.ToInt32(_row!["x"])).ShouldEqual(99);
 }

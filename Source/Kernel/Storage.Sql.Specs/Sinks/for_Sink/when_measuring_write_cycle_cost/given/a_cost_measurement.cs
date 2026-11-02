@@ -84,7 +84,7 @@ public abstract class a_cost_measurement<THarness> : a_cycle_with_failure_inject
                 await kind.Prepare(tag, events);
                 _capture.Clear();
                 var latencies = new List<double>(events);
-                var allocatedBefore = GC.GetAllocatedBytesForCurrentThread();
+                var allocatedBefore = GC.GetTotalAllocatedBytes(true);
                 var stopwatch = Stopwatch.StartNew();
                 for (var i = 0; i < events; i++)
                 {
@@ -94,7 +94,7 @@ public abstract class a_cost_measurement<THarness> : a_cycle_with_failure_inject
                 }
 
                 stopwatch.Stop();
-                var allocated = GC.GetAllocatedBytesForCurrentThread() - allocatedBefore;
+                var allocated = GC.GetTotalAllocatedBytes(true) - allocatedBefore;
                 latencies.Sort();
                 var measurement = new Measurement(kind.Name, kind.Multi, run, events, _capture.Commands.Count, _capture.Started, _capture.Committed, stopwatch.Elapsed.TotalMilliseconds, _capture.Fingerprint, Percentile(latencies, 0.5), Percentile(latencies, 0.95), latencies.Count == 0 ? 0 : latencies[^1], allocated, events == 0 ? 0 : (double)allocated / events);
                 _measurements.Add(measurement);
@@ -129,6 +129,7 @@ public abstract class a_cost_measurement<THarness> : a_cycle_with_failure_inject
             measurement.LatencyMaxMilliseconds,
             measurement.AllocatedBytes,
             measurement.AllocatedBytesPerEvent,
+            AllocationScope = "process-wide: GC.GetTotalAllocatedBytes(true) delta across the timed section, valid only while this is the only running measurement",
             RowFingerprint = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(snapshot))),
             Rows = snapshot,
             Operations = operations,
@@ -195,7 +196,7 @@ public abstract class a_cost_measurement<THarness> : a_cycle_with_failure_inject
     /// <param name="LatencyP50Milliseconds">The median duration of one ApplyChanges.</param>
     /// <param name="LatencyP95Milliseconds">The 95th percentile duration of one ApplyChanges.</param>
     /// <param name="LatencyMaxMilliseconds">The longest duration of one ApplyChanges.</param>
-    /// <param name="AllocatedBytes">The bytes allocated by the current thread across the timed section.</param>
+    /// <param name="AllocatedBytes">The bytes allocated by the whole process (GC.GetTotalAllocatedBytes(true)) across the timed section; async continuations hop threads, so a per-thread count is unreliable.</param>
     /// <param name="AllocatedBytesPerEvent">The allocated bytes per event.</param>
     protected sealed record Measurement(string Kind, bool Multi, int Run, int Events, int Commands, int Transactions, int Committed, double ElapsedMilliseconds, string Fingerprint, double LatencyP50Milliseconds, double LatencyP95Milliseconds, double LatencyMaxMilliseconds, long AllocatedBytes, double AllocatedBytesPerEvent);
 }

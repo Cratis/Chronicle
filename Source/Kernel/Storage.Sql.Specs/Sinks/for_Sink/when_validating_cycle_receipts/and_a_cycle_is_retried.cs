@@ -14,6 +14,8 @@ public abstract class and_a_cycle_is_retried<THarness> : given.a_receipt_cycle<T
 {
     Exception? _error;
     IDictionary<string, object?>? _row;
+    bool _table;
+    bool _index;
 
     async Task Establish()
     {
@@ -33,6 +35,8 @@ public abstract class and_a_cycle_is_retried<THarness> : given.a_receipt_cycle<T
     {
         _error = await Attempt(_retrying!, "retried", 4);
         _row = await Row("retried");
+        _table = await ReceiptTableExists();
+        _index = await ReceiptIndexExists();
     }
 
     [Fact] public void should_succeed() => _error.ShouldBeNull();
@@ -40,5 +44,6 @@ public abstract class and_a_cycle_is_retried<THarness> : given.a_receipt_cycle<T
     [Fact] public void should_retry_once() => _capture.Started.ShouldEqual(2);
     [Fact] public void should_probe_the_receipt_first_in_the_retry() => ReceiptProbes.Count().ShouldEqual(1);
     [Fact] public void should_not_revalidate_the_schema() => CatalogReads.ShouldBeEmpty();
+    [Fact] public void should_keep_the_receipt_table_and_index() => (_table && _index).ShouldBeTrue();
     [Fact] public void should_issue_no_receipt_ddl() => ReceiptDdl.ShouldBeEmpty();
 }

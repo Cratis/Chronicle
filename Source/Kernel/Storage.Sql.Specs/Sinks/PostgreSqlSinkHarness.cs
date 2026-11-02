@@ -30,9 +30,7 @@ namespace Cratis.Chronicle.Storage.Sql.Sinks;
 /// </remarks>
 public class PostgreSqlSinkHarness : ISqlSinkHarness
 {
-    readonly ReadModelMigrator _migrator = new(
-        new TableMigrator<ReadModelDbContext>(Substitute.For<ILogger<TableMigrator<ReadModelDbContext>>>()),
-        Substitute.For<ILogger<ReadModelMigrator>>());
+    ReadModelMigrator? _migrator;
 
     IReadOnlyList<ProjectedColumn> _columns = [];
 
@@ -60,6 +58,12 @@ public class PostgreSqlSinkHarness : ISqlSinkHarness
     /// Gets the logger for index diagnostics.
     /// </summary>
     public ILogger<SqlSink> Logger { get; init; } = Substitute.For<ILogger<SqlSink>>();
+
+    ReadModelMigrator Migrator => _migrator ??= new(
+        new RecordingTableMigrator<ReadModelDbContext>(
+            new TableMigrator<ReadModelDbContext>(Substitute.For<ILogger<TableMigrator<ReadModelDbContext>>>()),
+            () => Interceptors.OfType<SqlCommandCapture>().FirstOrDefault()),
+        Substitute.For<ILogger<ReadModelMigrator>>());
 
     /// <inheritdoc/>
     public ISink CreateSink(ReadModelDefinition definition)
@@ -109,7 +113,7 @@ public class PostgreSqlSinkHarness : ISqlSinkHarness
 
         var fixture = Fixture!;
 #pragma warning disable CA2000 // Disposed by the sink through the returned scope.
-        var context = fixture.Timings.Measure("ef-context-construction", () => fixture.Track(new ReadModelDbContext(options, containerName, _columns, _migrator)));
+        var context = fixture.Timings.Measure("ef-context-construction", () => fixture.Track(new ReadModelDbContext(options, containerName, _columns, Migrator)));
 #pragma warning restore CA2000
         await fixture.Timings.Run("ef-table-ensure", context.EnsureTableExists);
         return new DbContextScope<ReadModelDbContext>(context, () => { });

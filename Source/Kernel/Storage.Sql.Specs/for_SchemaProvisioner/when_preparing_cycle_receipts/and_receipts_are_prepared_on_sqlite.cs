@@ -15,6 +15,8 @@ public class and_receipts_are_prepared_on_sqlite : given.receipt_provisioning
     SchemaReport _repaired;
     SchemaReport _unsafeDrift;
     Exception _unsafeError;
+    Exception _uniqueError;
+    SchemaReport _uniqueDrift;
     long _rowsKept;
     long _indexes;
     long _driftedTables;
@@ -42,6 +44,11 @@ public class and_receipts_are_prepared_on_sqlite : given.receipt_provisioning
         _unsafeError = await Catch.Exception(() => _provisioner.Migrate(Scope));
         _unsafeDrift = await _provisioner.Verify(Scope);
         _driftedTables = Scalar(file, $"SELECT COUNT(*) FROM pragma_table_xinfo('{Table}') WHERE name = 'CreatedAt' AND dflt_value = '0'");
+        Execute(file, $"DROP TABLE {Table}");
+        await _provisioner.Migrate(Scope);
+        Execute(file, $"CREATE UNIQUE INDEX ux_receipt_extra ON {Table} (EventSequenceNumber)");
+        _uniqueError = await Catch.Exception(() => _provisioner.Migrate(Scope));
+        _uniqueDrift = await _provisioner.Verify(Scope);
     }
 
     [Fact] void should_provision_the_receipts() => _provisioned.IsCurrent.ShouldBeTrue();
@@ -53,5 +60,7 @@ public class and_receipts_are_prepared_on_sqlite : given.receipt_provisioning
     [Fact] void should_have_one_expiry_index() => _indexes.ShouldEqual(1);
     [Fact] void should_refuse_to_repair_unsafe_drift() => _unsafeError.ShouldBeOfExactType<SchemaNotCurrent>();
     [Fact] void should_report_unsafe_drift() => _unsafeDrift.IsCurrent.ShouldBeFalse();
+    [Fact] void should_refuse_to_provision_beside_a_unique_index() => _uniqueError.ShouldBeOfExactType<SchemaNotCurrent>();
+    [Fact] void should_report_a_unique_extra_index_as_drift() => _uniqueDrift.IsCurrent.ShouldBeFalse();
     [Fact] void should_leave_unsafe_drift_unchanged() => _driftedTables.ShouldEqual(1);
 }

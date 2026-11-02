@@ -15,6 +15,7 @@ public abstract class and_receipts_are_missing<THarness> : given.a_receipt_cycle
     protected Exception? _first;
     protected Exception? _second;
     protected bool _tableCreated;
+    protected bool _indexCreated;
 
     async Task Establish()
     {
@@ -29,11 +30,13 @@ public abstract class and_receipts_are_missing<THarness> : given.a_receipt_cycle
         _first = await Attempt(sink, "source", 2);
         _second = await Attempt(sink, "source", 3);
         _tableCreated = await ReceiptTableExists();
+        _indexCreated = await ReceiptIndexExists();
     }
 
     [Fact] public void should_report_the_schema_as_not_current() => _first.ShouldBeOfExactType<SchemaNotCurrent>();
     [Fact] public void should_report_it_again_for_the_next_cycle() => _second.ShouldBeOfExactType<SchemaNotCurrent>();
     [Fact] public void should_not_create_the_receipt_table() => _tableCreated.ShouldBeFalse();
+    [Fact] public void should_not_create_the_receipt_index() => _indexCreated.ShouldBeFalse();
     [Fact] public void should_issue_no_receipt_ddl() => ReceiptDdl.ShouldBeEmpty();
     [Fact] public void should_not_write_to_the_read_model() => ReadModelWrites.ShouldBeEmpty();
     [Fact] public void should_not_start_a_transaction() => _capture.Started.ShouldEqual(0);

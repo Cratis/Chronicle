@@ -115,7 +115,7 @@ public partial class Sink
     }
 
     /// <summary>
-    /// Handles a missing receipt table or shadow column in Verify: forgets the positive result, reports what is missing
+    /// Handles a missing receipt table in Verify: forgets the positive result, reports what is missing
     /// and leaves the original error to the caller. Nothing is created, repaired or retried.
     /// </summary>
     /// <param name="context">The cycle's context.</param>

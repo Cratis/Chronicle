@@ -21,6 +21,7 @@ namespace Cratis.Chronicle.Storage.Sql.Sinks;
 public partial class SqlCommandCapture : IDbCommandInterceptor, IDbTransactionInterceptor
 {
     readonly ConcurrentQueue<string> _commands = new();
+    readonly ConcurrentQueue<string> _migrations = new();
     int _started;
     int _committed;
     int _rolledBack;
@@ -35,6 +36,17 @@ public partial class SqlCommandCapture : IDbCommandInterceptor, IDbTransactionIn
     /// Gets the text of every command, in the order they started.
     /// </summary>
     public IReadOnlyList<string> Commands => _commands.ToArray();
+
+    /// <summary>
+    /// Gets the DDL operations that reached the table migrator, which runs them as raw commands EF never intercepts.
+    /// </summary>
+    public IReadOnlyList<string> MigrationOperations => _migrations.ToArray();
+
+    /// <summary>
+    /// Records a DDL operation seen at the table migrator.
+    /// </summary>
+    /// <param name="description">What the operation does.</param>
+    public void RecordMigration(string description) => _migrations.Enqueue(description);
 
     /// <summary>
     /// Gets the number of transactions started.
@@ -88,6 +100,7 @@ public partial class SqlCommandCapture : IDbCommandInterceptor, IDbTransactionIn
     {
         _commands.Clear();
         _operations.Clear();
+        _migrations.Clear();
         _started = 0;
         _committed = 0;
         _rolledBack = 0;

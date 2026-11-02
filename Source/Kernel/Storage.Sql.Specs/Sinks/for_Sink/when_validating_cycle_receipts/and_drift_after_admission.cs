@@ -18,6 +18,7 @@ public abstract class and_drift_after_admission<THarness> : given.a_receipt_cycl
     int _nextCatalogReads;
     int _nextWrites;
     bool _tableCreated;
+    bool _indexCreated;
     IDictionary<string, object?>? _driftedRow;
 
     async Task Establish()
@@ -40,6 +41,7 @@ public abstract class and_drift_after_admission<THarness> : given.a_receipt_cycl
         _nextCatalogReads = CatalogReads.Count();
         _nextWrites = ReadModelWrites.Count();
         _tableCreated = await ReceiptTableExists();
+        _indexCreated = await ReceiptIndexExists();
     }
 
     [Fact] public void should_fail_the_cycle_after_admission() => _drifted.ShouldNotBeNull();
@@ -49,5 +51,6 @@ public abstract class and_drift_after_admission<THarness> : given.a_receipt_cycl
     [Fact] public void should_report_the_schema_for_the_next_cycle() => _next.ShouldBeOfExactType<SchemaNotCurrent>();
     [Fact] public void should_not_enter_the_body_of_the_next_cycle() => _nextWrites.ShouldEqual(0);
     [Fact] public void should_not_recreate_the_table() => _tableCreated.ShouldBeFalse();
+    [Fact] public void should_not_recreate_the_index() => _indexCreated.ShouldBeFalse();
     [Fact] public void should_issue_no_receipt_ddl() => ReceiptDdl.ShouldBeEmpty();
 }

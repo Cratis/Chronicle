@@ -25,7 +25,18 @@ public abstract class a_receipt_cycle<THarness> : Cycle.a_cycle_with_failure_inj
 
     protected IEnumerable<string> CatalogReads => _capture.Commands.Where(command => _catalogMarkers.Any(marker => command.Contains(marker, StringComparison.OrdinalIgnoreCase)));
 
-    protected IEnumerable<string> ReceiptDdl => ReceiptCommands.Where(command => new[] { "CREATE TABLE", "CREATE INDEX", "ALTER TABLE", "DROP TABLE", "DROP INDEX" }.Any(verb => command.Contains(verb, StringComparison.OrdinalIgnoreCase)));
+    /// <summary>
+    /// Gets the receipt DDL seen at the table migrator, where it runs as raw commands that EF interceptors never see.
+    /// </summary>
+    protected IEnumerable<string> ReceiptDdl => _capture.MigrationOperations.Where(operation => operation.Contains(ReceiptTable, StringComparison.Ordinal));
+
+    /// <summary>
+    /// Gets the DDL verbs found in commands, which catches EF commands that change the schema.
+    /// </summary>
+    /// <param name="commands">The commands to look through.</param>
+    /// <returns>The commands that contain DDL.</returns>
+    protected static IEnumerable<string> DdlIn(IEnumerable<string> commands) =>
+        commands.Where(command => new[] { "CREATE TABLE", "CREATE INDEX", "CREATE UNIQUE", "ALTER TABLE", "DROP TABLE", "DROP INDEX" }.Any(verb => command.Contains(verb, StringComparison.OrdinalIgnoreCase)));
 
     protected void Configure(DbContextOptionsBuilder<ReadModelDbContext> builder)
     {
@@ -81,6 +92,22 @@ public abstract class a_receipt_cycle<THarness> : Cycle.a_cycle_with_failure_inj
         };
         return await Scalar(sql) == 1;
     }
+
+    protected async Task<bool> ReceiptIndexExists()
+    {
+        var index = SinkCycleReceiptSchema.IndexName;
+        var sql = _harness.ConnectionString.GetDatabaseType() switch
+        {
+            DatabaseType.PostgreSql => $"SELECT CAST(COUNT(*) AS bigint) AS \"Value\" FROM pg_indexes WHERE tablename = '{ReceiptTable}' AND indexname = '{index}'",
+            DatabaseType.SqlServer => $"SELECT CAST(COUNT(*) AS bigint) AS [Value] FROM sys.indexes WHERE object_id = OBJECT_ID(N'{ReceiptTable}') AND name = N'{index}'",
+            _ => $"SELECT COUNT(*) AS \"Value\" FROM sqlite_master WHERE type = 'index' AND tbl_name = '{ReceiptTable}' AND name = '{index}'"
+        };
+        return await Scalar(sql) == 1;
+    }
+
+    protected Task DropReceiptIndex() => Execute(_harness.ConnectionString.GetDatabaseType() == DatabaseType.SqlServer
+        ? $"DROP INDEX {Quote(SinkCycleReceiptSchema.IndexName)} ON {Quote(ReceiptTable)}"
+        : $"DROP INDEX {Quote(SinkCycleReceiptSchema.IndexName)}");
 
     protected Task DropReceiptTable() => Execute($"DROP TABLE {Quote(ReceiptTable)}");
 }

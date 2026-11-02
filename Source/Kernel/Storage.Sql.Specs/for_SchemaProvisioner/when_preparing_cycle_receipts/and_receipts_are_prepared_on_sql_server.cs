@@ -22,6 +22,8 @@ public class and_receipts_are_prepared_on_sql_server(SqlServerFixture fixture) :
     SchemaReport _repaired;
     SchemaReport _unsafeDrift;
     Exception _unsafeError;
+    Exception _uniqueError;
+    SchemaReport _uniqueDrift;
     long _rowsKept;
     long _indexes;
     long _driftedTables;
@@ -51,6 +53,11 @@ public class and_receipts_are_prepared_on_sql_server(SqlServerFixture fixture) :
         _unsafeError = await Catch.Exception(() => provisioner.Migrate(scope));
         _unsafeDrift = await provisioner.Verify(scope);
         _driftedTables = await Scalar(file, $"SELECT COUNT(*) FROM sys.default_constraints WHERE parent_object_id = OBJECT_ID('{Table}') AND definition IN ('((0))', '(0)')");
+        await Execute(file, $"DROP TABLE {Table}");
+        await provisioner.Migrate(scope);
+        await Execute(file, $"CREATE UNIQUE INDEX ux_receipt_extra ON {Table} ([EventSequenceNumber])");
+        _uniqueError = await Catch.Exception(() => provisioner.Migrate(scope));
+        _uniqueDrift = await provisioner.Verify(scope);
     }
 
     [Fact] void should_provision_the_receipts() => _provisioned.IsCurrent.ShouldBeTrue();
@@ -62,6 +69,8 @@ public class and_receipts_are_prepared_on_sql_server(SqlServerFixture fixture) :
     [Fact] void should_have_one_expiry_index() => _indexes.ShouldEqual(1);
     [Fact] void should_refuse_to_repair_unsafe_drift() => _unsafeError.ShouldBeOfExactType<SchemaNotCurrent>();
     [Fact] void should_report_unsafe_drift() => _unsafeDrift.IsCurrent.ShouldBeFalse();
+    [Fact] void should_refuse_to_provision_beside_a_unique_index() => _uniqueError.ShouldBeOfExactType<SchemaNotCurrent>();
+    [Fact] void should_report_a_unique_extra_index_as_drift() => _uniqueDrift.IsCurrent.ShouldBeFalse();
     [Fact] void should_leave_unsafe_drift_unchanged() => _driftedTables.ShouldEqual(1);
 
     async Task<string> ReceiptDatabase()

@@ -29,7 +29,7 @@ public partial class Sink
         changeset.Changes.Count(change => change is Joined or ChildRemovedFromAll) + (nonJoinedChanges.Length > 0 ? 1 : 0);
 
     static bool IsVerifyDrift(bool verifying, Exception exception) =>
-        verifying && (IsMissingReceiptTable(exception) || ShadowColumns.IsMissingColumn(exception));
+        verifying && IsMissingReceiptTable(exception);
 
     /// <summary>
     /// Runs the body of a cycle in a transaction together with the cycle's receipt.

@@ -24,6 +24,9 @@ The operation visits:
 - Additional stores supplied with repeatable `--event-store` flags. Repeatable `--namespace` flags apply to each explicitly supplied store.
 - Namespace and jobs migrations, the event-log, system, outbox and shared named-tag tables, and existing sequence tables, including inboxes.
 - Read-model databases, without creating arbitrary read-model tables.
+- The `chronicle_sink_cycle_receipts` table (and, if only that is missing, its `CreatedAt` index) in each read-model database. Multi-write SQL sink cycles use it to commit atomically.
+
+If the receipt table has drifted unsafely (for example a changed column or primary key), `--migrate-only` refuses to provision it and does not repair it. Fix the table by hand and run the operation again.
 
 Explicit stores and namespaces are registered so subsequent kernel boots can discover them. Re-running the operation is supported. Applied migration identifiers unknown to the current build are reported but do not cause verification to fail.
 
@@ -38,7 +41,7 @@ Run a read-only schema probe:
   --event-store orders --namespace production
 ```
 
-Or set `Cratis__Chronicle__Storage__SchemaAction=VerifyAndExit`. Verification reads history and table metadata; it does not register stores, acquire schema migration locks, create databases or schemas, or apply migrations. It checks versioned EF schemas and the presence of well-known sequence tables, not future dynamically shaped read-model or constraint tables.
+Or set `Cratis__Chronicle__Storage__SchemaAction=VerifyAndExit`. Verification reads history and table metadata; it does not register stores, acquire schema migration locks, create databases or schemas, or apply migrations. It checks versioned EF schemas, the presence of well-known sequence tables and the `chronicle_sink_cycle_receipts` table with its `CreatedAt` index. It does not check future dynamically shaped read-model or constraint tables. A missing or drifted receipt table fails with `SchemaNotCurrent`, and verification never creates or repairs it.
 
 After a successful migration job, configure normal replicas with:
 
@@ -104,6 +107,8 @@ The runtime identity still needs permissions for Chronicle's dynamic per-table o
 - Event-sequence tables for sequences that did not exist when `--migrate-only` ran.
 - Unique-constraint tables.
 - Read-model tables, including the per-generation tables created when a projection is rebuilt.
+
+The `chronicle_sink_cycle_receipts` table is not created in Verify mode. Run `--migrate-only` first, including after an upgrade: Verify replicas, and `--verify-schema` checks, fail with `SchemaNotCurrent` until it exists. Multi-write cycles on a Verify replica fail the same way when it is missing or drifted.
 
 Every other schema object comes from versioned migrations, which `--migrate-only` applies and Verify checks.
 

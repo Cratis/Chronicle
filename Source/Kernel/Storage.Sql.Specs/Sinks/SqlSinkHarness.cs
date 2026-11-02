@@ -26,9 +26,7 @@ namespace Cratis.Chronicle.Storage.Sql.Sinks;
 /// </summary>
 public class SqlSinkHarness : ISqlSinkHarness
 {
-    readonly ReadModelMigrator _migrator = new(
-        new TableMigrator<ReadModelDbContext>(Substitute.For<ILogger<TableMigrator<ReadModelDbContext>>>()),
-        Substitute.For<ILogger<ReadModelMigrator>>());
+    ReadModelMigrator? _migrator;
     readonly ReplayingTables _replayingTables = new();
     readonly string _path = Path.Combine(Path.GetTempPath(), $"chronicle-sink-{Guid.NewGuid():N}.db");
     readonly IntegrationTimings _timings = new(nameof(SqlSinkHarness), "sql-specs", "sqlite");
@@ -66,6 +64,12 @@ public class SqlSinkHarness : ISqlSinkHarness
     /// Gets the logger for sink diagnostics.
     /// </summary>
     public ILogger<SqlSink> Logger { get; init; } = Substitute.For<ILogger<SqlSink>>();
+
+    ReadModelMigrator Migrator => _migrator ??= new(
+        new RecordingTableMigrator<ReadModelDbContext>(
+            new TableMigrator<ReadModelDbContext>(Substitute.For<ILogger<TableMigrator<ReadModelDbContext>>>()),
+            () => Interceptors.OfType<SqlCommandCapture>().FirstOrDefault()),
+        Substitute.For<ILogger<ReadModelMigrator>>());
 
     /// <inheritdoc/>
     public ISink CreateSink(ReadModelDefinition definition)
@@ -164,7 +168,7 @@ public class SqlSinkHarness : ISqlSinkHarness
         }
         var context = _timings.Measure("ef-context-construction", () =>
         {
-            var created = new ReadModelDbContext(options, containerName, _columns, _migrator);
+            var created = new ReadModelDbContext(options, containerName, _columns, Migrator);
             return _commandTimings?.Track(created) ?? created;
         });
         await _timings.Run("ef-table-ensure", context.EnsureTableExists);

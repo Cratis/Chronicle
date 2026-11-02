@@ -23,7 +23,7 @@ internal static partial class SinkCycleReceiptSchema
     const string SqliteCatalog = """
         SELECT 'C|' || name || '|' || upper(type) || '|' || "notnull" || '|' || coalesce(dflt_value, '') || '|' || (CASE WHEN hidden <> 0 THEN 1 ELSE 0 END) AS "Value" FROM pragma_table_xinfo({0}, 'main')
         UNION ALL SELECT 'P|' || name AS "Value" FROM pragma_table_xinfo({0}, 'main') WHERE pk > 0
-        UNION ALL SELECT 'I|' || name || '|' || "unique" || '|' || partial AS "Value" FROM pragma_index_list({0}, 'main')
+        UNION ALL SELECT 'I|' || name || '|' || "unique" || '|' || partial AS "Value" FROM pragma_index_list({0}, 'main') WHERE origin <> 'pk'
         UNION ALL SELECT 'K|' || l.name || '|' || coalesce(x.name, '<expression>') || '|' || x.seqno AS "Value" FROM pragma_index_list({0}, 'main') l, pragma_index_xinfo(l.name, 'main') x WHERE x.key = 1
         """;
 
@@ -155,6 +155,11 @@ internal static partial class SinkCycleReceiptSchema
 
     static bool CompareIndex(string[][] parts, List<string> unsafeDrift)
     {
+        foreach (var other in parts.Where(p => p[0] == "I" && !string.Equals(p[1], IndexName, StringComparison.Ordinal) && (p[2] != "0" || p[3] != "0")))
+        {
+            unsafeDrift.Add($"index '{other[1]}' is unique or filtered; a violation of it would be mistaken for a receipt collision");
+        }
+
         var index = parts.FirstOrDefault(p => p[0] == "I" && string.Equals(p[1], IndexName, StringComparison.Ordinal));
         if (index is null)
         {
