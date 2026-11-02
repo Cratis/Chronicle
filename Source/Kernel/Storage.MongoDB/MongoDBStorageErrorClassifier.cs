@@ -18,8 +18,10 @@ public class MongoDBStorageErrorClassifier : IStorageErrorClassifier
             MongoNotPrimaryException or MongoNodeIsRecoveringException or MongoCursorNotFoundException or
             MongoWriteException { WriteError: null, WriteConcernError: not null } or MongoBulkWriteException { WriteErrors.Count: 0, WriteConcernError: not null } or
             ClientBulkWriteException { WriteErrors.Count: 0, WriteConcernErrors.Count: > 0 } ||
-        (exception is MongoException mongo && (mongo.HasErrorLabel("TransientTransactionError") || mongo.HasErrorLabel("UnknownTransactionCommitResult") || mongo.HasErrorLabel("RetryableWriteError") || mongo.HasErrorLabel("RetryableReadError"))) ||
+        (exception is MongoException mongo && (HasLabel(mongo, "TransientTransactionError") || HasLabel(mongo, "UnknownTransactionCommitResult") || HasLabel(mongo, "RetryableWriteError") || HasLabel(mongo, "RetryableReadError"))) ||
         (exception is AggregateException aggregate
             ? aggregate.InnerExceptions.Any(IsTransient)
             : exception.InnerException is { } inner && IsTransient(inner));
+
+    static bool HasLabel(MongoException mongo, string label) => mongo.ErrorLabels?.Contains(label) == true;
 }

@@ -123,17 +123,21 @@ public static class SerializationConfigurationExtensions
     }
 
     /// <summary>
-    /// Let the Orleans exception codec carry Cratis exceptions between silos.
+    /// Let the Orleans exception codec carry every exception between silos with its type, message, stack trace, inner exception and data.
     /// </summary>
     /// <param name="services"><see cref="IServiceCollection"/> to add to.</param>
     /// <returns><see cref="IServiceCollection"/> for continuation.</returns>
     /// <remarks>
-    /// The codec only serializes exception types under its supported namespace prefixes. Any other exception thrown by a
-    /// grain fails to serialize, so the response never reaches the caller on the other silo, which hangs until it times out.
+    /// Third-party exceptions, such as storage driver and Polly exceptions, have no generated codec. Without this filter,
+    /// callers receive CodecNotFoundException instead of the original failure. Driver-specific fields are not carried.
     /// </remarks>
     public static IServiceCollection AddExceptionSerialization(this IServiceCollection services)
     {
-        services.Configure<ExceptionSerializationOptions>(options => options.SupportedNamespacePrefixes.Add("Cratis"));
+        services.Configure<ExceptionSerializationOptions>(options =>
+        {
+            options.SupportedNamespacePrefixes.Add("Cratis");
+            options.SupportedExceptionTypeFilter = _ => true;
+        });
         return services;
     }
 

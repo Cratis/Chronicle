@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Net;
+using System.Runtime.CompilerServices;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using MongoDB.Driver.Core;
@@ -40,6 +41,7 @@ public class when_classifying_failures : Specification
     [Fact] void should_retry_a_write_concern_without_a_write_error() => _classifier.IsTransient(WriteFailure(false)).ShouldBeTrue();
     [Fact] void should_not_hide_a_deterministic_write_error_behind_write_concern() => _classifier.IsTransient(WriteFailure(true)).ShouldBeFalse();
     [Fact] void should_not_retry_unlabelled_driver_errors() => _classifier.IsTransient(new MongoException("deterministic")).ShouldBeFalse();
+    [Fact] void should_not_retry_an_exception_received_from_another_silo() => _classifier.IsTransient((MongoException)RuntimeHelpers.GetUninitializedObject(typeof(MongoException))).ShouldBeFalse();
     [Fact] void should_not_retry_deterministic_errors() => _classifier.IsTransient(new FormatException()).ShouldBeFalse();
 
     MongoWriteException WriteFailure(bool deterministic)
