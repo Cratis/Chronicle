@@ -35,6 +35,8 @@ public class a_webhook_delivery : Events.for_EventGenerationRelease.given.a_rele
     protected HttpClient _httpClient;
     protected RecordingLogger<WebhookObserverSubscriber> _logger;
 
+    protected virtual WebhookTarget Target => new("https://example.com/webhook", WebhookAuthorization.None, new Dictionary<string, string>());
+
     async Task Establish()
     {
         _silo = new TestKitSilo();
@@ -68,7 +70,7 @@ public class a_webhook_delivery : Events.for_EventGenerationRelease.given.a_rele
             }
         ];
         _partition = new("person", ArrayIndexers.NoIndexers);
-        _webhookDefinition = new("webhook", WebhookOwner.Client, "log", [_pin], new("https://example.com/webhook", WebhookAuthorization.None, new Dictionary<string, string>()))
+        _webhookDefinition = new("webhook", WebhookOwner.Client, "log", [_pin], Target)
         {
             GenerationDelivery = EventGenerationDelivery.Pinned
         };

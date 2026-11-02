@@ -110,7 +110,7 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
     /// </summary>
     public int Port
     {
-        get => ContainsKey(PortKey) ? Convert.ToInt32(this[PortKey]) : DefaultPort;
+        get => ContainsKey(PortKey) ? ConvertOption(PortKey, Convert.ToInt32) : DefaultPort;
         set
         {
             Remove(ServersKey);
@@ -299,7 +299,7 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
     /// </remarks>
     public bool SkipTlsValidation
     {
-        get => !ContainsKey(SkipTlsValidationKey) || Convert.ToBoolean(this[SkipTlsValidationKey]);
+        get => !ContainsKey(SkipTlsValidationKey) || ConvertOption(SkipTlsValidationKey, Convert.ToBoolean);
         set => this[SkipTlsValidationKey] = value;
     }
 
@@ -317,7 +317,7 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
     /// </remarks>
     public bool DisableTls
     {
-        get => ContainsKey(DisableTlsKey) && Convert.ToBoolean(this[DisableTlsKey]);
+        get => ContainsKey(DisableTlsKey) && ConvertOption(DisableTlsKey, Convert.ToBoolean);
         set
         {
             if (value)
@@ -347,7 +347,7 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
     /// </remarks>
     public bool SkipCompatibilityCheck
     {
-        get => ContainsKey(SkipCompatibilityCheckKey) && Convert.ToBoolean(this[SkipCompatibilityCheckKey]);
+        get => ContainsKey(SkipCompatibilityCheckKey) && ConvertOption(SkipCompatibilityCheckKey, Convert.ToBoolean);
         set => this[SkipCompatibilityCheckKey] = value;
     }
 
@@ -361,7 +361,7 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
     /// </remarks>
     public bool SkipKeepAlive
     {
-        get => ContainsKey(SkipKeepAliveKey) && Convert.ToBoolean(this[SkipKeepAliveKey]);
+        get => ContainsKey(SkipKeepAliveKey) && ConvertOption(SkipKeepAliveKey, Convert.ToBoolean);
         set => this[SkipKeepAliveKey] = value;
     }
 
@@ -628,6 +628,26 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
 
         var key = Uri.UnescapeDataString(pair[..equalsIndex]);
         return !_keysThatMayHoldAtSign.Contains(key);
+    }
+
+    /// <summary>
+    /// Converts an option, naming only the option key when it is rejected instead of quoting configuration text.
+    /// </summary>
+    /// <typeparam name="T">The option type.</typeparam>
+    /// <param name="key">The option key.</param>
+    /// <param name="convert">The conversion to apply.</param>
+    /// <returns>The converted value.</returns>
+    /// <exception cref="FormatException">Thrown when the value cannot be converted.</exception>
+    T ConvertOption<T>(string key, Func<object, T> convert)
+    {
+        try
+        {
+            return convert(this[key]);
+        }
+        catch (Exception ex) when (ex is FormatException or OverflowException)
+        {
+            throw new FormatException($"The value of the '{key}' option is invalid.");
+        }
     }
 
     void ParseConnectionString(string connectionString)

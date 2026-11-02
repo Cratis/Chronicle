@@ -8,9 +8,7 @@ namespace Cratis.Chronicle.Observation.Webhooks.for_WebhookObserverSubscriber.gi
 
 public class a_webhook_delivery_to_a_sensitive_target : a_webhook_delivery
 {
-    void Establish()
-    {
-        _webhookDefinition = _webhookDefinition with { Target = new(SensitiveTarget.WithCredentials(SensitiveTarget.UniqueHost()), WebhookAuthorization.None, new Dictionary<string, string>()) };
-        _httpClient.BaseAddress = new Uri(_webhookDefinition.Target.Url);
-    }
+    protected override WebhookTarget Target => new(SensitiveTarget.WithCredentials(SensitiveTarget.UniqueHost()), WebhookAuthorization.None, new Dictionary<string, string>());
+
+    void Establish() => _httpClient.BaseAddress = new Uri(_webhookDefinition.Target.Url);
 }

@@ -480,14 +480,14 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         {
             // Not being able to ask says nothing about whether the two sides agree, and a transport problem here
             // would surface again on the very next call with a better message than this one could give.
-            _logger.FailedToCheckCompatibility(ex.Message);
+            _logger.FailedToCheckCompatibility(ex.GetType().Name);
             return;
         }
 
         if (!response.IsCompatible)
         {
             var message = IncompatibilityMessage.Build(
-                _currentServerAddress?.ToString() ?? _connectionString.Redacted,
+                _connectionString.Redacted,
                 response.ServerVersion,
                 response.ServerProtocolVersion,
                 response.Incompatibilities);
@@ -520,7 +520,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
             if (!result.IsCompatible)
             {
                 var message = IncompatibilityMessage.Build(
-                    _currentServerAddress?.ToString() ?? _connectionString.Redacted,
+                    _connectionString.Redacted,
                     serverVersion: string.Empty,
                     serverProtocolVersion: string.Empty,
                     result.Errors);
@@ -533,7 +533,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         }
         catch (RpcException ex)
         {
-            _logger.FailedToRetrieveServerDescriptorSet(ex.Message);
+            _logger.FailedToRetrieveServerDescriptorSet(ex.GetType().Name);
         }
     }
 

@@ -2,20 +2,13 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Concepts.Observation.Webhooks;
 using Cratis.Chronicle.Observation.Webhooks.given;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Observation.Webhooks.for_WebhookObserverSubscriber.when_delivering;
 
-public class with_a_successful_delivery_to_a_sensitive_target : given.a_webhook_delivery
+public class with_a_successful_delivery_to_a_sensitive_target : given.a_webhook_delivery_to_a_sensitive_target
 {
-    void Establish()
-    {
-        _webhookDefinition = _webhookDefinition with { Target = new(SensitiveTarget.WithCredentials(SensitiveTarget.UniqueHost()), WebhookAuthorization.None, new Dictionary<string, string>()) };
-        _httpClient.BaseAddress = new Uri(_webhookDefinition.Target.Url);
-    }
-
     async Task Because() => _deliveryResult = await _subscriber.OnNext(_partition, _events, new(null));
 
     [Fact] void should_succeed() => _deliveryResult.State.ShouldEqual(ObserverSubscriberState.Ok);
