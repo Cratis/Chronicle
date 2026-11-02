@@ -91,6 +91,7 @@ public class all_dependencies : Specification
             _logger)
         {
             GenerationDelivery = GenerationDelivery,
+            ProgramIdentifier = "reducer-program",
             MaxConcurrentPartitions = MaxConcurrentPartitions
         };
 

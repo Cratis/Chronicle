@@ -107,6 +107,7 @@ public class all_dependencies : Specification
             _loggerFactory)
         {
             GenerationDelivery = GenerationDelivery,
+            ProgramIdentifier = "reactor-program",
             MaxConcurrentPartitions = MaxConcurrentPartitions
         };
     }

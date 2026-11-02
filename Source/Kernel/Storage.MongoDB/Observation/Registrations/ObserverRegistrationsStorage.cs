@@ -19,7 +19,7 @@ namespace Cratis.Chronicle.Storage.MongoDB.Observation.Registrations;
 /// <param name="serializerOptions">Options for serializing complete definitions.</param>
 public class ObserverRegistrationsStorage(IEventStoreDatabase database, JsonSerializerOptions serializerOptions) : IObserverRegistrationsStorage
 {
-    readonly Lazy<Task> _indexes = new(() => CreateIndexes(database));
+    Lazy<Task> _indexes = new(() => CreateIndexes(database));
 
     IMongoCollection<BsonDocument> Registrations => database.GetCollection<BsonDocument>(WellKnownCollectionNames.ObserverRegistrations);
     IMongoCollection<BsonDocument> Settings => database.GetCollection<BsonDocument>(WellKnownCollectionNames.ObserverOwnerSettings);
@@ -42,7 +42,17 @@ public class ObserverRegistrationsStorage(IEventStoreDatabase database, JsonSeri
             return false;
         }
 
-        await _indexes.Value;
+        var indexes = _indexes;
+        try
+        {
+            await indexes.Value;
+        }
+        catch
+        {
+            Interlocked.CompareExchange(ref _indexes, new(() => CreateIndexes(database)), indexes);
+            throw;
+        }
+
         var document = Document(Identity(registration.ObserverId, registration.EventSequenceId), registration.Revision.Value, registration);
         document["observerId"] = registration.ObserverId.Value;
         document["eventSequenceId"] = registration.EventSequenceId.Value;

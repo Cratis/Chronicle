@@ -25,15 +25,15 @@ internal sealed class ObserverDeliveries(ChronicleOptions options)
     {
         if (options.Serverless.Observers.TryGetValue(observerId, out var observerOptions) && observerOptions.Delivery is { } configured)
         {
-            return configured;
+            return Validate(configured, observerId);
         }
 
         if (observerType?.GetCustomAttribute<DeliveryAttribute>() is { } attribute)
         {
-            return attribute.Delivery;
+            return Validate(attribute.Delivery, observerId);
         }
 
-        return ServerlessActivation.IsOn(options) ? options.Serverless.DefaultDelivery : ObserverDelivery.Stream;
+        return Validate(ServerlessActivation.IsOn(options) ? options.Serverless.DefaultDelivery : ObserverDelivery.Stream, observerId);
     }
 
     /// <summary>
@@ -45,5 +45,15 @@ internal sealed class ObserverDeliveries(ChronicleOptions options)
     {
         var known = new HashSet<string>(knownObserverIds, StringComparer.Ordinal);
         return options.Serverless.Observers.Keys.Where(_ => !known.Contains(_)).ToArray();
+    }
+
+    static ObserverDelivery Validate(ObserverDelivery delivery, string observerId)
+    {
+        if (!Enum.IsDefined(delivery))
+        {
+            throw new InvalidServerlessConfiguration([$"Delivery for observer '{observerId}' has the undefined value {(int)delivery}."]);
+        }
+
+        return delivery;
     }
 }

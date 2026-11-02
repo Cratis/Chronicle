@@ -65,6 +65,7 @@ Without AuthProxy nothing changes: the signature is required everywhere, and `Al
 ### Storage
 
 - The kernel generates the key material. The private key and the HMAC secrets are stored encrypted with the kernel's `IEncryption`, in the same storage as other kernel state, and are never written to logs, events or API responses after creation.
+- Part A of [#5115](https://github.com/Cratis/Chronicle/issues/5115) does not implement HTTP credential custody: durable observer registrations currently serialize `HttpTarget.Headers` verbatim. Before HTTP registration is wired, [#5116](https://github.com/Cratis/Chronicle/issues/5116)/[#5117](https://github.com/Cratis/Chronicle/issues/5117) must encrypt HTTP target headers with `IEncryption` or refuse credential headers. Until then, do not persist bearer tokens, platform function keys, or other secret headers in those registrations.
 - The public key is not secret. Registration returns it, and a kernel `GET` for an event store returns the current and the previous public keys with their key ids.
 - A new HMAC secret is shown once, when the target is registered or the secret is rotated.
 

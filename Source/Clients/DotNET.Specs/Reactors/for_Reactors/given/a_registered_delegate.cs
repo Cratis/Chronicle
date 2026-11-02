@@ -21,6 +21,7 @@ public class a_registered_delegate : all_dependencies
     protected Subject<EventsToObserve> _observed;
     protected ReactorDefinition _definition;
     protected readonly List<ReactorDefinition> _definitions = [];
+    protected readonly List<string> _programIdentifiers = [];
     protected IReactorHandler _handler;
 
     void Establish()
@@ -38,6 +39,7 @@ public class a_registered_delegate : all_dependencies
                         case RegisterReactor registered:
                             _definition = registered.Reactor;
                             _definitions.Add(registered.Reactor);
+                            _programIdentifiers.Add(registered.ProgramIdentifier);
                             break;
                         case ReactorResult result:
                             _result.TrySetResult(result);

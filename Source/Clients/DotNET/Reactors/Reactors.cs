@@ -121,6 +121,11 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
     internal Observation.EventGenerationDelivery GenerationDelivery { get; init; }
 
     /// <summary>
+    /// Gets the program identifier supplied by the event store for registration.
+    /// </summary>
+    internal string ProgramIdentifier { get; init; } = ChronicleOptions.DefaultProgramIdentifier;
+
+    /// <summary>
     /// Gets how the events of reactors are delivered, when supplied by the event store.
     /// </summary>
     internal ObserverDeliveries? Deliveries { get; init; }
@@ -586,6 +591,7 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
             ConnectionId = _eventStore.Connection.Lifecycle.ConnectionId,
             EventStore = _eventStore.Name,
             Namespace = _eventStore.Namespace,
+            ProgramIdentifier = ProgramIdentifier,
             Reactor = new ReactorDefinition
             {
                 GenerationDelivery = (Contracts.Observation.EventGenerationDelivery)GenerationDelivery,

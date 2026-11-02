@@ -241,6 +241,7 @@ public partial class EventStore : IEventStore
             loggerFactory)
         {
             GenerationDelivery = options.Value.EventGenerationDelivery,
+            ProgramIdentifier = options.Value.ProgramIdentifier,
             Deliveries = Deliveries,
             MaxConcurrentPartitions = options.Value.Reactors.MaxConcurrentPartitions
         };
@@ -266,6 +267,7 @@ public partial class EventStore : IEventStore
             loggerFactory.CreateLogger<Reducers.Reducers>())
         {
             GenerationDelivery = options.Value.EventGenerationDelivery,
+            ProgramIdentifier = options.Value.ProgramIdentifier,
             Deliveries = Deliveries,
             MaxConcurrentPartitions = options.Value.Reducers.MaxConcurrentPartitions
         };

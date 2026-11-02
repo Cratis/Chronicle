@@ -51,7 +51,7 @@ public class and_they_were_registered_on_the_options : Specification
         servicesForClient.AddKeyedSingleton<IActivitySource<Reducers.Reducers>>(ClientActivity.SourceName, (_, _) => Substitute.For<IActivitySource<Reducers.Reducers>>());
         _provider = servicesForClient.BuildServiceProvider();
 
-        _options = new ChronicleOptions();
+        _options = new ChronicleOptions { ProgramIdentifier = "inventory-program" };
         _options.ExplicitArtifacts
             .RegisterProjection<Inventory>(projection => projection.From<ItemAdded>())
             .RegisterReadModel<Customer>()
@@ -91,6 +91,8 @@ public class and_they_were_registered_on_the_options : Specification
     [Fact] void should_know_the_read_model_with_a_declarative_projection() => _eventStore.Projections.HasFor<Inventory>().ShouldBeTrue();
     [Fact] void should_know_the_model_bound_read_model() => _eventStore.Projections.HasFor<Customer>().ShouldBeTrue();
     [Fact] void should_hold_both_definitions() => ((Projections.Projections)_eventStore.Projections).Definitions.Count.ShouldEqual(2);
+    [Fact] void should_supply_the_program_identifier_to_reactor_registration() => ((Reactors.Reactors)_eventStore.Reactors).ProgramIdentifier.ShouldEqual(_options.ProgramIdentifier);
+    [Fact] void should_supply_the_program_identifier_to_reducer_registration() => ((Reducers.Reducers)_eventStore.Reducers).ProgramIdentifier.ShouldEqual(_options.ProgramIdentifier);
     [Fact] void should_know_the_reactor() => _eventStore.Reactors.GetHandlerById("inventory-reactor").EventTypes.ShouldContainOnly([typeof(ItemAdded).GetEventType()]);
 
     [EventType]
