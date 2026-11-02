@@ -194,19 +194,17 @@ internal sealed class Reducers(
                             registration.Namespace,
                             (replayState, partition) => observer.OnNext(new ReduceOperationMessage { Partition = partition, ReplayState = (Contracts.Observation.ReplayState)replayState }));
 
-                        using (var span = activitySource.Register())
-                        {
-                            span?.Activity?.Tag(key, ObserverType.Reducer);
+                        using var span = activitySource.Register();
+                        span?.Activity?.Tag(key, ObserverType.Reducer);
 
-                            clientObserver = grainFactory.GetGrain<IReducer>(key);
-                            try
-                            {
-                                await clientObserver.SetDefinitionAndSubscribe(reducerDefinition);
-                            }
-                            catch (Exception exception)
-                            {
-                                throw CreateRegistrationFailure(registration, exception);
-                            }
+                        clientObserver = grainFactory.GetGrain<IReducer>(key);
+                        try
+                        {
+                            await clientObserver.SetDefinitionAndSubscribe(reducerDefinition);
+                        }
+                        catch (Exception exception)
+                        {
+                            throw CreateRegistrationFailure(registration, exception);
                         }
                     }
 
