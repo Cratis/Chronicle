@@ -75,8 +75,8 @@ public abstract class a_receipt_cycle<THarness> : Cycle.a_cycle_with_failure_inj
     {
         var sql = _harness.ConnectionString.GetDatabaseType() switch
         {
-            DatabaseType.PostgreSql => $"SELECT CASE WHEN to_regclass('\"{ReceiptTable}\"') IS NULL THEN 0 ELSE 1 END AS \"Value\"",
-            DatabaseType.SqlServer => $"SELECT CASE WHEN OBJECT_ID(N'{ReceiptTable}') IS NULL THEN 0 ELSE 1 END AS [Value]",
+            DatabaseType.PostgreSql => $"SELECT CAST(CASE WHEN to_regclass('\"{ReceiptTable}\"') IS NULL THEN 0 ELSE 1 END AS bigint) AS \"Value\"",
+            DatabaseType.SqlServer => $"SELECT CAST(CASE WHEN OBJECT_ID(N'{ReceiptTable}') IS NULL THEN 0 ELSE 1 END AS bigint) AS [Value]",
             _ => $"SELECT COUNT(*) AS \"Value\" FROM sqlite_master WHERE type = 'table' AND name = '{ReceiptTable}'"
         };
         return await Scalar(sql) == 1;
