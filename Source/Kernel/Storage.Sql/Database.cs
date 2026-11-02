@@ -260,6 +260,14 @@ public partial class Database(IServiceProvider serviceProvider, IOptions<Chronic
             purpose);
 
     /// <inheritdoc/>
+    public Task<DbContextScope<ReadModelDbContext>?> ExistingReadModelTable(EventStoreName eventStore, EventStoreNamespaceName @namespace, string containerName, IReadOnlyList<ProjectedColumn> columns) =>
+        GetExistingReadModelDbContext(
+            eventStore,
+            @namespace,
+            containerName,
+            (options, name) => new ReadModelDbContext(options, name, columns, serviceProvider.GetRequiredService<IReadModelMigrator>()));
+
+    /// <inheritdoc/>
     public void ClearTableMigrationCache(string connectionStringPrefix)
     {
         eventSequenceMigrator.ClearMigrationCache(connectionStringPrefix);

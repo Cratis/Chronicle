@@ -17,6 +17,14 @@ public interface IReadModelMigrator
     Task EnsureTableMigrated(string tableName, ReadModelDbContext context);
 
     /// <summary>
+    /// Brings an existing table up to the current column shape, without ever creating the table.
+    /// </summary>
+    /// <param name="tableName">The name of the table to reconcile.</param>
+    /// <param name="context">The <see cref="ReadModelDbContext"/> instance.</param>
+    /// <returns>True if the table exists; false otherwise, in which case nothing was changed.</returns>
+    Task<bool> EnsureExistingTableMigrated(string tableName, ReadModelDbContext context);
+
+    /// <summary>
     /// Ensures the Chronicle-owned replay promotion marker table exists in the read-model database.
     /// </summary>
     /// <param name="context">The context whose connection is used for the promotion transaction.</param>

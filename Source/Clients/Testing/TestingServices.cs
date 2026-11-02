@@ -414,6 +414,7 @@ internal sealed class TestingServices : IServices
     static KernelReadModelReadBindings CreateReadBindings(IStorage storage, IGrainFactory grainFactory) =>
         new(
             storage,
+            grainFactory,
             new KernelReadModelInstanceVisibilities(
                 new KernelProjectionsManager(Cratis.Chronicle.Testing.ReadModels.ProjectionReadModelProcessor.CreateProjectionFactory(storage), storage, grainFactory)));
 

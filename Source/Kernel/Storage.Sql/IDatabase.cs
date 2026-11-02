@@ -100,6 +100,17 @@ public interface IDatabase
     Task<DbContextScope<ReadModelDbContext>> ReadModelTable(EventStoreName eventStore, EventStoreNamespaceName @namespace, string containerName, IReadOnlyList<ProjectedColumn> columns, ConnectionPurpose purpose = ConnectionPurpose.Runtime);
 
     /// <summary>
+    /// Gets a database context scope for a read model table that already exists, bringing its columns up to date.
+    /// Unlike <see cref="ReadModelTable"/> it never creates a database or a table.
+    /// </summary>
+    /// <param name="eventStore">The name of the event store.</param>
+    /// <param name="namespace">The name of the namespace.</param>
+    /// <param name="containerName">The container name of the read model (table name).</param>
+    /// <param name="columns">The columns derived from the read model's <see cref="Schemas.JsonSchema"/>.</param>
+    /// <returns>A <see cref="DbContextScope{ReadModelDbContext}"/> for the table, or null when the table does not exist.</returns>
+    Task<DbContextScope<ReadModelDbContext>?> ExistingReadModelTable(EventStoreName eventStore, EventStoreNamespaceName @namespace, string containerName, IReadOnlyList<ProjectedColumn> columns);
+
+    /// <summary>
     /// Clears all cached table-migration state that was recorded for the given connection string prefix.
     /// Call this after deleting or recreating SQLite database files so that the next access
     /// re-creates every table from scratch instead of returning an early-out from the static cache.

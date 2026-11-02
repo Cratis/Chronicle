@@ -86,6 +86,8 @@ public class SqlSinkHarness : ISqlSinkHarness
         database.LiveQueryPollingInterval.Returns(TimeSpan.FromMilliseconds(50));
         database.ReadModelTable(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<string>(), Arg.Any<IReadOnlyList<ProjectedColumn>>(), Arg.Any<ConnectionPurpose>())
             .Returns(async callInfo => new DbContextScope<ReadModelDbContext>(await CreateContext(callInfo.ArgAt<string>(2)), () => { }));
+        database.ExistingReadModelTable(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<string>(), Arg.Any<IReadOnlyList<ProjectedColumn>>())
+            .Returns(callInfo => OpenExistingTable(callInfo.ArgAt<string>(2)));
 
         return new SqlSink(
             "test-event-store",
@@ -137,7 +139,26 @@ public class SqlSinkHarness : ISqlSinkHarness
         }
     }
 
+    async Task<DbContextScope<ReadModelDbContext>?> OpenExistingTable(string containerName)
+    {
+        var context = NewContext(containerName);
+        if (await _migrator.EnsureExistingTableMigrated(containerName, context))
+        {
+            return new DbContextScope<ReadModelDbContext>(context, () => { });
+        }
+
+        await context.DisposeAsync();
+        return null;
+    }
+
     async Task<ReadModelDbContext> CreateContext(string containerName)
+    {
+        var context = NewContext(containerName);
+        await _timings.Run("ef-table-ensure", context.EnsureTableExists);
+        return context;
+    }
+
+    ReadModelDbContext NewContext(string containerName)
     {
         var builder = new DbContextOptionsBuilder<ReadModelDbContext>();
         if (ConnectionString.GetDatabaseType() == DatabaseType.PostgreSql)
@@ -156,12 +177,10 @@ public class SqlSinkHarness : ISqlSinkHarness
             _commandTimings = new(_timings);
             _commandTimings.Start();
         }
-        var context = _timings.Measure("ef-context-construction", () =>
+        return _timings.Measure("ef-context-construction", () =>
         {
             var created = new ReadModelDbContext(options, containerName, _columns, _migrator);
             return _commandTimings?.Track(created) ?? created;
         });
-        await _timings.Run("ef-table-ensure", context.EnsureTableExists);
-        return context;
     }
 }

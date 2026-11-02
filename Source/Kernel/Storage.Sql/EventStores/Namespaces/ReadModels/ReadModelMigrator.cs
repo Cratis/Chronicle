@@ -45,6 +45,18 @@ public class ReadModelMigrator(
     }
 
     /// <inheritdoc/>
+    public async Task<bool> EnsureExistingTableMigrated(string tableName, ReadModelDbContext context)
+    {
+        if (!await TableMigrator<ReadModelDbContext>.TableExists(context, tableName))
+        {
+            return false;
+        }
+
+        await EnsureMissingColumnsAdded(tableName, context);
+        return true;
+    }
+
+    /// <inheritdoc/>
     public async Task EnsureReplayPromotions(ReadModelDbContext context)
     {
         try
@@ -182,21 +194,22 @@ public class ReadModelMigrator(
 
             if (context.Database.IsNpgsql())
             {
-                command.CommandText = $"SELECT column_name FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = '{tableName}'";
+                command.CommandText = "SELECT column_name FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = @table";
                 nameOrdinal = 0;
             }
             else if (context.Database.IsSqlServer())
             {
-                command.CommandText = $"SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = SCHEMA_NAME() AND TABLE_NAME = '{tableName}'";
+                command.CommandText = "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = SCHEMA_NAME() AND TABLE_NAME = @table";
                 nameOrdinal = 0;
             }
             else
             {
                 // table_xinfo includes VIRTUAL generated columns (hidden=2).
-                command.CommandText = $"PRAGMA table_xinfo(\"{tableName}\")";
-                nameOrdinal = 1;
+                command.CommandText = "SELECT name FROM pragma_table_xinfo(@table)";
+                nameOrdinal = 0;
             }
 
+            command.AddName("table", tableName);
             var columns = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             await using var reader = await command.ExecuteReaderAsync();
             while (await reader.ReadAsync())

@@ -69,6 +69,8 @@ public class PostgreSqlSinkHarness : ISqlSinkHarness
         database.LiveQueryPollingInterval.Returns(TimeSpan.FromMilliseconds(50));
         database.ReadModelTable(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<string>(), Arg.Any<IReadOnlyList<ProjectedColumn>>(), Arg.Any<ConnectionPurpose>())
             .Returns(callInfo => OpenTable(callInfo.ArgAt<string>(2)));
+        database.ExistingReadModelTable(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<string>(), Arg.Any<IReadOnlyList<ProjectedColumn>>())
+            .Returns(callInfo => OpenExistingTable(callInfo.ArgAt<string>(2)));
 
         return new SqlSink(
             "test-event-store",
@@ -98,6 +100,30 @@ public class PostgreSqlSinkHarness : ISqlSinkHarness
     /// <returns>A <see cref="DbContextScope{TDbContext}"/> for the container.</returns>
     async Task<DbContextScope<ReadModelDbContext>> OpenTable(string containerName)
     {
+        var context = OpenContext(containerName);
+        await Fixture!.Timings.Run("ef-table-ensure", context.EnsureTableExists);
+        return new DbContextScope<ReadModelDbContext>(context, () => { });
+    }
+
+    /// <summary>
+    /// Opens a container that must already exist, as an occurrence read does: never creating the table.
+    /// </summary>
+    /// <param name="containerName">The name of the container.</param>
+    /// <returns>A <see cref="DbContextScope{TDbContext}"/> for the container, or null when it does not exist.</returns>
+    async Task<DbContextScope<ReadModelDbContext>?> OpenExistingTable(string containerName)
+    {
+        var context = OpenContext(containerName);
+        if (await _migrator.EnsureExistingTableMigrated(containerName, context))
+        {
+            return new DbContextScope<ReadModelDbContext>(context, () => { });
+        }
+
+        await context.DisposeAsync();
+        return null;
+    }
+
+    ReadModelDbContext OpenContext(string containerName)
+    {
         var options = new DbContextOptionsBuilder<ReadModelDbContext>(SpecDbContextOptions.Kernel<ReadModelDbContext>(ConnectionString))
             .AddInterceptors(Interceptors).Options;
 
@@ -105,7 +131,6 @@ public class PostgreSqlSinkHarness : ISqlSinkHarness
 #pragma warning disable CA2000 // Disposed by the sink through the returned scope.
         var context = fixture.Timings.Measure("ef-context-construction", () => fixture.Track(new ReadModelDbContext(options, containerName, _columns, _migrator)));
 #pragma warning restore CA2000
-        await fixture.Timings.Run("ef-table-ensure", context.EnsureTableExists);
-        return new DbContextScope<ReadModelDbContext>(context, () => { });
+        return context;
     }
 }
