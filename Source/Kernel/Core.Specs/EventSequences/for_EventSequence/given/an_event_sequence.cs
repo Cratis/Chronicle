@@ -190,7 +190,7 @@ public class an_event_sequence : Specification
         _stateStorage.State = new EventSequenceState { ConstraintIndexWatermark = EventSequenceNumber.First };
 
         _eventSequence = await CreateEventSequence();
-        if (_eventSequence is not null) _eventSequence.ConstraintIndexRetryJitterSample = () => 0.5;
+        _eventSequence?.ConstraintIndexRetryJitterSample = () => 0.5;
     }
 
     /// <summary>
