@@ -61,6 +61,18 @@ The projection is read cold (a fresh session, so a newly activated grain folds t
 appended since the last read), warm after one event appended to the key, and warm after one event appended to another
 key. The passive reducer has no cache, so it is read once per iteration.
 
+### ReactorLiveInterleaveBenchmark
+
+Measures appending 1000 events in transactions of 100 to one live reactor, with `EventSources` set to 1 or 10
+round-robin interleaved sources, matching [#5473](https://github.com/Cratis/Chronicle/issues/5473).
+Every invocation fails unless all appends and observer completion succeed and the reactor receives exactly 1000 events.
+
+From this directory:
+
+```bash
+dotnet run -c Release --project Chronicle.Benchmarks -- --filter '*ReactorLiveInterleave*'
+```
+
 ### Future Benchmarks
 
 The following observer benchmarks are planned but require additional infrastructure:

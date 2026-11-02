@@ -11,7 +11,15 @@ namespace Cratis.Chronicle.Benchmarks;
 /// </summary>
 public class BenchmarkReactor : IReactor
 {
+    static int _totalEventsProcessed;
+
     int _eventsProcessed;
+
+    /// <summary>
+    /// Gets the process-wide number of benchmark events delivered. The reactor is activated per handling scope,
+    /// so only a process-wide count reflects deliveries.
+    /// </summary>
+    public static int TotalEventsProcessed => Volatile.Read(ref _totalEventsProcessed);
 
     /// <summary>
     /// Gets the number of benchmark events processed by the reactor.
@@ -30,6 +38,7 @@ public class BenchmarkReactor : IReactor
         _ = context;
 
         Interlocked.Increment(ref _eventsProcessed);
+        Interlocked.Increment(ref _totalEventsProcessed);
         return Task.CompletedTask;
     }
 }
