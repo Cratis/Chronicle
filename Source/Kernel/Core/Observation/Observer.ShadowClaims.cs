@@ -69,8 +69,6 @@ public partial class Observer
     void ShadowGrantObserverWide(ClaimHolderKind kind, JobId? job, EventSequenceNumber resume) =>
         GuardShadowClaims(() => ReportShadowDivergences(_shadowClaims.GrantObserverWide(kind, job, resume)));
 
-    void ShadowHandOverObserverWide(ClaimHolderKind holder, JobId job) => GuardShadowClaims(() => _shadowClaims.HandOverObserverWide(holder, job));
-
     void ReportShadowDivergences(IEnumerable<(Key? Partition, ShadowClaimDivergence Divergence)> divergences)
     {
         foreach (var (partition, divergence) in divergences)

@@ -212,10 +212,10 @@ public partial class Observer
         // The observer-wide job only owned the partitions it registered. A partition's own catch-up
         // keeps its hold until it reports PartitionCaughtUp (#5379).
         var releasable = await PartitionHoldsReleasableAfterCatchUp();
+        await ShadowHandOverCaughtUpObserverWide(jobId);
 
         var madeProgress = CatchUpMadeProgress(lastHandledEventSequenceNumber, lastScannedEventSequenceNumber);
         HandleNewLastHandledEvent(lastHandledEventSequenceNumber);
-        ShadowHandOverObserverWide(ClaimHolderKind.ObserverCatchUp, jobId);
         State.CatchingUpPartitions.ExceptWith(releasable);
         if (lastScannedEventSequenceNumber.IsActualValue &&
             (!State.NextEventSequenceNumber.IsActualValue || State.NextEventSequenceNumber <= lastScannedEventSequenceNumber))

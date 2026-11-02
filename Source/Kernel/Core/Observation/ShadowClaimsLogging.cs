@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Observation.Claims;
+using Cratis.Orleans.Jobs;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Observation;
@@ -47,4 +48,13 @@ internal static partial class ShadowClaimsLogging
     /// <param name="exception">The restore failure.</param>
     [LoggerMessage(LogLevel.Warning, "Observer {ObserverId} could not restore its shadow claims; the shadow ledger starts empty and delivery is unchanged")]
     internal static partial void ShadowClaimsRestoreFailed(this ILogger<Observer> logger, ObserverId observerId, Exception exception);
+
+    /// <summary>
+    /// Logs that a catch-up job reported back after its observer-wide claim had passed to newer work, so the claim was kept.
+    /// </summary>
+    /// <param name="logger">The observer logger.</param>
+    /// <param name="observerId">The observer identifier.</param>
+    /// <param name="jobId">The stale job reporting back.</param>
+    [LoggerMessage(LogLevel.Information, "Observer {ObserverId} ignored a stale observer-wide claim release from catch-up job {JobId}; the claim belongs to newer work")]
+    internal static partial void IgnoredStaleObserverWideClaimRelease(this ILogger<Observer> logger, ObserverId observerId, JobId jobId);
 }
