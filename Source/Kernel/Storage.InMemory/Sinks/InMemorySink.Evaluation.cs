@@ -11,6 +11,48 @@ namespace Cratis.Chronicle.Storage.InMemory.Sinks;
 
 public partial class InMemorySink
 {
+    static PropertiesChanged<ExpandoObject> Detached(PropertiesChanged<ExpandoObject> propertiesChanged)
+    {
+        if (!propertiesChanged.Differences.Any(difference => NeedsDetaching(difference.Changed)))
+        {
+            return propertiesChanged;
+        }
+
+        return propertiesChanged with
+        {
+            Differences = [.. propertiesChanged.Differences.Select(difference =>
+                new PropertyDifference(difference.PropertyPath, difference.Original, Detached(difference.Changed), difference.ArrayIndexers))]
+        };
+    }
+
+    /// <summary>
+    /// Copies a value taken from a change, so the row it is inserted into owns it.
+    /// </summary>
+    /// <param name="value">The value to copy.</param>
+    /// <returns>The value itself when it cannot be shared, otherwise a deep copy.</returns>
+    /// <remarks>
+    /// A value taken from a change is shared with the changeset, and a join hands the same change to every row it
+    /// matches. Inserting it as-is would let one row, the changeset or a later candidate change another row's state.
+    /// </remarks>
+    static object? Detached(object? value)
+    {
+        if (!NeedsDetaching(value))
+        {
+            return value;
+        }
+
+        if (value is ExpandoObject expando)
+        {
+            return expando.Clone();
+        }
+
+        var holder = new ExpandoObject();
+        ((IDictionary<string, object?>)holder)[nameof(value)] = value;
+        return ((IDictionary<string, object?>)holder.Clone())[nameof(value)];
+    }
+
+    static bool NeedsDetaching(object? value) => value is ExpandoObject or (IEnumerable and not string and not byte[]);
+
     static bool HoldsChild(ExpandoObject document, ChildRemovedFromAll childRemoved) =>
         VisitChild(document, ChildrenPathOf(childRemoved), 0, childRemoved, remove: false);
 
@@ -38,13 +80,7 @@ public partial class InMemorySink
 
         if (index == segments.Length - 1)
         {
-            var child = value is IList children ? children.Cast<object>().FindByKey(childRemoved.IdentifiedByProperty, childRemoved.Key) : null;
-            if (child is not null && remove)
-            {
-                ((IList)value).Remove(child);
-            }
-
-            return child is not null;
+            return VisitChildCollection(value, childRemoved, remove);
         }
 
         if (value is IDictionary<string, object?> nested)
@@ -64,6 +100,17 @@ public partial class InMemorySink
         return found;
     }
 
+    static bool VisitChildCollection(object value, ChildRemovedFromAll childRemoved, bool remove)
+    {
+        var child = value is IList children ? children.Cast<object>().FindByKey(childRemoved.IdentifiedByProperty, childRemoved.Key) : null;
+        if (child is not null && remove)
+        {
+            ((IList)value).Remove(child);
+        }
+
+        return child is not null;
+    }
+
     ExpandoObject ApplyActualChanges(Key key, IEnumerable<Change> changes, ExpandoObject state)
     {
         var changesToApply = changes.ToList();
@@ -75,12 +122,12 @@ public partial class InMemorySink
             switch (change)
             {
                 case PropertiesChanged<ExpandoObject> propertiesChanged:
-                    state = propertiesChanged.ApplyToStateWithoutChildOperationConflicts(state, collectionPathsWithChildOperations, wholeCollectionReplacementPaths);
+                    state = Detached(propertiesChanged).ApplyToStateWithoutChildOperationConflicts(state, collectionPathsWithChildOperations, wholeCollectionReplacementPaths);
                     break;
 
                 case ChildAdded childAdded:
                     var collection = state.EnsureCollection<ExpandoObject, object>(childAdded.ChildrenProperty, childAdded.ArrayIndexers);
-                    collection.Add(childAdded.State);
+                    collection.Add(Detached(childAdded.State)!);
                     break;
 
                 case ChildRemoved childRemoved:

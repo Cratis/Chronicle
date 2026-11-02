@@ -32,7 +32,8 @@ public partial class InMemorySink
         var changes = changeset.Changes.ToArray();
         var removed = changeset.HasBeenRemoved();
         var rootJoins = changes.Where(IsRootJoin).Cast<Joined>().ToArray();
-        if (!removed && rootJoins.Length > 0 && rootJoins.All(joined => !joined.HasKeyedFrom))
+        var onlyRootJoins = rootJoins.Length > 0 && rootJoins.All(joined => !joined.HasKeyedFrom);
+        if (!removed && onlyRootJoins)
         {
             // Root joins enrich existing rows selected by their join column, not by the incoming
             // event source id. Never create a phantom row for a join-only event. In particular,
@@ -57,13 +58,13 @@ public partial class InMemorySink
         var segments = ChangesetWriteOrder.SegmentsFor(changes) ?? [changes];
         for (var index = 0; index < segments.Count; index++)
         {
-            state = StageSegment(staged, keyedWrite, segments[index], state, continuesEarlierSegment: index > 0);
+            state = StageSegment(staged, keyedWrite with { ContinuesEarlierSegment = index > 0 }, segments[index], state);
         }
 
         return staged;
     }
 
-    ExpandoObject StageSegment(StagedWrite staged, KeyedWrite keyedWrite, IReadOnlyList<Change> changes, ExpandoObject state, bool continuesEarlierSegment)
+    ExpandoObject StageSegment(StagedWrite staged, KeyedWrite keyedWrite, IReadOnlyList<Change> changes, ExpandoObject state)
     {
         var rootJoins = changes.Where(IsRootJoin).Cast<Joined>().ToArray();
         var childJoins = changes.Where(IsChildJoin).Cast<Joined>().ToArray();
@@ -84,20 +85,26 @@ public partial class InMemorySink
 
         // The joined update may have touched this same row. Apply only the direct changes
         // on top of the now-current row, without replaying the join against the From key.
-        var joinsMayHaveTouchedTheRow = continuesEarlierSegment || rootJoins.Any(joined => joined.HasKeyedFrom) || childJoins.Length > 0;
+        var joinsMayHaveTouchedTheRow = keyedWrite.ContinuesEarlierSegment || rootJoins.Any(joined => joined.HasKeyedFrom) || childJoins.Length > 0;
         if (joinsMayHaveTouchedTheRow && staged.Current(keyedWrite.KeyValue) is not null)
         {
             state = staged.CandidateFor(keyedWrite.KeyValue);
         }
 
+        return StageDirectChanges(staged, keyedWrite, changes, state);
+    }
+
+    ExpandoObject StageDirectChanges(StagedWrite staged, KeyedWrite keyedWrite, IReadOnlyList<Change> changes, ExpandoObject state)
+    {
         var directChanges = changes.Where(change => change is not Joined).ToArray();
-        if ((childJoins.Length > 0 && directChanges.Length == 0) || keyedWrite.IsRejected)
+        var childJoinOnly = changes.Any(IsChildJoin) && directChanges.Length == 0;
+        if (childJoinOnly || keyedWrite.IsRejected)
         {
             return state;
         }
 
         state = ApplyActualChanges(keyedWrite.Key, directChanges, state);
-        ((IDictionary<string, object?>)state)["id"] = keyedWrite.Key.Value;
+        ((IDictionary<string, object?>)state)["id"] = Detached(keyedWrite.Key.Value);
         staged.Stage(keyedWrite.KeyValue, state, advancesWatermark: true);
         return state;
     }
@@ -185,5 +192,8 @@ public partial class InMemorySink
         }
     }
 
-    sealed record KeyedWrite(Key Key, object KeyValue, bool IsRejected);
+    sealed record KeyedWrite(Key Key, object KeyValue, bool IsRejected)
+    {
+        public bool ContinuesEarlierSegment { get; init; }
+    }
 }
