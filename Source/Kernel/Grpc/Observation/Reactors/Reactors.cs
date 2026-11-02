@@ -226,7 +226,7 @@ internal sealed class Reactors(
 
     static void RegisterStream(RegisterReactor registration, TaskCompletionSource<RegisterReactor> registrationTcs)
     {
-        if (registration.Reactor.Delivery == ObserverDelivery.Http)
+        if (registration.Reactor.Delivery != ObserverDelivery.Stream)
         {
             registrationTcs.SetException(new InvalidOperationException("HTTP delivery cannot be registered over an observation stream."));
         }

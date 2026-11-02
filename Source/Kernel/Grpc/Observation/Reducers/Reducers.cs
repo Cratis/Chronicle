@@ -257,7 +257,7 @@ internal sealed class Reducers(
 
     static void RegisterStream(RegisterReducer registration, IGrainFactory grainFactory, TaskCompletionSource<RegisterReducer> registrationTcs, Action<ReadModelDefinition> setModel)
     {
-        if (registration.Reducer.Delivery == ObserverDelivery.Http)
+        if (registration.Reducer.Delivery != ObserverDelivery.Stream)
         {
             registrationTcs.TrySetException(CreateRegistrationFailure(
                 registration,
