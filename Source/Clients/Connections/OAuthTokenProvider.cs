@@ -29,6 +29,7 @@ public class OAuthTokenProvider : ITokenProvider, IDisposable
     readonly Func<string> _tokenEndpoint;
     readonly string _clientId;
     readonly string _clientSecret;
+    readonly string? _scope;
     readonly ILogger<OAuthTokenProvider> _logger;
     readonly SemaphoreSlim _refreshLock = new(1, 1);
     readonly HttpClient _httpClient;
@@ -91,14 +92,57 @@ public class OAuthTokenProvider : ITokenProvider, IDisposable
         ILogger<OAuthTokenProvider> logger,
         HttpMessageHandler httpMessageHandler,
         TimeProvider timeProvider)
+        : this(
+            () =>
+            {
+                var serverAddress = serverAddressProvider();
+                return $"https://{serverAddress.Host}:{serverAddress.Port}/connect/token";
+            },
+            clientId,
+            clientSecret,
+            null,
+            logger,
+            httpMessageHandler,
+            timeProvider)
     {
-        _tokenEndpoint = () =>
-        {
-            var serverAddress = serverAddressProvider();
-            return $"https://{serverAddress.Host}:{serverAddress.Port}/connect/token";
-        };
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="OAuthTokenProvider"/> class that requests tokens from a fixed external endpoint.
+    /// </summary>
+    /// <param name="tokenEndpoint">The absolute https token endpoint.</param>
+    /// <param name="clientId">The OAuth client ID.</param>
+    /// <param name="clientSecret">The OAuth client secret.</param>
+    /// <param name="scope">Optional scope to request.</param>
+    /// <param name="logger">Logger for logging.</param>
+    /// <param name="httpMessageHandler">The <see cref="HttpMessageHandler"/> to perform token requests with.</param>
+    /// <param name="timeProvider">The <see cref="TimeProvider"/> for expiry and throttling decisions.</param>
+    /// <exception cref="InsecureTokenEndpoint">Thrown when the endpoint is not an absolute https URL without user info.</exception>
+    internal OAuthTokenProvider(
+        Uri tokenEndpoint,
+        string clientId,
+        string clientSecret,
+        string? scope,
+        ILogger<OAuthTokenProvider> logger,
+        HttpMessageHandler httpMessageHandler,
+        TimeProvider timeProvider)
+        : this(ExternalEndpoint(tokenEndpoint), clientId, clientSecret, scope, logger, httpMessageHandler, timeProvider)
+    {
+    }
+
+    OAuthTokenProvider(
+        Func<string> tokenEndpoint,
+        string clientId,
+        string clientSecret,
+        string? scope,
+        ILogger<OAuthTokenProvider> logger,
+        HttpMessageHandler httpMessageHandler,
+        TimeProvider timeProvider)
+    {
+        _tokenEndpoint = tokenEndpoint;
         _clientId = clientId;
         _clientSecret = clientSecret;
+        _scope = scope;
         _logger = logger;
         _httpMessageHandler = httpMessageHandler;
         _httpClient = new HttpClient(httpMessageHandler);
@@ -172,6 +216,24 @@ public class OAuthTokenProvider : ITokenProvider, IDisposable
         _httpMessageHandler.Dispose();
     }
 
+    /// <summary>
+    /// Creates a <see cref="HttpMessageHandler"/> for external authorities that always validates the server certificate.
+    /// </summary>
+    /// <returns>The <see cref="HttpMessageHandler"/>.</returns>
+    internal static SocketsHttpHandler CreateExternalHttpMessageHandler() => new();
+
+    /// <summary>
+    /// Gets the token endpoint tokens are currently requested from.
+    /// </summary>
+    /// <returns>The token endpoint.</returns>
+    internal string GetCurrentTokenEndpoint() => _tokenEndpoint();
+
+    static Func<string> ExternalEndpoint(Uri tokenEndpoint)
+    {
+        var endpoint = ExternalTokenEndpoints.Require(tokenEndpoint).AbsoluteUri;
+        return () => endpoint;
+    }
+
     static SocketsHttpHandler CreateHttpMessageHandler(bool skipTlsValidation) => new()
     {
         SslOptions = new SslClientAuthenticationOptions
@@ -188,12 +250,7 @@ public class OAuthTokenProvider : ITokenProvider, IDisposable
         {
             _logger.RequestingAccessToken(tokenEndpoint);
 
-            using var content = new FormUrlEncodedContent(new Dictionary<string, string>
-            {
-                ["grant_type"] = "client_credentials",
-                ["client_id"] = _clientId,
-                ["client_secret"] = _clientSecret
-            });
+            using var content = new FormUrlEncodedContent(CreateTokenRequestParameters());
 
             var response = await _httpClient.PostAsync(new Uri(tokenEndpoint), content, cancellationToken);
 
@@ -246,4 +303,21 @@ public class OAuthTokenProvider : ITokenProvider, IDisposable
 
     string? CachedTokenIfStillValid() =>
         !string.IsNullOrEmpty(_accessToken) && _timeProvider.GetUtcNow() < _expiresAt ? _accessToken : null;
+
+    Dictionary<string, string> CreateTokenRequestParameters()
+    {
+        var parameters = new Dictionary<string, string>
+        {
+            ["grant_type"] = "client_credentials",
+            ["client_id"] = _clientId,
+            ["client_secret"] = _clientSecret
+        };
+
+        if (!string.IsNullOrWhiteSpace(_scope))
+        {
+            parameters["scope"] = _scope;
+        }
+
+        return parameters;
+    }
 }
