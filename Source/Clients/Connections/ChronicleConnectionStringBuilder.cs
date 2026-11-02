@@ -50,6 +50,8 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
     /// </summary>
     static readonly string[] _sensitiveKeyFragments = ["password", "pwd", "secret", "token", "key", "credential"];
 
+    static readonly HashSet<string> _keysThatMayHoldAtSign = new([ApiKeyKey, CertificatePathKey, CertificatePasswordKey, LoadBalancerKey, SrvNameServerKey], StringComparer.OrdinalIgnoreCase);
+
     static readonly HashSet<string> _keysWithDedicatedRendering =
     [
         HostKey,
@@ -602,25 +604,41 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
             : throw new InvalidServerAddress(entry);
     }
 
-    static void ThrowIfUserInfoIsNotEncoded(string rest, int pathIndex, string authority)
+    static void ThrowIfUserInfoIsNotEncoded(string rest, int pathIndex)
     {
-        if (pathIndex == -1 || authority.Contains('@', StringComparison.Ordinal))
+        if (pathIndex == -1)
         {
             return;
         }
 
-        var queryIndex = rest.IndexOf('?', pathIndex);
-        var path = queryIndex == -1 ? rest[pathIndex..] : rest[pathIndex..queryIndex];
-        var query = queryIndex == -1 ? string.Empty : rest[(queryIndex + 1)..];
-        var firstPair = query.Split('&')[0];
-        var at = firstPair.IndexOf('@', StringComparison.Ordinal);
-        var equals = firstPair.IndexOf('=', StringComparison.Ordinal);
-        var queryHasUserInfo = at != -1 && (equals == -1 || equals > at);
+        // Nothing after the authority may carry an at sign, except the value of a setting that is known to hold one.
+        // An at sign anywhere else means the user information contained a separator that was not percent-encoded.
+        var tail = rest[pathIndex..];
+        var queryIndex = tail.IndexOf('?', StringComparison.Ordinal);
+        var path = queryIndex == -1 ? tail : tail[..queryIndex];
+        var query = queryIndex == -1 ? string.Empty : tail[(queryIndex + 1)..];
 
-        if (path.Contains('@', StringComparison.Ordinal) || queryHasUserInfo)
+        if (path.Contains('@', StringComparison.Ordinal) || query.Split('&').Any(IsPairWithMisplacedAtSign))
         {
             throw new InvalidUserInfo();
         }
+    }
+
+    static bool IsPairWithMisplacedAtSign(string pair)
+    {
+        if (!pair.Contains('@', StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        var equalsIndex = pair.IndexOf('=', StringComparison.Ordinal);
+        if (equalsIndex == -1 || pair.IndexOf('@', StringComparison.Ordinal) < equalsIndex)
+        {
+            return true;
+        }
+
+        var key = Uri.UnescapeDataString(pair[..equalsIndex]);
+        return !_keysThatMayHoldAtSign.Contains(key);
     }
 
     void ParseConnectionString(string connectionString)
@@ -667,7 +685,7 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
             query = queryIndex == -1 ? string.Empty : rest[(queryIndex + 1)..];
         }
 
-        ThrowIfUserInfoIsNotEncoded(rest, pathIndex, authority);
+        ThrowIfUserInfoIsNotEncoded(rest, pathIndex);
 
         // Extract username and password from the userinfo part
         var userInfoIndex = authority.LastIndexOf('@');

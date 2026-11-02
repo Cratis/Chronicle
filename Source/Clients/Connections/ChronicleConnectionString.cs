@@ -198,7 +198,8 @@ public class ChronicleConnectionString
     {
         try
         {
-            return new ChronicleConnectionStringBuilder(connectionString).BuildRedacted();
+            var redacted = new ChronicleConnectionStringBuilder(connectionString).BuildRedacted();
+            return HasOnlyMaskedUserInformation(redacted) ? redacted : MaskUserInformation(connectionString);
         }
 #pragma warning disable CA1031 // A diagnostics path must never throw
         catch
@@ -244,4 +245,39 @@ public class ChronicleConnectionString
     /// use <see cref="Redacted"/> for that.
     /// </remarks>
     public override string ToString() => _builder.Build();
+
+    static bool HasOnlyMaskedUserInformation(string redacted)
+    {
+        var schemeEnd = redacted.IndexOf("://", StringComparison.Ordinal) + 3;
+        var lastAt = redacted.LastIndexOf('@');
+        if (lastAt < schemeEnd)
+        {
+            return true;
+        }
+
+        var userInformation = redacted[schemeEnd..lastAt];
+        return string.Equals(userInformation, "REDACTED", StringComparison.Ordinal) || string.Equals(userInformation, "REDACTED:REDACTED", StringComparison.Ordinal);
+    }
+
+    static string MaskUserInformation(string connectionString)
+    {
+        var schemeEnd = connectionString.IndexOf("://", StringComparison.Ordinal) + 3;
+        var lastAt = connectionString.LastIndexOf('@');
+        if (schemeEnd < 3 || lastAt < schemeEnd)
+        {
+            return HiddenConnectionString;
+        }
+
+        var masked = $"{connectionString[..schemeEnd]}REDACTED{connectionString[lastAt..]}";
+        try
+        {
+            return new ChronicleConnectionStringBuilder(masked).BuildRedacted();
+        }
+#pragma warning disable CA1031 // A diagnostics path must never throw
+        catch
+#pragma warning restore CA1031
+        {
+            return HiddenConnectionString;
+        }
+    }
 }
