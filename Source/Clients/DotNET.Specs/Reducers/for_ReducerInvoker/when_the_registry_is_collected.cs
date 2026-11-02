@@ -6,6 +6,7 @@ using Cratis.Chronicle.Events.for_EventTypeRegistryCache.given;
 
 namespace Cratis.Chronicle.Reducers.for_ReducerInvoker;
 
+[Collection(UnloadingCollection.Name)]
 public class when_the_registry_is_collected : Specification
 {
     WeakReference _droppedEventType;

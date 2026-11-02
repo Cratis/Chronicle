@@ -6,6 +6,7 @@ using Cratis.Chronicle.Events.for_EventTypeRegistryCache.given;
 
 namespace Cratis.Chronicle.Events.for_EventTypeRegistryCache;
 
+[Collection(UnloadingCollection.Name)]
 public class when_the_registry_is_collected : Specification
 {
     readonly EventTypeRegistryCache<Type[]> _cache = new();

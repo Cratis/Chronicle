@@ -12,6 +12,7 @@ namespace Cratis.Chronicle.Reducers.for_ReducerInvoker;
 /// Control for the model-keyed side of discovery: a collectible reducer and model must unload once the invoker
 /// and registry are dropped, so the dispatch map never pins the assembly that declares them.
 /// </summary>
+[Collection(UnloadingCollection.Name)]
 public class when_the_model_is_collectible : Specification
 {
     WeakReference _model;

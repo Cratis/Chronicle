@@ -4,6 +4,7 @@
 using System.Collections.Immutable;
 using System.Reflection;
 using System.Reflection.Emit;
+using System.Runtime.Loader;
 using Cratis.Chronicle.Schemas;
 
 namespace Cratis.Chronicle.Events.for_EventTypeRegistryCache.given;
@@ -32,16 +33,38 @@ public static class CollectibleDispatchTypes
         AssemblyBuilder.DefineDynamicAssembly(new AssemblyName($"collectible-{Guid.NewGuid():N}"), AssemblyBuilderAccess.RunAndCollect).DefineDynamicModule("collectible");
 
     /// <summary>
-    /// Runs the collector until every probe is dead or the attempts are exhausted.
+    /// Loads an event type implementing <see cref="IKnown"/> into its own collectible <see cref="AssemblyLoadContext"/>.
+    /// </summary>
+    /// <returns>The event type and the context to unload.</returns>
+    public static (Type EventType, AssemblyLoadContext Context) LoadEventInUnloadableContext()
+    {
+        var name = $"unloadable-{Guid.NewGuid():N}";
+        var builder = new PersistedAssemblyBuilder(new AssemblyName(name), typeof(object).Assembly);
+        builder.DefineDynamicModule(name).DefineType("UnloadableEvent", TypeAttributes.Public, typeof(object), [typeof(IKnown)]).CreateType();
+        using var image = new MemoryStream();
+        builder.Save(image);
+        image.Position = 0;
+        var context = new AssemblyLoadContext(name, isCollectible: true);
+        return (context.LoadFromStream(image).GetType("UnloadableEvent", throwOnError: true)!, context);
+    }
+
+    /// <summary>
+    /// Runs the collector until every probe is dead or the time budget is spent.
     /// </summary>
     /// <param name="probes">The weak references to wait for.</param>
     /// <returns>True when every probe was collected.</returns>
+    /// <remarks>
+    /// Unloading an <see cref="AssemblyLoadContext"/> takes several collections and finalizer passes, and the runtime
+    /// postpones it while other threads are busy, so a fixed number of attempts is not enough in a parallel spec run.
+    /// </remarks>
     public static bool Collect(params WeakReference[] probes)
     {
-        for (var attempt = 0; attempt < 20 && probes.Any(probe => probe.IsAlive); attempt++)
+        var budget = System.Diagnostics.Stopwatch.StartNew();
+        while (probes.Any(probe => probe.IsAlive) && budget.Elapsed < TimeSpan.FromSeconds(10))
         {
             GC.Collect();
             GC.WaitForPendingFinalizers();
+            Thread.Sleep(1);
         }
 
         return probes.All(probe => !probe.IsAlive);
