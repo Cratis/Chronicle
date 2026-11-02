@@ -47,6 +47,48 @@ Observer configuration controls retry behavior, timeouts, watchdog monitoring, a
 | maxConcurrentPartitions | number | 32 | Upper bound on how many job steps (replay and catch-up work) run in parallel. The effective limit is the smaller of this value and `jobs.maxParallelSteps`. Despite the name it does not limit live event delivery. See [Job throttling](job-throttling.md) |
 | fanOutStrategy | string | round-robin | Strategy for distributing events across multiple connected instances of the same client. `round-robin` distributes deterministically by partition key, keeping every partition sticky to one instance and preserving per-partition ordering. `random` picks a random instance per delivery |
 
+## Per-observer retry overrides
+
+You can override the failed-partition retry settings for a single observer. Add an `observerRetryOverrides` section next to `observers` in `chronicle.json`, keyed by the full observer key `<observer id>#<event store>#<namespace>#<event sequence id>`:
+
+```json
+{
+  "observerRetryOverrides": {
+    "d2a138a2-6ca5-4bff-8a2f-ffd8534cc80e#my-store#Default#event-log": {
+      "maxRetryAttempts": 3,
+      "backoffDelay": 5,
+      "exponentialBackoffDelayFactor": 1.5,
+      "maximumBackoffDelay": 120
+    }
+  }
+}
+```
+
+| Property | Type | Description |
+| --- | --- | --- |
+| maxRetryAttempts | number | Maximum retry attempts for this observer's failed partitions (0 = infinite) |
+| backoffDelay | number | Initial backoff delay in seconds. Must be greater than 0 |
+| exponentialBackoffDelayFactor | number | Exponential backoff multiplier. Must be a finite number of at least 1 |
+| maximumBackoffDelay | number | Maximum backoff delay in seconds. Must be greater than 0 |
+
+A property you leave out inherits its value from the global `observers` section, and every other observer setting always comes from that section.
+
+The full key must match exactly, including case. There are no wildcards, and the observer id alone does not match. An entry that matches no observer is ignored without a warning. You find the observer ids on the Workbench Observers page or with `cratis chronicle observers list`.
+
+The Kernel validates the entries at startup and refuses to start when one is invalid: the key must have four parts, `maxRetryAttempts` cannot be negative, `backoffDelay` and `maximumBackoffDelay` must be greater than 0, and `exponentialBackoffDelayFactor` must be finite and at least 1. The global `observers` values are not validated by this.
+
+You can also set a value with an environment variable, which takes precedence over `chronicle.json`:
+
+```shell
+Cratis__Chronicle__ObserverRetryOverrides__<key>__MaxRetryAttempts=3
+```
+
+Some shells and orchestrators reject `#` in variable names. Use `chronicle.json` then.
+
+The values are copied into the configuration when the Kernel starts, so restart the Kernel to change them. Retry reminders that are already scheduled keep their time, and new values apply from the next scheduled retry or recovery. Lowering `maxRetryAttempts` does not park partitions that are already failing. A delay that would exceed `maximumBackoffDelay`, including one that results from a very large factor or attempt count, uses `maximumBackoffDelay`.
+
+Webhooks ignore these overrides. They use their own `webhooks.retry` settings, see [Delivery retry policy](../../configuration/chronicle-options.mdx#delivery-retry-policy). Alerts for webhook observers use the webhook retry settings too.
+
 ## Definition evolution
 
 Chronicle compares every newly registered projection and reducer definition with its stored definition. It then chooses the minimum operation it can prove correct:
@@ -151,7 +193,7 @@ A partition whose last attempt is a `Timeout` does not count toward the quaranti
 Quarantining stops retries and needs an operator to undo, which is the right answer for an observer
 that is wrong and the wrong answer for one waiting on congestion that will clear on its own.
 
-Webhook retries use these same budget and delay settings, with bounded ±20% jitter and a persisted
+Webhook retries use their own `webhooks.retry` settings, with bounded ±20% jitter and a persisted
 `RetryBackoff` deadline. `maxRetryAttempts: 0` still means unlimited retries. For webhooks, the
 observer-quarantine thresholds count parked non-timeout partitions, not transient partitions still
 waiting for retry. Receiver `Retry-After` and open-circuit deferrals consume no retry attempts.

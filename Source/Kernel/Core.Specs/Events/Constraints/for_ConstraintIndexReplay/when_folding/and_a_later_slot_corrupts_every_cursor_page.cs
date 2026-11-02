@@ -47,7 +47,7 @@ public class and_a_later_slot_corrupts_every_cursor_page : given.a_replay
         for (var turn = 0; turn < 40; turn++)
         {
             _result = await _replay.Continue();
-            foreach (var (name, failure) in _tracker.Observe(_result.Failed, _replay.StorageCallSucceeded)) _replay.SettlePoison(name, failure.Position!);
+            foreach (var (name, failure) in _tracker.Observe(_result.Failed, _replay.StorageCallSucceeded, 5)) _replay.SettlePoison(name, failure.Position!);
             if (_result.IsCompleted) break;
         }
     }

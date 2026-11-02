@@ -1,13 +1,13 @@
 ---
-description: Chronicle analyzer rule CHR0026 reports redundant [Key] or [Subject] attributes on an EventSourceId<T>, which is already both key and subject.
+description: Chronicle analyzer rule CHR0026 reports redundant [Key] attributes on EventSourceId<T> members while preserving explicit compliance subjects.
 ---
-# CHR0026: [Key] or [Subject] on an EventSourceId&lt;T&gt; is redundant
+# CHR0026: [Key] on an EventSourceId&lt;T&gt; is redundant
 
 ## Rule Description
 
-A property or record parameter whose type derives from `EventSourceId<T>` already is both the key (stream identity) and the compliance subject. `[Key]` and `[Subject]` exist for non-`EventSourceId<T>` values; on an `EventSourceId<T>` they are at best redundant and at worst mask an ambiguous multi-identity design that should be split into distinct types rather than annotated around.
+A property or record parameter whose type derives from `EventSourceId<T>` already carries the key (stream identity). Remove the redundant `[Key]` attribute.
 
-Remove the attribute.
+This rule does not report `[Subject]`. The type of an identifier does not establish its role as a compliance subject: an event can carry an order's event-source identity and a separate actor identity, both derived from `EventSourceId<T>`. Keep an explicit `[Subject]` when it identifies that actor.
 
 ## Severity
 
@@ -19,9 +19,9 @@ Warning
 
 ## Why This Rule Exists
 
-`EventSourceId<T>` is the strongly-typed event-source identity. Being that identity, it is automatically the key Chronicle resolves the stream by, and it is automatically the compliance subject a value's PII is encrypted under. `[Key]` and `[Subject]` exist precisely to designate those roles on values that would not otherwise carry them — a plain `Guid`, a string, another concept. On an `EventSourceId<T>` there is nothing to designate; the type already says it.
+`EventSourceId<T>` is a strongly typed event-source identity. Adding `[Key]` repeats the key role already expressed by the type, so the code fix removes only that attribute.
 
-At best the attribute is noise. At worst it is a signal that the design is trying to carry more than one identity on a single type — for example annotating a second `EventSourceId<T>`-derived property as the `[Key]` to disambiguate. That ambiguity should be resolved by splitting the identities into distinct types, not papered over with an attribute. Removing the attribute keeps the identity's meaning where it belongs: in the type.
+An explicit `[Subject]` has a different purpose. At runtime, Chronicle reads the marked property's or constructor parameter's value to resolve the compliance subject. Removing it can change whose protected data an event contains. CHR0026 therefore leaves `[Subject]` unchanged, including on `EventSourceId<T>`-derived members.
 
 ## Related Rules
 

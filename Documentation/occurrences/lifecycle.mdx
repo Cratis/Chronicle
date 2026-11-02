@@ -7,6 +7,12 @@ Use lifecycle occurrences for initialization or shutdown work that must be dedup
 
 Lifecycle delivery requires a kernel that supports lifecycle recording on the Occurrences service. It is at least once: use [effect receipts](effect-receipts.mdx) for Chronicle writes and stable effect keys for external endpoints.
 
+## Require the kernel at client start
+
+Lifecycle handlers need a reachable kernel when the host starts. The hosted service waits for the event store connection, for successful artifact registration and then for the `Startup` recording, all within the host's startup cancellation token. It does not retry in the background and does not skip startup work when the kernel is unavailable.
+
+If the kernel cannot be reached before the startup token is canceled, host start fails with the connection or cancellation error. A failed artifact registration fails it with `TriggerNotValid`, and a kernel that has not advertised occurrence support fails it with `OccurrencesNotSupported`. Make the kernel available before the application starts, or let your orchestrator restart the instance. Hosts without lifecycle handlers do not take this dependency.
+
 ## Choose the activation identity
 
 Configure the host's Chronicle options before starting it:

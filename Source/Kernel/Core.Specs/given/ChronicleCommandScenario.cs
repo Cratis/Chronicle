@@ -10,6 +10,7 @@ using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Security;
 using Cratis.Chronicle.Storage;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
@@ -68,12 +69,16 @@ public static class ChronicleCommandScenario
         var privileges = Substitute.For<IAdministratorPrivileges>();
         privileges.IsActiveAdministrator(userId).Returns(isAdministrator);
         services.AddSingleton(accessor);
+        var httpContextAccessor = Substitute.For<IHttpContextAccessor>();
+        httpContextAccessor.HttpContext.Returns(new DefaultHttpContext { User = principal });
+        services.AddSingleton(httpContextAccessor);
         services.AddSingleton(privileges);
         services.AddSingleton<IOptions<ChronicleOptions>>(Options.Create(new ChronicleOptions
         {
             Authentication = new Authentication { Enabled = true, EnforceAdministratorPolicyForOperations = true }
         }));
         services.AddScoped<IAdministratorAuthorization, AdministratorAuthorization>();
+        services.AddScoped<ISystemStoreAccess, SystemStoreAccessVerdict>();
         services.AddScoped<IAuthorizationHandler, SystemStoreOperationAuthorizationHandler>();
 
         // Keep the real policy handler; only the caller's authoritative privilege lookup is substituted.

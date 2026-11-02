@@ -50,6 +50,7 @@ internal sealed class TestingEventStore : IDisposable
     readonly Func<IEventTypes> _eventTypes;
     readonly JsonSerializerOptions _json = Globals.JsonSerializerOptions ?? new JsonSerializerOptions();
     readonly InProcessGrainFactory _grainFactory;
+    readonly Lazy<KernelSequences::IEventSequence> _system;
     bool _disposed;
 
     /// <summary>
@@ -74,6 +75,10 @@ internal sealed class TestingEventStore : IDisposable
         Capabilities = capabilities ?? new KernelCapabilitiesForTesting();
         if (capabilities is null) Capabilities.Current();
         _grainFactory = new InProcessGrainFactory(sequenceResolver: ResolveSequence, occurrenceResolver: ResolveOccurrenceQueue);
+        _system = new(() => InProcessSystemEventSequence.Create(
+            new KernelSequences::EventSequencesReactor(_grainFactory, _json, NullLogger<KernelSequences::EventSequencesReactor>.Instance, Storage, Compliance.Manager),
+            new(Name.Value),
+            new(Namespace.Value)));
         Connection = new ChronicleConnectionForTesting(_grainFactory, Storage, Compliance, _json, eventTypes, Dispose, Capabilities, Replies);
     }
 
@@ -191,20 +196,34 @@ internal sealed class TestingEventStore : IDisposable
         return new EventSequence(Name, Namespace, id, Connection, _eventTypes(), constraints, serializer, new CorrelationIdAccessor(), new NoConcurrencyScopeStrategies(), new CausationManager(), new NoUnitOfWorkManager(), new BaseIdentityProvider(), _json, eventSources: eventSources);
     }
 
+    /// <summary>
+    /// Frees a scratch sequence, its storage and any grain created for it, once nothing reads it again.
+    /// </summary>
+    /// <param name="id">The sequence identifier.</param>
+    internal void RemoveSequence(EventSequenceId id)
+    {
+        if (_grains.TryRemove(id, out var grain) && grain.IsValueCreated) ((IDisposable)grain.Value).Dispose();
+        ((EventStoreNamespaceStorage)Store.GetNamespace(new(Namespace.Value))).RemoveEventSequence(new(id.Value));
+    }
+
     Occurrences.InProcessOccurrenceQueue ResolveOccurrenceQueue(string key) =>
         _occurrenceQueues.GetOrAdd(key, static (value, root) => new Occurrences.InProcessOccurrenceQueue(root.Storage, value, root.Time), this);
 
     KernelSequences::IEventSequence ResolveSequence(string key)
     {
         var parsed = KernelConceptsNs::EventSequences.EventSequenceKey.Parse(key);
-        if (parsed.EventStore.Value != Name.Value || parsed.Namespace.Value != Namespace.Value || parsed.EventSequenceId == KernelConceptsNs::EventSequences.EventSequenceId.System)
+        if (parsed.EventStore.Value != Name.Value || parsed.Namespace.Value != Namespace.Value)
         {
             throw new GrainNotAvailableInTestScenario($"Event sequence '{key}'");
+        }
+        if (parsed.EventSequenceId == KernelConceptsNs::EventSequences.EventSequenceId.System)
+        {
+            return _system.Value;
         }
         return _grains.GetOrAdd(
             new EventSequenceId(parsed.EventSequenceId.Value),
             static (id, root) => new Lazy<KernelSequences::IEventSequence>(() =>
-                SerializedEventSequence.Create(InProcessEventSequence.Create(root.Storage, new(id.Value), new(root.Name.Value), new(root.Namespace.Value), root.Compliance)
+                SerializedEventSequence.Create(InProcessEventSequence.Create(root.Storage, new(id.Value), new(root.Name.Value), new(root.Namespace.Value), root.Compliance, root.Time)
                     .GetAwaiter().GetResult())),
             this).Value;
     }

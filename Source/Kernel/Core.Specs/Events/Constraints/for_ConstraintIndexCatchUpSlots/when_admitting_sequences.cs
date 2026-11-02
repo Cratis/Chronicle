@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Storage;
 
 namespace Cratis.Chronicle.Events.Constraints.for_ConstraintIndexCatchUpSlots;
@@ -13,7 +14,7 @@ public class when_admitting_sequences : Specification
     bool _refusingOwnerRetained;
     bool _admittedAfterCompletion;
 
-    void Establish() => _slots = ConstraintIndexCatchUpSlots.For(Substitute.For<IStorage>());
+    void Establish() => _slots = ConstraintIndexCatchUpSlots.For(Substitute.For<IStorage>(), ConstraintIndexRepairOptions.Default.CatchUpSlots);
 
     void Because()
     {
