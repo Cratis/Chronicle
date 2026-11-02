@@ -3,7 +3,7 @@
 
 using Microsoft.EntityFrameworkCore.Migrations.Operations;
 
-namespace Cratis.Chronicle.Storage.Sql.EventStores.Registrations.Migrations.for_v19_113_0;
+namespace Cratis.Chronicle.Storage.Sql.EventStores.Registrations.Migrations.for_v19_117_0_3;
 
 public class when_upgrading : Specification
 {
@@ -12,7 +12,7 @@ public class when_upgrading : Specification
 
     void Because()
     {
-        _operations = new v19_113_0 { ActiveProvider = "Microsoft.EntityFrameworkCore.Sqlite" }.UpOperations;
+        _operations = new v19_117_0_3 { ActiveProvider = "Microsoft.EntityFrameworkCore.Sqlite" }.UpOperations;
         _table = _operations.OfType<CreateTableOperation>().Single();
     }
 

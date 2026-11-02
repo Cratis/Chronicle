@@ -11,8 +11,8 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Registrations.Migrations;
 /// Adds event-store observer registrations and independently versioned owner and floor records.
 /// </summary>
 [DbContext(typeof(EventStoreDbContext))]
-[Migration($"{WellKnownTableNames.ObserverRegistrations}-{nameof(v19_113_0)}")]
-public class v19_113_0 : Migration
+[Migration($"{WellKnownTableNames.ObserverRegistrations}-{nameof(v19_117_0_3)}")]
+public class v19_117_0_3 : Migration
 {
     /// <inheritdoc/>
     protected override void Up(MigrationBuilder migrationBuilder)
