@@ -56,6 +56,7 @@ the same way (`compliance.encryption.migrateFromDefaultStorage` becomes
 | Cratis__Chronicle__Observers__DefinitionEvolution | Read-model evolution policy: `Automatic`, `PartialOnly`, or `Manual` |
 | Cratis__Chronicle__ReadModels__MaxBatchSize | Maximum items per read-model batch (default 500; must be greater than zero): events per subscriber call when replaying a projection, and documents per fenced sink write. Projection replay splits event pages at this limit. |
 | Cratis__Chronicle__ReadModels__ReplayedVersionsToKeep | Number of replay-generated read model versions to keep |
+| Cratis__Chronicle__ConnectedClients__AllowDebuggerExemption | Whether clients that report running with a debugger are exempt from connection expiry (default `true`); set to `false` to ignore client debugger claims for connection expiry |
 | Cratis__Chronicle__Events__Queues | Number of event queues |
 | Cratis__Chronicle__Webhooks__Validation | Webhook destination mode: `Warn`, `BlockLocalAddresses`, `BlockPrivateAddresses`, or `Enforce`; default `Warn` in Development builds, `BlockLocalAddresses` otherwise |
 | Cratis__Chronicle__Webhooks__AllowInsecureHttp | Allow webhook HTTP in the Development runtime environment only (default `false`) |

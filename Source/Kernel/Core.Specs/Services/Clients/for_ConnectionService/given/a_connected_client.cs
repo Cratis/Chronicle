@@ -25,6 +25,9 @@ public class a_connected_client : Specification
     static readonly TimeSpan _patience = TimeSpan.FromSeconds(10);
 
     protected IConnectedClients _connectedClients;
+
+    protected virtual bool AllowDebuggerExemption => true;
+
     readonly OpenConnections _openConnections = new();
     readonly SemaphoreSlim _somethingHappened = new(0);
     readonly CancellationTokenSource _cancellation = new();
@@ -54,7 +57,7 @@ public class a_connected_client : Specification
         var localSiloDetails = Substitute.For<ILocalSiloDetails>();
         localSiloDetails.SiloAddress.Returns(silo);
 
-        var options = Options.Create(new ChronicleOptions { ConnectedClients = new() { KeepAliveIntervalSeconds = 1 } });
+        var options = Options.Create(new ChronicleOptions { ConnectedClients = new() { KeepAliveIntervalSeconds = 1, AllowDebuggerExemption = AllowDebuggerExemption } });
         _connectionService = new KernelConnectionService(
             grainFactory,
             localSiloDetails,

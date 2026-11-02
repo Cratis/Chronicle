@@ -366,6 +366,17 @@ The HTTP request header used to resolve the event store namespace on a per-reque
 { "Cratis": { "Chronicle": { "NamespaceHttpHeader": "x-my-tenant" } } }
 ```
 
+## ConnectedClients (Kernel only)
+
+The Kernel's `Cratis.Chronicle.Configuration.ChronicleOptions.ConnectedClients` controls how connected clients
+are tracked. Set these keys under `connectedClients` in the Kernel's `chronicle.json`, or under
+`Cratis:Chronicle:ConnectedClients` in application configuration. Environment variable equivalents use
+`Cratis__Chronicle__ConnectedClients__` followed by the key.
+
+| Key | Default | Purpose |
+|---|---|---|
+| `AllowDebuggerExemption` | `true` | Whether clients that report running with a debugger are exempt from connection expiry. Set to `false` to ignore client debugger claims for connection expiry. |
+
 ## Webhooks (Kernel only)
 
 The Kernel's `Cratis.Chronicle.Configuration.ChronicleOptions.Webhooks` is separate from the client

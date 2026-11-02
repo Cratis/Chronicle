@@ -31,6 +31,7 @@ public partial class ConnectedClients(
 {
     readonly TimeSpan _reviseConnectedClientsPeriod = TimeSpan.FromSeconds(options.Value.ConnectedClients.ReviseIntervalSeconds);
     readonly TimeSpan _reservationTtl = TimeSpan.FromSeconds(options.Value.ConnectedClients.ReservationTtlSeconds);
+    readonly Configuration.Clients _clientsOptions = options.Value.ConnectedClients;
     readonly int _staleThresholdSeconds = options.Value.ConnectedClients.StaleThresholdSeconds;
     readonly Dictionary<ConnectionId, ConnectionEntry> _clients = [];
     readonly List<DateTimeOffset> _reservations = [];
@@ -188,7 +189,7 @@ public partial class ConnectedClients(
             var connectedClient = entry.Client;
 
             // A debugger client that has pinged is paused under a debugger; one that never pinged has no proof of life.
-            if (connectedClient.IsRunningWithDebugger && entry.HasPinged) continue;
+            if (_clientsOptions.ExemptsDebugger(connectedClient.IsRunningWithDebugger) && entry.HasPinged) continue;
 
             if (connectedClient.LastSeen < DateTimeOffset.UtcNow.AddSeconds(-_staleThresholdSeconds))
             {

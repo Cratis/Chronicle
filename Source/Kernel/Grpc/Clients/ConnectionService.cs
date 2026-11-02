@@ -36,6 +36,7 @@ internal sealed class ConnectionService(
 {
     static readonly Lazy<string> _schemaDefinition = new(GenerateSchema);
     static readonly Lazy<WireContract> _wireContract = new(() => WireContractReader.Read(Contracts.WireContractDescriptorSet.Bytes));
+    readonly Configuration.Clients _clientsOptions = options.Value.ConnectedClients;
     readonly TimeSpan _keepAliveInterval = TimeSpan.FromSeconds(options.Value.ConnectedClients.KeepAliveIntervalSeconds);
 
     /// <summary>
@@ -70,6 +71,11 @@ internal sealed class ConnectionService(
 
                 try
                 {
+                    if (request.IsRunningWithDebugger && !_clientsOptions.ExemptsDebugger(true))
+                    {
+                        logger.IgnoringDebuggerClaim(request.ConnectionId);
+                    }
+
                     // The session is established the moment the client is registered, and the first keep-alive is
                     // how the client learns that - it does not treat itself as connected until one arrives. Send it
                     // straight away rather than after a first interval, or every client everywhere pays the whole
@@ -88,7 +94,7 @@ internal sealed class ConnectionService(
                             break;
                         }
 
-                        if (request.IsRunningWithDebugger)
+                        if (_clientsOptions.ExemptsDebugger(request.IsRunningWithDebugger))
                         {
                             await KeepRegistered(connectedClients, request);
                         }

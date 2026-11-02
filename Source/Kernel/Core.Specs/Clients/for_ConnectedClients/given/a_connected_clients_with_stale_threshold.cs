@@ -16,10 +16,12 @@ public class a_connected_clients_with_stale_threshold : Specification
     protected ConnectedClients _clients = default!;
     protected ConnectionId _connection = ConnectionId.New();
 
+    protected virtual bool AllowDebuggerExemption => true;
+
     void Establish() => _clients = new ConnectedClients(
         Substitute.For<ILogger<ConnectedClients>>(),
         Substitute.For<IMeter<ConnectedClients>>(),
-        Options.Create(new ChronicleOptions()),
+        Options.Create(new ChronicleOptions { ConnectedClients = new() { AllowDebuggerExemption = AllowDebuggerExemption } }),
         Substitute.For<IStorage>());
 
     protected Task Connect(bool isRunningWithDebugger) =>

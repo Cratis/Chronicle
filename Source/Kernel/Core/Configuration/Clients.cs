@@ -42,4 +42,19 @@ public class Clients
     /// Gets the interval in seconds between keep-alive messages sent to a connected client.
     /// </summary>
     public int KeepAliveIntervalSeconds { get; init; } = 1;
+
+    /// <summary>
+    /// Gets a value indicating whether a client that reports running with a debugger is exempt from connection expiry.
+    /// </summary>
+    /// <remarks>
+    /// Set to false to ignore client debugger claims for connection expiry, so such a client is expired like any other.
+    /// </remarks>
+    public bool AllowDebuggerExemption { get; init; } = true;
+
+    /// <summary>
+    /// Gets whether a connection is exempt from connection expiry.
+    /// </summary>
+    /// <param name="isRunningWithDebugger">Whether the client reported running with a debugger.</param>
+    /// <returns>True if the connection is exempt, false if not.</returns>
+    public bool ExemptsDebugger(bool isRunningWithDebugger) => AllowDebuggerExemption && isRunningWithDebugger;
 }

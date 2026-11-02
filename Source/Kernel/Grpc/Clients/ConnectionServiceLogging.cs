@@ -23,6 +23,9 @@ internal static partial class ConnectionServiceLogMessages
     [LoggerMessage(LogLevel.Information, "The registry of connected clients no longer knows connection {ConnectionId}, which is still open. Registering it again")]
     internal static partial void RegisteringClientAgain(this ILogger<ConnectionService> logger, string connectionId);
 
+    [LoggerMessage(LogLevel.Information, "Connection {ConnectionId} reports running with a debugger. The server is configured not to exempt such clients from connection expiry, so it is treated like any other")]
+    internal static partial void IgnoringDebuggerClaim(this ILogger<ConnectionService> logger, string connectionId);
+
     [LoggerMessage(LogLevel.Warning, "Could not check that connection {ConnectionId} is still registered. Retrying at the next keep-alive")]
     internal static partial void FailedToKeepClientRegistered(this ILogger<ConnectionService> logger, string connectionId, Exception exception);
 }

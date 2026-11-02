@@ -156,6 +156,7 @@ The remaining settings stay in the mounted `chronicle.json`; the environment var
 6. **Set up monitoring** for all exposed ports
 7. **Use secrets management** for sensitive configuration values
 8. **Enable TLS** with proper certificates (see [TLS Configuration](configuration/tls.md))
+9. **Set `Cratis__Chronicle__ConnectedClients__AllowDebuggerExemption` to `false`** so a client's debugger report does not keep its connection registered
 
 ## Health Checks
 
