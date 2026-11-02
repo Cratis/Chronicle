@@ -41,7 +41,7 @@ public class when_a_definition_change_activates_a_subscriber(context context) : 
             await _changeDefinition().WaitAsync(TimeSpan.FromSeconds(60));
             ChangeCompletedOrder = _gate.NextOrder();
             var subsequent = await _immediateProjection.GetModelInstance().WaitAsync(TimeSpan.FromSeconds(30));
-            SubsequentSeed = subsequent.ReadModel["seed"]!.GetValue<string>();
+            SubsequentSeed = ValidateReadModel(subsequent.HasReadModel, subsequent.ReadModel, "subsequent", "changed").Seed;
         }
     }
 

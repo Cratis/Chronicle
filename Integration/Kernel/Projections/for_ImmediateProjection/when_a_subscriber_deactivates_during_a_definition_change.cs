@@ -57,7 +57,7 @@ public class when_a_subscriber_deactivates_during_a_definition_change(context co
             }
 
             var subsequent = await _immediateProjection.GetModelInstance().WaitAsync(TimeSpan.FromSeconds(30));
-            SubsequentSeed = subsequent.ReadModel["seed"]!.GetValue<string>();
+            SubsequentSeed = ValidateReadModel(subsequent.HasReadModel, subsequent.ReadModel, "subsequent", "changed").Seed;
         }
     }
 
