@@ -8,9 +8,12 @@ namespace Cratis.Chronicle.Projections.for_ImmediateProjection.when_deciding_whe
 
 public class when_inspecting_the_grains_interleaving_configuration : Specification
 {
-    MayInterleaveAttribute _attribute;
+    CustomAttributeData? _attribute;
 
-    void Because() => _attribute = typeof(ImmediateProjection).GetCustomAttribute<MayInterleaveAttribute>()!;
+    void Because() => _attribute = typeof(ImmediateProjection)
+        .GetCustomAttributesData()
+        .SingleOrDefault(_ => _.AttributeType == typeof(MayInterleaveAttribute));
 
-    [Fact] void should_declare_the_predicate_on_the_grain() => _attribute.CallbackMethodName.ShouldEqual(nameof(ImmediateProjection.IsDefinitionChangeNotification));
+    [Fact] void should_declare_the_attribute_on_the_grain() => _attribute.ShouldNotBeNull();
+    [Fact] void should_declare_the_predicate_on_the_grain() => _attribute!.ConstructorArguments[0].Value.ShouldEqual(nameof(ImmediateProjection.IsDefinitionChangeNotification));
 }
