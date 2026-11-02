@@ -10,6 +10,8 @@ namespace Cratis.Chronicle.Projections.for_Projection.when_setting_definition;
 /// <summary>
 /// Subscribing and unsubscribing interleave with a definition change that is notifying. The observer set is
 /// copy-on-write while it is notified: the round in flight keeps its snapshot, and a later round sees the new set.
+/// This relies on the read-snapshot semantics of Orleans' ObserverManager, verified against Microsoft.Orleans.Core 10.4.0.
+/// Re-verify them when upgrading Orleans; this specification guards the behavior.
 /// </summary>
 public class and_subscribers_change_while_they_are_notified : given.a_projection_adding_historical_event_mappings
 {

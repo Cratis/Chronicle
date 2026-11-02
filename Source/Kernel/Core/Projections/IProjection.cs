@@ -42,7 +42,8 @@ public interface IProjection : IGrainWithStringKey
     /// <returns>Awaitable task.</returns>
     /// <remarks>
     /// This may interleave with an in-flight <see cref="SetDefinition"/> so that a subscriber's activation never waits on a definition
-    /// change that is notifying it. The observer set is copy-on-write while a notification is in progress.
+    /// change that is notifying it. The observer set is copy-on-write while a notification is in progress, which relies on
+    /// Orleans' ObserverManager read snapshot (verified against Orleans 10.4.0; re-verify when upgrading Orleans).
     /// </remarks>
     [AlwaysInterleave]
     Task SubscribeDefinitionsChanged(INotifyProjectionDefinitionsChanged subscriber);
