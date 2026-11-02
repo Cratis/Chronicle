@@ -13,17 +13,20 @@ namespace Cratis.Chronicle.Services.Observation;
 /// <param name="options">The <see cref="ChronicleOptions"/>.</param>
 public sealed class ObserverRegistrationGate(IOptions<ChronicleOptions> options) : IObserverRegistrationGate, IDisposable
 {
-    readonly SemaphoreSlim _semaphore = new(
-        Math.Max(1, options.Value.Observers.MaxConcurrentRegistrations),
-        Math.Max(1, options.Value.Observers.MaxConcurrentRegistrations));
+    readonly SemaphoreSlim? _semaphore = options.Value.Observers.MaxConcurrentRegistrations > 0
+        ? new(options.Value.Observers.MaxConcurrentRegistrations, options.Value.Observers.MaxConcurrentRegistrations)
+        : null;
 
     /// <inheritdoc/>
-    public async ValueTask<IDisposable> Enter(CancellationToken cancellationToken)
+    public ValueTask<IDisposable> Enter(CancellationToken cancellationToken) =>
+        _semaphore is null ? new(Disposable.Empty) : WaitForPermit(_semaphore, cancellationToken);
+
+    /// <inheritdoc/>
+    public void Dispose() => _semaphore?.Dispose();
+
+    static async ValueTask<IDisposable> WaitForPermit(SemaphoreSlim semaphore, CancellationToken cancellationToken)
     {
-        await _semaphore.WaitAsync(cancellationToken);
-        return Disposable.Create(() => _semaphore.Release());
+        await semaphore.WaitAsync(cancellationToken);
+        return Disposable.Create(() => semaphore.Release());
     }
-
-    /// <inheritdoc/>
-    public void Dispose() => _semaphore.Dispose();
 }

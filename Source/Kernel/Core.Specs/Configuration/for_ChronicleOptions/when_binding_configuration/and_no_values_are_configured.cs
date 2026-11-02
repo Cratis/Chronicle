@@ -45,7 +45,7 @@ public class and_no_values_are_configured : Specification
     [Fact] void should_default_the_postgresql_connection_pruning_interval() => _options.Storage.PostgreSqlPooling.ConnectionPruningIntervalSeconds.ShouldEqual(5);
     [Fact] void should_default_the_live_query_poll_interval() => _options.Sql.LiveQueryPollIntervalSeconds.ShouldEqual(2);
     [Fact] void should_default_the_subscription_ready_timeout() => _options.Observers.SubscriptionReadyTimeout.ShouldEqual(5);
-    [Fact] void should_default_the_max_concurrent_registrations() => _options.Observers.MaxConcurrentRegistrations.ShouldEqual(8);
+    [Fact] void should_default_the_max_concurrent_registrations() => _options.Observers.MaxConcurrentRegistrations.ShouldEqual(0);
     [Fact] void should_default_the_queue_depletion_wait_timeout() => _options.Events.QueueDepletionWaitTimeoutMilliseconds.ShouldEqual(500);
     [Fact] void should_default_causation_property_retention() => _options.Events.CausationPropertyRetention.ShouldEqual(CausationPropertyRetention.Retain);
     [Fact] void should_default_the_health_port_to_not_set() => _options.Health.Port.ShouldBeNull();

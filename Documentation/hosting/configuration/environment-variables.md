@@ -49,7 +49,7 @@ the same way (`compliance.encryption.migrateFromDefaultStorage` becomes
 | Cratis__Chronicle__Observers__SubscriberTimeout | Seconds an observer waits for its subscriber to answer (0 = indefinitely during catch-up and replay; live waits remain bounded by the Orleans response timeout) |
 | Cratis__Chronicle__Observers__LiveDeliveryBudget | Maximum events delivered inline in a live call (default 100); larger batches are deferred to partition catch-up (0 or less disables the limit) |
 | Cratis__Chronicle__Observers__MaxConcurrentPartitions | Upper bound on parallel job steps, applied together with `Jobs__MaxParallelSteps` (does not limit live event delivery) |
-| Cratis__Chronicle__Observers__MaxConcurrentRegistrations | Maximum concurrent gRPC reactor and reducer registrations per silo (default 8; values below 1 are treated as 1). Does not limit event append or observer delivery |
+| Cratis__Chronicle__Observers__MaxConcurrentRegistrations | Maximum concurrent gRPC reactor and reducer registrations per silo (default 0, unlimited; values below 1 disable the gate). Does not limit event append or observer delivery |
 | Cratis__Chronicle__Observers__MaxRetryAttempts | Maximum retry attempts for observers |
 | Cratis__Chronicle__Observers__BackoffDelay | Initial observer backoff delay in seconds |
 | Cratis__Chronicle__Observers__ExponentialBackoffDelayFactor | Exponential backoff multiplier |

@@ -57,8 +57,9 @@ connection attempts** per pool.
 - `maxConnecting` limits simultaneous connection establishment. Raising it can warm pools faster,
   but can also increase connection pressure during rollouts.
 
-Size the pool with headroom above `observers.maxConcurrentRegistrations` (default **16**) for appends,
-observer delivery and background jobs. Registration concurrency across the cluster is approximately
+Registration admission is unlimited by default (`observers.maxConcurrentRegistrations: 0`). If you opt
+into a positive cap, size the pool with headroom above that cap for appends, observer delivery and
+background jobs. With a cap, registration concurrency across the cluster is approximately
 `maxConcurrentRegistrations` × the number of silos; pools are per client and server, not shared across
 silos. Account for all these pools against MongoDB's connection limit. Increasing the registration
 limit without pool headroom can make bursts worse. See [Observers](observers.md).

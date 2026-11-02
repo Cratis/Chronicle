@@ -27,6 +27,6 @@ public class and_the_limit_is_configured_below_one : Specification
         _gate.Dispose();
     }
 
-    [Fact] void should_allow_one_registration() => _held.ShouldNotBeNull();
-    [Fact] void should_queue_a_second_registration() => _waiting.IsCompleted.ShouldBeFalse();
+    [Fact] void should_allow_the_first_registration() => _held.ShouldNotBeNull();
+    [Fact] void should_not_queue_a_second_registration() => _waiting.IsCompletedSuccessfully.ShouldBeTrue();
 }
