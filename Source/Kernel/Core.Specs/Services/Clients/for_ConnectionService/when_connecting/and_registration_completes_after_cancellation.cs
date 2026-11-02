@@ -25,5 +25,5 @@ public class and_registration_completes_after_cancellation : given.a_registratio
     [Fact] void should_not_report_an_error() => _errors.Count.ShouldEqual(0);
     [Fact] void should_not_activate_after_observing_cancellation() => _heartbeats.ShouldEqual(0);
     [Fact] void should_not_open_locally() => LocallyOpen.ShouldBeFalse();
-    [Fact] void should_not_compensate_by_disconnecting() => Disconnects.ShouldEqual(0);
+    [Fact] void should_not_compensate_by_disconnecting_as_a_retry_reuses_the_connection_id() => Disconnects.ShouldEqual(0);
 }

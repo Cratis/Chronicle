@@ -29,5 +29,5 @@ public class and_registration_times_out : given.a_registration_lifetime
     [Fact] void should_bound_the_waiter_not_the_remote_operation() => _registrationStillPending.ShouldBeTrue();
     [Fact] void should_not_send_a_heartbeat() => _heartbeats.ShouldEqual(0);
     [Fact] void should_not_open_locally() => LocallyOpen.ShouldBeFalse();
-    [Fact] void should_not_compensate_by_disconnecting() => Disconnects.ShouldEqual(0);
+    [Fact] void should_not_compensate_by_disconnecting_as_a_retry_reuses_the_connection_id() => Disconnects.ShouldEqual(0);
 }

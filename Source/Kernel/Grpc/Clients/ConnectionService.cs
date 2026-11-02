@@ -222,7 +222,9 @@ internal sealed class ConnectionService(
 
                     if (request.IsRunningWithDebugger)
                     {
-                        await KeepRegistered(connectedClients, request);
+                        // Only the wait is cancellable: an ending call must not wait out a registry call. KeepRegistered
+                        // handles its own failures, so a check given up on cannot fault unobserved.
+                        await KeepRegistered(connectedClients, request).WaitAsync(cancellationToken).ConfigureAwait(false);
                     }
                     else if (openConnections.HasLapsed(request.ConnectionId))
                     {
@@ -277,6 +279,12 @@ internal sealed class ConnectionService(
 
                 // Only the wait is bounded and cancellable, not the registration itself. Should it fault after the
                 // wait has been given up on, nobody awaits it - observe it so the fault is not unobserved.
+                //
+                // A registration given up on (cancelled or timed out) is deliberately not compensated with a disconnect.
+                // The client retries an uncompleted connect with the same ConnectionId and the registry has no per-attempt
+                // identity, so a late disconnect by id would remove the retry's entry. Entries left behind rely on the
+                // registry's own lifecycle (entries flagged as running with a debugger are not swept - tracked separately).
+                // This differs from the legacy cancel path, which disconnected after a late success.
                 _ = registration.ContinueWith(
                     static task => _ = task.Exception,
                     CancellationToken.None,
