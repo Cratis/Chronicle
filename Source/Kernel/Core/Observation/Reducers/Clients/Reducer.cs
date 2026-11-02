@@ -162,6 +162,7 @@ public class Reducer(
                     connectedClient,
                     filters: definition.Filters,
                     generationDelivery: definition.GenerationDelivery);
+                await RecordObserver();
             }
             catch (ObserverServedByAnotherTransport)
             {
@@ -208,6 +209,11 @@ public class Reducer(
         logger.WaitingForWebhook(_observerKey!.ObserverId);
     }
 
+    /// <summary>Lets the connection registry tell this observer when the connection is dropped, instead of leaving it to the watchdog.</summary>
+    Task RecordObserver() => _connectedClients!.RecordObserver(
+        _observerKey!.ConnectionId,
+        new ObserverKey(_observerKey.ObserverId, _observerKey.EventStore, _observerKey.Namespace, _observerKey.EventSequenceId));
+
     async Task SubscribeToObserver(ReducerKey key, ReducerDefinition definition)
     {
         _observer = GrainFactory.GetGrain<IObserver>(new ObserverKey(key.ReducerId, key.EventStore, key.Namespace, key.EventSequenceId));
@@ -235,6 +241,7 @@ public class Reducer(
                     filters: definition.Filters);
             }
 
+            await RecordObserver();
             _subscribed = true;
         }
         catch (ObserverServedByAnotherTransport)

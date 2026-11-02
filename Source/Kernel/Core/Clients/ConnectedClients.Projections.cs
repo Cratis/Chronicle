@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Clients;
+using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Projections.Generations.Deployment;
 
@@ -58,5 +59,7 @@ public partial class ConnectedClients
         public HashSet<(EventStoreName EventStore, ProjectionId Projection)> Projections { get; } = [];
 
         public Dictionary<(EventStoreName EventStore, ProjectionId Projection), ProjectionRegistration> Registrations { get; } = [];
+
+        public HashSet<ObserverKey> Observers { get; } = [];
     }
 }

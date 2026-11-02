@@ -576,6 +576,15 @@ public partial class Observer(
             return;
         }
 
+        if (_subscription.IsSubscribed && _subscription.Arguments is not ConnectedClient)
+        {
+            // Served by something that is not a connected client instance (a webhook, for example), so a connection
+            // identifier says nothing about it. Only the registration that connection superseded can go.
+            LogClientDisconnected(connectionId, "not served by a connected client, dropping any superseded registration");
+            DropSupersededRegistration(connectionId);
+            return;
+        }
+
         LogClientDisconnected(connectionId, "unsubscribing");
         await Unsubscribe();
     }
