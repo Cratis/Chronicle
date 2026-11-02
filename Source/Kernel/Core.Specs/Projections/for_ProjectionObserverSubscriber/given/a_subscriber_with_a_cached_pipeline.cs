@@ -69,7 +69,7 @@ public class a_subscriber_with_a_cached_pipeline : Specification
             ReadModelObserverType.Projection,
             ReadModelObserverIdentifier.Unspecified,
             SinkDefinition.None,
-            new Dictionary<ReadModelGeneration, JsonSchema> { [ReadModelGeneration.First] = new() },
+            new Dictionary<ReadModelGeneration, JsonSchema> { [ReadModelGeneration.First] = ReadModelSchema() },
             []);
         var readModelGrain = Substitute.For<IReadModel>();
         readModelGrain.GetDefinition().Returns(readModel);
@@ -117,6 +117,8 @@ public class a_subscriber_with_a_cached_pipeline : Specification
     }
 
     protected virtual ProjectionDefinition DefinitionAtActivation() => _definition;
+
+    protected virtual JsonSchema ReadModelSchema() => new();
 
     static ProjectionDefinition CreateDefinition() => new(
         ProjectionOwner.Client,

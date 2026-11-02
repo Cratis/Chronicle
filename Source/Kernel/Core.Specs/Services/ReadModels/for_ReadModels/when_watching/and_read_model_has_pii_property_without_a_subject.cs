@@ -6,7 +6,6 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Contracts.ReadModels;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Schemas;
-using Cratis.Chronicle.Storage;
 
 namespace Cratis.Chronicle.Services.ReadModels.for_ReadModels.when_watching;
 
@@ -21,11 +20,11 @@ public class and_read_model_has_pii_property_without_a_subject : given.all_depen
     {
         // Snapshot the subject the observable path resolves before it hands the document to ReleaseJson.
         _complianceHelper
-            .ReleaseJson(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<JsonSchema>(), Arg.Any<JsonObject>())
+            .ReleaseJson(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<JsonSchema>(), Arg.Any<JsonObject>(), Arg.Any<string?>(), Arg.Any<IReadOnlyDictionary<string, string>>())
             .Returns(callInfo =>
             {
                 var released = callInfo.ArgAt<JsonObject>(3);
-                _releasedSubject = released[WellKnownProperties.Subject]?.GetValue<string>();
+                _releasedSubject = callInfo.ArgAt<string?>(4);
                 return Task.FromResult(released);
             });
 
@@ -87,9 +86,9 @@ public class and_read_model_has_pii_property_without_a_subject : given.all_depen
                 Concepts.ReadModels.ReadModelChangeType.Added,
                 Concepts.Events.EventSequenceNumber.First,
                 DateTimeOffset.UtcNow,
-                Cratis.Execution.CorrelationId.NotSet));
+                CorrelationId.NotSet));
     }
 
-    [Fact] void should_release_compliance_metadata() => _complianceHelper.Received(1).ReleaseJson(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<JsonSchema>(), Arg.Any<JsonObject>());
+    [Fact] void should_release_compliance_metadata() => _complianceHelper.Received(1).ReleaseJson(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<JsonSchema>(), Arg.Any<JsonObject>(), Arg.Any<string?>(), Arg.Any<IReadOnlyDictionary<string, string>>());
     [Fact] void should_infer_the_subject_from_the_identifier() => _releasedSubject.ShouldEqual("key-1");
 }

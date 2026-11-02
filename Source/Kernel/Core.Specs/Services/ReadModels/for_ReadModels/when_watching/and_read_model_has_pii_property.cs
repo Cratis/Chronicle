@@ -23,11 +23,11 @@ public class and_read_model_has_pii_property : given.all_dependencies
         // the document is stamped, decrypted, then the marker is stripped from the same instance, so a
         // post-hoc matcher on the captured argument would no longer see it.
         _complianceHelper
-            .ReleaseJson(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<JsonSchema>(), Arg.Any<JsonObject>())
+            .ReleaseJson(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<JsonSchema>(), Arg.Any<JsonObject>(), Arg.Any<string?>(), Arg.Any<IReadOnlyDictionary<string, string>>())
             .Returns(callInfo =>
             {
                 var released = callInfo.ArgAt<JsonObject>(3);
-                _releasedSubject = released[WellKnownProperties.Subject]?.GetValue<string>();
+                _releasedSubject = callInfo.ArgAt<string?>(4);
                 return Task.FromResult(released);
             });
 
@@ -86,9 +86,9 @@ public class and_read_model_has_pii_property : given.all_dependencies
                 Concepts.ReadModels.ReadModelChangeType.Added,
                 Concepts.Events.EventSequenceNumber.First,
                 DateTimeOffset.UtcNow,
-                Cratis.Execution.CorrelationId.NotSet));
+                CorrelationId.NotSet));
     }
 
-    [Fact] void should_release_compliance_metadata() => _complianceHelper.Received(1).ReleaseJson(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<JsonSchema>(), Arg.Any<JsonObject>());
+    [Fact] void should_release_compliance_metadata() => _complianceHelper.Received(1).ReleaseJson(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<JsonSchema>(), Arg.Any<JsonObject>(), Arg.Any<string?>(), Arg.Any<IReadOnlyDictionary<string, string>>());
     [Fact] void should_release_using_the_document_subject() => _releasedSubject.ShouldEqual("some-subject");
 }

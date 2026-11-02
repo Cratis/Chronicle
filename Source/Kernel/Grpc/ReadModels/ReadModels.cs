@@ -439,7 +439,7 @@ internal sealed class ReadModels(
             {
                 // Decrypt through the shared release path so observable queries resolve the compliance
                 // subject exactly like one-shot queries (explicit __subject, else inferred from _id/id).
-                var decrypted = await ReleaseJsonForReadModel(request.EventStore, namespaceName, schema, readModelInstance);
+                var decrypted = await ReleaseJsonForReadModel(request.EventStore, namespaceName, schema, readModelInstance, change: change);
                 observer.OnNext(new ReadModelChangeset
                 {
                     Namespace = namespaceName,
@@ -716,7 +716,8 @@ internal sealed class ReadModels(
         string @namespace,
         JsonSchema schema,
         JsonObject readModel,
-        string? preferredSubject = null)
+        string? preferredSubject = null,
+        ReadModelChangeContext? change = null)
     {
         // A read model projected directly from stored (encrypted) events still holds its [PII] and [Encrypted]
         // fields encrypted under the resolved subject. The subject is resolved identically for one-shot and
@@ -729,31 +730,30 @@ internal sealed class ReadModels(
         // The document handed in is never modified. On the observable path it belongs to the changeset the notifier
         // pushed, not to this call, so stamping bookkeeping onto it would leave an internal marker on an object
         // this method does not own.
-        var stamped = (readModel.DeepClone() as JsonObject)!;
-        if (!schema.HasSchemaMetadata())
+        //
+        // Kernel bookkeeping never reaches compliance: the subject lineage comes from the change (or, for a producer
+        // of an earlier release and for one-shot reads, from the document) and the document is split from it first
+        // (Cratis/Chronicle#3588). Watches restore an actual watermark after release, whether or not the model is
+        // PII. One-shot callers retain their own watermark handling.
+        var (payload, storedSubject, subjects) = ReadModelChangeBookkeeping.Split(readModel, change, schema);
+        var released = payload;
+        if (schema.HasSchemaMetadata())
         {
-            stamped.Remove(WellKnownProperties.Subject);
-            stamped.Remove(WellKnownProperties.Subjects);
-            return stamped;
+            // Persisted event lineage is authoritative; a request key is only a fallback for older state.
+            var fallbackSubject = !string.IsNullOrWhiteSpace(preferredSubject) && preferredSubject != ReadModelKey.Unspecified.Value
+                ? preferredSubject
+                : InferSubjectFromJson(payload);
+            var resolvedSubject = !string.IsNullOrWhiteSpace(storedSubject) ? storedSubject : fallbackSubject;
+            released = await complianceHelper.ReleaseJson(eventStore, @namespace, schema, payload, resolvedSubject, subjects);
         }
 
-        // Persisted event lineage is authoritative; a request key is only a fallback for older state.
-        var storedSubject = readModel[WellKnownProperties.Subject]?.GetValue<string>();
-        var fallbackSubject = !string.IsNullOrWhiteSpace(preferredSubject) && preferredSubject != ReadModelKey.Unspecified.Value
-            ? preferredSubject
-            : InferSubjectFromJson(readModel);
-        var resolvedSubject = !string.IsNullOrWhiteSpace(storedSubject) ? storedSubject : fallbackSubject;
-        if (!string.IsNullOrWhiteSpace(resolvedSubject))
-        {
-            stamped[WellKnownProperties.Subject] = resolvedSubject;
-        }
-
-        // The strip stays even though the compliance manager releases onto a clone that never carried the marker:
-        // an implementation that hands back the instance it was given returns the stamped document, and the marker
-        // must never reach the client.
-        var released = await complianceHelper.ReleaseJson(eventStore, @namespace, schema, stamped);
         released.Remove(WellKnownProperties.Subject);
         released.Remove(WellKnownProperties.Subjects);
+        if (change?.EventSequenceNumber.IsActualValue == true)
+        {
+            released[WellKnownProperties.LastHandledEventSequenceNumber] = JsonValue.Create(change.EventSequenceNumber.Value);
+        }
+
         return released;
 
         static string? InferSubjectFromJson(JsonObject json)
