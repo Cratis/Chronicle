@@ -222,7 +222,7 @@ Chronicle traces the following activity sources:
 
 ### Orleans trace volume
 
-Orleans runtime and grain-call spans are **no longer exported by default**. These sources accounted
+Chronicle's own telemetry setup (`AddChronicleTelemetry`) **no longer exports Orleans runtime and grain-call spans by default**. These sources accounted
 for about 99% of kernel spans during replay. Chronicle spans remain enabled, and Orleans
 `AddActivityPropagation()` remains in place: trace context continues across grain calls without
 exporting their carrier activities. Chronicle spans in the called grain keep the caller's trace id,
@@ -246,3 +246,6 @@ To restore Orleans spans, set `Cratis:Chronicle:Telemetry:OrleansTracing=true`:
 The equivalent environment variable is `Cratis__Chronicle__Telemetry__OrleansTracing=true`.
 `OTEL_TRACES_SAMPLER` and `OTEL_TRACES_SAMPLER_ARG` retain their OpenTelemetry behavior; Chronicle
 sets no sampler override. Exporter, endpoint, resource, and metric configuration are unchanged.
+
+The default applies only to `AddChronicleTelemetry`. The public `TracerProviderBuilder.AddChronicleInstrumentation()`
+extension is unchanged and still adds both Orleans sources; pass `false` to its `bool` overload to leave them out.
