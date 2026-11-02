@@ -34,6 +34,7 @@ public class RecordingTableMigrator<TContext>(ITableMigrator<TContext> inner, Fu
             {
                 CreateTableOperation create => $"CREATE TABLE {create.Name}",
                 CreateIndexOperation index => $"CREATE INDEX {index.Name} ON {index.Table}",
+                ITableMigrationOperation table => $"{operation.GetType().Name} {table.Table}",
                 _ => $"{operation.GetType().Name} {operation}"
             });
         }
