@@ -75,13 +75,6 @@ public class ProjectionChangesetNotifier(ILogger<ProjectionChangesetNotifier> lo
         // the registration was lost (deactivation/wiring) rather than the downstream push dropping it.
         logger.Notifying(this.GetPrimaryKeyString(), _subscribers.Count, namespaceName, readModelKey);
 
-        if (_subscribers.Count == 0)
-        {
-            // A producer activated this grain without any watcher; nothing to fan out to, so do not stay resident.
-            DeactivateOnIdle();
-            return;
-        }
-
         // OnChangeset is [OneWay], so these calls return as soon as the message is sent; the notifier
         // never blocks its grain turn on the downstream push to a client stream.
         await Task.WhenAll(_subscribers.Select(subscriber => subscriber.OnChangeset(namespaceName, readModelKey, readModel, change)));
@@ -96,12 +89,6 @@ public class ProjectionChangesetNotifier(ILogger<ProjectionChangesetNotifier> lo
         }
 
         logger.Notifying(this.GetPrimaryKeyString(), _subscribers.Count, namespaceName, notifications[0].ReadModelKey);
-        if (_subscribers.Count == 0)
-        {
-            DeactivateOnIdle();
-            return;
-        }
-
         foreach (var notification in notifications)
         {
             await Task.WhenAll(_subscribers.Select(subscriber => subscriber.OnChangeset(namespaceName, notification.ReadModelKey, notification.ReadModel, notification.Change)));
