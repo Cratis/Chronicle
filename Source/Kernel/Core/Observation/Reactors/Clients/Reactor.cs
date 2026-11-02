@@ -194,9 +194,20 @@ public class Reactor(
     }
 
     /// <summary>Lets the connection registry tell this observer when the connection is dropped, instead of leaving it to the watchdog.</summary>
-    Task RecordObserver() => _connectedClients!.RecordObserver(
-        _observerKey!.ConnectionId,
-        new ObserverKey(_observerKey.ObserverId, _observerKey.EventStore, _observerKey.Namespace, _observerKey.EventSequenceId));
+    /// <remarks>Best effort: a failure (for example during a rolling upgrade) leaves takeover to the watchdog and never fails the subscription.</remarks>
+    async Task RecordObserver()
+    {
+        try
+        {
+            await _connectedClients!.RecordObserver(
+                _observerKey!.ConnectionId,
+                new ObserverKey(_observerKey.ObserverId, _observerKey.EventStore, _observerKey.Namespace, _observerKey.EventSequenceId));
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            logger.FailedToRecordObserver(_observerKey!.ObserverId, _observerKey.ConnectionId, ex);
+        }
+    }
 
     async Task SubscribeToObserver(ReactorKey key, ReactorDefinition definition)
     {

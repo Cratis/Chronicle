@@ -19,22 +19,25 @@ namespace Cratis.Chronicle.Clients;
 /// <param name="grainFactory">The <see cref="IGrainFactory"/> for getting observers.</param>
 /// <param name="logger">The <see cref="ILogger"/> for logging.</param>
 [Singleton]
-public class ClientDepartureNotifier(IGrainFactory grainFactory, ILogger<ClientDepartureNotifier> logger) : IClientDepartureNotifier
+public class ClientDepartureNotifier(IGrainFactory grainFactory, ILogger<ClientDepartureNotifier> logger) : IClientDepartureNotifier, IDisposable
 {
     /// <summary>
-    /// The most observers notified at the same time, so a connection that served many observers cannot flood the cluster.
+    /// The most observers notified at the same time, across every connection, so connections dropping together cannot flood the cluster.
     /// </summary>
     internal const int MaxConcurrentNotifications = 16;
 
+    readonly SemaphoreSlim _inFlight = new(MaxConcurrentNotifications);
+
+    /// <inheritdoc/>
+    public void Dispose() => _inFlight.Dispose();
+
     /// <inheritdoc/>
     public Task Notify(ConnectionId connectionId, IReadOnlyCollection<ObserverKey> observers) =>
-        Parallel.ForEachAsync(
-            observers,
-            new ParallelOptions { MaxDegreeOfParallelism = MaxConcurrentNotifications },
-            (observer, _) => new ValueTask(NotifyObserver(connectionId, observer)));
+        Task.WhenAll(observers.Select(observer => NotifyObserver(connectionId, observer)));
 
     async Task NotifyObserver(ConnectionId connectionId, ObserverKey observer)
     {
+        await _inFlight.WaitAsync();
         try
         {
             await grainFactory.GetGrain<IObserver>(observer).UnsubscribeIfMatchesClient(connectionId);
@@ -42,6 +45,10 @@ public class ClientDepartureNotifier(IGrainFactory grainFactory, ILogger<ClientD
         catch (Exception ex)
         {
             logger.FailedToNotifyObserver(connectionId, observer.ObserverId, ex);
+        }
+        finally
+        {
+            _inFlight.Release();
         }
     }
 }
