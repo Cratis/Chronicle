@@ -120,7 +120,7 @@ When a gRPC transport creates clients from the generated definitions, use the ge
 
 ## Publishing a New Version
 
-The TypeScript package is published by the reusable `publish-typescript-client.yml` workflow, which runs either from a manual dispatch of `publish.yml` or after an eligible pull request is merged into main and a release is selected. It does not use a release-created trigger. The workflow will:
+The TypeScript package is published by `publish-typescript-client.yml`, which supports direct manual dispatch and is also called by `publish.yml` after manual dispatch or an eligible merged pull request into main, subject to release selection. It does not use a release-created trigger. The workflow will:
 
 1. Use the proto files from the release run, or generate them from C# contracts
 2. Generate TypeScript code from proto files
