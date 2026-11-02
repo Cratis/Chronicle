@@ -5,6 +5,7 @@ using System.Collections.Concurrent;
 using System.Data.Common;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 
 namespace Cratis.Chronicle.Storage.Sql.Sinks;
@@ -17,7 +18,7 @@ namespace Cratis.Chronicle.Storage.Sql.Sinks;
 /// The hooks are one-shot and use <see cref="Interlocked"/> flags, because a hook may drive a competing sink whose
 /// contexts carry this same interceptor.
 /// </remarks>
-public class SqlCommandCapture : IDbCommandInterceptor, IDbTransactionInterceptor
+public partial class SqlCommandCapture : IDbCommandInterceptor, IDbTransactionInterceptor
 {
     readonly ConcurrentQueue<string> _commands = new();
     int _started;
@@ -63,7 +64,7 @@ public class SqlCommandCapture : IDbCommandInterceptor, IDbTransactionIntercepto
     /// <summary>
     /// Gets a stable hash of the command texts, in order.
     /// </summary>
-    public string Fingerprint => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(string.Join('\n', _commands)))).ToLowerInvariant();
+    public string Fingerprint => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(string.Join('\n', _commands.Select(NormalizeGeneratedNames))))).ToLowerInvariant();
 
     /// <summary>
     /// Gets the commands that modify data, which are the INSERT, UPDATE and DELETE statements.
@@ -222,6 +223,16 @@ public class SqlCommandCapture : IDbCommandInterceptor, IDbTransactionIntercepto
         Interlocked.Increment(ref _savepoints);
         return ValueTask.FromResult(result);
     }
+
+    /// <summary>
+    /// Replaces the randomly generated index names, which differ on every run, so fingerprints stay comparable.
+    /// </summary>
+    /// <param name="commandText">The command text.</param>
+    /// <returns>The command text with a fixed name for generated indexes.</returns>
+    static string NormalizeGeneratedNames(string commandText) => GeneratedIndexName.Replace(commandText, "chronicle_imx_generated");
+
+    [GeneratedRegex("chronicle_imx_[A-Za-z0-9_]+", RegexOptions.None, matchTimeoutMilliseconds: 1000)]
+    private static partial Regex GeneratedIndexName { get; }
 
     void AfterNextCommit(Func<Task> action, bool loseAcknowledgment, bool beforeSending) => _afterCommit = new(action, loseAcknowledgment) { BeforeSending = beforeSending };
 

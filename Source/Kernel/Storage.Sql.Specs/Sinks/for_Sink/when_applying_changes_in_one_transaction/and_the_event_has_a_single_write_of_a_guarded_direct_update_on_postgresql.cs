@@ -8,7 +8,7 @@ public class and_the_event_has_a_single_write_of_a_guarded_direct_update_on_post
 {
     protected override PostgreSqlSinkHarness CreateHarness(SqlCommandCapture capture) => new() { Fixture = fixture, Interceptors = [capture] };
 
-    protected override int RecordedCommands => 0;
+    protected override int RecordedCommands => 2;
 
-    protected override string RecordedFingerprint => "";
+    protected override string RecordedFingerprint => "fdc92e1e3ff02bcc32b6a875de88f1d67a2723b1bf94a526973f7feb89b96aad";
 }

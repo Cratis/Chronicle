@@ -7,7 +7,7 @@ public class and_the_event_has_a_single_write_of_a_guarded_direct_update_on_sqli
 {
     protected override SqlSinkHarness CreateHarness(SqlCommandCapture capture) => new() { Interceptors = [capture] };
 
-    protected override int RecordedCommands => 0;
+    protected override int RecordedCommands => 2;
 
-    protected override string RecordedFingerprint => "";
+    protected override string RecordedFingerprint => "db8e74c02fe86fdb1aad9971395f5fb6a7b89fffba66a71d1055ebee1c1695ca";
 }

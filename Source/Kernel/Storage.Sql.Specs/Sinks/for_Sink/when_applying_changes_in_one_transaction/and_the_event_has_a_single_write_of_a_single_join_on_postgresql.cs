@@ -8,7 +8,7 @@ public class and_the_event_has_a_single_write_of_a_single_join_on_postgresql(Pos
 {
     protected override PostgreSqlSinkHarness CreateHarness(SqlCommandCapture capture) => new() { Fixture = fixture, Interceptors = [capture] };
 
-    protected override int RecordedCommands => 0;
+    protected override int RecordedCommands => 2;
 
-    protected override string RecordedFingerprint => "";
+    protected override string RecordedFingerprint => "71b8e8a69ca6194fc359990d2e3f509c7a7e5f8405b706285d46c331ac0338e5";
 }

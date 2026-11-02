@@ -8,7 +8,7 @@ public class and_the_event_has_a_single_write_of_a_removal_on_postgresql(Postgre
 {
     protected override PostgreSqlSinkHarness CreateHarness(SqlCommandCapture capture) => new() { Fixture = fixture, Interceptors = [capture] };
 
-    protected override int RecordedCommands => 0;
+    protected override int RecordedCommands => 2;
 
-    protected override string RecordedFingerprint => "";
+    protected override string RecordedFingerprint => "f5b4aa088e96d5c599a8b3382e7aea516c2e02998b105946d25ff600c3b79d64";
 }

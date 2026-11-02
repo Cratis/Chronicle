@@ -7,7 +7,7 @@ public class and_the_event_has_a_single_write_of_a_single_join_on_sqlite : and_t
 {
     protected override SqlSinkHarness CreateHarness(SqlCommandCapture capture) => new() { Interceptors = [capture] };
 
-    protected override int RecordedCommands => 0;
+    protected override int RecordedCommands => 2;
 
-    protected override string RecordedFingerprint => "";
+    protected override string RecordedFingerprint => "4d885c3e7de11cfd465c689a2b1291153aecbf7bbcc4483317cc08c53b09eca4";
 }

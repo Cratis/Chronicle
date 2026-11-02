@@ -7,7 +7,7 @@ public class and_the_event_has_a_single_write_of_a_direct_update_on_sqlite : and
 {
     protected override SqlSinkHarness CreateHarness(SqlCommandCapture capture) => new() { Interceptors = [capture] };
 
-    protected override int RecordedCommands => 0;
+    protected override int RecordedCommands => 2;
 
-    protected override string RecordedFingerprint => "";
+    protected override string RecordedFingerprint => "d58cece4b753c7ca4b9e5a07c543603480a5c6308b7fc04e8e6174bc2bea4824";
 }

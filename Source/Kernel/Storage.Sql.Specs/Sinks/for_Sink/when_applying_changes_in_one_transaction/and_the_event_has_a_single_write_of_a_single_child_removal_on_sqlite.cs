@@ -7,7 +7,7 @@ public class and_the_event_has_a_single_write_of_a_single_child_removal_on_sqlit
 {
     protected override SqlSinkHarness CreateHarness(SqlCommandCapture capture) => new() { Interceptors = [capture] };
 
-    protected override int RecordedCommands => 0;
+    protected override int RecordedCommands => 2;
 
-    protected override string RecordedFingerprint => "";
+    protected override string RecordedFingerprint => "57223979dad6fb0dfa03151490a3ba2aff9fa7d715c7879ea10bd149877ad8ad";
 }
