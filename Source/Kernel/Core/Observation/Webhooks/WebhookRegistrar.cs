@@ -1,11 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Concepts.EventSequences.Concurrency;
-using Cratis.Chronicle.Concepts.Identities;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.Webhooks;
@@ -34,7 +31,7 @@ namespace Cratis.Chronicle.Observation.Webhooks;
 /// <param name="options"><see cref="IOptions{ChronicleOptions}"/> for configuration.</param>
 /// <param name="storage">Storage for validating registered event generations.</param>
 /// <param name="eventSerializer"><see cref="IEventSerializer"/> for serializing and reading back webhook registration events.</param>
-/// <param name="logger">The logger for probe failures and idempotent registrations, not exposed to callers.</param>
+/// <param name="logger">The logger for probe failures, not exposed to callers.</param>
 /// <param name="targetPolicy">The operator approval policy. Without it managed identity registrations are refused.</param>
 /// <remarks>
 /// Registering a webhook is a diff, not a write: the definition is compared with what is stored and only what
@@ -54,7 +51,7 @@ public sealed class WebhookRegistrar(
     IWebhookTargetPolicy? targetPolicy = null)
 {
     const string WebhookTestPartitionKey = "test";
-    readonly WebhookAdmission _admission = new(grainFactory, storage, eventSerializer, logger);
+    readonly WebhookAdmission _admission = new(grainFactory, storage, eventSerializer);
     readonly TimeSpan _webhookTestTimeout = TimeSpan.FromSeconds(options.Value.Webhooks.TestTimeoutSeconds);
 
     /// <summary>
@@ -68,7 +65,7 @@ public sealed class WebhookRegistrar(
     /// <exception cref="ObserverPinsMultipleGenerationsOfEventType">The webhook pins multiple generations of one type.</exception>
     /// <exception cref="EventTypeGenerationNotRegisteredForObserver">A pinned generation is not registered.</exception>
     /// <exception cref="WebhookDeliveryFormatCannotBeChanged">The delivery format of an existing webhook is changed.</exception>
-    /// <exception cref="ConflictingWebhookDeliveryFormatsInRequest">One webhook appears with different delivery formats in the request.</exception>
+    /// <exception cref="WebhookDeliveryFormatNotSupported">A requested delivery format is not supported.</exception>
     /// <exception cref="EnvelopeWebhookIdentifierHasObserverHistory">An envelope webhook is added under an identifier with observer history.</exception>
     /// <exception cref="WebhookLifecycleChangedDuringRegistration">The lifecycle of an envelope webhook changed while it was admitted.</exception>
     internal async Task Add(EventStoreName eventStore, IEnumerable<WebhookDefinition> webhooks)
@@ -90,57 +87,17 @@ public sealed class WebhookRegistrar(
             var encryptedWebhook = EncryptWebhookSecrets(chronicleWebhook);
             var webhookKey = new WebhookKey(chronicleWebhook.Identifier, eventStore);
 
-            var existingWebhooks = await webhooksManager.GetWebhookDefinitions();
-            var existingWebhook = existingWebhooks.FirstOrDefault(w => w.Identifier == chronicleWebhook.Identifier);
-
-            var compareResult = await webhookDefinitionComparer.Compare(
-                webhookKey,
-                existingWebhook ?? encryptedWebhook,
-                encryptedWebhook);
-
-            if (compareResult.Result == WebhookDefinitionCompareResult.New)
+            await _admission.Write(eventSequence, encryptedWebhook, admissionContext, async () =>
             {
-                var addedEvent = new WebhookAdded(
-                    encryptedWebhook.Owner,
-                    encryptedWebhook.EventSequenceId,
-                    encryptedWebhook.EventTypes,
-                    encryptedWebhook.Target.Url,
-                    encryptedWebhook.Target.Headers,
-                    encryptedWebhook.IsReplayable,
-                    encryptedWebhook.IsActive)
-                {
-                    GenerationDelivery = encryptedWebhook.GenerationDelivery,
-                    DeliveryFormat = encryptedWebhook.DeliveryFormat
-                };
+                var existingWebhooks = await webhooksManager.GetWebhookDefinitions();
+                var existingWebhook = existingWebhooks.FirstOrDefault(w => w.Identifier == chronicleWebhook.Identifier);
+                var compareResult = await webhookDefinitionComparer.Compare(
+                    webhookKey,
+                    existingWebhook ?? encryptedWebhook,
+                    encryptedWebhook);
 
-                if (await _admission.Admit(eventSequence, encryptedWebhook, addedEvent, admissionContext))
-                {
-                    await AppendAuthorizationEvent(eventSequence, webhook.Identifier, encryptedWebhook.Target.Authorization);
-                }
-            }
-            else if (compareResult.Result == WebhookDefinitionCompareResult.Different && compareResult.ChangedProperties is not null)
-            {
-                var changedProperties = compareResult.ChangedProperties;
-
-                await AppendGenerationChanges(eventSequence, encryptedWebhook, changedProperties);
-
-                if (changedProperties.TargetUrlChanged)
-                {
-                    await Append(eventSequence, webhook.Identifier, new TargetUrlSetForWebhook(encryptedWebhook.Target.Url));
-                }
-
-                if (changedProperties.TargetHeadersChanged)
-                {
-                    await Append(eventSequence, webhook.Identifier, new TargetHeadersSetForWebhook(encryptedWebhook.Target.Headers));
-                }
-
-                if (changedProperties.AuthorizationChanged)
-                {
-                    await AppendAuthorizationEvent(eventSequence, webhook.Identifier, encryptedWebhook.Target.Authorization);
-                }
-            }
-
-            // If compareResult is Same, no event is appended
+                return BuildChanges(encryptedWebhook, compareResult);
+            });
         }
     }
 
@@ -217,7 +174,8 @@ public sealed class WebhookRegistrar(
             var oAuth = new OAuthAuthorization(
                 new Authority(oAuthContract.Authority),
                 new ClientId(oAuthContract.ClientId),
-                new ClientSecret(oAuthContract.ClientSecret)) { Scope = oAuthContract.Scope };
+                new ClientSecret(oAuthContract.ClientSecret))
+            { Scope = oAuthContract.Scope };
 
             try
             {
@@ -264,6 +222,51 @@ public sealed class WebhookRegistrar(
             Success = false,
             ErrorMessage = exception is WebhookTargetRejected ? exception.Message : "Unable to connect to webhook endpoint."
         };
+    }
+
+    static (IEnumerable<object> Events, WebhookAuthorization? Authorization) BuildChanges(
+        Concepts.Observation.Webhooks.WebhookDefinition webhook,
+        WebhookDefinitionComparisonResult comparison)
+    {
+        if (comparison.Result == WebhookDefinitionCompareResult.New)
+        {
+            return ([new WebhookAdded(
+                webhook.Owner,
+                webhook.EventSequenceId,
+                webhook.EventTypes,
+                webhook.Target.Url,
+                webhook.Target.Headers,
+                webhook.IsReplayable,
+                webhook.IsActive)
+            {
+                GenerationDelivery = webhook.GenerationDelivery,
+                DeliveryFormat = webhook.DeliveryFormat
+            }], webhook.Target.Authorization);
+        }
+
+        var events = new List<object>();
+        WebhookAuthorization? authorization = null;
+        if (comparison.Result == WebhookDefinitionCompareResult.Different && comparison.ChangedProperties is { } changed)
+        {
+            AddGenerationChanges(events, webhook, changed);
+            if (changed.TargetUrlChanged) events.Add(new TargetUrlSetForWebhook(webhook.Target.Url));
+            if (changed.TargetHeadersChanged) events.Add(new TargetHeadersSetForWebhook(webhook.Target.Headers));
+            if (changed.AuthorizationChanged) authorization = webhook.Target.Authorization;
+        }
+
+        return (events, authorization);
+    }
+
+    static void AddGenerationChanges(List<object> events, Concepts.Observation.Webhooks.WebhookDefinition webhook, WebhookDefinitionChangedProperties changed)
+    {
+        if (changed.GenerationDeliveryChanged)
+        {
+            events.Add(new GenerationDeliverySetForWebhook(webhook.GenerationDelivery, webhook.EventTypes));
+        }
+        else if (changed.EventTypesChanged)
+        {
+            events.Add(new EventTypesSetForWebhook(webhook.EventTypes));
+        }
     }
 
     void ValidateManagedIdentities(EventStoreName eventStore, IEnumerable<WebhookDefinition> webhooks)
@@ -333,21 +336,6 @@ public sealed class WebhookRegistrar(
         }
     }
 
-    async Task AppendGenerationChanges(
-        IEventSequence eventSequence,
-        Concepts.Observation.Webhooks.WebhookDefinition webhook,
-        WebhookDefinitionChangedProperties changedProperties)
-    {
-        if (changedProperties.GenerationDeliveryChanged)
-        {
-            await Append(eventSequence, webhook.Identifier, new GenerationDeliverySetForWebhook(webhook.GenerationDelivery, webhook.EventTypes));
-        }
-        else if (changedProperties.EventTypesChanged)
-        {
-            await Append(eventSequence, webhook.Identifier, new EventTypesSetForWebhook(webhook.EventTypes));
-        }
-    }
-
     Concepts.Observation.Webhooks.WebhookDefinition EncryptWebhookSecrets(Concepts.Observation.Webhooks.WebhookDefinition definition)
     {
         var encryptedAuthorization = definition.Target.Authorization.Match(
@@ -359,7 +347,8 @@ public sealed class WebhookRegistrar(
             oauth => (WebhookAuthorization)new OAuthAuthorization(
                 oauth.Authority,
                 oauth.ClientId,
-                new ClientSecret(encryption.Encrypt(oauth.ClientSecret.Value))) { Scope = oauth.Scope },
+                new ClientSecret(encryption.Encrypt(oauth.ClientSecret.Value)))
+            { Scope = oauth.Scope },
             none => WebhookAuthorization.None,
             managedIdentity => (WebhookAuthorization)managedIdentity);
 
@@ -369,51 +358,6 @@ public sealed class WebhookRegistrar(
             definition.Target.Headers);
 
         return definition with { Target = encryptedTarget };
-    }
-
-    async Task AppendAuthorizationEvent(IEventSequence eventSequence, string webhookId, WebhookAuthorization authorization)
-    {
-        await authorization.Match(
-            basic => Append(eventSequence, webhookId, new BasicAuthorizationSetForWebhook(basic.Username, basic.Password)),
-            bearer => Append(eventSequence, webhookId, new BearerTokenAuthorizationSetForWebhook(bearer.Token)),
-            oauth => AppendOAuth(eventSequence, webhookId, oauth),
-            none => Task.CompletedTask,
-            managedIdentity => Append(eventSequence, webhookId, new ManagedIdentityAuthorizationSetForWebhook(managedIdentity.ClientId, managedIdentity.Scope)));
-    }
-
-    async Task AppendOAuth(IEventSequence sequence, string webhookId, OAuthAuthorization oauth)
-    {
-        var authorization = new OAuthAuthorizationSetForWebhook(oauth.Authority, oauth.ClientId, oauth.ClientSecret);
-        if (string.IsNullOrEmpty(oauth.Scope))
-        {
-            await Append(sequence, webhookId, authorization);
-            return;
-        }
-
-        var events = new EventToAppend[]
-        {
-            new(
-                EventSourceType.Default,
-                webhookId,
-                EventStreamType.All,
-                EventStreamId.Default,
-                typeof(OAuthAuthorizationSetForWebhook).GetEventType(),
-                [],
-                new JsonObject { ["authority"] = oauth.Authority.Value, ["clientId"] = oauth.ClientId.Value, ["clientSecret"] = oauth.ClientSecret.Value }),
-            new(
-                EventSourceType.Default,
-                webhookId,
-                EventStreamType.All,
-                EventStreamId.Default,
-                typeof(OAuthScopeSetForWebhook).GetEventType(),
-                [],
-                new JsonObject { ["scope"] = oauth.Scope })
-        };
-        var result = await sequence.AppendMany(events, CorrelationId.New(), [], Identity.System, new ConcurrencyScopes(new Dictionary<EventSourceId, ConcurrencyScope>()));
-        if (!result.IsSuccess)
-        {
-            throw new WebhookRegistrationFailed(webhookId, typeof(OAuthScopeSetForWebhook));
-        }
     }
 
     /// <summary>

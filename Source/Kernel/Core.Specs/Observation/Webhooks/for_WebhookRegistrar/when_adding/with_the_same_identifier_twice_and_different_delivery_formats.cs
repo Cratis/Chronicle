@@ -21,6 +21,6 @@ public class with_the_same_identifier_twice_and_different_delivery_formats : giv
 
     async Task Because() => _error = await Catch.Exception(() => _registrar.Add("store", [_definition, _second]));
 
-    [Fact] void should_refuse_the_request() => _error.ShouldBeOfExactType<ConflictingWebhookDeliveryFormatsInRequest>();
+    [Fact] void should_refuse_the_request() => _error.ShouldBeOfExactType<WebhookDeliveryFormatNotSupported>();
     [Fact] void should_not_append_anything() => AppendCount.ShouldEqual(0);
 }

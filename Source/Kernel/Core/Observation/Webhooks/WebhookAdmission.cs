@@ -1,37 +1,27 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.EventSequences.Concurrency;
 using Cratis.Chronicle.Concepts.Identities;
+using Cratis.Chronicle.Concepts.Observation.Webhooks;
+using Cratis.Chronicle.Concepts.Security;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Storage;
-using Microsoft.Extensions.Logging;
 using ContractWebhookDefinition = Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookDefinition;
-using WebhookDefinition = Cratis.Chronicle.Concepts.Observation.Webhooks.WebhookDefinition;
 
 namespace Cratis.Chronicle.Observation.Webhooks;
 
 /// <summary>
-/// Validates the delivery format of webhook registrations and admits <see cref="WebhookAdded"/> events atomically
-/// against the lifecycle of the webhook.
+/// Validates delivery formats and writes registration changes against the authoritative webhook lifecycle.
 /// </summary>
-/// <remarks>
-/// The delivery format is fixed when a webhook is created. For an envelope webhook that is not yet registered the
-/// lifecycle position is read first, and only then is the observer history checked, so that admission appends
-/// against the very position the checks were made at.
-/// </remarks>
 /// <param name="grainFactory"><see cref="IGrainFactory"/> for creating grains.</param>
 /// <param name="storage"><see cref="IStorage"/> for reading the system event sequence and observers.</param>
 /// <param name="eventSerializer"><see cref="IEventSerializer"/> for serializing and reading back registration events.</param>
-/// <param name="logger">The logger.</param>
-class WebhookAdmission(
-    IGrainFactory grainFactory,
-    IStorage storage,
-    IEventSerializer eventSerializer,
-    ILogger<WebhookRegistrar> logger)
+class WebhookAdmission(IGrainFactory grainFactory, IStorage storage, IEventSerializer eventSerializer)
 {
     static readonly EventType[] _lifecycleEventTypes = [typeof(WebhookAdded).GetEventType(), typeof(WebhookRemoved).GetEventType()];
     static readonly EventTypeId[] _lifecycleEventTypeIds = [.. _lifecycleEventTypes.Select(_ => _.Id)];
@@ -41,160 +31,176 @@ class WebhookAdmission(
     /// </summary>
     /// <param name="eventStore">The <see cref="EventStoreName"/> the webhooks belong to.</param>
     /// <param name="webhooks">The requested webhook definitions.</param>
-    /// <returns>The <see cref="WebhookAdmissionContext"/> to admit the registrations with.</returns>
-    /// <exception cref="ConflictingWebhookDeliveryFormatsInRequest">One webhook appears with different delivery formats in the request.</exception>
+    /// <returns>The context to write the registrations with.</returns>
+    /// <exception cref="WebhookDeliveryFormatNotSupported">A requested delivery format is not supported.</exception>
     /// <exception cref="WebhookDeliveryFormatCannotBeChanged">The delivery format of an existing webhook is changed.</exception>
-    /// <exception cref="EnvelopeWebhookIdentifierHasObserverHistory">An envelope webhook is added under an identifier with observer history.</exception>
-    /// <exception cref="WebhookLifecycleChangedDuringRegistration">The lifecycle of an envelope webhook is already registered but not yet applied.</exception>
     public async Task<WebhookAdmissionContext> Validate(EventStoreName eventStore, IEnumerable<ContractWebhookDefinition> webhooks)
     {
-        var context = new WebhookAdmissionContext(eventStore);
-        var requestedByIdentifier = webhooks.GroupBy(_ => _.Identifier).ToArray();
-        foreach (var group in requestedByIdentifier)
+        var requested = webhooks.Select(_ => _.ToChronicle()).ToArray();
+        foreach (var webhook in requested.Where(_ => _.DeliveryFormat != WebhookDeliveryFormat.Legacy))
         {
-            var formats = group.Select(_ => _.ToChronicle().DeliveryFormat).Distinct().ToArray();
-            if (formats.Length > 1)
-            {
-                throw new ConflictingWebhookDeliveryFormatsInRequest(group.Key, formats.Select(_ => _.ToString()));
-            }
+            throw new WebhookDeliveryFormatNotSupported(webhook.Identifier, webhook.DeliveryFormat);
         }
 
-        var existingWebhooks = (await grainFactory.GetGrain<Chronicle.Observation.Webhooks.IWebhooks>(eventStore).GetWebhookDefinitions()).ToArray();
-        foreach (var group in requestedByIdentifier)
+        var existingWebhooks = (await grainFactory.GetGrain<IWebhooks>(eventStore).GetWebhookDefinitions()).ToArray();
+        foreach (var webhook in requested)
         {
-            var requested = group.First().ToChronicle();
-            var existing = existingWebhooks.FirstOrDefault(_ => _.Identifier == requested.Identifier);
+            var existing = existingWebhooks.FirstOrDefault(_ => _.Identifier == webhook.Identifier);
             if (existing is not null)
             {
-                EnsureSameFormat(existing, requested);
-            }
-            else if (requested.UsesDeliveryEnvelope())
-            {
-                context.Positions[group.Key] = await ReadLifecyclePositionAndCheckObserverHistory(eventStore, requested);
+                EnsureSameFormat(webhook, existing.DeliveryFormat);
             }
         }
 
-        return context;
+        return new WebhookAdmissionContext(eventStore);
     }
 
     /// <summary>
-    /// Appends the <see cref="WebhookAdded"/> event for a new webhook, atomically against the webhook's lifecycle.
+    /// Rechecks the lifecycle and writes every registration branch, including unchanged definitions.
     /// </summary>
     /// <remarks>
-    /// The system event sequence validates the concurrency scope and writes within one turn, so of two registrations
-    /// made against the same lifecycle position only one lands. An envelope registration is made against the position
-    /// its checks were made at and fails closed on any conflict. An identical legacy registration is idempotent.
+    /// Legacy-over-legacy writes deliberately remain unfenced and last-write-wins. Non-legacy writes use a lifecycle
+    /// scope: the system event sequence checks it and appends in one turn. Authorization after our own add must not
+    /// use that scope, since our add has advanced the lifecycle. Envelope admission is dormant until dispatch supports it.
     /// </remarks>
-    /// <param name="eventSequence">The system <see cref="IEventSequence"/>.</param>
-    /// <param name="webhook">The webhook being registered.</param>
-    /// <param name="added">The event to append.</param>
-    /// <param name="context">The <see cref="WebhookAdmissionContext"/> of the request.</param>
-    /// <returns>True if the event was appended, false if an identical registration already exists.</returns>
-    public Task<bool> Admit(IEventSequence eventSequence, WebhookDefinition webhook, WebhookAdded added, WebhookAdmissionContext context)
+    /// <param name="eventSequence">The system event sequence.</param>
+    /// <param name="webhook">The requested webhook.</param>
+    /// <param name="context">The registration request context.</param>
+    /// <param name="compare">Compares the definition and builds its events and optional authorization change.</param>
+    /// <returns>Awaitable task.</returns>
+    /// <exception cref="WebhookDeliveryFormatCannotBeChanged">The log holds a different delivery format.</exception>
+    /// <exception cref="EnvelopeWebhookIdentifierHasObserverHistory">An envelope identifier has observer history.</exception>
+    /// <exception cref="WebhookLifecycleChangedDuringRegistration">The envelope lifecycle is pending or changes during the write.</exception>
+    /// <exception cref="WebhookRegistrationFailed">An append fails.</exception>
+    public async Task Write(
+        IEventSequence eventSequence,
+        WebhookDefinition webhook,
+        WebhookAdmissionContext context,
+        Func<Task<(IEnumerable<object> Events, WebhookAuthorization? Authorization)>> compare)
     {
         var id = webhook.Identifier.Value;
-        if (!webhook.UsesDeliveryEnvelope())
+        var last = await GetSystemLog(context.EventStore).TryGetLastInstanceOfAny(id, _lifecycleEventTypeIds);
+        var registered = last.TryGetValue(out var lifecycle) && lifecycle.Context.EventType.Id == typeof(WebhookAdded).GetEventType().Id;
+        if (registered)
         {
-            return AdmitLegacy(eventSequence, id, added, context.EventStore);
+            EnsureSameFormat(webhook, ((WebhookAdded)eventSerializer.Deserialize(lifecycle)).DeliveryFormat);
         }
 
-        // The same envelope webhook appeared earlier in this request and was admitted then.
-        return context.Admitted.Add(id) ? AdmitEnvelope(eventSequence, id, added, context) : Task.FromResult(false);
+        if (webhook.UsesDeliveryEnvelope())
+        {
+            if (context.Admitted.Contains(id)) return;
+            await CheckEnvelopeIdentity(context.EventStore, webhook, registered);
+        }
+
+        var position = last.TryGetValue(out var appended) ? appended.Context.SequenceNumber : EventSequenceNumber.BeforeFirst;
+        var scope = webhook.DeliveryFormat == WebhookDeliveryFormat.Legacy ? null : new ConcurrencyScope(
+            position, EventSourceId: true, EventStreamType: null, EventStreamId: null, EventSourceType: null, EventTypes: _lifecycleEventTypes);
+        var changes = await compare();
+        var added = false;
+        foreach (var @event in changes.Events)
+        {
+            await Append(eventSequence, id, @event, scope);
+            added |= @event is WebhookAdded;
+        }
+
+        if (changes.Authorization is not null)
+        {
+            await AppendAuthorization(eventSequence, id, changes.Authorization, added ? null : scope);
+        }
+
+        if (webhook.UsesDeliveryEnvelope()) context.Admitted.Add(id);
     }
 
-    static void EnsureSameFormat(WebhookDefinition existing, WebhookDefinition requested)
+    static void EnsureSameFormat(WebhookDefinition requested, WebhookDeliveryFormat stored)
     {
-        if (existing.DeliveryFormat != requested.DeliveryFormat)
+        if (stored != requested.DeliveryFormat)
         {
-            throw new WebhookDeliveryFormatCannotBeChanged(requested.Identifier, existing.DeliveryFormat, requested.DeliveryFormat);
+            throw new WebhookDeliveryFormatCannotBeChanged(requested.Identifier, stored, requested.DeliveryFormat);
         }
     }
 
-    static bool IsWebhookAdded(AppendedEvent appended) => appended.Context.EventType.Id == typeof(WebhookAdded).GetEventType().Id;
-
-    static EventSequenceNumber PositionOf(Cratis.Monads.Option<AppendedEvent> last) =>
-        last.TryGetValue(out var lifecycle) ? lifecycle.Context.SequenceNumber : EventSequenceNumber.BeforeFirst;
-
-    async Task<EventSequenceNumber> ReadLifecyclePositionAndCheckObserverHistory(EventStoreName eventStore, WebhookDefinition requested)
+    static void EnsureAppended(bool success, bool lifecycleChanged, string id, Type eventType)
     {
-        var last = await GetSystemLog(eventStore).TryGetLastInstanceOfAny(requested.Identifier.Value, _lifecycleEventTypeIds);
-
-        // A registration that is in the log but not yet applied to the read model is pending: fail closed rather than
-        // guess which state the webhook will end up in.
-        if (last.TryGetValue(out var appended) && IsWebhookAdded(appended))
-        {
-            throw new WebhookLifecycleChangedDuringRegistration(requested.Identifier);
-        }
-
-        if (await storage.GetEventStore(eventStore).Observers.Has(requested.Identifier))
-        {
-            throw new EnvelopeWebhookIdentifierHasObserverHistory(requested.Identifier);
-        }
-
-        return PositionOf(last);
+        if (lifecycleChanged) throw new WebhookLifecycleChangedDuringRegistration(id);
+        if (!success) throw new WebhookRegistrationFailed(id, eventType);
     }
 
-    async Task<bool> AdmitEnvelope(IEventSequence eventSequence, string id, WebhookAdded added, WebhookAdmissionContext context)
+    async Task CheckEnvelopeIdentity(EventStoreName eventStore, WebhookDefinition webhook, bool registered)
     {
-        if (!context.Positions.TryGetValue(id, out var position))
+        if (registered)
         {
-            throw new WebhookLifecycleChangedDuringRegistration(id);
+            var existing = await grainFactory.GetGrain<IWebhooks>(eventStore).GetWebhookDefinitions();
+            if (!existing.Any(_ => _.Identifier == webhook.Identifier))
+            {
+                throw new WebhookLifecycleChangedDuringRegistration(webhook.Identifier);
+            }
         }
-
-        var result = await AppendWebhookAdded(eventSequence, id, added, position);
-        if (result.HasConcurrencyViolations) throw new WebhookLifecycleChangedDuringRegistration(id);
-        if (!result.IsSuccess) throw new WebhookRegistrationFailed(id, typeof(WebhookAdded));
-        return true;
+        else if (await storage.GetEventStore(eventStore).Observers.Has(webhook.Identifier))
+        {
+            throw new EnvelopeWebhookIdentifierHasObserverHistory(webhook.Identifier);
+        }
     }
 
-    async Task<bool> AdmitLegacy(IEventSequence eventSequence, string id, WebhookAdded added, EventStoreName eventStore)
+    Task AppendAuthorization(IEventSequence sequence, string id, WebhookAuthorization authorization, ConcurrencyScope? scope) =>
+        authorization.Match(
+            basic => Append(sequence, id, new BasicAuthorizationSetForWebhook(basic.Username, basic.Password), scope),
+            bearer => Append(sequence, id, new BearerTokenAuthorizationSetForWebhook(bearer.Token), scope),
+            oauth => AppendOAuth(sequence, id, oauth, scope),
+            none => Task.CompletedTask,
+            managedIdentity => Append(sequence, id, new ManagedIdentityAuthorizationSetForWebhook(managedIdentity.ClientId, managedIdentity.Scope), scope));
+
+    async Task AppendOAuth(IEventSequence sequence, string id, OAuthAuthorization oauth, ConcurrencyScope? scope)
     {
-        var log = GetSystemLog(eventStore);
-        var last = await log.TryGetLastInstanceOfAny(id, _lifecycleEventTypeIds);
-        if (last.TryGetValue(out var lastAppended) && IsWebhookAdded(lastAppended))
+        var authorization = new OAuthAuthorizationSetForWebhook(oauth.Authority, oauth.ClientId, oauth.ClientSecret);
+        if (string.IsNullOrEmpty(oauth.Scope))
         {
-            return SkipIfIdentical(id, added, lastAppended);
+            await Append(sequence, id, authorization, scope);
+            return;
         }
 
-        var result = await AppendWebhookAdded(eventSequence, id, added, PositionOf(last));
-        if (result.IsSuccess) return true;
-        if (!result.HasConcurrencyViolations) throw new WebhookRegistrationFailed(id, typeof(WebhookAdded));
-
-        // Another writer registered or removed the webhook meanwhile. Look once; there is no retry loop.
-        var current = await log.TryGetLastInstanceOfAny(id, _lifecycleEventTypeIds);
-        if (current.TryGetValue(out var currentAppended) && IsWebhookAdded(currentAppended))
+        var events = new EventToAppend[]
         {
-            return SkipIfIdentical(id, added, currentAppended);
-        }
-
-        throw new WebhookRegistrationFailed(id, typeof(WebhookAdded));
+            new(
+                EventSourceType.Default,
+                id,
+                EventStreamType.All,
+                EventStreamId.Default,
+                typeof(OAuthAuthorizationSetForWebhook).GetEventType(),
+                [],
+                new JsonObject { ["authority"] = oauth.Authority.Value, ["clientId"] = oauth.ClientId.Value, ["clientSecret"] = oauth.ClientSecret.Value }),
+            new(
+                EventSourceType.Default,
+                id,
+                EventStreamType.All,
+                EventStreamId.Default,
+                typeof(OAuthScopeSetForWebhook).GetEventType(),
+                [],
+                new JsonObject { ["scope"] = oauth.Scope })
+        };
+        var scopes = new Dictionary<EventSourceId, ConcurrencyScope>();
+        if (scope is not null) scopes[id] = scope;
+        var result = await sequence.AppendMany(events, CorrelationId.New(), [], Identity.System, new ConcurrencyScopes(scopes));
+        EnsureAppended(result.IsSuccess, scope is not null && result.HasConcurrencyViolations, id, typeof(OAuthScopeSetForWebhook));
     }
 
-    bool SkipIfIdentical(string id, WebhookAdded requested, AppendedEvent registered)
+    async Task Append(IEventSequence sequence, string id, object @event, ConcurrencyScope? scope)
     {
-        var stored = (WebhookAdded)eventSerializer.Deserialize(registered);
-        if (stored.DeliveryFormat != requested.DeliveryFormat)
-        {
-            throw new WebhookDeliveryFormatCannotBeChanged(id, stored.DeliveryFormat, requested.DeliveryFormat);
-        }
-
-        logger.IdenticalWebhookAlreadyRegistered(id);
-        return false;
+        var result = scope is null
+            ? await sequence.Append(id, @event)
+            : await sequence.Append(
+                EventSourceType.Default,
+                id,
+                EventStreamType.All,
+                EventStreamId.Default,
+                @event.GetType().GetEventType(),
+                eventSerializer.Serialize(@event),
+                CorrelationId.New(),
+                [],
+                Identity.System,
+                [],
+                scope);
+        EnsureAppended(result.IsSuccess, scope is not null && result.HasConcurrencyViolations, id, @event.GetType());
     }
-
-    Task<AppendResult> AppendWebhookAdded(IEventSequence eventSequence, string id, WebhookAdded added, EventSequenceNumber position) =>
-        eventSequence.Append(
-            EventSourceType.Default,
-            id,
-            EventStreamType.All,
-            EventStreamId.Default,
-            typeof(WebhookAdded).GetEventType(),
-            eventSerializer.Serialize(added),
-            CorrelationId.New(),
-            [],
-            Identity.System,
-            [],
-            new ConcurrencyScope(position, EventSourceId: true, EventStreamType: null, EventStreamId: null, EventSourceType: null, EventTypes: _lifecycleEventTypes));
 
     Storage.EventSequences.IEventSequenceStorage GetSystemLog(EventStoreName eventStore) =>
         storage.GetEventStore(eventStore).GetNamespace(EventStoreNamespaceName.Default).GetEventSequence(EventSequenceId.System);

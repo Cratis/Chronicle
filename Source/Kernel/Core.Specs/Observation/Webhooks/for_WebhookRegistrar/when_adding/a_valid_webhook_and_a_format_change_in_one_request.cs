@@ -24,6 +24,7 @@ public class a_valid_webhook_and_a_format_change_in_one_request : given.a_pinned
 
     async Task Because() => _error = await Catch.Exception(() => _registrar.Add("store", [_definition, _other]));
 
-    [Fact] void should_refuse_the_format_change() => _error.ShouldBeOfExactType<WebhookDeliveryFormatCannotBeChanged>();
+    [Fact] void should_refuse_the_format_change() => _error.ShouldBeOfExactType<WebhookDeliveryFormatNotSupported>();
     [Fact] void should_not_append_anything_for_any_webhook() => AppendCount.ShouldEqual(0);
+    [Fact] void should_not_append_authorization_or_scope() => AppendManyCount.ShouldEqual(0);
 }

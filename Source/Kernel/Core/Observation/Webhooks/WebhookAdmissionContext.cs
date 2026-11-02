@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts;
-using Cratis.Chronicle.Concepts.Events;
 
 namespace Cratis.Chronicle.Observation.Webhooks;
 
@@ -16,11 +15,6 @@ class WebhookAdmissionContext(EventStoreName eventStore)
     /// Gets the <see cref="EventStoreName"/> the request is for.
     /// </summary>
     public EventStoreName EventStore { get; } = eventStore;
-
-    /// <summary>
-    /// Gets the lifecycle position captured during validation for every new envelope webhook, keyed by identifier.
-    /// </summary>
-    public Dictionary<string, EventSequenceNumber> Positions { get; } = [];
 
     /// <summary>
     /// Gets the identifiers of the envelope webhooks already admitted in this request.

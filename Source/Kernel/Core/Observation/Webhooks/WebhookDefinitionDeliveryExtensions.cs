@@ -27,5 +27,5 @@ public static class WebhookDefinitionDeliveryExtensions
     /// </summary>
     /// <param name="definition">The <see cref="WebhookDefinition"/>.</param>
     /// <returns>True if replays must never reach the target, false otherwise.</returns>
-    public static bool IsLiveOnly(this WebhookDefinition definition) => definition.UsesDeliveryEnvelope();
+    public static bool IsLiveOnly(this WebhookDefinition definition) => definition.DeliveryFormat != WebhookDeliveryFormat.Legacy;
 }

@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts.Auditing;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences.Concurrency;
@@ -42,21 +41,18 @@ public class with_new_webhook : given.a_webhook_registrar
 
     async Task Because() => await _registrar.Add("test-event-store", _webhooks);
 
-    [Fact] void should_append_webhook_added_event() =>
+    [Fact]
+    void should_append_webhook_added_event() =>
         _eventSequence.Received(1).Append(
-            Arg.Any<EventSourceType>(),
             Arg.Is<EventSourceId>(id => id.Value == "test-webhook"),
-            Arg.Any<EventStreamType>(),
-            Arg.Any<EventStreamId>(),
-            Arg.Is<EventType>(type => type.Id == typeof(WebhookAdded).GetEventType().Id),
-            Arg.Any<JsonObject>(),
+            Arg.Is<object>(_ => _ is WebhookAdded),
             Arg.Any<CorrelationId>(),
             Arg.Any<IEnumerable<Causation>>(),
             Arg.Any<Identity>(),
             Arg.Any<IEnumerable<Tag>>(),
-            Arg.Any<ConcurrencyScope>(),
-            Arg.Any<DateTimeOffset?>(),
-            Arg.Any<Subject?>());
+            Arg.Any<EventSourceType>(),
+            Arg.Any<EventStreamType>(),
+            Arg.Any<EventStreamId>());
 
-    [Fact] void should_serialize_one_webhook_added_event() => _serialized.OfType<WebhookAdded>().Count().ShouldEqual(1);
+    [Fact] void should_not_fence_the_legacy_write() => _eventSequence.ReceivedCalls().SelectMany(_ => _.GetArguments().OfType<ConcurrencyScope>()).ShouldBeEmpty();
 }

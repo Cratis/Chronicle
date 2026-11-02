@@ -25,6 +25,8 @@ public class a_pinned_registration : a_webhook_registrar
     protected Exception? _error;
     protected IEventSequence _eventSequence;
 
+    readonly object _appendLock = new();
+
     void Establish()
     {
         _appended = _serialized;
@@ -40,7 +42,7 @@ public class a_pinned_registration : a_webhook_registrar
         sequence.Append(Arg.Any<EventSourceId>(), Arg.Any<object>(), Arg.Any<CorrelationId>(), Arg.Any<IEnumerable<Causation>>(), Arg.Any<Identity>(), Arg.Any<IEnumerable<Tag>>(), Arg.Any<EventSourceType>(), Arg.Any<EventStreamType>(), Arg.Any<EventStreamId>())
             .Returns(call =>
             {
-                _appended.Add(call[1]);
+                RecordAppend(call[1]);
                 return AppendResult.Success(CorrelationId.New(), EventSequenceNumber.First);
             });
         _grainFactory.GetGrain<IEventSequence>(Arg.Any<string>()).Returns(sequence);
@@ -60,11 +62,18 @@ public class a_pinned_registration : a_webhook_registrar
             .Where(_ => _.GetMethodInfo().Name == nameof(IEventSequence.Append))
             .SelectMany(_ => _.GetArguments().OfType<ConcurrencyScope>());
 
+    protected int AppendManyCount => _eventSequence.ReceivedCalls().Count(_ => _.GetMethodInfo().Name == nameof(IEventSequence.AppendMany));
+
     protected int AppendCount => _eventSequence.ReceivedCalls().Count(_ => _.GetMethodInfo().Name == nameof(IEventSequence.Append));
 
     protected int UnscopedAppendCount => AppendCount - ScopedAppends.Count();
 
     protected int LifecycleReads => _log.ReceivedCalls().Count(_ => _.GetMethodInfo().Name == nameof(Storage.EventSequences.IEventSequenceStorage.TryGetLastInstanceOfAny));
+
+    protected void RecordAppend(object @event)
+    {
+        lock (_appendLock) _appended.Add(@event);
+    }
 
     protected void ExistingWebhookWithFormat(WebhookDeliveryFormat format) =>
         _manager.GetWebhookDefinitions().Returns([_definition.ToChronicle() with { DeliveryFormat = format }]);

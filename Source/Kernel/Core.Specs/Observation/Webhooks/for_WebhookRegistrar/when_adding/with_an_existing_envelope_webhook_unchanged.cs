@@ -17,6 +17,6 @@ public class with_an_existing_envelope_webhook_unchanged : given.a_pinned_regist
 
     async Task Because() => _error = await Catch.Exception(() => _registrar.Add("store", [_definition]));
 
-    [Fact] void should_not_throw() => _error.ShouldBeNull();
+    [Fact] void should_refuse_even_an_unchanged_envelope() => _error.ShouldBeOfExactType<WebhookDeliveryFormatNotSupported>();
     [Fact] void should_not_append() => AppendCount.ShouldEqual(0);
 }

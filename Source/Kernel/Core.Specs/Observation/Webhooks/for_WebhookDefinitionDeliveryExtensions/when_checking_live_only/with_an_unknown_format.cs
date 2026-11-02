@@ -14,5 +14,5 @@ public class with_an_unknown_format : Specification
         DeliveryFormat = (WebhookDeliveryFormat)7
     }.IsLiveOnly();
 
-    [Fact] void should_not_be_live_only() => _result.ShouldEqual(false);
+    [Fact] void should_be_live_only() => _result.ShouldEqual(true);
 }

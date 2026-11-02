@@ -2,22 +2,30 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Concepts.Observation.Webhooks;
 
 namespace Cratis.Chronicle.Observation.Webhooks.for_WebhookRegistrar.when_adding;
 
-public class concurrently_with_the_same_delivery_format : given.a_pinned_registration
+public class concurrently_with_the_same_delivery_format : given.a_lagging_legacy_registration
 {
     void Establish()
     {
-        ALogWithLastLifecycleEvent(Cratis.Monads.Option<AppendedEvent>.None(), ALifecycleEvent<WebhookAdded>(5));
-        TheStoredRegistrationHasFormat(WebhookDeliveryFormat.Legacy);
-        TheScopedAppendFailsWithAConcurrencyViolation();
+        var bothRead = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var reads = 0;
+        _log.TryGetLastInstanceOfAny(Arg.Any<EventSourceId>(), Arg.Any<IEnumerable<EventTypeId>>()).Returns(async _ =>
+        {
+            if (Interlocked.Increment(ref reads) == 2) bothRead.SetResult();
+            await bothRead.Task;
+            return Cratis.Monads.Option<AppendedEvent>.None();
+        });
     }
 
-    async Task Because() => _error = await Catch.Exception(() => _registrar.Add("store", [_definition]));
+    /// <summary>Source equivalence: base 130c50244a WebhookRegistrar.cs:85-109 and :421-428 let both concurrent New writes append.</summary>
+    /// <returns>Awaitable task.</returns>
+    async Task Because() => _error = await Catch.Exception(() => Task.WhenAll(_registrar.Add("store", [_definition]), _registrar.Add("store", [_definition])));
 
     [Fact] void should_not_throw() => _error.ShouldBeNull();
-    [Fact] void should_attempt_exactly_one_webhook_added_append() => ScopedAppends.Count().ShouldEqual(1);
-    [Fact] void should_not_append_an_authorization_event() => UnscopedAppendCount.ShouldEqual(0);
+    [Fact] void should_append_both_registrations() => _appended.OfType<WebhookAdded>().Count().ShouldEqual(2);
+    [Fact] void should_append_both_authorizations() => _appended.OfType<BearerTokenAuthorizationSetForWebhook>().Count().ShouldEqual(2);
+    [Fact] void should_not_fence_either_write() => ScopedAppends.ShouldBeEmpty();
+    [Fact] void should_not_retry() => LifecycleReads.ShouldEqual(2);
 }
