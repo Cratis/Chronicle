@@ -12,5 +12,5 @@ public class when_the_server_address_is_invalid_and_has_user_information_like_te
 
     [Fact] void should_reject_the_address() => _result.ShouldBeOfExactType<InvalidServerAddress>();
     [Fact] void should_not_expose_the_username() => _result.Message.Contains("alice", StringComparison.Ordinal).ShouldBeFalse();
-    [Fact] void should_not_expose_the_text_before_the_port() => _result.Message.Contains("'pa", StringComparison.Ordinal).ShouldBeFalse();
+    [Fact] void should_not_expose_the_password_fragment() => _result.Message.Contains("pa", StringComparison.Ordinal).ShouldBeFalse();
 }
