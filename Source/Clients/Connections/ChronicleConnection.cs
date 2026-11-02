@@ -321,7 +321,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         var lastFailure = _lastConnectFailure;
         if (lastFailure is not null && _timeProvider.GetUtcNow() - lastFailure.Value < TimeSpan.FromSeconds(_connectTimeout))
         {
-            throw new ConnectionUnavailable(_connectionString.Redacted);
+            throw new ConnectionUnavailable(_connectionString);
         }
     }
 

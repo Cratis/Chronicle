@@ -14,6 +14,7 @@ public class a_connection_that_lost_a_working_kernel : Specification
     protected const int ConnectTimeoutSeconds = 2;
 
     protected ChronicleConnection _connection;
+    protected a_logger_that_remembers_messages<ChronicleConnection> _logger;
     protected IConnectionLifecycle _lifecycle;
     protected IChronicleServerAddressResolver _serverAddressResolver;
     protected ControllableTimeProvider _time;
@@ -21,8 +22,11 @@ public class a_connection_that_lost_a_working_kernel : Specification
     protected bool _kernelIsReachable;
     protected int _resolveAttempts;
 
+    protected virtual ChronicleConnectionString ConnectionString => ChronicleConnectionString.Default;
+
     void Establish()
     {
+        _logger = new a_logger_that_remembers_messages<ChronicleConnection>();
         _time = new ControllableTimeProvider();
         _kernelIsReachable = true;
         _isConnected = false;
@@ -50,7 +54,7 @@ public class a_connection_that_lost_a_working_kernel : Specification
             });
 
         _connection = new ChronicleConnection(
-            ChronicleConnectionString.Default,
+            ConnectionString,
             ConnectTimeoutSeconds,
             null,
             null,
@@ -59,7 +63,7 @@ public class a_connection_that_lost_a_working_kernel : Specification
             Substitute.For<ICorrelationIdAccessor>(),
             NullLoggerFactory.Instance,
             CancellationToken.None,
-            NullLogger<ChronicleConnection>.Instance,
+            _logger,
             skipTlsValidation: true,
             skipCompatibilityCheck: true,
             skipKeepAlive: true,

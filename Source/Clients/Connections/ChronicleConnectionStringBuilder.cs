@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Data.Common;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 
 namespace Cratis.Chronicle.Connections;
@@ -15,6 +16,7 @@ namespace Cratis.Chronicle.Connections;
 /// chronicle+srv://host[/?options] for DNS SRV record lookup.
 /// </remarks>
 #pragma warning disable CA1010 // Generic interface should also be implemented
+[DebuggerDisplay("{BuildRedacted(),nq}")]
 public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
 #pragma warning restore CA1010 // Generic interface should also be implemented
 {
@@ -46,7 +48,7 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
     /// <summary>
     /// Fragments in an option name that mark its value as a credential.
     /// </summary>
-    static readonly string[] _sensitiveKeyFragments = ["password", "secret", "token", "key", "credential"];
+    static readonly string[] _sensitiveKeyFragments = ["password", "pwd", "secret", "token", "key", "credential"];
 
     static readonly HashSet<string> _keysWithDedicatedRendering =
     [
@@ -548,6 +550,7 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
     /// costs a little diagnostic detail; missing one puts it in the log forever.
     /// </remarks>
     static bool IsSensitiveKey(string key) =>
+        string.Equals(key, UsernameKey, StringComparison.OrdinalIgnoreCase) ||
         _sensitiveKeyFragments.Any(fragment => key.Contains(fragment, StringComparison.OrdinalIgnoreCase));
 
     static ChronicleServerAddress[] ParseServerAddresses(string authority)
@@ -599,6 +602,27 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
             : throw new InvalidServerAddress(entry);
     }
 
+    static void ThrowIfUserInfoIsNotEncoded(string rest, int pathIndex, string authority)
+    {
+        if (pathIndex == -1 || authority.Contains('@', StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        var queryIndex = rest.IndexOf('?', pathIndex);
+        var path = queryIndex == -1 ? rest[pathIndex..] : rest[pathIndex..queryIndex];
+        var query = queryIndex == -1 ? string.Empty : rest[(queryIndex + 1)..];
+        var firstPair = query.Split('&')[0];
+        var at = firstPair.IndexOf('@', StringComparison.Ordinal);
+        var equals = firstPair.IndexOf('=', StringComparison.Ordinal);
+        var queryHasUserInfo = at != -1 && (equals == -1 || equals > at);
+
+        if (path.Contains('@', StringComparison.Ordinal) || queryHasUserInfo)
+        {
+            throw new InvalidUserInfo();
+        }
+    }
+
     void ParseConnectionString(string connectionString)
     {
         if (string.IsNullOrWhiteSpace(connectionString))
@@ -642,6 +666,8 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
             var queryIndex = rest.IndexOf('?', pathIndex);
             query = queryIndex == -1 ? string.Empty : rest[(queryIndex + 1)..];
         }
+
+        ThrowIfUserInfoIsNotEncoded(rest, pathIndex, authority);
 
         // Extract username and password from the userinfo part
         var userInfoIndex = authority.LastIndexOf('@');
