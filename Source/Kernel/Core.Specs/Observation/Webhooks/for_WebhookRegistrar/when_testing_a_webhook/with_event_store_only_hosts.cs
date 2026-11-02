@@ -22,6 +22,7 @@ public class with_event_store_only_hosts : for_WebhookMediator.given.a_store_sco
         _mediator,
         Options.Create(new ChronicleOptions()),
         Substitute.For<Storage.IStorage>(),
+        Substitute.For<EventSequences.IEventSerializer>(),
         NullLogger<WebhookRegistrar>.Instance);
 
     async Task Because()

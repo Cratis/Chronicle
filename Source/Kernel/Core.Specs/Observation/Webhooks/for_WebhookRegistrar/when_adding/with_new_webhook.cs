@@ -3,9 +3,12 @@
 
 using Cratis.Chronicle.Concepts.Auditing;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.EventSequences;
+using Cratis.Chronicle.Concepts.EventSequences.Concurrency;
 using Cratis.Chronicle.Concepts.Identities;
 using Cratis.Chronicle.Concepts.Observation.Webhooks;
 using Cratis.Chronicle.EventSequences;
+using System.Text.Json.Nodes;
 using ContractWebhookDefinition = Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookDefinition;
 
 namespace Cratis.Chronicle.Observation.Webhooks.for_WebhookRegistrar.when_adding;
@@ -42,13 +45,19 @@ public class with_new_webhook : given.a_webhook_registrar
 
     [Fact] void should_append_webhook_added_event() =>
         _eventSequence.Received(1).Append(
+            Arg.Any<EventSourceType>(),
             Arg.Is<EventSourceId>(id => id.Value == "test-webhook"),
-            Arg.Any<WebhookAdded>(),
+            Arg.Any<EventStreamType>(),
+            Arg.Any<EventStreamId>(),
+            Arg.Is<EventType>(type => type.Id == typeof(WebhookAdded).GetEventType().Id),
+            Arg.Any<JsonObject>(),
             Arg.Any<CorrelationId>(),
             Arg.Any<IEnumerable<Causation>>(),
             Arg.Any<Identity>(),
             Arg.Any<IEnumerable<Tag>>(),
-            Arg.Any<EventSourceType>(),
-            Arg.Any<EventStreamType>(),
-            Arg.Any<EventStreamId>());
+            Arg.Any<ConcurrencyScope>(),
+            Arg.Any<DateTimeOffset?>(),
+            Arg.Any<Subject?>());
+
+    [Fact] void should_serialize_one_webhook_added_event() => _serialized.OfType<WebhookAdded>().Count().ShouldEqual(1);
 }

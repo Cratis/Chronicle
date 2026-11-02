@@ -4,6 +4,7 @@
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.EventSequences.Concurrency;
 using Cratis.Chronicle.Concepts.Identities;
 using Cratis.Chronicle.Concepts.Keys;
@@ -33,7 +34,8 @@ namespace Cratis.Chronicle.Observation.Webhooks;
 /// <param name="webhookMediator"><see cref="IWebhookMediator"/> for testing webhook endpoints.</param>
 /// <param name="options"><see cref="IOptions{ChronicleOptions}"/> for configuration.</param>
 /// <param name="storage">Storage for validating registered event generations.</param>
-/// <param name="logger">The logger for probe failures, not exposed to callers.</param>
+/// <param name="eventSerializer"><see cref="IEventSerializer"/> for serializing and reading back webhook registration events.</param>
+/// <param name="logger">The logger for probe failures and idempotent registrations, not exposed to callers.</param>
 /// <param name="targetPolicy">The operator approval policy. Without it managed identity registrations are refused.</param>
 /// <remarks>
 /// Registering a webhook is a diff, not a write: the definition is compared with what is stored and only what
@@ -48,10 +50,12 @@ public sealed class WebhookRegistrar(
     IWebhookMediator webhookMediator,
     IOptions<ChronicleOptions> options,
     IStorage storage,
+    IEventSerializer eventSerializer,
     ILogger<WebhookRegistrar> logger,
     IWebhookTargetPolicy? targetPolicy = null)
 {
     const string WebhookTestPartitionKey = "test";
+    readonly WebhookAdmission _admission = new(grainFactory, storage, eventSerializer, logger);
     readonly TimeSpan _webhookTestTimeout = TimeSpan.FromSeconds(options.Value.Webhooks.TestTimeoutSeconds);
 
     /// <summary>
@@ -64,6 +68,10 @@ public sealed class WebhookRegistrar(
     /// <exception cref="ManagedIdentityWebhookNotAllowed">The requested managed identity, scope or receiver is not approved.</exception>
     /// <exception cref="ObserverPinsMultipleGenerationsOfEventType">The webhook pins multiple generations of one type.</exception>
     /// <exception cref="EventTypeGenerationNotRegisteredForObserver">A pinned generation is not registered.</exception>
+    /// <exception cref="WebhookDeliveryFormatCannotBeChanged">The delivery format of an existing webhook is changed.</exception>
+    /// <exception cref="ConflictingWebhookDeliveryFormatsInRequest">One webhook appears with different delivery formats in the request.</exception>
+    /// <exception cref="EnvelopeWebhookIdentifierHasObserverHistory">An envelope webhook is added under an identifier with observer history.</exception>
+    /// <exception cref="WebhookLifecycleChangedDuringRegistration">The lifecycle of an envelope webhook changed while it was admitted.</exception>
     internal async Task Add(EventStoreName eventStore, IEnumerable<WebhookDefinition> webhooks)
     {
         webhooks = webhooks.ToArray();
@@ -72,6 +80,7 @@ public sealed class WebhookRegistrar(
         ValidateManagedIdentities(eventStore, webhooks);
         await ValidatePins(eventStore, webhooks);
         await ValidateTransportOwnership(eventStore, webhooks);
+        var admissionContext = await _admission.Validate(eventStore, webhooks);
 
         var eventSequence = grainFactory.GetSystemEventSequence(eventStore);
         var webhooksManager = grainFactory.GetGrain<Chronicle.Observation.Webhooks.IWebhooks>(eventStore);
@@ -105,8 +114,10 @@ public sealed class WebhookRegistrar(
                     DeliveryFormat = encryptedWebhook.DeliveryFormat
                 };
 
-                await Append(eventSequence, webhook.Identifier, addedEvent);
-                await AppendAuthorizationEvent(eventSequence, webhook.Identifier, encryptedWebhook.Target.Authorization);
+                if (await _admission.Admit(eventSequence, encryptedWebhook, addedEvent, admissionContext))
+                {
+                    await AppendAuthorizationEvent(eventSequence, webhook.Identifier, encryptedWebhook.Target.Authorization);
+                }
             }
             else if (compareResult.Result == WebhookDefinitionCompareResult.Different && compareResult.ChangedProperties is not null)
             {

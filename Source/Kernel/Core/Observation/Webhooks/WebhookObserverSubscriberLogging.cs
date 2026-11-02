@@ -16,4 +16,7 @@ internal static partial class WebhookObserverSubscriberLogging
 
     [LoggerMessage(LogLevel.Trace, "Successfully handled all events for webhook for key {Key}")]
     internal static partial void SuccessfullyHandledAllEvents(this ILogger<WebhookObserverSubscriber> logger, ObserverKey key);
+
+    [LoggerMessage(LogLevel.Warning, "Refusing replayed events for live-only webhook with key {Key}, parking the partition")]
+    internal static partial void RefusingReplayForLiveOnlyWebhook(this ILogger<WebhookObserverSubscriber> logger, ObserverKey key);
 }

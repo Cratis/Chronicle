@@ -3,9 +3,11 @@
 
 using Cratis.Chronicle.Concepts.Auditing;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.EventSequences.Concurrency;
 using Cratis.Chronicle.Concepts.Identities;
 using Cratis.Chronicle.Concepts.Observation.Webhooks;
 using Cratis.Chronicle.EventSequences;
+using System.Text.Json.Nodes;
 using ContractWebhookDefinition = Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookDefinition;
 
 namespace Cratis.Chronicle.Observation.Webhooks.for_WebhookRegistrar.when_adding;
@@ -35,6 +37,20 @@ public class with_a_failed_bearer_authorization_append : given.a_webhook_registr
                 Authorization = new(new Contracts.Security.BearerTokenAuthorization { Token = "synthetic-token" })
             }
         };
+        _eventSequence.Append(
+            Arg.Any<EventSourceType>(),
+            Arg.Any<EventSourceId>(),
+            Arg.Any<EventStreamType>(),
+            Arg.Any<EventStreamId>(),
+            Arg.Any<EventType>(),
+            Arg.Any<JsonObject>(),
+            Arg.Any<CorrelationId>(),
+            Arg.Any<IEnumerable<Causation>>(),
+            Arg.Any<Identity>(),
+            Arg.Any<IEnumerable<Tag>>(),
+            Arg.Any<ConcurrencyScope>(),
+            Arg.Any<DateTimeOffset?>(),
+            Arg.Any<Subject?>()).Returns(_ => AppendResult.Success(CorrelationId.New(), EventSequenceNumber.First));
         _eventSequence.Append(
             Arg.Any<EventSourceId>(),
             Arg.Any<object>(),

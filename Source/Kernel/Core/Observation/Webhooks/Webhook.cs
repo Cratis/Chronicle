@@ -46,6 +46,14 @@ public class Webhook(
         {
             logger.WebhookHasChanged(key.WebhookId);
             await _definitionObservers.Notify(notifier => notifier.OnWebhookDefinitionsChanged());
+
+            // 0020: HTTP delivery v1 delivers live events only, so there is nothing to replay and nothing to recommend.
+            if (definition.IsLiveOnly())
+            {
+                logger.LiveOnlyWebhookNotReplayed(key.WebhookId);
+                return;
+            }
+
             var namespaceNames = (await GrainFactory.GetGrain<INamespaces>(key.EventStore).GetAll()).ToList();
 
             // Schedule replay as a separate grain turn so that SetDefinition() returns immediately,

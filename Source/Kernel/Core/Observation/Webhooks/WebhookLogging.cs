@@ -23,4 +23,7 @@ internal static partial class WebhookLogging
 
     [LoggerMessage(LogLevel.Information, "Auto-replaying webhook '{Identifier}' for namespace '{Namespace}' due to definition change")]
     internal static partial void AutoReplayingWebhook(this ILogger<Webhook> logger, WebhookId identifier, EventStoreNamespaceName @namespace);
+
+    [LoggerMessage(LogLevel.Information, "Webhook '{Identifier}' is live-only, so its changed definition does not cause a replay")]
+    internal static partial void LiveOnlyWebhookNotReplayed(this ILogger<Webhook> logger, WebhookId identifier);
 }

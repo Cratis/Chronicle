@@ -60,7 +60,17 @@ public class WebhookObserverSubscriber(
     {
         try
         {
-            events = await ReleaseMismatches(events);
+            // SetDefinition persists here before notifications, replay, and observer rebind. Resolve the committed
+            // policy for every batch, including old Compatibility jobs with null metadata. Reading storage directly
+            // avoids calling the webhook grain while its replay turn awaits this observer's delivery.
+            var definition = await storage.GetEventStore(_key.EventStore).Webhooks.Get(_key.ObserverId);
+            if (definition.IsLiveOnly() && events.Any(_ => _.Context.ObservationState.HasFlag(EventObservationState.Replay)))
+            {
+                logger.RefusingReplayForLiveOnlyWebhook(_key);
+                return HandleError(new ReplayRefusedForLiveOnlyWebhook(_key)) with { FailurePolicy = WebhookDeliveryFailurePolicy.ParkPartition };
+            }
+
+            events = await ReleaseMismatches(definition, events);
         }
         catch (Exception error)
         {
@@ -109,12 +119,8 @@ public class WebhookObserverSubscriber(
         }
     }
 
-    async Task<IEnumerable<AppendedEvent>> ReleaseMismatches(IEnumerable<AppendedEvent> events)
+    async Task<IEnumerable<AppendedEvent>> ReleaseMismatches(WebhookDefinition definition, IEnumerable<AppendedEvent> events)
     {
-        // SetDefinition persists here before notifications, replay, and observer rebind. Resolve the committed
-        // policy for every batch, including old Compatibility jobs with null metadata. Reading storage directly
-        // avoids calling the webhook grain while its replay turn awaits this observer's delivery.
-        var definition = await storage.GetEventStore(_key.EventStore).Webhooks.Get(_key.ObserverId);
         if (definition.GenerationDelivery != EventGenerationDelivery.Pinned)
         {
             return events;

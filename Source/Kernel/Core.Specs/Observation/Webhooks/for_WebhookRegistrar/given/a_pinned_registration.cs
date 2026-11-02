@@ -4,12 +4,16 @@
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Auditing;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.EventSequences;
+using Cratis.Chronicle.Concepts.EventSequences.Concurrency;
 using Cratis.Chronicle.Concepts.Identities;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.Webhooks;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.EventSequences.Concurrency;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.EventTypes;
+using System.Text.Json.Nodes;
 
 namespace Cratis.Chronicle.Observation.Webhooks.for_WebhookRegistrar.given;
 
@@ -20,10 +24,11 @@ public class a_pinned_registration : a_webhook_registrar
     protected IWebhooks _manager;
     protected List<object> _appended;
     protected Exception? _error;
+    protected IEventSequence _eventSequence;
 
     void Establish()
     {
-        _appended = [];
+        _appended = _serialized;
         _eventTypes = Substitute.For<IEventTypesStorage>();
         _eventTypes.HasFor(Arg.Any<EventTypeId>(), Arg.Any<EventTypeGeneration?>()).Returns(true);
         _eventTypes.GetDefinition("customer").Returns(new EventTypeDefinition("customer", EventTypeOwner.Client, false, [new(3, JsonSchema.FromJson("{\"type\":\"object\"}"))], []));
@@ -32,6 +37,7 @@ public class a_pinned_registration : a_webhook_registrar
         _manager.GetWebhookDefinitions().Returns([]);
         _grainFactory.GetGrain<IWebhooks>(Arg.Any<string>()).Returns(_manager);
         var sequence = AnEventSequenceThatAppendsSuccessfully();
+        _eventSequence = sequence;
         sequence.Append(Arg.Any<EventSourceId>(), Arg.Any<object>(), Arg.Any<CorrelationId>(), Arg.Any<IEnumerable<Causation>>(), Arg.Any<Identity>(), Arg.Any<IEnumerable<Tag>>(), Arg.Any<EventSourceType>(), Arg.Any<EventStreamType>(), Arg.Any<EventStreamId>())
             .Returns(call =>
             {
@@ -49,6 +55,52 @@ public class a_pinned_registration : a_webhook_registrar
             Target = new() { Url = "https://example.com/webhook" }
         };
     }
+
+    protected IEnumerable<ConcurrencyScope> ScopedAppends =>
+        _eventSequence.ReceivedCalls()
+            .Where(_ => _.GetMethodInfo().Name == nameof(IEventSequence.Append))
+            .SelectMany(_ => _.GetArguments().OfType<ConcurrencyScope>());
+
+    protected int AppendCount => _eventSequence.ReceivedCalls().Count(_ => _.GetMethodInfo().Name == nameof(IEventSequence.Append));
+
+    protected int UnscopedAppendCount => AppendCount - ScopedAppends.Count();
+
+    protected int LifecycleReads => _log.ReceivedCalls().Count(_ => _.GetMethodInfo().Name == nameof(Storage.EventSequences.IEventSequenceStorage.TryGetLastInstanceOfAny));
+
+    protected void ExistingWebhookWithFormat(WebhookDeliveryFormat format) =>
+        _manager.GetWebhookDefinitions().Returns([_definition.ToChronicle() with { DeliveryFormat = format }]);
+
+    protected void TheStoredRegistrationHasFormat(WebhookDeliveryFormat format)
+    {
+        var definition = _definition.ToChronicle();
+        _eventSerializer.Deserialize(Arg.Any<AppendedEvent>()).Returns(new WebhookAdded(
+            definition.Owner,
+            definition.EventSequenceId,
+            definition.EventTypes,
+            definition.Target.Url,
+            definition.Target.Headers,
+            definition.IsReplayable,
+            definition.IsActive)
+        {
+            DeliveryFormat = format
+        });
+    }
+
+    protected void TheScopedAppendFailsWithAConcurrencyViolation() =>
+        _eventSequence.Append(
+            Arg.Any<EventSourceType>(),
+            Arg.Any<EventSourceId>(),
+            Arg.Any<EventStreamType>(),
+            Arg.Any<EventStreamId>(),
+            Arg.Any<EventType>(),
+            Arg.Any<JsonObject>(),
+            Arg.Any<CorrelationId>(),
+            Arg.Any<IEnumerable<Causation>>(),
+            Arg.Any<Identity>(),
+            Arg.Any<IEnumerable<Tag>>(),
+            Arg.Any<ConcurrencyScope>(),
+            Arg.Any<DateTimeOffset?>(),
+            Arg.Any<Subject?>()).Returns(_ => AppendResult.Failed(CorrelationId.New(), new ConcurrencyViolation("webhook", EventSequenceNumber.BeforeFirst, EventSequenceNumber.First)));
 
     protected void ExistingDefinition(bool eventTypesChanged, bool modeChanged)
     {

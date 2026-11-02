@@ -45,6 +45,7 @@ using KernelCapturesService = KernelGrpc::Cratis.Chronicle.Services.Captures.Cap
 using KernelCaptureValidator = KernelCore::Cratis.Chronicle.Captures.Engine.CaptureValidator;
 using KernelComplianceService = KernelGrpc::Cratis.Chronicle.Services.Compliance.ComplianceService;
 using KernelConstraintsService = KernelGrpc::Cratis.Chronicle.Services.Events.Constraints.Constraints;
+using KernelEventSerializer = KernelCore::Cratis.Chronicle.EventSequences.EventSerializer;
 using KernelEventSourcesService = KernelGrpc::Cratis.Chronicle.Services.EventSources.EventSources;
 using KernelEventStoresService = KernelGrpc::Cratis.Chronicle.Services.EventStores.EventStores;
 using KernelEventTypeRegistrar = KernelCore::Cratis.Chronicle.EventTypes.EventTypeRegistrar;
@@ -432,5 +433,6 @@ internal sealed class TestingServices : IServices
             new KernelWebhookMediatorImpl(null!, jsonSerializerOptions),
             Options.Create(new KernelCore::Cratis.Chronicle.Configuration.ChronicleOptions()),
             storage,
+            new KernelEventSerializer(new EventSequences.InMemoryKernelEventTypes(), new ExpandoObjectConverter(new TypeFormats()), jsonSerializerOptions),
             NullLogger<KernelWebhookRegistrar>.Instance);
 }
