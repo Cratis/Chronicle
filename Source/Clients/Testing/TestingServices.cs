@@ -180,8 +180,7 @@ internal sealed class TestingServices : IServices
 
         _failedPartitions = new(() => new KernelFailedPartitionsService(storage));
 
-        var registrationGate = new KernelGrpc::Cratis.Chronicle.Services.Observation.ObserverRegistrationGate(
-            Options.Create(new KernelCore::Cratis.Chronicle.Configuration.ChronicleOptions()));
+        var registrationGate = new UnboundedObserverRegistrationGate();
 
         _reactors = new(() =>
             new KernelReactorsService(
@@ -438,4 +437,13 @@ internal sealed class TestingServices : IServices
             Options.Create(new KernelCore::Cratis.Chronicle.Configuration.ChronicleOptions()),
             storage,
             NullLogger<KernelWebhookRegistrar>.Instance);
+
+    sealed class UnboundedObserverRegistrationGate : KernelGrpc::Cratis.Chronicle.Services.Observation.IObserverRegistrationGate
+    {
+        public ValueTask<IDisposable> Enter(CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return ValueTask.FromResult(System.Reactive.Disposables.Disposable.Empty);
+        }
+    }
 }
