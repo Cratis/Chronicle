@@ -13,7 +13,7 @@ namespace Cratis.Chronicle.MongoDB.Integration.Setup.for_ReleasedAdmissionCompat
 /// Collectible load context that resolves every assembly strictly from one extracted image closure.
 /// </summary>
 /// <remarks>
-/// The closure is the union of explicitly supplied roots (for example the flattened <c>/app</c> publish and the
+/// The closure is the union of explicitly supplied roots (for example the flattened <c language="text">/app</c> publish and the
 /// selected shared framework directories of one image). Only the finite <see cref="SharedBcl"/> list crosses into the
 /// host context; everything else, including Microsoft.Extensions, Orleans, Mongo and Cratis assemblies, must resolve
 /// from the closure. Anything unresolved, conflicting or ambiguous throws; there is never a host fallback.
@@ -62,6 +62,7 @@ sealed class AdmissionLoadContext : AssemblyLoadContext
     /// Verifies that the requested type is either owned by this context or is a shared BCL type.
     /// </summary>
     /// <param name="type">The type to check.</param>
+    /// <exception cref="InvalidOperationException">The type is owned by neither this context nor the shared BCL.</exception>
     public void EnsureContained(Type type)
     {
         var assembly = type.Assembly;
@@ -85,6 +86,7 @@ sealed class AdmissionLoadContext : AssemblyLoadContext
     /// or the shared BCL list, without loading anything.
     /// </summary>
     /// <param name="rootAssemblyName">Simple name of the root assembly, which must be in the closure.</param>
+    /// <exception cref="FileNotFoundException">The root assembly is absent or its assembly references do not form a closed image closure.</exception>
     public void EnsureClosed(string rootAssemblyName)
     {
         if (!_managed.ContainsKey(rootAssemblyName))
@@ -305,7 +307,7 @@ sealed class AdmissionLoadContext : AssemblyLoadContext
                 }
 
                 var extension = info.Extension.ToLowerInvariant();
-                if (extension is ".so" or ".dylib" || (extension == ".dll" && !IsManaged(file)))
+                if (string.Equals(extension, ".so", StringComparison.Ordinal) || string.Equals(extension, ".dylib", StringComparison.Ordinal) || (extension == ".dll" && !IsManaged(file)))
                 {
                     Register(_native, info.Name, file, "native");
                 }

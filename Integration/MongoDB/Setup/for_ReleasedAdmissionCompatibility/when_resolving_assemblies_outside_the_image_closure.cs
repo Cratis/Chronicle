@@ -53,9 +53,9 @@ public class when_resolving_assemblies_outside_the_image_closure : Cratis.Specif
         _hostExtensionsError = Catch.Exception(() => _context.LoadFromAssemblyName(new AssemblyName("Microsoft.Extensions.Primitives")));
         _hostOrleansError = Catch.Exception(() => _context.LoadFromAssemblyName(typeof(IGrainFactory).Assembly.GetName()));
         _openClosureError = Catch.Exception(() => _context.EnsureClosed(typeof(ChronicleOptions).Assembly.GetName().Name!));
-        _conflictError = Catch.Exception(() => new AdmissionLoadContext("conflict", [_first, _second]));
-        _overlapError = Catch.Exception(() => new AdmissionLoadContext("overlap", [_first, _overlapping]));
-        _missingRootError = Catch.Exception(() => new AdmissionLoadContext("missing", [Path.Combine(_root, "absent")]));
+        _conflictError = Catch.Exception(() => new AdmissionLoadContext("conflict", [_first, _second]).Unload());
+        _overlapError = Catch.Exception(() => new AdmissionLoadContext("overlap", [_first, _overlapping]).Unload());
+        _missingRootError = Catch.Exception(() => new AdmissionLoadContext("missing", [Path.Combine(_root, "absent")]).Unload());
         _escapeError = Catch.Exception(() => _context.EnsureContained(typeof(ChronicleOptions)));
         _sharedTypeError = Catch.Exception(() => _context.EnsureContained(typeof(object)));
     }
