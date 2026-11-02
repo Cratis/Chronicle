@@ -26,7 +26,17 @@ internal static class ChangesetWriteOrder
     /// </returns>
     public static IReadOnlyList<IReadOnlyList<Change>>? SegmentsFor(IReadOnlyList<Change> changes)
     {
-        if (!changes.Any(change => change is Joined { HasKeyedFrom: true }) || !IsCovered(changes) || !HasDirectChangeOverlappingALaterJoin(changes))
+        if (!changes.Any(change => change is Joined { HasKeyedFrom: true }))
+        {
+            return null;
+        }
+
+        if (!IsCovered(changes))
+        {
+            return null;
+        }
+
+        if (!HasDirectChangeOverlappingALaterJoin(changes))
         {
             return null;
         }

@@ -54,14 +54,17 @@ public partial class InMemorySink
         }
 
         var keyedWrite = new KeyedWrite(key, keyValue, IsRejectedWatermarkWrite(keyValue, eventSequenceNumber, mode));
-        var state = changeset.InitialState.Clone();
+        StageKeyedChanges(staged, keyedWrite, changes, changeset.InitialState.Clone());
+        return staged;
+    }
+
+    void StageKeyedChanges(StagedWrite staged, KeyedWrite keyedWrite, IReadOnlyList<Change> changes, ExpandoObject state)
+    {
         var segments = ChangesetWriteOrder.SegmentsFor(changes) ?? [changes];
         for (var index = 0; index < segments.Count; index++)
         {
             state = StageSegment(staged, keyedWrite with { ContinuesEarlierSegment = index > 0 }, segments[index], state);
         }
-
-        return staged;
     }
 
     ExpandoObject StageSegment(StagedWrite staged, KeyedWrite keyedWrite, IReadOnlyList<Change> changes, ExpandoObject state)

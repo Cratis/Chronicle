@@ -54,10 +54,10 @@ public partial class InMemorySink
     static bool NeedsDetaching(object? value) => value is ExpandoObject or (IEnumerable and not string and not byte[]);
 
     static bool HoldsChild(ExpandoObject document, ChildRemovedFromAll childRemoved) =>
-        VisitChild(document, ChildrenPathOf(childRemoved), 0, childRemoved, remove: false);
+        VisitChild(document, childRemoved, remove: false);
 
     static void RemoveChildFromDocument(ExpandoObject document, ChildRemovedFromAll childRemoved) =>
-        VisitChild(document, ChildrenPathOf(childRemoved), 0, childRemoved, remove: true);
+        VisitChild(document, childRemoved, remove: true);
 
     static string[] ChildrenPathOf(ChildRemovedFromAll childRemoved) =>
         [.. childRemoved.ChildrenProperty.Segments.Select(_ => _.Value)];
@@ -65,39 +65,43 @@ public partial class InMemorySink
     /// <summary>
     /// Finds a child, and removes it when asked to, so deciding whether a published row is affected never changes it.
     /// </summary>
-    /// <param name="document">The document to look in.</param>
-    /// <param name="segments">The segments of the path to the children.</param>
-    /// <param name="index">The segment being visited.</param>
+    /// <param name="root">The document to look in.</param>
     /// <param name="childRemoved">The <see cref="ChildRemovedFromAll"/> identifying the child.</param>
     /// <param name="remove">Whether to remove the child when it is found.</param>
     /// <returns>True when the document holds the child.</returns>
-    static bool VisitChild(IDictionary<string, object?> document, string[] segments, int index, ChildRemovedFromAll childRemoved, bool remove)
+    static bool VisitChild(IDictionary<string, object?> root, ChildRemovedFromAll childRemoved, bool remove)
     {
-        if (index >= segments.Length || !document.TryGetValue(segments[index], out var value) || value is null)
-        {
-            return false;
-        }
+        var segments = ChildrenPathOf(childRemoved);
+        return VisitPath(root, 0);
 
-        if (index == segments.Length - 1)
+        bool VisitPath(IDictionary<string, object?> document, int index)
         {
-            return VisitChildCollection(value, childRemoved, remove);
-        }
-
-        if (value is IDictionary<string, object?> nested)
-        {
-            return VisitChild(nested, segments, index + 1, childRemoved, remove);
-        }
-
-        var found = false;
-        if (value is IEnumerable collection)
-        {
-            foreach (var item in collection.OfType<IDictionary<string, object?>>())
+            if (index >= segments.Length || !document.TryGetValue(segments[index], out var value) || value is null)
             {
-                found |= VisitChild(item, segments, index + 1, childRemoved, remove);
+                return false;
             }
-        }
 
-        return found;
+            if (index == segments.Length - 1)
+            {
+                return VisitChildCollection(value, childRemoved, remove);
+            }
+
+            if (value is IDictionary<string, object?> nested)
+            {
+                return VisitPath(nested, index + 1);
+            }
+
+            var found = false;
+            if (value is IEnumerable collection)
+            {
+                foreach (var item in collection.OfType<IDictionary<string, object?>>())
+                {
+                    found |= VisitPath(item, index + 1);
+                }
+            }
+
+            return found;
+        }
     }
 
     static bool VisitChildCollection(object value, ChildRemovedFromAll childRemoved, bool remove)
