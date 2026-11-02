@@ -5,9 +5,9 @@ using Cratis.Chronicle.Concepts.Security;
 
 namespace Cratis.Chronicle.Observation.Webhooks.Envelope.for_WebhookMediator.when_reading_a_result;
 
-public class with_managed_identity_and_receiver_text : given.a_batch_delivery
+public class with_a_managed_identity_target : given.a_batch_delivery
 {
-    const string Secret = "sentinel-token-secret";
+    const string Secret = "secret-token";
     WebhookDeliveryResult _result;
 
     void Establish()

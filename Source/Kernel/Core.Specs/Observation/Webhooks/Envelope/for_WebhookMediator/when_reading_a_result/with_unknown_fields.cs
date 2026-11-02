@@ -7,7 +7,7 @@ public class with_unknown_fields : given.a_batch_delivery
 {
     WebhookDeliveryResult _result;
 
-    void Establish() => _handler.ResponseBody = Result("success", 45, extra: ",\"future\":{\"nested\":[1,2]}").Replace("{\"results\":", "{\"futureTop\":true,\"results\":");
+    void Establish() => _handler.ResponseBody = Result("success", 45, extra: ",\"future\":{\"nested\":[1,2]},\"readModelState\":{\"ignored\":true}").Replace("{\"results\":", "{\"futureTop\":true,\"results\":");
 
     async Task Because() => _result = await _mediator.DeliverEnvelope(_request);
 
