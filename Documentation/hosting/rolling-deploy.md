@@ -73,6 +73,8 @@ set `Cratis:Chronicle:ApplicationVersion` (`Cratis__Chronicle__ApplicationVersio
 for each deployment. This client option is distinct from projection `SoftwareVersion`; if unset, it sends
 the entry-assembly version. A higher known application version owns the observer. A lower version remains
 connected in standby, without changing definitions or replaying, and emits a warning and recommendation.
+If it loses a concurrent registration race to a newer client, it never replays, but it may still overwrite the
+stored definition ([Cratis/Chronicle#5516](https://github.com/Cratis/Chronicle/issues/5516)).
 When the newer owner's last client disconnects, standby retries on keep-alive and can take over within
 `connectedClients:ownerCheckIntervalSeconds` plus `connectedClients:reviseIntervalSeconds` (default 30 + 2 = 32
 seconds). Lower `ownerCheckIntervalSeconds` for a faster takeover; each check reads the observer definition from storage.

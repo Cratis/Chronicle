@@ -35,6 +35,7 @@ public class a_reducer_grain_with_a_stored_definition : Specification
     protected Storage.IStorage _storage;
     protected ILogger<Reducer> _logger;
     protected DeliveryClock _clock;
+    protected INamespaces _namespaces;
 
     async Task Establish()
     {
@@ -57,7 +58,8 @@ public class a_reducer_grain_with_a_stored_definition : Specification
         _silo.AddService(_logger);
         _clock = new DeliveryClock();
         _silo.AddService<TimeProvider>(_clock);
-        _silo.AddProbe(_ => Substitute.For<INamespaces>());
+        _namespaces = Substitute.For<INamespaces>();
+        _silo.AddProbe(_ => _namespaces);
 
         _client = new ConnectedClient { ConnectionId = "the-connection", Version = "1.0.0" };
         _connectedClients = Substitute.For<IConnectedClients>();
@@ -85,6 +87,10 @@ public class a_reducer_grain_with_a_stored_definition : Specification
         // A fresh activation, as after losing the one the client registered with.
         _grain = await _silo.CreateGrainAsync<Reducer>(key.ToString());
     }
+
+    protected static Task SubscribeOn(IObserver observer) => observer.Subscribe<IReducerObserverSubscriber>(ObserverType.Reducer, Arg.Any<IEnumerable<EventType>>(), Arg.Any<SiloAddress>(), Arg.Any<object?>(), Arg.Any<bool>(), Arg.Any<ObserverFilters?>(), Arg.Any<bool>(), Arg.Any<bool>());
+
+    protected void TheNamespaceExists() => _namespaces.GetAll().Returns([EventStoreNamespaceName.Default]);
 
     protected Task WasSubscribed(ReducerDefinition definition) => _observer.Received(1).Subscribe<IReducerObserverSubscriber>(
         ObserverType.Reducer,

@@ -235,6 +235,11 @@ Chronicle compares their application versions. A higher known version takes owne
 in standby without overwriting the definition or replaying. The client stays connected. A warning and a
 recommendation identify the observer, both sequences and both versions.
 
+When a newer client already owns the observer, a lower version never writes its definition and never replays.
+If a lower version loses a concurrent registration race instead, it never replays, but it may still overwrite
+the stored definition. That remaining race is tracked in
+[Cratis/Chronicle#5516](https://github.com/Cratis/Chronicle/issues/5516).
+
 Each registration checks for an owner on another sequence on its first keep-alive and then at most once per
 `connectedClients:ownerCheckIntervalSeconds` (default 30 seconds). Keep-alives run every
 `connectedClients:reviseIntervalSeconds` (default 2 seconds); those in between read nothing from storage. A newer

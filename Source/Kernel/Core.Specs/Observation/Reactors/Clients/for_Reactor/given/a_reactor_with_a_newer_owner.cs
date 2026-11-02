@@ -2,6 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Concepts.Recommendations;
+using Cratis.Chronicle.Observation.States;
 using Cratis.Chronicle.Recommendations;
 using Cratis.Chronicle.Storage.Observation;
 using Microsoft.Extensions.Logging;
@@ -34,6 +36,8 @@ public class a_reactor_with_a_newer_owner : a_reactor_grain_with_a_stored_defini
         _recommendations = Substitute.For<IRecommendationsManager>();
         _silo.AddProbe(_ => _recommendations);
     }
+
+    protected static Task<RecommendationId> ReplayRecommendedOn(IRecommendationsManager recommendations) => recommendations.Add<IReplayCandidateRecommendation, ReplayCandidateRequest>(Arg.Any<RecommendationDescription>(), Arg.Any<ReplayCandidateRequest>());
 
     protected bool Subscribed => (bool)typeof(Reactor).GetField("_subscribed", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.GetValue(_grain)!;
 

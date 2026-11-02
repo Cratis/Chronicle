@@ -77,18 +77,43 @@ public class Reactor(
             return;
         }
 
-        var compareResult = await reactorDefinitionComparer.Compare(key, State, definition);
+        var previousDefinition = State;
+        var compareResult = await reactorDefinitionComparer.Compare(key, previousDefinition, definition);
 
+        // The definition is written before the observer is subscribed, so that replay, recovery and delivery never see a missing
+        // or stale definition. A replay or recommendation is only issued once the observer accepted the subscription: a client that
+        // loses the race to a newer client version must not schedule one for a definition that never took effect. The stored definition
+        // can still be overwritten when two registrations race on different event sequences (https://github.com/Cratis/Chronicle/issues/5516).
         State = definition;
-        await WriteStateAsync();
-
-        if (compareResult == ReactorDefinitionCompareResult.Different)
+        bool refusedByNewerOwner;
+        try
         {
-            if (_subscribed)
+            await WriteStateAsync();
+
+            if (compareResult == ReactorDefinitionCompareResult.Different && _subscribed)
             {
                 await _observer!.Unsubscribe();
                 _subscribed = false;
             }
+
+            refusedByNewerOwner = !_subscribed && await SubscribeToObserver(key, definition, connectedClient);
+        }
+        catch (Exception)
+        {
+            // The registration did not take effect; a retry must compare against what was registered before.
+            State = previousDefinition;
+            throw;
+        }
+
+        if (refusedByNewerOwner)
+        {
+            // Standby: taking over later registers again and then detects the change.
+            State = previousDefinition;
+            return;
+        }
+
+        if (compareResult == ReactorDefinitionCompareResult.Different)
+        {
             var namespaceNames = (await GrainFactory.GetGrain<INamespaces>(key.EventStore).GetAll()).ToList();
 
             // Schedule replay as a separate grain turn so that SetDefinition() returns immediately,
@@ -101,11 +126,6 @@ public class Reactor(
             {
                 await AddReplayRecommendationForAllNamespaces(key, namespaceNames);
             }
-        }
-
-        if (!_subscribed)
-        {
-            await SubscribeToObserver(key, definition, connectedClient);
         }
     }
 
@@ -282,7 +302,7 @@ public class Reactor(
         logger.WaitingForWebhook(_observerKey!.ObserverId);
     }
 
-    async Task SubscribeToObserver(ReactorKey key, ReactorDefinition definition, ConnectedClient connectedClient)
+    async Task<bool> SubscribeToObserver(ReactorKey key, ReactorDefinition definition, ConnectedClient connectedClient)
     {
         _observer = GrainFactory.GetGrain<IObserver>(key);
         var eventTypes = definition.EventTypes.Select(e => e.EventType).ToArray();
@@ -320,11 +340,14 @@ public class Reactor(
         catch (ObserverOwnedByNewerClientVersion exception)
         {
             await EnterStandby(definition, new(RegistrationPrecedenceOutcome.OwnerIsNewer, exception.OwnerSequence, exception.OwnerVersion), exception.IncomingVersion);
+            return true;
         }
         catch (ObserverServedByAnotherTransport)
         {
             WaitForWebhook();
         }
+
+        return false;
     }
 
     async Task ReplayForAllNamespaces(ReactorKey key, IEnumerable<EventStoreNamespaceName> namespaces)

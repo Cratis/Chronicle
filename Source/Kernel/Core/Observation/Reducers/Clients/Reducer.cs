@@ -82,29 +82,51 @@ public class Reducer(
         var previousDefinition = State;
         var compareResult = await reducerDefinitionComparer.Compare(key, previousDefinition, definition);
 
+        // The definition is written before the observer is subscribed, so that replay, recovery and the reducer pipeline never see a
+        // missing or stale definition. An evolution (replay or recommendation) is only issued once the observer accepted the subscription:
+        // a client that loses the race to a newer client version must not schedule one for a definition that never took effect.
+        // The stored definition can still be overwritten when two registrations race on different event sequences (https://github.com/Cratis/Chronicle/issues/5516).
         State = definition;
-        await WriteStateAsync();
-
-        if (compareResult == ReducerDefinitionCompareResult.Different)
+        var refusedByNewerOwner = false;
+        try
         {
-            if (_subscribed)
+            await WriteStateAsync();
+
+            if (compareResult == ReducerDefinitionCompareResult.Different && _subscribed)
             {
                 await _observer.Unsubscribe();
                 _subscribed = false;
             }
+
+            if (!_subscribed && definition.IsActive)
+            {
+                refusedByNewerOwner = await SubscribeToObserver(key, definition, connectedClient);
+            }
+            else if (_subscribed && !definition.IsActive)
+            {
+                await _observer.Unsubscribe();
+                _subscribed = false;
+            }
+        }
+        catch (Exception)
+        {
+            // The registration did not take effect; a retry must compare against what was registered before.
+            State = previousDefinition;
+            throw;
+        }
+
+        if (refusedByNewerOwner)
+        {
+            // Standby: taking over later registers again and then detects the change.
+            State = previousDefinition;
+            return;
+        }
+
+        if (compareResult == ReducerDefinitionCompareResult.Different)
+        {
             var namespaceNames = (await GrainFactory.GetGrain<INamespaces>(key.EventStore).GetAll()).ToList();
 
             await EvolveForAllNamespaces(key, namespaceNames, previousDefinition, definition);
-        }
-
-        if (!_subscribed && definition.IsActive)
-        {
-            await SubscribeToObserver(key, definition, connectedClient);
-        }
-        else if (_subscribed && !definition.IsActive)
-        {
-            await _observer.Unsubscribe();
-            _subscribed = false;
         }
     }
 
@@ -294,7 +316,7 @@ public class Reducer(
         logger.WaitingForWebhook(_observerKey!.ObserverId);
     }
 
-    async Task SubscribeToObserver(ReducerKey key, ReducerDefinition definition, ConnectedClient connectedClient)
+    async Task<bool> SubscribeToObserver(ReducerKey key, ReducerDefinition definition, ConnectedClient connectedClient)
     {
         _observer = GrainFactory.GetGrain<IObserver>(new ObserverKey(key.ReducerId, key.EventStore, key.Namespace, key.EventSequenceId));
 
@@ -326,11 +348,14 @@ public class Reducer(
         catch (ObserverOwnedByNewerClientVersion exception)
         {
             await EnterStandby(definition, new(RegistrationPrecedenceOutcome.OwnerIsNewer, exception.OwnerSequence, exception.OwnerVersion), exception.IncomingVersion);
+            return true;
         }
         catch (ObserverServedByAnotherTransport)
         {
             WaitForWebhook();
         }
+
+        return false;
     }
 
     async Task EvolveForAllNamespaces(

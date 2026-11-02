@@ -37,6 +37,7 @@ public class a_reactor_grain_with_a_stored_definition : Specification
     protected Storage.IStorage _storage;
     protected ILogger<Reactor> _logger;
     protected DeliveryClock _clock;
+    protected INamespaces _namespaces;
 
     async Task Establish()
     {
@@ -60,7 +61,8 @@ public class a_reactor_grain_with_a_stored_definition : Specification
         _clock = new DeliveryClock();
         _silo.AddService<TimeProvider>(_clock);
 
-        _silo.AddProbe(_ => Substitute.For<INamespaces>());
+        _namespaces = Substitute.For<INamespaces>();
+        _silo.AddProbe(_ => _namespaces);
 
         _client = new ConnectedClient { ConnectionId = TheConnection, Version = "1.0.0" };
         _connectedClients = Substitute.For<IConnectedClients>();
@@ -87,6 +89,10 @@ public class a_reactor_grain_with_a_stored_definition : Specification
         // A fresh activation, as after losing the one the client registered with.
         _grain = await _silo.CreateGrainAsync<Reactor>(key.ToString());
     }
+
+    protected static Task SubscribeOn(IObserver observer) => observer.Subscribe<IReactorObserverSubscriber>(ObserverType.Reactor, Arg.Any<IEnumerable<EventType>>(), Arg.Any<SiloAddress>(), Arg.Any<object?>(), Arg.Any<bool>(), Arg.Any<ObserverFilters?>(), Arg.Any<bool>(), Arg.Any<bool>());
+
+    protected void TheNamespaceExists() => _namespaces.GetAll().Returns([EventStoreNamespaceName.Default]);
 
     protected Task WasSubscribed(ReactorDefinition definition) => _observer.Received(1).Subscribe<IReactorObserverSubscriber>(
         ObserverType.Reactor,
