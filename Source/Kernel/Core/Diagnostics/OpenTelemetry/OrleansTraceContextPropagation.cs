@@ -21,7 +21,8 @@ public sealed class OrleansTraceContextPropagation : IHostedService, IDisposable
         _listener = new ActivityListener
         {
             ShouldListenTo = source => source.Name.Equals(OrleansActivitySources.Runtime, StringComparison.Ordinal) || source.Name.Equals(OrleansActivitySources.Application, StringComparison.Ordinal),
-            Sample = Sample
+            Sample = Sample,
+            ActivityStarted = DoNotRequestAllData
         };
         ActivitySource.AddActivityListener(_listener);
         return Task.CompletedTask;
@@ -41,6 +42,14 @@ public sealed class OrleansTraceContextPropagation : IHostedService, IDisposable
         _listener = null;
     }
 
+    /// <summary>
+    /// Withdraws the all-data request ActivitySource sets for AllDataAndRecorded, so Orleans' grain call filter does not
+    /// format grain ids and exception strings for carriers that are never exported. The Recorded flag lives on the
+    /// trace flags, so propagation and downstream sampling are unaffected.
+    /// </summary>
+    /// <param name="activity">The started carrier <see cref="Activity"/>.</param>
+    static void DoNotRequestAllData(Activity activity) => activity.IsAllDataRequested = false;
+
     static ActivitySamplingResult Sample(ref ActivityCreationOptions<ActivityContext> options)
     {
         var parent = options.Parent;
@@ -48,7 +57,8 @@ public sealed class OrleansTraceContextPropagation : IHostedService, IDisposable
         // Orleans 10.4 ActivityPropagationGrainCallFilter only injects context if StartActivity succeeds.
         // Do not create root activities for system calls. For sampled parents, AllDataAndRecorded is
         // required: ActivitySource otherwise clears Recorded, and ParentBased drops callee kernel spans.
-        // OpenTelemetry does not listen to these sources, so these carrier activities are not exported.
+        // All-data is withdrawn again in ActivityStarted. OpenTelemetry does not listen to these sources,
+        // so these carrier activities are not exported.
         if (parent.TraceId == default) return ActivitySamplingResult.None;
 
         return parent.TraceFlags.HasFlag(ActivityTraceFlags.Recorded)

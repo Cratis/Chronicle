@@ -18,7 +18,7 @@ public class and_orleans_tracing_is_not_requested : Specification
 
     void Establish()
     {
-        _provider = Sdk.CreateTracerProviderBuilder().AddChronicleInstrumentation().Build();
+        _provider = Sdk.CreateTracerProviderBuilder().AddChronicleInstrumentation(false).Build();
         _orleans = new("Microsoft.Orleans.Application");
     }
 

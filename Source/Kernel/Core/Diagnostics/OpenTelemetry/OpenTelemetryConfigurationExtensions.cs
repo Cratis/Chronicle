@@ -36,18 +36,21 @@ public static class OpenTelemetryConfigurationExtensions
     }
 
     /// <summary>
-    /// Add Chronicle instrumentation to the <see cref="TracerProviderBuilder"/>.
+    /// Add Chronicle instrumentation to the <see cref="TracerProviderBuilder"/>, including the Orleans runtime and grain-call sources.
     /// </summary>
+    /// <remarks>
+    /// Orleans spans are off by default only in <see cref="AddChronicleTelemetry"/>; this overload keeps including them.
+    /// </remarks>
     /// <param name="builder">The <see cref="TracerProviderBuilder"/> to add to.</param>
     /// <returns>The <see cref="TracerProviderBuilder"/> for continuation.</returns>
     public static TracerProviderBuilder AddChronicleInstrumentation(this TracerProviderBuilder builder) =>
-        builder.AddChronicleInstrumentation(false);
+        builder.AddChronicleInstrumentation(true);
 
     /// <summary>
     /// Add Chronicle instrumentation, optionally including Orleans runtime and grain-call spans.
     /// </summary>
     /// <param name="builder">The <see cref="TracerProviderBuilder"/> to add to.</param>
-    /// <param name="orleansTracing">Whether to export Orleans spans. Defaults to false in kernel configuration.</param>
+    /// <param name="orleansTracing">Whether to export Orleans spans. <see cref="AddChronicleTelemetry"/> passes the kernel configuration value, which defaults to false.</param>
     /// <returns>The <see cref="TracerProviderBuilder"/> for continuation.</returns>
     public static TracerProviderBuilder AddChronicleInstrumentation(this TracerProviderBuilder builder, bool orleansTracing)
     {
