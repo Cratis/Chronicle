@@ -88,7 +88,7 @@ public class a_registration : Specification
             ConnectionId = connectionId,
             EventStore = "store",
             Namespace = "namespace",
-            Reducer = new Contracts.Observation.Reducers.ReducerDefinition { ReducerId = "reducer", EventSequenceId = "event-log", ReadModel = "model" }
+            Reducer = new ReducerDefinition { ReducerId = "reducer", EventSequenceId = "event-log", ReadModel = "model" }
         })));
     }
 

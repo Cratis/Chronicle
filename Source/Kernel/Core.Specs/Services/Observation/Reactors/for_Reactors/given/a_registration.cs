@@ -68,7 +68,7 @@ public class a_registration : Specification
             ConnectionId = connectionId,
             EventStore = "store",
             Namespace = "namespace",
-            Reactor = new Contracts.Observation.Reactors.ReactorDefinition { ReactorId = "reactor", EventSequenceId = "event-log" }
+            Reactor = new ReactorDefinition { ReactorId = "reactor", EventSequenceId = "event-log" }
         })));
     }
 
