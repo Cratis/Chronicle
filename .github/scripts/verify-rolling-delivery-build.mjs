@@ -61,7 +61,9 @@ assert.equal(existsSync(deniedPack), false, 'denied Pack created its output dire
 const normalPublish = path.join(output, 'normal-publish');
 const normalPack = path.join(output, 'normal-pack');
 check('normal parent Publish succeeds', [...noBuild, '-p:IsPublishable=true', `-p:PublishDir=${normalPublish}${path.sep}`], '', { target: 'Publish', project: parent });
-check('normal parent Pack succeeds', [...noBuild, '-p:IsPackable=true', `-p:PackageOutputPath=${normalPack}`], '', { target: 'Pack', project: parent });
+// The probe packs one framework of a multi-framework package, so NuGet's framework-completeness warning (NU5128)
+// is expected; NoBuild means no compiler warnings are involved. The probe only proves a normal Pack is allowed.
+check('normal parent Pack succeeds', [...noBuild, '-p:IsPackable=true', '-p:TreatWarningsAsErrors=false', `-p:PackageOutputPath=${normalPack}`], '', { target: 'Pack', project: parent });
 assert.ok(existsSync(path.join(normalPublish, 'Cratis.Chronicle.dll')), 'normal parent Publish did not copy its client reference');
 assert.ok(readdirSync(normalPack).some(file => file.endsWith('.nupkg')), 'normal parent Pack did not produce a package');
 check('server Publish with diagnostics denied', [...enabled, ...noBuild, '-p:IsPublishable=true'], 'cannot be packed, published or put in an image (Server)', { target: 'Publish', project: 'Source/Kernel/Server/Server.csproj' });
