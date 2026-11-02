@@ -376,6 +376,7 @@ json Cratis.Chronicle.Concepts.Observation.Reactors.ReactorDefinition
   identifier: Cratis.Chronicle.Concepts.Observation.Reactors.ReactorId
   isReplayable: bool
   owner: Cratis.Chronicle.Concepts.Observation.Reactors.ReactorOwner
+  programIdentifier: Cratis.Chronicle.Concepts.Observation.Registrations.ProgramIdentifier
   startAtTail: bool
   tags: System.Collections.Generic.IEnumerable<string>
 concept Cratis.Chronicle.Concepts.Observation.Reactors.ReactorId : string
@@ -391,9 +392,11 @@ json Cratis.Chronicle.Concepts.Observation.Reducers.ReducerDefinition
   hash: string
   identifier: Cratis.Chronicle.Concepts.Observation.Reducers.ReducerId
   isActive: bool
+  programIdentifier: Cratis.Chronicle.Concepts.Observation.Registrations.ProgramIdentifier
   readModel: Cratis.Chronicle.Concepts.ReadModels.ReadModelIdentifier
   tags: System.Collections.Generic.IEnumerable<string>
 concept Cratis.Chronicle.Concepts.Observation.Reducers.ReducerId : string
+concept Cratis.Chronicle.Concepts.Observation.Registrations.ProgramIdentifier : string
 json Cratis.Chronicle.Concepts.Observation.Replaying.ReplayCandidateReason
   type: Cratis.Chronicle.Concepts.Observation.Replaying.ReplayCandidateReasonType
 concept Cratis.Chronicle.Concepts.Observation.Replaying.ReplayCandidateReasonType : string
