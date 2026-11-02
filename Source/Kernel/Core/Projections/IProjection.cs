@@ -40,6 +40,11 @@ public interface IProjection : IGrainWithStringKey
     /// </summary>
     /// <param name="subscriber"><see cref="INotifyProjectionDefinitionsChanged"/> to subscribe.</param>
     /// <returns>Awaitable task.</returns>
+    /// <remarks>
+    /// This may interleave with an in-flight <see cref="SetDefinition"/> so that a subscriber's activation never waits on a definition
+    /// change that is notifying it. The observer set is copy-on-write while a notification is in progress.
+    /// </remarks>
+    [AlwaysInterleave]
     Task SubscribeDefinitionsChanged(INotifyProjectionDefinitionsChanged subscriber);
 
     /// <summary>
@@ -47,6 +52,11 @@ public interface IProjection : IGrainWithStringKey
     /// </summary>
     /// <param name="subscriber"><see cref="INotifyProjectionDefinitionsChanged"/> to subscribe.</param>
     /// <returns>Awaitable task.</returns>
+    /// <remarks>
+    /// This may interleave with an in-flight <see cref="SetDefinition"/> so that a subscriber's deactivation never waits on a definition
+    /// change that is notifying it. The observer set is copy-on-write while a notification is in progress.
+    /// </remarks>
+    [AlwaysInterleave]
     Task UnsubscribeDefinitionsChanged(INotifyProjectionDefinitionsChanged subscriber);
 
     /// <summary>
