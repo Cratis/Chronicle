@@ -17,6 +17,12 @@ public class Jobs
     public int? MaxParallelSteps { get; init; }
 
     /// <summary>
+    /// Gets the step budget for silos without the Jobs role.
+    /// Defaults to one quarter of the effective maximum, but never less than one.
+    /// </summary>
+    public int? MaxParallelStepsWithoutJobsRole { get; init; }
+
+    /// <summary>
     /// Gets the time threshold for considering a job as dead in the water.
     /// Jobs in preparation state with no steps that were created before this threshold are candidates for cleanup.
     /// Defaults to 1 hour.
@@ -67,4 +73,15 @@ public class Jobs
     /// </summary>
     /// <returns>The maximum parallel steps value.</returns>
     public int GetEffectiveMaxParallelSteps() => MaxParallelSteps ?? Math.Max(1, Environment.ProcessorCount - 1);
+
+    /// <summary>
+    /// Gets the effective step budget for the local silo, including the observer partition cap.
+    /// </summary>
+    /// <param name="hasJobsRole">Whether the local silo has the Jobs role.</param>
+    /// <param name="maxConcurrentPartitions">The observer partition cap.</param>
+    /// <returns>The local maximum number of parallel steps.</returns>
+    public int GetEffectiveMaxParallelSteps(bool hasJobsRole, int maxConcurrentPartitions) =>
+        Math.Min(
+            hasJobsRole ? GetEffectiveMaxParallelSteps() : MaxParallelStepsWithoutJobsRole ?? Math.Max(1, GetEffectiveMaxParallelSteps() / 4),
+            maxConcurrentPartitions);
 }

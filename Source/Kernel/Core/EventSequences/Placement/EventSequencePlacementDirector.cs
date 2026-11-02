@@ -1,37 +1,26 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Configuration;
-using Microsoft.Extensions.Options;
+using Cratis.Chronicle.Cluster;
 using Orleans.Runtime.Placement;
 
 namespace Cratis.Chronicle.EventSequences.Placement;
 
 /// <summary>
-/// Represents a placement director for event sequences that respects the Clustering configuration.
+/// Places event sequence grains on compatible silos with the role, or with unknown roles.
 /// </summary>
-/// <param name="options">Chronicle options containing clustering configuration.</param>
-/// <param name="localSiloDetails">Details about the local silo used to exclude it from candidates when it does not support event sequences.</param>
-public class EventSequencePlacementDirector(IOptions<ChronicleOptions> options, ILocalSiloDetails localSiloDetails) : IPlacementDirector
+/// <param name="eligibility">The role eligibility selector.</param>
+public class EventSequencePlacementDirector(IRoleEligibility eligibility) : IPlacementDirector
 {
     /// <inheritdoc/>
+    /// <exception cref="InvalidOperationException">No compatible silo has or may have the EventSequences role.</exception>
     public Task<SiloAddress> OnAddActivation(PlacementStrategy strategy, PlacementTarget target, IPlacementContext context)
     {
-        IEnumerable<SiloAddress> candidates = context.GetCompatibleSilos(target);
-
-        if (!options.Value.Clustering.Roles.EventSequences)
-        {
-            // This silo is not configured to host event sequence grains. Exclude it from the
-            // candidate list so the grain is placed on a silo that is configured as an event
-            // sequence host. In a single-silo deployment every silo is also an event sequence
-            // host, so this path is never reached and no candidates are lost.
-            candidates = candidates.Where(s => s != localSiloDetails.SiloAddress);
-        }
-
-        var selected = candidates.OrderBy(_ => Random.Shared.Next()).FirstOrDefault()
+        var eligible = eligibility.Select(context.GetCompatibleSilos(target), roles => roles.EventSequences, includeLackingRole: false);
+        var selected = eligible.Silos.OrderBy(_ => Random.Shared.Next()).FirstOrDefault()
             ?? throw new InvalidOperationException(
-                "No event-sequence-capable silos are available for event sequence grain placement. " +
-                "Ensure at least one silo has EventSequences enabled in its Clustering configuration.");
+                "No silo has the EventSequences role or unknown roles for event sequence grain placement; " +
+                "enable Cratis:Chronicle:Clustering:Roles:EventSequences on at least one compatible silo.");
 
         return Task.FromResult(selected);
     }

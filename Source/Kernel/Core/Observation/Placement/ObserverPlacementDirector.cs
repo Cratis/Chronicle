@@ -1,47 +1,36 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Configuration;
+using Cratis.Chronicle.Cluster;
 using Cratis.Chronicle.Releases;
-using Microsoft.Extensions.Options;
 using Orleans.Runtime.Placement;
 
 namespace Cratis.Chronicle.Observation.Placement;
 
 /// <summary>
-/// Represents a placement director for observers that respects the Clustering configuration.
+/// Places observer grains on compatible silos with the role, or with unknown roles.
 /// </summary>
-/// <param name="options">Chronicle options containing clustering configuration.</param>
-/// <param name="localSiloDetails">Details about the local silo used to exclude it from candidates when it does not support observers.</param>
+/// <param name="eligibility">The role eligibility selector.</param>
 /// <param name="clusterReleases">The published kernel releases used to avoid older silos during a rollout.</param>
 /// <remarks>
-/// In a mixed-release cluster observers prefer silos at least as new as this one, so older silos do not
-/// receive subscriber types they cannot load. If no such observer host exists, existing placement is preserved.
+/// The role is a hard constraint: only silos with the Observers role, or with unknown roles, are candidates.
+/// Among those, in a mixed-release cluster observers prefer silos at least as new as this one, so older silos do not
+/// receive subscriber types they cannot load. If no such observer host exists, the role-eligible silos are used.
 /// </remarks>
-public class ObserverPlacementDirector(IOptions<ChronicleOptions> options, ILocalSiloDetails localSiloDetails, IClusterReleases clusterReleases) : IPlacementDirector
+public class ObserverPlacementDirector(IRoleEligibility eligibility, IClusterReleases clusterReleases) : IPlacementDirector
 {
     /// <inheritdoc/>
+    /// <exception cref="InvalidOperationException">No compatible silo has or may have the Observers role.</exception>
     public Task<SiloAddress> OnAddActivation(PlacementStrategy strategy, PlacementTarget target, IPlacementContext context)
     {
-        IEnumerable<SiloAddress> candidates = context.GetCompatibleSilos(target);
-
-        if (!options.Value.Clustering.Roles.Observers)
-        {
-            // This silo is not configured to host observer grains. Exclude it from the candidate
-            // list so the grain is placed on a silo that is configured as an observer host.
-            // In a single-silo deployment every silo is also an observer host, so this path
-            // is never reached and no candidates are lost.
-            candidates = candidates.Where(s => s != localSiloDetails.SiloAddress);
-        }
-
-        candidates = candidates.ToArray();
-        var preferred = clusterReleases.AtLeastAsNewAsThisSilo(candidates);
-        if (preferred.Count > 0) candidates = preferred;
+        var eligible = eligibility.Select(context.GetCompatibleSilos(target), roles => roles.Observers, includeLackingRole: false).Silos;
+        var preferred = clusterReleases.AtLeastAsNewAsThisSilo(eligible);
+        IEnumerable<SiloAddress> candidates = preferred.Count > 0 ? preferred : eligible;
 
         var selected = candidates.OrderBy(_ => Random.Shared.Next()).FirstOrDefault()
             ?? throw new InvalidOperationException(
-                "No observer-capable silos are available for observer grain placement. " +
-                "Ensure at least one silo has Observers enabled in its Clustering configuration.");
+                "No silo has the Observers role or unknown roles for observer grain placement; " +
+                "enable Cratis:Chronicle:Clustering:Roles:Observers on at least one compatible silo.");
 
         return Task.FromResult(selected);
     }
