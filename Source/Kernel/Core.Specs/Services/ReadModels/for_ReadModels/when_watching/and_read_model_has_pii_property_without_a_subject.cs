@@ -64,7 +64,7 @@ public class and_read_model_has_pii_property_without_a_subject : given.all_depen
     async Task Because()
     {
         _service.Watch(
-            new WatchRequest { EventStore = "test-store", ReadModelIdentifier = "test-read-model" },
+            new WatchRequest { EventStore = "test-store", Namespace = "test-namespace", ReadModelIdentifier = "test-read-model" },
             default).Subscribe(_ => { });
 
         var forwarder = await _forwarderCaptured.Task.WaitAsync(TimeSpan.FromSeconds(5));

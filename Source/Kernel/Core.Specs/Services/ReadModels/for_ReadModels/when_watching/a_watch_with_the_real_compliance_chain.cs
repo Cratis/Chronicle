@@ -93,7 +93,7 @@ public class a_watch_with_the_real_compliance_chain : given.all_dependencies
     protected async Task Push(JsonObject document, ReadModelChangeContext change)
     {
         _service.Watch(
-            new WatchRequest { EventStore = "test-store", ReadModelIdentifier = "test-read-model" },
+            new WatchRequest { EventStore = "test-store", Namespace = "test-namespace", ReadModelIdentifier = "test-read-model" },
             default).Subscribe(_emitted.Add);
 
         var forwarder = await _forwarderCaptured.Task.WaitAsync(TimeSpan.FromSeconds(5));

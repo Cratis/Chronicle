@@ -72,7 +72,7 @@ public class ProjectionObserverSubscriber(
         // Direct grain-to-observer notification — the previous Orleans MemoryStreams pub-sub
         // propagated subscribers to the producer's PullingAgent on a periodic refresh that
         // could lag the first publish and silently drop it under load.
-        _changesetNotifier = GrainFactory.GetGrain<IProjectionChangesetNotifier>(_key.ObserverId);
+        _changesetNotifier = GrainFactory.GetGrain<IProjectionChangesetNotifier>(new ProjectionChangesetNotifierKey(_key.ObserverId, _key.EventStore, _key.Namespace));
 
         var projection = GrainFactory.GetGrain<IProjection>(new ProjectionKey(_key.ObserverId, _key.EventStore));
         await projection.SubscribeDefinitionsChanged(this.AsReference<INotifyProjectionDefinitionsChanged>());
