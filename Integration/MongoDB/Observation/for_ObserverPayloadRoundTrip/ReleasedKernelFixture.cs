@@ -84,11 +84,34 @@ public sealed class ReleasedKernelFixture : IAsyncDisposable
     /// Starts the database and released kernel.
     /// </summary>
     /// <returns>The asynchronous operation.</returns>
+    /// <exception cref="ReleasedKernelNotReady">The released kernel did not become ready within the readiness timeout.</exception>
     public async Task Start()
     {
         await _network.CreateAsync();
         await _mongoDB.StartAsync();
-        await _kernel.StartAsync();
+        try
+        {
+            await _kernel.StartAsync();
+        }
+        catch (TimeoutException ex)
+        {
+            throw await DescribeReadinessFailure(ex);
+        }
+    }
+
+    async Task<ReleasedKernelNotReady> DescribeReadinessFailure(TimeoutException timeout)
+    {
+        // The waits run in order, so the first one still unsatisfied is the one that timed out.
+        var healthy = await new HttpsHealthWait(35000).UntilAsync(_kernel);
+        var activeWait = healthy ? "persisted kernel observer (ReleasedObserverReadyWait)" : "HTTPS /health on 35000 (HttpsHealthWait)";
+        var (stdout, stderr) = await _kernel.GetLogsAsync();
+        return new ReleasedKernelNotReady(activeWait, _kernel.State.ToString(), Tail(stdout), Tail(stderr), timeout);
+    }
+
+    static string Tail(string log)
+    {
+        var lines = log.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+        return string.Join('\n', lines.TakeLast(40));
     }
 
     internal static void ReserveKernelPorts(CreateContainerParameters parameters)

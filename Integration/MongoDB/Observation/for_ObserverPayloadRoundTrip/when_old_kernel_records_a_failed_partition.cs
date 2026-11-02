@@ -44,7 +44,7 @@ public class when_old_kernel_records_a_failed_partition : Cratis.Specifications.
     [Fact] void should_record_a_failure_attempt() => _failedPartition["attempts"].AsBsonArray.ShouldNotBeEmpty();
     [Fact] void should_not_fail_the_successfully_handled_partition() => _successfulPartitionFailed.ShouldBeFalse();
 
-    async Task Cleanup()
+    async Task Destroy()
     {
         if (_fixture is not null) await _fixture.DisposeAsync();
     }
