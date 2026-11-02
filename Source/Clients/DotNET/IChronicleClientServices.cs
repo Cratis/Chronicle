@@ -11,6 +11,10 @@ namespace Cratis.Chronicle;
 /// <remarks>
 /// Implementations must have a public parameterless constructor. Registrations apply only to the client container,
 /// not to the kernel or to the private containers used by testing.
+/// <para>
+/// Implementations must be idempotent: they run on every client registration, and a host may register the client more
+/// than once in the same container. Check for an existing registration before adding one.
+/// </para>
 /// </remarks>
 public interface IChronicleClientServices
 {
@@ -18,5 +22,6 @@ public interface IChronicleClientServices
     /// Add services to the client container.
     /// </summary>
     /// <param name="services">The client service collection.</param>
+    /// <remarks>Called on every client registration; repeated calls on the same collection must not add duplicates.</remarks>
     void Configure(IServiceCollection services);
 }
