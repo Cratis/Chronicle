@@ -12,6 +12,7 @@ namespace Cratis.Chronicle.Benchmarks;
 public class BenchmarkReactor : IReactor
 {
     static int _totalEventsProcessed;
+    static volatile bool _countDeliveries;
 
     int _eventsProcessed;
 
@@ -20,6 +21,17 @@ public class BenchmarkReactor : IReactor
     /// so only a process-wide count reflects deliveries.
     /// </summary>
     public static int TotalEventsProcessed => Volatile.Read(ref _totalEventsProcessed);
+
+    /// <summary>
+    /// Gets or sets a value indicating whether deliveries are counted in <see cref="TotalEventsProcessed"/>.
+    /// Off by default so benchmarks that only append keep their existing per-event cost; only
+    /// <see cref="ReactorLiveInterleaveBenchmark"/> turns it on.
+    /// </summary>
+    public static bool CountDeliveries
+    {
+        get => _countDeliveries;
+        set => _countDeliveries = value;
+    }
 
     /// <summary>
     /// Gets the number of benchmark events processed by the reactor.
@@ -38,7 +50,11 @@ public class BenchmarkReactor : IReactor
         _ = context;
 
         Interlocked.Increment(ref _eventsProcessed);
-        Interlocked.Increment(ref _totalEventsProcessed);
+        if (_countDeliveries)
+        {
+            Interlocked.Increment(ref _totalEventsProcessed);
+        }
+
         return Task.CompletedTask;
     }
 }

@@ -14,11 +14,12 @@ namespace Cratis.Chronicle.Benchmarks;
 /// <remarks>
 /// <para>
 /// The measured window covers appending 1000 events in transactions of 100 and the reactor handling every event live.
-/// The only registered observer is <see cref="BenchmarkReactor"/>. With one event source there is one partition run per
-/// transaction; with ten round-robin sources every run is one event long, matching the shape of issue #5473.
+/// The only registered observer is <see cref="BenchmarkReactor"/>. With one event source there is at most one partition run
+/// per transaction; with ten round-robin sources every run is one event long, matching the shape of issue #5473.
 /// </para>
 /// <para>
-/// The measured time includes waiting for completion, so it has a fixed floor that does not depend on how little
+/// The measured time includes the ten sequential append round trips and waiting for completion, so events per second
+/// is not reactor throughput alone, and the time has a fixed floor that does not depend on how little
 /// work the reactor does; compare the two cases with each other rather than reading absolute numbers.
 /// </para>
 /// </remarks>
@@ -47,6 +48,7 @@ public class ReactorLiveInterleaveBenchmark : IDisposable, IAsyncDisposable
     [GlobalSetup]
     public async Task Setup()
     {
+        BenchmarkReactor.CountDeliveries = true;
         _fixture = new ChronicleBenchmarkFixture();
         _helper = new ChronicleClientHelper(
             _fixture,
