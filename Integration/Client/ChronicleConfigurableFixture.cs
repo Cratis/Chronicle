@@ -287,7 +287,7 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
         };
         var settings = MongoClientSettings.FromUrl(urlBuilder.ToMongoUrl());
         using var client = new MongoClient(settings);
-        await client.DropDatabaseAsync(InProcessMongoDatabaseName);
+        await XUnit.Integration.MongoDBDatabaseDropper.DropAndWait(client, InProcessMongoDatabaseName);
     }
 
     /// <inheritdoc/>
