@@ -370,6 +370,14 @@ Decided on 2026-10-30 by woksin (Q-146, "all recommended"), and confirmed by L0'
 
 **Kernel delivery hand-off.** The kernel-owned HTTP subscriber uses empty client targets and `SiloAddress.Zero`; live and catch-up specifications preserve partition identity. The delivery implementation reports readiness explicitly, with a fail-closed default; readiness includes signing readiness. A partial acknowledgement maps to a failed subscriber result carrying the acknowledged prefix, never a successful prefix result that could skip the remainder of the catch-up page. Malformed checkpoints never advance progress. Specifications cover partial-page recovery and deadline cancellation/draining before enablement. Reducer delivery remains unsupported until a separate agreement defines prefix-safe state persistence, including explicit state presence and deletion semantics.
 
+**Reading the delivery result.** Decided on 2026-11-02 for the delivery-v1 result parser ([#5116](https://github.com/Cratis/Chronicle/issues/5116)). The rules start strict, because loosening them later does not break receivers and tightening them would:
+
+- `state` is the string `success` or `failed`, matched case-insensitively. A numeric `state` is malformed in v1: the HTTP contract does not expose the internal enum numbering. Accepting numbers later is a non-breaking addition.
+- Any `2xx` with a non-empty body is read like `200`. `204`, or a `2xx` with an empty body, still acknowledges the whole batch.
+- A `2xx` body that is not JSON (for example `200` with `OK`) is malformed. A receiver that reports no result answers `204` or an empty body.
+- `lastSuccessfulObservation` must be the sequence number of an event in the batch. A checkpoint after the last event, or one that is not in the batch, is malformed. A missing checkpoint, or one before the first event, acknowledges nothing. `success` with a checkpoint before the last event is a failure carrying the acknowledged prefix. `failed` at the last event is malformed: the kernel would otherwise report a failure at the next event, which was never delivered.
+- A malformed result acknowledges nothing and follows the retry policy. It does not pause or park the partition.
+
 **`413` and `Retry-After`.** A `413` halves the batch and also honours `Retry-After`: the kernel waits at least that long before it sends the first half. A single event over the size limit still parks the partition with reason `PayloadTooLarge`. The earlier recommendation was to ignore `Retry-After` on `413`; the acceptance of #5115 states that it is honoured, and this record follows the acceptance.
 
 ## Questions and the decider's verdict
