@@ -21,7 +21,7 @@ public partial class Sink
         if (!changeset.HasBeenRemoved() && WriteSteps(changeset, changes) >= 2)
         {
             await using var cycleScope = await OpenActiveScope();
-            await RunInCycleTransaction(cycleScope, sequenceNumber, async () =>
+            await RunInCycleTransaction(cycleScope, sequenceNumber, changes.Length > 0, async () =>
             {
                 await ApplyJoinsAndChildRemovals(cycleScope, changeset, sequenceNumber);
                 if (changes.Length == 0 || !await ShouldWriteDirectChanges(cycleScope, id, changeset, changes))

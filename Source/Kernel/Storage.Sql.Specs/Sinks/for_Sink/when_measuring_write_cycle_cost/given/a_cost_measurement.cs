@@ -83,14 +83,20 @@ public abstract class a_cost_measurement<THarness> : a_cycle_with_failure_inject
                 var tag = $"{kind.Name}{run}";
                 await kind.Prepare(tag, events);
                 _capture.Clear();
+                var latencies = new List<double>(events);
+                var allocatedBefore = GC.GetAllocatedBytesForCurrentThread();
                 var stopwatch = Stopwatch.StartNew();
                 for (var i = 0; i < events; i++)
                 {
+                    var started = Stopwatch.GetTimestamp();
                     await kind.Write(tag, i);
+                    latencies.Add(Stopwatch.GetElapsedTime(started).TotalMilliseconds);
                 }
 
                 stopwatch.Stop();
-                var measurement = new Measurement(kind.Name, kind.Multi, run, events, _capture.Commands.Count, _capture.Started, _capture.Committed, stopwatch.Elapsed.TotalMilliseconds, _capture.Fingerprint);
+                var allocated = GC.GetAllocatedBytesForCurrentThread() - allocatedBefore;
+                latencies.Sort();
+                var measurement = new Measurement(kind.Name, kind.Multi, run, events, _capture.Commands.Count, _capture.Started, _capture.Committed, stopwatch.Elapsed.TotalMilliseconds, _capture.Fingerprint, Percentile(latencies, 0.5), Percentile(latencies, 0.95), latencies.Count == 0 ? 0 : latencies[^1], allocated, events == 0 ? 0 : (double)allocated / events);
                 _measurements.Add(measurement);
                 if (report is not null)
                 {
@@ -118,6 +124,11 @@ public abstract class a_cost_measurement<THarness> : a_cycle_with_failure_inject
             measurement.Committed,
             measurement.ElapsedMilliseconds,
             measurement.Fingerprint,
+            measurement.LatencyP50Milliseconds,
+            measurement.LatencyP95Milliseconds,
+            measurement.LatencyMaxMilliseconds,
+            measurement.AllocatedBytes,
+            measurement.AllocatedBytesPerEvent,
             RowFingerprint = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(snapshot))),
             Rows = snapshot,
             Operations = operations,
@@ -126,6 +137,9 @@ public abstract class a_cost_measurement<THarness> : a_cycle_with_failure_inject
         };
         await File.AppendAllTextAsync(report, JsonSerializer.Serialize(result) + "\n");
     }
+
+    static double Percentile(List<double> sorted, double fraction) =>
+        sorted.Count == 0 ? 0 : sorted[Math.Min(sorted.Count - 1, (int)Math.Ceiling(fraction * sorted.Count) - 1)];
 
     ulong Next() => _sequence++;
 
@@ -178,5 +192,10 @@ public abstract class a_cost_measurement<THarness> : a_cycle_with_failure_inject
     /// <param name="Committed">The number of transactions committed.</param>
     /// <param name="ElapsedMilliseconds">The elapsed time.</param>
     /// <param name="Fingerprint">The command fingerprint.</param>
-    protected sealed record Measurement(string Kind, bool Multi, int Run, int Events, int Commands, int Transactions, int Committed, double ElapsedMilliseconds, string Fingerprint);
+    /// <param name="LatencyP50Milliseconds">The median duration of one ApplyChanges.</param>
+    /// <param name="LatencyP95Milliseconds">The 95th percentile duration of one ApplyChanges.</param>
+    /// <param name="LatencyMaxMilliseconds">The longest duration of one ApplyChanges.</param>
+    /// <param name="AllocatedBytes">The bytes allocated by the current thread across the timed section.</param>
+    /// <param name="AllocatedBytesPerEvent">The allocated bytes per event.</param>
+    protected sealed record Measurement(string Kind, bool Multi, int Run, int Events, int Commands, int Transactions, int Committed, double ElapsedMilliseconds, string Fingerprint, double LatencyP50Milliseconds, double LatencyP95Milliseconds, double LatencyMaxMilliseconds, long AllocatedBytes, double AllocatedBytesPerEvent);
 }

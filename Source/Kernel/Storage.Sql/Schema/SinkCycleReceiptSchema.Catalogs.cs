@@ -118,7 +118,7 @@ internal static partial class SinkCycleReceiptSchema
     }
 
     static bool IsRequiredWithoutDefault(string[] column) =>
-        !_columns.Contains(column[1], StringComparer.Ordinal) && column[3] == "0" && column[4].Length == 0;
+        !_columns.Contains(column[1], StringComparer.Ordinal) && column[3] == "1" && column[4].Length == 0 && column[^1] == "0";
 
     static void CompareKey(string[][] parts, List<string> unsafeDrift)
     {

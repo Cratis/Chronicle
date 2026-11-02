@@ -36,9 +36,10 @@ public partial class Sink
     /// </summary>
     /// <param name="scope">The scope holding the context.</param>
     /// <param name="sequenceNumber">The sequence number applied.</param>
+    /// <param name="hasDirectChanges">Whether the cycle has a direct change. When an earlier attempt of this call already committed, its direct change counts as written.</param>
     /// <param name="body">The writes. Returns whether the direct change was written.</param>
     /// <returns>Whether the direct change was written.</returns>
-    async Task<bool> RunInCycleTransaction(DbContextScope<ReadModelDbContext> scope, EventSequenceNumber sequenceNumber, Func<Task<bool>> body)
+    async Task<bool> RunInCycleTransaction(DbContextScope<ReadModelDbContext> scope, EventSequenceNumber sequenceNumber, bool hasDirectChanges, Func<Task<bool>> body)
     {
         var context = scope.DbContext;
         await EnsureCycleReceiptTable(context);
@@ -72,7 +73,8 @@ public partial class Sink
                 catch (DbUpdateException exception) when (IsUniqueViolation(exception) && IsReceiptCollision(exception))
                 {
                     // The receipt key is already taken: an earlier attempt of this call committed. Never rerun.
-                    return state.WroteDirect;
+                    // That attempt wrote the direct change, so the idempotent composite-key stamp must still run.
+                    return hasDirectChanges;
                 }
                 catch (DbUpdateException exception) when (IsUniqueViolation(exception) && ++insertRaceReruns <= MaxInsertRaceReruns)
                 {
