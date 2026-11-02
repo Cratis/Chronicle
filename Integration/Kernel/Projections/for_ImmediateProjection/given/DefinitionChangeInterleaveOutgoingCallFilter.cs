@@ -1,10 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-extern alias KernelCore;
-
-using KernelProjection = KernelCore::Cratis.Chronicle.Projections.IProjection;
-
 namespace Cratis.Chronicle.Kernel.Integration.Projections.for_ImmediateProjection.given;
 
 /// <summary>
@@ -16,8 +12,8 @@ public class DefinitionChangeInterleaveOutgoingCallFilter(DefinitionChangeInterl
     /// <inheritdoc/>
     public async Task Invoke(IOutgoingGrainCallContext context)
     {
-        if (context.InterfaceType == typeof(KernelProjection) &&
-            context.MethodName == nameof(KernelProjection.FoldForSingleReadModel) &&
+        if (context.Request.GetInterfaceType().FullName == "Cratis.Chronicle.Projections.IProjection" &&
+            context.MethodName == "FoldForSingleReadModel" &&
             gate.TryEnter())
         {
             await gate.WaitForRelease();

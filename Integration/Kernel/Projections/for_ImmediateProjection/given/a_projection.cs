@@ -1,14 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-extern alias KernelCore;
-
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Projections;
-using Cratis.Chronicle.Concepts.Projections.Definitions;
+using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Registrations;
 using Cratis.Chronicle.Setup;
-using KernelProjection = KernelCore::Cratis.Chronicle.Projections.IProjection;
 
 namespace Cratis.Chronicle.Kernel.Integration.Projections.for_ImmediateProjection.given;
 
@@ -19,9 +16,8 @@ namespace Cratis.Chronicle.Kernel.Integration.Projections.for_ImmediateProjectio
 public class a_projection(DefinitionChangeInterleaveFixture fixture) : Specification<DefinitionChangeInterleaveFixture>(fixture)
 {
     protected DefinitionChangeInterleaveGate _gate;
-    protected KernelProjection _projection;
-    protected KernelCore::Cratis.Chronicle.Projections.IImmediateProjection _immediateProjection;
-    protected ProjectionDefinition _changed;
+    protected IImmediateProjection _immediateProjection;
+    protected Func<Task> _changeDefinition;
 
     /// <inheritdoc/>
     public override bool AutoDiscoverArtifacts => false;
@@ -30,7 +26,7 @@ public class a_projection(DefinitionChangeInterleaveFixture fixture) : Specifica
     public override IEnumerable<Type> EventTypes => [typeof(ProjectionReadStarted)];
 
     /// <inheritdoc/>
-    public override IEnumerable<Type> Projections => [typeof(InterleavedProjection)];
+    public override IEnumerable<Type> Projections => [];
 
     /// <inheritdoc/>
     protected override Action<Configuration.IChronicleBuilder> GetStorageConfigurator(string mongoServer) => builder =>
@@ -49,19 +45,23 @@ public class a_projection(DefinitionChangeInterleaveFixture fixture) : Specifica
         await store.DiscoverAll();
         await store.RegisterAll();
         (await store.WaitForRegistration(TimeSpan.FromSeconds(30))).IsSuccess.ShouldBeTrue();
+        await store.Projections.Register<InterleavedReadModel>(new InterleavedProjection().Define, InterleavedProjection.ProjectionIdentifier);
         (await store.EventLog.Append("source", new ProjectionReadStarted("projected"))).IsSuccess.ShouldBeTrue();
+
+        _changeDefinition = () => store.Projections.Register<InterleavedReadModel>(
+            builder =>
+            {
+                new InterleavedProjection().Define(builder);
+                builder.WithInitialValues(() => new InterleavedReadModel(string.Empty, "changed"));
+
+                // InitialModelState alone is intentionally ignored by the definition comparer.
+                builder.NotRewindable();
+            },
+            InterleavedProjection.ProjectionIdentifier);
 
         var grains = Services.GetRequiredService<IGrainFactory>();
         _gate = Services.GetRequiredService<DefinitionChangeInterleaveGate>();
-        _projection = grains.GetGrain<KernelProjection>(new ProjectionKey(InterleavedProjection.ProjectionIdentifier, store.Name.Value));
-        var definition = await _projection.GetDefinition();
-        _changed = definition with
-        {
-            InitialModelState = new System.Text.Json.Nodes.JsonObject { ["name"] = string.Empty, ["seed"] = "changed" },
-            // InitialModelState alone is intentionally ignored by the definition comparer.
-            IsRewindable = !definition.IsRewindable
-        };
-        _immediateProjection = grains.GetGrain<KernelCore::Cratis.Chronicle.Projections.IImmediateProjection>(
+        _immediateProjection = grains.GetGrain<IImmediateProjection>(
             new ImmediateProjectionKey(InterleavedProjection.ProjectionIdentifier, store.Name.Value, store.Namespace.Value, EventSequenceId.Log, "source"));
         await _immediateProjection.GetModelInstance();
         _gate.Arm();
