@@ -24,11 +24,26 @@ applies-to:
 <!-- markdownlint-disable-next-line MD025 -->
 # Deliver observer events to HTTP receivers through one versioned envelope, ordered per partition, identified by a deterministic delivery id, signed with Standard Webhooks, and bracketed by awaited replay boundaries
 
-Accepted on 2026-10-25 by Einar ([verdict](https://github.com/Cratis/Chronicle/pull/5398#issuecomment-6394945714)). The verdict decides four points: Ed25519 by default with HMAC opt-in and a key id header, a reserved fencing field, an envelope of per-partition batches, and one canonical per-event dedup key. It leaves one point explicitly open: how replay interacts with deduplication ([Q5](#q5-delivery-identity-across-replays)). Every other question keeps its recommended answer. See [Questions and the decider's verdict](#questions-and-the-deciders-verdict).
+Accepted on 2026-10-25 by Einar ([verdict](https://github.com/Cratis/Chronicle/pull/5398#issuecomment-6394945714)). The verdict decides four points: Ed25519 by default with HMAC opt-in and a key id header, a reserved fencing field, an envelope of per-partition batches, and one canonical per-event dedup key (the key id header is advisory; see the [Amendment](#amendment-2026-11-01-cratis-key-id-is-advisory)). It leaves one point explicitly open: how replay interacts with deduplication ([Q5](#q5-delivery-identity-across-replays)). Every other question keeps its recommended answer. See [Questions and the decider's verdict](#questions-and-the-deciders-verdict).
 
 This record settles the wire contract between the kernel and an HTTP receiver: what a request looks like, in which order and how often it arrives, how the receiver proves the kernel sent it, and how replays reach it. It is the design input for [#5115](https://github.com/Cratis/Chronicle/issues/5115), and the contract that [#5116](https://github.com/Cratis/Chronicle/issues/5116) (envelope, ordering, replay), [#5117](https://github.com/Cratis/Chronicle/issues/5117) (signatures) and the receivers in [#5119](https://github.com/Cratis/Chronicle/issues/5119), [#5120](https://github.com/Cratis/Chronicle/issues/5120) and [#5121](https://github.com/Cratis/Chronicle/issues/5121) build on, all under the serverless epic [#5104](https://github.com/Cratis/Chronicle/issues/5104).
 
 It does not decide which transport owns an observer (stream or HTTP) or how an observer moves between them. That is [#5115](https://github.com/Cratis/Chronicle/issues/5115)'s ownership model and the cutover defect [#5370](https://github.com/Cratis/Chronicle/issues/5370). This record assumes exactly one transport serves an observer at a time.
+
+## Amendment (2026-11-01): Cratis-Key-Id is advisory
+
+Decided on 2026-11-01 during [#5117](https://github.com/Cratis/Chronicle/issues/5117) work; this supersedes only the key-selection role of the `Cratis-Key-Id` header. The rest of the accepted text stands.
+
+[Standard Webhooks](https://github.com/standard-webhooks/standard-webhooks/blob/main/spec/standard-webhooks.md) sends space-separated signatures during key rotation and defines no key id header, so one header value cannot pick the verification key during an overlap.
+
+The rule:
+
+- The `Cratis-Key-Id` header stays and names the currently active signing key. It is advisory only.
+- Receivers verify `webhook-signature` against their trusted, published key set. Any valid signature from a trusted key passes.
+- A receiver never rejects a delivery solely because of the header value, whether it is absent, mismatched or unknown.
+- A missing signature, or no valid signature from a trusted key, is rejected (fail closed).
+
+The Ed25519 key encoding and the library remain open under [#5117](https://github.com/Cratis/Chronicle/issues/5117).
 
 ## Context
 
@@ -113,7 +128,7 @@ The kernel is not serverless. On an empty store it opened its port after 15.2 s 
 
 ## Decision
 
-The kernel delivers events to Cratis HTTP receivers as `POST` requests with the content type `application/vnd.cratis.chronicle.delivery+json; v=1`, whose body is a versioned envelope of kind `events`, `replay-started`, `replay-ended` or `ping`, carrying the observer, event store, namespace, event sequence and a list of per-partition batches. Each batch carries its partition, its events in a pinned public shape and a reserved, monotonically increasing fencing token; the response carries one result per batch. Version 1 sends one partition per request, so sending several later is not a breaking change. Delivery is at least once and ordered per (observer, namespace, partition), with at most one request in flight per partition from the kernel's side (the kernel bounds its own dispatch and wait, not how long a receiver keeps executing an abandoned request), and with per-target concurrency caps that include replay. Each request carries a deterministic `webhook-id` that is identical across retries of the same request, together with `webhook-timestamp`, a `webhook-signature` per the Standard Webhooks specification (Ed25519 `v1a` by default, HMAC `v1` as an opt-in alternative), a `Cratis-Key-Id` header naming the signing key so keys can rotate, a deadline header and `traceparent`. Each event has one canonical, deterministic dedup key, shared with the broker sinks and separate from the partition, which only orders. How a replay interacts with deduplication is not decided (see [Q5](#q5-delivery-identity-across-replays)). Retry, deferral, park and quarantine follow the policy shipped in [#5108](https://github.com/Cratis/Chronicle/issues/5108), extended with partial acknowledgement and payload limits. A replay is bracketed by `replay-started` and `replay-ended`, and the kernel dispatches no replayed partition before the receiver has acknowledged `replay-started`. Within this major release generic webhooks keep today's body until they opt in.
+The kernel delivers events to Cratis HTTP receivers as `POST` requests with the content type `application/vnd.cratis.chronicle.delivery+json; v=1`, whose body is a versioned envelope of kind `events`, `replay-started`, `replay-ended` or `ping`, carrying the observer, event store, namespace, event sequence and a list of per-partition batches. Each batch carries its partition, its events in a pinned public shape and a reserved, monotonically increasing fencing token; the response carries one result per batch. Version 1 sends one partition per request, so sending several later is not a breaking change. Delivery is at least once and ordered per (observer, namespace, partition), with at most one request in flight per partition from the kernel's side (the kernel bounds its own dispatch and wait, not how long a receiver keeps executing an abandoned request), and with per-target concurrency caps that include replay. Each request carries a deterministic `webhook-id` that is identical across retries of the same request, together with `webhook-timestamp`, a `webhook-signature` per the Standard Webhooks specification (Ed25519 `v1a` by default, HMAC `v1` as an opt-in alternative), a `Cratis-Key-Id` header naming the signing key so keys can rotate (advisory; see the [Amendment](#amendment-2026-11-01-cratis-key-id-is-advisory)), a deadline header and `traceparent`. Each event has one canonical, deterministic dedup key, shared with the broker sinks and separate from the partition, which only orders. How a replay interacts with deduplication is not decided (see [Q5](#q5-delivery-identity-across-replays)). Retry, deferral, park and quarantine follow the policy shipped in [#5108](https://github.com/Cratis/Chronicle/issues/5108), extended with partial acknowledgement and payload limits. A replay is bracketed by `replay-started` and `replay-ended`, and the kernel dispatches no replayed partition before the receiver has acknowledged `replay-started`. Within this major release generic webhooks keep today's body until they opt in.
 
 ### Envelope
 
@@ -149,7 +164,7 @@ Why unknown data kinds are not ignored: this is the one part of the envelope tha
 
 ### Authentication and signatures
 
-- Every envelope delivery is signed per Standard Webhooks: `webhook-id`, `webhook-timestamp` (Unix seconds) and `webhook-signature` over `id.timestamp.body`. The default is Ed25519 (`v1a`), so a receiver holds only a public key; HMAC-SHA256 (`v1`) is an opt-in alternative for receivers that only support shared secrets. Every delivery carries the id of the signing key in the `Cratis-Key-Id` header, so a receiver picks the right key and keys can be rotated; several signatures can be sent at once for an overlap.
+- Every envelope delivery is signed per Standard Webhooks: `webhook-id`, `webhook-timestamp` (Unix seconds) and `webhook-signature` over `id.timestamp.body`. The default is Ed25519 (`v1a`), so a receiver holds only a public key; HMAC-SHA256 (`v1`) is an opt-in alternative for receivers that only support shared secrets. Every delivery carries the id of the signing key in the `Cratis-Key-Id` header, so a receiver picks the right key and keys can be rotated; several signatures can be sent at once for an overlap. (The header is advisory; see the [Amendment](#amendment-2026-11-01-cratis-key-id-is-advisory).)
 - An HMAC `v1` secret is unique per target, as the Standard Webhooks specification requires for symmetric keys; a shared secret would let one receiver forge deliveries to another. An Ed25519 key may be shared by the targets of one event store, because receivers hold only the public key. Receivers take the public key from configuration, never from the request.
 - No published Standard Webhooks library verifies `v1a`, and .NET has no built-in Ed25519 ([dotnet/runtime#63174](https://github.com/dotnet/runtime/issues/63174)). The kernel signs and the .NET receiver verifies `v1a` with code owned by this repository on top of one named Ed25519 library. `v1` is the interoperable choice for receivers in other languages.
 - Receivers verify the signature in constant time, reject timestamps outside a tolerance (proposed 5 minutes), and never follow redirects.
@@ -327,7 +342,7 @@ Each question below keeps the recommendation it was put with. The verdict covers
 | Q6 | Decided as recommended | The result carries one entry per batch. |
 | Q7 | Decided as recommended | |
 | Q8 | Decided by the verdict | Ed25519 by default, HMAC opt-in; mandatory signing and the verifier code as recommended. |
-| Q9 | Decided as recommended | The key id travels in the `Cratis-Key-Id` header; custody details follow the Q1 split. |
+| Q9 | Decided as recommended | The key id travels in the `Cratis-Key-Id` header; custody details follow the Q1 split. The header is advisory; see the [Amendment](#amendment-2026-11-01-cratis-key-id-is-advisory). |
 | Q10, Q11, Q12, Q13 | Decided as recommended | The timeout conflict in Q13 stays under Unknowns. |
 | Q14 | Decided differently | The fencing field is reserved in v1 instead of deferred to a follow-up record. |
 | Q15, Q16, Q17 | Decided as recommended | |
