@@ -41,6 +41,11 @@ public class SqlServerSinkHarness : ISqlSinkHarness
     public IEnumerable<IInterceptor> Interceptors { get; init; } = [];
 
     /// <summary>
+    /// Gets a hook that adjusts the context options, such as installing an execution strategy that retries.
+    /// </summary>
+    public Action<DbContextOptionsBuilder<ReadModelDbContext>>? ConfigureOptions { get; init; }
+
+    /// <summary>
     /// Gets the logger for index diagnostics.
     /// </summary>
     public ILogger<Sink> Logger { get; init; } = Substitute.For<ILogger<Sink>>();
@@ -83,6 +88,7 @@ public class SqlServerSinkHarness : ISqlSinkHarness
     {
         var builder = new DbContextOptionsBuilder<ReadModelDbContext>();
         builder.UseDatabaseFromConnectionString(ConnectionString);
+        ConfigureOptions?.Invoke(builder);
         var options = builder.AddConceptAsSupport().WithoutServiceProviderCaching().AddInterceptors(Interceptors).Options;
 
         var fixture = Fixture!;

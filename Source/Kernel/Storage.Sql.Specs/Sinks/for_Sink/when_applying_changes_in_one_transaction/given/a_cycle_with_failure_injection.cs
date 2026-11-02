@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Data.Common;
 using System.Dynamic;
 using Cratis.Arc.EntityFrameworkCore;
 using Cratis.Arc.EntityFrameworkCore.Concepts;
@@ -78,6 +79,50 @@ public abstract class a_cycle_with_failure_injection<THarness> : Specification
         await _sink.ApplyChanges(new Key(id, ArrayIndexers.NoIndexers), changeset, sequenceNumber, mode);
     }
 
+    protected static async Task ApplyOn(ISink sink, string id, ulong sequenceNumber, params Change[] changes)
+    {
+        var changeset = Substitute.For<IChangeset<AppendedEvent, ExpandoObject>>();
+        changeset.Changes.Returns(changes);
+        await sink.ApplyChanges(new Key(id, ArrayIndexers.NoIndexers), changeset, sequenceNumber, SinkWriteMode.Always);
+    }
+
+    protected bool IsSqlite => _harness.ConnectionString.GetDatabaseType() == DatabaseType.Sqlite;
+
+    protected async Task Execute(string sql)
+    {
+        await using var context = OpenInspectionContext();
+#pragma warning disable EF1002 // Specification-owned statements.
+        await context.Database.ExecuteSqlRawAsync(sql);
+#pragma warning restore EF1002
+    }
+
+    protected async Task<long> Scalar(string sql)
+    {
+        await using var context = OpenInspectionContext();
+#pragma warning disable EF1002 // Specification-owned statements.
+        return await context.Database.SqlQueryRaw<long>(sql).SingleAsync();
+#pragma warning restore EF1002
+    }
+
+    protected Task<long> DatabaseNow() => Scalar($"SELECT CAST({_harness.ConnectionString.GetDatabaseType() switch { DatabaseType.PostgreSql => "(extract(epoch from clock_timestamp()) * 1000)::bigint", DatabaseType.SqlServer => "DATEDIFF_BIG(MILLISECOND, '1970-01-01', SYSUTCDATETIME())", _ => "CAST(strftime('%s', 'now') AS INTEGER) * 1000" }} AS bigint) AS \"Value\"");
+
+    /// <summary>
+    /// Runs a statement on the very connection and transaction of a command that is about to run. Needed on SQLite, where the
+    /// cycle holds the write lock so that no other connection can interleave.
+    /// </summary>
+    /// <param name="command">The command about to run.</param>
+    /// <param name="sql">The statement to run first.</param>
+    /// <returns>Awaitable task.</returns>
+    protected static async Task ExecuteOn(DbCommand command, string sql)
+    {
+#pragma warning disable CA2100 // Specification-owned statement.
+        await using var other = command.Connection!.CreateCommand();
+        other.Transaction = command.Transaction;
+        other.CommandText = sql;
+#pragma warning restore CA2100
+        await other.ExecuteNonQueryAsync();
+    }
+
     protected async Task<IDictionary<string, object?>?> Row(string id) =>
         await _sink.FindOrDefault(new Key(id, ArrayIndexers.NoIndexers));
 
@@ -115,6 +160,8 @@ public abstract class a_cycle_with_failure_injection<THarness> : Specification
     }
 
     protected IEnumerable<string> ReceiptCommands => _capture.Commands.Where(command => command.Contains(ReceiptTable, StringComparison.Ordinal));
+
+    protected IEnumerable<string> ReceiptProbes => ReceiptCommands.Where(command => command.Contains("EXISTS", StringComparison.OrdinalIgnoreCase));
 
     protected IEnumerable<string> ReceiptInserts => ReceiptCommands.Where(command => command.Contains("INSERT", StringComparison.OrdinalIgnoreCase));
 

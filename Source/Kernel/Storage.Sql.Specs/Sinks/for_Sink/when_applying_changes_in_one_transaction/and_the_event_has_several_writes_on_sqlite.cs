@@ -5,5 +5,5 @@ namespace Cratis.Chronicle.Storage.Sql.Sinks.for_Sink.when_applying_changes_in_o
 
 public class and_the_event_has_several_writes_on_sqlite : and_the_event_has_several_writes<SqlSinkHarness>
 {
-    protected override SqlSinkHarness CreateHarness(SqlCommandCapture capture) => new() { Interceptors = [capture] };
+    protected override SqlSinkHarness CreateHarness(SqlCommandCapture capture) => new() { Interceptors = [capture], ConfigureOptions = given.retrying_on_timeout.Configure };
 }

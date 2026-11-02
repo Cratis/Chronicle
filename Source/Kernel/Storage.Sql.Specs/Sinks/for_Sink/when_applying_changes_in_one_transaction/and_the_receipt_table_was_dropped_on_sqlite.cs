@@ -3,7 +3,7 @@
 
 namespace Cratis.Chronicle.Storage.Sql.Sinks.for_Sink.when_applying_changes_in_one_transaction;
 
-public class and_the_event_has_a_single_write_on_sqlite : and_the_event_has_a_single_write<SqlSinkHarness>
+public class and_the_receipt_table_was_dropped_on_sqlite : and_the_receipt_table_was_dropped<SqlSinkHarness>
 {
     protected override SqlSinkHarness CreateHarness(SqlCommandCapture capture) => new() { Interceptors = [capture] };
 }

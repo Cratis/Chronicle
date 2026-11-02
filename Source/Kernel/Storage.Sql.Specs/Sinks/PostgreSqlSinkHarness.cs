@@ -52,6 +52,11 @@ public class PostgreSqlSinkHarness : ISqlSinkHarness
     public IEnumerable<IInterceptor> Interceptors { get; init; } = [];
 
     /// <summary>
+    /// Gets a hook that adjusts the context options, such as installing an execution strategy that retries.
+    /// </summary>
+    public Action<DbContextOptionsBuilder<ReadModelDbContext>>? ConfigureOptions { get; init; }
+
+    /// <summary>
     /// Gets the logger for index diagnostics.
     /// </summary>
     public ILogger<SqlSink> Logger { get; init; } = Substitute.For<ILogger<SqlSink>>();
@@ -98,8 +103,9 @@ public class PostgreSqlSinkHarness : ISqlSinkHarness
     /// <returns>A <see cref="DbContextScope{TDbContext}"/> for the container.</returns>
     async Task<DbContextScope<ReadModelDbContext>> OpenTable(string containerName)
     {
-        var options = new DbContextOptionsBuilder<ReadModelDbContext>(SpecDbContextOptions.Kernel<ReadModelDbContext>(ConnectionString))
-            .AddInterceptors(Interceptors).Options;
+        var builder = new DbContextOptionsBuilder<ReadModelDbContext>(SpecDbContextOptions.Kernel<ReadModelDbContext>(ConnectionString));
+        ConfigureOptions?.Invoke(builder);
+        var options = builder.AddInterceptors(Interceptors).Options;
 
         var fixture = Fixture!;
 #pragma warning disable CA2000 // Disposed by the sink through the returned scope.

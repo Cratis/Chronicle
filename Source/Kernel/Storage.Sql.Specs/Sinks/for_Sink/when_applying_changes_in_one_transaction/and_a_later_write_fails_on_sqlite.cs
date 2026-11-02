@@ -5,5 +5,5 @@ namespace Cratis.Chronicle.Storage.Sql.Sinks.for_Sink.when_applying_changes_in_o
 
 public class and_a_later_write_fails_on_sqlite : and_a_later_write_fails<SqlSinkHarness>
 {
-    protected override SqlSinkHarness CreateHarness(SqlCommandCapture capture) => new() { Interceptors = [capture] };
+    protected override SqlSinkHarness CreateHarness(SqlCommandCapture capture) => new() { Interceptors = [capture], ConfigureOptions = given.retrying_on_timeout.Configure };
 }

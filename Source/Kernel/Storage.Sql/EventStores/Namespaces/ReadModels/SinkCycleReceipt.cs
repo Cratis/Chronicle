@@ -16,6 +16,20 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels;
 internal record SinkCycleReceipt(Guid Id, string TableName, long EventSequenceNumber, long CreatedAt)
 {
     /// <summary>
+    /// Stores a sequence number, keeping its bits. Sentinels such as <see cref="Concepts.Events.EventSequenceNumber.Unavailable"/> (ulong.MaxValue) can reach a cycle and must neither throw nor collide in meaning.
+    /// </summary>
+    /// <param name="value">The sequence number value.</param>
+    /// <returns>The bit-preserving signed value.</returns>
+    public static long ToStored(ulong value) => unchecked((long)value);
+
+    /// <summary>
+    /// Restores a sequence number stored with <see cref="ToStored"/>.
+    /// </summary>
+    /// <param name="stored">The stored value.</param>
+    /// <returns>The original value.</returns>
+    public static ulong FromStored(long stored) => unchecked((ulong)stored);
+
+    /// <summary>
     /// Gets the SQL expression for the database clock, in Unix milliseconds, for a provider.
     /// </summary>
     /// <param name="databaseType">The <see cref="DatabaseType"/>.</param>

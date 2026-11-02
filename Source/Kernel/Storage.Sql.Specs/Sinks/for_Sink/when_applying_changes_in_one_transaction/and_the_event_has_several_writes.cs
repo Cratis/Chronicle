@@ -18,4 +18,5 @@ public abstract class and_the_event_has_several_writes<THarness> : given.a_cycle
     [Fact] public void should_commit_once() => _capture.Committed.ShouldEqual(1);
     [Fact] public void should_not_create_savepoints() => _capture.Savepoints.ShouldEqual(0);
     [Fact] public void should_insert_one_receipt() => ReceiptInserts.Count().ShouldEqual(1);
+    [Fact] public async Task should_remove_the_receipt_when_the_owner_is_done() => (await ReceiptCount()).ShouldEqual(0);
 }

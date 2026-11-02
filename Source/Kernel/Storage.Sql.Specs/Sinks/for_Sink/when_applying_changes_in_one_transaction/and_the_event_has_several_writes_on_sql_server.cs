@@ -6,5 +6,7 @@ namespace Cratis.Chronicle.Storage.Sql.Sinks.for_Sink.when_applying_changes_in_o
 [Collection(SqlServerCollection.Name)]
 public class and_the_event_has_several_writes_on_sql_server(SqlServerFixture fixture) : and_the_event_has_several_writes<SqlServerSinkHarness>
 {
-    protected override SqlServerSinkHarness CreateHarness(SqlCommandCapture capture) => new() { Fixture = fixture, Interceptors = [capture] };
+    protected override SqlServerSinkHarness CreateHarness(SqlCommandCapture capture) => new() { Fixture = fixture, Interceptors = [capture], ConfigureOptions = given.retrying_on_timeout.Configure };
+
+    [Fact] public void should_batch_the_receipt_with_a_write() => ReceiptInserts.All(command => command.Contains(TableName, StringComparison.Ordinal)).ShouldBeTrue();
 }

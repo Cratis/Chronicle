@@ -14,7 +14,7 @@ namespace Cratis.Chronicle.Storage.Sql.Sinks;
 /// </summary>
 /// <remarks>
 /// A cycle with a single write keeps its single command and its own implicit transaction. A cycle with two or more
-/// writes (joins, child removals and the direct change) is rerun as a whole when it fails and nothing else is kept
+/// writes (joins, child removals and the direct change) is rerun as a whole when it fails and nothing else is kep
 /// across attempts, so every provider behaves the same: no savepoints, and an aborted PostgreSQL transaction is never
 /// reused. Whole-cycle rerun is also how an insert race, a lost guarded compare-and-swap and a missing shadow column
 /// are recovered. <see cref="Sink"/> stamps the composite key outside the transaction. Moving it inside is
@@ -44,11 +44,12 @@ public partial class Sink
         context.Database.AutoSavepointsEnabled = false;
         var strategy = context.Database.CreateExecutionStrategy();
         var receiptId = Guid.CreateVersion7();
-        var sequence = checked((long)sequenceNumber.Value);
+        var sequence = SinkCycleReceipt.ToStored(sequenceNumber.Value);
         long? startedAt = null;
         var attempts = 0;
         var insertRaceReruns = 0;
         var repaired = false;
+        var tableRepaired = false;
         var wroteDirect = false;
         try
         {
@@ -60,10 +61,13 @@ public partial class Sink
                         async () =>
                         {
                             context.ChangeTracker.Clear();
-                            if (attempts++ > 0)
+                            if (attempts++ > 0 && await ProbeReceipt(context, receiptId, startedAt, sequence))
                             {
-                                await FailClosedWhenTooOld(context, receiptId, startedAt, sequence);
+                                // A previous attempt committed and only its acknowledgment was lost.
+                                return;
                             }
+
+                            wroteDirect = false;
 
                             var receipt = new SinkCycleReceipt(receiptId, ActiveTableName, sequence, 0);
                             context.SinkCycleReceipts.Add(receipt);
@@ -76,18 +80,32 @@ public partial class Sink
                             await FlushReceiptIfPending(context, receipt);
                             startedAt ??= receipt.CreatedAt;
                         },
-                        () => ReceiptCommitted(context, receiptId, startedAt, sequence));
+
+                        // The probe is the first statement of every retry attempt, in that attempt's transaction, so there is nothing to verify here.
+                        () => Task.FromResult(false));
                     return wroteDirect;
                 }
                 catch (CycleRerun)
                 {
                     // The transaction was rolled back; apply the whole cycle again on current state.
                 }
+                catch (DbUpdateException exception) when (IsUniqueViolation(exception) && IsReceiptCollision(exception))
+                {
+                    // The receipt key is already taken: an earlier attempt of this call committed. Never rerun.
+                    return wroteDirect;
+                }
                 catch (DbUpdateException exception) when (IsUniqueViolation(exception) && ++insertRaceReruns <= MaxInsertRaceReruns)
                 {
                     // Another writer inserted the row first. Inside a transaction we do not recover in place:
                     // PostgreSQL has aborted it. Rerun, and the row is now found and updated.
                     SqlStorageTelemetry.RecoveredCollision("read-model");
+                }
+                catch (Exception exception) when (!tableRepaired && IsMissingReceiptTable(exception))
+                {
+                    // The database lost the table after this sink created it, such as after a restore.
+                    tableRepaired = true;
+                    Volatile.Write(ref _receiptTableEnsured, 0);
+                    await EnsureCycleReceiptTable();
                 }
                 catch (Exception exception) when (!repaired && ShadowColumns.IsMissingColumn(exception))
                 {
