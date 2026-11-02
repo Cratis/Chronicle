@@ -24,7 +24,7 @@ namespace Cratis.Chronicle.Storage.Sql.Sinks.for_Sink.when_applying_changes;
 public class and_a_keyed_from_and_a_join_set_the_same_property_guarded : Specification
 {
     readonly JsonSchema _schema = JsonSchema.FromJson("""
-        {"type":"object","properties":{"id":{"type":"string"},"joinId":{"type":"string"},"count":{"type":"integer"}}}
+        {"type":"object","properties":{"id":{"type":"string"},"joinId":{"type":"string"},"count":{"type":"integer"},"x":{"type":"integer"}}}
         """);
     SqliteConnection _connection;
     IReadOnlyList<ProjectedColumn> _columns;
@@ -78,7 +78,7 @@ public class and_a_keyed_from_and_a_join_set_the_same_property_guarded : Specifi
         changeset.InitialState.Returns(initial);
         changeset.Changes.Returns(
         [
-            new PropertiesChanged<ExpandoObject>(initial, [new PropertyDifference(new PropertyPath("count"), 0L, 1L)]),
+            new PropertiesChanged<ExpandoObject>(initial, [new PropertyDifference(new PropertyPath("count"), 0L, 1L), new PropertyDifference(new PropertyPath("x"), null, 1L)]),
             new Joined(initial, "root", new PropertyPath("joinId"), ArrayIndexers.NoIndexers, [new PropertiesChanged<ExpandoObject>(initial, [new PropertyDifference(new PropertyPath("count"), 1L, 2L)])])
             {
                 HasKeyedFrom = true
@@ -91,6 +91,7 @@ public class and_a_keyed_from_and_a_join_set_the_same_property_guarded : Specifi
     void Destroy() => _connection.Dispose();
 
     [Fact] void should_store_the_value_the_join_applied_last() => Convert.ToInt64(((IDictionary<string, object?>)_result!)["count"]).ShouldEqual(2L);
+    [Fact] void should_store_the_direct_only_property() => Convert.ToInt64(((IDictionary<string, object?>)_result!)["x"]).ShouldEqual(1L);
 
     ReadModelDbContext CreateContext()
     {

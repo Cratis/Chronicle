@@ -203,41 +203,103 @@ public partial class Sink : ISink, ICanReconcileIndexes, ISinkCompositeKeyLookup
             return _noFailedPartitions;
         }
 
-        // A join that follows the direct changes in the changeset was applied after them by the projection,
-        // so it is written after them here too; joins that come first keep being written first.
-        var trailingJoins = JoinsAfterDirectChanges(changeset);
+        // Joins that follow the direct changes in the changeset were applied after them by the projection,
+        // so they are written after them here too, interleaved in changeset order; joins that come first
+        // keep being written first.
+        var segments = OrderedSegmentsFromFirstDirectChange(changeset);
+        var trailingJoins = segments.SelectMany(segment => segment).OfType<Joined>().ToArray();
         await ApplyJoinsAndChildRemovals(scope, changeset, eventSequenceNumber, joined => !trailingJoins.Any(trailing => ReferenceEquals(trailing, joined)));
 
-        await WriteDirectChanges(scope, new DirectWrite(key, id, changeset, eventSequenceNumber, mode));
-
-        await ApplyJoinedChanges(scope, trailingJoins, eventSequenceNumber);
+        await WriteDirectChanges(scope, new DirectWrite(key, id, changeset, eventSequenceNumber, mode), segments);
 
         return _noFailedPartitions;
     }
 
-    async Task ApplyJoinedChanges(DbContextScope<ReadModelDbContext> scope, Joined[] joins, EventSequenceNumber eventSequenceNumber)
+    /// <summary>
+    /// Splits the changes from the first direct change onwards into consecutive runs, alternating between direct
+    /// changes and joins, in changeset order. The first run, when there is one, is always a direct run.
+    /// </summary>
+    /// <param name="changeset">The changeset to split.</param>
+    /// <returns>The ordered runs.</returns>
+    static List<Change[]> OrderedSegmentsFromFirstDirectChange(IChangeset<AppendedEvent, ExpandoObject> changeset)
     {
-        foreach (var joined in joins)
+        var changes = changeset.Changes.ToArray();
+        var segments = new List<Change[]>();
+        var firstDirectIndex = Array.FindIndex(changes, c => c is not Joined and not ChildRemovedFromAll);
+        if (firstDirectIndex < 0)
         {
-            await ApplyJoinedChange(scope, joined, eventSequenceNumber);
+            return segments;
+        }
+
+        var current = new List<Change>();
+        foreach (var change in changes.Skip(firstDirectIndex).Where(c => c is not ChildRemovedFromAll))
+        {
+            if (current.Count > 0 && (current[0] is Joined) != (change is Joined))
+            {
+                segments.Add([.. current]);
+                current.Clear();
+            }
+
+            current.Add(change);
+        }
+
+        segments.Add([.. current]);
+        return segments;
+    }
+
+    static Change[] DirectChangesOf(List<Change[]> segments) =>
+        [.. segments.Where(IsDirectSegment).SelectMany(segment => segment)];
+
+    static bool IsDirectSegment(Change[] segment) => segment[0] is not Joined;
+
+    /// <summary>
+    /// Applies the runs that follow the first direct run, in order. Direct runs are only written when the first
+    /// direct run was; the decision is made once per event so a watermark the first run advanced does not skip the rest.
+    /// </summary>
+    /// <param name="scope">The database scope.</param>
+    /// <param name="write">The write context.</param>
+    /// <param name="segments">The runs to apply.</param>
+    /// <returns>Awaitable task.</returns>
+    async Task ApplyRemainingSegments(DbContextScope<ReadModelDbContext> scope, SegmentWrite write, IEnumerable<Change[]> segments)
+    {
+        foreach (var segment in segments)
+        {
+            if (!IsDirectSegment(segment))
+            {
+                foreach (var joined in segment.OfType<Joined>())
+                {
+                    await ApplyJoinedChange(scope, joined, write.SequenceNumber);
+                }
+
+                continue;
+            }
+
+            if (!write.DirectApplied)
+            {
+                continue;
+            }
+
+            var entry = await GetOrAttachEntity(scope, write.Id, write.Key);
+            ApplyChangesToEntity(entry, segment);
+            AdvanceLastHandledSequenceNumber(entry, write.SequenceNumber);
+            await SaveRecoveringFromInsertRace(scope, entry, new PendingWrite(write.Id, segment, write.SequenceNumber));
+            await SqlCompositeKeyShadow.Stamp(scope.DbContext, write.Key, write.Id, _logger);
         }
     }
 
-    static Joined[] JoinsAfterDirectChanges(IChangeset<AppendedEvent, ExpandoObject> changeset)
-    {
-        var changes = changeset.Changes.ToArray();
-        var firstDirectIndex = Array.FindIndex(changes, c => c is not Joined and not ChildRemovedFromAll);
-        return firstDirectIndex < 0 ? [] : changes.Skip(firstDirectIndex).OfType<Joined>().ToArray();
-    }
-
-    async Task WriteDirectChanges(DbContextScope<ReadModelDbContext> scope, DirectWrite write)
+    async Task WriteDirectChanges(DbContextScope<ReadModelDbContext> scope, DirectWrite write, List<Change[]> segments)
     {
         var (key, id, changeset, eventSequenceNumber, mode) = write;
-        var nonJoinedChanges = changeset.Changes
-            .Where(c => c is not Joined and not ChildRemovedFromAll)
-            .ToArray();
-        if (nonJoinedChanges.Length == 0 || !await ShouldWriteDirectChanges(scope, id, changeset, nonJoinedChanges))
+        var directChanges = DirectChangesOf(segments);
+        if (directChanges.Length == 0)
         {
+            return;
+        }
+
+        var remaining = segments.Skip(1);
+        if (!await ShouldWriteDirectChanges(scope, id, changeset, directChanges))
+        {
+            await ApplyRemainingSegments(scope, new SegmentWrite(key, id, eventSequenceNumber, false), remaining);
             return;
         }
 
@@ -245,13 +307,15 @@ public partial class Sink : ISink, ICanReconcileIndexes, ISinkCompositeKeyLookup
         if (IsSkippedByWatermark(entry, mode, eventSequenceNumber))
         {
             entry.State = EntityState.Detached;
+            await ApplyRemainingSegments(scope, new SegmentWrite(key, id, eventSequenceNumber, false), remaining);
             return;
         }
 
-        ApplyChangesToEntity(entry, nonJoinedChanges);
+        ApplyChangesToEntity(entry, segments[0]);
         AdvanceLastHandledSequenceNumber(entry, eventSequenceNumber);
-        await SaveRecoveringFromInsertRace(scope, entry, new PendingWrite(id, nonJoinedChanges, eventSequenceNumber));
+        await SaveRecoveringFromInsertRace(scope, entry, new PendingWrite(id, segments[0], eventSequenceNumber));
         await SqlCompositeKeyShadow.Stamp(scope.DbContext, key, id, _logger);
+        await ApplyRemainingSegments(scope, new SegmentWrite(key, id, eventSequenceNumber, true), remaining);
     }
 
     async Task RemoveEntry(DbContextScope<ReadModelDbContext> scope, string id)
@@ -910,6 +974,8 @@ public partial class Sink : ISink, ICanReconcileIndexes, ISinkCompositeKeyLookup
     }
 
     sealed record PendingWrite(string Id, Change[] Changes, EventSequenceNumber SequenceNumber);
+
+    sealed record SegmentWrite(Key Key, string Id, EventSequenceNumber SequenceNumber, bool DirectApplied);
 
     sealed record DirectWrite(Key Key, string Id, IChangeset<AppendedEvent, ExpandoObject> Changeset, EventSequenceNumber SequenceNumber, SinkWriteMode Mode);
 
