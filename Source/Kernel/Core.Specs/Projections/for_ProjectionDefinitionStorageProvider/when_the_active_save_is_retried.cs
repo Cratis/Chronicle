@@ -14,6 +14,6 @@ public class when_the_active_save_is_retried : given.a_history_provider
         await Catch.Exception(Write);
         await Write();
     }
-    [Fact] Task should_retry_the_same_history_identity() => _history.Received(2).Record(Arg.Is<ProjectionDefinitionHistoryEntry>(_ => _.Digest == ProjectionFactory.DefinitionDigestFor(_firstDefinition)));
+    [Fact] Task should_not_record_the_same_history_identity_again() => _history.Received(1).Record(Arg.Is<ProjectionDefinitionHistoryEntry>(_ => _.Digest == ProjectionFactory.DefinitionDigestFor(_firstDefinition)));
     [Fact] Task should_retry_the_active_save() => _eventStoreStorage.Projections.Received(2).Save(_firstDefinition);
 }
