@@ -1,0 +1,8 @@
+- name: Overview
+  href: index.mdx
+- name: Recovering from failures
+  href: recovering-from-failures.md
+- name: Diagnostics
+  href: diagnostics.md
+- name: Recover a failed partition
+  href: recover-a-failed-partition.md

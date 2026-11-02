@@ -83,6 +83,13 @@ public class QueryResult<TData>
     public static QueryResult<TData> Success(Guid correlationId, TData data) => new() { CorrelationId = correlationId, Data = data };
 
     /// <summary>
+    /// Creates a <see cref="QueryResult{TData}"/> for a caller that is not authorized to run the query.
+    /// </summary>
+    /// <param name="correlationId">The correlation identifier.</param>
+    /// <returns>An unauthorized result.</returns>
+    public static QueryResult<TData> Unauthorized(Guid correlationId) => new() { CorrelationId = correlationId, IsAuthorized = false };
+
+    /// <summary>
     /// Creates a new <see cref="QueryResult{TData}"/> representing an error.
     /// </summary>
     /// <param name="correlationId">The correlation id associated with the query.</param>

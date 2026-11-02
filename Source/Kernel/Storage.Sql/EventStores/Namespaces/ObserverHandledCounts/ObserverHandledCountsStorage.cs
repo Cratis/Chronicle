@@ -19,24 +19,33 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ObserverHandledCou
 /// <param name="database">The <see cref="IDatabase"/> to use.</param>
 public class ObserverHandledCountsStorage(EventStoreName eventStore, EventStoreNamespaceName @namespace, IDatabase database) : IObserverHandledCountsStorage
 {
-    const int MaxAttempts = 5;
-
     /// <inheritdoc/>
-    public async Task Increment(ObserverId observerId, Key partition, IReadOnlyDictionary<EventTypeId, EventCount> countsPerEventType)
-    {
-        foreach (var (eventTypeId, count) in countsPerEventType)
-        {
-            await Increment(observerId.Value, partition.ToString(), eventTypeId.Value, (long)count.Value);
-        }
-    }
+    public Task Increment(ObserverId observerId, Key partition, IReadOnlyDictionary<EventTypeId, EventCount> countsPerEventType) =>
+        Increment(observerId, [new(partition, countsPerEventType)]);
 
     /// <inheritdoc/>
     public async Task Increment(ObserverId observerId, IReadOnlyCollection<KeyValuePair<Key, IReadOnlyDictionary<EventTypeId, EventCount>>> countsPerPartition)
     {
-        foreach (var (partition, counts) in countsPerPartition)
+        var cells = countsPerPartition.SelectMany(partition => partition.Value.Select(count => new
         {
-            await Increment(observerId, partition, counts);
-        }
+            Partition = partition.Key.ToString(),
+            EventType = count.Key.Value,
+            Count = (long)count.Value.Value
+        })).GroupBy(cell => (cell.Partition, cell.EventType))
+            .OrderBy(group => group.Key.Partition, StringComparer.Ordinal)
+            .ThenBy(group => group.Key.EventType, StringComparer.Ordinal)
+            .Select(group => new ObserverHandledCountEntry
+            {
+                Id = Guid.NewGuid(),
+                ObserverId = observerId.Value,
+                Partition = group.Key.Partition,
+                EventTypeId = group.Key.EventType,
+                Count = group.Sum(cell => cell.Count)
+            }).ToArray();
+        if (cells.Length == 0) return;
+
+        await using var scope = await database.Namespace(eventStore, @namespace);
+        await ObserverHandledCountsSql.Increment(scope.DbContext, cells);
     }
 
     /// <inheritdoc/>
@@ -98,39 +107,5 @@ public class ObserverHandledCountsStorage(EventStoreName eventStore, EventStoreN
         await scope.DbContext.ObserverHandledCounts
             .Where(_ => _.ObserverId == observer)
             .ExecuteDeleteAsync();
-    }
-
-    async Task Increment(string observer, string partition, string eventType, long addend)
-    {
-        for (var attempt = 1; ; attempt++)
-        {
-            await using var scope = await database.Namespace(eventStore, @namespace);
-
-            // Atomic server-side increment; no read-modify-write, so concurrent writers never lose counts.
-            var updated = await scope.DbContext.ObserverHandledCounts
-                .Where(_ => _.ObserverId == observer && _.Partition == partition && _.EventTypeId == eventType)
-                .ExecuteUpdateAsync(_ => _.SetProperty(row => row.Count, row => row.Count + addend));
-            if (updated > 0)
-            {
-                return;
-            }
-
-            try
-            {
-                scope.DbContext.ObserverHandledCounts.Add(new ObserverHandledCountEntry
-                {
-                    ObserverId = observer,
-                    Partition = partition,
-                    EventTypeId = eventType,
-                    Count = addend
-                });
-                await scope.DbContext.SaveChangesAsync();
-                return;
-            }
-            catch (DbUpdateException) when (attempt < MaxAttempts)
-            {
-                // A concurrent writer inserted the row first; loop around and increment it instead.
-            }
-        }
     }
 }

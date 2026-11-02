@@ -31,7 +31,7 @@ public partial class ReadModelScenario<TReadModel>
         if (_readModelSeeds.ContainsKey(identity)) throw new ConflictingReadModelSeeds(typeof(TReadModel), identity);
         _namedReadModelSeeds.Add(identity, new(key, identity, instance));
         _seedKey = contract;
-        EventStore().RegisterReadModelInstance(identity, instance);
+        SeededReadModels().RegisterInstance(identity, instance);
         _processed = false;
     }
 
