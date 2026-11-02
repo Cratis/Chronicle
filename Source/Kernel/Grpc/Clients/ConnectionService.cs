@@ -50,6 +50,11 @@ internal sealed class ConnectionService(
         options.Value.ConnectedClients.StaleThresholdSeconds - options.Value.ConnectedClients.KeepAliveIntervalSeconds,
         options.Value.ConnectedClients.KeepAliveIntervalSeconds));
 
+    /// <summary>
+    /// Gets or sets the clock used for registration deadlines.
+    /// </summary>
+    internal TimeProvider RegistrationTimeProvider { get; set; } = TimeProvider.System;
+
     /// <inheritdoc/>
     public IObservable<ConnectionKeepAlive> Connect(
         ConnectRequest request,
@@ -62,63 +67,9 @@ internal sealed class ConnectionService(
         var subject = new ReplaySubject<ConnectionKeepAlive>(1);
         var connectedClients = grainFactory.GetConnectedClients(localSiloDetails.SiloAddress);
 
-        _ = Task.Run(
-            async () =>
-            {
-                await Register(connectedClients, request);
-                openConnections.Opened(request, DateTimeOffset.UtcNow);
-
-                try
-                {
-                    // The session is established the moment the client is registered, and the first keep-alive is
-                    // how the client learns that - it does not treat itself as connected until one arrives. Send it
-                    // straight away rather than after a first interval, or every client everywhere pays the whole
-                    // keep-alive interval before it can do anything.
-                    subject.OnNext(new ConnectionKeepAlive
-                    {
-                        ConnectionId = request.ConnectionId
-                    });
-
-                    while (!context.CancellationToken.IsCancellationRequested)
-                    {
-                        await Task.Delay(_keepAliveInterval).ConfigureAwait(false);
-
-                        if (context.CancellationToken.IsCancellationRequested)
-                        {
-                            break;
-                        }
-
-                        if (request.IsRunningWithDebugger)
-                        {
-                            await KeepRegistered(connectedClients, request);
-                        }
-                        else if (openConnections.HasLapsed(request.ConnectionId))
-                        {
-                            subject.OnCompleted();
-                            break;
-                        }
-
-                        subject.OnNext(new ConnectionKeepAlive
-                        {
-                            ConnectionId = request.ConnectionId
-                        });
-                    }
-                }
-                catch (Exception ex)
-                {
-                    logger.FailureDuringKeepAlive(request.ConnectionId, ex);
-                }
-
-                openConnections.Closed(request.ConnectionId);
-                await connectedClients.OnClientDisconnected(request.ConnectionId, "Client disconnected");
-            },
-            context.CancellationToken);
-
-        context.CancellationToken.Register(() =>
-        {
-            subject.OnCompleted();
-            subject.Dispose();
-        });
+        // The producer is the only owner of the subject: it alone emits and terminates, so a cancelling call and a
+        // registration finishing cannot race each other into two terminal notifications.
+        _ = Task.Run(() => Produce(subject, connectedClients, request, context.CancellationToken), CancellationToken.None);
 
         return subject;
     }
@@ -237,6 +188,137 @@ internal sealed class ConnectionService(
             request.MachineName,
             request.ClientType);
 
+    async Task Produce(
+        ReplaySubject<ConnectionKeepAlive> subject,
+        IConnectedClients connectedClients,
+        ConnectRequest request,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            if (!await TryRegister(subject, connectedClients, request, cancellationToken))
+            {
+                return;
+            }
+
+            openConnections.Opened(request, DateTimeOffset.UtcNow);
+            var keepRegistered = Task.CompletedTask;
+
+            try
+            {
+                // The session is established the moment the client is registered, and the first keep-alive is
+                // how the client learns that - it does not treat itself as connected until one arrives. Send it
+                // straight away rather than after a first interval, or every client everywhere pays the whole
+                // keep-alive interval before it can do anything.
+                subject.OnNext(new ConnectionKeepAlive
+                {
+                    ConnectionId = request.ConnectionId
+                });
+
+                while (!cancellationToken.IsCancellationRequested)
+                {
+#pragma warning disable MA0166 // The registration clock seam must not change existing heartbeat timing
+                    await Task.Delay(_keepAliveInterval, cancellationToken).ConfigureAwait(false);
+#pragma warning restore MA0166
+
+                    if (request.IsRunningWithDebugger)
+                    {
+                        // Only the wait is cancellable: an ending call must not wait out a registry call. KeepRegistered
+                        // handles its own failures, so a check given up on cannot fault unobserved.
+                        keepRegistered = KeepRegistered(connectedClients, request, cancellationToken);
+                        await keepRegistered.WaitAsync(cancellationToken).ConfigureAwait(false);
+                    }
+                    else if (openConnections.HasLapsed(request.ConnectionId))
+                    {
+                        break;
+                    }
+
+                    subject.OnNext(new ConnectionKeepAlive
+                    {
+                        ConnectionId = request.ConnectionId
+                    });
+                }
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                // The call ended while waiting for the next keep-alive.
+            }
+            catch (Exception ex)
+            {
+                logger.FailureDuringKeepAlive(request.ConnectionId, ex);
+            }
+
+            subject.OnCompleted();
+            openConnections.Closed(request.ConnectionId);
+
+            // A registry check given up on above may still be putting the client back. Let it settle first, so the
+            // disconnect is the registry's last word for this connection rather than being undone by a late restore.
+            await keepRegistered.ConfigureAwait(false);
+            await connectedClients.OnClientDisconnected(request.ConnectionId, "Client disconnected");
+        }
+        catch (Exception ex)
+        {
+            // Nothing is left to run this connection, so the client must be told rather than left waiting.
+            subject.OnError(ex);
+        }
+    }
+
+    /// <summary>
+    /// Registers the client, reporting a failed, timed out or cancelled registration to the subject.
+    /// </summary>
+    /// <param name="subject">The <see cref="ReplaySubject{T}"/> to terminate when the client is not registered.</param>
+    /// <param name="connectedClients">The <see cref="IConnectedClients"/> registry of the silo the client is connected to.</param>
+    /// <param name="request">The <see cref="ConnectRequest"/> the client connected with.</param>
+    /// <param name="cancellationToken">The <see cref="CancellationToken"/> of the call.</param>
+    /// <returns>True if the client is registered and the call is still live, false if the subject has been terminated.</returns>
+    async Task<bool> TryRegister(
+        ReplaySubject<ConnectionKeepAlive> subject,
+        IConnectedClients connectedClients,
+        ConnectRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (!cancellationToken.IsCancellationRequested)
+        {
+            try
+            {
+                var registration = Register(connectedClients, request);
+
+                // Only the wait is bounded and cancellable, not the registration itself. Should it fault after the
+                // wait has been given up on, nobody awaits it - observe it so the fault is not unobserved.
+                //
+                // A registration given up on (cancelled or timed out) is deliberately not compensated with a disconnect.
+                // The client retries an uncompleted connect with the same ConnectionId and the registry has no per-attempt
+                // identity, so a late disconnect by id would remove the retry's entry. Entries left behind rely on the
+                // registry's own lifecycle (an entry flagged as running with a debugger that never pinged is swept as stale too).
+                // This differs from the legacy cancel path, which disconnected after a late success.
+                _ = registration.ContinueWith(
+                    static task => _ = task.Exception,
+                    CancellationToken.None,
+                    TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously,
+                    TaskScheduler.Default);
+
+                await registration.WaitAsync(options.Value.Clustering.ResponseTimeout, RegistrationTimeProvider, cancellationToken).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                // The call was cancelled while registering - not an error.
+            }
+            catch (Exception ex)
+            {
+                subject.OnError(ex);
+                return false;
+            }
+        }
+
+        if (cancellationToken.IsCancellationRequested)
+        {
+            subject.OnCompleted();
+            return false;
+        }
+
+        return true;
+    }
+
     /// <summary>
     /// Refreshes a client running with a debugger in its silo's registry, and registers it again if the registry no
     /// longer knows it while the connection is still open.
@@ -258,12 +340,13 @@ internal sealed class ConnectionService(
     /// </remarks>
     /// <param name="connectedClients">The <see cref="IConnectedClients"/> registry of the silo the client is connected to.</param>
     /// <param name="request">The <see cref="ConnectRequest"/> the client connected with.</param>
+    /// <param name="cancellationToken">The <see cref="CancellationToken"/> of the call; once it ends, the client is not put back.</param>
     /// <returns>Awaitable task.</returns>
-    async Task KeepRegistered(IConnectedClients connectedClients, ConnectRequest request)
+    async Task KeepRegistered(IConnectedClients connectedClients, ConnectRequest request, CancellationToken cancellationToken)
     {
         try
         {
-            if (await connectedClients.OnClientPing(request.ConnectionId))
+            if (await connectedClients.OnClientPing(request.ConnectionId) || cancellationToken.IsCancellationRequested)
             {
                 return;
             }
