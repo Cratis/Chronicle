@@ -29,7 +29,8 @@ public class when_collectible_types_span_assemblies : Specification
     [Fact] void should_not_share_the_result() => _shared.ShouldBeFalse();
     [Fact] void should_unload_the_context_the_other_outlives() => _unloaded.IsAlive.ShouldBeFalse();
     [Fact] void should_collect_everything_it_waited_for() => _collected.ShouldBeTrue();
-    [Fact] void should_keep_the_other_context_loaded() => _loaded.EventType.Assembly.IsCollectible.ShouldBeTrue();
+
+    void Destroy() => _loaded.Context.Unload();
 
     [MethodImpl(MethodImplOptions.NoInlining)]
     static (WeakReference Context, bool Shared) CacheAndUnload(EventTypeSetCache<Type[]> cache, Type outliving)

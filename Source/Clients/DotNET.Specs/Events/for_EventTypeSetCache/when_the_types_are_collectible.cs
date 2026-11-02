@@ -16,15 +16,12 @@ public class when_the_types_are_collectible : Specification
     WeakReference _eventType;
     object _cached;
     object _again;
+    bool _collected;
 
     void Because()
     {
         (_artifact, _eventType) = CacheForCollectibleTypes(_cache);
-        for (var attempt = 0; attempt < 20 && (_artifact.IsAlive || _eventType.IsAlive); attempt++)
-        {
-            GC.Collect();
-            GC.WaitForPendingFinalizers();
-        }
+        _collected = CollectibleDispatchTypes.Collect(_artifact, _eventType);
 
         _cached = _cache.Get([typeof(string)], typeof(string), typeof(int), _ => new object());
         _again = _cache.Get([typeof(string)], typeof(string), typeof(int), _ => new object());
@@ -32,6 +29,7 @@ public class when_the_types_are_collectible : Specification
 
     [Fact] void should_let_the_artifact_be_collected() => _artifact.IsAlive.ShouldBeFalse();
     [Fact] void should_let_the_event_type_be_collected() => _eventType.IsAlive.ShouldBeFalse();
+    [Fact] void should_collect_everything_it_waited_for() => _collected.ShouldBeTrue();
     [Fact] void should_keep_caching_other_types() => _again.ShouldBeSame(_cached);
 
     [MethodImpl(MethodImplOptions.NoInlining)]
