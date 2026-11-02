@@ -15,17 +15,18 @@ public class and_an_older_join_is_redelivered_after_a_newer_direct_change(Chroni
 
     async Task Because()
     {
-        // Characterizes the pre-existing exposure of unguarded join writes: an older join redelivered after a newer direct
-        // change restores the older value while the watermark stays at the newer event. This is not fixed here and must not get worse.
+        // For a projection keyed by its event source id the older join is applied once: its redelivery is suppressed
+        // by the applied event marker, so the newer direct value survives (#5524, previously characterized as count=2).
         using var sink = CreateSink(UnfencedSinkWrites.Instance);
-        await sink.ApplyChanges(RootKey, ChangesetOf(Join(false, ("count", 2))), 10UL, SinkWriteMode.Always);
-        await sink.ApplyChanges(RootKey, ChangesetOf(Direct(("count", 3))), 20UL, SinkWriteMode.Always);
-        await sink.ApplyChanges(RootKey, ChangesetOf(Join(false, ("count", 2))), 10UL, SinkWriteMode.Always);
+        var join = EventOf("joined", "root", 10UL);
+        await sink.ApplyChanges(RootKey, ChangesetOf(join, Join(false, ("count", 2))), 10UL, SinkWriteMode.OncePerSourceEvent);
+        await sink.ApplyChanges(RootKey, ChangesetOf(EventOf("own", "root", 20UL), Direct(("count", 3))), 20UL, SinkWriteMode.OncePerSourceEvent);
+        await sink.ApplyChanges(RootKey, ChangesetOf(join, Join(false, ("count", 2))), 10UL, SinkWriteMode.OncePerSourceEvent);
         _root = await Read("root");
         _other = await Read("other");
     }
 
-    [Fact] void should_restore_the_older_joined_value_on_the_root() => _root["count"].ToInt32().ShouldEqual(2);
-    [Fact] void should_write_the_joined_value_to_the_other_row() => _other["count"].ToInt32().ShouldEqual(2);
+    [Fact] void should_keep_the_newer_direct_value_on_the_root() => _root["count"].ToInt32().ShouldEqual(3);
+    [Fact] void should_keep_the_joined_value_on_the_other_row() => _other["count"].ToInt32().ShouldEqual(2);
     [Fact] void should_keep_the_watermark_at_the_newer_event() => WatermarkOf(_root).ShouldEqual(20);
 }

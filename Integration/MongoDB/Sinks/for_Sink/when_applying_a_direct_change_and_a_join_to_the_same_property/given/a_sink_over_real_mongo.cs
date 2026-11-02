@@ -58,6 +58,25 @@ public class a_sink_over_real_mongo(ChronicleInProcessFixture fixture) : Integra
         changeset.InitialState.Returns(new ExpandoObject());
         changeset.Changes.Returns(changes);
         changeset.HasJoined().Returns(changes.OfType<Joined>().Any());
+        changeset.HasBeenRemoved().Returns(changes.OfType<Removed>().Any());
+        return changeset;
+    }
+
+    protected static AppendedEvent EventOf(string eventTypeId, string eventSourceId, ulong sequenceNumber, string @namespace = "default") =>
+        new(
+            EventContext.Empty with
+            {
+                EventType = new EventType(eventTypeId, EventTypeGeneration.First),
+                EventSourceId = eventSourceId,
+                Namespace = @namespace,
+                SequenceNumber = sequenceNumber
+            },
+            new ExpandoObject());
+
+    protected static IChangeset<AppendedEvent, ExpandoObject> ChangesetOf(AppendedEvent incoming, params Change[] changes)
+    {
+        var changeset = ChangesetOf(changes);
+        changeset.Incoming.Returns(incoming);
         return changeset;
     }
 
