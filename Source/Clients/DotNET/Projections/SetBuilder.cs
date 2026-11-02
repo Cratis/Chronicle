@@ -104,7 +104,7 @@ public class SetBuilder<TReadModel, TEvent, TProperty, TParentBuilder>(TParentBu
     /// <inheritdoc/>
     public TParentBuilder ToValue(TProperty value)
     {
-        _expression = ConstantValueExpression.From(value);
+        _expression = ConstantValueExpression.From(value, TargetProperty);
         return _parent;
     }
 

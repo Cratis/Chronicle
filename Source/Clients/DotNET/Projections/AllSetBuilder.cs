@@ -27,7 +27,7 @@ public class AllSetBuilder<TReadModel, TParentBuilder>(TParentBuilder parent, Pr
     /// <inheritdoc/>
     public TParentBuilder ToValue<TProperty>(TProperty value)
     {
-        _expression = ConstantValueExpression.From(value);
+        _expression = ConstantValueExpression.From(value, TargetProperty);
         return parent;
     }
 

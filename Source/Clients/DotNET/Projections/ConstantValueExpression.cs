@@ -2,7 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Globalization;
+using System.Numerics;
 using Cratis.Chronicle.Projections.Engine.Expressions;
+using Cratis.Chronicle.Properties;
 
 namespace Cratis.Chronicle.Projections;
 
@@ -16,8 +18,10 @@ internal static class ConstantValueExpression
     /// </summary>
     /// <typeparam name="TProperty">Type of the constant.</typeparam>
     /// <param name="value">The constant value.</param>
+    /// <param name="targetProperty">The property receiving the constant.</param>
     /// <returns>The constant or null expression.</returns>
-    internal static IEventValueExpression From<TProperty>(TProperty value)
+    /// <exception cref="UnsupportedProjectionConstant">The value is not a supported scalar constant.</exception>
+    internal static IEventValueExpression From<TProperty>(TProperty value, PropertyPath targetProperty)
     {
         if (value is null)
         {
@@ -28,6 +32,11 @@ internal static class ConstantValueExpression
         if (actualValue.IsConcept())
         {
             actualValue = actualValue.GetConceptValue();
+        }
+
+        if (!IsSupported(actualValue))
+        {
+            throw new UnsupportedProjectionConstant(targetProperty, actualValue.GetType());
         }
 
         if (actualValue.GetType().IsEnum)
@@ -50,4 +59,9 @@ internal static class ConstantValueExpression
 
         return new ValueExpression(invariantString);
     }
+
+    static bool IsSupported(object value) =>
+        value.GetType().IsPrimitive || value.GetType().IsEnum ||
+        value is string or decimal or Guid or DateTime or DateTimeOffset or DateOnly or TimeOnly or TimeSpan or Uri or
+            Half or Int128 or UInt128 or BigInteger;
 }

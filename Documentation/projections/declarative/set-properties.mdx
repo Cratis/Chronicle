@@ -46,6 +46,10 @@ You can map properties in several ways:
 - **From event context**: `.Set(m => m.OpenedAt).ToEventContextProperty(c => c.Occurred)`
 - **From event source ID**: `.Set(m => m.Id).ToEventSourceId()`
 
+In the .NET client, `ToValue()` accepts scalar constants: primitives (including `char`), `decimal`, strings, enums, `Guid`, date and time types (`DateTime`, `DateTimeOffset`, `DateOnly`, `TimeOnly`, `TimeSpan`), and `Uri`. Numeric scalars such as `Half`, `Int128`, `UInt128`, and `BigInteger` are also supported. Concepts are unwrapped and validated as scalars; nullable scalar values and `null` are supported. Constants use invariant formatting.
+
+Objects, records, and collections are not supported as complex constants. Both event-specific and every-event mappings throw `UnsupportedProjectionConstant` when `ToValue()` is called, naming the target property and unsupported type without including the constant value. [Complex constant support is tracked separately](https://github.com/Cratis/Chronicle/issues/5525).
+
 > [!NOTE]
 > `.To(...)` maps a single **event property** — it reads the value straight off the event, it does not run code. It cannot produce a *computed* value: `.To(e => $"{e.FirstName} {e.LastName}")`, `.To(_ => DateTimeOffset.UtcNow)` and similar expressions are not supported, because the builder extracts a property path from the expression rather than executing it. To derive a value, either record it on the event as a fact (compute it in the command's `Handle()` before appending) or use a [reducer](/chronicle/reducers/), which can run arbitrary logic over the current state and the event.
 
