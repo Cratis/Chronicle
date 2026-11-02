@@ -18,6 +18,7 @@ public partial class Sink
         var id = GetIdString(key);
         var incoming = checked((long)sequenceNumber.Value);
         var changes = changeset.Changes.Where(change => change is not Joined and not ChildRemovedFromAll).ToArray();
+        var trailingJoins = JoinsAfterDirectChanges(changeset);
         var joinsApplied = false;
         while (true)
         {
@@ -30,16 +31,18 @@ public partial class Sink
             }
             if (!joinsApplied)
             {
-                await ApplyJoinsAndChildRemovals(scope, changeset, sequenceNumber);
+                await ApplyJoinsAndChildRemovals(scope, changeset, sequenceNumber, joined => !trailingJoins.Any(trailing => ReferenceEquals(trailing, joined)));
                 joinsApplied = true;
             }
             if (changes.Length == 0 || !await ShouldWriteDirectChanges(scope, id, changeset, changes))
             {
+                await ApplyJoinedChanges(scope, trailingJoins, sequenceNumber);
                 return _noFailedPartitions;
             }
 
             if (await TryApplyGuardedChanges(scope, key, new PendingWrite(id, changes, sequenceNumber)))
             {
+                await ApplyJoinedChanges(scope, trailingJoins, sequenceNumber);
                 return _noFailedPartitions;
             }
         }

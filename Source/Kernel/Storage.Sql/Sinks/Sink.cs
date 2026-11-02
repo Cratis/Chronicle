@@ -203,29 +203,55 @@ public partial class Sink : ISink, ICanReconcileIndexes, ISinkCompositeKeyLookup
             return _noFailedPartitions;
         }
 
-        await ApplyJoinsAndChildRemovals(scope, changeset, eventSequenceNumber);
+        // A join that follows the direct changes in the changeset was applied after them by the projection,
+        // so it is written after them here too; joins that come first keep being written first.
+        var trailingJoins = JoinsAfterDirectChanges(changeset);
+        await ApplyJoinsAndChildRemovals(scope, changeset, eventSequenceNumber, joined => !trailingJoins.Any(trailing => ReferenceEquals(trailing, joined)));
 
+        await WriteDirectChanges(scope, new DirectWrite(key, id, changeset, eventSequenceNumber, mode));
+
+        await ApplyJoinedChanges(scope, trailingJoins, eventSequenceNumber);
+
+        return _noFailedPartitions;
+    }
+
+    async Task ApplyJoinedChanges(DbContextScope<ReadModelDbContext> scope, Joined[] joins, EventSequenceNumber eventSequenceNumber)
+    {
+        foreach (var joined in joins)
+        {
+            await ApplyJoinedChange(scope, joined, eventSequenceNumber);
+        }
+    }
+
+    static Joined[] JoinsAfterDirectChanges(IChangeset<AppendedEvent, ExpandoObject> changeset)
+    {
+        var changes = changeset.Changes.ToArray();
+        var firstDirectIndex = Array.FindIndex(changes, c => c is not Joined and not ChildRemovedFromAll);
+        return firstDirectIndex < 0 ? [] : changes.Skip(firstDirectIndex).OfType<Joined>().ToArray();
+    }
+
+    async Task WriteDirectChanges(DbContextScope<ReadModelDbContext> scope, DirectWrite write)
+    {
+        var (key, id, changeset, eventSequenceNumber, mode) = write;
         var nonJoinedChanges = changeset.Changes
             .Where(c => c is not Joined and not ChildRemovedFromAll)
             .ToArray();
         if (nonJoinedChanges.Length == 0 || !await ShouldWriteDirectChanges(scope, id, changeset, nonJoinedChanges))
         {
-            return _noFailedPartitions;
+            return;
         }
 
         var entry = await GetOrAttachEntity(scope, id, key);
         if (IsSkippedByWatermark(entry, mode, eventSequenceNumber))
         {
             entry.State = EntityState.Detached;
-            return _noFailedPartitions;
+            return;
         }
 
         ApplyChangesToEntity(entry, nonJoinedChanges);
         AdvanceLastHandledSequenceNumber(entry, eventSequenceNumber);
         await SaveRecoveringFromInsertRace(scope, entry, new PendingWrite(id, nonJoinedChanges, eventSequenceNumber));
         await SqlCompositeKeyShadow.Stamp(scope.DbContext, key, id, _logger);
-
-        return _noFailedPartitions;
     }
 
     async Task RemoveEntry(DbContextScope<ReadModelDbContext> scope, string id)
@@ -238,11 +264,11 @@ public partial class Sink : ISink, ICanReconcileIndexes, ISinkCompositeKeyLookup
         }
     }
 
-    async Task ApplyJoinsAndChildRemovals(DbContextScope<ReadModelDbContext> scope, IChangeset<AppendedEvent, ExpandoObject> changeset, EventSequenceNumber eventSequenceNumber)
+    async Task ApplyJoinsAndChildRemovals(DbContextScope<ReadModelDbContext> scope, IChangeset<AppendedEvent, ExpandoObject> changeset, EventSequenceNumber eventSequenceNumber, Func<Joined, bool>? includeJoin = null)
     {
         // Composite-key design §4.1: these paths lack target key parts. Leave shadows untouched;
         // never reconstruct composite parts from ambiguous or culture-sensitive legacy ids.
-        foreach (var joined in changeset.Changes.OfType<Joined>())
+        foreach (var joined in changeset.Changes.OfType<Joined>().Where(joined => includeJoin?.Invoke(joined) ?? true))
         {
             await ApplyJoinedChange(scope, joined, eventSequenceNumber);
         }
@@ -884,6 +910,8 @@ public partial class Sink : ISink, ICanReconcileIndexes, ISinkCompositeKeyLookup
     }
 
     sealed record PendingWrite(string Id, Change[] Changes, EventSequenceNumber SequenceNumber);
+
+    sealed record DirectWrite(Key Key, string Id, IChangeset<AppendedEvent, ExpandoObject> Changeset, EventSequenceNumber SequenceNumber, SinkWriteMode Mode);
 
     sealed record ObservedPage(long TotalCount, DynamicReadModelEntity[] Entries);
 
