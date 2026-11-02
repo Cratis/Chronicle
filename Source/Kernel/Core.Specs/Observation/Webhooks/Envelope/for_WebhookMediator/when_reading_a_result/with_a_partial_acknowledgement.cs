@@ -1,0 +1,23 @@
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+namespace Cratis.Chronicle.Observation.Webhooks.Envelope.for_WebhookMediator.when_reading_a_result;
+
+public class with_a_partial_acknowledgement : given.a_batch_delivery
+{
+    WebhookDeliveryResult _result;
+
+    void Establish() => _handler.ResponseBody = Result("FaIlEd", 42, extra: ",\"exceptionMessages\":[\"boom\"],\"exceptionStackTrace\":\"receiver trace\"");
+
+    async Task Because() => _result = await _mediator.DeliverEnvelope(_request);
+
+    [Fact] void should_not_succeed() => _result.IsSuccess.ShouldBeFalse();
+    [Fact] void should_acknowledge_only_the_prefix() => _result.LastHandled.Value.ShouldEqual(42UL);
+    [Fact] void should_carry_the_failure() => _result.Error.ShouldBeOfExactType<DeliveryNotFullyAcknowledged>();
+    [Fact] void should_keep_the_receiver_message() => _result.Error!.Message.ShouldContain("boom");
+    [Fact] void should_keep_the_receiver_stack_trace() => _result.Error!.StackTrace.ShouldEqual("receiver trace");
+    [Fact] void should_expose_the_checkpoint() => ((DeliveryNotFullyAcknowledged)_result.Error!).LastAcknowledged.Value.ShouldEqual(42UL);
+    [Fact] void should_expose_the_receiver_messages() => ((DeliveryNotFullyAcknowledged)_result.Error!).ReceiverMessages.ShouldContain("boom");
+    [Fact] void should_retry() => _result.FailurePolicy.ShouldEqual(WebhookDeliveryFailurePolicy.Retry);
+    [Fact] void should_have_no_deferral() => _result.Deferral.ShouldBeNull();
+}

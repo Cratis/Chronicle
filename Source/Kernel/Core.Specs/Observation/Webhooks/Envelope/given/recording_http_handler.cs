@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Net;
+using System.Text;
 
 namespace Cratis.Chronicle.Observation.Webhooks.Envelope.given;
 
@@ -11,6 +12,8 @@ public class recording_http_handler : HttpMessageHandler
     public List<Dictionary<string, string>> Headers { get; } = [];
     public List<string> MediaTypes { get; } = [];
     public HttpStatusCode Status { get; set; } = HttpStatusCode.OK;
+    public string? ResponseBody { get; set; }
+    public string ResponseMediaType { get; set; } = "application/json";
     public bool WaitForCancellation { get; set; }
     public bool WasCancelled { get; private set; }
 
@@ -30,6 +33,10 @@ public class recording_http_handler : HttpMessageHandler
                 WasCancelled = true;
                 throw;
             }
+        }
+        if (ResponseBody is not null)
+        {
+            return new(Status) { Content = new StringContent(ResponseBody, Encoding.UTF8, ResponseMediaType) };
         }
         return new(Status);
     }

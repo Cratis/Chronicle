@@ -74,7 +74,7 @@ public class WebhookMediator(IWebhookHttpClientFactory webhookHttpClientFactory,
             await deadline.CancelAsync();
         }
 
-        return await Send(delivery.EventStore, delivery.Target, batch, delivery.AccessToken, () => CreateEnvelopeRequest(delivery, trace.TraceParent), deadline.Token);
+        return await SendEnvelope(delivery, batch, trace.TraceParent, deadline.Token);
     }
 
     /// <summary>
@@ -135,6 +135,32 @@ public class WebhookMediator(IWebhookHttpClientFactory webhookHttpClientFactory,
         request.Headers.Add(DeliveryHeaders.Deadline, delivery.DeliverBy.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture));
         request.Headers.Add(DeliveryHeaders.TraceParent, traceParent);
         return request;
+    }
+
+    async Task<WebhookDeliveryResult> SendEnvelope(HttpDeliveryRequest delivery, AppendedEvent[] batch, string traceParent, CancellationToken cancellationToken)
+    {
+        // Mirrors Send; kept separate so the legacy path stays unchanged until the envelope is wired (#5116).
+        try
+        {
+            var httpClient = webhookHttpClientFactory.Create(delivery.Target, delivery.AccessToken);
+            using var request = CreateEnvelopeRequest(delivery, traceParent);
+            request.Options.Set(WebhookRequestOptions.EventStore, delivery.EventStore);
+            using var response = await httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+            if (!response.IsSuccessStatusCode)
+            {
+                return DeliveryRejected(response, delivery.Target, batch);
+            }
+
+            return await DeliveryResultReader.Read(response, delivery, batch, cancellationToken);
+        }
+        catch (BrokenCircuitException error)
+        {
+            return CircuitRejected(error, delivery.Target, batch);
+        }
+        catch (Exception error)
+        {
+            return WebhookDeliveryErrors.FromException(delivery.Target, error, FindTargetRejection(error));
+        }
     }
 
     async Task<WebhookDeliveryResult> Send(EventStoreName? eventStore, WebhookTarget webhookTarget, AppendedEvent[] batch, string? accessToken, Func<HttpRequestMessage> createRequest, CancellationToken cancellationToken)
