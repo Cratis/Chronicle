@@ -15,7 +15,7 @@ const enabled = ['-p:EnableRollingDeliveryDiagnostics=true', `-p:ArtifactsPath=$
 const validate = 'ValidateRollingDeliveryDiagnostics';
 
 function check(name, properties, expectedError = '', { target = validate, project = clientProject } = {}) {
-    const result = spawnSync('dotnet', ['msbuild', project, '-nologo', '-m:4', '-nodeReuse:false', '-p:TargetFramework=net10.0', `-t:${target}`, ...properties], {
+    const result = spawnSync('dotnet', ['msbuild', project, '-nologo', '-m:4', '-nodeReuse:false', '-p:TargetFramework=net10.0', '-p:TargetFrameworks=net10.0', `-t:${target}`, ...properties], {
         encoding: 'utf8', timeout: 60000, maxBuffer: 1024 * 1024
     });
     assert.ifError(result.error);
@@ -27,9 +27,13 @@ function check(name, properties, expectedError = '', { target = validate, projec
         assert.equal(result.status, 0, `${name}: ${output}`);
     }
     console.log(`PASS ${name}`);
+    return output;
 }
 
 check('normal defaults', []);
+// Packaging props must not expand this single-TFM probe back to the shipping framework list.
+const targeting = check('single-TFM packaging evaluation', ['-p:IsPackaging=true', '-getProperty:TargetFramework,TargetFrameworks']);
+assert.deepEqual(JSON.parse(targeting).Properties, { TargetFramework: 'net10.0', TargetFrameworks: 'net10.0' });
 check('isolated candidate accepted', enabled);
 check('raw symbol denied', ['-p:DefineConstants=CHRONICLE_ROLLING_DIAGNOSTICS'], 'require EnableRollingDeliveryDiagnostics');
 check('missing isolation denied', ['-p:EnableRollingDeliveryDiagnostics=true'], 'require an absolute ArtifactsPath');
