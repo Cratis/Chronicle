@@ -86,7 +86,9 @@ public class when_upgrading_an_existing_pre_train6_event_store : Specification
     {
         await context.Database.OpenConnectionAsync();
         await using var command = context.Database.GetDbConnection().CreateCommand();
+#pragma warning disable CA2100 // Test-only helper: every caller supplies a fixed SQL literal; no external input.
         command.CommandText = sql;
+#pragma warning restore CA2100
         return Convert.ToInt64(await command.ExecuteScalarAsync());
     }
 
