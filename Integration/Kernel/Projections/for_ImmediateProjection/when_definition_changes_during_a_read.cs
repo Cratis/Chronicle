@@ -1,6 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text.Json;
+using Cratis.Chronicle.Kernel.Integration.Projections.for_ImmediateProjection.given;
+using Cratis.Chronicle.Projections;
 using context = Cratis.Chronicle.Kernel.Integration.Projections.for_ImmediateProjection.when_definition_changes_during_a_read.context;
 
 namespace Cratis.Chronicle.Kernel.Integration.Projections.for_ImmediateProjection;
@@ -48,9 +51,27 @@ public class when_definition_changes_during_a_read(context context) : Given<cont
             }
 
             var inFlight = await read.WaitAsync(TimeSpan.FromSeconds(30));
-            InFlightName = inFlight.ReadModel["name"]!.GetValue<string>();
+            InFlightName = ReadModel(inFlight, "in-flight read").Name;
             var subsequent = await _immediateProjection.GetModelInstance().WaitAsync(TimeSpan.FromSeconds(30));
-            SubsequentSeed = subsequent.ReadModel["seed"]!.GetValue<string>();
+            SubsequentSeed = ReadModel(subsequent, "subsequent read").Seed;
+        }
+
+        InterleavedReadModel ReadModel(ProjectionResult result, string phase)
+        {
+            var model = result.ReadModel;
+            var keys = model is null ? "" : string.Join(", ", model.Take(8).Select(entry => entry.Key.Length > 64 ? entry.Key[..64] : entry.Key));
+            var diagnostic = $"{phase}: HasReadModel={result.HasReadModel}; model null: {model is null}; property count: {model?.Count ?? 0}; first 8 keys (up to 64 characters each): [{keys}]";
+            Assert.True(result.HasReadModel, diagnostic);
+            Assert.True(model is not null, diagnostic);
+            foreach (var property in new[] { nameof(InterleavedReadModel.Name), nameof(InterleavedReadModel.Seed) })
+            {
+                Assert.True(model.TryGetPropertyValue(property, out var value), $"Expected property '{property}'. {diagnostic}");
+                Assert.True(value is not null, $"Expected non-null property '{property}'. {diagnostic}");
+            }
+
+            var typed = model.Deserialize<InterleavedReadModel>(ChronicleClient.Options.JsonSerializerOptions);
+            Assert.True(typed is not null, diagnostic);
+            return typed;
         }
     }
 
