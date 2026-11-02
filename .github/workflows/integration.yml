@@ -464,6 +464,15 @@ jobs:
             --enabled "$RUNNER_TEMP/rolling-delivery-diagnostics/bin/SqlClustering/release/Cratis.Chronicle.Integration.SqlClustering.dll" \
             --output "$RUNNER_TEMP/rolling-delivery-overhead"
 
+      - name: Upload rolling delivery overhead evidence immediately
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: rolling-delivery-overhead
+          path: ${{ runner.temp }}/rolling-delivery-overhead/
+          retention-days: 7
+
       - name: Pre-pull images
         uses: nick-fields/retry@v3
         with:
