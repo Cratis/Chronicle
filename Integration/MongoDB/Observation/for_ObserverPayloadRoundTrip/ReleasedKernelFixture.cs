@@ -95,7 +95,11 @@ public sealed class ReleasedKernelFixture : IAsyncDisposable
         }
         catch (TimeoutException ex)
         {
-            throw await DescribeReadinessFailure(ex);
+            var notReady = await DescribeReadinessFailure(ex);
+
+            // A failing Establish skips Destroy, so the fixture releases its own containers before reporting.
+            await DisposeAsync();
+            throw notReady;
         }
     }
 
