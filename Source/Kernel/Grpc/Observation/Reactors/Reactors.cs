@@ -36,6 +36,7 @@ namespace Cratis.Chronicle.Services.Observation.Reactors;
 /// <param name="activitySource">The <see cref="IActivitySource{T}"/> for tracing.</param>
 /// <param name="options"><see cref="IOptions{ChronicleOptions}"/> for how often to check the subscription of a connected client.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
+/// <param name="registrationGate">The silo-wide gate for observer registrations.</param>
 internal sealed class Reactors(
     IGrainFactory grainFactory,
     IReactorMediator reactorMediator,
@@ -43,7 +44,8 @@ internal sealed class Reactors(
     JsonSerializerOptions jsonSerializerOptions,
     [FromKeyedServices(WellKnown.MeterName)] IActivitySource<Reactors> activitySource,
     IOptions<ChronicleOptions> options,
-    ILogger<Reactors> logger) : IReactors
+    ILogger<Reactors> logger,
+    IObserverRegistrationGate registrationGate) : IReactors
 {
     /// <inheritdoc/>
     public IObservable<EventsToObserve> Observe(IObservable<ReactorMessage> messages, CallContext context = default)
@@ -100,10 +102,11 @@ internal sealed class Reactors(
         var observable = Observable.Create<EventsToObserve>(async (observer, cancellationToken) =>
         {
             observableObserver = observer;
+            using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, context.CancellationToken);
 
             try
             {
-                var registration = await registrationTcs.Task;
+                var registration = await registrationTcs.Task.WaitAsync(cancellation.Token);
                 connectionId = registration.ConnectionId;
                 observerId = registration.Reactor.ReactorId;
                 eventStoreName = registration.EventStore;
@@ -149,6 +152,7 @@ internal sealed class Reactors(
                     (replayState, partition) => observer.OnNext(new EventsToObserve { Partition = partition, ReplayState = (Contracts.Observation.ReplayState)replayState }));
 
                 var definition = registration.Reactor.ToChronicle();
+                using (await registrationGate.Enter(cancellation.Token))
                 using (var span = activitySource.Register())
                 {
                     span?.Activity?.Tag(key, ObserverType.Reactor);
@@ -161,7 +165,7 @@ internal sealed class Reactors(
                     TimeSpan.FromSeconds(options.Value.ConnectedClients.ReviseIntervalSeconds),
                     registration.ConnectionId,
                     logger,
-                    cancellationToken);
+                    cancellation.Token);
 
                 logger.Disconnected(
                     registration.Reactor.ReactorId,

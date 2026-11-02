@@ -38,7 +38,8 @@ public class and_get_definition_fails : Specification
             new JsonSerializerOptions(),
             new ActivitySource<Reducers>(),
             Options.Create(new ChronicleOptions()),
-            NullLogger<Reducers>.Instance);
+            NullLogger<Reducers>.Instance,
+            Substitute.For<IObserverRegistrationGate>());
 
         _messages = new Subject<ReducerMessage>();
     }

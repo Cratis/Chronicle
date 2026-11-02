@@ -23,6 +23,7 @@ Observer configuration controls retry behavior, timeouts, watchdog monitoring, a
     "definitionEvolution": "Automatic",
     "watchdogInterval": 60,
     "maxConcurrentPartitions": 32,
+    "maxConcurrentRegistrations": 8,
     "fanOutStrategy": "round-robin"
   }
 }
@@ -45,7 +46,16 @@ Observer configuration controls retry behavior, timeouts, watchdog monitoring, a
 | watchdogInterval | number | 60 | Interval in seconds between watchdog checks; the watchdog verifies connected clients are still active, running jobs (replay and catch-up) are still progressing, and `NextEventSequenceNumber` is up-to-date |
 | maxCatchupRecoveryAttempts | number | 5 | How many watchdog checks in a row may retry a stuck catch-up preparation, or a recovery that failed after quarantine was cleared, before the watchdog quarantines the observer. `0` or less quarantines on the first retry. See [Ending quarantine](#ending-quarantine) |
 | maxConcurrentPartitions | number | 32 | Upper bound on how many job steps (replay and catch-up work) run in parallel. The effective limit is the smaller of this value and `jobs.maxParallelSteps`. Despite the name it does not limit live event delivery. See [Job throttling](job-throttling.md) |
+| maxConcurrentRegistrations | number | 8 | Maximum gRPC reactor and reducer registrations running concurrently on each silo. Excess registrations wait before any registration grain or read-model lookup. Values below 1 are treated as 1. Does not limit event append or observer delivery. See [Registration concurrency](#registration-concurrency) |
 | fanOutStrategy | string | round-robin | Strategy for distributing events across multiple connected instances of the same client. `round-robin` distributes deterministically by partition key, keeping every partition sticky to one instance and preserving per-partition ordering. `random` picks a random instance per delivery |
+
+## Registration concurrency
+
+`maxConcurrentRegistrations` limits registration work from gRPC reactors and reducers together on each silo. It defaults to `8`; values below `1` are treated as `1`. Excess registrations wait before their first grain or read-model lookup, and waiting ends if the client disconnects.
+
+A permit covers the registration lookups and subscription, not the lifetime of the connection. Once registration succeeds or fails, the permit is released. A disconnect cancels a queued registration; work already in flight retains its permit until it finishes. Reconnecting clients acquire a new permit. Event append, observer delivery and subscription maintenance do not acquire permits. This is a per-silo limit, not a cluster-wide limit, and is independent of `maxConcurrentPartitions`.
+
+Set it through JSON as shown above, or with `Cratis__Chronicle__Observers__MaxConcurrentRegistrations` as an environment variable.
 
 ## Definition evolution
 

@@ -22,6 +22,12 @@ public class Observers
     public int MaxConcurrentPartitions { get; init; } = 32;
 
     /// <summary>
+    /// Gets the maximum number of gRPC reactor and reducer registrations running concurrently on a silo.
+    /// </summary>
+    /// <remarks>Defaults to 8. Values below 1 are treated as 1. Does not limit event append or observer delivery.</remarks>
+    public int MaxConcurrentRegistrations { get; init; } = 8;
+
+    /// <summary>
     /// Gets how many seconds an observer waits for its subscriber to answer before giving up on the batch. Zero waits
     /// indefinitely.
     /// </summary>
