@@ -28,6 +28,9 @@ public partial class Sink
     static int WriteSteps(IChangeset<AppendedEvent, ExpandoObject> changeset, Change[] nonJoinedChanges) =>
         changeset.Changes.Count(change => change is Joined or ChildRemovedFromAll) + (nonJoinedChanges.Length > 0 ? 1 : 0);
 
+    static bool IsVerifyDrift(bool verifying, Exception exception) =>
+        verifying && (IsMissingReceiptTable(exception) || ShadowColumns.IsMissingColumn(exception));
+
     /// <summary>
     /// Runs the body of a cycle in a transaction together with the cycle's receipt.
     /// </summary>
@@ -44,14 +47,11 @@ public partial class Sink
         // The whole cycle is rerun instead of rolling back to a savepoint, which behaves the same on every provider.
         context.Database.AutoSavepointsEnabled = false;
         var strategy = context.Database.CreateExecutionStrategy();
-        var receiptId = Guid.CreateVersion7();
-        var sequence = SinkCycleReceipt.ToStored(sequenceNumber.Value);
-        long? startedAt = null;
-        var attempts = 0;
+        var state = new CycleAttemptState(Guid.CreateVersion7(), SinkCycleReceipt.ToStored(sequenceNumber.Value));
+        var receiptId = state.ReceiptId;
         var insertRaceReruns = 0;
         var repaired = false;
         var tableRepaired = false;
-        var wroteDirect = false;
         try
         {
             while (true)
@@ -59,27 +59,11 @@ public partial class Sink
                 try
                 {
                     await strategy.ExecuteInTransactionAsync(
-                        async () =>
-                        {
-                            context.ChangeTracker.Clear();
-                            if (attempts++ > 0 && await ProbeReceipt(context, receiptId, startedAt, sequence))
-                            {
-                                // A previous attempt committed and only its acknowledgment was lost.
-                                return;
-                            }
-
-                            wroteDirect = false;
-
-                            var receipt = new SinkCycleReceipt(receiptId, ActiveTableName, sequence, 0);
-                            context.SinkCycleReceipts.Add(receipt);
-                            wroteDirect = await body();
-                            await FlushReceiptIfPending(context, receipt);
-                            startedAt ??= receipt.CreatedAt;
-                        },
+                        () => RunCycleAttempt(context, state, body),
 
                         // The probe is the first statement of every retry attempt, in that attempt's transaction, so there is nothing to verify here.
                         () => Task.FromResult(false));
-                    return wroteDirect;
+                    return state.WroteDirect;
                 }
                 catch (CycleRerun)
                 {
@@ -88,7 +72,7 @@ public partial class Sink
                 catch (DbUpdateException exception) when (IsUniqueViolation(exception) && IsReceiptCollision(exception))
                 {
                     // The receipt key is already taken: an earlier attempt of this call committed. Never rerun.
-                    return wroteDirect;
+                    return state.WroteDirect;
                 }
                 catch (DbUpdateException exception) when (IsUniqueViolation(exception) && ++insertRaceReruns <= MaxInsertRaceReruns)
                 {
@@ -96,7 +80,7 @@ public partial class Sink
                     // PostgreSQL has aborted it. Rerun, and the row is now found and updated.
                     SqlStorageTelemetry.RecoveredCollision("read-model");
                 }
-                catch (Exception exception) when (verifying && (IsMissingReceiptTable(exception) || ShadowColumns.IsMissingColumn(exception)))
+                catch (Exception exception) when (IsVerifyDrift(verifying, exception))
                 {
                     // Verify never repairs. Report what is missing, or surface the original error when the receipts are fine.
                     await RejectVerifyDrift(context);
@@ -120,6 +104,37 @@ public partial class Sink
         {
             await DeleteReceiptAndSweepOrphans(context, receiptId);
         }
+    }
+
+    async Task RunCycleAttempt(ReadModelDbContext context, CycleAttemptState state, Func<Task<bool>> body)
+    {
+        context.ChangeTracker.Clear();
+        if (state.Attempts++ > 0 && await ProbeReceipt(context, state.ReceiptId, state.StartedAt, state.Sequence))
+        {
+            // A previous attempt committed and only its acknowledgment was lost.
+            return;
+        }
+
+        state.WroteDirect = false;
+
+        var receipt = new SinkCycleReceipt(state.ReceiptId, ActiveTableName, state.Sequence, 0);
+        context.SinkCycleReceipts.Add(receipt);
+        state.WroteDirect = await body();
+        await FlushReceiptIfPending(context, receipt);
+        state.StartedAt ??= receipt.CreatedAt;
+    }
+
+    sealed class CycleAttemptState(Guid receiptId, long sequence)
+    {
+        internal Guid ReceiptId { get; } = receiptId;
+
+        internal long Sequence { get; } = sequence;
+
+        internal long? StartedAt { get; set; }
+
+        internal int Attempts { get; set; }
+
+        internal bool WroteDirect { get; set; }
     }
 
 #pragma warning disable CA1064 // Private control-flow signal that never leaves this class.

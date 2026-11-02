@@ -91,30 +91,42 @@ internal static partial class SinkCycleReceiptSchema
         }
 
         var unsafeDrift = new List<string>();
+        CompareColumns(databaseType, columns, unsafeDrift);
+        CompareKey(parts, unsafeDrift);
+        var missingIndex = CompareIndex(parts, unsafeDrift);
+        return new(false, missingIndex ? [$"index '{IndexName}' is missing"] : [], unsafeDrift);
+    }
+
+    static void CompareColumns(DatabaseType databaseType, Dictionary<string, string[]> columns, List<string> unsafeDrift)
+    {
         foreach (var name in _columns)
         {
-            if (!columns.TryGetValue(name, out var column))
+            if (columns.TryGetValue(name, out var column))
+            {
+                CompareColumn(databaseType, name, column, unsafeDrift);
+            }
+            else
             {
                 unsafeDrift.Add($"column '{name}' is missing");
-                continue;
             }
-
-            CompareColumn(databaseType, name, column, unsafeDrift);
         }
 
-        foreach (var column in columns.Values.Where(c => !_columns.Contains(c[1], StringComparer.Ordinal) && c[3] == "0" && c[4].Length == 0))
+        foreach (var column in columns.Values.Where(IsRequiredWithoutDefault))
         {
             unsafeDrift.Add($"column '{column[1]}' is required and has no default");
         }
+    }
 
+    static bool IsRequiredWithoutDefault(string[] column) =>
+        !_columns.Contains(column[1], StringComparer.Ordinal) && column[3] == "0" && column[4].Length == 0;
+
+    static void CompareKey(string[][] parts, List<string> unsafeDrift)
+    {
         var key = parts.Where(p => p[0] == "P").Select(p => p[1]).ToArray();
         if (key.Length != 1 || key[0] != "Id")
         {
             unsafeDrift.Add($"primary key is ({string.Join(", ", key)}) instead of (Id)");
         }
-
-        var missingIndex = CompareIndex(parts, unsafeDrift);
-        return new(false, missingIndex ? [$"index '{IndexName}' is missing"] : [], unsafeDrift);
     }
 
     static void CompareColumn(DatabaseType databaseType, string name, string[] column, List<string> unsafeDrift)
@@ -158,16 +170,11 @@ internal static partial class SinkCycleReceiptSchema
         return false;
     }
 
-    static string ExpectedType(DatabaseType databaseType, string column) => (databaseType, column) switch
+    static string ExpectedType(DatabaseType databaseType, string column) => databaseType switch
     {
-        (DatabaseType.PostgreSql, "Id") => "uuid",
-        (DatabaseType.PostgreSql, "TableName") => "text",
-        (DatabaseType.PostgreSql, _) => "bigint",
-        (DatabaseType.SqlServer, "Id") => "uniqueidentifier",
-        (DatabaseType.SqlServer, "TableName") => "nvarchar(max)",
-        (DatabaseType.SqlServer, _) => "bigint",
-        (_, "Id" or "TableName") => "TEXT",
-        _ => "INTEGER"
+        DatabaseType.PostgreSql => column switch { "Id" => "uuid", "TableName" => "text", _ => "bigint" },
+        DatabaseType.SqlServer => column switch { "Id" => "uniqueidentifier", "TableName" => "nvarchar(max)", _ => "bigint" },
+        _ => string.Equals(column, "Id", StringComparison.Ordinal) || string.Equals(column, "TableName", StringComparison.Ordinal) ? "TEXT" : "INTEGER"
     };
 
     /// <summary>
