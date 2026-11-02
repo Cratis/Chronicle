@@ -14,5 +14,6 @@ public class and_discovery_succeeds : given.an_external_authority
     [Fact] void should_post_once_to_the_discovered_endpoint() => _handler.TokenRequests.Single().Uri.AbsoluteUri.ShouldEqual(TokenUrl);
     [Fact] void should_send_the_scope() => _handler.TokenRequests.Single().Form["scope"].ShouldEqual("api://chronicle/.default");
     [Fact] void should_send_the_client_id() => _handler.TokenRequests.Single().Form["client_id"].ShouldEqual("test-client");
+    [Fact] void should_not_log_the_token_source_at_information_level() => _log.Entries.Any(_ => _.Level >= Microsoft.Extensions.Logging.LogLevel.Information).ShouldBeFalse();
     [Fact] void should_return_the_token() => _token.ShouldEqual("the-token");
 }

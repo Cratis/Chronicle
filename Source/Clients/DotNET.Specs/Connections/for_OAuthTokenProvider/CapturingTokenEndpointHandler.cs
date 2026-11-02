@@ -11,6 +11,11 @@ public class CapturingTokenEndpointHandler : HttpMessageHandler
     public string Token { get; set; } = "the-token";
     public int ExpiresIn { get; set; } = 3600;
     public bool FailDiscovery { get; set; }
+    public Exception? DiscoveryException { get; set; }
+    public Action? OnDiscovery { get; set; }
+    public HttpStatusCode DiscoveryStatus { get; set; } = HttpStatusCode.OK;
+    public HttpStatusCode TokenStatus { get; set; } = HttpStatusCode.OK;
+    public string? TokenErrorBody { get; set; }
     public string DiscoveryDocument { get; set; } = "{\"token_endpoint\":\"https://idp.example.com/realms/chronicle/protocol/openid-connect/token\"}";
 
     public IEnumerable<CapturedRequest> DiscoveryRequests => Requests.Where(IsDiscovery);
@@ -34,18 +39,43 @@ public class CapturingTokenEndpointHandler : HttpMessageHandler
 
         if (IsDiscovery(captured))
         {
+            OnDiscovery?.Invoke();
+            if (DiscoveryException is not null)
+            {
+                throw DiscoveryException;
+            }
+
             if (FailDiscovery)
             {
                 throw new HttpRequestException("Simulated discovery failure");
             }
 
-            return new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(DiscoveryDocument) };
+            return IsRedirect(DiscoveryStatus) ? Redirect(DiscoveryStatus) : new HttpResponseMessage(DiscoveryStatus) { Content = new StringContent(DiscoveryDocument) };
         }
 
-        return new HttpResponseMessage(HttpStatusCode.OK)
+        if (IsRedirect(TokenStatus))
+        {
+            return Redirect(TokenStatus);
+        }
+
+        if (TokenErrorBody is not null)
+        {
+            return new HttpResponseMessage(TokenStatus == HttpStatusCode.OK ? HttpStatusCode.BadRequest : TokenStatus) { Content = new StringContent(TokenErrorBody) };
+        }
+
+        return new HttpResponseMessage(TokenStatus)
         {
             Content = new StringContent($"{{\"access_token\":\"{Token}\",\"expires_in\":{ExpiresIn}}}")
         };
+    }
+
+    static bool IsRedirect(HttpStatusCode status) => (int)status is >= 300 and < 400;
+
+    static HttpResponseMessage Redirect(HttpStatusCode status)
+    {
+        var response = new HttpResponseMessage(status);
+        response.Headers.Location = new Uri("https://elsewhere.example.net/collect");
+        return response;
     }
 
     static bool IsDiscovery(CapturedRequest request) => request.Uri.AbsolutePath.EndsWith("/.well-known/openid-configuration", StringComparison.Ordinal);

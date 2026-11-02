@@ -10,7 +10,7 @@ internal static partial class ExternalAuthorityTokenProviderLogMessages
     [LoggerMessage(LogLevel.Debug, "Discovering token endpoint from authority {Authority}")]
     internal static partial void DiscoveringTokenEndpoint(this ILogger<ExternalAuthorityTokenProvider> logger, string authority);
 
-    [LoggerMessage(LogLevel.Information, "Requesting client tokens from token endpoint {Endpoint} discovered from authority {Authority} (source: Authentication:Authority)")]
+    [LoggerMessage(LogLevel.Debug, "Discovered token endpoint {Endpoint} from authority {Authority}")]
     internal static partial void DiscoveredTokenEndpoint(this ILogger<ExternalAuthorityTokenProvider> logger, string authority, string endpoint);
 
     [LoggerMessage(LogLevel.Warning, "Failed to discover the token endpoint from authority {Authority}")]

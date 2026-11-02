@@ -27,6 +27,7 @@ public class OAuthTokenProvider : ITokenProvider, IDisposable
     static readonly TimeSpan _failedFetchRetryDelay = TimeSpan.FromSeconds(5);
 
     readonly Func<string> _tokenEndpoint;
+    readonly Func<string, string> _describeEndpoint;
     readonly string _clientId;
     readonly string _clientSecret;
     readonly string? _scope;
@@ -126,7 +127,7 @@ public class OAuthTokenProvider : ITokenProvider, IDisposable
         ILogger<OAuthTokenProvider> logger,
         HttpMessageHandler httpMessageHandler,
         TimeProvider timeProvider)
-        : this(ExternalEndpoint(tokenEndpoint), clientId, clientSecret, scope, logger, httpMessageHandler, timeProvider)
+        : this(ExternalEndpoint(tokenEndpoint), clientId, clientSecret, scope, logger, httpMessageHandler, timeProvider, endpoint => ExternalTokenEndpoints.Describe(new Uri(endpoint)))
     {
     }
 
@@ -137,9 +138,11 @@ public class OAuthTokenProvider : ITokenProvider, IDisposable
         string? scope,
         ILogger<OAuthTokenProvider> logger,
         HttpMessageHandler httpMessageHandler,
-        TimeProvider timeProvider)
+        TimeProvider timeProvider,
+        Func<string, string>? describeEndpoint = null)
     {
         _tokenEndpoint = tokenEndpoint;
+        _describeEndpoint = describeEndpoint ?? (endpoint => endpoint);
         _clientId = clientId;
         _clientSecret = clientSecret;
         _scope = scope;
@@ -220,7 +223,16 @@ public class OAuthTokenProvider : ITokenProvider, IDisposable
     /// Creates a <see cref="HttpMessageHandler"/> for external authorities that always validates the server certificate.
     /// </summary>
     /// <returns>The <see cref="HttpMessageHandler"/>.</returns>
-    internal static SocketsHttpHandler CreateExternalHttpMessageHandler() => new();
+    /// <remarks>
+    /// Redirects are never followed: a redirect would resend the client credentials to a host nobody configured.
+    /// </remarks>
+    internal static SocketsHttpHandler CreateExternalHttpMessageHandler() => new() { AllowAutoRedirect = false };
+
+    /// <summary>
+    /// Gets the <see cref="HttpMessageHandler"/> token requests are performed with.
+    /// </summary>
+    /// <returns>The <see cref="HttpMessageHandler"/>.</returns>
+    internal HttpMessageHandler GetMessageHandler() => _httpMessageHandler;
 
     /// <summary>
     /// Gets the token endpoint tokens are currently requested from.
@@ -246,9 +258,10 @@ public class OAuthTokenProvider : ITokenProvider, IDisposable
     async Task<string?> FetchToken(CancellationToken cancellationToken)
     {
         var tokenEndpoint = _tokenEndpoint();
+        var loggedEndpoint = _describeEndpoint(tokenEndpoint);
         try
         {
-            _logger.RequestingAccessToken(tokenEndpoint);
+            _logger.RequestingAccessToken(loggedEndpoint);
 
             using var content = new FormUrlEncodedContent(CreateTokenRequestParameters());
 
@@ -257,7 +270,7 @@ public class OAuthTokenProvider : ITokenProvider, IDisposable
             if (!response.IsSuccessStatusCode)
             {
                 var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
-                _logger.TokenRequestFailed((int)response.StatusCode, response.ReasonPhrase ?? "Unknown", errorContent);
+                _logger.TokenRequestFailed((int)response.StatusCode, response.StatusCode.ToString(), OAuthErrorCodes.Describe(errorContent));
                 response.EnsureSuccessStatusCode();
             }
 
@@ -288,11 +301,11 @@ public class OAuthTokenProvider : ITokenProvider, IDisposable
             {
                 // Only the refresh margin has been crossed, not the actual expiry - a transient
                 // token-endpoint failure must not take down an otherwise healthy session.
-                _logger.ServingCachedTokenAfterFailedFetch(tokenEndpoint, _expiresAt, ex);
+                _logger.ServingCachedTokenAfterFailedFetch(loggedEndpoint, _expiresAt, ex);
                 return cachedToken;
             }
 
-            _logger.FailedToObtainAccessToken(tokenEndpoint, ex);
+            _logger.FailedToObtainAccessToken(loggedEndpoint, ex);
             throw;
         }
     }

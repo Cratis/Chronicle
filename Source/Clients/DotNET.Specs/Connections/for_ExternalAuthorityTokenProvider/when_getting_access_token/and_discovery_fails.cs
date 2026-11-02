@@ -14,6 +14,7 @@ public class and_discovery_fails : given.an_external_authority
     {
         _firstResult = await Catch.Exception(() => _provider.GetAccessToken());
         _handler.FailDiscovery = false;
+        _time.Advance(TimeSpan.FromSeconds(6));
         _secondToken = (await _provider.GetAccessToken())!;
     }
 

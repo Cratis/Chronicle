@@ -12,11 +12,23 @@ namespace Cratis.Chronicle.Connections;
 /// </summary>
 /// <remarks>
 /// Discovery is lazy, happens once and is cached for the life of the provider once it succeeds. A failed
-/// discovery is not cached and is retried on the next request.
+/// discovery is remembered for a short delay, during which the same failure is rethrown without contacting the
+/// authority again, so an outage does not turn every RPC into a discovery request. Redirects are never followed.
 /// </remarks>
 internal sealed class ExternalAuthorityTokenProvider : ITokenProvider, IDisposable
 {
     const string DiscoveryPath = "/.well-known/openid-configuration";
+
+    /// <summary>
+    /// The longest a discovery request may take. Discovery is one small GET that runs under a lock every token request waits on,
+    /// so 15 seconds is generous for a healthy authority while keeping an unreachable one from stalling callers for the 100 second HttpClient default.
+    /// </summary>
+    static readonly TimeSpan _discoveryTimeout = TimeSpan.FromSeconds(15);
+
+    /// <summary>
+    /// How long a failed discovery is rethrown without contacting the authority again - the same delay <see cref="OAuthTokenProvider"/> applies to failed token fetches.
+    /// </summary>
+    static readonly TimeSpan _failedDiscoveryRetryDelay = TimeSpan.FromSeconds(5);
 
     readonly Uri _authority;
     readonly string _clientId;
@@ -29,6 +41,8 @@ internal sealed class ExternalAuthorityTokenProvider : ITokenProvider, IDisposab
     readonly HttpClient _discoveryClient;
     readonly SemaphoreSlim _discoveryLock = new(1, 1);
     OAuthTokenProvider? _inner;
+    TokenEndpointDiscoveryFailed? _lastFailure;
+    DateTimeOffset _lastFailedDiscovery = DateTimeOffset.MinValue;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ExternalAuthorityTokenProvider"/> class.
@@ -79,7 +93,7 @@ internal sealed class ExternalAuthorityTokenProvider : ITokenProvider, IDisposab
         _tokenLogger = tokenLogger;
         _handler = handler;
         _timeProvider = timeProvider;
-        _discoveryClient = new HttpClient(handler, disposeHandler: false);
+        _discoveryClient = new HttpClient(handler, disposeHandler: false) { Timeout = _discoveryTimeout };
     }
 
     /// <inheritdoc/>
@@ -88,7 +102,7 @@ internal sealed class ExternalAuthorityTokenProvider : ITokenProvider, IDisposab
 
     /// <inheritdoc/>
     public async Task<string?> Refresh(CancellationToken cancellationToken = default) =>
-        await (await GetInner(cancellationToken)).Refresh(cancellationToken);
+        await (await GetInner(cancellationToken, bypassThrottle: true)).Refresh(cancellationToken);
 
     /// <inheritdoc/>
     public void Dispose()
@@ -105,7 +119,13 @@ internal sealed class ExternalAuthorityTokenProvider : ITokenProvider, IDisposab
         }
     }
 
-    async Task<OAuthTokenProvider> GetInner(CancellationToken cancellationToken)
+    /// <summary>
+    /// Gets the <see cref="HttpMessageHandler"/> discovery and token requests are performed with.
+    /// </summary>
+    /// <returns>The <see cref="HttpMessageHandler"/>.</returns>
+    internal HttpMessageHandler GetMessageHandler() => _handler;
+
+    async Task<OAuthTokenProvider> GetInner(CancellationToken cancellationToken, bool bypassThrottle = false)
     {
         await _discoveryLock.WaitAsync(cancellationToken);
         try
@@ -115,7 +135,13 @@ internal sealed class ExternalAuthorityTokenProvider : ITokenProvider, IDisposab
                 return _inner;
             }
 
+            if (_lastFailure is not null && !bypassThrottle && _timeProvider.GetUtcNow() - _lastFailedDiscovery < _failedDiscoveryRetryDelay)
+            {
+                throw _lastFailure;
+            }
+
             var endpoint = await Discover(cancellationToken);
+            _lastFailure = null;
             _inner = new OAuthTokenProvider(endpoint, _clientId, _clientSecret, _scope, _tokenLogger, _handler, _timeProvider);
             return _inner;
         }
@@ -133,6 +159,11 @@ internal sealed class ExternalAuthorityTokenProvider : ITokenProvider, IDisposab
         {
             var discoveryUri = new Uri($"{_authority.AbsoluteUri.TrimEnd('/')}{DiscoveryPath}");
             using var response = await _discoveryClient.GetAsync(discoveryUri, cancellationToken);
+            if ((int)response.StatusCode is >= 300 and < 400)
+            {
+                throw new HttpRequestException($"The authority answered with a redirect ({(int)response.StatusCode}); redirects are not followed");
+            }
+
             response.EnsureSuccessStatusCode();
 
             var content = await response.Content.ReadAsStringAsync(cancellationToken);
@@ -153,14 +184,17 @@ internal sealed class ExternalAuthorityTokenProvider : ITokenProvider, IDisposab
             _logger.DiscoveredTokenEndpoint(authority, ExternalTokenEndpoints.Describe(endpoint));
             return endpoint;
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
             throw;
         }
         catch (Exception ex)
         {
+            // Includes the HttpClient timeout, which surfaces as a cancellation the caller did not ask for.
             _logger.TokenEndpointDiscoveryFailed(authority, ex);
-            throw new TokenEndpointDiscoveryFailed(authority, ex);
+            _lastFailure = new TokenEndpointDiscoveryFailed(authority, ex);
+            _lastFailedDiscovery = _timeProvider.GetUtcNow();
+            throw _lastFailure;
         }
     }
 }
