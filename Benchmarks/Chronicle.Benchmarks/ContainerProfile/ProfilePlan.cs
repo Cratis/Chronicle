@@ -72,6 +72,6 @@ internal static class ProfilePlan
         ContainerCommands.Start(context.Kernel), MetricCommands.Port(context, 8080), MetricCommands.Port(context, 35000),
         MetricCommands.Status(context), MetricCommands.Stats(context), MetricCommands.State(context),
         MetricCommands.Stop(context), MetricCommands.State(context), CleanupCommands.Remove(context.Kernel, context.Mongo),
-        CleanupCommands.RemoveNetwork(context.Network), CleanupCommands.Containers(), CleanupCommands.Networks()
+        CleanupCommands.RemoveNetwork(context.Network), CleanupCommands.Containers(context.Session), CleanupCommands.Networks(context.Session)
     ];
 }

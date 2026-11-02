@@ -16,25 +16,29 @@ internal static class CleanupCommands
     /// <returns>The bounded command.</returns>
     public static DockerCommand RemoveNetwork(string network) => new("remove network", ["network", "rm", network], TimeSpan.FromSeconds(60));
 
-    /// <summary>Finds only harness-labelled containers.</summary>
+    /// <summary>Finds only harness-labelled containers owned by one session.</summary>
+    /// <param name="session">The session identity.</param>
     /// <returns>The bounded command.</returns>
-    public static DockerCommand Containers() => new("list labelled containers", ["ps", "-aq", "--filter", "label=cratis.container-profile=1"], TimeSpan.FromSeconds(30));
+    public static DockerCommand Containers(string session) => new("list labelled containers", ["ps", "-aq", "--filter", "label=cratis.container-profile=1", "--filter", $"label=cratis.container-profile.session={session}"], TimeSpan.FromSeconds(30));
 
-    /// <summary>Finds only harness-labelled networks.</summary>
+    /// <summary>Finds only harness-labelled networks owned by one session.</summary>
+    /// <param name="session">The session identity.</param>
     /// <returns>The bounded command.</returns>
-    public static DockerCommand Networks() => new("list labelled networks", ["network", "ls", "-q", "--filter", "label=cratis.container-profile=1"], TimeSpan.FromSeconds(30));
+    public static DockerCommand Networks(string session) => new("list labelled networks", ["network", "ls", "-q", "--filter", "label=cratis.container-profile=1", "--filter", $"label=cratis.container-profile.session={session}"], TimeSpan.FromSeconds(30));
 
-    /// <summary>Removes resources selected by the harness ownership label.</summary>
+    /// <summary>Removes exact IDs selected by both harness ownership and session labels.</summary>
+    /// <param name="session">The required session identity.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The cleanup task.</returns>
-    public static async Task Run(CancellationToken cancellationToken)
+    public static async Task Run(string session, CancellationToken cancellationToken)
     {
-        var containers = await DockerCli.Require(Containers(), cancellationToken);
+        ArgumentException.ThrowIfNullOrWhiteSpace(session);
+        var containers = await DockerCli.Require(Containers(session), cancellationToken);
         foreach (var id in Split(containers))
         {
             await DockerCli.Require(Remove(id), cancellationToken);
         }
-        var networks = await DockerCli.Require(Networks(), cancellationToken);
+        var networks = await DockerCli.Require(Networks(session), cancellationToken);
         foreach (var id in Split(networks))
         {
             await DockerCli.Require(RemoveNetwork(id), cancellationToken);

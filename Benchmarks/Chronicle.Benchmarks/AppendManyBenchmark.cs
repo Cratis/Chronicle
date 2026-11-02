@@ -24,6 +24,13 @@ public class AppendManyBenchmark : IDisposable, IAsyncDisposable
     public int EventCount { get; set; }
 
     /// <summary>
+    /// Gets the pre-profile projection/reducer scope, excluding all reactors from append measurements.
+    /// </summary>
+    internal static IClientArtifactsProvider ArtifactsProvider => new ObserverScopedClientArtifactsProvider(
+        typeof(BenchmarkProjection), typeof(BenchmarkMaterializedReadModel), typeof(BenchmarkPassiveReadModel),
+        typeof(BenchmarkReducer), typeof(BenchmarkPassiveReducer));
+
+    /// <summary>
     /// Initializes the benchmark fixture and Chronicle client.
     /// </summary>
     /// <returns>A task that completes when setup is finished.</returns>
@@ -31,7 +38,7 @@ public class AppendManyBenchmark : IDisposable, IAsyncDisposable
     public async Task Setup()
     {
         _fixture = new ChronicleBenchmarkFixture();
-        _helper = new ChronicleClientHelper(_fixture);
+        _helper = new ChronicleClientHelper(_fixture, ChronicleClientHelper.DefaultEventStoreName, ArtifactsProvider);
         await _helper.WaitForConnection();
         _eventSourceId = EventSourceId.New();
     }

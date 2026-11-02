@@ -33,7 +33,7 @@ host with explicit permission. All output defaults to the ignored
 dotnet run --no-build -c Release --project Benchmarks/Chronicle.Benchmarks -- --container-profile build-images --variants r2r,jit
 dotnet run --no-build -c Release --project Benchmarks/Chronicle.Benchmarks -- --container-profile r2r-check --image chronicle-container-profile:<shortsha>-r2r
 dotnet run --no-build -c Release --project Benchmarks/Chronicle.Benchmarks -- --container-profile run --matrix core --gc-trace
-dotnet run --no-build -c Release --project Benchmarks/Chronicle.Benchmarks -- --container-profile cleanup
+dotnet run --no-build -c Release --project Benchmarks/Chronicle.Benchmarks -- --container-profile cleanup --session <id>
 ```
 
 Images are self-contained Linux publishes for Docker's architecture, built with the
@@ -64,6 +64,7 @@ The one-minute host-load ceiling defaults to half the client CPU count. The harn
 waits up to five minutes before recording a skipped row. `--max-host-load` changes the
 ceiling; `--allow-noisy-host` explicitly permits, and records, noisy runs. Child commands
 have deadlines and their process trees are killed on timeout. Cleanup is exact-target
-or label-scoped, never daemon-wide; it does not remove result files or scratch images.
-Do not run `cleanup` while another container-profile session is active. No production
+or scoped to both ownership and session labels, never daemon-wide; it does not remove
+result files or scratch images. `run` prints its session ID before starting containers;
+`cleanup --session <id>` removes only that session's exact resource IDs. No production
 performance claim follows from a plan, a build, or a noisy-host run.

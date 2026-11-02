@@ -16,6 +16,18 @@ internal static class CommandValidation
     public static IEnumerable<string> Validate(DockerCommand command, MatrixCell cell, string session) =>
         ValidateSafety(command).Concat(ValidateLabels(command, session)).Concat(ValidateKernelLimits(command, cell));
 
+    /// <summary>Rejects unsafe commands at the execution boundary as well as in plans.</summary>
+    /// <param name="command">The command to execute.</param>
+    /// <exception cref="HarnessFailure">The command has an invalid deadline or forbidden argument.</exception>
+    public static void RequireSafe(DockerCommand command)
+    {
+        var violations = ValidateSafety(command).ToArray();
+        if (violations.Length > 0)
+        {
+            throw new HarnessFailure(string.Join("; ", violations));
+        }
+    }
+
     static IEnumerable<string> ValidateSafety(DockerCommand command)
     {
         if (command.Deadline <= TimeSpan.Zero)

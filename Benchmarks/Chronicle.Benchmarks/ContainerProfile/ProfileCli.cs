@@ -60,7 +60,7 @@ internal static class ProfileCli
                 await ProfileImages.Build(options, cancellationToken);
                 return 0;
             case "cleanup":
-                await CleanupCommands.Run(cancellationToken);
+                await CleanupCommands.Run(options.Session, cancellationToken);
                 return 0;
             default:
                 return 2;

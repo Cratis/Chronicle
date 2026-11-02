@@ -10,8 +10,11 @@ internal static class DockerCli
     /// <param name="command">The command.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The raw process outcome.</returns>
-    public static Task<ProcessResult> Run(DockerCommand command, CancellationToken cancellationToken) =>
-        ProcessRunner.Run("docker", command.Arguments, command.Deadline, cancellationToken);
+    public static Task<ProcessResult> Run(DockerCommand command, CancellationToken cancellationToken)
+    {
+        CommandValidation.RequireSafe(command);
+        return ProcessRunner.Run("docker", command.Arguments, command.Deadline, cancellationToken);
+    }
 
     /// <summary>Runs a Docker command that must succeed.</summary>
     /// <param name="command">The command.</param>

@@ -23,6 +23,7 @@ internal sealed record ProfileOptions
         ["--cells"] = (options, argument) => options with { Cells = argument.Value.Split(',', StringSplitOptions.RemoveEmptyEntries) },
         ["--results"] = (options, argument) => options with { Results = Path.GetFullPath(argument.Value) },
         ["--image"] = (options, argument) => options with { Image = argument.Value },
+        ["--session"] = (options, argument) => options with { Session = argument.Value },
         ["--variants"] = WithVariants,
         ["--max-host-load"] = WithLoad
     };
@@ -59,6 +60,9 @@ internal sealed record ProfileOptions
 
     /// <summary>Gets the image for offline PE inspection.</summary>
     public string Image { get; init; } = string.Empty;
+
+    /// <summary>Gets the required cleanup session identity.</summary>
+    public string Session { get; init; } = string.Empty;
 
     /// <summary>Gets the workload scale.</summary>
     public WorkloadSettings Workload { get; init; } = new();
@@ -98,10 +102,18 @@ internal sealed record ProfileOptions
 
     static bool HasCommand(string[] arguments) => arguments.Length > 0 && _commands.Contains(arguments[0]);
 
-    static (ProfileOptions? Options, string? Error) Validate(ProfileOptions options) =>
-        options.Command == "r2r-check" && options.Image.Length == 0
-            ? (null, "r2r-check requires --image <ref>.")
-            : (options, null);
+    static (ProfileOptions? Options, string? Error) Validate(ProfileOptions options)
+    {
+        if (options.Command == "r2r-check" && options.Image.Length == 0)
+        {
+            return (null, "r2r-check requires --image <ref>.");
+        }
+        if (options.Command == "cleanup" && string.IsNullOrWhiteSpace(options.Session))
+        {
+            return (null, "cleanup requires --session <id>.");
+        }
+        return (options, null);
+    }
 
     static ProfileOptions? ApplyFlag(ProfileOptions options, string key) =>
         _flags.TryGetValue(key, out var apply) ? apply(options) : null;

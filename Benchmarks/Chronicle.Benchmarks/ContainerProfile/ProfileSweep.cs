@@ -21,6 +21,7 @@ internal static class ProfileSweep
         var sha = await ProfileRepository.Sha(cancellationToken);
         var mongo = Environment.GetEnvironmentVariable("CHRONICLE_MONGODB_IMAGE") ?? "mongo:8.2";
         var session = new ProfileSession(Guid.NewGuid().ToString("N"), options.Results, sha, mongo);
+        Console.WriteLine($"Session: {session.Id}");
         await DockerCli.Require(ImageCommands.Pull(mongo), cancellationToken);
         await DockerCli.Require(ImageCommands.Pull("busybox:1.36"), cancellationToken);
         var networkContext = ContainerLifecycle.Context(session, new RunIdentity("network", 0, false));
