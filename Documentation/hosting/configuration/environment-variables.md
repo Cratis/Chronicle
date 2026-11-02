@@ -33,6 +33,7 @@ the same way (`compliance.encryption.migrateFromDefaultStorage` becomes
 | --- | --- |
 | Cratis__Chronicle__Port | The Chronicle port — HTTPS with HTTP/2 and HTTP/1.1 by default; HTTP/2-only h2c when TLS is disabled |
 | Cratis__Chronicle__HealthCheckEndpoint | Health check endpoint path |
+| Cratis__Chronicle__Telemetry__OrleansTracing | Export Orleans runtime and grain-call spans (default `false`); trace context propagation remains enabled; see [OpenTelemetry](open-telemetry.md#orleans-trace-volume) |
 | Cratis__Chronicle__Health__Port | Dedicated HTTP/1.1 port for the health endpoint |
 | Cratis__Chronicle__Health__Tls | Whether the dedicated health port uses TLS (default `true`) |
 | Cratis__Chronicle__Features__Api | Enable REST API endpoint |
