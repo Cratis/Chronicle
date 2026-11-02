@@ -202,6 +202,7 @@ internal sealed class ConnectionService(
             }
 
             openConnections.Opened(request, DateTimeOffset.UtcNow);
+            var keepRegistered = Task.CompletedTask;
 
             try
             {
@@ -224,7 +225,8 @@ internal sealed class ConnectionService(
                     {
                         // Only the wait is cancellable: an ending call must not wait out a registry call. KeepRegistered
                         // handles its own failures, so a check given up on cannot fault unobserved.
-                        await KeepRegistered(connectedClients, request).WaitAsync(cancellationToken).ConfigureAwait(false);
+                        keepRegistered = KeepRegistered(connectedClients, request, cancellationToken);
+                        await keepRegistered.WaitAsync(cancellationToken).ConfigureAwait(false);
                     }
                     else if (openConnections.HasLapsed(request.ConnectionId))
                     {
@@ -248,6 +250,10 @@ internal sealed class ConnectionService(
 
             subject.OnCompleted();
             openConnections.Closed(request.ConnectionId);
+
+            // A registry check given up on above may still be putting the client back. Let it settle first, so the
+            // disconnect is the registry's last word for this connection rather than being undone by a late restore.
+            await keepRegistered.ConfigureAwait(false);
             await connectedClients.OnClientDisconnected(request.ConnectionId, "Client disconnected");
         }
         catch (Exception ex)
@@ -329,12 +335,13 @@ internal sealed class ConnectionService(
     /// </remarks>
     /// <param name="connectedClients">The <see cref="IConnectedClients"/> registry of the silo the client is connected to.</param>
     /// <param name="request">The <see cref="ConnectRequest"/> the client connected with.</param>
+    /// <param name="cancellationToken">The <see cref="CancellationToken"/> of the call; once it ends, the client is not put back.</param>
     /// <returns>Awaitable task.</returns>
-    async Task KeepRegistered(IConnectedClients connectedClients, ConnectRequest request)
+    async Task KeepRegistered(IConnectedClients connectedClients, ConnectRequest request, CancellationToken cancellationToken)
     {
         try
         {
-            if (await connectedClients.IsConnected(request.ConnectionId))
+            if (await connectedClients.IsConnected(request.ConnectionId) || cancellationToken.IsCancellationRequested)
             {
                 return;
             }

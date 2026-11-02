@@ -10,6 +10,7 @@ public class and_the_call_ends_while_checking_the_registry_for_a_client_running_
 {
     readonly TaskCompletionSource<bool> _isConnected = new(TaskCreationOptions.RunContinuationsAsynchronously);
     bool _completedWhileTheRegistryWasPending;
+    bool _disconnectedBeforeTheCheckSettled;
 
     void Establish() => _connectedClients.IsConnected(new ConnectionId(TheConnection)).Returns(_isConnected.Task);
 
@@ -20,11 +21,15 @@ public class and_the_call_ends_while_checking_the_registry_for_a_client_running_
         await Cancel();
         await WaitUntil(() => Completed);
         _completedWhileTheRegistryWasPending = Completed && !_isConnected.Task.IsCompleted;
+        _disconnectedBeforeTheCheckSettled = CallsTo(nameof(IConnectedClients.OnClientDisconnected)) > 0;
 
-        // Settle the test-owned registry call the service gave up on.
-        _isConnected.TrySetResult(true);
+        // The registry answers late that it no longer knows the client.
+        _isConnected.TrySetResult(false);
+        await WaitUntil(() => CallsTo(nameof(IConnectedClients.OnClientDisconnected)) >= 1);
     }
 
     [Fact] void should_complete_without_waiting_for_the_registry() => _completedWhileTheRegistryWasPending.ShouldBeTrue();
-    [Fact] Task should_not_put_the_client_back() => WasRestored(0);
+    [Fact] void should_not_disconnect_before_the_check_settles() => _disconnectedBeforeTheCheckSettled.ShouldBeFalse();
+    [Fact] Task should_not_put_the_client_back_after_the_call_ended() => WasRestored(0);
+    [Fact] void should_disconnect_once() => CallsTo(nameof(IConnectedClients.OnClientDisconnected)).ShouldEqual(1);
 }
