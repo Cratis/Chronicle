@@ -12,6 +12,7 @@ public class and_direct_evaluation_fails_after_a_same_row_join : given.a_sink_wi
 {
     readonly Exception _failure = new("Nested evaluation failed");
     readonly List<long> _snapshots = [];
+    readonly List<string> _evaluated = [];
     IDisposable _subscription;
     Exception? _error;
     long _countAfterFailure;
@@ -19,13 +20,14 @@ public class and_direct_evaluation_fails_after_a_same_row_join : given.a_sink_wi
 
     void Establish()
     {
-        var nestedChanges = Substitute.For<IEnumerable<Change>>();
-        nestedChanges.GetEnumerator().Returns(_ => throw _failure);
         _changeset.Changes.Returns(
         [
             Direct(1L),
-            Join(),
-            new ResolvedJoin(_initial, "root", new PropertyPath("joinId"), ArrayIndexers.NoIndexers, nestedChanges)
+            new Joined(_initial, "root", new PropertyPath("joinId"), ArrayIndexers.NoIndexers, JoinedChanges())
+            {
+                HasKeyedFrom = true
+            },
+            new ResolvedJoin(_initial, "root", new PropertyPath("joinId"), ArrayIndexers.NoIndexers, FailingChanges())
         ]);
         _subscription = _sink.ObserveInstances().Subscribe(rows =>
             _snapshots.Add((long)((IDictionary<string, object?>)rows.Single())["count"]!));
@@ -40,10 +42,25 @@ public class and_direct_evaluation_fails_after_a_same_row_join : given.a_sink_wi
         await _sink.ApplyChanges(_key, _changeset, 20UL, SinkWriteMode.OnlyWhenAdvancingWatermark);
     }
 
+    [Fact] void should_evaluate_the_join_before_the_failing_evaluation() => _evaluated.ShouldEqual(["join", "failing"]);
     [Fact] void should_propagate_the_evaluation_failure() => _error.ShouldBeSame(_failure);
     [Fact] void should_leave_the_published_state_unchanged() => _countAfterFailure.ShouldEqual(0L);
     [Fact] void should_not_notify_on_evaluation_failure() => _snapshotsAfterFailure.ShouldEqual([0L]);
     [Fact] void should_admit_a_same_sequence_retry_after_evaluation_failure() => StoredCount.ShouldEqual(3L);
+
+    IEnumerable<Change> JoinedChanges()
+    {
+        _evaluated.Add("join");
+        yield return Direct(2L);
+    }
+
+    IEnumerable<Change> FailingChanges()
+    {
+        _evaluated.Add("failing");
+        yield return ThrowFailure();
+    }
+
+    Change ThrowFailure() => throw _failure;
 
     void Destroy() => _subscription.Dispose();
 }
