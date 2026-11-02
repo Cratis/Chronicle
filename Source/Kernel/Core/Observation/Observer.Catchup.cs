@@ -48,8 +48,9 @@ public partial class Observer
         var jobId = JobId.NotSet;
         try
         {
-            jobId = await AcquireCatchUpJob();
-            ShadowGrantObserverWide(ClaimHolderKind.ObserverCatchUp, jobId, State.NextEventSequenceNumber);
+            var stampedEpoch = default(ulong?);
+            jobId = await AcquireCatchUpJob(epoch => stampedEpoch = epoch);
+            ClaimCatchUpJob(jobId, stampedEpoch);
         }
         finally
         {
@@ -153,7 +154,7 @@ public partial class Observer
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
         Skips.Completing(partition, FurthestOf(lastHandledEventSequenceNumber, lastScannedEventSequenceNumber));
         logger.PartitionCaughtUp(partition, lastHandledEventSequenceNumber);
-        ShadowHandOverPartition(partition);
+        ShadowHandOverPartition(partition, ClaimHolderKind.PartitionCatchUp);
         State.CatchingUpPartitions.Remove(partition);
         _partitionHoldsVersion++;
         HandleNewLastHandledEventForPartition(partition, lastHandledEventSequenceNumber);
@@ -186,7 +187,7 @@ public partial class Observer
                 if (!result.TryGetResult(out var jobs)) return new HashSet<Key>();
                 if (version != CurrentPartitionHoldsVersion()) continue;
 
-                var owned = jobs.PartitionsHeldBy<CatchUpObserverPartitionRequest>(_observerKey, DateTimeOffset.UtcNow);
+                var owned = jobs.PartitionsHeldBy<CatchUpObserverPartitionRequest>(_observerKey, DateTimeOffset.UtcNow, State);
                 return partitions.Where(partition => !owned.Contains(partition)).ToHashSet();
             }
             catch (Exception)
@@ -214,7 +215,7 @@ public partial class Observer
 
         var madeProgress = CatchUpMadeProgress(lastHandledEventSequenceNumber, lastScannedEventSequenceNumber);
         HandleNewLastHandledEvent(lastHandledEventSequenceNumber);
-        ShadowHandOverObserverWide();
+        ShadowHandOverObserverWide(ClaimHolderKind.ObserverCatchUp, jobId);
         State.CatchingUpPartitions.ExceptWith(releasable);
         if (lastScannedEventSequenceNumber.IsActualValue &&
             (!State.NextEventSequenceNumber.IsActualValue || State.NextEventSequenceNumber <= lastScannedEventSequenceNumber))
@@ -317,11 +318,36 @@ public partial class Observer
         return false;
     }
 
-    async Task<JobId> AcquireCatchUpJob()
+    /// <summary>
+    /// Records the catch-up job acquired in the observer-wide claim.
+    /// </summary>
+    /// <param name="jobId">The <see cref="JobId"/> acquired; <see cref="JobId.NotSet"/> if none was.</param>
+    /// <param name="stampedEpoch">The epoch a newly started job was stamped with; null if the job was adopted, resumed or runs unchecked.</param>
+    /// <remarks>
+    /// A job started under a granted claim is attached to it. Any other job is recorded in a claim of its own, as before
+    /// claims were enforced, unless a catch-up claim is already held - granting over it would leave a resumed or adopted
+    /// job carrying an epoch no longer held - or a replay holds the observer, which catch-up never takes over.
+    /// </remarks>
+    void ClaimCatchUpJob(JobId jobId, ulong? stampedEpoch)
+    {
+        if (stampedEpoch is ulong epoch)
+        {
+            if (jobId != JobId.NotSet) AttachObserverWideJob(epoch, jobId);
+            return;
+        }
+
+        var holder = _shadowClaims.ObserverWide?.Holder;
+        if (holder is not ClaimHolderKind.ObserverCatchUp and not ClaimHolderKind.ObserverReplay)
+        {
+            ShadowGrantObserverWide(ClaimHolderKind.ObserverCatchUp, jobId, State.NextEventSequenceNumber);
+        }
+    }
+
+    async Task<JobId> AcquireCatchUpJob(Action<ulong?> onStamped)
     {
         await ForgetFinishedConcludedCatchUpJobs();
         var subscription = await GetSubscription();
-        return await _jobsManager.StartOrResumeObserverJobFor<ICatchUpObserver, CatchUpObserverRequest>(
+        return await _jobsManager.StartOrResumeObserverJobReportingDrops<ICatchUpObserver, CatchUpObserverRequest>(
             logger,
 
             // Created after the lookup: a job concluding while it is in flight is excluded and has moved the position on.
@@ -355,7 +381,16 @@ public partial class Observer
                 NotePreparationEnded();
                 return Task.CompletedTask;
             },
-            concludedJobs: _concludedCatchUpJobs);
+            _concludedCatchUpJobs,
+            0,
+            null,
+            async request =>
+            {
+                var epoch = await GrantObserverWideBeforeStart(ClaimHolderKind.ObserverCatchUp, request.FromEventSequenceNumber);
+                onStamped(epoch);
+                return request with { OwnershipEpoch = epoch };
+            },
+            IsObsolete);
     }
 
     async Task StartCatchupJobIfNeeded(Key partition, EventSequenceNumber lastHandledEventSequenceNumber, bool fromStartWhenNothingRead = false)
@@ -422,13 +457,17 @@ public partial class Observer
     {
         if (IsRetired || _removed) return;
         logger.StartingCatchUpForPartition(partition, nextEventSequenceNumber);
-        State.CatchingUpPartitions.Add(partition);
-        _partitionHoldsVersion++;
-        ShadowGrantPartition(partition, ClaimHolderKind.PartitionCatchUp, null, nextEventSequenceNumber);
         Skips.JobStarted(partition);
-        await _jobsManager.Start<ICatchUpObserverPartition, CatchUpObserverPartitionRequest>(new(_observerKey, Definition.Type, partition, nextEventSequenceNumber, Definition.EventTypes) { ReaderScope = ReaderScope });
-        await WriteStateAsync();
+
+        // The hold and claim are persisted before the job starts, so admission finds the claim the job is stamped with.
+        using var start = BeginPartitionJobStart();
+        var epochs = await GrantPartitionsBeforeStart([partition], ClaimHolderKind.PartitionCatchUp, nextEventSequenceNumber);
+        if (PartitionJobStartAbandoned()) return;
+        await _jobsManager.Start<ICatchUpObserverPartition, CatchUpObserverPartitionRequest>(
+            new(_observerKey, Definition.Type, partition, nextEventSequenceNumber, Definition.EventTypes) { ReaderScope = ReaderScope, OwnershipEpoch = epochs[partition] });
     }
+
+    bool PartitionJobStartAbandoned() => IsRetired || _removed || !_observerExists;
 
     /// <summary>
     /// Remembers a catch-up job that has reported its work as done, so no catch-up takes it as an owner.

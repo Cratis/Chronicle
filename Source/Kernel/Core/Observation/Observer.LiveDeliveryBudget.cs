@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Observation.Jobs;
+using Cratis.Chronicle.Storage.Observation;
 using Cratis.Orleans.Jobs;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -86,17 +87,23 @@ public partial class Observer
         try
         {
             LogLiveBatchDeferred(logger, events.Length, partition);
-            State.CatchingUpPartitions.Add(partition);
-            await WriteStateAsync();
+            var epochs = await GrantPartitionsBeforeStart([partition], ClaimHolderKind.PartitionCatchUp, sequenceNumber);
 
             // Writing state can find that another sequence owns the definition; an inert activation starts nothing.
             if (!_observerExists) return true;
 
+            var epoch = epochs[partition];
             var startResult = await _jobsManager.Start<ICatchUpObserverPartition, CatchUpObserverPartitionRequest>(
-                new(_observerKey, Definition.Type, partition, sequenceNumber, Definition.EventTypes) { ReaderScope = ReaderScope });
+                new(_observerKey, Definition.Type, partition, sequenceNumber, Definition.EventTypes) { ReaderScope = ReaderScope, OwnershipEpoch = epoch });
             if (startResult?.TryGetResult(out _) is true)
             {
                 Skips.JobStarted(partition);
+                return true;
+            }
+
+            // Refused because a later grant holds the partition: the catch-up started under it reads this batch too.
+            if (IsHeldByNewerClaim(partition, epoch))
+            {
                 return true;
             }
 

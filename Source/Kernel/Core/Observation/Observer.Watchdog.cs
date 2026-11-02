@@ -317,7 +317,7 @@ public partial class Observer
         }
 
         var now = DateTimeOffset.UtcNow;
-        var ownedPartitions = catchupJobs.PartitionsHeldBy<CatchUpObserverPartitionRequest>(_observerKey, now);
+        var ownedPartitions = catchupJobs.PartitionsHeldBy<CatchUpObserverPartitionRequest>(_observerKey, now, State);
         return catchupJobs.Any(job =>
             job.Request is CatchUpObserverRequest request &&
             request.ObserverKey == _observerKey &&

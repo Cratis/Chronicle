@@ -18,6 +18,11 @@ internal sealed class ShadowClaimLedger
     OwnershipRevision _revision = OwnershipRevision.None;
 
     /// <summary>
+    /// Gets the observer-wide claim, if any.
+    /// </summary>
+    internal ObserverWideClaim? ObserverWide => _wide;
+
+    /// <summary>
     /// Restores stored claims, identifying records predating the shadow protocol.
     /// </summary>
     /// <param name="claims">The stored partition claims, or null for legacy state.</param>
@@ -97,6 +102,42 @@ internal sealed class ShadowClaimLedger
     }
 
     /// <summary>
+    /// Gets the claim held for a partition, if any.
+    /// </summary>
+    /// <param name="partition">The partition.</param>
+    /// <returns>The <see cref="PartitionClaim"/>, or null when the partition is not claimed.</returns>
+    internal PartitionClaim? ClaimFor(Key partition) => _claims.GetValueOrDefault(partition);
+
+    /// <summary>
+    /// Records the job started under the observer-wide claim granted with the given epoch.
+    /// </summary>
+    /// <param name="epoch">The epoch the job was started under.</param>
+    /// <param name="job">The <see cref="JobId"/> of the job.</param>
+    /// <remarks>
+    /// Changes neither the epoch nor the revision. A claim granted since then is left as it is.
+    /// </remarks>
+    internal void AttachObserverWideJob(ClaimEpoch epoch, JobId job)
+    {
+        if (_wide is not null && _wide.Epoch == epoch)
+        {
+            _wide = _wide with { Job = job };
+        }
+    }
+
+    /// <summary>
+    /// Releases a partition claim of the given kind, leaving a claim of any other kind in place.
+    /// </summary>
+    /// <param name="partition">The partition handed over.</param>
+    /// <param name="holder">The <see cref="ClaimHolderKind"/> handing it over.</param>
+    internal void HandOver(Key partition, ClaimHolderKind holder)
+    {
+        if (_claims.TryGetValue(partition, out var claim) && claim.Holder == holder)
+        {
+            HandOver(partition);
+        }
+    }
+
+    /// <summary>
     /// Releases a partition claim, advancing the revision only when it was held.
     /// </summary>
     /// <param name="partition">The partition handed over.</param>
@@ -117,6 +158,23 @@ internal sealed class ShadowClaimLedger
         {
             _wide = null;
             _revision = _revision.Next();
+        }
+    }
+
+    /// <summary>
+    /// Releases the observer-wide claim held by a job of the given kind, leaving a claim granted to other work in place.
+    /// </summary>
+    /// <param name="holder">The <see cref="ClaimHolderKind"/> handing it over.</param>
+    /// <param name="job">The <see cref="JobId"/> of the job handing it over.</param>
+    /// <remarks>
+    /// A claim not yet attached to a job is released too: the job was started under it but the attachment was not persisted.
+    /// </remarks>
+    internal void HandOverObserverWide(ClaimHolderKind holder, JobId job)
+    {
+        // A claim with no job attached yet takes the handing-over job as its own.
+        if (_wide?.Holder == holder && (_wide.Job ?? job) == job)
+        {
+            HandOverObserverWide();
         }
     }
 

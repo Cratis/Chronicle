@@ -3,6 +3,7 @@
 
 using System.Collections.Immutable;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Chronicle.Storage.Observation;
@@ -65,6 +66,7 @@ public class CatchingUpInFlight(
 
         logger.RecoveringInFlightPartitions(state.InFlightPartitions.Count);
 
+        var claims = StateMachine as IObserverOwnershipClaims;
         var partitions = state.InFlightPartitions
             .Where(p =>
                 !state.CatchingUpPartitions.Contains(p) &&
@@ -81,16 +83,24 @@ public class CatchingUpInFlight(
 
         try
         {
+            // The holds and claims are persisted before any job starts, so admission finds the claim each job is stamped with.
+            var epochs = claims is null || partitions.Length == 0
+                ? new Dictionary<Key, ulong?>().AsReadOnly()
+                : await claims.GrantPartitionsBeforeStart(partitions, ClaimHolderKind.PartitionCatchUp, startFrom);
             foreach (var partition in partitions)
             {
                 logger.StartingInFlightCatchUpForPartition(partition, startFrom);
                 state.CatchingUpPartitions.Add(partition);
+                var epoch = epochs.GetValueOrDefault(partition);
                 var startResult = await jobsManager.Start<ICatchUpObserverPartition, CatchUpObserverPartitionRequest>(
                     new(observerKey, definitionState.State.Type, partition, startFrom, definitionState.State.EventTypes)
                     {
-                        ReaderScope = ObserverReaderScope.For(state.SubscribesToAllEvents, definitionState.State.EventTypes)
+                        ReaderScope = ObserverReaderScope.For(state.SubscribesToAllEvents, definitionState.State.EventTypes),
+                        OwnershipEpoch = epoch
                     });
-                if (startResult?.TryGetResult(out _) is not true)
+
+                // A start refused because a later grant holds the partition is owned by the catch-up started under it.
+                if (startResult?.TryGetResult(out _) is not true && claims?.IsHeldByNewerClaim(partition, epoch) is not true)
                 {
                     var error = startResult?.TryGetError(out var startError) is true ? startError : default;
                     logger.CouldNotStartInFlightCatchUpForPartition(partition, error);

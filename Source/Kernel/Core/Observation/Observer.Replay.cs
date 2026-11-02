@@ -6,6 +6,7 @@ using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Chronicle.Observation.States;
+using Cratis.Chronicle.Storage.Observation;
 using Cratis.Orleans.Jobs;
 using Microsoft.Extensions.Logging;
 namespace Cratis.Chronicle.Observation;
@@ -187,6 +188,7 @@ public partial class Observer
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
         Skips.Completing(partition, FurthestOf(lastHandledEventSequenceNumber, lastScannedEventSequenceNumber));
         logger.FinishedReplayForPartition(partition);
+        ShadowHandOverPartition(partition, ClaimHolderKind.PartitionReplay);
         State.ReplayingPartitions.Remove(partition);
         _partitionHoldsVersion++;
         if (replayedEventTypes.Length > 0 && lastHandledEventSequenceNumber.IsActualValue &&
@@ -258,19 +260,20 @@ public partial class Observer
         // Capture and mark in the same synchronous turn, before awaiting storage or job admission. Live delivery
         // may interleave those awaits: events below this cursor were already handled or belong to existing
         // failure/catch-up work; events from here on cannot reach this partition while its replay marker is set.
+        // The marker, hold and claim are persisted before the job starts, so admission finds the claim the job is stamped with.
         var heldBackFrom = State.NextEventSequenceNumber;
-        State.ReplayingPartitions.Add(partition);
-        _partitionHoldsVersion++;
         Skips.JobStarted(partition);
         RecordedHandlingState();
-        await WriteStateAsync();
+        using var start = BeginPartitionJobStart();
+        var epochs = await GrantPartitionsBeforeStart([partition], ClaimHolderKind.PartitionReplay, ShadowResumePosition());
         try
         {
             await _jobsManager.Start<IReplayObserverPartition, ReplayObserverPartitionRequest>(new(_observerKey, Definition.Type, partition, EventSequenceNumber.First, sequenceNumber, eventTypesToReplay)
             {
                 ReplaysAllEventTypes = !retainOtherCounts,
                 ReaderScope = ReaderScope,
-                HeldBackFrom = heldBackFrom
+                HeldBackFrom = heldBackFrom,
+                OwnershipEpoch = epochs[partition]
             });
         }
         catch

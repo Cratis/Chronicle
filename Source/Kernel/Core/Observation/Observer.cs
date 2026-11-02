@@ -797,6 +797,7 @@ public partial class Observer(
                 }
             }
 
+            _persistedStateWrites++;
             if (revision == _alertRevision)
             {
                 _alertStateNeedsPersistence = false;

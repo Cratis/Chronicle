@@ -21,6 +21,7 @@ public partial class Observer
     void RestoreShadowLedger()
     {
         _shadowClaims = ShadowClaimLedger.Restore(State.PartitionClaims, State.ObserverWideClaim, State.OwnershipRevision, out var legacy);
+        _claimsTrusted = true;
         if (legacy)
         {
             logger.ShadowClaimsSeededFromLegacyState(_observerId);
@@ -37,7 +38,9 @@ public partial class Observer
     void ShadowRestoreFailed(Exception exception)
     {
         // Acceptable while claims are a shadow; the enforcing increment must not start from an empty ledger (DR0018).
+        // A ledger started over issues epochs from the beginning again, which a stale job may carry: stamp none of them.
         _shadowClaims = new();
+        _claimsTrusted = false;
         logger.ShadowClaimsRestoreFailed(_observerId, exception);
     }
 
@@ -61,15 +64,12 @@ public partial class Observer
         ? State.LastHandledEventSequenceNumber.Next()
         : EventSequenceNumber.First;
 
-    void ShadowGrantPartition(Key partition, ClaimHolderKind kind, JobId? job, EventSequenceNumber resume) =>
-        GuardShadowClaims(() => ReportShadowDivergences(_shadowClaims.Grant(partition, kind, job, resume)));
-
-    void ShadowHandOverPartition(Key partition) => GuardShadowClaims(() => _shadowClaims.HandOver(partition));
+    void ShadowHandOverPartition(Key partition, ClaimHolderKind holder) => GuardShadowClaims(() => _shadowClaims.HandOver(partition, holder));
 
     void ShadowGrantObserverWide(ClaimHolderKind kind, JobId? job, EventSequenceNumber resume) =>
         GuardShadowClaims(() => ReportShadowDivergences(_shadowClaims.GrantObserverWide(kind, job, resume)));
 
-    void ShadowHandOverObserverWide() => GuardShadowClaims(_shadowClaims.HandOverObserverWide);
+    void ShadowHandOverObserverWide(ClaimHolderKind holder, JobId job) => GuardShadowClaims(() => _shadowClaims.HandOverObserverWide(holder, job));
 
     void ReportShadowDivergences(IEnumerable<(Key? Partition, ShadowClaimDivergence Divergence)> divergences)
     {
