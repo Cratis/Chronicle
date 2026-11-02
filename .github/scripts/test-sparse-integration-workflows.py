@@ -597,12 +597,13 @@ if os.environ['MISSING'] == '1':
     sys.exit(1)
 results = pathlib.Path(args[args.index('--results-directory') + 1])
 results.mkdir(parents=True, exist_ok=True)
-failed = len(calls) < 3
+outcomes = {'A': 'Failed' if len(calls) < 3 else 'Passed',
+            'B': 'Failed' if len(calls) < 2 else 'Passed'}
 (results / 'results.trx').write_text(
-    '<TestRun xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">'
-    '<UnitTestResult testName="Example.A.should_work" outcome="' +
-    ('Failed' if failed else 'Passed') + '" /></TestRun>')
-sys.exit(1 if failed else 0)
+    '<TestRun xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">' +
+    ''.join('<UnitTestResult testName="Example.' + name + '.should_work" outcome="' + outcome + '" />'
+            for name, outcome in outcomes.items()) + '</TestRun>')
+sys.exit(1 if 'Failed' in outcomes.values() else 0)
 """, encoding="utf-8")
                     fake.chmod(0o755)
                     env = dict(os.environ, PATH=f"{path}{os.pathsep}{os.environ['PATH']}",
@@ -628,7 +629,9 @@ sys.exit(1 if failed else 0)
             self.assertEqual([".github/scripts/run-spec-project.mjs", "--project", f"Integration/{project}/{project}.csproj"], args[:3])
             self.assertEqual(lane != "sql-clustering", "--coverage" in args)
             self.assertIn("--results-directory", args)
-            self.assertEqual(expected_filter if index == 0 else "FullyQualifiedName=Example.A.should_work",
+            retry_filters = ["FullyQualifiedName=Example.A.should_work|FullyQualifiedName=Example.B.should_work",
+                             "FullyQualifiedName=Example.A.should_work"]
+            self.assertEqual(expected_filter if index == 0 else retry_filters[index - 1],
                              args[args.index("--filter") + 1])
 
     def test_only_rolling_upgrade_is_gated_and_other_sql_lanes_are_unchanged(self):
