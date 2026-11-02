@@ -17,7 +17,7 @@ public class recording_http_handler : HttpMessageHandler
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
         Bodies.Add(await request.Content!.ReadAsByteArrayAsync(cancellationToken));
-        Headers.Add(request.Headers.ToDictionary(_ => _.Key, _ => string.Join(",", _.Value)));
+        Headers.Add(request.Headers.ToDictionary(_ => _.Key, _ => string.Join(',', _.Value)));
         MediaTypes.Add(request.Content.Headers.ContentType!.ToString());
         if (WaitForCancellation)
         {

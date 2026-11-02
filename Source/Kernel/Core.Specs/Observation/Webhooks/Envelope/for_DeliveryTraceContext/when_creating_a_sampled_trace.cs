@@ -21,7 +21,7 @@ public class when_creating_a_sampled_trace : Specification
         using var listener = new ActivityListener
         {
             ShouldListenTo = source => source.Name == ChronicleActivity.SourceName,
-            Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllData
+            Sample = (ref _) => ActivitySamplingResult.AllData
         };
         ActivitySource.AddActivityListener(listener);
         using (var trace = DeliveryTraceContext.Create(CorrelationId.NotSet))

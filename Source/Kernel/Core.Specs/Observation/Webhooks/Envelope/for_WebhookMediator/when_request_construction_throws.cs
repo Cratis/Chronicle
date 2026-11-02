@@ -3,7 +3,7 @@
 
 using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
-using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Concepts.Observation.Webhooks;
 
 namespace Cratis.Chronicle.Observation.Webhooks.Envelope.for_WebhookMediator;
 
