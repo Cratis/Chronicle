@@ -1,10 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-extern alias KernelCore;
-
 using context = Cratis.Chronicle.Kernel.Integration.Projections.for_ImmediateProjection.when_a_definition_change_activates_a_subscriber.context;
-using KernelProjectionResult = KernelCore::Cratis.Chronicle.Projections.ProjectionResult;
 
 namespace Cratis.Chronicle.Kernel.Integration.Projections.for_ImmediateProjection;
 
@@ -18,6 +15,7 @@ public class when_a_definition_change_activates_a_subscriber(context context) : 
     /// <summary>
     /// Deactivates the subscriber while it stays subscribed, then changes the definition.
     /// </summary>
+    /// <param name="fixture">The isolated integration fixture.</param>
     public class context(given.SubscriberLifecycleFixture fixture) : given.a_subscribed_immediate_projection(fixture)
     {
         /// <summary>
@@ -26,9 +24,9 @@ public class when_a_definition_change_activates_a_subscriber(context context) : 
         public int ChangeCompletedOrder { get; private set; }
 
         /// <summary>
-        /// Gets the subsequent read.
+        /// Gets the initial seed from the subsequent read.
         /// </summary>
-        public KernelProjectionResult Subsequent { get; private set; }
+        public string SubsequentSeed { get; private set; }
 
         /// <summary>
         /// Gets the position at which the reactivated subscriber subscribed.
@@ -40,12 +38,13 @@ public class when_a_definition_change_activates_a_subscriber(context context) : 
             _gate.Arm(dropUnsubscribe: true);
             await _immediateProjection.Dehydrate();
             await _gate.UnsubscribeEntered.WaitAsync(TimeSpan.FromSeconds(30));
-            await _projection.SetDefinition(_changed).WaitAsync(TimeSpan.FromSeconds(60));
+            await _changeDefinition().WaitAsync(TimeSpan.FromSeconds(60));
             ChangeCompletedOrder = _gate.NextOrder();
-            Subsequent = await _immediateProjection.GetModelInstance().WaitAsync(TimeSpan.FromSeconds(30));
+            var subsequent = await _immediateProjection.GetModelInstance().WaitAsync(TimeSpan.FromSeconds(30));
+            SubsequentSeed = subsequent.ReadModel["seed"]!.GetValue<string>();
         }
     }
 
     [Fact] void should_subscribe_the_activated_subscriber_before_the_change_completes() => (Context.ResubscribeCompletedOrder > 0 && Context.ResubscribeCompletedOrder < Context.ChangeCompletedOrder).ShouldBeTrue();
-    [Fact] void should_use_the_changed_definition_on_the_next_read() => Context.Subsequent.ReadModel["seed"]!.GetValue<string>().ShouldEqual("changed");
+    [Fact] void should_use_the_changed_definition_on_the_next_read() => Context.SubsequentSeed.ShouldEqual("changed");
 }

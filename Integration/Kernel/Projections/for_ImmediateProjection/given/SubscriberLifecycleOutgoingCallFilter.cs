@@ -1,11 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-extern alias KernelCore;
-
-using KernelNotify = KernelCore::Cratis.Chronicle.Projections.INotifyProjectionDefinitionsChanged;
-using KernelProjection = KernelCore::Cratis.Chronicle.Projections.IProjection;
-
 namespace Cratis.Chronicle.Kernel.Integration.Projections.for_ImmediateProjection.given;
 
 /// <summary>
@@ -17,7 +12,7 @@ public class SubscriberLifecycleOutgoingCallFilter(SubscriberLifecycleGate gate)
     /// <inheritdoc/>
     public async Task Invoke(IOutgoingGrainCallContext context)
     {
-        if (IsCall<KernelProjection>(context, nameof(KernelProjection.UnsubscribeDefinitionsChanged)) && gate.TryEnterUnsubscribe())
+        if (IsCall(context, "IProjection", "UnsubscribeDefinitionsChanged") && gate.TryEnterUnsubscribe())
         {
             if (gate.DropUnsubscribe)
             {
@@ -31,11 +26,11 @@ public class SubscriberLifecycleOutgoingCallFilter(SubscriberLifecycleGate gate)
             return;
         }
 
-        if (IsCall<KernelNotify>(context, nameof(KernelNotify.OnProjectionDefinitionsChanged)))
+        if (IsCall(context, "INotifyProjectionDefinitionsChanged", "OnProjectionDefinitionsChanged"))
         {
             gate.NotificationWasSent();
         }
-        else if (IsCall<KernelProjection>(context, nameof(KernelProjection.SubscribeDefinitionsChanged)) && gate.TryEnterResubscribe())
+        else if (IsCall(context, "IProjection", "SubscribeDefinitionsChanged") && gate.TryEnterResubscribe())
         {
             await context.Invoke();
             gate.ResubscribeCompleted();
@@ -45,6 +40,6 @@ public class SubscriberLifecycleOutgoingCallFilter(SubscriberLifecycleGate gate)
         await context.Invoke();
     }
 
-    static bool IsCall<TInterface>(IOutgoingGrainCallContext context, string methodName) =>
-        context.InterfaceType == typeof(TInterface) && context.MethodName == methodName;
+    static bool IsCall(IOutgoingGrainCallContext context, string interfaceName, string methodName) =>
+        context.Request.GetInterfaceType().FullName == $"Cratis.Chronicle.Projections.{interfaceName}" && context.MethodName == methodName;
 }
