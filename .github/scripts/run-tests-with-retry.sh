@@ -21,9 +21,10 @@
 # ledger travels with the run for free.
 #
 # Retries stop early when a retry fails exactly the same set of tests (sorted, de-duplicated
-# TRX testNames) as the attempt before it. Every attempt runs against the fixture state the
-# earlier attempt left behind, so an unchanged set samples nothing new: the failure is either
-# deterministic or the fixture was left wedged (#4057). Runs with no recorded failures (a
+# TRX testNames) as the attempt before it. This is a bounded-retry policy, not a diagnosis:
+# an identical set does not prove the failure is deterministic, and its cause is unknown
+# (#4057). Each attempt starts a new runner and its own fixture, although a failed or
+# killed attempt can still leave state behind. Runs with no recorded failures (a
 # crash, build or container-start failure, see #4048) and runs with more than
 # TEST_MAX_RETRY_TESTS failures are never retried; the identical-set guard covers a fixture
 # that started and then became unusable. Recycling the fixture between attempts is not done
@@ -116,11 +117,11 @@ run() {
         "${EXTRA_ARGS[@]}"
 }
 
-# An unchanged failure set means another attempt samples nothing new (see the header).
+# Stop retrying on an unchanged failure set (bounded retry policy, see the header).
 fail_unchanged_set() {
     local attempt_number="$1"
     shift
-    echo "::error::Attempt ${attempt_number} failed with the identical set of $# test(s) as attempt $((attempt_number - 1)); not retrying. An unchanged failure set means another attempt samples nothing new: the failure is deterministic, or an earlier attempt left the fixture wedged (fixtures are not recycled between attempts)."
+    echo "::error::Attempt ${attempt_number} failed with the identical set of $# test(s) as attempt $((attempt_number - 1)); stopping under the bounded retry policy; cause unknown."
     printf '  - %s\n' "$@"
     exit 1
 }
