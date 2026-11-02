@@ -15,7 +15,7 @@ public class when_reading_an_old_payload : Specification
     {
         var options = new JsonSerializerOptions { Converters = { new ConceptAsJsonConverterFactory() } };
         _registration = JsonSerializer.Deserialize<ObserverRegistration>(
-            """{"ObserverId":"observer","EventSequenceId":"event-log","ObserverType":1,"Definition":{"kind":"reactor","Definition":{"Identifier":"observer","Owner":"client","EventSequenceId":"event-log","EventTypes":[]}}}""", options)!;
+            """{"ObserverId":"observer","EventSequenceId":"event-log","ObserverType":1,"Definition":{"kind":"reactor","Definition":{"Identifier":"observer","Owner":1,"EventSequenceId":"event-log","EventTypes":[]}}}""", options)!;
         _settings = JsonSerializer.Deserialize<ObserverOwnerSettings>("""{"Owner":"program","OwnerPrincipal":"subject"}""", options)!;
     }
 
