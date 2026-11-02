@@ -15,6 +15,7 @@ using Cratis.Chronicle.EventSequences.Placement;
 using Cratis.Chronicle.EventTypes;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Observation;
+using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Chronicle.Observation.Placement;
 using Cratis.Chronicle.Observation.Reactors.Clients;
 using Cratis.Chronicle.Observation.Reducers.Clients;
@@ -29,6 +30,7 @@ using Cratis.Chronicle.Setup;
 using Cratis.Chronicle.Setup.Execution;
 using Cratis.Chronicle.Setup.Serialization;
 using Cratis.Chronicle.Storage;
+using Cratis.Orleans.Hosting;
 using Cratis.Orleans.Jobs;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -81,6 +83,7 @@ public static class ChronicleServerSiloBuilderExtensions
         builder.Services.TryAddSingleton<IEventTypes, EventTypes>();
         builder.Services.TryAddSingleton<IJobTypes, JobTypes>();
         builder.Services.TryAddSingleton<IJobStepThrottle, JobStepThrottle>();
+        AddObserverJobAdmission(builder);
 
         // The package's JobsManager/Job/JobStep grains and JobStepThrottle resolve Cratis.Orleans.Jobs.JobsOptions,
         // not ChronicleOptions - this host never calls AddCratisOrleans (it wires the pieces individually), so
@@ -231,5 +234,20 @@ public static class ChronicleServerSiloBuilderExtensions
     {
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IGrainInterfacePropertiesProvider, KernelReleaseInterfaceProperties>());
         services.TryAddSingleton<IClusterReleases, ClusterReleases>();
+    }
+
+    /// <summary>
+    /// Adds the one job admission Chronicle registers and the observer job admission rules it asks, in order.
+    /// </summary>
+    /// <param name="builder"><see cref="ISiloBuilder"/> to add to.</param>
+    /// <remarks>
+    /// The rules are checked for a shared order when the silo starts, so a misregistered rule stops the silo rather
+    /// than failing every observer job later.
+    /// </remarks>
+    static void AddObserverJobAdmission(ISiloBuilder builder)
+    {
+        builder.AddJobAdmission<ObserverJobAdmission>();
+        builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IObserverJobAdmissionRule, ObserverOwnershipEpochRule>());
+        builder.Services.AddSingleton<ILifecycleParticipant<ISiloLifecycle>, ObserverJobAdmissionRulesCheck>();
     }
 }
