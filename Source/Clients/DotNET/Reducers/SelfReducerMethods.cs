@@ -13,6 +13,7 @@ namespace Cratis.Chronicle.Reducers;
 internal static class SelfReducerMethods
 {
     static readonly EventTypeRegistryCache<FrozenDictionary<Type, MethodInfo>> _cache = new();
+    static readonly EventTypeSetCache<FrozenDictionary<Type, MethodInfo>> _sharedCache = new();
 
     /// <summary>
     /// Recognizes the structural signal without classifying classic reducers as self models.
@@ -50,7 +51,7 @@ internal static class SelfReducerMethods
     /// <param name="model">The self model.</param>
     /// <returns>The unique selected methods.</returns>
     internal static FrozenDictionary<Type, MethodInfo> Get(IEventTypes eventTypes, Type model) =>
-        _cache.Get(eventTypes, model, model, types => Build(model, types));
+        _cache.Get(eventTypes, model, model, types => _sharedCache.Get(types, model, model, snapshot => Build(model, snapshot)));
 
     /// <summary>
     /// Enumerates the declared hierarchy, retaining hidden methods for validation.
