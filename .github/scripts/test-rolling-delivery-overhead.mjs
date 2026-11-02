@@ -22,7 +22,7 @@ function enabledValues(records, workload, metric, value) {
 
 test('median and relative max-minus-min spread use raw samples, not the mean', () => {
     assert.deepEqual(statistics([104, 100, 101, 102, 103]), { median: 102, spread: 4 / 102 });
-    assert.deepEqual(statistics([0, 0, 0, 0, 0]), { median: 0, spread: 0 });
+    assert.deepEqual(statistics([0, 0, 0, 0, 0]), { median: 0, spread: null });
     assert.deepEqual(statistics([0, 0, 0, 0, 1]), { median: 0, spread: null });
 });
 
@@ -59,12 +59,12 @@ test('storage maximum, not merely its median, must satisfy the cap', () => {
     assert.equal(summarize(records).verdict, 'FAIL');
 });
 
-test('zero allocation baseline never divides by zero or green-washes enabled allocations', () => {
+test('zero allocation baseline is INCONCLUSIVE, never an implicit zero-over-zero pass', () => {
     const records = samples();
     for (const record of records) record.measurement.steady.allocatedBytes = 0;
-    assert.equal(summarize(records).verdict, 'PASS');
+    assert.equal(summarize(records).verdict, 'INCONCLUSIVE');
     enabledValues(records, 'steady', 'allocatedBytes', 1);
-    assert.equal(summarize(records).verdict, 'FAIL');
+    assert.equal(summarize(records).verdict, 'INCONCLUSIVE');
     records[0].measurement.steady.allocatedBytes = 1;
     assert.equal(summarize(records).verdict, 'INCONCLUSIVE');
 });

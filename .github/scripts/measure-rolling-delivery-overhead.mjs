@@ -18,7 +18,7 @@ export function statistics(values) {
     const sorted = [...values].sort((a, b) => a - b);
     const median = sorted[Math.floor(sorted.length / 2)];
     const range = sorted.at(-1) - sorted[0];
-    return { median, spread: median === 0 ? (range === 0 ? 0 : null) : range / median };
+    return { median, spread: median === 0 ? null : range / median };
 }
 
 export function validateSample(sample, arm) {
@@ -66,7 +66,7 @@ function markdown(result) {
     const rows = ['# Rolling delivery diagnostic overhead', '', `**Verdict: ${result.verdict}** — ${result.reason}`, '',
         'Five interleaved disabled/enabled pairs on this runner. Synthetic generated-log + callback + enqueue harness, not a network/production benchmark.',
         'Steady: 100 events at 20/s; elapsed is summed synchronous event work, excluding pacing delays. Burst: 10000 events. Allocations are synchronous event-thread bytes; setup/JIT and pacing are excluded.',
-        'Validity requires disabled elapsed AND allocation spreads ≤5% for both workloads. PASS requires both metrics ≤1.10× steady / ≤1.25× burst and maximum retained diagnostic storage upper bound ≤16 MiB. Zero baseline median only permits zero enabled median.', '',
+        'Validity requires disabled elapsed AND allocation spreads ≤5% for both workloads. PASS requires both metrics ≤1.10× steady / ≤1.25× burst and maximum retained diagnostic storage upper bound ≤16 MiB. A zero disabled median has undefined spread and is INCONCLUSIVE.', '',
         '| Arm | Workload | Elapsed median (ms) | Spread | Allocation median (bytes) | Spread |', '|---|---|---:|---:|---:|---:|' ];
     const spread = value => value === null ? 'undefined' : `${(value * 100).toFixed(3)}%`;
     for (const [arm, summary] of Object.entries(result.arms)) {
