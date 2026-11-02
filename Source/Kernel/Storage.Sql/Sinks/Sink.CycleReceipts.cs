@@ -4,6 +4,7 @@
 using Cratis.Arc.Connections;
 using Cratis.Arc.EntityFrameworkCore;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels;
+using Cratis.Chronicle.Storage.Sql.Schema;
 using Microsoft.EntityFrameworkCore;
 
 namespace Cratis.Chronicle.Storage.Sql.Sinks;
@@ -26,6 +27,11 @@ public partial class Sink
 {
     static readonly long _sweepIntervalTicks = (long)TimeSpan.FromSeconds(60).TotalMilliseconds;
     int _receiptTableEnsured;
+
+    /// <summary>
+    /// Verify's own admission, separate from Migrate's flag so that neither mode can satisfy the other.
+    /// </summary>
+    int _receiptSchemaVerified;
     long _lastSweep = long.MinValue;
 
     /// <summary>
@@ -84,6 +90,41 @@ public partial class Sink
         }
 
         return false;
+    }
+
+    /// <summary>
+    /// In Verify, admits the cycle after one read-only validation per sink. It never creates or repairs anything.
+    /// </summary>
+    /// <param name="cycleContext">The cycle's own context, whose options decide the schema mode.</param>
+    /// <returns>Awaitable task.</returns>
+    async Task EnsureCycleReceiptTable(ReadModelDbContext cycleContext)
+    {
+        if (!SinkCycleReceiptSchema.IsVerify(cycleContext))
+        {
+            await EnsureCycleReceiptTable();
+            return;
+        }
+
+        if (Volatile.Read(ref _receiptSchemaVerified) == 1)
+        {
+            return;
+        }
+
+        await SinkCycleReceiptSchema.Validate(cycleContext);
+        Volatile.Write(ref _receiptSchemaVerified, 1);
+    }
+
+    /// <summary>
+    /// Handles a missing receipt table or shadow column in Verify: forgets the positive result, reports what is missing
+    /// and leaves the original error to the caller. Nothing is created, repaired or retried.
+    /// </summary>
+    /// <param name="context">The cycle's context.</param>
+    /// <returns>Awaitable task.</returns>
+    /// <exception cref="SchemaNotCurrent">The receipt schema is missing or drifted.</exception>
+    async Task RejectVerifyDrift(ReadModelDbContext context)
+    {
+        Volatile.Write(ref _receiptSchemaVerified, 0);
+        await SinkCycleReceiptSchema.Validate(context);
     }
 
     async Task EnsureCycleReceiptTable()

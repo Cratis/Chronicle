@@ -5,6 +5,7 @@ using System.Collections.Concurrent;
 using Cratis.Arc.EntityFrameworkCore;
 using Cratis.Arc.EntityFrameworkCore.Json;
 using Cratis.Chronicle.Configuration;
+using Cratis.Chronicle.Storage.Sql.Schema;
 using Microsoft.Data.SqlClient;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
@@ -62,6 +63,13 @@ public class ReadModelMigrator(
     /// <inheritdoc/>
     public async Task EnsureSinkCycleReceipts(ReadModelDbContext context)
     {
+        if (SinkCycleReceiptSchema.IsVerify(context))
+        {
+            // Verify never creates the table: it only checks, read-only, that it was provisioned explicitly.
+            await SinkCycleReceiptSchema.Validate(context);
+            return;
+        }
+
         try
         {
             await tableMigrator.EnsureTableMigrated(WellKnownTableNames.SinkCycleReceipts, context, CreateSinkCycleReceipts);
@@ -101,19 +109,7 @@ public class ReadModelMigrator(
 
     async Task CreateSinkCycleReceipts(ReadModelDbContext context, string tableName)
     {
-        var migrationBuilder = new MigrationBuilder(context.Database.ProviderName);
-        var nowSql = SinkCycleReceipt.NowSql(context.Database.GetDatabaseType());
-        migrationBuilder.CreateTable(
-            name: tableName,
-            columns: table => new
-            {
-                Id = table.Column<Guid>(nullable: false),
-                TableName = table.StringColumn(migrationBuilder, nullable: false),
-                EventSequenceNumber = table.Column<long>(nullable: false),
-                CreatedAt = table.Column<long>(nullable: false, defaultValueSql: nowSql)
-            },
-            constraints: table => table.PrimaryKey($"PK_{tableName}", receipt => receipt.Id));
-        migrationBuilder.CreateIndex($"IX_{tableName}_CreatedAt", tableName, "CreatedAt");
+        var migrationBuilder = SinkCycleReceiptSchema.CreateOperations(context.Database.ProviderName, tableName, context.Database.GetDatabaseType());
         await tableMigrator.ExecuteMigrationOperations(context, migrationBuilder);
     }
 

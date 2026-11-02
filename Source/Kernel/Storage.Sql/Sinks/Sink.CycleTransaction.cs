@@ -5,6 +5,7 @@ using System.Dynamic;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels;
+using Cratis.Chronicle.Storage.Sql.Schema;
 using Microsoft.EntityFrameworkCore;
 
 namespace Cratis.Chronicle.Storage.Sql.Sinks;
@@ -36,8 +37,9 @@ public partial class Sink
     /// <returns>Whether the direct change was written.</returns>
     async Task<bool> RunInCycleTransaction(DbContextScope<ReadModelDbContext> scope, EventSequenceNumber sequenceNumber, Func<Task<bool>> body)
     {
-        await EnsureCycleReceiptTable();
         var context = scope.DbContext;
+        await EnsureCycleReceiptTable(context);
+        var verifying = SinkCycleReceiptSchema.IsVerify(context);
 
         // The whole cycle is rerun instead of rolling back to a savepoint, which behaves the same on every provider.
         context.Database.AutoSavepointsEnabled = false;
@@ -93,6 +95,12 @@ public partial class Sink
                     // Another writer inserted the row first. Inside a transaction we do not recover in place:
                     // PostgreSQL has aborted it. Rerun, and the row is now found and updated.
                     SqlStorageTelemetry.RecoveredCollision("read-model");
+                }
+                catch (Exception exception) when (verifying && (IsMissingReceiptTable(exception) || ShadowColumns.IsMissingColumn(exception)))
+                {
+                    // Verify never repairs. Report what is missing, or surface the original error when the receipts are fine.
+                    await RejectVerifyDrift(context);
+                    throw;
                 }
                 catch (Exception exception) when (!tableRepaired && IsMissingReceiptTable(exception))
                 {
