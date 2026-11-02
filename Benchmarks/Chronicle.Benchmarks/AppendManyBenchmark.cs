@@ -24,11 +24,15 @@ public class AppendManyBenchmark : IDisposable, IAsyncDisposable
     public int EventCount { get; set; }
 
     /// <summary>
-    /// Gets the pre-profile projection/reducer scope, excluding all reactors from append measurements.
+    /// Gets the observer set discovered before the container profile existed, so append numbers stay comparable.
     /// </summary>
     internal static IClientArtifactsProvider ArtifactsProvider => new ObserverScopedClientArtifactsProvider(
-        typeof(BenchmarkProjection), typeof(BenchmarkMaterializedReadModel), typeof(BenchmarkPassiveReadModel),
-        typeof(BenchmarkReducer), typeof(BenchmarkPassiveReducer));
+        typeof(BenchmarkReactor),
+        typeof(BenchmarkProjection),
+        typeof(BenchmarkMaterializedReadModel),
+        typeof(BenchmarkPassiveReadModel),
+        typeof(BenchmarkReducer),
+        typeof(BenchmarkPassiveReducer));
 
     /// <summary>
     /// Initializes the benchmark fixture and Chronicle client.

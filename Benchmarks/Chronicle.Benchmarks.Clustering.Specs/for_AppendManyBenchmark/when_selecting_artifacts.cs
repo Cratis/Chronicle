@@ -12,7 +12,10 @@ public class when_selecting_artifacts : Specification
 
     void Because() => _artifacts = AppendManyBenchmark.ArtifactsProvider;
 
-    [Fact] void should_register_no_reactors() => _artifacts.Reactors.ShouldBeEmpty();
-    [Fact] void should_keep_the_existing_projection() => _artifacts.Projections.ShouldContain(typeof(BenchmarkProjection));
+    [Fact] void should_register_only_the_pre_profile_reactor() => _artifacts.Reactors.ShouldContainOnly(typeof(BenchmarkReactor));
+    [Fact] void should_register_only_the_pre_profile_projection() => _artifacts.Projections.ShouldContainOnly(typeof(BenchmarkProjection));
+    [Fact] void should_register_only_the_pre_profile_model_bound_projections() => _artifacts.ModelBoundProjections.ShouldContainOnly(typeof(BenchmarkMaterializedReadModel), typeof(BenchmarkPassiveReadModel));
+    [Fact] void should_register_only_the_pre_profile_reducers() => _artifacts.Reducers.ShouldContainOnly(typeof(BenchmarkReducer), typeof(BenchmarkPassiveReducer));
+    [Fact] void should_register_no_read_model_reactors() => _artifacts.ReadModelReactors.ShouldBeEmpty();
     [Fact] void should_keep_the_benchmark_events() => _artifacts.EventTypes.ShouldContain(typeof(BenchmarkEvent));
 }
