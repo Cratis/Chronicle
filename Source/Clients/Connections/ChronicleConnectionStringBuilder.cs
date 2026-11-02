@@ -40,16 +40,6 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
     const string SrvScheme = "chronicle+srv";
     const int DefaultPort = 35000;
 
-    /// <summary>
-    /// The value every credential is replaced by when building a redacted connection string.
-    /// </summary>
-    const string RedactedValue = "REDACTED";
-
-    /// <summary>
-    /// Fragments in an option name that mark its value as a credential.
-    /// </summary>
-    static readonly string[] _sensitiveKeyFragments = ["password", "pwd", "secret", "token", "key", "credential"];
-
     static readonly HashSet<string> _keysThatMayHoldAtSign = new([ApiKeyKey, CertificatePathKey, CertificatePasswordKey, LoadBalancerKey, SrvNameServerKey], StringComparer.OrdinalIgnoreCase);
 
     static readonly HashSet<string> _keysWithDedicatedRendering =
@@ -71,6 +61,8 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
         CertificatePasswordKey
     ];
 
+    readonly bool _hasUncertainDiagnosticInput = true;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="ChronicleConnectionStringBuilder"/> class.
     /// </summary>
@@ -84,7 +76,18 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
     /// <param name="connectionString">The connection string to parse.</param>
     public ChronicleConnectionStringBuilder(string connectionString)
     {
+        _hasUncertainDiagnosticInput = !ConnectionStringDiagnostics.HasUnambiguousStructure(connectionString);
         ParseConnectionString(connectionString);
+    }
+
+    /// <summary>
+    /// Initializes a diagnostic-preserving copy without changing raw serialization.
+    /// </summary>
+    /// <param name="source">The builder to copy.</param>
+    internal ChronicleConnectionStringBuilder(ChronicleConnectionStringBuilder source)
+        : this(source.Build())
+    {
+        _hasUncertainDiagnosticInput |= source._hasUncertainDiagnosticInput;
     }
 
     /// <summary>
@@ -534,26 +537,12 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
     /// </summary>
     /// <returns>The Chronicle connection string, safe to log.</returns>
     /// <remarks>
-    /// Scheme, host, port and every non-sensitive option are preserved so the result stays useful for
-    /// diagnostics; the password, the API key, the certificate password and any option whose name looks
-    /// like a credential are replaced by <c language="csharp">REDACTED</c>. The result is not a usable connection string.
+    /// Only structurally attributable endpoints and explicitly recognized settings are projected.
+    /// Credentials are masked; ambiguous input, paths and arbitrary options produce an opaque
+    /// <c language="csharp">REDACTED</c>. The result is not a usable connection string.
     /// </remarks>
     [SuppressMessage("Design", "CA1055:Uri return values should not be strings", Justification = "Returning a Chronicle URL string format")]
-    public string BuildRedacted() => CreateRedactedCopy().Build();
-
-    /// <summary>
-    /// Determines whether the value of an option is sensitive and must be masked when redacting.
-    /// </summary>
-    /// <param name="key">Name of the option.</param>
-    /// <returns>True if the value must be masked, false if not.</returns>
-    /// <remarks>
-    /// Connection strings carry arbitrary options, so a name-based heuristic is the only thing that can
-    /// catch a credential this type does not model. Masking a value that turned out not to be a secret
-    /// costs a little diagnostic detail; missing one puts it in the log forever.
-    /// </remarks>
-    static bool IsSensitiveKey(string key) =>
-        string.Equals(key, UsernameKey, StringComparison.OrdinalIgnoreCase) ||
-        _sensitiveKeyFragments.Any(fragment => key.Contains(fragment, StringComparison.OrdinalIgnoreCase));
+    public string BuildRedacted() => ConnectionStringDiagnostics.Build(this, _hasUncertainDiagnosticInput);
 
     static ChronicleServerAddress[] ParseServerAddresses(string authority)
     {
@@ -715,31 +704,5 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
                 }
             }
         }
-    }
-
-    /// <summary>
-    /// Creates a copy of the builder holding the same settings, with every credential replaced by a mask.
-    /// </summary>
-    /// <returns>A <see cref="ChronicleConnectionStringBuilder"/> that carries no credential.</returns>
-    /// <remarks>
-    /// Redaction works by masking the values first and rendering afterwards, rather than by rendering
-    /// conditionally. The copy a redacted connection string is built from holds no secret at all, so no
-    /// argument about which branch ran is needed to know that none can reach the result.
-    /// </remarks>
-    ChronicleConnectionStringBuilder CreateRedactedCopy()
-    {
-        var redacted = new ChronicleConnectionStringBuilder();
-
-        foreach (var key in Keys)
-        {
-            if (key.ToString() is not { } name)
-            {
-                continue;
-            }
-
-            redacted[name] = IsSensitiveKey(name) ? RedactedValue : this[name];
-        }
-
-        return redacted;
     }
 }

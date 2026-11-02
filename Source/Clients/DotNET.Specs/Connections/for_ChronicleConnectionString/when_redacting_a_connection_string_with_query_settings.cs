@@ -11,5 +11,5 @@ public class when_redacting_a_connection_string_with_query_settings : Specificat
 
     [Fact] void should_not_expose_the_password() => _result.Contains("s3cret", StringComparison.Ordinal).ShouldBeFalse();
     [Fact] void should_not_expose_the_username() => _result.Contains("//user", StringComparison.Ordinal).ShouldBeFalse();
-    [Fact] void should_keep_the_non_sensitive_setting() => _result.Contains("skipTlsValidation=false", StringComparison.Ordinal).ShouldBeTrue();
+    [Fact] void should_hide_unmodelled_query_settings() => _result.ShouldEqual("REDACTED");
 }

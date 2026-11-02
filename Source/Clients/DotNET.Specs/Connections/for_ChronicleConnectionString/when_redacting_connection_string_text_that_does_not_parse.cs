@@ -12,5 +12,5 @@ public class when_redacting_connection_string_text_that_does_not_parse : Specifi
 
     [Fact] void should_not_throw() => _exception.ShouldBeNull();
     [Fact] void should_not_expose_the_password() => _result.Contains("s3cret", StringComparison.Ordinal).ShouldBeFalse();
-    [Fact] void should_return_the_placeholder() => _result.ShouldEqual(ChronicleConnectionString.HiddenConnectionString);
+    [Fact] void should_return_the_placeholder() => _result.ShouldEqual("REDACTED");
 }

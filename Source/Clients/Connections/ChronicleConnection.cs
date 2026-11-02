@@ -134,7 +134,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         _loggerFactory = loggerFactory;
         if (ServerCertificateValidationWarning.AppliesTo(skipTlsValidation, connectionString))
         {
-            _logger.ServerCertificateValidationDisabled(string.Join(", ", connectionString.ServerAddresses));
+            _logger.ServerCertificateValidationDisabled(connectionString.Redacted);
         }
 
         _certificatePath = certificatePath;
@@ -555,7 +555,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
             // still connects over TLS (server-authenticated) — it simply does not present a client
             // certificate for mutual TLS. This is the common case against a TLS server with no mutual-TLS.
             certificate = !string.IsNullOrEmpty(_certificatePath)
-                ? CertificateLoader.LoadCertificate(_certificatePath!, _certificatePassword)
+                ? CertificateLoader.LoadCertificate(_certificatePath, _certificatePassword)
                 : null;
             var httpHandler = new SocketsHttpHandler
             {
@@ -568,7 +568,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
             if (certificate is not null)
             {
                 httpHandler.SslOptions.ClientCertificates = new X509CertificateCollection { certificate };
-                _logger.UsingClientCertificate(_certificatePath!);
+                _logger.UsingClientCertificate(ConnectionStringDiagnostics.Redacted);
             }
 #pragma warning restore CA2000
 
@@ -606,7 +606,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
                     }
                 });
 
-            _logger.ChannelCreated(address);
+            _logger.ChannelCreated(_connectionString.Redacted);
             return channel;
         }
         catch

@@ -193,19 +193,18 @@ public class ChronicleConnectionString
     /// Renders connection string text in a form that is safe to log, with the user name and every credential masked.
     /// </summary>
     /// <param name="connectionString">The connection string text.</param>
-    /// <returns>The redacted text, or <see cref="HiddenConnectionString"/> when the text cannot be parsed.</returns>
+    /// <returns>The redacted text, or an opaque REDACTED when details cannot be safely attributed.</returns>
     public static string Redact(string connectionString)
     {
         try
         {
-            var redacted = new ChronicleConnectionStringBuilder(connectionString).BuildRedacted();
-            return HasOnlyMaskedUserInformation(redacted) ? redacted : MaskUserInformation(connectionString);
+            return new ChronicleConnectionStringBuilder(connectionString).BuildRedacted();
         }
 #pragma warning disable CA1031 // A diagnostics path must never throw
         catch
 #pragma warning restore CA1031
         {
-            return HiddenConnectionString;
+            return ConnectionStringDiagnostics.Redacted;
         }
     }
 
@@ -217,7 +216,7 @@ public class ChronicleConnectionString
     /// <returns>A new <see cref="ChronicleConnectionString"/> with the username and password set.</returns>
     public ChronicleConnectionString WithCredentials(string username, string password)
     {
-        var newBuilder = new ChronicleConnectionStringBuilder(_builder.Build())
+        var newBuilder = new ChronicleConnectionStringBuilder(_builder)
         {
             Username = username,
             Password = password
@@ -232,7 +231,7 @@ public class ChronicleConnectionString
     /// <returns>A new <see cref="ChronicleConnectionString"/> with API key authentication configured.</returns>
     public ChronicleConnectionString WithApiKey(string apiKey)
     {
-        var newBuilder = new ChronicleConnectionStringBuilder(_builder.Build())
+        var newBuilder = new ChronicleConnectionStringBuilder(_builder)
         {
             ApiKey = apiKey
         };
@@ -245,39 +244,4 @@ public class ChronicleConnectionString
     /// use <see cref="Redacted"/> for that.
     /// </remarks>
     public override string ToString() => _builder.Build();
-
-    static bool HasOnlyMaskedUserInformation(string redacted)
-    {
-        var schemeEnd = redacted.IndexOf("://", StringComparison.Ordinal) + 3;
-        var lastAt = redacted.LastIndexOf('@');
-        if (lastAt < schemeEnd)
-        {
-            return true;
-        }
-
-        var userInformation = redacted[schemeEnd..lastAt];
-        return string.Equals(userInformation, "REDACTED", StringComparison.Ordinal) || string.Equals(userInformation, "REDACTED:REDACTED", StringComparison.Ordinal);
-    }
-
-    static string MaskUserInformation(string connectionString)
-    {
-        var schemeEnd = connectionString.IndexOf("://", StringComparison.Ordinal) + 3;
-        var lastAt = connectionString.LastIndexOf('@');
-        if (schemeEnd < 3 || lastAt < schemeEnd)
-        {
-            return HiddenConnectionString;
-        }
-
-        var masked = $"{connectionString[..schemeEnd]}REDACTED{connectionString[lastAt..]}";
-        try
-        {
-            return new ChronicleConnectionStringBuilder(masked).BuildRedacted();
-        }
-#pragma warning disable CA1031 // A diagnostics path must never throw
-        catch
-#pragma warning restore CA1031
-        {
-            return HiddenConnectionString;
-        }
-    }
 }
