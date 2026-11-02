@@ -1,10 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-extern alias KernelCore;
-
 using context = Cratis.Chronicle.Kernel.Integration.Projections.for_ImmediateProjection.when_definition_changes_during_a_read.context;
-using KernelProjectionResult = KernelCore::Cratis.Chronicle.Projections.ProjectionResult;
 
 namespace Cratis.Chronicle.Kernel.Integration.Projections.for_ImmediateProjection;
 
@@ -27,14 +24,14 @@ public class when_definition_changes_during_a_read(context context) : Given<cont
         public bool ChangedBeforeRelease { get; private set; }
 
         /// <summary>
-        /// Gets the read which was active during the change.
+        /// Gets the name from the read which was active during the change.
         /// </summary>
-        public KernelProjectionResult InFlight { get; private set; }
+        public string InFlightName { get; private set; }
 
         /// <summary>
-        /// Gets the subsequent read.
+        /// Gets the initial seed from the subsequent read.
         /// </summary>
-        public KernelProjectionResult Subsequent { get; private set; }
+        public string SubsequentSeed { get; private set; }
 
         async Task Because()
         {
@@ -42,7 +39,7 @@ public class when_definition_changes_during_a_read(context context) : Given<cont
             try
             {
                 await _gate.Entered.WaitAsync(TimeSpan.FromSeconds(30));
-                await _projection.SetDefinition(_changed).WaitAsync(TimeSpan.FromSeconds(30));
+                await _changeDefinition().WaitAsync(TimeSpan.FromSeconds(30));
                 ChangedBeforeRelease = true;
             }
             finally
@@ -50,12 +47,14 @@ public class when_definition_changes_during_a_read(context context) : Given<cont
                 _gate.Release();
             }
 
-            InFlight = await read.WaitAsync(TimeSpan.FromSeconds(30));
-            Subsequent = await _immediateProjection.GetModelInstance().WaitAsync(TimeSpan.FromSeconds(30));
+            var inFlight = await read.WaitAsync(TimeSpan.FromSeconds(30));
+            InFlightName = inFlight.ReadModel["name"]!.GetValue<string>();
+            var subsequent = await _immediateProjection.GetModelInstance().WaitAsync(TimeSpan.FromSeconds(30));
+            SubsequentSeed = subsequent.ReadModel["seed"]!.GetValue<string>();
         }
     }
 
     [Fact] void should_acknowledge_the_definition_before_releasing_the_fold() => Context.ChangedBeforeRelease.ShouldBeTrue();
-    [Fact] void should_finish_the_in_flight_read_without_losing_its_model() => Context.InFlight.ReadModel["name"]!.GetValue<string>().ShouldEqual("projected");
-    [Fact] void should_use_the_changed_definition_on_the_next_read() => Context.Subsequent.ReadModel["seed"]!.GetValue<string>().ShouldEqual("changed");
+    [Fact] void should_finish_the_in_flight_read_without_losing_its_model() => Context.InFlightName.ShouldEqual("projected");
+    [Fact] void should_use_the_changed_definition_on_the_next_read() => Context.SubsequentSeed.ShouldEqual("changed");
 }
