@@ -222,7 +222,7 @@ public sealed partial class LegacyIdentifierDatabase(SqlClusterDatabase database
     [GeneratedRegex(@"^\s*UPDATE\b", RegexOptions.IgnoreCase | RegexOptions.ExplicitCapture, 1000)]
     private static partial Regex Update { get; }
 
-    [GeneratedRegex("^\\s*ALTER TABLE (?:\"[^\"]+\"\\.)?\"LegacyIdentifier5512\" ADD (?:COLUMN )?\"(?:__lastHandledEventSequenceNumber|__initialized)\" (?:(?!\\b(?:ADD|ALTER|DROP|RENAME)\\b)[^;])*;?\\s*$", RegexOptions.IgnoreCase | RegexOptions.ExplicitCapture, 1000)]
+    [GeneratedRegex("^\\s*ALTER TABLE (?:\"[^\"]+\"\\.)?\"LegacyIdentifier5512\" ADD (?:COLUMN )?(?:\"__lastHandledEventSequenceNumber\" bigint(?: NULL)?|\"__initialized\" boolean NOT NULL DEFAULT TRUE)\\s*;?\\s*$", RegexOptions.IgnoreCase | RegexOptions.ExplicitCapture, 1000)]
     private static partial Regex AddBookkeepingColumn { get; }
 
     [GeneratedRegex("^\\s*CREATE INDEX (?:CONCURRENTLY )?(?:IF NOT EXISTS )?\"chronicle_imx_[^\"]*\" ON (?:\"[^\"]+\"\\.)?\"LegacyIdentifier5512\" \\(\"__initialized\"\\)\\s*;?\\s*$", RegexOptions.IgnoreCase | RegexOptions.ExplicitCapture, 1000)]

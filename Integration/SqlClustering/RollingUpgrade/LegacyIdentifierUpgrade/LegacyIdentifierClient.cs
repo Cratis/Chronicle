@@ -143,7 +143,7 @@ public sealed class LegacyIdentifierClient : IDisposable
                 Namespace = EventStoreNamespaceName.Default.Value
             })
             .Select(observers => observers.SingleOrDefault(_ => _.Id == Projection))
-            .FirstAsync(_ => _ is not null && _.RunningState != Contracts.Observation.ObserverRunningState.Replaying)
+            .FirstAsync(_ => _?.RunningState is not (null or Contracts.Observation.ObserverRunningState.Replaying or Contracts.Observation.ObserverRunningState.Unknown))
             .ToTask(token);
         observer!.RunningState.ShouldEqual(Contracts.Observation.ObserverRunningState.Active);
     }
