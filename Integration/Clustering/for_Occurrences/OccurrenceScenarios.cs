@@ -105,20 +105,8 @@ public static class OccurrenceScenarios
             await fixture.Rehydrate();
             await using var recovery = await OccurrenceApp.Start(fixture.SiloServices, signals, "no-lifecycle", lifecycle: false);
             var completed = (await recovery.WaitFor("p3c-work", rows => rows.Any(row => row.Id == id && row.State == OccurrenceState.Completed))).Single(row => row.Id == id);
-            completed.Epoch.ShouldEqual(entered.Lease.Epoch + 1);
-            completed.Receipts.Count().ShouldEqual(1);
             signals.Effects(id).ShouldEqual(1);
-            var events = await recovery.Store.EventLog.GetFromSequenceNumber(Events.EventSequenceNumber.First, id);
-            Assert.True(events.Count == 1, $"Settlements: {signals.Settlements}. Events: {string.Join("; ", events.Select(e => $"{e.Context.SequenceNumber}:{e.Context.EventType.Id}:{e.Context.CorrelationId}:{e.Context.Occurred:O}"))}");
-            var stale = await recovery.Service.CompleteOccurrence(new()
-            {
-                EventStore = Constants.EventStore,
-                Namespace = EventStoreNamespaceName.Default.Value,
-                Trigger = "p3c-work",
-                OccurrenceId = id,
-                Epoch = entered.Lease.Epoch
-            }).EnsureSuccess();
-            stale.Status.ShouldEqual(OccurrenceLeaseResult.OccurrenceLeaseLost);
+            await new OccurrenceRecoveryAssertions(recovery.Store, recovery.Service, "p3c-work").Recovered(id, entered.Lease.Epoch, completed, signals.Settlements);
         }
         finally
         {
