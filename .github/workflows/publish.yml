@@ -127,34 +127,69 @@ jobs:
     needs: [wire-compatibility, grain-compatibility, release]
     permissions:
       contents: write
+      actions: read
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
+          ref: ${{ github.sha }}
           fetch-depth: 0
           token: ${{ secrets.PAT_WORKFLOWS }}
 
-      - name: Restore cached coverage
-        uses: actions/cache@v4
-        with:
-          path: ./coverage-reports
-          key: coverage-cache-${{ github.sha }}
-          fail-on-cache-miss: false
+      - name: Verify frozen main checkout
+        env:
+          EXPECTED_SHA: ${{ github.sha }}
+          EXECUTION_REF: ${{ github.ref }}
+          EXECUTION_REPOSITORY: ${{ github.repository }}
+        run: |
+          test "$EXECUTION_REPOSITORY" = Cratis/Chronicle
+          test "$EXECUTION_REF" = refs/heads/main
+          [[ "$EXPECTED_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          case "$(git config --get remote.origin.url)" in
+            https://github.com/Cratis/Chronicle|https://github.com/Cratis/Chronicle.git) ;;
+            *) echo 'Noncanonical writer origin' >&2; exit 1 ;;
+          esac
+
+      - name: Admit scheduled main coverage
+        id: feed
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: Cratis/Chronicle
+          COVERAGE_REQUESTED_VERSION: ${{ needs.release.outputs.version }}
+        run: |
+          status=0
+          python3 -B .github/scripts/nightly-coverage-feed.py consume \
+            --output "$RUNNER_TEMP/coverage-nightly-admitted" || status=$?
+          case "$status" in
+            0|1) ;;
+            2) jq -e '.unavailable == true' "$RUNNER_TEMP/coverage-nightly-admitted/result.json" > /dev/null ;;
+            *) exit "$status" ;;
+          esac
+          test -f "$RUNNER_TEMP/coverage-nightly-admitted/result.json"
+          echo "admission-exit=$status" >> "$GITHUB_OUTPUT"
+          echo "Nightly coverage admission exit: $status (0 admitted; 1 missing/rejected; 2 API unavailable). Observer release context is unverified; publication is not coverage proof." >> "$GITHUB_STEP_SUMMARY"
 
       - name: Collect coverage statistics for release
         env:
-          HEAD_COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+          COVERAGE_FEED_CONTEXT: ${{ runner.temp }}/coverage-nightly-admitted/result.json
         run: |
-          .github/scripts/collect-coverage.sh \
-            "./coverage-reports" \
-            "./Documentation/statistics/coverage-data.js" \
-            "${{ needs.release.outputs.version }}" \
-            "${{ github.sha }}" \
-            "$HEAD_COMMIT_MESSAGE"
+          bash .github/scripts/collect-coverage.sh \
+            "$RUNNER_TEMP/coverage-nightly-admitted" \
+            "./Documentation/statistics/coverage-data.js"
 
       - name: Commit coverage statistics
+        env:
+          EXECUTION_REF: ${{ github.ref }}
+          EXECUTION_REPOSITORY: ${{ github.repository }}
         run: |
+          test "$EXECUTION_REPOSITORY" = Cratis/Chronicle
+          test "$EXECUTION_REF" = refs/heads/main
+          case "$(git config --get remote.origin.url)" in
+            https://github.com/Cratis/Chronicle|https://github.com/Cratis/Chronicle.git) ;;
+            *) echo 'Noncanonical writer origin' >&2; exit 1 ;;
+          esac
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
           git add Documentation/statistics/coverage-data.js
@@ -162,8 +197,10 @@ jobs:
             echo "No coverage statistics changes to commit"
           else
             git commit -m "Update coverage statistics for release ${{ needs.release.outputs.version }} [skip ci]"
-            git pull --rebase origin ${{ github.ref_name }}
-            git push
+            git fetch origin main
+            git rebase refs/remotes/origin/main
+            git merge-base --is-ancestor refs/remotes/origin/main HEAD
+            git push origin HEAD:refs/heads/main
           fi
 
   # Benchmark results are committed by benchmarks.yml when it runs on main, so there is no longer a cache

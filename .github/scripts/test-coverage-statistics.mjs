@@ -8,6 +8,7 @@ import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, rmSync } from 'node:fs';
 import { createRequire } from 'node:module';
+import { createHash } from 'node:crypto';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -33,7 +34,7 @@ function summary(assemblies, generatedon) {
 
 const goodAssemblies = [{ name: 'Cratis.Chronicle', coverage: 72.5 }, { name: 'Foo.Specs', coverage: 10 }];
 
-function run({ summaryJson, existingData, storedText, reportName = 'reports', env = {} }) {
+function run({ summaryJson, existingData, storedText, reportName = 'reports', env = {}, feedContext }) {
     const dir = mkdtempSync(path.join(tmpdir(), 'coverage-stats-'));
     try {
         const reports = path.join(dir, reportName);
@@ -42,7 +43,9 @@ function run({ summaryJson, existingData, storedText, reportName = 'reports', en
         const out = path.join(dir, 'coverage-data.js');
         if (storedText !== undefined) writeFileSync(out, storedText);
         else if (existingData) writeFileSync(out, `${PREFIX}${JSON.stringify(existingData, null, 2)};\n`);
-        const result = spawnSync('bash', [script, reports, out, '19.116.0', SHA, 'msg'], {
+        const contextPath = path.join(dir, 'context.json');
+        if (feedContext !== undefined) writeFileSync(contextPath, JSON.stringify(feedContext));
+        const result = spawnSync('bash', [script, reports, out, '19.116.0', SHA, 'msg', ...(feedContext !== undefined ? [contextPath] : [])], {
             encoding: 'utf8',
             env: { ...process.env, COVERAGE_NOW_MS: String(NOW), COVERAGE_MEASURED_AT_MS: '', ...env }
         });
@@ -54,6 +57,93 @@ function run({ summaryJson, existingData, storedText, reportName = 'reports', en
         rmSync(dir, { recursive: true, force: true });
     }
 }
+
+const feedSummary = summary(goodAssemblies);
+function feedContext(measuredAt = NOW) {
+    return {
+        state: 'measured', attemptedAt: NOW,
+        observer: { runId: 99, runAttempt: 1, executionSha: 'a'.repeat(40), requestedVersion: '19.116.0', releaseContext: 'unverified' },
+        source: {
+            schemaVersion: 1, repository: 'Cratis/Chronicle', repositoryId: 11,
+            workflowPath: '.github/workflows/dotnet-build.yml', workflowId: 22, event: 'schedule', ref: 'refs/heads/main',
+            runId: 33, runAttempt: 2, headSha: 'a'.repeat(40), measuredAt,
+            summarySha256: createHash('sha256').update(JSON.stringify(feedSummary)).digest('hex'),
+            scope: 'dotnet-build/coverage-merge-and-cache-v1', artifactId: 44, artifactName: 'coverage-nightly-v1-33-2',
+            artifactDigest: `sha256:${'d'.repeat(64)}`, artifactSize: 1000,
+            runCreatedAt: new Date(measuredAt - 3600000).toISOString(), runUpdatedAt: new Date(measuredAt + 1000).toISOString(),
+            artifactCreatedAt: new Date(measuredAt + 1000).toISOString(), artifactExpiresAt: new Date(measuredAt + 28 * 86400000).toISOString()
+        }
+    };
+}
+
+test('nightly context separates observer even for equal SHAs and re-observation does not remeasure', () => {
+    const context = feedContext();
+    const first = run({ summaryJson: feedSummary, feedContext: context });
+    assert.equal(first.result.status, 0, first.result.stderr);
+    assert.equal(first.data.measurement.version, null);
+    assert.equal(first.data.entries['Cratis.Chronicle'][0].version, null);
+    assert.equal(first.data.measurement.source.headSha, 'a'.repeat(40));
+    context.observer.runId = 100;
+    const second = run({ summaryJson: feedSummary, feedContext: context, existingData: first.data });
+    assert.equal(second.result.status, 0, second.result.stderr);
+    assert.deepEqual(second.data.measurement, first.data.measurement);
+    assert.deepEqual(second.data.entries, first.data.entries);
+    assert.equal(second.data.lastUpdate, first.data.lastUpdate);
+    assert.equal(second.data.latestAttempt.observer.runId, 100);
+});
+
+test('rejected and unavailable feed preserves history despite a stale Summary.json', () => {
+    for (const state of ['missing', 'incomplete']) {
+        const context = { state, reason: 'feed unavailable', attemptedAt: NOW, observer: feedContext().observer };
+        const { result, data } = run({ summaryJson: feedSummary, feedContext: context, existingData: existing });
+        assert.equal(result.status, 0, result.stderr);
+        assert.deepEqual(data.measurement, existing.measurement);
+        assert.deepEqual(data.entries, existing.entries);
+        assert.equal(data.lastUpdate, existing.lastUpdate);
+        assert.equal(data.latestAttempt.state, state);
+        assert.equal(data.latestAttempt.observer.releaseContext, 'unverified');
+    }
+});
+
+test('older feed preserves history and newer same-week feed updates date', () => {
+    const first = run({ summaryJson: feedSummary, feedContext: feedContext(NOW - 2 * 86400000) }).data;
+    const older = run({ summaryJson: feedSummary, feedContext: feedContext(NOW - 3 * 86400000), existingData: first });
+    assert.equal(older.result.status, 0, older.result.stderr);
+    assert.equal(older.data.latestAttempt.state, 'incomplete');
+    assert.deepEqual(older.data.measurement, first.measurement);
+    const newer = run({ summaryJson: feedSummary, feedContext: feedContext(NOW - 86400000), existingData: first });
+    assert.equal(newer.result.status, 0, newer.result.stderr);
+    assert.equal(newer.data.entries['Cratis.Chronicle'][0].date, '2026-10-31');
+});
+
+test('malformed context or changed verified report never modifies output', () => {
+    for (const context of [{}, { ...feedContext(), source: {} }, feedContext()]) {
+        const { result, outputText } = run({ summaryJson: summary([{ name: 'Other', coverage: 10 }]), feedContext: context, existingData: existing });
+        assert.notEqual(result.status, 0);
+        assert.equal(outputText, `${PREFIX}${JSON.stringify(existing, null, 2)};\n`);
+    }
+});
+
+test('nightly status names unverified observer safely without claiming coverage for a release', () => {
+    const context = feedContext();
+    const data = run({ summaryJson: feedSummary, feedContext: context }).data;
+    const status = describeCoverageStatus(data, NOW);
+    assert.match(status.message, /nightly measurement/i);
+    assert.match(status.message, /Publish run 99/);
+    assert.match(status.message, /release context unverified/);
+    assert.equal(describeCoverageStatus(data, NOW + 8 * 86400000).state, 'stale');
+});
+
+test('observer text remains literal and coverage status is rendered only as text', () => {
+    const context = feedContext();
+    context.observer.requestedVersion = '<img src=x onerror=alert(1)>';
+    const { result, data } = run({ summaryJson: feedSummary, feedContext: context });
+    assert.equal(result.status, 0, result.stderr);
+    assert.match(describeCoverageStatus(data, NOW).message, /<img src=x onerror=alert\(1\)>/);
+    const page = readFileSync(new URL('../../Documentation/statistics/coverage-page.js', import.meta.url), 'utf8');
+    assert.match(page, /statusElement\.textContent = status\.message/);
+    assert.doesNotMatch(page, /innerHTML\s*=\s*status\.message/);
+});
 
 test('missing report leaves measurement untouched and records a missing attempt', () => {
     const { result, data } = run({ existingData: existing });

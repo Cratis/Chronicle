@@ -14,14 +14,25 @@
     const measurement = data.measurement || newest;
     if (measurement) Object.assign(status, measurement);
     const attempt = data.latestAttempt;
+    const observer = attempt && attempt.observer;
+    const source = measurement && measurement.source;
+    // This string is rendered only through textContent, never as markup or a link.
+    const describe = message => {
+      const producer = source
+        ? ` Last nightly measurement: run ${source.runId}, attempt ${source.runAttempt}, commit ${source.headSha.slice(0, 7)}.` : '';
+      const observation = observer
+        ? ` Publish run ${observer.runId || 'unknown'} observed it for requested version ${observer.requestedVersion || 'unknown'}; release context unverified.` : '';
+      return message + producer + observation;
+    };
     if (attempt && attempt.state !== 'measured' && (!measurement || attempt.attemptedAt > status.measuredAt)) {
-      return { ...status, state: 'missing', message: `Coverage missing for version ${attempt.version}: ${attempt.state}.` };
+      const message = observer ? `Coverage missing: ${attempt.state}.` : `Coverage missing for version ${attempt.version}: ${attempt.state}.`;
+      return { ...status, state: 'missing', message: describe(message) };
     }
-    if (!measurement) return { ...status, state: 'none', message: 'No coverage measurement yet.' };
+    if (!measurement) return { ...status, state: 'none', message: describe('No coverage measurement yet.') };
     if (nowMs - status.measuredAt > STALE_AFTER_DAYS * 86400000) {
-      return { ...status, state: 'stale', message: 'Coverage is stale (more than 7 days old).' };
+      return { ...status, state: 'stale', message: describe('Coverage is stale (more than 7 days old).') };
     }
-    return { ...status, state: 'current', message: 'Coverage measurement is current.' };
+    return { ...status, state: 'current', message: describe('Coverage measurement is current.') };
   }
 
   const projectColors = [

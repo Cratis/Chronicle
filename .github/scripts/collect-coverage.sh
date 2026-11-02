@@ -12,6 +12,14 @@ COMMIT_SHA="${4:-}"
 # shellcheck disable=SC2034
 COMMIT_MESSAGE="${5:-}"
 
+# A feed handoff must be validated before the legacy report-repair path can run.
+# Preserve all positional/legacy callers; the optional sixth argument is data, never sourced.
+feed_context="${6:-${COVERAGE_FEED_CONTEXT:-}}"
+if [ -n "$feed_context" ]; then
+    exec python3 -B "$(dirname "$0")/nightly-coverage-feed.py" collect \
+        --context "$feed_context" --report "$COVERAGE_REPORT_PATH" --output "$OUTPUT_PATH"
+fi
+
 echo "Collecting coverage data from: $COVERAGE_REPORT_PATH"
 
 # Environment (both optional):
