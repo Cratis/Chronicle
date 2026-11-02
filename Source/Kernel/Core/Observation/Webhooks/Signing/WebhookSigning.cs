@@ -26,6 +26,21 @@ internal static class WebhookSigning
     /// <exception cref="EncoderFallbackException">The identifier cannot be encoded losslessly as UTF-8.</exception>
     internal static string Sign(string messageId, long unixTimestamp, ReadOnlySpan<byte> payload, ReadOnlySpan<byte> secret)
     {
+        var message = Frame(messageId, unixTimestamp, payload);
+        return $"v1,{Convert.ToBase64String(ComputeSignature(message, secret))}";
+    }
+
+    /// <summary>
+    /// Frames the message identifier, attempt time and exact payload bytes as <c language="text">id.timestamp.payload</c>.
+    /// </summary>
+    /// <param name="messageId">The caller-owned identifier, without framing delimiters.</param>
+    /// <param name="unixTimestamp">The caller-owned attempt time in Unix seconds.</param>
+    /// <param name="payload">The exact bytes to be delivered.</param>
+    /// <returns>The bytes to authenticate.</returns>
+    /// <exception cref="InvalidWebhookMessageId">The identifier contains a framing delimiter.</exception>
+    /// <exception cref="EncoderFallbackException">The identifier cannot be encoded losslessly as UTF-8.</exception>
+    internal static byte[] Frame(string messageId, long unixTimestamp, ReadOnlySpan<byte> payload)
+    {
         // Standard Webhooks 1.0.0, "Signature scheme": identifiers must not contain '.'.
         if (messageId.Contains('.'))
         {
@@ -36,7 +51,7 @@ internal static class WebhookSigning
         var message = new byte[checked(prefix.Length + payload.Length)];
         prefix.CopyTo(message, 0);
         payload.CopyTo(message.AsSpan(prefix.Length));
-        return $"v1,{Convert.ToBase64String(ComputeSignature(message, secret))}";
+        return message;
     }
 
     /// <summary>
