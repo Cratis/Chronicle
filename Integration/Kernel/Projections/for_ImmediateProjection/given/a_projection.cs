@@ -41,7 +41,7 @@ public class a_projection(DefinitionChangeInterleaveFixture fixture) : Specifica
 
     async Task Establish()
     {
-        var store = await ChronicleClient.GetEventStore($"interleave-{Guid.NewGuid():N}", "definition-change");
+        var store = await ChronicleClient.GetEventStore($"iread-{Guid.NewGuid():N}", "definition-change");
         await store.DiscoverAll();
         await store.RegisterAll();
         (await store.WaitForRegistration(TimeSpan.FromSeconds(30))).IsSuccess.ShouldBeTrue();
