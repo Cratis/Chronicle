@@ -18,6 +18,5 @@ public class when_the_calling_trace_is_not_sampled : given.a_kernel_tracer_witho
     }
 
     [Fact] void should_still_propagate_the_trace() => Client.TraceId.ShouldEqual(Caller.TraceId);
-    [Fact] void should_keep_the_callee_in_the_callers_trace() => (Callee is null || Callee.TraceId == Caller.TraceId).ShouldBeTrue();
-    [Fact] void should_not_record_the_callee_span() => (Callee?.Recorded != true).ShouldBeTrue();
+    [Fact] void should_not_create_a_callee_span() => Callee.ShouldBeNull();
 }
