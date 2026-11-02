@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Orleans.Jobs;
@@ -11,9 +12,30 @@ namespace Cratis.Chronicle.Observation;
 
 public partial class Observer
 {
-    static bool IsStaleObserverWideRelease(ObserverWideClaim? claim, JobId job, ulong? epoch) =>
-        claim is { Holder: ClaimHolderKind.ObserverCatchUp } &&
-        (claim.Job is not null ? claim.Job != job : epoch is not null && epoch != claim.Epoch.Value);
+    /// <summary>
+    /// Gets whether a job reporting back was started under a claim that has since passed to newer work, logging it when so.
+    /// </summary>
+    /// <param name="holder">The <see cref="ClaimHolderKind"/> the reporting job runs as.</param>
+    /// <param name="partition">The partition it worked on, or null for observer-wide work.</param>
+    /// <param name="ownershipEpoch">The epoch the job was started under, or null when it carries none.</param>
+    /// <param name="job">The reporting <see cref="JobId"/>, or null when it is not known.</param>
+    /// <returns>True when the report must not release anything; false to handle it as before.</returns>
+    /// <remarks>
+    /// A newer job of the same kind is admitted only while its epoch is the claim's. Letting an older job's report
+    /// release that claim, or end the work the claim covers, refuses the newer job at its next stage and nothing
+    /// finishes the work. A report carrying no epoch, or for a scope no claim of its kind holds, is handled as before.
+    /// </remarks>
+    bool IgnoresStaleRelease(ClaimHolderKind holder, Key? partition, ulong? ownershipEpoch, JobId? job = null)
+    {
+        var stale = false;
+        GuardShadowClaims(() => stale = _shadowClaims.IsHeldByOtherWork(holder, partition, job, ownershipEpoch));
+        if (stale)
+        {
+            logger.IgnoredStaleClaimRelease(_observerId, holder, partition?.ToString(), ownershipEpoch);
+        }
+
+        return stale;
+    }
 
     /// <summary>
     /// Releases the observer-wide catch-up claim only when the job reporting back is its current holder.
@@ -23,8 +45,7 @@ public partial class Observer
     /// <remarks>
     /// A claim is granted and persisted before its job starts, and attached to the job only once the start returns.
     /// In that window the claim names no job, so the reporting job's own request tells whether it was started under
-    /// this claim: an older epoch means the claim already belongs to newer work, and releasing it would refuse that
-    /// work at its next stage. The lookup is awaited before the claim is read, so the check sees the current claim.
+    /// this claim. The lookup is awaited before the claim is read, so the check sees the current claim.
     /// </remarks>
     async Task ShadowHandOverCaughtUpObserverWide(JobId job)
     {
@@ -32,16 +53,9 @@ public partial class Observer
             ? await CatchUpJobOwnershipEpoch(job)
             : null;
 
-        GuardShadowClaims(() =>
-        {
-            if (IsStaleObserverWideRelease(_shadowClaims.ObserverWide, job, epoch))
-            {
-                logger.IgnoredStaleObserverWideClaimRelease(_observerId, job);
-                return;
-            }
-
-            _shadowClaims.HandOverObserverWide(ClaimHolderKind.ObserverCatchUp, job);
-        });
+        var reporting = job == JobId.NotSet ? null : job;
+        if (IgnoresStaleRelease(ClaimHolderKind.ObserverCatchUp, null, epoch, reporting)) return;
+        GuardShadowClaims(() => _shadowClaims.HandOverObserverWide(ClaimHolderKind.ObserverCatchUp, job));
     }
 
     async Task<ulong?> CatchUpJobOwnershipEpoch(JobId job)

@@ -35,7 +35,7 @@ public class CatchUpObserverPartition(
             logger.NoEventsWereHandled(nameof(CatchUpObserverPartition));
             return;
         }
-        await observer.PartitionCaughtUp(Request.Key, State.LastHandledEventSequenceNumber, lastScanned);
+        await observer.PartitionCaughtUp(Request, Request.Key, State.LastHandledEventSequenceNumber, lastScanned);
     }
 
     /// <inheritdoc/>

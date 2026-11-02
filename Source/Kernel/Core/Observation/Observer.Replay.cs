@@ -79,11 +79,21 @@ public partial class Observer
         ReplayPartitionTo(partition, sequenceNumber, Definition.EventTypes, false);
 
     /// <inheritdoc/>
-    public Task Replayed(EventSequenceNumber lastHandledEventSequenceNumber) => CompleteReplay(lastHandledEventSequenceNumber, new Dictionary<Key, EventSequenceNumber>(), [], DateTimeOffset.MinValue);
+    public Task Replayed(EventSequenceNumber lastHandledEventSequenceNumber) => Replayed(lastHandledEventSequenceNumber, null);
+
+    /// <inheritdoc/>
+    public Task Replayed(EventSequenceNumber lastHandledEventSequenceNumber, ulong? ownershipEpoch) =>
+        ReplayedSuccessfullySince(lastHandledEventSequenceNumber, new Dictionary<Key, EventSequenceNumber>(), [], DateTimeOffset.MinValue, ownershipEpoch);
 
     /// <inheritdoc/>
     public Task ReplayedSuccessfullySince(EventSequenceNumber lastHandledEventSequenceNumber, IReadOnlyDictionary<Key, EventSequenceNumber> replayedPartitions, EventType[] replayedEventTypes, DateTimeOffset replayStartedAt) =>
-        CompleteReplay(lastHandledEventSequenceNumber, replayedPartitions, replayedEventTypes, replayStartedAt);
+        ReplayedSuccessfullySince(lastHandledEventSequenceNumber, replayedPartitions, replayedEventTypes, replayStartedAt, null);
+
+    /// <inheritdoc/>
+    public Task ReplayedSuccessfullySince(EventSequenceNumber lastHandledEventSequenceNumber, IReadOnlyDictionary<Key, EventSequenceNumber> replayedPartitions, EventType[] replayedEventTypes, DateTimeOffset replayStartedAt, ulong? ownershipEpoch) =>
+        IgnoresStaleRelease(ClaimHolderKind.ObserverReplay, null, ownershipEpoch)
+            ? Task.CompletedTask
+            : CompleteReplay(lastHandledEventSequenceNumber, replayedPartitions, replayedEventTypes, replayStartedAt);
 
     /// <inheritdoc/>
     public Task PartitionReplayed(Key partition, EventSequenceNumber lastHandledEventSequenceNumber) => CompletePartitionReplay(partition, lastHandledEventSequenceNumber, [], EventSequenceNumber.Unavailable);
@@ -97,7 +107,13 @@ public partial class Observer
 
     /// <inheritdoc/>
     public Task PartitionReplayed(Key partition, EventSequenceNumber lastHandledEventSequenceNumber, EventSequenceNumber lastScannedEventSequenceNumber, EventType[] replayedEventTypes) =>
-        CompletePartitionReplay(partition, lastHandledEventSequenceNumber, replayedEventTypes, lastScannedEventSequenceNumber);
+        PartitionReplayed(partition, lastHandledEventSequenceNumber, lastScannedEventSequenceNumber, replayedEventTypes, null);
+
+    /// <inheritdoc/>
+    public Task PartitionReplayed(Key partition, EventSequenceNumber lastHandledEventSequenceNumber, EventSequenceNumber lastScannedEventSequenceNumber, EventType[] replayedEventTypes, ulong? ownershipEpoch) =>
+        IgnoresStaleRelease(ClaimHolderKind.PartitionReplay, partition, ownershipEpoch)
+            ? Task.CompletedTask
+            : CompletePartitionReplay(partition, lastHandledEventSequenceNumber, replayedEventTypes, lastScannedEventSequenceNumber);
 
     [LoggerMessage(LogLevel.Warning, "Could not flush handled-event counts while completing replay; counts remain pending")]
     static partial void FailedFlushingHandledCountsOnReplay(ILogger logger, Exception exception);

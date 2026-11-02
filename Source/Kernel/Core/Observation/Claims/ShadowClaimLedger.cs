@@ -150,6 +150,25 @@ internal sealed class ShadowClaimLedger
     }
 
     /// <summary>
+    /// Gets whether the claim of the given kind on a scope belongs to other work than the job reporting back.
+    /// </summary>
+    /// <param name="holder">The <see cref="ClaimHolderKind"/> the reporting job runs as.</param>
+    /// <param name="partition">The partition, or null for the observer-wide claim.</param>
+    /// <param name="job">The reporting <see cref="JobId"/>, or null when it is not known.</param>
+    /// <param name="epoch">The ownership epoch the reporting job was started under, or null when it carries none.</param>
+    /// <returns>True when such a claim is held under another job or epoch; false when none is held or it cannot be told.</returns>
+    /// <remarks>
+    /// With no claim of that kind there is no newer work to protect, so a report is never judged stale for it.
+    /// </remarks>
+    internal bool IsHeldByOtherWork(ClaimHolderKind holder, Key? partition, JobId? job, ulong? epoch)
+    {
+        var held = HeldClaim(holder, partition);
+        if (held is not { } claim) return false;
+        if (job is not null && claim.Job is not null) return claim.Job != job;
+        return epoch is not null && epoch != claim.Epoch.Value;
+    }
+
+    /// <summary>
     /// Releases the observer-wide claim, advancing the revision only when it was held.
     /// </summary>
     internal void HandOverObserverWide()
@@ -265,5 +284,15 @@ internal sealed class ShadowClaimLedger
     {
         _revision = _revision.Next();
         return new(_revision.Value);
+    }
+
+    (JobId? Job, ClaimEpoch Epoch)? HeldClaim(ClaimHolderKind holder, Key? partition)
+    {
+        if (partition is null)
+        {
+            return _wide?.Holder == holder ? (_wide.Job, _wide.Epoch) : null;
+        }
+
+        return _claims.TryGetValue(partition, out var claim) && claim.Holder == holder ? (claim.Job, claim.Epoch) : null;
     }
 }

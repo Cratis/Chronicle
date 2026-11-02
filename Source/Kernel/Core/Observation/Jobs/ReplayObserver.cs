@@ -301,7 +301,7 @@ public class ReplayObserver(
 
         // Preparing failed; never report a successful replay. Avoid waiting on Replay()'s own turn.
         CompletionNotification = release
-            ? NotifyObserverOfRefusal(observer)
+            ? NotifyObserverOfRefusal(observer, Request)
             : NotifyObserverOfCompletion(observer, false, new Dictionary<Key, EventSequenceNumber>(), [], EventSequenceNumber.Unavailable);
     }
 
@@ -371,7 +371,7 @@ public class ReplayObserver(
         // Do not await from job.Start's turn: Replay() on the observer may still be waiting on us.
         // The notification is kept and retried rather than dropped, so a failed one is not silently lost.
         CompletionNotification = release
-            ? NotifyObserverOfRefusal(observer)
+            ? NotifyObserverOfRefusal(observer, Request)
             : NotifyObserverOfCompletion(observer, canResolve, coveredPartitions, eventTypes, State.LastHandledEventSequenceNumber);
     }
 
@@ -402,12 +402,12 @@ public class ReplayObserver(
         return true;
     }
 
-    Task NotifyObserverOfRefusal(IObserver observer) => NotifyObserverWithRetry(observer.ReleaseRefusedReplay);
+    Task NotifyObserverOfRefusal(IObserver observer, ReplayObserverRequest request) => NotifyObserverWithRetry(() => observer.ReleaseRefusedReplay(request));
 
     Task NotifyObserverOfCompletion(IObserver observer, bool canResolve, IReadOnlyDictionary<Key, EventSequenceNumber> coveredPartitions, EventType[] eventTypes, EventSequenceNumber lastHandledEventSequenceNumber) =>
         NotifyObserverWithRetry(() => canResolve
-            ? observer.ReplayedSuccessfullySince(lastHandledEventSequenceNumber, coveredPartitions, eventTypes, State.ReplayStartedAt)
-            : observer.Replayed(lastHandledEventSequenceNumber));
+            ? observer.ReplayedSuccessfullySince(Request, lastHandledEventSequenceNumber, coveredPartitions, eventTypes, State.ReplayStartedAt)
+            : observer.Replayed(Request, lastHandledEventSequenceNumber));
 
     async Task NotifyObserverWithRetry(Func<Task> notify)
     {
@@ -460,7 +460,7 @@ public class ReplayObserver(
 
                 // Refusal is not completion: it must not replace the observer's retained cursor.
                 // Do not await the observer from Start: its replay turn may still be waiting for this job.
-                CompletionNotification = NotifyObserverOfRefusal(observer);
+                CompletionNotification = NotifyObserverOfRefusal(observer, request);
             }
 
             throw;

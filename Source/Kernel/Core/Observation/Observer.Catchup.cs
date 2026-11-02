@@ -148,9 +148,13 @@ public partial class Observer
     /// catch-up is therefore decided from the furthest event read, so trailing excluded events do not start a
     /// catch-up that reads them again, while only the handled events count as handled.
     /// </remarks>
-    public async Task PartitionCaughtUp(Key partition, EventSequenceNumber lastHandledEventSequenceNumber, EventSequenceNumber lastScannedEventSequenceNumber)
+    public Task PartitionCaughtUp(Key partition, EventSequenceNumber lastHandledEventSequenceNumber, EventSequenceNumber lastScannedEventSequenceNumber) =>
+        PartitionCaughtUp(partition, lastHandledEventSequenceNumber, lastScannedEventSequenceNumber, null);
+
+    /// <inheritdoc/>
+    public async Task PartitionCaughtUp(Key partition, EventSequenceNumber lastHandledEventSequenceNumber, EventSequenceNumber lastScannedEventSequenceNumber, ulong? ownershipEpoch)
     {
-        if (IsRetired || _removed) return;
+        if (IsRetired || _removed || IgnoresStaleRelease(ClaimHolderKind.PartitionCatchUp, partition, ownershipEpoch)) return;
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
         Skips.Completing(partition, FurthestOf(lastHandledEventSequenceNumber, lastScannedEventSequenceNumber));
         logger.PartitionCaughtUp(partition, lastHandledEventSequenceNumber);
