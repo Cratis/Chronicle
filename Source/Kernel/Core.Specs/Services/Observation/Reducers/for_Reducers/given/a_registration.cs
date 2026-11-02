@@ -56,7 +56,9 @@ public class a_registration : Specification
         _gate = Substitute.For<IObserverRegistrationGate>();
         _lease = Substitute.For<IDisposable>();
         _lease.When(_ => _.Dispose()).Do(_ => _released.TrySetResult());
-        SubstituteExtensions.Returns(_gate.Enter(Arg.Any<CancellationToken>()), _ => new ValueTask<IDisposable>(_lease));
+#pragma warning disable CA2012 // Configuring the substitute; the ValueTask is the stubbed call, not an operation to await
+        _gate.Enter(Arg.Any<CancellationToken>()).Returns(_ => new ValueTask<IDisposable>(_lease));
+#pragma warning restore CA2012
         _reducers = new(
             _grainFactory,
             Substitute.For<IReducerMediator>(),
@@ -72,7 +74,9 @@ public class a_registration : Specification
         _gate.ClearReceivedCalls();
     }
 
-    protected void ExhaustGate() => SubstituteExtensions.Returns(_gate.Enter(Arg.Any<CancellationToken>()), call => WaitForPermit(call.Arg<CancellationToken>()));
+#pragma warning disable CA2012 // Configuring the substitute; the ValueTask is the stubbed call, not an operation to await
+    protected void ExhaustGate() => _gate.Enter(Arg.Any<CancellationToken>()).Returns(call => WaitForPermit(call.Arg<CancellationToken>()));
+#pragma warning restore CA2012
 
     protected void Connect(string connectionId = "connection", CancellationToken cancellationToken = default)
     {
