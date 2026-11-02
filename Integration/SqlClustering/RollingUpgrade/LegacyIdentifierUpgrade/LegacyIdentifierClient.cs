@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Reactive.Linq;
+using System.Reactive.Threading.Tasks;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts;
@@ -130,6 +132,20 @@ public sealed class LegacyIdentifierClient : IDisposable
             EventSequenceId = EventSequenceId.Log.Value
         }).WaitAsync(token);
         Guid.Parse(result.JobId).ShouldNotEqual(Guid.Empty);
+    }
+
+    public async Task WaitForReplayToEnd(CancellationToken token)
+    {
+        // Replay() returns once the observer is Replaying; it leaves that state only after the job has finalized.
+        var observer = await Services.Observers.ObserveObservers(new()
+            {
+                EventStore = Store,
+                Namespace = EventStoreNamespaceName.Default.Value
+            })
+            .Select(observers => observers.SingleOrDefault(_ => _.Id == Projection))
+            .FirstAsync(_ => _ is not null && _.RunningState != Contracts.Observation.ObserverRunningState.Replaying)
+            .ToTask(token);
+        observer!.RunningState.ShouldEqual(Contracts.Observation.ObserverRunningState.Active);
     }
 
     public async Task WaitForCompletion(ulong tail, CancellationToken token)

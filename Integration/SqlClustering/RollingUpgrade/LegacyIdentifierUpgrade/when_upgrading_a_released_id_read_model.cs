@@ -77,14 +77,12 @@ public class when_upgrading_a_released_id_read_model : Specification
         // Explicit replay may replace the physical table, unlike the upgrade/read/write checkpoints.
         var beforeReplay = await _database.Capture(_deadline.Token);
         await _client!.Replay(_deadline.Token);
-        LegacyIdentifierDatabase.Snapshot replayed;
-        do
-        {
-            await Task.Delay(100, _deadline.Token);
-            replayed = await _database.Capture(_deadline.Token);
-        }
-        while (replayed.Relation == beforeReplay.Relation);
+        await _client.WaitForReplayToEnd(_deadline.Token);
         await _client.WaitForCompletion(_tail, _deadline.Token);
+
+        // The replay job promotes the rebuilt table before it hands the observer back, so it has replaced the relation.
+        var replayed = await _database.Capture(_deadline.Token);
+        replayed.Relation.ShouldNotEqual(beforeReplay.Relation);
         LegacyIdentifierDatabase.AssertRetained(beforeReplay, replayed, physical: false);
         AssertRows(replayed, ("existing", "current update"), ("new", "current insert"), ("sentinel", "released sentinel"));
         await _client.Read("sentinel", "released sentinel", _deadline.Token);

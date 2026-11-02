@@ -8,6 +8,9 @@ namespace Cratis.Chronicle.Integration.SqlClustering.RollingUpgrade.LegacyIdenti
 
 public sealed partial class LegacyIdentifierDatabase(SqlClusterDatabase database)
 {
+    const string LastHandled = "__lastHandledEventSequenceNumber";
+    const string Initialized = "__initialized";
+
     string _connectionString = string.Empty;
     string _databaseName = string.Empty;
     string _schema = string.Empty;
@@ -83,11 +86,20 @@ public sealed partial class LegacyIdentifierDatabase(SqlClusterDatabase database
         snapshot.Relation.ShouldNotEqual(0u);
         snapshot.File.ShouldNotEqual(0u);
         snapshot.PrimaryIndex.ShouldNotEqual(0u);
-        snapshot.Columns.Count.ShouldEqual(3);
+        var business = Business(snapshot);
+        business.Length.ShouldEqual(3);
         snapshot.Keys.ShouldEqual("Id");
-        snapshot.Columns.Single(column => column.StartsWith("ID:", StringComparison.Ordinal)).ShouldEqual("ID:text:false");
-        snapshot.Columns.ShouldContain("Id:text:true");
-        snapshot.Columns.ShouldContain("Name:text:false");
+        business.Single(column => column.StartsWith("ID:", StringComparison.Ordinal)).ShouldEqual("ID:text:false");
+        business.ShouldContain("Id:text:true");
+        business.ShouldContain("Name:text:false");
+
+        // Only the bookkeeping the current SQL sink adds to an existing table (ReadModelMigrator) may sit beside the
+        // legacy columns, with the nullability it creates them with.
+        foreach (var column in snapshot.Columns.Except(business))
+        {
+            ((column.StartsWith($"{LastHandled}:", StringComparison.Ordinal) && column.EndsWith(":false", StringComparison.Ordinal)) ||
+                (column.StartsWith($"{Initialized}:", StringComparison.Ordinal) && column.EndsWith(":true", StringComparison.Ordinal))).ShouldBeTrue();
+        }
         snapshot.Rows.Count.ShouldBeGreaterThan(0);
         snapshot.Rows.Select(row => row.Id).Distinct().Count().ShouldEqual(snapshot.Rows.Count);
     }
@@ -95,10 +107,18 @@ public sealed partial class LegacyIdentifierDatabase(SqlClusterDatabase database
     public static void AssertRetained(Snapshot before, Snapshot after, bool physical = true)
     {
         AssertLegacy(after);
-        ShouldCollectionExtensions.ShouldEqual(after.Columns, before.Columns.ToArray());
         ShouldCollectionExtensions.ShouldEqual(after.Keys, before.Keys.ToArray());
-        if (physical)
+        if (!physical)
         {
+            // A replay rebuilds the table, so only the set of legacy columns is retained, not their order.
+            ShouldCollectionExtensions.ShouldEqual(Business(after).Order(StringComparer.Ordinal).ToArray(), Business(before).Order(StringComparer.Ordinal).ToArray());
+        }
+        else
+        {
+            ShouldCollectionExtensions.ShouldEqual(Business(after), Business(before));
+
+            // Bookkeeping the sink has added is never removed again.
+            before.Columns.Except(Business(before)).Except(after.Columns).ShouldBeEmpty();
             after.Relation.ShouldEqual(before.Relation);
             after.File.ShouldEqual(before.File);
             after.PrimaryIndex.ShouldEqual(before.PrimaryIndex);
@@ -124,8 +144,17 @@ public sealed partial class LegacyIdentifierDatabase(SqlClusterDatabase database
         foreach (var sql in statements) AssertOrdinaryStatement(sql);
     }
 
+    static string[] Business(Snapshot snapshot) =>
+        [.. snapshot.Columns.Where(column => !column.StartsWith($"{LastHandled}:", StringComparison.Ordinal) && !column.StartsWith($"{Initialized}:", StringComparison.Ordinal))];
+
     static void AssertOrdinaryStatement(string sql)
     {
+        // The sink's own bookkeeping DDL on this table is expected; every other DDL stays forbidden below.
+        if (AddBookkeepingColumn.IsMatch(sql) || CreateMarkerIndex.IsMatch(sql))
+        {
+            return;
+        }
+
         var ordinary = Ordinary.IsMatch(sql);
         var idempotentCreate = IdempotentCreate.IsMatch(sql) && !AsSelect.IsMatch(sql);
         (ordinary || idempotentCreate).ShouldBeTrue();
@@ -192,6 +221,12 @@ public sealed partial class LegacyIdentifierDatabase(SqlClusterDatabase database
 
     [GeneratedRegex(@"^\s*UPDATE\b", RegexOptions.IgnoreCase | RegexOptions.ExplicitCapture, 1000)]
     private static partial Regex Update { get; }
+
+    [GeneratedRegex("^\\s*ALTER TABLE (?:\"[^\"]+\"\\.)?\"LegacyIdentifier5512\" ADD (?:COLUMN )?\"(?:__lastHandledEventSequenceNumber|__initialized)\" (?:(?!\\b(?:ADD|ALTER|DROP|RENAME)\\b)[^;])*;?\\s*$", RegexOptions.IgnoreCase | RegexOptions.ExplicitCapture, 1000)]
+    private static partial Regex AddBookkeepingColumn { get; }
+
+    [GeneratedRegex("^\\s*CREATE INDEX (?:CONCURRENTLY )?(?:IF NOT EXISTS )?\"chronicle_imx_[^\"]*\" ON (?:\"[^\"]+\"\\.)?\"LegacyIdentifier5512\" \\(\"__initialized\"\\)\\s*;?\\s*$", RegexOptions.IgnoreCase | RegexOptions.ExplicitCapture, 1000)]
+    private static partial Regex CreateMarkerIndex { get; }
 
     [GeneratedRegex("\\bWHERE\\s+\"Id\"\\s*=", RegexOptions.IgnoreCase | RegexOptions.ExplicitCapture, 1000)]
     private static partial Regex KeyPredicate { get; }
