@@ -6,7 +6,6 @@ using System.Dynamic;
 using Cratis.Arc.EntityFrameworkCore;
 using Cratis.Arc.EntityFrameworkCore.Concepts;
 using Cratis.Chronicle.Changes;
-using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
@@ -34,6 +33,11 @@ public abstract class a_cycle_with_failure_injection<THarness> : Specification
     protected SqlCommandCapture _capture;
     protected Exception? _error;
 
+    /// <summary>
+    /// Gets how many finished receipts a sink deletes together. Specifications that look at a receipt after its cycle want it gone at once.
+    /// </summary>
+    protected virtual int ReceiptCleanupBatchSize => 1;
+
     protected abstract THarness CreateHarness(SqlCommandCapture capture);
 
     void Establish()
@@ -42,7 +46,7 @@ public abstract class a_cycle_with_failure_injection<THarness> : Specification
         _harness = CreateHarness(_capture);
         var schema = JsonSchema.FromJson("""{"type":"object","properties":{"id":{"type":"string"},"group":{"type":"string"},"joinId":{"type":"string"},"x":{"type":"integer"},"children":{"type":"array","items":{"type":"object","properties":{"id":{"type":"string"},"label":{"type":"string"}}}}}}""");
         _definition = new ReadModelDefinition("cycle-read-model", TableName, "Cycle", ReadModelOwner.Client, ReadModelSource.Code, ReadModelObserverType.Projection, ReadModelObserverIdentifier.Unspecified, SinkDefinition.None, new Dictionary<ReadModelGeneration, JsonSchema> { [ReadModelGeneration.First] = schema }, []);
-        _sink = _harness.CreateSink(_definition);
+        _sink = AnotherSink();
     }
 
     void Destroy() => _harness.Dispose();
@@ -74,16 +78,12 @@ public abstract class a_cycle_with_failure_injection<THarness> : Specification
 
     protected async Task Apply(string id, ulong sequenceNumber, SinkWriteMode mode, params Change[] changes)
     {
-        var changeset = Substitute.For<IChangeset<AppendedEvent, ExpandoObject>>();
-        changeset.Changes.Returns(changes);
-        await _sink.ApplyChanges(new Key(id, ArrayIndexers.NoIndexers), changeset, sequenceNumber, mode);
+        await _sink.ApplyChanges(new Key(id, ArrayIndexers.NoIndexers), new FixedChangeset(changes), sequenceNumber, mode);
     }
 
     protected static async Task ApplyOn(ISink sink, string id, ulong sequenceNumber, params Change[] changes)
     {
-        var changeset = Substitute.For<IChangeset<AppendedEvent, ExpandoObject>>();
-        changeset.Changes.Returns(changes);
-        await sink.ApplyChanges(new Key(id, ArrayIndexers.NoIndexers), changeset, sequenceNumber, SinkWriteMode.Always);
+        await sink.ApplyChanges(new Key(id, ArrayIndexers.NoIndexers), new FixedChangeset(changes), sequenceNumber, SinkWriteMode.Always);
     }
 
     protected bool IsSqlite => _harness.ConnectionString.GetDatabaseType() == DatabaseType.Sqlite;
@@ -147,7 +147,12 @@ public abstract class a_cycle_with_failure_injection<THarness> : Specification
         }
     }
 
-    protected ISink AnotherSink() => _harness.CreateSink(_definition);
+    protected ISink AnotherSink()
+    {
+        var sink = _harness.CreateSink(_definition);
+        ((Sink)sink).ReceiptCleanupBatchSize = ReceiptCleanupBatchSize;
+        return sink;
+    }
 
     protected string Quote(string identifier) => _harness.ConnectionString.GetDatabaseType() == DatabaseType.SqlServer ? $"[{identifier}]" : $"\"{identifier}\"";
 

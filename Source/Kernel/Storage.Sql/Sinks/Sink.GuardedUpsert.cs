@@ -18,23 +18,9 @@ public partial class Sink
         var id = GetIdString(key);
         var incoming = checked((long)sequenceNumber.Value);
         var changes = changeset.Changes.Where(change => change is not Joined and not ChildRemovedFromAll).ToArray();
-        if (!changeset.HasBeenRemoved() && WriteSteps(changeset, changes) >= 2)
+        if (IsMultiWrite(changeset.Changes) && !changeset.HasBeenRemoved())
         {
-            await using var cycleScope = await OpenActiveScope();
-            await RunInCycleTransaction(cycleScope, sequenceNumber, changes.Length > 0, async () =>
-            {
-                await ApplyJoinsAndChildRemovals(cycleScope, changeset, sequenceNumber);
-                if (changes.Length == 0 || !await ShouldWriteDirectChanges(cycleScope, id, changeset, changes))
-                {
-                    return false;
-                }
-
-                // A lost compare-and-swap reruns the whole cycle, so joins are applied once, on current state.
-                return await TryApplyGuardedChanges(cycleScope, key, new PendingWrite(id, changes, sequenceNumber))
-                    ? true
-                    : throw new CycleRerun();
-            });
-            return _noFailedPartitions;
+            return await ApplyGuardedCycle(key, changeset, sequenceNumber, id, changes);
         }
 
         var joinsApplied = false;
@@ -62,6 +48,25 @@ public partial class Sink
                 return _noFailedPartitions;
             }
         }
+    }
+
+    async Task<IEnumerable<FailedPartition>> ApplyGuardedCycle(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset, EventSequenceNumber sequenceNumber, string id, Change[] changes)
+    {
+        await using var cycleScope = await OpenActiveScope();
+        await RunInCycleTransaction(cycleScope, sequenceNumber, changes.Length > 0, async () =>
+        {
+            await ApplyJoinsAndChildRemovals(cycleScope, changeset, sequenceNumber);
+            if (changes.Length == 0 || !await ShouldWriteDirectChanges(cycleScope, id, changeset, changes))
+            {
+                return false;
+            }
+
+            // A lost compare-and-swap reruns the whole cycle, so joins are applied once, on current state.
+            return await TryApplyGuardedChanges(cycleScope, key, new PendingWrite(id, changes, sequenceNumber))
+                ? true
+                : throw new CycleRerun();
+        });
+        return _noFailedPartitions;
     }
 
     async Task<bool> TryApplyGuardedChanges(DbContextScope<ReadModelDbContext> scope, Key key, PendingWrite write)

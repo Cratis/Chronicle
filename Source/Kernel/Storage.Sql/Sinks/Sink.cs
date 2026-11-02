@@ -203,39 +203,34 @@ public partial class Sink : ISink, ICanReconcileIndexes, ISinkCompositeKeyLookup
             return _noFailedPartitions;
         }
 
+        if (IsMultiWrite(changeset.Changes))
+        {
+            return await ApplyCycle(scope, key, id, changeset, eventSequenceNumber, mode);
+        }
+
+        await ApplyJoinsAndChildRemovals(scope, changeset, eventSequenceNumber);
+
         var nonJoinedChanges = changeset.Changes
             .Where(c => c is not Joined and not ChildRemovedFromAll)
             .ToArray();
-        var wroteDirect = WriteSteps(changeset, nonJoinedChanges) >= 2
-            ? await RunInCycleTransaction(scope, eventSequenceNumber, nonJoinedChanges.Length > 0, () => ApplyJoinsThenDirectChanges(scope, key, id, changeset, nonJoinedChanges, eventSequenceNumber, mode))
-            : await ApplyJoinsThenDirectChanges(scope, key, id, changeset, nonJoinedChanges, eventSequenceNumber, mode);
-        if (wroteDirect)
-        {
-            await SqlCompositeKeyShadow.Stamp(scope.DbContext, key, id, _logger);
-        }
-
-        return _noFailedPartitions;
-    }
-
-    async Task<bool> ApplyJoinsThenDirectChanges(DbContextScope<ReadModelDbContext> scope, Key key, string id, IChangeset<AppendedEvent, ExpandoObject> changeset, Change[] nonJoinedChanges, EventSequenceNumber eventSequenceNumber, SinkWriteMode mode)
-    {
-        await ApplyJoinsAndChildRemovals(scope, changeset, eventSequenceNumber);
         if (nonJoinedChanges.Length == 0 || !await ShouldWriteDirectChanges(scope, id, changeset, nonJoinedChanges))
         {
-            return false;
+            return _noFailedPartitions;
         }
 
         var entry = await GetOrAttachEntity(scope, id, key);
         if (IsSkippedByWatermark(entry, mode, eventSequenceNumber))
         {
             entry.State = EntityState.Detached;
-            return false;
+            return _noFailedPartitions;
         }
 
         ApplyChangesToEntity(entry, nonJoinedChanges);
         AdvanceLastHandledSequenceNumber(entry, eventSequenceNumber);
         await SaveRecoveringFromInsertRace(scope, entry, new PendingWrite(id, nonJoinedChanges, eventSequenceNumber));
-        return true;
+        await SqlCompositeKeyShadow.Stamp(scope.DbContext, key, id, _logger);
+
+        return _noFailedPartitions;
     }
 
     async Task RemoveEntry(DbContextScope<ReadModelDbContext> scope, string id)

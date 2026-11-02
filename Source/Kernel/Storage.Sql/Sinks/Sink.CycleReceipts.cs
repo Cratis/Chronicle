@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Concurrent;
 using Cratis.Arc.Connections;
 using Cratis.Arc.EntityFrameworkCore;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels;
@@ -26,6 +27,7 @@ namespace Cratis.Chronicle.Storage.Sql.Sinks;
 public partial class Sink
 {
     static readonly long _sweepIntervalTicks = (long)TimeSpan.FromSeconds(60).TotalMilliseconds;
+    readonly ConcurrentQueue<Guid> _finishedReceipts = new();
     int _receiptTableEnsured;
 
     /// <summary>
@@ -38,6 +40,11 @@ public partial class Sink
     /// Gets or sets how long a call may be retried against its receipt, measured on the database clock. Settable so that specs need not wait.
     /// </summary>
     internal TimeSpan ReceiptVerificationWindow { get; set; } = TimeSpan.FromMinutes(5);
+
+    /// <summary>
+    /// Gets or sets how many finished receipts are deleted together. Settable so that specs can see a batch fill.
+    /// </summary>
+    internal int ReceiptCleanupBatchSize { get; set; } = 64;
 
     /// <summary>
     /// Gets or sets how long an orphaned receipt is kept, measured on the database clock. Settable so that specs need not wait.
@@ -54,6 +61,13 @@ public partial class Sink
 
     static void ClearReadModelTracking(ReadModelDbContext context)
     {
+        // Outside a cycle there is no receipt to keep, so a plain clear is all it takes.
+        if (context.Database.CurrentTransaction is null)
+        {
+            context.ChangeTracker.Clear();
+            return;
+        }
+
         // An unsaved receipt must ride on the first real save, even when a guarded CAS clears row state.
         var pending = context.ChangeTracker.Entries<SinkCycleReceipt>()
             .Where(entry => entry.State == EntityState.Added)
@@ -178,35 +192,67 @@ public partial class Sink
         return false;
     }
 
-    async Task DeleteReceiptAndSweepOrphans(ReadModelDbContext context, Guid receiptId)
+    /// <summary>
+    /// Queues the finished call's receipt for deletion. The queue is deleted in one statement once it holds
+    /// <see cref="ReceiptCleanupBatchSize"/> receipts, or together with the orphan sweep when that is due.
+    /// </summary>
+    /// <param name="context">The cycle's context.</param>
+    /// <param name="receiptId">The finished call's receipt id.</param>
+    /// <returns>Awaitable task.</returns>
+    async Task CleanUpReceipts(ReadModelDbContext context, Guid receiptId)
     {
+        _finishedReceipts.Enqueue(receiptId);
+        var now = Environment.TickCount64;
+        var last = Interlocked.Read(ref _lastSweep);
+        var sweep = (last == long.MinValue || now - last >= _sweepIntervalTicks) && Interlocked.CompareExchange(ref _lastSweep, now, last) == last;
+        if (!sweep && _finishedReceipts.Count < ReceiptCleanupBatchSize)
+        {
+            return;
+        }
+
         try
         {
             context.ChangeTracker.Clear();
-            var now = Environment.TickCount64;
-            var last = Interlocked.Read(ref _lastSweep);
-            var sweep = (last == long.MinValue || now - last >= _sweepIntervalTicks) && Interlocked.CompareExchange(ref _lastSweep, now, last) == last;
-            if (!sweep)
+            var finished = new List<Guid>(ReceiptCleanupBatchSize);
+            while (finished.Count < ReceiptCleanupBatchSize && _finishedReceipts.TryDequeue(out var queued))
             {
-                await context.SinkCycleReceipts.Where(receipt => receipt.Id == receiptId).ExecuteDeleteAsync();
-                return;
+                finished.Add(queued);
             }
 
-            // Only scheduling uses process time. Expiry is evaluated once on the database, with owner cleanup.
-            var databaseType = context.Database.GetDatabaseType();
-            var quote = databaseType == DatabaseType.SqlServer ? ("[", "]") : ("\"", "\"");
-            var table = $"{quote.Item1}{WellKnownTableNames.SinkCycleReceipts}{quote.Item2}";
-            var id = $"{quote.Item1}Id{quote.Item2}";
-            var createdAt = $"{quote.Item1}CreatedAt{quote.Item2}";
-            var sql = $"DELETE FROM {table} WHERE {id} = {{0}} OR {createdAt} < {SinkCycleReceipt.NowSql(databaseType)} - {{1}}";
-#pragma warning disable EF1002 // Identifiers and clock are assembly constants; values are parameters.
-            await context.Database.ExecuteSqlRawAsync(sql, receiptId, (long)OrphanRetention.TotalMilliseconds);
-#pragma warning restore EF1002
+            await DeleteReceipts(context, finished, sweep);
         }
         catch (Exception exception)
         {
             // Best effort: the sweep removes whatever this call leaves behind.
             _logger.CycleReceiptCleanupFailed(exception, _tableName);
         }
+    }
+
+    async Task DeleteReceipts(ReadModelDbContext context, List<Guid> finished, bool sweep)
+    {
+        // Only scheduling uses process time. Expiry is evaluated once on the database, with owner cleanup.
+        var databaseType = context.Database.GetDatabaseType();
+        var quote = databaseType == DatabaseType.SqlServer ? ("[", "]") : ("\"", "\"");
+        var table = $"{quote.Item1}{WellKnownTableNames.SinkCycleReceipts}{quote.Item2}";
+        var id = $"{quote.Item1}Id{quote.Item2}";
+        var createdAt = $"{quote.Item1}CreatedAt{quote.Item2}";
+        var parameters = new List<object>(finished.Count + 1);
+        parameters.AddRange(finished.Cast<object>());
+        var conditions = new List<string>(2);
+        if (finished.Count > 0)
+        {
+            conditions.Add($"{id} IN ({string.Join(", ", finished.Select((_, index) => $"{{{index}}}"))})");
+        }
+
+        if (sweep)
+        {
+            conditions.Add($"{createdAt} < {SinkCycleReceipt.NowSql(databaseType)} - {{{parameters.Count}}}");
+            parameters.Add((long)OrphanRetention.TotalMilliseconds);
+        }
+
+        var sql = $"DELETE FROM {table} WHERE {string.Join(" OR ", conditions)}";
+#pragma warning disable EF1002 // Identifiers and clock are assembly constants; values are parameters.
+        await context.Database.ExecuteSqlRawAsync(sql, parameters);
+#pragma warning restore EF1002
     }
 }

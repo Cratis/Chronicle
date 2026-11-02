@@ -4,6 +4,8 @@
 using System.Dynamic;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Keys;
+using Cratis.Chronicle.Storage.Sinks;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels;
 using Cratis.Chronicle.Storage.Sql.Schema;
 using Microsoft.EntityFrameworkCore;
@@ -25,11 +27,92 @@ public partial class Sink
 {
     const int MaxInsertRaceReruns = 5;
 
-    static int WriteSteps(IChangeset<AppendedEvent, ExpandoObject> changeset, Change[] nonJoinedChanges) =>
-        changeset.Changes.Count(change => change is Joined or ChildRemovedFromAll) + (nonJoinedChanges.Length > 0 ? 1 : 0);
+    /// <summary>
+    /// Determines whether the changes need two or more writes. Joins and child removals count one step each and every other
+    /// change together counts as one direct step. It allocates nothing for the list and array shapes a changeset has.
+    /// </summary>
+    /// <param name="changes">The changes of the changeset.</param>
+    /// <returns>True when the cycle has two or more write steps.</returns>
+    internal static bool IsMultiWrite(IEnumerable<Change> changes)
+    {
+        var steps = 0;
+        var direct = false;
+        if (changes is IReadOnlyList<Change> list)
+        {
+            for (var i = 0; i < list.Count; i++)
+            {
+                if (CountsAsAnotherStep(list[i], ref direct, ref steps))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        foreach (var change in changes)
+        {
+            if (CountsAsAnotherStep(change, ref direct, ref steps))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    static bool CountsAsAnotherStep(Change change, ref bool direct, ref int steps)
+    {
+        if (change is Joined or ChildRemovedFromAll)
+        {
+            steps++;
+        }
+        else if (!direct)
+        {
+            direct = true;
+            steps++;
+        }
+
+        return steps >= 2;
+    }
 
     static bool IsVerifyDrift(bool verifying, Exception exception) =>
         verifying && IsMissingReceiptTable(exception);
+
+    async Task<IEnumerable<FailedPartition>> ApplyCycle(DbContextScope<ReadModelDbContext> scope, Key key, string id, IChangeset<AppendedEvent, ExpandoObject> changeset, EventSequenceNumber eventSequenceNumber, SinkWriteMode mode)
+    {
+        var nonJoinedChanges = changeset.Changes
+            .Where(c => c is not Joined and not ChildRemovedFromAll)
+            .ToArray();
+        var wroteDirect = await RunInCycleTransaction(scope, eventSequenceNumber, nonJoinedChanges.Length > 0, () => ApplyJoinsThenDirectChanges(scope, key, id, changeset, nonJoinedChanges, eventSequenceNumber, mode));
+        if (wroteDirect)
+        {
+            await SqlCompositeKeyShadow.Stamp(scope.DbContext, key, id, _logger);
+        }
+
+        return _noFailedPartitions;
+    }
+
+    async Task<bool> ApplyJoinsThenDirectChanges(DbContextScope<ReadModelDbContext> scope, Key key, string id, IChangeset<AppendedEvent, ExpandoObject> changeset, Change[] nonJoinedChanges, EventSequenceNumber eventSequenceNumber, SinkWriteMode mode)
+    {
+        await ApplyJoinsAndChildRemovals(scope, changeset, eventSequenceNumber);
+        if (nonJoinedChanges.Length == 0 || !await ShouldWriteDirectChanges(scope, id, changeset, nonJoinedChanges))
+        {
+            return false;
+        }
+
+        var entry = await GetOrAttachEntity(scope, id, key);
+        if (IsSkippedByWatermark(entry, mode, eventSequenceNumber))
+        {
+            entry.State = EntityState.Detached;
+            return false;
+        }
+
+        ApplyChangesToEntity(entry, nonJoinedChanges);
+        AdvanceLastHandledSequenceNumber(entry, eventSequenceNumber);
+        await SaveRecoveringFromInsertRace(scope, entry, new PendingWrite(id, nonJoinedChanges, eventSequenceNumber));
+        return true;
+    }
 
     /// <summary>
     /// Runs the body of a cycle in a transaction together with the cycle's receipt.
@@ -104,7 +187,7 @@ public partial class Sink
         }
         finally
         {
-            await DeleteReceiptAndSweepOrphans(context, receiptId);
+            await CleanUpReceipts(context, receiptId);
         }
     }
 
@@ -118,7 +201,6 @@ public partial class Sink
         }
 
         state.WroteDirect = false;
-
         var receipt = new SinkCycleReceipt(state.ReceiptId, ActiveTableName, state.Sequence, 0);
         context.SinkCycleReceipts.Add(receipt);
         state.WroteDirect = await body();
