@@ -23,6 +23,8 @@ public class RegistrationClock : TimeProvider
 
     public void Expire() => _timer?.Fire();
 
+    public void ReleaseTimer() => _timer = null;
+
     sealed class DeadlineTimer(TimerCallback callback, object? state, TaskCompletionSource disposed) : ITimer
     {
         readonly Lock _lock = new();
