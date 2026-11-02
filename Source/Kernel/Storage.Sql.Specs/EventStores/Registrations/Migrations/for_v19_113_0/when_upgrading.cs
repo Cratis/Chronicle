@@ -12,7 +12,7 @@ public class when_upgrading : Specification
 
     void Because()
     {
-        _operations = new v19_113_0().UpOperations;
+        _operations = new v19_113_0 { ActiveProvider = "Microsoft.EntityFrameworkCore.Sqlite" }.UpOperations;
         _table = _operations.OfType<CreateTableOperation>().Single();
     }
 
