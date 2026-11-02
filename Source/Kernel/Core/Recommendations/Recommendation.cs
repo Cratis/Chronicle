@@ -39,7 +39,16 @@ public class Recommendation<TRequest> : Grain<RecommendationState>, IRecommendat
     /// <inheritdoc/>
     public async Task Ignore()
     {
-        await ClearStateAsync();
+        State.IsIgnored = true;
+        await WriteStateAsync();
+        DeactivateOnIdle();
+    }
+
+    /// <inheritdoc/>
+    public async Task Unignore()
+    {
+        State.IsIgnored = false;
+        await WriteStateAsync();
         DeactivateOnIdle();
     }
 

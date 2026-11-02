@@ -120,6 +120,9 @@ internal sealed class SequenceReplies(IEventSequences inner, DropReplyIntercepto
     public Task<QueryResult<IEnumerable<AppendedEventResponse>>> ForEventSourceIdAndEventTypes(ForEventSourceIdAndEventTypesRequest request, CallContext callContext = default) => inner.ForEventSourceIdAndEventTypes(request, callContext);
 
     /// <inheritdoc/>
+    public Task<QueryResult<IEnumerable<AppendedEventResponse>>> FromSequenceNumberWithErasedProperties(FromSequenceNumberWithErasedPropertiesRequest request, CallContext callContext = default) => inner.FromSequenceNumberWithErasedProperties(request, callContext);
+
+    /// <inheritdoc/>
     public Task<QueryResult<IEnumerable<AppendedEventResponse>>> FromSequenceNumber(FromSequenceNumberRequest request, CallContext callContext = default) => inner.FromSequenceNumber(request, callContext);
 
     /// <inheritdoc/>

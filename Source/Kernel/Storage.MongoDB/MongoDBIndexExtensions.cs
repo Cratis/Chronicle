@@ -46,14 +46,18 @@ public static class MongoDBIndexExtensions
     public static async Task<IReadOnlySet<string>> GetIndexNamesAsync<T>(this IMongoCollection<T> collection)
     {
         var names = new HashSet<string>(StringComparer.Ordinal);
-        using var cursor = await collection.Indexes.ListAsync().ConfigureAwait(false);
-        await cursor.ForEachAsync(index =>
+        try
         {
-            if (index.TryGetValue("name", out var name))
+            using var cursor = await collection.Indexes.ListAsync().ConfigureAwait(false);
+            await cursor.ForEachAsync(index =>
             {
-                names.Add(name.AsString);
-            }
-        }).ConfigureAwait(false);
+                if (index.TryGetValue("name", out var name)) names.Add(name.AsString);
+            }).ConfigureAwait(false);
+        }
+        catch (MongoCommandException exception) when (exception.Code == 26)
+        {
+            // A namespace without a collection has no indexes yet.
+        }
         return names;
     }
 

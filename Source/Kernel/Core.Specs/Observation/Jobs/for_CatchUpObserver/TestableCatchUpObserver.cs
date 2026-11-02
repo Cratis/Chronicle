@@ -39,6 +39,14 @@ public class TestableCatchUpObserver(
     public Task CompleteForTesting() => OnAllStepsCompleted();
 
     /// <summary>
+    /// Records a step result for testing catch-up progress.
+    /// </summary>
+    /// <param name="stepId">The step that completed.</param>
+    /// <param name="result">Its result.</param>
+    /// <returns>Awaitable task.</returns>
+    public Task RecordStepForTesting(JobStepId stepId, JobStepResult result) => OnStepCompletedOrStopped(stepId, result);
+
+    /// <summary>
     /// Invokes the check for whether the job can be resumed.
     /// </summary>
     /// <returns>True if the job can be resumed.</returns>

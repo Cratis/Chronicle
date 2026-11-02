@@ -36,6 +36,9 @@ internal static partial class ReactorsLogMessages
     [LoggerMessage(LogLevel.Warning, "Reactor {ReactorId} disconnected ungracefully from connection {ConnectionId}")]
     internal static partial void DisconnectedUngracefully(this ILogger<Reactors> logger, ObserverId reactorId, ConnectionId connectionId);
 
+    [LoggerMessage(LogLevel.Information, "Reactor {ReactorId} stream from connection {ConnectionId} ended after a later stream replaced it - keeping the subscription")]
+    internal static partial void StreamReplacedKeepingSubscription(this ILogger<Reactors> logger, ObserverId reactorId, ConnectionId connectionId);
+
     [LoggerMessage(LogLevel.Error, "Error occurred for reactor {ReactorId} from connection {ConnectionId} - disengaging")]
     internal static partial void Disengage(this ILogger<Reactors> logger, ObserverId reactorId, ConnectionId connectionId, Exception exception);
 }

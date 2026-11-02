@@ -76,6 +76,18 @@ public interface IJsonSchemaMetadataManager
     Task<JsonObject> Release(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, JsonSchema schema, string identifier, JsonObject json);
 
     /// <summary>
+    /// Releases display content and reports confirmed erased paths in that content, not an erasure audit.
+    /// </summary>
+    /// <param name="eventStore">The event store.</param>
+    /// <param name="eventStoreNamespace">The namespace.</param>
+    /// <param name="schema">The content schema.</param>
+    /// <param name="identifier">The subject identifier.</param>
+    /// <param name="json">The protected content.</param>
+    /// <returns>Released content and ordinally ordered erased paths using dotted members and bracketed indices.</returns>
+    async Task<(JsonObject Value, IReadOnlyList<string> ErasedPaths)> ReleaseReportingErasedProperties(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, JsonSchema schema, string identifier, JsonObject json) =>
+        (await Release(eventStore, eventStoreNamespace, schema, identifier, json), []);
+
+    /// <summary>
     /// Releases a document without substituting empty values for unavailable protected content.
     /// </summary>
     /// <param name="eventStore">The event store.</param>

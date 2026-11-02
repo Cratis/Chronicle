@@ -4,9 +4,7 @@
 import { given } from 'given';
 import { a_view_model } from './given/a_view_model';
 
-describe('when managing selection and toggling a recommendation on', given(a_view_model, (context) => {
-    beforeAll(() => context.viewModel.toggleRecommendationSelection(context.firstRecommendationId));
-
-    it('should mark the recommendation as selected', () => context.viewModel.isRecommendationSelected(context.firstRecommendationId).should.be.true);
-    it('should hold exactly one selected id', () => context.viewModel.selectedRecommendationIds.length.should.equal(1));
+describe('when managing selection and selecting one recommendation', given(a_view_model, context => {
+    beforeAll(() => { context.viewModel.selectedRecommendations = [context.recommendations[0]]; });
+    it('should hold exactly that recommendation', () => context.viewModel.selectedRecommendations.map(item => item.id).should.deep.equal([context.firstRecommendationId]));
 }));

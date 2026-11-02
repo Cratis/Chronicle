@@ -19,4 +19,5 @@ public class and_projection_and_context_exists : given.a_projection_replay_handl
 
     [Fact] void should_end_replay() => _projectionPipeline.Received(1).EndReplay(_replayContext);
     [Fact] void should_signal_replayed_to_replay_manager() => _readModelReplayManager.Received(1).Replayed(_observerDetails.Key.ObserverId, _replayContext);
+    [Fact] void should_not_apply_retention_when_ending() => _readModelReplayManager.DidNotReceiveWithAnyArgs().ApplyRetentionPolicy(default);
 }

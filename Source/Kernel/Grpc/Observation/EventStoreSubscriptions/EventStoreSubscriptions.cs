@@ -118,6 +118,7 @@ internal sealed class EventStoreSubscriptions(
     /// <inheritdoc/>
     public async Task<IEnumerable<ContractEventStoreSubscriptionDefinition>> GetSubscriptions(GetEventStoreSubscriptionsRequest request)
     {
+        SystemStoreGuard.EnsureNotSystem(new(request.TargetEventStore));
         var definitions = await storage.GetEventStore(request.TargetEventStore).EventStoreSubscriptions.GetAll();
         return definitions.Select(definition => new ContractEventStoreSubscriptionDefinition
         {

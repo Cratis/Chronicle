@@ -36,7 +36,7 @@ public class a_job_storage(ChronicleInProcessFixture fixture) : Integration.give
         await Task.CompletedTask;
     }
 
-    async Task Cleanup()
+    async Task Destroy()
     {
         await _mongoDatabase.Client.DropDatabaseAsync(_databaseName);
     }

@@ -57,6 +57,15 @@ internal sealed class FallbackServiceProvider(IServiceProvider inner, MutableSer
             return registryResult;
         }
 
+        // The shared host's container was built from the first context. A test-assembly service that
+        // may take dependencies must not be constructed from it for a later context.
+        if (registry.IsContainerFallbackRejected(serviceType))
+        {
+            throw new InvalidOperationException(
+                $"Service '{serviceType.FullName}' is not registered for the current test context and would be constructed by the shared test host with dependencies from the first context. " +
+                $"Register it explicitly in the current context's ConfigureServices, for example services.AddSingleton(new {serviceType.Name}(...)).");
+        }
+
         // Fall back to the inner (built) container for framework and silo types.
         return inner.GetService(serviceType);
     }

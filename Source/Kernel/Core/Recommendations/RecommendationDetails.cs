@@ -56,4 +56,31 @@ public record RecommendationDetails(
             .GetNamespace(@namespace).Recommendations
             .ObserveRecommendations()
             .TransformSubject(_ => _.ToDetails());
+
+    /// <summary>
+    /// Gets all ignored recommendations for the given event store and namespace.
+    /// </summary>
+    /// <param name="eventStore">Name of the event store the recommendations are for.</param>
+    /// <param name="namespace">Namespace within the event store the recommendations are for.</param>
+    /// <param name="storage">The <see cref="IStorage"/> to read recommendations from.</param>
+    /// <returns>A collection of ignored recommendations.</returns>
+    public static async Task<IEnumerable<RecommendationDetails>> GetIgnoredRecommendations(EventStoreName eventStore, EventStoreNamespaceName @namespace, IStorage storage)
+    {
+        var recommendations = await storage.GetEventStore(eventStore).GetNamespace(@namespace).Recommendations.GetAll();
+        return recommendations.ToIgnoredDetails();
+    }
+
+    /// <summary>
+    /// Observes all ignored recommendations for the given event store and namespace.
+    /// </summary>
+    /// <param name="eventStore">Name of the event store the recommendations are for.</param>
+    /// <param name="namespace">Namespace within the event store the recommendations are for.</param>
+    /// <param name="storage">The <see cref="IStorage"/> to observe recommendations from.</param>
+    /// <returns>An observable subject emitting collections of ignored recommendations.</returns>
+    public static ISubject<IEnumerable<RecommendationDetails>> IgnoredRecommendations(EventStoreName eventStore, EventStoreNamespaceName @namespace, IStorage storage) =>
+        storage
+            .GetEventStore(eventStore)
+            .GetNamespace(@namespace).Recommendations
+            .ObserveRecommendations()
+            .TransformSubject(_ => _.ToIgnoredDetails());
 }
