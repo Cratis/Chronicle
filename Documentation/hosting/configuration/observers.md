@@ -227,7 +227,7 @@ retired observer. When no earlier client remains, the observer unsubscribes.
 When a connection is dropped, Chronicle tells only the observers that connection subscribed, each with the exact
 connection identifier, without waiting for the watchdog. Telling an observer is best effort and runs outside
 the connection registry, so a notification that is lost, late or repeated is harmless: the watchdog still finds the
-client gone on its next check. Observers served by a webhook are never affected by a client connection being dropped.
+client gone on its next check. During a rolling upgrade, or if recording the observer for its connection fails, the subscription still stands and takeover falls back to the watchdog. Observers served by a webhook are never affected by a client connection being dropped.
 
 > [!NOTE]
 > This shortens the time before another client takes over; it does not make delivery exactly-once. An old client
