@@ -41,5 +41,16 @@ public enum SinkWriteMode
     /// Insert a missing instance; otherwise apply changes only when the incoming sequence number
     /// is beyond the stored watermark, including when writes are buffered in a bulk window.
     /// </summary>
-    GuardedUpsert = 2
+    GuardedUpsert = 2,
+
+    /// <summary>
+    /// Apply each write only when the event that makes it has not already been applied to the document, as recorded in the
+    /// document's applied event markers (<see cref="WellKnownProperties.AppliedEventMarkers"/>).
+    /// </summary>
+    /// <remarks>
+    /// Only chosen for a projection keyed by the event source id that has root joins, so that a redelivered event, or an older
+    /// own event delivered after a newer join, does not overwrite a newer value. An event delivered for the first time is always
+    /// applied. A sink that does not keep markers (see <see cref="ISinkAppliedEventMarkers"/>) treats it as <see cref="Always"/>.
+    /// </remarks>
+    OncePerSourceEvent = 3
 }
