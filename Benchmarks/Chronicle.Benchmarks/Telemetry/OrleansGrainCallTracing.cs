@@ -1,0 +1,190 @@
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+using System.Diagnostics;
+using BenchmarkDotNet.Attributes;
+using Cratis.Chronicle.Diagnostics.OpenTelemetry;
+using Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
+using OpenTelemetry;
+using OpenTelemetry.Trace;
+
+namespace Cratis.Chronicle.Benchmarks.Telemetry;
+
+/// <summary>
+/// How the TracerProvider and the Orleans trace propagation are configured.
+/// </summary>
+public enum TracingConfiguration
+{
+    /// <summary>Before #4607: the TracerProvider listens to both Orleans sources, no propagation listener.</summary>
+    Base,
+
+    /// <summary>After #4607, OrleansTracing=false: Chronicle's provider without Orleans sources plus <see cref="OrleansTraceContextPropagation"/>.</summary>
+    HeadTracingOff,
+
+    /// <summary>After #4607, OrleansTracing=true: the provider as <c>AddChronicleTelemetry</c> builds it with tracing on.</summary>
+    HeadTracingOn
+}
+
+/// <summary>
+/// What the caller of the grain has as its current activity.
+/// </summary>
+public enum CallerContext
+{
+    /// <summary>No current <see cref="Activity"/>.</summary>
+    Untraced,
+
+    /// <summary>A current activity from a sampled (Recorded) parent.</summary>
+    SampledParent,
+
+    /// <summary>A current activity from an unsampled parent.</summary>
+    UnsampledParent
+}
+
+/// <summary>
+/// Measures the per-call cost of Orleans' activity propagation grain call filters under the telemetry configurations
+/// before and after #4607. The grain call is modeled in process: it reproduces the work of Orleans 10.4's
+/// <c>ActivityPropagationGrainCallFilter</c> (outgoing: start a client activity on the Orleans application source and
+/// inject the context; incoming: extract the context without the caller's ExecutionContext, start a server activity,
+/// and set the rpc tags when all data is requested) rather than running a silo.
+/// </summary>
+[MemoryDiagnoser]
+public class OrleansGrainCallTracing
+{
+    static readonly ActivitySource _source = new(OrleansActivitySources.Application);
+    static readonly Action<Dictionary<string, string>, string, string> _set = (carrier, name, value) => carrier[name] = value;
+    static readonly DistributedContextPropagator.PropagatorGetterCallback _get = Get;
+
+    static readonly ActivitySource _callerSource = new("Cratis.Chronicle.Benchmarks.Caller");
+    ActivityListener? _callerListener;
+    TracerProvider? _provider;
+    OrleansTraceContextPropagation? _propagation;
+    Activity? _caller;
+    int _sequence;
+
+    /// <summary>
+    /// Gets or sets the telemetry configuration under test.
+    /// </summary>
+    [Params(TracingConfiguration.Base, TracingConfiguration.HeadTracingOff, TracingConfiguration.HeadTracingOn)]
+    public TracingConfiguration Configuration { get; set; }
+
+    /// <summary>
+    /// Gets or sets the caller's trace context.
+    /// </summary>
+    [Params(CallerContext.Untraced, CallerContext.SampledParent, CallerContext.UnsampledParent)]
+    public CallerContext Caller { get; set; }
+
+    /// <summary>
+    /// Builds the tracer provider (and the propagation listener for the head, tracing-off case).
+    /// </summary>
+    /// <returns>A task that completes when setup is finished.</returns>
+    [GlobalSetup]
+    public async Task Setup()
+    {
+        // ParentBased(AlwaysOn) is the OpenTelemetry default sampler AddChronicleTelemetry relies on.
+        var builder = Sdk.CreateTracerProviderBuilder();
+        switch (Configuration)
+        {
+            case TracingConfiguration.Base:
+                builder.AddSource(ChronicleActivitySourceName).AddSource(OrleansActivitySources.All);
+                break;
+            case TracingConfiguration.HeadTracingOff:
+                builder.AddChronicleInstrumentation(false);
+                break;
+            default:
+                builder.AddChronicleInstrumentation(true);
+                break;
+        }
+
+        _provider = builder.AddProcessor(new SimpleActivityExportProcessor(new NoOpExporter())).Build();
+
+        if (Configuration == TracingConfiguration.HeadTracingOff)
+        {
+            _propagation = new();
+            await _propagation.StartAsync(CancellationToken.None);
+        }
+
+        if (Caller == CallerContext.Untraced) return;
+
+        var flags = Caller == CallerContext.SampledParent ? ActivityTraceFlags.Recorded : ActivityTraceFlags.None;
+        var parent = new ActivityContext(ActivityTraceId.CreateRandom(), ActivitySpanId.CreateRandom(), flags, isRemote: true);
+        _callerListener = new ActivityListener
+        {
+            ShouldListenTo = source => ReferenceEquals(source, _callerSource),
+            Sample = (ref ActivityCreationOptions<ActivityContext> options) => options.Parent.TraceFlags.HasFlag(ActivityTraceFlags.Recorded) ? ActivitySamplingResult.AllDataAndRecorded : ActivitySamplingResult.PropagationData
+        };
+        ActivitySource.AddActivityListener(_callerListener);
+        _caller = _callerSource.StartActivity("caller", ActivityKind.Server, parent);
+
+    }
+
+    /// <summary>
+    /// Disposes the provider and propagation listener.
+    /// </summary>
+    [GlobalCleanup]
+    public void Cleanup()
+    {
+        _caller?.Dispose();
+        Activity.Current = null;
+        _callerListener?.Dispose();
+        _propagation?.Dispose();
+        _provider?.Dispose();
+    }
+
+    /// <summary>
+    /// One modeled grain call: outgoing filter then incoming filter.
+    /// </summary>
+    /// <returns>The value the grain would return.</returns>
+    [Benchmark]
+    public int GrainCall()
+    {
+        var current = Activity.Current;
+        var carrier = new Dictionary<string, string>(2);
+
+        // Outgoing filter.
+        using (var client = _source.StartActivity("IPing/Ping", ActivityKind.Client))
+        {
+            if (client is not null)
+            {
+                if (client.IsAllDataRequested) SetRpcTags(client);
+                DistributedContextPropagator.Current.Inject(client, carrier, (state, name, value) => _set((Dictionary<string, string>)state!, name, value));
+            }
+        }
+
+        // Incoming filter, in a grain turn that does not see the caller's ExecutionContext.
+        Activity.Current = null;
+        try
+        {
+            DistributedContextPropagator.Current.ExtractTraceIdAndState(carrier, _get, out var traceParent, out var traceState);
+            using var server = ActivityContext.TryParse(traceParent, traceState, true, out var parent)
+                ? _source.CreateActivity("IPing/Ping", ActivityKind.Server, parent)?.Start()
+                : null;
+            if (server is { IsAllDataRequested: true }) SetRpcTags(server);
+            return ++_sequence;
+        }
+        finally
+        {
+            Activity.Current = current;
+        }
+    }
+
+    static string ChronicleActivitySourceName => ChronicleActivity.SourceName;
+
+    static void SetRpcTags(Activity activity)
+    {
+        activity.SetTag("rpc.system", "orleans.rpc");
+        activity.SetTag("rpc.service", "Cratis.Chronicle.Benchmarks.IPing");
+        activity.SetTag("rpc.method", "Ping");
+        activity.SetTag("orleans.grain.id", string.Concat("ping/", "0f3c1d2e4b5a69788796a5b4c3d2e1f0"));
+    }
+
+    static void Get(object? carrier, string fieldName, out string? fieldValue, out IEnumerable<string>? fieldValues)
+    {
+        fieldValues = null;
+        fieldValue = ((Dictionary<string, string>)carrier!).TryGetValue(fieldName, out var value) ? value : null;
+    }
+
+    sealed class NoOpExporter : BaseExporter<Activity>
+    {
+        public override ExportResult Export(in Batch<Activity> batch) => ExportResult.Success;
+    }
+}
