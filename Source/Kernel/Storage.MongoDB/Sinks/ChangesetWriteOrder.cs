@@ -26,6 +26,11 @@ internal static class ChangesetWriteOrder
     /// </returns>
     public static IReadOnlyList<IReadOnlyList<Change>>? SegmentsFor(IEnumerable<Change> changes)
     {
+        if (!ContainsKeyedJoin(changes))
+        {
+            return null;
+        }
+
         var list = changes.ToList();
         if (!NeedsOrdering(list))
         {
@@ -50,9 +55,53 @@ internal static class ChangesetWriteOrder
     }
 
     static bool NeedsOrdering(List<Change> changes) =>
-        IsCovered(changes) && HasKeyedFrom(changes) && HasDirectChangeOverlappingALaterJoin(changes);
+        IsCovered(changes) && HasDirectChangeOverlappingALaterJoin(changes);
 
-    static bool HasKeyedFrom(List<Change> changes) => changes.OfType<Joined>().ToList().Exists(joined => joined.HasKeyedFrom);
+    static bool ContainsKeyedJoin(IEnumerable<Change> changes) => changes switch
+    {
+        List<Change> list => ContainsKeyedJoin(list),
+        IReadOnlyList<Change> readOnlyList => ContainsKeyedJoin(readOnlyList),
+        _ => ContainsKeyedJoinInSequence(changes)
+    };
+
+    static bool ContainsKeyedJoin(List<Change> changes)
+    {
+        for (var index = 0; index < changes.Count; index++)
+        {
+            if (changes[index] is Joined { HasKeyedFrom: true })
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    static bool ContainsKeyedJoin(IReadOnlyList<Change> changes)
+    {
+        for (var index = 0; index < changes.Count; index++)
+        {
+            if (changes[index] is Joined { HasKeyedFrom: true })
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    static bool ContainsKeyedJoinInSequence(IEnumerable<Change> changes)
+    {
+        foreach (var change in changes)
+        {
+            if (change is Joined { HasKeyedFrom: true })
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
 
     static bool IsCovered(IEnumerable<Change> changes) => changes.All(change => change switch
     {
