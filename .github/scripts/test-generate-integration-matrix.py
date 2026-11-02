@@ -139,7 +139,10 @@ class for_generating_the_matrix(unittest.TestCase):
             return {
                 (entry["namespace"], entry["shard"], entry["filter"])
                 for entry in include
-                if entry["namespace"] != "Cratis.Chronicle.Integration.SqlServerAlertIncidents"
+                if entry["namespace"] not in {
+                    "Cratis.Chronicle.Integration.SqlServerAlertIncidents",
+                    "Cratis.Chronicle.Integration.for_OccurrenceProcessRecovery",
+                }
             }
 
         self.assertEqual(shards(_run()), shards(_run("--all-providers")))
@@ -149,6 +152,27 @@ class for_generating_the_matrix(unittest.TestCase):
             self.assertEqual(
                 {"namespace", "shard", "filter", "mode", "database", "needs-docker"},
                 set(entry))
+
+    def test_per_process_activation_runs_only_out_of_process_with_mongodb(self):
+        for arguments in ((), ("--all-providers",)):
+            entries = [entry for entry in _run(*arguments)
+                       if "for_PerProcessActivation" in entry["filter"]]
+            self.assertTrue(entries)
+            for entry in entries:
+                self.assertEqual("outofprocess", entry["mode"])
+                self.assertEqual("mongodb", entry["database"])
+
+    def test_process_recovery_runs_only_out_of_process_with_postgresql(self):
+        entries = [entry for entry in _run()
+                   if "for_OccurrenceProcessRecovery" in entry["filter"]]
+        self.assertEqual([], entries)
+        for arguments in (("--all-providers",), ("--databases", "postgresql")):
+            entries = [entry for entry in _run(*arguments)
+                       if "for_OccurrenceProcessRecovery" in entry["filter"]]
+            self.assertTrue(entries)
+            for entry in entries:
+                self.assertEqual("outofprocess", entry["mode"])
+                self.assertEqual("postgresql", entry["database"])
 
     def test_an_unknown_backend_fails_the_run(self):
         completed = subprocess.run(
