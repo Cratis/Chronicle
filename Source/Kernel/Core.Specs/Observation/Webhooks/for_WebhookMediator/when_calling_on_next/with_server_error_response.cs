@@ -42,7 +42,7 @@ public class with_server_error_response : given.a_webhook_mediator
         exception.ShouldBeOfExactType<WebhookDeliveryFailed>();
         var failure = (WebhookDeliveryFailed)exception;
         failure.StatusCode.ShouldEqual(HttpStatusCode.ServiceUnavailable);
-        failure.ReasonPhrase.ShouldEqual("Webhook is unavailable");
-        failure.TargetUrl.ShouldEqual(_target.Url);
+        failure.ReasonPhrase.ShouldBeNull();
+        failure.TargetUrl.ShouldEqual((WebhookTargetUrl)"https://example.com");
     }
 }

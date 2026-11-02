@@ -55,7 +55,7 @@ public static class WebhookHttpClientExtensions
                     BreakDuration = TimeSpan.FromSeconds(webhooks.CircuitBreakerBreakDurationSeconds),
                     OnOpened = arguments =>
                     {
-                        var authority = arguments.Context.GetRequestMessage()!.RequestUri!.GetLeftPart(UriPartial.Authority);
+                        var authority = WebhookDiagnostics.Authority(arguments.Context.GetRequestMessage()!.RequestUri!.AbsoluteUri);
                         WebhookDeliveryMetrics.CircuitOpened(authority);
                         return ValueTask.CompletedTask;
                     }

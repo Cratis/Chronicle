@@ -68,7 +68,7 @@ public class WebhookMediator(IWebhookHttpClientFactory webhookHttpClientFactory,
         {
             var now = DateTimeOffset.UtcNow;
             var delay = error.RetryAfter ?? TimeSpan.FromSeconds(options?.Value.Webhooks.CircuitBreakerBreakDurationSeconds ?? 15);
-            var authority = new Uri(webhookTarget.Url).GetLeftPart(UriPartial.Authority);
+            var authority = WebhookDiagnostics.Authority(webhookTarget.Url);
             WebhookDeliveryMetrics.CircuitRejected(authority);
             (logger ?? NullLogger<WebhookMediator>.Instance).TargetUnavailable(authority, now + delay);
             return new(EventSequenceNumber.Unavailable, WebhookDeliveryErrors.SafeError(webhookTarget, error), new(Guid.NewGuid(), PartitionDeferralReason.CircuitOpen, now, now + delay, batch.FirstOrDefault()?.Context.SequenceNumber ?? EventSequenceNumber.First));
@@ -118,7 +118,7 @@ public class WebhookMediator(IWebhookHttpClientFactory webhookHttpClientFactory,
     WebhookDeliveryResult DeliveryRejected(HttpResponseMessage response, WebhookTarget target, AppendedEvent[] batch)
     {
         var error = WebhookDeliveryErrors.ForResponse(target, response);
-        var authority = new Uri(target.Url).GetLeftPart(UriPartial.Authority);
+        var authority = WebhookDiagnostics.Authority(target.Url);
         var deliveryLogger = logger ?? NullLogger<WebhookMediator>.Instance;
         if ((response.StatusCode is HttpStatusCode.TooManyRequests or HttpStatusCode.ServiceUnavailable) && GetRetryAfter(response, options?.Value.Webhooks.MaximumRetryAfterSeconds ?? 24 * 60 * 60) is { } until)
         {
