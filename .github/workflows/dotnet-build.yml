@@ -126,6 +126,9 @@ jobs:
       - name: Spec executable runner contracts and forbid test-host dispatch
         run: node --test .github/scripts/test-mixed-spec-runners.mjs
 
+      - name: Spec coverage statistics honesty (missing input never advances the measurement date)
+        run: node --test .github/scripts/test-coverage-statistics.mjs
+
       # The publish workflow's Docker verification logic is release-only, so this checkout-only spec run is
       # where a pull request proves the tag expansion, retry and failure behavior before any publication occurs.
       - name: Spec the published Docker tag verifier

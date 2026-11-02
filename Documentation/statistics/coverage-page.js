@@ -1,5 +1,29 @@
 'use strict';
 (function() {
+  const STALE_AFTER_DAYS = 7;
+
+  function describeCoverageStatus(data, nowMs) {
+    const status = { state: 'unavailable', measuredAt: null, commit: '', version: '', message: 'Coverage data is not available.' };
+    if (!data) return status;
+
+    const newest = Object.values(data.entries || {}).flat().reduce((latest, entry) => {
+      const measuredAt = Date.parse(`${entry.date}T00:00:00Z`);
+      return Number.isFinite(measuredAt) && (!latest || measuredAt > latest.measuredAt)
+        ? { measuredAt, commit: entry.commit || '', version: entry.version || '' } : latest;
+    }, null);
+    const measurement = data.measurement || newest;
+    if (!measurement) return { ...status, state: 'none', message: 'No coverage measurement yet.' };
+    Object.assign(status, measurement);
+    const attempt = data.latestAttempt;
+    if (attempt && attempt.state !== 'measured' && attempt.attemptedAt > status.measuredAt) {
+      return { ...status, state: 'missing', message: `Coverage missing for version ${attempt.version}: ${attempt.state}.` };
+    }
+    if (nowMs - status.measuredAt > STALE_AFTER_DAYS * 86400000) {
+      return { ...status, state: 'stale', message: 'Coverage is stale (more than 7 days old).' };
+    }
+    return { ...status, state: 'current', message: 'Coverage measurement is current.' };
+  }
+
   const projectColors = [
     '#178600', // .NET green
     '#3298dc', // Blue
@@ -40,6 +64,13 @@
 
   function init() {
     const data = window.COVERAGE_DATA;
+    const status = describeCoverageStatus(data, Date.now());
+    const statusElement = document.getElementById('coverage-status');
+    statusElement.textContent = status.message;
+    statusElement.dataset.state = status.state;
+    document.getElementById('last-update').textContent = status.measuredAt !== null
+      ? `${new Date(status.measuredAt).toString()}${status.commit ? ` (${status.commit.slice(0, 7)})` : ''}`
+      : 'No data yet';
     if (!data) {
       setSummaryMessage('Coverage data is not available.');
       setMessage('Coverage data could not be loaded.');
@@ -47,8 +78,6 @@
       return null;
     }
 
-    const lastUpdate = data.lastUpdate ? new Date(data.lastUpdate).toString() : 'No data yet';
-    document.getElementById('last-update').textContent = lastUpdate;
     const repoLink = document.getElementById('repository-link');
     repoLink.href = data.repoUrl;
     repoLink.textContent = data.repoUrl;
@@ -268,6 +297,11 @@
     renderSummaryStats(chartData);
     renderProjectToggles(chartData);
     createChart(chartData);
+  }
+
+  if (typeof module === 'object' && module.exports) {
+    module.exports = { describeCoverageStatus, STALE_AFTER_DAYS };
+    return;
   }
 
   if (document.readyState === 'loading') {

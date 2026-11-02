@@ -7,9 +7,30 @@ COVERAGE_REPORT_PATH="${1:-./coverage-reports}"
 OUTPUT_PATH="${2:-./Documentation/statistics/coverage-data.js}"
 VERSION="${3:-}"
 COMMIT_SHA="${4:-}"
+# Retain the optional fifth argument for existing callers.
+# shellcheck disable=SC2034
 COMMIT_MESSAGE="${5:-}"
 
 echo "Collecting coverage data from: $COVERAGE_REPORT_PATH"
+
+# Environment (both optional):
+#   COVERAGE_NOW_MS          Override the current time in milliseconds (used by the specs).
+#   COVERAGE_MEASURED_AT_MS  Time the coverage was actually measured, in milliseconds. Wins over the
+#                            report's own generation time.
+# A run without a usable coverage report never advances the measurement date. It only records
+# an explicit "missing" or "incomplete" attempt in latestAttempt.
+
+if [ -n "${COVERAGE_NOW_MS:-}" ]; then
+    now_ms="$COVERAGE_NOW_MS"
+elif command -v python3 >/dev/null 2>&1; then
+    now_ms=$(python3 -c "import time; print(int(time.time() * 1000))")
+else
+    # Fallback: use seconds if Python is not available
+    now_ms=$(($(date +%s) * 1000))
+fi
+
+# Extract commit hash (first 7 chars)
+commit_short="${COMMIT_SHA:0:7}"
 
 # Read existing data or create new structure
 if [ -f "$OUTPUT_PATH" ]; then
@@ -19,21 +40,24 @@ else
     existing_json='{"lastUpdate":0,"repoUrl":"https://github.com/Cratis/Chronicle","entries":{}}'
 fi
 
+# Record an attempt that did not produce a measurement. Leaves lastUpdate, measurement and entries untouched.
+record_attempt() {
+    local state="$1"
+    local reason="$2"
+    echo "::warning::Coverage $state: $reason; measurement date unchanged"
+    echo "window.COVERAGE_DATA = $(echo "$existing_json" | jq --arg state "$state" --arg reason "$reason" \
+        --arg version "$VERSION" --arg commit "$commit_short" --argjson now "$now_ms" '
+        .schemaVersion = 2 |
+        .latestAttempt = {state: $state, attemptedAt: $now, version: $version, commit: $commit, reason: $reason}
+    ' | jq .);" > "$OUTPUT_PATH"
+    exit 0
+}
+
 # Find the main Summary.json file (reportgenerator creates one at the root)
 summary_file="$COVERAGE_REPORT_PATH/Summary.json"
 
 if [ ! -f "$summary_file" ]; then
-    echo "Warning: No Summary.json found in $COVERAGE_REPORT_PATH"
-    # Still update the timestamp
-    if command -v python3 >/dev/null 2>&1; then
-        timestamp=$(python3 -c "import time; print(int(time.time() * 1000))")
-    else
-        # Fallback: use seconds if Python is not available
-        timestamp=$(($(date +%s) * 1000))
-    fi
-    echo "window.COVERAGE_DATA = $(echo "$existing_json" | jq --argjson ts "$timestamp" '.lastUpdate = $ts');" > "$OUTPUT_PATH"
-    echo "Updated timestamp in coverage data (no coverage report found)"
-    exit 0
+    record_attempt missing "no Summary.json found in $COVERAGE_REPORT_PATH"
 fi
 
 echo "Processing coverage report: $summary_file"
@@ -62,24 +86,45 @@ if ! jq empty "$summary_file" 2>/dev/null; then
     fi
 fi
 
-# Get current date and week
-current_date=$(date +%Y-%m-%d)
-year=$(date +%Y)
-month=$(date +%m)
-day=$(date +%d)
+# Production assemblies after filtering out specs and test infrastructure
+assembly_filter='(.coverage.assemblies // []) | map(select(
+    (.name | test("\\.Specs$") | not) and
+    (.name | test("^xunit") | not) and
+    (.name | test("^NSubstitute") | not) and
+    (.name | test("^testhost") | not) and
+    (.name | test("^coverlet") | not)
+)) | length'
+production_count=$(jq "$assembly_filter" "$summary_file")
+if [ "$production_count" -eq 0 ]; then
+    record_attempt incomplete "no production assemblies in Summary.json"
+fi
+
+# Determine when the coverage was measured: explicit override, then the report, then now
+generated_on=$(jq -r '.summary.generatedon // empty' "$summary_file")
+measured_ms=""
+if [[ "${COVERAGE_MEASURED_AT_MS:-}" =~ ^[0-9]+$ ]]; then
+    measured_ms="$COVERAGE_MEASURED_AT_MS"
+    echo "Measurement time from COVERAGE_MEASURED_AT_MS"
+elif [[ "$generated_on" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2} ]]; then
+    # Only UTC (no offset, Z or +00:00) is trusted; anything else falls back to now
+    if [[ "$generated_on" =~ ^[0-9T:-]{19}(\.[0-9]+)?(Z|[+-]00:?00)?$ ]]; then
+        measured_ms=$(jq -rn --arg v "${generated_on:0:19}Z" 'try (($v | fromdateiso8601) * 1000) catch empty')
+    fi
+fi
+if [ -z "$measured_ms" ]; then
+    measured_ms="$now_ms"
+    echo "Measurement time from current time (no usable generation time in report)"
+else
+    echo "Measurement time: $measured_ms"
+fi
+
+# Derive date and week from the measurement time in UTC
+current_date=$(jq -rn --argjson ms "$measured_ms" '($ms / 1000 | floor | gmtime | strftime("%Y-%m-%d"))')
+year=${current_date:0:4}
+month=${current_date:5:2}
+day=${current_date:8:2}
 week_of_month=$(( (10#$day + 6) / 7 ))
 current_week="${year}-M${month}-W${week_of_month}"
-
-# Extract commit hash (first 7 chars)
-commit_short="${COMMIT_SHA:0:7}"
-
-# Get timestamp - use Python if available for cross-platform millisecond precision
-if command -v python3 >/dev/null 2>&1; then
-    timestamp=$(python3 -c "import time; print(int(time.time() * 1000))")
-else
-    # Fallback: use seconds if Python is not available
-    timestamp=$(($(date +%s) * 1000))
-fi
 
 # Process assemblies and update the data structure
 result_json=$(echo "$existing_json" | jq --slurpfile summary "$summary_file" \
@@ -87,9 +132,13 @@ result_json=$(echo "$existing_json" | jq --slurpfile summary "$summary_file" \
                   --arg date "$current_date" \
                   --arg version "$VERSION" \
                   --arg commit "$commit_short" \
-                  --argjson timestamp "$timestamp" '
-    # Update timestamp
-    .lastUpdate = $timestamp |
+                  --argjson measured "$measured_ms" \
+                  --argjson now "$now_ms" '
+    # Record the measurement and the attempt
+    .schemaVersion = 2 |
+    .lastUpdate = $measured |
+    .measurement = {measuredAt: $measured, commit: $commit, version: $version} |
+    .latestAttempt = {state: "measured", attemptedAt: $now, version: $version, commit: $commit} |
 
     # Process each assembly
     ($summary[0].coverage.assemblies // [] | map(
@@ -158,7 +207,7 @@ result_json=$(echo "$existing_json" | jq --slurpfile summary "$summary_file" \
 ')
 
 # Write to file
-echo "window.COVERAGE_DATA = $(echo "$result_json" | jq -c .);" > "$OUTPUT_PATH"
+echo "window.COVERAGE_DATA = $(echo "$result_json" | jq .);" > "$OUTPUT_PATH"
 
 # Count projects and show summary
 project_count=$(echo "$result_json" | jq '.entries | keys | length')
