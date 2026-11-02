@@ -126,7 +126,7 @@ public static class ChronicleClientServiceCollectionExtensions
 
         services.AddKeyedSingleton(typeof(IActivitySource<>), ClientActivity.SourceName, typeof(KeyedActivitySource<>));
 
-        return services;
+        return services.ConfigureChronicleClientServices();
     }
 
     sealed class KeyedActivitySource<T>(IServiceProvider serviceProvider, [ServiceKey] string? key = null) : IActivitySource<T>
