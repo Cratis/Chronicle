@@ -13,7 +13,7 @@ public class and_the_client_disconnects_while_waiting : given.a_registration
     {
         Connect(cancellationToken: _cancellation.Token);
         await _entering.Task.WaitAsync(TimeSpan.FromSeconds(5));
-        _cancellation.Cancel();
+        await _cancellation.CancelAsync();
         await _cancelled.Task.WaitAsync(TimeSpan.FromSeconds(5));
     }
 

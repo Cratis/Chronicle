@@ -26,7 +26,7 @@ public class and_the_caller_cancels_while_waiting : Specification
 
     async Task Because()
     {
-        _cancellation.Cancel();
+        await _cancellation.CancelAsync();
         _error = await Catch.Exception(async () => await _waiting.WaitAsync(TimeSpan.FromSeconds(5)));
         var replacement = _gate.Enter(CancellationToken.None).AsTask();
         _countWasUnchanged = !replacement.IsCompleted;

@@ -27,7 +27,7 @@ public class and_the_client_reconnects : given.a_registration
         await _secondRelease.Task.WaitAsync(TimeSpan.FromSeconds(5));
     }
 
-    [Fact] void should_acquire_a_permit_for_each_registration() => _gate.Received(2).Enter(Arg.Any<CancellationToken>());
+    [Fact] async Task should_acquire_a_permit_for_each_registration() => await _gate.Received(2).Enter(Arg.Any<CancellationToken>());
     [Fact] void should_release_each_lease_without_waiting_for_the_stream_to_close() => _lease.Received(2).Dispose();
     [Fact] void should_subscribe_again() => _client.Received(2).SetDefinitionAndSubscribe(Arg.Any<ReducerDefinition>());
 }

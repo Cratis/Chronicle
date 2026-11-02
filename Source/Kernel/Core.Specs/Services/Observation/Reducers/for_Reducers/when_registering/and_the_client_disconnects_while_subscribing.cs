@@ -22,7 +22,7 @@ public class and_the_client_disconnects_while_subscribing : given.a_registration
     {
         Connect(cancellationToken: _cancellation.Token);
         await _subscribing.Task.WaitAsync(TimeSpan.FromSeconds(5));
-        _cancellation.Cancel();
+        await _cancellation.CancelAsync();
         _heldUntilRegistrationFinished = !_released.Task.IsCompleted;
         _subscribed.SetResult();
         await _released.Task.WaitAsync(TimeSpan.FromSeconds(5));

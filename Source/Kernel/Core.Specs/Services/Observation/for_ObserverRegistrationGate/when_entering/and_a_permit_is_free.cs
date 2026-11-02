@@ -9,15 +9,15 @@ namespace Cratis.Chronicle.Services.Observation.for_ObserverRegistrationGate.whe
 public class and_a_permit_is_free : Specification
 {
     ObserverRegistrationGate _gate;
-    ValueTask<IDisposable> _enter;
+    Task<IDisposable> _enter;
 
     void Establish() => _gate = new(Options.Create(new ChronicleOptions { Observers = new() { MaxConcurrentRegistrations = 1 } }));
 
-    void Because() => _enter = _gate.Enter(CancellationToken.None);
+    void Because() => _enter = _gate.Enter(CancellationToken.None).AsTask();
 
     async Task Destroy()
     {
-        (await _enter.AsTask().WaitAsync(TimeSpan.FromSeconds(5))).Dispose();
+        (await _enter.WaitAsync(TimeSpan.FromSeconds(5))).Dispose();
         _gate.Dispose();
     }
 
