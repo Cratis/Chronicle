@@ -203,29 +203,39 @@ public partial class Sink : ISink, ICanReconcileIndexes, ISinkCompositeKeyLookup
             return _noFailedPartitions;
         }
 
-        await ApplyJoinsAndChildRemovals(scope, changeset, eventSequenceNumber);
-
         var nonJoinedChanges = changeset.Changes
             .Where(c => c is not Joined and not ChildRemovedFromAll)
             .ToArray();
+        var wroteDirect = WriteSteps(changeset, nonJoinedChanges) >= 2
+            ? await RunInCycleTransaction(scope, eventSequenceNumber, false, () => ApplyJoinsThenDirectChanges(scope, key, id, changeset, nonJoinedChanges, eventSequenceNumber, mode))
+            : await ApplyJoinsThenDirectChanges(scope, key, id, changeset, nonJoinedChanges, eventSequenceNumber, mode);
+        if (wroteDirect)
+        {
+            await SqlCompositeKeyShadow.Stamp(scope.DbContext, key, id, _logger);
+        }
+
+        return _noFailedPartitions;
+    }
+
+    async Task<bool> ApplyJoinsThenDirectChanges(DbContextScope<ReadModelDbContext> scope, Key key, string id, IChangeset<AppendedEvent, ExpandoObject> changeset, Change[] nonJoinedChanges, EventSequenceNumber eventSequenceNumber, SinkWriteMode mode)
+    {
+        await ApplyJoinsAndChildRemovals(scope, changeset, eventSequenceNumber);
         if (nonJoinedChanges.Length == 0 || !await ShouldWriteDirectChanges(scope, id, changeset, nonJoinedChanges))
         {
-            return _noFailedPartitions;
+            return false;
         }
 
         var entry = await GetOrAttachEntity(scope, id, key);
         if (IsSkippedByWatermark(entry, mode, eventSequenceNumber))
         {
             entry.State = EntityState.Detached;
-            return _noFailedPartitions;
+            return false;
         }
 
         ApplyChangesToEntity(entry, nonJoinedChanges);
         AdvanceLastHandledSequenceNumber(entry, eventSequenceNumber);
         await SaveRecoveringFromInsertRace(scope, entry, new PendingWrite(id, nonJoinedChanges, eventSequenceNumber));
-        await SqlCompositeKeyShadow.Stamp(scope.DbContext, key, id, _logger);
-
-        return _noFailedPartitions;
+        return true;
     }
 
     async Task RemoveEntry(DbContextScope<ReadModelDbContext> scope, string id)
@@ -298,7 +308,7 @@ public partial class Sink : ISink, ICanReconcileIndexes, ISinkCompositeKeyLookup
         {
             await scope.DbContext.SaveChangesAsync();
         }
-        catch (DbUpdateException ex) when (IsUniqueViolation(ex) && entry.State == EntityState.Added)
+        catch (DbUpdateException ex) when (IsUniqueViolation(ex) && entry.State == EntityState.Added && scope.DbContext.Database.CurrentTransaction is null)
         {
             // Lost the insert race against another concurrent ApplyChanges for the same key.
             // The row now exists; detach our Added entity, reload from DB, re-apply the changes

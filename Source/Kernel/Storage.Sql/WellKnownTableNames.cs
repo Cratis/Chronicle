@@ -164,6 +164,11 @@ public static class WellKnownTableNames
     public const string ReplayPromotions = "chronicle_replay_promotions";
 
     /// <summary>
+    /// The read-model database table that records committed multi-write sink cycles, so a retry after a lost commit acknowledgment does not apply a cycle twice.
+    /// </summary>
+    public const string SinkCycleReceipts = "chronicle_sink_cycle_receipts";
+
+    /// <summary>
     /// The table that holds read model definitions.
     /// </summary>
     public const string ReadModelDefinitions = "ReadModelDefinitions";

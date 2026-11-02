@@ -18,6 +18,25 @@ public partial class Sink
         var id = GetIdString(key);
         var incoming = checked((long)sequenceNumber.Value);
         var changes = changeset.Changes.Where(change => change is not Joined and not ChildRemovedFromAll).ToArray();
+        if (!changeset.HasBeenRemoved() && WriteSteps(changeset, changes) >= 2)
+        {
+            await using var cycleScope = await OpenActiveScope();
+            await RunInCycleTransaction(cycleScope, sequenceNumber, true, async () =>
+            {
+                await ApplyJoinsAndChildRemovals(cycleScope, changeset, sequenceNumber);
+                if (changes.Length == 0 || !await ShouldWriteDirectChanges(cycleScope, id, changeset, changes))
+                {
+                    return false;
+                }
+
+                // A lost compare-and-swap reruns the whole cycle, so joins are applied once, on current state.
+                return await TryApplyGuardedChanges(cycleScope, key, new PendingWrite(id, changes, sequenceNumber))
+                    ? true
+                    : throw new CycleRerun();
+            });
+            return _noFailedPartitions;
+        }
+
         var joinsApplied = false;
         while (true)
         {

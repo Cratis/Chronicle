@@ -119,7 +119,7 @@ public partial class Sink
             await context.SaveChangesAsync();
             return true;
         }
-        catch (DbUpdateException exception) when (IsUniqueViolation(exception))
+        catch (DbUpdateException exception) when (IsUniqueViolation(exception) && context.Database.CurrentTransaction is null)
         {
             context.ChangeTracker.Clear();
             if (!await context.Entries.AnyAsync(BuildIdPredicate(id)))

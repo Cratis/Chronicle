@@ -58,6 +58,11 @@ public class SqlSinkHarness : ISqlSinkHarness
     public IEnumerable<IInterceptor> Interceptors { get; init; } = [];
 
     /// <summary>
+    /// Gets a hook that adjusts the context options, such as installing an execution strategy that retries.
+    /// </summary>
+    public Action<DbContextOptionsBuilder<ReadModelDbContext>>? ConfigureOptions { get; init; }
+
+    /// <summary>
     /// Gets the logger for sink diagnostics.
     /// </summary>
     public ILogger<SqlSink> Logger { get; init; } = Substitute.For<ILogger<SqlSink>>();
@@ -149,6 +154,7 @@ public class SqlSinkHarness : ISqlSinkHarness
             builder.UseDatabaseFromConnectionString(ConnectionString);
             builder.AddConceptAsSupport().WithoutServiceProviderCaching();
         }
+        ConfigureOptions?.Invoke(builder);
         var options = builder.AddInterceptors(Interceptors).Options;
 
         if (IntegrationTimings.Enabled && _commandTimings is null)

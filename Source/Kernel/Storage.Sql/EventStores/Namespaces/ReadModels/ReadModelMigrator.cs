@@ -60,6 +60,20 @@ public class ReadModelMigrator(
     }
 
     /// <inheritdoc/>
+    public async Task EnsureSinkCycleReceipts(ReadModelDbContext context)
+    {
+        try
+        {
+            await tableMigrator.EnsureTableMigrated(WellKnownTableNames.SinkCycleReceipts, context, CreateSinkCycleReceipts);
+        }
+        catch (Exception exception) when (IsDuplicateTable(exception))
+        {
+            // Another silo may have created the shared table. Recheck through the migrator.
+            await tableMigrator.EnsureTableMigrated(WellKnownTableNames.SinkCycleReceipts, context, CreateSinkCycleReceipts);
+        }
+    }
+
+    /// <inheritdoc/>
     public void ClearMigrationCache(string connectionStringPrefix)
     {
         tableMigrator.ClearMigrationCacheForConnectionString(connectionStringPrefix);
@@ -82,6 +96,24 @@ public class ReadModelMigrator(
                 BackupTableName = table.StringColumn(migrationBuilder, nullable: true)
             },
             constraints: table => table.PrimaryKey($"PK_{tableName}", promotion => promotion.Id));
+        await tableMigrator.ExecuteMigrationOperations(context, migrationBuilder);
+    }
+
+    async Task CreateSinkCycleReceipts(ReadModelDbContext context, string tableName)
+    {
+        var migrationBuilder = new MigrationBuilder(context.Database.ProviderName);
+        var nowSql = SinkCycleReceipt.NowSql(context.Database.GetDatabaseType());
+        migrationBuilder.CreateTable(
+            name: tableName,
+            columns: table => new
+            {
+                Id = table.Column<Guid>(nullable: false),
+                TableName = table.StringColumn(migrationBuilder, nullable: false),
+                EventSequenceNumber = table.Column<long>(nullable: false),
+                CreatedAt = table.Column<long>(nullable: false, defaultValueSql: nowSql)
+            },
+            constraints: table => table.PrimaryKey($"PK_{tableName}", receipt => receipt.Id));
+        migrationBuilder.CreateIndex($"IX_{tableName}_CreatedAt", tableName, "CreatedAt");
         await tableMigrator.ExecuteMigrationOperations(context, migrationBuilder);
     }
 
