@@ -17,9 +17,20 @@ public class chronicle_authentication_services : for_CertificateLoader.given.a_c
         SharedDataProtectionKeys? sharedKeys = null,
         bool authenticationEnabled = false,
         bool useInternalAuthority = false,
-        Action<IServiceCollection>? configureServices = null,
-        Configuration.ExternalAdministratorClaim? externalAdministratorClaim = null)
+        Action<IServiceCollection>? configureServices = null) =>
+        BuildServices(new(authenticationEnabled, useInternalAuthority, null), sharedKeys, configureServices);
+
+    protected ChronicleAuthenticationServices BuildServicesWithExternalAdministratorClaim(
+        Configuration.ExternalAdministratorClaim externalAdministratorClaim,
+        Action<IServiceCollection>? configureServices = null) =>
+        BuildServices(new(true, false, externalAdministratorClaim), null, configureServices);
+
+    ChronicleAuthenticationServices BuildServices(
+        AuthenticationScenario scenario,
+        SharedDataProtectionKeys? sharedKeys,
+        Action<IServiceCollection>? configureServices)
     {
+        var (authenticationEnabled, useInternalAuthority, externalAdministratorClaim) = scenario;
         sharedKeys ??= new();
         var dataProtectionKeys = sharedKeys.CreateGrain();
         var grainFactory = Substitute.For<IGrainFactory>();
@@ -64,6 +75,11 @@ public class chronicle_authentication_services : for_CertificateLoader.given.a_c
             serviceProvider.GetRequiredService<IDataProtectionProvider>(),
             services);
     }
+
+    protected sealed record AuthenticationScenario(
+        bool AuthenticationEnabled,
+        bool UseInternalAuthority,
+        Configuration.ExternalAdministratorClaim? ExternalAdministratorClaim);
 
     protected sealed record ChronicleAuthenticationServices(
         ServiceProvider ServiceProvider,

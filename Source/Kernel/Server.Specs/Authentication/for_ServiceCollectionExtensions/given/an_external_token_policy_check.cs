@@ -24,17 +24,16 @@ public class an_external_token_policy_check : chronicle_authentication_services
     protected async Task<bool> Authorize(params string[] roles)
     {
         var mapping = new ExternalAdministratorClaim { Type = "roles", Value = "chronicle-admin" };
-        var authenticationServices = BuildServices(
-            authenticationEnabled: true,
-            configureServices: services =>
+        var authenticationServices = BuildServicesWithExternalAdministratorClaim(
+            mapping,
+            services =>
             {
                 services.AddSingleton<IOptions<ChronicleOptions>>(Options.Create(new ChronicleOptions
                 {
                     Authentication = new Configuration.Authentication { Authority = "https://identity.example", ExternalAdministratorClaim = mapping }
                 }));
                 services.AddSingleton(Substitute.For<IAdministratorPrivileges>());
-            },
-            externalAdministratorClaim: mapping);
+            });
         await using var provider = authenticationServices.ServiceProvider;
         await using var scope = provider.CreateAsyncScope();
 
