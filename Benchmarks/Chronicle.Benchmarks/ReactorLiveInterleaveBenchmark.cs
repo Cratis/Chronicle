@@ -18,8 +18,8 @@ namespace Cratis.Chronicle.Benchmarks;
 /// transaction; with ten round-robin sources every run is one event long, matching the shape of issue #5473.
 /// </para>
 /// <para>
-/// Completion is observed by the kernel polling every 50 ms, which puts a floor of roughly 60 to 70 ms on each
-/// measurement regardless of how little work the reactor does.
+/// The measured time includes waiting for completion, so it has a fixed floor that does not depend on how little
+/// work the reactor does; compare the two cases with each other rather than reading absolute numbers.
 /// </para>
 /// </remarks>
 [MemoryDiagnoser]
