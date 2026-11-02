@@ -10,6 +10,7 @@ using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
+using Cratis.Chronicle.Storage.Sinks;
 
 namespace Cratis.Chronicle.Projections.Engine;
 
@@ -75,6 +76,13 @@ public interface IProjection
     /// content — for which the pipeline keeps the coarse whole-projection lock.
     /// </remarks>
     bool IsEventSourceKeyed { get; }
+
+    /// <summary>
+    /// Gets the root join definitions the sink keeps applied event markers for, which is empty unless the projection is
+    /// marked for <see cref="SinkWriteMode.OncePerSourceEvent"/>.
+    /// </summary>
+    /// <remarks>See <see cref="AppliedEventMarkerClassification"/> for the rule.</remarks>
+    IReadOnlyList<AppliedEventMarkerJoin> MarkedJoins => [];
 
     /// <summary>
     /// Gets a value indicating whether the projection subscribes to every event type in the system, including

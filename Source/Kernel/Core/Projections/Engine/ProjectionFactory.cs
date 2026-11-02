@@ -1128,6 +1128,18 @@ public class ProjectionFactory(
             distinctEventTypes,
             distinctOwnEventTypes,
             operationTypes);
+
+        if (!hasParent)
+        {
+            projection.MarkedJoins = AppliedEventMarkerClassification.For(
+                projection.Scope,
+                projectionDefinition.SubscribesToAllEvents,
+                childProjections.Length > 0,
+                projectionDefinition.Nested?.Count > 0,
+                projectionDefinition.Join,
+                distinctEventTypes,
+                operationTypes);
+        }
     }
 
     void SetAllEventsKeyResolver(Projection projection, ProjectionDefinition projectionDefinition, PropertyPath actualIdentifiedByProperty)
