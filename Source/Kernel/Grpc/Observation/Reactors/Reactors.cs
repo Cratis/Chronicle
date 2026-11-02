@@ -6,6 +6,7 @@ using System.Text.Json;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Concepts.Observation.Registrations;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Contracts.Observation.Reactors;
@@ -66,7 +67,7 @@ internal sealed class Reactors(
                         register.Reactor.EventSequenceId,
                         register.ConnectionId);
 
-                    registrationTcs.SetResult(register);
+                    RegisterStream(register, registrationTcs);
                     break;
 
                 case ReactorResult result:
@@ -148,7 +149,7 @@ internal sealed class Reactors(
                     registration.Namespace,
                     (replayState, partition) => observer.OnNext(new EventsToObserve { Partition = partition, ReplayState = (Contracts.Observation.ReplayState)replayState }));
 
-                var definition = registration.Reactor.ToChronicle();
+                var definition = ToDefinition(registration);
                 using (var span = activitySource.Register())
                 {
                     span?.Activity?.Tag(key, ObserverType.Reactor);
@@ -222,4 +223,24 @@ internal sealed class Reactors(
         var definition = await eventStore.Reactors.Get(new(request.ReactorId));
         return new HasReactorResponse { Exists = true, EventSequenceId = definition.EventSequenceId.Value };
     }
+
+    static void RegisterStream(RegisterReactor registration, TaskCompletionSource<RegisterReactor> registrationTcs)
+    {
+        if (registration.Reactor.Delivery == ObserverDelivery.Http)
+        {
+            registrationTcs.SetException(new InvalidOperationException("HTTP delivery cannot be registered over an observation stream."));
+        }
+        else
+        {
+            registrationTcs.SetResult(registration);
+        }
+    }
+
+    static Concepts.Observation.Reactors.ReactorDefinition ToDefinition(RegisterReactor registration) =>
+        registration.Reactor.ToChronicle() with
+        {
+            ProgramIdentifier = string.IsNullOrWhiteSpace(registration.ProgramIdentifier)
+                ? ProgramIdentifier.Unknown
+                : new(registration.ProgramIdentifier)
+        };
 }

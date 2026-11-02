@@ -8,6 +8,7 @@ using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Concepts.Observation.Registrations;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.Configuration;
@@ -86,28 +87,7 @@ internal sealed class Reducers(
                         register.Reducer.EventSequenceId,
                         register.ConnectionId);
 
-                    grainFactory.GetReadModel(register.Reducer.ReadModel, register.EventStore).GetDefinition().ContinueWith(
-                        result =>
-                        {
-                            if (result.IsFaulted)
-                            {
-                                registrationTcs.TrySetException(CreateRegistrationFailure(register, result.Exception!));
-                            }
-                            else
-                            {
-                                model = result.Result;
-                                try
-                                {
-                                    ValidateReadModelDefinition(register, model);
-                                    registrationTcs.TrySetResult(register);
-                                }
-                                catch (Exception exception)
-                                {
-                                    registrationTcs.TrySetException(CreateRegistrationFailure(register, exception));
-                                }
-                            }
-                        },
-                        TaskScheduler.Current);
+                    RegisterStream(register, grainFactory, registrationTcs, definition => model = definition);
                     break;
 
                 case ReducerResult result:
@@ -199,7 +179,7 @@ internal sealed class Reducers(
                         registration.Namespace,
                         (replayState, partition) => observer.OnNext(new ReduceOperationMessage { Partition = partition, ReplayState = (Contracts.Observation.ReplayState)replayState }));
 
-                    var reducerDefinition = registration.Reducer.ToChronicle();
+                    var reducerDefinition = ToDefinition(registration);
                     using (var span = activitySource.Register())
                     {
                         span?.Activity?.Tag(key, ObserverType.Reducer);
@@ -265,6 +245,48 @@ internal sealed class Reducers(
         });
 
         return observable;
+    }
+
+    static Concepts.Observation.Reducers.ReducerDefinition ToDefinition(RegisterReducer registration) =>
+        registration.Reducer.ToChronicle() with
+        {
+            ProgramIdentifier = string.IsNullOrWhiteSpace(registration.ProgramIdentifier)
+                ? ProgramIdentifier.Unknown
+                : new(registration.ProgramIdentifier)
+        };
+
+    static void RegisterStream(RegisterReducer registration, IGrainFactory grainFactory, TaskCompletionSource<RegisterReducer> registrationTcs, Action<ReadModelDefinition> setModel)
+    {
+        if (registration.Reducer.Delivery == ObserverDelivery.Http)
+        {
+            registrationTcs.TrySetException(CreateRegistrationFailure(
+                registration,
+                new InvalidOperationException("HTTP delivery cannot be registered over an observation stream.")));
+            return;
+        }
+
+        grainFactory.GetReadModel(registration.Reducer.ReadModel, registration.EventStore).GetDefinition().ContinueWith(
+            result =>
+            {
+                if (result.IsFaulted)
+                {
+                    registrationTcs.TrySetException(CreateRegistrationFailure(registration, result.Exception));
+                }
+                else
+                {
+                    setModel(result.Result);
+                    try
+                    {
+                        ValidateReadModelDefinition(registration, result.Result);
+                        registrationTcs.TrySetResult(registration);
+                    }
+                    catch (Exception exception)
+                    {
+                        registrationTcs.TrySetException(CreateRegistrationFailure(registration, exception));
+                    }
+                }
+            },
+            TaskScheduler.Current);
     }
 
     static ReducerRegistrationFailed CreateRegistrationFailure(RegisterReducer registration, Exception exception)

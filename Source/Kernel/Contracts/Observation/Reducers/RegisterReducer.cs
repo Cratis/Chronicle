@@ -32,4 +32,10 @@ public class RegisterReducer
     /// </summary>
     [ProtoMember(4)]
     public ReducerDefinition Reducer { get; set; }
+
+    /// <summary>
+    /// Gets or sets the program owning the reducer. Empty means unknown.
+    /// </summary>
+    [ProtoMember(5)]
+    public string ProgramIdentifier { get; set; } = string.Empty;
 }

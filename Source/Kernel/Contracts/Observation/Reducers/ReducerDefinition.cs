@@ -62,4 +62,16 @@ public class ReducerDefinition
     /// </summary>
     [ProtoMember(10)]
     public EventGenerationDelivery GenerationDelivery { get; set; }
+
+    /// <summary>
+    /// Gets or sets how events are delivered. Defaults to stream delivery.
+    /// </summary>
+    [ProtoMember(11)]
+    public ObserverDelivery Delivery { get; set; } = ObserverDelivery.Stream;
+
+    /// <summary>
+    /// Gets or sets the HTTP delivery target, if any.
+    /// </summary>
+    [ProtoMember(12)]
+    public HttpTarget? HttpTarget { get; set; }
 }

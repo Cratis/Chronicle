@@ -32,4 +32,10 @@ public class RegisterReactor
     /// </summary>
     [ProtoMember(4)]
     public ReactorDefinition Reactor { get; set; }
+
+    /// <summary>
+    /// Gets or sets the program owning the reactor. Empty means unknown.
+    /// </summary>
+    [ProtoMember(5)]
+    public string ProgramIdentifier { get; set; } = string.Empty;
 }

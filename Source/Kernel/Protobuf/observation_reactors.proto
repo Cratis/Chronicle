@@ -76,6 +76,11 @@ message HasReactorResponse {
    bool Exists = 1;
    string EventSequenceId = 2;
 }
+message HttpTarget {
+   reserved 3, 4, 5, 6, 7, 8, 9;
+   string Url = 1;
+   map<string,string> Headers = 2;
+}
 message Identity {
    string Subject = 1;
    string Name = 2;
@@ -90,6 +95,10 @@ enum ObservationState {
    OBSERVATION_STATE_None = 0;
    Success = 1;
    Failed = 2;
+}
+enum ObserverDelivery {
+   Stream = 0;
+   Http = 1;
 }
 message ObserverFilters {
    repeated string FilterTags = 1;
@@ -110,6 +119,8 @@ message ReactorDefinition {
    bool IsNotReplayable = 7;
    EventGenerationDelivery GenerationDelivery = 8;
    bool StartAtTail = 9;
+   ObserverDelivery Delivery = 10;
+   HttpTarget HttpTarget = 11;
 }
 message ReactorMessage {
    OneOf_RegisterReactor_ReactorResult Content = 1;
@@ -127,6 +138,7 @@ message RegisterReactor {
    string EventStore = 2;
    string Namespace = 3;
    ReactorDefinition Reactor = 4;
+   string ProgramIdentifier = 5;
 }
 enum ReplayState {
    REPLAY_STATE_None = 0;

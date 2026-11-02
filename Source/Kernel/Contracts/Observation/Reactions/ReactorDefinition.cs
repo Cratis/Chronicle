@@ -58,6 +58,18 @@ public class ReactorDefinition
     public EventGenerationDelivery GenerationDelivery { get; set; }
 
     /// <summary>
+    /// Gets or sets how events are delivered. Defaults to stream delivery.
+    /// </summary>
+    [ProtoMember(10)]
+    public ObserverDelivery Delivery { get; set; } = ObserverDelivery.Stream;
+
+    /// <summary>
+    /// Gets or sets the HTTP delivery target, if any.
+    /// </summary>
+    [ProtoMember(11)]
+    public HttpTarget? HttpTarget { get; set; }
+
+    /// <summary>
     /// Gets or sets whether the reactor should begin at the tail of the event sequence when it is registered for the first time.
     /// </summary>
     /// <remarks>

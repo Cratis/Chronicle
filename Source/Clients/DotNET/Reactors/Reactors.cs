@@ -564,7 +564,7 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
     /// <exception cref="HttpDeliveryNotAvailable">Thrown when the reactor resolves to HTTP delivery.</exception>
     void ThrowIfDeliveredOverHttp(ReactorHandler handler)
     {
-        if (Deliveries?.Resolve(handler.Id.Value, handler.ReactorType) == ObserverDelivery.Http)
+        if (Deliveries?.Resolve(handler.Id.Value, handler.ReactorType) == Observation.ObserverDelivery.Http)
         {
             throw new HttpDeliveryNotAvailable([handler.Id.Value]);
         }

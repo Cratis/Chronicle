@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.EventSequences;
+using Cratis.Chronicle.Concepts.Observation.Registrations;
 
 namespace Cratis.Chronicle.Concepts.Observation.Reactors;
 
@@ -28,6 +29,11 @@ public record ReactorDefinition(
     /// Gets the event generation delivery policy.
     /// </summary>
     public EventGenerationDelivery GenerationDelivery { get; init; } = EventGenerationDelivery.Compatibility;
+
+    /// <summary>
+    /// Gets the program owning the reactor, or unknown for legacy definitions.
+    /// </summary>
+    public ProgramIdentifier ProgramIdentifier { get; init; } = ProgramIdentifier.Unknown;
 
     /// <summary>
     /// Gets a value indicating whether the reactor begins at the tail of the event sequence when it is registered for the first time.

@@ -1,0 +1,15 @@
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+using Cratis.Chronicle.Concepts.Observation.Registrations;
+
+namespace Cratis.Chronicle.Services.Observation.Reactors.for_Reactors;
+
+public class when_registering_with_an_empty_program_identifier : given.a_registration_stream
+{
+    void Establish() => _registration.ProgramIdentifier = string.Empty;
+
+    Task Because() => Register();
+
+    [Fact] void should_subscribe_with_an_unknown_owner() => _definition.ProgramIdentifier.ShouldEqual(ProgramIdentifier.Unknown);
+}

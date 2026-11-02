@@ -481,7 +481,7 @@ public partial class Reducers : IReducers
     /// <exception cref="HttpDeliveryNotAvailable">Thrown when the reducer resolves to HTTP delivery.</exception>
     void ThrowIfDeliveredOverHttp(IReducerHandler handler)
     {
-        if (Deliveries?.Resolve(handler.Id.Value, handler.ReducerType) == ObserverDelivery.Http)
+        if (Deliveries?.Resolve(handler.Id.Value, handler.ReducerType) == Observation.ObserverDelivery.Http)
         {
             throw new HttpDeliveryNotAvailable([handler.Id.Value]);
         }

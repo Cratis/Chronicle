@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.EventSequences;
+using Cratis.Chronicle.Concepts.Observation.Registrations;
 using Cratis.Chronicle.Concepts.ReadModels;
 
 namespace Cratis.Chronicle.Concepts.Observation.Reducers;
@@ -31,4 +32,9 @@ public record ReducerDefinition(
     /// Gets the event generation delivery policy.
     /// </summary>
     public EventGenerationDelivery GenerationDelivery { get; init; } = EventGenerationDelivery.Compatibility;
+
+    /// <summary>
+    /// Gets the program owning the reducer, or unknown for legacy definitions.
+    /// </summary>
+    public ProgramIdentifier ProgramIdentifier { get; init; } = ProgramIdentifier.Unknown;
 }
