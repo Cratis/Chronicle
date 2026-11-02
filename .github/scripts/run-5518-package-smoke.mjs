@@ -16,7 +16,7 @@ const digestPattern = /^[a-z0-9][a-z0-9._\/-]*(:[A-Za-z0-9._-]+)?@sha256:[0-9a-f
 const platforms = new Set(['linux/amd64', 'linux/arm64']);
 const frameworks = ['Microsoft.NETCore.App', 'Microsoft.AspNetCore.App'];
 const maxCapture = 64 * 1024;
-const caps = { tool: 60000, create: 60000, copy: 120000, remove: 60000, overall: 300000 };
+const caps = { tool: 60000, pull: 120000, create: 60000, copy: 120000, remove: 60000, overall: 300000 };
 
 function fail(message, exitCode = 1) {
     const error = new Error(message);
@@ -128,6 +128,8 @@ export async function extract({ image, platform, destination, docker = 'docker' 
         await mkdir(destination, { recursive: true });
         created = true;
         await writeFile(path.join(destination, marker), `${image}\n`);
+        // Explicit pull with its own cap, so a cold runner cannot make create time out; real exit code preserved by runChild.
+        await runChild(docker, ['pull', '--platform', platform, image], remaining(deadline, caps.pull));
         const { stdout } = await runChild(docker, ['create', '--platform', platform, image], remaining(deadline, caps.create));
         container = stdout.trim();
         if (!/^[0-9a-f]{12,64}$/.test(container)) throw fail('docker create did not return a container id');

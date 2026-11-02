@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.MongoDB.Integration.Setup.for_ReleasedAdmissionCompat
 /// <summary>
 /// Closure-negative checks only. No serializer, filter or retry behaviour is exercised here.
 /// </summary>
-public class when_released_and_candidate_failures_cross_serializers : Cratis.Specifications.Specification
+public class when_resolving_assemblies_outside_the_image_closure : Cratis.Specifications.Specification
 {
     string _root;
     string _first;
