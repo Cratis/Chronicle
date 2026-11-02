@@ -452,6 +452,18 @@ jobs:
             --enabled "$RUNNER_TEMP/rolling-delivery-diagnostics/bin/DotNET/release/Cratis.Chronicle.dll"
           grep -a -F -q -- "$CRATIS_CHRONICLE_CLIENT_VERSION" "$RUNNER_TEMP/rolling-delivery-diagnostics/bin/DotNET/release/Cratis.Chronicle.dll"
 
+      # Evidence only: an explicit FAIL/INCONCLUSIVE must not suppress the rolling-loss run.
+      # Both arms execute existing outputs on this same hosted runner; no rebuild or coverage collector.
+      - name: Measure rolling delivery diagnostic overhead (evidence only)
+        if: matrix.provider == 'RollingUpgrade'
+        timeout-minutes: 8
+        continue-on-error: true
+        run: |
+          node .github/scripts/measure-rolling-delivery-overhead.mjs \
+            --normal Integration/SqlClustering/bin/Release/net10.0/Cratis.Chronicle.Integration.SqlClustering.dll \
+            --enabled "$RUNNER_TEMP/rolling-delivery-diagnostics/bin/SqlClustering/release/Cratis.Chronicle.Integration.SqlClustering.dll" \
+            --output "$RUNNER_TEMP/rolling-delivery-overhead"
+
       - name: Pre-pull images
         uses: nick-fields/retry@v3
         with:
@@ -490,6 +502,14 @@ jobs:
         with:
           path: ./coverage-results
           name: This SQL clustering provider
+
+      - name: Upload rolling delivery diagnostics evidence
+        if: always() && matrix.provider == 'RollingUpgrade'
+        uses: actions/upload-artifact@v4
+        with:
+          name: rolling-delivery-diagnostics
+          path: ${{ runner.temp }}/rolling-delivery-overhead/
+          retention-days: 7
 
       - name: Upload SQL clustering results
         if: always()
