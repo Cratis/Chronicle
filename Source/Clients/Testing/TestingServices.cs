@@ -180,6 +180,12 @@ internal sealed class TestingServices : IServices
 
         _failedPartitions = new(() => new KernelFailedPartitionsService(storage));
 
+        var registrationGate = new KernelGrpc::Cratis.Chronicle.Services.Observation.ObserverRegistrationGate(
+            Options.Create(new KernelCore::Cratis.Chronicle.Configuration.ChronicleOptions
+            {
+                Observers = new() { MaxConcurrentRegistrations = int.MaxValue }
+            }));
+
         _reactors = new(() =>
             new KernelReactorsService(
                 grainFactory,
@@ -188,7 +194,8 @@ internal sealed class TestingServices : IServices
                 jsonSerializerOptions,
                 new ActivitySource<KernelReactorsService>(),
                 Options.Create(new KernelCore::Cratis.Chronicle.Configuration.ChronicleOptions()),
-                NullLogger<KernelReactorsService>.Instance));
+                NullLogger<KernelReactorsService>.Instance,
+                registrationGate));
 
         _reducers = new(() =>
             new KernelReducersService(
@@ -198,7 +205,8 @@ internal sealed class TestingServices : IServices
                 jsonSerializerOptions,
                 new ActivitySource<KernelReducersService>(),
                 Options.Create(new KernelCore::Cratis.Chronicle.Configuration.ChronicleOptions()),
-                NullLogger<KernelReducersService>.Instance));
+                NullLogger<KernelReducersService>.Instance,
+                registrationGate));
 
         _projections = new(() =>
             new KernelProjectionsService(
