@@ -2,9 +2,12 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json;
+using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Keys;
 using Cratis.Chronicle.Projections;
+using Cratis.Chronicle.Projections.ModelBound;
 using Cratis.Chronicle.Registrations;
+using Cratis.Chronicle.Schemas;
 using Cratis.Serialization;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -78,7 +81,7 @@ public class a_cross_generation_registry : all_dependencies
         foreach (var type in types)
         {
             var property = type.GetProperties().Single().Name;
-            var schema = await JsonSchema.FromJsonAsync($$"""{"title":"{{type.Name}}","type":"object","properties":{"{{property}}":{"type":"string"}}}""");
+            var schema = await JsonSchema.FromJsonAsync($$$$"""{"title":"{{{{type.Name}}}}","type":"object","properties":{"{{{{property}}}}":{"type":"string"}}}""");
             _schemaGenerator.Generate(type).Returns(schema);
         }
         var catalog = options is null ? discovered : options.CreateSnapshot().ApplyTo(discovered);
@@ -88,14 +91,9 @@ public class a_cross_generation_registry : all_dependencies
         return registry;
     }
 
-    static ExplicitArtifacts ExplicitPair()
-    {
-        var options = new ExplicitArtifacts();
-        options.RegisterEventType<ExplicitPrevious>(eventType => eventType.WithId(EventId).Generation(1).ForEventStore(PreviousOwner));
-        options.RegisterEventType<ExplicitCurrent>(eventType => eventType.WithId(EventId).Generation(2).ForEventStore(CurrentOwner));
-
-        return options;
-    }
+    static ExplicitArtifacts ExplicitPair() => new ExplicitArtifacts()
+        .RegisterEventType<ExplicitPrevious>(eventType => eventType.WithId(EventId).Generation(1).ForEventStore(PreviousOwner))
+        .RegisterEventType<ExplicitCurrent>(eventType => eventType.WithId(EventId).Generation(2).ForEventStore(CurrentOwner));
 
     [EventType(EventId, generation: 1)]
     [EventStore(PreviousOwner)]
@@ -156,8 +154,8 @@ public class a_cross_generation_registry : all_dependencies
         public void Define(IProjectionBuilderFor<CurrentFluentModel> builder)
         {
             builder.From<ExplicitCurrent>();
-            builder.Join<ExplicitCurrent>();
-            builder.Join<JoinEvent>();
+            builder.Join<ExplicitCurrent>(join => join.On(model => model.CurrentValue));
+            builder.Join<JoinEvent>(join => join.On(model => model.JoinedValue));
         }
     }
 
@@ -168,19 +166,11 @@ public class a_cross_generation_registry : all_dependencies
 
     public class InboxProjection : IProjectionFor<InboxFluentModel>
     {
-        public void Define(IProjectionBuilderFor<InboxFluentModel> builder)
-        {
-            builder.From<ExplicitPrevious>();
-            builder.FromEventSequence(OverrideInbox);
-        }
+        public void Define(IProjectionBuilderFor<InboxFluentModel> builder) => builder.From<ExplicitPrevious>().FromEventSequence(OverrideInbox);
     }
 
     public class CustomProjection : IProjectionFor<CustomFluentModel>
     {
-        public void Define(IProjectionBuilderFor<CustomFluentModel> builder)
-        {
-            builder.From<ExplicitCurrent>();
-            builder.FromEventSequence(CustomSequence);
-        }
+        public void Define(IProjectionBuilderFor<CustomFluentModel> builder) => builder.From<ExplicitCurrent>().FromEventSequence(CustomSequence);
     }
 }

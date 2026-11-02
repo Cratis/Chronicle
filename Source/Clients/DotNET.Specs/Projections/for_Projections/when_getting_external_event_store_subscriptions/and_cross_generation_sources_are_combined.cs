@@ -19,7 +19,7 @@ public class and_cross_generation_sources_are_combined : Events.for_EventTypes.g
             .ToDictionary(subscription => subscription.EventStoreName, subscription => subscription.EventTypeIds.ToArray());
     }
 
-    [Fact] void should_discover_every_real_projection_definition() => _subject.Definitions.Count().ShouldEqual(9);
+    [Fact] void should_discover_every_real_projection_definition() => _subject.Definitions.Count.ShouldEqual(9);
     [Fact] void should_keep_duplicate_current_source_definitions() => _subject.Definitions.Count(definition => definition.EventSequenceId == "inbox-current-owner").ShouldEqual(4);
     [Fact] void should_keep_both_custom_sequence_definitions_without_subscribing_to_them() => _subject.Definitions.Count(definition => definition.EventSequenceId == CustomSequence).ShouldEqual(2);
     [Fact] void should_contribute_exactly_the_three_inbox_sources() => _contributions.Keys.ShouldContainOnly([PreviousOwner, CurrentOwner, OverrideOwner]);

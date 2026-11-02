@@ -58,7 +58,7 @@ public class and_cross_generation_projection_sources_are_combined : Events.for_E
 
     void Set(string field, object value) => typeof(EventStore).GetField(field, BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(_store, value);
 
-    [Fact] void should_start_with_all_nine_real_projection_definitions() => _realProjections.Definitions.Count().ShouldEqual(9);
+    [Fact] void should_start_with_all_nine_real_projection_definitions() => _realProjections.Definitions.Count.ShouldEqual(9);
     [Fact] void should_send_exactly_three_requests() => _requests.Count.ShouldEqual(3);
     [Fact] void should_send_exactly_the_inferred_and_explicit_inbox_sources() => _requests.Select(request => request.Source).ShouldContainOnly([PreviousOwner, CurrentOwner, OverrideOwner]);
     [Fact] void should_send_one_historical_source_request() => _requests.Count(request => request.Source == PreviousOwner).ShouldEqual(1);
@@ -73,5 +73,5 @@ public class and_cross_generation_projection_sources_are_combined : Events.for_E
     [Fact] void should_not_duplicate_the_historical_filter() => _requests.Single(request => request.Source == PreviousOwner).Filters.Count.ShouldEqual(1);
     [Fact] void should_not_duplicate_the_current_filters_across_definitions_or_clauses() => _requests.Single(request => request.Source == CurrentOwner).Filters.Count.ShouldEqual(2);
     [Fact] void should_not_duplicate_the_override_filter() => _requests.Single(request => request.Source == OverrideOwner).Filters.Count.ShouldEqual(1);
-    [Fact] void should_not_send_a_request_for_the_non_inbox_sequence() => _requests.Any(request => request.Source == CustomSequence).ShouldBeFalse();
+    [Fact] void should_not_send_a_request_for_the_non_inbox_sequence() => _requests.Exists(request => request.Source == CustomSequence).ShouldBeFalse();
 }
