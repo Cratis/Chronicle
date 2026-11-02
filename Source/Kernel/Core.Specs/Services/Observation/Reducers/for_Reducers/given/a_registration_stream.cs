@@ -50,10 +50,16 @@ public class a_registration_stream : Specification
         var schema = new JsonSchema();
         schema.Properties.Add("id", new JsonSchemaProperty { Type = JsonObjectType.String });
         _readModel.GetDefinition().Returns(new ReadModelDefinition(
-            "model", "models", "Model", ReadModelOwner.Client, ReadModelSource.Code,
-            ReadModelObserverType.Reducer, ReadModelObserverIdentifier.Unspecified,
+            "model",
+            "models",
+            "Model",
+            ReadModelOwner.Client,
+            ReadModelSource.Code,
+            ReadModelObserverType.Reducer,
+            ReadModelObserverIdentifier.Unspecified,
             Concepts.Sinks.SinkDefinition.None,
-            new Dictionary<ReadModelGeneration, JsonSchema> { [ReadModelGeneration.First] = schema }, []));
+            new Dictionary<ReadModelGeneration, JsonSchema> { [ReadModelGeneration.First] = schema },
+            []));
         var reducers = new Reducers(
             grainFactory,
             Substitute.For<IReducerMediator>(),

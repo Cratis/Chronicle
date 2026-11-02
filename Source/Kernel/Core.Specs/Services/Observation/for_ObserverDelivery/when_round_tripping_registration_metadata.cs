@@ -36,5 +36,5 @@ public class when_round_tripping_registration_metadata : Specification
     [Fact] void should_round_trip_the_reducer_url() => _reducer.Reducer.HttpTarget.Url.ShouldEqual("https://orders.example/reducer");
     [Fact] void should_round_trip_the_reactor_headers() => _reactor.Reactor.HttpTarget.Headers["X-Observer"].ShouldEqual("orders");
     [Fact] void should_round_trip_the_reducer_headers() => _reducer.Reducer.HttpTarget.Headers["X-Observer"].ShouldEqual("orders");
-    [Fact] void should_reserve_the_future_http_target_fields() => ((ReservedProtoFieldsAttribute)Attribute.GetCustomAttribute(typeof(HttpTarget), typeof(ReservedProtoFieldsAttribute))!).FieldNumbers.ShouldEqual([3, 4, 5, 6, 7, 8, 9]);
+    [Fact] void should_reserve_the_future_http_target_fields() => ((ReservedProtoFieldsAttribute)Attribute.GetCustomAttribute(typeof(HttpTarget), typeof(ReservedProtoFieldsAttribute))!).FieldNumbers.ShouldEqual<int>([3, 4, 5, 6, 7, 8, 9]);
 }
