@@ -9,7 +9,7 @@ public class and_the_token_response_echoes_the_request : Specification
 {
     OAuthTokenProvider _provider;
     CapturingTokenEndpointHandler _handler;
-    RecordingLogger<OAuthTokenProvider> _log;
+    CapturingLogger<OAuthTokenProvider> _log;
 
     void Establish()
     {
@@ -17,7 +17,7 @@ public class and_the_token_response_echoes_the_request : Specification
         {
             TokenErrorBody = "{\"error\":\"invalid_client\",\"error_description\":\"rejected grant_type=client_credentials&client_secret=test-secret\"}"
         };
-        _log = new RecordingLogger<OAuthTokenProvider>();
+        _log = new CapturingLogger<OAuthTokenProvider>();
         _provider = new OAuthTokenProvider(
             new Uri("https://idp.example.com/oauth2/token"),
             "test-client",

@@ -7,12 +7,12 @@ public class and_the_token_response_is_not_json : Specification
 {
     OAuthTokenProvider _provider;
     CapturingTokenEndpointHandler _handler;
-    RecordingLogger<OAuthTokenProvider> _log;
+    CapturingLogger<OAuthTokenProvider> _log;
 
     void Establish()
     {
         _handler = new CapturingTokenEndpointHandler { TokenErrorBody = "<html>client_secret=test-secret and error=custom_code</html>" };
-        _log = new RecordingLogger<OAuthTokenProvider>();
+        _log = new CapturingLogger<OAuthTokenProvider>();
         _provider = new OAuthTokenProvider(
             new Uri("https://idp.example.com/oauth2/token"),
             "test-client",

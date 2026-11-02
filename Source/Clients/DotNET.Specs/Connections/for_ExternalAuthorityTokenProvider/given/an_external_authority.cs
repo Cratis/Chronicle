@@ -12,15 +12,15 @@ public class an_external_authority : Specification
     internal ExternalAuthorityTokenProvider _provider;
     protected CapturingTokenEndpointHandler _handler;
     protected ControllableTimeProvider _time;
-    internal RecordingLogger<ExternalAuthorityTokenProvider> _log;
-    internal RecordingLogger<OAuthTokenProvider> _tokenLog;
+    internal CapturingLogger<ExternalAuthorityTokenProvider> _log;
+    internal CapturingLogger<OAuthTokenProvider> _tokenLog;
 
     void Establish()
     {
         _handler = new CapturingTokenEndpointHandler();
         _time = new ControllableTimeProvider();
-        _log = new RecordingLogger<ExternalAuthorityTokenProvider>();
-        _tokenLog = new RecordingLogger<OAuthTokenProvider>();
+        _log = new CapturingLogger<ExternalAuthorityTokenProvider>();
+        _tokenLog = new CapturingLogger<OAuthTokenProvider>();
         _provider = new ExternalAuthorityTokenProvider(
             new Uri("https://idp.example.com/realms/chronicle/"),
             "test-client",

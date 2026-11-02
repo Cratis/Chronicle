@@ -7,12 +7,12 @@ public class and_the_external_endpoint_has_a_query_string : Specification
 {
     OAuthTokenProvider _provider;
     CapturingTokenEndpointHandler _handler;
-    RecordingLogger<OAuthTokenProvider> _log;
+    CapturingLogger<OAuthTokenProvider> _log;
 
     void Establish()
     {
         _handler = new CapturingTokenEndpointHandler { TokenErrorBody = "{\"error\":\"invalid_client\"}" };
-        _log = new RecordingLogger<OAuthTokenProvider>();
+        _log = new CapturingLogger<OAuthTokenProvider>();
         _provider = new OAuthTokenProvider(
             new Uri("https://idp.example.com/oauth2/token?tenant=hidden-tenant-value"),
             "test-client",

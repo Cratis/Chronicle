@@ -9,13 +9,13 @@ namespace Cratis.Chronicle.Connections.for_OAuthTokenProvider.when_requesting_a_
 public class and_the_external_token_endpoint_redirects : given.a_token_provider_with_an_external_endpoint
 {
     Exception _result;
-    RecordingLogger<OAuthTokenProvider> _log;
+    CapturingLogger<OAuthTokenProvider> _log;
     OAuthTokenProvider _recordingProvider;
 
     void Establish()
     {
         _handler.TokenStatus = HttpStatusCode.PermanentRedirect;
-        _log = new RecordingLogger<OAuthTokenProvider>();
+        _log = new CapturingLogger<OAuthTokenProvider>();
         _recordingProvider = new OAuthTokenProvider(_endpoint, "test-client", "test-secret", null, _log, _handler, _time);
     }
 

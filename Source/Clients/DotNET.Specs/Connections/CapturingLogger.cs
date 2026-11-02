@@ -5,9 +5,9 @@ using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Connections;
 
-public class RecordingLogger<T>(List<RecordedLog> entries) : ILogger<T>
+public class CapturingLogger<T>(List<RecordedLog> entries) : ILogger<T>
 {
-    public RecordingLogger()
+    public CapturingLogger()
         : this([])
     {
     }

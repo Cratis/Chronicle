@@ -9,7 +9,7 @@ public class RecordingLoggerFactory : ILoggerFactory
 {
     public List<RecordedLog> Entries { get; } = [];
 
-    public ILogger CreateLogger(string categoryName) => new RecordingLogger<object>(Entries);
+    public ILogger CreateLogger(string categoryName) => new CapturingLogger<object>(Entries);
 
     public void AddProvider(ILoggerProvider provider)
     {
