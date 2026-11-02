@@ -23,6 +23,10 @@
 # Regenerate after a rename with `python3 .github/scripts/assert-timing-coupling-ratchet.py
 # --report`, then carry the annotations back over - `--report` prints counts only.
 
+# The released-kernel proof polls the actual failed-partition document with a 45-second deadline.
+# The pinned old kernel has no document-persistence completion signal; 200 ms is retry backoff,
+# never an elapsed-time success condition. Success requires the selected observer and partition.
+1 Integration/MongoDB/Observation/for_ObserverPayloadRoundTrip/ReleasedFailedPartitionWait.cs  # readiness: persisted failure visibility
 2 Integration/Client/ChronicleConfigurableFixture.cs  # readiness
 1 Integration/Client/Projections/Scenarios/ModelBound/when_projecting_with_nested_in_children/clearing_the_nested_object.cs
 1 Integration/Client/Projections/Scenarios/given/a_projection_and_events_appended_to_it.cs
