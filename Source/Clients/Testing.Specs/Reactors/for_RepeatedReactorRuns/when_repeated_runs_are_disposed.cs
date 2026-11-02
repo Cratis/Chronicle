@@ -22,6 +22,11 @@ public class when_repeated_runs_are_disposed : Specification
     async Task Because()
     {
         await RunBatch(_defaults, _ledger);
+
+        // Microsoft.Extensions.DependencyInjection queues call-site compilation on the thread pool,
+        // and a queued item roots its provider until it runs. Let those items run before collecting,
+        // so the assertions below measure retention by the scenario, not a pending DI work item.
+        await DrainThreadPool();
         GC.Collect();
         GC.WaitForPendingFinalizers();
         GC.Collect();
@@ -55,6 +60,15 @@ public class when_repeated_runs_are_disposed : Specification
             {
                 ledger.Failures++;
             }
+        }
+    }
+
+    static async Task DrainThreadPool()
+    {
+        var deadline = DateTime.UtcNow.AddSeconds(10);
+        while (ThreadPool.PendingWorkItemCount > 0 && DateTime.UtcNow < deadline)
+        {
+            await Task.Delay(10);
         }
     }
 
