@@ -17,7 +17,8 @@ public class chronicle_authentication_services : for_CertificateLoader.given.a_c
         SharedDataProtectionKeys? sharedKeys = null,
         bool authenticationEnabled = false,
         bool useInternalAuthority = false,
-        Action<IServiceCollection>? configureServices = null)
+        Action<IServiceCollection>? configureServices = null,
+        Configuration.ExternalAdministratorClaim? externalAdministratorClaim = null)
     {
         sharedKeys ??= new();
         var dataProtectionKeys = sharedKeys.CreateGrain();
@@ -44,7 +45,8 @@ public class chronicle_authentication_services : for_CertificateLoader.given.a_c
             Authentication = new Configuration.Authentication
             {
                 Enabled = authenticationEnabled,
-                Authority = authenticationEnabled && !useInternalAuthority ? "https://identity.example" : null
+                Authority = authenticationEnabled && !useInternalAuthority ? "https://identity.example" : null,
+                ExternalAdministratorClaim = externalAdministratorClaim
             }
         });
 
