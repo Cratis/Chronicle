@@ -21,7 +21,10 @@ internal static class ObserverInformationConverters
             information.RunningState.ToClient(),
             information.LastHandledEventSequenceNumber,
             information.NextEventSequenceNumber,
-            information.HandledEventCount);
+            information.HandledEventCount)
+        {
+            RunningStateChangedAt = information.RunningStateChangedAt
+        };
 
     /// <summary>
     /// Convert to client.

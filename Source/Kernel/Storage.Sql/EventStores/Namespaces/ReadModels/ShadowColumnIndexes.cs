@@ -80,9 +80,17 @@ internal static class ShadowColumnIndexes
     /// <param name="context">The SQLite read-model context.</param>
     /// <param name="column">The original decimal property.</param>
     /// <returns>An awaitable task.</returns>
-    internal static async Task RemoveLegacyDecimalIndex(ReadModelDbContext context, string column)
+    internal static Task RemoveLegacyDecimalIndex(ReadModelDbContext context, string column) =>
+        RemoveSupersededIndex(context, ReadModelIndexNames.For(DatabaseType.Sqlite, context.TableName, column));
+
+    /// <summary>
+    /// Removes a superseded declared index by name when it is non-unique, never a custom or unique index.
+    /// </summary>
+    /// <param name="context">The SQLite read-model context.</param>
+    /// <param name="name">The superseded index name.</param>
+    /// <returns>An awaitable task.</returns>
+    internal static async Task RemoveSupersededIndex(ReadModelDbContext context, string name)
     {
-        var name = ReadModelIndexNames.For(DatabaseType.Sqlite, context.TableName, column);
         var exists = await context.Database.SqlQuery<string>($"SELECT name AS Value FROM pragma_index_list({context.TableName}) WHERE \"unique\" = 0 AND name = {name}").AnyAsync();
         if (exists) await ReadModelIndexOperations.Drop(context, context.TableName, name, online: true);
     }

@@ -44,6 +44,7 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
     IReadOnlyDictionary<ReactorId, ReactorRegistration> _handlers = FrozenDictionary<ReactorId, ReactorRegistration>.Empty;
 
     bool _registered;
+    bool _released;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Reactors"/> class.
@@ -102,16 +103,7 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
             argumentsResolver,
             logger,
             loggerFactory);
-        _eventStore.Connection.Lifecycle.OnDisconnected += () =>
-        {
-            lock (_registerLock)
-            {
-                _registered = false;
-                RecreateHandlersForReconnect();
-            }
-
-            return Task.CompletedTask;
-        };
+        _eventStore.Connection.Lifecycle.OnDisconnected += ConnectionDisconnected;
     }
 
     /// <summary>
@@ -123,6 +115,16 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
     /// Gets how many partitions of one reactor are handled at the same time.
     /// </summary>
     internal int MaxConcurrentPartitions { get; init; } = PartitionedDeliveryScheduler.DefaultMaxConcurrentPartitions;
+
+    /// <summary>
+    /// Gets the delay before a reactor re-registers after its observation stream ended.
+    /// </summary>
+    internal TimeSpan ReconnectDelay { get; init; } = TimeSpan.FromSeconds(2);
+
+    /// <summary>
+    /// Gets how the re-registration work is started. Specs replace this to run the work deterministically.
+    /// </summary>
+    internal Func<Func<Task>, Task> ScheduleReconnectWork { get; init; } = work => Task.Run(work);
 
     /// <summary>
     /// Gets the current discovered and runtime reactor handlers.
@@ -179,7 +181,7 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
 
         lock (_registerLock)
         {
-            if (_registered)
+            if (_registered || _released)
             {
                 return Task.CompletedTask;
             }
@@ -405,6 +407,20 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
         }
     }
 
+    /// <summary>
+    /// Releases the reactors of an event store whose creation failed and that no caller holds: stops reacting to the
+    /// connection lifecycle, closes the observe streams and makes a registration that is still in flight a no-op.
+    /// </summary>
+    internal void Release()
+    {
+        lock (_registerLock)
+        {
+            _released = true;
+            _eventStore.Connection.Lifecycle.OnDisconnected -= ConnectionDisconnected;
+            DisconnectHandlers();
+        }
+    }
+
     static void ThrowIfUnknownReactorId(IReactorHandler? handler, ReactorId reactorId)
     {
         if (handler is null)
@@ -421,7 +437,7 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
         var handler = CreateHandler(
             ResolveId(reactorType),
             reactorType,
-            reactorType.GetEventSequenceId(_eventStore.EventTypes, _eventStore.Name, _sideEffectHandlers),
+            reactorType.GetEventSequenceId(_eventStore.EventTypes, _eventStore.Name, _sideEffectHandlers, _clientArtifactsProvider),
             eventTypes);
 #pragma warning restore CA2000
         var eventSourceFilter = reactorType.GetEventSourceFilter(_eventStore.EventSources);
@@ -525,6 +541,22 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
         }
     }
 
+    Task ConnectionDisconnected()
+    {
+        lock (_registerLock)
+        {
+            if (_released)
+            {
+                return Task.CompletedTask;
+            }
+
+            _registered = false;
+            RecreateHandlersForReconnect();
+        }
+
+        return Task.CompletedTask;
+    }
+
     void DisconnectHandlers()
     {
         foreach (var registration in _handlers.Values.ToList())
@@ -563,7 +595,7 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
         var services = _servicesAccessor.Services;
         lock (_registerLock)
         {
-            if (cancellationToken.IsCancellationRequested || !IsCurrentHandler(handler))
+            if (cancellationToken.IsCancellationRequested || _released || !IsCurrentHandler(handler))
             {
                 _logger.SkippingStaleReactorReconnect(handler.Id);
                 return;
@@ -615,6 +647,9 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
 #pragma warning disable CA2000 // Dispose objects before losing scope
         var scheduler = new PartitionedDeliveryScheduler(MaxConcurrentPartitions);
 #pragma warning restore CA2000 // Dispose objects before losing scope
+#if CHRONICLE_ROLLING_DIAGNOSTICS
+        var diagnostic = ReactorsDeliveryDiagnosticsLogging.Open(_logger);
+#endif
         var eventsToObserve = services.Reactors.Observe(messages.Messages, cancellationToken);
 
         // Re-establish the observation after the stream ends. A cross-store
@@ -630,17 +665,21 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
                 return;
             }
 
-            _ = Task.Run(async () =>
+            _ = ScheduleReconnectWork(async () =>
             {
                 try
                 {
                     await scheduler.DrainAndDispose();
-                    await Task.Delay(TimeSpan.FromSeconds(2), cancellationToken);
+                    await Task.Delay(ReconnectDelay, cancellationToken);
                     ReconnectIfCurrent(registration, cancellationToken);
                 }
                 catch (OperationCanceledException ex)
                 {
                     _logger.RegisteringReactorStreamCancelled(handler.Id, ex);
+                }
+                catch (Exception ex)
+                {
+                    _logger.ReactorReconnectFailed(handler.Id, ex);
                 }
             });
         }
@@ -649,9 +688,16 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
         eventsToObserve
             .Select(events =>
             {
+#if CHRONICLE_ROLLING_DIAGNOSTICS
+                var batch = ReactorsDeliveryDiagnosticsLogging.NextBatch(_logger, diagnostic.Stream, ref diagnostic.Batch, events);
+#endif
                 async Task Deliver()
                 {
+#if CHRONICLE_ROLLING_DIAGNOSTICS
+                    await ObserverMethod(messages, registration, (events, diagnostic.Stream, batch), cancellationToken);
+#else
                     await ObserverMethod(messages, registration, events, cancellationToken);
+#endif
                     _logger.EventHandlingCompleted(handler.Id);
                 }
 
@@ -665,6 +711,9 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
                 {
                     scheduler.Stop();
                     var errorKind = cancellationToken.IsCancellationRequested ? KernelConnectionErrorKind.Cancelled : ex.ClassifyStreamError();
+#if CHRONICLE_ROLLING_DIAGNOSTICS
+                    ReactorsDeliveryDiagnosticsLogging.StreamError(_logger, diagnostic.Stream, errorKind == KernelConnectionErrorKind.Cancelled);
+#endif
                     if (errorKind == KernelConnectionErrorKind.Cancelled)
                     {
                         _logger.RegisteringReactorStreamCancelled(handler.Id, ex);
@@ -702,14 +751,22 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
                 () =>
                 {
                     scheduler.Stop();
+#if CHRONICLE_ROLLING_DIAGNOSTICS
+                    ReactorsDeliveryDiagnosticsLogging.Record(_logger, 2, diagnostic.Stream);
+#endif
                     _logger.RegisteringReactorStreamCompleted(handler.Id);
                     messages.Dispose();
                     ScheduleReconnect();
                 });
     }
 
+#if CHRONICLE_ROLLING_DIAGNOSTICS
+    Task ObserverMethod(SerializedMessages<ReactorMessage> messages, ReactorRegistration registration, (EventsToObserve Events, Guid Stream, long Batch) delivery, CancellationToken cancellationToken) =>
+        _dispatcher.Dispatch(registration.Handler, registration.Handle, delivery.Events, _eventStore.Namespace, result => messages.Publish(new(new(result))), cancellationToken, delivery.Stream, delivery.Batch);
+#else
     Task ObserverMethod(SerializedMessages<ReactorMessage> messages, ReactorRegistration registration, EventsToObserve events, CancellationToken cancellationToken) =>
         _dispatcher.Dispatch(registration.Handler, registration.Handle, events, _eventStore.Namespace, result => messages.Publish(new(new(result))), cancellationToken);
+#endif
 
     sealed record ReactorRegistration(
         ReactorHandler Handler,

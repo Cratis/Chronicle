@@ -44,21 +44,24 @@ The exception beneath it is a `TypeLoadException` such as `Unable to resolve typ
 ## Roll out administrator authorization
 
 Keep `Authentication.EnforceAdministratorPolicyForOperations=false` on every node while replacing nodes
-with the administrator-policy release. Existing operational calls then remain in audit mode. The new
+with the administrator-policy release. Existing operational calls other than System-store operations then remain in audit mode.
+System-store reads and operations always require an administrator on upgraded nodes, regardless of this flag.
+Nodes that have not been upgraded retain their earlier behaviour. The new
 administrator-management service is always enforced on upgraded nodes when authentication is enabled;
 old nodes do not expose that service.
 
 After every node has been upgraded, review the would-deny warnings for user/application management,
-System job recovery and System observer recovery. Confirm that the operators who need those operations
+and other administrator-policy operations. Confirm that the operators who need those operations
 are active administrators, and obtain fresh user sessions carrying `chronicle_principal=user`. Refresh
 OpenIddict user tokens or sign in again for existing cookie and Identity bearer sessions. Applications
 cannot acquire administrator privilege, even if their token subject matches an administrator's identifier.
 
 Only then set `Authentication.EnforceAdministratorPolicyForOperations=true` consistently across the
 cluster. During a staggered configuration change, a call can still be audited rather than denied on a
-node that retains audit mode; enforcement is not cluster-wide until every node has the setting. Application-store
+node that retains audit mode. This does not apply to System-store operations, which are always enforced on upgraded nodes.
+For other administrator-policy operations, enforcement is not cluster-wide until every node has the setting. Application-store
 operations are unaffected. See [Administrator authorization](configuration/authentication.md#administrator-authorization)
-for the configuration and external-authority limitations.
+for the configuration and external-authority limitations, and [The System event store](system-event-store.md) for recovery guidance.
 
 Every release that includes the administrator roster must recognize `GrantReason.AdministratorGrant`
 (value `3`) before administrator-management grants are written. A node whose enum converter does not
@@ -103,7 +106,7 @@ A node binds its listeners before starting its silo, so a schema lock wait or st
 
 - **Startup probe.** Use `tcpSocket` on port 35000 or an HTTP probe on `/health/live`. Raising `failureThreshold` is not the fix for backlog-dependent startup restarts; do not use readiness as the startup probe.
 - **Liveness probe.** Use `/health/live`, which remains successful while the silo is starting, including while waiting on a schema lock.
-- **Shutdown.** The host allows 10 seconds for a graceful stop (`HostOptions.ShutdownTimeout`). Set the termination grace period at or above that and let the orchestrator send `SIGTERM`. The server treats a signal during startup as an orderly stop.
+- **Shutdown.** The Chronicle images forward `SIGTERM` to the kernel, which then leaves the cluster in an orderly way. The host allows 10 seconds for that graceful stop (`HostOptions.ShutdownTimeout`). Docker also waits only 10 seconds by default before killing the container, which leaves no margin, so give the container at least 30 seconds: `docker stop --time 30`, or `stop_grace_period: 30s` in Docker Compose. In Kubernetes, keep `terminationGracePeriodSeconds` at 30 seconds or more (30 is the default). The server treats a signal during startup as an orderly stop.
 - **Defunct entries.** A node that restarts joins as a new silo and never reuses an old identity. Old entries stay in the membership table until the sweep removes them. `defunctSiloExpiration` defaults to three hours and `defunctSiloCleanupPeriod` to one hour. They only control cleanup of dead entries, so do not raise them to make a rollout safer. See [Clustering](configuration/clustering.md).
 
 Orleans' own failure detection settings, such as probe timeouts and the number of missed probes, are not exposed by Chronicle's configuration. Chronicle sets only the defunct-silo cleanup and the response timeout. If a node restarts slowly, raise `clustering.responseTimeout` (`Cratis__Chronicle__Clustering__ResponseTimeout`, default 30 seconds), which governs how long the startup grain calls wait.
