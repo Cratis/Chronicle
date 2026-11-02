@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Concepts.Observation.Webhooks;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 
@@ -17,9 +18,11 @@ public class with_a_legacy_record : Specification
         _document = new WebhookDefinition { EventTypes = new Dictionary<string, string> { ["customer+3"] = "$eventSourceId" } }.ToBsonDocument();
         var map = BsonClassMap.LookupClassMap(typeof(WebhookDefinition));
         _document.Remove(map.GetMemberMap(nameof(WebhookDefinition.GenerationDelivery)).ElementName);
+        _document.Remove(map.GetMemberMap(nameof(WebhookDefinition.DeliveryFormat)).ElementName);
     }
 
     void Because() => _result = BsonSerializer.Deserialize<WebhookDefinition>(_document).ToKernel();
+    [Fact] void should_default_to_the_legacy_delivery_format() => _result.DeliveryFormat.ShouldEqual(WebhookDeliveryFormat.Legacy);
     [Fact] void should_default_to_compatibility() => _result.GenerationDelivery.ShouldEqual(EventGenerationDelivery.Compatibility);
     [Fact] void should_preserve_the_declared_generation() => _result.EventTypes.Single().Generation.Value.ShouldEqual(3u);
 }

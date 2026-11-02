@@ -408,6 +408,7 @@ oneof Cratis.Chronicle.Concepts.Observation.Webhooks.WebhookAuthorization
   case3: OneOf.Types.None
   case4: Cratis.Chronicle.Concepts.Security.ManagedIdentityAuthorization
 json Cratis.Chronicle.Concepts.Observation.Webhooks.WebhookDefinition
+  deliveryFormat: Cratis.Chronicle.Concepts.Observation.Webhooks.WebhookDeliveryFormat
   eventSequenceId: Cratis.Chronicle.Concepts.EventSequences.EventSequenceId
   eventTypes: System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Events.EventType>
   generationDelivery: Cratis.Chronicle.Concepts.Observation.EventGenerationDelivery
@@ -416,6 +417,9 @@ json Cratis.Chronicle.Concepts.Observation.Webhooks.WebhookDefinition
   isReplayable: bool
   owner: Cratis.Chronicle.Concepts.Observation.Webhooks.WebhookOwner
   target: Cratis.Chronicle.Concepts.Observation.Webhooks.WebhookTarget
+enum Cratis.Chronicle.Concepts.Observation.Webhooks.WebhookDeliveryFormat : int
+  EnvelopeV1 = 1
+  Legacy = 0
 concept Cratis.Chronicle.Concepts.Observation.Webhooks.WebhookId : string
 enum Cratis.Chronicle.Concepts.Observation.Webhooks.WebhookOwner : int
   Client = 1

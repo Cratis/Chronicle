@@ -64,4 +64,10 @@ public class WebhookDefinition
     /// </summary>
     [ProtoMember(9)]
     public EventGenerationDelivery GenerationDelivery { get; set; } = EventGenerationDelivery.Compatibility;
+
+    /// <summary>
+    /// Gets or sets the format used to deliver webhook events.
+    /// </summary>
+    [ProtoMember(10)]
+    public WebhookDeliveryFormat DeliveryFormat { get; set; } = WebhookDeliveryFormat.Legacy;
 }

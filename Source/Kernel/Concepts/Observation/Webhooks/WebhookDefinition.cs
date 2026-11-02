@@ -29,4 +29,9 @@ public record WebhookDefinition(
     /// Gets the policy for delivering event generations.
     /// </summary>
     public EventGenerationDelivery GenerationDelivery { get; init; } = EventGenerationDelivery.Compatibility;
+
+    /// <summary>
+    /// Gets the format used to deliver webhook events.
+    /// </summary>
+    public WebhookDeliveryFormat DeliveryFormat { get; init; } = WebhookDeliveryFormat.Legacy;
 }

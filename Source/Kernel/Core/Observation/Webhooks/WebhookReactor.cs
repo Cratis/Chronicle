@@ -41,7 +41,8 @@ public class WebhookReactor(IGrainFactory grainFactory, ILogger<WebhookReactor> 
             @event.IsReplayable,
             @event.IsActive)
         {
-            GenerationDelivery = @event.GenerationDelivery
+            GenerationDelivery = @event.GenerationDelivery,
+            DeliveryFormat = @event.DeliveryFormat
         };
 
         var webhooksManager = grainFactory.GetGrain<IWebhooks>(eventContext.EventStore.Value);

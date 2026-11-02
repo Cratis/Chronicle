@@ -178,6 +178,12 @@ public class AddWebhookRequest
     public global::Cratis.Chronicle.Contracts.Observation.EventGenerationDelivery GenerationDelivery { get; set; }
 
     /// <summary>
+    /// Gets or sets the DeliveryFormat.
+    /// </summary>
+    [ProtoMember(20)]
+    public global::Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookDeliveryFormat DeliveryFormat { get; set; }
+
+    /// <summary>
     /// Gets or sets the ManagedIdentityClientId.
     /// </summary>
     [ProtoMember(18)]

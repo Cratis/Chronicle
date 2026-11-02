@@ -71,6 +71,11 @@ public record WebhookDetails(
     }
 
     /// <summary>
+    /// Gets the format used to deliver webhook events.
+    /// </summary>
+    public Concepts.Observation.Webhooks.WebhookDeliveryFormat DeliveryFormat { get; init; } = Concepts.Observation.Webhooks.WebhookDeliveryFormat.Legacy;
+
+    /// <summary>
     /// Deconstructs the original nine-field webhook read model shape.
     /// </summary>
     /// <param name="Id">The identity of the webhook.</param>

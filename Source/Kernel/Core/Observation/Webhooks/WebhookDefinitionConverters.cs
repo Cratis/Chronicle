@@ -32,7 +32,8 @@ internal static class WebhookDefinitionConverters
             webhookDefinition.IsReplayable && !webhookDefinition.IsNotReplayable,
             webhookDefinition.IsActive && !webhookDefinition.IsInactive)
         {
-            GenerationDelivery = (EventGenerationDelivery)webhookDefinition.GenerationDelivery
+            GenerationDelivery = (EventGenerationDelivery)webhookDefinition.GenerationDelivery,
+            DeliveryFormat = (WebhookDeliveryFormat)webhookDefinition.DeliveryFormat
         };
 
     /// <summary>
@@ -45,6 +46,7 @@ internal static class WebhookDefinitionConverters
         {
             Identifier = webhookDefinition.Identifier,
             GenerationDelivery = (Contracts.Observation.EventGenerationDelivery)webhookDefinition.GenerationDelivery,
+            DeliveryFormat = (Contracts.Observation.Webhooks.WebhookDeliveryFormat)webhookDefinition.DeliveryFormat,
             EventSequenceId = webhookDefinition.EventSequenceId,
             EventTypes = webhookDefinition.EventTypes.Select(type => type.ToContract()).ToList(),
             IsActive = webhookDefinition.IsActive,
@@ -147,7 +149,8 @@ internal static class WebhookDefinitionConverters
             contract.IsReplayable,
             contract.IsActive)
         {
-            GenerationDelivery = definition.GenerationDelivery
+            GenerationDelivery = definition.GenerationDelivery,
+            DeliveryFormat = definition.DeliveryFormat
         };
     }
 

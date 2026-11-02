@@ -22,6 +22,7 @@ message AddWebhookRequest {
    string OAuthScope = 17;
    string ManagedIdentityClientId = 18;
    string ManagedIdentityScope = 19;
+   WebhookDeliveryFormat DeliveryFormat = 20;
 }
 message AddWebhooksRequest {
    string EventStore = 1;
@@ -116,6 +117,11 @@ message WebhookDefinition {
    bool IsNotReplayable = 7;
    bool IsInactive = 8;
    EventGenerationDelivery GenerationDelivery = 9;
+   WebhookDeliveryFormat DeliveryFormat = 10;
+}
+enum WebhookDeliveryFormat {
+   Legacy = 0;
+   EnvelopeV1 = 1;
 }
 message WebhookDetailsResponse {
    string Identifier = 1;

@@ -62,6 +62,11 @@ public record AddWebhook(
     public EventGenerationDelivery GenerationDelivery { get; init; } = EventGenerationDelivery.Compatibility;
 
     /// <summary>
+    /// Gets the format used to deliver webhook events.
+    /// </summary>
+    public Concepts.Observation.Webhooks.WebhookDeliveryFormat DeliveryFormat { get; init; } = Concepts.Observation.Webhooks.WebhookDeliveryFormat.Legacy;
+
+    /// <summary>
     /// Gets the client identifier, or empty for the system-assigned identity.
     /// </summary>
     public string ManagedIdentityClientId { get; init; } = string.Empty;
@@ -103,7 +108,8 @@ public record AddWebhook(
             Target = Target(),
             IsReplayable = IsReplayable,
             IsActive = IsActive,
-            GenerationDelivery = (Contracts.Observation.EventGenerationDelivery)GenerationDelivery
+            GenerationDelivery = (Contracts.Observation.EventGenerationDelivery)GenerationDelivery,
+            DeliveryFormat = (Contracts.Observation.Webhooks.WebhookDeliveryFormat)DeliveryFormat
         };
 
     Contracts.Primitives.OneOf<BasicAuthorization, BearerTokenAuthorization, OAuthAuthorization>? Authorization() =>

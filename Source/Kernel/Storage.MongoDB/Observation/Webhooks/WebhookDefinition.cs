@@ -51,4 +51,9 @@ public class WebhookDefinition
     /// Gets or sets the generation delivery policy.
     /// </summary>
     public EventGenerationDelivery GenerationDelivery { get; set; } = EventGenerationDelivery.Compatibility;
+
+    /// <summary>
+    /// Gets or sets the format used to deliver webhook events.
+    /// </summary>
+    public WebhookDeliveryFormat DeliveryFormat { get; set; } = WebhookDeliveryFormat.Legacy;
 }

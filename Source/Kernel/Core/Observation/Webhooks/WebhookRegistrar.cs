@@ -101,7 +101,8 @@ public sealed class WebhookRegistrar(
                     encryptedWebhook.IsReplayable,
                     encryptedWebhook.IsActive)
                 {
-                    GenerationDelivery = encryptedWebhook.GenerationDelivery
+                    GenerationDelivery = encryptedWebhook.GenerationDelivery,
+                    DeliveryFormat = encryptedWebhook.DeliveryFormat
                 };
 
                 await Append(eventSequence, webhook.Identifier, addedEvent);
