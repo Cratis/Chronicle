@@ -1,22 +1,17 @@
 ---
-description: Mark a declarative Chronicle projection forward-only with NotRewindable() so it cannot be replayed or rewound from scratch.
+description: Mark a declarative Chronicle projection with NotRewindable(), which sets IsRewindable to false on the projection definition.
 ---
 # Projection with NotRewindable
 
-The `NotRewindable()` method marks a projection as forward-only, meaning it cannot be replayed or rewound. This is useful for projections that maintain state that should not be recreated from scratch or for performance-critical scenarios where replay is not needed.
+The `NotRewindable()` method sets `IsRewindable` to `false` on the projection definition. This is a property of the projection definition and is distinct from observer replayability.
 
 ## Defining a non-rewindable projection
 
-Use `NotRewindable()` to mark a projection as forward-only:
+Call `NotRewindable()` on the projection builder:
 
 <ChronicleClientTabs snippet="projections/declarative/not-rewindable/basic" />
 
-This projection:
-
-- Cannot be replayed or reset
-- Processes events only as they arrive in real-time
-- Maintains forward-only state progression
-- Is optimized for performance and append-only scenarios
+This projection is registered with `IsRewindable` set to `false` in its definition.
 
 ## Read model definition
 
@@ -26,60 +21,29 @@ The read model can include timestamp and audit information:
 
 ## Event definitions
 
-Events should be designed for forward-only processing:
+Events used by the projection:
 
 <ChronicleClientTabs snippet="projections/declarative/not-rewindable/events" />
 
 ## How it works
 
-When a projection is marked as `NotRewindable()`:
+`NotRewindable()` records `IsRewindable = false` on the projection definition that the client registers with the Kernel. It does not change which events the projection subscribes to or how it handles them.
 
-1. **No replay capability**: The projection cannot be reset and rebuilt from the beginning
-2. **Forward-only processing**: Events are processed only as they arrive in chronological order
-3. **Performance optimization**: Chronicle skips replay infrastructure and optimizations
-4. **State preservation**: Existing projection state is preserved and cannot be recreated
-5. **Error handling**: Failed events may require manual intervention since replay isn't available
+## Further examples
 
-## Use cases for non-rewindable projections
+These examples show `NotRewindable()` on projections with different read models. They illustrate the call, not a recommendation.
 
-### Audit and logging projections
-
-Perfect for audit logs where you want to preserve the exact timing and sequence:
+### Audit entries
 
 <ChronicleClientTabs snippet="projections/declarative/not-rewindable/audit-use-case" />
 
-### Performance monitoring
-
-For real-time performance metrics that don't need historical accuracy:
+### Performance metrics
 
 <ChronicleClientTabs snippet="projections/declarative/not-rewindable/performance-use-case" />
 
 ### Financial transactions
 
-For append-only financial records where replay could cause confusion:
-
 <ChronicleClientTabs snippet="projections/declarative/not-rewindable/financial-use-case" />
-
-## When to use NotRewindable
-
-Use `NotRewindable()` when:
-
-- **Audit requirements**: You need to preserve exact event timestamps and sequence
-- **Performance critical**: The projection handles high-volume events and replay would be expensive
-- **Append-only data**: The projection represents data that should never be regenerated
-- **Real-time processing**: Only forward, real-time event flow matters — a rebuilt-from-replay history would not reflect current state
-- **External integrations**: The projection triggers external actions that shouldn't be repeated
-- **Compliance**: Regulatory requirements prevent data recreation or replay
-
-## When NOT to use NotRewindable
-
-Avoid `NotRewindable()` when:
-
-- **Business logic changes**: You might need to replay events with updated logic
-- **Bug fixes**: Errors in projection logic need to be corrected by replay
-- **Data migration**: You need to rebuild projections with new schemas
-- **Testing**: Development and testing scenarios benefit from replay capability
-- **Recovery**: System failures might require rebuilding projection state
 
 ## Combining with other features
 
@@ -87,24 +51,4 @@ NotRewindable can be combined with other projection features:
 
 <ChronicleClientTabs snippet="projections/declarative/not-rewindable/combined-features" />
 
-This combines non-rewindable behavior with event sequence specification, passive mode, and event-context timestamp mapping.
-
-## Error handling considerations
-
-With non-rewindable projections:
-
-- **Failed events**: Must be handled carefully since replay isn't available
-- **Dead letter queues**: Consider implementing for failed event processing
-- **Manual intervention**: May be required to fix projection state
-- **Monitoring**: Implement comprehensive monitoring and alerting
-- **Backup strategies**: Consider point-in-time snapshots for recovery
-
-## Performance benefits
-
-Non-rewindable projections offer several performance advantages:
-
-- **Reduced memory usage**: No need to store replay state or checkpoints
-- **Faster startup**: No replay phase during application startup
-- **Lower CPU usage**: Eliminates replay processing overhead
-- **Simplified infrastructure**: Fewer moving parts in the projection system
-- **Better throughput**: All processing power focused on real-time events
+This combines `NotRewindable()` with event sequence specification, passive mode, and event-context timestamp mapping.
