@@ -44,8 +44,10 @@ public enum CallerContext
 /// Measures the per-call cost of Orleans' activity propagation grain call filters under the telemetry configurations
 /// before and after #4607. The grain call is modeled in process: it reproduces the work of Orleans 10.4's
 /// <c>ActivityPropagationGrainCallFilter</c> (outgoing: start a client activity on the Orleans application source and
-/// inject the context; incoming: extract the context without the caller's ExecutionContext, start a server activity,
-/// and set the rpc tags when all data is requested) rather than running a silo.
+/// inject the context; incoming: extract the context without the caller's ExecutionContext, start a server activity -
+/// a root one when no context arrived, as Orleans does - and set the rpc tags when all data is requested) rather than
+/// running a silo. <see cref="GrainCallWithCalleeSpan"/> adds the callee side: the grain's own Chronicle span, which is
+/// where Base and head differ for an unsampled caller (Base drops the context, so the callee records a root trace).
 /// </summary>
 [MemoryDiagnoser]
 public class OrleansGrainCallTracing : IDisposable
@@ -60,6 +62,7 @@ public class OrleansGrainCallTracing : IDisposable
     OrleansTraceContextPropagation? _propagation;
     Activity? _caller;
     Activity? _verifiedClient;
+    Activity? _verifiedCallee;
     bool _verifying;
     int _sequence;
 
@@ -110,6 +113,7 @@ public class OrleansGrainCallTracing : IDisposable
         if (Caller == CallerContext.Untraced)
         {
             VerifyEntry(default);
+            VerifyCallee();
             return;
         }
 
@@ -123,6 +127,7 @@ public class OrleansGrainCallTracing : IDisposable
         ActivitySource.AddActivityListener(_callerListener);
         _caller = _callerSource.StartActivity("caller", ActivityKind.Server, parent);
         VerifyEntry(parent);
+        VerifyCallee();
     }
 
     /// <summary>
@@ -147,7 +152,16 @@ public class OrleansGrainCallTracing : IDisposable
     /// </summary>
     /// <returns>The value the grain would return.</returns>
     [Benchmark]
-    public int GrainCall()
+    public int GrainCall() => Call(calleeSpan: false);
+
+    /// <summary>
+    /// One modeled grain call whose grain starts its own Chronicle span, as kernel grains do.
+    /// </summary>
+    /// <returns>The value the grain would return.</returns>
+    [Benchmark]
+    public int GrainCallWithCalleeSpan() => Call(calleeSpan: true);
+
+    int Call(bool calleeSpan)
     {
         // Activity.Current is AsyncLocal and does not flow from the async GlobalSetup to the workload thread,
         // so establish the caller on the thread that runs the call, as it is on a real grain call. Same cost for every configuration.
@@ -170,11 +184,15 @@ public class OrleansGrainCallTracing : IDisposable
         Activity.Current = null;
         try
         {
-            DistributedContextPropagator.Current.ExtractTraceIdAndState(carrier, _get, out var traceParent, out var traceState);
-            using var server = ActivityContext.TryParse(traceParent, traceState, true, out var parent)
-                ? _source.CreateActivity("IPing/Ping", ActivityKind.Server, parent)?.Start()
-                : null;
+            using var server = StartServer(carrier);
             if (server is { IsAllDataRequested: true }) SetRpcTags(server);
+            if (calleeSpan)
+            {
+                using var callee = ChronicleActivity.Source.StartActivity("IPing.Ping");
+                if (_verifying) _verifiedCallee = callee;
+                callee?.SetTag("chronicle.benchmark", "callee");
+            }
+
             return ++_sequence;
         }
         finally
@@ -225,6 +243,40 @@ public class OrleansGrainCallTracing : IDisposable
     }
 
     static string ChronicleActivitySourceName => ChronicleActivity.SourceName;
+
+    static Activity? StartServer(Dictionary<string, string> carrier)
+    {
+        DistributedContextPropagator.Current.ExtractTraceIdAndState(carrier, _get, out var traceParent, out var traceState);
+        if (string.IsNullOrEmpty(traceParent)) return _source.CreateActivity("IPing/Ping", ActivityKind.Server)?.Start();
+        return ActivityContext.TryParse(traceParent, traceState, true, out var parent)
+            ? _source.CreateActivity("IPing/Ping", ActivityKind.Server, parent)?.Start()
+            : _source.CreateActivity("IPing/Ping", ActivityKind.Server, traceParent)?.Start();
+    }
+
+    void VerifyCallee()
+    {
+        Activity.Current = _caller;
+        _verifying = true;
+        _verifiedCallee = null;
+        try
+        {
+            Call(calleeSpan: true);
+        }
+        finally
+        {
+            _verifying = false;
+            Activity.Current = _caller;
+        }
+
+        // Only head with tracing off honors an unsampled caller on the callee; every other case records the callee span.
+        var expectRecorded = !(Configuration == TracingConfiguration.HeadTracingOff && Caller == CallerContext.UnsampledParent);
+        var recorded = _verifiedCallee?.Recorded == true;
+        _verifiedCallee = null;
+        if (recorded != expectRecorded)
+        {
+            throw new InvalidOperationException($"{Configuration}/{Caller}: callee span recorded={recorded}, expected {expectRecorded}.");
+        }
+    }
 
     static void SetRpcTags(Activity activity)
     {
