@@ -81,6 +81,7 @@ public static class ChronicleServerSiloBuilderExtensions
         builder.Services.TryAddSingleton<IEventTypes, EventTypes>();
         builder.Services.TryAddSingleton<IJobTypes, JobTypes>();
         builder.Services.TryAddSingleton<IJobStepThrottle, JobStepThrottle>();
+        builder.Services.TryAddSingleton<IObserverRegistrationGate, ObserverRegistrationGate>();
 
         // The package's JobsManager/Job/JobStep grains and JobStepThrottle resolve Cratis.Orleans.Jobs.JobsOptions,
         // not ChronicleOptions - this host never calls AddCratisOrleans (it wires the pieces individually), so
@@ -199,8 +200,9 @@ public static class ChronicleServerSiloBuilderExtensions
                     jsonSerializerOptions,
                     sp.GetRequiredKeyedService<Cratis.Traces.IActivitySource<Cratis.Chronicle.Services.Observation.Reactors.Reactors>>(Cratis.Chronicle.Concepts.WellKnown.MeterName),
                     sp.GetRequiredService<IOptions<ChronicleOptions>>(),
-                    sp.GetRequiredService<ILogger<Cratis.Chronicle.Services.Observation.Reactors.Reactors>>()),
-                new Cratis.Chronicle.Services.Observation.Reducers.Reducers(grainFactory, sp.GetRequiredService<IReducerMediator>(), expandoObjectConverter, jsonSerializerOptions, sp.GetRequiredKeyedService<Cratis.Traces.IActivitySource<Cratis.Chronicle.Services.Observation.Reducers.Reducers>>(Cratis.Chronicle.Concepts.WellKnown.MeterName), sp.GetRequiredService<IOptions<ChronicleOptions>>(), sp.GetRequiredService<ILogger<Cratis.Chronicle.Services.Observation.Reducers.Reducers>>()),
+                    sp.GetRequiredService<ILogger<Cratis.Chronicle.Services.Observation.Reactors.Reactors>>(),
+                    sp.GetRequiredService<IObserverRegistrationGate>()),
+                new Cratis.Chronicle.Services.Observation.Reducers.Reducers(grainFactory, sp.GetRequiredService<IReducerMediator>(), expandoObjectConverter, jsonSerializerOptions, sp.GetRequiredKeyedService<Cratis.Traces.IActivitySource<Cratis.Chronicle.Services.Observation.Reducers.Reducers>>(Cratis.Chronicle.Concepts.WellKnown.MeterName), sp.GetRequiredService<IOptions<ChronicleOptions>>(), sp.GetRequiredService<ILogger<Cratis.Chronicle.Services.Observation.Reducers.Reducers>>(), sp.GetRequiredService<IObserverRegistrationGate>()),
                 projections,
                 ActivatorUtilities.CreateInstance<Cratis.Chronicle.Services.Observation.Webhooks.Webhooks>(sp),
                 ActivatorUtilities.CreateInstance<Cratis.Chronicle.Services.ExternalServices.ExternalServices>(sp),

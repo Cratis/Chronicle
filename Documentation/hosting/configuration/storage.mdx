@@ -32,6 +32,42 @@ Configure the storage backend for Chronicle Server.
 }
 ```
 
+### MongoDB connection pool
+
+Set pool options in `storage.connectionDetails`, for example:
+
+```json
+{
+  "storage": {
+    "type": "MongoDB",
+    "connectionDetails": "mongodb://localhost:27017/?maxPoolSize=100&waitQueueTimeoutMS=120000&maxConnecting=2"
+  }
+}
+```
+
+The MongoDB driver defaults to a maximum pool size of **100 connections per server**, a wait queue
+of **500 operations** (five times the pool size), a wait timeout of **120000 ms**, and **2 concurrent
+connection attempts** per pool.
+
+- `maxPoolSize` limits connections per server for each client. Increase it only when MongoDB has
+  connection capacity for every silo and other application clients.
+- `waitQueueTimeoutMS` bounds how long an operation waits for a connection. Increasing it tolerates
+  longer bursts but does not add capacity. A full wait queue fails immediately with
+  `MongoWaitQueueFullException`, which Chronicle treats as transient.
+- `maxConnecting` limits simultaneous connection establishment. Raising it can warm pools faster,
+  but can also increase connection pressure during rollouts.
+
+Registration admission is unlimited by default (`observers.maxConcurrentRegistrations: 0`). If you opt
+into a positive cap, size the pool with headroom above that cap for appends, observer delivery and
+background jobs. With a cap, registration concurrency across the cluster is approximately
+`maxConcurrentRegistrations` × the number of silos; pools are per client and server, not shared across
+silos. Account for all these pools against MongoDB's connection limit. Increasing the registration
+limit without pool headroom can make bursts worse. See [Observers](observers.md).
+
+MongoDB health checks read the driver's monitored cluster state without borrowing a pooled connection;
+pool saturation alone therefore does not make the MongoDB check unhealthy. This is not an active query
+or a guarantee that an application operation can immediately acquire a connection.
+
 ### Index provisioning
 
 Use `--migrate-only` to provision kernel-owned indexes before deployment and `--verify-schema` to check them without DDL. Both exit without starting the kernel. `storage.schemaMode: Verify` adds a warning-only MongoDB startup check of System/Default, its event-store level, and global encryption; it does not disable lazy runtime index creation. See [MongoDB Index Operations](mongodb-index-operations.md) for scope discovery, permissions, jobs routing, and exit codes.

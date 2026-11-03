@@ -144,8 +144,8 @@ public static class MongoDBChronicleBuilderExtensions
             services.AddGenerationCatalog();
             services.AddSingleton<Storage.MongoDB.Generations.Gates.IGenerationGateWrites, Storage.MongoDB.Generations.Gates.MongoDBGenerationGateWrites>();
 
-            services.AddHealthChecks().AddMongoDb(
-                _ => new MongoClient(settings),
+            services.AddSingleton(provider => new MongoDBClusterHealthCheck(provider.GetRequiredService<IMongoDBClientManager>(), settings));
+            services.AddHealthChecks().AddCheck<MongoDBClusterHealthCheck>(
                 name: "mongodb",
                 timeout: TimeSpan.FromSeconds(3));
         });
