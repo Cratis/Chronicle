@@ -80,6 +80,13 @@ public static class SerializationConfigurationExtensions
                 .AddCompleteSerializer<ExpandoObjectSerializer>()
                 .AddLinqCollectionCopier();
             builder.Services.AddSingleton<ITypeFilter, CratisTypesFilter>();
+
+            // Orleans 10.4.2 (#11456) independently authorizes a constructed generic type's own generic
+            // definition, not only its arguments. The Orleans-generated invokable for a generic grain method
+            // (e.g. IObserver.Subscribe<TObserverSubscriber>) lives under an "OrleansCodeGen." namespace that
+            // CratisTypesFilter's "Cratis"-prefix check does not match, so trust the assembly it is generated
+            // into directly - the same assembly already holds every type the filter trusts by namespace.
+            builder.Configure(options => options.AddAllowedAssembly(typeof(SerializationConfigurationExtensions).Assembly));
         });
         return services;
     }
