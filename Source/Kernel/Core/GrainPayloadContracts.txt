@@ -171,6 +171,7 @@ json Cratis.Chronicle.Concepts.Events.EventContext
   appendedGeneration: Cratis.Chronicle.Concepts.Events.EventTypeGeneration
   causation: System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Auditing.Causation>
   causedBy: Cratis.Chronicle.Concepts.Identities.Identity
+  compensationFor: Cratis.Chronicle.Concepts.Events.EventSequenceNumber
   correlationId: Cratis.Execution.CorrelationId
   eventSource: Cratis.Chronicle.Concepts.Events.EventSourceName
   eventSourceId: Cratis.Chronicle.Concepts.Events.EventSourceId
