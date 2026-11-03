@@ -11,6 +11,8 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <IsPackable>false</IsPackable>
+        <!-- The repository's Directory.Build.props (not imported here) suppresses NU1507; CI adds a second package source. -->
+        <NoWarn>$(NoWarn);NU1507</NoWarn>
     </PropertyGroup>
     <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
 </Project>
