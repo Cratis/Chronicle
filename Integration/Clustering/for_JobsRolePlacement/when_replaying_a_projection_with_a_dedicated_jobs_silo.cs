@@ -20,7 +20,7 @@ public class when_replaying_a_projection_with_a_dedicated_jobs_silo(context _con
         public JobStepPlacementSignal Placement => fixture.Placement;
         public IReadOnlyList<JobsRoleReadModel> Replayed { get; private set; } = [];
 
-        public async Task InitializeAsync()
+        public async ValueTask InitializeAsync()
         {
             // Wait for role metadata on both callers, not just membership convergence.
             await PlacementScenario.ActivateFromBothSilos(fixture);
@@ -48,7 +48,7 @@ public class when_replaying_a_projection_with_a_dedicated_jobs_silo(context _con
             }
         }
 
-        public Task DisposeAsync() => Task.CompletedTask;
+        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
     }
 
     [Fact] void should_run_steps() => _context.Placement.Steps.Count.ShouldBeGreaterThan(0);
