@@ -21,7 +21,7 @@ public class a_connection_with_projection_declarations : Specification
 
     async Task Establish()
     {
-        _clients = new ConnectedClients(Substitute.For<ILogger<ConnectedClients>>(), Substitute.For<IMeter<ConnectedClients>>(), Options.Create(new ChronicleOptions()), Substitute.For<IStorage>());
+        _clients = new ConnectedClients(Substitute.For<ILogger<ConnectedClients>>(), Substitute.For<IMeter<ConnectedClients>>(), Options.Create(new ChronicleOptions()), Substitute.For<IStorage>(), Substitute.For<IClientDepartureNotifier>());
         await Connect(_connection);
         await _clients.RecordDeclaredProjections(_connection, _eventStore, [_projection]);
     }

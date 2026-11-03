@@ -7,6 +7,7 @@ using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Monads;
 using Cratis.Orleans.Jobs;
+using Cratis.Orleans.Storage.Jobs;
 
 namespace Cratis.Chronicle.Observation.for_Observer.when_subscribing;
 
@@ -28,6 +29,15 @@ public class and_the_quarantined_observer_was_reactivated_with_partitions_catchi
             InFlightPartitions = new HashSet<Key> { _catchingUpPartition, _inFlightPartition },
             CatchingUpPartitions = new HashSet<Key> { _catchingUpPartition }
         };
+
+        // A partition is catching up when its own partition catch-up job is durable. A hold with no such job is what a
+        // crash between granting it and starting the job leaves behind, and that one is restarted.
+        HasOutstandingJobs(new JobState
+        {
+            Id = JobId.New(),
+            Status = JobStatus.Running,
+            Request = new CatchUpObserverPartitionRequest(_observerKey, ObserverType.Reactor, _catchingUpPartition, EventSequenceNumber.First, [EventType.Unknown])
+        });
 
         _jobsManager
             .Start<ICatchUpObserverPartition, CatchUpObserverPartitionRequest>(Arg.Any<CatchUpObserverPartitionRequest>())

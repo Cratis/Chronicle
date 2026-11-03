@@ -32,8 +32,6 @@ public class PostgreSqlSinkHarness : ISqlSinkHarness
 {
     ReadModelMigrator? _migrator;
 
-    IReadOnlyList<ProjectedColumn> _columns = [];
-
     /// <summary>
     /// Gets or sets the <see cref="PostgreSqlFixture"/> supplying the container.
     /// </summary>
@@ -68,7 +66,6 @@ public class PostgreSqlSinkHarness : ISqlSinkHarness
     /// <inheritdoc/>
     public ISink CreateSink(ReadModelDefinition definition)
     {
-        _columns = ProjectedColumns.ForSchema(definition.GetSchemaForLatestGeneration(), definition.Indexes);
         if (ConnectionString.Length == 0)
         {
             ConnectionString = Fixture!.CreateDatabase().GetAwaiter().GetResult();
@@ -77,7 +74,7 @@ public class PostgreSqlSinkHarness : ISqlSinkHarness
         var database = Substitute.For<IDatabase>();
         database.LiveQueryPollingInterval.Returns(TimeSpan.FromMilliseconds(50));
         database.ReadModelTable(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<string>(), Arg.Any<IReadOnlyList<ProjectedColumn>>(), Arg.Any<ConnectionPurpose>())
-            .Returns(callInfo => OpenTable(callInfo.ArgAt<string>(2)));
+            .Returns(callInfo => OpenTable(callInfo.ArgAt<string>(2), callInfo.ArgAt<IReadOnlyList<ProjectedColumn>>(3)));
 
         return new SqlSink(
             "test-event-store",
@@ -104,8 +101,9 @@ public class PostgreSqlSinkHarness : ISqlSinkHarness
     /// Opens a container in the sink's database, migrating its table as the real database does on every use.
     /// </summary>
     /// <param name="containerName">The name of the container.</param>
+    /// <param name="columns">The columns for this read model.</param>
     /// <returns>A <see cref="DbContextScope{TDbContext}"/> for the container.</returns>
-    async Task<DbContextScope<ReadModelDbContext>> OpenTable(string containerName)
+    async Task<DbContextScope<ReadModelDbContext>> OpenTable(string containerName, IReadOnlyList<ProjectedColumn> columns)
     {
         var builder = new DbContextOptionsBuilder<ReadModelDbContext>(SpecDbContextOptions.Kernel<ReadModelDbContext>(ConnectionString));
         ConfigureOptions?.Invoke(builder);
@@ -113,7 +111,7 @@ public class PostgreSqlSinkHarness : ISqlSinkHarness
 
         var fixture = Fixture!;
 #pragma warning disable CA2000 // Disposed by the sink through the returned scope.
-        var context = fixture.Timings.Measure("ef-context-construction", () => fixture.Track(new ReadModelDbContext(options, containerName, _columns, Migrator)));
+        var context = fixture.Timings.Measure("ef-context-construction", () => fixture.Track(new ReadModelDbContext(options, containerName, columns, Migrator)));
 #pragma warning restore CA2000
         await fixture.Timings.Run("ef-table-ensure", context.EnsureTableExists);
         return new DbContextScope<ReadModelDbContext>(context, () => { });

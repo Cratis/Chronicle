@@ -59,8 +59,19 @@ public class when_clearing_quarantine_after_automatic_reconciliation_with_pendin
             _resumedJobs.Add(callInfo.Arg<JobId>());
             return Task.FromResult(true);
         });
-        _jobsManager.GetJobs(Arg.Any<JobQuery>()).Returns(_ => Task.FromResult<IImmutableList<JobState>>(
-            ImmutableList.Create(AsReportingResumed(catchupJob), AsReportingResumed(retryJob))));
+
+        // The partition is catching up under its own durable partition catch-up job, listed by the jobs manager and the
+        // job storage alike. A hold with no such job is what a crash between granting it and starting the job leaves
+        // behind, and that one is restarted.
+        JobState partitionCatchupJob = new()
+        {
+            Id = JobId.New(),
+            Status = JobStatus.Running,
+            Request = new CatchUpObserverPartitionRequest(_observerKey, ObserverType.External, _catchingUpPartition, EventSequenceNumber.First, [EventType.Unknown])
+        };
+        IImmutableList<JobState> Listed() => ImmutableList.Create(AsReportingResumed(catchupJob), AsReportingResumed(retryJob), partitionCatchupJob);
+        _jobsManager.GetJobs(Arg.Any<JobQuery>()).Returns(_ => Task.FromResult(Listed()));
+        _jobStorage.GetJobs(Arg.Any<JobQuery>()).Returns(_ => Task.FromResult(Catch<IImmutableList<JobState>>.Success(Listed())));
         _jobsManager.Start<ICatchUpObserverPartition, CatchUpObserverPartitionRequest>(Arg.Any<CatchUpObserverPartitionRequest>())
             .Returns(Result<JobId, StartJobError>.Success(JobId.New()));
         await _observer.Subscribe<IEventStoreSubscriptionObserverSubscriber>(ObserverType.External, [EventType.Unknown], SiloAddress.Zero, "target", automatic: true);

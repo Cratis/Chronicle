@@ -78,7 +78,7 @@ public partial class Sink
     async Task<bool> ApplyJoinsThenDirectChanges(CycleWrite write, Change[] nonJoinedChanges)
     {
         var scope = write.Scope;
-        await ApplyJoinsAndChildRemovals(scope, write.Changeset, write.SequenceNumber);
+        await ApplyJoinsAndChildRemovals(scope, write.Changeset, write.SequenceNumber, write.Key.ArrayIndexers);
         if (nonJoinedChanges.Length == 0 || !await ShouldWriteDirectChanges(scope, write.Id, write.Changeset, nonJoinedChanges))
         {
             return false;
@@ -91,9 +91,9 @@ public partial class Sink
             return false;
         }
 
-        ApplyChangesToEntity(entry, nonJoinedChanges);
+        ApplyChangesToEntity(entry, nonJoinedChanges, write.Key.ArrayIndexers);
         AdvanceLastHandledSequenceNumber(entry, write.SequenceNumber);
-        await SaveRecoveringFromInsertRace(scope, entry, new PendingWrite(write.Id, nonJoinedChanges, write.SequenceNumber));
+        await SaveRecoveringFromInsertRace(scope, entry, new PendingWrite(write.Id, nonJoinedChanges, write.SequenceNumber, write.Key.ArrayIndexers));
         return true;
     }
 

@@ -22,4 +22,7 @@ public record ReplayObserverRequest(
 
     /// <inheritdoc/>
     public ulong? Revision { get; init; }
+
+    /// <inheritdoc/>
+    public ulong? OwnershipEpoch { get; init; }
 }

@@ -128,6 +128,7 @@ jobs:
       - name: Verify contents and write checksums and provenance
         env:
           TAG: ${{ inputs.tag }}
+          ATTACH: ${{ inputs.attach }}
           VERSION: ${{ steps.tag.outputs.version }}
           COMMIT: ${{ steps.release.outputs.commit }}
         run: |
@@ -138,7 +139,7 @@ jobs:
           python3 "$tool" manifest --dist "$dist" --tag "$TAG" --commit "$COMMIT" --proto-root source/Source/Kernel/Protobuf
           python3 "$tool" verify-checksums --dist "$dist" --version "$VERSION"
           {
-            echo "### Python contract assets for \`$TAG\` (attach: ${{ inputs.attach }})"
+            echo "### Python contract assets for \`$TAG\` (attach: $ATTACH)"
             echo
             echo "Source commit \`$COMMIT\`. Temporary release assets, not published to PyPI."
             echo '```'

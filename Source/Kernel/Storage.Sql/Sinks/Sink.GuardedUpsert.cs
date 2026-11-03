@@ -23,7 +23,7 @@ public partial class Sink
         var changes = changeset.Changes.Where(change => change is not Joined and not ChildRemovedFromAll).ToArray();
         if (IsGuardedCycle(changeset))
         {
-            return await ApplyGuardedCycle(key, changeset, new PendingWrite(id, changes, sequenceNumber));
+            return await ApplyGuardedCycle(key, changeset, new PendingWrite(id, changes, sequenceNumber, key.ArrayIndexers));
         }
 
         var joinsApplied = false;
@@ -37,7 +37,7 @@ public partial class Sink
             }
             if (!joinsApplied)
             {
-                await ApplyJoinsAndChildRemovals(scope, changeset, sequenceNumber);
+                await ApplyJoinsAndChildRemovals(scope, changeset, sequenceNumber, key.ArrayIndexers);
                 joinsApplied = true;
             }
             if (changes.Length == 0 || !await ShouldWriteDirectChanges(scope, id, changeset, changes))
@@ -45,7 +45,7 @@ public partial class Sink
                 return _noFailedPartitions;
             }
 
-            if (await TryApplyGuardedChanges(scope, key, new PendingWrite(id, changes, sequenceNumber)))
+            if (await TryApplyGuardedChanges(scope, key, new PendingWrite(id, changes, sequenceNumber, key.ArrayIndexers)))
             {
                 return _noFailedPartitions;
             }
@@ -57,7 +57,7 @@ public partial class Sink
         await using var cycleScope = await OpenActiveScope();
         await RunInCycleTransaction(cycleScope, write.SequenceNumber, write.Changes.Length > 0, async () =>
         {
-            await ApplyJoinsAndChildRemovals(cycleScope, changeset, write.SequenceNumber);
+            await ApplyJoinsAndChildRemovals(cycleScope, changeset, write.SequenceNumber, key.ArrayIndexers);
             if (write.Changes.Length == 0 || !await ShouldWriteDirectChanges(cycleScope, write.Id, changeset, write.Changes))
             {
                 return false;
@@ -84,7 +84,7 @@ public partial class Sink
         {
             return true;
         }
-        ApplyChangesToEntity(entry, write.Changes);
+        ApplyChangesToEntity(entry, write.Changes, write.ArrayIndexers);
         AdvanceLastHandledSequenceNumber(entry, write.SequenceNumber);
         if (entry.State == EntityState.Added)
         {

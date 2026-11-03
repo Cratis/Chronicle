@@ -3,6 +3,8 @@
 
 using System.Collections.Concurrent;
 using System.Reactive.Subjects;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventTypes;
@@ -23,6 +25,7 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.EventTypes;
 public partial class EventTypesStorage(EventStoreName eventStore, IDatabase database, ILogger<EventTypesStorage>? logger = null) : IEventTypesStorage
 {
     const int MaxMigrationVersionAttempts = 5;
+    static readonly JsonSerializerOptions _migrationJsonOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
     readonly ILogger<EventTypesStorage> _logger = logger ?? NullLogger<EventTypesStorage>.Instance;
     readonly ConcurrentDictionary<EventTypeId, EventTypeDefinition> _definitionsByType = new();
     ConcurrentBag<EventType> _eventTypes = new();
@@ -54,7 +57,7 @@ public partial class EventTypesStorage(EventStoreName eventStore, IDatabase data
         {
             _eventTypes = new ConcurrentBag<EventType>(_eventTypes.Where(_ => _.Id != type.Id));
         }
-        var eventType = eventSchema.ToSql();
+        var eventType = PreserveStoredContent(existingEventType, eventSchema.ToSql());
         eventType.MigrationVersionsJson = existingEventType?.MigrationVersionsJson ?? "{}";
         _eventTypes.Add(eventType);
 
@@ -68,8 +71,12 @@ public partial class EventTypesStorage(EventStoreName eventStore, IDatabase data
     {
         await using var scope = await database.EventStore(eventStore);
 
-        var eventType = definition.ToSql();
         var existing = await scope.DbContext.EventTypes.FirstOrDefaultAsync(_ => _.Id == definition.Id);
+        var migrationsJson = PrepareMigrations(existing, definition.Migrations);
+
+        // Serialize the effective chain before ToSql's legacy fallback can turn a failed write into an empty list.
+        var eventType = (definition with { Migrations = [] }).ToSql();
+        eventType.MigrationsJson = migrationsJson;
         if (existing is not null)
         {
             // The full definition carries no visibility or origin, so what is already stored is kept.
@@ -77,22 +84,7 @@ public partial class EventTypesStorage(EventStoreName eventStore, IDatabase data
             eventType.Origin = existing.Origin;
             eventType.MigrationVersionsJson = existing.MigrationVersionsJson;
 
-            // Preserve the stored schema when only CLR titles differ; those titles are not needed to
-            // resolve composite keys (which use read-model schemas, not event schemas).
-            foreach (var (generation, incomingSchema) in eventType.Schemas.ToArray())
-            {
-                if (existing.Schemas.TryGetValue(generation, out var storedSchema) &&
-                    JsonSchemaCompatibilityExtensions.EqualsIgnoringTitles(storedSchema, incomingSchema))
-                {
-                    eventType.Schemas[generation] = storedSchema;
-                }
-            }
-
-            // Clients may know different generations; omitted stored schemas must survive registration.
-            foreach (var (generation, storedSchema) in existing.Schemas.Where(_ => !eventType.Schemas.ContainsKey(_.Key)))
-            {
-                eventType.Schemas[generation] = storedSchema;
-            }
+            eventType.Schemas = MergeSchemas(existing.Schemas, eventType.Schemas);
 
             if (existing.Owner == eventType.Owner && existing.Source == eventType.Source &&
                 existing.Tombstone == eventType.Tombstone && existing.MigrationsJson == eventType.MigrationsJson &&
@@ -238,6 +230,62 @@ public partial class EventTypesStorage(EventStoreName eventStore, IDatabase data
         {
             _eventTypes = new ConcurrentBag<EventType>(_eventTypes.Where(_ => _.Id != eventTypeId));
         }
+    }
+
+    static EventType PreserveStoredContent(EventType? existing, EventType incoming)
+    {
+        if (existing is null)
+        {
+            return incoming;
+        }
+
+        // A simple registration carries one schema and no migration knowledge.
+        incoming.Schemas = MergeSchemas(existing.Schemas, incoming.Schemas);
+        incoming.MigrationsJson = existing.MigrationsJson;
+        return incoming;
+    }
+
+    static Dictionary<uint, string> MergeSchemas(IDictionary<uint, string> stored, IDictionary<uint, string> incoming)
+    {
+        var schemas = new Dictionary<uint, string>(stored);
+
+        // Omitted schemas and stored CLR titles survive when the structural schema is unchanged.
+        foreach (var (generation, schema) in incoming.Where(_ => !stored.TryGetValue(_.Key, out var previous) ||
+            !JsonSchemaCompatibilityExtensions.EqualsIgnoringTitles(previous, _.Value)))
+        {
+            schemas[generation] = schema;
+        }
+        return schemas;
+    }
+
+    static string PrepareMigrations(EventType? existing, IEnumerable<EventTypeMigrationDefinition> incoming)
+    {
+        var stored = existing?.ToDefinition().Migrations.ToList() ?? [];
+        var migrations = MergeMigrations(stored, incoming);
+        return existing is not null && MigrationsEqual(stored, migrations)
+            ? existing.MigrationsJson
+            : JsonSerializer.Serialize(migrations, _migrationJsonOptions);
+    }
+
+    static List<EventTypeMigrationDefinition> MergeMigrations(IEnumerable<EventTypeMigrationDefinition> stored, IEnumerable<EventTypeMigrationDefinition> incoming)
+    {
+        var migrations = stored.ToDictionary(_ => (_.FromGeneration, _.ToGeneration));
+        foreach (var migration in incoming)
+        {
+            migrations[(migration.FromGeneration, migration.ToGeneration)] = migration;
+        }
+        return migrations.Values.OrderBy(_ => _.FromGeneration.Value).ThenBy(_ => _.ToGeneration.Value).ToList();
+    }
+
+    static bool MigrationsEqual(List<EventTypeMigrationDefinition> stored, List<EventTypeMigrationDefinition> incoming)
+    {
+        if (stored.Count != incoming.Count)
+        {
+            return false;
+        }
+        var byEndpoint = stored.ToDictionary(_ => (_.FromGeneration, _.ToGeneration));
+        return incoming.TrueForAll(migration => byEndpoint.TryGetValue((migration.FromGeneration, migration.ToGeneration), out var previous) &&
+            JsonNode.DeepEquals(JsonSerializer.SerializeToNode(previous, _migrationJsonOptions), JsonSerializer.SerializeToNode(migration, _migrationJsonOptions)));
     }
 
     async Task<EventType?> GetSpecificEventType(EventTypeId eventTypeId)
