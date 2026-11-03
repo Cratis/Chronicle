@@ -33,26 +33,15 @@ public partial class Sink
     /// </summary>
     /// <param name="changes">The changes of the changeset.</param>
     /// <returns>True when the cycle has two or more write steps.</returns>
-    internal static bool IsMultiWrite(IEnumerable<Change> changes)
+    internal static bool IsMultiWrite(IEnumerable<Change> changes) =>
+        changes is IReadOnlyList<Change> list ? IsMultiWriteList(list) : IsMultiWriteEnumerated(changes);
+
+    static bool IsMultiWriteList(IReadOnlyList<Change> changes)
     {
-        var steps = 0;
-        var direct = false;
-        if (changes is IReadOnlyList<Change> list)
+        var steps = default(WriteStepCount);
+        for (var i = 0; i < changes.Count; i++)
         {
-            for (var i = 0; i < list.Count; i++)
-            {
-                if (CountsAsAnotherStep(list[i], ref direct, ref steps))
-                {
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
-        foreach (var change in changes)
-        {
-            if (CountsAsAnotherStep(change, ref direct, ref steps))
+            if (steps.AddReachesTwo(changes[i]))
             {
                 return true;
             }
@@ -61,56 +50,50 @@ public partial class Sink
         return false;
     }
 
-    static bool CountsAsAnotherStep(Change change, ref bool direct, ref int steps)
-    {
-        if (change is Joined or ChildRemovedFromAll)
-        {
-            steps++;
-        }
-        else if (!direct)
-        {
-            direct = true;
-            steps++;
-        }
-
-        return steps >= 2;
-    }
+    /// <summary>
+    /// Any other shape of changes is not what a changeset has, so this may allocate.
+    /// </summary>
+    /// <param name="changes">The changes.</param>
+    /// <returns>True when the cycle has two or more write steps.</returns>
+    static bool IsMultiWriteEnumerated(IEnumerable<Change> changes) =>
+        changes.Count(change => change is Joined or ChildRemovedFromAll) + (changes.Any(change => change is not Joined and not ChildRemovedFromAll) ? 1 : 0) >= 2;
 
     static bool IsVerifyDrift(bool verifying, Exception exception) =>
         verifying && IsMissingReceiptTable(exception);
 
-    async Task<IEnumerable<FailedPartition>> ApplyCycle(DbContextScope<ReadModelDbContext> scope, Key key, string id, IChangeset<AppendedEvent, ExpandoObject> changeset, EventSequenceNumber eventSequenceNumber, SinkWriteMode mode)
+    async Task<IEnumerable<FailedPartition>> ApplyCycle(CycleWrite write)
     {
-        var nonJoinedChanges = changeset.Changes
+        var nonJoinedChanges = write.Changeset.Changes
             .Where(c => c is not Joined and not ChildRemovedFromAll)
             .ToArray();
-        var wroteDirect = await RunInCycleTransaction(scope, eventSequenceNumber, nonJoinedChanges.Length > 0, () => ApplyJoinsThenDirectChanges(scope, key, id, changeset, nonJoinedChanges, eventSequenceNumber, mode));
+        var wroteDirect = await RunInCycleTransaction(write.Scope, write.SequenceNumber, nonJoinedChanges.Length > 0, () => ApplyJoinsThenDirectChanges(write, nonJoinedChanges));
         if (wroteDirect)
         {
-            await SqlCompositeKeyShadow.Stamp(scope.DbContext, key, id, _logger);
+            await SqlCompositeKeyShadow.Stamp(write.Scope.DbContext, write.Key, write.Id, _logger);
         }
 
         return _noFailedPartitions;
     }
 
-    async Task<bool> ApplyJoinsThenDirectChanges(DbContextScope<ReadModelDbContext> scope, Key key, string id, IChangeset<AppendedEvent, ExpandoObject> changeset, Change[] nonJoinedChanges, EventSequenceNumber eventSequenceNumber, SinkWriteMode mode)
+    async Task<bool> ApplyJoinsThenDirectChanges(CycleWrite write, Change[] nonJoinedChanges)
     {
-        await ApplyJoinsAndChildRemovals(scope, changeset, eventSequenceNumber);
-        if (nonJoinedChanges.Length == 0 || !await ShouldWriteDirectChanges(scope, id, changeset, nonJoinedChanges))
+        var scope = write.Scope;
+        await ApplyJoinsAndChildRemovals(scope, write.Changeset, write.SequenceNumber);
+        if (nonJoinedChanges.Length == 0 || !await ShouldWriteDirectChanges(scope, write.Id, write.Changeset, nonJoinedChanges))
         {
             return false;
         }
 
-        var entry = await GetOrAttachEntity(scope, id, key);
-        if (IsSkippedByWatermark(entry, mode, eventSequenceNumber))
+        var entry = await GetOrAttachEntity(scope, write.Id, write.Key);
+        if (IsSkippedByWatermark(entry, write.Mode, write.SequenceNumber))
         {
             entry.State = EntityState.Detached;
             return false;
         }
 
         ApplyChangesToEntity(entry, nonJoinedChanges);
-        AdvanceLastHandledSequenceNumber(entry, eventSequenceNumber);
-        await SaveRecoveringFromInsertRace(scope, entry, new PendingWrite(id, nonJoinedChanges, eventSequenceNumber));
+        AdvanceLastHandledSequenceNumber(entry, write.SequenceNumber);
+        await SaveRecoveringFromInsertRace(scope, entry, new PendingWrite(write.Id, nonJoinedChanges, write.SequenceNumber));
         return true;
     }
 
@@ -134,7 +117,6 @@ public partial class Sink
 
         // A receipt only protects a retry after a lost commit acknowledgment, so a strategy that never retries needs none.
         var state = new CycleAttemptState(Guid.CreateVersion7(), SinkCycleReceipt.ToStored(sequenceNumber.Value), strategy.RetriesOnFailure);
-        var receiptId = state.ReceiptId;
         var insertRaceReruns = 0;
         var repaired = false;
         var tableRepaired = false;
@@ -189,34 +171,82 @@ public partial class Sink
         }
         finally
         {
-            if (state.UsesReceipt)
-            {
-                await CleanUpReceipts(context, receiptId);
-            }
+            await CleanUpReceiptsWhenUsed(context, state);
         }
     }
+
+    Task CleanUpReceiptsWhenUsed(ReadModelDbContext context, CycleAttemptState state) =>
+        state.UsesReceipt ? CleanUpReceipts(context, state.ReceiptId) : Task.CompletedTask;
 
     async Task RunCycleAttempt(ReadModelDbContext context, CycleAttemptState state, Func<Task<bool>> body)
     {
         context.ChangeTracker.Clear();
-        if (state.Attempts++ > 0 && state.UsesReceipt && await ProbeReceipt(context, state.ReceiptId, state.StartedAt, state.Sequence))
-        {
-            // A previous attempt committed and only its acknowledgment was lost.
-            return;
-        }
-
-        state.WroteDirect = false;
         if (!state.UsesReceipt)
         {
             state.WroteDirect = await body();
             return;
         }
 
+        await RunReceiptedCycleAttempt(context, state, body);
+    }
+
+    async Task RunReceiptedCycleAttempt(ReadModelDbContext context, CycleAttemptState state, Func<Task<bool>> body)
+    {
+        if (state.Attempts++ > 0 && await ProbeReceipt(context, state.ReceiptId, state.StartedAt, state.Sequence))
+        {
+            // A previous attempt committed and only its acknowledgment was lost.
+            return;
+        }
+
+        state.WroteDirect = false;
+
         var receipt = new SinkCycleReceipt(state.ReceiptId, ActiveTableName, state.Sequence, 0);
         context.SinkCycleReceipts.Add(receipt);
         state.WroteDirect = await body();
         await FlushReceiptIfPending(context, receipt);
         state.StartedAt ??= receipt.CreatedAt;
+    }
+
+    /// <summary>
+    /// Counts the write steps of a changeset. Joins and child removals count one step each and every other change together counts as one.
+    /// </summary>
+    struct WriteStepCount
+    {
+        int _steps;
+        bool _direct;
+
+        internal bool AddReachesTwo(Change change)
+        {
+            if (change is Joined or ChildRemovedFromAll)
+            {
+                _steps++;
+            }
+            else if (!_direct)
+            {
+                _direct = true;
+                _steps++;
+            }
+
+            return _steps >= 2;
+        }
+    }
+
+    /// <summary>
+    /// The inputs of a multi-write cycle. It is created only for a multi-write cycle, so a single write allocates nothing for it.
+    /// </summary>
+    sealed record CycleWrite
+    {
+        internal required DbContextScope<ReadModelDbContext> Scope { get; init; }
+
+        internal required Key Key { get; init; }
+
+        internal required string Id { get; init; }
+
+        internal required IChangeset<AppendedEvent, ExpandoObject> Changeset { get; init; }
+
+        internal required EventSequenceNumber SequenceNumber { get; init; }
+
+        internal required SinkWriteMode Mode { get; init; }
     }
 
     sealed class CycleAttemptState(Guid receiptId, long sequence, bool usesReceipt)

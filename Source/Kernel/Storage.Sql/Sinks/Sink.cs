@@ -205,7 +205,7 @@ public partial class Sink : ISink, ICanReconcileIndexes, ISinkCompositeKeyLookup
 
         if (IsMultiWrite(changeset.Changes))
         {
-            return await ApplyCycle(scope, key, id, changeset, eventSequenceNumber, mode);
+            return await ApplyCycle(new CycleWrite { Scope = scope, Key = key, Id = id, Changeset = changeset, SequenceNumber = eventSequenceNumber, Mode = mode });
         }
 
         await ApplyJoinsAndChildRemovals(scope, changeset, eventSequenceNumber);
