@@ -153,33 +153,13 @@ public partial class Database
 #pragma warning disable CA2000
         var dbContext = await CreateExistingContext(new ExistingContextRequest<ReadModelDbContext>(
             new(DatabaseKind.ReadModels, eventStore.Value, @namespace.Value),
-            $"readmodel-read:{eventStore.Value}:{@namespace.Value}:{tableName}",
+            $"readmodel-read:{eventStore.Value}:{@namespace.Value}",
             _readModelOptions,
             options => createDbContext(options, tableName),
-            EnsureExistingTableMigrated));
+            (context, _) => readModelMigrator.ProbeExistingTable(context.TableName, context)));
 #pragma warning restore CA2000
 
         return dbContext is null ? null : new DbContextScope<ReadModelDbContext>(dbContext, static () => { });
-    }
-
-    async Task<bool> EnsureExistingTableMigrated(ReadModelDbContext context, SqlTarget target)
-    {
-        if (target.ConnectionString.GetDatabaseType() != DatabaseType.Sqlite)
-        {
-            return await readModelMigrator.EnsureExistingTableMigrated(context.TableName, context);
-        }
-
-        var migrationLock = DatabaseMigrationLock.For(target.ConnectionString);
-        await migrationLock.Semaphore.WaitAsync();
-        try
-        {
-            RefreshMigrationCaches(migrationLock);
-            return await readModelMigrator.EnsureExistingTableMigrated(context.TableName, context);
-        }
-        finally
-        {
-            migrationLock.Semaphore.Release();
-        }
     }
 
     sealed record ExistingContextRequest<TDbContext>(

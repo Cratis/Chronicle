@@ -197,7 +197,7 @@ public partial class Database(IServiceProvider serviceProvider, IOptions<Chronic
             $"namespace-read:{eventStore.Value}:{@namespace.Value}",
             _namespaceOptions,
             static options => new NamespaceDbContext(options),
-            async (context, _) => !(await context.Database.GetPendingMigrationsAsync()).Any()));
+            (context, _) => TableMigrator<NamespaceDbContext>.TableExists(context, WellKnownTableNames.ReplayedReadModels)));
 #pragma warning restore CA2000
 
         return dbContext is null ? null : new DbContextScope<NamespaceDbContext>(dbContext, static () => { });

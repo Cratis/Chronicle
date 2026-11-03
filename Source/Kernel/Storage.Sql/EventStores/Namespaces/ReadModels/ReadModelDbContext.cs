@@ -59,6 +59,8 @@ public class ReadModelDbContext(
         v => v.ToString("D"),
         v => Guid.Parse(v));
 
+    IReadOnlyList<ProjectedColumn> _columns = columns;
+
     /// <summary>
     /// Gets the JSON serializer options used to round-trip JSON column values.
     /// </summary>
@@ -72,7 +74,7 @@ public class ReadModelDbContext(
     /// <summary>
     /// Gets the column metadata used to register the dynamic entity and create the underlying table.
     /// </summary>
-    public IReadOnlyList<ProjectedColumn> Columns => columns;
+    public IReadOnlyList<ProjectedColumn> Columns => _columns;
 
     /// <summary>
     /// Gets the dynamic entity set for this read model's table.
@@ -84,9 +86,19 @@ public class ReadModelDbContext(
     /// </summary>
     internal DbSet<ReplayPromotion> ReplayPromotions => Set<ReplayPromotion>();
 
+    /// <summary>
+    /// Gets a value indicating whether this context only serves a table that already exists, and so never changes its schema.
+    /// </summary>
+    internal bool ExistingOnly { get; private set; }
+
     /// <inheritdoc/>
     public async Task EnsureTableExists()
     {
+        if (ExistingOnly)
+        {
+            throw new InvalidOperationException($"Table '{tableName}' is read as it is; a read never creates or alters it.");
+        }
+
         await migrator.EnsureTableMigrated(tableName, this);
     }
 
@@ -97,11 +109,27 @@ public class ReadModelDbContext(
     internal Task EnsureReplayPromotions() => migrator.EnsureReplayPromotions(this);
 
     /// <summary>
+    /// Narrows this context to the columns an existing table has, and forbids it from changing the table.
+    /// </summary>
+    /// <param name="served">The columns of the existing table.</param>
+    /// <remarks>Call before the model is first used; the model is built over these columns.</remarks>
+    internal void ServeExisting(IReadOnlyList<ProjectedColumn> served)
+    {
+        _columns = served;
+        ExistingOnly = true;
+    }
+
+    /// <summary>
     /// Clears stale migration state for this table and restores shadows after an old-kernel promotion.
     /// </summary>
     /// <returns>An awaitable task.</returns>
     internal Task RepairShadowColumns()
     {
+        if (ExistingOnly)
+        {
+            return Task.CompletedTask;
+        }
+
         migrator.ClearMigrationCache($"{Database.GetConnectionString()}:{TableName}");
         return EnsureTableExists();
     }
@@ -136,7 +164,7 @@ public class ReadModelDbContext(
             entity.ToTable(tableName);
 
             ProjectedColumn? keyColumn = null;
-            foreach (var column in columns)
+            foreach (var column in _columns)
             {
                 var propertyBuilder = entity.IndexerProperty(column.ClrType, column.Name);
                 propertyBuilder.IsRequired(!column.IsNullable);

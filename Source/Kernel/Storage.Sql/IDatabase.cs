@@ -51,12 +51,12 @@ public interface IDatabase
     Task<DbContextScope<NamespaceDbContext>> Namespace(EventStoreName eventStore, EventStoreNamespaceName @namespace);
 
     /// <summary>
-    /// Gets a database context scope for an event store namespace that has already been provisioned and migrated.
+    /// Gets a database context scope for an event store namespace whose storage already exists and holds the replayed read models.
     /// Unlike <see cref="Namespace"/> it never creates or migrates a database, a schema, a table or a database name binding.
     /// </summary>
     /// <param name="eventStore">The name of the event store.</param>
     /// <param name="namespace">The name of the namespace.</param>
-    /// <returns>A <see cref="DbContextScope{NamespaceDbContext}"/>, or null when the namespace storage is absent or not fully migrated.</returns>
+    /// <returns>A <see cref="DbContextScope{NamespaceDbContext}"/>, or null when the namespace storage, or the table of replayed read models, is absent. A later pending migration does not make it absent.</returns>
     Task<DbContextScope<NamespaceDbContext>?> ExistingNamespace(EventStoreName eventStore, EventStoreNamespaceName @namespace);
 
     /// <summary>

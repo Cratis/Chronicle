@@ -22,8 +22,8 @@ public class a_database_without_read_model_storage : a_sqlite_database
             NullLogger<ReadModelMigrator>.Instance);
         _readModelMigrator.EnsureTableMigrated(Arg.Any<string>(), Arg.Any<ReadModelDbContext>())
             .Returns(call => migrator.EnsureTableMigrated(call.Arg<string>(), call.Arg<ReadModelDbContext>()));
-        _readModelMigrator.EnsureExistingTableMigrated(Arg.Any<string>(), Arg.Any<ReadModelDbContext>())
-            .Returns(call => migrator.EnsureExistingTableMigrated(call.Arg<string>(), call.Arg<ReadModelDbContext>()));
+        _readModelMigrator.ProbeExistingTable(Arg.Any<string>(), Arg.Any<ReadModelDbContext>())
+            .Returns(call => migrator.ProbeExistingTable(call.Arg<string>(), call.Arg<ReadModelDbContext>()));
     }
 
     /// <summary>

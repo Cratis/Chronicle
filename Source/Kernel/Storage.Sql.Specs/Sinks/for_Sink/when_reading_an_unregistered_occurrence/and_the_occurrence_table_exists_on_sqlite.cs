@@ -5,6 +5,6 @@ namespace Cratis.Chronicle.Storage.Sql.Sinks.for_Sink.when_reading_an_unregister
 
 public class and_the_occurrence_table_exists_on_sqlite : and_the_occurrence_table_exists<SqlSinkHarness>
 {
-    [Fact] void should_not_fail_the_read() => _error.ShouldBeNull();
+    [Fact] void should_not_fail_the_read() => PageReceived().ShouldBeTrue();
     [Fact] void should_return_the_instance_of_the_occurrence() => InstanceCount().ShouldEqual(1);
 }

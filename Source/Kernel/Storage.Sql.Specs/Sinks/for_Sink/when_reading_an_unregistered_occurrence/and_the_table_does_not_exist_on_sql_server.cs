@@ -8,6 +8,7 @@ public class and_the_table_does_not_exist_on_sql_server(SqlServerFixture fixture
 {
     protected override SqlServerSinkHarness CreateSqlHarness() => new() { Fixture = fixture };
 
+    [Fact] void should_receive_a_page() => PageReceived().ShouldBeTrue();
     [Fact] void should_not_create_the_table() => _created.ShouldBeFalse();
     [Fact] void should_return_no_instances() => InstanceCount().ShouldEqual(0);
 }

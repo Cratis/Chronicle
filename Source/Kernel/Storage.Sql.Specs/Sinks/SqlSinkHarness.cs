@@ -52,6 +52,9 @@ public class SqlSinkHarness : ISqlSinkHarness
     /// </summary>
     public string ConnectionString { get; init; }
 
+    /// <inheritdoc/>
+    public ReadActivity Reads { get; } = new();
+
     /// <summary>
     /// Gets interceptors that let concurrency specs arrange an exact command interleaving.
     /// </summary>
@@ -85,7 +88,11 @@ public class SqlSinkHarness : ISqlSinkHarness
         var database = Substitute.For<IDatabase>();
         database.LiveQueryPollingInterval.Returns(TimeSpan.FromMilliseconds(50));
         database.ReadModelTable(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<string>(), Arg.Any<IReadOnlyList<ProjectedColumn>>(), Arg.Any<ConnectionPurpose>())
-            .Returns(async callInfo => new DbContextScope<ReadModelDbContext>(await CreateContext(callInfo.ArgAt<string>(2)), () => { }));
+            .Returns(async callInfo =>
+            {
+                var finished = Reads.Begin();
+                return new DbContextScope<ReadModelDbContext>(await CreateContext(callInfo.ArgAt<string>(2)), finished);
+            });
         database.ExistingReadModelTable(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<string>(), Arg.Any<IReadOnlyList<ProjectedColumn>>())
             .Returns(callInfo => OpenExistingTable(callInfo.ArgAt<string>(2)));
 
@@ -141,13 +148,15 @@ public class SqlSinkHarness : ISqlSinkHarness
 
     async Task<DbContextScope<ReadModelDbContext>?> OpenExistingTable(string containerName)
     {
+        var finished = Reads.Begin();
         var context = NewContext(containerName);
-        if (await _migrator.EnsureExistingTableMigrated(containerName, context))
+        if (await _migrator.ProbeExistingTable(containerName, context))
         {
-            return new DbContextScope<ReadModelDbContext>(context, () => { });
+            return new DbContextScope<ReadModelDbContext>(context, finished);
         }
 
         await context.DisposeAsync();
+        finished();
         return null;
     }
 

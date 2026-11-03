@@ -18,6 +18,8 @@ namespace Cratis.Chronicle.Storage.Sql.for_Database.given;
 
 public class a_postgresql_database(PostgreSqlFixture fixture) : Specification
 {
+    protected PostgreSqlFixture Fixture => fixture;
+
     internal string ConnectionString;
     internal Database Database;
     internal ServiceProvider Services;
@@ -74,6 +76,65 @@ public class a_postgresql_database(PostgreSqlFixture fixture) : Specification
         await using var command = new NpgsqlCommand(sql, connection);
 #pragma warning restore CA2100
         await command.ExecuteNonQueryAsync();
+    }
+
+    internal readonly ProjectedColumn[] OccurrenceColumns =
+    [
+        new("Id", typeof(string), true, false, false, false),
+        new("Value", typeof(int?), false, false, false, true),
+        new(WellKnownProperties.ReadModelInstanceInitialized, typeof(bool), false, false, false, false)
+    ];
+
+    internal async Task<string[]> PhysicalDatabases()
+    {
+        await using var connection = new NpgsqlConnection(ConnectionString);
+        await connection.OpenAsync();
+        await using var command = new NpgsqlCommand("SELECT datname FROM pg_database WHERE NOT datistemplate ORDER BY datname", connection);
+        await using var reader = await command.ExecuteReaderAsync();
+        var names = new List<string>();
+        while (await reader.ReadAsync())
+        {
+            names.Add(reader.GetString(0));
+        }
+
+        return [.. names];
+    }
+
+    internal async Task<int> BindingCount()
+    {
+        await using var cluster = await Database.Cluster();
+        return await cluster.DbContext.DatabaseNames.CountAsync(row => row.Kind != DatabaseKind.Cluster);
+    }
+
+    internal async Task ProvisionPrimaryTable()
+    {
+        await using var scope = await Database.ReadModelTable(Store, Namespace, "primary", OccurrenceColumns);
+    }
+
+    internal async Task<string> ReadModelConnection() => ConnectionFor(await Binding(DatabaseKind.ReadModels, Store, Namespace));
+
+    internal async Task CreateOlderTable(string connectionString, string table)
+    {
+        await Execute(connectionString, $"CREATE TABLE \"{table}\" (\"Id\" text NOT NULL PRIMARY KEY, \"{WellKnownProperties.ReadModelInstanceInitialized}\" boolean NOT NULL DEFAULT true)");
+        await Execute(connectionString, $"INSERT INTO \"{table}\" (\"Id\") VALUES (\x27one\x27)");
+    }
+
+    /// <summary>
+    /// Gets the columns and indexes of a table, or an empty string when there is no such table.
+    /// </summary>
+    /// <param name="connectionString">The database to look in.</param>
+    /// <param name="table">The table.</param>
+    /// <returns>The sorted columns and indexes.</returns>
+    internal static async Task<string> TableShape(string connectionString, string table)
+    {
+        await using var connection = new NpgsqlConnection(connectionString);
+        await connection.OpenAsync();
+        await using var command = new NpgsqlCommand(
+            "SELECT COALESCE((SELECT string_agg(column_name, \x27,\x27 ORDER BY column_name) FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = @t), \x27\x27) || \x27|\x27 || COALESCE((SELECT string_agg(indexname, \x27,\x27 ORDER BY indexname) FROM pg_indexes WHERE schemaname = current_schema() AND tablename = @t), \x27\x27)",
+            connection);
+        command.Parameters.AddWithValue("t", table);
+        var shape = (string)(await command.ExecuteScalarAsync())!;
+        return shape == "|" ? string.Empty : shape;
     }
 
     async Task Destroy()

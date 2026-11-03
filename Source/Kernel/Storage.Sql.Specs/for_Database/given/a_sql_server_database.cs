@@ -18,10 +18,13 @@ namespace Cratis.Chronicle.Storage.Sql.for_Database.given;
 
 public class a_sql_server_database(SqlServerFixture fixture) : Specification
 {
+    const int DatabaseDoesNotExist = 3701;
+
     internal string ConnectionString;
     internal Database Database;
     internal ServiceProvider Services;
     internal string Store = "a-store";
+    internal string Namespace = "a-namespace";
 
     protected SqlServerFixture Fixture => fixture;
 
@@ -45,6 +48,84 @@ public class a_sql_server_database(SqlServerFixture fixture) : Specification
         Substitute.For<IUniqueConstraintMigrator>(),
         Substitute.For<IReadModelMigrator>());
 
+    internal readonly ProjectedColumn[] OccurrenceColumns =
+    [
+        new("Id", typeof(string), true, false, false, false),
+        new("Value", typeof(int?), false, false, false, true),
+        new(WellKnownProperties.ReadModelInstanceInitialized, typeof(bool), false, false, false, false)
+    ];
+
+    internal async Task<string[]> PhysicalDatabases()
+    {
+        await using var connection = new SqlConnection(ConnectionString);
+        await connection.OpenAsync();
+        await using var command = new SqlCommand("SELECT name FROM sys.databases ORDER BY name", connection);
+        await using var reader = await command.ExecuteReaderAsync();
+        var names = new List<string>();
+        while (await reader.ReadAsync())
+        {
+            names.Add(reader.GetString(0));
+        }
+
+        return [.. names];
+    }
+
+    internal async Task<int> BindingCount()
+    {
+        await using var cluster = await Database.Cluster();
+        return await cluster.DbContext.DatabaseNames.CountAsync(row => row.Kind != DatabaseKind.Cluster);
+    }
+
+    internal async Task ProvisionPrimaryTable()
+    {
+        await using var scope = await Database.ReadModelTable(Store, Namespace, "primary", OccurrenceColumns);
+    }
+
+    internal async Task<string> ReadModelDatabaseName()
+    {
+        await using var cluster = await Database.Cluster();
+        return await cluster.DbContext.DatabaseNames
+            .Where(row => row.Kind == DatabaseKind.ReadModels && row.EventStore == Store && row.Namespace == Namespace)
+            .Select(row => row.PhysicalName)
+            .SingleAsync();
+    }
+
+    internal string ConnectionFor(string name) => new SqlConnectionStringBuilder(ConnectionString) { InitialCatalog = name }.ConnectionString;
+
+    internal async Task CreateOlderTable(string connectionString, string table)
+    {
+        await Execute(connectionString, $"CREATE TABLE [{table}] ([Id] nvarchar(450) NOT NULL PRIMARY KEY, [{WellKnownProperties.ReadModelInstanceInitialized}] bit NOT NULL DEFAULT 1)");
+        await Execute(connectionString, $"INSERT INTO [{table}] ([Id]) VALUES (\x27one\x27)");
+    }
+
+    internal static async Task Execute(string connectionString, string sql)
+    {
+        await using var connection = new SqlConnection(connectionString);
+        await connection.OpenAsync();
+#pragma warning disable CA2100 // Only specification-owned identifiers and constant fixture SQL are accepted.
+        await using var command = new SqlCommand(sql, connection);
+#pragma warning restore CA2100
+        await command.ExecuteNonQueryAsync();
+    }
+
+    /// <summary>
+    /// Gets the columns and indexes of a table, or an empty string when there is no such table.
+    /// </summary>
+    /// <param name="connectionString">The database to look in.</param>
+    /// <param name="table">The table.</param>
+    /// <returns>The sorted columns and indexes.</returns>
+    internal static async Task<string> TableShape(string connectionString, string table)
+    {
+        await using var connection = new SqlConnection(connectionString);
+        await connection.OpenAsync();
+        await using var command = new SqlCommand(
+            "SELECT COALESCE((SELECT STRING_AGG(COLUMN_NAME, \x27,\x27) WITHIN GROUP (ORDER BY COLUMN_NAME) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = SCHEMA_NAME() AND TABLE_NAME = @t), \x27\x27) + \x27|\x27 + COALESCE((SELECT STRING_AGG(i.name, \x27,\x27) WITHIN GROUP (ORDER BY i.name) FROM sys.indexes i WHERE i.object_id = OBJECT_ID(QUOTENAME(SCHEMA_NAME()) + \x27.\x27 + QUOTENAME(@t)) AND i.name IS NOT NULL), \x27\x27)",
+            connection);
+        command.Parameters.AddWithValue("@t", table);
+        var shape = (string)(await command.ExecuteScalarAsync())!;
+        return shape == "|" ? string.Empty : shape;
+    }
+
     async Task Destroy()
     {
         if (ConnectionString is not null)
@@ -54,7 +135,14 @@ public class a_sql_server_database(SqlServerFixture fixture) : Specification
                 var databases = await cluster.DbContext.DatabaseNames.Where(row => row.Kind != DatabaseKind.Cluster).Select(row => row.PhysicalName).ToArrayAsync();
                 foreach (var name in databases)
                 {
-                    await fixture.DropDatabase(new SqlConnectionStringBuilder(ConnectionString) { InitialCatalog = name }.ConnectionString);
+                    try
+                    {
+                        await fixture.DropDatabase(new SqlConnectionStringBuilder(ConnectionString) { InitialCatalog = name }.ConnectionString);
+                    }
+                    catch (SqlException ex) when (ex.Number == DatabaseDoesNotExist)
+                    {
+                        // A binding whose database a read never created, which is what the reads under specification must leave.
+                    }
                 }
             }
 

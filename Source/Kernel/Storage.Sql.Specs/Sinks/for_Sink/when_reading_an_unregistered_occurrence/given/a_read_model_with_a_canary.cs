@@ -20,9 +20,10 @@ public abstract class a_read_model_with_a_canary<THarness> : for_Sink.given.an_a
 {
     protected const string Canary = "canary";
     static readonly TimeSpan _deadline = TimeSpan.FromSeconds(30);
+    static readonly TimeSpan _settle = TimeSpan.FromMilliseconds(300);
 
     protected ReadModelInstances? _instances;
-    protected Exception? _error;
+    protected bool _received;
 
     async Task Establish()
     {
@@ -31,41 +32,42 @@ public abstract class a_read_model_with_a_canary<THarness> : for_Sink.given.an_a
     }
 
     /// <summary>
-    /// Reads an occurrence through the sink the way the read boundary does, keeping the outcome for the facts.
+    /// Reads an occurrence through the sink the way the read boundary does, keeping the page it returned.
     /// </summary>
     /// <param name="occurrence">The occurrence named by the caller.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
+    /// <remarks>
+    /// A failure is not caught: every occurrence read here is answered with a page, and one that is not fails the specification.
+    /// </remarks>
     protected async Task ReadOccurrence(string occurrence)
     {
-        try
-        {
-            _instances = await _sink.GetInstances(occurrence, 0, 10, ReadModelInstanceVisibility.InitializedOnly);
-        }
-        catch (Exception error)
-        {
-            _error = error;
-        }
+        _instances = await _sink.GetInstances(occurrence, 0, 10, ReadModelInstanceVisibility.InitializedOnly);
+        _received = true;
     }
 
     /// <summary>
-    /// Observes an occurrence through the sink the way the read boundary does, keeping the first page or failure.
+    /// Observes an occurrence through the sink the way the read boundary does, keeping the first page it delivered.
     /// </summary>
     /// <param name="occurrence">The occurrence named by the caller.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
+    /// <remarks>
+    /// A failure or a missing page is not caught: the wait times out and the specification fails, so storage is only
+    /// inspected once the query has answered. The subscription is ended and any poll still in flight is awaited before the specification inspects or tears down storage.
+    /// </remarks>
     protected async Task ObserveOccurrence(string occurrence)
     {
         var first = new TaskCompletionSource<IEnumerable<ExpandoObject>>(TaskCreationOptions.RunContinuationsAsynchronously);
-        using var subscription = _sink.ObserveInstances(occurrence, 0, 10, ReadModelInstanceVisibility.InitializedOnly)
-            .Subscribe(page => first.TrySetResult(page), error => first.TrySetException(error));
-        try
+        using (_sink.ObserveInstances(occurrence, 0, 10, ReadModelInstanceVisibility.InitializedOnly)
+            .Subscribe(page => first.TrySetResult(page), error => first.TrySetException(error)))
         {
             var page = (await first.Task.WaitAsync(_deadline)).ToArray();
             _instances = new ReadModelInstances(page, page.Length);
+            _received = true;
         }
-        catch (Exception error)
-        {
-            _error = error;
-        }
+
+        // Unsubscribing stops further polls but does not wait for one already running, which could still be
+        // creating or reading a table while the specification inspects or drops storage.
+        await _sqlHarness.Reads.WhenQuiet(_settle, _deadline);
     }
 
     /// <summary>
@@ -93,6 +95,12 @@ public abstract class a_read_model_with_a_canary<THarness> : for_Sink.given.an_a
     /// </summary>
     /// <returns>The number of instances.</returns>
     protected int InstanceCount() => _instances?.Instances.Count() ?? 0;
+
+    /// <summary>
+    /// Gets whether the read delivered a page, which is what makes inspecting storage afterwards meaningful.
+    /// </summary>
+    /// <returns>True if a page, possibly empty, was received.</returns>
+    protected bool PageReceived() => _received;
 
     Task CreateCanary() => CreateTable(Canary);
 }

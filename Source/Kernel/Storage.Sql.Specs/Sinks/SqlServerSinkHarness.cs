@@ -30,6 +30,9 @@ public class SqlServerSinkHarness : ISqlSinkHarness
     /// <inheritdoc/>
     public string ConnectionString { get; private set; } = string.Empty;
 
+    /// <inheritdoc/>
+    public ReadActivity Reads { get; } = new();
+
     /// <summary>
     /// Gets the container supplying isolated databases.
     /// </summary>
@@ -83,9 +86,10 @@ public class SqlServerSinkHarness : ISqlSinkHarness
 
     async Task<DbContextScope<ReadModelDbContext>> OpenTable(string containerName)
     {
+        var finished = Reads.Begin();
         var context = OpenContext(containerName);
         await Fixture!.Timings.Run("ef-table-ensure", context.EnsureTableExists);
-        return new DbContextScope<ReadModelDbContext>(context, () => { });
+        return new DbContextScope<ReadModelDbContext>(context, finished);
     }
 
     /// <summary>
@@ -95,13 +99,15 @@ public class SqlServerSinkHarness : ISqlSinkHarness
     /// <returns>A <see cref="DbContextScope{TDbContext}"/> for the container, or null when it does not exist.</returns>
     async Task<DbContextScope<ReadModelDbContext>?> OpenExistingTable(string containerName)
     {
+        var finished = Reads.Begin();
         var context = OpenContext(containerName);
-        if (await _migrator.EnsureExistingTableMigrated(containerName, context))
+        if (await _migrator.ProbeExistingTable(containerName, context))
         {
-            return new DbContextScope<ReadModelDbContext>(context, () => { });
+            return new DbContextScope<ReadModelDbContext>(context, finished);
         }
 
         await context.DisposeAsync();
+        finished();
         return null;
     }
 

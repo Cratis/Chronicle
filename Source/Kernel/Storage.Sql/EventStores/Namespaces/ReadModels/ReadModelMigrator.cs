@@ -45,14 +45,36 @@ public class ReadModelMigrator(
     }
 
     /// <inheritdoc/>
-    public async Task<bool> EnsureExistingTableMigrated(string tableName, ReadModelDbContext context)
+    public async Task<bool> ProbeExistingTable(string tableName, ReadModelDbContext context)
     {
         if (!await TableMigrator<ReadModelDbContext>.TableExists(context, tableName))
         {
             return false;
         }
 
-        await EnsureMissingColumnsAdded(tableName, context);
+        var connectionString = context.Database.GetConnectionString() ?? string.Empty;
+        var columnsKey = string.Join('|', context.Columns.Select(c => c.Name)) + string.Join('|', ShadowColumns.For(context).Select(c => c.Name));
+        var cacheKey = $"{connectionString}:{tableName}:probe:{columnsKey}";
+        if (_columnMigrations.ContainsKey(cacheKey))
+        {
+            context.ServeExisting(context.Columns);
+            return true;
+        }
+
+        var existingColumns = await GetExistingColumnNames(context, tableName);
+        var served = ExistingTableShape.Serve(context, existingColumns);
+        if (served is null)
+        {
+            return false;
+        }
+
+        // Only a complete shape is remembered; a table that may still be migrated is looked at again.
+        if (served.Count == context.Columns.Count)
+        {
+            _columnMigrations.TryAdd(cacheKey, true);
+        }
+
+        context.ServeExisting(served);
         return true;
     }
 

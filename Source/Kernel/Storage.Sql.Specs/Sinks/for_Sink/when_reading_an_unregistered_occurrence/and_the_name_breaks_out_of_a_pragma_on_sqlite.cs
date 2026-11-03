@@ -18,6 +18,7 @@ public class and_the_name_breaks_out_of_a_pragma_on_sqlite : given.a_read_model_
         _created = await TableExists(Occurrence);
     }
 
+    [Fact] void should_receive_a_page() => PageReceived().ShouldBeTrue();
     [Fact] async Task should_keep_the_canary() => (await CanaryExists()).ShouldBeTrue();
     [Fact] void should_not_create_a_table() => _created.ShouldBeFalse();
 }

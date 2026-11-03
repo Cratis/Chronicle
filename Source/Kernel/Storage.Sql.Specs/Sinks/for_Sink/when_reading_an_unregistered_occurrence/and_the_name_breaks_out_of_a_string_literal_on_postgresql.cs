@@ -8,6 +8,7 @@ public class and_the_name_breaks_out_of_a_string_literal_on_postgresql(PostgreSq
 {
     protected override PostgreSqlSinkHarness CreateSqlHarness() => new() { Fixture = fixture };
 
+    [Fact] void should_receive_a_page() => PageReceived().ShouldBeTrue();
     [Fact] async Task should_keep_the_canary() => (await CanaryExists()).ShouldBeTrue();
     [Fact] void should_return_no_instances() => InstanceCount().ShouldEqual(0);
     [Fact] void should_not_create_a_table() => _created.ShouldBeFalse();
