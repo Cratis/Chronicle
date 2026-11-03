@@ -19,6 +19,7 @@ export * from './Causation';
 export * from './ClosedStream';
 export * from './ClosedStreamOrigin';
 export * from './ClosedStreams';
+export * from './Compensate';
 export * from './CompleteStream';
 export * from './CompleteStreamError';
 export * from './CompleteStreamOutcome';
