@@ -3,20 +3,20 @@ using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Observation;
 
 [EventType]
-public record MoneyDeposited(decimal Amount);
+public record BatchMoneyDeposited(decimal Amount);
 
 [EventType]
-public record MoneyWithdrawn(decimal Amount);
+public record BatchMoneyWithdrawn(decimal Amount);
 
-public record Account(decimal Balance)
+public record AccountBalance(decimal Balance)
 {
-    [Observes<MoneyDeposited>]
-    [Observes<MoneyWithdrawn>]
-    public static Account? Reduce(EventBatch events, Account? current, BatchContext context) =>
-        events.Aggregate(current ?? new Account(0), (account, e) => e.Event switch
+    [Observes<BatchMoneyDeposited>]
+    [Observes<BatchMoneyWithdrawn>]
+    public static AccountBalance? Reduce(EventBatch events, AccountBalance? current, BatchContext context) =>
+        events.Aggregate(current ?? new AccountBalance(0), (account, e) => e.Event switch
         {
-            MoneyDeposited deposited => account with { Balance = account.Balance + deposited.Amount },
-            MoneyWithdrawn withdrawn => account with { Balance = account.Balance - withdrawn.Amount },
+            BatchMoneyDeposited deposited => account with { Balance = account.Balance + deposited.Amount },
+            BatchMoneyWithdrawn withdrawn => account with { Balance = account.Balance - withdrawn.Amount },
             _ => account
         });
 }

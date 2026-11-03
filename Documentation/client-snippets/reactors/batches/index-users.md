@@ -12,6 +12,26 @@ public record UserRenamed(string NewName);
 [EventType]
 public record UserEmailChanged(string Email);
 
+public record UserDocument(EventSourceId Id, string Name);
+
+public record BulkUpsertFailure(EventSourceId EventSourceId, Exception Exception);
+
+public record BulkUpsertThrottled(EventSourceId EventSourceId, TimeSpan RetryAfter);
+
+public record BulkUpsertResponse(IEnumerable<BulkUpsertFailure> Failures, IEnumerable<BulkUpsertThrottled> Throttled);
+
+public class UnknownUserEvent(object @event) : Exception($"Unknown user event: {@event}");
+
+public interface ISearchIndex
+{
+    Task<BulkUpsertResponse> BulkUpsert(IEnumerable<UserDocument> documents, CancellationToken cancellationToken);
+}
+
+public interface IEmailConfirmations
+{
+    Task Send(EventSourceId accountId, string email);
+}
+
 public class Users(ISearchIndex index, IEmailConfirmations confirmations) : IReactor
 {
     [Observes<UserRegistered>]
