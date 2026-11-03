@@ -80,6 +80,10 @@ Separators, default values, and mapped values are literals and are not renamed. 
 
 A path that goes nowhere is rejected at registration with `InvalidMigrationPropertyForEventType`, naming the path so you can see which segment is wrong.
 
+## Properties inside the elements of a collection
+
+A property on every element of a list is addressed with `Select`: `DefaultValue(m => m.Days.Select(day => day.Activity), "work")` gives each element that does not carry an `activity` the default. The path is written `days[].activity`, and a raw string path may use the same form. The kernel applies the operation element by element and keeps the collection. `RenamedFrom` and `MapValues` accept the same form when their sources are written with the same `days[].` prefix. A path that reaches into a collection without `[]` is refused rather than replacing the collection with an object.
+
 ## When you need no operations at all
 
 Adding or removing an **optional** property, at any depth, needs a migration class but no property operations inside it. The [concept page](../concepts/event-type-migrations.mdx#when-no-operations-are-needed) explains why:

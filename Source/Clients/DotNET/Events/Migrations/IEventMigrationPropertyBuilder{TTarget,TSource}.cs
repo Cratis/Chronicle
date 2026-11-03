@@ -68,6 +68,17 @@ public interface IEventMigrationPropertyBuilder<TTarget, TSource>
         TProperty value);
 
     /// <summary>
+    /// Provide a default value for a property that did not exist on the elements of a collection in the source generation.
+    /// </summary>
+    /// <typeparam name="TElementProperty">The type of the property on each element.</typeparam>
+    /// <param name="targetProperty">Expression selecting the property on every element, such as <c language="csharp">e => e.Days.Select(day => day.Activity)</c>.</param>
+    /// <param name="value">The default value, applied to each element that does not carry the property.</param>
+    /// <returns>The builder for continued configuration.</returns>
+    IEventMigrationPropertyBuilder<TTarget, TSource> DefaultValue<TElementProperty>(
+        Expression<Func<TTarget, IEnumerable<TElementProperty>>> targetProperty,
+        TElementProperty value);
+
+    /// <summary>
     /// Translate the individual values of a property that mean something different in the target generation.
     /// </summary>
     /// <typeparam name="TProperty">The type of the target property.</typeparam>
