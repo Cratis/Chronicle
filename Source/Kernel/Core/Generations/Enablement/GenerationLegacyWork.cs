@@ -2,13 +2,13 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using Cratis.Choreography.Jobs;
+using Cratis.Choreography.Storage.Jobs;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Projections.Generations.Enablement;
 using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Chronicle.Storage;
-using Cratis.Orleans.Jobs;
-using Cratis.Orleans.Storage.Jobs;
-using JobError = Cratis.Orleans.Storage.Jobs.JobError;
+using JobError = Cratis.Choreography.Storage.Jobs.JobError;
 
 namespace Cratis.Chronicle.Generations.Enablement;
 

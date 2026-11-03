@@ -2,9 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reflection;
+using Cratis.Choreography.Jobs;
+using Cratis.Choreography.Storage.MongoDB.Jobs;
 using Cratis.Chronicle.Storage.MongoDB.Sinks;
-using Cratis.Orleans.Jobs;
-using Cratis.Orleans.Storage.MongoDB.Jobs;
 using MongoDB.Bson;
 using MongoDB.Driver;
 
