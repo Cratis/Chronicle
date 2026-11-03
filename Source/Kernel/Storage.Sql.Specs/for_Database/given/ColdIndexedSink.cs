@@ -32,6 +32,11 @@ static class ColdIndexedSink
     internal const string IntegerValueSchema = """{"type":"object","properties":{"id":{"type":"string"},"value":{"type":"integer"}}}""";
 
     /// <summary>
+    /// A schema whose identifier is spelled <c language="csharp">ID</c>, which earlier releases stored beside a synthesized <c language="csharp">Id</c> key.
+    /// </summary>
+    internal const string UpperCaseIdentifierSchema = """{"type":"object","properties":{"ID":{"type":"string"},"value":{"type":"integer"}}}""";
+
+    /// <summary>
     /// A schema with a decimal key, which SQLite orders through a shadow column.
     /// </summary>
     internal const string DecimalKeySchema = """{"type":"object","properties":{"id":{"type":"number","format":"decimal"},"value":{"type":"integer"}}}""";
@@ -55,12 +60,13 @@ static class ColdIndexedSink
     /// <param name="schema">The JSON schema of the read model.</param>
     /// <param name="eventStore">The event store the sink belongs to.</param>
     /// <param name="namespace">The namespace the sink belongs to.</param>
+    /// <param name="occurrence">The occurrence to read.</param>
     /// <returns>What the two queries returned.</returns>
-    internal static Task<OccurrenceRead> ReadTheOccurrence(IDatabase database, string schema, string eventStore = "store", string @namespace = "namespace") =>
+    internal static Task<OccurrenceRead> ReadTheOccurrence(IDatabase database, string schema, string eventStore = "store", string @namespace = "namespace", string occurrence = Occurrence) =>
         Resolve(database, schema, eventStore, @namespace, async sink =>
         {
-            var instances = await sink.GetInstances(Occurrence, 0, 10, ReadModelInstanceVisibility.InitializedOnly);
-            var observed = await sink.ObserveInstances(Occurrence, 0, 10, ReadModelInstanceVisibility.InitializedOnly).Take(1).ToTask().WaitAsync(TimeSpan.FromSeconds(30));
+            var instances = await sink.GetInstances(occurrence, 0, 10, ReadModelInstanceVisibility.InitializedOnly);
+            var observed = await sink.ObserveInstances(occurrence, 0, 10, ReadModelInstanceVisibility.InitializedOnly).Take(1).ToTask().WaitAsync(TimeSpan.FromSeconds(30));
             return new OccurrenceRead(instances.TotalCount, instances.Instances.Count(), observed.Count());
         });
 
