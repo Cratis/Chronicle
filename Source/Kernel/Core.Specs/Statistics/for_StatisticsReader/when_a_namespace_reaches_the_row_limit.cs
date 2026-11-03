@@ -27,7 +27,7 @@ public class when_a_namespace_reaches_the_row_limit : given.a_statistics_reader
             });
         var factory = Substitute.For<IGrainFactory>();
         factory.GetGrain<Namespaces.INamespaces>("store").Returns(_namespaces);
-        _reader = new(_readModels, factory, _logger);
+        _reader = new(_readModels, factory, _initialization, _logger);
         _namespaces.GetAll().Returns(["capped"]);
         _readModels.GetInstances(Arg.Any<GetInstancesRequest>(), Arg.Any<CallContext>()).Returns(new GetInstancesResponse
         {
