@@ -28,6 +28,8 @@ internal sealed class EventSources(
     /// <inheritdoc/>
     public Task<global::Cratis.Chronicle.Contracts.Queries.QueryResult<IEnumerable<global::Cratis.Chronicle.Contracts.EventSources.EventSourceDetailsResponse>>> AllEventSources(global::Cratis.Chronicle.Contracts.EventSources.AllEventSourcesRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         QueryExecutor.Execute<IEnumerable<global::Cratis.Chronicle.Contracts.EventSources.EventSourceDetailsResponse>>(
+            callContext,
+            new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore),
             async () =>
             {
                 var result = await global::Cratis.Chronicle.EventSources.EventSourceDetails.AllEventSources((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, storage);
@@ -38,6 +40,8 @@ internal sealed class EventSources(
     /// <inheritdoc/>
     public IObservable<global::Cratis.Chronicle.Contracts.Queries.QueryResult<IEnumerable<global::Cratis.Chronicle.Contracts.EventSources.EventSourceDetailsResponse>>> ObserveEventSources(global::Cratis.Chronicle.Contracts.EventSources.ObserveEventSourcesRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         QueryExecutor.Execute<IEnumerable<global::Cratis.Chronicle.Contracts.EventSources.EventSourceDetailsResponse>>(
+            callContext,
+            new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore),
             () => global::Cratis.Chronicle.EventSources.EventSourceDetails.ObserveEventSources((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, storage)
                 .CompletedBy(callContext.CancellationToken)
                 .Select(_ => (IEnumerable<global::Cratis.Chronicle.Contracts.EventSources.EventSourceDetailsResponse>)_.Select(ToEventSourceDetailsResponse).ToList()),

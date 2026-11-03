@@ -33,6 +33,56 @@ public class EventCompliance(
     }
 
     /// <inheritdoc/>
+    public async Task<AppendedEvent> ReleaseReportingErasure(AppendedEvent @event, JsonSchema schema)
+    {
+        var contentAsJson = expandoObjectConverter.ToJsonObject(@event.Content, schema);
+        var released = await complianceManager.ReleaseReportingErasedProperties(
+            @event.Context.EventStore,
+            @event.Context.Namespace,
+            schema,
+            @event.Context.Subject.Value,
+            contentAsJson);
+
+        return @event with
+        {
+            Content = expandoObjectConverter.ToExpandoObject(released.Value, schema),
+            ErasedProperties = released.ErasedPaths
+        };
+    }
+
+    /// <inheritdoc/>
+    public async Task<AppendedEvent[]> ReleaseReportingErasure(
+        IEnumerable<AppendedEvent> events,
+        IDictionary<EventType, EventTypeSchema> eventTypeSchemas)
+    {
+        var releasedEvents = new List<AppendedEvent>();
+        foreach (var @event in events)
+        {
+            if (!eventTypeSchemas.TryGetValue(@event.Context.EventType, out var schema))
+            {
+                releasedEvents.Add(@event with { ErasedProperties = [] });
+                continue;
+            }
+
+            if (@event.Context.Subject is null)
+            {
+                releasedEvents.Add(@event with { ErasedProperties = [] });
+                continue;
+            }
+
+            if (!schema.Schema.HasSchemaMetadata())
+            {
+                releasedEvents.Add(@event with { ErasedProperties = [] });
+                continue;
+            }
+
+            releasedEvents.Add(await ReleaseReportingErasure(@event, schema.Schema));
+        }
+
+        return releasedEvents.ToArray();
+    }
+
+    /// <inheritdoc/>
     public async Task<AppendedEvent[]> Release(
         IEnumerable<AppendedEvent> events,
         IDictionary<EventType, EventTypeSchema> eventTypeSchemas)

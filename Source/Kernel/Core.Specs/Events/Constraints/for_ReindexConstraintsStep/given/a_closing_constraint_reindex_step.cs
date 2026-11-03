@@ -33,6 +33,7 @@ public class a_closing_constraint_reindex_step : Specification
     protected ReindexConstraintsStep _step;
     protected Catch<JobStepResult> _result;
     protected IEventSequence _sequence;
+    protected readonly JobId _jobId = JobId.New();
     protected ConstraintIndexRebuildRunId _runId = new(Guid.NewGuid());
     protected CancellationToken _cancellationToken;
 
@@ -77,7 +78,7 @@ public class a_closing_constraint_reindex_step : Specification
         silo.AddService(Substitute.For<IJobStepThrottle>());
         silo.AddService(NullLogger<ReindexConstraintsStep>.Instance);
         silo.AddPersistentStateStorage<ReindexConstraintsStepState>(nameof(ReindexConstraintsStepState), Cratis.Orleans.WellKnownGrainStorageProviders.JobSteps);
-        _step = await silo.CreateGrainAsync<ReindexConstraintsStep>(_runId.Value, new JobStepKey(JobId.New(), "store", "ns"));
+        _step = await silo.CreateGrainAsync<ReindexConstraintsStep>(_runId.Value, new JobStepKey(_jobId, "store", "ns"));
         _state = new() { EventSequenceId = EventSequenceId.Log, Changes = [new("closing", true, [ConstraintChangeType.EventAdded])] };
     }
 

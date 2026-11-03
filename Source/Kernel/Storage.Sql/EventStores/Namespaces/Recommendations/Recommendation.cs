@@ -45,4 +45,9 @@ public record Recommendation
     /// Gets the JSON representation of the request that generated this recommendation.
     /// </summary>
     public string RequestJson { get; init; } = string.Empty;
+
+    /// <summary>
+    /// Gets a value indicating whether the recommendation has been ignored.
+    /// </summary>
+    public bool IsIgnored { get; init; }
 }

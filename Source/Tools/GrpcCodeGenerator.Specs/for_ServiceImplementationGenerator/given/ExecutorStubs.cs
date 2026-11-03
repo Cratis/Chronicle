@@ -44,7 +44,15 @@ public static class ExecutorStubs
 
             internal static Task<QueryResult<TData>> Execute<TData>(Func<Task<TData>> query, Action<Exception>? onError = null) =>
                 throw new NotSupportedException();
+
+            internal static IObservable<QueryResult<TData>> Execute<TData>(ProtoBuf.Grpc.CallContext callContext, QueryRouting routing, Func<IObservable<TData>> query, Action<Exception>? onError = null) =>
+                throw new NotSupportedException();
+
+            internal static Task<QueryResult<TData>> Execute<TData>(ProtoBuf.Grpc.CallContext callContext, QueryRouting routing, Func<Task<TData>> query, Action<Exception>? onError = null) =>
+                throw new NotSupportedException();
         }
+
+        internal readonly record struct QueryRouting(string? Store, string? First = null, string? Second = null, string? Third = null, string? Fourth = null, string? Fifth = null);
 
         internal static class ServiceLogMessages
         {

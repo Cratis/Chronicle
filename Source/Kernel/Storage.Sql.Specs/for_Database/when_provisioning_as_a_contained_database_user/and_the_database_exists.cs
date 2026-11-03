@@ -36,7 +36,7 @@ public class and_the_database_exists(SqlServerFixture fixture) : given.a_sql_ser
     async Task Because() => _provisioningFailure = await Catch.Exception(() => SqlServerDatabaseCreation.RunWithLock(
         _containedConnectionString,
         _ => Task.CompletedTask,
-        async () =>
+        async _ =>
         {
             await Open(_containedConnectionString);
             _targetOpened = true;
