@@ -20,7 +20,8 @@ public class a_connected_clients_with_stale_threshold : Specification
         Substitute.For<ILogger<ConnectedClients>>(),
         Substitute.For<IMeter<ConnectedClients>>(),
         Options.Create(new ChronicleOptions()),
-        Substitute.For<IStorage>());
+        Substitute.For<IStorage>(),
+        Substitute.For<IClientDepartureNotifier>());
 
     protected Task Connect(bool isRunningWithDebugger) =>
         _clients.OnClientConnected(_connection, "1.0", isRunningWithDebugger, 1, "/app", "host", ".NET");
