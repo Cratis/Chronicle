@@ -57,24 +57,16 @@ public class ReadModelMigrator(
         var cacheKey = $"{connectionString}:{tableName}:probe:{columnsKey}";
         if (_columnMigrations.ContainsKey(cacheKey))
         {
-            context.ServeExisting(context.Columns);
             return true;
         }
 
-        var existingColumns = await GetExistingColumnNames(context, tableName);
-        var served = ExistingTableShape.Serve(context, existingColumns);
-        if (served is null)
+        // Only a complete shape is remembered; a table that may still be migrated is looked at again.
+        if (!ExistingTableShape.IsComplete(context, await GetExistingColumnNames(context, tableName)))
         {
             return false;
         }
 
-        // Only a complete shape is remembered; a table that may still be migrated is looked at again.
-        if (served.Count == context.Columns.Count)
-        {
-            _columnMigrations.TryAdd(cacheKey, true);
-        }
-
-        context.ServeExisting(served);
+        _columnMigrations.TryAdd(cacheKey, true);
         return true;
     }
 

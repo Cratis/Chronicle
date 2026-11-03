@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Arc.Connections;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Storage.Sql.Cluster;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces;
@@ -19,6 +20,7 @@ namespace Cratis.Chronicle.Storage.Sql.for_Database.given;
 public class a_sql_server_database(SqlServerFixture fixture) : Specification
 {
     const int DatabaseDoesNotExist = 3701;
+    readonly List<ServiceProvider> _resolutionServices = [];
 
     internal string ConnectionString;
     internal Database Database;
@@ -36,6 +38,26 @@ public class a_sql_server_database(SqlServerFixture fixture) : Specification
         Database = new(
             Services,
             Options.Create(new ChronicleOptions { Storage = new() { Type = StorageType.MsSql, ConnectionDetails = ConnectionString } }),
+            new EventSequenceMigrator(new TableMigrator<EventSequenceDbContext>(NullLogger<TableMigrator<EventSequenceDbContext>>.Instance), NullLogger<EventSequenceMigrator>.Instance),
+            new UniqueConstraintMigrator(new TableMigrator<UniqueConstraintDbContext>(NullLogger<TableMigrator<UniqueConstraintDbContext>>.Instance), new TableMigrator<UniqueConstraintValuesDbContext>(NullLogger<TableMigrator<UniqueConstraintValuesDbContext>>.Instance), NullLogger<UniqueConstraintMigrator>.Instance),
+            migrator);
+    }
+
+    internal readonly RecordingConnectionResolver Resolver = new();
+
+    internal Database ResolvingDatabase()
+    {
+        var resolution = new ConnectionResolutionOptions();
+        resolution.Identity.UseCustom<RecordingConnectionResolver>();
+        var services = new ServiceCollection()
+            .AddSingleton(Services.GetRequiredService<IReadModelMigrator>())
+            .AddSingleton(Resolver)
+            .BuildServiceProvider();
+        _resolutionServices.Add(services);
+        var migrator = Services.GetRequiredService<IReadModelMigrator>();
+        return new(
+            services,
+            Options.Create(new ChronicleOptions { Storage = new() { Type = StorageType.MsSql, ConnectionDetails = ConnectionString, ConnectionResolution = resolution } }),
             new EventSequenceMigrator(new TableMigrator<EventSequenceDbContext>(NullLogger<TableMigrator<EventSequenceDbContext>>.Instance), NullLogger<EventSequenceMigrator>.Instance),
             new UniqueConstraintMigrator(new TableMigrator<UniqueConstraintDbContext>(NullLogger<TableMigrator<UniqueConstraintDbContext>>.Instance), new TableMigrator<UniqueConstraintValuesDbContext>(NullLogger<TableMigrator<UniqueConstraintValuesDbContext>>.Instance), NullLogger<UniqueConstraintMigrator>.Instance),
             migrator);
@@ -98,6 +120,22 @@ public class a_sql_server_database(SqlServerFixture fixture) : Specification
         await Execute(connectionString, $"INSERT INTO [{table}] ([Id]) VALUES (\x27one\x27)");
     }
 
+    internal static async Task CreateOlderOccurrenceTable(string connectionString, string table)
+    {
+        await Execute(connectionString, $"CREATE TABLE [{table}] ([id] nvarchar(450) NOT NULL PRIMARY KEY, [{WellKnownProperties.LastHandledEventSequenceNumber}] bigint NULL, [{WellKnownProperties.ReadModelInstanceInitialized}] bit NOT NULL DEFAULT 1)");
+        await Execute(connectionString, $"INSERT INTO [{table}] ([id]) VALUES (\x27one\x27)");
+    }
+
+    internal static async Task<string> Catalog(string connectionString)
+    {
+        await using var connection = new SqlConnection(connectionString);
+        await connection.OpenAsync();
+        await using var command = new SqlCommand(
+            "SELECT COALESCE((SELECT STRING_AGG(TABLE_NAME + \x27.\x27 + COLUMN_NAME, \x27,\x27) WITHIN GROUP (ORDER BY TABLE_NAME, COLUMN_NAME) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = SCHEMA_NAME()), \x27\x27) + \x27|\x27 + COALESCE((SELECT STRING_AGG(i.name, \x27,\x27) WITHIN GROUP (ORDER BY i.name) FROM sys.indexes i JOIN sys.tables t ON t.object_id = i.object_id WHERE t.schema_id = SCHEMA_ID() AND i.name IS NOT NULL), \x27\x27)",
+            connection);
+        return (string)(await command.ExecuteScalarAsync())!;
+    }
+
     internal static async Task Execute(string connectionString, string sql)
     {
         await using var connection = new SqlConnection(connectionString);
@@ -150,5 +188,9 @@ public class a_sql_server_database(SqlServerFixture fixture) : Specification
         }
 
         await Services.DisposeAsync();
+        foreach (var services in _resolutionServices)
+        {
+            await services.DisposeAsync();
+        }
     }
 }

@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Reactive.Linq;
+using System.Reactive.Threading.Tasks;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.Json;
@@ -20,13 +22,51 @@ namespace Cratis.Chronicle.Storage.Sql.for_Database.given;
 static class ColdIndexedSink
 {
     /// <summary>
+    /// The occurrence the specifications read.
+    /// </summary>
+    internal const string Occurrence = "indexed_model-20240101000000-deadbeef";
+
+    /// <summary>
+    /// A schema with a string key and an integer value.
+    /// </summary>
+    internal const string IntegerValueSchema = """{"type":"object","properties":{"id":{"type":"string"},"value":{"type":"integer"}}}""";
+
+    /// <summary>
+    /// A schema with a decimal key, which SQLite orders through a shadow column.
+    /// </summary>
+    internal const string DecimalKeySchema = """{"type":"object","properties":{"id":{"type":"number","format":"decimal"},"value":{"type":"integer"}}}""";
+
+    /// <summary>
     /// Resolves the sink without provisioning and asks it for an occurrence that does not exist.
     /// </summary>
     /// <param name="database">The real database.</param>
     /// <returns>The sink.</returns>
-    internal static async Task<ISink> ReadAnOccurrence(IDatabase database)
+    internal static Task<ISink> ReadAnOccurrence(IDatabase database) =>
+        Resolve(database, IntegerValueSchema, "store", "namespace", async sink =>
+        {
+            await sink.GetInstances(Occurrence, 0, 10, ReadModelInstanceVisibility.InitializedOnly);
+            return sink;
+        });
+
+    /// <summary>
+    /// Reads the occurrence through the sink's list query and its live query.
+    /// </summary>
+    /// <param name="database">The real database.</param>
+    /// <param name="schema">The JSON schema of the read model.</param>
+    /// <param name="eventStore">The event store the sink belongs to.</param>
+    /// <param name="namespace">The namespace the sink belongs to.</param>
+    /// <returns>What the two queries returned.</returns>
+    internal static Task<OccurrenceRead> ReadTheOccurrence(IDatabase database, string schema, string eventStore = "store", string @namespace = "namespace") =>
+        Resolve(database, schema, eventStore, @namespace, async sink =>
+        {
+            var instances = await sink.GetInstances(Occurrence, 0, 10, ReadModelInstanceVisibility.InitializedOnly);
+            var observed = await sink.ObserveInstances(Occurrence, 0, 10, ReadModelInstanceVisibility.InitializedOnly).Take(1).ToTask().WaitAsync(TimeSpan.FromSeconds(30));
+            return new OccurrenceRead(instances.TotalCount, instances.Instances.Count(), observed.Count());
+        });
+
+    static async Task<T> Resolve<T>(IDatabase database, string schemaJson, string eventStore, string @namespace, Func<ISink, Task<T>> read)
     {
-        var schema = await JsonSchema.FromJsonAsync("""{"type":"object","properties":{"id":{"type":"string"},"value":{"type":"integer"}}}""");
+        var schema = await JsonSchema.FromJsonAsync(schemaJson);
         var definition = new ReadModelDefinition(
             "indexed",
             "indexed_model",
@@ -45,10 +85,8 @@ static class ColdIndexedSink
             .AddSingleton<ILogger<Sink>>(NullLogger<Sink>.Instance)
             .BuildServiceProvider();
         var factory = new SinkFactory(services, new ExpandoObjectConverter(new TypeFormats()));
-        var sinks = new StorageSinks("store", "namespace", new KnownInstancesOf<ISinkFactory>([factory]));
+        var sinks = new StorageSinks(eventStore, @namespace, new KnownInstancesOf<ISinkFactory>([factory]));
 
-        var sink = await sinks.GetWithoutProvisioning(definition);
-        await sink.GetInstances("indexed_model-20240101000000-deadbeef", 0, 10, ReadModelInstanceVisibility.InitializedOnly);
-        return sink;
+        return await read(await sinks.GetWithoutProvisioning(definition));
     }
 }

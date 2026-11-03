@@ -120,6 +120,33 @@ public class a_postgresql_database(PostgreSqlFixture fixture) : Specification
     }
 
     /// <summary>
+    /// Creates the occurrence table an older kernel left, which has a row but not the value column the read model has now.
+    /// </summary>
+    /// <param name="connectionString">The read model database.</param>
+    /// <param name="table">The table.</param>
+    /// <returns>Awaitable task.</returns>
+    internal static async Task CreateOlderOccurrenceTable(string connectionString, string table)
+    {
+        await Execute(connectionString, $"CREATE TABLE \"{table}\" (\"id\" text NOT NULL PRIMARY KEY, \"{WellKnownProperties.LastHandledEventSequenceNumber}\" bigint NULL, \"{WellKnownProperties.ReadModelInstanceInitialized}\" boolean NOT NULL DEFAULT true)");
+        await Execute(connectionString, $"INSERT INTO \"{table}\" (\"id\") VALUES (\x27one\x27)");
+    }
+
+    /// <summary>
+    /// Gets every column and index of the current schema of a database.
+    /// </summary>
+    /// <param name="connectionString">The database to look in.</param>
+    /// <returns>The sorted columns and indexes.</returns>
+    internal static async Task<string> Catalog(string connectionString)
+    {
+        await using var connection = new NpgsqlConnection(connectionString);
+        await connection.OpenAsync();
+        await using var command = new NpgsqlCommand(
+            "SELECT COALESCE((SELECT string_agg(table_name || \x27.\x27 || column_name, \x27,\x27 ORDER BY table_name, column_name) FROM information_schema.columns WHERE table_schema = current_schema()), \x27\x27) || \x27|\x27 || COALESCE((SELECT string_agg(indexname, \x27,\x27 ORDER BY indexname) FROM pg_indexes WHERE schemaname = current_schema()), \x27\x27)",
+            connection);
+        return (string)(await command.ExecuteScalarAsync())!;
+    }
+
+    /// <summary>
     /// Gets the columns and indexes of a table, or an empty string when there is no such table.
     /// </summary>
     /// <param name="connectionString">The database to look in.</param>

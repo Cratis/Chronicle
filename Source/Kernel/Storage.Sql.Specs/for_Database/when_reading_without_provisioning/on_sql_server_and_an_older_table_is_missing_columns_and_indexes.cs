@@ -3,7 +3,6 @@
 
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels;
 using Cratis.Chronicle.Storage.Sql.Sinks;
-using Microsoft.EntityFrameworkCore;
 
 namespace Cratis.Chronicle.Storage.Sql.for_Database.when_reading_without_provisioning;
 
@@ -14,7 +13,6 @@ public class on_sql_server_and_an_older_table_is_missing_columns_and_indexes(Sql
     string _before;
     string _after;
     DbContextScope<ReadModelDbContext>? _scope;
-    int _rows;
 
     async Task Establish()
     {
@@ -27,12 +25,10 @@ public class on_sql_server_and_an_older_table_is_missing_columns_and_indexes(Sql
     async Task Because()
     {
         _scope = await Database.ExistingReadModelTable(Store, Namespace, "older", OccurrenceColumns);
-        _rows = _scope is null ? -1 : await _scope.DbContext.Entries.AsNoTracking().CountAsync();
         _after = await TableShape(_connection, "older");
     }
 
     [Fact] void should_have_created_the_older_table_without_the_value_column_in_the_setup() => (_before.Contains("__initialized", StringComparison.Ordinal) && !_before.Contains("Value", StringComparison.Ordinal)).ShouldBeTrue();
-    [Fact] void should_serve_the_table_as_it_is() => _scope.ShouldNotBeNull();
-    [Fact] void should_read_its_rows() => _rows.ShouldEqual(1);
+    [Fact] void should_report_the_table_as_absent() => _scope.ShouldBeNull();
     [Fact] void should_not_add_columns_or_indexes() => _after.ShouldEqual(_before);
 }

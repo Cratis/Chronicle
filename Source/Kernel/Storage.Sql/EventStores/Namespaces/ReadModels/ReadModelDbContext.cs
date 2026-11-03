@@ -59,8 +59,6 @@ public class ReadModelDbContext(
         v => v.ToString("D"),
         v => Guid.Parse(v));
 
-    IReadOnlyList<ProjectedColumn> _columns = columns;
-
     /// <summary>
     /// Gets the JSON serializer options used to round-trip JSON column values.
     /// </summary>
@@ -74,7 +72,7 @@ public class ReadModelDbContext(
     /// <summary>
     /// Gets the column metadata used to register the dynamic entity and create the underlying table.
     /// </summary>
-    public IReadOnlyList<ProjectedColumn> Columns => _columns;
+    public IReadOnlyList<ProjectedColumn> Columns => columns;
 
     /// <summary>
     /// Gets the dynamic entity set for this read model's table.
@@ -109,14 +107,13 @@ public class ReadModelDbContext(
     internal Task EnsureReplayPromotions() => migrator.EnsureReplayPromotions(this);
 
     /// <summary>
-    /// Narrows this context to the columns an existing table has, and forbids it from changing the table.
+    /// Forbids this context from changing the table, so a read only ever looks at what is there.
     /// </summary>
-    /// <param name="served">The columns of the existing table.</param>
-    /// <remarks>Call before the model is first used; the model is built over these columns.</remarks>
-    internal void ServeExisting(IReadOnlyList<ProjectedColumn> served)
+    /// <returns>This context.</returns>
+    internal ReadModelDbContext ServeExisting()
     {
-        _columns = served;
         ExistingOnly = true;
+        return this;
     }
 
     /// <summary>
@@ -164,7 +161,7 @@ public class ReadModelDbContext(
             entity.ToTable(tableName);
 
             ProjectedColumn? keyColumn = null;
-            foreach (var column in _columns)
+            foreach (var column in columns)
             {
                 var propertyBuilder = entity.IndexerProperty(column.ClrType, column.Name);
                 propertyBuilder.IsRequired(!column.IsNullable);

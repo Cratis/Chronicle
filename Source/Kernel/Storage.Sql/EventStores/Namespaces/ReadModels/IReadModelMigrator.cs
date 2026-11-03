@@ -20,8 +20,8 @@ public interface IReadModelMigrator
     /// Looks at an existing table without changing anything: never creates the table, adds a column or builds an index.
     /// </summary>
     /// <param name="tableName">The name of the table to look at.</param>
-    /// <param name="context">The <see cref="ReadModelDbContext"/> instance, which is narrowed to the columns the table has.</param>
-    /// <returns>True if the table exists and can be read as it is; false otherwise, in which case nothing was changed.</returns>
+    /// <param name="context">The <see cref="ReadModelDbContext"/> instance, which is not changed.</param>
+    /// <returns>True only if the table exists with every column the context expects; false otherwise. Nothing was changed either way.</returns>
     Task<bool> ProbeExistingTable(string tableName, ReadModelDbContext context);
 
     /// <summary>

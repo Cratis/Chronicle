@@ -155,7 +155,7 @@ public partial class Database
             new(DatabaseKind.ReadModels, eventStore.Value, @namespace.Value),
             $"readmodel-read:{eventStore.Value}:{@namespace.Value}",
             _readModelOptions,
-            options => createDbContext(options, tableName),
+            options => createDbContext(options, tableName).ServeExisting(),
             (context, _) => readModelMigrator.ProbeExistingTable(context.TableName, context)));
 #pragma warning restore CA2000
 
