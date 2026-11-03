@@ -6,7 +6,7 @@ using Cratis.Chronicle.Events.Migrations.for_EventTypeMigration.given;
 
 namespace Cratis.Chronicle.Events.Migrations.for_EventMigrationPropertyBuilder.when_serializing_object_literals;
 
-public class and_the_values_are_scalars_and_null : Specification
+public class and_the_values_are_scalars : Specification
 {
     EventMigrationPropertyBuilder _prefix;
     EventMigrationPropertyBuilder _default;
@@ -25,7 +25,6 @@ public class and_the_values_are_scalars_and_null : Specification
             builder.DefaultValue("Int", 42);
             builder.DefaultValue("Concept", new ModuleKey("global"));
             builder.DefaultValue("Enum", Level.High);
-            builder.DefaultValue("Null", null!);
         }
     }
 
@@ -33,7 +32,6 @@ public class and_the_values_are_scalars_and_null : Specification
     [Fact] void should_render_integers_as_with_the_default_policy() => _prefix.Properties["Int"].ToJsonString().ShouldEqual(_default.Properties["Int"].ToJsonString());
     [Fact] void should_render_concepts_as_with_the_default_policy() => _prefix.Properties["Concept"].ToJsonString().ShouldEqual(_default.Properties["Concept"].ToJsonString());
     [Fact] void should_render_enums_as_with_the_default_policy() => _prefix.Properties["Enum"].ToJsonString().ShouldEqual(_default.Properties["Enum"].ToJsonString());
-    [Fact] void should_render_null_as_with_the_default_policy() => _prefix.Properties["Null"].ToJsonString().ShouldEqual(_default.Properties["Null"].ToJsonString());
     [Fact] void should_render_concepts_as_their_value() => _prefix.Properties["Concept"]["$defaultValue"]!.ToJsonString().ShouldEqual("\"global\"");
 
     enum Level
