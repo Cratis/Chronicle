@@ -92,6 +92,34 @@ The default is an empty string: existing database names remain unchanged. Changi
 
 For environment-variable configuration, use `Cratis__Chronicle__Storage__DatabaseNamePrefix`. The development-only kernel reset preserves the global cluster database and, when a prefix is set, drops only other databases starting with that exact, case-sensitive prefix. Use a unique prefix when sharing a server; a prefix is a naming boundary, not a substitute for database permissions.
 
+### System event store database name
+
+Chronicle keeps its own state, such as the System event log and the observers that run inside the kernel, in the System event store. On MongoDB, an event store's databases are named after it: `Orders+es`, `Orders+es+Default` and `Orders` for its read models. The System event store is the exception. Some hosted offerings, such as MongoDB Atlas Flex, reserve a database named `System`, so its databases are named by `storage.systemDatabaseName` instead, which defaults to `_system`:
+
+| Database | Default name |
+| --- | --- |
+| Event store state | `_system+es` |
+| Event sequences of the Default namespace | `_system+es+Default` |
+| Read models of the Default namespace | `_system` |
+
+`storage.databaseNamePrefix` still comes first, so a `staging_` prefix gives `staging__system+es`. MongoDB does not allow `$` in a database name, so `$system` is not an option. All nodes in a cluster must use the same name, and no other event store can be named the same as the System event store's databases.
+
+```json
+{
+  "storage": {
+    "type": "MongoDB",
+    "connectionDetails": "mongodb://localhost:27017",
+    "systemDatabaseName": "_system"
+  }
+}
+```
+
+For environment-variable configuration, use `Cratis__Chronicle__Storage__SystemDatabaseName`.
+
+:::caution[Upgrading moves the System event store's databases]
+Kernels before 19.117 named the System event store's databases `System+es`, `System+es+<namespace>` and `System`. On its first start, 19.117 moves them to the configured name as a patch: it copies every collection with its indexes into the new database and then drops the old one. Take a backup before upgrading. A kernel older than 19.117 looks for the old names, so after the move it no longer finds the System event store's data. To keep the old names, set `storage.systemDatabaseName` to `System` before upgrading; nothing is moved then. The patch runs once, so changing the name later does not move the data again.
+:::
+
 ## PostgreSQL
 
 ```json
@@ -255,6 +283,7 @@ When you host Chronicle programmatically, select the in-memory backend with the 
 | type | string | Yes | Storage type: `MongoDB`, `PostgreSql`, `MsSql`, `Sqlite`, or `InMemory` |
 | connectionDetails | string | Conditional | Connection string for the chosen storage backend. Required for all backends except `InMemory`, which ignores it |
 | databaseNamePrefix | string | No | Prefix prepended to every MongoDB database name. Defaults to empty; ignored by other storage backends |
+| systemDatabaseName | string | No | Name the System event store's MongoDB databases are named by. Defaults to `_system`; ignored by other storage backends |
 | schema | string | No | SQL schema Chronicle keeps its tables in. Defaults to empty, the database user's default schema; ignored by MongoDB and SQLite |
 | createIfMissing | boolean | No | Whether Chronicle creates missing databases and schemas. Defaults to `true` |
 | connectionResolution | object | No | Resolves the server, database, schema and identity per event store, namespace and purpose. See [storage connection resolution](storage-connection-resolution.md) |

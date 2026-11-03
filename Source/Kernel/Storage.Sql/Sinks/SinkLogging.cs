@@ -27,4 +27,10 @@ internal static partial class SinkLogging
 
     [LoggerMessage(LogLevel.Warning, "SQL read model {ReadModel} has a composite key that cannot be rebuilt from its stored id ({Reason}); instances are returned without their key. Rows whose key parts contain '_' or are empty may also share a row with another key; replaying the read model does not change this until the key format changes (#5335).")]
     internal static partial void CompositeKeyNotRebuilt(this ILogger<Sink> logger, string readModel, string reason);
+
+    [LoggerMessage(LogLevel.Error, "SQL read model {ReadModel}: the outcome of the multi-write cycle for sequence number {SequenceNumber} (receipt {ReceiptId}) is unknown and too old to verify. It is not applied again; decide on a replay.")]
+    internal static partial void CycleOutcomeUnknown(this ILogger<Sink> logger, string readModel, long sequenceNumber, Guid receiptId);
+
+    [LoggerMessage(LogLevel.Warning, "SQL read model {ReadModel}: the receipt of a finished multi-write cycle could not be cleaned up; it is swept later")]
+    internal static partial void CycleReceiptCleanupFailed(this ILogger<Sink> logger, Exception exception, string readModel);
 }

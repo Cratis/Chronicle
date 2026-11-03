@@ -214,6 +214,11 @@ public partial class Sink : ISink, ICanReconcileIndexes, ISinkCompositeKeyLookup
             return _noFailedPartitions;
         }
 
+        if (IsMultiWrite(changeset.Changes))
+        {
+            return await ApplyCycle(new CycleWrite { Scope = scope, Key = key, Id = id, Changeset = changeset, SequenceNumber = eventSequenceNumber, Mode = mode });
+        }
+
         await ApplyJoinsAndChildRemovals(scope, changeset, eventSequenceNumber, key.ArrayIndexers);
 
         var nonJoinedChanges = changeset.Changes
@@ -309,7 +314,7 @@ public partial class Sink : ISink, ICanReconcileIndexes, ISinkCompositeKeyLookup
         {
             await scope.DbContext.SaveChangesAsync();
         }
-        catch (DbUpdateException ex) when (IsUniqueViolation(ex) && entry.State == EntityState.Added)
+        catch (DbUpdateException ex) when (IsUniqueViolation(ex) && entry.State == EntityState.Added && scope.DbContext.Database.CurrentTransaction is null)
         {
             // Lost the insert race against another concurrent ApplyChanges for the same key.
             // The row now exists; detach our Added entity, reload from DB, re-apply the changes

@@ -22,9 +22,7 @@ namespace Cratis.Chronicle.Storage.Sql.Sinks;
 /// </summary>
 public class SqlServerSinkHarness : ISqlSinkHarness
 {
-    readonly ReadModelMigrator _migrator = new(
-        new TableMigrator<ReadModelDbContext>(Substitute.For<ILogger<TableMigrator<ReadModelDbContext>>>()),
-        Substitute.For<ILogger<ReadModelMigrator>>());
+    ReadModelMigrator? _migrator;
 
     /// <inheritdoc/>
     public string ConnectionString { get; private set; } = string.Empty;
@@ -40,9 +38,20 @@ public class SqlServerSinkHarness : ISqlSinkHarness
     public IEnumerable<IInterceptor> Interceptors { get; init; } = [];
 
     /// <summary>
+    /// Gets a hook that adjusts the context options, such as installing an execution strategy that retries.
+    /// </summary>
+    public Action<DbContextOptionsBuilder<ReadModelDbContext>>? ConfigureOptions { get; init; }
+
+    /// <summary>
     /// Gets the logger for index diagnostics.
     /// </summary>
     public ILogger<Sink> Logger { get; init; } = Substitute.For<ILogger<Sink>>();
+
+    ReadModelMigrator Migrator => _migrator ??= new(
+        new RecordingTableMigrator<ReadModelDbContext>(
+            new TableMigrator<ReadModelDbContext>(Substitute.For<ILogger<TableMigrator<ReadModelDbContext>>>()),
+            () => Interceptors.OfType<SqlCommandCapture>().FirstOrDefault()),
+        Substitute.For<ILogger<ReadModelMigrator>>());
 
     /// <inheritdoc/>
     public ISink CreateSink(ReadModelDefinition definition)
@@ -81,11 +90,12 @@ public class SqlServerSinkHarness : ISqlSinkHarness
     {
         var builder = new DbContextOptionsBuilder<ReadModelDbContext>();
         builder.UseDatabaseFromConnectionString(ConnectionString);
+        ConfigureOptions?.Invoke(builder);
         var options = builder.AddConceptAsSupport().WithoutServiceProviderCaching().AddInterceptors(Interceptors).Options;
 
         var fixture = Fixture!;
 #pragma warning disable CA2000 // Disposed by the sink through the returned scope.
-        var context = fixture.Timings.Measure("ef-context-construction", () => fixture.Track(new ReadModelDbContext(options, containerName, columns, _migrator)));
+        var context = fixture.Timings.Measure("ef-context-construction", () => fixture.Track(new ReadModelDbContext(options, containerName, columns, Migrator)));
 #pragma warning restore CA2000
         await fixture.Timings.Run("ef-table-ensure", context.EnsureTableExists);
         return new DbContextScope<ReadModelDbContext>(context, () => { });
