@@ -131,7 +131,9 @@ public partial class Sink
         // The whole cycle is rerun instead of rolling back to a savepoint, which behaves the same on every provider.
         context.Database.AutoSavepointsEnabled = false;
         var strategy = context.Database.CreateExecutionStrategy();
-        var state = new CycleAttemptState(Guid.CreateVersion7(), SinkCycleReceipt.ToStored(sequenceNumber.Value));
+
+        // A receipt only protects a retry after a lost commit acknowledgment, so a strategy that never retries needs none.
+        var state = new CycleAttemptState(Guid.CreateVersion7(), SinkCycleReceipt.ToStored(sequenceNumber.Value), strategy.RetriesOnFailure);
         var receiptId = state.ReceiptId;
         var insertRaceReruns = 0;
         var repaired = false;
@@ -187,20 +189,29 @@ public partial class Sink
         }
         finally
         {
-            await CleanUpReceipts(context, receiptId);
+            if (state.UsesReceipt)
+            {
+                await CleanUpReceipts(context, receiptId);
+            }
         }
     }
 
     async Task RunCycleAttempt(ReadModelDbContext context, CycleAttemptState state, Func<Task<bool>> body)
     {
         context.ChangeTracker.Clear();
-        if (state.Attempts++ > 0 && await ProbeReceipt(context, state.ReceiptId, state.StartedAt, state.Sequence))
+        if (state.Attempts++ > 0 && state.UsesReceipt && await ProbeReceipt(context, state.ReceiptId, state.StartedAt, state.Sequence))
         {
             // A previous attempt committed and only its acknowledgment was lost.
             return;
         }
 
         state.WroteDirect = false;
+        if (!state.UsesReceipt)
+        {
+            state.WroteDirect = await body();
+            return;
+        }
+
         var receipt = new SinkCycleReceipt(state.ReceiptId, ActiveTableName, state.Sequence, 0);
         context.SinkCycleReceipts.Add(receipt);
         state.WroteDirect = await body();
@@ -208,8 +219,10 @@ public partial class Sink
         state.StartedAt ??= receipt.CreatedAt;
     }
 
-    sealed class CycleAttemptState(Guid receiptId, long sequence)
+    sealed class CycleAttemptState(Guid receiptId, long sequence, bool usesReceipt)
     {
+        internal bool UsesReceipt { get; } = usesReceipt;
+
         internal Guid ReceiptId { get; } = receiptId;
 
         internal long Sequence { get; } = sequence;
