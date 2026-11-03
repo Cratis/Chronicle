@@ -12,10 +12,14 @@ namespace Cratis.Chronicle.Clients.for_ClientDepartureNotifier;
 
 public class when_notifying_for_several_connections_at_once : Specification
 {
-    const int ObserversPerConnection = ClientDepartureNotifier.MaxConcurrentNotifications * 2;
+    const int Cap = ClientDepartureNotifier.MaxConcurrentNotifications;
+    const int ObserversPerConnection = Cap * 2;
+    static readonly TimeSpan _gateTimeout = TimeSpan.FromSeconds(30);
 
     readonly Dictionary<string, IObserver> _observers = [];
     readonly object _gate = new();
+    readonly SemaphoreSlim _entered = new(0);
+    readonly SemaphoreSlim _step = new(0);
     ClientDepartureNotifier _notifier;
     ObserverKey[] _firstKeys;
     ObserverKey[] _secondKeys;
@@ -38,7 +42,8 @@ public class when_notifying_for_several_connections_at_once : Specification
                     _peakInFlight = Math.Max(_peakInFlight, _inFlight);
                 }
 
-                await Task.Delay(20);
+                _entered.Release();
+                await _step.WaitAsync(_gateTimeout);
                 lock (_gate)
                 {
                     _inFlight--;
@@ -51,14 +56,60 @@ public class when_notifying_for_several_connections_at_once : Specification
         _notifier = new ClientDepartureNotifier(silo.GrainFactory, Substitute.For<ILogger<ClientDepartureNotifier>>());
     }
 
-    Task Because() => Task.WhenAll(
-        Task.Run(() => _notifier.Notify("first-connection", _firstKeys)),
-        Task.Run(() => _notifier.Notify("second-connection", _secondKeys)));
+    async Task Because()
+    {
+        const int total = ObserversPerConnection * 2;
+        Task[] notifications = [];
+        try
+        {
+            notifications =
+            [
+                Task.Run(() => _notifier.Notify("first-connection", _firstKeys)),
+                Task.Run(() => _notifier.Notify("second-connection", _secondKeys))
+            ];
 
-    [Fact] void should_notify_every_observer() => _observers.Count.ShouldEqual(ObserversPerConnection * 2);
-    [Fact] void should_have_notified_concurrently() => _peakInFlight.ShouldBeGreaterThan(1);
-    [Fact] void should_bound_in_flight_notifications_across_all_connections() => _peakInFlight.ShouldBeLessThanOrEqual(ClientDepartureNotifier.MaxConcurrentNotifications);
+            // Fill every slot, then admit exactly one more observer each time a slot is freed.
+            for (var index = 0; index < Cap; index++)
+            {
+                await WaitForEntry();
+            }
+
+            for (var index = Cap; index < total; index++)
+            {
+                _step.Release();
+                await WaitForEntry();
+            }
+        }
+        finally
+        {
+            _step.Release(total);
+            await Task.WhenAll(notifications).WaitAsync(_gateTimeout);
+        }
+    }
+
+    [Fact] void should_notify_every_observer_with_its_connection_exactly_once() =>
+        _observers.Values.ShouldEachConformTo(observer => Received(observer, "first-connection") + Received(observer, "second-connection") == 1);
+
+    [Fact] void should_notify_first_connection_observers_with_the_first_connection() =>
+        _firstKeys.ShouldEachConformTo(key => Received(_observers[key.ToString()], "first-connection") == 1);
+
+    [Fact] void should_notify_second_connection_observers_with_the_second_connection() =>
+        _secondKeys.ShouldEachConformTo(key => Received(_observers[key.ToString()], "second-connection") == 1);
+
+    [Fact] void should_fill_the_cap_across_both_connections() => _peakInFlight.ShouldEqual(Cap);
+    [Fact] void should_never_exceed_the_cap_across_all_connections() => _peakInFlight.ShouldBeLessThanOrEqual(Cap);
 
     static ObserverKey[] CreateKeys(string prefix) =>
         [.. Enumerable.Range(0, ObserversPerConnection).Select(index => new ObserverKey($"{prefix}-observer-{index}", "the-store", "the-namespace", EventSequenceId.Log))];
+
+    static int Received(IObserver observer, string connection) =>
+        observer.ReceivedCalls().Count(call => call.GetMethodInfo().Name == nameof(IObserver.UnsubscribeIfMatchesClient) && (ConnectionId)call.GetArguments()[0]! == connection);
+
+    async Task WaitForEntry()
+    {
+        if (!await _entered.WaitAsync(_gateTimeout))
+        {
+            throw new TimeoutException("An observer notification did not start; the cap may be blocking progress.");
+        }
+    }
 }

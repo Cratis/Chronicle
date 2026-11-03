@@ -61,6 +61,10 @@ public class when_notifying_observers : Specification
     Task Because() => _notifier.Notify(_connection, _keys);
 
     [Fact] void should_notify_every_observer_with_the_exact_connection() => _observers.Values.ShouldEachConformTo(observer => observer.ReceivedCalls().Count(call => call.GetMethodInfo().Name == nameof(IObserver.UnsubscribeIfMatchesClient) && (ConnectionId)call.GetArguments()[0]! == _connection) == 1);
-    [Fact] void should_keep_notifying_after_an_observer_fails() => _observers.Count.ShouldEqual(ObserverCount);
+    [Fact] void should_keep_notifying_the_other_observers_after_an_observer_fails() => _keys.Where(key => key.ObserverId != _failingObserverId).ShouldEachConformTo(key => ReceivedFor(_observers[key.ToString()]) == 1);
+    [Fact] void should_have_attempted_the_failing_observer_once() => ReceivedFor(_observers[_keys[1].ToString()]).ShouldEqual(1);
     [Fact] void should_bound_how_many_are_notified_at_once() => _peakInFlight.ShouldBeLessThanOrEqual(ClientDepartureNotifier.MaxConcurrentNotifications);
+
+    int ReceivedFor(IObserver observer) =>
+        observer.ReceivedCalls().Count(call => call.GetMethodInfo().Name == nameof(IObserver.UnsubscribeIfMatchesClient) && (ConnectionId)call.GetArguments()[0]! == _connection);
 }
