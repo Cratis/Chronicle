@@ -38,15 +38,27 @@ public class SiloRoles(ISiloMetadataCache metadataCache) : ISiloRoles
     public Option<ClusterRoles> GetRoles(SiloAddress siloAddress)
     {
         var metadata = metadataCache.GetSiloMetadata(siloAddress).Metadata;
-        if (metadata.TryGetValue(VersionKey, out var version) && version == "1" &&
-            TryGetFlag(metadata, EventSequencesKey, out var hasEventSequences) &&
-            TryGetFlag(metadata, ObserversKey, out var hasObservers) &&
-            TryGetFlag(metadata, JobsKey, out var hasJobs))
+        if (!metadata.TryGetValue(VersionKey, out var version) || version != "1")
         {
-            return new ClusterRoles { EventSequences = hasEventSequences, Observers = hasObservers, Jobs = hasJobs };
+            return Option<ClusterRoles>.None();
         }
 
-        return Option<ClusterRoles>.None();
+        if (!TryGetFlag(metadata, EventSequencesKey, out var hasEventSequences))
+        {
+            return Option<ClusterRoles>.None();
+        }
+
+        if (!TryGetFlag(metadata, ObserversKey, out var hasObservers))
+        {
+            return Option<ClusterRoles>.None();
+        }
+
+        if (!TryGetFlag(metadata, JobsKey, out var hasJobs))
+        {
+            return Option<ClusterRoles>.None();
+        }
+
+        return new ClusterRoles { EventSequences = hasEventSequences, Observers = hasObservers, Jobs = hasJobs };
     }
 
     static bool TryGetFlag(ImmutableDictionary<string, string> metadata, string key, out bool value)
