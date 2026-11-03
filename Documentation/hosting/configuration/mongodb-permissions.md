@@ -2,7 +2,7 @@
 title: MongoDB permissions
 description: The databases the Chronicle kernel uses, including the System databases, and the MongoDB roles and privileges it needs in each.
 ---
-Chronicle fails with `not authorized on System to execute command { listIndexes: "EventTypeStatistics" ... }` when its MongoDB credential is scoped to your application's databases only. The kernel has its own event store, named `System`, that always exists. It uses three databases that nobody configures, and the credential needs access to them as well as to your event stores.
+Chronicle fails with `not authorized on _system to execute command { listIndexes: "EventTypeStatistics" ... }` when its MongoDB credential is scoped to your application's databases only. Kernels before 19.117 name the database `System` in this error. The kernel has its own event store, named `System`, that always exists. It uses three databases that you normally don't configure, and the credential needs access to them as well as to your event stores.
 
 This page lists every database Chronicle uses, what it does in each, and which MongoDB roles cover them.
 
@@ -21,13 +21,15 @@ In the table, `P` is the value of `storage.databaseNamePrefix`. It is empty by d
 
 ### The System databases
 
-The kernel's own event store is named `System`. Chronicle registers its event types, ensures its `Default` namespace and registers its reactors at every startup, so these three databases always exist:
+The kernel's own event store is named `System` in the API. Its MongoDB databases are named by `storage.systemDatabaseName` instead, which defaults to `_system`. See [System event store database name](storage.mdx#system-event-store-database-name). Chronicle registers its event types, ensures its `Default` namespace and registers its reactors at every startup, so these three databases always exist:
 
-- `System`: read models of the kernel, for example the event type statistics.
-- `System+es`
-- `System+es+Default`
+- `_system`: read models of the kernel, for example the event type statistics.
+- `_system+es`
+- `_system+es+Default`
 
-With a prefix, each name starts with the prefix. With `chr_`, they are `chr_System`, `chr_System+es` and `chr_System+es+Default`.
+With a prefix, each name starts with the prefix. With `chr_`, they are `chr__system`, `chr__system+es` and `chr__system+es+Default`.
+
+Kernels before 19.117 named these databases `System`, `System+es` and `System+es+Default`. Version 19.117 moves them to the configured name on its first start, unless `storage.systemDatabaseName` is set to `System`. Use the old names in the grants below if you keep that setting. The environment variable is `Cratis__Chronicle__Storage__SystemDatabaseName`.
 
 ### Worked example
 
@@ -36,9 +38,9 @@ For an event store `Orders` with the namespaces `Default` and `tenant-a`:
 | Without a prefix | With prefix `chr_` |
 | --- | --- |
 | `chronicle+main` | `chr_chronicle+main` |
-| `System` | `chr_System` |
-| `System+es` | `chr_System+es` |
-| `System+es+Default` | `chr_System+es+Default` |
+| `_system` | `chr__system` |
+| `_system+es` | `chr__system+es` |
+| `_system+es+Default` | `chr__system+es+Default` |
 | `Orders` | `chr_Orders` |
 | `Orders+es` | `chr_Orders+es` |
 | `Orders+es+Default` | `chr_Orders+es+Default` |
@@ -93,9 +95,9 @@ db.createUser({
   pwd: passwordPrompt(),
   roles: [
     { role: "readWrite", db: "chr_chronicle+main" },
-    { role: "readWrite", db: "chr_System" },
-    { role: "readWrite", db: "chr_System+es" },
-    { role: "readWrite", db: "chr_System+es+Default" },
+    { role: "readWrite", db: "chr__system" },
+    { role: "readWrite", db: "chr__system+es" },
+    { role: "readWrite", db: "chr__system+es+Default" },
     { role: "readWrite", db: "chr_Orders" },
     { role: "readWrite", db: "chr_Orders+es" },
     { role: "readWrite", db: "chr_Orders+es+Default" },
@@ -116,9 +118,9 @@ A custom role can grant only the actions in the matrix for each kind of database
 The example has one privilege block per kind, shown for the `Orders` event store with prefix `chr_`. Repeat a block for every database of that kind:
 
 - **Cluster**: `chr_chronicle+main`.
-- **Event store**: `chr_System+es` and `chr_Orders+es`.
-- **Namespace**: `chr_System+es+Default`, `chr_Orders+es+Default` and `chr_Orders+es+tenant-a`.
-- **Read models**: `chr_System`, `chr_Orders` and `chr_Orders+tenant-a`.
+- **Event store**: `chr__system+es` and `chr_Orders+es`.
+- **Namespace**: `chr__system+es+Default`, `chr_Orders+es+Default` and `chr_Orders+es+tenant-a`.
+- **Read models**: `chr__system`, `chr_Orders` and `chr_Orders+tenant-a`.
 
 Change streams are database-level watches, so `changeStream` and `killCursors` appear in every block.
 
@@ -136,7 +138,7 @@ db.createRole({
         "changeStream", "killCursors"
       ]
     },
-    // Event store databases: chr_System+es, chr_Orders+es (repeat the block for each)
+    // Event store databases: chr__system+es, chr_Orders+es (repeat the block for each)
     {
       resource: { db: "chr_Orders+es", collection: "" },
       actions: [
@@ -145,7 +147,7 @@ db.createRole({
         "changeStream", "killCursors"
       ]
     },
-    // Namespace databases: chr_System+es+Default, chr_Orders+es+Default, chr_Orders+es+tenant-a
+    // Namespace databases: chr__system+es+Default, chr_Orders+es+Default, chr_Orders+es+tenant-a
     {
       resource: { db: "chr_Orders+es+Default", collection: "" },
       actions: [
@@ -154,7 +156,7 @@ db.createRole({
         "changeStream", "killCursors"
       ]
     },
-    // Read model databases: chr_System, chr_Orders, chr_Orders+tenant-a
+    // Read model databases: chr__system, chr_Orders, chr_Orders+tenant-a
     {
       resource: { db: "chr_Orders", collection: "" },
       actions: [
@@ -179,9 +181,9 @@ Change streams, used for live read model queries and event store observation, an
 
 ## Managed tiers and the System databases
 
-Some managed tiers restrict which databases a user can be granted. A reported case on MongoDB Atlas Flex is that a user could not be granted access to a database named `System`. This is reported behaviour; it is not confirmed against the Atlas documentation, and Atlas Flex support for custom roles, database-specific grants and change streams has not been verified here.
+Some managed tiers restrict which databases a user can be granted. A reported case on MongoDB Atlas Flex is that a user could not be granted access to a database named `System`, which is the name kernels before 19.117 used. The default `_system` avoids that name. This is reported behaviour; it is not confirmed against the Atlas documentation, and Atlas Flex support for custom roles, database-specific grants and change streams has not been verified here.
 
-The workaround is to set `storage.databaseNamePrefix` (environment variable `Cratis__Chronicle__Storage__DatabaseNamePrefix`) before the first start. Every database, including `System`, `System+es` and `System+es+Default`, then gets a prefixed name such as `chr_System`, which can be granted like any other. The prefix does not change names in the API, collection names or names returned by connection resolution.
+On kernels before 19.117, or if you set `storage.systemDatabaseName` to `System`, the workaround is to set `storage.databaseNamePrefix` (environment variable `Cratis__Chronicle__Storage__DatabaseNamePrefix`) before the first start. Every database, including the System ones, then gets a prefixed name such as `chr_System`, which can be granted like any other. A prefix is still an option on newer kernels. The prefix does not change names in the API, collection names or names returned by connection resolution.
 
 :::caution
 Changing the prefix later points Chronicle at different, empty databases. It does not rename or migrate data. Decide the prefix before the first start. See [Database-name prefix](storage.mdx#database-name-prefix).
@@ -197,7 +199,7 @@ MongoDB reports a missing privilege as:
 not authorized on <db> to execute command { <command>: ... }
 ```
 
-1. Find `<db>` in [the list of databases](#databases-chronicle-uses). A name such as `System` or `System+es+Default` is a kernel database, not one of yours.
+1. Find `<db>` in [the list of databases](#databases-chronicle-uses). A name such as `_system` or `_system+es+Default` (`System` or `System+es+Default` before 19.117) is a kernel database, not one of yours.
 2. Map `<command>` to the action it needs:
 
    | Command | Action |
@@ -214,4 +216,4 @@ not authorized on <db> to execute command { <command>: ... }
 
 3. Grant `readWrite` on that database, or switch to `readWriteAnyDatabase`. Grant `dropDatabase` through `dbAdmin` or a custom role only for `dropDatabase` errors, which occur when a namespace is removed.
 
-An error on `System` for `listIndexes` means the credential lacks a grant on the kernel's own read model database. Grant `readWrite` on `System`, `System+es` and `System+es+Default`, with your prefix if you use one.
+An error on `_system` for `listIndexes` means the credential lacks a grant on the kernel's own read model database. Grant `readWrite` on `_system`, `_system+es` and `_system+es+Default`, with your prefix if you use one. Use the `System` names on kernels before 19.117.
