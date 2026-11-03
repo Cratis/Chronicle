@@ -10,6 +10,7 @@ using Cratis.Chronicle.Dynamic;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.MongoDB.Generations.Fencing;
+using Cratis.Chronicle.Storage.Sinks;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using MongoDB.Bson;
@@ -82,12 +83,12 @@ public class ChangesetConverter(
         EventSequenceNumber eventSequenceNumber) => ToUpdateDefinition(key, changeset.Changes, changeset.InitialState, eventSequenceNumber, new SinkMultiDocumentWrites(collections, writes));
 
     /// <inheritdoc/>
-    Task<UpdateDefinitionAndArrayFilters> IChangesetConverterWithDirectWrites.ToUpdateDefinition(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset, EventSequenceNumber eventSequenceNumber, SinkMultiDocumentWrites directWrites) =>
-        ToUpdateDefinition(key, changeset.Changes, changeset.InitialState, eventSequenceNumber, directWrites);
+    Task<UpdateDefinitionAndArrayFilters> IChangesetConverterWithDirectWrites.ToUpdateDefinition(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset, EventSequenceNumber eventSequenceNumber, SinkMultiDocumentWrites directWrites, AppliedEventMarkerContext? markers) =>
+        ToUpdateDefinition(key, changeset.Changes, changeset.InitialState, eventSequenceNumber, directWrites, markers);
 
     /// <inheritdoc/>
-    Task<UpdateDefinitionAndArrayFilters> IChangesetConverterWithDirectWrites.ToUpdateDefinition(Key key, IEnumerable<Change> changes, ExpandoObject? initialState, EventSequenceNumber eventSequenceNumber, SinkMultiDocumentWrites directWrites) =>
-        ToUpdateDefinition(key, changes, initialState, eventSequenceNumber, directWrites);
+    Task<UpdateDefinitionAndArrayFilters> IChangesetConverterWithDirectWrites.ToUpdateDefinition(Key key, IEnumerable<Change> changes, ExpandoObject? initialState, EventSequenceNumber eventSequenceNumber, SinkMultiDocumentWrites directWrites, AppliedEventMarkerContext? markers) =>
+        ToUpdateDefinition(key, changes, initialState, eventSequenceNumber, directWrites, markers);
 
     /// <summary>
     /// Build the property and comparand the <see cref="Joined"/> change filters its update on.
@@ -238,8 +239,9 @@ public class ChangesetConverter(
         return new BsonDocument(arrayPath, new BsonDocument("$elemMatch", elementMatch));
     }
 
-    async Task<UpdateDefinitionAndArrayFilters> ToUpdateDefinition(Key key, IEnumerable<Change> changes, ExpandoObject? initialState, EventSequenceNumber eventSequenceNumber, SinkMultiDocumentWrites directWrites)
+    async Task<UpdateDefinitionAndArrayFilters> ToUpdateDefinition(Key key, IEnumerable<Change> changes, ExpandoObject? initialState, EventSequenceNumber eventSequenceNumber, SinkMultiDocumentWrites directWrites, AppliedEventMarkerContext? markers = null)
     {
+        var tracker = markers is null ? null : new AppliedEventMarkerTracker();
         var hasChanges = false;
         var updateDefinitionBuilder = Builders<BsonDocument>.Update;
         UpdateDefinition<BsonDocument>? updateBuilder = default;
@@ -259,7 +261,9 @@ public class ChangesetConverter(
             ref hasChanges,
             arrayFiltersForDocument,
             eventSequenceNumber,
-            directWrites);
+            directWrites,
+            markers,
+            tracker);
 
         // EventSequenceNumber sentinels (Unavailable, Max) are not positions in the sequence. Letting one through
         // would pin the $max watermark at the top of the range and permanently block every later guarded write to
@@ -269,10 +273,20 @@ public class ChangesetConverter(
             BuildLastHandledEventSequenceNumber(updateDefinitionBuilder, ref updateBuilder, eventSequenceNumber);
         }
 
+        FilterDefinition<BsonDocument>? appliedCondition = null;
+        if (markers is { RecordOwnSlot: true } && hasChanges)
+        {
+            var slot = AppliedEventMarkerSlots.Own(AppliedEventMarkerSlots.SegmentOf(normalizedChanges, markers));
+            updateBuilder = updateBuilder!.Set(slot, AppliedEventMarkerSlots.Value(markers.OwnStream, markers.SequenceNumber));
+            appliedCondition = AppliedEventMarkerSlots.NotApplied(slot, markers.OwnStream, markers.SequenceNumber);
+        }
+
         var distinctArrayFilters = arrayFiltersForDocument.DistinctBy(_ => _.Document).ToArray();
 
         return new(updateBuilder!, distinctArrayFilters, hasChanges)
         {
+            AppliedCondition = appliedCondition,
+            ResolvedJoinSlots = tracker?.ResolvedJoins ?? [],
             NullParentPaths = nullParentPaths.OrderBy(_ => _.Count(ch => ch == '.')).ToArray(),
             NullArrayParents = nullArrayParents.DistinctBy(_ => (_.Path, string.Join('|', _.ArrayFilters.Select(filter => filter.Document.ToJson())))).ToArray(),
             RequiredArrayPaths = [.. arrayFiltersForDocument.ArrayPaths]
@@ -290,7 +304,9 @@ public class ChangesetConverter(
         ref bool hasChanges,
         ArrayFilters arrayFiltersForDocument,
         EventSequenceNumber eventSequenceNumber,
-        SinkMultiDocumentWrites directWrites)
+        SinkMultiDocumentWrites directWrites,
+        AppliedEventMarkerContext? markers,
+        AppliedEventMarkerTracker? tracker)
     {
         var joinTasks = new List<Task>();
         var changesToApply = changes.ToList();
@@ -321,11 +337,12 @@ public class ChangesetConverter(
                     break;
 
                 case Joined joined:
-                    joinTasks.Add(PerformJoined(key, updateDefinitionBuilder, joined, eventSequenceNumber, directWrites));
+                    joinTasks.Add(PerformJoined(key, updateDefinitionBuilder, joined, eventSequenceNumber, directWrites, markers));
                     break;
 
                 case ResolvedJoin resolvedJoined:
-                    var applyActualChangesTask = ApplyActualChanges(key, resolvedJoined.Changes, initialState, nullParentPaths, nullArrayParents, updateDefinitionBuilder, ref updateBuilder, ref hasChanges, arrayFiltersForDocument, eventSequenceNumber, directWrites);
+                    tracker?.Add(resolvedJoined);
+                    var applyActualChangesTask = ApplyActualChanges(key, resolvedJoined.Changes, initialState, nullParentPaths, nullArrayParents, updateDefinitionBuilder, ref updateBuilder, ref hasChanges, arrayFiltersForDocument, eventSequenceNumber, directWrites, markers, tracker);
                     joinTasks.Add(applyActualChangesTask);
                     break;
             }
@@ -484,7 +501,7 @@ public class ChangesetConverter(
             : updateDefinitionBuilder.Pull(property, bsonValue);
     }
 
-    async Task PerformJoined(Key key, UpdateDefinitionBuilder<BsonDocument> updateDefinitionBuilder, Joined joined, EventSequenceNumber eventSequenceNumber, SinkMultiDocumentWrites directWrites)
+    async Task PerformJoined(Key key, UpdateDefinitionBuilder<BsonDocument> updateDefinitionBuilder, Joined joined, EventSequenceNumber eventSequenceNumber, SinkMultiDocumentWrites directWrites, AppliedEventMarkerContext? markers)
     {
         UpdateDefinition<BsonDocument>? joinUpdateBuilder = default;
         var hasJoinChanges = false;
@@ -494,7 +511,7 @@ public class ChangesetConverter(
 
         // A join can match many documents with different parent shapes. Check each matched
         // document for legacy nulls rather than using one joined state for the whole batch.
-        await ApplyActualChanges(key, joined.Changes, null, nullParentPaths, nullArrayParents, updateDefinitionBuilder, ref joinUpdateBuilder, ref hasJoinChanges, joinArrayFiltersForDocument, eventSequenceNumber, directWrites);
+        await ApplyActualChanges(key, joined.Changes, null, nullParentPaths, nullArrayParents, updateDefinitionBuilder, ref joinUpdateBuilder, ref hasJoinChanges, joinArrayFiltersForDocument, eventSequenceNumber, directWrites, null, null);
 
         if (!hasJoinChanges)
         {
@@ -513,7 +530,15 @@ public class ChangesetConverter(
             return;
         }
 
-        var joinFilter = Builders<BsonDocument>.Filter.Eq(target.Property, target.Value);
+        FilterDefinition<BsonDocument> joinFilter = Builders<BsonDocument>.Filter.Eq(target.Property, target.Value);
+        var joinSlot = markers is not null && isRootLevelJoin
+            ? AppliedEventMarkerSlots.Join(AppliedEventMarkers.DefinitionId(markers.EventTypeId, joined.OnProperty.Path))
+            : null;
+        if (joinSlot is not null)
+        {
+            joinFilter = Builders<BsonDocument>.Filter.And(joinFilter, AppliedEventMarkerSlots.NotApplied(joinSlot, markers!.OwnStream, markers.SequenceNumber));
+        }
+
         foreach (var parent in nullParentPaths.Select(path => (Path: path, Filters: (IReadOnlyList<BsonDocumentArrayFilterDefinition<BsonDocument>>)[]))
                      .Concat(nullArrayParents.DistinctBy(_ => (_.Path, string.Join('|', _.ArrayFilters.Select(filter => filter.Document.ToJson())))).Select(_ => (_.Path, Filters: _.ArrayFilters)))
                      .OrderBy(_ => _.Path.Count(ch => ch == '.')))
@@ -529,6 +554,11 @@ public class ChangesetConverter(
         }
 
         BuildLastHandledEventSequenceNumber(updateDefinitionBuilder, ref joinUpdateBuilder, eventSequenceNumber);
+        if (joinSlot is not null)
+        {
+            joinUpdateBuilder = joinUpdateBuilder!.Set(joinSlot, AppliedEventMarkerSlots.Value(markers!.OwnStream, markers.SequenceNumber));
+        }
+
         var result = await directWrites.UpdateManyAsync(
             joinFilter,
             joinUpdateBuilder!,

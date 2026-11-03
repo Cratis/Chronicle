@@ -86,6 +86,29 @@ public sealed partial class FencedSinkWrites(IFenceTokenSource tokens, IFencedBa
         Write(collection, filter, false, options.IsUpsert, update, session => collection.UpdateOneAsync(session, filter, update, options));
 
     /// <inheritdoc/>
+    public async Task<UpdateResult> ConditionalUpsertOne(IMongoCollection<BsonDocument> collection, FilterDefinition<BsonDocument> filter, FilterDefinition<BsonDocument> idFilter, UpdateDefinition<BsonDocument> update, UpdateOptions options)
+    {
+        if (!IsInBatch)
+        {
+            return await InBatch(() => ConditionalUpsertOne(collection, filter, idFilter, update, options));
+        }
+
+        // A collision with the primary key inside a transaction aborts it, so the document is looked for instead of inserted over.
+        var result = await UpdateOne(collection, filter, update, new UpdateOptions { IsUpsert = false, ArrayFilters = options.ArrayFilters });
+        if (result.MatchedCount > 0 || !options.IsUpsert)
+        {
+            return result;
+        }
+
+        if ((await SinkBatchDocuments.FindIds(collection, _session.Value, idFilter, 1, CancellationToken.None)).Count > 0)
+        {
+            return result;
+        }
+
+        return await UpdateOne(collection, filter, update, options);
+    }
+
+    /// <inheritdoc/>
     public Task<UpdateResult> UpdateMany(IMongoCollection<BsonDocument> collection, FilterDefinition<BsonDocument> filter, UpdateDefinition<BsonDocument> update, UpdateOptions options)
     {
         if (!IsInBatch)

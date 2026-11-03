@@ -54,6 +54,36 @@ internal static class ChangesetWriteOrder
         return segments;
     }
 
+    /// <summary>
+    /// Splits the changes into a segment per join, so every join has a slot of its own that records it was applied.
+    /// </summary>
+    /// <param name="changes">The changes of the changeset.</param>
+    /// <returns>The segments, or null when there is no join.</returns>
+    public static IReadOnlyList<IReadOnlyList<Change>>? SegmentsAtEveryJoin(IEnumerable<Change> changes)
+    {
+        var list = changes.ToList();
+        if (!list.Exists(change => change is Joined))
+        {
+            return null;
+        }
+
+        var segments = new List<IReadOnlyList<Change>>();
+        var current = new List<Change>();
+        foreach (var change in list)
+        {
+            if (change is Joined && current.Count > 0)
+            {
+                segments.Add(current);
+                current = [];
+            }
+
+            current.Add(change);
+        }
+
+        segments.Add(current);
+        return segments;
+    }
+
     static bool NeedsOrdering(List<Change> changes) =>
         IsCovered(changes) && HasDirectChangeOverlappingALaterJoin(changes);
 

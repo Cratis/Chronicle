@@ -33,12 +33,15 @@ public partial class Sink
         WritePlan plan,
         SinkWriteOptions options)
     {
-        if (IsGuardedWrite(options.Mode, plan, eventSequenceNumber) || changesetConverter is not IChangesetConverterWithDirectWrites)
+        if (IsGuardedWrite(options.Mode, plan, eventSequenceNumber) || changesetConverter is not IChangesetConverterWithDirectWrites || IsWrittenThroughJoinTargets(plan))
         {
             return null;
         }
 
-        return IsWrittenThroughJoinTargets(plan) ? null : ChangesetWriteOrder.SegmentsFor(changeset.Changes);
+        // Once per source event, every join is its own segment, so the slot of a segment records exactly what it wrote.
+        return MarkersFor(changeset, eventSequenceNumber, plan, options) is null
+            ? ChangesetWriteOrder.SegmentsFor(changeset.Changes)
+            : ChangesetWriteOrder.SegmentsAtEveryJoin(changeset.Changes);
     }
 
     async Task<IEnumerable<FailedPartition>> WriteSegments(
@@ -50,18 +53,20 @@ public partial class Sink
         IReadOnlyList<IReadOnlyList<Change>> segments)
     {
         var converterWithDirectWrites = (IChangesetConverterWithDirectWrites)changesetConverter;
+        var markers = MarkersFor(changeset, eventSequenceNumber, plan, options);
         var failures = new List<FailedPartition>();
         foreach (var segment in segments)
         {
-            var converted = await converterWithDirectWrites.ToUpdateDefinition(key, segment, changeset.InitialState, eventSequenceNumber, DirectWrites);
+            var converted = await converterWithDirectWrites.ToUpdateDefinition(key, segment, changeset.InitialState, eventSequenceNumber, DirectWrites, markers);
             if (!converted.hasChanges)
             {
                 continue;
             }
 
-            var write = ScopeToExistingArrays(new UpdateWrite(key, eventSequenceNumber, converted, plan.Filter, plan.IsUpsert));
+            var write = ScopeToExistingArrays(NewWrite(key, eventSequenceNumber, converted, plan));
             await UnsetNullParents(write, options);
             failures.AddRange(await WriteUpdate(write, changeset, options));
+            await RecordResolvedJoinSlots(write, converted, plan, options);
         }
 
         await RemoveChildrenFromAll(changeset);

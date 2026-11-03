@@ -16,8 +16,9 @@ internal interface IChangesetConverterWithDirectWrites
     /// <param name="changeset">The changes to convert.</param>
     /// <param name="eventSequenceNumber">The event watermark.</param>
     /// <param name="directWrites">The owning sink's direct-write boundary.</param>
+    /// <param name="markers">The event to record applied event markers for, or null when none are kept.</param>
     /// <returns>The converted keyed update.</returns>
-    Task<UpdateDefinitionAndArrayFilters> ToUpdateDefinition(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset, EventSequenceNumber eventSequenceNumber, SinkMultiDocumentWrites directWrites);
+    Task<UpdateDefinitionAndArrayFilters> ToUpdateDefinition(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset, EventSequenceNumber eventSequenceNumber, SinkMultiDocumentWrites directWrites, AppliedEventMarkerContext? markers = null);
 
     /// <summary>Converts a segment of changes, routing any direct multi-document mutations through the supplied boundary.</summary>
     /// <param name="key">The changeset key.</param>
@@ -25,6 +26,7 @@ internal interface IChangesetConverterWithDirectWrites
     /// <param name="initialState">The initial state of the changeset.</param>
     /// <param name="eventSequenceNumber">The event watermark.</param>
     /// <param name="directWrites">The owning sink's direct-write boundary.</param>
+    /// <param name="markers">The event to record applied event markers for, or null when none are kept.</param>
     /// <returns>The converted keyed update.</returns>
-    Task<UpdateDefinitionAndArrayFilters> ToUpdateDefinition(Key key, IEnumerable<Change> changes, ExpandoObject? initialState, EventSequenceNumber eventSequenceNumber, SinkMultiDocumentWrites directWrites);
+    Task<UpdateDefinitionAndArrayFilters> ToUpdateDefinition(Key key, IEnumerable<Change> changes, ExpandoObject? initialState, EventSequenceNumber eventSequenceNumber, SinkMultiDocumentWrites directWrites, AppliedEventMarkerContext? markers = null);
 }
