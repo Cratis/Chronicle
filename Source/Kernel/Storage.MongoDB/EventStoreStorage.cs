@@ -25,6 +25,7 @@ using Cratis.Chronicle.Storage.MongoDB.Projections;
 using Cratis.Chronicle.Storage.MongoDB.Seeding;
 using Cratis.Chronicle.Storage.MongoDB.SequenceQueries;
 using Cratis.Chronicle.Storage.Namespaces;
+using Cratis.Chronicle.Storage.Naming;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Chronicle.Storage.Observation.EventStoreSubscriptions;
 using Cratis.Chronicle.Storage.Observation.Reactors;
@@ -56,6 +57,7 @@ namespace Cratis.Chronicle.Storage.MongoDB;
 /// <param name="jobsStorage">The <see cref="Cratis.Orleans.Storage.IJobsStorage"/> resolving jobs storage for an event store namespace.</param>
 /// <param name="options"><see cref="ChronicleOptions"/>.</param>
 /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
+/// <param name="namespaceOpening">Optional <see cref="NamespaceOpeningGuard"/> checking names when a namespace is opened.</param>
 public class EventStoreStorage(
     EventStoreName eventStore,
     IEventStoreDatabase eventStoreDatabase,
@@ -64,7 +66,8 @@ public class EventStoreStorage(
     SinksFactory sinksFactory,
     Cratis.Orleans.Storage.IJobsStorage jobsStorage,
     IOptions<ChronicleOptions> options,
-    ILoggerFactory loggerFactory) : IEventStoreStorage
+    ILoggerFactory loggerFactory,
+    NamespaceOpeningGuard? namespaceOpening = null) : IEventStoreStorage
 {
     readonly ConcurrentDictionary<EventStoreNamespaceName, IEventStoreNamespaceStorage> _namespaces = new();
     readonly Occurrences.OccurrencesStorage _occurrences = new(eventStoreDatabase.GetCollection<BsonDocument>("occurrences").Database);
@@ -154,10 +157,13 @@ public class EventStoreStorage(
     /// <inheritdoc/>
     public IEventStoreNamespaceStorage GetNamespace(EventStoreNamespaceName @namespace)
     {
+        namespaceOpening?.EnsureCanOpen(EventStore, @namespace, Namespaces);
         if (_namespaces.TryGetValue(@namespace, out var instance))
         {
             return instance;
         }
+
+        namespaceOpening?.EnsureCanCreateIfNew(EventStore, @namespace, Namespaces);
 
         var created = new EventStoreNamespaceStorage(
             EventStore,

@@ -43,10 +43,12 @@ namespace Cratis.Chronicle.Storage.InMemory;
 /// <param name="eventStore">The <see cref="EventStoreName"/> the storage is for.</param>
 /// <param name="sinksFactory">Factory delegate that creates <see cref="ISinks"/> for a namespace.</param>
 /// <param name="jobsStorage">The <see cref="Cratis.Orleans.Storage.IJobsStorage"/> resolving jobs storage for a scope and namespace.</param>
+/// <param name="namespaceOpening">Optional <see cref="Naming.NamespaceOpeningGuard"/> checking names when a namespace is opened.</param>
 public sealed class EventStoreStorage(
     EventStoreName eventStore,
     SinksFactory sinksFactory,
-    Cratis.Orleans.Storage.IJobsStorage jobsStorage) : IEventStoreStorage
+    Cratis.Orleans.Storage.IJobsStorage jobsStorage,
+    Chronicle.Storage.Naming.NamespaceOpeningGuard? namespaceOpening = null) : IEventStoreStorage
 {
     readonly ConcurrentDictionary<EventStoreNamespaceName, IEventStoreNamespaceStorage> _namespaces = new();
     readonly Occurrences.OccurrencesStorage _occurrences = new();
@@ -60,12 +62,14 @@ public sealed class EventStoreStorage(
     /// <param name="sinksFactory">The sinks factory.</param>
     /// <param name="jobsStorage">The jobs storage.</param>
     /// <param name="eventTypesFactory">The event-types storage factory.</param>
+    /// <param name="namespaceOpening">Optional <see cref="Chronicle.Storage.Naming.NamespaceOpeningGuard"/> checking names when a namespace is opened.</param>
     internal EventStoreStorage(
         EventStoreName eventStore,
         SinksFactory sinksFactory,
         Cratis.Orleans.Storage.IJobsStorage jobsStorage,
-        Func<EventStoreName, IEventTypesStorage> eventTypesFactory)
-        : this(eventStore, sinksFactory, jobsStorage)
+        Func<EventStoreName, IEventTypesStorage> eventTypesFactory,
+        Chronicle.Storage.Naming.NamespaceOpeningGuard? namespaceOpening = null)
+        : this(eventStore, sinksFactory, jobsStorage, namespaceOpening)
     {
         EventTypes = eventTypesFactory(eventStore);
     }
@@ -159,6 +163,8 @@ public sealed class EventStoreStorage(
     /// <inheritdoc/>
     public IEventStoreNamespaceStorage GetNamespace(EventStoreNamespaceName @namespace)
     {
+        namespaceOpening?.EnsureCanOpen(EventStore, @namespace, Namespaces);
+        namespaceOpening?.EnsureCanCreateIfNew(EventStore, @namespace, Namespaces);
         if (_namespaces.TryGetValue(@namespace, out var existing))
         {
             return existing;

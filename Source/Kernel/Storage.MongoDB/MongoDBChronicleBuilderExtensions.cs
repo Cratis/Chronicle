@@ -8,6 +8,7 @@ using Cratis.Chronicle.Storage.Compliance;
 using Cratis.Chronicle.Storage.MongoDB;
 using Cratis.Chronicle.Storage.MongoDB.Schema;
 using Cratis.Chronicle.Storage.MongoDB.Sinks;
+using Cratis.Chronicle.Storage.Naming;
 using Cratis.Chronicle.Storage.SingleWriter;
 using Cratis.Compliance.MongoDB;
 using Cratis.Orleans.Jobs;
@@ -113,6 +114,9 @@ public static class MongoDBChronicleBuilderExtensions
             services.AddSingleton<EncryptionKeyStorage>();
             services.AddSingleton<IEncryptionKeyStorage>(sp => new CacheEncryptionKeyStorage(sp.GetRequiredService<EncryptionKeyStorage>()));
             services.AddSingleton<IClusterStorage, ClusterStorage>();
+            services.AddSingleton<IResourceNameReservations, MongoDBResourceNameReservations>();
+            services.AddSingleton<IResourcePhysicalNames, MongoDBResourcePhysicalNames>();
+            services.AddResourceNameGate();
             services.AddSingleton<ISingleWriterLeaseStorage, MongoDBSingleWriterLeaseStorage>();
             services.AddSingleton<ISystemStorage, SystemStorage>();
 
@@ -126,7 +130,11 @@ public static class MongoDBChronicleBuilderExtensions
                 sp.GetRequiredService<ICustomSerializers>(),
                 Options.Create(new MongoDBJobsStorageOptions
                 {
-                    DatabaseNameResolver = (scope, @namespace) => Storage.MongoDB.DatabaseNames.ForEventStoreNamespace(scope, @namespace, databaseNamePrefix)
+                    DatabaseNameResolver = (scope, @namespace) =>
+                    {
+                        sp.GetService<IResourceNameGate>()?.EnsureAvailable(scope, @namespace);
+                        return Storage.MongoDB.DatabaseNames.ForEventStoreNamespace(scope, @namespace, databaseNamePrefix);
+                    }
                 })));
             services.AddSingleton<ICustomSerializers, CustomSerializers>();
 

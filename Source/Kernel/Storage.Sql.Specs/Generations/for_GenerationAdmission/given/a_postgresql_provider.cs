@@ -31,7 +31,7 @@ public class a_postgresql_provider(PostgreSqlFixture fixture) : for_Database.giv
         var factories = Substitute.For<IInstancesOf<ISinkFactory>>();
         factories.GetEnumerator().Returns(_ => Enumerable.Empty<ISinkFactory>().GetEnumerator());
         using var cluster = new ClusterStorage(Provider, factories, Substitute.For<Cratis.Orleans.Storage.IJobsStorage>(), new JsonSerializerOptions(), Substitute.For<Json.IExpandoObjectConverter>());
-        var storage = new Chronicle.Storage.Storage(cluster, Substitute.For<ISystemStorage>(), factories);
+        var storage = new Chronicle.Storage.Storage(cluster, Substitute.For<ISystemStorage>(), factories, Substitute.For<Cratis.Chronicle.Storage.Naming.IResourceNameGate>());
         await new GenerationFloorAdmission(storage).Admit(CancellationToken.None);
     }
 }

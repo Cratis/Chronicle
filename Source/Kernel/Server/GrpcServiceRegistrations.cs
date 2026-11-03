@@ -23,9 +23,11 @@ public static class GrpcServiceRegistrations
     {
         // Stateless, so one instance serves every call rather than grpc-dotnet activating one per call.
         services.AddSingleton<StreamingCallInterceptor>();
+        services.AddSingleton<ResourceNameExceptionInterceptor>();
         services.AddCodeFirstGrpc(options =>
         {
             options.EnableDetailedErrors = true;
+            options.Interceptors.Add<ResourceNameExceptionInterceptor>();
             options.Interceptors.Add<StreamingCallInterceptor>();
         });
         services.AddOptions<GrpcServiceOptions>().Configure<IOptions<ChronicleOptions>>((grpc, chronicle) =>

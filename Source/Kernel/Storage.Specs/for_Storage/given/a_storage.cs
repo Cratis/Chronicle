@@ -18,7 +18,7 @@ public class a_storage : Specification
             _clusterStorage.Provide(Substitute.For<IEventStoreStorage>());
         }
 
-        _storage = new Storage(_clusterStorage, Substitute.For<ISystemStorage>(), new KnownInstancesOf<ISinkFactory>([]));
+        _storage = new Storage(_clusterStorage, Substitute.For<ISystemStorage>(), new KnownInstancesOf<ISinkFactory>([]), Substitute.For<Chronicle.Storage.Naming.IResourceNameGate>());
     }
 
     void Destroy() => _clusterStorage.Dispose();

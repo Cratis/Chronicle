@@ -28,7 +28,11 @@ namespace Cratis.Chronicle.Storage.InMemory;
 /// </remarks>
 /// <param name="sinkFactories">All discovered <see cref="ISinkFactory"/> instances.</param>
 /// <param name="jobsStorage">The <see cref="Cratis.Orleans.Storage.IJobsStorage"/> resolving jobs storage for a scope and namespace.</param>
-public sealed class EventStoreStorages(IInstancesOf<ISinkFactory> sinkFactories, Cratis.Orleans.Storage.IJobsStorage jobsStorage) : IDisposable
+/// <param name="gate">Optional <see cref="Chronicle.Storage.Naming.IResourceNameGate"/> checking event store and namespace names.</param>
+public sealed class EventStoreStorages(
+    IInstancesOf<ISinkFactory> sinkFactories,
+    Cratis.Orleans.Storage.IJobsStorage jobsStorage,
+    Chronicle.Storage.Naming.IResourceNameGate? gate = null) : IDisposable
 {
     readonly ConcurrentDictionary<EventStoreName, IEventStoreStorage> _eventStores = new();
     readonly ConcurrentDictionary<EventStoreName, Generations.GenerationFloorStorage> _generationFloors = new();
@@ -100,15 +104,21 @@ public sealed class EventStoreStorages(IInstancesOf<ISinkFactory> sinkFactories,
     /// <returns>The <see cref="IEventStoreStorage"/> for the event store.</returns>
     public IEventStoreStorage GetOrCreate(EventStoreName eventStore, SinksFactory? sinksFactory = null)
     {
+        gate?.EnsureAvailable(eventStore);
         if (_eventStores.TryGetValue(eventStore, out var existing))
         {
             return existing;
         }
 
+        if (gate is not null)
+        {
+            Task.Run(() => gate.EnsureCanCreate(new Chronicle.Storage.Naming.ResourceCreation(eventStore, null, Names.Select(_ => _.Value)))).GetAwaiter().GetResult();
+        }
+
         var sinks = sinksFactory ?? CreateDefaultSinksFactory(eventStore);
         var created = _eventTypesFactory is null
-            ? new EventStoreStorage(eventStore, sinks, jobsStorage)
-            : new EventStoreStorage(eventStore, sinks, jobsStorage, _eventTypesFactory);
+            ? new EventStoreStorage(eventStore, sinks, jobsStorage, CreateOpeningGuard())
+            : new EventStoreStorage(eventStore, sinks, jobsStorage, _eventTypesFactory, CreateOpeningGuard());
         created.GenerationFloor = _generationFloors.GetOrAdd(eventStore, _ => new Generations.GenerationFloorStorage());
         var storage = _eventStores.GetOrAdd(eventStore, created);
 
@@ -161,4 +171,7 @@ public sealed class EventStoreStorages(IInstancesOf<ISinkFactory> sinkFactories,
 
     SinksFactory CreateDefaultSinksFactory(EventStoreName eventStore) =>
         @namespace => new Cratis.Chronicle.Storage.Sinks.Sinks(eventStore, @namespace, sinkFactories);
+
+    Chronicle.Storage.Naming.NamespaceOpeningGuard? CreateOpeningGuard() =>
+        gate is null ? null : new Chronicle.Storage.Naming.NamespaceOpeningGuard(gate, () => Task.FromResult(Names.Select(_ => _.Value)));
 }

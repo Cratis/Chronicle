@@ -49,7 +49,7 @@ public static class DatabaseNames
     /// <param name="prefix">The prefix, or empty to preserve the database name.</param>
     /// <returns>The database name.</returns>
     public static string ForEventStore(EventStoreName eventStore, string prefix = "") =>
-        Validated($"{prefix}{eventStore}+es", eventStore, null);
+        Validated(ComposeForEventStore(eventStore, prefix), eventStore, null);
 
     /// <summary>
     /// Get the name of the database holding the event sequences of a namespace within an event store.
@@ -59,7 +59,7 @@ public static class DatabaseNames
     /// <param name="prefix">The prefix, or empty to preserve the database name.</param>
     /// <returns>The database name.</returns>
     public static string ForEventStoreNamespace(EventStoreName eventStore, EventStoreNamespaceName @namespace, string prefix = "") =>
-        Validated($"{prefix}{eventStore}+es+{@namespace}", eventStore, @namespace);
+        Validated(ComposeForEventStoreNamespace(eventStore, @namespace, prefix), eventStore, @namespace);
 
     /// <summary>
     /// Get the name of the database read models of a namespace within an event store are materialized into.
@@ -73,11 +73,52 @@ public static class DatabaseNames
     /// bare event store name. A reader that suffixes unconditionally therefore resolves a database that simply
     /// does not exist for the default namespace, and reads come back empty rather than failing.
     /// </remarks>
-    public static string ForReadModels(EventStoreName eventStore, EventStoreNamespaceName @namespace, string prefix = "") =>
-        Validated(
-            @namespace == EventStoreNamespaceName.Default ? $"{prefix}{eventStore}" : $"{prefix}{eventStore}+{@namespace}",
-            eventStore,
-            @namespace);
+    /// <exception cref="InvalidDatabaseName">The composed name is not usable, including when it is the cluster database.</exception>
+    public static string ForReadModels(EventStoreName eventStore, EventStoreNamespaceName @namespace, string prefix = "")
+    {
+        var databaseName = ComposeForReadModels(eventStore, @namespace, prefix);
+        if (databaseName.Equals(ComposeClusterDatabase(prefix), StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidDatabaseName(databaseName, "it is the database Chronicle keeps its cluster state in", eventStore, @namespace.Value);
+        }
+
+        return Validated(databaseName, eventStore, @namespace);
+    }
+
+    /// <summary>
+    /// Compose the name of the database holding an event store's cross-namespace state, without validating it.
+    /// </summary>
+    /// <param name="eventStore">The <see cref="EventStoreName"/> to compose the database name for.</param>
+    /// <param name="prefix">The prefix, or empty to preserve the database name.</param>
+    /// <returns>The composed database name.</returns>
+    public static string ComposeForEventStore(EventStoreName eventStore, string prefix = "") => $"{prefix}{eventStore}+es";
+
+    /// <summary>
+    /// Compose the name of the database holding the event sequences of a namespace, without validating it.
+    /// </summary>
+    /// <param name="eventStore">The <see cref="EventStoreName"/> to compose the database name for.</param>
+    /// <param name="namespace">The <see cref="EventStoreNamespaceName"/> to compose the database name for.</param>
+    /// <param name="prefix">The prefix, or empty to preserve the database name.</param>
+    /// <returns>The composed database name.</returns>
+    public static string ComposeForEventStoreNamespace(EventStoreName eventStore, EventStoreNamespaceName @namespace, string prefix = "") =>
+        $"{prefix}{eventStore}+es+{@namespace}";
+
+    /// <summary>
+    /// Compose the name of the database read models of a namespace are materialized into, without validating it.
+    /// </summary>
+    /// <param name="eventStore">The <see cref="EventStoreName"/> to compose the database name for.</param>
+    /// <param name="namespace">The <see cref="EventStoreNamespaceName"/> to compose the database name for.</param>
+    /// <param name="prefix">The prefix, or empty to preserve the database name.</param>
+    /// <returns>The composed database name.</returns>
+    public static string ComposeForReadModels(EventStoreName eventStore, EventStoreNamespaceName @namespace, string prefix = "") =>
+        @namespace == EventStoreNamespaceName.Default ? $"{prefix}{eventStore}" : $"{prefix}{eventStore}+{@namespace}";
+
+    /// <summary>
+    /// Compose the name of the database holding the cluster state, without validating it.
+    /// </summary>
+    /// <param name="prefix">The prefix, or empty to preserve the database name.</param>
+    /// <returns>The composed database name.</returns>
+    public static string ComposeClusterDatabase(string prefix = "") => $"{prefix}{WellKnownDatabaseNames.Chronicle}";
 
     static string Validated(string databaseName, EventStoreName eventStore, EventStoreNamespaceName? @namespace)
     {

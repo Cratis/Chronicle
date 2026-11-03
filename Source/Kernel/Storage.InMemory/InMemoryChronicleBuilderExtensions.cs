@@ -6,6 +6,7 @@ using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Compliance;
 using Cratis.Chronicle.Storage.InMemory;
 using Cratis.Chronicle.Storage.InMemory.Compliance;
+using Cratis.Chronicle.Storage.Naming;
 using Cratis.Orleans.Storage;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -47,6 +48,8 @@ public static class InMemoryChronicleBuilderExtensions
             services.AddSingleton<EventStoreStorages>();
             services.AddSingleton<ISystemStorage, SystemStorage>();
             services.AddSingleton<IClusterStorage, ClusterStorage>();
+            services.AddSingleton<Cratis.Chronicle.Storage.Naming.IResourceNameReservations, InMemoryResourceNameReservations>();
+            services.AddResourceNameGate();
             services.AddSingleton<IEncryptionKeyStorage, EncryptionKeyStorage>();
             services.AddSingleton<IStorage, Cratis.Chronicle.Storage.InMemory.Storage>();
             services.AddSingleton<IStorageErrorClassifier, InMemoryStorageErrorClassifier>();
