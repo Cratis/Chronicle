@@ -70,6 +70,7 @@
         "patternHeatmap": "Pattern heatmap",
         "observers": "Observers",
         "failedPartitions": "Failed partitions",
+        "failedPartitionGroups": "Failed partition groups",
         "readModels": "Read Models",
         "identities": "Identities",
         "closedStreams": "Closed Streams",
@@ -722,6 +723,36 @@
                     "messages": "Messages",
                     "stackTrace": "Stack trace",
                     "noStackTrace": "No stack trace available"
+                }
+            },
+            "failedPartitionGroups": {
+                "title": "Failed partition groups",
+                "empty": "No failed partitions found",
+                "notRootCause": "Partitions are grouped by observer and failure kind. A group means a shared failure kind, not a confirmed root cause.",
+                "columns": {
+                    "observer": "Observer",
+                    "kind": "Failure kind",
+                    "partitions": "Partitions",
+                    "quarantined": "Quarantined",
+                    "firstObserved": "First observed",
+                    "lastObserved": "Last observed"
+                },
+                "kinds": {
+                    "unknown": "Unknown",
+                    "handling": "Handling",
+                    "timeout": "Timeout",
+                    "disconnected": "Disconnected",
+                    "waitingForHandler": "Waiting for handler"
+                },
+                "details": {
+                    "observer": "Observer",
+                    "kind": "Failure kind",
+                    "partitions": "Partitions",
+                    "quarantined": "Quarantined",
+                    "firstObserved": "First observed",
+                    "lastObserved": "Last observed",
+                    "examples": "Example partitions (most recent, up to 10)",
+                    "viewFailedPartitions": "View failed partitions"
                 }
             },
             "closedStreams": {
