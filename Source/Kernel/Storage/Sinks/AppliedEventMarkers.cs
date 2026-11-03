@@ -10,7 +10,7 @@ namespace Cratis.Chronicle.Storage.Sinks;
 /// Helpers for the applied event markers a sink keeps on a document for <see cref="SinkWriteMode.OncePerSourceEvent"/>.
 /// </summary>
 /// <remarks>
-/// A marker slot is <c>{ s, n }</c>: <c>s</c> identifies the event stream that made the write and <c>n</c> is the event
+/// A marker slot is <c language="text">{ s, n }</c>: <c language="text">s</c> identifies the event stream that made the write and <c language="text">n</c> is the event
 /// sequence number of the event that made it. A write is a no-op when its slot already holds the same stream with a
 /// sequence number at or beyond the event's.
 /// </remarks>

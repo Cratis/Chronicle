@@ -15,5 +15,5 @@ public class when_hashing_the_same_stream_twice : Specification
     }
 
     [Fact] void should_be_the_same() => _first.ShouldEqual(_second);
-    [Fact] void should_be_22_url_safe_characters() => System.Text.RegularExpressions.Regex.IsMatch(_first, "^[A-Za-z0-9_-]{22}$").ShouldBeTrue();
+    [Fact] void should_be_22_url_safe_characters() => (_first.Length == 22 && _first.All(c => char.IsAsciiLetterOrDigit(c) || c is '_' or '-')).ShouldBeTrue();
 }

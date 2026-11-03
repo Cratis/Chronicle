@@ -530,7 +530,7 @@ public class ChangesetConverter(
             return;
         }
 
-        FilterDefinition<BsonDocument> joinFilter = Builders<BsonDocument>.Filter.Eq(target.Property, target.Value);
+        var joinFilter = Builders<BsonDocument>.Filter.Eq(target.Property, target.Value);
         var joinSlot = markers is not null && isRootLevelJoin
             ? AppliedEventMarkerSlots.Join(AppliedEventMarkers.DefinitionId(markers.EventTypeId, joined.OnProperty.Path))
             : null;

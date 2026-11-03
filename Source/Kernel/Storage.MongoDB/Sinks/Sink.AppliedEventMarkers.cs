@@ -18,7 +18,7 @@ public partial class Sink : ISinkAppliedEventMarkers
     public async Task ClearAppliedEventMarkers(EventStoreNamespaceName @namespace, Key partition, IReadOnlyList<AppliedEventMarkerJoin> joins)
     {
         DirectWrites.BeforeWrite();
-        var markers = WellKnownProperties.AppliedEventMarkers;
+        const string markers = WellKnownProperties.AppliedEventMarkers;
         await writes.UpdateOne(
             Collection,
             Builders<BsonDocument>.Filter.Eq("_id", converter.ToBsonValue(partition)),

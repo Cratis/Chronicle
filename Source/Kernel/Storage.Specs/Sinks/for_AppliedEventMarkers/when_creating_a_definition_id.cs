@@ -19,7 +19,7 @@ public class when_creating_a_definition_id : Specification
     }
 
     [Fact] void should_be_stable() => _id.ShouldEqual(_same);
-    [Fact] void should_be_11_url_safe_characters() => System.Text.RegularExpressions.Regex.IsMatch(_id, "^[A-Za-z0-9_-]{11}$").ShouldBeTrue();
+    [Fact] void should_be_11_url_safe_characters() => (_id.Length == 11 && _id.All(c => char.IsAsciiLetterOrDigit(c) || c is '_' or '-')).ShouldBeTrue();
     [Fact] void should_differ_per_event_type() => _id.ShouldNotEqual(_otherType);
     [Fact] void should_differ_per_path() => _id.ShouldNotEqual(_otherPath);
 }
