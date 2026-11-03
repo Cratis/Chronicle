@@ -52,10 +52,10 @@ public interface IObserverOwnershipClaims
     bool IsObsolete(IObserverJobRequest request);
 
     /// <summary>
-    /// Gets whether a partition is still held, by work of any kind, under a claim granted after the one with the given epoch.
+    /// Gets whether a partition is still catching up under a partition catch-up claim granted after the one with the given epoch.
     /// </summary>
     /// <param name="partition">The partition.</param>
-    /// <param name="epoch">The epoch a refused start carried.</param>
-    /// <returns>True if a later grant owns the partition, so the refused start's work is not lost.</returns>
+    /// <param name="epoch">The epoch a refused catch-up start carried.</param>
+    /// <returns>True if a later catch-up grant owns the partition, so the refused start's work is not lost; a newer claim of another kind does not cover it.</returns>
     bool IsHeldByNewerClaim(Key partition, ulong? epoch);
 }

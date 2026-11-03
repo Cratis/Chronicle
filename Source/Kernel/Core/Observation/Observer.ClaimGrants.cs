@@ -85,9 +85,9 @@ public partial class Observer : IObserverOwnershipClaims
             return false;
         }
 
-        var current = (State.PartitionClaims ?? []).FirstOrDefault(_ => _.Partition == partition)?.Epoch;
-        var held = State.CatchingUpPartitions.Contains(partition) || State.ReplayingPartitions.Contains(partition);
-        return held && current is not null && current.Value > epoch.Value;
+        // Only a newer catch-up of the partition reads the batch the refused one would have; a newer replay does not cover it.
+        var current = new ObserverJobScope(ClaimHolderKind.PartitionCatchUp, partition).EpochIn(State);
+        return State.CatchingUpPartitions.Contains(partition) && current is not null && current.Value > epoch.Value;
     }
 
     /// <summary>
