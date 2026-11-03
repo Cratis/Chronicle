@@ -119,6 +119,26 @@ value comparison still determine which rows and children are actually updated.
 
 This allows teams using SQL databases (SQL Server, PostgreSQL, SQLite) to take advantage of Chronicle projections without maintaining a MongoDB instance.
 
+### Null nested objects
+
+When a projection sets a nested object to `null`, the SQL sink stores SQL `NULL` in that object's JSON
+column, and reads return the property as `null`, the same as MongoDB. A later change to one of the
+object's properties creates the object again. An empty object is still stored as `{}` and read back
+as an empty object. Collection columns keep their existing storage.
+
+Kernels before this change stored a `null` nested object as `{}`. Keep the following in mind when you upgrade:
+
+- Existing rows are not converted. A stored `{}` can mean either an empty object or a `null` written
+  by an older kernel, and Chronicle cannot tell them apart, so it never rewrites them in bulk. To
+  correct a read model, replay it once every kernel writing to it runs the new version; this needs
+  the event history that produced the rows.
+- Older kernels read the new `NULL` values correctly. Until every kernel in a cluster is upgraded,
+  an older kernel still writes `{}`, and rolling back to an older version brings those writes back.
+- If you query the tables directly, `column IS NULL` matches only rows written as `null` by the new
+  kernel on SQLite, PostgreSQL and SQL Server alike. It does not match `{}`, and it does not match a JSON
+  `null` literal (`'null'::jsonb` on PostgreSQL, the text `null` on SQL Server and SQLite).
+  To match `{}` use `column = '{}'::jsonb` on PostgreSQL and `column = '{}'` on SQL Server and SQLite.
+
 ### Decimal columns
 
 Decimal-formatted read-model properties use NUMERIC on PostgreSQL, DECIMAL(38,18) on SQL Server,
