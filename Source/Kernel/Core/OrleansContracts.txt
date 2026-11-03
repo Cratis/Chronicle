@@ -74,6 +74,14 @@ class [GrainType("appendedeventsqueue")] Cratis.Chronicle.EventSequences.Appende
 
 class [GrainType("appendedeventsqueues")] Cratis.Chronicle.EventSequences.AppendedEventsQueues
 
+class [GrainType("copyeventsourceevents")] Cratis.Chronicle.EventSequences.Copy.CopyEventSourceEvents
+
+class [GrainType("copyeventsourceeventsstep")] Cratis.Chronicle.EventSequences.Copy.CopyEventSourceEventsStep
+
+interface [GrainInterfaceType("Cratis.Chronicle.EventSequences.Copy.ICopyEventSourceEvents")] Cratis.Chronicle.EventSequences.Copy.ICopyEventSourceEvents [Version(0)]
+
+interface [GrainInterfaceType("Cratis.Chronicle.EventSequences.Copy.ICopyEventSourceEventsStep")] Cratis.Chronicle.EventSequences.Copy.ICopyEventSourceEventsStep [Version(0)]
+
 class [GrainType("eventsequence")] Cratis.Chronicle.EventSequences.EventSequence
 
 class [GrainType("eventsequences")] Cratis.Chronicle.EventSequences.EventSequences
