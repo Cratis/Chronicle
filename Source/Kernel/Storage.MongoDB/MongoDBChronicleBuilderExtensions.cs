@@ -40,7 +40,7 @@ public static class MongoDBChronicleBuilderExtensions
     /// </remarks>
     public static IChronicleBuilder WithMongoDB(this IChronicleBuilder builder, ChronicleOptions options)
     {
-        builder.WithMongoDB(options.Storage.ConnectionDetails, WellKnownDatabaseNames.Chronicle, options.Clustering.Type == ClusteringType.MongoDB, options.Storage.DatabaseNamePrefix);
+        builder.WithMongoDB(options.Storage.ConnectionDetails, WellKnownDatabaseNames.Chronicle, options.Clustering.Type == ClusteringType.MongoDB, options.Storage.DatabaseNamePrefix, options.Storage.SystemDatabaseName);
         builder.ConfigureServices(services =>
         {
             services.AddStorageConnectionResolution(WellKnownConnectionStorage.MongoDB, options.Storage.ConnectionResolution);
@@ -59,15 +59,20 @@ public static class MongoDBChronicleBuilderExtensions
     /// <param name="database">Name of the database to use. Defaults to the <see cref="WellKnownDatabaseNames.Chronicle"/>.</param>
     /// <param name="useClustering">Whether to also use MongoDB for Orleans cluster membership, letting multiple nodes form one cluster.</param>
     /// <param name="databaseNamePrefix">The prefix prepended to every database name. Empty preserves the default names.</param>
+    /// <param name="systemDatabaseName">The name the System event store's databases are named by, in place of the event store name.</param>
     /// <returns><see cref="IChronicleBuilder"/> for continuation.</returns>
-    public static IChronicleBuilder WithMongoDB(this IChronicleBuilder builder, string server, string database = WellKnownDatabaseNames.Chronicle, bool useClustering = false, string databaseNamePrefix = "")
+    public static IChronicleBuilder WithMongoDB(this IChronicleBuilder builder, string server, string database = WellKnownDatabaseNames.Chronicle, bool useClustering = false, string databaseNamePrefix = "", string systemDatabaseName = Configuration.Storage.DefaultSystemDatabaseName)
     {
         var settings = GetMongoClientSettings(server);
         database = Storage.MongoDB.DatabaseNames.WithPrefix(database, databaseNamePrefix);
 
         builder.ConfigureServices(services =>
         {
-            services.Configure<MongoDBStorageOptions>(options => options.DatabaseNamePrefix = databaseNamePrefix);
+            services.Configure<MongoDBStorageOptions>(options =>
+            {
+                options.DatabaseNamePrefix = databaseNamePrefix;
+                options.SystemDatabaseName = systemDatabaseName;
+            });
             var mongoClientDescriptor = services.LastOrDefault(_ => !_.IsKeyedService && _.ServiceType == typeof(IMongoClient));
             if (mongoClientDescriptor is null || mongoClientDescriptor.Lifetime != ServiceLifetime.Singleton)
             {
@@ -126,7 +131,7 @@ public static class MongoDBChronicleBuilderExtensions
                 sp.GetRequiredService<ICustomSerializers>(),
                 Options.Create(new MongoDBJobsStorageOptions
                 {
-                    DatabaseNameResolver = (scope, @namespace) => Storage.MongoDB.DatabaseNames.ForEventStoreNamespace(scope, @namespace, databaseNamePrefix)
+                    DatabaseNameResolver = (scope, @namespace) => Storage.MongoDB.DatabaseNames.ForEventStoreNamespace(scope, @namespace, databaseNamePrefix, systemDatabaseName)
                 })));
             services.AddSingleton<ICustomSerializers, CustomSerializers>();
 
