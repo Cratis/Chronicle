@@ -196,6 +196,38 @@ internal static class JsonColumnDocuments
         return Equals(value, key) || (value is not null && value.ToString() == keyAsString);
     }
 
+    /// <summary>
+    /// Removes the child described by <paramref name="removal"/> from its collection, selecting every ancestor array element through <paramref name="indexers"/>.
+    /// </summary>
+    /// <remarks>
+    /// Traversal only reads: nothing is created, and a missing ancestor, indexer or collection leaves the document untouched.
+    /// The terminal collection's own indexer is ignored; the victim is decided by the identifier and key.
+    /// </remarks>
+    /// <param name="columnValue">The deserialized JSON column holding the document.</param>
+    /// <param name="removal">The collection path, identifier and key of the child to remove.</param>
+    /// <param name="indexers">The indexers selecting each ancestor array element.</param>
+    /// <returns>True if a child was removed.</returns>
+    internal static bool RemoveNestedChild(object? columnValue, ChildRemoval removal, ArrayIndexers indexers)
+    {
+        if (FindChildCollection(columnValue, removal.Segments, indexers) is not IList<object?> children)
+        {
+            return false;
+        }
+
+        var keyAsString = removal.Key?.ToString();
+        var removed = false;
+        for (var position = children.Count - 1; position >= 0; position--)
+        {
+            if (IsRemovedChild(children[position], removal.Identifier, removal.Key, keyAsString))
+            {
+                children.RemoveAt(position);
+                removed = true;
+            }
+        }
+
+        return removed;
+    }
+
     internal static ArrayIndexers RewriteIndexersRelativeTo(string columnName, ArrayIndexers indexers)
     {
         // The change's indexers carry absolute paths from the read model root (e.g.
@@ -417,6 +449,45 @@ internal static class JsonColumnDocuments
     static bool MatchesConceptValue(object value, object target) =>
         (target.IsConcept() && value.Equals(target.GetConceptValue())) ||
         (value.IsConcept() && (value.GetConceptValue()?.Equals(target) ?? false));
+
+    static object? FindChildCollection(object? columnValue, IPropertyPathSegment[] segments, ArrayIndexers indexers)
+    {
+        var current = columnValue;
+        for (var index = 0; index < segments.Length && current is not null; index++)
+        {
+            current = index == 0 ? current : ReadMember(current, segments[index].Value);
+            if (index < segments.Length - 1 && segments[index] is ArrayProperty)
+            {
+                current = SelectAncestor(current, segments[..(index + 1)], indexers);
+            }
+        }
+
+        return current;
+    }
+
+    static object? ReadMember(object? node, string name)
+    {
+        return node is IDictionary<string, object?> dictionary && dictionary.TryGetValue(name, out var value) ? value : null;
+    }
+
+    static IDictionary<string, object?>? SelectAncestor(object? node, IPropertyPathSegment[] arrayPath, ArrayIndexers indexers)
+    {
+        var indexer = indexers.All.LastOrDefault(candidate => candidate.ArrayProperty.Segments.Select(segment => segment.Value).SequenceEqual(arrayPath.Select(segment => segment.Value)));
+        if (indexer is null || node is not IList<object?> elements)
+        {
+            return null;
+        }
+
+        if (!indexer.IdentifierProperty.IsSet)
+        {
+            return indexer.Identifier is int position && position >= 0 && position < elements.Count ? elements[position] as IDictionary<string, object?> : null;
+        }
+
+        var parentIdentifier = ChildIdentifier.For(indexer.IdentifierProperty, UnwrapConceptValue(indexer.Identifier));
+        return elements
+            .OfType<IDictionary<string, object?>>()
+            .FirstOrDefault(parent => ChildIdentity.TryGetValue(parent, parentIdentifier.Name, out var matchValue) && IdentifierMatches(matchValue, parentIdentifier, true));
+    }
 
     static bool RemoveMatchingChildren(object? node, ChildRemoval removal)
     {
