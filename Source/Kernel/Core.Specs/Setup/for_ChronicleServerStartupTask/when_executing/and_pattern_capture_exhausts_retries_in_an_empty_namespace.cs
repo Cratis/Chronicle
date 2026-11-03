@@ -10,7 +10,7 @@ public class and_pattern_capture_exhausts_retries_in_an_empty_namespace : given.
     void Establish() => _patternCapture.Subscribe(_eventStore, _emptyNamespace)
         .Returns(_ => Task.FromException(new TimeoutException("Sibling silo is unavailable")));
 
-    async Task Because() => _error = await Catch.Exception(ExecuteAndSettle);
+    async Task Because() => _error = await Catch.Exception(Execute);
 
     [Fact] void should_complete_startup() => _error.ShouldBeNull();
     [Fact] async Task should_exhaust_the_transient_retry_budget() => await _patternCapture.Received(5).Subscribe(_eventStore, _emptyNamespace);

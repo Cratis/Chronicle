@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Collections.Concurrent;
 using Cratis.Chronicle.Captures;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Observation;
@@ -46,7 +45,6 @@ namespace Orleans.Hosting;
 /// <param name="logger">The logger.</param>
 /// <param name="timeProvider">Optional <see cref="TimeProvider"/> the retry backoff waits on; defaults to <see cref="TimeProvider.System"/>.</param>
 /// <param name="generationFloorAdmission">Optional read-only generation admission; defaults to the real storage-backed admission.</param>
-/// <param name="startupWorkEscalation">Optional <see cref="IStartupWorkEscalation"/> told when background startup work keeps failing; defaults to structured logging.</param>
 /// <remarks>
 /// Every step in <see cref="Execute"/> is a grain call that can land on a sibling silo, and every
 /// silo runs this task as it starts. A sibling that has not stabilized yet answers none of them, and
@@ -64,12 +62,6 @@ namespace Orleans.Hosting;
 /// registered <see cref="IStorageErrorClassifier"/> instead of being folded into
 /// <see cref="SiblingSiloInstability"/>, which stays provider-agnostic.
 /// </para>
-/// <para>
-/// Only the prerequisites for safe requests are awaited here. Work that scales with the backlog - activating
-/// observers, resuming jobs, starting webhooks, captures and event store subscriptions - runs in a background
-/// pass after them (see <see cref="RecoverableStartupWork"/>), so it neither delays readiness nor stops the host
-/// when it is slow or failing.
-/// </para>
 /// </remarks>
 internal sealed class ChronicleServerStartupTask(
     IStorage storage,
@@ -85,8 +77,7 @@ internal sealed class ChronicleServerStartupTask(
     IClusterReleases clusterReleases,
     ILogger<ChronicleServerStartupTask> logger,
     TimeProvider? timeProvider = null,
-    IGenerationFloorAdmission? generationFloorAdmission = null,
-    IStartupWorkEscalation? startupWorkEscalation = null) : ILifecycleParticipant<ISiloLifecycle>, IDisposable
+    IGenerationFloorAdmission? generationFloorAdmission = null) : ILifecycleParticipant<ISiloLifecycle>
 {
     /// <summary>
     /// The exact Orleans placement-failure prefix for this grain and interface.
@@ -109,18 +100,6 @@ internal sealed class ChronicleServerStartupTask(
     static readonly TimeSpan _patchManagerRelocationDelay = TimeSpan.FromSeconds(1);
 
     readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
-    readonly RecoverableStartupWork _recoverableStartupWork = new(
-        timeProvider ?? TimeProvider.System,
-        startupWorkEscalation ?? new LoggingStartupWorkEscalation(logger),
-        logger);
-
-    readonly CancellationTokenSource _stopping = new();
-    Task _recoverableWork = Task.CompletedTask;
-
-    /// <summary>
-    /// Gets the background pass, which completes once every recoverable item has succeeded or the silo stopped.
-    /// </summary>
-    internal Task RecoverableWork => _recoverableWork;
 
     /// <inheritdoc/>
     public void Participate(ISiloLifecycle lifecycle)
@@ -128,12 +107,8 @@ internal sealed class ChronicleServerStartupTask(
         lifecycle.Subscribe(
             nameof(ChronicleServerStartupTask),
             ServiceLifecycleStage.Active,
-            Execute,
-            OnStop);
+            Execute);
     }
-
-    /// <inheritdoc/>
-    public void Dispose() => _stopping.Dispose();
 
     /// <summary>
     /// Recognizes only the patch manager's no-compatible-node response during manifest convergence.
@@ -142,24 +117,6 @@ internal sealed class ChronicleServerStartupTask(
     /// <returns>Whether the bounded patch-manager relocation loop should retry.</returns>
     internal static bool IsPatchManagerAwaitingManifest(OrleansException exception) =>
         exception.Message.StartsWith(PatchManagerPlacementFailure, StringComparison.Ordinal);
-
-    /// <summary>
-    /// Cancels the background pass when the silo stops and waits for it to wind down.
-    /// </summary>
-    /// <param name="cancellationToken">Token that abandons the wait when the silo cannot wait any longer.</param>
-    /// <returns>Awaitable task.</returns>
-    internal async Task OnStop(CancellationToken cancellationToken)
-    {
-        await _stopping.CancelAsync();
-        try
-        {
-            await _recoverableWork.WaitAsync(cancellationToken);
-        }
-        catch (Exception exception) when (exception is OperationCanceledException or TimeoutException)
-        {
-            // The pass observes the same cancellation and never outlives the silo's own shutdown.
-        }
-    }
 
     /// <summary>
     /// Determines whether an observer's activation is required for startup.
@@ -190,8 +147,6 @@ internal sealed class ChronicleServerStartupTask(
         // Register reactors for the system event store first, so ReactorsReactor can process EventStoreAdded/NamespaceAdded events
         await Step("DiscoverAndRegisterSystemReactors", () => reactors.DiscoverAndRegister(EventStoreName.System, EventStoreNamespaceName.Default, cancellationToken));
 
-        var recoverableStores = new List<EventStoreName>();
-        var recoverableNamespaces = new ConcurrentBag<(EventStoreName EventStore, EventStoreNamespaceName Namespace)>();
         var allEventStores = await storage.GetEventStores().WaitAsync(cancellationToken);
         foreach (var eventStore in allEventStores)
         {
@@ -219,7 +174,8 @@ internal sealed class ChronicleServerStartupTask(
             var namespaces = grainFactory.GetGrain<INamespaces>(eventStore);
             await Step("EnsureDefaultNamespace", namespaces.EnsureDefault);
 
-            recoverableStores.Add(eventStore);
+            var eventStoreSubscriptionsManager = grainFactory.GetGrain<IEventStoreSubscriptionsManager>(eventStore);
+            await Step("EnsureEventStoreSubscriptions", eventStoreSubscriptionsManager.Ensure);
 
             var readModelsManager = grainFactory.GetGrain<IReadModelsManager>(eventStore);
             await Step("EnsureReadModels", readModelsManager.Ensure);
@@ -230,6 +186,12 @@ internal sealed class ChronicleServerStartupTask(
             // Before the persisted definitions are registered below, so the kernel's own projections are part of
             // the set that pass registers rather than a second registration racing it.
             await Step("DiscoverAndRegisterKernelProjections", () => kernelProjections.DiscoverAndRegister(eventStore));
+
+            var webhooksManager = grainFactory.GetGrain<IWebhooks>(eventStore);
+            await Step("EnsureWebhooks", webhooksManager.Ensure);
+
+            var capturesManager = grainFactory.GetGrain<ICapturesManager>(eventStore);
+            await Step("EnsureCaptures", capturesManager.Ensure);
 
             var projectionDefinitions = await projectionsManager.GetProjectionDefinitions().WaitAsync(cancellationToken);
             await Step("RegisterPersistedProjectionDefinitions", () => RegisterPersistedProjectionDefinitions(eventStore, projectionDefinitions));
@@ -263,8 +225,11 @@ internal sealed class ChronicleServerStartupTask(
 
                 await Step("DiscoverAndRegisterReactors", () => reactors.DiscoverAndRegister(eventStore, namespaceName, cancellationToken));
 
+                var jobsManager = grainFactory.GetJobsManager(eventStore, namespaceName);
+                await Step("RehydrateJobs", jobsManager.Rehydrate);
                 await Step("RehydrateEventSequences", grainFactory.GetEventSequences(eventStore, namespaceName).Rehydrate);
-                recoverableNamespaces.Add((eventStore, namespaceName));
+                await Step("RehydrateObservers", () => RehydrateReducerAndReactorObservers(eventStore, namespaceName));
+                await Step("BootstrapObserverAlerts", () => BootstrapObserverAlerts(eventStore, namespaceName));
             });
         }
 
@@ -273,69 +238,6 @@ internal sealed class ChronicleServerStartupTask(
 #if DEVELOPMENT
         await Step(nameof(IAuthenticationService.EnsureDefaultClientCredentials), authenticationService.EnsureDefaultClientCredentials);
 #endif
-
-        // Everything a request needs is now in place. The backlog-proportional work continues without gating readiness.
-        var stopping = _stopping.Token;
-        _recoverableWork = Task.Run(() => RunRecoverableWork([.. recoverableStores], [.. recoverableNamespaces], stopping), CancellationToken.None);
-    }
-
-    async Task RunRecoverableWork(
-        IReadOnlyList<EventStoreName> eventStores,
-        IReadOnlyList<(EventStoreName EventStore, EventStoreNamespaceName Namespace)> namespaces,
-        CancellationToken cancellationToken)
-    {
-        var started = _timeProvider.GetTimestamp();
-        try
-        {
-            await Task.WhenAll(eventStores.Select(_ => RecoverEventStore(_, cancellationToken))
-                .Concat(namespaces.Select(_ => RecoverNamespace(_.EventStore, _.Namespace, cancellationToken))));
-            if (!cancellationToken.IsCancellationRequested)
-            {
-                logger.RecoverableStartupWorkCompleted(_timeProvider.GetElapsedTime(started));
-            }
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            // The silo is stopping.
-        }
-        catch (Exception exception)
-        {
-            logger.RecoverableStartupWorkFaulted(exception);
-        }
-    }
-
-    Task RecoverEventStore(EventStoreName eventStore, CancellationToken cancellationToken)
-    {
-        Task Run(string kind, Func<Task> action) => _recoverableStartupWork.Run(new(kind, eventStore.Value), _ => action(), cancellationToken);
-
-        return Task.WhenAll(
-            Run("EnsureEventStoreSubscriptions", grainFactory.GetGrain<IEventStoreSubscriptionsManager>(eventStore).Ensure),
-            Run("EnsureWebhooks", grainFactory.GetGrain<IWebhooks>(eventStore).Ensure),
-            Run("EnsureCaptures", grainFactory.GetGrain<ICapturesManager>(eventStore).Ensure));
-    }
-
-    async Task RecoverNamespace(EventStoreName eventStore, EventStoreNamespaceName namespaceName, CancellationToken cancellationToken)
-    {
-        var scope = $"{eventStore.Value}/{namespaceName.Value}";
-
-        // Jobs first, as before: observers reconcile the partition holds of jobs that are already rehydrated.
-        await _recoverableStartupWork.Run(new("RehydrateJobs", scope), _ => grainFactory.GetJobsManager(eventStore, namespaceName).Rehydrate(), cancellationToken);
-        await Task.WhenAll(
-            ActivateObservers("RehydrateObservers", scope, () => ResolveReducerAndReactorObserverKeys(eventStore, namespaceName), cancellationToken),
-            ActivateObservers("BootstrapObserverAlerts", scope, () => ResolveObserverKeysNeedingAlertBootstrap(eventStore, namespaceName), cancellationToken));
-    }
-
-    async Task ActivateObservers(string kind, string scope, Func<Task<IReadOnlyList<ObserverKey>>> resolve, CancellationToken cancellationToken)
-    {
-        IReadOnlyList<ObserverKey> observerKeys = [];
-        await _recoverableStartupWork.Run(new($"Resolve{kind}", scope), async _ => observerKeys = await resolve(), cancellationToken);
-
-        // One independent, retried item per observer key: a slow or failing observer never holds up the others,
-        // and the same key is never activated by two overlapping attempts from this pass.
-        await Task.WhenAll(observerKeys.Select(key => _recoverableStartupWork.Run(
-            new("ActivateObserver", key.ToString()),
-            _ => grainFactory.GetGrain<IObserver>(key).Ensure(),
-            cancellationToken)));
     }
 
     async Task ApplyPatches(IPatchManager patchManager, CancellationToken cancellationToken)
@@ -471,9 +373,8 @@ internal sealed class ChronicleServerStartupTask(
         }
     }
 
-    async Task<IReadOnlyList<ObserverKey>> ResolveObserverKeysNeedingAlertBootstrap(EventStoreName eventStore, EventStoreNamespaceName namespaceName)
+    async Task BootstrapObserverAlerts(EventStoreName eventStore, EventStoreNamespaceName namespaceName)
     {
-        var keys = new List<ObserverKey>();
         var eventStoreStorage = storage.GetEventStore(eventStore);
         var definitions = (await eventStoreStorage.Observers.GetAll()).ToDictionary(_ => _.Identifier);
         var states = await eventStoreStorage.GetNamespace(namespaceName).Observers.GetAll();
@@ -493,13 +394,11 @@ internal sealed class ChronicleServerStartupTask(
                 continue;
             }
 
-            keys.Add(new ObserverKey(state.Identifier, eventStore, namespaceName, definition.EventSequenceId));
+            await grainFactory.GetGrain<IObserver>(new ObserverKey(state.Identifier, eventStore, namespaceName, definition.EventSequenceId)).Ensure();
         }
-
-        return keys;
     }
 
-    async Task<IReadOnlyList<ObserverKey>> ResolveReducerAndReactorObserverKeys(EventStoreName eventStore, EventStoreNamespaceName namespaceName)
+    async Task RehydrateReducerAndReactorObservers(EventStoreName eventStore, EventStoreNamespaceName namespaceName)
     {
         var eventStoreStorage = storage.GetEventStore(eventStore);
         var namespaceStorage = eventStoreStorage.GetNamespace(namespaceName);
@@ -514,6 +413,8 @@ internal sealed class ChronicleServerStartupTask(
         var reactorObserverKeys = reactorDefinitions
             .Where(_ => IsRequiredObserver(_.Identifier) && knownObserverIds.Contains(_.Identifier))
             .Select(_ => new ObserverKey(_.Identifier, eventStore, namespaceName, _.EventSequenceId));
-        return reducerObserverKeys.Concat(reactorObserverKeys).Distinct().ToArray();
+        var observerKeys = reducerObserverKeys.Concat(reactorObserverKeys).Distinct().ToArray();
+
+        await Task.WhenAll(observerKeys.Select(_ => grainFactory.GetGrain<IObserver>(_).Ensure()));
     }
 }
