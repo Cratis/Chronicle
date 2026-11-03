@@ -12,8 +12,8 @@ public class and_storage_admission_recovers : given.a_startup_task
     Exception? _failure;
 
     void Establish() => _reactors.DiscoverAndRegister(Concepts.EventStoreName.System, Concepts.EventStoreNamespaceName.Default).Returns(
-        Task.FromException(new MongoWaitQueueFullException("Planted storage admission overload")),
-        Task.CompletedTask);
+        _ => FailThroughIncomingCallFilter(new MongoWaitQueueFullException("Planted storage admission overload")),
+        _ => Task.CompletedTask);
 
     async Task Because() => _failure = await Catch.Exception(Execute);
 
