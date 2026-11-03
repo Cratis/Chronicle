@@ -41,7 +41,7 @@ internal sealed class ExternalAuthorityTokenProvider : ITokenProvider, IDisposab
     readonly HttpClient _discoveryClient;
     readonly SemaphoreSlim _discoveryLock = new(1, 1);
     OAuthTokenProvider? _inner;
-    TokenEndpointDiscoveryFailed? _lastFailure;
+    Exception? _lastCause;
     DateTimeOffset _lastFailedDiscovery = DateTimeOffset.MinValue;
 
     /// <summary>
@@ -135,13 +135,13 @@ internal sealed class ExternalAuthorityTokenProvider : ITokenProvider, IDisposab
                 return _inner;
             }
 
-            if (_lastFailure is not null && !bypassThrottle && _timeProvider.GetUtcNow() - _lastFailedDiscovery < _failedDiscoveryRetryDelay)
+            if (_lastCause is not null && !bypassThrottle && _timeProvider.GetUtcNow() - _lastFailedDiscovery < _failedDiscoveryRetryDelay)
             {
-                throw _lastFailure;
+                throw new TokenEndpointDiscoveryFailed(ExternalTokenEndpoints.Describe(_authority), _lastCause);
             }
 
             var endpoint = await Discover(cancellationToken);
-            _lastFailure = null;
+            _lastCause = null;
             _inner = new OAuthTokenProvider(endpoint, _clientId, _clientSecret, _scope, _tokenLogger, _handler, _timeProvider);
             return _inner;
         }
@@ -161,10 +161,13 @@ internal sealed class ExternalAuthorityTokenProvider : ITokenProvider, IDisposab
             using var response = await _discoveryClient.GetAsync(discoveryUri, cancellationToken);
             if ((int)response.StatusCode is >= 300 and < 400)
             {
-                throw new HttpRequestException($"The authority answered with a redirect ({(int)response.StatusCode}); redirects are not followed");
+                throw new HttpRequestException($"The authority answered with a redirect ({(int)response.StatusCode}); redirects are not followed", null, response.StatusCode);
             }
 
-            response.EnsureSuccessStatusCode();
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new HttpRequestException($"The authority returned HTTP status {(int)response.StatusCode}.", null, response.StatusCode);
+            }
 
             var content = await response.Content.ReadAsStringAsync(cancellationToken);
             using var document = JsonDocument.Parse(content);
@@ -192,9 +195,9 @@ internal sealed class ExternalAuthorityTokenProvider : ITokenProvider, IDisposab
         {
             // Includes the HttpClient timeout, which surfaces as a cancellation the caller did not ask for.
             _logger.TokenEndpointDiscoveryFailed(authority, ex);
-            _lastFailure = new TokenEndpointDiscoveryFailed(authority, ex);
+            _lastCause = ex;
             _lastFailedDiscovery = _timeProvider.GetUtcNow();
-            throw _lastFailure;
+            throw new TokenEndpointDiscoveryFailed(authority, ex);
         }
     }
 }

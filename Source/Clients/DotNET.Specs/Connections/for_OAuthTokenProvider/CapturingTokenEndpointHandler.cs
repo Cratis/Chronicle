@@ -15,6 +15,8 @@ public class CapturingTokenEndpointHandler : HttpMessageHandler
     public Action? OnDiscovery { get; set; }
     public HttpStatusCode DiscoveryStatus { get; set; } = HttpStatusCode.OK;
     public HttpStatusCode TokenStatus { get; set; } = HttpStatusCode.OK;
+    public string? DiscoveryReasonPhrase { get; set; }
+    public string? TokenReasonPhrase { get; set; }
     public string? TokenErrorBody { get; set; }
     public string DiscoveryDocument { get; set; } = "{\"token_endpoint\":\"https://idp.example.com/realms/chronicle/protocol/openid-connect/token\"}";
 
@@ -50,30 +52,31 @@ public class CapturingTokenEndpointHandler : HttpMessageHandler
                 throw new HttpRequestException("Simulated discovery failure");
             }
 
-            return IsRedirect(DiscoveryStatus) ? Redirect(DiscoveryStatus) : new HttpResponseMessage(DiscoveryStatus) { Content = new StringContent(DiscoveryDocument) };
+            return IsRedirect(DiscoveryStatus) ? Redirect(DiscoveryStatus, DiscoveryReasonPhrase) : new HttpResponseMessage(DiscoveryStatus) { ReasonPhrase = DiscoveryReasonPhrase, Content = new StringContent(DiscoveryDocument) };
         }
 
         if (IsRedirect(TokenStatus))
         {
-            return Redirect(TokenStatus);
+            return Redirect(TokenStatus, TokenReasonPhrase);
         }
 
         if (TokenErrorBody is not null)
         {
-            return new HttpResponseMessage(TokenStatus == HttpStatusCode.OK ? HttpStatusCode.BadRequest : TokenStatus) { Content = new StringContent(TokenErrorBody) };
+            return new HttpResponseMessage(TokenStatus == HttpStatusCode.OK ? HttpStatusCode.BadRequest : TokenStatus) { ReasonPhrase = TokenReasonPhrase, Content = new StringContent(TokenErrorBody) };
         }
 
         return new HttpResponseMessage(TokenStatus)
         {
+            ReasonPhrase = TokenReasonPhrase,
             Content = new StringContent($"{{\"access_token\":\"{Token}\",\"expires_in\":{ExpiresIn}}}")
         };
     }
 
     static bool IsRedirect(HttpStatusCode status) => (int)status is >= 300 and < 400;
 
-    static HttpResponseMessage Redirect(HttpStatusCode status)
+    static HttpResponseMessage Redirect(HttpStatusCode status, string? reasonPhrase)
     {
-        var response = new HttpResponseMessage(status);
+        var response = new HttpResponseMessage(status) { ReasonPhrase = reasonPhrase };
         response.Headers.Location = new Uri("https://elsewhere.example.net/collect");
         return response;
     }

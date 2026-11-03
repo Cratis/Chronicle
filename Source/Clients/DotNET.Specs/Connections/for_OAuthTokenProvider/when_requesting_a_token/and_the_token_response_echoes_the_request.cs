@@ -32,8 +32,8 @@ public class and_the_token_response_echoes_the_request : Specification
 
     void Destroy() => _provider.Dispose();
 
-    [Fact] void should_not_log_the_response_body() => _log.Entries.Any(_ => _.Message.Contains("test-secret", StringComparison.Ordinal)).ShouldBeFalse();
-    [Fact] void should_not_log_the_error_description() => _log.Entries.Any(_ => _.Message.Contains("rejected", StringComparison.Ordinal)).ShouldBeFalse();
+    [Fact] void should_not_log_the_response_body() => _log.Entries.Any(_ => _.Contains("test-secret")).ShouldBeFalse();
+    [Fact] void should_not_log_the_error_description() => _log.Entries.Any(_ => _.Contains("rejected")).ShouldBeFalse();
     [Fact] void should_log_the_status_code() => _log.Entries.Any(_ => _.Level == LogLevel.Error && _.Message.Contains("400", StringComparison.Ordinal)).ShouldBeTrue();
     [Fact] void should_log_the_oauth_error_code() => _log.Entries.Any(_ => _.Message.Contains("invalid_client", StringComparison.Ordinal)).ShouldBeTrue();
 }

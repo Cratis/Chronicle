@@ -29,5 +29,5 @@ public class and_the_external_endpoint_has_a_query_string : Specification
 
     [Fact] void should_send_the_request_to_the_full_endpoint() => _handler.Requests.Single().Uri.Query.ShouldEqual("?tenant=hidden-tenant-value");
     [Fact] void should_log_the_endpoint() => _log.Entries.Any(_ => _.Message.Contains("https://idp.example.com/oauth2/token", StringComparison.Ordinal)).ShouldBeTrue();
-    [Fact] void should_not_log_the_query_string() => _log.Entries.Any(_ => _.Message.Contains("hidden-tenant-value", StringComparison.Ordinal)).ShouldBeFalse();
+    [Fact] void should_not_log_the_query_string() => _log.Entries.Any(_ => _.Contains("hidden-tenant-value")).ShouldBeFalse();
 }

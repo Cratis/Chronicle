@@ -271,7 +271,7 @@ public class OAuthTokenProvider : ITokenProvider, IDisposable
             {
                 var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
                 _logger.TokenRequestFailed((int)response.StatusCode, response.StatusCode.ToString(), OAuthErrorCodes.Describe(errorContent));
-                response.EnsureSuccessStatusCode();
+                throw new HttpRequestException($"The token endpoint returned HTTP status {(int)response.StatusCode}.", null, response.StatusCode);
             }
 
             var responseContent = await response.Content.ReadAsStringAsync(cancellationToken);

@@ -27,5 +27,5 @@ public class and_the_token_response_is_not_json : Specification
 
     void Destroy() => _provider.Dispose();
 
-    [Fact] void should_not_log_any_of_the_response_body() => _log.Entries.Any(_ => _.Message.Contains("test-secret", StringComparison.Ordinal) || _.Message.Contains("custom_code", StringComparison.Ordinal)).ShouldBeFalse();
+    [Fact] void should_not_log_any_of_the_response_body() => _log.Entries.Any(_ => _.Contains("test-secret") || _.Contains("custom_code")).ShouldBeFalse();
 }
