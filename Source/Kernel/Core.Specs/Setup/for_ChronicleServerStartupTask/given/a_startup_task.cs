@@ -30,6 +30,7 @@ using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Releases;
 using Cratis.Chronicle.Setup.Authentication;
+using Cratis.Chronicle.Setup.Execution;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Chronicle.Storage.Observation.Reactors;
@@ -60,7 +61,6 @@ public class a_startup_task : Specification
     protected IPatchManager _patchManager = null!;
     readonly an_immediate_time_provider _timeProvider = new();
     protected IClusterReleases _clusterReleases = null!;
-    private protected RecordingStartupWorkEscalation _escalation = null!;
     protected ILocalSiloDetails _localSiloDetails = null!;
     readonly List<string> _logMessages = [];
     protected INamespaces _systemNamespaces = null!;
@@ -85,7 +85,6 @@ public class a_startup_task : Specification
 
     void EstablishStartupTask()
     {
-        _escalation = new RecordingStartupWorkEscalation();
         _startupTask = new(
             _storage,
             _eventTypes,
@@ -99,8 +98,7 @@ public class a_startup_task : Specification
             _localSiloDetails,
             _clusterReleases,
             new StartupLogger(_logMessages),
-            _timeProvider,
-            startupWorkEscalation: _escalation);
+            _timeProvider);
     }
 
     void Establish()
@@ -191,26 +189,14 @@ public class a_startup_task : Specification
         _namespaces.GetAll().Returns(Task.FromResult<IEnumerable<EventStoreNamespaceName>>([_namespace]));
     }
 
-    /// <summary>
-    /// Gets the background pass the startup task started after its prerequisites.
-    /// </summary>
-    protected Task RecoverableWork => _startupTask.RecoverableWork;
-
-    protected Task Execute() => Execute(CancellationToken.None);
-
-    /// <summary>
-    /// Runs startup and then waits, bounded, for the background pass to finish. Only for work that eventually succeeds.
-    /// </summary>
-    /// <returns>Awaitable task.</returns>
-    protected async Task ExecuteAndSettle()
+    protected static async Task FailThroughIncomingCallFilter(Exception exception)
     {
-        await Execute();
-
-        // Real time on purpose: the fixture's fake clock never advances on its own, so it could not bound the wait.
-        await RecoverableWork.WaitAsync(TimeSpan.FromSeconds(10), TimeProvider.System);
+        var context = Substitute.For<IIncomingGrainCallContext>();
+        context.Invoke().Returns(Task.FromException(exception));
+        await new SerializableFailureIncomingCallFilter().Invoke(context);
     }
 
-    protected Task Stop() => _startupTask.OnStop(CancellationToken.None);
+    protected Task Execute() => Execute(CancellationToken.None);
 
     protected Task Execute(CancellationToken cancellationToken)
     {

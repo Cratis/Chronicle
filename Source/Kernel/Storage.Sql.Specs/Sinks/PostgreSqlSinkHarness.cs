@@ -30,11 +30,7 @@ namespace Cratis.Chronicle.Storage.Sql.Sinks;
 /// </remarks>
 public class PostgreSqlSinkHarness : ISqlSinkHarness
 {
-    readonly ReadModelMigrator _migrator = new(
-        new TableMigrator<ReadModelDbContext>(Substitute.For<ILogger<TableMigrator<ReadModelDbContext>>>()),
-        Substitute.For<ILogger<ReadModelMigrator>>());
-
-    IReadOnlyList<ProjectedColumn> _columns = [];
+    ReadModelMigrator? _migrator;
 
     /// <summary>
     /// Gets or sets the <see cref="PostgreSqlFixture"/> supplying the container.
@@ -52,14 +48,24 @@ public class PostgreSqlSinkHarness : ISqlSinkHarness
     public IEnumerable<IInterceptor> Interceptors { get; init; } = [];
 
     /// <summary>
+    /// Gets a hook that adjusts the context options, such as installing an execution strategy that retries.
+    /// </summary>
+    public Action<DbContextOptionsBuilder<ReadModelDbContext>>? ConfigureOptions { get; init; }
+
+    /// <summary>
     /// Gets the logger for index diagnostics.
     /// </summary>
     public ILogger<SqlSink> Logger { get; init; } = Substitute.For<ILogger<SqlSink>>();
 
+    ReadModelMigrator Migrator => _migrator ??= new(
+        new RecordingTableMigrator<ReadModelDbContext>(
+            new TableMigrator<ReadModelDbContext>(Substitute.For<ILogger<TableMigrator<ReadModelDbContext>>>()),
+            () => Interceptors.OfType<SqlCommandCapture>().FirstOrDefault()),
+        Substitute.For<ILogger<ReadModelMigrator>>());
+
     /// <inheritdoc/>
     public ISink CreateSink(ReadModelDefinition definition)
     {
-        _columns = ProjectedColumns.ForSchema(definition.GetSchemaForLatestGeneration(), definition.Indexes);
         if (ConnectionString.Length == 0)
         {
             ConnectionString = Fixture!.CreateDatabase().GetAwaiter().GetResult();
@@ -68,7 +74,7 @@ public class PostgreSqlSinkHarness : ISqlSinkHarness
         var database = Substitute.For<IDatabase>();
         database.LiveQueryPollingInterval.Returns(TimeSpan.FromMilliseconds(50));
         database.ReadModelTable(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<string>(), Arg.Any<IReadOnlyList<ProjectedColumn>>(), Arg.Any<ConnectionPurpose>())
-            .Returns(callInfo => OpenTable(callInfo.ArgAt<string>(2)));
+            .Returns(callInfo => OpenTable(callInfo.ArgAt<string>(2), callInfo.ArgAt<IReadOnlyList<ProjectedColumn>>(3)));
 
         return new SqlSink(
             "test-event-store",
@@ -95,15 +101,17 @@ public class PostgreSqlSinkHarness : ISqlSinkHarness
     /// Opens a container in the sink's database, migrating its table as the real database does on every use.
     /// </summary>
     /// <param name="containerName">The name of the container.</param>
+    /// <param name="columns">The columns for this read model.</param>
     /// <returns>A <see cref="DbContextScope{TDbContext}"/> for the container.</returns>
-    async Task<DbContextScope<ReadModelDbContext>> OpenTable(string containerName)
+    async Task<DbContextScope<ReadModelDbContext>> OpenTable(string containerName, IReadOnlyList<ProjectedColumn> columns)
     {
-        var options = new DbContextOptionsBuilder<ReadModelDbContext>(SpecDbContextOptions.Kernel<ReadModelDbContext>(ConnectionString))
-            .AddInterceptors(Interceptors).Options;
+        var builder = new DbContextOptionsBuilder<ReadModelDbContext>(SpecDbContextOptions.Kernel<ReadModelDbContext>(ConnectionString));
+        ConfigureOptions?.Invoke(builder);
+        var options = builder.AddInterceptors(Interceptors).Options;
 
         var fixture = Fixture!;
 #pragma warning disable CA2000 // Disposed by the sink through the returned scope.
-        var context = fixture.Timings.Measure("ef-context-construction", () => fixture.Track(new ReadModelDbContext(options, containerName, _columns, _migrator)));
+        var context = fixture.Timings.Measure("ef-context-construction", () => fixture.Track(new ReadModelDbContext(options, containerName, columns, Migrator)));
 #pragma warning restore CA2000
         await fixture.Timings.Run("ef-table-ensure", context.EnsureTableExists);
         return new DbContextScope<ReadModelDbContext>(context, () => { });

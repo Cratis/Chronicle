@@ -56,9 +56,10 @@ jobs:
         id: client
         run: |
           echo "matrix=$(python3 .github/scripts/generate-integration-matrix.py ${ALL_PROVIDERS:+--all-providers})" >> "$GITHUB_OUTPUT"
-          echo "all-providers=${{ inputs.all-providers }}" >> "$GITHUB_OUTPUT"
+          echo "all-providers=$INPUT_ALL_PROVIDERS" >> "$GITHUB_OUTPUT"
         env:
           ALL_PROVIDERS: ${{ inputs.all-providers && 'true' || '' }}
+          INPUT_ALL_PROVIDERS: ${{ inputs.all-providers }}
 
       - name: Discover Kernel integration namespaces
         id: kernel
@@ -480,15 +481,18 @@ jobs:
           max_attempts: 5
           retry_wait_seconds: 15
           command: |
-            docker pull "${{ inputs.chronicle-image }}"
-            if [ "${{ matrix.provider }}" = "RollingUpgrade" ]; then
+            docker pull "$CHRONICLE_IMAGE"
+            if [ "$PROVIDER" = "RollingUpgrade" ]; then
               docker pull "$CRATIS_CHRONICLE_PREVIOUS_IMAGE"
             fi
-            if [ "${{ matrix.provider }}" != "SqlServer" ]; then
+            if [ "$PROVIDER" != "SqlServer" ]; then
               docker pull postgres:16
             else
               docker pull mcr.microsoft.com/mssql/server:2025-CU10-ubuntu-24.04
             fi
+        env:
+          CHRONICLE_IMAGE: ${{ inputs.chronicle-image }}
+          PROVIDER: ${{ matrix.provider }}
 
       # Three kernel containers from the image the Client shards use. No retries: an append that
       # fails during a membership transition is part of the availability measurement.

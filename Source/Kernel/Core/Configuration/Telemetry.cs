@@ -12,6 +12,12 @@ namespace Cratis.Chronicle.Configuration;
 public class Telemetry
 {
     /// <summary>
+    /// Gets or inits whether Orleans runtime and grain-call spans are exported. Defaults to false:
+    /// these sources accounted for about 99% of kernel spans. Trace context propagation stays enabled.
+    /// </summary>
+    public bool OrleansTracing { get; init; }
+
+    /// <summary>
     /// Gets or inits how event source ids are included in spans. The default is Raw.
     /// </summary>
     public EventSourceIdTracing EventSourceIdTracing { get; init; } = EventSourceIdTracing.Raw;

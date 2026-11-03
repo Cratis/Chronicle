@@ -19,6 +19,7 @@ public class a_provider_with_retry_overrides : Specification
         _global = new Observers
         {
             MaxConcurrentPartitions = 7,
+            MaxConcurrentRegistrations = 5,
             SubscriberTimeout = 11,
             LiveDeliveryBudget = 47,
             AbandonedDeliveryHold = 13,

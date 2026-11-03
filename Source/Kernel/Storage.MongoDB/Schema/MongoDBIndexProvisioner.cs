@@ -78,7 +78,7 @@ public class MongoDBIndexProvisioner(
 
                 // The shared Orleans jobs adapter deliberately uses the configured server, not namespace routing.
                 var jobs = clients.GetClientFor(MongoDBChronicleBuilderExtensions.GetMongoClientSettings(mongoOptions.Value.Server))
-                    .GetDatabase(DatabaseNames.ForEventStoreNamespace(store, name, storageOptions.Value.DatabaseNamePrefix));
+                    .GetDatabase(DatabaseNames.ForEventStoreNamespace(store, name, storageOptions.Value.DatabaseNamePrefix, storageOptions.Value.SystemDatabaseName));
                 await Visit($"jobs:{store}/{name}", jobs, MongoDBIndexCatalogue.ForJobs(jobs), migrate, results, [], cancellationToken);
             }
         }

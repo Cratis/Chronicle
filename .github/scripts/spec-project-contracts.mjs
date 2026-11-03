@@ -3,7 +3,7 @@
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdir, mkdtemp, readFile, symlink, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { assertExecutableSpecRunners } from './assert-executable-spec-runners.mjs';
 import { main } from './run-spec-project.mjs';
@@ -147,4 +147,100 @@ process.exit(attempt < 3 ? 1 : 0);
         'FullyQualifiedName~Original', 'FullyQualifiedName=Example.A|FullyQualifiedName=Example.B', 'FullyQualifiedName=Example.A'
     ]);
     assert.equal(new Set(calls.map(args => args[args.indexOf('--results-directory') + 1])).size, 3);
+});
+
+const retryProject = 'Integration/Client/Client.csproj';
+const escapeXml = value => value.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;');
+
+// Runs run-tests-with-retry.sh against a fake `node`. attempts[n-1] lists the failed test names of attempt n,
+// or null for "no TRX, exit 1". Attempts past the end of the list repeat the last entry.
+async function retryHarness(attempts, env = {}) {
+    const directory = await fixture();
+    try {
+        const bin = path.join(directory, 'bin');
+        await mkdir(bin);
+        await writeFile(path.join(bin, 'node'), `#!${process.execPath}
+const fs = require('node:fs');
+const args = process.argv.slice(2);
+if (args[0] !== '.github/scripts/run-spec-project.mjs') process.exit(91);
+const dir = args[args.indexOf('--results-directory') + 1];
+const attempt = Number(dir.match(/attempt-(\\d+)$/)[1]);
+fs.appendFileSync(${JSON.stringify(path.join(directory, 'calls'))}, JSON.stringify(args) + '\\n');
+const plan = ${JSON.stringify(attempts.map(names => names && names.map(escapeXml)))};
+const failed = plan[Math.min(attempt, plan.length) - 1];
+if (failed === null) process.exit(1);
+fs.mkdirSync(dir, { recursive: true });
+const rows = failed.map(name => '<UnitTestResult testName="' + name + '" outcome="Failed" />').join('');
+fs.writeFileSync(dir + '/results.trx', '<TestRun xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010"><Results>' + rows + '<UnitTestResult testName="Example.Other" outcome="Passed" /></Results></TestRun>');
+process.exit(failed.length ? 1 : 0);
+`, { mode: 0o755 });
+        const results = path.join(directory, 'results');
+        const settings = Object.entries({ TEST_MAX_ATTEMPTS: '3', ...env }).map(([key, value]) => `${key}=${value}`);
+        const result = await runProcess('env', [`PATH=${bin}:${process.env.PATH}`, `TEST_RESULTS_DIR=${results}`, ...settings, 'bash', '.github/scripts/run-tests-with-retry.sh', retryProject, 'FullyQualifiedName~Original'], {
+            cwd: root, capture: true, timeout: 10000
+        });
+        const callsText = await readFile(path.join(directory, 'calls'), 'utf8').catch(() => '');
+        const flaky = await readFile(path.join(results, 'flaky-tests.log'), 'utf8').catch(() => null);
+        return { code: result.code, stdout: result.stdout + result.stderr, calls: callsText.trim() ? callsText.trim().split('\n') : [], flaky };
+    } finally {
+        await rm(directory, { recursive: true, force: true });
+    }
+}
+const identicalMarker = 'identical set';
+
+test('retry wrapper stops when a retry fails the identical test set', async () => {
+    const result = await retryHarness([['Example.A', 'Example.B'], ['Example.A', 'Example.B']]);
+    assert.equal(result.code, 1, result.stdout);
+    assert.equal(result.calls.length, 2, result.stdout);
+    assert.match(result.stdout, new RegExp(identicalMarker));
+    assert.equal(result.flaky, null);
+});
+
+test('retry wrapper compares each attempt with the attempt before it', async () => {
+    const result = await retryHarness([['Example.A', 'Example.B', 'Example.C'], ['Example.A', 'Example.B'], ['Example.A', 'Example.B']], { TEST_MAX_ATTEMPTS: '5' });
+    assert.equal(result.code, 1, result.stdout);
+    assert.equal(result.calls.length, 3, result.stdout);
+});
+
+test('retry wrapper treats reordered and duplicated failure rows as the identical set', async () => {
+    const a = 'Example.theory(value: "a&b")';
+    const c = 'Example.theory(value: "c")';
+    const result = await retryHarness([[a, c], [c, a, c]]);
+    assert.equal(result.code, 1, result.stdout);
+    assert.equal(result.calls.length, 2, result.stdout);
+    assert.match(result.stdout, new RegExp(identicalMarker));
+});
+
+test('retry wrapper uses every retry while the failure set keeps changing', async () => {
+    const result = await retryHarness([['Example.A', 'Example.B', 'Example.C'], ['Example.A', 'Example.B'], ['Example.A']]);
+    assert.equal(result.code, 1, result.stdout);
+    assert.equal(result.calls.length, 3, result.stdout);
+    assert.match(result.stdout, /changed between attempts/);
+    assert.doesNotMatch(result.stdout, new RegExp(identicalMarker));
+});
+
+test('retry wrapper reports an identical set on the final attempt', async () => {
+    const result = await retryHarness([['Example.A', 'Example.B'], ['Example.A'], ['Example.A']]);
+    assert.equal(result.code, 1, result.stdout);
+    assert.equal(result.calls.length, 3, result.stdout);
+    assert.match(result.stdout, /Attempt 3 failed with the identical set .* as attempt 2/);
+});
+
+test('retry wrapper still records rescued tests and warns', async () => {
+    const result = await retryHarness([['Example.A', 'Example.B'], ['Example.A'], []]);
+    assert.equal(result.code, 0, result.stdout);
+    assert.equal(result.calls.length, 3, result.stdout);
+    const lines = result.flaky.trim().split('\n');
+    assert.equal(lines.length, 2);
+    for (const line of lines) assert.match(line, /\tIntegration\/Client\/Client\.csproj\tpassed-on-attempt-3\tExample\.(A|B)$/);
+    assert.match(result.stdout, /::warning::2 flaky test\(s\)/);
+});
+
+test('retry wrapper keeps its existing fail-fast guards', async () => {
+    const systemic = await retryHarness([['Example.A', 'Example.B']], { TEST_MAX_RETRY_TESTS: '1' });
+    assert.equal(systemic.code, 1, systemic.stdout);
+    assert.equal(systemic.calls.length, 1);
+    const noTrx = await retryHarness([null]);
+    assert.equal(noTrx.code, 1, noTrx.stdout);
+    assert.equal(noTrx.calls.length, 1);
 });

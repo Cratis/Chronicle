@@ -20,6 +20,9 @@ public abstract record ObserverPartitionedJobRequest(ObserverKey ObserverKey, Ob
     /// <inheritdoc/>
     public ulong? Revision { get; init; }
 
+    /// <inheritdoc/>
+    public ulong? OwnershipEpoch { get; init; }
+
     /// <summary>
     /// Creates an <see cref="ObserverSubscriberKey"/> from the request.
     /// </summary>

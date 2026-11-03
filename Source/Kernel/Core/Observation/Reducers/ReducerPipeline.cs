@@ -112,7 +112,7 @@ public class ReducerPipeline(
             {
                 initialForComparison = new ExpandoObject();
                 var declaredProperties = schema.GetFlattenedProperties().Select(property => property.Name).ToHashSet(StringComparer.Ordinal);
-                foreach (var (name, value) in initial.Where(property => !WellKnownProperties.All.Contains(property.Key) || declaredProperties.Contains(property.Key)))
+                foreach (var (name, value) in initial.ExceptBy(["_id"], property => property.Key).Where(property => !WellKnownProperties.All.Contains(property.Key) || declaredProperties.Contains(property.Key)))
                 {
                     ((IDictionary<string, object?>)initialForComparison)[name] = value;
                 }
@@ -168,12 +168,18 @@ public class ReducerPipeline(
             (_, null) => ReadModelChangeType.Added,
             _ => ReadModelChangeType.Modified
         };
-        var model = _expandoObjectConverter.ToJsonObject(storedState ?? new ExpandoObject(), schema);
-        ReadModelSubjects.CopyToJson(storedState ?? new ExpandoObject(), model);
+        var state = storedState ?? new ExpandoObject();
+        var model = _expandoObjectConverter.ToJsonObject(state, schema);
+        ReadModelChangeBookkeeping.CopyLegacySubjectLineage(state, model);
+        var (subject, subjects) = ReadModelChangeBookkeeping.LineageOf(state);
         var last = context.Events.Last().Context;
         return new ReadModelChangeNotification(
             context.Key.ToString(),
             model,
-            new ReadModelChangeContext(changeType, last.SequenceNumber, last.Occurred, last.CorrelationId));
+            new ReadModelChangeContext(changeType, last.SequenceNumber, last.Occurred, last.CorrelationId)
+            {
+                Subject = subject,
+                Subjects = subjects
+            });
     }
 }

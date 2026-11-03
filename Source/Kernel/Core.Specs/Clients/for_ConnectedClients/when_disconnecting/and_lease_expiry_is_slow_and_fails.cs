@@ -47,7 +47,7 @@ public class and_lease_expiry_is_slow_and_fails : Specification
             _continued.SetResult();
             return Task.CompletedTask;
         });
-        _clients = new(NullLogger<ConnectedClients>.Instance, _meter, Options.Create(new ChronicleOptions()), storage);
+        _clients = new(NullLogger<ConnectedClients>.Instance, _meter, Options.Create(new ChronicleOptions()), storage, Substitute.For<IClientDepartureNotifier>());
         await _clients.OnClientConnected(_connection, "1.0", false, 1, "app", "host", ".NET");
         _meter.ClearReceivedCalls();
     }

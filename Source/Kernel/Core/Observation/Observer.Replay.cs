@@ -6,6 +6,7 @@ using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Chronicle.Observation.States;
+using Cratis.Chronicle.Storage.Observation;
 using Cratis.Orleans.Jobs;
 using Microsoft.Extensions.Logging;
 namespace Cratis.Chronicle.Observation;
@@ -78,11 +79,21 @@ public partial class Observer
         ReplayPartitionTo(partition, sequenceNumber, Definition.EventTypes, false);
 
     /// <inheritdoc/>
-    public Task Replayed(EventSequenceNumber lastHandledEventSequenceNumber) => CompleteReplay(lastHandledEventSequenceNumber, new Dictionary<Key, EventSequenceNumber>(), [], DateTimeOffset.MinValue);
+    public Task Replayed(EventSequenceNumber lastHandledEventSequenceNumber) => Replayed(lastHandledEventSequenceNumber, null);
+
+    /// <inheritdoc/>
+    public Task Replayed(EventSequenceNumber lastHandledEventSequenceNumber, ulong? ownershipEpoch) =>
+        ReplayedSuccessfullySince(lastHandledEventSequenceNumber, new Dictionary<Key, EventSequenceNumber>(), [], DateTimeOffset.MinValue, ownershipEpoch);
 
     /// <inheritdoc/>
     public Task ReplayedSuccessfullySince(EventSequenceNumber lastHandledEventSequenceNumber, IReadOnlyDictionary<Key, EventSequenceNumber> replayedPartitions, EventType[] replayedEventTypes, DateTimeOffset replayStartedAt) =>
-        CompleteReplay(lastHandledEventSequenceNumber, replayedPartitions, replayedEventTypes, replayStartedAt);
+        ReplayedSuccessfullySince(lastHandledEventSequenceNumber, replayedPartitions, replayedEventTypes, replayStartedAt, null);
+
+    /// <inheritdoc/>
+    public Task ReplayedSuccessfullySince(EventSequenceNumber lastHandledEventSequenceNumber, IReadOnlyDictionary<Key, EventSequenceNumber> replayedPartitions, EventType[] replayedEventTypes, DateTimeOffset replayStartedAt, ulong? ownershipEpoch) =>
+        IgnoresStaleRelease(ClaimHolderKind.ObserverReplay, null, ownershipEpoch)
+            ? Task.CompletedTask
+            : CompleteReplay(lastHandledEventSequenceNumber, replayedPartitions, replayedEventTypes, replayStartedAt);
 
     /// <inheritdoc/>
     public Task PartitionReplayed(Key partition, EventSequenceNumber lastHandledEventSequenceNumber) => CompletePartitionReplay(partition, lastHandledEventSequenceNumber, [], EventSequenceNumber.Unavailable);
@@ -96,7 +107,13 @@ public partial class Observer
 
     /// <inheritdoc/>
     public Task PartitionReplayed(Key partition, EventSequenceNumber lastHandledEventSequenceNumber, EventSequenceNumber lastScannedEventSequenceNumber, EventType[] replayedEventTypes) =>
-        CompletePartitionReplay(partition, lastHandledEventSequenceNumber, replayedEventTypes, lastScannedEventSequenceNumber);
+        PartitionReplayed(partition, lastHandledEventSequenceNumber, lastScannedEventSequenceNumber, replayedEventTypes, null);
+
+    /// <inheritdoc/>
+    public Task PartitionReplayed(Key partition, EventSequenceNumber lastHandledEventSequenceNumber, EventSequenceNumber lastScannedEventSequenceNumber, EventType[] replayedEventTypes, ulong? ownershipEpoch) =>
+        IgnoresStaleRelease(ClaimHolderKind.PartitionReplay, partition, ownershipEpoch)
+            ? Task.CompletedTask
+            : CompletePartitionReplay(partition, lastHandledEventSequenceNumber, replayedEventTypes, lastScannedEventSequenceNumber);
 
     [LoggerMessage(LogLevel.Warning, "Could not flush handled-event counts while completing replay; counts remain pending")]
     static partial void FailedFlushingHandledCountsOnReplay(ILogger logger, Exception exception);
@@ -187,6 +204,7 @@ public partial class Observer
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
         Skips.Completing(partition, FurthestOf(lastHandledEventSequenceNumber, lastScannedEventSequenceNumber));
         logger.FinishedReplayForPartition(partition);
+        ShadowHandOverPartition(partition, ClaimHolderKind.PartitionReplay);
         State.ReplayingPartitions.Remove(partition);
         _partitionHoldsVersion++;
         if (replayedEventTypes.Length > 0 && lastHandledEventSequenceNumber.IsActualValue &&
@@ -258,26 +276,27 @@ public partial class Observer
         // Capture and mark in the same synchronous turn, before awaiting storage or job admission. Live delivery
         // may interleave those awaits: events below this cursor were already handled or belong to existing
         // failure/catch-up work; events from here on cannot reach this partition while its replay marker is set.
+        // The marker, hold and claim are persisted before the job starts, so admission finds the claim the job is stamped with.
         var heldBackFrom = State.NextEventSequenceNumber;
-        State.ReplayingPartitions.Add(partition);
-        _partitionHoldsVersion++;
         Skips.JobStarted(partition);
         RecordedHandlingState();
-        await WriteStateAsync();
+        using var start = BeginPartitionJobStart();
+        var epochs = await GrantPartitionsBeforeStart([partition], ClaimHolderKind.PartitionReplay, ShadowResumePosition());
         try
         {
             await _jobsManager.Start<IReplayObserverPartition, ReplayObserverPartitionRequest>(new(_observerKey, Definition.Type, partition, EventSequenceNumber.First, sequenceNumber, eventTypesToReplay)
             {
                 ReplaysAllEventTypes = !retainOtherCounts,
                 ReaderScope = ReaderScope,
-                HeldBackFrom = heldBackFrom
+                HeldBackFrom = heldBackFrom,
+                OwnershipEpoch = epochs[partition]
             });
         }
         catch
         {
             // No job owns the marker, so nothing would ever release it. The sink is untouched: hand the partition
             // back to catch-up from the captured bound, as a refused replay does, and report the failure.
-            await ReleaseRefusedPartitionReplay(partition, heldBackFrom);
+            await ReleaseRefusedPartitionReplay(partition, heldBackFrom, epochs[partition]);
             throw;
         }
     }

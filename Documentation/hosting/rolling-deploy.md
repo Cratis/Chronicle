@@ -76,8 +76,7 @@ Every node runs the same startup. Nothing in it is specific to the first node, s
 1. **It migrates the cluster database before joining the cluster.** `ClusterDbContextMigrator` runs at the first silo lifecycle stage and prepares the cluster database, including the membership table that SQL clustering reads.
 2. **It serializes schema changes with a database lock.** Migrations run under a lock held in the database itself: `sp_getapplock` on SQL Server and a `pg_advisory_lock` on PostgreSQL. A node that cannot get the lock within **5 minutes** fails with `DatabaseSchemaLockNotAcquired`. When several nodes start together, one migrates and the others wait for it, then find the schema current.
 3. **It migrates event store and namespace databases on first access, not at startup.** The first request that touches a new event store, namespace or read model on any node runs its migration while the cluster is serving traffic.
-4. **It runs `ChronicleServerStartupTask` once the silo is active.** The task registers event types, reactors and projections, which every request depends on. A step that fails because a sibling node has not settled is retried up to five times, waiting 2, 4, 8 and 16 seconds between attempts, on top of Orleans' own response timeout. Any other failure, or exhausting the retries, stops the host.
-5. **It activates observers, jobs, webhooks, captures and event store subscriptions in the background.** This work grows with the backlog, so it does not delay readiness and does not stop the host when it fails. Each piece is retried with a capped, jittered backoff of at most 60 seconds until it succeeds or the node shuts down. A piece that keeps failing is logged as an error with its kind, key, attempt count and next delay, at most once per 60 seconds, and a recovery is logged as information. Chronicle does not raise an alert for this. This includes a failure that points at an incompatible release: the prerequisite steps above still stop the node with a critical message, but a background item only keeps logging errors until you stop the old nodes.
+4. **It runs `ChronicleServerStartupTask` once the silo is active.** The task registers event types, reactors and projections, and reactivates observers. Every node runs it. A step that fails because a sibling node has not settled is retried up to five times, waiting 2, 4, 8 and 16 seconds between attempts, on top of Orleans' own response timeout. Any other failure, or exhausting the retries, stops the host.
 
 ## Roll out the new version
 
@@ -87,7 +86,7 @@ Look for schema changes in the release notes. A release that only adds tables or
 
 ### 2. Upgrade one node first
 
-Chronicle has no separate migration command or migrate-only mode. The first node that starts on the new version performs the migrations. Replace one node, and wait until it logs that it started successfully before replacing the next:
+By default (`SchemaMode=Migrate`), the first node that starts on the new version performs the migrations. To apply them as a separate deployment step instead, run the new version with `--migrate-only` before the rollout and start the nodes with `SchemaMode=Verify`; see [SQL schema operations](configuration/sql-schema-operations.md). Either way, replace one node, and wait until it logs that it started successfully before replacing the next:
 
 ```text
 Cratis Chronicle Server started successfully - ready and listening on port 35000 for gRPC (HTTP/2) and Workbench, API and OAuth (HTTP/1.1)
@@ -116,13 +115,12 @@ Orleans' own failure detection settings, such as probe timeouts and the number o
 
 Use `/health` (or `/health/ready`) on the main or dedicated [health port](configuration/health-endpoint.md) for readiness. It returns 503 until the silo startup task has finished and the host has started, and becomes unready when shutdown begins. It also runs existing storage health checks, including the cluster database check for SQL clustering; it does not cover every event store and namespace database.
 
-Use `/health/live` for liveness, not `/health`. A TCP connection or successful liveness check means only that the listener is accepting requests. While unready, non-health traffic receives HTTP 503 with `Retry-After` or gRPC `Unavailable`, including Workbench traffic. Wait for readiness before replacing the next node. A kernel with a large observer backlog now becomes ready without waiting for every observer to activate; failed activations keep retrying in the background and are logged as errors (#4040). Search the logs for `keeps failing` before you trust a node that has just become ready.
+Use `/health/live` for liveness, not `/health`. A TCP connection or successful liveness check means only that the listener is accepting requests. While unready, non-health traffic receives HTTP 503 with `Retry-After` or gRPC `Unavailable`, including Workbench traffic. Wait for readiness before replacing the next node; background catch-up may continue after readiness succeeds.
 
 ### 6. Handle a node that does not come up
 
 - **`DatabaseSchemaLockNotAcquired`.** Another node held the schema lock for more than 5 minutes. Look for a migration that is still running, or a node that crashed while holding it, and let the orchestrator restart the waiting node. Do not start more nodes meanwhile.
 - **`DatabaseMigrationIncomplete`.** A concurrent run hit an already-exists error and migrations are still pending. Restart the node. If it repeats, a person has to look at the database, since a duplicate object is in the way.
-- **A background startup item is logged as `keeps failing`.** The node is ready and serving, and keeps retrying that item. The message names the item kind and key and the last exception, which is usually a sibling node that is not reachable or a storage timeout. It stops when the cause clears, and the node logs the recovery.
 - **A startup step reports exhausted retries.** The node could not reach its siblings through five attempts. Check that ports 11111 and 30000 are reachable between nodes, and that no other node is mid-restart.
 - **A startup step reports an incompatible release, or fails with `Unable to resolve type alias`.** The old and new versions cannot share a cluster. See [Check that the two versions can share a cluster](#check-that-the-two-versions-can-share-a-cluster).
 
@@ -132,7 +130,7 @@ If a new version cannot run against the migrated schema, restore the backup from
 
 Set `Cratis__Chronicle__Storage__CreateIfMissing=false` when a platform provisions databases and schemas. A missing database fails with `DatabaseDoesNotExist` and a missing schema with `SchemaDoesNotExist`, each naming what to create.
 
-This option stops Chronicle creating databases and schemas only. **Migrations still run in the existing databases**, so the identity Chronicle migrates as still needs rights to create and alter tables in its schema. The `Schema` and `Runtime` identities from [connection resolution](configuration/storage-connection-resolution.md#what-chronicle-asks) can be different logins, but both are used by the kernel process. Chronicle has no separate job that migrates the schema ahead of time, so you cannot run the kernel with only `db_datareader` and `db_datawriter` on its own tables.
+This option stops Chronicle creating databases and schemas only. **Migrations still run in the existing databases**, so the identity Chronicle migrates as still needs rights to create and alter tables in its schema. The `Schema` and `Runtime` identities from [connection resolution](configuration/storage-connection-resolution.md#what-chronicle-asks) can be different logins. You can apply versioned migrations ahead of time with a separate [`--migrate-only` step](configuration/sql-schema-operations.md#provision-before-starting-replicas) that uses the `Schema` identity. The kernel still creates dynamic tables when they are first used, even in Verify mode: event-sequence tables for new sequences, unique-constraint tables and read-model tables, including those created when a projection is rebuilt. So the runtime identity still needs rights to create those tables, and you cannot run the kernel with only `db_datareader` and `db_datawriter` on its own tables.
 
 Each new event store and each new namespace needs a database or schema provisioned ahead of its first use. Without it, the first access fails, and that access can happen after the rollout has finished.
 
@@ -141,7 +139,7 @@ Each new event store and each new namespace needs a database or schema provision
 - **No zero-downtime guarantee.** Orleans reactivates the grains of a stopped node on the remaining nodes, but Chronicle does not state how long that takes or what clients see meanwhile. Test a rollout against a copy of your data before relying on it.
 - **No mixed versions across a major, or from before 19.106.** Grain calls are kept compatible within a major from 19.106 onwards. Other upgrades need every node stopped first.
 - **No rollback while mixed.** A grain that moved to a new node cannot move back to an old node that lacks what the new version added. Roll back by stopping every node and starting the previous version.
-- **No migration job and no migrate-only mode.** The nodes migrate.
+- **No DDL-free runtime.** A separate [`--migrate-only` step](configuration/sql-schema-operations.md) applies versioned migrations, but nodes still create dynamic tables when they are first used, including in Verify mode.
 - **No schema version gate.** Chronicle does not enforce expand-then-contract database migrations, or limit migrations to the newest node. A change that removes or renames a column breaks nodes still running the old version. Plan those releases as a cluster stop and start, or keep each release additive.
 - **No readiness check for membership or startup.** See step 5.
 - **No schema downgrade.** Restore from backup.

@@ -29,7 +29,7 @@ public class and_retired_and_unsubscribed_observers_need_alert_wakeups : given.a
         ]);
     }
 
-    Task Because() => ExecuteAndSettle();
+    Task Because() => Execute();
 
     [Fact] async Task should_bootstrap_the_retired_observer() => await _retired.Received(1).Ensure();
     [Fact] async Task should_bootstrap_the_unsubscribed_observer_on_its_sequence() => await _unsubscribed.Received(1).Ensure();

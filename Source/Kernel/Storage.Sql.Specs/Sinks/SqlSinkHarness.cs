@@ -26,9 +26,7 @@ namespace Cratis.Chronicle.Storage.Sql.Sinks;
 /// </summary>
 public class SqlSinkHarness : ISqlSinkHarness
 {
-    readonly ReadModelMigrator _migrator = new(
-        new TableMigrator<ReadModelDbContext>(Substitute.For<ILogger<TableMigrator<ReadModelDbContext>>>()),
-        Substitute.For<ILogger<ReadModelMigrator>>());
+    ReadModelMigrator? _migrator;
     readonly ReplayingTables _replayingTables = new();
     readonly string _path = Path.Combine(Path.GetTempPath(), $"chronicle-sink-{Guid.NewGuid():N}.db");
     readonly IntegrationTimings _timings = new(nameof(SqlSinkHarness), "sql-specs", "sqlite");
@@ -58,9 +56,20 @@ public class SqlSinkHarness : ISqlSinkHarness
     public IEnumerable<IInterceptor> Interceptors { get; init; } = [];
 
     /// <summary>
+    /// Gets a hook that adjusts the context options, such as installing an execution strategy that retries.
+    /// </summary>
+    public Action<DbContextOptionsBuilder<ReadModelDbContext>>? ConfigureOptions { get; init; }
+
+    /// <summary>
     /// Gets the logger for sink diagnostics.
     /// </summary>
     public ILogger<SqlSink> Logger { get; init; } = Substitute.For<ILogger<SqlSink>>();
+
+    ReadModelMigrator Migrator => _migrator ??= new(
+        new RecordingTableMigrator<ReadModelDbContext>(
+            new TableMigrator<ReadModelDbContext>(Substitute.For<ILogger<TableMigrator<ReadModelDbContext>>>()),
+            () => Interceptors.OfType<SqlCommandCapture>().FirstOrDefault()),
+        Substitute.For<ILogger<ReadModelMigrator>>());
 
     /// <inheritdoc/>
     public ISink CreateSink(ReadModelDefinition definition)
@@ -85,7 +94,7 @@ public class SqlSinkHarness : ISqlSinkHarness
         var database = Substitute.For<IDatabase>();
         database.LiveQueryPollingInterval.Returns(TimeSpan.FromMilliseconds(50));
         database.ReadModelTable(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<string>(), Arg.Any<IReadOnlyList<ProjectedColumn>>(), Arg.Any<ConnectionPurpose>())
-            .Returns(async callInfo => new DbContextScope<ReadModelDbContext>(await CreateContext(callInfo.ArgAt<string>(2)), () => { }));
+            .Returns(async callInfo => new DbContextScope<ReadModelDbContext>(await CreateContext(callInfo.ArgAt<string>(2), callInfo.ArgAt<IReadOnlyList<ProjectedColumn>>(3)), () => { }));
 
         return new SqlSink(
             "test-event-store",
@@ -137,7 +146,7 @@ public class SqlSinkHarness : ISqlSinkHarness
         }
     }
 
-    async Task<ReadModelDbContext> CreateContext(string containerName)
+    async Task<ReadModelDbContext> CreateContext(string containerName, IReadOnlyList<ProjectedColumn>? columns = null)
     {
         var builder = new DbContextOptionsBuilder<ReadModelDbContext>();
         if (ConnectionString.GetDatabaseType() == DatabaseType.PostgreSql)
@@ -149,6 +158,7 @@ public class SqlSinkHarness : ISqlSinkHarness
             builder.UseDatabaseFromConnectionString(ConnectionString);
             builder.AddConceptAsSupport().WithoutServiceProviderCaching();
         }
+        ConfigureOptions?.Invoke(builder);
         var options = builder.AddInterceptors(Interceptors).Options;
 
         if (IntegrationTimings.Enabled && _commandTimings is null)
@@ -158,7 +168,7 @@ public class SqlSinkHarness : ISqlSinkHarness
         }
         var context = _timings.Measure("ef-context-construction", () =>
         {
-            var created = new ReadModelDbContext(options, containerName, _columns, _migrator);
+            var created = new ReadModelDbContext(options, containerName, columns ?? _columns, Migrator);
             return _commandTimings?.Track(created) ?? created;
         });
         await _timings.Run("ef-table-ensure", context.EnsureTableExists);
