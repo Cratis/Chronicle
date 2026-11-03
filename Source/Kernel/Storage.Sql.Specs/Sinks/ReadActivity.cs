@@ -9,7 +9,7 @@ namespace Cratis.Chronicle.Storage.Sql.Sinks;
 public sealed class ReadActivity
 {
     int _active;
-    int _started;
+    TaskCompletionSource _changed = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
     /// <summary>
     /// Marks a read as started.
@@ -17,14 +17,15 @@ public sealed class ReadActivity
     /// <returns>The action that marks it finished; calling it more than once has no further effect.</returns>
     public Action Begin()
     {
-        Interlocked.Increment(ref _started);
         Interlocked.Increment(ref _active);
+        SignalChange();
         var finished = 0;
         return () =>
         {
             if (Interlocked.Exchange(ref finished, 1) == 0)
             {
                 Interlocked.Decrement(ref _active);
+                SignalChange();
             }
         };
     }
@@ -38,21 +39,30 @@ public sealed class ReadActivity
     public async Task WhenQuiet(TimeSpan settle, TimeSpan deadline)
     {
         using var timeout = new CancellationTokenSource(deadline);
-        var quietSince = Environment.TickCount64;
-        var started = Volatile.Read(ref _started);
         while (true)
         {
-            await Task.Delay(10, timeout.Token);
-            var current = Volatile.Read(ref _started);
-            if (Volatile.Read(ref _active) != 0 || current != started)
+            // Take the change signal before reading the state, so a read that starts or finishes afterwards completes it.
+            var changed = Volatile.Read(ref _changed).Task;
+            if (Volatile.Read(ref _active) != 0)
             {
-                started = current;
-                quietSince = Environment.TickCount64;
+                await changed.WaitAsync(timeout.Token);
+                continue;
             }
-            else if (Environment.TickCount64 - quietSince >= settle.TotalMilliseconds)
+
+            // Nothing is in flight: it is quiet once the settling period passes without any read starting or finishing.
+            using var settling = CancellationTokenSource.CreateLinkedTokenSource(timeout.Token);
+            settling.CancelAfter(settle);
+            var settled = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            await using var registration = settling.Token.Register(() => settled.TrySetResult());
+            var first = await Task.WhenAny(changed, settled.Task);
+            timeout.Token.ThrowIfCancellationRequested();
+            if (first == settled.Task)
             {
                 return;
             }
         }
     }
+
+    void SignalChange() =>
+        Interlocked.Exchange(ref _changed, new(TaskCreationOptions.RunContinuationsAsynchronously)).TrySetResult();
 }
