@@ -84,7 +84,7 @@ public class and_document_is_owned_by_the_caller : given.all_dependencies
     async Task Because()
     {
         _service.Watch(
-            new WatchRequest { EventStore = "test-store", ReadModelIdentifier = "test-read-model" },
+            new WatchRequest { EventStore = "test-store", Namespace = "test-namespace", ReadModelIdentifier = "test-read-model" },
             default).Subscribe(_emitted.Add);
 
         var forwarder = await _forwarderCaptured.Task.WaitAsync(TimeSpan.FromSeconds(5));
@@ -100,7 +100,7 @@ public class and_document_is_owned_by_the_caller : given.all_dependencies
                 Concepts.ReadModels.ReadModelChangeType.Added,
                 Concepts.Events.EventSequenceNumber.First,
                 DateTimeOffset.UtcNow,
-                Cratis.Execution.CorrelationId.NotSet));
+                CorrelationId.NotSet));
     }
 
     [Fact] void should_stream_the_decrypted_read_model() => JsonSerializer.Deserialize<JsonElement>(_emitted.Single(_ => !_.Subscribed).ReadModel).GetProperty("name").GetString().ShouldEqual(DecryptedName);

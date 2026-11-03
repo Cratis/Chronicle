@@ -21,5 +21,10 @@ public enum ObservationState
     /// <summary>
     /// The observation failed.
     /// </summary>
-    Failed = 2
+    Failed = 2,
+
+    /// <summary>
+    /// The observation was deferred: the partition is delivered again after a delay, without being failed.
+    /// </summary>
+    Deferred = 3
 }

@@ -175,7 +175,9 @@ public class EventTypeMigrations(
             currentContent = ApplyUpcastMigration(currentContent, migration);
             currentGeneration = migration.ToGeneration;
             var targetGenerationDef = definition.Generations.First(g => g.Generation == currentGeneration);
-            result[currentGeneration] = Convert(currentContent, targetGenerationDef.Schema, onConverted);
+            var converted = Convert(currentContent, targetGenerationDef.Schema, onConverted);
+            result[currentGeneration] = converted;
+            currentContent = MigrationContentProjection.Project(currentContent, targetGenerationDef.Schema, converted);
         }
 
         await Task.CompletedTask;
@@ -205,7 +207,9 @@ public class EventTypeMigrations(
             currentContent = ApplyDowncastMigration(currentContent, migration);
             currentGeneration = migration.FromGeneration;
             var targetGenerationDef = definition.Generations.First(g => g.Generation == currentGeneration);
-            result[currentGeneration] = Convert(currentContent, targetGenerationDef.Schema, onConverted);
+            var converted = Convert(currentContent, targetGenerationDef.Schema, onConverted);
+            result[currentGeneration] = converted;
+            currentContent = MigrationContentProjection.Project(currentContent, targetGenerationDef.Schema, converted);
         }
 
         await Task.CompletedTask;

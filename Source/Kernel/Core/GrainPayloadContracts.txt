@@ -361,6 +361,7 @@ json Cratis.Chronicle.Concepts.Observation.PartitionDeferral
 enum Cratis.Chronicle.Concepts.Observation.PartitionDeferralReason : int
   CircuitOpen = 1
   None = 0
+  RequestedByObserver = 4
   RetryAfter = 2
   RetryBackoff = 3
 enum Cratis.Chronicle.Concepts.Observation.PartitionRecoveryOutcome : int
@@ -1491,6 +1492,8 @@ orleans [Alias("ProjectionFuture")] Cratis.Chronicle.Concepts.Projections.Projec
   [Id(7,Level=0,Constructor=true)] ParentKey: Cratis.Chronicle.Concepts.Keys.Key
   [Id(8,Level=0,Constructor=true)] Created: System.DateTimeOffset
 orleans [Alias("ReadModelChangeContext")] Cratis.Chronicle.Concepts.ReadModels.ReadModelChangeContext
+  [Id(4)] Subject: string
+  [Id(5)] Subjects: System.Collections.Generic.IReadOnlyDictionary<string,string>
   [Id(0,Level=0,Constructor=true)] ChangeType: Cratis.Chronicle.Concepts.ReadModels.ReadModelChangeType
   [Id(1,Level=0,Constructor=true)] EventSequenceNumber: Cratis.Chronicle.Concepts.Events.EventSequenceNumber
   [Id(2,Level=0,Constructor=true)] Occurred: System.DateTimeOffset

@@ -47,7 +47,7 @@ public class and_read_model_is_an_immediate_projection_with_pii : given.all_depe
         _grainFactory.GetGrain<IImmediateProjection>(Arg.Any<string>()).Returns(immediateProjection);
 
         // The compliance helper decrypts the projected read model.
-        _complianceHelper.ReleaseJson(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<JsonSchema>(), Arg.Any<JsonObject>())
+        _complianceHelper.ReleaseJson(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<JsonSchema>(), Arg.Any<JsonObject>(), Subject, Arg.Is<IReadOnlyDictionary<string, string>>(_ => _.Count == 0))
             .Returns(new JsonObject { ["name"] = "decrypted-value", ["_id"] = Subject });
     }
 
@@ -60,7 +60,7 @@ public class and_read_model_is_an_immediate_projection_with_pii : given.all_depe
         ReadModelKey = Subject
     });
 
-    [Fact] void should_release_compliance_metadata() => _complianceHelper.Received(1).ReleaseJson(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<JsonSchema>(), Arg.Any<JsonObject>());
+    [Fact] void should_release_compliance_metadata() => _complianceHelper.Received(1).ReleaseJson(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<JsonSchema>(), Arg.Any<JsonObject>(), Subject, Arg.Is<IReadOnlyDictionary<string, string>>(_ => _.Count == 0));
     [Fact] void should_return_the_decrypted_read_model() => JsonSerializer.Deserialize<JsonElement>(_result.ReadModel).GetProperty("name").GetString().ShouldEqual("decrypted-value");
     [Fact] void should_not_leak_the_subject_marker() => JsonSerializer.Deserialize<JsonElement>(_result.ReadModel).TryGetProperty(WellKnownProperties.Subject, out _).ShouldBeFalse();
 }
