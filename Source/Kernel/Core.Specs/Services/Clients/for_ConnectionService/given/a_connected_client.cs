@@ -114,8 +114,6 @@ public class a_connected_client : Specification
         TimeSpan.FromSeconds(4),
         out _);
 
-    protected Task Cancel() => _cancellation.CancelAsync();
-
     protected Task Respond() => _connectionService.ConnectionKeepAlive(new ConnectionKeepAlive { ConnectionId = TheConnection });
 
     /// <summary>
