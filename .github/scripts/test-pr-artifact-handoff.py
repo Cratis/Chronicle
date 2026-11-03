@@ -135,6 +135,7 @@ class ArtifactHandoff(unittest.TestCase):
 
 class NightlyFeedHandoff(unittest.TestCase):
     def setUp(self):
+        (ROOT / '.ai-work').mkdir(exist_ok=True)
         self.build = yaml.load((ROOT / '.github/workflows/dotnet-build.yml').read_text(), Loader=yaml.BaseLoader)['jobs']
         self.publish = yaml.load((ROOT / '.github/workflows/publish.yml').read_text(), Loader=yaml.BaseLoader)['jobs']['coverage-statistics']
         self.steps = {step.get('name'): step for step in self.publish['steps']}
@@ -142,7 +143,7 @@ class NightlyFeedHandoff(unittest.TestCase):
     def test_producer_and_consumer_permissions_and_transport(self):
         producer = self.build['coverage-merge-and-cache']
         self.assertEqual({'contents': 'read', 'actions': 'read'}, producer['permissions'])
-        self.assertEqual({'contents': 'write', 'actions': 'read'}, self.publish['permissions'])
+        self.assertEqual({'contents': 'read', 'actions': 'read'}, self.publish['permissions'])
         upload = next(step for step in producer['steps'] if step.get('name') == 'Upload nightly coverage feed')
         self.assertRegex(upload['uses'], r'^actions/upload-artifact@[0-9a-f]{40}$')
         self.assertEqual('coverage-nightly-v1-${{ github.run_id }}-${{ github.run_attempt }}', upload['with']['name'])
