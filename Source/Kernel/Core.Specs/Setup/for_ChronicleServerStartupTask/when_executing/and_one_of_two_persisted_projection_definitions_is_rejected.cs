@@ -31,7 +31,7 @@ public class and_one_of_two_persisted_projection_definitions_is_rejected : given
             .Returns(Cratis.Monads.Result.Failed(error));
     }
 
-    async Task Because() => _exception = await Catch.Exception(Execute);
+    async Task Because() => _exception = await Catch.Exception(ExecuteAndSettle);
 
     [Fact] void should_not_prevent_the_server_from_starting() => _exception.ShouldBeNull();
     [Fact] void should_register_the_definitions_as_one_batch() => _projectionsServiceClient.Received(1).Register(_eventStore, Arg.Is<IEnumerable<ProjectionDefinition>>(definitions => definitions.SequenceEqual(new[] { _acceptedDefinition, _rejectedDefinition })));
