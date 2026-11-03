@@ -14,8 +14,10 @@ namespace Cratis.Chronicle.Storage.Sql.Sinks;
 /// The part of <see cref="Sink"/> that keeps the receipts of multi-write cycles.
 /// </summary>
 /// <remarks>
-/// A receipt is inserted in the cycle's own transaction, batched with the cycle's first write. A cycle that finds
-/// its commit acknowledgment lost looks for its receipt to learn whether the cycle already committed. Only the database
+/// Every cycle whose execution strategy retries inserts a receipt on its first attempt, batched with its first write
+/// in the same transaction. That attempt skips the probe but pays for the write, index maintenance and amortized cleanup.
+/// SQLite's default non-retrying strategy writes no receipt. A cycle that finds its commit acknowledgment lost looks
+/// for its receipt to learn whether the cycle already committed. Only the database
 /// clock is used, so skewed silo clocks have no effect. The owning call deletes its receipt when it is done. Receipts of
 /// crashed owners are swept after <see cref="OrphanRetention"/>.
 /// Residual risk, accepted: a duplicate application needs one open retry transaction to stay open for more than

@@ -108,12 +108,20 @@ The runtime identity still needs permissions for Chronicle's dynamic per-table o
 - Unique-constraint tables.
 - Read-model tables, including the per-generation tables created when a projection is rebuilt.
 
-The `chronicle_sink_cycle_receipts` table is not created in Verify mode. Run `--migrate-only` first, including after an upgrade: Verify replicas, and `--verify-schema` checks, fail with `SchemaNotCurrent` until it exists. Multi-write cycles on a Verify replica fail the same way when it is missing or drifted. A Verify replica does not check the table when it starts; the failure appears when the first multi-write cycle runs, or when `--verify-schema` is run.
+The `chronicle_sink_cycle_receipts` table is not created in Verify mode. Run `--migrate-only` first, including after an upgrade. A Verify replica now fails at startup with `SchemaNotCurrent` if the receipt table or its required index is missing or drifted in any known event store and namespace, including the system store and default namespaces. It does not report ready or repair the table. `--verify-schema` checks the same schema. Multi-write cycles still fail clearly with `SchemaNotCurrent` if the receipt schema is missing or drifted when accessed at runtime.
 
 Two upgrade rules follow from this:
 
 - Drop the `chronicle_sink_cycle_receipts` table only while no silo running the new version is using the database. A running silo can lose a cycle's receipt, which it needs to tell whether a retried cycle already committed.
 - A namespace created after `--migrate-only` ran has no receipt table. Run `--migrate-only` again for it (`--event-store` and `--namespace`) before Verify replicas serve its multi-write cycles.
+
+### Receipt cost and retry budget
+
+Every multi-write cycle whose execution strategy has `RetriesOnFailure` enabled inserts a receipt on its **first attempt**, even if no retry occurs. The first attempt skips the receipt probe but pays for the receipt write, its index maintenance and amortized cleanup. Subsequent attempts probe before reapplying writes. SQLite's default strategy does not retry and writes no receipts; it still needs the receipt schema in Verify mode.
+
+The five-minute limit is the verification window for retries **within one call**, measured on the database clock, not the receipt's storage lifetime. Keep the total execution-strategy retry budget, including command execution and delays, within that window. When a retry finds no receipt after the window, it throws `SinkCycleOutcomeUnknown` rather than applying the cycle again. The operator sees an Error log identifying the read model, sequence number and receipt id: the outcome is unknown and too old to verify, and the cycle is not applied again. Investigate the committed read-model state and decide on a replay instead of blindly retrying the write.
+
+This is not deduplication across redelivery. A redelivered cycle starts a new call with a new receipt id; it can apply the writes again, even if the previous call's receipt remains. Expired or deleted receipts cannot establish that an earlier delivery committed, and a new call does not emit the old call's outcome-unknown Error merely because it was redelivered. Finished receipts are cleaned up in batches; receipts left by crashed owners are swept after 24 hours. Do not use that retention period as a redelivery or exactly-once guarantee.
 
 Every other schema object comes from versioned migrations, which `--migrate-only` applies and Verify checks.
 
