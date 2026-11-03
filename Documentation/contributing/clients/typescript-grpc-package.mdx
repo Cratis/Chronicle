@@ -22,9 +22,7 @@ An npm package that provides strongly-typed TypeScript bindings for the Chronicl
 - `package.json` - Package configuration with @cratis/chronicle.contracts as the package name
 - `tsconfig.json` - TypeScript compiler configuration
 - `rollup.config.mjs` - Rollup bundler configuration for ESM and CJS builds
-- `index.ts` - Main entry point that exports all generated services
-- `ChronicleConnection.ts` - Connection manager for Chronicle services
-- `ChronicleServices.ts` - Interface for all available services
+- `index.ts` - Main entry point that re-exports the generated barrel (`./generated/index`)
 - `generated/` - Directory containing TypeScript files generated from proto definitions
 - `README.md` - Package documentation
 
@@ -32,28 +30,18 @@ An npm package that provides strongly-typed TypeScript bindings for the Chronicl
 - Uses `ts-proto` to generate TypeScript files from proto definitions
 - Generates proto `int64`/`uint64` fields as TypeScript `bigint` (`forceLong=bigint`)
 - Generates strongly-typed clients with full IDE support and IntelliSense
-- Provides `ChronicleConnection` class for easy connection management
-- Provides `ChronicleConnectionString` class for connection string parsing
-- Implements OAuth 2.0 client credentials flow for authentication
-- Exports all service clients and types
+- Exports the generated messages and service definitions through the barrel in `index.ts`
 - Builds both ESM and CJS versions using Rollup
-
-**Key classes:**
-- `ChronicleConnection` - Main connection manager with service access
-- `ChronicleConnectionString` - Connection string parser supporting `chronicle://` URI scheme
-- `ChronicleServices` - Interface defining all available services
-- `TokenProvider` - OAuth token management (client credentials and API key)
 
 ### 2. GitHub Workflows
 
 #### Build Workflow (`.github/workflows/typescript-build.yml`)
 
-Validates the TypeScript package on every PR and push to main.
+Validates the TypeScript package.
 
 **Triggers:**
-- Push to main branch
-- Pull requests to any branch
-- Changes to TypeScript client, Contracts, Protobuf, or ProtoGenerator
+- Manual dispatch (`workflow_dispatch`)
+- Non-draft pull requests (opened, synchronized, reopened or marked ready for review) that change the TypeScript client, Contracts, Protobuf, or ProtoGenerator paths. It does not run on push to main.
 
 **Steps:**
 1. Setup .NET 10 and Node.js 23
@@ -66,24 +54,25 @@ Validates the TypeScript package on every PR and push to main.
 
 #### Publish Workflow (`.github/workflows/publish.yml`)
 
-Publishes the TypeScript package to NPM alongside .NET packages during releases.
+Publishes the TypeScript package to NPM alongside the .NET packages.
 
 **Triggers:**
-- Release published
+- Manual dispatch (`workflow_dispatch`) with a version
+- A merged pull request into main that changes the paths the workflow watches (such as `Source/**`), subject to the release selection of `cratis/release-action`; it publishes only when that selects a release
 
-**Steps:**
-1. Setup .NET 10 and Node.js 23
+**Delegation:** after the release and compatibility jobs, `publish.yml` calls the reusable workflow `.github/workflows/publish-typescript-client.yml` with the release version and the generated proto files artifact.
+
+**Steps in the reusable workflow:**
+1. Setup Node.js 23 and upgrade npm for trusted publishing
 2. Install protoc
-3. Build the Contracts assembly
-4. Run ProtoGenerator to generate .proto files
-5. Install TypeScript dependencies
-6. Generate TypeScript files using ts-proto
-7. Build TypeScript package
-8. Publish to NPM
-9. Commit and push updated proto and TypeScript files back to repository
+3. Use the proto files artifact, or generate them when none is given
+4. Install TypeScript dependencies
+5. Generate TypeScript files using ts-proto
+6. Build the TypeScript package and check packed consumers
+7. Set the package version
+8. Publish to NPM with `npm publish --provenance --access public --tag latest`
 
-**Required Secrets:**
-- `NPM_TOKEN` - NPM authentication token for publishing
+Publishing uses npm trusted publishing (`id-token: write`), not an `NPM_TOKEN` secret.
 
 ## Usage
 
@@ -131,13 +120,12 @@ When a gRPC transport creates clients from the generated definitions, use the ge
 
 ## Publishing a New Version
 
-The TypeScript package is automatically published to NPM when a new GitHub release is created. The publish workflow will:
+The TypeScript package is published by `publish-typescript-client.yml`, which supports direct manual dispatch and is also called by `publish.yml` after manual dispatch or an eligible merged pull request into main, subject to release selection. It does not use a release-created trigger. The workflow will:
 
-1. Generate fresh proto files from C# contracts
+1. Use the proto files from the release run, or generate them from C# contracts
 2. Generate TypeScript code from proto files
 3. Build the TypeScript package
-4. Publish to NPM with the release version tag
-5. Commit updated proto and TypeScript files back to the repository
+4. Publish to NPM with the release version
 
 ## Generated Files
 
@@ -162,7 +150,7 @@ When adding new gRPC services to the C# Contracts:
 3. Regenerate proto files (see [Protobuf Extraction](protobuf-extraction.md))
 4. Run the TypeScript generation to create new TypeScript clients
 5. The TypeScript package will automatically include the new services with full type safety
-6. Publish a new version of the npm package by creating a GitHub release
+6. A new version of the npm package is published by the publish workflow described above
 
 ## Package Structure
 
@@ -170,7 +158,7 @@ The published npm package includes:
 
 - **ESM build** (`dist/esm/`) - ES modules for modern bundlers
 - **CJS build** (`dist/cjs/`) - CommonJS for Node.js compatibility
-- **Type definitions** (`dist/types/`) - TypeScript .d.ts files for IntelliSense
+- **Type definitions** (`dist/esm/index.d.ts` and `dist/cjs/index.d.ts`) - TypeScript .d.ts files for IntelliSense
 - **Source maps** - For debugging support
 - **README.md** - Package documentation
 
@@ -178,8 +166,11 @@ The published npm package includes:
 
 The TypeScript package has the following runtime dependencies:
 
-- `@grpc/grpc-js` - gRPC client for Node.js
-- `@grpc/proto-loader` - Protocol buffer loading (for metadata)
+- `@bufbuild/protobuf`
+- `@grpc/grpc-js`
+- `nice-grpc`
+
+See `Source/Clients/TypeScript/package.json` for the versions.
 
 Development dependencies include:
 

@@ -8,6 +8,12 @@ namespace Cratis.Chronicle.Projections;
 /// <summary>
 /// Defines an internal grain observer that lets you get notified when definitions change on a projection.
 /// </summary>
+/// <remarks>
+/// On <see cref="ImmediateProjection"/>, this notification may interleave with an active read.
+/// Acknowledgment means the definition was received, not that the active read adopted it; the latest
+/// pending definition is applied after that read completes or fails. The active read keeps its existing
+/// read model metadata, while subsequent reads resolve the current definition from the projection grain.
+/// </remarks>
 public interface INotifyProjectionDefinitionsChanged : IGrainObserver
 {
     /// <summary>

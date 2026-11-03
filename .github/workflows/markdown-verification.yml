@@ -46,7 +46,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 23.x
+          node-version: 24.x
 
       - name: Install documentation authoring dependencies
         run: npm ci --prefix .github/scripts/docs-verification

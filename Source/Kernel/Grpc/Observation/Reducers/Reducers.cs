@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Diagnostics;
 using System.Dynamic;
 using System.Reactive.Linq;
 using System.Text.Json;
@@ -79,6 +80,12 @@ internal sealed class Reducers(
             switch (message.Content.Value)
             {
                 case RegisterReducer register:
+                    if (SystemStoreGuard.RegistrationRefusal(new(register.EventStore, register.Namespace, register.Reducer.ReducerId, register.Reducer.EventSequenceId, register.Reducer.ReadModel, register.ConnectionId)) is { } refusal)
+                    {
+                        registrationTcs.TrySetException(refusal);
+                        break;
+                    }
+
                     logger.Registering(
                         register.Reducer.ReducerId,
                         register.EventStore,
@@ -144,6 +151,7 @@ internal sealed class Reducers(
         var eventStoreName = EventStoreName.NotSet;
         var namespaceName = EventStoreNamespaceName.NotSet;
         IObserver<ReduceOperationMessage>? observableObserver = null;
+        (ReducerEventsObserver? deliver, ReducerReplayObserver? replay) = (null, null);
 
         var observable = Observable.Create<ReduceOperationMessage>(
             async (observer, cancellationToken) =>
@@ -171,48 +179,57 @@ internal sealed class Reducers(
                         registration.Reducer.EventSequenceId,
                         registration.ConnectionId);
 
+                    deliver = (reduceOperation, tcs) =>
+                    {
+                        var deliveryId = pendingDeliveries.Add(reduceOperation.Partition, tcs);
+                        var initialState = reduceOperation.InitialState is null ? null : expandoObjectConverter.ToJsonObject(reduceOperation.InitialState, model.GetSchemaForLatestGeneration()).ToString();
+                        var message = new ReduceOperationMessage()
+                        {
+                            Partition = reduceOperation.Partition.Value.ToString()!,
+                            DeliveryId = deliveryId,
+                            DeliverWithinMilliseconds = DeliveryDeadlines.ToMilliseconds(reduceOperation.DeliverWithin),
+                            InitialState = initialState,
+                            Events = reduceOperation.Events.Select(_ => _.ToContract(jsonSerializerOptions)).ToArray()
+                        };
+
+                        observer.OnNext(message);
+                    };
+                    replay = (replayState, partition) => observer.OnNext(new ReduceOperationMessage { Partition = partition, ReplayState = (Contracts.Observation.ReplayState)replayState });
+
                     reducerMediator.Subscribe(
                         registration.Reducer.ReducerId,
                         registration.ConnectionId,
                         registration.EventStore,
                         registration.Namespace,
-                        (reduceOperation, tcs) =>
-                        {
-                            var deliveryId = pendingDeliveries.Add(reduceOperation.Partition, tcs);
-                            var initialState = reduceOperation.InitialState is null ? null : expandoObjectConverter.ToJsonObject(reduceOperation.InitialState, model.GetSchemaForLatestGeneration()).ToString();
-                            var message = new ReduceOperationMessage()
-                            {
-                                Partition = reduceOperation.Partition.Value.ToString()!,
-                                DeliveryId = deliveryId,
-                                DeliverWithinMilliseconds = DeliveryDeadlines.ToMilliseconds(reduceOperation.DeliverWithin),
-                                InitialState = initialState,
-                                Events = reduceOperation.Events.Select(_ => _.ToContract(jsonSerializerOptions)).ToArray()
-                            };
-
-                            observer.OnNext(message);
-                        });
+                        deliver);
 
                     reducerMediator.SubscribeReplayNotifications(
                         registration.Reducer.ReducerId,
                         registration.ConnectionId,
                         registration.EventStore,
                         registration.Namespace,
-                        (replayState, partition) => observer.OnNext(new ReduceOperationMessage { Partition = partition, ReplayState = (Contracts.Observation.ReplayState)replayState }));
+                        replay);
 
                     var reducerDefinition = registration.Reducer.ToChronicle();
-                    using (var span = activitySource.Register())
+
+                    // The parent is the long-lived Observe request, which the server deliberately does not trace.
+                    var requestActivity = Activity.Current;
+                    Activity.Current = null;
+                    try
                     {
+                        using var span = activitySource.Register();
                         span?.Activity?.Tag(key, ObserverType.Reducer);
 
                         clientObserver = grainFactory.GetGrain<IReducer>(key);
-                        try
-                        {
-                            await clientObserver.SetDefinitionAndSubscribe(reducerDefinition);
-                        }
-                        catch (Exception exception)
-                        {
-                            throw CreateRegistrationFailure(registration, exception);
-                        }
+                        await clientObserver.SetDefinitionAndSubscribe(reducerDefinition);
+                    }
+                    catch (Exception exception)
+                    {
+                        throw CreateRegistrationFailure(registration, exception);
+                    }
+                    finally
+                    {
+                        Activity.Current = requestActivity;
                     }
 
                     await ClientSubscriptionKeeper.KeepWhileConnected(
@@ -243,13 +260,10 @@ internal sealed class Reducers(
                 finally
                 {
                     messagesSubscription.Dispose();
-                    reducerMediator.Disconnected(observerId, connectionId, eventStoreName, namespaceName);
+                    var ownsRegistration = DisconnectStream((observerId, connectionId, eventStoreName, namespaceName), deliver, replay);
                     pendingDeliveries.Disconnect(new(ObserverSubscriberResult.Disconnected(), new ExpandoObject()));
-                    if (clientObserver is not null)
-                    {
-                        await clientObserver.Unsubscribe();
-                        clientObserver = null;
-                    }
+                    await ReleaseRegistration(clientObserver, observerId, connectionId, ownsRegistration);
+                    clientObserver = null;
                 }
             });
 
@@ -260,7 +274,8 @@ internal sealed class Reducers(
             logger.ObserverStreamDisconnected(observerId, connectionId);
             pendingDeliveries.Disconnect(new(ObserverSubscriberResult.Disconnected(), new ExpandoObject()));
             observableObserver?.OnCompleted();
-            reducerMediator.Disconnected(observerId, connectionId, eventStoreName, namespaceName);
+            DisconnectStream((observerId, connectionId, eventStoreName, namespaceName), deliver, replay);
+
             register?.Dispose();
         });
 
@@ -312,5 +327,27 @@ internal sealed class Reducers(
                 registration,
                 new InvalidReadModelDefinitionForReducer(readModel.Identifier, "No key property could be inferred from the read model schema."));
         }
+    }
+
+    bool DisconnectStream(
+        (ObserverId ObserverId, ConnectionId ConnectionId, EventStoreName EventStore, EventStoreNamespaceName Namespace) key,
+        ReducerEventsObserver? deliver,
+        ReducerReplayObserver? replay) =>
+        deliver is null || replay is null || reducerMediator.Disconnected(key.ObserverId, key.ConnectionId, key.EventStore, key.Namespace, deliver, replay);
+
+    async Task ReleaseRegistration(IReducer? clientObserver, ObserverId observerId, ConnectionId connectionId, bool ownsRegistration)
+    {
+        if (clientObserver is null)
+        {
+            return;
+        }
+
+        if (ownsRegistration)
+        {
+            await clientObserver.Unsubscribe();
+            return;
+        }
+
+        logger.StreamReplacedKeepingSubscription(observerId, connectionId);
     }
 }

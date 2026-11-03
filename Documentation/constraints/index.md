@@ -34,6 +34,22 @@ Chronicle supports two types of uniqueness constraints and a constraint that clo
 | **Unique event type** | Enforces that only one event of a specific type can ever be appended per event source |
 | **Closing stream** | Closes a stream scope when an event of a specific type is appended, so later appends inside the scope are rejected. See [Closing streams](../closing-streams/index.mdx) |
 
+## Tombstone markers do not close streams
+
+The .NET `[Tombstone]` attribute is currently inert. Adding it to an event type does not close an event source or stream, reject later appends, or change the event type identity discovered by the client. The attribute is declared, but client discovery does not consume it. This is separate from the existing `Tombstone` field on event type identities and wire/storage representations; that field is not an instruction to enable closure through the attribute.
+
+Use an explicit [`[ClosesStream]` declaration](../closing-streams/closing-events.mdx) when a domain event should close a scope. Closure is opt-in. Its default dimensions are **event source id, event stream type and event stream id together**, not the whole event source. Choose broader dimensions deliberately: a source-only closure blocks every stream of that source. A declaration can also restrict event sequences and name reopening event types. Reopening events do not override manual closures.
+
+Adding or changing a closing declaration is not retroactive: it does not close scopes from historical events merely because the declaration was registered. A constraint reindex can rebuild event-driven closures from the log; it is an explicit repair operation, not a migration performed by adding the attribute. See [Closing streams: guarantees and limits](../closing-streams/index.mdx#guarantees-and-limits) before relying on a rebuild:
+
+- The closing event becomes durable before the closure index update. They share a grain turn, but are not crash-atomic. A lost update needs index recovery or reindexing; the marker supplies no extra guarantee.
+- Manual closures are not rebuilt or removed by constraint reindexing.
+- A redacted closing or reopening event whose scope came from a payload property may no longer contain enough information to rebuild that scope. Reindex leaves that constraint's closures untouched and reports the limitation.
+
+Closure only prevents new appends in the selected scope. It does **not** erase stored events, revoke read access, delete an aggregate or reclaim values held by uniqueness constraints. Reads and replays continue. Treat compliance erasure and authorization as separate concerns.
+
+This clarification does not deprecate or remove `[Tombstone]`, change identity or wire fields, or introduce a migration. Whether to retire the marker, support it as shorthand, or change its release and warning policy remains undecided.
+
 ## Defining constraints
 
 Chronicle provides two ways to define constraints:

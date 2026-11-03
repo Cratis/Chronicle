@@ -90,6 +90,16 @@ public class ObserverState
     public WebhookProbeState? WebhookProbe { get; set; }
 
     /// <summary>
+    /// Gets or sets when the running state last changed, absent on legacy state.
+    /// </summary>
+    /// <remarks>
+    /// Deliberately not mapped by the state converters and not part of the Save update, so progress saves preserve it.
+    /// </remarks>
+    [BsonElement("runningStateChangedAt")]
+    [BsonIgnoreIfNull]
+    public DateTimeOffset? RunningStateChangedAt { get; set; }
+
+    /// <summary>
     /// Gets or sets the last handled event sequence number.
     /// </summary>
     public EventSequenceNumber LastHandledEventSequenceNumber { get; set; } = EventSequenceNumber.Unavailable;

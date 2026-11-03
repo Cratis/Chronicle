@@ -3,7 +3,7 @@ title: Compliance
 description: Protect personally identifiable information in an immutable event log with encryption, erasure, and redaction.
 ---
 
-Modern applications collect and store personal data. Regulations such as the General Data Protection Regulation (GDPR) require that this data be protected, identifiable, and erasable on demand. Chronicle provides first-class support for compliance requirements directly in the event sourcing model, so that protection is applied consistently and automatically rather than scattered across application code.
+Modern applications collect and store personal data. Regulations such as the General Data Protection Regulation (GDPR) require that this data be protected, identifiable, and erasable on demand. Chronicle provides first-class support for compliance requirements directly in the event sourcing model, so that protection is applied consistently and automatically rather than scattered across application code. GDPR is one regime among several; see [Regulatory responsibilities](regulatory-responsibilities.md) for HIPAA, SEC/PCAOB, PCI DSS and cross-border transfers.
 
 ## Why compliance belongs in the event store
 
@@ -60,5 +60,6 @@ If the identifier itself is sensitive, use a non-sensitive surrogate key as the 
 | [Working with compliance from the client](client) | How to annotate events and ConceptAs types in your .NET client code |
 | [Read models and PII](read-models) | How PII encryption affects projections, reducers, and read model queries |
 | [Erasing a subject](erasing-a-subject) | What one erasure reaches, and how to erase across every event store |
+| [Regulatory responsibilities](regulatory-responsibilities.md) | What Chronicle provides, what you configure and what stays yours for HIPAA, SEC/PCAOB, PCI DSS and GDPR transfers |
 | [Compliance in Arc applications](arc.md) | Using read models and queries with compliance in Arc |
 | [Event Redaction](../events/redaction) | Removing event content for GDPR right-to-erasure requests |

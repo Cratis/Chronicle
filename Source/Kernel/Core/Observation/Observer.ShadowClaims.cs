@@ -44,14 +44,23 @@ public partial class Observer
     (IEnumerable<PartitionClaim>? Claims, ObserverWideClaim? Wide, OwnershipRevision? Revision) ShadowClaimsSnapshot()
     {
         var snapshot = (Claims: State.PartitionClaims, Wide: State.ObserverWideClaim, Revision: State.OwnershipRevision);
-        GuardShadowClaims(() =>
+        try
         {
-            // Reconcile reports stale releases, but silently seeds missing claims. Report those before they are repaired.
-            ReportShadowDivergences(_shadowClaims.Compare(State.ReplayingPartitions, State.CatchingUpPartitions, IsObserverReplaying())
-                .Where(_ => _.Divergence == ShadowClaimDivergence.DerivedSetWithoutClaim));
-            ReportShadowDivergences(_shadowClaims.Reconcile(State.ReplayingPartitions, State.CatchingUpPartitions, IsObserverReplaying(), ShadowResumePosition()));
+            if (!_shadowClaims.IsAligned(State.ReplayingPartitions, State.CatchingUpPartitions, IsObserverReplaying()))
+            {
+                // Reconcile reports stale releases, but silently seeds missing claims. Report those before they are repaired.
+                ReportShadowDivergences(_shadowClaims.Compare(State.ReplayingPartitions, State.CatchingUpPartitions, IsObserverReplaying())
+                    .Where(_ => _.Divergence == ShadowClaimDivergence.DerivedSetWithoutClaim).ToArray());
+                ReportShadowDivergences(_shadowClaims.Reconcile(State.ReplayingPartitions, State.CatchingUpPartitions, IsObserverReplaying(), ShadowResumePosition()));
+            }
+
             snapshot = _shadowClaims.Snapshot();
-        });
+        }
+        catch (Exception exception)
+        {
+            ReportShadowClaimsFailure(exception);
+        }
+
         return snapshot;
     }
 
@@ -61,20 +70,71 @@ public partial class Observer
         ? State.LastHandledEventSequenceNumber.Next()
         : EventSequenceNumber.First;
 
-    void ShadowGrantPartition(Key partition, ClaimHolderKind kind, JobId? job, EventSequenceNumber resume) =>
-        GuardShadowClaims(() => ReportShadowDivergences(_shadowClaims.Grant(partition, kind, job, resume)));
-
-    void ShadowHandOverPartition(Key partition) => GuardShadowClaims(() => _shadowClaims.HandOver(partition));
-
-    void ShadowGrantObserverWide(ClaimHolderKind kind, JobId? job, EventSequenceNumber resume) =>
-        GuardShadowClaims(() => ReportShadowDivergences(_shadowClaims.GrantObserverWide(kind, job, resume)));
-
-    void ShadowHandOverObserverWide() => GuardShadowClaims(_shadowClaims.HandOverObserverWide);
-
-    void ReportShadowDivergences(IEnumerable<(Key? Partition, ShadowClaimDivergence Divergence)> divergences)
+    void ShadowGrantPartition(Key partition, ClaimHolderKind kind, JobId? job, EventSequenceNumber resume)
     {
-        foreach (var (partition, divergence) in divergences)
+        try
         {
+            ReportShadowDivergences(_shadowClaims.Grant(partition, kind, job, resume));
+        }
+        catch (Exception exception)
+        {
+            ReportShadowClaimsFailure(exception);
+        }
+    }
+
+    void ShadowHandOverPartition(Key partition)
+    {
+        try
+        {
+            _shadowClaims.HandOver(partition);
+        }
+        catch (Exception exception)
+        {
+            ReportShadowClaimsFailure(exception);
+        }
+    }
+
+    void ShadowGrantObserverWide(ClaimHolderKind kind, JobId? job, EventSequenceNumber resume)
+    {
+        try
+        {
+            ReportShadowDivergences(_shadowClaims.GrantObserverWide(kind, job, resume));
+        }
+        catch (Exception exception)
+        {
+            ReportShadowClaimsFailure(exception);
+        }
+    }
+
+    void ShadowHandOverObserverWide()
+    {
+        try
+        {
+            _shadowClaims.HandOverObserverWide();
+        }
+        catch (Exception exception)
+        {
+            ReportShadowClaimsFailure(exception);
+        }
+    }
+
+    void ReportShadowClaimsFailure(Exception exception)
+    {
+        try
+        {
+            logger.ShadowClaimsFailed(_observerId, exception);
+        }
+        catch (Exception)
+        {
+            // A failing diagnostic logger must not turn write-only shadow data into a delivery failure.
+        }
+    }
+
+    void ReportShadowDivergences(IReadOnlyList<(Key? Partition, ShadowClaimDivergence Divergence)> divergences)
+    {
+        for (var i = 0; i < divergences.Count; i++)
+        {
+            var (partition, divergence) = divergences[i];
             logger.ShadowClaimDivergence(_observerId, divergence, partition?.ToString());
             _metrics?.ClaimDivergence(divergence);
         }

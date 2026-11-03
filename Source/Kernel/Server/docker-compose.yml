@@ -47,7 +47,7 @@ services:
 
   # ─── Microsoft SQL Server ──────────────────────────────────────────────────────
   mssql:
-    image: mcr.microsoft.com/mssql/server:2022-latest
+    image: mcr.microsoft.com/mssql/server:2025-CU10-ubuntu-24.04
     profiles: [mssql]
     environment:
       - ACCEPT_EULA=Y

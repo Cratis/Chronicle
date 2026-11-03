@@ -81,13 +81,19 @@ public static class OpenTelemetryConfigurationExtensions
             .WithLogging(logger => logger.AddOtlpExporter())
             .WithTracing(tracing =>
             {
-                tracing
+                var tracingBuilder = tracing
                     .AddChronicleInstrumentation(chronicle.Telemetry.OrleansTracing)
                     .AddProcessor(new IdentifierSpanProcessor())
                     .AddHttpClientInstrumentation()
-                    .AddAspNetCoreInstrumentation()
-                    .AddGrpcClientInstrumentation()
-                    .AddOtlpExporter();
+                    .AddAspNetCoreInstrumentation(options => options.Filter = context =>
+                        ServerRequestTraceFilter.ShouldTrace(chronicle.HealthCheckEndpoint, context.Request.Path.Value));
+
+                if (chronicle.Telemetry.GrpcClientTracing)
+                {
+                    tracingBuilder.AddGrpcClientInstrumentation();
+                }
+
+                tracingBuilder.AddOtlpExporter();
             })
                 .WithMetrics(metrics =>
             {

@@ -56,6 +56,94 @@ public class EventTypeMigrations(
         return result;
     }
 
+    static void ApplyToElements(JsonObject result, JsonObject content, string target, string kind, JsonNode? configuration)
+    {
+        var marker = target.IndexOf(JsonPropertyPaths.ElementMarker, StringComparison.Ordinal);
+        var collectionPath = target[..marker];
+        var remainder = target[(marker + JsonPropertyPaths.ElementMarker.Length)..].TrimStart('.');
+        var elementPrefix = $"{collectionPath}{JsonPropertyPaths.ElementMarker}.";
+
+        if (!JsonPropertyPaths.TryResolve(result, collectionPath, out var resultNode) || resultNode is not JsonArray resultElements ||
+            !JsonPropertyPaths.TryResolve(content, collectionPath, out var contentNode) || contentNode is not JsonArray contentElements ||
+            resultElements.Count != contentElements.Count)
+        {
+            return;
+        }
+
+        // Sources are written the way the target is, with the collection in them, and are read from the element.
+        var relative = RelativeTo(configuration, kind, elementPrefix);
+
+        for (var index = 0; index < resultElements.Count; index++)
+        {
+            if (resultElements[index] is not JsonObject resultElement || contentElements[index] is not JsonObject contentElement)
+            {
+                continue;
+            }
+
+            if (JsonPropertyPaths.AddressesElements(remainder))
+            {
+                ApplyToElements(resultElement, contentElement, remainder, kind, relative);
+                continue;
+            }
+
+            switch (kind)
+            {
+                case WellKnownExpressions.DefaultValue:
+                    JsonPropertyPaths.SetWhereAbsent(resultElement, remainder, relative?.DeepClone());
+                    break;
+
+                case WellKnownExpressions.Split when relative is JsonObject split:
+                    JsonPropertyPaths.Set(resultElement, remainder, EventMigrationExpressions.EvaluateSplit(contentElement, split));
+                    break;
+
+                case WellKnownExpressions.Combine when relative is JsonObject combine:
+                    JsonPropertyPaths.Set(resultElement, remainder, EventMigrationExpressions.EvaluateCombine(contentElement, combine));
+                    break;
+
+                case WellKnownExpressions.Rename:
+                    JsonPropertyPaths.Set(resultElement, remainder, EventMigrationExpressions.EvaluateRename(contentElement, relative?.GetValue<string>())?.DeepClone());
+                    break;
+
+                case WellKnownExpressions.MapValues when relative is JsonObject map &&
+                    EventMigrationExpressions.TryEvaluateMapValues(contentElement, map, out var mapped):
+                    JsonPropertyPaths.Set(resultElement, remainder, mapped?.DeepClone());
+                    break;
+            }
+        }
+    }
+
+    static JsonNode? RelativeTo(JsonNode? configuration, string kind, string elementPrefix)
+    {
+        string Strip(string path) => path.StartsWith(elementPrefix, StringComparison.Ordinal) ? path[elementPrefix.Length..] : path;
+
+        switch (kind)
+        {
+            case WellKnownExpressions.Rename when configuration is JsonValue renamed && renamed.TryGetValue<string>(out var oldName):
+                return JsonValue.Create(Strip(oldName));
+
+            case WellKnownExpressions.Split or WellKnownExpressions.MapValues when configuration is JsonObject single:
+                var copy = (JsonObject)single.DeepClone();
+                if (copy["source"]?.GetValue<string>() is { } source)
+                {
+                    copy["source"] = Strip(source);
+                }
+
+                return copy;
+
+            case WellKnownExpressions.Combine when configuration is JsonObject combine:
+                var combined = (JsonObject)combine.DeepClone();
+                if (combined["sources"] is JsonArray sources)
+                {
+                    combined["sources"] = new JsonArray([.. sources.Select(_ => (JsonNode?)JsonValue.Create(Strip(_!.GetValue<string>())))]);
+                }
+
+                return combined;
+
+            default:
+                return configuration?.DeepClone();
+        }
+    }
+
     ExpandoObject Convert(JsonObject content, JsonSchema schema, Action<JsonObject, JsonSchema, ExpandoObject>? onConverted)
     {
         var converted = expandoObjectConverter.ToExpandoObject(content, schema);
@@ -144,11 +232,19 @@ public class EventTypeMigrations(
         // Separate built-in expressions from standard JmesPath expressions
         var defaultValues = new Dictionary<string, JsonNode?>();
         var customResults = new Dictionary<string, JsonNode?>();
+        var elementOperations = new List<(string Target, string Kind, JsonNode? Configuration)>();
         var regularJmesPath = new JsonObject();
 
         foreach (var property in jmesPath)
         {
-            if (property.Value is JsonObject expr && expr.Count == 1)
+            if (JsonPropertyPaths.AddressesElements(property.Key) &&
+                property.Value is JsonObject elementExpression && elementExpression.Count == 1)
+            {
+                // A target inside the elements of a collection is applied element by element once the result exists.
+                var (kind, configuration) = elementExpression.Single();
+                elementOperations.Add((property.Key, kind, configuration?.DeepClone()));
+            }
+            else if (property.Value is JsonObject expr && expr.Count == 1)
             {
                 using var enumerator = expr.GetEnumerator();
                 enumerator.MoveNext();
@@ -233,6 +329,11 @@ public class EventTypeMigrations(
             {
                 JsonPropertyPaths.Set(result, propertyName, defaultValue?.DeepClone());
             }
+        }
+
+        foreach (var (target, kind, configuration) in elementOperations)
+        {
+            ApplyToElements(result, content, target, kind, configuration);
         }
 
         return result;
