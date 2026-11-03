@@ -1,11 +1,13 @@
 ---
 id: 0022-observers-receive-batches-on-every-path
 title: Deliver to every observer in pages spanning many partitions on every path, live included, settle each partition on its own, and let client reactors and reducers declare batch methods with a generic Observes attribute, with each event type reaching exactly one method
-status: proposed
+status: accepted
 stage: none
 class: contract
 reversibility: costly
 proposed: 2026-11-03
+decided: 2026-11-03
+decider: Einar
 applies-to:
   - Source/Kernel/Core/EventSequences/AppendedEventsQueue*.cs
   - Source/Kernel/Core/Observation/**
