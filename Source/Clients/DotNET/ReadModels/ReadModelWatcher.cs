@@ -95,12 +95,15 @@ public class ReadModelWatcher<TReadModel> : IReadModelWatcher<TReadModel>, IDisp
         // never leaks the subscription established for the previous connection.
         prior?.Dispose();
 
+        var reducer = _eventStore.Reducers.HasFor<TReadModel>()
+            ? _eventStore.Reducers.GetHandlerForReadModelType(typeof(TReadModel))
+            : null;
         var request = new ContractReadModels.WatchRequest
         {
             EventStore = _eventStore.Name,
             Namespace = _eventStore.Namespace,
             ReadModelIdentifier = typeof(TReadModel).GetReadModelIdentifier(),
-            EventSequenceId = EventSequences.EventSequenceId.Log
+            EventSequenceId = reducer?.EventSequenceId ?? EventSequences.EventSequenceId.Log
         };
         _serverObservable = _servicesAccessor.Services.ReadModels.Watch(request);
         var subscription = _serverObservable.Subscribe(
@@ -112,7 +115,7 @@ public class ReadModelWatcher<TReadModel> : IReadModelWatcher<TReadModel>, IDisp
                     return;
                 }
 
-                var readModel = JsonSerializer.Deserialize<TReadModel>(changeset.ReadModel, _jsonSerializerOptions);
+                var readModel = reducer is not null && changeset.Removed ? default : JsonSerializer.Deserialize<TReadModel>(changeset.ReadModel, _jsonSerializerOptions);
                 var changeContext = EventContext.From(
                     _eventStore.Name,
                     changeset.Namespace,

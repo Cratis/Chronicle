@@ -88,23 +88,6 @@ public class ReadModelReactors(
         }
     }
 
-    static ReadModelChangeType DetermineChangeType<TReadModel>(ReadModelChangeset<TReadModel> changeset, HashSet<string>? seenKeys)
-    {
-        if (seenKeys is null)
-        {
-            return changeset.ChangeType;
-        }
-
-        var key = changeset.ModelKey.Value;
-        if (changeset.Removed)
-        {
-            seenKeys.Remove(key);
-            return ReadModelChangeType.Removed;
-        }
-
-        return seenKeys.Add(key) ? ReadModelChangeType.Added : ReadModelChangeType.Modified;
-    }
-
     List<IDisposable> TakeSubscriptions(bool release)
     {
         lock (_sync)
@@ -147,15 +130,11 @@ public class ReadModelReactors(
             return;
         }
 
-        // Projections report the change type from the server; reducers compute changesets locally without one,
-        // so first-seen keys are tracked client-side to distinguish an addition from a modification.
-        var seenKeys = eventStore.Reducers.HasFor<TReadModel>() ? new HashSet<string>(StringComparer.Ordinal) : null;
-
         var subscription = eventStore.ReadModels.Watch<TReadModel>().Subscribe(changeset => DispatchAll(
             reactorType,
             typeof(TReadModel),
             changeset.ReadModel,
-            DetermineChangeType(changeset, seenKeys),
+            changeset.ChangeType,
             changeset.ChangeContext ?? EventContext.EmptyWithEventSourceId(changeset.ModelKey)));
         subscriptions.Add(subscription);
     }
