@@ -72,6 +72,14 @@ public record EventContext(
     } = EventSourceName.NotSet;
 
     /// <summary>
+    /// Gets the <see cref="EventSequenceNumber"/> of the event this event compensates for, or null when the event is not a compensation.
+    /// </summary>
+    /// <remarks>
+    /// Declared outside the primary constructor so existing positional construction and deconstruction shapes remain compatible.
+    /// </remarks>
+    public EventSequenceNumber? CompensationFor { get; init; }
+
+    /// <summary>
     /// Gets confirmed erased paths in current released content, using dotted members and bracketed indices.
     /// Empty is not proof of no erasure. Original, revision and generational content are not covered.
     /// </summary>

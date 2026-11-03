@@ -47,6 +47,11 @@ public record EventToAppendToStorage(
     public EventSourceName EventSource { get; init; } = EventSourceName.NotSet;
 
     /// <summary>
+    /// Gets the <see cref="EventSequenceNumber"/> of the event this event compensates for. Null when the event is not a compensation.
+    /// </summary>
+    public EventSequenceNumber? CompensationFor { get; init; }
+
+    /// <summary>
     /// Gets the optional identity and fingerprint persisted atomically by <see cref="IEventPublicationStorage.AppendManyWithIdentities"/>.
     /// Ordinary append methods do not persist this identity.
     /// </summary>
