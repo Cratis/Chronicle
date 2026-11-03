@@ -37,7 +37,9 @@ public class when_a_page_event_fails_under_a_shared_composite_key : given.a_page
             var changeset = Substitute.For<IChangeset<AppendedEvent, ExpandoObject>>();
             changeset.HasChanges.Returns(_hasChanges);
             changeset.HasBeenRemoved().Returns(@event.Context.SequenceNumber == (EventSequenceNumber)3UL);
-            changeset.CurrentState.Returns(new ExpandoObject());
+            var state = new ExpandoObject();
+            ((IDictionary<string, object?>)state)["position"] = @event.Context.SequenceNumber.Value;
+            changeset.CurrentState.Returns(state);
             return new ProjectionEventContext(_compositeKey, @event, changeset, ProjectionOperationType.From, false)
             {
                 IsNewInstance = @event.Context.SequenceNumber == (EventSequenceNumber)1UL
