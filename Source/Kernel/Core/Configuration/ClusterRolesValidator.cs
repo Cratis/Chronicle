@@ -15,7 +15,7 @@ public class ClusterRolesValidator : IValidateOptions<ChronicleOptions>
     {
         var failures = new List<string>();
         var roles = options.Clustering.Roles;
-        if (!roles.EventSequences && !roles.Observers && !roles.Jobs)
+        if (HasNoRoleEnabled(roles))
         {
             failures.Add("Clustering.Roles must enable at least one of EventSequences, Observers or Jobs.");
         }
@@ -32,4 +32,7 @@ public class ClusterRolesValidator : IValidateOptions<ChronicleOptions>
 
         return failures.Count > 0 ? ValidateOptionsResult.Fail(failures) : ValidateOptionsResult.Success;
     }
+
+    static bool HasNoRoleEnabled(ClusterRoles roles) =>
+        !(roles.EventSequences || roles.Observers || roles.Jobs);
 }

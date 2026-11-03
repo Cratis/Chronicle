@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Immutable;
 using Cratis.Chronicle.Configuration;
 using Cratis.Monads;
 using Orleans.Runtime.MembershipService.SiloMetadata;
@@ -38,13 +39,19 @@ public class SiloRoles(ISiloMetadataCache metadataCache) : ISiloRoles
     {
         var metadata = metadataCache.GetSiloMetadata(siloAddress).Metadata;
         if (metadata.TryGetValue(VersionKey, out var version) && version == "1" &&
-            metadata.TryGetValue(EventSequencesKey, out var eventSequences) && bool.TryParse(eventSequences, out var hasEventSequences) &&
-            metadata.TryGetValue(ObserversKey, out var observers) && bool.TryParse(observers, out var hasObservers) &&
-            metadata.TryGetValue(JobsKey, out var jobs) && bool.TryParse(jobs, out var hasJobs))
+            TryGetFlag(metadata, EventSequencesKey, out var hasEventSequences) &&
+            TryGetFlag(metadata, ObserversKey, out var hasObservers) &&
+            TryGetFlag(metadata, JobsKey, out var hasJobs))
         {
             return new ClusterRoles { EventSequences = hasEventSequences, Observers = hasObservers, Jobs = hasJobs };
         }
 
         return Option<ClusterRoles>.None();
+    }
+
+    static bool TryGetFlag(ImmutableDictionary<string, string> metadata, string key, out bool value)
+    {
+        value = false;
+        return metadata.TryGetValue(key, out var text) && bool.TryParse(text, out value);
     }
 }

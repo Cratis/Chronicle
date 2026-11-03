@@ -117,14 +117,7 @@ public static class ChronicleServerSiloBuilderExtensions
         builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IGrainPropertiesProvider, JobStepPlacementProperties>());
         builder
             .AddChronicleServicesAsInMemory()
-            .AddPlacementDirector<ConnectedClientsPlacementStrategy, ConnectedClientsPlacementDirector>()
-            .AddPlacementDirector<ServerInstancePlacementStrategy, ServerInstancePlacementDirector>()
-            .AddPlacementDirector<ConnectedObserverPlacementStrategy, ConnectedObserverPlacementDirector>()
-            .AddPlacementDirector<EventSequencePlacementStrategy, EventSequencePlacementDirector>()
-            .AddPlacementDirector<ObserverPlacementStrategy, ObserverPlacementDirector>()
-
-            // Every silo must be able to resolve placement, even while opt-in settings differ.
-            .AddPlacementDirector<JobStepsPlacementStrategy, JobWorkerPlacementDirector>()
+            .AddChroniclePlacementDirectors()
             .AddBroadcastChannel(WellKnownBroadcastChannelNames.NamespaceAdded, _ => _.FireAndForgetDelivery = true)
             .AddBroadcastChannel(WellKnownBroadcastChannelNames.ConstraintsChanged, _ => _.FireAndForgetDelivery = true)
             .AddReplayStateManagement()
@@ -235,6 +228,16 @@ public static class ChronicleServerSiloBuilderExtensions
 
         return builder;
     }
+
+    static ISiloBuilder AddChroniclePlacementDirectors(this ISiloBuilder builder) => builder
+        .AddPlacementDirector<ConnectedClientsPlacementStrategy, ConnectedClientsPlacementDirector>()
+        .AddPlacementDirector<ServerInstancePlacementStrategy, ServerInstancePlacementDirector>()
+        .AddPlacementDirector<ConnectedObserverPlacementStrategy, ConnectedObserverPlacementDirector>()
+        .AddPlacementDirector<EventSequencePlacementStrategy, EventSequencePlacementDirector>()
+        .AddPlacementDirector<ObserverPlacementStrategy, ObserverPlacementDirector>()
+
+        // Every silo must be able to resolve placement, even while opt-in settings differ.
+        .AddPlacementDirector<JobStepsPlacementStrategy, JobWorkerPlacementDirector>();
 
     static void AddClusterReleaseSupport(IServiceCollection services)
     {
