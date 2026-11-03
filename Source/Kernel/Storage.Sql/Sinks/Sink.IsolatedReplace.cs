@@ -93,7 +93,7 @@ public partial class Sink
             }
             else if (values.TryGetValue(column.Name, out var value))
             {
-                replacement[column.Name] = column.IsJson && value is not null ? SerializeJsonColumn(value, column) : CoerceForColumn(column, value);
+                replacement[column.Name] = column.IsJson ? SerializeJsonColumnReplacement(value, column) : CoerceForColumn(column, value);
             }
         }
         replacement[WellKnownProperties.LastHandledEventSequenceNumber] = watermark;

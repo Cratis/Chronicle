@@ -19,8 +19,9 @@ public abstract class and_nullable_properties_are_explicitly_null<THarness> : gi
     }
 
     [Fact] public void should_replace_the_row() => _result.ShouldEqual(IsolatedReplaceResult.Replaced);
-    [Fact] public void should_preserve_the_scalar_null() => _stored["name"].ShouldBeNull();
-    [Fact] public void should_preserve_the_object_null() => _stored["child"].ShouldBeNull();
-    [Fact] public void should_preserve_the_array_null() => _stored["children"].ShouldBeNull();
+    [Fact] public void should_preserve_the_scalar_null() => StoredValue("name").ShouldBeNull();
+    [Fact] public void should_preserve_the_object_null() => StoredValue("child").ShouldBeNull();
+    [Fact] public void should_not_retain_any_array_elements() =>
+        (StoredValue("children") is null || (StoredValue("children") is System.Collections.IEnumerable children && !children.Cast<object>().Any())).ShouldBeTrue();
     [Fact] public void should_keep_the_identity() => _stored["id"].ShouldEqual("root");
 }

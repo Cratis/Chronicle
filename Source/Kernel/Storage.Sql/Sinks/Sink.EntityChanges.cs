@@ -118,7 +118,7 @@ public partial class Sink
         // for an empty path, so use it to detect "replace the entire column value".
         if (!subPath.IsSet)
         {
-            entry.Entity[column.Name] = SerializeJsonColumn(UnwrapForJson(difference.Changed), column);
+            entry.Entity[column.Name] = SerializeJsonColumnReplacement(UnwrapForJson(difference.Changed), column);
         }
         else
         {
@@ -128,6 +128,9 @@ public partial class Sink
 
         entry.Property(column.Name).IsModified = true;
     }
+
+    static string? SerializeJsonColumnReplacement(object? value, ProjectedColumn column) =>
+        value is null && !column.IsArray ? null : SerializeJsonColumn(value, column);
 
     void TryApplyDifferenceViaArrayIndexers(EntityEntry<DynamicReadModelEntity> entry, PropertyDifference difference)
     {
@@ -310,13 +313,7 @@ public partial class Sink
 
     static void SetTypedColumn(EntityEntry<DynamicReadModelEntity> entry, ProjectedColumn column, object? value)
     {
-        var coercedValue = CoerceForColumn(column, value);
-        if (entry.Entity.TryGetValue(column.Name, out var existingValue) && Equals(existingValue, coercedValue))
-        {
-            return;
-        }
-
-        entry.Entity[column.Name] = coercedValue;
+        entry.Entity[column.Name] = CoerceForColumn(column, value);
         entry.Property(column.Name).IsModified = true;
     }
 

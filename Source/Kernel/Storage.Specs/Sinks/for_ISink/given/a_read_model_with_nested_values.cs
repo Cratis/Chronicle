@@ -5,6 +5,7 @@ using System.Dynamic;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
+using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
 
 namespace Cratis.Chronicle.Storage.Sinks.for_ISink.given;
@@ -46,7 +47,7 @@ public abstract class a_read_model_with_nested_values<THarness> : Specification
             ReadModelObserverType.Projection,
             ReadModelObserverIdentifier.Unspecified,
             SinkDefinition.None,
-            new Dictionary<ReadModelGeneration, JsonSchema> { [ReadModelGeneration.First] = JsonSchema.FromJson(SchemaJson) },
+            new Dictionary<ReadModelGeneration, JsonSchema> { [ReadModelGeneration.First] = await JsonSchema.FromJsonAsync(SchemaJson) },
             []));
         dynamic child = new ExpandoObject();
         child.name = "before";
