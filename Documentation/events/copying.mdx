@@ -27,5 +27,3 @@ Copying is a durable job. The call returns the identifier of the job straight aw
 - A copy keeps the event type, its generation, the tags, the stream, and the original occurred time.
 - Personal data is released from the source and protected again for the target. An event whose subject was the source event source gets the target as its subject, while an explicit subject is kept.
 - If the target refuses an append — for example because a unique constraint is violated — the job fails and reports it. Copies appended before that point stay in the target.
-
-Copying is an administrative operation and requires the administrator role.

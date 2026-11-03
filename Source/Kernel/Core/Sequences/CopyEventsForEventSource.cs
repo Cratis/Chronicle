@@ -20,7 +20,6 @@ namespace Cratis.Chronicle.Sequences;
 /// <param name="TargetId">The event source to append the copies to.</param>
 /// <param name="EventTypes">The identifiers of the event types to copy. When empty, every event type is copied.</param>
 [Command]
-[Cratis.Arc.Authorization.Authorize(Policy = Security.WellKnownAuthorizationPolicies.AdministratorOperations)]
 [BelongsTo(WellKnownServices.EventSequences)]
 public record CopyEventsForEventSource(
     EventStoreName EventStore,
