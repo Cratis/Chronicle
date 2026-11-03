@@ -65,7 +65,7 @@ class OAuthTokenProvider(
             .POST(HttpRequest.BodyPublishers.ofString(requestBody))
             .build()
 
-        val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
+        val response = send(request)
         if (response.statusCode() != 200) {
             // Never include the response body, reason phrase or error_description: a token endpoint can reflect the submitted credentials.
             throw IllegalStateException("Token request failed with status ${response.statusCode()} (${OAuthErrorCodes.describe(response.body())})")
@@ -90,6 +90,18 @@ class OAuthTokenProvider(
         tokenExpiry = Instant.now().plusSeconds((expiresIn - 60).coerceAtLeast(1))
         return token
     }
+
+    // Transport and protocol failures can carry text from the token endpoint (for example a malformed status line),
+    // so neither their message nor the exception itself is kept; only the exception type is reported.
+    private fun send(request: HttpRequest): HttpResponse<String> =
+        try {
+            httpClient.send(request, HttpResponse.BodyHandlers.ofString())
+        } catch (e: InterruptedException) {
+            Thread.currentThread().interrupt()
+            throw IllegalStateException("Token request was interrupted")
+        } catch (e: java.io.IOException) {
+            throw IllegalStateException("Token request failed (${e.javaClass.simpleName})")
+        }
 
     private fun urlEncode(value: String) = URLEncoder.encode(value, StandardCharsets.UTF_8)
 }
