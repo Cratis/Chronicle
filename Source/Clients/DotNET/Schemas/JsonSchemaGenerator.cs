@@ -411,38 +411,7 @@ public partial class JsonSchemaGenerator : IJsonSchemaGenerator
             AddSecurityMetadata(schemaObj, _securityMetadataResolver.GetMetadataFor(type));
         }
 
-        // Add compliance and security metadata for the property
-        if (context.PropertyInfo?.AttributeProvider is PropertyInfo propInfo)
-        {
-            if (_metadataResolver.HasMetadataFor(propInfo))
-            {
-                AddComplianceMetadata(schemaObj, _metadataResolver.GetMetadataFor(propInfo));
-            }
-
-            if (_securityMetadataResolver.HasMetadataFor(propInfo))
-            {
-                AddSecurityMetadata(schemaObj, _securityMetadataResolver.GetMetadataFor(propInfo));
-            }
-        }
-        else if (context.PropertyInfo?.AttributeProvider is ParameterInfo paramInfo &&
-            paramInfo.Member.DeclaringType is { } recordType)
-        {
-            var recordProp = recordType.GetProperty(
-                paramInfo.Name ?? string.Empty,
-                BindingFlags.Public | BindingFlags.Instance);
-            if (recordProp is not null)
-            {
-                if (_metadataResolver.HasMetadataFor(recordProp))
-                {
-                    AddComplianceMetadata(schemaObj, _metadataResolver.GetMetadataFor(recordProp));
-                }
-
-                if (_securityMetadataResolver.HasMetadataFor(recordProp))
-                {
-                    AddSecurityMetadata(schemaObj, _securityMetadataResolver.GetMetadataFor(recordProp));
-                }
-            }
-        }
+        AddPropertyMetadata(schemaObj, context.PropertyInfo?.AttributeProvider);
 
         // Preserve the CLR name on nested object schemas too. Composite Ids are emitted inline by the
         // serializer, so declaration generation needs the title to recover the key type from the Id schema.
@@ -485,6 +454,29 @@ public partial class JsonSchemaGenerator : IJsonSchemaGenerator
         }
 
         return schema;
+    }
+
+    void AddPropertyMetadata(JsonObject schema, ICustomAttributeProvider? attributeProvider)
+    {
+        var property = attributeProvider as PropertyInfo;
+        if (attributeProvider is ParameterInfo parameter)
+        {
+            property = parameter.Member.DeclaringType?.GetProperty(
+                parameter.Name ?? string.Empty,
+                BindingFlags.Public | BindingFlags.Instance);
+        }
+
+        if (property is null) return;
+
+        if (_metadataResolver.HasMetadataFor(property))
+        {
+            AddComplianceMetadata(schema, _metadataResolver.GetMetadataFor(property));
+        }
+
+        if (_securityMetadataResolver.HasMetadataFor(property))
+        {
+            AddSecurityMetadata(schema, _securityMetadataResolver.GetMetadataFor(property));
+        }
     }
 
     /// <summary>
@@ -627,6 +619,8 @@ public partial class JsonSchemaGenerator : IJsonSchemaGenerator
         {
             AddSecurityMetadata(representedSchemaObject, _securityMetadataResolver.GetMetadataFor(declaredType));
         }
+
+        AddPropertyMetadata(representedSchemaObject, attributeProvider);
 
         if (PropertyIsNullable(declaredType, attributeProvider))
         {
