@@ -2,8 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
+using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
-using NJsonSchema;
 
 namespace Cratis.Chronicle.ReadModels.for_ReadModelInstanceExtensions.when_removing_sink_bookkeeping;
 
@@ -15,8 +15,7 @@ public class and_the_schema_declares_one_of_them : Specification
 
     void Establish()
     {
-        _schema = new JsonSchema();
-        _schema.Properties[WellKnownProperties.AppliedEventMarkers] = new JsonSchemaProperty { Type = JsonObjectType.Object };
+        _schema = JsonSchema.FromJson("""{ "type": "object", "properties": { "__applied": { "type": "object" } } }""");
         _instance = new ExpandoObject();
         var values = (IDictionary<string, object?>)_instance;
         values[WellKnownProperties.AppliedEventMarkers] = new ExpandoObject();

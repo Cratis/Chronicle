@@ -13,6 +13,7 @@ namespace Cratis.Chronicle.Observation.Reducers.for_ReducerPipeline.when_handlin
 public class and_stored_state_contains_sink_bookkeeping : given.all_dependencies
 {
     ExpandoObject _initial;
+    string[] _keysBefore;
     PropertyDifference[] _differences;
 
     void Establish()
@@ -24,6 +25,7 @@ public class and_stored_state_contains_sink_bookkeeping : given.all_dependencies
         values[WellKnownProperties.LastHandledEventSequenceNumber] = 1UL;
         values[WellKnownProperties.Subject] = EventSourceIdValue;
         values[WellKnownProperties.Subjects] = new ExpandoObject();
+        _keysBefore = [.. values.Keys];
         _sink.FindOrDefault(Arg.Any<Concepts.Keys.Key>()).Returns(_initial);
         _sink.ApplyChanges(Arg.Any<Concepts.Keys.Key>(), Arg.Any<IChangeset<AppendedEvent, ExpandoObject>>(), Arg.Any<EventSequenceNumber>(), Arg.Any<SinkWriteMode>())
             .Returns(call =>
@@ -45,5 +47,5 @@ public class and_stored_state_contains_sink_bookkeeping : given.all_dependencies
     [Fact] void should_not_rewrite_an_unchanged_subject() => _differences.Where(difference => difference.PropertyPath.Path == WellKnownProperties.Subject).ShouldBeEmpty();
     [Fact] void should_not_remove_sink_bookkeeping() => _differences.Where(difference => WellKnownProperties.All.Contains(difference.PropertyPath.Path) && difference.Changed is null).ShouldBeEmpty();
     [Fact] void should_change_the_reducer_property() => _differences.Single(difference => difference.PropertyPath.Path == "count").Changed.ShouldEqual(2);
-    [Fact] void should_not_mutate_the_stored_initial_state() => WellKnownProperties.All.All(((IDictionary<string, object?>)_initial).ContainsKey).ShouldBeTrue();
+    [Fact] void should_not_mutate_the_stored_initial_state() => ((IDictionary<string, object?>)_initial).Keys.ShouldContainOnly(_keysBefore);
 }
