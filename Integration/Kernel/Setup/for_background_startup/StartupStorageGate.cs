@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.ExceptionServices;
 using Cratis.Chronicle.Storage;
@@ -11,6 +12,7 @@ namespace Cratis.Chronicle.Kernel.Integration.Setup.for_background_startup;
 public class StartupStorageGate
 {
     readonly TaskCompletionSource _entered = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    const string StartupTaskTypeName = "Orleans.Hosting.ChronicleServerStartupTask";
     readonly TaskCompletionSource _released = new(TaskCreationOptions.RunContinuationsAsynchronously);
     bool _armed;
 
@@ -31,9 +33,20 @@ public class StartupStorageGate
     IEventStoreNamespaceStorage WrapNamespace(IEventStoreNamespaceStorage storage) => ForwardingProxy.Wrap(storage, (method, _, result) =>
         method == "get_Observers"
             ? ForwardingProxy.Wrap((IObserverStateStorage)result!, (member, _, value) =>
-                member == nameof(IObserverStateStorage.GetAll) && _armed && !IsReleased
+                member == nameof(IObserverStateStorage.GetAll) && _armed && !IsReleased && IsCalledByStartupTask()
                     ? Hold((Task<IEnumerable<ObserverState>>)value!) : value)
             : result);
+
+    /// <summary>
+    /// Whether the startup task issued the current read. Only its own recovery read is held: client-facing reads of the
+    /// same storage (for example GetObservers, which a connecting client's identity-drift check calls) must pass through,
+    /// as they do in production. The read is issued synchronously from the startup task's async method, so its state
+    /// machine is on the stack.
+    /// </summary>
+    /// <returns>True when a frame of the startup task is on the call stack.</returns>
+    static bool IsCalledByStartupTask() => new StackTrace().GetFrames().Any(frame =>
+        frame.GetMethod()?.DeclaringType?.FullName is { } name &&
+        (name == StartupTaskTypeName || name.StartsWith($"{StartupTaskTypeName}+", StringComparison.Ordinal)));
 
     async Task<IEnumerable<ObserverState>> Hold(Task<IEnumerable<ObserverState>> read)
     {
