@@ -35,7 +35,7 @@ public class and_there_are_persisted_reducer_and_reactor_observers : given.a_sta
         ]));
     }
 
-    Task Because() => Execute();
+    Task Because() => ExecuteAndSettle();
 
     [Fact] void should_rehydrate_the_persisted_reducer_observer() => _reducerObserver.Received(1).Ensure();
     [Fact] void should_rehydrate_the_persisted_reactor_observer() => _reactorObserver.Received(1).Ensure();

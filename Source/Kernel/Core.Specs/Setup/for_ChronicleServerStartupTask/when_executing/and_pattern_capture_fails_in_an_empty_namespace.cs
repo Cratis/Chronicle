@@ -10,7 +10,7 @@ public class and_pattern_capture_fails_in_an_empty_namespace : given.a_startup_t
     void Establish() => _patternCapture.Subscribe(_eventStore, _emptyNamespace)
         .Returns(_ => Task.FromException(new InvalidOperationException("Capture is unavailable")));
 
-    async Task Because() => _error = await Catch.Exception(Execute);
+    async Task Because() => _error = await Catch.Exception(ExecuteAndSettle);
 
     [Fact] void should_complete_startup() => _error.ShouldBeNull();
     [Fact] async Task should_not_retry_a_non_transient_failure() => await _patternCapture.Received(1).Subscribe(_eventStore, _emptyNamespace);
