@@ -30,7 +30,9 @@ public class and_an_older_generation_inherits_personal_data : given.a_replay
         var plaintext = new ExpandoObject();
         ((IDictionary<string, object?>)plaintext)["email"] = "plaintext";
         _converter.ToJsonObject(Arg.Any<ExpandoObject>(), Arg.Any<JsonSchema>()).Returns(new JsonObject { ["email"] = "ciphertext" });
-        _metadata.Release(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<JsonSchema>(), Arg.Any<string>(), Arg.Any<JsonObject>()).Returns(new JsonObject { ["email"] = "plaintext" });
+
+        // Only the effective schema, which inherits the later generation's PII classification, releases the plaintext.
+        _metadata.Release(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Is<JsonSchema>(schema => ConstraintPersonalData.PropertiesOf(schema).Contains("email")), Arg.Any<string>(), Arg.Any<JsonObject>()).Returns(new JsonObject { ["email"] = "plaintext" });
         _converter.ToExpandoObject(Arg.Any<JsonObject>(), Arg.Any<JsonSchema>()).Returns(plaintext);
         Event(0, "source", "Claimed", "ciphertext", generation: 1);
         Start();
