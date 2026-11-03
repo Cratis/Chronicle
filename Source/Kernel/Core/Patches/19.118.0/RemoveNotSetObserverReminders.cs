@@ -13,7 +13,7 @@ namespace Cratis.Chronicle.Patches;
 /// Removes the persistent reminders of observers that belong to the event store <see cref="EventStoreName.NotSet"/>.
 /// </summary>
 /// <remarks>
-/// A client call without an event store once created observers for <c>[NotSet]</c>, and those observers left reminders
+/// A client call without an event store once created observers for <see cref="EventStoreName.NotSet"/>, and those observers left reminders
 /// behind. Such an observer can never activate - its storage refuses the name - so its reminder ticks, fails and logs a
 /// stack trace every minute, for as long as the reminder exists. Nothing inside the grain can remove it.
 /// </remarks>
@@ -37,7 +37,7 @@ public class RemoveNotSetObserverReminders(IReminderTable reminderTable, ILogger
 
         foreach (var row in rows)
         {
-            if (await reminderTable.RemoveRow(row.GrainId, row.ReminderName, row.ETag))
+            if (await reminderTable.RemoveRow(row.GrainId, row.ReminderName, row.ETag!))
             {
                 logger.RemovedReminder(row.ReminderName, row.GrainId.ToString());
             }
