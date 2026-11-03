@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Collections;
 using MongoDB.Driver;
 using Orleans.Runtime.Messaging;
 
@@ -26,16 +25,6 @@ namespace Cratis.Chronicle.Setup;
 public static class SiblingSiloInstability
 {
     /// <summary>
-    /// The data key for a trusted silo's storage admission category.
-    /// </summary>
-    internal const string StorageAdmissionCategoryKey = "Cratis.Chronicle.StorageAdmission.Category";
-
-    /// <summary>
-    /// The category for an exact MongoDB wait-queue-full failure.
-    /// </summary>
-    internal const string MongoWaitQueueFullCategory = "MongoWaitQueueFull.v1";
-
-    /// <summary>
     /// Determines whether an exception is a sibling silo that has not stabilized yet, rather than a
     /// failure of the work itself, or temporary saturation of storage admission.
     /// </summary>
@@ -48,15 +37,6 @@ public static class SiblingSiloInstability
         OrleansMessageRejectionException => true,
         ConnectionFailedException => true,
         MongoWaitQueueFullException => true,
-        _ => IsCategorizedStorageAdmissionFailure(exception)
+        _ => false
     };
-
-    static bool IsCategorizedStorageAdmissionFailure(Exception exception) =>
-        exception?.GetType() == typeof(InvalidOperationException) &&
-        exception.InnerException is null &&
-        exception.Data.Cast<DictionaryEntry>().Any(entry =>
-            entry.Key is string key &&
-            entry.Value is string value &&
-            string.Equals(key, StorageAdmissionCategoryKey, StringComparison.Ordinal) &&
-            string.Equals(value, MongoWaitQueueFullCategory, StringComparison.Ordinal));
 }
