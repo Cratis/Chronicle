@@ -57,7 +57,10 @@ public sealed class StartupClient : IAsyncDisposable
             callbacks.Enqueue(receipt);
 
             // Ordinary append: every invocation creates another durable row, including a duplicate invocation.
-            var result = await Store.EventLog.Append(context.EventSourceId, receipt)
+            // Each observer writes to its own event source, so the receipts of two observers, and the inputs the spec
+            // appends, never race on the default optimistic concurrency check of a shared event source. Such a
+            // conflict fails the partition, and its retry is a redelivery that has nothing to do with startup.
+            var result = await Store.EventLog.Append($"{observer}-{context.EventSourceId}", receipt)
                 .WaitAsync(BackgroundStartupFixture.OperationDeadline);
             result.IsSuccess.ShouldBeTrue();
         }));
