@@ -54,7 +54,7 @@ public partial class EventSequence
         }
         var stale = runId.Started != default && terminalChange.Occurred < runId.Started;
 
-        // Cratis.Choreography (verified for 1.27.4 and 1.31.0) persists Scheduled before dispatching a retry and the run id is
+        // Cratis.Orleans (verified for 1.27.4 and 1.31.0; unchanged in Cratis.Choreography 2.0.0) persists Scheduled before dispatching a retry and the run id is
         // created inside the step after that barrier, so a terminal status left by an earlier attempt cannot pass as this
         // run's; terminal status is written only after work and cancellation handoff drain. The time check is a backstop.
         return (stale ? RebuildStepLiveness.Alive : RebuildStepLiveness.Ended, step.Status.ToString());

@@ -36,7 +36,7 @@ public class when_using_package_jobs_indexes(MongoDBFixture fixture) : given.a_s
     [Fact] async Task should_match_jobs_names_keys_and_options() => await ShouldMatch(WellKnownCollectionNames.Jobs);
     [Fact] async Task should_match_active_step_names_keys_and_options() => await ShouldMatch(WellKnownCollectionNames.JobSteps);
     [Fact] async Task should_match_failed_step_names_keys_and_options() => await ShouldMatch(WellKnownCollectionNames.FailedJobSteps);
-    [Fact] void should_pin_the_package_version() => typeof(JobStorage).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>().InformationalVersion.Split('+')[0].ShouldEqual("1.32.3");
+    [Fact] void should_pin_the_package_version() => typeof(JobStorage).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>().InformationalVersion.Split('+')[0].ShouldEqual("2.0.0");
 
     async Task ShouldMatch(string collection)
     {
