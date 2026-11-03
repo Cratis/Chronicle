@@ -19,6 +19,12 @@ public class NotifierRouter
     readonly SemaphoreSlim _gate = new(1, 1);
     readonly Dictionary<string, ProjectionChangesetNotifier> _activations = [];
     readonly List<string> _requestedKeys = [];
+    TaskCompletionSource _subscribedSinceReplace = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+    /// <summary>
+    /// Gets a task that completes once a subscriber registered with an activation created by the latest <see cref="ReplaceAll"/>.
+    /// </summary>
+    public Task SubscribedSinceReplace => Volatile.Read(ref _subscribedSinceReplace).Task;
 
     /// <summary>
     /// Gets the distinct keys any producer or watch resolved a notifier for.
@@ -65,6 +71,8 @@ public class NotifierRouter
             {
                 _activations[key] = await NewActivation(key);
             }
+
+            Volatile.Write(ref _subscribedSinceReplace, new(TaskCreationOptions.RunContinuationsAsynchronously));
         }
         finally
         {
@@ -80,18 +88,43 @@ public class NotifierRouter
         return silo.CreateGrainAsync<ProjectionChangesetNotifier>(key);
     }
 
+    async Task Subscribe(string key, IReadModelChangesetSubscriber subscriber)
+    {
+        // Read the activation and its generation together so a registration with a replaced activation never counts.
+        ProjectionChangesetNotifier activation;
+        TaskCompletionSource generation;
+        await _gate.WaitAsync();
+        try
+        {
+            activation = await ActivationWithinGate(key);
+            generation = _subscribedSinceReplace;
+        }
+        finally
+        {
+            _gate.Release();
+        }
+
+        await activation.Subscribe(subscriber);
+        generation.TrySetResult();
+    }
+
+    async Task<ProjectionChangesetNotifier> ActivationWithinGate(string key)
+    {
+        if (!_activations.TryGetValue(key, out var activation))
+        {
+            activation = await NewActivation(key);
+            _activations[key] = activation;
+        }
+
+        return activation;
+    }
+
     async Task<ProjectionChangesetNotifier> Activation(string key)
     {
         await _gate.WaitAsync();
         try
         {
-            if (!_activations.TryGetValue(key, out var activation))
-            {
-                activation = await NewActivation(key);
-                _activations[key] = activation;
-            }
-
-            return activation;
+            return await ActivationWithinGate(key);
         }
         finally
         {
@@ -101,7 +134,7 @@ public class NotifierRouter
 
     sealed class RoutingNotifier(NotifierRouter router, string key) : IProjectionChangesetNotifier
     {
-        public async Task Subscribe(IReadModelChangesetSubscriber subscriber) => await (await router.Activation(key)).Subscribe(subscriber);
+        public Task Subscribe(IReadModelChangesetSubscriber subscriber) => router.Subscribe(key, subscriber);
 
         public async Task Unsubscribe(IReadModelChangesetSubscriber subscriber) => await (await router.Activation(key)).Unsubscribe(subscriber);
 

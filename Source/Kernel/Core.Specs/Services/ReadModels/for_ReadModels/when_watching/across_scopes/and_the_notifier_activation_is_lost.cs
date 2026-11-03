@@ -15,14 +15,10 @@ public class and_the_notifier_activation_is_lost : given.a_composed_watch_topolo
         var producer = await given.ProjectionProducer.Create(_router, ObserverId, StoreS, NamespaceA);
         await _router.ReplaceAll();
 
-        // The fresh activations hold no registration until the watch re-registers; produce until it does.
-        var deadline = DateTime.UtcNow.AddSeconds(5);
-        while (Values(_watch).Length == 0 && DateTime.UtcNow < deadline)
-        {
-            await producer.Produce("after-loss");
-            await Task.Delay(10);
-        }
+        // The fresh activations hold no registration until the watch re-registers; produce once it has.
+        await _router.SubscribedSinceReplace.WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
+        await producer.Produce("after-loss");
     }
 
-    [Fact] void should_deliver_a_change_after_the_watch_re_registers() => Values(_watch).Contains("after-loss").ShouldBeTrue();
+    [Fact] void should_deliver_a_change_after_the_watch_re_registers() => Values(_watch).ShouldEqual(["after-loss"]);
 }

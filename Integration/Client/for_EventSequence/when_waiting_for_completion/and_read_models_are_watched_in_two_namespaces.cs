@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Concurrent;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Registrations;
 
@@ -14,7 +15,9 @@ public class and_read_models_are_watched_in_two_namespaces(context context) : Gi
     public class context(ChronicleFixture fixture) : Specification(fixture)
     {
         readonly Guid _customerId = Guid.NewGuid();
-        readonly TaskCompletionSource _defaultReceived = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        readonly Guid _markerId = Guid.NewGuid();
+        readonly ConcurrentQueue<Guid> _defaultReceivedIds = new();
+        readonly TaskCompletionSource _defaultMarkerReceived = new(TaskCreationOptions.RunContinuationsAsynchronously);
         readonly TaskCompletionSource<ReadModelChangeset<CustomerSnapshot>> _tenantReceived = new(TaskCreationOptions.RunContinuationsAsynchronously);
 #pragma warning disable CA2213 // Disposable fields should be disposed
         IDisposable _defaultSubscription;
@@ -43,7 +46,19 @@ public class and_read_models_are_watched_in_two_namespaces(context context) : Gi
 
             var defaultWatcher = defaultStore.ReadModels.GetWatcherFor<CustomerSnapshot>();
             var tenantWatcher = tenantStore.ReadModels.GetWatcherFor<CustomerSnapshot>();
-            _defaultSubscription = defaultWatcher.Observable.Subscribe(_ => _defaultReceived.TrySetResult());
+            _defaultSubscription = defaultWatcher.Observable.Subscribe(changeset =>
+            {
+                if (changeset.ReadModel is null)
+                {
+                    return;
+                }
+
+                _defaultReceivedIds.Enqueue(changeset.ReadModel.Id);
+                if (changeset.ReadModel.Id == _markerId)
+                {
+                    _defaultMarkerReceived.TrySetResult();
+                }
+            });
             _tenantSubscription = tenantWatcher.Observable.Subscribe(changeset => _tenantReceived.TrySetResult(changeset));
 
             // Both watches are registered with the kernel once Subscribed has signaled, so an event
@@ -56,9 +71,12 @@ public class and_read_models_are_watched_in_two_namespaces(context context) : Gi
 
             TenantWatcherModel = (await _tenantReceived.Task.WaitAsync(TimeSpan.FromSeconds(30))).ReadModel;
 
-            // The second namespace has been served; give the default namespace a bounded window to
-            // (incorrectly) receive the same change before asserting it did not.
-            DefaultWatcherReceived = await Task.WhenAny(_defaultReceived.Task, Task.Delay(TimeSpan.FromSeconds(3))) == _defaultReceived.Task;
+            // The second namespace has been served. Append a marker in the default namespace and wait until its
+            // watcher has it: a change leaked from the second namespace would have been dispatched to the
+            // default watcher before the marker, so everything it received up to the marker is conclusive.
+            (await defaultStore.EventLog.Append(_markerId, new CustomerNamed("Default marker"))).IsSuccess.ShouldBeTrue();
+            await _defaultMarkerReceived.Task.WaitAsync(TimeSpan.FromSeconds(30));
+            DefaultWatcherReceived = _defaultReceivedIds.Contains(_customerId);
 
             _defaultSubscription.Dispose();
             _tenantSubscription.Dispose();
