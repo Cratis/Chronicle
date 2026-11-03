@@ -216,7 +216,10 @@ public partial class Observer
         // The observer-wide job only owned the partitions it registered. A partition's own catch-up
         // keeps its hold until it reports PartitionCaughtUp (#5379).
         var releasable = await PartitionHoldsReleasableAfterCatchUp();
-        await ShadowHandOverCaughtUpObserverWide(jobId);
+
+        // A job whose claim has passed to a newer catch-up concluded nothing the newer one owns: its holds, cursor,
+        // preparation and routing all belong to the newer job, which reports back on its own.
+        if (!await ShadowHandOverCaughtUpObserverWide(jobId)) return;
 
         var madeProgress = CatchUpMadeProgress(lastHandledEventSequenceNumber, lastScannedEventSequenceNumber);
         HandleNewLastHandledEvent(lastHandledEventSequenceNumber);

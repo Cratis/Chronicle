@@ -14,4 +14,5 @@ public class from_a_partition_replay : given.an_observer_holding_a_newer_claim
     [Fact] void should_keep_the_partition_replaying() => _stateStorage.State.ReplayingPartitions.ShouldContain(_partition);
     [Fact] void should_keep_the_newer_claim() => ClaimOnPartition!.Epoch.ShouldEqual(new ClaimEpoch(CurrentEpoch));
     [Fact] void should_keep_admitting_the_newer_job() => AdmitsNewerPartitionReplay().ShouldBeTrue();
+    [Fact] void should_not_write_state() => _storageStats.Writes.ShouldEqual(0);
 }

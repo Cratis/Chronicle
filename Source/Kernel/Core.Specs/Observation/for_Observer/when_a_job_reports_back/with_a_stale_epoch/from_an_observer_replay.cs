@@ -21,4 +21,5 @@ public class from_an_observer_replay : given.an_observer_holding_a_newer_claim
     [Fact] void should_keep_the_newer_claim() => _stateStorage.State.ObserverWideClaim!.Epoch.ShouldEqual(new ClaimEpoch(CurrentEpoch));
     [Fact] void should_keep_the_handled_position() => _stateStorage.State.LastHandledEventSequenceNumber.ShouldEqual((EventSequenceNumber)42UL);
     [Fact] void should_keep_admitting_the_newer_job() => AdmitsNewerObserverReplay().ShouldBeTrue();
+    [Fact] void should_not_write_state() => _storageStats.Writes.ShouldEqual(0);
 }

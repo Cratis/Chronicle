@@ -14,4 +14,5 @@ public class from_a_partition_catch_up : given.an_observer_holding_a_newer_claim
     [Fact] void should_keep_the_partition_catching_up() => _stateStorage.State.CatchingUpPartitions.ShouldContain(_partition);
     [Fact] void should_keep_the_newer_claim() => ClaimOnPartition!.Epoch.ShouldEqual(new ClaimEpoch(CurrentEpoch));
     [Fact] void should_keep_admitting_the_newer_job() => AdmitsNewerPartitionCatchUp().ShouldBeTrue();
+    [Fact] void should_not_write_state() => _storageStats.Writes.ShouldEqual(0);
 }

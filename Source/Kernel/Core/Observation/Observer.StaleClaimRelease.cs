@@ -41,21 +41,22 @@ public partial class Observer
     /// Releases the observer-wide catch-up claim only when the job reporting back is its current holder.
     /// </summary>
     /// <param name="job">The <see cref="JobId"/> of the catch-up job reporting back.</param>
-    /// <returns>Awaitable task.</returns>
+    /// <returns>True when the reporting job may conclude catch-up; false when the claim belongs to newer work and the report must change nothing.</returns>
     /// <remarks>
     /// A claim is granted and persisted before its job starts, and attached to the job only once the start returns.
     /// In that window the claim names no job, so the reporting job's own request tells whether it was started under
     /// this claim. The lookup is awaited before the claim is read, so the check sees the current claim.
     /// </remarks>
-    async Task ShadowHandOverCaughtUpObserverWide(JobId job)
+    async Task<bool> ShadowHandOverCaughtUpObserverWide(JobId job)
     {
         var epoch = _shadowClaims.ObserverWide is { Holder: ClaimHolderKind.ObserverCatchUp, Job: null }
             ? await CatchUpJobOwnershipEpoch(job)
             : null;
 
         var reporting = job == JobId.NotSet ? null : job;
-        if (IgnoresStaleRelease(ClaimHolderKind.ObserverCatchUp, null, epoch, reporting)) return;
+        if (IgnoresStaleRelease(ClaimHolderKind.ObserverCatchUp, null, epoch, reporting)) return false;
         GuardShadowClaims(() => _shadowClaims.HandOverObserverWide(ClaimHolderKind.ObserverCatchUp, job));
+        return true;
     }
 
     async Task<ulong?> CatchUpJobOwnershipEpoch(JobId job)
