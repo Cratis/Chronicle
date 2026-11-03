@@ -22,10 +22,11 @@ public class and_null_and_case_selection_match_conversion : given.a_schema_filte
     async Task Because() => _result = await _migrations.MigrateToAllGenerations(_definition, _type, _source, new(), Converted, Migrating);
 
     [Fact] void should_match_the_converter_selection_for_an_exact_null_collision() => Members(_result[1])["name"].ShouldEqual("first");
-    [Fact] void should_carry_the_same_collision_winner() => _inputs[0]["name"]!.GetValue<string>().ShouldEqual("first");
-    [Fact] void should_use_canonical_schema_casing() => _inputs[0]["mixed"]!.GetValue<string>().ShouldEqual("case value");
-    [Fact] void should_keep_explicit_null_members() => _inputs[0].ContainsKey("explicit").ShouldBeTrue();
-    [Fact] void should_not_materialize_converter_defaults_in_json() => _inputs[0].ContainsKey("missing").ShouldBeFalse();
-    [Fact] void should_filter_unknown_properties() => _inputs[0].ContainsKey("unknown").ShouldBeFalse();
-    [Fact] void should_not_carry_duplicate_case_variants() => _inputs[0].ContainsKey("NAME").ShouldBeFalse();
+    [Fact] void should_carry_the_same_collision_winner() => _inputs[1]["NAME"]!.GetValue<string>().ShouldEqual("first");
+    [Fact] void should_keep_the_selected_source_casing() => _inputs[1]["mIxEd"]!.GetValue<string>().ShouldEqual("case value");
+    [Fact] void should_keep_explicit_null_members() => _inputs[1].ContainsKey("explicit").ShouldBeTrue();
+    [Fact] void should_not_materialize_converter_defaults_in_json() => _inputs[1].ContainsKey("missing").ShouldBeFalse();
+    [Fact] void should_filter_unknown_properties() => _inputs[1].ContainsKey("unknown").ShouldBeFalse();
+    [Fact] void should_not_carry_the_unselected_null_variant() => _inputs[1].ContainsKey("name").ShouldBeFalse();
+    [Fact] void should_not_carry_the_unselected_non_null_variant() => _inputs[1].ContainsKey("Name").ShouldBeFalse();
 }
