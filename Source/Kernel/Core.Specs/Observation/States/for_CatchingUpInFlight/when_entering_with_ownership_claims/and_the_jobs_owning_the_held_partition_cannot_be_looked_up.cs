@@ -3,9 +3,7 @@
 
 using System.Collections.Immutable;
 using Cratis.Chronicle.Concepts.Keys;
-using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Monads;
-using Cratis.Orleans.Jobs;
 using Cratis.Orleans.Storage.Jobs;
 
 namespace Cratis.Chronicle.Observation.States.for_CatchingUpInFlight.when_entering_with_ownership_claims;
