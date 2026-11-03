@@ -1,10 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Net;
 using System.Reflection;
 using System.Text.Json.Nodes;
 using Cratis.Choreography.Jobs;
+using Cratis.Choreography.Patching;
 using Cratis.Chronicle.Captures;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
@@ -23,7 +23,6 @@ using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Observation.EventStoreSubscriptions;
 using Cratis.Chronicle.Observation.Reactors.Kernel;
 using Cratis.Chronicle.Observation.Webhooks;
-using Cratis.Chronicle.Patching;
 using Cratis.Chronicle.Patterns;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Projections.Kernel;
@@ -58,10 +57,9 @@ public class a_startup_task : Specification
     protected IObserverStateStorage _observerStateStorage = null!;
     protected IReactorDefinitionsStorage _reactorDefinitionsStorage = null!;
     protected IReducerDefinitionsStorage _reducerDefinitionsStorage = null!;
-    protected IPatchManager _patchManager = null!;
+    protected IPatchRunner _patchRunner = null!;
     readonly an_immediate_time_provider _timeProvider = new();
     protected IClusterReleases _clusterReleases = null!;
-    protected ILocalSiloDetails _localSiloDetails = null!;
     readonly List<string> _logMessages = [];
     protected INamespaces _systemNamespaces = null!;
     protected INamespaces _namespaces = null!;
@@ -95,7 +93,7 @@ public class a_startup_task : Specification
             _grainFactory,
             _authenticationService,
             _storageErrorClassifier,
-            _localSiloDetails,
+            _patchRunner,
             _clusterReleases,
             new StartupLogger(_logMessages),
             _timeProvider);
@@ -119,11 +117,9 @@ public class a_startup_task : Specification
         _observerStateStorage = Substitute.For<IObserverStateStorage>();
         _reactorDefinitionsStorage = Substitute.For<IReactorDefinitionsStorage>();
         _reducerDefinitionsStorage = Substitute.For<IReducerDefinitionsStorage>();
-        _patchManager = Substitute.For<IPatchManager>();
+        _patchRunner = Substitute.For<IPatchRunner>();
         _clusterReleases = Substitute.For<IClusterReleases>();
         _clusterReleases.Summarize().Returns(new ClusterReleaseSummary([], 0, 0));
-        _localSiloDetails = Substitute.For<ILocalSiloDetails>();
-        _localSiloDetails.SiloAddress.Returns(SiloAddress.New(new IPEndPoint(IPAddress.Loopback, 11111), 1));
         _systemNamespaces = Substitute.For<INamespaces>();
         _namespaces = Substitute.For<INamespaces>();
         _eventStoreSubscriptionsManager = Substitute.For<IEventStoreSubscriptionsManager>();
@@ -156,7 +152,7 @@ public class a_startup_task : Specification
         _reactorDefinitionsStorage.GetAll().Returns(Task.FromResult<IEnumerable<ReactorDefinition>>([]));
         _reducerDefinitionsStorage.GetAll().Returns(Task.FromResult<IEnumerable<ReducerDefinition>>([]));
 
-        _patchManager.ApplyPatchesFor(Arg.Any<Cratis.Chronicle.Concepts.System.SemanticVersion>()).Returns(Task.FromResult(PatchOutcome.Completed));
+        _patchRunner.ApplyPatches(Arg.Any<CancellationToken>()).Returns(Task.CompletedTask);
         _systemNamespaces.EnsureDefault().Returns(Task.CompletedTask);
         _namespaces.EnsureDefault().Returns(Task.CompletedTask);
         _eventStoreSubscriptionsManager.Ensure().Returns(Task.CompletedTask);
@@ -174,7 +170,6 @@ public class a_startup_task : Specification
         _reactors.DiscoverAndRegister(_eventStore, _namespace).Returns(Task.CompletedTask);
         _projectionsServiceClient.Register(_eventStore, Arg.Any<IEnumerable<ProjectionDefinition>>()).Returns(Task.FromResult(Cratis.Monads.Result<ProjectionRegistrationError>.Success()));
 
-        _grainFactory.GetGrain<IPatchManager>(0).Returns(_patchManager);
         _grainFactory.GetGrain<INamespaces>(EventStoreName.System).Returns(_systemNamespaces);
         _grainFactory.GetGrain<INamespaces>(_eventStore).Returns(_namespaces);
         _grainFactory.GetGrain<IEventStoreSubscriptionsManager>(_eventStore).Returns(_eventStoreSubscriptionsManager);
