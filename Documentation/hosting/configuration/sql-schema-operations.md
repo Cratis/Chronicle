@@ -108,7 +108,12 @@ The runtime identity still needs permissions for Chronicle's dynamic per-table o
 - Unique-constraint tables.
 - Read-model tables, including the per-generation tables created when a projection is rebuilt.
 
-The `chronicle_sink_cycle_receipts` table is not created in Verify mode. Run `--migrate-only` first, including after an upgrade: Verify replicas, and `--verify-schema` checks, fail with `SchemaNotCurrent` until it exists. Multi-write cycles on a Verify replica fail the same way when it is missing or drifted.
+The `chronicle_sink_cycle_receipts` table is not created in Verify mode. Run `--migrate-only` first, including after an upgrade: Verify replicas, and `--verify-schema` checks, fail with `SchemaNotCurrent` until it exists. Multi-write cycles on a Verify replica fail the same way when it is missing or drifted. A Verify replica does not check the table when it starts; the failure appears when the first multi-write cycle runs, or when `--verify-schema` is run.
+
+Two upgrade rules follow from this:
+
+- Drop the `chronicle_sink_cycle_receipts` table only while no silo running the new version is using the database. A running silo can lose a cycle's receipt, which it needs to tell whether a retried cycle already committed.
+- A namespace created after `--migrate-only` ran has no receipt table. Run `--migrate-only` again for it (`--event-store` and `--namespace`) before Verify replicas serve its multi-write cycles.
 
 Every other schema object comes from versioned migrations, which `--migrate-only` applies and Verify checks.
 
