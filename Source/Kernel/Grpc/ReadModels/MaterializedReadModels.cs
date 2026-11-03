@@ -31,7 +31,7 @@ internal sealed class MaterializedReadModels(
         var readModel = grainFactory.GetReadModel(request.ReadModel, request.EventStore);
         var definition = await readModel.GetKnownDefinition(request.ReadModel);
         var occurrence = string.IsNullOrEmpty(request.Occurrence) ? null : (ReadModelContainerName)request.Occurrence;
-        var binding = await readBindings.Resolve(request.EventStore, request.Namespace, definition, occurrence);
+        var binding = await readBindings.ResolveOrReject(request.EventStore, request.Namespace, definition, occurrence);
         var skip = Math.Max(0, request.Page * request.PageSize);
 
         var (instances, totalCount) = await binding.GetInstances(skip, request.PageSize);
@@ -66,7 +66,7 @@ internal sealed class MaterializedReadModels(
             var readModel = grainFactory.GetReadModel(request.ReadModel, request.EventStore);
             var definition = await readModel.GetKnownDefinition(request.ReadModel);
             var occurrence = string.IsNullOrEmpty(request.Occurrence) ? null : (ReadModelContainerName)request.Occurrence;
-            var binding = await readBindings.Resolve(request.EventStore, request.Namespace, definition, occurrence);
+            var binding = await readBindings.ResolveOrReject(request.EventStore, request.Namespace, definition, occurrence);
             var skip = Math.Max(0, request.Page * request.PageSize);
 
             var schema = definition.GetSchemaForLatestGeneration();

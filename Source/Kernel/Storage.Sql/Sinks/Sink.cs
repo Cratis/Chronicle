@@ -512,8 +512,9 @@ public partial class Sink : ISink, ICanReconcileIndexes, ISinkCompositeKeyLookup
     /// <inheritdoc/>
     public async Task<ReadModelInstances> GetInstances(ReadModelContainerName? occurrence, int skip, int take, ReadModelInstanceVisibility visibility)
     {
-        var containerName = QueriedTableNameFor(occurrence);
-        await using var scope = await OpenScope(containerName);
+        await using var scope = await OpenQueriedTable(occurrence);
+        if (scope is null) return new ReadModelInstances([], 0);
+
         var totalCount = await VisibleInstances(scope.DbContext.Entries.AsNoTracking(), visibility).CountAsync();
         var entries = await ReadOrderedPage(scope.DbContext, skip, take, visibility);
         return new ReadModelInstances(entries.Select(MaterializeInstance), totalCount);
@@ -532,8 +533,9 @@ public partial class Sink : ISink, ICanReconcileIndexes, ISinkCompositeKeyLookup
         // never stays bound to a table a replay promotion has renamed away.
         async Task<IEnumerable<ObservedPage>> ReadPage()
         {
-            var containerName = QueriedTableNameFor(occurrence);
-            await using var scope = await OpenScope(containerName);
+            await using var scope = await OpenQueriedTable(occurrence);
+            if (scope is null) return [new ObservedPage(0, [])];
+
             var totalCount = await VisibleInstances(scope.DbContext.Entries.AsNoTracking(), visibility).CountAsync();
             var entries = (await ReadOrderedPage(scope.DbContext, skip, take, visibility)).ToArray();
             return [new ObservedPage(totalCount, entries)];
@@ -543,6 +545,20 @@ public partial class Sink : ISink, ICanReconcileIndexes, ISinkCompositeKeyLookup
             .Select(pages => pages.Single().Entries.Select(MaterializeInstance).ToArray().AsEnumerable())
             .Catch<IEnumerable<ExpandoObject>, Exception>(error =>
                 Observable.Throw<IEnumerable<ExpandoObject>>(new FailedToObserveReadModelInstances(TypeId, _readModelIdentifier, QueriedTableNameFor(occurrence), error)));
+    }
+
+    /// <summary>
+    /// Opens the table instances are read from for a query.
+    /// </summary>
+    /// <param name="occurrence">The explicitly requested <see cref="ReadModelContainerName"/>, if any.</param>
+    /// <returns>The scope for the table, or null when an explicitly requested occurrence has no table.</returns>
+    /// <remarks>Only the primary table is provisioned on read; an occurrence never creates a table or a database.</remarks>
+    async Task<DbContextScope<ReadModelDbContext>?> OpenQueriedTable(ReadModelContainerName? occurrence)
+    {
+        var containerName = QueriedTableNameFor(occurrence);
+        return occurrence is null || containerName == _tableName
+            ? await _database.ReadModelTable(_eventStoreName, _namespace, containerName, _columns)
+            : await _database.ExistingReadModelTable(_eventStoreName, _namespace, containerName, _columns);
     }
 
     /// <summary>

@@ -27,9 +27,16 @@ public class ReplayedModelsStorage(EventStoreName eventStore, EventStoreNamespac
     }
 
     /// <inheritdoc/>
+    /// <remarks>
+    /// Reading occurrences never provisions anything: a namespace whose storage does not exist yet has none.
+    /// </remarks>
     public async Task<IEnumerable<ReadModelOccurrence>> GetOccurrences(ReadModelIdentifier readModel)
     {
-        await using var scope = await database.Namespace(eventStore, @namespace);
+        await using var scope = await database.ExistingNamespace(eventStore, @namespace);
+        if (scope is null)
+        {
+            return [];
+        }
 
         var occurrences = await scope.DbContext.ReplayedModels
             .Where(r => r.ReadModelIdentifier == readModel.Value)

@@ -50,6 +50,9 @@ public class SqlSinkHarness : ISqlSinkHarness
     /// </summary>
     public string ConnectionString { get; init; }
 
+    /// <inheritdoc/>
+    public ReadActivity Reads { get; } = new();
+
     /// <summary>
     /// Gets interceptors that let concurrency specs arrange an exact command interleaving.
     /// </summary>
@@ -94,7 +97,13 @@ public class SqlSinkHarness : ISqlSinkHarness
         var database = Substitute.For<IDatabase>();
         database.LiveQueryPollingInterval.Returns(TimeSpan.FromMilliseconds(50));
         database.ReadModelTable(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<string>(), Arg.Any<IReadOnlyList<ProjectedColumn>>(), Arg.Any<ConnectionPurpose>())
-            .Returns(async callInfo => new DbContextScope<ReadModelDbContext>(await CreateContext(callInfo.ArgAt<string>(2), callInfo.ArgAt<IReadOnlyList<ProjectedColumn>>(3)), () => { }));
+            .Returns(async callInfo =>
+            {
+                var finished = Reads.Begin();
+                return new DbContextScope<ReadModelDbContext>(await CreateContext(callInfo.ArgAt<string>(2), callInfo.ArgAt<IReadOnlyList<ProjectedColumn>>(3)), finished);
+            });
+        database.ExistingReadModelTable(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<string>(), Arg.Any<IReadOnlyList<ProjectedColumn>>())
+            .Returns(callInfo => OpenExistingTable(callInfo.ArgAt<string>(2), callInfo.ArgAt<IReadOnlyList<ProjectedColumn>>(3)));
 
         return new SqlSink(
             "test-event-store",
@@ -146,7 +155,28 @@ public class SqlSinkHarness : ISqlSinkHarness
         }
     }
 
+    async Task<DbContextScope<ReadModelDbContext>?> OpenExistingTable(string containerName, IReadOnlyList<ProjectedColumn> columns)
+    {
+        var finished = Reads.Begin();
+        var context = NewContext(containerName, columns);
+        if (await Migrator.ProbeExistingTable(containerName, context))
+        {
+            return new DbContextScope<ReadModelDbContext>(context, finished);
+        }
+
+        await context.DisposeAsync();
+        finished();
+        return null;
+    }
+
     async Task<ReadModelDbContext> CreateContext(string containerName, IReadOnlyList<ProjectedColumn>? columns = null)
+    {
+        var context = NewContext(containerName, columns);
+        await _timings.Run("ef-table-ensure", context.EnsureTableExists);
+        return context;
+    }
+
+    ReadModelDbContext NewContext(string containerName, IReadOnlyList<ProjectedColumn>? columns = null)
     {
         var builder = new DbContextOptionsBuilder<ReadModelDbContext>();
         if (ConnectionString.GetDatabaseType() == DatabaseType.PostgreSql)
@@ -166,12 +196,10 @@ public class SqlSinkHarness : ISqlSinkHarness
             _commandTimings = new(_timings);
             _commandTimings.Start();
         }
-        var context = _timings.Measure("ef-context-construction", () =>
+        return _timings.Measure("ef-context-construction", () =>
         {
             var created = new ReadModelDbContext(options, containerName, columns ?? _columns, Migrator);
             return _commandTimings?.Track(created) ?? created;
         });
-        await _timings.Run("ef-table-ensure", context.EnsureTableExists);
-        return context;
     }
 }

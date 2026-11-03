@@ -85,6 +85,11 @@ public class ReadModelDbContext(
     internal DbSet<ReplayPromotion> ReplayPromotions => Set<ReplayPromotion>();
 
     /// <summary>
+    /// Gets a value indicating whether this context only serves a table that already exists, and so never changes its schema.
+    /// </summary>
+    internal bool ExistingOnly { get; private set; }
+
+    /// <summary>
     /// Gets the receipts of committed multi-write sink cycles.
     /// </summary>
     internal DbSet<SinkCycleReceipt> SinkCycleReceipts => Set<SinkCycleReceipt>();
@@ -92,6 +97,11 @@ public class ReadModelDbContext(
     /// <inheritdoc/>
     public async Task EnsureTableExists()
     {
+        if (ExistingOnly)
+        {
+            throw new InvalidOperationException($"Table '{tableName}' is read as it is; a read never creates or alters it.");
+        }
+
         await migrator.EnsureTableMigrated(tableName, this);
     }
 
@@ -100,6 +110,16 @@ public class ReadModelDbContext(
     /// </summary>
     /// <returns>Awaitable task.</returns>
     internal Task EnsureReplayPromotions() => migrator.EnsureReplayPromotions(this);
+
+    /// <summary>
+    /// Forbids this context from changing the table, so a read only ever looks at what is there.
+    /// </summary>
+    /// <returns>This context.</returns>
+    internal ReadModelDbContext ServeExisting()
+    {
+        ExistingOnly = true;
+        return this;
+    }
 
     /// <summary>
     /// Creates the shared sink cycle receipt table, the first time a multi-write cycle needs it.
@@ -113,6 +133,11 @@ public class ReadModelDbContext(
     /// <returns>An awaitable task.</returns>
     internal Task RepairShadowColumns()
     {
+        if (ExistingOnly)
+        {
+            return Task.CompletedTask;
+        }
+
         migrator.ClearMigrationCache($"{Database.GetConnectionString()}:{TableName}");
         return EnsureTableExists();
     }

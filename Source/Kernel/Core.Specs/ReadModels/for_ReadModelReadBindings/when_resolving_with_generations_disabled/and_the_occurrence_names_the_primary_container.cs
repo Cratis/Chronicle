@@ -9,5 +9,6 @@ public class and_the_occurrence_names_the_primary_container : given.a_read_bindi
 
     [Fact] void should_resolve_the_existing_container() => _sinks.Received(1).GetFor(_definition, _definition.ContainerName);
     [Fact] void should_return_the_existing_sink() => _binding.Sink.ShouldBeSame(_sink);
+    [Fact] void should_not_look_up_occurrences() => _replayManager.DidNotReceive().GetOccurrences();
     [Fact] void should_preserve_the_occurrence() => _binding.Occurrence.ShouldEqual(_definition.ContainerName);
 }
