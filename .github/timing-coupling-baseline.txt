@@ -99,6 +99,8 @@
 1 Integration/Kernel/Setup/for_background_startup/when_clients_register_and_append_while_recovery_is_blocked.cs
 1 Integration/Kernel/for_JobsManager/given/TheJobStep.cs  # knob
 1 Integration/Kernel/for_JobsManager/when_starting/job_with_single_step/and_job_step_fails.cs
+2 Integration/MongoDB/Generations/for_ReleasedKernelGenerationFloor/ReleasedFloorKernel.cs  # readiness: bounded poll of a released kernel container (populated store, container exit); a released binary exposes no completion signal
+1 Integration/MongoDB/Generations/for_ReleasedKernelGenerationFloor/given/a_populated_store.cs  # readiness: bounded poll for the first event-store write by a released kernel container; no completion signal available
 2 Integration/SqlClustering/for_ClusterLoadDeliveryDiagnostics/when_capturing_the_enabled_transport.cs  # knob: 20 events/s pacing cadence for the diagnostics overhead measurement, not a wait
 1 Source/Clients/Connections.Specs/for_ChronicleConnection/given/a_connection_with_ambient_state.cs  # knob: monitor double parked until cancellation (infinite delay)
 1 Source/Clients/Connections.Specs/for_ConnectionLifecycle/given/a_lifecycle_with_ambient_state.cs  # interleave: Task.Yield forces a continuation to observe flowed ambient state
