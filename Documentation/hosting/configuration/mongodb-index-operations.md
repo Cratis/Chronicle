@@ -75,7 +75,7 @@ The catalog covers the following scopes. Names below are unprefixed examples; a 
 | Namespace | `alert-incidents`, `failed-partitions`, `in-flight-events` | Alert browsing, observer and partition lookups |
 | Namespace | `observer-definition-change-progress`, `observer-definition-change-continuations`, `observer-definition-change-restart-plans`, `observer-definition-change-inventory` | Observer/revision/identity lookups |
 | Namespace | `occurrences`, `encryption-keys` | Occurrence delivery and encryption identifier/revision |
-| Prefix-derived namespace on the jobs server | `jobs`, `job-steps`, `failed-job-steps` | Status, type, creation order, job identity |
+| Prefix-derived namespace on the jobs server | `jobs`, `job-steps`, `failed-job-steps`, `job-step-plans` | Status, type, creation order, job identity, plan incarnation, step order |
 | Reserved global encryption scope | `encryption-keys` | Encryption identifier/revision |
 
 The reserved global encryption scope is included even when no key has been written.
