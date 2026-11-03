@@ -60,6 +60,11 @@ internal sealed class ReadModels(
     /// <inheritdoc/>
     public async Task RegisterMany(RegisterManyRequest request, CallContext context = default)
     {
+        SystemStoreGuard.EnsureNotSystem(new(request.EventStore));
+        foreach (var definition in request.ReadModels)
+        {
+            SystemStoreGuard.EnsureNotSystem(new(request.EventStore, definition.Type.Identifier, definition.ObserverIdentifier));
+        }
         var readModelsManager = grainFactory.GetReadModelsManager(request.EventStore);
         var readModelDefinitions = request.ReadModels.Select(definition => definition.ToChronicle(request.Owner, request.Source)).ToArray();
         await readModelsManager.Register(readModelDefinitions);
@@ -68,6 +73,8 @@ internal sealed class ReadModels(
     /// <inheritdoc/>
     public async Task RegisterSingle(RegisterSingleRequest request, CallContext context = default)
     {
+        SystemStoreGuard.EnsureNotSystem(new(request.EventStore));
+        SystemStoreGuard.EnsureNotSystem(new(request.EventStore, request.ReadModel.Type.Identifier, request.ReadModel.ObserverIdentifier));
         var readModelsManager = grainFactory.GetReadModelsManager(request.EventStore);
         var readModelDefinition = request.ReadModel.ToChronicle(request.Owner, request.Source);
         await readModelsManager.RegisterSingle(readModelDefinition);
@@ -76,6 +83,8 @@ internal sealed class ReadModels(
     /// <inheritdoc/>
     public async Task UpdateDefinition(UpdateDefinitionRequest request, CallContext context = default)
     {
+        SystemStoreGuard.EnsureNotSystem(new(request.EventStore));
+        SystemStoreGuard.EnsureNotSystem(new(request.EventStore, request.ReadModel.Type.Identifier, request.ReadModel.ObserverIdentifier));
         var readModelsManager = grainFactory.GetReadModelsManager(request.EventStore);
         var existingDefinitions = await readModelsManager.GetDefinitions();
         var existingDefinition = existingDefinitions.FirstOrDefault(d => d.Identifier == request.ReadModel.Type.Identifier) ??
@@ -105,6 +114,7 @@ internal sealed class ReadModels(
     /// <inheritdoc/>
     public async Task<GetDefinitionsResponse> GetDefinitions(GetDefinitionsRequest request, CallContext context = default)
     {
+        await SystemStoreGuard.Ensure(context, new(request.EventStore));
         var readModelsManager = grainFactory.GetReadModelsManager(request.EventStore);
         var definitions = await readModelsManager.GetDefinitions();
         return new()
@@ -116,6 +126,7 @@ internal sealed class ReadModels(
     /// <inheritdoc/>
     public async Task<GetOccurrencesResponse> GetOccurrences(GetOccurrencesRequest request, CallContext context = default)
     {
+        await SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace));
         var readModelReplayManager = grainFactory.GetReadModelReplayManager(request.EventStore, request.Namespace, request.Type.Identifier);
         var occurrences = await readModelReplayManager.GetOccurrences();
         return new()
@@ -127,6 +138,7 @@ internal sealed class ReadModels(
     /// <inheritdoc/>
     public async Task<GetInstancesResponse> GetInstances(GetInstancesRequest request, CallContext context = default)
     {
+        await SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace, request.ReadModel, request.Occurrence));
         var readModel = grainFactory.GetReadModel(request.ReadModel, request.EventStore);
         var definition = await readModel.GetKnownDefinition(request.ReadModel);
         var occurrence = string.IsNullOrEmpty(request.Occurrence) ? null : (ReadModelContainerName)request.Occurrence;
@@ -142,7 +154,7 @@ internal sealed class ReadModels(
             schema,
             instances);
 
-        var instancesAsJson = releasedInstances.Select(instance => JsonSerializer.Serialize(instance.WithoutInitializationState(schema))).ToList();
+        var instancesAsJson = releasedInstances.Select(instance => JsonSerializer.Serialize(instance.WithoutSinkBookkeeping(schema))).ToList();
         return new()
         {
             Instances = instancesAsJson,
@@ -155,6 +167,7 @@ internal sealed class ReadModels(
     /// <inheritdoc/>
     public async Task<GetInstanceByKeyResponse> GetInstanceByKey(GetInstanceByKeyRequest request, CallContext context = default)
     {
+        await SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace, request.ReadModelIdentifier, request.EventSequenceId, request.SessionId));
         var readModel = grainFactory.GetReadModel(request.ReadModelIdentifier, request.EventStore);
         var definition = await readModel.GetKnownDefinition(request.ReadModelIdentifier);
 
@@ -283,6 +296,7 @@ internal sealed class ReadModels(
     /// <inheritdoc/>
     public async Task<GetAllInstancesResponse> GetAllInstances(GetAllInstancesRequest request, CallContext context = default)
     {
+        await SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace, request.ReadModelIdentifier, request.EventSequenceId));
         var readModel = grainFactory.GetReadModel(request.ReadModelIdentifier, request.EventStore);
         var definition = await readModel.GetKnownDefinition(request.ReadModelIdentifier);
 
@@ -418,7 +432,44 @@ internal sealed class ReadModels(
     }
 
     /// <inheritdoc/>
-    public IObservable<ReadModelChangeset> Watch(WatchRequest request, CallContext context = default)
+    public IObservable<ReadModelChangeset> Watch(WatchRequest request, CallContext context = default) =>
+        SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace, request.ReadModelIdentifier, request.EventSequenceId), () => WatchGuarded(request, context));
+
+    /// <inheritdoc/>
+    public async Task DehydrateSession(DehydrateSessionRequest request, CallContext context = default)
+    {
+        await SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace, request.ReadModelIdentifier, request.EventSequenceId, request.SessionId));
+        var readModel = grainFactory.GetReadModel(request.ReadModelIdentifier, request.EventStore);
+        var definition = await readModel.GetKnownDefinition(request.ReadModelIdentifier);
+
+        if (definition.ObserverType == Concepts.ReadModels.ReadModelObserverType.Projection)
+        {
+            var streamScope = !string.IsNullOrEmpty(request.EventStreamType) || !string.IsNullOrEmpty(request.EventStreamId)
+                ? new ImmediateProjectionStreamScope(
+                    string.IsNullOrEmpty(request.EventSourceId) ? request.ReadModelKey : request.EventSourceId,
+                    string.IsNullOrEmpty(request.EventSourceType) ? null : (EventSourceType)request.EventSourceType,
+                    string.IsNullOrEmpty(request.EventStreamType) ? EventStreamType.All : (EventStreamType)request.EventStreamType,
+                    string.IsNullOrEmpty(request.EventStreamId) ? EventStreamId.Default : (EventStreamId)request.EventStreamId)
+                : null;
+            var projectionKey = new ImmediateProjectionKey(
+                (ProjectionId)definition.ObserverIdentifier.Value,
+                request.EventStore,
+                request.Namespace,
+                request.EventSequenceId,
+                request.ReadModelKey,
+                (ProjectionSessionId)Guid.Parse(request.SessionId),
+                streamScope);
+
+            var projection = grainFactory.GetGrain<IImmediateProjection>(projectionKey);
+            await projection.Dehydrate();
+        }
+        else
+        {
+            throw new NotSupportedException("Server-side reducer session dehydration is not yet supported. Reducers typically run client-side.");
+        }
+    }
+
+    IObservable<ReadModelChangeset> WatchGuarded(WatchRequest request, CallContext context)
     {
         var readModel = grainFactory.GetReadModel(request.ReadModelIdentifier, request.EventStore);
 
@@ -488,39 +539,6 @@ internal sealed class ReadModels(
         });
     }
 
-    /// <inheritdoc/>
-    public async Task DehydrateSession(DehydrateSessionRequest request, CallContext context = default)
-    {
-        var readModel = grainFactory.GetReadModel(request.ReadModelIdentifier, request.EventStore);
-        var definition = await readModel.GetKnownDefinition(request.ReadModelIdentifier);
-
-        if (definition.ObserverType == Concepts.ReadModels.ReadModelObserverType.Projection)
-        {
-            var streamScope = !string.IsNullOrEmpty(request.EventStreamType) || !string.IsNullOrEmpty(request.EventStreamId)
-                ? new ImmediateProjectionStreamScope(
-                    string.IsNullOrEmpty(request.EventSourceId) ? request.ReadModelKey : request.EventSourceId,
-                    string.IsNullOrEmpty(request.EventSourceType) ? null : (EventSourceType)request.EventSourceType,
-                    string.IsNullOrEmpty(request.EventStreamType) ? EventStreamType.All : (EventStreamType)request.EventStreamType,
-                    string.IsNullOrEmpty(request.EventStreamId) ? EventStreamId.Default : (EventStreamId)request.EventStreamId)
-                : null;
-            var projectionKey = new ImmediateProjectionKey(
-                (ProjectionId)definition.ObserverIdentifier.Value,
-                request.EventStore,
-                request.Namespace,
-                request.EventSequenceId,
-                request.ReadModelKey,
-                (ProjectionSessionId)Guid.Parse(request.SessionId),
-                streamScope);
-
-            var projection = grainFactory.GetGrain<IImmediateProjection>(projectionKey);
-            await projection.Dehydrate();
-        }
-        else
-        {
-            throw new NotSupportedException("Server-side reducer session dehydration is not yet supported. Reducers typically run client-side.");
-        }
-    }
-
     async Task<GetInstanceByKeyResponse> GetMaterializedInstanceByKey(GetInstanceByKeyRequest request, Concepts.ReadModels.ReadModelDefinition definition)
     {
         var key = new Key(request.ReadModelKey, ArrayIndexers.NoIndexers);
@@ -540,7 +558,7 @@ internal sealed class ReadModels(
         }
 
         var schema = definition.GetSchemaForLatestGeneration();
-        var jsonObject = expandoObjectConverter.ToJsonObject(instance.WithoutInitializationState(schema), schema);
+        var jsonObject = expandoObjectConverter.ToJsonObject(instance.WithoutSinkBookkeeping(schema), schema);
 
         return new GetInstanceByKeyResponse
         {
@@ -564,7 +582,7 @@ internal sealed class ReadModels(
 
     string SerializeInstance(ExpandoObject instance, JsonSchema schema)
     {
-        var jsonObject = expandoObjectConverter.ToJsonObject(instance.WithoutInitializationState(schema), schema);
+        var jsonObject = expandoObjectConverter.ToJsonObject(instance.WithoutSinkBookkeeping(schema), schema);
 
         // ToJsonObject drops the last handled event sequence number when the schema does not describe it, so
         // put it back — clients mirror it onto the instance to tell how far it has been brought up to date.

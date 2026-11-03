@@ -14,7 +14,7 @@ namespace Cratis.Chronicle.Captures.Engine;
 
 /// <summary>
 /// Represents an implementation of <see cref="ICaptureSourceReader"/> for API sources -
-/// polling an HTTP external service for its current items.
+/// polling an HTTP external service for its current items while keeping requests on that service's origin.
 /// </summary>
 /// <param name="storage"><see cref="IStorage"/> for resolving the external service.</param>
 /// <param name="httpClientFactory"><see cref="IExternalServiceHttpClientFactory"/> for creating clients for the external service.</param>
@@ -34,7 +34,8 @@ public class ApiCaptureSourceReader(
             ?? throw new MissingExternalServiceForCapture(source.Api ?? string.Empty);
 
         using var client = await httpClientFactory.Create(externalService);
-        using var request = new HttpRequestMessage(HttpMethod.Get, source.Route ?? string.Empty);
+        var target = CaptureRoute.Resolve(externalService.Name.Value, client.BaseAddress, source.Route);
+        using var request = new HttpRequestMessage(HttpMethod.Get, target);
         request.Options.Set(WebhookRequestOptions.EventStore, eventStore);
         using var response = await client.SendAsync(request);
         response.EnsureSuccessStatusCode();

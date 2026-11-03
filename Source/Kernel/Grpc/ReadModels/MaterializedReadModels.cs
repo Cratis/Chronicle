@@ -27,6 +27,7 @@ internal sealed class MaterializedReadModels(
     /// <inheritdoc/>
     public async Task<GetInstancesResponse> GetInstances(GetInstancesRequest request, CallContext context = default)
     {
+        await SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace, request.ReadModel, request.Occurrence));
         var readModel = grainFactory.GetReadModel(request.ReadModel, request.EventStore);
         var definition = await readModel.GetKnownDefinition(request.ReadModel);
         var occurrence = string.IsNullOrEmpty(request.Occurrence) ? null : (ReadModelContainerName)request.Occurrence;
@@ -42,7 +43,7 @@ internal sealed class MaterializedReadModels(
             schema,
             instances);
 
-        var instancesAsJson = releasedInstances.Select(instance => JsonSerializer.Serialize(instance.WithoutInitializationState(schema))).ToList();
+        var instancesAsJson = releasedInstances.Select(instance => JsonSerializer.Serialize(instance.WithoutSinkBookkeeping(schema))).ToList();
         return new()
         {
             Instances = instancesAsJson,
@@ -54,6 +55,11 @@ internal sealed class MaterializedReadModels(
 
     /// <inheritdoc/>
     public IObservable<ObserveInstancesResponse> ObserveInstances(ObserveInstancesRequest request, CallContext context = default)
+    {
+        return SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace, request.ReadModel, request.Occurrence), () => ObserveGuardedInstances(request));
+    }
+
+    IObservable<ObserveInstancesResponse> ObserveGuardedInstances(ObserveInstancesRequest request)
     {
         return Observable.FromAsync(async () =>
         {
@@ -82,7 +88,7 @@ internal sealed class MaterializedReadModels(
                             state.schema,
                             instances);
 
-                        var instancesAsJson = releasedInstances.Select(instance => JsonSerializer.Serialize(instance.WithoutInitializationState(state.schema))).ToList();
+                        var instancesAsJson = releasedInstances.Select(instance => JsonSerializer.Serialize(instance.WithoutSinkBookkeeping(state.schema))).ToList();
                         var (_, totalCount) = await state.binding.GetInstances(state.skip, request.PageSize);
 
                         return new ObserveInstancesResponse

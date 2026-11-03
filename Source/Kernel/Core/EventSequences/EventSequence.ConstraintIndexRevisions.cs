@@ -18,8 +18,8 @@ public partial class EventSequence
 
     /// <summary>
     /// Prepares the constraint indexes for revising an event: marks every affected constraint pending from the
-    /// event's position, persists the lowered watermark, and releases the keys the old content produced that the
-    /// refold cannot reach. The existing repair then refolds from the revised position.
+    /// event's position or earlier history needed by a reopening, persists the lowered watermark, and releases
+    /// the keys the old content produced that the refold cannot reach. The existing repair then refolds that range.
     /// </summary>
     /// <param name="event">The event as it is stored before the revision.</param>
     /// <returns>Awaitable task.</returns>
@@ -32,12 +32,18 @@ public partial class EventSequence
 
         foreach (var definition in affected)
         {
+            // A content-sourced reopening leaves no closure row for its old scope. Refold the prior
+            // transitions too, so moving the reopening restores that scope's preceding closure.
+            var from = definition is ClosesStreamConstraintDefinition { EventStreamIdFrom: not null } closing && closing.ReopenedBy.Contains(type)
+                ? EventSequenceNumber.First
+                : position;
+
             // Revisions extend closing coverage into history, even when activation started at the tail.
-            if (definition is ClosesStreamConstraintDefinition && _closingCoverageStarts.TryGetValue(definition.Name, out var start) && position < start)
+            if (definition is ClosesStreamConstraintDefinition && _closingCoverageStarts.TryGetValue(definition.Name, out var start) && from < start)
             {
-                _closingCoverageStarts[definition.Name] = position;
+                _closingCoverageStarts[definition.Name] = from;
             }
-            MarkConstraintIndexPending(definition.Name, position);
+            MarkConstraintIndexPending(definition.Name, from);
         }
         UpdateConstraintIndexWatermark();
         _constraintIndexReplay = null;

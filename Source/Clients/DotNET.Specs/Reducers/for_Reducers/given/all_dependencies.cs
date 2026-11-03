@@ -39,6 +39,10 @@ public class all_dependencies : Specification
 
     protected virtual int MaxConcurrentPartitions => Observation.PartitionedDeliveryScheduler.DefaultMaxConcurrentPartitions;
 
+    protected virtual TimeSpan ReconnectDelay => TimeSpan.FromSeconds(2);
+
+    protected virtual Func<Func<Task>, Task> ScheduleReconnectWork => work => Task.Run(work);
+
     void Establish()
     {
         _eventStore = Substitute.For<IEventStore>();
@@ -91,7 +95,9 @@ public class all_dependencies : Specification
             _logger)
         {
             GenerationDelivery = GenerationDelivery,
-            MaxConcurrentPartitions = MaxConcurrentPartitions
+            MaxConcurrentPartitions = MaxConcurrentPartitions,
+            ReconnectDelay = ReconnectDelay,
+            ScheduleReconnectWork = ScheduleReconnectWork
         };
 
         // Use reflection to set the private handler fields

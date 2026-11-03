@@ -17,7 +17,7 @@ public sealed partial class FencedSinkWrites
     {
         if (_splitting.Value)
         {
-            SinkBatchDocuments.RequireRetrySafe(collection, requests);
+            SinkBatchDocuments.RequireRetrySafe(collection, requests, _cap);
         }
         if (_session.Value is not null)
         {
@@ -84,7 +84,7 @@ public sealed partial class FencedSinkWrites
 
     async Task WriteCappedBulk(IMongoCollection<BsonDocument> collection, IReadOnlyList<WriteModel<BsonDocument>> requests, IReadOnlySet<WriteModel<BsonDocument>>? guardedUpserts, CancellationToken cancellationToken)
     {
-        SinkBatchDocuments.RequireRetrySafe(collection, requests);
+        SinkBatchDocuments.RequireRetrySafe(collection, requests, _cap);
         foreach (var chunk in requests.Chunk(_cap))
         {
             try

@@ -194,7 +194,7 @@ public partial class Sink(
 
     void SeedPrefetchedState(Key key, BsonDocument instance)
     {
-        var cacheKey = converter.ToBsonValue(key).ToString()!;
+        var cacheKey = SinkCacheKey.For(converter.ToBsonValue(key));
         if (!_bulkPendingDeletes.ContainsKey(cacheKey) &&
             _bulkStateCache.TryAdd(cacheKey, expandoObjectConverter.ToExpandoObject(instance, readModel.GetSchemaForLatestGeneration())))
         {
@@ -295,7 +295,7 @@ public partial class Sink(
 
     bool TryAnswerFromBulk(Key key, out ExpandoObject? answer)
     {
-        var cacheKey = converter.ToBsonValue(key).ToString()!;
+        var cacheKey = SinkCacheKey.For(converter.ToBsonValue(key));
         if (_bulkStateCache.TryGetValue(cacheKey, out var cachedState))
         {
             answer = cachedState;
@@ -315,7 +315,7 @@ public partial class Sink(
 
         if (instance.TryGetValue(WellKnownProperties.LastHandledEventSequenceNumber, out var watermark) && watermark.IsNumeric)
         {
-            RecordBulkWatermark(converter.ToBsonValue(key).ToString()!, (ulong)watermark.ToInt64());
+            RecordBulkWatermark(SinkCacheKey.For(converter.ToBsonValue(key)), (ulong)watermark.ToInt64());
         }
     }
 
@@ -405,6 +405,12 @@ public partial class Sink(
         {
             EvictBulkState(key);
             failures = [];
+        }
+        catch (NonIdempotentWriteCannotBeSplit error)
+        {
+            var partition = options.PartitionOr(key);
+            logger.RefusedOversizedChangesetSplit(readModel.Identifier, key.ToString(), partition.ToString(), error.Collection, error.MaxBatchSize, string.Join(", ", error.Operations));
+            throw new OversizedChangesetCannotBeSplit(readModel.Identifier, key, partition, error);
         }
         return joinBatch is null ? failures : TakeBulkFailures([joinBatch]).Concat(failures).ToArray();
     }
@@ -577,7 +583,7 @@ public partial class Sink(
     {
         if (CanBuffer(options))
         {
-            var cacheKey = converter.ToBsonValue(key).ToString()!;
+            var cacheKey = SinkCacheKey.For(converter.ToBsonValue(key));
             if (await AddToBulk(new DeleteOneModel<BsonDocument>(filter), key, options.PartitionOr(key), eventSequenceNumber, () =>
             {
                 if (options.Mode == SinkWriteMode.GuardedUpsert)
@@ -603,7 +609,7 @@ public partial class Sink(
         return [];
     }
 
-    void EvictBulkState(Key key) => EvictBulkState(converter.ToBsonValue(key).ToString()!);
+    void EvictBulkState(Key key) => EvictBulkState(SinkCacheKey.For(converter.ToBsonValue(key)));
 
     void EvictBulkState(string cacheKey)
     {
@@ -626,7 +632,7 @@ public partial class Sink(
         {
             foreach (var key in batches.SelectMany(batch => batch.Metadata.Values).Select(metadata => metadata.ReadModelKey).Distinct())
             {
-                EvictBulkCache(converter.ToBsonValue(key).ToString()!);
+                EvictBulkCache(SinkCacheKey.For(converter.ToBsonValue(key)));
             }
         }
     }
@@ -642,7 +648,7 @@ public partial class Sink(
 
     bool IsAlreadyApplied(Key key, EventSequenceNumber eventSequenceNumber) =>
         _isBulkMode &&
-        _bulkWatermarks.TryGetValue(converter.ToBsonValue(key).ToString()!, out var applied) &&
+        _bulkWatermarks.TryGetValue(SinkCacheKey.For(converter.ToBsonValue(key)), out var applied) &&
         applied >= eventSequenceNumber.Value;
 
     async Task UnsetNullParents(UpdateWrite write, SinkWriteOptions options)
@@ -773,7 +779,7 @@ public partial class Sink(
 
     Action CreateCacheState(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset, EventSequenceNumber eventSequenceNumber)
     {
-        var cacheKey = converter.ToBsonValue(key).ToString()!;
+        var cacheKey = SinkCacheKey.For(converter.ToBsonValue(key));
         return () =>
         {
             _prefetchedCacheKeys.TryRemove(cacheKey, out _);
@@ -1612,7 +1618,7 @@ public partial class Sink(
                 .Distinct();
             foreach (var readModelKey in failedReadModels)
             {
-                EvictBulkCache(converter.ToBsonValue(readModelKey).ToString()!);
+                EvictBulkCache(SinkCacheKey.For(converter.ToBsonValue(readModelKey)));
             }
         }
     }

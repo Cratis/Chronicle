@@ -91,6 +91,7 @@ public static class system_store_command_policy
         ["Cratis.Chronicle.ProjectionEditor.PreviewProjection"] = "read-only preview; preview definitions are not persisted",
         ["Cratis.Chronicle.Recommendations.PerformRecommendation"] = "operational action on an existing recommendation (for example an observer replay), no event or definition write; administrator policy in P3",
         ["Cratis.Chronicle.Recommendations.IgnoreRecommendation"] = "operational dismissal of an existing recommendation, no event or definition write; administrator policy in P3",
+        ["Cratis.Chronicle.Recommendations.UnignoreRecommendation"] = "operational restoration of an existing recommendation, no event or definition write; administrator policy in P3",
         ["Cratis.Chronicle.Security.AddApplication"] = SecurityReason,
         ["Cratis.Chronicle.Security.AddUser"] = SecurityReason,
         ["Cratis.Chronicle.Security.GrantAdministrator"] = "administrator management through the guarded authoritative roster; Tier A policy",

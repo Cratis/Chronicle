@@ -19,11 +19,13 @@ public class ReadModelWatcher<TReadModel> : IReadModelWatcher<TReadModel>, IDisp
     readonly IEventStore _eventStore;
     readonly IChronicleServicesAccessor _servicesAccessor;
     readonly JsonSerializerOptions _jsonSerializerOptions;
+    readonly object _sync = new();
     TaskCompletionSource _subscribedTcs;
     Action? _stopped;
     IObservable<ContractReadModels.ReadModelChangeset>? _serverObservable;
     IDisposable? _serverSubscription;
     bool _started;
+    bool _disposed;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ReadModelWatcher{TReadModel}"/> class.
@@ -54,8 +56,15 @@ public class ReadModelWatcher<TReadModel> : IReadModelWatcher<TReadModel>, IDisp
     {
         _eventStore.Connection.Lifecycle.OnConnected -= ClientConnected;
         _eventStore.Connection.Lifecycle.OnDisconnected -= ClientDisconnected;
-        _serverSubscription?.Dispose();
-        _serverSubscription = null;
+        IDisposable? subscription;
+        lock (_sync)
+        {
+            _disposed = true;
+            subscription = _serverSubscription;
+            _serverSubscription = null;
+        }
+
+        subscription?.Dispose();
         _stopped?.Invoke();
         _stopped = null;
         _observable.Dispose();
@@ -64,20 +73,27 @@ public class ReadModelWatcher<TReadModel> : IReadModelWatcher<TReadModel>, IDisp
     /// <inheritdoc/>
     public void Start()
     {
-        if (_started)
+        IDisposable? prior;
+        lock (_sync)
         {
-            return;
-        }
+            if (_disposed || _started)
+            {
+                return;
+            }
 
-        _started = true;
-        if (_subscribedTcs.Task.IsCompleted)
-        {
-            _subscribedTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            _started = true;
+            if (_subscribedTcs.Task.IsCompleted)
+            {
+                _subscribedTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            }
+
+            prior = _serverSubscription;
+            _serverSubscription = null;
         }
 
         // Dispose any prior subscription before opening a new server stream so a reconnect
         // never leaks the subscription established for the previous connection.
-        _serverSubscription?.Dispose();
+        prior?.Dispose();
 
         var request = new ContractReadModels.WatchRequest
         {
@@ -87,7 +103,7 @@ public class ReadModelWatcher<TReadModel> : IReadModelWatcher<TReadModel>, IDisp
             EventSequenceId = EventSequences.EventSequenceId.Log
         };
         _serverObservable = _servicesAccessor.Services.ReadModels.Watch(request);
-        _serverSubscription = _serverObservable.Subscribe(
+        var subscription = _serverObservable.Subscribe(
             changeset =>
             {
                 if (changeset.Subscribed)
@@ -119,6 +135,19 @@ public class ReadModelWatcher<TReadModel> : IReadModelWatcher<TReadModel>, IDisp
             },
             _ => ResetForReconnect(),
             ResetForReconnect);
+
+        // The stream is kept in a local until it is published, so a disposal that ran while it was being
+        // created closes it here instead of leaking it. The services are never reached under the lock.
+        lock (_sync)
+        {
+            if (!_disposed)
+            {
+                _serverSubscription = subscription;
+                return;
+            }
+        }
+
+        subscription.Dispose();
     }
 
     /// <inheritdoc/>
@@ -153,8 +182,14 @@ public class ReadModelWatcher<TReadModel> : IReadModelWatcher<TReadModel>, IDisp
         // Tear down the current server stream and clear the started latch so the next
         // OnConnected re-subscribes. Reached both on disconnect and on a stream fault or
         // completion, so a dropped stream is never left silently non-emitting.
-        _serverSubscription?.Dispose();
-        _serverSubscription = null;
-        _started = false;
+        IDisposable? subscription;
+        lock (_sync)
+        {
+            subscription = _serverSubscription;
+            _serverSubscription = null;
+            _started = false;
+        }
+
+        subscription?.Dispose();
     }
 }
