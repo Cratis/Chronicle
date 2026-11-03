@@ -20,6 +20,17 @@ public class ClosedStreamsConstraintStorage(IEventStoreNamespaceDatabase eventSt
         eventStoreNamespaceDatabase.GetCollection<ClosedStreamDocument>($"{eventSequenceId}+closed_streams");
     bool _indexEnsured;
 
+    /// <summary>
+    /// Gets the closed stream indexes.
+    /// </summary>
+    internal static IReadOnlyList<CreateIndexModel<ClosedStreamDocument>> ClosedStreamsIndexes { get; } =
+    [
+        new(
+            Builders<ClosedStreamDocument>.IndexKeys.Ascending(row => row.StreamType).Ascending(row => row.StreamId)
+                .Ascending(row => row.EventSourceId).Ascending(row => row.EventSourceType).Ascending(row => row.Owner),
+            new CreateIndexOptions { Name = "scope_owner" })
+    ];
+
     /// <inheritdoc/>
     public async Task<IEnumerable<ClosedStream>> GetCovering(ClosedStreamScope target, IEnumerable<ClosedStreamDimensions> masks)
     {
@@ -162,12 +173,8 @@ public class ClosedStreamsConstraintStorage(IEventStoreNamespaceDatabase eventSt
     async Task EnsureIndex(CancellationToken cancellationToken = default)
     {
         if (_indexEnsured) return;
-        await _collection.Indexes.CreateOneAsync(
-            new CreateIndexModel<ClosedStreamDocument>(
-                Builders<ClosedStreamDocument>.IndexKeys.Ascending(row => row.StreamType).Ascending(row => row.StreamId)
-                    .Ascending(row => row.EventSourceId).Ascending(row => row.EventSourceType).Ascending(row => row.Owner),
-                new CreateIndexOptions { Name = "scope_owner" }),
-            cancellationToken: cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
+        await _collection.EnsureIndexesAsync(ClosedStreamsIndexes.ToArray());
         _indexEnsured = true;
     }
 }

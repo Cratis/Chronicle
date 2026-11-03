@@ -23,7 +23,7 @@ Keep the personal value on a read model keyed and subjected by its owner, or res
 
 ## Existing Stored Documents
 
-Fixing the projection prevents future wrong-subject materialization; it does not remove or re-encrypt copies already stored under the wrong subject. Before claiming erasure coverage, replace the affected read-model storage by dropping and rebuilding the projection into a clean container, rebuilding into a new container and switching readers, or performing an audited migration that proves the owner of every personal value and rewrites or removes each wrong-subject document. Replaying corrected code over the existing container is not sufficient evidence that stale copies are gone.
+Fixing the projection prevents future wrong-subject materialization; it does not remove or re-encrypt copies already stored under the wrong subject. Before claiming erasure coverage, replace the affected read-model storage by dropping and rebuilding the projection into a clean container, rebuilding into a new container and switching readers, or performing an audited migration that proves the owner of every personal value and rewrites or removes each wrong-subject document. Replaying corrected code over the existing container is not sufficient evidence that stale copies are gone. A clean projection or reducer rebuild can materialize erased PII as empty markers without authorizing a new key; this does not scrub the old container or restart the erased subject's lifecycle. Follow the [read-model rebuild procedure](../compliance/read-models.mdx#rebuilding-after-erasure) and validate ownership and cleanup before switching readers.
 
 ## Severity
 

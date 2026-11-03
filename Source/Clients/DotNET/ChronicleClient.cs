@@ -441,7 +441,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
         }
         catch
         {
-            eventStore.DetachAutomaticRegistration();
+            eventStore.ReleaseAfterFailedCreation();
             throw;
         }
     }

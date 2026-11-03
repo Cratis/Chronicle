@@ -11,6 +11,37 @@
         <DefineConstants>$(DefineConstants);DEVELOPMENT</DefineConstants>
     </PropertyGroup>
 
+    <!-- The CI Release build already analyzes one target framework with warnings as errors, so the packaging -->
+    <!-- build passes -p:SkipAnalyzersForTargetFramework=<that framework> to avoid analyzing it a second time. -->
+    <!-- Source generators keep running; only analyzers are skipped, and only for that one framework. -->
+    <PropertyGroup Condition="'$(SkipAnalyzersForTargetFramework)' != '' AND '$(TargetFramework)' == '$(SkipAnalyzersForTargetFramework)'">
+        <RunAnalyzers>false</RunAnalyzers>
+    </PropertyGroup>
+
+    <!-- A build of a project that is not in Chronicle.slnx (the benchmarks) passes -p:AnalyzeOnlyProject=<its name>: -->
+    <!-- that project keeps its analyzers, while its project references, which the CI Release build already -->
+    <!-- analyzes, skip them. Source generators keep running. -->
+    <PropertyGroup Condition="'$(AnalyzeOnlyProject)' != '' AND '$(MSBuildProjectName)' != '$(AnalyzeOnlyProject)'">
+        <RunAnalyzers>false</RunAnalyzers>
+    </PropertyGroup>
+
+    <!-- Candidate binaries must never flow through a parent project's distribution pipeline.
+         Guard the early SDK/NuGet prerequisites as well as the public entry targets: their
+         dependencies can copy files or create packages before BeforeTargets=Publish/Pack runs.
+         Ordinary isolated Build/copy-local stays available to the diagnostic test graph. -->
+    <Target Name="ForbidRollingDeliveryDiagnosticsDistribution"
+            BeforeTargets="Pack;_IntermediatePack;GenerateNuspec;_GetPackageFiles;Publish;_PreventProjectReferencesFromBuilding;PrepareForPublish;ComputeAndCopyFilesToPublishDirectory;CopyFilesToPublishDirectory;_CopyResolvedFilesToPublishPreserveNewest;_CopyResolvedFilesToPublishAlways;PublishContainer;_PublishSingleContainer;_PublishMultiContainer;BuildContainer;DockerBuild;DockerPublish;PublishKernel"
+            Condition="'$(EnableRollingDeliveryDiagnostics)' == 'true'">
+        <Error Text="Rolling delivery diagnostics cannot be packed, published or put in an image ($(MSBuildProjectName))." />
+    </Target>
+
+    <!-- Integration projects attach BuildDocker to Build. A disabled Docker target must not
+         reject the candidate's ordinary Build; an enabled one must stop before its first task. -->
+    <Target Name="ForbidRollingDeliveryDiagnosticsDockerBuild" BeforeTargets="BuildDocker"
+            Condition="'$(EnableRollingDeliveryDiagnostics)' == 'true' AND '$(DisableDockerBuild)' != 'true'">
+        <Error Text="Rolling delivery diagnostics cannot be packed, published or put in an image ($(MSBuildProjectName))." />
+    </Target>
+
     <!--
         Use only the .globalconfig that sits beside this file.
 

@@ -50,6 +50,14 @@ Use an every-event mapping when a read model property should reflect the latest 
 
 <ChronicleClientTabs snippet="projections/model-bound/basic-mapping/context-vs-from-every" />
 
+### Derived Context Values
+
+Context paths can end in a registered derived function. `Occurred.Week` and `Occurred.Week()` both select the ISO week number from the event's occurrence time. `Occurred.WeekYear` selects the ISO week-numbering year, which can differ from the calendar year near New Year. This works on properties and record parameters with `[SetFromContext<T>]`, and with `[FromEvery(contextProperty: ...)]`.
+
+<ChronicleClientTabs snippet="projections/model-bound/basic-mapping/derived-context" />
+
+The function must be the final segment, take no arguments, and support the receiver's CLR type. Calendar functions support `DateTimeOffset`, `DateTime`, and `DateOnly`, including nullable receivers. Unknown functions and incompatible receivers are rejected when building the projection. Real CLR properties take precedence over bare function names. Naming policies apply to property segments, not function names: under camel casing, `Occurred.Week` becomes `$eventContext(occurred.Week())`.
+
 ## Choosing The Mapping
 
 | Mapping | Use it when |

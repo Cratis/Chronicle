@@ -38,6 +38,7 @@ internal sealed class Applications(
             new global::Cratis.Chronicle.Security.RemoveApplication((global::Cratis.Chronicle.Concepts.Security.ApplicationId)request.Id));
 
     /// <inheritdoc/>
+    [global::Microsoft.AspNetCore.Authorization.Authorize(Policy = "Chronicle.Administrator")]
     public IObservable<global::Cratis.Chronicle.Contracts.Queries.QueryResult<IEnumerable<global::Cratis.Chronicle.Contracts.Security.ApplicationResponse>>> AllApplications(global::ProtoBuf.Grpc.CallContext callContext = default) =>
         QueryExecutor.Execute<IEnumerable<global::Cratis.Chronicle.Contracts.Security.ApplicationResponse>>(
             () => global::Cratis.Chronicle.Security.Application.AllApplications(storage)
