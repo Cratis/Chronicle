@@ -35,8 +35,7 @@ try
 
     var current = WireContractReader.Read(DescriptorSetFor(options.Current, options.ImportPath));
     var all = await Baselines(nuget, options);
-    var afterFloor = options.Since is { } floor ? all.Where(_ => ReleaseVersion.IsAtOrAfter(_, floor)).ToArray() : all;
-    var excluded = all.Count - afterFloor.Count;
+    var selection = BaselineSelection.From(all, options.Since, options.UpTo, options.Withdrawn);
 
     // A withdrawn release is one whose published contract is not the one that major is meant to carry. Excluding it
     // by name keeps every other release of the major compared, which a floor cannot do for the newest one.
@@ -47,14 +46,19 @@ try
         return 2;
     }
 
-    var baselines = afterFloor.Where(_ => !options.Withdrawn.Contains(_)).ToArray();
+    var baselines = selection.Baselines;
     var results = new List<BaselineResult>();
 
     await Console.Out.WriteLineAsync($"Current:  {options.Current}");
 
     if (options.Since is not null)
     {
-        await Console.Out.WriteLineAsync($"Floor:    {options.Since} ({excluded} earlier release(s) not compared against)");
+        await Console.Out.WriteLineAsync($"Floor:    {options.Since} ({selection.BeforeFloor.Count} earlier release(s) not compared against)");
+    }
+
+    if (options.UpTo is not null)
+    {
+        await Console.Out.WriteLineAsync($"Ceiling:  {options.UpTo} ({selection.AfterCeiling.Count} later release(s) not compared against)");
     }
 
     if (options.Withdrawn.Count > 0)
@@ -71,14 +75,20 @@ try
         await Console.Out.WriteLineAsync($"::notice title=Wire compatibility narrowed::{string.Join(", ", options.Withdrawn)} withdrawn, so this run did not compare against it.");
     }
 
-    // A floor or a withdrawal that excludes everything is not the same as a clean run, and a gate that reports them
+    if (options.GitHub && selection.AfterCeiling.Count > 0)
+    {
+        await Console.Out.WriteLineAsync($"::notice title=Wire compatibility narrowed::Releases after {options.UpTo} ({string.Join(", ", selection.AfterCeiling)}) were not compared against, because they were published after the release this run checks.");
+    }
+
+    // A bound or a withdrawal that excludes everything is not the same as a clean run, and a gate that reports them
     // the same way is a gate nobody can tell is switched off. Say it out loud, in the log and in the pull request.
-    if (baselines.Length == 0 && (options.Since is not null || options.Withdrawn.Count > 0))
+    if (baselines.Count == 0 && (options.Since is not null || options.UpTo is not null || options.Withdrawn.Count > 0))
     {
         await Console.Out.WriteLineAsync("Every released baseline is excluded, so nothing was compared.");
         if (options.GitHub)
         {
-            await Console.Out.WriteLineAsync("::warning title=Wire compatibility not compared::Every released baseline is excluded by the declared floor or withdrawals, so this run checked nothing.");
+            var exclusions = options.UpTo is null ? "floor or withdrawals" : "floor, ceiling or withdrawals";
+            await Console.Out.WriteLineAsync($"::warning title=Wire compatibility not compared::Every released baseline is excluded by the declared {exclusions}, so this run checked nothing.");
         }
 
         return 0;

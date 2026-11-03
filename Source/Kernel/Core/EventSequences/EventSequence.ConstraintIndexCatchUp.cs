@@ -16,16 +16,26 @@ public partial class EventSequence
     ConstraintIndexReplay? _catchUpReplay;
     bool _catchUpBoundaryDirty;
     bool _catchUpTracking;
-
-    /// <summary>
-    /// Gets or sets the exclusion cap, lowered only by deterministic specifications.
-    /// </summary>
-    internal int ConstraintIndexCatchUpKeyLimit { get; set; } = 100000;
+    ConstraintName[] _catchUpScope = [];
+    ConstraintName[] _catchUpDeferred = [];
 
     /// <summary>
     /// Gets the retained exclusion count for memory-bound specifications.
     /// </summary>
     internal int ConstraintIndexCatchUpExcludedKeyCount => _catchUpExcluded.Count;
+
+    ConstraintIndexCatchUpSlots CatchUpSlots => ConstraintIndexCatchUpSlots.For(storage, ConstraintIndexRepair.CatchUpSlots);
+
+    /// <summary>
+    /// Determines whether an independently scheduled catch-up turn has eligible work.
+    /// </summary>
+    /// <param name="now">The current time.</param>
+    /// <returns>Whether a catch-up turn is due.</returns>
+    internal bool ConstraintCatchUpDue(DateTimeOffset now)
+    {
+        if (State.ConstraintIndexCatchUpBelow is null || now < _nextConstraintCatchUpAttempt || _rebuildOwnsBoundary) return false;
+        return _catchUpReplay is not null || CatchUpScopeDefinitions(out _).Any() || !CatchUpDefinitions().Any();
+    }
 
     void ExcludeLiveConstraintKeys(ConstraintValidationContext context, EventSequenceNumber number)
     {
@@ -33,7 +43,7 @@ public partial class EventSequence
         foreach (var definition in CatchUpDefinitions())
         {
             _catchUpExcluded.Include(definition, context);
-            if (_catchUpExcluded.Count < ConstraintIndexCatchUpKeyLimit) continue;
+            if (_catchUpExcluded.Count < ConstraintIndexRepair.CatchUpExclusionLimit) continue;
             RaiseConstraintCatchUpBoundary();
             return;
         }
@@ -54,10 +64,11 @@ public partial class EventSequence
     async Task RunConstraintIndexCatchUpTurn(CancellationToken cancellationToken)
     {
         if (_rebuildOwnsBoundary) return;
-        var slots = ConstraintIndexCatchUpSlots.For(storage);
+        var slots = CatchUpSlots;
         if (!slots.TryEnter(this)) return;
         _catchUpTracking = true;
-        using var timeout = new CancellationTokenSource(TimeSpan.FromMilliseconds(1750), ConstraintIndexTimeProvider);
+        var yield = false;
+        using var timeout = new CancellationTokenSource(ConstraintIndexRepair.TimerTurnBudget - TimeSpan.FromMilliseconds(250), ConstraintIndexTimeProvider);
         using var budget = CancellationTokenSource.CreateLinkedTokenSource(timeout.Token, cancellationToken);
         try
         {
@@ -70,9 +81,27 @@ public partial class EventSequence
             if (_catchUpBoundaryDirty || _catchUpExcludedThrough! < State.SequenceNumber || count >= 1000) return;
             _catchUpReplay ??= CreateCatchUpReplay();
             var result = await _catchUpReplay.Continue(1000 - count, budget.Token);
-            if (CatchUpTurnFailed(result)) return;
+            if (CatchUpTurnFailed(result))
+            {
+                yield = _constraintCatchUpFailures >= CatchUpFailuresBeforeYield;
+                return;
+            }
+            if (_catchUpReplay.BlockedByPendingRepair)
+            {
+                yield = true;
+                return;
+            }
+            ResetConstraintCatchUpBackOff();
             if (!result.IsCompleted) return;
-            await CompleteConstraintCatchUp(budget.Token);
+            if (_catchUpDeferred.Length > 0)
+            {
+                await CompleteCatchUpMembers(budget.Token);
+                yield = true;
+            }
+            else
+            {
+                await CompleteConstraintCatchUp(budget.Token);
+            }
         }
         catch (OperationCanceledException) when (budget.IsCancellationRequested)
         {
@@ -81,13 +110,30 @@ public partial class EventSequence
         }
         catch (Exception error)
         {
-            BackOffConstraintRepair();
+            BackOffConstraintCatchUp();
+            yield = _constraintCatchUpFailures >= CatchUpFailuresBeforeYield;
             logger.ConstraintIndexRepairFailed(_eventSequenceKey, State.ConstraintIndexWatermark!, State.SequenceNumber, error);
         }
         finally
         {
+            if (yield) YieldConstraintCatchUp(slots);
             slots.LeaveTurn(this, State.ConstraintIndexCatchUpRefusing?.Any() == true);
         }
+    }
+
+    void YieldConstraintCatchUp(ConstraintIndexCatchUpSlots slots)
+    {
+        var refusing = State.ConstraintIndexCatchUpRefusing?.Any() == true || _catchUpReplay?.CatchUp?.Refusing == true;
+        if (refusing) return;
+
+        // Durable progress (written keys, boundary) is kept. Readmission rebuilds exclusions from the boundary before any write.
+        _catchUpReplay = null;
+        _catchUpScope = [];
+        _catchUpDeferred = [];
+        _catchUpTracking = false;
+        _catchUpExcluded.Clear();
+        _catchUpExcludedThrough = State.ConstraintIndexCatchUpBelow;
+        slots.Yield(this, false);
     }
 
     async Task<int> RebuildCatchUpExclusions(CancellationToken cancellationToken)
@@ -144,7 +190,7 @@ public partial class EventSequence
         {
             if (context is null) _catchUpExcluded.IncludeSource(definition, @event.Context);
             else _catchUpExcluded.Include(definition, context);
-            if (_catchUpExcluded.Count < ConstraintIndexCatchUpKeyLimit) continue;
+            if (_catchUpExcluded.Count < ConstraintIndexRepair.CatchUpExclusionLimit) continue;
             RaiseConstraintCatchUpBoundary();
             return true;
         }
@@ -156,16 +202,20 @@ public partial class EventSequence
     {
         var namespaceStorage = storage.GetEventStore(_eventSequenceKey.EventStore).GetNamespace(_eventSequenceKey.Namespace);
         _catchUpSettledErrors = 0;
+        var definitions = CatchUpScopeDefinitions(out _catchUpDeferred).ToArray();
+        _catchUpScope = definitions.Select(definition => definition.Name).ToArray();
         return new(
             EventSequenceStorage,
             namespaceStorage.GetUniqueConstraintsStorage(_eventSequenceId),
             ClosedStreamsStorage,
             CatchUpContent(),
             constraintIndexReplayLogger ?? NullLogger<ConstraintIndexReplay>.Instance,
-            CatchUpDefinitions().Select(definition => new ConstraintIndexReplayScope(definition, EventSequenceNumber.First)),
-            State.ConstraintIndexCatchUpBelow!)
+            definitions.Select(definition => new ConstraintIndexReplayScope(definition, EventSequenceNumber.First)),
+            State.ConstraintIndexCatchUpBelow!,
+            ConstraintIndexRepair.FoldKeyLimit)
         {
             ConstraintIndexTimeProvider = ConstraintIndexTimeProvider,
+            AttemptTimeout = ConstraintIndexRepair.AttemptTimeout,
             StorageErrorClassifier = _storageErrorClassifier,
             SettledPoison = _catchUpPoisonTracker.Settled,
             CatchUp = new(
@@ -188,6 +238,16 @@ public partial class EventSequence
     /// </remarks>
     /// <returns>The definitions eligible for this activation's historical catch-up.</returns>
     IEnumerable<UniqueConstraintDefinition> CatchUpDefinitions() => _indexedDefinitions.Values.OfType<UniqueConstraintDefinition>().Where(definition => _catchUpDefinitionNames.Contains(definition.Name) && !_rebuildingConstraintIndexes.ContainsKey(definition.Name));
+
+    IEnumerable<UniqueConstraintDefinition> CatchUpScopeDefinitions(out ConstraintName[] deferred)
+    {
+        var definitions = CatchUpDefinitions().ToArray();
+        deferred = State.ConstraintIndexCatchUpRefusing?.Any() == true
+            ? []
+            : definitions.Where(definition => _pendingConstraintIndexes.ContainsKey(definition.Name)).Select(definition => definition.Name).ToArray();
+        var deferredNames = deferred.ToHashSet();
+        return definitions.Where(definition => !deferredNames.Contains(definition.Name));
+    }
 
     StoredConstraintEventContent CatchUpContent() => new(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, EventTypesStorage, jsonComplianceManagerProvider, expandoObjectConverter, schemaCache);
 }

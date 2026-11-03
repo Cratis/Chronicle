@@ -13,10 +13,12 @@ namespace Cratis.Chronicle.Projections;
 /// </summary>
 /// <param name="logger">The <see cref="ILogger{T}"/> for logging.</param>
 /// <remarks>
+/// One activation exists per observer, event store and namespace (see <see cref="ProjectionChangesetNotifierKey"/>).
 /// Marked <c language="csharp">[KeepAlive]</c> because the subscriber registrations live only in memory — there is no
-/// persisted state and no re-subscribe recovery, so a deactivation between a client's
-/// <see cref="Subscribe"/> and the projection's <see cref="Notify"/> would drop the registration and the
-/// appended event's changeset would never reach the watching client. Every sibling subscription/queue
+/// persisted state, so each live watch re-registers periodically (<see cref="Subscribe"/> is idempotent), which restores
+/// a lost activation. The activation ends when its last watcher unsubscribes. A deactivation between a client's
+/// <see cref="Subscribe"/> and the projection's <see cref="Notify"/> would otherwise drop the registration and the
+/// appended event's changeset would not reach the watching client until the next re-registration. Every sibling subscription/queue
 /// grain (<c language="csharp">Observer</c>, <c language="csharp">AppendedEventsQueue</c>) is already <c language="csharp">[KeepAlive]</c> for the same reason;
 /// KeepAlive grains also survive <c language="csharp">ForceActivationCollection</c>. Fan-out is to
 /// <see cref="IReadModelChangesetSubscriber"/> grain references, which Orleans routes reliably to the silo
@@ -46,8 +48,11 @@ public class ProjectionChangesetNotifier(ILogger<ProjectionChangesetNotifier> lo
     /// <inheritdoc/>
     public Task Subscribe(IReadModelChangesetSubscriber subscriber)
     {
-        _subscribers.Add(subscriber);
-        logger.Subscribed(this.GetPrimaryKeyString(), _subscribers.Count);
+        if (_subscribers.Add(subscriber))
+        {
+            logger.Subscribed(this.GetPrimaryKeyString(), _subscribers.Count);
+        }
+
         return Task.CompletedTask;
     }
 
@@ -55,6 +60,11 @@ public class ProjectionChangesetNotifier(ILogger<ProjectionChangesetNotifier> lo
     public Task Unsubscribe(IReadModelChangesetSubscriber subscriber)
     {
         _subscribers.Remove(subscriber);
+        if (_subscribers.Count == 0)
+        {
+            DeactivateOnIdle();
+        }
+
         return Task.CompletedTask;
     }
 

@@ -24,6 +24,17 @@ public interface IStorage
     Task<IReadOnlyDictionary<EventStoreName, Concepts.Projections.Generations.Enablement.GenerationFloor>> ReadGenerationFloors() => throw new NotSupportedException("The provider does not support read-only generation floor discovery.");
 
     /// <summary>
+    /// Moves the System event store's data to a <see cref="SystemEventStoreLocation"/>.
+    /// </summary>
+    /// <param name="location">The <see cref="SystemEventStoreLocation"/> to move to.</param>
+    /// <returns>Awaitable task.</returns>
+    /// <remarks>
+    /// Only a provider that derives where the System event store is kept from configuration has anything to move. A
+    /// provider that keeps it in the same place regardless has nothing to do, which is what the default does.
+    /// </remarks>
+    Task MoveSystemEventStoreTo(SystemEventStoreLocation location) => Task.CompletedTask;
+
+    /// <summary>
     /// Get all the <see cref="EventStoreName">event stores</see> available.
     /// </summary>
     /// <returns>Collection of <see cref="EventStoreName"/>.</returns>

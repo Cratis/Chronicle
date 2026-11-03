@@ -299,6 +299,9 @@ public partial class Observer
     async Task DeliverReleasedWebhookProbe(WebhookProbeDelivery delivery)
     {
         var (control, failure, _, _, _) = delivery;
+
+        // The recovery writes absolute counts derived from this read, so it must include held-back live counts.
+        await FlushPendingLivePartitionCounts();
         var partitionCounts = (await storage.GetEventStore(_observerKey.EventStore).GetNamespace(_observerKey.Namespace).ObserverHandledCounts.GetFor(_observerId, failure.Partition)).ToDictionary(_ => _.Key, _ => _.Value);
         if (!CurrentWebhookProbe(control, failure)) return;
         var options = await GetWebhookProbeConfiguration();

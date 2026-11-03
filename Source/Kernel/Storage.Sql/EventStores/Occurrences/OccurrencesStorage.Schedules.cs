@@ -21,7 +21,9 @@ public partial class OccurrencesStorage<TContext>
     /// <inheritdoc/>
     public async Task<bool> TryAddDefinition(ScheduleDefinition definition) => await TryInsert(new ScheduleDefinitionEntry
     {
-        Id = StorageIdentity.Hash(definition.Token.Value), Revision = definition.Revision, Data = JsonSerializer.Serialize(definition)
+        Id = StorageIdentity.Hash(definition.Token.Value),
+        Revision = definition.Revision,
+        Data = JsonSerializer.Serialize(definition)
     });
 
     /// <inheritdoc/>
@@ -46,8 +48,12 @@ public partial class OccurrencesStorage<TContext>
     /// <inheritdoc/>
     public async Task<bool> TryAddCursor(ScheduleCursor cursor) => await TryInsert(new ScheduleCursorEntry
     {
-        Id = StorageIdentity.Hash(cursor.Token.Value), Token = cursor.Token.Value, LastMaterializedDue = cursor.LastMaterializedDue,
-        RegisteredRevision = cursor.RegisteredRevision, AppliedRevision = cursor.AppliedRevision, Version = cursor.Version
+        Id = StorageIdentity.Hash(cursor.Token.Value),
+        Token = cursor.Token.Value,
+        LastMaterializedDue = cursor.LastMaterializedDue,
+        RegisteredRevision = cursor.RegisteredRevision,
+        AppliedRevision = cursor.AppliedRevision,
+        Version = cursor.Version
     });
 
     /// <inheritdoc/>
@@ -62,6 +68,9 @@ public partial class OccurrencesStorage<TContext>
     /// <inheritdoc/>
     public async Task<bool> TryCommitTurn(ScheduleTurn turn)
     {
+        // A reply lost after a successful commit is not detected here. The retry observes the already advanced cursor,
+        // fails the version check below and returns false, and the engine recomputes from the stored cursor.
+        // Occurrences and skipped ranges are only inserted when absent, so a recomputed turn adds no duplicates.
         if (turn.Next.Token != turn.Observed.Token || turn.Next.Version != turn.Observed.Version + 1 || turn.Next.RegisteredRevision != turn.Observed.RegisteredRevision || turn.Next.AppliedRevision != turn.Observed.RegisteredRevision)
         {
             return false;

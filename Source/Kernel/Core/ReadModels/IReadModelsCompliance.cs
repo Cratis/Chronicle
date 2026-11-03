@@ -46,6 +46,25 @@ public interface IReadModelsCompliance
         JsonObject instance);
 
     /// <summary>
+    /// Release (decrypt) compliance- and security-annotated properties in a read model <see cref="JsonObject"/> whose
+    /// subject lineage is supplied separately from the document.
+    /// </summary>
+    /// <param name="eventStore">The <see cref="EventStoreName"/> the read model belongs to.</param>
+    /// <param name="eventStoreNamespace">The <see cref="EventStoreNamespaceName"/> the read model belongs to.</param>
+    /// <param name="schema">The <see cref="JsonSchema"/> describing the read model's properties.</param>
+    /// <param name="instance">The <see cref="JsonObject"/> read model instance to decrypt. Kernel bookkeeping is not read from it.</param>
+    /// <param name="subject">The default compliance subject, or <see langword="null"/> when none is known.</param>
+    /// <param name="subjects">The compliance subject of each top-level property that differs from <paramref name="subject"/>.</param>
+    /// <returns>The decrypted instance, or the original when release is not applicable.</returns>
+    Task<JsonObject> ReleaseJson(
+        EventStoreName eventStore,
+        EventStoreNamespaceName eventStoreNamespace,
+        JsonSchema schema,
+        JsonObject instance,
+        string? subject,
+        IReadOnlyDictionary<string, string> subjects);
+
+    /// <summary>
     /// Release (decrypt) compliance- and security-annotated properties in a single read model instance.
     /// </summary>
     /// <param name="eventStore">The <see cref="EventStoreName"/> the read model belongs to.</param>

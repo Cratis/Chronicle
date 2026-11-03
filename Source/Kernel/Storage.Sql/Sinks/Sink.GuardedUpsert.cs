@@ -30,7 +30,7 @@ public partial class Sink
             }
             if (!joinsApplied)
             {
-                await ApplyJoinsAndChildRemovals(scope, changeset, sequenceNumber);
+                await ApplyJoinsAndChildRemovals(scope, changeset, sequenceNumber, key.ArrayIndexers);
                 joinsApplied = true;
             }
             if (changes.Length == 0 || !await ShouldWriteDirectChanges(scope, id, changeset, changes))
@@ -38,7 +38,7 @@ public partial class Sink
                 return _noFailedPartitions;
             }
 
-            if (await TryApplyGuardedChanges(scope, key, new PendingWrite(id, changes, sequenceNumber)))
+            if (await TryApplyGuardedChanges(scope, key, new PendingWrite(id, changes, sequenceNumber, key.ArrayIndexers)))
             {
                 return _noFailedPartitions;
             }
@@ -53,7 +53,7 @@ public partial class Sink
         {
             return true;
         }
-        ApplyChangesToEntity(entry, write.Changes);
+        ApplyChangesToEntity(entry, write.Changes, write.ArrayIndexers);
         AdvanceLastHandledSequenceNumber(entry, write.SequenceNumber);
         if (entry.State == EntityState.Added)
         {

@@ -7,7 +7,6 @@ using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Observation;
 using Cratis.Metrics;
-using Cratis.Traces;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -59,7 +58,6 @@ public class and_multiple_batches_are_queued_for_one_partition : given.all_depen
             _taskFactory,
             _grainFactory,
             Substitute.For<IMeter<AppendedEventsQueue>>(),
-            new ActivitySource<AppendedEventsQueue>(),
             Options.Create(new ChronicleOptions()),
             Substitute.For<ILogger<AppendedEventsQueue>>());
 
@@ -92,10 +90,12 @@ public class and_multiple_batches_are_queued_for_one_partition : given.all_depen
         }
     };
 
-    [Fact] void should_deliver_every_event() =>
+    [Fact]
+    void should_deliver_every_event() =>
         _handleCalls.SelectMany(call => call).Select(@event => (ulong)@event.Context.SequenceNumber).ShouldContainOnly([0UL, 1UL, 2UL, 3UL]);
 
-    [Fact] void should_preserve_per_partition_sequence_order() =>
+    [Fact]
+    void should_preserve_per_partition_sequence_order() =>
         _handleCalls
             .SelectMany(call => call)
             .Select(@event => (ulong)@event.Context.SequenceNumber)
@@ -103,9 +103,11 @@ public class and_multiple_batches_are_queued_for_one_partition : given.all_depen
             .SequenceEqual([0UL, 1UL, 2UL, 3UL])
             .ShouldBeTrue();
 
-    [Fact] void should_coalesce_the_queued_batches_into_a_single_dispatch() =>
+    [Fact]
+    void should_coalesce_the_queued_batches_into_a_single_dispatch() =>
         _handleCalls.Count.ShouldEqual(2);
 
-    [Fact] void should_deliver_the_coalesced_events_in_one_call() =>
+    [Fact]
+    void should_deliver_the_coalesced_events_in_one_call() =>
         _handleCalls[1].Select(@event => (ulong)@event.Context.SequenceNumber).ShouldContainOnly([1UL, 2UL, 3UL]);
 }

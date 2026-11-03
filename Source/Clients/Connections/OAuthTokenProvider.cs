@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Net;
 using System.Net.Security;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
@@ -181,6 +182,9 @@ public class OAuthTokenProvider : ITokenProvider, IDisposable
         }
     };
 
+    static bool IsTransientStatus(HttpStatusCode statusCode) =>
+        (int)statusCode >= 500 || statusCode is HttpStatusCode.RequestTimeout or HttpStatusCode.TooManyRequests;
+
     async Task<string?> FetchToken(CancellationToken cancellationToken)
     {
         var tokenEndpoint = _tokenEndpoint();
@@ -199,8 +203,7 @@ public class OAuthTokenProvider : ITokenProvider, IDisposable
 
             if (!response.IsSuccessStatusCode)
             {
-                var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
-                _logger.TokenRequestFailed((int)response.StatusCode, response.ReasonPhrase ?? "Unknown", errorContent);
+                await LogTokenRequestFailure(response, cancellationToken);
                 response.EnsureSuccessStatusCode();
             }
 
@@ -235,8 +238,37 @@ public class OAuthTokenProvider : ITokenProvider, IDisposable
                 return cachedToken;
             }
 
-            _logger.FailedToObtainAccessToken(tokenEndpoint, ex);
+            LogTokenFetchFailure(tokenEndpoint, ex);
             throw;
+        }
+    }
+
+    async Task LogTokenRequestFailure(HttpResponseMessage response, CancellationToken cancellationToken)
+    {
+        var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
+        if (IsTransientStatus(response.StatusCode))
+        {
+            _logger.TokenRequestFailed((int)response.StatusCode, response.ReasonPhrase ?? "Unknown", errorContent);
+        }
+        else
+        {
+            _logger.TokenRequestRejected((int)response.StatusCode, response.ReasonPhrase ?? "Unknown", errorContent);
+        }
+    }
+
+    void LogTokenFetchFailure(string tokenEndpoint, Exception exception)
+    {
+        switch (exception)
+        {
+            case HttpRequestException { StatusCode: not null }:
+                // The HTTP response status was already reported; do not log it a second time.
+                break;
+            case HttpRequestException:
+                _logger.TokenEndpointUnreachable(tokenEndpoint, exception);
+                break;
+            default:
+                _logger.FailedToObtainAccessToken(tokenEndpoint, exception);
+                break;
         }
     }
 

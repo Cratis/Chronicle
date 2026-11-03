@@ -43,7 +43,7 @@ public partial class EventSequence
             throw new InvalidEffectReceipt("Receipt-only writes must be NoEvents or Refused.");
         }
 
-        var receipt = new StoredEffectReceipt(id, new(new(effectReceipt.OccurrenceId), effectReceipt.Epoch), outcome, null, null, null, reasons, effectReceipt.Response, DateTimeOffset.UtcNow);
+        var receipt = new StoredEffectReceipt(id, new(new(effectReceipt.OccurrenceId), effectReceipt.Epoch), outcome, null, null, null, reasons, effectReceipt.Response, _timeProvider.GetUtcNow());
         var result = await WriteEffectReceiptForSettlement([], receipt);
         if (result == EffectReceiptWriteResult.Written) return new(EffectReceiptStatus.Recorded, EffectReceiptConverters.ToDetails(receipt));
         existing = await EffectReceiptStorage.GetEffectReceipt(id);
@@ -180,5 +180,5 @@ public partial class EventSequence
         events.Count > 0 ? events[^1].SequenceNumber : null,
         [],
         effectReceipt.Response,
-        DateTimeOffset.UtcNow);
+        _timeProvider.GetUtcNow());
 }

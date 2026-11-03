@@ -34,6 +34,15 @@ internal static class ProjectionPropertyPaths
         new(string.Join('.', path.Split('.').Select((segment, index) => ResolveRawSegment(segment, namingPolicy, role, index))));
 
     /// <summary>
+    /// Applies the naming policy to a validated canonical context path without reparsing its function calls.
+    /// </summary>
+    /// <param name="path">The validated canonical context property path.</param>
+    /// <param name="namingPolicy">The serialization naming policy.</param>
+    /// <returns>The serialized context path, preserving explicit function parentheses.</returns>
+    public static string RenderContextPath(string path, INamingPolicy namingPolicy) =>
+        string.Join('.', path.Split('.').Select((segment, index) => ResolveRawSegment(segment, namingPolicy, ProjectionPathRole.Source, index)));
+
+    /// <summary>
     /// Converts a CLR member to its serialized projection property path without parsing its CLR name.
     /// </summary>
     /// <param name="property">The CLR property to resolve.</param>

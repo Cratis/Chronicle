@@ -42,6 +42,7 @@
     </ItemGroup>
 
     <ItemGroup>
+        <ProjectReference Include="../../Tools/GrpcCodeGenerator/GrpcCodeGenerator.csproj" ReferenceOutputAssembly="false" PrivateAssets="all" OutputItemType="GrpcCodeGeneratorAssembly" SkipGetTargetFrameworkProperties="true" GlobalPropertiesToRemove="TargetFramework;TargetFrameworks;RuntimeIdentifier;IsPackaging" />
         <ProjectReference Include="../../Infrastructure/Infrastructure.csproj" />
         <ProjectReference Include="../Compatibility/Compatibility.csproj" />
         <ProjectReference Include="../Contracts/Contracts.csproj" />
@@ -67,9 +68,20 @@
     <!-- Generates the gRPC contracts under ../Contracts from this project's Arc artifacts, the classes that
          implement them under ../Grpc, and the registrations for those in ../Server. Everything named in
          NonDerivedGrpcServices is left alone, so a hand-written contract for one of those survives a run. -->
-    <Target Name="GenerateGrpcContracts" AfterTargets="Build" Condition=" '$(TargetFramework)' != '' AND '$(RuntimeIdentifier)' == '' AND '$(DisableGrpcContractGeneration)' != 'true' ">
+    <Target Name="_PrepareGrpcContractGeneration" Condition=" '$(TargetFramework)' != '' AND '$(RuntimeIdentifier)' == '' AND '$(DisableGrpcContractGeneration)' != 'true' ">
+        <PropertyGroup>
+            <_GrpcContractGenerationStamp>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '$(IntermediateOutputPath)', 'GenerateGrpcContracts.stamp'))</_GrpcContractGenerationStamp>
+        </PropertyGroup>
+        <Delete Files="$(_GrpcContractGenerationStamp)" Condition="'$(ForceCodeGeneration)' == 'true'" />
+        <ItemGroup>
+            <_GrpcContractGenerationInput Include="$(TargetPath);$(TargetDir)Cratis.Chronicle*.dll;$(TargetDir)Cratis.Chronicle*.xml;@(GrpcCodeGeneratorAssembly);$(MSBuildProjectFullPath);$(MSBuildThisFileDirectory)../Contracts/**/*.cs;$(MSBuildThisFileDirectory)../Grpc/**/*.cs;$(MSBuildThisFileDirectory)../Server/GeneratedGrpcServices.cs" Exclude="**/bin/**;**/obj/**" />
+        </ItemGroup>
+    </Target>
+
+    <Target Name="GenerateGrpcContracts" AfterTargets="Build" DependsOnTargets="_PrepareGrpcContractGeneration" Inputs="@(_GrpcContractGenerationInput)" Outputs="$(_GrpcContractGenerationStamp)" Condition=" '$(TargetFramework)' != '' AND '$(RuntimeIdentifier)' == '' AND '$(DisableGrpcContractGeneration)' != 'true' ">
         <Message Text="Generating gRPC contracts and service implementations from Arc artifacts" Importance="high" />
-        <Exec Command="dotnet run -- &quot;$(TargetPath)&quot; &quot;$(MSBuildThisFileDirectory)../Contracts&quot; --skip-namespaces 2 --base-namespace Cratis.Chronicle.Contracts --implementations &quot;$(MSBuildThisFileDirectory)../Grpc&quot; --implementations-namespace Cratis.Chronicle.Services --registrations &quot;$(MSBuildThisFileDirectory)../Server/GeneratedGrpcServices.cs&quot; --registrations-namespace Cratis.Chronicle.Server --exclude $(NonDerivedGrpcServices)" WorkingDirectory="$(MSBuildThisFileDirectory)../../../Source/Tools/GrpcCodeGenerator" />
+        <Exec Command="dotnet &quot;@(GrpcCodeGeneratorAssembly)&quot; &quot;$(TargetPath)&quot; &quot;$(MSBuildThisFileDirectory)../Contracts&quot; --skip-namespaces 2 --base-namespace Cratis.Chronicle.Contracts --implementations &quot;$(MSBuildThisFileDirectory)../Grpc&quot; --implementations-namespace Cratis.Chronicle.Services --registrations &quot;$(MSBuildThisFileDirectory)../Server/GeneratedGrpcServices.cs&quot; --registrations-namespace Cratis.Chronicle.Server --exclude $(NonDerivedGrpcServices)" WorkingDirectory="$(MSBuildThisFileDirectory)../../../Source/Tools/GrpcCodeGenerator" />
+        <Touch Files="$(_GrpcContractGenerationStamp)" AlwaysCreate="true" />
     </Target>
 
     <PropertyGroup>

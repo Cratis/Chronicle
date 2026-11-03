@@ -91,6 +91,10 @@ BODY_SNIPPETS = {
     "testing/read-models/scenario/strict-event-subscription": "",
     "testing/read-models/scenario/substitutions": "",
     "testing/read-models/scenario/strict-fidelity": "",
+    "testing/read-models/scenario/borrowed-store": """
+        Cratis.Chronicle.Testing.Events.EventStoreForTesting store = default!;
+        IEnumerable<AppendedEvent> selectedEvents = default!;
+    """,
     "read-models/decision-reads/detached-read": """
         IEventStore eventStore = default!;
         ReadModelKey orderId = new("order-123");

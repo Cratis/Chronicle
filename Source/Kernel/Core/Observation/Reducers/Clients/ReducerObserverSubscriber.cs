@@ -67,7 +67,7 @@ public class ReducerObserverSubscriber(
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
         (_key, _) = this.GetKeys();
-        _changesetNotifier = GrainFactory.GetGrain<IProjectionChangesetNotifier>(_key.ObserverId);
+        _changesetNotifier = GrainFactory.GetGrain<IProjectionChangesetNotifier>(new ProjectionChangesetNotifierKey(_key.ObserverId, _key.EventStore, _key.Namespace));
         await HandlePipeline();
     }
 

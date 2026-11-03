@@ -124,8 +124,9 @@ public partial class ReindexConstraintsStep(
     {
         try
         {
-            var runId = new ConstraintIndexRebuildRunId(this.GetPrimaryKey(out var key));
+            var stepId = this.GetPrimaryKey(out var key);
             var jobStepKey = (JobStepKey)key!;
+            var runId = new ConstraintIndexRebuildRunId(stepId, JobId: jobStepKey.JobId);
             var definitions = await storage.GetEventStore(jobStepKey.Scope).Constraints.GetDefinitions();
             var names = definitions.Where(definition => definition.AppliesTo(currentState.EventSequenceId) && currentState.Changes.Any(change => change.Name == definition.Name && (definition is ClosesStreamConstraintDefinition || (definition is UniqueConstraintDefinition && change.RequiresReindex)))).Select(definition => definition.Name).Distinct().ToArray();
             if (names.Length > 0)
@@ -146,8 +147,9 @@ public partial class ReindexConstraintsStep(
     {
         try
         {
-            var runId = new ConstraintIndexRebuildRunId(this.GetPrimaryKey(out var key), Guid.NewGuid(), DateTimeOffset.UtcNow);
+            var stepId = this.GetPrimaryKey(out var key);
             var jobStepKey = (JobStepKey)key!;
+            var runId = new ConstraintIndexRebuildRunId(stepId, Guid.NewGuid(), DateTimeOffset.UtcNow, jobStepKey.JobId);
 
             var eventStoreStorage = storage.GetEventStore(jobStepKey.Scope);
             var namespaceStorage = eventStoreStorage.GetNamespace(jobStepKey.Namespace);

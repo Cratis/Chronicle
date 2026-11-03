@@ -97,4 +97,18 @@ public record Product(ProductId Id, ProductName Name)
     /// <returns>An observable subject emitting product collections.</returns>
     public static ISubject<IEnumerable<Product>> ObserveAll() =>
         new BehaviorSubject<IEnumerable<Product>>([]);
+
+    /// <summary>Returns the products of an event store.</summary>
+    /// <param name="eventStore">The event store.</param>
+    /// <param name="id">The product identifier.</param>
+    /// <param name="readModel">The read model name.</param>
+    /// <param name="readModelIdentifier">The read model identifier.</param>
+    /// <returns>The product, or null if not found.</returns>
+    public static Product? FindInStore(Cratis.Chronicle.Concepts.EventStoreName eventStore, ProductId id, string readModel, Cratis.Chronicle.Concepts.ReadModels.ReadModelIdentifier readModelIdentifier) => null;
+
+    /// <summary>Observes the products of an event store.</summary>
+    /// <param name="eventStore">The event store.</param>
+    /// <returns>An observable subject emitting product collections.</returns>
+    public static ISubject<IEnumerable<Product>> ObserveInStore(Cratis.Chronicle.Concepts.EventStoreName eventStore) =>
+        new BehaviorSubject<IEnumerable<Product>>([]);
 }

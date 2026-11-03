@@ -529,6 +529,7 @@ class SparseIntegrationWorkflows(unittest.TestCase):
 
 
 VERSION_STAMPED_CLIENT_REBUILD = "Rebuild the client under test with a version above the previous release"
+ROLLING_DELIVERY_DIAGNOSTIC_REBUILD = "Build isolated rolling delivery diagnostic candidate"
 
 
 class IntegrationSingleBuildContracts(unittest.TestCase):
@@ -547,7 +548,7 @@ class IntegrationSingleBuildContracts(unittest.TestCase):
                 for step in steps:
                     command = step.get("run", "")
                     if lane == "sql-clustering" and step.get("name") == VERSION_STAMPED_CLIENT_REBUILD:
-                        # The one allowed rebuild: the rolling-upgrade leg stamps the client under test above the
+                        # The version-stamped rebuild: the rolling-upgrade leg stamps the client under test above the
                         # previous release so the compatibility check orders the two sides correctly (#5353).
                         self.assertEqual("matrix.provider == 'RollingUpgrade'", step.get("if"))
                         self.assertIn('-p:Version="$CRATIS_CHRONICLE_CLIENT_VERSION"', command)
@@ -555,6 +556,35 @@ class IntegrationSingleBuildContracts(unittest.TestCase):
                         self.assertEqual(1, len(re.findall(r"\bdotnet\b", command)))
                         self.assertRegex(command.strip(), r"^dotnet\s+build\s+Integration/SqlClustering/SqlClustering\.csproj\s")
                         self.assertNotRegex(command, r"[;&|`]|\$\(|\n")
+                        continue
+                    if lane == "sql-clustering" and step.get("name") == ROLLING_DELIVERY_DIAGNOSTIC_REBUILD:
+                        # #5300 needs a compile-time-enabled diagnostic variant; the normal build artifact must
+                        # remain diagnostics-free. Pin the entire script, including provenance and IL verification,
+                        # so only these two isolated builds are allowed, never another build/publish/pack/run/msbuild.
+                        self.assertEqual("matrix.provider == 'RollingUpgrade'", step.get("if"))
+                        self.assertEqual(
+                            'set -euo pipefail\n'
+                            'printf \'diagnostic-source=%s client-version=%s artifacts=%s\\n\' '
+                            '"$(git rev-parse HEAD)" "$CRATIS_CHRONICLE_CLIENT_VERSION" '
+                            '"$RUNNER_TEMP/rolling-delivery-diagnostics"\n'
+                            'dotnet build .github/scripts/rolling-delivery-il/RollingDeliveryIl.csproj '
+                            '-c Release -warnaserror \\\n'
+                            '  --artifacts-path "$RUNNER_TEMP/rolling-il-verifier" '
+                            '-o "$RUNNER_TEMP/rolling-il-tool"\n'
+                            'dotnet build Integration/SqlClustering/SqlClustering.csproj '
+                            '-c Release -warnaserror \\\n'
+                            '  -p:EnableDevelopmentSymbol=true -p:DisableProxyGenerator=true '
+                            '-p:DisableDockerBuild=true \\\n'
+                            '  -p:Version="$CRATIS_CHRONICLE_CLIENT_VERSION" '
+                            '-p:EnableRollingDeliveryDiagnostics=true \\\n'
+                            '  --artifacts-path "$RUNNER_TEMP/rolling-delivery-diagnostics"\n'
+                            'dotnet "$RUNNER_TEMP/rolling-il-tool/RollingDeliveryIl.dll" \\\n'
+                            '  Source/Clients/DotNET/bin/Release/net10.0/Cratis.Chronicle.dll \\\n'
+                            '  --enabled "$RUNNER_TEMP/rolling-delivery-diagnostics/bin/DotNET/'
+                            'release/Cratis.Chronicle.dll"\n'
+                            'grep -a -F -q -- "$CRATIS_CHRONICLE_CLIENT_VERSION" '
+                            '"$RUNNER_TEMP/rolling-delivery-diagnostics/bin/DotNET/release/Cratis.Chronicle.dll"\n',
+                            command)
                         continue
                     self.assertNotRegex(command, r"dotnet\s+(build|publish|run|msbuild)\b|GenerateProtoFiles")
 
@@ -646,6 +676,30 @@ sys.exit(1 if failed else 0)
                          jobs["discover"]["outputs"]["rolling-upgrade-enabled"])
         report = next(step for step in jobs["discover"]["steps"] if step.get("id") == "exclusions")
         self.assertEqual("python3 .github/scripts/integration_lane_exclusions.py", report["run"])
+
+    def test_rolling_upgrade_skips_only_listed_releases_and_each_names_why(self):
+        root = WORKFLOWS.parents[1]
+        listed = root / ".github/rolling-upgrade-unusable-releases.txt"
+        step = next(step for step in workflow("integration.yml")["jobs"]["sql-clustering-rolling-upgrade"]["steps"]
+                    if step.get("name") == "Resolve previous release image")
+        self.assertIn(".github/rolling-upgrade-unusable-releases.txt", step["run"])
+        for line in listed.read_text().splitlines():
+            if not line.strip() or line.startswith("#"):
+                continue
+            with self.subTest(line=line):
+                self.assertRegex(line, r"^v\d+\.\d+\.\d+ # .*\(#\d+\)$",
+                                 "Each unusable release is one tag with the reason and its issue")
+        tags = "v19.114.4\nv19.115.0\n"
+        for contents, expected in (("v19.115.0 # broken (#1)\n", "v19.114.4"), ("# none\n", "v19.115.0")):
+            with self.subTest(contents=contents), tempfile.TemporaryDirectory() as directory:
+                (Path(directory) / ".github").mkdir()
+                (Path(directory) / ".github/rolling-upgrade-unusable-releases.txt").write_text(contents)
+                selection = step["run"].split("\nimage_tag=")[0]
+                script = "git() { printf '%s' \"$TAGS\"; }\n" + selection + "\necho \"$release_tag\""
+                result = subprocess.run(["bash", "-c", "set -euo pipefail\n" + script], cwd=directory,
+                                        env={**os.environ, "TAGS": tags}, capture_output=True, text=True, check=False)
+                self.assertEqual(0, result.returncode, result.stderr)
+                self.assertEqual(expected, result.stdout.strip().splitlines()[-1])
 
     def test_declaration_is_visible_and_one_line_removal_reenables_the_job(self):
         for declarations in (exclusions.EXCLUDED_LANES.copy(), {}):

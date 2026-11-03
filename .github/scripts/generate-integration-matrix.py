@@ -222,6 +222,9 @@ def main():
 
     include = []
     for namespace in _namespaces_with_facts():
+        # The injected startup specs need neither a runtime configuration nor Docker.
+        if namespace == "for_ContainerStartup":
+            continue
         # This family exercises a provider directly, not the configurable Chronicle runtime.
         # Run it once in the SQL Server lane instead of starting SQL Server in every backend lane.
         namespace_configs = configs

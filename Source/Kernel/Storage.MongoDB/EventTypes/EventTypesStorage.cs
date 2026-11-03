@@ -3,6 +3,7 @@
 
 using System.Collections.Concurrent;
 using System.Reactive.Subjects;
+using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventTypes;
@@ -163,17 +164,22 @@ public partial class EventTypesStorage(
     {
         logger.Registering(definition.Id, EventTypeGeneration.First, eventStore);
 
-        // The full definition carries no visibility, so what is already stored is kept rather than lost on replace.
+        // The full definition carries no visibility, so what is already stored is kept.
         using var existingCursor = await GetCollection().FindAsync(_ => _.Id == definition.Id).ConfigureAwait(false);
         var existingDocument = await existingCursor.FirstOrDefaultAsync().ConfigureAwait(false);
-        var mongoEventType = definition.ToMongoDB(
+        var mongoEventType = Merge(existingDocument, definition.ToMongoDB(
             visibility: existingDocument?.Visibility ?? EventTypeVisibility.Unspecified,
-            origin: existingDocument?.Origin ?? string.Empty) with { MigrationVersions = existingDocument?.MigrationVersions };
+            origin: existingDocument?.Origin ?? string.Empty));
+        if (!Changes(existingDocument, mongoEventType))
+        {
+            return false;
+        }
 
-        var result = await GetCollection().ReplaceOneAsync(
+        // Target only the current definition; immutable versions may have been recorded since the read.
+        var result = await GetCollection().UpdateOneAsync(
             _ => _.Id == definition.Id,
-            mongoEventType,
-            new ReplaceOptions { IsUpsert = true }).ConfigureAwait(false);
+            BuildUpdate(existingDocument, mongoEventType),
+            new UpdateOptions { IsUpsert = true }).ConfigureAwait(false);
 
         return InvalidateIfMutated(definition.Id, result.ModifiedCount > 0 || result.UpsertedId is not null);
     }
@@ -201,37 +207,36 @@ public partial class EventTypesStorage(
         using var cursor = await collection.FindAsync(Builders<EventType>.Filter.In(_ => _.Id, ids)).ConfigureAwait(false);
         var stored = (await cursor.ToListAsync()).ToDictionary(_ => _.Id);
 
-        var writes = new List<WriteModel<EventType>>();
-        var mutated = new List<EventTypeId>();
-
+        var prepared = new Dictionary<EventTypeId, EventType>();
         foreach (var eventType in all)
         {
             var definition = eventType.Definition;
-            var schemas = definition.Generations.ToDictionary(
-                _ => _.Generation.ToString(),
-                _ => BsonDocument.Parse(_.Schema.ToJson()));
-            var migrations = definition.Migrations.Select(_ => new EventTypeMigration(
-                _.FromGeneration,
-                _.ToGeneration,
-                BsonDocument.Parse(_.UpcastJmesPath?.ToJsonString() ?? "{}"),
-                BsonDocument.Parse(_.DowncastJmesPath?.ToJsonString() ?? "{}"))).ToList();
+            var previous = prepared.GetValueOrDefault(definition.Id) ?? stored.GetValueOrDefault(definition.Id);
+            prepared[definition.Id] = Merge(previous, definition.ToMongoDB(
+                owner: definition.Owner,
+                source: eventType.Source,
+                visibility: eventType.Visibility,
+                origin: eventType.Origin));
+        }
 
-            stored.TryGetValue(definition.Id, out var existing);
-
-            if (!Changes(existing, eventType, schemas, migrations))
+        var writes = new List<WriteModel<EventType>>();
+        var mutated = new List<EventTypeId>();
+        foreach (var (id, effective) in prepared)
+        {
+            stored.TryGetValue(id, out var existing);
+            if (!Changes(existing, effective))
             {
                 continue;
             }
 
-            logger.Registering(definition.Id, EventTypeGeneration.First, eventStore);
-
+            logger.Registering(id, EventTypeGeneration.First, eventStore);
             writes.Add(new UpdateOneModel<EventType>(
-                Builders<EventType>.Filter.Eq(_ => _.Id, definition.Id),
-                BuildUpdate(existing, eventType, schemas, migrations))
+                Builders<EventType>.Filter.Eq(_ => _.Id, id),
+                BuildUpdate(existing, effective))
             {
                 IsUpsert = true
             });
-            mutated.Add(definition.Id);
+            mutated.Add(id);
         }
 
         if (writes.Count > 0)
@@ -363,58 +368,93 @@ public partial class EventTypesStorage(
         }
     }
 
-    static bool Changes(
-        EventType? existing,
-        EventTypeToRegister eventType,
-        Dictionary<string, BsonDocument> schemas,
-        List<EventTypeMigration> migrations)
+    static EventType Merge(EventType? existing, EventType incoming) => incoming with
+    {
+        Schemas = MergeSchemas(existing?.Schemas ?? new Dictionary<string, BsonDocument>(), incoming.Schemas),
+        Visibility = EffectiveVisibility(existing, incoming.Visibility),
+        Migrations = MergeMigrations(existing?.Migrations ?? [], incoming.Migrations ?? [])
+    };
+
+    static Dictionary<string, BsonDocument> MergeSchemas(IDictionary<string, BsonDocument> stored, IDictionary<string, BsonDocument> incoming)
+    {
+        var schemas = new Dictionary<string, BsonDocument>(stored);
+        foreach (var (generation, schema) in incoming.Where(_ => !stored.TryGetValue(_.Key, out var previous) ||
+            !JsonSchemaCompatibilityExtensions.EqualsIgnoringTitles(previous.ToJson(), _.Value.ToJson())))
+        {
+            schemas[generation] = schema;
+        }
+        return schemas;
+    }
+
+    static IEnumerable<EventTypeMigration> MergeMigrations(IEnumerable<EventTypeMigration> stored, IEnumerable<EventTypeMigration> incoming)
+    {
+        var migrations = stored.ToDictionary(_ => (_.FromGeneration, _.ToGeneration));
+        foreach (var migration in incoming)
+        {
+            migrations[(migration.FromGeneration, migration.ToGeneration)] = migration;
+        }
+        var effective = migrations.Values.OrderBy(_ => _.FromGeneration.Value).ThenBy(_ => _.ToGeneration.Value).ToList();
+        return MigrationsEqual(stored, effective) ? stored : effective;
+    }
+
+    static bool MigrationsEqual(IEnumerable<EventTypeMigration> stored, IEnumerable<EventTypeMigration> incoming)
+    {
+        var byEndpoint = stored.ToDictionary(_ => (_.FromGeneration, _.ToGeneration));
+        var supplied = incoming.ToList();
+        if (byEndpoint.Count != supplied.Count)
+        {
+            return false;
+        }
+        return supplied.TrueForAll(migration => byEndpoint.TryGetValue((migration.FromGeneration, migration.ToGeneration), out var previous) &&
+            JsonNode.DeepEquals(JsonNode.Parse(previous.UpcastJmesPath.ToJson()), JsonNode.Parse(migration.UpcastJmesPath.ToJson())) &&
+            JsonNode.DeepEquals(JsonNode.Parse(previous.DowncastJmesPath.ToJson()), JsonNode.Parse(migration.DowncastJmesPath.ToJson())));
+    }
+
+    static bool Changes(EventType? existing, EventType effective)
     {
         if (existing is null)
         {
             return true;
         }
 
-        if (existing.Owner != eventType.Definition.Owner ||
-            existing.Source != eventType.Source ||
-            existing.Visibility != EffectiveVisibility(existing, eventType.Visibility) ||
-            (existing.Origin ?? string.Empty) != eventType.Origin ||
-            existing.Tombstone != eventType.Definition.Tombstone)
+        if (existing.Owner != effective.Owner ||
+            existing.Source != effective.Source ||
+            existing.Visibility != effective.Visibility ||
+            (existing.Origin ?? string.Empty) != effective.Origin ||
+            existing.Tombstone != effective.Tombstone)
         {
             return true;
         }
 
-        if (schemas.Any(_ => !existing.Schemas.TryGetValue(_.Key, out var storedSchema) ||
+        if (effective.Schemas.Any(_ => !existing.Schemas.TryGetValue(_.Key, out var storedSchema) ||
             !JsonSchemaCompatibilityExtensions.EqualsIgnoringTitles(storedSchema.ToJson(), _.Value.ToJson())))
         {
             return true;
         }
 
-        return migrations.Count > 0 && !migrations.SequenceEqual(existing.Migrations ?? []);
+        return !MigrationsEqual(existing.Migrations ?? [], effective.Migrations ?? []);
     }
 
     static EventTypeVisibility EffectiveVisibility(EventType? existing, EventTypeVisibility incoming) =>
         incoming == EventTypeVisibility.Unspecified && existing is not null ? existing.Visibility : incoming;
 
-    static UpdateDefinition<EventType> BuildUpdate(
-        EventType? existing,
-        EventTypeToRegister eventType,
-        Dictionary<string, BsonDocument> schemas,
-        List<EventTypeMigration> migrations)
+    static UpdateDefinition<EventType> BuildUpdate(EventType? existing, EventType effective)
     {
         var update = Builders<EventType>.Update
-            .Set(_ => _.Owner, eventType.Definition.Owner)
-            .Set(_ => _.Source, eventType.Source)
-            .Set(_ => _.Visibility, EffectiveVisibility(existing, eventType.Visibility))
-            .Set(_ => _.Origin, eventType.Origin)
-            .Set(_ => _.Tombstone, eventType.Definition.Tombstone);
+            .Set(_ => _.Owner, effective.Owner)
+            .Set(_ => _.Source, effective.Source)
+            .Set(_ => _.Visibility, effective.Visibility)
+            .Set(_ => _.Origin, effective.Origin)
+            .Set(_ => _.Tombstone, effective.Tombstone);
 
-        update = schemas.Aggregate(
-            update,
-            (current, schema) => current.Set($"{nameof(EventType.Schemas).ToCamelCase()}.{schema.Key}", schema.Value));
+        update = effective.Schemas.Where(schema => existing is null ||
+                !existing.Schemas.TryGetValue(schema.Key, out var stored) ||
+                !JsonSchemaCompatibilityExtensions.EqualsIgnoringTitles(stored.ToJson(), schema.Value.ToJson()))
+            .Aggregate(update, (current, schema) => current.Set($"{nameof(EventType.Schemas).ToCamelCase()}.{schema.Key}", schema.Value));
 
-        if (migrations.Count > 0)
+        if (!MigrationsEqual(existing?.Migrations ?? [], effective.Migrations ?? []))
         {
-            update = update.Set(_ => _.Migrations, migrations);
+            update = update.Set(_ => _.Migrations, effective.Migrations);
         }
 
         return update;

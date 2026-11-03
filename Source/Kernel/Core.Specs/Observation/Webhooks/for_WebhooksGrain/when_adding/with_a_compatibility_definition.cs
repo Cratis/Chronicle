@@ -26,5 +26,5 @@ public class with_a_compatibility_definition : given.a_webhooks_manager_grain
 
     Task Because() => _grain.Add(_definition);
 
-    [Fact] async Task should_subscribe_as_explicit_registration() => await _observer.Received(1).Subscribe<IWebhookObserverSubscriber>(ObserverType.External, Arg.Any<IEnumerable<EventType>>(), Arg.Any<SiloAddress>(), reactivateRetired: true, automatic: false);
+    [Fact] async Task should_subscribe_as_explicit_registration() => await _observer.Received(1).Subscribe<IWebhookObserverSubscriber>(ObserverType.External, Arg.Any<IEnumerable<EventType>>(), Arg.Any<SiloAddress>(), isReplayable: true, reactivateRetired: true, automatic: false);
 }

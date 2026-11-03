@@ -218,7 +218,11 @@ public partial class ProjectionsManager
     {
         var namespaces = await GrainFactory.GetGrain<INamespaces>(_eventStoreName).GetAll();
         var activeDefinitions = State.Projections.Where(definition => definition.IsActive).ToArray();
-        var missingNamespaces = namespaces.Where(namespaceName => _failedNamespaceSetups.Contains(namespaceName) ||
+
+        // After a silo departure the cache cannot be trusted: a pass that started before it can have re-added entries.
+        var reconcileAll = _reconcileAllNamespaces;
+        _reconcileAllNamespaces = false;
+        var missingNamespaces = namespaces.Where(namespaceName => reconcileAll || _failedNamespaceSetups.Contains(namespaceName) ||
             activeDefinitions.Any(definition => !_subscribed.ContainsKey((definition.Identifier, namespaceName))));
         await Task.WhenAll(missingNamespaces.Select(async namespaceName =>
         {
