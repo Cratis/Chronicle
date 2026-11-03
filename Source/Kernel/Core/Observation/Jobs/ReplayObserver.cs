@@ -405,7 +405,7 @@ public class ReplayObserver(
 
     Task NotifyObserverOfRefusal(IObserver observer, ReplayObserverRequest request) => NotifyObserverWithRetry(() => observer.ReleaseRefusedReplay(request));
 
-    Task NotifyObserverOfUnpreparedReplay(IObserver observer) => NotifyObserverWithRetry(observer.ReplayStepsCouldNotBePrepared);
+    Task NotifyObserverOfUnpreparedReplay(IObserver observer) => NotifyObserverWithRetry(() => observer.ReplayStepsCouldNotBePrepared(Request));
 
     Task NotifyObserverOfCompletion(IObserver observer, bool canResolve, IReadOnlyDictionary<Key, EventSequenceNumber> coveredPartitions, EventType[] eventTypes, EventSequenceNumber lastHandledEventSequenceNumber) =>
         NotifyObserverWithRetry(() => canResolve

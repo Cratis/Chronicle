@@ -268,6 +268,7 @@ interface [GrainInterfaceType("Cratis.Chronicle.Observation.IObserver")] Cratis.
   4F386154: ReplayPartition(Cratis.Chronicle.Concepts.Keys.Key, System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Events.EventType>) -> Task
   AA80A13C: ReplayPartitionTo(Cratis.Chronicle.Concepts.Keys.Key, Cratis.Chronicle.Concepts.Events.EventSequenceNumber) -> Task
   B7ADE783: ReplayStepsCouldNotBePrepared() -> Task
+  574A7313: ReplayStepsCouldNotBePrepared(ulong?) -> Task
   0E88E52D: Replayed(Cratis.Chronicle.Concepts.Events.EventSequenceNumber) -> Task
   FAA73CC9: Replayed(Cratis.Chronicle.Concepts.Events.EventSequenceNumber, ulong?) -> Task
   444B1A83: ReplayedSuccessfullySince(Cratis.Chronicle.Concepts.Events.EventSequenceNumber, System.Collections.Generic.IReadOnlyDictionary<Cratis.Chronicle.Concepts.Keys.Key, Cratis.Chronicle.Concepts.Events.EventSequenceNumber>, Cratis.Chronicle.Concepts.Events.EventType[], System.DateTimeOffset) -> Task

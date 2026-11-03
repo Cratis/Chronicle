@@ -40,8 +40,12 @@ public partial class Observer
     }
 
     /// <inheritdoc/>
-    public async Task ReplayStepsCouldNotBePrepared()
+    public Task ReplayStepsCouldNotBePrepared() => ReplayStepsCouldNotBePrepared(null);
+
+    /// <inheritdoc/>
+    public async Task ReplayStepsCouldNotBePrepared(ulong? ownershipEpoch)
     {
+        if (IgnoresStaleRelease(ClaimHolderKind.ObserverReplay, null, ownershipEpoch)) return;
         if (IsRetired || _removed || !KeyOwnsDefinition) return;
         if (!State.IsReplaying && State.RunningState != ObserverRunningState.Replaying) return;
 

@@ -426,6 +426,14 @@ public interface IObserver : IGrainWithStringKey
     Task ReplayStepsCouldNotBePrepared();
 
     /// <summary>
+    /// Quarantines a replaying observer whose replay job, started under the given ownership epoch, could not prepare its steps, keeping the replay pending.
+    /// </summary>
+    /// <param name="ownershipEpoch">The ownership epoch the replay was started under, or null when it carries none.</param>
+    /// <remarks>Ignored when a newer replay holds the observer-wide claim under another epoch.</remarks>
+    /// <returns>Awaitable task.</returns>
+    Task ReplayStepsCouldNotBePrepared(ulong? ownershipEpoch);
+
+    /// <summary>
     /// Releases a refused partition replay and probes catch-up from its persisted live-delivery lower bound.
     /// </summary>
     /// <param name="partition">The partition whose replay was refused.</param>

@@ -34,6 +34,7 @@ public class with_an_epoch : Specification
         await _observer.Replayed(_replayRequest, 3UL);
         await _observer.ReplayedSuccessfullySince(_replayRequest, 3UL, _covered, _eventTypes, _startedAt);
         await _observer.ReleaseRefusedReplay(_replayRequest);
+        await _observer.ReplayStepsCouldNotBePrepared(_replayRequest);
     }
 
     [Fact] void should_report_the_partition_catch_up() => _observer.Received(1).PartitionCaughtUp(_partition, 3UL, 4UL, 7UL);
@@ -42,4 +43,5 @@ public class with_an_epoch : Specification
     [Fact] void should_report_the_replay() => _observer.Received(1).Replayed(3UL, 7UL);
     [Fact] void should_report_the_successful_replay() => _observer.Received(1).ReplayedSuccessfullySince(3UL, _covered, _eventTypes, _startedAt, 7UL);
     [Fact] void should_release_the_refused_replay() => _observer.Received(1).ReleaseRefusedReplay(7UL);
+    [Fact] void should_report_the_unprepared_replay() => _observer.Received(1).ReplayStepsCouldNotBePrepared(7UL);
 }

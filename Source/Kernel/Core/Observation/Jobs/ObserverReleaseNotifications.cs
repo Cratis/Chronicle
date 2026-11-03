@@ -95,4 +95,15 @@ public static class ObserverReleaseNotifications
         request.OwnershipEpoch is null
             ? observer.ReleaseRefusedReplay()
             : observer.ReleaseRefusedReplay(request.OwnershipEpoch);
+
+    /// <summary>
+    /// Reports that a replay could not prepare its steps.
+    /// </summary>
+    /// <param name="observer">The <see cref="IObserver"/> to report to.</param>
+    /// <param name="request">The <see cref="IObserverJobRequest"/> the job runs.</param>
+    /// <returns>Awaitable task.</returns>
+    public static Task ReplayStepsCouldNotBePrepared(this IObserver observer, IObserverJobRequest request) =>
+        request.OwnershipEpoch is null
+            ? observer.ReplayStepsCouldNotBePrepared()
+            : observer.ReplayStepsCouldNotBePrepared(request.OwnershipEpoch);
 }
