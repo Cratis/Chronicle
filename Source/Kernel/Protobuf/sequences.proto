@@ -338,6 +338,19 @@ message CommandResult_VerifyContentResponse {
    string AuthorizationFailureReason = 6;
    VerifyContentResponse Response = 7;
 }
+message CompensateRequest {
+   string EventStore = 1;
+   string Namespace = 2;
+   string EventSequenceId = 3;
+   uint64 CompensationFor = 4;
+   EventType EventType = 5;
+   string Content = 6;
+   .bcl.Guid CorrelationId = 7;
+   repeated string Tags = 8;
+   SerializableDateTimeOffset Occurred = 9;
+   repeated Causation Causation = 10;
+   Identity CausedBy = 11;
+}
 enum CompleteStreamError {
    COMPLETE_STREAM_ERROR_None = 0;
    AlreadyCompleted = 1;
@@ -451,6 +464,7 @@ message EventContext {
    string Subject = 14;
    repeated NamedTag NamedTags = 15;
    string EventSource = 16;
+   uint64 CompensationFor = 17;
 }
 message EventForEventSourceId {
    string EventSourceId = 1;
@@ -961,6 +975,7 @@ service EventSequences {
    rpc AppendOnceWithNamedTags (AppendOnceWithNamedTagsRequest) returns (CommandResult_AppendOnceResponse);
    rpc AppendWithNamedTags (AppendWithNamedTagsRequest) returns (CommandResult_AppendResponse);
    rpc ClosedStreams (ClosedStreamsRequest) returns (QueryResult_IEnumerable_ClosedStreamResponse);
+   rpc Compensate (CompensateRequest) returns (CommandResult_AppendResponse);
    rpc CompleteStream (CompleteStreamRequest) returns (CommandResult_CompleteStreamResponse);
    rpc CompleteStreamScope (CompleteStreamScopeRequest) returns (CommandResult_CompleteStreamResponse);
    rpc EndOf (EndOfRequest) returns (QueryResult_SerializableDateTimeOffset);
