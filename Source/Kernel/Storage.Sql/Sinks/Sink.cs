@@ -77,6 +77,7 @@ public partial class Sink : ISink, ICanReconcileIndexes, ISinkCompositeKeyLookup
     readonly object _layoutLock = new();
     IReadOnlyList<ProjectedColumn> _columns;
     Task? _layout;
+    Task<bool>? _readLayout;
     LegacyCompositeKey? _compositeKey;
 
     /// <summary>
@@ -556,9 +557,13 @@ public partial class Sink : ISink, ICanReconcileIndexes, ISinkCompositeKeyLookup
     async Task<DbContextScope<ReadModelDbContext>?> OpenQueriedTable(ReadModelContainerName? occurrence)
     {
         var containerName = QueriedTableNameFor(occurrence);
-        return occurrence is null || containerName == _tableName
-            ? await _database.ReadModelTable(_eventStoreName, _namespace, containerName, _columns)
-            : await _database.ExistingReadModelTable(_eventStoreName, _namespace, containerName, _columns);
+        if (occurrence is null || containerName == _tableName)
+        {
+            return await _database.ReadModelTable(_eventStoreName, _namespace, containerName, _columns);
+        }
+
+        await EnsureLayoutForRead();
+        return await _database.ExistingReadModelTable(_eventStoreName, _namespace, containerName, _columns);
     }
 
     /// <summary>

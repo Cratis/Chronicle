@@ -55,6 +55,71 @@ public partial class Sink
         }
     }
 
+    /// <summary>
+    /// Resolves the key layout for reading an occurrence or backup table without provisioning anything.
+    /// </summary>
+    /// <remarks>
+    /// A sink that was never initialized, after a restart or on a silo that does not own the read model, has not looked at the
+    /// table, so it would read a table created in the earlier layout with the current one. The layout is read from the primary table
+    /// only when that table exists; nothing is created. It is looked up once per sink, and only when an occurrence is read.
+    /// </remarks>
+    /// <returns>Awaitable task.</returns>
+    async Task EnsureLayoutForRead()
+    {
+        if (!_needsLayout)
+        {
+            return;
+        }
+
+        Task<bool> layout;
+        lock (_layoutLock)
+        {
+            if (_layout is not null)
+            {
+                return;
+            }
+
+            layout = _readLayout ??= ResolveLayoutForRead();
+        }
+
+        var resolved = false;
+        try
+        {
+            resolved = await layout;
+        }
+        finally
+        {
+            if (!resolved)
+            {
+                // Without a primary table there is no layout to adopt, and a failed lookup is not kept: try again on the next read.
+                lock (_layoutLock)
+                {
+                    if (ReferenceEquals(_readLayout, layout))
+                    {
+                        _readLayout = null;
+                    }
+                }
+            }
+        }
+    }
+
+    async Task<bool> ResolveLayoutForRead()
+    {
+        var scope = await _database.ExistingReadModelTable(_eventStoreName, _namespace, _tableName, _columns);
+        if (scope is null)
+        {
+            return false;
+        }
+
+        await using (scope)
+        {
+            var database = scope.DbContext.Database;
+            AdoptLayout(await ReadTableLayout(database, database.GetDatabaseType(), _tableName));
+        }
+
+        return true;
+    }
+
     async Task ResolveLayout()
     {
         await using var scope = await _database.ReadModelTable(_eventStoreName, _namespace, _tableName, _columns);
