@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Clients;
+using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Projections.Generations.Deployment;
 using Orleans.CodeGeneration;
@@ -17,7 +18,7 @@ namespace Cratis.Chronicle.Clients;
 /// that silo, making the tracking local per silo. Use
 /// <see cref="ConnectedClientsGrainFactoryExtensions.GetConnectedClients"/> to get the grain for a silo.
 /// </remarks>
-[Version(1)]
+[Version(2)]
 public interface IConnectedClients : IGrainWithStringKey
 {
     /// <summary>
@@ -80,6 +81,19 @@ public interface IConnectedClients : IGrainWithStringKey
     /// <param name="projections">The declared projection identifiers.</param>
     /// <returns>Awaitable task.</returns>
     Task RecordDeclaredProjections(ConnectionId connectionId, EventStoreName eventStore, IEnumerable<ProjectionId> projections);
+
+    /// <summary>
+    /// Records that an observer accepted a subscription from an existing connection. Unknown connections are ignored.
+    /// </summary>
+    /// <param name="connectionId">The connection that subscribed the observer.</param>
+    /// <param name="observer">The <see cref="ObserverKey"/> of the observer.</param>
+    /// <returns>Awaitable task.</returns>
+    /// <remarks>
+    /// When the connection is dropped, the observers recorded for it are told, so they can hand over to another client without
+    /// waiting for the observer watchdog. The record is kept until then, even if the observer has since been unsubscribed,
+    /// because telling an observer about a connection it does not know changes nothing.
+    /// </remarks>
+    Task RecordObserver(ConnectionId connectionId, ObserverKey observer);
 
     /// <summary>
     /// Records definition registration versions for projections declared by an existing connection.

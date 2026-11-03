@@ -107,12 +107,7 @@ public class all_dependencies : Specification
             Arg.Any<ExpandoObject>())
             .Returns(callInfo => Task.FromResult(callInfo.ArgAt<ExpandoObject>(3)));
 
-        _complianceHelper.ReleaseJson(
-            Arg.Any<EventStoreName>(),
-            Arg.Any<EventStoreNamespaceName>(),
-            Arg.Any<JsonSchema>(),
-            Arg.Any<JsonObject>())
-            .Returns(callInfo => Task.FromResult(callInfo.ArgAt<JsonObject>(3)));
+        ConfigureJsonCompliance();
 
         _service = new ReadModels(
             _grainFactory,
@@ -125,5 +120,24 @@ public class all_dependencies : Specification
             _complianceHelper,
             _materializedReadModels,
             new JsonSerializerOptions());
+    }
+
+    void ConfigureJsonCompliance()
+    {
+        _complianceHelper.ReleaseJson(
+            Arg.Any<EventStoreName>(),
+            Arg.Any<EventStoreNamespaceName>(),
+            Arg.Any<JsonSchema>(),
+            Arg.Any<JsonObject>())
+            .Returns(callInfo => Task.FromResult(callInfo.ArgAt<JsonObject>(3)));
+
+        _complianceHelper.ReleaseJson(
+            Arg.Any<EventStoreName>(),
+            Arg.Any<EventStoreNamespaceName>(),
+            Arg.Any<JsonSchema>(),
+            Arg.Any<JsonObject>(),
+            Arg.Any<string?>(),
+            Arg.Any<IReadOnlyDictionary<string, string>>())
+            .Returns(callInfo => Task.FromResult(callInfo.ArgAt<JsonObject>(3)));
     }
 }
