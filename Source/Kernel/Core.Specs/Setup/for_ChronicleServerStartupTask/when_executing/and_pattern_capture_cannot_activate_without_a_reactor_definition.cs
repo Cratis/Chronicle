@@ -7,7 +7,7 @@ public class and_pattern_capture_cannot_activate_without_a_reactor_definition : 
 {
     Exception _error;
 
-    async Task Because() => _error = await Catch.Exception(ExecuteAndSettle);
+    async Task Because() => _error = await Catch.Exception(Execute);
 
     [Fact] void should_complete_startup() => _error.ShouldBeNull();
     [Fact] async Task should_exhaust_the_capture_subscription_retry_budget() => await _patternCapture.Received(5).Subscribe(_eventStore, _namespace);

@@ -181,7 +181,7 @@ A node that only processes observers (reactors, reducers, projections):
 
 ## Startup and probes
 
-The kernel binds port 35000 and any dedicated health port before starting the Orleans silo. Use `tcpSocket` on port 35000 or `/health/live` for a startup probe, `/health/live` for liveness, and `/health` or `/health/ready` for readiness. Readiness waits for silo startup (including Chronicle's startup task) and host startup, and fails once shutdown begins. Observer, job, webhook, capture and event store subscription activation continues in the background after readiness succeeds, retries until it succeeds, and is logged as an error while it keeps failing.
+The kernel binds port 35000 and any dedicated health port before starting the Orleans silo. Use `tcpSocket` on port 35000 or `/health/live` for a startup probe, `/health/live` for liveness, and `/health` or `/health/ready` for readiness. Readiness waits for silo startup (including Chronicle's startup task) and host startup, and fails once shutdown begins. Background catch-up can continue after readiness succeeds.
 
 An open TCP port is not readiness. Non-health requests receive HTTP 503 with `Retry-After` or gRPC `Unavailable` until ready. Raising `failureThreshold` is not the fix for backlog-dependent startup restarts: separate listener liveness from silo readiness. See [Health Endpoint](health-endpoint.md) for dedicated-port probe examples.
 

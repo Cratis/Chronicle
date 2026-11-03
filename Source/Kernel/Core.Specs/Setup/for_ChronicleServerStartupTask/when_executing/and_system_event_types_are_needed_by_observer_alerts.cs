@@ -47,7 +47,7 @@ public class and_system_event_types_are_needed_by_observer_alerts : given.a_star
         _eventStoreStorage.Observers.GetAll().Returns([new ObserverDefinition { Identifier = "projection", EventSequenceId = EventSequenceId.Log }]);
     }
 
-    Task Because() => ExecuteAndSettle();
+    Task Because() => Execute();
 
     [Fact] void should_register_before_patches_can_activate_grains() => _registeredBeforePatches.ShouldBeTrue();
     [Fact] void should_register_before_system_reactors_activate() => _registeredBeforeSystemReactors.ShouldBeTrue();
