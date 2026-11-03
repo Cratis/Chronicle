@@ -39,6 +39,9 @@ public partial class Sink
         try
         {
             await layout;
+
+            // Only a layout that was adopted is published for reads; a failed one is cleared below and resolved again.
+            Volatile.Write(ref _layoutResolvedForRead, true);
         }
         catch
         {
@@ -77,6 +80,13 @@ public partial class Sink
         {
             if (_layout is not null)
             {
+                // _layout is assigned before it is awaited, so a pending or failed adoption must not mark reads as resolved:
+                // a failure clears _layout and the next read has to resolve the layout again.
+                if (_layout.IsCompletedSuccessfully)
+                {
+                    Volatile.Write(ref _layoutResolvedForRead, true);
+                }
+
                 return;
             }
 

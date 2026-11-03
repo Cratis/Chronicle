@@ -33,6 +33,7 @@ public class SqlSinkHarness : ISqlSinkHarness
     SqlCommandTimings? _commandTimings;
     IReadOnlyList<ProjectedColumn> _columns = [];
     SqliteConnection? _connection;
+    int _existingTableOpens;
     ReadModelDefinition? _definition;
 
     /// <summary>
@@ -62,6 +63,16 @@ public class SqlSinkHarness : ISqlSinkHarness
     /// Gets a hook that adjusts the context options, such as installing an execution strategy that retries.
     /// </summary>
     public Action<DbContextOptionsBuilder<ReadModelDbContext>>? ConfigureOptions { get; init; }
+
+    /// <summary>
+    /// Gets a hook awaited, with the table name, before a table is opened for reading or writing, so a specification can pause or fail the open.
+    /// </summary>
+    public Func<string, Task>? BeforeOpeningTable { get; init; }
+
+    /// <summary>
+    /// Gets how many times a table was opened without provisioning, which is how a read resolves the layout of an existing table.
+    /// </summary>
+    public int ExistingTableOpens => Volatile.Read(ref _existingTableOpens);
 
     /// <summary>
     /// Gets the logger for sink diagnostics.
@@ -99,6 +110,11 @@ public class SqlSinkHarness : ISqlSinkHarness
         database.ReadModelTable(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<string>(), Arg.Any<IReadOnlyList<ProjectedColumn>>(), Arg.Any<ConnectionPurpose>())
             .Returns(async callInfo =>
             {
+                if (BeforeOpeningTable is not null)
+                {
+                    await BeforeOpeningTable(callInfo.ArgAt<string>(2));
+                }
+
                 var finished = Reads.Begin();
                 return new DbContextScope<ReadModelDbContext>(await CreateContext(callInfo.ArgAt<string>(2), callInfo.ArgAt<IReadOnlyList<ProjectedColumn>>(3)), finished);
             });
@@ -157,6 +173,7 @@ public class SqlSinkHarness : ISqlSinkHarness
 
     async Task<DbContextScope<ReadModelDbContext>?> OpenExistingTable(string containerName, IReadOnlyList<ProjectedColumn> columns)
     {
+        Interlocked.Increment(ref _existingTableOpens);
         var finished = Reads.Begin();
         var context = NewContext(containerName, columns);
         if (await Migrator.ProbeExistingTable(containerName, context))
