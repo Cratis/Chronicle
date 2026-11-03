@@ -3,7 +3,6 @@
 
 using System.Globalization;
 using System.Linq.Expressions;
-using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Cratis.Json;
@@ -14,7 +13,7 @@ namespace Cratis.Chronicle.Events.Migrations;
 /// <summary>
 /// Represents an implementation of <see cref="IEventMigrationPropertyBuilder"/>.
 /// </summary>
-/// <param name="namingPolicy">The naming policy for typed accessors and object-valued literals. Raw property paths are preserved verbatim.</param>
+/// <param name="namingPolicy">The naming policy for typed accessors. Raw property paths are preserved verbatim.</param>
 public class EventMigrationPropertyBuilder(INamingPolicy? namingPolicy) : IEventMigrationPropertyBuilder, IResolveMigrationPropertyNames
 {
     const string SplitExpression = "$split";
@@ -23,11 +22,17 @@ public class EventMigrationPropertyBuilder(INamingPolicy? namingPolicy) : IEvent
     const string DefaultValueExpression = "$defaultValue";
     const string MapValuesExpression = "$mapValues";
 
-    static readonly JsonSerializerOptions _jsonSerializerOptions = CreateOptions(null);
-    static readonly ConditionalWeakTable<JsonNamingPolicy, JsonSerializerOptions> _optionsPerPolicy = [];
+    readonly JsonSerializerOptions _jsonSerializerOptions = new()
+    {
+        PropertyNamingPolicy = namingPolicy?.JsonPropertyNamingPolicy,
+        Converters =
+        {
+            new EnumerableConceptAsJsonConverterFactory(),
+            new ConceptAsJsonConverterFactory()
+        }
+    };
 
     readonly Dictionary<PropertyExpression, JsonNode> _properties = [];
-    readonly JsonSerializerOptions _literalOptions = OptionsFor(namingPolicy?.JsonPropertyNamingPolicy);
 
     /// <summary>
     /// Initializes a new instance of <see cref="EventMigrationPropertyBuilder"/> using the default naming policy.
@@ -82,7 +87,7 @@ public class EventMigrationPropertyBuilder(INamingPolicy? namingPolicy) : IEvent
     {
         _properties[(PropertyExpression)targetProperty.Value] = new JsonObject
         {
-            [DefaultValueExpression] = JsonSerializer.SerializeToNode(value, _literalOptions)
+            [DefaultValueExpression] = JsonSerializer.SerializeToNode(value, value.GetType(), _jsonSerializerOptions)
         };
     }
 
@@ -103,19 +108,6 @@ public class EventMigrationPropertyBuilder(INamingPolicy? namingPolicy) : IEvent
     PropertyName IResolveMigrationPropertyNames.ResolvePropertyName(LambdaExpression expression) =>
         MigrationPropertyNames.Resolve(expression, namingPolicy?.JsonPropertyNamingPolicy);
 
-    static JsonSerializerOptions OptionsFor(JsonNamingPolicy? policy) =>
-        policy is null ? _jsonSerializerOptions : _optionsPerPolicy.GetValue(policy, CreateOptions);
-
-    static JsonSerializerOptions CreateOptions(JsonNamingPolicy? policy) => new()
-    {
-        PropertyNamingPolicy = policy,
-        Converters =
-        {
-            new EnumerableConceptAsJsonConverterFactory(),
-            new ConceptAsJsonConverterFactory()
-        }
-    };
-
     JsonNode ToMappingNode(ValueMapping mapping) => new JsonObject
     {
         ["from"] = ToJsonNode(mapping.From),
@@ -123,7 +115,7 @@ public class EventMigrationPropertyBuilder(INamingPolicy? namingPolicy) : IEvent
     };
 
     /// <summary>
-    /// Renders a mapped value the way the value will appear in an event's payload, honoring the configured naming policy for object members.
+    /// Renders a mapped value the way the value will appear in an event's payload.
     /// </summary>
     /// <param name="value">The value to render.</param>
     /// <returns>The value as a <see cref="JsonNode"/>.</returns>
@@ -136,6 +128,6 @@ public class EventMigrationPropertyBuilder(INamingPolicy? namingPolicy) : IEvent
         null => null,
         Enum enumValue => JsonSerializer.SerializeToNode(
             Convert.ChangeType(enumValue, Enum.GetUnderlyingType(enumValue.GetType()), CultureInfo.InvariantCulture)),
-        _ => JsonSerializer.SerializeToNode(value, value.GetType(), _literalOptions)
+        _ => JsonSerializer.SerializeToNode(value, value.GetType(), _jsonSerializerOptions)
     };
 }
