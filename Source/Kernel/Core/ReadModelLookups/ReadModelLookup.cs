@@ -61,7 +61,7 @@ public record ReadModelLookup(ReadModelLookupOutcome Outcome, string ReadModel, 
         var result = await store.FindByCompositeKey(eventStore, @namespace, definition, new Key(normalization.Key, ArrayIndexers.NoIndexers));
         if (result.Outcome != CompositeKeyLookupOutcome.Found) return ReadModelLookupResults.From(result.Outcome);
         var instance = result.Instance!;
-        var json = expandoObjectConverter.ToJsonObject(instance.WithoutInitializationState(schema), schema);
+        var json = expandoObjectConverter.ToJsonObject(instance.WithoutSinkBookkeeping(schema), schema);
         return new(ReadModelLookupOutcome.Found, json.ToJsonString(jsonSerializerOptions), instance.GetLastHandledEventSequenceNumber().Value, string.Empty);
     }
 }

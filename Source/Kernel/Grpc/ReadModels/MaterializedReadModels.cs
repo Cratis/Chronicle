@@ -43,7 +43,7 @@ internal sealed class MaterializedReadModels(
             schema,
             instances);
 
-        var instancesAsJson = releasedInstances.Select(instance => JsonSerializer.Serialize(instance.WithoutInitializationState(schema))).ToList();
+        var instancesAsJson = releasedInstances.Select(instance => JsonSerializer.Serialize(instance.WithoutSinkBookkeeping(schema))).ToList();
         return new()
         {
             Instances = instancesAsJson,
@@ -88,7 +88,7 @@ internal sealed class MaterializedReadModels(
                             state.schema,
                             instances);
 
-                        var instancesAsJson = releasedInstances.Select(instance => JsonSerializer.Serialize(instance.WithoutInitializationState(state.schema))).ToList();
+                        var instancesAsJson = releasedInstances.Select(instance => JsonSerializer.Serialize(instance.WithoutSinkBookkeeping(state.schema))).ToList();
                         var (_, totalCount) = await state.binding.GetInstances(state.skip, request.PageSize);
 
                         return new ObserveInstancesResponse
