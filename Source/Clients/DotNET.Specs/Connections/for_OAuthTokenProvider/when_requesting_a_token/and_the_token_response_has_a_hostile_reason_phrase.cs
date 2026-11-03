@@ -38,7 +38,8 @@ public class and_the_token_response_has_a_hostile_reason_phrase : Specification
     [Fact] void should_fail() => _result.ShouldBeOfExactType<HttpRequestException>();
     [Fact] void should_preserve_the_status_code() => ((HttpRequestException)_result).StatusCode.ShouldEqual(HttpStatusCode.BadRequest);
     [Fact] void should_not_keep_an_unsafe_inner_exception() => _result.InnerException.ShouldBeNull();
-    [Fact] void should_log_the_failure() => _log.Entries.Any(_ => _.Level == LogLevel.Error && _.Exception is HttpRequestException).ShouldBeTrue();
+    [Fact] void should_log_the_failure() => _log.Entries.Any(_ => _.Level == LogLevel.Error && _.Message.Contains("400", StringComparison.Ordinal)).ShouldBeTrue();
+    [Fact] void should_not_log_any_exception_with_the_remote_reason_phrase() => _log.Entries.Where(_ => _.Exception is not null).Any(_ => _.Exception!.ToString().Contains("leak-marker", StringComparison.Ordinal)).ShouldBeFalse();
     [Fact] void should_not_log_the_remote_reason_phrase() => _log.Entries.Any(_ => _.Contains("leak-marker")).ShouldBeFalse();
     [Fact] void should_not_retain_the_remote_reason_phrase() => _result.ToString().Contains("leak-marker", StringComparison.Ordinal).ShouldBeFalse();
 }

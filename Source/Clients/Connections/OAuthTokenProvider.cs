@@ -273,7 +273,7 @@ public class OAuthTokenProvider : ITokenProvider, IDisposable
 
             if (!response.IsSuccessStatusCode)
             {
-                await LogTokenRequestFailure(response, cancellationToken);
+                await LogTokenRequestFailure(response, loggedEndpoint, cancellationToken);
                 throw new HttpRequestException($"The token endpoint returned HTTP status {(int)response.StatusCode}.", null, response.StatusCode);
             }
 
@@ -313,18 +313,18 @@ public class OAuthTokenProvider : ITokenProvider, IDisposable
         }
     }
 
-    async Task LogTokenRequestFailure(HttpResponseMessage response, CancellationToken cancellationToken)
+    async Task LogTokenRequestFailure(HttpResponseMessage response, string loggedEndpoint, CancellationToken cancellationToken)
     {
         // Never log the remote reason phrase or response body: a token endpoint can reflect the submitted credentials.
-        var errorContent = OAuthErrorCodes.Describe(await response.Content.ReadAsStringAsync(cancellationToken));
+        var errorCode = OAuthErrorCodes.Describe(await response.Content.ReadAsStringAsync(cancellationToken));
         var statusName = response.StatusCode.ToString();
         if (IsTransientStatus(response.StatusCode))
         {
-            _logger.TokenRequestFailed((int)response.StatusCode, statusName, errorContent);
+            _logger.TokenRequestFailed(loggedEndpoint, (int)response.StatusCode, statusName, errorCode);
         }
         else
         {
-            _logger.TokenRequestRejected((int)response.StatusCode, statusName, errorContent);
+            _logger.TokenRequestRejected(loggedEndpoint, (int)response.StatusCode, statusName, errorCode);
         }
     }
 

@@ -17,5 +17,5 @@ public class and_the_token_endpoint_redirects : given.an_external_authority
     [Fact] void should_fail() => _result.ShouldBeOfExactType<HttpRequestException>();
     [Fact] void should_post_only_once() => _handler.TokenRequests.Count().ShouldEqual(1);
     [Fact] void should_not_send_anything_to_the_redirect_target() => _handler.Requests.Exists(_ => _.Uri.Host == "elsewhere.example.net").ShouldBeFalse();
-    [Fact] void should_name_the_endpoint_in_the_error_log() => _tokenLog.Entries.Single(_ => _.Level == LogLevel.Error && _.Exception is not null).Message.Contains(TokenUrl, StringComparison.Ordinal).ShouldBeTrue();
+    [Fact] void should_name_the_endpoint_in_the_error_log() => _tokenLog.Entries.Single(_ => _.Level == LogLevel.Error).Message.Contains(TokenUrl, StringComparison.Ordinal).ShouldBeTrue();
 }
