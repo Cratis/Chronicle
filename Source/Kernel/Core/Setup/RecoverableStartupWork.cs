@@ -21,17 +21,31 @@ namespace Orleans.Hosting;
 /// Only one run of a given <see cref="StartupWorkItem"/> is in flight at a time, so the same observer is never
 /// activated by two overlapping attempts from the startup pass. The work itself must be idempotent.
 /// </para>
+/// <para>
+/// At most <see cref="DefaultMaxConcurrentAttempts"/> attempts run at the same time across all items, so a store with
+/// many namespaces and observers does not flood the cluster and storage while live traffic is already arriving. The
+/// slot is held only for the attempt itself, never during the backoff, so a persistently failing item cannot starve the
+/// others.
+/// </para>
 /// </remarks>
 /// <param name="timeProvider">The <see cref="TimeProvider"/> the backoff waits on.</param>
 /// <param name="escalation">The <see cref="IStartupWorkEscalation"/> told about persistent failure and recovery.</param>
 /// <param name="logger">The logger.</param>
 /// <param name="jitter">Optional source of values in [0, 1) for the backoff jitter; defaults to <see cref="Random.Shared"/>.</param>
+/// <param name="maxConcurrentAttempts">Optional limit on attempts running at the same time; defaults to <see cref="DefaultMaxConcurrentAttempts"/>.</param>
+#pragma warning disable CA1001 // The semaphore never exposes its wait handle, holds no unmanaged resources and lives as long as the host.
 internal sealed class RecoverableStartupWork(
     TimeProvider timeProvider,
     IStartupWorkEscalation escalation,
     ILogger<ChronicleServerStartupTask> logger,
-    Func<double>? jitter = null)
+    Func<double>? jitter = null,
+    int maxConcurrentAttempts = RecoverableStartupWork.DefaultMaxConcurrentAttempts)
 {
+    /// <summary>
+    /// The default limit on attempts running at the same time across all items.
+    /// </summary>
+    internal const int DefaultMaxConcurrentAttempts = 64;
+
     /// <summary>
     /// The number of consecutive failures after which an item is escalated.
     /// </summary>
@@ -49,6 +63,7 @@ internal sealed class RecoverableStartupWork(
 
     readonly ConcurrentDictionary<StartupWorkItem, byte> _inFlight = new();
     readonly Func<double> _jitter = jitter ?? Random.Shared.NextDouble;
+    readonly SemaphoreSlim _attempts = new(maxConcurrentAttempts, maxConcurrentAttempts);
 
     /// <summary>
     /// Runs an item until it succeeds or <paramref name="cancellationToken"/> is cancelled.
@@ -72,7 +87,16 @@ internal sealed class RecoverableStartupWork(
             {
                 try
                 {
-                    await work(cancellationToken).WaitAsync(cancellationToken);
+                    await _attempts.WaitAsync(cancellationToken);
+                    try
+                    {
+                        await work(cancellationToken).WaitAsync(cancellationToken);
+                    }
+                    finally
+                    {
+                        _attempts.Release();
+                    }
+
                     if (lastEscalation is not null)
                     {
                         escalation.Recovered(item, failures + 1);
@@ -128,3 +152,4 @@ internal sealed class RecoverableStartupWork(
         return half + (half * Math.Clamp(_jitter(), 0d, 1d));
     }
 }
+#pragma warning restore CA1001
