@@ -1,7 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Storage.ReadModels;
 using Cratis.Chronicle.Storage.Sinks;
 
@@ -87,6 +89,14 @@ public interface IProjectionPipeline
     void ClearPreparedPage()
     {
     }
+
+    /// <summary>
+    /// Clears the applied event markers a partition left in the sink, so that a partition replay rewrites the partition.
+    /// </summary>
+    /// <param name="namespace">The event store namespace.</param>
+    /// <param name="partition">The replayed partition.</param>
+    /// <returns>Awaitable task.</returns>
+    Task ClearAppliedEventMarkers(EventStoreNamespaceName @namespace, Key partition) => Task.CompletedTask;
 
     /// <summary>
     /// Handles the event and coordinates everything according to the pipeline.

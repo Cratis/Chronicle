@@ -17,11 +17,13 @@ namespace Cratis.Chronicle.Observation.Jobs;
 /// <param name="replayStateServiceClient"><see cref="IObserverServiceClient"/>.</param>
 /// <param name="storage"><see cref="IStorage"/> for reading the persisted projection definition on resume.</param>
 /// <param name="jsonSerializerOptions">The serializer options used for JSON serialization.</param>
+/// <param name="partitionReplayMarkers"><see cref="IPartitionReplayMarkers"/> for clearing the applied event markers of the partition.</param>
 /// <param name="logger">The logger.</param>
 public class ReplayObserverPartition(
     IObserverServiceClient replayStateServiceClient,
     IStorage storage,
     JsonSerializerOptions jsonSerializerOptions,
+    IPartitionReplayMarkers partitionReplayMarkers,
     ILogger<ReplayObserverPartition> logger) : Job<ReplayObserverPartitionRequest, JobStateWithLastHandledEvent>, IReplayObserverPartition
 {
     bool _refusalNotificationScheduled;
@@ -60,15 +62,22 @@ public class ReplayObserverPartition(
     {
         await EnsureReplaySupported();
         await replayStateServiceClient.BeginReplayPartitionFor(State.ObserverDetails, Request.Key);
+        await partitionReplayMarkers.ClearFor(State.ObserverDetails, Request.Key);
     }
 
     /// <inheritdoc/>
     /// <remarks>
     /// Only the admission check is repeated: a persisted partition replay of a projection whose stored definition is
     /// globally scoped must not continue writing into the shared sink. The replay itself is not begun again, so
-    /// reactors and reducers are not told twice that their partition replay started.
+    /// reactors and reducers are not told twice that their partition replay started. The partition's applied event
+    /// markers are cleared again, which is idempotent, so a replay that crashed after clearing but before rewriting
+    /// the partition does not skip events it already applied.
     /// </remarks>
-    protected override Task OnBeforeResumingJobSteps() => EnsureReplaySupported();
+    protected override async Task OnBeforeResumingJobSteps()
+    {
+        await EnsureReplaySupported();
+        await partitionReplayMarkers.ClearFor(State.ObserverDetails, Request.Key);
+    }
 
     /// <inheritdoc/>
     protected override async Task<bool> CanResume()
