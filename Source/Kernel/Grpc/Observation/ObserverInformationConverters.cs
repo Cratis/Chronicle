@@ -16,20 +16,26 @@ internal static class ObserverInformationConverters
     /// Convert to contract.
     /// </summary>
     /// <param name="information"><see cref="IEnumerable{ObserverInformation}"/> to convert from.</param>
+    /// <param name="runningStatesChangedAt">The known running-state change times by observer; observers without an entry get none.</param>
     /// <returns>Converted <see cref="IEnumerable{ObserverInformation}"/>.</returns>
     public static IEnumerable<ObserverInformation> ToContract(
-        this IEnumerable<(ObserverDefinition Definition, ObserverState State)> information) =>
-        information.Select(_ => _.Definition.ToContract(_.State));
+        this IEnumerable<(ObserverDefinition Definition, ObserverState State)> information,
+        IReadOnlyDictionary<Concepts.Observation.ObserverId, DateTimeOffset> runningStatesChangedAt) =>
+        information.Select(_ => _.Definition.ToContract(
+            _.State,
+            runningStatesChangedAt.TryGetValue(_.Definition.Identifier, out var changedAt) ? changedAt : null));
 
     /// <summary>
     /// Convert to contract.
     /// </summary>
     /// <param name="definition"><see cref="ObserverDefinition"/> to convert from.</param>
     /// <param name="state"><see cref="ObserverState"/> to convert from.</param>
+    /// <param name="runningStateChangedAt">When the running state last changed, or null when unknown.</param>
     /// <returns>Converted <see cref="ObserverInformation"/>.</returns>
     public static ObserverInformation ToContract(
         this ObserverDefinition definition,
-        ObserverState state) =>
+        ObserverState state,
+        DateTimeOffset? runningStateChangedAt = null) =>
         new()
         {
             Id = definition.Identifier,
@@ -42,6 +48,7 @@ internal static class ObserverInformationConverters
             TailEventSequenceNumber = state.TailEventSequenceNumber,
             HandledEventCount = state.HandledEventCount,
             RunningState = state.RunningState.ToContract(),
+            RunningStateChangedAt = runningStateChangedAt,
             IsReplayable = definition.IsReplayable
         };
 

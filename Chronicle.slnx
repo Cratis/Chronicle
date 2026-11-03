@@ -2,6 +2,7 @@
 <Solution>
     <Folder Name="/Benchmarks/">
         <Project Path="Benchmarks/Chronicle.Benchmarks.Clustering.Specs/Chronicle.Benchmarks.Clustering.Specs.csproj" />
+        <Project Path="Benchmarks/Chronicle.Benchmarks.Kernel/Chronicle.Benchmarks.Kernel.csproj" />
     </Folder>
     <Folder Name="/Source/Clients/">
         <Project Path="Source/Clients/Aspire/Aspire.csproj" />

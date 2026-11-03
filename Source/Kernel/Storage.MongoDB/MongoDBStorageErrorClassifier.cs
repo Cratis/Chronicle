@@ -14,7 +14,7 @@ public class MongoDBStorageErrorClassifier : IStorageErrorClassifier
     /// <inheritdoc/>
     public bool IsTransient(Exception exception) =>
         exception is OperationCanceledException or TimeoutException or MongoExecutionTimeoutException or
-            MongoConnectionException or MongoConnectionPoolPausedException or MongoProxyConnectionException or MongoWriteConcernException or
+            MongoConnectionException or MongoConnectionPoolPausedException or MongoWaitQueueFullException or MongoProxyConnectionException or MongoWriteConcernException or
             MongoNotPrimaryException or MongoNodeIsRecoveringException or MongoCursorNotFoundException or
             MongoWriteException { WriteError: null, WriteConcernError: not null } or MongoBulkWriteException { WriteErrors.Count: 0, WriteConcernError: not null } or
             ClientBulkWriteException { WriteErrors.Count: 0, WriteConcernErrors.Count: > 0 } ||

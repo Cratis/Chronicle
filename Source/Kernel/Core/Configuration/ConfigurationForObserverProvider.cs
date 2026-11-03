@@ -17,6 +17,10 @@ public class ConfigurationForObserverProvider(IOptionsMonitor<ChronicleOptions> 
     public Task<Observers> GetFor(string observerKey)
     {
         // TODO: Merge with persisted config and attributes.
-        return Task.FromResult(optionsMonitor.CurrentValue.Observers);
+        var options = optionsMonitor.CurrentValue;
+        return Task.FromResult(
+            options.ObserverRetryOverrides.TryGetValue(observerKey, out var retryOverride)
+                ? retryOverride.ApplyTo(options.Observers)
+                : options.Observers);
     }
 }

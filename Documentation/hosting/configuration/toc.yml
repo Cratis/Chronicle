@@ -14,6 +14,8 @@
   href: storage-connection-resolution.md
 - name: SQL Schema Operations
   href: sql-schema-operations.md
+- name: MongoDB Index Operations
+  href: mongodb-index-operations.md
 - name: Compliance Storage
   href: compliance-storage.md
 - name: Clustering
@@ -24,6 +26,8 @@
   href: read-models.md
 - name: Events
   href: events.md
+- name: Constraint Index Repair
+  href: constraint-index-repair.md
 - name: Authentication
   href: authentication.md
 - name: TLS

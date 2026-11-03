@@ -21,11 +21,16 @@ public record ReduceResult(
     /// <summary>
     /// Gets whether or not the reduce operation was successful.
     /// </summary>
-    public bool IsSuccess => !ErrorMessages.Any();
+    public bool IsSuccess => !ErrorMessages.Any() && RetryAfter is null;
 
     /// <summary>Gets the internal exception type for failure tracing, without its message.</summary>
     internal string? ExceptionType { get; init; }
 
     /// <summary>Gets the number of successfully dispatched events, including handlers returning null.</summary>
     internal int DispatchedEvents { get; init; }
+
+    /// <summary>
+    /// Gets how long to wait before the partition is delivered again, when a batch method deferred it.
+    /// </summary>
+    internal TimeSpan? RetryAfter { get; init; }
 }

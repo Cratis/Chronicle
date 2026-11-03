@@ -12,4 +12,9 @@ public class MongoDBStorageOptions
     /// Gets or sets the prefix prepended to every database name. Empty preserves the default names.
     /// </summary>
     public string DatabaseNamePrefix { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the name the System event store's databases are named by, in place of the event store name.
+    /// </summary>
+    public string SystemDatabaseName { get; set; } = Configuration.Storage.DefaultSystemDatabaseName;
 }

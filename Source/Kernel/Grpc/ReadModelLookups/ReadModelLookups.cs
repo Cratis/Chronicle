@@ -23,6 +23,8 @@ internal sealed class ReadModelLookups(
     /// <inheritdoc/>
     public Task<global::Cratis.Chronicle.Contracts.Queries.QueryResult<global::Cratis.Chronicle.Contracts.ReadModelLookups.ReadModelLookupResponse>> FindByCompositeKey(global::Cratis.Chronicle.Contracts.ReadModelLookups.FindByCompositeKeyRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         QueryExecutor.Execute<global::Cratis.Chronicle.Contracts.ReadModelLookups.ReadModelLookupResponse>(
+            callContext,
+            new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, request.Namespace, request.ReadModel),
             async () =>
             {
                 var result = await global::Cratis.Chronicle.ReadModelLookups.ReadModelLookup.FindByCompositeKey((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, request.ReadModel, request.Parts, grainFactory, materializedReadModelStore, typeFormats, expandoObjectConverter, jsonSerializerOptions);

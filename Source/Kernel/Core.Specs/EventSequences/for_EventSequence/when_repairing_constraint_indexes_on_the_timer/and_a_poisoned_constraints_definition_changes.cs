@@ -24,7 +24,7 @@ public class and_a_poisoned_constraints_definition_changes : given.an_event_sequ
             [_uniqueDefinition.Name] = new(EventSequenceNumber.First, new FormatException("old definition")),
             [_otherDefinition.Name] = new((EventSequenceNumber)1, new FormatException("unchanged definition"))
         };
-        for (var attempt = 0; attempt < 5; attempt++) _tracker.Observe(failures, true);
+        for (var attempt = 0; attempt < 5; attempt++) _tracker.Observe(failures, true, 5);
         _uniqueDefinition = _uniqueDefinition with { IgnoreCasing = true };
         var validation = new ConstraintValidation([new UniqueConstraintValidator(_uniqueDefinition, _unique), new UniqueConstraintValidator(_otherDefinition, _unique)]);
         typeof(EventSequence).GetField("_constraints", BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(_eventSequence, validation);

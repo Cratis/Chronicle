@@ -7,10 +7,16 @@ using Cratis.Chronicle.Diagnostics;
 namespace Cratis.Chronicle.Configuration;
 
 /// <summary>
-/// Controls event source id tracing in kernel telemetry.
+/// Represents the telemetry configuration.
 /// </summary>
 public class Telemetry
 {
+    /// <summary>
+    /// Gets or inits whether Orleans runtime and grain-call spans are exported. Defaults to false:
+    /// these sources accounted for about 99% of kernel spans. Trace context propagation stays enabled.
+    /// </summary>
+    public bool OrleansTracing { get; init; }
+
     /// <summary>
     /// Gets or inits how event source ids are included in spans. The default is Raw.
     /// </summary>
@@ -21,4 +27,13 @@ public class Telemetry
     /// </summary>
     [JsonIgnore]
     public string? EventSourceIdHashKey { get; init; }
+
+    /// <summary>
+    /// Gets whether gRPC client tracing is enabled. Defaults to false.
+    /// </summary>
+    /// <remarks>
+    /// Client spans for every kernel-to-kernel or outbound gRPC call account for a large share
+    /// of trace volume, so this instrumentation is opt-in.
+    /// </remarks>
+    public bool GrpcClientTracing { get; init; }
 }

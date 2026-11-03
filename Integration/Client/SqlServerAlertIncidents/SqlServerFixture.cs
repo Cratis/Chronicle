@@ -64,13 +64,12 @@ public sealed class SqlServerFixture : IAsyncLifetime
     /// <inheritdoc/>
     public async ValueTask InitializeAsync()
     {
-        _container = new ContainerBuilder(SqlServerContainerImage.Name)
+        var builder = new ContainerBuilder(SqlServerContainerImage.Name)
             .WithEnvironment("ACCEPT_EULA", "Y").WithEnvironment("MSSQL_SA_PASSWORD", Password)
             .WithPortBinding(1433, assignRandomHostPort: true)
             .WithWaitStrategy(Wait.ForUnixContainer().UntilCommandIsCompleted(
-                "/opt/mssql-tools18/bin/sqlcmd", "-S", "localhost", "-U", "sa", "-P", Password, "-C", "-Q", "SELECT 1"))
-            .Build();
-        await _container.StartAsync();
+                "/opt/mssql-tools18/bin/sqlcmd", "-S", "localhost", "-U", "sa", "-P", Password, "-C", "-Q", "SELECT 1"));
+        _container = await ContainerStartup.ForDocker(builder.Build).Start(c => _container = c, null, CancellationToken.None);
     }
 
     /// <inheritdoc/>

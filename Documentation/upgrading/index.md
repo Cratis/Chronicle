@@ -109,8 +109,8 @@ only if you later put an HTTPS endpoint in front of YARP.
 ## Upgrading across several majors
 
 Take them one at a time and read each guide. Chronicle's wire compatibility is verified
-within a major: every released minor of the major you are on is checked to still be
-served by the current build. Crossing a major boundary is where a protocol change is
+within a major: every released minor of the major you are on published before the current build
+is checked to still be served by it. Crossing a major boundary is where a protocol change is
 permitted to have happened, so it is where an upgrade deserves attention.
 
 ## Events you already stored

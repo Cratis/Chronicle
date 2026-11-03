@@ -15,6 +15,7 @@ internal sealed class Constraints(IGrainFactory grainFactory) : IConstraints
     /// <inheritdoc/>
     public async Task Register(RegisterConstraintsRequest request)
     {
+        SystemStoreGuard.EnsureNotSystem(new(request.EventStore));
         var key = new ConstraintsKey(request.EventStore);
         var grain = grainFactory.GetGrain<Chronicle.Events.Constraints.IConstraints>(key);
 

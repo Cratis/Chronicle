@@ -4,7 +4,9 @@
 import { DialogResult, useDialogContext } from '@cratis/arc.react/dialogs';
 import { CommandDialog } from '@cratis/components/CommandDialog';
 import { InputTextField } from '@cratis/components/CommandForm';
-import { SaveProjectionWithInferredReadModel } from 'Features/ProjectionEditor';
+import { Message } from '@cratis/components/Display';
+import { ProjectionDeclarationSyntaxError, SaveProjectionWithInferredReadModel } from 'Features/ProjectionEditor';
+import { useRef, useState } from 'react';
 import strings from 'Strings';
 import { useParams } from 'react-router-dom';
 import { type EventStoreAndNamespaceParams } from 'Shared';
@@ -20,9 +22,11 @@ export interface SaveWithInferredReadModelDialogProps {
 export const SaveWithInferredReadModelDialog = () => {
     const { request, closeDialog } = useDialogContext<SaveWithInferredReadModelDialogProps>();
     const params = useParams<EventStoreAndNamespaceParams>();
+    const responseErrors = useRef<ProjectionDeclarationSyntaxError[]>([]);
+    const [errors, setErrors] = useState<ProjectionDeclarationSyntaxError[]>([]);
 
     return (
-        <CommandDialog
+        <CommandDialog<SaveProjectionWithInferredReadModel, ProjectionDeclarationSyntaxError[]>
             command={SaveProjectionWithInferredReadModel}
             initialValues={{
                 declaration: request.declaration,
@@ -33,7 +37,14 @@ export const SaveWithInferredReadModelDialog = () => {
             okLabel={strings.general.buttons.ok}
             cancelLabel={strings.general.buttons.cancel}
             width="35rem"
-            onConfirm={() => closeDialog(DialogResult.Ok)}
+            onSuccess={response => {
+                responseErrors.current = response ?? [];
+                setErrors(responseErrors.current);
+            }}
+            onConfirm={() => {
+                if (responseErrors.current.length > 0) return false;
+                return closeDialog(DialogResult.Ok);
+            }}
             onCancel={() => closeDialog(DialogResult.Cancelled)}
         >
             <p>{strings.eventStore.general.projections.dialogs.saveWithInferredReadModel.message}</p>
@@ -41,6 +52,7 @@ export const SaveWithInferredReadModelDialog = () => {
                 value={c => c.readModelDisplayName}
                 title={strings.eventStore.general.projections.dialogs.saveWithInferredReadModel.readModelNameLabel}
             />
+            {errors.map((error, index) => <Message key={index} severity="error" text={error.message} className="mb-2" />)}
         </CommandDialog>
     );
 };

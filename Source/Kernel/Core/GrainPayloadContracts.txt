@@ -361,6 +361,7 @@ json Cratis.Chronicle.Concepts.Observation.PartitionDeferral
 enum Cratis.Chronicle.Concepts.Observation.PartitionDeferralReason : int
   CircuitOpen = 1
   None = 0
+  RequestedByObserver = 4
   RetryAfter = 2
   RetryBackoff = 3
 enum Cratis.Chronicle.Concepts.Observation.PartitionRecoveryOutcome : int
@@ -731,6 +732,7 @@ orleans Cratis.Chronicle.EventSequences.ConstraintIndexRebuildRunId
   [Id(0)] Value: System.Guid
   [Id(1)] Attempt: System.Guid
   [Id(2)] Started: System.DateTimeOffset
+  [Id(3)] JobId: Cratis.Orleans.Jobs.JobId
 json Cratis.Chronicle.EventSequences.EventToAppend
   causation: System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Auditing.Causation>
   content: System.Text.Json.Nodes.JsonObject
@@ -854,6 +856,7 @@ json Cratis.Chronicle.Observation.Jobs.CatchUpObserverPartitionRequest
   key: Cratis.Chronicle.Concepts.Keys.Key
   observerKey: Cratis.Chronicle.Concepts.Observation.ObserverKey
   observerType: Cratis.Chronicle.Concepts.Observation.ObserverType
+  ownershipEpoch: ulong?
   readerScope: Cratis.Chronicle.Concepts.Observation.ObserverReaderScope
   revision: ulong?
 json Cratis.Chronicle.Observation.Jobs.CatchUpObserverRequest
@@ -861,6 +864,7 @@ json Cratis.Chronicle.Observation.Jobs.CatchUpObserverRequest
   fromEventSequenceNumber: Cratis.Chronicle.Concepts.Events.EventSequenceNumber
   observerKey: Cratis.Chronicle.Concepts.Observation.ObserverKey
   observerType: Cratis.Chronicle.Concepts.Observation.ObserverType
+  ownershipEpoch: ulong?
   readerScope: Cratis.Chronicle.Concepts.Observation.ObserverReaderScope
   revision: ulong?
 json Cratis.Chronicle.Observation.Jobs.HandleEventsForObserverArguments
@@ -869,6 +873,7 @@ json Cratis.Chronicle.Observation.Jobs.HandleEventsForObserverArguments
   eventTypes: System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Events.EventType>
   observerKey: Cratis.Chronicle.Concepts.Observation.ObserverKey
   observerType: Cratis.Chronicle.Concepts.Observation.ObserverType
+  ownershipEpoch: ulong?
   readerScope: Cratis.Chronicle.Concepts.Observation.ObserverReaderScope
   revision: ulong?
   skipFailedPartitions: bool
@@ -901,6 +906,7 @@ json Cratis.Chronicle.Observation.Jobs.HandleEventsForPartitionArguments
   key: Cratis.Chronicle.Concepts.Keys.Key
   observerKey: Cratis.Chronicle.Concepts.Observation.ObserverKey
   observerType: Cratis.Chronicle.Concepts.Observation.ObserverType
+  ownershipEpoch: ulong?
   partition: Cratis.Chronicle.Concepts.Keys.Key
   readerScope: Cratis.Chronicle.Concepts.Observation.ObserverReaderScope
   revision: ulong?
@@ -938,6 +944,7 @@ json Cratis.Chronicle.Observation.Jobs.ReplayObserverPartitionRequest
   key: Cratis.Chronicle.Concepts.Keys.Key
   observerKey: Cratis.Chronicle.Concepts.Observation.ObserverKey
   observerType: Cratis.Chronicle.Concepts.Observation.ObserverType
+  ownershipEpoch: ulong?
   readerScope: Cratis.Chronicle.Concepts.Observation.ObserverReaderScope
   replaysAllEventTypes: bool
   revision: ulong?
@@ -946,6 +953,7 @@ json Cratis.Chronicle.Observation.Jobs.ReplayObserverRequest
   eventTypes: System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Events.EventType>
   observerKey: Cratis.Chronicle.Concepts.Observation.ObserverKey
   observerType: Cratis.Chronicle.Concepts.Observation.ObserverType
+  ownershipEpoch: ulong?
   readerScope: Cratis.Chronicle.Concepts.Observation.ObserverReaderScope
   revision: ulong?
 json Cratis.Chronicle.Observation.Jobs.RetryFailedPartitionRequest
@@ -956,6 +964,7 @@ json Cratis.Chronicle.Observation.Jobs.RetryFailedPartitionRequest
   key: Cratis.Chronicle.Concepts.Keys.Key
   observerKey: Cratis.Chronicle.Concepts.Observation.ObserverKey
   observerType: Cratis.Chronicle.Concepts.Observation.ObserverType
+  ownershipEpoch: ulong?
   readerScope: Cratis.Chronicle.Concepts.Observation.ObserverReaderScope
   revision: ulong?
 json Cratis.Chronicle.Observation.ObserverDetails
@@ -1470,6 +1479,8 @@ orleans [Alias("ProjectionFuture")] Cratis.Chronicle.Concepts.Projections.Projec
   [Id(7,Level=0,Constructor=true)] ParentKey: Cratis.Chronicle.Concepts.Keys.Key
   [Id(8,Level=0,Constructor=true)] Created: System.DateTimeOffset
 orleans [Alias("ReadModelChangeContext")] Cratis.Chronicle.Concepts.ReadModels.ReadModelChangeContext
+  [Id(4)] Subject: string
+  [Id(5)] Subjects: System.Collections.Generic.IReadOnlyDictionary<string,string>
   [Id(0,Level=0,Constructor=true)] ChangeType: Cratis.Chronicle.Concepts.ReadModels.ReadModelChangeType
   [Id(1,Level=0,Constructor=true)] EventSequenceNumber: Cratis.Chronicle.Concepts.Events.EventSequenceNumber
   [Id(2,Level=0,Constructor=true)] Occurred: System.DateTimeOffset

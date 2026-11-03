@@ -15,6 +15,7 @@ using Cratis.Chronicle.EventSequences.Placement;
 using Cratis.Chronicle.EventTypes;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Observation;
+using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Chronicle.Observation.Placement;
 using Cratis.Chronicle.Observation.Reactors.Clients;
 using Cratis.Chronicle.Observation.Reducers.Clients;
@@ -29,6 +30,7 @@ using Cratis.Chronicle.Setup;
 using Cratis.Chronicle.Setup.Execution;
 using Cratis.Chronicle.Setup.Serialization;
 using Cratis.Chronicle.Storage;
+using Cratis.Orleans.Hosting;
 using Cratis.Orleans.Jobs;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -70,6 +72,7 @@ public static class ChronicleServerSiloBuilderExtensions
         });
 
         builder.AddIncomingGrainCallFilter<CorrelationIdIncomingCallFilter>();
+        builder.AddIncomingGrainCallFilter<SerializableFailureIncomingCallFilter>();
         builder.AddOutgoingGrainCallFilter<CorrelationIdOutgoingCallFilter>();
         builder.AddIncomingGrainCallFilter<UserIdentityIncomingCallFilter>();
         builder.AddOutgoingGrainCallFilter<UserIdentityOutgoingCallFilter>();
@@ -80,6 +83,8 @@ public static class ChronicleServerSiloBuilderExtensions
         builder.Services.TryAddSingleton<IEventTypes, EventTypes>();
         builder.Services.TryAddSingleton<IJobTypes, JobTypes>();
         builder.Services.TryAddSingleton<IJobStepThrottle, JobStepThrottle>();
+        builder.Services.TryAddSingleton<IObserverRegistrationGate, ObserverRegistrationGate>();
+        AddObserverJobAdmission(builder);
 
         // The package's JobsManager/Job/JobStep grains and JobStepThrottle resolve Cratis.Orleans.Jobs.JobsOptions,
         // not ChronicleOptions - this host never calls AddCratisOrleans (it wires the pieces individually), so
@@ -162,6 +167,7 @@ public static class ChronicleServerSiloBuilderExtensions
 
         builder.Services.AddSingleton<IServices>(sp =>
         {
+            Cratis.Chronicle.Services.SystemStoreGuard.InProcessServices = sp;
             var grainFactory = sp.GetRequiredService<IGrainFactory>();
             var storage = sp.GetRequiredService<IStorage>();
             var expandoObjectConverter = sp.GetRequiredService<IExpandoObjectConverter>();
@@ -197,8 +203,9 @@ public static class ChronicleServerSiloBuilderExtensions
                     jsonSerializerOptions,
                     sp.GetRequiredKeyedService<Cratis.Traces.IActivitySource<Cratis.Chronicle.Services.Observation.Reactors.Reactors>>(Cratis.Chronicle.Concepts.WellKnown.MeterName),
                     sp.GetRequiredService<IOptions<ChronicleOptions>>(),
-                    sp.GetRequiredService<ILogger<Cratis.Chronicle.Services.Observation.Reactors.Reactors>>()),
-                new Cratis.Chronicle.Services.Observation.Reducers.Reducers(grainFactory, sp.GetRequiredService<IReducerMediator>(), expandoObjectConverter, jsonSerializerOptions, sp.GetRequiredKeyedService<Cratis.Traces.IActivitySource<Cratis.Chronicle.Services.Observation.Reducers.Reducers>>(Cratis.Chronicle.Concepts.WellKnown.MeterName), sp.GetRequiredService<IOptions<ChronicleOptions>>(), sp.GetRequiredService<ILogger<Cratis.Chronicle.Services.Observation.Reducers.Reducers>>()),
+                    sp.GetRequiredService<ILogger<Cratis.Chronicle.Services.Observation.Reactors.Reactors>>(),
+                    sp.GetRequiredService<IObserverRegistrationGate>()),
+                new Cratis.Chronicle.Services.Observation.Reducers.Reducers(grainFactory, sp.GetRequiredService<IReducerMediator>(), expandoObjectConverter, jsonSerializerOptions, sp.GetRequiredKeyedService<Cratis.Traces.IActivitySource<Cratis.Chronicle.Services.Observation.Reducers.Reducers>>(Cratis.Chronicle.Concepts.WellKnown.MeterName), sp.GetRequiredService<IOptions<ChronicleOptions>>(), sp.GetRequiredService<ILogger<Cratis.Chronicle.Services.Observation.Reducers.Reducers>>(), sp.GetRequiredService<IObserverRegistrationGate>()),
                 projections,
                 ActivatorUtilities.CreateInstance<Cratis.Chronicle.Services.Observation.Webhooks.Webhooks>(sp),
                 ActivatorUtilities.CreateInstance<Cratis.Chronicle.Services.ExternalServices.ExternalServices>(sp),
@@ -230,5 +237,20 @@ public static class ChronicleServerSiloBuilderExtensions
     {
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IGrainInterfacePropertiesProvider, KernelReleaseInterfaceProperties>());
         services.TryAddSingleton<IClusterReleases, ClusterReleases>();
+    }
+
+    /// <summary>
+    /// Adds the one job admission Chronicle registers and the observer job admission rules it asks, in order.
+    /// </summary>
+    /// <param name="builder"><see cref="ISiloBuilder"/> to add to.</param>
+    /// <remarks>
+    /// The rules are checked for a shared order when the silo starts, so a misregistered rule stops the silo rather
+    /// than failing every observer job later.
+    /// </remarks>
+    static void AddObserverJobAdmission(ISiloBuilder builder)
+    {
+        builder.AddJobAdmission<ObserverJobAdmission>();
+        builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IObserverJobAdmissionRule, ObserverOwnershipEpochRule>());
+        builder.Services.AddSingleton<ILifecycleParticipant<ISiloLifecycle>, ObserverJobAdmissionRulesCheck>();
     }
 }
