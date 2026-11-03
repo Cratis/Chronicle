@@ -7,7 +7,7 @@ public class and_persisted_pattern_capture_cannot_activate : given.a_startup_tas
 {
     Exception _error;
 
-    async Task Because() => _error = await Catch.Exception(Execute);
+    async Task Because() => _error = await Catch.Exception(ExecuteAndSettle);
 
     [Fact] void should_complete_startup() => _error.ShouldBeNull();
     [Fact] async Task should_exhaust_the_capture_subscription_retry_budget() => await _patternCapture.Received(5).Subscribe(_eventStore, _namespace);

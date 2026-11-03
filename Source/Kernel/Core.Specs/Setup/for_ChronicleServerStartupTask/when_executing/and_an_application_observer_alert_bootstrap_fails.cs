@@ -11,15 +11,19 @@ namespace Orleans.Hosting.for_ChronicleServerStartupTask.when_executing;
 
 public class and_an_application_observer_alert_bootstrap_fails : given.a_startup_task_with_incomplete_persisted_capture
 {
-    readonly TimeoutException _bootstrapFailure = new();
+    const int FailedActivations = 6;
+
     IObserver _applicationObserver;
+    StartupWorkItem _observerWork;
+    int _activations;
     Exception _error;
 
     void Establish()
     {
         _applicationObserver = Substitute.For<IObserver>();
         _grainFactory.GetGrain<IObserver>(new ObserverKey("unsubscribed", _eventStore, _namespace, EventSequenceId.Outbox)).Returns(_applicationObserver);
-        _applicationObserver.Ensure().Returns(_ => Task.FromException(_bootstrapFailure));
+        _observerWork = new("ActivateObserver", new ObserverKey("unsubscribed", _eventStore, _namespace, EventSequenceId.Outbox).ToString());
+        _applicationObserver.Ensure().Returns(_ => ++_activations <= FailedActivations ? Task.FromException(new TimeoutException()) : Task.CompletedTask);
         _observerStateStorage.GetAll().Returns([
             ObserverState.Empty with { Identifier = PatternCapture.ObserverIdentifier },
             ObserverState.Empty with { Identifier = "unsubscribed", RunningState = ObserverRunningState.Disconnected }
@@ -30,10 +34,11 @@ public class and_an_application_observer_alert_bootstrap_fails : given.a_startup
         ]);
     }
 
-    async Task Because() => _error = await Catch.Exception(Execute);
+    async Task Because() => _error = await Catch.Exception(ExecuteAndSettle);
 
-    [Fact] void should_fail_startup_with_the_application_bootstrap_failure() => _error.ShouldEqual(_bootstrapFailure);
-    [Fact] async Task should_exhaust_the_required_bootstrap_retry_budget() => await _applicationObserver.Received(5).Ensure();
+    [Fact] void should_not_fail_startup() => _error.ShouldBeNull();
+    [Fact] async Task should_keep_retrying_the_bootstrap_until_it_succeeds() => await _applicationObserver.Received(FailedActivations + 1).Ensure();
+    [Fact] void should_escalate_through_the_seam() => _escalation.Escalations.Select(_ => (_.Item, _.Attempts)).ShouldContainOnly([(_observerWork, RecoverableStartupWork.EscalateAfterFailures)]);
     [Fact] async Task should_not_require_capture_alert_bootstrap() => await _captureObserver.DidNotReceive().Ensure();
-    [Fact] void should_not_run_the_final_authentication_step() => _bootstrapClientsEnsured.ShouldBeFalse();
+    [Fact] void should_ensure_bootstrap_clients() => _bootstrapClientsEnsured.ShouldBeTrue();
 }
