@@ -14,7 +14,6 @@ public class when_a_conditional_upsert_one_finds_no_document(ReplicaSetMongoDBFi
     UpdateResult _result;
     BsonDocument _document;
 
-
     async Task Because()
     {
         _error = await Catch.Exception(async () => _result = await _writes.ConditionalUpsertOne(_models, new BsonDocument { { "_id", 2 }, { "watermark", new BsonDocument("$lt", 10) } }, new BsonDocument("_id", 2), new BsonDocument("$set", new BsonDocument("watermark", 10)), new UpdateOptions { IsUpsert = true }));

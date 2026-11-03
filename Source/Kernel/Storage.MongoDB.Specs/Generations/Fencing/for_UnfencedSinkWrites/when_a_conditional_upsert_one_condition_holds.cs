@@ -18,7 +18,7 @@ public class when_a_conditional_upsert_one_condition_holds(ReplicaSetMongoDBFixt
 
     async Task Because()
     {
-        _error = await Catch.Exception(async () => _result = await new UnfencedSinkWrites().ConditionalUpsertOne(_models, new BsonDocument { { "_id", 2 }, { "watermark", new BsonDocument("$lt", 10) } }, new BsonDocument("_id", 2), new BsonDocument("$set", new BsonDocument("watermark", 10)), new UpdateOptions { IsUpsert = true }));
+        _error = await Catch.Exception(async () => _result = await ((ISinkWrites)new UnfencedSinkWrites()).ConditionalUpsertOne(_models, new BsonDocument { { "_id", 2 }, { "watermark", new BsonDocument("$lt", 10) } }, new BsonDocument("_id", 2), new BsonDocument("$set", new BsonDocument("watermark", 10)), new UpdateOptions { IsUpsert = true }));
         _document = await _models.Find(new BsonDocument("_id", 2)).FirstOrDefaultAsync();
     }
 
