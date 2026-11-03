@@ -196,7 +196,7 @@ public partial class ReadModelScenario<TReadModel>(TReadModel? initialState, Def
     /// <c language="csharp">GetInstanceById</c> calls return the instances registered via
     /// <c language="csharp">Given.ForEventSourceId(...).ReadModel(...)</c>.
     /// </remarks>
-    public IReadModels ReadModels => EventStore().ReadModels;
+    public IReadModels ReadModels => SeededReadModels();
 
     /// <summary>
     /// Gets the <see cref="IClientArtifactsProvider"/> holding the artifacts Chronicle discovered — the same
@@ -310,7 +310,7 @@ public partial class ReadModelScenario<TReadModel>(TReadModel? initialState, Def
         }
 
         _processed = false;
-        _eventStore?.RegisterReadModelInstance(eventSourceId, readModel);
+        RegisterSeed(eventSourceId, readModel);
     }
 
     /// <summary>
@@ -377,6 +377,7 @@ public partial class ReadModelScenario<TReadModel>(TReadModel? initialState, Def
     public void Dispose()
     {
         _eventStore?.Dispose();
+        if (_borrowedStore is not null && _syntheticInputSequenceId is not null) _borrowedStore.TestingStore.RemoveSequence(_syntheticInputSequenceId);
         if (serviceProvider is null && Services.Any() && _resolvedServiceProvider is IDisposable disposable) disposable.Dispose();
         GC.SuppressFinalize(this);
     }
@@ -414,18 +415,12 @@ public partial class ReadModelScenario<TReadModel>(TReadModel? initialState, Def
 
     EventStoreForTesting EventStore()
     {
+        if (_borrowedStore is not null) return _borrowedStore;
         if (_eventStore is null)
         {
             _eventStore = new EventStoreForTesting(ResolvedServiceProvider(), defaults.ClientArtifactsProvider, defaults.ScenarioOptions, testingStore: null, eventLog: null, eventStore: defaults.EventStore.Name, @namespace: defaults.EventStore.Namespace);
             ((ReadModelsForTesting)_eventStore.ReadModels).DisableObservation();
-            ((ReadModelsForTesting)_eventStore.ReadModels).BeforeInstanceRead = () =>
-            {
-                if (_readModelSeeds.Count > 0 || _namedReadModelSeeds.Count > 0) EnsureProcessed();
-            };
-            foreach (var (key, seed) in _readModelSeeds)
-            {
-                _eventStore.RegisterReadModelInstance(key, seed);
-            }
+            AttachSeeds((ReadModelsForTesting)_eventStore.ReadModels);
         }
 
         return _eventStore;
@@ -479,7 +474,7 @@ public partial class ReadModelScenario<TReadModel>(TReadModel? initialState, Def
         if (!_processed && (_collectedEvents.Count > 0 || HasSeeds))
         {
             (_instance, _instances) = ProcessEvents(_collectedEvents).GetAwaiter().GetResult();
-            if (HasSeeds) ((ReadModelsForTesting)EventStore().ReadModels).ReplaceInstances(_instances);
+            if (HasSeeds) SeededReadModels().ReplaceInstances(_instances);
             _processed = true;
         }
     }
@@ -498,7 +493,8 @@ public partial class ReadModelScenario<TReadModel>(TReadModel? initialState, Def
             InitialState = _initialState,
             SeededInstances = _readModelSeeds,
             NamedSeededInstances = _namedReadModelSeeds.Values.ToArray(),
-            StrictEventSubscription = _strictEventSubscription
+            StrictEventSubscription = _strictEventSubscription,
+            SyntheticInputSequenceId = _syntheticInputSequenceId
         };
         return fold.Process(events);
     }

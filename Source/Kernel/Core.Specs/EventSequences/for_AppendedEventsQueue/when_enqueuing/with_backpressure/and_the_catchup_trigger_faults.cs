@@ -8,7 +8,6 @@ using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.EventSequences.for_AppendedEventsQueue.when_enqueuing.with_observer_that_is_unreachable.given;
 using Cratis.Chronicle.Observation;
 using Cratis.Metrics;
-using Cratis.Traces;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -48,7 +47,6 @@ public class and_the_catchup_trigger_faults : given.all_dependencies
             _taskFactory,
             _grainFactory,
             Substitute.For<IMeter<AppendedEventsQueue>>(),
-            new ActivitySource<AppendedEventsQueue>(),
             Options.Create(new ChronicleOptions
             {
                 Events = new Configuration.Events { QueueBoundedCapacity = 1 }

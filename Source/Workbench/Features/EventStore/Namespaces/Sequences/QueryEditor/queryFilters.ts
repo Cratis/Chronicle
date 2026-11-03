@@ -67,7 +67,6 @@ export const buildFilterDefinitions = (
         label: labels.eventType,
         type: 'string',
         multi: true,
-        searchable: true,
         searchPlaceholder: labels.searchEventTypes,
         options: eventTypeIds.map(id => ({ key: id, label: id, value: id }))
     },

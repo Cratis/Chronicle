@@ -14,6 +14,6 @@ public class and_asking_fails_with_a_message_naming_the_target : given.a_connect
     Task Because() => CheckCompatibility();
 
     [Fact] void should_not_refuse_the_server() => _failure.ShouldBeNull();
-    [Fact] void should_log_that_the_check_could_not_be_made() => _logger.Messages.ShouldContain(message => message.Contains("Could not ask the server", StringComparison.Ordinal));
+    [Fact] void should_log_that_the_check_could_not_be_made() => _logger.Messages.ShouldContain(message => message.Contains("Could not reach the server", StringComparison.Ordinal));
     [Fact] void should_not_expose_user_information() => AssertNothingSensitiveWasExposed();
 }

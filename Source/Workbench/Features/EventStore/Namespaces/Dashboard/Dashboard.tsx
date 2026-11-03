@@ -17,6 +17,7 @@ import { HealthTiles } from '../../Dashboard/HealthTiles';
 import { JobsWidget } from '../../Dashboard/JobsWidget';
 import { ObserversOverTimeWidget } from '../../Dashboard/ObserversOverTimeWidget';
 import { readTail } from '../../Dashboard/readers';
+import { readStatistics } from '../../Dashboard/statistics';
 import { ServerHealthWidget } from '../../Dashboard/ServerHealthWidget';
 import { ThroughputWidget } from '../../Dashboard/ThroughputWidget';
 import { TopEventTypesWidget } from '../../Dashboard/TopEventTypesWidget';
@@ -42,6 +43,7 @@ export const Dashboard = () => {
     const namespacePath = `${basePath}/${namespace}`;
 
     const [statistics] = StatisticsForNamespace.use({ eventStore, namespace });
+    const figures = readStatistics(statistics);
     const [observers] = ObserveObservers.use({ eventStore, namespace });
     const [failedPartitions] = AllFailedPartitions.use({ eventStore, namespace });
     const [recommendations] = AllRecommendations.use({ eventStore, namespace });
@@ -72,7 +74,7 @@ export const Dashboard = () => {
                     className='dashboard__rail'
                     eventStore={eventStore}
                     namespace={namespace}
-                    totalEvents={statistics.isReady && statistics.isSuccess ? Number(statistics.data.totalEvents ?? 0) : undefined}
+                    totalEvents={figures.totalEvents}
                     tail={tail.value}
                     basePath={basePath}
                     updatedAt={tail.updatedAt} />
@@ -90,8 +92,8 @@ export const Dashboard = () => {
 
                 <ObserversOverTimeWidget observers={health?.observers} scope={`${eventStore}/${namespace}`} />
                 <TopEventTypesWidget
-                    perEventType={statistics.isReady && statistics.isSuccess ? statistics.data.perEventType ?? [] : undefined}
-                    failed={statistics.isReady && !statistics.isSuccess} />
+                    perEventType={figures.perEventType}
+                    failed={figures.failed} />
 
                 <AttentionWidget className='dashboard__wide' items={attention} namespacePath={namespacePath} />
                 <JobsWidget jobs={jobs.isReady ? jobs.data : undefined} namespacePath={namespacePath} />

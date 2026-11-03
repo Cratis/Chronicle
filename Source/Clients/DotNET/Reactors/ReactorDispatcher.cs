@@ -44,6 +44,29 @@ internal sealed class ReactorDispatcher(
     ILogger<Reactors> logger,
     ILoggerFactory loggerFactory)
 {
+#if CHRONICLE_ROLLING_DIAGNOSTICS
+    /// <summary>
+    /// Dispatches an isolated diagnostic candidate's batch with stream-local correlation.
+    /// </summary>
+    /// <param name="handler">The reactor handler.</param>
+    /// <param name="handle">The fluent callback, if registered.</param>
+    /// <param name="events">The delivered batch.</param>
+    /// <param name="namespace">The event store namespace.</param>
+    /// <param name="publish">The outbound result publisher.</param>
+    /// <param name="cancellationToken">The shutdown token.</param>
+    /// <param name="diagnosticStream">The diagnostic stream incarnation.</param>
+    /// <param name="diagnosticBatch">The diagnostic batch ordinal.</param>
+    /// <returns>The dispatch task.</returns>
+    public async Task Dispatch(
+        ReactorHandler handler,
+        Func<ReactorEvent, CancellationToken, Task>? handle,
+        EventsToObserve events,
+        EventStoreNamespaceName @namespace,
+        Action<ReactorResult> publish,
+        CancellationToken cancellationToken,
+        Guid diagnosticStream = default,
+        long diagnosticBatch = 0)
+#else
     /// <summary>
     /// Dispatches a batch of events, or a replay notification, to a reactor.
     /// </summary>
@@ -61,7 +84,12 @@ internal sealed class ReactorDispatcher(
         EventStoreNamespaceName @namespace,
         Action<ReactorResult> publish,
         CancellationToken cancellationToken)
+#endif
     {
+#if CHRONICLE_ROLLING_DIAGNOSTICS
+        using var diagnosticScope = ReactorsDeliveryDiagnosticsLogging.BeginScope(logger, diagnosticStream, diagnosticBatch);
+        ReactorsDeliveryDiagnosticsLogging.Members(logger, diagnosticStream, diagnosticBatch, events);
+#endif
         if (events.ReplayState != ReplayState.None)
         {
             if (handle is null)
@@ -88,6 +116,9 @@ internal sealed class ReactorDispatcher(
             {
                 if (cancellationToken.IsCancellationRequested)
                 {
+#if CHRONICLE_ROLLING_DIAGNOSTICS
+                    ReactorsDeliveryDiagnosticsLogging.Record(logger, 10, diagnosticStream, diagnosticBatch, events.DeliveryId, @event.Context.SequenceNumber);
+#endif
                     return;
                 }
 
@@ -109,10 +140,19 @@ internal sealed class ReactorDispatcher(
                             handler.EndHandling();
                         }
                     }
+#if CHRONICLE_ROLLING_DIAGNOSTICS
+                    var previousSequence = lastSuccessfullyObservedEvent.Value;
+#endif
                     lastSuccessfullyObservedEvent = @event.Context.SequenceNumber;
+#if CHRONICLE_ROLLING_DIAGNOSTICS
+                    ReactorsDeliveryDiagnosticsLogging.Record(logger, 7, diagnosticStream, diagnosticBatch, events.DeliveryId, lastSuccessfullyObservedEvent.Value, previousSequence);
+#endif
                 }
                 catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
                 {
+#if CHRONICLE_ROLLING_DIAGNOSTICS
+                    ReactorsDeliveryDiagnosticsLogging.Record(logger, 10, diagnosticStream, diagnosticBatch, events.DeliveryId, @event.Context.SequenceNumber);
+#endif
                     return;
                 }
                 catch (Exception ex)
@@ -189,7 +229,13 @@ internal sealed class ReactorDispatcher(
                     FailedToHandleEvent(handleResult, @event.Context.EventType.Id);
                     break;
                 }
+#if CHRONICLE_ROLLING_DIAGNOSTICS
+                var previousSequence = lastSuccessfullyObservedEvent.Value;
+#endif
                 lastSuccessfullyObservedEvent = @event.Context.SequenceNumber;
+#if CHRONICLE_ROLLING_DIAGNOSTICS
+                ReactorsDeliveryDiagnosticsLogging.Record(logger, 7, diagnosticStream, diagnosticBatch, events.DeliveryId, lastSuccessfullyObservedEvent.Value, previousSequence);
+#endif
             }
             catch (Exception ex)
             {
@@ -236,6 +282,9 @@ internal sealed class ReactorDispatcher(
 
         void FailedToHandleEventWithException(Exception ex, EventTypeId eventTypeId)
         {
+#if CHRONICLE_ROLLING_DIAGNOSTICS
+            ReactorsDeliveryDiagnosticsLogging.Record(logger, 11, diagnosticStream, diagnosticBatch, events.DeliveryId);
+#endif
             LogErrorWhileHandlingEvent(ex, eventTypeId);
             exceptionMessages = ex.GetAllMessages();
             exceptionStackTrace = ex.StackTrace ?? string.Empty;
@@ -262,7 +311,23 @@ internal sealed class ReactorDispatcher(
                 ExceptionStackTrace = exceptionStackTrace
             };
 
+#if CHRONICLE_ROLLING_DIAGNOSTICS
+            ReactorsDeliveryDiagnosticsLogging.Record(logger, 8, diagnosticStream, diagnosticBatch, events.DeliveryId, lastSuccessfullyObservedEvent.Value, state: (int)state);
+#endif
+#if CHRONICLE_ROLLING_DIAGNOSTICS
+            try
+            {
+                publish(result);
+            }
+            catch
+            {
+                ReactorsDeliveryDiagnosticsLogging.Record(logger, 11, diagnosticStream, diagnosticBatch, events.DeliveryId, lastSuccessfullyObservedEvent.Value, state: (int)state);
+                throw;
+            }
+            ReactorsDeliveryDiagnosticsLogging.Record(logger, 9, diagnosticStream, diagnosticBatch, events.DeliveryId, lastSuccessfullyObservedEvent.Value, state: (int)state);
+#else
             publish(result);
+#endif
         }
     }
 

@@ -28,4 +28,10 @@ public record StoredEventGenerations(
     int RevisionCount,
     string ConcurrencyToken,
     EventTypeGeneration? RevisedGeneration = null,
-    string? RevisedContent = null);
+    string? RevisedContent = null)
+{
+    /// <summary>
+    /// Gets the recorded provenance of derived generations.
+    /// </summary>
+    public IReadOnlyDictionary<EventTypeGeneration, GenerationProvenance> DerivedGenerations { get; init; } = new Dictionary<EventTypeGeneration, GenerationProvenance>();
+}

@@ -14,6 +14,7 @@ public class a_logger_that_remembers_messages<T> : ILogger<T>
     readonly List<string> _messages = [];
     readonly List<IReadOnlyList<KeyValuePair<string, object?>>> _states = [];
     readonly List<Exception> _exceptions = [];
+    readonly List<(LogLevel Level, string Message, Exception? Exception)> _entries = [];
 
     /// <summary>Gets the messages logged so far.</summary>
     public IReadOnlyList<string> Messages => _messages;
@@ -23,6 +24,14 @@ public class a_logger_that_remembers_messages<T> : ILogger<T>
 
     /// <summary>Gets the actual exception objects logged so far.</summary>
     public IReadOnlyList<Exception> Exceptions => _exceptions;
+
+    /// <summary>Gets the captured entries in logging order.</summary>
+    public IReadOnlyList<(LogLevel Level, string Message, Exception? Exception)> Entries => _entries;
+
+    /// <summary>Gets entries at the specified level.</summary>
+    /// <param name="level">The level to select.</param>
+    /// <returns>The matching entries.</returns>
+    public IEnumerable<(LogLevel Level, string Message, Exception? Exception)> AtLevel(LogLevel level) => _entries.Where(_ => _.Level == level);
 
     /// <inheritdoc/>
     public IDisposable? BeginScope<TState>(TState state)
@@ -34,7 +43,9 @@ public class a_logger_that_remembers_messages<T> : ILogger<T>
     /// <inheritdoc/>
     public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
     {
-        _messages.Add(formatter(state, exception));
+        var message = formatter(state, exception);
+        _messages.Add(message);
+        _entries.Add((logLevel, message, exception));
         _states.Add(state is IEnumerable<KeyValuePair<string, object?>> arguments
             ? arguments.ToArray()
             : [new("state", state)]);

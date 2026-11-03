@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Reactive.Concurrency;
 using System.Reactive.Linq;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
@@ -29,7 +30,7 @@ public class and_only_a_deferral_deadline_changes : given.a_failed_partition_sto
         var initial = new TaskCompletionSource();
         var changed = new TaskCompletionSource<Concepts.Observation.FailedPartition>();
         _deadline = since.AddMinutes(3);
-        _subscription = _storage.ObserveAllFor().Subscribe(partitions =>
+        _subscription = _storage.ObserveAllFor().SubscribeOn(TaskPoolScheduler.Default).Subscribe(partitions =>
         {
             var partition = partitions.SingleOrDefault();
             if (partition?.Deferral?.Until == since.AddMinutes(1)) initial.TrySetResult();

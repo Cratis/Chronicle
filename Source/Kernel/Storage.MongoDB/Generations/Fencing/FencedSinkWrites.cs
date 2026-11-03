@@ -126,7 +126,7 @@ public sealed partial class FencedSinkWrites(IFenceTokenSource tokens, IFencedBa
     {
         if (_splitting.Value && update is not null)
         {
-            SinkBatchDocuments.RequireRetrySafe(collection, update);
+            SinkBatchDocuments.RequireRetrySafe(collection, update, _cap);
         }
         if (_splitting.Value && !many)
         {
@@ -154,7 +154,7 @@ public sealed partial class FencedSinkWrites(IFenceTokenSource tokens, IFencedBa
 
     async Task<UpdateResult> SplitUpdate(IMongoCollection<BsonDocument> collection, FilterDefinition<BsonDocument> filter, UpdateDefinition<BsonDocument> update, UpdateOptions options)
     {
-        SinkBatchDocuments.RequireRetrySafe(collection, update);
+        SinkBatchDocuments.RequireRetrySafe(collection, update, _cap);
         if (options.IsUpsert)
         {
             throw new InvalidOperationException("Split fenced multi-document upserts require a destination key.");

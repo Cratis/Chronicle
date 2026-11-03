@@ -9,6 +9,8 @@ namespace Cratis.Chronicle.Storage.Observation;
 /// <summary>
 /// Provider-independent downgrade checks over persisted event-store and namespace observer state.
 /// </summary>
+// Each fact persists a different observer initialization state and needs fresh provider storage.
+[PerFactSpecificationLifecycle]
 public abstract class ObserverStorageCompatibilityContract : Specification
 {
     /// <summary>
@@ -22,6 +24,8 @@ public abstract class ObserverStorageCompatibilityContract : Specification
     /// </summary>
     /// <returns>The observer state storage.</returns>
     protected abstract IObserverStateStorage OpenObservers();
+
+    static readonly DateTimeOffset _changedAt = new(2026, 1, 2, 3, 4, 5, TimeSpan.Zero);
 
     [Fact] public async Task should_stamp_and_round_trip_the_owner()
     {
@@ -57,6 +61,71 @@ public abstract class ObserverStorageCompatibilityContract : Specification
     {
         await OpenObservers().ClaimOwnership("observer", "another-sequence");
         (await OpenObservers().GetAll()).ShouldBeEmpty();
+    }
+    [Fact] public async Task should_round_trip_a_running_state_timestamp()
+    {
+        await OpenObservers().Save(new() { Identifier = "observer" }, EventSequenceId.Log);
+        (await OpenObservers().SaveRunningStateChangedAt("observer", _changedAt, EventSequenceId.Log)).ShouldBeTrue();
+        (await OpenObservers().GetRunningStateChangedAt("observer")).ShouldEqual(_changedAt);
+        (await OpenObservers().GetRunningStatesChangedAt())["observer"].ShouldEqual(_changedAt);
+    }
+    [Fact] public async Task should_keep_the_running_state_timestamp_when_saving_progress()
+    {
+        await OpenObservers().Save(new() { Identifier = "observer" }, EventSequenceId.Log);
+        await OpenObservers().SaveRunningStateChangedAt("observer", _changedAt, EventSequenceId.Log);
+        await OpenObservers().Save(new() { Identifier = "observer", LastHandledEventSequenceNumber = 43 }, EventSequenceId.Log);
+        (await OpenObservers().GetRunningStateChangedAt("observer")).ShouldEqual(_changedAt);
+        (await OpenObservers().Get("observer")).LastHandledEventSequenceNumber.ShouldEqual((Concepts.Events.EventSequenceNumber)43);
+    }
+    [Fact] public async Task should_keep_the_running_state_timestamp_when_claiming_ownership()
+    {
+        await OpenObservers().Save(new() { Identifier = "observer" }, EventSequenceId.Log);
+        await OpenObservers().SaveRunningStateChangedAt("observer", _changedAt, EventSequenceId.Log);
+        await OpenObservers().ClaimOwnership("observer", "another-sequence");
+        (await OpenObservers().GetRunningStateChangedAt("observer")).ShouldEqual(_changedAt);
+    }
+    [Fact] public async Task should_refuse_a_running_state_timestamp_from_another_owner()
+    {
+        await OpenObservers().Save(new() { Identifier = "observer" }, EventSequenceId.Log);
+        await OpenObservers().SaveRunningStateChangedAt("observer", _changedAt, EventSequenceId.Log);
+        (await OpenObservers().SaveRunningStateChangedAt("observer", _changedAt.AddHours(1), "another-sequence")).ShouldBeFalse();
+        (await OpenObservers().GetRunningStateChangedAt("observer")).ShouldEqual(_changedAt);
+    }
+    [Fact] public async Task should_read_an_unknown_running_state_timestamp_as_null()
+    {
+        await OpenObservers().Save(new() { Identifier = "observer" }, EventSequenceId.Log);
+        (await OpenObservers().GetRunningStateChangedAt("observer")).ShouldBeNull();
+        (await OpenObservers().GetRunningStatesChangedAt()).ContainsKey("observer").ShouldBeFalse();
+    }
+    [Fact] public async Task should_clear_the_running_state_timestamp_when_writing_null()
+    {
+        await OpenObservers().Save(new() { Identifier = "observer" }, EventSequenceId.Log);
+        await OpenObservers().SaveRunningStateChangedAt("observer", _changedAt, EventSequenceId.Log);
+        (await OpenObservers().SaveRunningStateChangedAt("observer", null, EventSequenceId.Log)).ShouldBeTrue();
+        (await OpenObservers().GetRunningStateChangedAt("observer")).ShouldBeNull();
+        (await OpenObservers().GetRunningStatesChangedAt()).ContainsKey("observer").ShouldBeFalse();
+    }
+    [Fact] public async Task should_move_the_running_state_timestamp_when_renaming()
+    {
+        await OpenObservers().Save(new() { Identifier = "observer" }, EventSequenceId.Log);
+        await OpenObservers().SaveRunningStateChangedAt("observer", _changedAt, EventSequenceId.Log);
+        await OpenObservers().Rename("observer", "renamed");
+        (await OpenObservers().GetRunningStateChangedAt("renamed")).ShouldEqual(_changedAt);
+        (await OpenObservers().GetRunningStateChangedAt("observer")).ShouldBeNull();
+    }
+    [Fact] public async Task should_remove_the_running_state_timestamp_when_deleting()
+    {
+        await OpenObservers().Save(new() { Identifier = "observer" }, EventSequenceId.Log);
+        await OpenObservers().SaveRunningStateChangedAt("observer", _changedAt, EventSequenceId.Log);
+        await OpenObservers().Delete("observer");
+        (await OpenObservers().GetRunningStateChangedAt("observer")).ShouldBeNull();
+        (await OpenObservers().GetRunningStatesChangedAt()).ShouldBeEmpty();
+    }
+    [Fact] public async Task should_not_create_state_when_saving_a_timestamp_for_a_missing_observer()
+    {
+        (await OpenObservers().SaveRunningStateChangedAt("observer", _changedAt, EventSequenceId.Log)).ShouldBeFalse();
+        (await OpenObservers().GetAll()).ShouldBeEmpty();
+        (await OpenObservers().GetRunningStateChangedAt("observer")).ShouldBeNull();
     }
     [Fact] public async Task should_allow_a_missing_legacy_observer() => (await Check()).ShouldBeNull();
     [Fact] public async Task should_not_treat_shadow_claims_as_a_downgrade_floor()

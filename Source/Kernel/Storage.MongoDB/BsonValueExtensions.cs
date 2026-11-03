@@ -88,6 +88,15 @@ public static class BsonValueExtensions
 
         switch (input)
         {
+            case byte actualValue:
+                return new BsonInt32(actualValue);
+
+            case sbyte actualValue:
+                return new BsonInt32(actualValue);
+
+            case char actualValue:
+                return new BsonString(actualValue.ToString());
+
             case short actualValue:
                 return new BsonInt32(actualValue);
 

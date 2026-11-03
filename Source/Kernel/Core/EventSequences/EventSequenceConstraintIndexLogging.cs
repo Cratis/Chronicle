@@ -11,6 +11,18 @@ namespace Cratis.Chronicle.EventSequences;
 
 internal static partial class EventSequenceConstraintIndexLogging
 {
+    [LoggerMessage(Message = "Constraint rebuild {RunId} on {Sequence} is still holding {Constraints} after {Held}; job step is {Step}")]
+    internal static partial void ConstraintIndexRebuildHeld(this ILogger<EventSequence> logger, LogLevel level, EventSequenceKey sequence, ConstraintIndexRebuildRunId runId, string constraints, TimeSpan held, string step);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Releasing constraint rebuild {RunId} on {Sequence} for {Constraints} because its job step is {Step}; catching the index up from the event sequence")]
+    internal static partial void ReleasingConstraintIndexRebuildAfterStepEnded(this ILogger<EventSequence> logger, EventSequenceKey sequence, ConstraintIndexRebuildRunId runId, string constraints, string step);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Could not read the job step of constraint rebuild {RunId} on {Sequence}")]
+    internal static partial void ConstraintIndexRebuildLivenessUnreadable(this ILogger<EventSequence> logger, EventSequenceKey sequence, ConstraintIndexRebuildRunId runId, Exception? exception);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Could not release constraint rebuild {RunId} on {Sequence}; retrying at the next check")]
+    internal static partial void ConstraintIndexRebuildReleaseFailed(this ILogger<EventSequence> logger, EventSequenceKey sequence, ConstraintIndexRebuildRunId runId, Exception exception);
+
     [LoggerMessage(Level = LogLevel.Warning, Message = "Ignoring late Starting for finished constraint rebuild {RunId} on {Sequence}")]
     internal static partial void IgnoringFinishedConstraintIndexRebuild(this ILogger<EventSequence> logger, EventSequenceKey sequence, ConstraintIndexRebuildRunId runId);
 

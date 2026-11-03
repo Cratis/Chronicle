@@ -8,7 +8,7 @@ import type { JsonSchema } from '@cratis/components/types';
 import type { JsonSchema as ProjectionJsonSchema } from '@cratis/screenplay-language/projection';
 import { ProjectionEditor, setCreateReadModelCallback, setEditReadModelCallback, setDraftReadModel as setDraftReadModelInProvider, toComponentsSchema } from 'Components/ProjectionEditor';
 import { ReadModelTypeEditor } from 'Components/ReadModelTypeEditor/ReadModelTypeEditor';
-import { ActionMenubar, Button, type ActionMenuItem } from '@cratis/components/Common';
+import { ActionMenubar, type ActionMenuItem } from '@cratis/components/Common';
 import { Dialog } from '@cratis/components/Dialogs';
 import { useState, useEffect, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
@@ -25,6 +25,7 @@ import { useDialog, useConfirmationDialog, DialogResult, DialogButtons } from '@
 import { TimeMachineDialog, TimeScrubberDialog, ReadModelInstances, getInstanceKey } from 'Components';
 import { Json } from 'Features';
 import { SaveWithInferredReadModelDialog } from './SaveWithInferredReadModelDialog';
+import { ProjectionAction } from './ProjectionAction';
 
 const projectionDeclarationPattern = /^(\s*projection\s+[\w.]+\s*=>\s*)([\w.]+)/m;
 
@@ -396,13 +397,10 @@ export const Projections = () => {
                                     // Rendered through the template so the disabled action can still explain
                                     // itself on hover; ActionMenuItem carries no tooltip of its own.
                                     template: saveDisabledReason ? (item: ActionMenuItem) => (
-                                        <Button
-                                            variant='ghost'
-                                            disabled
+                                        <ProjectionAction
                                             icon={item.icon}
                                             label={item.label}
-                                            tooltip={saveDisabledReason}
-                                            tooltipOptions={{ position: 'bottom' }} />
+                                            disabledReason={saveDisabledReason} />
                                     ) : undefined
                                 },
                                 {
@@ -440,13 +438,10 @@ export const Projections = () => {
                                     // Rendered through the template so the disabled action can still explain
                                     // itself on hover; ActionMenuItem carries no tooltip of its own.
                                     template: previewDisabledReason ? (item: ActionMenuItem) => (
-                                        <Button
-                                            variant='ghost'
-                                            disabled
+                                        <ProjectionAction
                                             icon={item.icon}
                                             label={item.label}
-                                            tooltip={previewDisabledReason}
-                                            tooltipOptions={{ position: 'bottom' }} />
+                                            disabledReason={previewDisabledReason} />
                                     ) : undefined
                                 },
                                 {

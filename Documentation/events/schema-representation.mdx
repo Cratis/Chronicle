@@ -128,7 +128,7 @@ read-model properties. The current registry contains:
 
 | Name pattern | Provider | Storage | Index |
 | --- | --- | --- | --- |
-| `__order_{column}` | SQLite, scalar decimal properties including decimal keys | Generated VIRTUAL TEXT | When the decimal property declares an index |
+| `__order_{column}` | SQLite, scalar decimal properties including decimal keys | Generated VIRTUAL TEXT | When the decimal property declares an index, single (either direction) or as part of a composite index |
 
 If a schema property collides with a shadow name (case-insensitively), the schema property wins:
 the shadow is skipped and the kernel logs a warning. Registration still succeeds, but an operation
