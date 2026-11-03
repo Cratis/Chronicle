@@ -121,8 +121,10 @@ This allows teams using SQL databases (SQL Server, PostgreSQL, SQLite) to take a
 
 ### Null nested objects
 
-When a projection sets a nested object to `null`, the SQL sink stores SQL `NULL` in that object's JSON
-column, and reads return the property as `null`, the same as MongoDB. A later change to one of the
+When a projection sets a nested object property to `null` (for example, an event property mapped
+to it carries `null`), the SQL sink stores SQL `NULL` in that object's JSON column, and reads return
+the property as `null`, the same as MongoDB. Removing a nested object with `RemovedWith` works
+differently: it stores the JSON literal `null` in the column, which also reads back as `null`. A later change to one of the
 object's properties creates the object again. An empty object is still stored as `{}` and read back
 as an empty object. Collection columns keep their existing storage.
 
@@ -134,7 +136,7 @@ Kernels before this change stored a `null` nested object as `{}`. Keep the follo
   the event history that produced the rows.
 - Older kernels read the new `NULL` values correctly. Until every kernel in a cluster is upgraded,
   an older kernel still writes `{}`, and rolling back to an older version brings those writes back.
-- If you query the tables directly, `column IS NULL` matches only rows written as `null` by the new
+- If you query the tables directly, `column IS NULL` matches only objects set to `null` by the new
   kernel on SQLite, PostgreSQL and SQL Server alike. It does not match `{}`, and it does not match a JSON
   `null` literal (`'null'::jsonb` on PostgreSQL, the text `null` on SQL Server and SQLite).
   To match `{}` use `column = '{}'::jsonb` on PostgreSQL and `column = '{}'` on SQL Server and SQLite.
