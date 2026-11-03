@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Reactive.Concurrency;
 using System.Reactive.Subjects;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Storage;
@@ -30,7 +31,9 @@ public class a_live_event_store_list : Specification
         _errors = [];
     }
 
-    protected void Observe() => _subscription = LiveEventStoreNames.Observe(_storage, _initialization, _scheduler).Subscribe(_emissions.Add, _errors.Add);
+    protected virtual IScheduler RetryScheduler => _scheduler;
+
+    protected void Observe() => _subscription = LiveEventStoreNames.Observe(_storage, _initialization, RetryScheduler).Subscribe(_emissions.Add, _errors.Add);
 
     void Destroy()
     {

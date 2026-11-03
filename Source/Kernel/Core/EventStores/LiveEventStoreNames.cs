@@ -6,6 +6,7 @@ using System.Reactive.Concurrency;
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
+using System.Reactive.Threading.Tasks;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Storage;
 
@@ -48,16 +49,32 @@ internal static class LiveEventStoreNames
     /// <returns>An observable emitting the initialized stores after every attempt.</returns>
     /// <remarks>
     /// Each retry replaces the previous attempt and timer instead of nesting subscriptions, so a store that keeps
-    /// failing costs constant memory for as long as the list is observed.
+    /// failing costs constant memory for as long as the list is observed. Starting an attempt and stopping share one lock,
+    /// so a timer callback that is already running when the subscription is disposed, or superseded by a new stored set,
+    /// cannot start initialization afterwards.
     /// </remarks>
     static IObservable<EventStoreName[]> ObserveInitializedStores(EventStoreName[] stores, IEventStoreInitialization initialization, IScheduler scheduler) =>
         Observable.Create<EventStoreName[]>(observer =>
         {
+            var gate = new Lock();
+            var stopped = false;
             var attempt = new SerialDisposable();
             var timer = new SerialDisposable();
 
-            void Attempt(TimeSpan delay) =>
-                attempt.Disposable = Observable.FromAsync(async () => (await initialization.EnsureAll(stores)).ToArray())
+            void Attempt(TimeSpan delay)
+            {
+                Task<EventStoreName[]> pending;
+                lock (gate)
+                {
+                    if (stopped)
+                    {
+                        return;
+                    }
+
+                    pending = EnsureAll(initialization, stores);
+                }
+
+                attempt.Disposable = pending.ToObservable()
                     .Subscribe(
                         initialized =>
                         {
@@ -72,8 +89,27 @@ internal static class LiveEventStoreNames
                             timer.Disposable = scheduler.Schedule(delay, () => Attempt(next));
                         },
                         observer.OnError);
+            }
 
             Attempt(_initialRetryDelay);
-            return new CompositeDisposable(attempt, timer);
+            return Disposable.Create(() =>
+            {
+                lock (gate)
+                {
+                    stopped = true;
+                }
+
+                attempt.Dispose();
+                timer.Dispose();
+            });
         });
+
+    /// <summary>
+    /// Starts initialization of the stored set, turning a synchronous failure into a faulted task.
+    /// </summary>
+    /// <param name="initialization">The event store initialization service.</param>
+    /// <param name="stores">The stored set of event stores.</param>
+    /// <returns>The initialized stores.</returns>
+    static async Task<EventStoreName[]> EnsureAll(IEventStoreInitialization initialization, EventStoreName[] stores) =>
+        [.. await initialization.EnsureAll(stores)];
 }
