@@ -5,7 +5,7 @@ namespace Cratis.Chronicle.Projections.Engine.for_AppliedEventMarkerClassificati
 
 public class when_an_own_event_type_is_not_keyed_by_event_source_id : given.a_classification_scenario
 {
-    void Establish() { OwnEventResolvesToEventSourceId = false;}
+    void Establish() { OwnEventResolvesToEventSourceId = false; }
 
     void Because() => Classify();
 

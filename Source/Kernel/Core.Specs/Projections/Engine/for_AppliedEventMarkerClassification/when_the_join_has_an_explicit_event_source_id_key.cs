@@ -5,7 +5,7 @@ namespace Cratis.Chronicle.Projections.Engine.for_AppliedEventMarkerClassificati
 
 public class when_the_join_has_an_explicit_event_source_id_key : given.a_classification_scenario
 {
-    void Establish() { JoinKey = new("$eventSourceId");}
+    void Establish() { JoinKey = new("$eventSourceId"); }
 
     void Because() => Classify();
 

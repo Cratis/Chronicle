@@ -5,7 +5,7 @@ namespace Cratis.Chronicle.Projections.Engine.for_AppliedEventMarkerClassificati
 
 public class when_the_projection_is_global : given.a_classification_scenario
 {
-    void Establish() { Scope = Cratis.Chronicle.Concepts.Projections.ProjectionScope.Global;}
+    void Establish() { Scope = Cratis.Chronicle.Concepts.Projections.ProjectionScope.Global; }
 
     void Because() => Classify();
 

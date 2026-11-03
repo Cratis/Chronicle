@@ -5,7 +5,7 @@ namespace Cratis.Chronicle.Projections.Engine.for_AppliedEventMarkerClassificati
 
 public class when_the_join_is_keyed_by_an_event_property : given.a_classification_scenario
 {
-    void Establish() { JoinKey = new("customerId");}
+    void Establish() { JoinKey = new("customerId"); }
 
     void Because() => Classify();
 

@@ -6,7 +6,6 @@ using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Projections.Engine;
-using Cratis.Chronicle.Storage.Sinks;
 
 namespace Cratis.Chronicle.Observation.for_PartitionReplayMarkers;
 

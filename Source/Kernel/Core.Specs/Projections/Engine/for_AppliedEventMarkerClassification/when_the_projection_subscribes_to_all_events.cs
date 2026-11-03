@@ -5,7 +5,7 @@ namespace Cratis.Chronicle.Projections.Engine.for_AppliedEventMarkerClassificati
 
 public class when_the_projection_subscribes_to_all_events : given.a_classification_scenario
 {
-    void Establish() { SubscribesToAllEvents = true;}
+    void Establish() { SubscribesToAllEvents = true; }
 
     void Because() => Classify();
 

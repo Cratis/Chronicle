@@ -5,7 +5,7 @@ namespace Cratis.Chronicle.Projections.Engine.for_AppliedEventMarkerClassificati
 
 public class when_the_projection_has_children : given.a_classification_scenario
 {
-    void Establish() { HasChildren = true;}
+    void Establish() { HasChildren = true; }
 
     void Because() => Classify();
 

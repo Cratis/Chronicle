@@ -5,7 +5,7 @@ namespace Cratis.Chronicle.Projections.Engine.for_AppliedEventMarkerClassificati
 
 public class when_the_projection_is_keyed_by_event_source_id_with_a_root_join : given.a_classification_scenario
 {
-    void Establish() {}
+    void Establish() { }
 
     void Because() => Classify();
 

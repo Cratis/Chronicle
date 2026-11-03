@@ -5,7 +5,7 @@ namespace Cratis.Chronicle.Projections.Engine.for_AppliedEventMarkerClassificati
 
 public class when_the_join_event_is_also_a_from_keyed_by_event_source_id : given.a_classification_scenario
 {
-    void Establish() { JoinEventIsAlsoFrom = true;}
+    void Establish() { JoinEventIsAlsoFrom = true; }
 
     void Because() => Classify();
 

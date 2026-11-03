@@ -5,7 +5,7 @@ namespace Cratis.Chronicle.Projections.Engine.for_AppliedEventMarkerClassificati
 
 public class when_the_projection_has_nested_objects : given.a_classification_scenario
 {
-    void Establish() { HasNested = true;}
+    void Establish() { HasNested = true; }
 
     void Because() => Classify();
 
