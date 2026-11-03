@@ -66,12 +66,14 @@ public sealed class OrleansTraceContextPropagation : IHostedService, IDisposable
         var parent = options.Parent;
 
         // Orleans 10.4 ActivityPropagationGrainCallFilter only injects context if StartActivity succeeds.
-        // Do not create root activities for system calls. PropagationData requests no all-data, so carriers stay
+        // Do not create root activities for system calls, and do not create carriers under an unsampled parent: that
+        // matches what the TracerProvider did when it listened to these sources (ParentBased drops them), so calls under
+        // an unsampled trace cost no more than before (#4607). PropagationData requests no all-data, so carriers stay
         // lightweight; the parent's Recorded flag is remembered for ActivityStarted on this thread. OpenTelemetry does
         // not listen to these sources, so these carrier activities are not exported.
-        if (parent.TraceId == default) return ActivitySamplingResult.None;
+        if (parent.TraceId == default || !parent.TraceFlags.HasFlag(ActivityTraceFlags.Recorded)) return ActivitySamplingResult.None;
 
-        _parentFlags = new(parent.SpanId, parent.TraceFlags.HasFlag(ActivityTraceFlags.Recorded));
+        _parentFlags = new(parent.SpanId, HasRecorded: true);
         return ActivitySamplingResult.PropagationData;
     }
 

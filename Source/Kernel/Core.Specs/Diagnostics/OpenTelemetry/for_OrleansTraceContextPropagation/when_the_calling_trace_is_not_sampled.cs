@@ -17,6 +17,6 @@ public class when_the_calling_trace_is_not_sampled : given.a_kernel_tracer_witho
         CallGrain(() => ChronicleActivity.Source.StartActivity("callee"));
     }
 
-    [Fact] void should_still_propagate_the_trace() => Client.TraceId.ShouldEqual(Caller.TraceId);
-    [Fact] void should_not_create_a_callee_span() => Callee.ShouldBeNull();
+    [Fact] void should_not_create_an_orleans_carrier() => Client.ShouldBeNull();
+    [Fact] void should_start_the_callee_in_a_trace_of_its_own() => Callee.TraceId.ShouldNotEqual(Caller.TraceId);
 }
