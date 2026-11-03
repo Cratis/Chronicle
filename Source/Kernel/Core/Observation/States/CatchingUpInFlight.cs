@@ -6,8 +6,10 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Observation.Jobs;
+using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Orleans.Jobs;
+using Cratis.Orleans.Storage.Jobs;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Observation.States;
@@ -20,6 +22,7 @@ namespace Cratis.Chronicle.Observation.States;
 /// <param name="definitionState"><see cref="IPersistentState{ObserverDefinition}"/> for the observer's definition.</param>
 /// <param name="failuresState"><see cref="IPersistentState{FailedPartitions}"/> for the observer's failed partitions.</param>
 /// <param name="jobsManager"><see cref="IJobsManager"/> for starting partition catch-up jobs.</param>
+/// <param name="storage"><see cref="IStorage"/> for finding the jobs that own held partitions.</param>
 /// <param name="logger">Logger for logging.</param>
 /// <remarks>
 /// On entry, every partition recorded as in-flight on the observer state — but that is not already failed,
@@ -34,6 +37,7 @@ public class CatchingUpInFlight(
     IPersistentState<ObserverDefinition> definitionState,
     IPersistentState<FailedPartitions> failuresState,
     IJobsManager jobsManager,
+    IStorage storage,
     ILogger<CatchingUpInFlight> logger) : BaseObserverState
 {
     /// <inheritdoc/>
@@ -67,15 +71,21 @@ public class CatchingUpInFlight(
         logger.RecoveringInFlightPartitions(state.InFlightPartitions.Count);
 
         var claims = StateMachine as IObserverOwnershipClaims;
+
+        // A catch-up hold is granted and persisted before its job starts, so a crash in between leaves a hold no job owns.
+        // Only a durable job relieves the marker; without one, recovery restarts from the saved position.
+        var owned = await PartitionsOwnedByDurableCatchUp(state);
         var partitions = state.InFlightPartitions
             .Where(p =>
-                !state.CatchingUpPartitions.Contains(p) &&
+                !(state.CatchingUpPartitions.Contains(p) && (owned is null || owned.Contains(p))) &&
                 !state.ReplayingPartitions.Contains(p) &&
                 !failuresState.State.IsFailed(p))
             .ToArray();
 
-        // Other recovery mechanisms own the skipped markers. Keep a private set until each new job is durable.
-        state = state with { InFlightPartitions = partitions.ToHashSet() };
+        // Other recovery mechanisms own the skipped markers. Keep a private set until each new job is durable. A marker
+        // whose ownership could not be looked up is kept for the next activation to decide.
+        var undecided = owned is null ? state.InFlightPartitions.Where(state.CatchingUpPartitions.Contains) : [];
+        state = state with { InFlightPartitions = partitions.Concat(undecided).ToHashSet() };
 
         var startFrom = state.LastHandledEventSequenceNumber.IsActualValue
             ? state.LastHandledEventSequenceNumber.Next()
@@ -120,6 +130,33 @@ public class CatchingUpInFlight(
 
         await StateMachine.TransitionTo<Routing>();
         return state;
+    }
+
+    /// <summary>
+    /// Finds the in-flight partitions already held for catch-up that an outstanding partition catch-up job owns.
+    /// </summary>
+    /// <param name="state">The <see cref="ObserverState"/>.</param>
+    /// <returns>The owned partitions; empty when no in-flight partition is held, and null when the jobs could not be looked up.</returns>
+    async Task<ISet<Key>?> PartitionsOwnedByDurableCatchUp(ObserverState state)
+    {
+        var held = state.InFlightPartitions.Count(state.CatchingUpPartitions.Contains);
+        if (held == 0) return new HashSet<Key>();
+
+        try
+        {
+            var result = await storage.GetEventStore(observerKey.EventStore).GetNamespace(observerKey.Namespace).Jobs.GetOutstandingJobs();
+            if (result.TryGetResult(out var jobs))
+            {
+                return jobs.PartitionsHeldBy<CatchUpObserverPartitionRequest>(observerKey, DateTimeOffset.UtcNow, state);
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.InFlightCatchUpOwnershipLookupThrew(ex);
+        }
+
+        logger.KeepingInFlightMarkersJobLookupFailed(held);
+        return null;
     }
 
     /// <inheritdoc/>

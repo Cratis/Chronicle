@@ -1,13 +1,18 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Immutable;
+using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
+using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Observation.Jobs;
+using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Monads;
 using Cratis.Orleans.Jobs;
 using Cratis.Orleans.StateMachines;
+using Cratis.Orleans.Storage.Jobs;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Observation.States.for_CatchingUpInFlight.given;
@@ -24,6 +29,7 @@ public class a_catching_up_in_flight_state : Specification
     protected IPersistentState<FailedPartitions> _failuresState;
     protected IJobsManager _jobsManager;
     protected FailedPartitions _failedPartitions;
+    protected IJobStorage _jobStorage;
 
     void Establish()
     {
@@ -43,11 +49,18 @@ public class a_catching_up_in_flight_state : Specification
             .Start<ICatchUpObserverPartition, CatchUpObserverPartitionRequest>(Arg.Any<CatchUpObserverPartitionRequest>())
             .Returns(Task.FromResult(Result<JobId, StartJobError>.Success(JobId.New())));
 
+        // By default no job is outstanding; a lookup failure is distinguishable from that.
+        _jobStorage = Substitute.For<IJobStorage>();
+        HasOutstandingJobs();
+        var storage = Substitute.For<IStorage>();
+        storage.GetEventStore(Arg.Any<Concepts.EventStoreName>()).GetNamespace(Arg.Any<Concepts.EventStoreNamespaceName>()).Jobs.Returns(_jobStorage);
+
         _state = new CatchingUpInFlight(
             _observerKey,
             _definitionState,
             _failuresState,
             _jobsManager,
+            storage,
             Substitute.For<ILogger<CatchingUpInFlight>>());
         _state.SetStateMachine(_stateMachine);
 
@@ -57,4 +70,16 @@ public class a_catching_up_in_flight_state : Specification
             RunningState = ObserverRunningState.Unknown,
         };
     }
+
+    protected void HasOutstandingJobs(params JobState[] jobs) =>
+        _jobStorage
+            .GetJobs(Arg.Any<JobQuery>())
+            .Returns(_ => Task.FromResult(Catch<IImmutableList<JobState>>.Success(ImmutableList.Create(jobs))));
+
+    protected JobState PartitionCatchUpJob(Key partition, JobStatus status = JobStatus.Running) => new()
+    {
+        Id = JobId.New(),
+        Status = status,
+        Request = new CatchUpObserverPartitionRequest(_observerKey, ObserverType.Reactor, partition, EventSequenceNumber.First, [])
+    };
 }
