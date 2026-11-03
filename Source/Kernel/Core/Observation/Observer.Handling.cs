@@ -519,7 +519,7 @@ public partial class Observer
                         var key = _subscription.GetSubscriberKeyFor(partition, siloAddress);
 
                         var subscriber = (GrainFactory.GetGrain(_subscription.SubscriberType, key) as IObserverSubscriber)!;
-                        var context = new ObserverSubscriberContext(target.ConnectedClient ?? _subscription.Arguments).WithDeadlines(subscriberTimeout, hold, _clock);
+                        var context = new ObserverSubscriberContext(target.ConnectedClient ?? _subscription.Arguments) { Origin = ObservationOrigin.Live }.WithDeadlines(subscriberTimeout, hold, _clock);
                         deliveryFence = AbandonedDeliveryDrain.Capture(_subscription, partition, target, context);
                         result = await subscriber.OnNextWithin(subscriberTimeout, partition, decryptedEvents, context);
 

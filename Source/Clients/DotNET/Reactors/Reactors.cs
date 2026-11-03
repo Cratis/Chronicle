@@ -621,6 +621,7 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
             ConnectionId = _eventStore.Connection.Lifecycle.ConnectionId,
             EventStore = _eventStore.Name,
             Namespace = _eventStore.Namespace,
+            PageDelivery = new() { Enabled = true },
             Reactor = new ReactorDefinition
             {
                 GenerationDelivery = (Contracts.Observation.EventGenerationDelivery)GenerationDelivery,
@@ -702,7 +703,8 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
                 }
 
                 var isBarrier = events.ReplayState is ReplayState.BeginReplay or ReplayState.EndReplay;
-                return (isBarrier ? scheduler.ScheduleBarrier(Deliver) : scheduler.Schedule(events.Partition ?? string.Empty, Deliver)).ToObservable();
+                var partition = events.SchedulingPartition();
+                return (isBarrier || partition is null ? scheduler.ScheduleBarrier(Deliver) : scheduler.Schedule(partition, Deliver)).ToObservable();
             })
             .Merge()
             .Subscribe(
