@@ -189,6 +189,21 @@ public partial class Database(IServiceProvider serviceProvider, IOptions<Chronic
     }
 
     /// <inheritdoc/>
+    public async Task<DbContextScope<NamespaceDbContext>?> ExistingNamespace(EventStoreName eventStore, EventStoreNamespaceName @namespace)
+    {
+#pragma warning disable CA2000
+        var dbContext = await CreateExistingContext(new ExistingContextRequest<NamespaceDbContext>(
+            new(DatabaseKind.Namespace, eventStore.Value, @namespace.Value),
+            $"namespace-read:{eventStore.Value}:{@namespace.Value}",
+            _namespaceOptions,
+            static options => new NamespaceDbContext(options),
+            async (context, _) => !(await context.Database.GetPendingMigrationsAsync()).Any()));
+#pragma warning restore CA2000
+
+        return dbContext is null ? null : new DbContextScope<NamespaceDbContext>(dbContext, static () => { });
+    }
+
+    /// <inheritdoc/>
     /// <remarks>
     /// The jobs storage migrates its own tables through these options, so they resolve for
     /// <see cref="ConnectionPurpose.Runtime"/> only.

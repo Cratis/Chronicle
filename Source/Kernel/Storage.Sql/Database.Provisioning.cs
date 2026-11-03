@@ -402,54 +402,6 @@ public partial class Database
         return new DbContextScope<TDbContext>(dbContext, static () => { });
     }
 
-    async Task<DbContextScope<ReadModelDbContext>?> GetExistingReadModelDbContext(
-        EventStoreName eventStore,
-        EventStoreNamespaceName @namespace,
-        string tableName,
-        Func<DbContextOptions<ReadModelDbContext>, string, ReadModelDbContext> createDbContext)
-    {
-        var exists = false;
-
-        // Reading must never create a database or a table, so there is no EnsureDatabaseExists and no table creation here.
-#pragma warning disable CA2000
-        var dbContext = await CreateContext(
-            new(DatabaseKind.ReadModels, eventStore.Value, @namespace.Value),
-            $"readmodel-read:{eventStore.Value}:{@namespace.Value}:{tableName}",
-            _readModelOptions,
-            options => createDbContext(options, tableName),
-            async (context, target) => exists = await EnsureExistingTableMigrated(context, target),
-            ConnectionPurpose.Runtime);
-#pragma warning restore CA2000
-
-        if (exists)
-        {
-            return new DbContextScope<ReadModelDbContext>(dbContext, static () => { });
-        }
-
-        await dbContext.DisposeAsync();
-        return null;
-    }
-
-    async Task<bool> EnsureExistingTableMigrated(ReadModelDbContext context, SqlTarget target)
-    {
-        if (target.ConnectionString.GetDatabaseType() != DatabaseType.Sqlite)
-        {
-            return await readModelMigrator.EnsureExistingTableMigrated(context.TableName, context);
-        }
-
-        var migrationLock = DatabaseMigrationLock.For(target.ConnectionString);
-        await migrationLock.Semaphore.WaitAsync();
-        try
-        {
-            RefreshMigrationCaches(migrationLock);
-            return await readModelMigrator.EnsureExistingTableMigrated(context.TableName, context);
-        }
-        finally
-        {
-            migrationLock.Semaphore.Release();
-        }
-    }
-
     async Task<DbContextScope<ReadModelDbContext>> GetOrCreateReadModelDbContext(
         EventStoreName eventStore,
         EventStoreNamespaceName @namespace,

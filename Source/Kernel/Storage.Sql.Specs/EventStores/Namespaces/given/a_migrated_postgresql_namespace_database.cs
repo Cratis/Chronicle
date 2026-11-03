@@ -25,6 +25,8 @@ public abstract class a_migrated_postgresql_namespace_database(PostgreSqlFixture
         _database = Substitute.For<IDatabase>();
         _database.Namespace(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>())
             .Returns(_ => new DbContextScope<NamespaceDbContext>(CreateContext(), () => { }));
+        _database.ExistingNamespace(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>())
+            .Returns(_ => new DbContextScope<NamespaceDbContext>(CreateContext(), () => { }));
     }
 
     Task Destroy() => fixture.DropDatabase(_connectionString);

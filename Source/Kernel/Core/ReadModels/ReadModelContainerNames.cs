@@ -20,10 +20,11 @@ public static class ReadModelContainerNames
     /// <exception cref="InvalidReadModelContainerName">Thrown when the name is empty, whitespace, or contains control, quote or delimiter characters.</exception>
     public static void EnsureValid(this ReadModelContainerName name, ReadModelIdentifier readModel)
     {
-        var value = name.Value;
-        if (string.IsNullOrWhiteSpace(value) || value.Any(_ => char.IsControl(_) || ForbiddenCharacters.Contains(_)))
+        if (string.IsNullOrWhiteSpace(name.Value) || name.Value.Any(IsForbidden))
         {
             throw new InvalidReadModelContainerName(readModel);
         }
     }
+
+    static bool IsForbidden(char character) => char.IsControl(character) || ForbiddenCharacters.Contains(character);
 }

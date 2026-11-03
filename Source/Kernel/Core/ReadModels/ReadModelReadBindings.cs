@@ -24,7 +24,12 @@ public class ReadModelReadBindings(IStorage storage, IGrainFactory grainFactory,
     {
         await EnsureKnownOccurrence(eventStore, eventStoreNamespace, definition, occurrence);
         var sinks = storage.GetEventStore(eventStore).GetNamespace(eventStoreNamespace).Sinks;
-        var sink = await sinks.GetFor(definition, definition.ContainerName);
+
+        // Reading an occurrence must not provision the primary container or its indexes.
+        var isOccurrence = occurrence is not null && occurrence.Value != definition.ContainerName.Value;
+        var sink = isOccurrence
+            ? await sinks.GetWithoutProvisioning(definition)
+            : await sinks.GetFor(definition, definition.ContainerName);
         var visibility = await visibilities.GetFor(eventStore, eventStoreNamespace, definition);
         return new(sink, occurrence, visibility);
     }

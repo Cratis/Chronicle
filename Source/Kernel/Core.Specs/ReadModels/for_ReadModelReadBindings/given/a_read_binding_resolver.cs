@@ -40,6 +40,7 @@ public class a_read_binding_resolver : Specification
         _sink = Substitute.For<ISink>();
         _sinks = Substitute.For<ISinks>();
         _sinks.GetFor(_definition, _definition.ContainerName).Returns(_sink);
+        _sinks.GetWithoutProvisioning(_definition).Returns(_sink);
         var storage = Substitute.For<IStorage>();
         var eventStoreStorage = Substitute.For<IEventStoreStorage>();
         var namespaceStorage = Substitute.For<IEventStoreNamespaceStorage>();

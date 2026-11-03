@@ -51,6 +51,15 @@ public interface IDatabase
     Task<DbContextScope<NamespaceDbContext>> Namespace(EventStoreName eventStore, EventStoreNamespaceName @namespace);
 
     /// <summary>
+    /// Gets a database context scope for an event store namespace that has already been provisioned and migrated.
+    /// Unlike <see cref="Namespace"/> it never creates or migrates a database, a schema, a table or a database name binding.
+    /// </summary>
+    /// <param name="eventStore">The name of the event store.</param>
+    /// <param name="namespace">The name of the namespace.</param>
+    /// <returns>A <see cref="DbContextScope{NamespaceDbContext}"/>, or null when the namespace storage is absent or not fully migrated.</returns>
+    Task<DbContextScope<NamespaceDbContext>?> ExistingNamespace(EventStoreName eventStore, EventStoreNamespaceName @namespace);
+
+    /// <summary>
     /// Gets the <see cref="DbContextOptions{JobsDbContext}"/> for the Cratis.Orleans job system's storage in
     /// the database of an event store namespace - the same database the namespace's own DbContext uses.
     /// </summary>

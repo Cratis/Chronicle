@@ -14,4 +14,5 @@ public class and_the_occurrence_is_not_registered : given.a_read_binding_resolve
     [Fact] void should_reject_the_occurrence() => _error.ShouldBeOfExactType<UnknownReadModelOccurrence>();
     [Fact] void should_not_echo_the_occurrence() => _error.Message.ShouldNotContain("DROP");
     [Fact] void should_not_resolve_a_sink() => _sinks.DidNotReceiveWithAnyArgs().GetFor(default!, default!);
+    [Fact] void should_not_resolve_a_sink_without_provisioning() => _sinks.DidNotReceiveWithAnyArgs().GetWithoutProvisioning(default!);
 }
