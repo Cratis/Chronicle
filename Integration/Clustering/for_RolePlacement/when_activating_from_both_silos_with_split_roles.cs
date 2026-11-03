@@ -14,9 +14,9 @@ public class when_activating_from_both_silos_with_split_roles(context _context) 
         public SiloAddress ObserversSilo => fixture.ObserversSiloAddress;
         public IReadOnlyList<GrainPlacement> Placements { get; private set; } = [];
 
-        public async Task InitializeAsync() => Placements = await PlacementScenario.ActivateFromBothSilos(fixture);
+        public async ValueTask InitializeAsync() => Placements = await PlacementScenario.ActivateFromBothSilos(fixture);
 
-        public Task DisposeAsync() => Task.CompletedTask;
+        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
     }
 
     [Fact] void should_observe_two_fresh_placements() => _context.Placements.Count.ShouldEqual(2);
