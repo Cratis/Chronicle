@@ -45,7 +45,9 @@ A handler can append events, exactly like a [reactor side effect](../reactors/si
 | `Modified` | The read model instance changed. |
 | `Removed` | The read model instance was removed. |
 
-For **projection-backed** read models the change type and the causing event's context come straight from the server, so `Added` versus `Modified` is precise and `EventContext` is fully populated. Other backings infer more of this locally — see the limits below.
+For **projection-backed** read models and **active reducer-backed** read models with dispatchable event handlers whose read model is not `[Passive]`, the change type and causing event context come from the kernel. `Added` versus `Modified` reflects persisted state rather than whether this client has seen the key. The context includes the causing event's sequence number, occurrence time, and correlation ID.
+
+A late subscriber or a client reconnecting to an existing model receives `Modified` for its next change, not an inferred `Added`. Removing a reducer-backed model reports `Removed` with no model instance; recreating it reports `Added`. An unchanged reduction produces no notification. Multiple events reduced in one batch produce one net change with the last event's context.
 
 ## Watch through the materialized read model
 
@@ -64,7 +66,8 @@ A read model reactor is convenient, not transactional. Design for that:
 :::
 
 - **Materialized fidelity is reduced.** The materialized API delivers full windows of already-deserialized instances, so the change type is inferred by comparing serialized values keyed by `id`, and the `EventContext` carries only the model key — no event sequence number. On SQL, several changes within one polling interval can collapse into one `[Materialized]` dispatch.
-- **Reducer-backed read models infer additions client-side.** Reducers compute changesets locally with no server-provided change type, so the first time a key is seen it is reported as `Added` and everything after as `Modified`. Only projection-backed read models carry the precise change type and causing event context.
+- **Legacy local reducers have reduced fidelity.** Inactive reducers, reducers for `[Passive]` read models, and reducers without dispatchable event handlers keep their local callback path. Their first non-removal is `Modified`, not an inferred `Added`; removals are `Removed`. Their context carries the model key, not the causing event's sequence number. This path does not remotely watch another client's active reducer. Upgrading code that relied on a first-seen local `Added` requires handling `Modified` instead.
+- **Kernel watching remains best-effort.** Reducer change streams have the same watcher-cache, reconnect, and replay behavior as projection change streams. They do not add transactional side effects, exactly-once delivery, or an ordering guarantee across rapid changes.
 
 When you need transactional, ordered, replayable reactions, react to the **domain event** with a [reactor](../reactors/) rather than to the derived read model.
 
