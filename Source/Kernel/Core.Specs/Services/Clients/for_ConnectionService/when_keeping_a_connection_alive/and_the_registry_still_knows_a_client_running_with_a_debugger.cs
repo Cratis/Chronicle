@@ -8,14 +8,13 @@ namespace Cratis.Chronicle.Services.Clients.for_ConnectionService.when_keeping_a
 
 public class and_the_registry_still_knows_a_client_running_with_a_debugger : given.a_connected_client
 {
-    void Establish() => _connectedClients.OnClientPing(new ConnectionId(TheConnection)).Returns(true);
+    void Establish() => _connectedClients.IsConnected(new ConnectionId(TheConnection)).Returns(true);
 
     async Task Because()
     {
         Connect(isRunningWithDebugger: true);
-        await WaitUntil(() => CallsTo(nameof(IConnectedClients.OnClientPing)) >= 1);
+        await WaitUntil(() => CallsTo(nameof(IConnectedClients.IsConnected)) >= 1);
     }
 
-    [Fact] void should_refresh_the_registry_entry() => CallsTo(nameof(IConnectedClients.OnClientPing)).ShouldBeGreaterThanOrEqual(1);
     [Fact] Task should_not_put_the_client_back() => WasRestored(0);
 }

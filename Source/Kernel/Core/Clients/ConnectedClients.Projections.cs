@@ -55,8 +55,6 @@ public partial class ConnectedClients
 
     sealed record ConnectionEntry(ConnectedClient Client)
     {
-        public bool HasPinged { get; set; }
-
         public HashSet<(EventStoreName EventStore, ProjectionId Projection)> Projections { get; } = [];
 
         public Dictionary<(EventStoreName EventStore, ProjectionId Projection), ProjectionRegistration> Registrations { get; } = [];

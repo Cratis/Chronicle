@@ -123,7 +123,6 @@ public partial class ConnectedClients(
         if (_clients.TryGetValue(connectionId, out var entry))
         {
             entry.Client.LastSeen = DateTimeOffset.UtcNow;
-            entry.HasPinged = true;
             return Task.FromResult(true);
         }
 
@@ -183,12 +182,9 @@ public partial class ConnectedClients(
 
         if (Debugger.IsAttached) return;
 
-        foreach (var entry in _clients.Values.ToArray())
+        foreach (var connectedClient in _clients.Values.Select(entry => entry.Client).ToArray())
         {
-            var connectedClient = entry.Client;
-
-            // A debugger client that has pinged is paused under a debugger; one that never pinged has no proof of life.
-            if (connectedClient.IsRunningWithDebugger && entry.HasPinged) continue;
+            if (connectedClient.IsRunningWithDebugger) continue;
 
             if (connectedClient.LastSeen < DateTimeOffset.UtcNow.AddSeconds(-_staleThresholdSeconds))
             {
