@@ -361,6 +361,7 @@ json Cratis.Chronicle.Concepts.Observation.PartitionDeferral
 enum Cratis.Chronicle.Concepts.Observation.PartitionDeferralReason : int
   CircuitOpen = 1
   None = 0
+  RequestedByObserver = 4
   RetryAfter = 2
   RetryBackoff = 3
 enum Cratis.Chronicle.Concepts.Observation.PartitionRecoveryOutcome : int
