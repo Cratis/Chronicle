@@ -23,8 +23,11 @@ internal static partial class ObservationJobLogMessages
     [LoggerMessage(LogLevel.Information, "Replay progress: {CompletedSteps}/{TotalSteps} partitions completed ({PercentComplete:F1}%). Last handled sequence number: {LastSequenceNumber}")]
     internal static partial void ReplayProgress(this ILogger<ReplayObserver> logger, int completedSteps, int totalSteps, double percentComplete, EventSequenceNumber lastSequenceNumber);
 
-    [LoggerMessage(LogLevel.Warning, "Not every partition of the replay of reducer '{ObserverId}' was rebuilt. Abandoning the replay and keeping the read model as it was before it started")]
+    [LoggerMessage(LogLevel.Warning, "Not every partition of the replay of observer '{ObserverId}' was rebuilt. Abandoning the replay and keeping the read model as it was before it started")]
     internal static partial void AbandoningReplay(this ILogger<ReplayObserver> logger, ObserverId observerId);
+
+    [LoggerMessage(LogLevel.Warning, "The final flush of the replay failed on a silo. The replay was abandoned and the read model keeps the state it had before the replay started")]
+    internal static partial void ReplayAbandonedAfterFailedFlush(this ILogger<ReplayObserver> logger, Exception exception);
 
     [LoggerMessage(LogLevel.Error, "Could not finalize observer replay; failed partitions will remain unresolved")]
     internal static partial void ReplayFinalizationFailed(this ILogger<ReplayObserver> logger, Exception exception);
@@ -32,8 +35,8 @@ internal static partial class ObservationJobLogMessages
     [LoggerMessage(LogLevel.Error, "Could not notify observer that replay completed; replay or recovery must be retried")]
     internal static partial void ReplayCompletionNotificationFailed(this ILogger<ReplayObserver> logger, Exception exception);
 
-    [LoggerMessage(LogLevel.Warning, "CatchUpObserver prepared no job steps, so the job concludes without doing any work: {KeysEnumerated} keys enumerated, {FailedKeysSkipped} skipped as failed, {EventTypeCount} reader-scope event types")]
-    internal static partial void CatchUpPreparedNoSteps(this ILogger<IJob> logger, int keysEnumerated, int failedKeysSkipped, int eventTypeCount);
+    [LoggerMessage(LogLevel.Warning, "{JobName} prepared no job steps, so the job concludes without doing any work")]
+    internal static partial void NoJobStepsPrepared(this ILogger<IJob> logger, string jobName);
 
     [LoggerMessage(LogLevel.Warning, "Recovery of failed partition '{Partition}' handled no events but there are still events from sequence number {FromSequenceNumber} to handle. Keeping the partition failed rather than clearing it without running the handler")]
     internal static partial void NotClearingFailedPartitionWithEventsLeftToHandle(this ILogger<IJob> logger, Key partition, EventSequenceNumber fromSequenceNumber);

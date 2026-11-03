@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.EventSequences;
@@ -17,6 +18,9 @@ namespace Cratis.Chronicle.Observation;
 
 internal static partial class ObserverLogMessages
 {
+    [LoggerMessage(LogLevel.Information, "Client subscription for observer '{ObserverKey}' is waiting for the webhook to leave")]
+    internal static partial void ClientSubscriptionWaitingForWebhook(this ILogger<Observer> logger, ObserverKey observerKey);
+
     [LoggerMessage(LogLevel.Warning, "Stored webhook target violates current policy; Warn mode allows delivery: {Reason}")]
     internal static partial void StoredWebhookTargetWarning(this ILogger<Observer> logger, string reason);
 
@@ -41,8 +45,14 @@ internal static partial class ObserverLogMessages
     [LoggerMessage(LogLevel.Information, "Subscribing observer to all event types")]
     internal static partial void SubscribingToAllEvents(this ILogger<Observer> logger);
 
-    [LoggerMessage(LogLevel.Warning, "Partition {Partition} failed for event with sequence number {EventSequenceNumber}. Error: {ExceptionMessages}. StackTrace: {StackTrace}")]
-    internal static partial void PartitionFailed(this ILogger<Observer> logger, Key partition, EventSequenceNumber eventSequenceNumber, IEnumerable<string> exceptionMessages, string stackTrace);
+    [LoggerMessage(LogLevel.Warning, "Partition {Partition} failed at {SequenceNumber} ({ErrorType})")]
+    internal static partial void PartitionFailed(this ILogger<Observer> logger, Key partition, EventSequenceNumber sequenceNumber, string errorType);
+
+    [LoggerMessage(LogLevel.Debug, "Partition {Partition} failed again at {SequenceNumber}, attempt {Attempt}")]
+    internal static partial void PartitionFailedAgain(this ILogger<Observer> logger, Key partition, EventSequenceNumber sequenceNumber, int attempt);
+
+    [LoggerMessage(LogLevel.Debug, "Partition {Partition} failure details: {ExceptionMessages}. StackTrace: {StackTrace}")]
+    internal static partial void PartitionFailureDetails(this ILogger<Observer> logger, Key partition, IEnumerable<string> exceptionMessages, string stackTrace);
 
     [LoggerMessage(LogLevel.Information, "Manual retry overrides deferral for partition {Partition}: {Reason} until {Deadline}")]
     internal static partial void PartitionDeferralOverridden(this ILogger<Observer> logger, Key partition, PartitionDeferralReason reason, DateTimeOffset deadline);
@@ -56,8 +66,8 @@ internal static partial class ObserverLogMessages
     [LoggerMessage(LogLevel.Debug, "Trying to recover partition {Partition}")]
     internal static partial void TryingToRecoverFailedPartition(this ILogger<Observer> logger, Key partition);
 
-    [LoggerMessage(LogLevel.Warning, "Giving up on trying to recover failed partition {Partition} automatically after {AttemptCount} attempts (max {MaxRetryAttempts})")]
-    internal static partial void GivingUpOnRecoveringFailedPartition(this ILogger<Observer> logger, Key partition, int attemptCount, int maxRetryAttempts);
+    [LoggerMessage(LogLevel.Information, "Recovery job for partition {Partition} did not start: {Reason}")]
+    internal static partial void FailedPartitionRetryDidNotStart(this ILogger<Observer> logger, Key partition, string reason);
 
     [LoggerMessage(LogLevel.Warning, "Skipping recovery of partition {Partition} — already exceeded max retry attempts ({AttemptCount}/{MaxRetryAttempts}). Partition requires manual intervention or server restart to retry")]
     internal static partial void SkippingRecoveryMaxAttemptsExceeded(this ILogger<Observer> logger, Key partition, int attemptCount, int maxRetryAttempts);
@@ -86,7 +96,7 @@ internal static partial class ObserverLogMessages
     [LoggerMessage(LogLevel.Debug, "Deferring recovery of {Count} failed partition(s) to a later turn so other calls can reach the observer")]
     internal static partial void DeferringRecoveryOfFailedPartitions(this ILogger<Observer> logger, int count);
 
-    [LoggerMessage(LogLevel.Information, "Skipping catch-up because observer is replaying")]
+    [LoggerMessage(LogLevel.Debug, "Skipping catch-up because observer is replaying")]
     internal static partial void SkippingCatchUpBecauseObserverIsReplaying(this ILogger<Observer> logger);
 
     [LoggerMessage(LogLevel.Debug, "Waiting for catch-up handover to finish routing before replaying")]
@@ -155,13 +165,13 @@ internal static partial class ObserverLogMessages
     [LoggerMessage(LogLevel.Trace, "Entering catchup state")]
     internal static partial void Entering(this ILogger<Observer> logger);
 
-    [LoggerMessage(LogLevel.Information, "Existing catch up job running, will let it finish")]
+    [LoggerMessage(LogLevel.Trace, "Existing catch up job running, will let it finish")]
     internal static partial void FinishingExistingCatchUpJob(this ILogger<Observer> logger);
 
-    [LoggerMessage(LogLevel.Information, "Existing catch up job found - resuming")]
+    [LoggerMessage(LogLevel.Trace, "Existing catch up job found - resuming")]
     internal static partial void ResumingCatchUpJob(this ILogger<Observer> logger);
 
-    [LoggerMessage(LogLevel.Information, "Start new catch up job from event sequence number {EventSequenceNumber}")]
+    [LoggerMessage(LogLevel.Trace, "Start new catch up job from event sequence number {EventSequenceNumber}")]
     internal static partial void StartCatchUpJob(this ILogger<Observer> logger, EventSequenceNumber eventSequenceNumber);
 
     [LoggerMessage(LogLevel.Warning, "No catch-up job took ownership of the preparation - clearing it rather than waiting for a job that will never report")]
@@ -189,6 +199,15 @@ internal static partial class ObserverLogMessages
 
     [LoggerMessage(LogLevel.Information, "The client {ConnectionId} that was superseded by a later registration is no longer connected. Dropping its registration.")]
     internal static partial void SupersededClientDisconnected(this ILogger<Observer> logger, ConnectionId connectionId);
+
+    [LoggerMessage(LogLevel.Information, "Client {ConnectionId} disconnected; subscribed to {SubscribedConnectionIds}: {Outcome}")]
+    internal static partial void ClientDisconnectedFromObserver(this ILogger<Observer> logger, ConnectionId connectionId, string subscribedConnectionIds, string outcome);
+
+    [LoggerMessage(LogLevel.Information, "Observer unsubscribed; it is now disconnected and receives no events until a client subscribes again")]
+    internal static partial void Unsubscribed(this ILogger<Observer> logger);
+
+    [LoggerMessage(LogLevel.Information, "Observer deactivating ({ReasonCode}: {ReasonDescription})")]
+    internal static partial void Deactivating(this ILogger<Observer> logger, DeactivationReasonCode reasonCode, string reasonDescription);
 
     [LoggerMessage(LogLevel.Information, "Restoring the subscription of client {ConnectionId}, which this observer activation does not know about")]
     internal static partial void RestoringClientSubscription(this ILogger<Observer> logger, ConnectionId connectionId);
@@ -256,20 +275,38 @@ internal static partial class ObserverLogMessages
     [LoggerMessage(LogLevel.Information, "Retiring observer - unsubscribing, discarding its failed partitions and clearing its alerts as removed while retaining quarantine")]
     internal static partial void RetiringObserver(this ILogger<Observer> logger);
 
-    [LoggerMessage(LogLevel.Information, "Stale catch-up lap: retry {Attempt} in {Delay}, Next {Next}, event-type tail {TypeTail}")]
-    internal static partial void RetryingStaleCatchUp(this ILogger<Observer> logger, int attempt, TimeSpan delay, EventSequenceNumber next, EventSequenceNumber typeTail);
-
-    [LoggerMessage(LogLevel.Information, "Stale catch-up retries exhausted after {Attempts} attempts, Next {Next}, event-type tail {TypeTail}. Falling back to zero-work backoff")]
-    internal static partial void StaleCatchUpRetriesExhausted(this ILogger<Observer> logger, int attempts, EventSequenceNumber next, EventSequenceNumber typeTail);
-
-    [LoggerMessage(LogLevel.Warning, "Could not look up the event-type tail after a zero-work catch-up lap. Falling back to zero-work backoff")]
-    internal static partial void CatchUpTypeTailLookupFailed(this ILogger<Observer> logger, Exception exception);
+    [LoggerMessage(LogLevel.Warning, "Replay could not prepare its job steps; quarantining the observer with the replay pending until the quarantine is cleared")]
+    internal static partial void ReplayStepsCouldNotBePrepared(this ILogger<Observer> logger);
 
     [LoggerMessage(LogLevel.Warning, "A catch-up job concluded without moving the observer forward ({ConsecutiveLaps} in a row)")]
     internal static partial void CatchUpProducedNoWork(this ILogger<Observer> logger, int consecutiveLaps);
 
     [LoggerMessage(LogLevel.Information, "Catch-up backoff after catch-up jobs that produced no work has elapsed. Routing the observer again")]
     internal static partial void CatchUpBackoffElapsed(this ILogger<Observer> logger);
+
+    [LoggerMessage(LogLevel.Warning, "Observer '{ObserverId}' moved from event sequence '{KeyEventSequenceId}' to '{DefinitionEventSequenceId}'. The old activation relinquishes ownership and deactivates")]
+    internal static partial void LostOwnershipToAnotherEventSequence(this ILogger<Observer> logger, ObserverId observerId, EventSequenceId keyEventSequenceId, EventSequenceId definitionEventSequenceId);
+
+    [LoggerMessage(LogLevel.Warning, "Observer '{ObserverId}' was activated on event sequence '{KeyEventSequenceId}', but it observes event sequence '{DefinitionEventSequenceId}'. The activation stays inert and persists nothing")]
+    internal static partial void ActivatedOnAnotherEventSequence(this ILogger<Observer> logger, ObserverId observerId, EventSequenceId keyEventSequenceId, EventSequenceId definitionEventSequenceId);
+
+    [LoggerMessage(LogLevel.Information, "Resuming stalled observer job {JobId}")]
+    internal static partial void ResumingStalledObserverJob(this ILogger<Observer> logger, JobId jobId);
+
+    [LoggerMessage(LogLevel.Debug, "Stalled observer job {JobId} was not resumed: {Reason}")]
+    internal static partial void StalledObserverJobNotResumed(this ILogger<Observer> logger, JobId jobId, string reason);
+
+    [LoggerMessage(LogLevel.Debug, "Stalled observer job {JobId} is no longer running")]
+    internal static partial void StalledObserverJobNoLongerRunning(this ILogger<Observer> logger, JobId jobId);
+
+    [LoggerMessage(LogLevel.Warning, "Resuming stalled observer job {JobId} failed; retrying on the next watchdog tick")]
+    internal static partial void ResumingStalledObserverJobWillRetry(this ILogger<Observer> logger, JobId jobId);
+
+    [LoggerMessage(LogLevel.Warning, "Resuming stalled observer job {JobId} failed")]
+    internal static partial void ResumingStalledObserverJobFailed(this ILogger<Observer> logger, JobId jobId, Exception exception);
+
+    [LoggerMessage(LogLevel.Warning, "Looking for stalled observer jobs failed")]
+    internal static partial void FindingStalledObserverJobsFailed(this ILogger<Observer> logger, Exception exception);
 }
 
 internal static class ObserverScopes

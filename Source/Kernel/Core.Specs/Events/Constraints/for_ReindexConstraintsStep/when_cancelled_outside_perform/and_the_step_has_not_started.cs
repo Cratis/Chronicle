@@ -11,5 +11,5 @@ public class and_the_step_has_not_started : given.a_handoff_reindex_step
 {
     async Task Because() => await (ValueTask<object?>)typeof(ReindexConstraintsStep).GetMethod("CreateCancelledResultFromCurrentState", BindingFlags.NonPublic | BindingFlags.Instance)!.Invoke(_step, [_state])!;
 
-    [Fact] async Task should_report_unknown_progress_with_the_stable_identity() => await _sequence.Received(1).ConstraintIndexRebuilt(_runId, Arg.Is<IEnumerable<ConstraintName>>(names => names.SequenceEqual(new[] { _unique.Name })), ConstraintIndexRebuildOutcome.ProgressUnknown);
+    [Fact] async Task should_report_unknown_progress_with_the_stable_identity() => await _sequence.Received(1).ConstraintIndexRebuilt(new(_runId.Value, JobId: _jobId), Arg.Is<IEnumerable<ConstraintName>>(names => names.SequenceEqual(new[] { _unique.Name })), ConstraintIndexRebuildOutcome.ProgressUnknown);
 }

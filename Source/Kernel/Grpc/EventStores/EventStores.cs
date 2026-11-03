@@ -16,7 +16,9 @@ namespace Cratis.Chronicle.Services.EventStores;
 /// </summary>
 internal sealed class EventStores(
     global::Cratis.Arc.Commands.ICommandPipeline commandPipeline,
+    global::Orleans.IGrainFactory grainFactory,
     global::Cratis.Chronicle.Storage.IStorage storage,
+    global::Cratis.Chronicle.EventStores.IEventStoreInitialization eventStoreInitialization,
     global::Microsoft.Extensions.Logging.ILogger<global::Cratis.Chronicle.Services.EventStores.EventStores> logger) : global::Cratis.Chronicle.Contracts.EventStores.IEventStores
 {
     /// <inheritdoc/>
@@ -26,11 +28,29 @@ internal sealed class EventStores(
             new global::Cratis.Chronicle.EventStores.EnsureEventStore((global::Cratis.Chronicle.Concepts.EventStoreName)request.Name));
 
     /// <inheritdoc/>
+    public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult> RegisterDeployment(global::Cratis.Chronicle.Contracts.EventStores.RegisterDeploymentRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
+        CommandExecutor.Execute(
+            commandPipeline,
+            new global::Cratis.Chronicle.EventStores.RegisterDeployment((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.Registrations.DeploymentGeneration)request.Generation, (global::Cratis.Chronicle.Concepts.Registrations.ArtifactFingerprint)request.Fingerprint));
+
+    /// <inheritdoc/>
+    public Task<global::Cratis.Chronicle.Contracts.Queries.QueryResult<global::Cratis.Chronicle.Contracts.EventStores.EventStoreDeploymentResponse>> GetEventStoreDeployment(global::Cratis.Chronicle.Contracts.EventStores.GetEventStoreDeploymentRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
+        QueryExecutor.Execute<global::Cratis.Chronicle.Contracts.EventStores.EventStoreDeploymentResponse>(
+            callContext,
+            new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore),
+            async () =>
+            {
+                var result = await global::Cratis.Chronicle.EventStores.EventStoreDeployment.GetEventStoreDeployment(request.EventStore, grainFactory);
+                return ToEventStoreDeploymentResponse(result);
+            },
+            exception => logger.QueryFailed(exception, "EventStores", "GetEventStoreDeployment"));
+
+    /// <inheritdoc/>
     public Task<global::Cratis.Chronicle.Contracts.Queries.QueryResult<IEnumerable<global::Cratis.Chronicle.Contracts.EventStores.EventStoreNamesResponse>>> AllEventStores(global::ProtoBuf.Grpc.CallContext callContext = default) =>
         QueryExecutor.Execute<IEnumerable<global::Cratis.Chronicle.Contracts.EventStores.EventStoreNamesResponse>>(
             async () =>
             {
-                var result = await global::Cratis.Chronicle.EventStores.EventStoreNames.AllEventStores(storage);
+                var result = await global::Cratis.Chronicle.EventStores.EventStoreNames.AllEventStores(storage, eventStoreInitialization);
                 return result.Select(ToEventStoreNamesResponse).ToList();
             },
             exception => logger.QueryFailed(exception, "EventStores", "AllEventStores"));
@@ -38,10 +58,17 @@ internal sealed class EventStores(
     /// <inheritdoc/>
     public IObservable<global::Cratis.Chronicle.Contracts.Queries.QueryResult<IEnumerable<global::Cratis.Chronicle.Contracts.EventStores.EventStoreNamesResponse>>> ObserveEventStores(global::ProtoBuf.Grpc.CallContext callContext = default) =>
         QueryExecutor.Execute<IEnumerable<global::Cratis.Chronicle.Contracts.EventStores.EventStoreNamesResponse>>(
-            () => global::Cratis.Chronicle.EventStores.EventStoreNames.ObserveEventStores(storage)
+            () => global::Cratis.Chronicle.EventStores.EventStoreNames.ObserveEventStores(storage, eventStoreInitialization)
                 .CompletedBy(callContext.CancellationToken)
                 .Select(_ => (IEnumerable<global::Cratis.Chronicle.Contracts.EventStores.EventStoreNamesResponse>)_.Select(ToEventStoreNamesResponse).ToList()),
             exception => logger.QueryFailed(exception, "EventStores", "ObserveEventStores"));
+
+    static global::Cratis.Chronicle.Contracts.EventStores.EventStoreDeploymentResponse ToEventStoreDeploymentResponse(global::Cratis.Chronicle.EventStores.EventStoreDeployment source) =>
+        new()
+        {
+            Generation = source.Generation,
+            Fingerprint = source.Fingerprint
+        };
 
     static global::Cratis.Chronicle.Contracts.EventStores.EventStoreNamesResponse ToEventStoreNamesResponse(global::Cratis.Chronicle.EventStores.EventStoreNames source) =>
         new()

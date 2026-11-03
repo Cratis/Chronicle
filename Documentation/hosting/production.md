@@ -218,9 +218,9 @@ Start one node after a restore and read `GET /diagnostics/encryption-certificate
 
 - **Network Isolation**: Run Chronicle in a private network with MongoDB
 - **Connection Encryption**: Use TLS for all connections in production
-- **Client certificate validation**: The clients connect over TLS but accept *any* server certificate unless the connection string sets `skipTlsValidation=false`. Set it for every client that reaches a production kernel. See [Client TLS](../configuration/tls.mdx) and [Server connection strings](../connection-strings/server.md)
+- **Client certificate validation**: The .NET client connects over TLS but accepts *any* server certificate unless the connection string sets `skipTlsValidation=false`. Trust the server's CA on client machines and inside application containers, or configure a matching `certificatePath` pin, then enable validation for every client that reaches a production kernel. The client logs one warning at construction if validation is skipped for a non-loopback target or DNS SRV lookup; localhost, 127.0.0.0/8, and ::1 are exempt. A future major version validates by default. See [Client TLS](../configuration/tls.mdx) and [Server connection strings](../connection-strings/server.md)
 - **Workbench behind a path-routed proxy**: When one host serves several instances by path, set `Workbench:BasePath` so the Workbench works under its prefix. See [Workbench](configuration/workbench.md)
-- **Initial administrator**: The production image creates the administrator without a password and lets the first visitor to the Workbench set one. Supply the initial password from your secret store through `Authentication:AdminUser`, or keep the port unreachable until setup is done. See [Authentication](configuration/authentication.md)
+- **Initial administrator**: The production image creates the administrator without a password. Initial setup requires the token from server logs or `Authentication:InitialAdminSetupToken`. Protect access to that token and remove it from configuration after setup. Supply the initial password from your secret store through `Authentication:AdminUser` to avoid interactive setup, and keep the port unreachable until setup is done. See [Authentication](configuration/authentication.md)
 - **Access Control**: Implement proper firewall rules for exposed ports
 - **Secrets Management**: Use external secret management for sensitive configuration
 - **Regular Updates**: Keep Chronicle and MongoDB images updated
@@ -232,7 +232,7 @@ Chronicle supports horizontal scaling through Orleans clustering:
 
 1. **Multiple Instances**: Deploy multiple Chronicle containers
 2. **Load Balancing**: Use a load balancer for API traffic (port 35000)
-3. **Orleans Clustering**: Ensure Orleans ports (11111, 30000) are accessible between instances
+3. **Orleans Clustering**: Allow the silo port (11111) only between trusted nodes, and the gateway (30000) only for trusted Orleans clients. HTTP/gRPC-only deployments can set `clustering.gatewayEnabled=false`. Do not publish either Orleans port publicly; they do not use Chronicle's HTTP authentication. See [Clustering network boundaries](configuration/clustering.md#listener-and-network-boundaries) for interface binding and a Kubernetes NetworkPolicy example.
 4. **Shared Storage**: All instances must connect to the same storage. MongoDB, PostgreSQL and SQL Server support more than one node; with SQLite, run a single instance (see [Clustering](configuration/clustering.md))
 
 > [!WARNING]

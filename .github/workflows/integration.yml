@@ -30,6 +30,7 @@ jobs:
       all-providers: ${{ steps.client.outputs.all-providers }}
       kernel-matrix: ${{ steps.kernel.outputs.matrix }}
       clustering-matrix: ${{ steps.clustering.outputs.matrix }}
+      rolling-upgrade-enabled: ${{ steps.exclusions.outputs.rolling-upgrade-enabled }}
 
     steps:
       - name: Checkout code
@@ -40,6 +41,10 @@ jobs:
       # second and run before anything is discovered.
       - name: Verify the integration matrix generator
         run: python3 .github/scripts/test-generate-integration-matrix.py
+
+      - name: Report explicitly skipped integration lanes
+        id: exclusions
+        run: python3 .github/scripts/integration_lane_exclusions.py
 
       # Each client namespace runs against the selected infrastructure configs;
       # large namespaces are additionally split into parallel shards so the
@@ -147,7 +152,7 @@ jobs:
               docker pull postgres:16
             fi
             if [ "${{ matrix.database }}" = "mssql" ]; then
-              docker pull mcr.microsoft.com/mssql/server:2025-latest
+              docker pull mcr.microsoft.com/mssql/server:2025-CU10-ubuntu-24.04
             fi
 
       - name: Run Client integration tests (${{ matrix.namespace }} ${{ matrix.shard }} | ${{ matrix.mode }} | ${{ matrix.database }})
@@ -345,11 +350,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # RollingUpgrade starts the cluster on the latest release and replaces its nodes with this build one at a
-        # time under load, so silos of both releases call each other's grains (#5272). It runs on PostgreSQL.
-        provider: [PostgreSql, SqlServer, RollingUpgrade]
+        provider: [PostgreSql, SqlServer]
 
-    steps:
+    # Shared verbatim with the separately gated RollingUpgrade lane below.
+    steps: &sql-clustering-steps
       - name: Checkout code
         uses: actions/checkout@v4
         with:
@@ -360,10 +364,16 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          release_tag=$(git tag --merged HEAD --sort=version:refname --list 'v*' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | tail -n 1) || {
-            echo "::error::No release tag is an ancestor of $(git rev-parse HEAD)."
+          # A release that cannot start a cluster cannot be upgraded from; the lane starts from the newest one that can.
+          unusable=$(sed -E 's/#.*//; s/[[:space:]]+//g; /^$/d' .github/rolling-upgrade-unusable-releases.txt)
+          release_tag=$(git tag --merged HEAD --sort=version:refname --list 'v*' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' \
+            | grep -vxF -e "${unusable:-^}" | tail -n 1) || {
+            echo "::error::No usable release tag is an ancestor of $(git rev-parse HEAD)."
             exit 1
           }
+          if [ -n "$unusable" ]; then
+            echo "Skipping releases listed in .github/rolling-upgrade-unusable-releases.txt: $(tr '\n' ' ' <<< "$unusable")"
+          fi
           image_tag="${release_tag#v}-development-slim"
           metadata=$(curl --fail --silent --show-error --location --max-time 60 \
             "https://hub.docker.com/v2/repositories/cratis/chronicle/tags/${image_tag}") || {
@@ -423,6 +433,46 @@ jobs:
           -p:EnableDevelopmentSymbol=true -p:DisableProxyGenerator=true -p:DisableDockerBuild=true
           -p:Version="$CRATIS_CHRONICLE_CLIENT_VERSION"
 
+      # Only this candidate test shard consumes instrumentation. SDK artifacts layout isolates the
+      # entire dependency graph outside the checkout, so shipping bin/obj, packages and images cannot
+      # pick up enabled outputs. Keep the ordinary stamped build above for the absence comparison.
+      - name: Build isolated rolling delivery diagnostic candidate
+        if: matrix.provider == 'RollingUpgrade'
+        run: |
+          set -euo pipefail
+          printf 'diagnostic-source=%s client-version=%s artifacts=%s\n' "$(git rev-parse HEAD)" "$CRATIS_CHRONICLE_CLIENT_VERSION" "$RUNNER_TEMP/rolling-delivery-diagnostics"
+          dotnet build .github/scripts/rolling-delivery-il/RollingDeliveryIl.csproj -c Release -warnaserror \
+            --artifacts-path "$RUNNER_TEMP/rolling-il-verifier" -o "$RUNNER_TEMP/rolling-il-tool"
+          dotnet build Integration/SqlClustering/SqlClustering.csproj -c Release -warnaserror \
+            -p:EnableDevelopmentSymbol=true -p:DisableProxyGenerator=true -p:DisableDockerBuild=true \
+            -p:Version="$CRATIS_CHRONICLE_CLIENT_VERSION" -p:EnableRollingDeliveryDiagnostics=true \
+            --artifacts-path "$RUNNER_TEMP/rolling-delivery-diagnostics"
+          dotnet "$RUNNER_TEMP/rolling-il-tool/RollingDeliveryIl.dll" \
+            Source/Clients/DotNET/bin/Release/net10.0/Cratis.Chronicle.dll \
+            --enabled "$RUNNER_TEMP/rolling-delivery-diagnostics/bin/DotNET/release/Cratis.Chronicle.dll"
+          grep -a -F -q -- "$CRATIS_CHRONICLE_CLIENT_VERSION" "$RUNNER_TEMP/rolling-delivery-diagnostics/bin/DotNET/release/Cratis.Chronicle.dll"
+
+      # Evidence only: an explicit FAIL/INCONCLUSIVE must not suppress the rolling-loss run.
+      # Both arms execute existing outputs on this same hosted runner; no rebuild or coverage collector.
+      - name: Measure rolling delivery diagnostic overhead (evidence only)
+        if: matrix.provider == 'RollingUpgrade'
+        timeout-minutes: 8
+        continue-on-error: true
+        run: |
+          node .github/scripts/measure-rolling-delivery-overhead.mjs \
+            --normal Integration/SqlClustering/bin/Release/net10.0/Cratis.Chronicle.Integration.SqlClustering.dll \
+            --enabled "$RUNNER_TEMP/rolling-delivery-diagnostics/bin/SqlClustering/release/Cratis.Chronicle.Integration.SqlClustering.dll" \
+            --output "$RUNNER_TEMP/rolling-delivery-overhead"
+
+      - name: Upload rolling delivery overhead evidence immediately
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: rolling-delivery-overhead
+          path: ${{ runner.temp }}/rolling-delivery-overhead/
+          retention-days: 7
+
       - name: Pre-pull images
         uses: nick-fields/retry@v3
         with:
@@ -437,7 +487,7 @@ jobs:
             if [ "${{ matrix.provider }}" != "SqlServer" ]; then
               docker pull postgres:16
             else
-              docker pull mcr.microsoft.com/mssql/server:2022-CU20-ubuntu-22.04
+              docker pull mcr.microsoft.com/mssql/server:2025-CU10-ubuntu-24.04
             fi
 
       # Three kernel containers from the image the Client shards use. No retries: an append that
@@ -446,16 +496,29 @@ jobs:
         env:
           CRATIS_CHRONICLE_LOCAL_IMAGE: ${{ inputs.chronicle-image }}
           TESTCONTAINERS_RYUK_DISABLED: true
-        run: >-
-          node .github/scripts/run-spec-project.mjs --project Integration/SqlClustering/SqlClustering.csproj
-          --filter "FullyQualifiedName~Cratis.Chronicle.Integration.SqlClustering.${{ matrix.provider }}"
-          --results-directory coverage-results
+        run: |
+          set -euo pipefail
+          if [ "${{ matrix.provider }}" = "RollingUpgrade" ]; then
+            export EnableRollingDeliveryDiagnostics=true
+            export ArtifactsPath="$RUNNER_TEMP/rolling-delivery-diagnostics"
+          fi
+          node .github/scripts/run-spec-project.mjs --project Integration/SqlClustering/SqlClustering.csproj \
+            --filter "FullyQualifiedName~Cratis.Chronicle.Integration.SqlClustering.${{ matrix.provider }}" \
+            --results-directory coverage-results
 
       - name: Assert SQL clustering specifications ran
         uses: ./.github/actions/assert-tests-ran
         with:
           path: ./coverage-results
           name: This SQL clustering provider
+
+      - name: Upload rolling delivery diagnostics evidence
+        if: always() && matrix.provider == 'RollingUpgrade'
+        uses: actions/upload-artifact@v4
+        with:
+          name: rolling-delivery-diagnostics
+          path: ${{ runner.temp }}/rolling-delivery-overhead/
+          retention-days: 7
 
       - name: Upload SQL clustering results
         if: always()
@@ -464,3 +527,18 @@ jobs:
           name: sql-clustering-${{ matrix.provider }}-results
           path: coverage-results/
           retention-days: 7
+
+  # A job-level condition (not a successful zero-spec run) makes the excluded lane visibly skipped.
+  # Its reason and issue links are in discovery's summary; remove only the declaration to re-enable.
+  sql-clustering-rolling-upgrade:
+    name: SQL clustering (RollingUpgrade)
+    needs: [discover]
+    if: needs.discover.outputs.rolling-upgrade-enabled == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        # Replace nodes from the latest release one at a time under load on PostgreSQL (#5272).
+        provider: [RollingUpgrade]
+    steps: *sql-clustering-steps

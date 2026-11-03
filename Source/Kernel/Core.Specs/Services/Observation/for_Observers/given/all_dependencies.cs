@@ -8,7 +8,7 @@ using IObserverRemover = Cratis.Chronicle.Observation.IObserverRemover;
 
 namespace Cratis.Chronicle.Services.Observation.for_Observers.given;
 
-public class all_dependencies : Specification
+public class all_dependencies : Services.for_QueryExecutor.given.a_routed_query
 {
     protected IStorage _storage;
     protected IEventStoreStorage _eventStoreStorage;

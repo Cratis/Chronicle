@@ -54,26 +54,7 @@ public class EventGenerationRelease(
                 throw new PinnedEventTypeGenerationUnavailable(pin);
             }
 
-            var revisionGeneration = @event.RevisedGeneration ?? @event.Revisions.LastOrDefault()?.EventTypeGeneration;
-            var deliverySource = @event;
-            if (revisionGeneration is not null && revisionGeneration != @event.Context.EventType.Generation)
-            {
-                var revisionSchema = definition.Generations.SingleOrDefault(_ => _.Generation == revisionGeneration)?.Schema;
-                if (revisionSchema is null || !@event.GenerationalContent.TryGetValue((int)revisionGeneration.Value, out var revisionContent))
-                {
-                    throw new PinnedEventTypeGenerationUnavailable(new(pin.Id, revisionGeneration));
-                }
-
-                deliverySource = @event with
-                {
-                    Content = converter.ToExpandoObject(JsonNode.Parse(revisionContent)!.AsObject(), revisionSchema),
-                    Context = @event.Context with
-                    {
-                        EventType = new(pin.Id, revisionGeneration),
-                        Hash = @event.GenerationalHashes.GetValueOrDefault((int)revisionGeneration.Value, EventHash.NotSet)
-                    }
-                };
-            }
+            var deliverySource = GetRevisionDeliverySource(@event, definition, pin);
 
             if (deliverySource.Context.EventType.Generation == pin.Generation)
             {
@@ -83,10 +64,11 @@ public class EventGenerationRelease(
 
             if (!@event.IsRevised && @event.GenerationalContent.TryGetValue((int)pin.Generation.Value, out var storedContent))
             {
-                var content = converter.ToExpandoObject(JsonNode.Parse(storedContent)!.AsObject(), schema.Schema);
+                var effective = GenerationProtectionSchemas.For(definition, pin.Generation);
+                var content = converter.ToExpandoObject(JsonNode.Parse(storedContent)!.AsObject(), effective);
                 var hash = @event.GenerationalHashes.GetValueOrDefault((int)pin.Generation.Value, EventHash.NotSet);
                 var selected = @event with { Content = content, Context = @event.Context with { EventType = pin, Hash = hash } };
-                releasedEvents.Add(await eventCompliance.Release(selected, schema.Schema));
+                releasedEvents.Add(await eventCompliance.Release(selected, effective));
                 continue;
             }
 
@@ -121,5 +103,45 @@ public class EventGenerationRelease(
         }
 
         return releasedEvents.ToArray();
+    }
+
+    static (string Content, EventHash Hash) GetRevisionContent(AppendedEvent @event, EventType revisionType)
+    {
+        var revision = @event.Revisions.LastOrDefault();
+        if (revision is not null)
+        {
+            if (revision.EventTypeGeneration != revisionType.Generation || string.IsNullOrEmpty(revision.Content))
+            {
+                throw new PinnedEventTypeGenerationUnavailable(revisionType);
+            }
+
+            return (revision.Content, EventHash.NotSet);
+        }
+
+        if (!@event.GenerationalContent.TryGetValue((int)revisionType.Generation.Value, out var content))
+        {
+            throw new PinnedEventTypeGenerationUnavailable(revisionType);
+        }
+
+        return (content, @event.GenerationalHashes.GetValueOrDefault((int)revisionType.Generation.Value, EventHash.NotSet));
+    }
+
+    AppendedEvent GetRevisionDeliverySource(AppendedEvent @event, EventTypeDefinition definition, EventType pin)
+    {
+        var revisionGeneration = @event.RevisedGeneration ?? @event.Revisions.LastOrDefault()?.EventTypeGeneration;
+        if (revisionGeneration is null || revisionGeneration == @event.Context.EventType.Generation)
+        {
+            return @event;
+        }
+
+        var revisionType = new EventType(pin.Id, revisionGeneration);
+        var revisionSchema = definition.Generations.SingleOrDefault(_ => _.Generation == revisionGeneration)?.Schema
+            ?? throw new PinnedEventTypeGenerationUnavailable(revisionType);
+        var (content, hash) = GetRevisionContent(@event, revisionType);
+        return @event with
+        {
+            Content = converter.ToExpandoObject(JsonNode.Parse(content)!.AsObject(), revisionSchema),
+            Context = @event.Context with { EventType = revisionType, Hash = hash }
+        };
     }
 }

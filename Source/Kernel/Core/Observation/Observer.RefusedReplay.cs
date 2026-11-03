@@ -13,7 +13,7 @@ public partial class Observer
     /// <inheritdoc/>
     public async Task ReleaseRefusedReplay()
     {
-        if (IsRetired || _removed || (!State.IsReplaying && State.RunningState != ObserverRunningState.Replaying)) return;
+        if (IsRetired || _removed || !KeyOwnsDefinition || (!State.IsReplaying && State.RunningState != ObserverRunningState.Replaying)) return;
 
         Skips.Reset();
         State = State with
@@ -35,9 +35,30 @@ public partial class Observer
     }
 
     /// <inheritdoc/>
+    public async Task ReplayStepsCouldNotBePrepared()
+    {
+        if (IsRetired || _removed || !KeyOwnsDefinition) return;
+        if (!State.IsReplaying && State.RunningState != ObserverRunningState.Replaying) return;
+
+        using var scope = logger.BeginObserverScope(_observerId, _observerKey);
+        logger.ReplayStepsCouldNotBePrepared();
+        if (!State.IsReplaying)
+        {
+            State = State with { IsReplaying = true };
+            await WriteStateAsync();
+        }
+
+        if (!IsQuarantined)
+        {
+            // A refused transition keeps the replay pending for the next routing pass.
+            await TransitionTo<QuarantinedObserver>();
+        }
+    }
+
+    /// <inheritdoc/>
     public async Task ReleaseRefusedPartitionReplay(Key partition, EventSequenceNumber heldBackFrom)
     {
-        if (IsRetired || _removed || !State.ReplayingPartitions.Contains(partition)) return;
+        if (IsRetired || _removed || !KeyOwnsDefinition || !State.ReplayingPartitions.Contains(partition)) return;
 
         // Keep ownership until the catch-up decision, but claim no replay coverage or successful delivery.
         Skips.JobStarted(partition);
@@ -75,8 +96,16 @@ public partial class Observer
         {
             var alreadyFailed = Failures.TryGet(partition, out var existing);
             var position = alreadyFailed ? existing!.LastAttempt.SequenceNumber : EventSequenceNumber.Unavailable;
-            logger.PartitionFailed(partition, position, [reason], string.Empty);
-            failures.State.RegisterAttempt(partition, position, [reason], string.Empty);
+            var failure = failures.State.RegisterAttempt(partition, position, [reason], string.Empty);
+            if (alreadyFailed)
+            {
+                logger.PartitionFailedAgain(partition, position, failure.AttemptsInCurrentBudget);
+            }
+            else
+            {
+                logger.PartitionFailed(partition, position, FailureKindCode(FailureKind.Unknown));
+            }
+            logger.PartitionFailureDetails(partition, [reason], string.Empty);
             failures.State.Quarantine(partition);
             if (!alreadyFailed)
             {
@@ -85,7 +114,7 @@ public partial class Observer
 
             ChangeAlertState();
             await WriteStateAsync();
-            await failures.WriteStateAsync();
+            await WriteFailedPartitions();
         }
         finally
         {

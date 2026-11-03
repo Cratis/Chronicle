@@ -39,7 +39,6 @@ public partial class Observer
         _webhookProbeCancellation?.Dispose();
         _metrics?.Dispose();
         _coalescedWriteTimer?.Dispose();
-        _staleCatchUpRetryTimer?.Dispose();
         _alertMutationLock.Dispose();
         _stateWriteLock.Dispose();
         GC.SuppressFinalize(this);
@@ -97,7 +96,7 @@ public partial class Observer
                     return false;
                 }
 
-                var configuration = await configurationProvider.GetFor(_observerKey);
+                var retryConfiguration = await GetRetryConfiguration();
                 var committedFailures = await namespaceStorage.FailedPartitions.GetFor(_observerId);
                 var quarantineDesired = source.RunningState == ObserverRunningState.Quarantined;
                 if (!_subscription.IsSubscribed && Definition.Type == ObserverType.Projection)
@@ -121,7 +120,7 @@ public partial class Observer
                         latest.Kind,
                         latest.Messages.FirstOrDefault() ?? string.Empty);
                 }).ToArray();
-                snapshot = new(_observerKey, partitions, quarantineDesired, source.AlertDisposition, configuration.MaxRetryAttempts)
+                snapshot = new(_observerKey, partitions, quarantineDesired, source.AlertDisposition, retryConfiguration.MaxRetryAttempts)
                 {
                     LifecycleId = source.AlertLifecycleId,
                     Revision = source.AlertRevision,
@@ -210,7 +209,9 @@ public partial class Observer
             await UnregisterReminderNamed(LegacyAlertReminderName);
         }
 
-        if (source.Identifier != _observerId)
+        // An activation under another event sequence than the definition's is not this observer, even though it
+        // loads its record. It must neither keep the reminder that reactivates it nor count as existing.
+        if (source.Identifier != _observerId || !KeyOwnsDefinition)
         {
             await UnregisterReminderNamed(AlertReminderName);
             return;

@@ -78,15 +78,29 @@ public class ReducerMediator : IReducerMediator
         NotifyReplayObservers(reducerId, eventStore, @namespace, ReplayState.EndReplayPartition, partition.Value.ToString()!);
 
     /// <inheritdoc/>
-    public void Disconnected(
+    public bool Disconnected(
         ReducerId reducerId,
         ConnectionId connectionId,
         EventStoreName eventStore,
-        EventStoreNamespaceName @namespace)
+        EventStoreNamespaceName @namespace,
+        ReducerEventsObserver target,
+        ReducerReplayObserver replayTarget)
     {
         var key = new ReducerMediatorKey(reducerId, connectionId, eventStore, @namespace);
-        _observers.TryRemove(key, out _);
-        _replayObservers.TryRemove(key, out _);
+        var ownsEvents = RemoveIfOwned(_observers, key, target);
+        RemoveIfOwned(_replayObservers, key, replayTarget);
+        return ownsEvents;
+    }
+
+    static bool RemoveIfOwned<TObserver>(ConcurrentDictionary<ReducerMediatorKey, TObserver> observers, ReducerMediatorKey key, TObserver target)
+        where TObserver : Delegate
+    {
+        if (!observers.TryGetValue(key, out var current))
+        {
+            return true;
+        }
+
+        return ReferenceEquals(current, target) && (observers.TryRemove(new KeyValuePair<ReducerMediatorKey, TObserver>(key, current)) || !observers.ContainsKey(key));
     }
 
     void NotifyReplayObservers(ReducerId reducerId, EventStoreName eventStore, EventStoreNamespaceName @namespace, ReplayState replayState, string partition)

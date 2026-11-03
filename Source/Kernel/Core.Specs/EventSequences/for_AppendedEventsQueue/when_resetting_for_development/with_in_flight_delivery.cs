@@ -8,7 +8,6 @@ using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Observation;
 using Cratis.Metrics;
 using Cratis.Tasks;
-using Cratis.Traces;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
@@ -35,7 +34,7 @@ public class with_in_flight_delivery : Specification
         });
         var observerKey = new ObserverKey("old-observer", "store", "ns", "log");
         grainFactory.GetGrain<IObserver>(observerKey).Returns(_observer);
-        _queue = new(tasks, grainFactory, Substitute.For<IMeter<AppendedEventsQueue>>(), new ActivitySource<AppendedEventsQueue>(), Options.Create(new ChronicleOptions()), NullLogger<AppendedEventsQueue>.Instance);
+        _queue = new(tasks, grainFactory, Substitute.For<IMeter<AppendedEventsQueue>>(), Options.Create(new ChronicleOptions()), NullLogger<AppendedEventsQueue>.Instance);
         var eventType = new EventType("reset-event", 1);
         await _queue.Subscribe(observerKey, [eventType]);
         await _queue.Enqueue([AppendedEvent.Empty() with { Context = EventContext.Empty with { EventType = eventType } }]);

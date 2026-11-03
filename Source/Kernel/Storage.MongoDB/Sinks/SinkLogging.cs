@@ -16,6 +16,9 @@ namespace Cratis.Chronicle.Storage.MongoDB.Sinks;
 /// </remarks>
 internal static partial class SinkLogging
 {
+    [LoggerMessage(LogLevel.Warning, "Bulk window '{PreviousWindow}' for read model '{ReadModel}' was replaced by {Mode} window '{Window}', discarding {QueuedOperationCount} queued operations and {InFlightBatchCount} in-flight write batches; a step that pinned it fails with BulkWindowLost and resumes from its last durable checkpoint")]
+    internal static partial void OpenBulkWindowReplaced(this ILogger<Sink> logger, ReadModelIdentifier readModel, Guid previousWindow, Guid window, string mode, int queuedOperationCount, int inFlightBatchCount);
+
     [LoggerMessage(LogLevel.Warning, "Composite-key lookup in collection '{Collection}' has {PartCount} parts and requires a collection scan")]
     internal static partial void CompositeKeyCollectionScan(this ILogger<Sink> logger, string collection, int partCount);
 
@@ -24,6 +27,9 @@ internal static partial class SinkLogging
 
     [LoggerMessage(LogLevel.Error, "Bulk write to collection '{Collection}' for read model '{ReadModel}' reported a write concern error {Code} ({CodeName}): {ErrorMessage} - the outcome of {OperationCount} operations is unknown")]
     internal static partial void BulkWriteConcernErrorOccurred(this ILogger<Sink> logger, string collection, ReadModelIdentifier readModel, int code, string codeName, string errorMessage, int operationCount);
+
+    [LoggerMessage(LogLevel.Error, "Read model '{ReadModel}' key '{Key}' (partition '{Partition}'): the changeset touches more than {MaxBatchSize} documents (ReadModels.MaxBatchSize) and collection '{Collection}' holds operations that cannot be split safely: {Operations}. Raise ReadModels.MaxBatchSize and retry the partition")]
+    internal static partial void RefusedOversizedChangesetSplit(this ILogger<Sink> logger, ReadModelIdentifier readModel, string key, string partition, string collection, int maxBatchSize, string operations);
 
     [LoggerMessage(LogLevel.Error, "Shutdown bulk write to collection '{Collection}' for read model '{ReadModel}' failed with {ErrorType}; the outcome of {FailedPartitionCount} partitions is unknown")]
     internal static partial void ShutdownBulkWriteOutcomeUnknown(this ILogger<Sink> logger, string collection, ReadModelIdentifier readModel, string errorType, int failedPartitionCount);

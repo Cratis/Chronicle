@@ -11,7 +11,9 @@ Observer configuration controls retry behavior, timeouts, watchdog monitoring, a
 {
   "observers": {
     "subscriberTimeout": 30,
+    "liveDeliveryBudget": 100,
     "abandonedDeliveryHold": 300,
+    "maxEventsPerSubscriberCall": 100,
     "maxRetryAttempts": 10,
     "backoffDelay": 1,
     "exponentialBackoffDelayFactor": 2,
@@ -28,9 +30,11 @@ Observer configuration controls retry behavior, timeouts, watchdog monitoring, a
 
 | Property | Type | Default | Description |
 | --- | --- | --- | --- |
-| subscriberTimeout | number | 30 | How many seconds an observer waits for its subscriber to answer a batch before giving up on it. `0` waits indefinitely. See [Subscriber timeout](#subscriber-timeout) |
+| subscriberTimeout | number | 30 | How many seconds an observer waits for its subscriber to answer a batch before giving up on it. Not capped by `clustering.responseTimeout` during catch-up, replay and partition recovery; bounded at 1 hour. Live delivery stays below the Orleans response timeout. `0` waits indefinitely (up to that bound). See [Subscriber timeout](#subscriber-timeout) |
+| liveDeliveryBudget | number | 100 | Maximum events delivered inline in one live call. Larger batches are deferred to partition catch-up without advancing the live position. `0` or less disables the limit. Catch-up and replay are unaffected |
 | abandonedDeliveryHold | number | 300 | Maximum additional seconds to hold an abandoned gRPC client delivery. Positive values are at least `subscriberTimeout`. `0` or less disables fencing; a disabled subscriber timeout also disables it. See [Abandoned client deliveries](#abandoned-client-deliveries) |
-| maxRetryAttempts | number | 10 | Maximum retry attempts for failed partitions (0 = infinite). The limit applies per retry budget: clearing the quarantine of a partition starts a new budget, so it gets this many attempts again |
+| maxEventsPerSubscriberCall | number | 100 | The most events handed to a gRPC client (reactor or reducer) or webhook subscriber in one call during catch-up, replay and partition recovery. `0` or less hands over storage batches as read. See [Bounded subscriber calls](#bounded-subscriber-calls) |
+| maxRetryAttempts | number | 10 | Maximum retry attempts for failed partitions (0 = infinite). The limit applies per retry budget: clearing the quarantine of a partition starts a new budget, so it gets this many attempts again. An attempt that fails at a later event than the previous one made progress and also starts a new budget, so only a partition that keeps failing at the same event is quarantined |
 | quarantineOnFailedPartitionCount | number | 0 | Quarantine the observer once this many of its partitions have failed (0 = never) |
 | quarantineOnFailedPartitionPercentage | number | 0.0 | Quarantine the observer once this share of its observed partitions have failed (0.0 = never) |
 | backoffDelay | number | 1 | Initial backoff delay in seconds |
@@ -42,6 +46,48 @@ Observer configuration controls retry behavior, timeouts, watchdog monitoring, a
 | maxCatchupRecoveryAttempts | number | 5 | How many watchdog checks in a row may retry a stuck catch-up preparation, or a recovery that failed after quarantine was cleared, before the watchdog quarantines the observer. `0` or less quarantines on the first retry. See [Ending quarantine](#ending-quarantine) |
 | maxConcurrentPartitions | number | 32 | Upper bound on how many job steps (replay and catch-up work) run in parallel. The effective limit is the smaller of this value and `jobs.maxParallelSteps`. Despite the name it does not limit live event delivery. See [Job throttling](job-throttling.md) |
 | fanOutStrategy | string | round-robin | Strategy for distributing events across multiple connected instances of the same client. `round-robin` distributes deterministically by partition key, keeping every partition sticky to one instance and preserving per-partition ordering. `random` picks a random instance per delivery |
+
+## Per-observer retry overrides
+
+You can override the failed-partition retry settings for a single observer. Add an `observerRetryOverrides` section next to `observers` in `chronicle.json`, keyed by the full observer key `<observer id>#<event store>#<namespace>#<event sequence id>`:
+
+```json
+{
+  "observerRetryOverrides": {
+    "d2a138a2-6ca5-4bff-8a2f-ffd8534cc80e#my-store#Default#event-log": {
+      "maxRetryAttempts": 3,
+      "backoffDelay": 5,
+      "exponentialBackoffDelayFactor": 1.5,
+      "maximumBackoffDelay": 120
+    }
+  }
+}
+```
+
+| Property | Type | Description |
+| --- | --- | --- |
+| maxRetryAttempts | number | Maximum retry attempts for this observer's failed partitions (0 = infinite) |
+| backoffDelay | number | Initial backoff delay in seconds. Must be greater than 0 |
+| exponentialBackoffDelayFactor | number | Exponential backoff multiplier. Must be a finite number of at least 1 |
+| maximumBackoffDelay | number | Maximum backoff delay in seconds. Must be greater than 0 |
+
+A property you leave out inherits its value from the global `observers` section, and every other observer setting always comes from that section.
+
+The full key must match exactly, including case. There are no wildcards, and the observer id alone does not match. An entry that matches no observer is ignored without a warning. You find the observer ids on the Workbench Observers page or with `cratis chronicle observers list`.
+
+The Kernel validates the entries at startup and refuses to start when one is invalid: the key must have four parts, `maxRetryAttempts` cannot be negative, `backoffDelay` and `maximumBackoffDelay` must be greater than 0, and `exponentialBackoffDelayFactor` must be finite and at least 1. The global `observers` values are not validated by this.
+
+You can also set a value with an environment variable, which takes precedence over `chronicle.json`:
+
+```shell
+Cratis__Chronicle__ObserverRetryOverrides__<key>__MaxRetryAttempts=3
+```
+
+Some shells and orchestrators reject `#` in variable names. Use `chronicle.json` then.
+
+The values are copied into the configuration when the Kernel starts, so restart the Kernel to change them. Retry reminders that are already scheduled keep their time, and new values apply from the next scheduled retry or recovery. Lowering `maxRetryAttempts` does not park partitions that are already failing. A delay that would exceed `maximumBackoffDelay`, including one that results from a very large factor or attempt count, uses `maximumBackoffDelay`.
+
+Webhooks ignore these overrides. They use their own `webhooks.retry` settings, see [Delivery retry policy](../../configuration/chronicle-options.mdx#delivery-retry-policy). Alerts for webhook observers use the webhook retry settings too.
 
 ## Definition evolution
 
@@ -66,10 +112,41 @@ Every path that hands events to an observer's subscriber — live delivery, catc
 `Timeout` and the partition retries with the usual backoff.
 
 Giving up abandons the wait, not the work. For gRPC reactors and reducers, Chronicle holds the subscriber turn
-open after the timeout and fences that partition before recovery can send another batch. Raising the setting past
-the transport's own response timeout does not extend the transport's wait.
+open after the timeout and fences that partition before recovery can send another batch.
 
-Set it to `0` to wait indefinitely. This also disables abandoned-delivery fencing.
+The setting is independent of `clustering.responseTimeout`. Subscriber calls carry their own Orleans response
+timeout of **1 hour**, so a `subscriberTimeout` of, for example, `600` waits the full 10 minutes during catch-up,
+replay and partition recovery without raising the response timeout for every other call in the cluster. When a
+subscriber call does hit that 1-hour ceiling, the failure says so (`The Orleans response timeout fired after ...`)
+instead of naming the configured subscriber timeout.
+
+Set it to `0` to wait indefinitely during catch-up and replay. This also disables abandoned-delivery fencing. Both
+`0` and values above one hour are bounded by the 1-hour ceiling, and Chronicle logs a warning at startup when that
+applies.
+
+Live delivery still bounds its wait to five seconds below the effective Orleans response timeout (the larger of
+its response and system-response timeouts), including when `subscriberTimeout` is `0`, because the observer has to
+record the result before its own call times out. A shorter positive subscriber timeout remains unchanged. If the
+response timeout is at most five seconds, the live wait is reduced to a minimal positive duration rather than
+becoming indefinite.
+
+Live batches exceeding `liveDeliveryBudget` (default **100 events**) are deferred to a partition catch-up job
+before calling the subscriber. The job starts at the batch's first unhandled event; the live position does not
+advance merely because the batch was deferred. A batch at the limit is delivered live. Set the budget to `0`
+or less to disable this handoff. This setting does not limit catch-up or replay batch sizes.
+
+## Bounded subscriber calls
+
+Catch-up, replay and partition recovery read events from storage in batches whose size the storage decides, and a
+MongoDB cursor batch can hold thousands of events. A gRPC client or webhook subscriber gets them at most
+`maxEventsPerSubscriberCall` at a time. Each answered call is checkpointed before the next is sent, so a long
+partition advances call by call, and `subscriberTimeout` only has to cover the work behind one bounded call.
+
+Kernel-owned subscribers, such as projections, keep the storage batches they are tuned for.
+
+Every batch sent to a gRPC client also says how long the kernel waits for its result (`DeliverWithinMilliseconds`,
+counted from when the client receives it). A client that only gets to the batch after that time can answer it as
+failed right away instead of doing work the kernel has already given up on.
 
 ## Abandoned client deliveries
 
@@ -116,7 +193,7 @@ A partition whose last attempt is a `Timeout` does not count toward the quaranti
 Quarantining stops retries and needs an operator to undo, which is the right answer for an observer
 that is wrong and the wrong answer for one waiting on congestion that will clear on its own.
 
-Webhook retries use these same budget and delay settings, with bounded ±20% jitter and a persisted
+Webhook retries use their own `webhooks.retry` settings, with bounded ±20% jitter and a persisted
 `RetryBackoff` deadline. `maxRetryAttempts: 0` still means unlimited retries. For webhooks, the
 observer-quarantine thresholds count parked non-timeout partitions, not transient partitions still
 waiting for retry. Receiver `Retry-After` and open-circuit deferrals consume no retry attempts.

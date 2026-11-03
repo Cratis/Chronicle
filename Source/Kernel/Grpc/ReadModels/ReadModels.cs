@@ -60,6 +60,11 @@ internal sealed class ReadModels(
     /// <inheritdoc/>
     public async Task RegisterMany(RegisterManyRequest request, CallContext context = default)
     {
+        SystemStoreGuard.EnsureNotSystem(new(request.EventStore));
+        foreach (var definition in request.ReadModels)
+        {
+            SystemStoreGuard.EnsureNotSystem(new(request.EventStore, definition.Type.Identifier, definition.ObserverIdentifier));
+        }
         var readModelsManager = grainFactory.GetReadModelsManager(request.EventStore);
         var readModelDefinitions = request.ReadModels.Select(definition => definition.ToChronicle(request.Owner, request.Source)).ToArray();
         await readModelsManager.Register(readModelDefinitions);
@@ -68,6 +73,8 @@ internal sealed class ReadModels(
     /// <inheritdoc/>
     public async Task RegisterSingle(RegisterSingleRequest request, CallContext context = default)
     {
+        SystemStoreGuard.EnsureNotSystem(new(request.EventStore));
+        SystemStoreGuard.EnsureNotSystem(new(request.EventStore, request.ReadModel.Type.Identifier, request.ReadModel.ObserverIdentifier));
         var readModelsManager = grainFactory.GetReadModelsManager(request.EventStore);
         var readModelDefinition = request.ReadModel.ToChronicle(request.Owner, request.Source);
         await readModelsManager.RegisterSingle(readModelDefinition);
@@ -76,6 +83,8 @@ internal sealed class ReadModels(
     /// <inheritdoc/>
     public async Task UpdateDefinition(UpdateDefinitionRequest request, CallContext context = default)
     {
+        SystemStoreGuard.EnsureNotSystem(new(request.EventStore));
+        SystemStoreGuard.EnsureNotSystem(new(request.EventStore, request.ReadModel.Type.Identifier, request.ReadModel.ObserverIdentifier));
         var readModelsManager = grainFactory.GetReadModelsManager(request.EventStore);
         var existingDefinitions = await readModelsManager.GetDefinitions();
         var existingDefinition = existingDefinitions.FirstOrDefault(d => d.Identifier == request.ReadModel.Type.Identifier) ??
@@ -105,6 +114,7 @@ internal sealed class ReadModels(
     /// <inheritdoc/>
     public async Task<GetDefinitionsResponse> GetDefinitions(GetDefinitionsRequest request, CallContext context = default)
     {
+        await SystemStoreGuard.Ensure(context, new(request.EventStore));
         var readModelsManager = grainFactory.GetReadModelsManager(request.EventStore);
         var definitions = await readModelsManager.GetDefinitions();
         return new()
@@ -116,6 +126,7 @@ internal sealed class ReadModels(
     /// <inheritdoc/>
     public async Task<GetOccurrencesResponse> GetOccurrences(GetOccurrencesRequest request, CallContext context = default)
     {
+        await SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace));
         var readModelReplayManager = grainFactory.GetReadModelReplayManager(request.EventStore, request.Namespace, request.Type.Identifier);
         var occurrences = await readModelReplayManager.GetOccurrences();
         return new()
@@ -127,18 +138,14 @@ internal sealed class ReadModels(
     /// <inheritdoc/>
     public async Task<GetInstancesResponse> GetInstances(GetInstancesRequest request, CallContext context = default)
     {
+        await SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace, request.ReadModel, request.Occurrence));
         var readModel = grainFactory.GetReadModel(request.ReadModel, request.EventStore);
         var definition = await readModel.GetKnownDefinition(request.ReadModel);
         var occurrence = string.IsNullOrEmpty(request.Occurrence) ? null : (ReadModelContainerName)request.Occurrence;
         var binding = await readBindings.Resolve(request.EventStore, request.Namespace, definition, occurrence);
-        var sink = binding.Sink;
-        occurrence = binding.Occurrence;
         var skip = Math.Max(0, request.Page * request.PageSize);
 
-        var (instances, totalCount) = await sink.GetInstances(
-            occurrence,
-            skip,
-            request.PageSize);
+        var (instances, totalCount) = await binding.GetInstances(skip, request.PageSize);
 
         var schema = definition.GetSchemaForLatestGeneration();
         var releasedInstances = await complianceHelper.Release(
@@ -160,6 +167,7 @@ internal sealed class ReadModels(
     /// <inheritdoc/>
     public async Task<GetInstanceByKeyResponse> GetInstanceByKey(GetInstanceByKeyRequest request, CallContext context = default)
     {
+        await SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace, request.ReadModelIdentifier, request.EventSequenceId, request.SessionId));
         var readModel = grainFactory.GetReadModel(request.ReadModelIdentifier, request.EventStore);
         var definition = await readModel.GetKnownDefinition(request.ReadModelIdentifier);
 
@@ -288,6 +296,7 @@ internal sealed class ReadModels(
     /// <inheritdoc/>
     public async Task<GetAllInstancesResponse> GetAllInstances(GetAllInstancesRequest request, CallContext context = default)
     {
+        await SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace, request.ReadModelIdentifier, request.EventSequenceId));
         var readModel = grainFactory.GetReadModel(request.ReadModelIdentifier, request.EventStore);
         var definition = await readModel.GetKnownDefinition(request.ReadModelIdentifier);
 
@@ -423,86 +432,13 @@ internal sealed class ReadModels(
     }
 
     /// <inheritdoc/>
-    public IObservable<ReadModelChangeset> Watch(WatchRequest request, CallContext context = default)
-    {
-        var readModel = grainFactory.GetReadModel(request.ReadModelIdentifier, request.EventStore);
-
-        return Observable.Create<ReadModelChangeset>(async observer =>
-        {
-            var definition = await WaitForReadModelDefinition(readModel, request.ReadModelIdentifier, context.CancellationToken);
-
-            if (definition.ObserverType == Concepts.ReadModels.ReadModelObserverType.Projection)
-            {
-                var schema = definition.GetSchemaForLatestGeneration();
-                var subscriptionId = Guid.NewGuid();
-
-                // Register the forwarder that decrypts a changeset and pushes it onto this client's gRPC
-                // stream into this silo's changeset mediator. The per-watch subscriber grain below is
-                // pinned to this silo, so the notifier -> subscriber -> mediator -> stream path ends with
-                // a strictly in-process hop. This mirrors the reducer/reactor delivery pattern and
-                // replaces the previous CreateObjectReference grain-observer callback, whose one-way
-                // dispatch from the notifier grain was silently dropped on slower backends.
-                changesetMediator.Subscribe(subscriptionId, async (namespaceName, readModelKey, readModelInstance, change) =>
-                {
-                    // Decrypt through the shared release path so observable queries resolve the compliance
-                    // subject exactly like one-shot queries (explicit __subject, else inferred from _id/id).
-                    var decrypted = await ReleaseJsonForProjectedReadModel(request.EventStore, namespaceName, schema, readModelInstance);
-                    observer.OnNext(new ReadModelChangeset
-                    {
-                        Namespace = namespaceName,
-                        ModelKey = readModelKey,
-                        ReadModel = decrypted.ToJsonString(jsonSerializerOptions),
-                        Removed = change.ChangeType == Concepts.ReadModels.ReadModelChangeType.Removed,
-                        ChangeType = change.ChangeType switch
-                        {
-                            Concepts.ReadModels.ReadModelChangeType.Added => Contracts.ReadModels.ReadModelChangeType.Added,
-                            Concepts.ReadModels.ReadModelChangeType.Removed => Contracts.ReadModels.ReadModelChangeType.Removed,
-                            _ => Contracts.ReadModels.ReadModelChangeType.Modified
-                        },
-                        EventSequenceNumber = change.EventSequenceNumber.Value,
-                        Occurred = change.Occurred,
-                        CorrelationId = change.CorrelationId.Value
-                    });
-                });
-
-                // The subscriber grain carries this silo's address in its key so [ConnectedObserverPlacement]
-                // pins it here; the subscription id travels in the event source id slot. The notifier reaches
-                // it as an ordinary — reliably routed — grain reference rather than an object reference.
-                var subscriberKey = new ObserverSubscriberKey(
-                    new ObserverId(definition.ObserverIdentifier.Value),
-                    request.EventStore,
-                    request.Namespace,
-                    request.EventSequenceId,
-                    subscriptionId.ToString("N"),
-                    localSiloDetails.SiloAddress.ToParsableString());
-                var subscriber = grainFactory.GetGrain<IReadModelChangesetSubscriber>(subscriberKey);
-                var notifier = grainFactory.GetGrain<IProjectionChangesetNotifier>(definition.ObserverIdentifier);
-                await notifier.Subscribe(subscriber);
-
-                try
-                {
-                    // Notify the client that the watch subscription is now active. Any changeset produced
-                    // from this point on reaches the forwarder registered above.
-                    observer.OnNext(new ReadModelChangeset { Subscribed = true });
-
-                    await Task.Delay(Timeout.Infinite, context.CancellationToken).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
-                }
-                finally
-                {
-                    await notifier.Unsubscribe(subscriber).ConfigureAwait(false);
-                    changesetMediator.Unsubscribe(subscriptionId);
-                }
-            }
-            else
-            {
-                observer.OnError(new NotSupportedException("Server-side reducer watching is not yet supported. Reducers typically run client-side."));
-            }
-        });
-    }
+    public IObservable<ReadModelChangeset> Watch(WatchRequest request, CallContext context = default) =>
+        SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace, request.ReadModelIdentifier, request.EventSequenceId), () => WatchGuarded(request, context));
 
     /// <inheritdoc/>
     public async Task DehydrateSession(DehydrateSessionRequest request, CallContext context = default)
     {
+        await SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace, request.ReadModelIdentifier, request.EventSequenceId, request.SessionId));
         var readModel = grainFactory.GetReadModel(request.ReadModelIdentifier, request.EventStore);
         var definition = await readModel.GetKnownDefinition(request.ReadModelIdentifier);
 
@@ -531,6 +467,76 @@ internal sealed class ReadModels(
         {
             throw new NotSupportedException("Server-side reducer session dehydration is not yet supported. Reducers typically run client-side.");
         }
+    }
+
+    IObservable<ReadModelChangeset> WatchGuarded(WatchRequest request, CallContext context)
+    {
+        var readModel = grainFactory.GetReadModel(request.ReadModelIdentifier, request.EventStore);
+
+        return Observable.Create<ReadModelChangeset>(async observer =>
+        {
+            var definition = await WaitForReadModelDefinition(readModel, request.ReadModelIdentifier, context.CancellationToken);
+
+            var schema = definition.GetSchemaForLatestGeneration();
+            var subscriptionId = Guid.NewGuid();
+
+            // Register the forwarder that decrypts a changeset and pushes it onto this client's gRPC
+            // stream into this silo's changeset mediator. The per-watch subscriber grain below is
+            // pinned to this silo, so the notifier -> subscriber -> mediator -> stream path ends with
+            // a strictly in-process hop. This mirrors the reducer/reactor delivery pattern and
+            // replaces the previous CreateObjectReference grain-observer callback, whose one-way
+            // dispatch from the notifier grain was silently dropped on slower backends.
+            changesetMediator.Subscribe(subscriptionId, async (namespaceName, readModelKey, readModelInstance, change) =>
+            {
+                // Decrypt through the shared release path so observable queries resolve the compliance
+                // subject exactly like one-shot queries (explicit __subject, else inferred from _id/id).
+                var decrypted = await ReleaseJsonForReadModel(request.EventStore, namespaceName, schema, readModelInstance);
+                observer.OnNext(new ReadModelChangeset
+                {
+                    Namespace = namespaceName,
+                    ModelKey = readModelKey,
+                    ReadModel = decrypted.ToJsonString(jsonSerializerOptions),
+                    Removed = change.ChangeType == Concepts.ReadModels.ReadModelChangeType.Removed,
+                    ChangeType = change.ChangeType switch
+                    {
+                        Concepts.ReadModels.ReadModelChangeType.Added => Contracts.ReadModels.ReadModelChangeType.Added,
+                        Concepts.ReadModels.ReadModelChangeType.Removed => Contracts.ReadModels.ReadModelChangeType.Removed,
+                        _ => Contracts.ReadModels.ReadModelChangeType.Modified
+                    },
+                    EventSequenceNumber = change.EventSequenceNumber.Value,
+                    Occurred = change.Occurred,
+                    CorrelationId = change.CorrelationId.Value
+                });
+            });
+
+            // The subscriber grain carries this silo's address in its key so [ConnectedObserverPlacement]
+            // pins it here; the subscription id travels in the event source id slot. The notifier reaches
+            // it as an ordinary — reliably routed — grain reference rather than an object reference.
+            var subscriberKey = new ObserverSubscriberKey(
+                new ObserverId(definition.ObserverIdentifier.Value),
+                request.EventStore,
+                request.Namespace,
+                request.EventSequenceId,
+                subscriptionId.ToString("N"),
+                localSiloDetails.SiloAddress.ToParsableString());
+            var subscriber = grainFactory.GetGrain<IReadModelChangesetSubscriber>(subscriberKey);
+            var notifier = grainFactory.GetGrain<IProjectionChangesetNotifier>(definition.ObserverIdentifier);
+            await notifier.Subscribe(subscriber);
+
+            try
+            {
+                // Notify the client that the watch subscription is now active. Any changeset produced
+                // from this point on reaches the forwarder registered above.
+                observer.OnNext(new ReadModelChangeset { Subscribed = true });
+
+                await Task.Delay(Timeout.Infinite, context.CancellationToken).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
+            }
+            finally
+            {
+                await notifier.Unsubscribe(subscriber).ConfigureAwait(false);
+                changesetMediator.Unsubscribe(subscriptionId);
+            }
+        });
     }
 
     async Task<GetInstanceByKeyResponse> GetMaterializedInstanceByKey(GetInstanceByKeyRequest request, Concepts.ReadModels.ReadModelDefinition definition)
@@ -721,9 +727,9 @@ internal sealed class ReadModels(
     }
 
     Task<JsonObject> ReleaseProjectedReadModel(JsonObject readModel, JsonSchema schema, string eventStore, string @namespace, string? subject) =>
-        ReleaseJsonForProjectedReadModel(eventStore, @namespace, schema, readModel, subject);
+        ReleaseJsonForReadModel(eventStore, @namespace, schema, readModel, subject);
 
-    async Task<JsonObject> ReleaseJsonForProjectedReadModel(
+    async Task<JsonObject> ReleaseJsonForReadModel(
         string eventStore,
         string @namespace,
         JsonSchema schema,

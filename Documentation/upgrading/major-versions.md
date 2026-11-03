@@ -217,7 +217,7 @@ once before, and rehearse the upgrade against a copy.
 ## Wire compatibility across a boundary
 
 Chronicle verifies that the current build still serves **every released minor of the major it
-is on**. That guarantee stops at a major boundary — which is exactly what a major means. So a
+is on published before it**. That guarantee stops at a major boundary — which is exactly what a major means. So a
 client and kernel differing only in minor are expected to interoperate, while a client and
 kernel on different majors are not, unless a boundary above explicitly says otherwise (8 → 9
 did).

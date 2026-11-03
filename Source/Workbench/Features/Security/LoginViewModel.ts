@@ -15,6 +15,7 @@ export class LoginViewModel {
     password: string = '';
     newPassword: string = '';
     confirmPassword: string = '';
+    setupToken: string = '';
     isLoggingIn: boolean = false;
     isLoading: boolean = true;
     errorMessage: string = '';
@@ -142,10 +143,15 @@ export class LoginViewModel {
             command.userId = this.userId!;
             command.password = this.newPassword;
             command.confirmedPassword = this.confirmPassword;
-            if (!this.isInitialSetup) this._changePassword.oldPassword = this.password;
+            if (this.isInitialSetup) {
+                this._setInitialAdminPassword.setupToken = this.setupToken.trim();
+            } else {
+                this._changePassword.oldPassword = this.password;
+            }
 
             const result = await command.execute();
             if (result.isSuccess) {
+                this.setupToken = '';
                 this.password = this.newPassword;
                 await this.signInWithIdentityApi();
             } else {
@@ -172,6 +178,7 @@ export class LoginViewModel {
         this.isInitialSetup = false;
         this.newPassword = '';
         this.confirmPassword = '';
+        this.setupToken = '';
         this.userId = null;
         this.errorMessage = '';
 

@@ -79,11 +79,16 @@ public interface IReducerMediator
     void OnEndReplayPartition(ReducerId reducerId, EventStoreName eventStore, EventStoreNamespaceName @namespace, Key partition);
 
     /// <summary>
-    /// Notify that a client has disconnected.
+    /// Notify that a client stream has disconnected. The registrations are only removed when they are still
+    /// the ones the disconnecting stream made; a stream that was replaced by a later one for the same key leaves
+    /// its successor in place.
     /// </summary>
     /// <param name="reducerId"><see cref="ReducerId"/> for the client that disconnected.</param>
     /// <param name="connectionId"><see cref="ConnectionId"/> for the client that disconnected.</param>
     /// <param name="eventStore"><see cref="EventStoreName"/> for the client that disconnected.</param>
     /// <param name="namespace"><see cref="EventStoreNamespaceName"/> for the client that disconnected.</param>
-    void Disconnected(ReducerId reducerId, ConnectionId connectionId, EventStoreName eventStore, EventStoreNamespaceName @namespace);
+    /// <param name="target"><see cref="ReducerEventsObserver"/> delegate the disconnecting stream registered.</param>
+    /// <param name="replayTarget"><see cref="ReducerReplayObserver"/> delegate the disconnecting stream registered.</param>
+    /// <returns>True if the disconnecting stream still owned the events registration, or none was registered; false if a later stream replaced it.</returns>
+    bool Disconnected(ReducerId reducerId, ConnectionId connectionId, EventStoreName eventStore, EventStoreNamespaceName @namespace, ReducerEventsObserver target, ReducerReplayObserver replayTarget);
 }

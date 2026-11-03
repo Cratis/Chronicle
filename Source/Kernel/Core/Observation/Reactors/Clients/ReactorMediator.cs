@@ -50,11 +50,12 @@ public class ReactorMediator : IReactorMediator
         EventStoreNamespaceName @namespace,
         Key partition,
         IEnumerable<AppendedEvent> events,
-        TaskCompletionSource<ObserverSubscriberResult> taskCompletionSource)
+        TaskCompletionSource<ObserverSubscriberResult> taskCompletionSource,
+        TimeSpan? deliverWithin = null)
     {
         if (_observers.TryGetValue(new(reactorId, connectionId, eventStore, @namespace), out var observable))
         {
-            observable(partition, events, taskCompletionSource);
+            observable(partition, events, taskCompletionSource, deliverWithin);
         }
         else
         {
@@ -79,15 +80,29 @@ public class ReactorMediator : IReactorMediator
         NotifyReplayObservers(reactorId, eventStore, @namespace, ReplayState.EndReplayPartition, partition.Value.ToString()!);
 
     /// <inheritdoc/>
-    public void Disconnected(
+    public bool Disconnected(
         ReactorId reactorId,
         ConnectionId connectionId,
         EventStoreName eventStore,
-        EventStoreNamespaceName @namespace)
+        EventStoreNamespaceName @namespace,
+        ReactorEventsObserver target,
+        ReactorReplayObserver replayTarget)
     {
         var key = new ReactorMediatorKey(reactorId, connectionId, eventStore, @namespace);
-        _observers.TryRemove(key, out _);
-        _replayObservers.TryRemove(key, out _);
+        var ownsEvents = RemoveIfOwned(_observers, key, target);
+        RemoveIfOwned(_replayObservers, key, replayTarget);
+        return ownsEvents;
+    }
+
+    static bool RemoveIfOwned<TObserver>(ConcurrentDictionary<ReactorMediatorKey, TObserver> observers, ReactorMediatorKey key, TObserver target)
+        where TObserver : Delegate
+    {
+        if (!observers.TryGetValue(key, out var current))
+        {
+            return true;
+        }
+
+        return ReferenceEquals(current, target) && (observers.TryRemove(new KeyValuePair<ReactorMediatorKey, TObserver>(key, current)) || !observers.ContainsKey(key));
     }
 
     void NotifyReplayObservers(ReactorId reactorId, EventStoreName eventStore, EventStoreNamespaceName @namespace, ReplayState replayState, string partition)

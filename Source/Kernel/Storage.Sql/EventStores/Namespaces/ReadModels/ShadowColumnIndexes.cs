@@ -22,6 +22,21 @@ internal static class ShadowColumnIndexes
     static readonly ConcurrentDictionary<string, SemaphoreSlim> _gates = new();
 
     /// <summary>
+    /// Checks whether shadow-index reconciliation would issue DDL, without taking the schema lock.
+    /// </summary>
+    /// <param name="context">The read-model context.</param>
+    /// <param name="cancellationToken">The cancellation token for reading existing indexes.</param>
+    /// <returns>Whether an index needs to be dropped or created.</returns>
+    internal static async Task<bool> NeedsReconciliation(ReadModelDbContext context, CancellationToken cancellationToken = default)
+    {
+        if (ShadowColumns.For(context).Count == 0) return false;
+        var expected = ShadowColumns.IndexedFor(context).ToHashSet(StringComparer.Ordinal);
+        var indexes = await Existing(context).ToArrayAsync(cancellationToken);
+        return indexes.Any(index => !index.IsValid || !expected.Contains(index.Column)) ||
+            expected.Any(column => !indexes.Any(index => index.IsValid && index.Column == column));
+    }
+
+    /// <summary>
     /// Ensures the registry's shadow indexes on the physical table and removes obsolete shadow indexes.
     /// </summary>
     /// <param name="context">The read-model context.</param>
@@ -65,9 +80,17 @@ internal static class ShadowColumnIndexes
     /// <param name="context">The SQLite read-model context.</param>
     /// <param name="column">The original decimal property.</param>
     /// <returns>An awaitable task.</returns>
-    internal static async Task RemoveLegacyDecimalIndex(ReadModelDbContext context, string column)
+    internal static Task RemoveLegacyDecimalIndex(ReadModelDbContext context, string column) =>
+        RemoveSupersededIndex(context, ReadModelIndexNames.For(DatabaseType.Sqlite, context.TableName, column));
+
+    /// <summary>
+    /// Removes a superseded declared index by name when it is non-unique, never a custom or unique index.
+    /// </summary>
+    /// <param name="context">The SQLite read-model context.</param>
+    /// <param name="name">The superseded index name.</param>
+    /// <returns>An awaitable task.</returns>
+    internal static async Task RemoveSupersededIndex(ReadModelDbContext context, string name)
     {
-        var name = ReadModelIndexNames.For(DatabaseType.Sqlite, context.TableName, column);
         var exists = await context.Database.SqlQuery<string>($"SELECT name AS Value FROM pragma_index_list({context.TableName}) WHERE \"unique\" = 0 AND name = {name}").AnyAsync();
         if (exists) await ReadModelIndexOperations.Drop(context, context.TableName, name, online: true);
     }

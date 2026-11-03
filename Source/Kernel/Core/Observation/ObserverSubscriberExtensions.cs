@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using Cratis.Chronicle.Concepts.Events;
@@ -81,21 +82,9 @@ public static class ObserverSubscriberExtensions
         ObserverSubscriberContext context,
         CancellationToken cancellationToken = default)
     {
+        var started = Stopwatch.GetTimestamp();
         var call = subscriber.OnNextPage(events, context);
-        if (timeout <= TimeSpan.Zero)
-        {
-            return await call.WaitAsync(cancellationToken);
-        }
-
-        try
-        {
-            return await call.WaitAsync(timeout, cancellationToken);
-        }
-        catch (TimeoutException)
-        {
-            _ = call.ContinueWith(static abandoned => _ = abandoned.Exception, TaskScheduler.Default);
-            throw new SubscriberCallTimedOut(ObserverSubscriberKey.AllPartitions, timeout);
-        }
+        return await WaitForAnswer(call, timeout, ObserverSubscriberKey.AllPartitions, started, cancellationToken);
     }
 
     /// <summary>
@@ -109,6 +98,105 @@ public static class ObserverSubscriberExtensions
         var subscriberKey = ObserverSubscriberKey.Parse(subscriber.GetPrimaryKeyString());
         var observerKey = new ObserverKey(subscriberKey.ObserverId, subscriberKey.EventStore, subscriberKey.Namespace, subscriberKey.EventSequenceId);
         return (observerKey, subscriberKey);
+    }
+
+    /// <summary>
+    /// Hands events to a webhook subscriber, cancelling and draining the HTTP call once the delivery deadline elapses.
+    /// </summary>
+    /// <param name="subscriber">The <see cref="IWebhookObserverSubscriber"/> to hand the events to.</param>
+    /// <param name="deliveryDeadline">The <see cref="WebhookDeliveryDeadline"/> bounding the call; a timeout at or below zero waits indefinitely.</param>
+    /// <param name="partition">The <see cref="Key">partition</see> the events belong to.</param>
+    /// <param name="events">The <see cref="AppendedEvent">events</see> to hand over.</param>
+    /// <param name="context">The <see cref="ObserverSubscriberContext"/> for the call.</param>
+    /// <param name="cancellationToken">Cancellation of the wait.</param>
+    /// <returns>The <see cref="ObserverSubscriberResult"/> the subscriber answered with.</returns>
+    /// <exception cref="SubscriberCallTimedOut">Thrown when the subscriber does not answer before the deadline.</exception>
+    internal static async Task<ObserverSubscriberResult> OnNextWebhook(
+        IWebhookObserverSubscriber subscriber,
+        WebhookDeliveryDeadline deliveryDeadline,
+        Key partition,
+        IEnumerable<AppendedEvent> events,
+        ObserverSubscriberContext context,
+        CancellationToken cancellationToken)
+    {
+        using var timeoutCancellation = new CancellationTokenSource(deliveryDeadline.Timeout > TimeSpan.Zero ? deliveryDeadline.Timeout : Timeout.InfiniteTimeSpan, deliveryDeadline.Clock);
+        using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCancellation.Token);
+
+        // Orleans can cancel the caller's task before the remote turn has unwound. The non-interleavable
+        // Drain turn is a completion barrier on that same activation; do not release a timed-out delivery
+        // until it has crossed the barrier.
+        ObserverSubscriberResult result;
+        try
+        {
+            result = await subscriber.OnNext(partition, events, context, deadline.Token);
+        }
+        catch (Exception exception)
+        {
+            var timedOut = deadline.IsCancellationRequested && !cancellationToken.IsCancellationRequested;
+            await deadline.CancelAsync();
+            await subscriber.Drain();
+            if (exception is OperationCanceledException && timedOut)
+            {
+                throw new SubscriberCallTimedOut(partition, deliveryDeadline.Timeout);
+            }
+
+            throw;
+        }
+
+        if (deadline.IsCancellationRequested)
+        {
+            await subscriber.Drain();
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
+        if (deadline.IsCancellationRequested)
+        {
+            throw new SubscriberCallTimedOut(partition, deliveryDeadline.Timeout);
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Waits for a subscriber call to answer, telling the configured subscriber timeout apart from Orleans giving up on the call.
+    /// </summary>
+    /// <param name="call">The grain call in flight.</param>
+    /// <param name="timeout">The configured subscriber timeout; zero or less waits indefinitely.</param>
+    /// <param name="partition">The partition being delivered, for the failure.</param>
+    /// <param name="started">The <see cref="Stopwatch"/> timestamp the call was made at.</param>
+    /// <param name="cancellationToken">Cancellation of the wait.</param>
+    /// <returns>The <see cref="ObserverSubscriberResult"/> the subscriber answered with.</returns>
+    /// <exception cref="SubscriberCallTimedOut">The configured subscriber timeout elapsed.</exception>
+    /// <exception cref="SubscriberResponseTimedOut">Orleans gave up on the call before the subscriber timeout elapsed.</exception>
+    /// <remarks>
+    /// Both surface as a <see cref="TimeoutException"/>. The difference is where it comes from: when the call task
+    /// itself has faulted, it was Orleans' response timeout; when it is still running, the subscriber timeout elapsed.
+    /// </remarks>
+    internal static async Task<ObserverSubscriberResult> WaitForAnswer(
+        Task<ObserverSubscriberResult> call,
+        TimeSpan timeout,
+        Key partition,
+        long started,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            return timeout <= TimeSpan.Zero
+                ? await call.WaitAsync(cancellationToken)
+                : await call.WaitAsync(timeout, cancellationToken);
+        }
+        catch (TimeoutException timeoutException) when (call.IsFaulted)
+        {
+            throw new SubscriberResponseTimedOut(partition, Stopwatch.GetElapsedTime(started), timeout, timeoutException);
+        }
+        catch (TimeoutException) when (timeout > TimeSpan.Zero)
+        {
+            // The call is abandoned rather than cancelled, so nothing is awaiting it any more. Observe whatever it
+            // eventually does, or a subscriber that times out and then faults raises an unobserved task exception
+            // once the task is collected.
+            _ = call.ContinueWith(static abandoned => _ = abandoned.Exception, TaskScheduler.Default);
+            throw new SubscriberCallTimedOut(partition, timeout);
+        }
     }
 
     /// <summary>
@@ -180,75 +268,11 @@ public static class ObserverSubscriberExtensions
     {
         if (subscriber is IWebhookObserverSubscriber webhook)
         {
-            return await OnNextWebhook(webhook, timeout, partition, events, context, cancellationToken);
+            return await OnNextWebhook(webhook, new(timeout, TimeProvider.System), partition, events, context, cancellationToken);
         }
 
+        var started = Stopwatch.GetTimestamp();
         var call = subscriber.OnNext(partition, events, context);
-        if (timeout <= TimeSpan.Zero)
-        {
-            return await call.WaitAsync(cancellationToken);
-        }
-
-        try
-        {
-            return await call.WaitAsync(timeout, cancellationToken);
-        }
-        catch (TimeoutException)
-        {
-            // The call is abandoned rather than cancelled, so nothing is awaiting it any more. Observe whatever it
-            // eventually does, or a subscriber that times out and then faults raises an unobserved task exception
-            // once the task is collected.
-            _ = call.ContinueWith(static abandoned => _ = abandoned.Exception, TaskScheduler.Default);
-            throw new SubscriberCallTimedOut(partition, timeout);
-        }
-    }
-
-    static async Task<ObserverSubscriberResult> OnNextWebhook(
-        IWebhookObserverSubscriber subscriber,
-        TimeSpan timeout,
-        Key partition,
-        IEnumerable<AppendedEvent> events,
-        ObserverSubscriberContext context,
-        CancellationToken cancellationToken)
-    {
-        using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        if (timeout > TimeSpan.Zero)
-        {
-            deadline.CancelAfter(timeout);
-        }
-
-        // Orleans can cancel the caller's task before the remote turn has unwound. The non-interleavable
-        // Drain turn is a completion barrier on that same activation; do not release a timed-out delivery
-        // until it has crossed the barrier.
-        ObserverSubscriberResult result;
-        try
-        {
-            result = await subscriber.OnNext(partition, events, context, deadline.Token);
-        }
-        catch (Exception exception)
-        {
-            var timedOut = deadline.IsCancellationRequested && !cancellationToken.IsCancellationRequested;
-            await deadline.CancelAsync();
-            await subscriber.Drain();
-            if (exception is OperationCanceledException && timedOut)
-            {
-                throw new SubscriberCallTimedOut(partition, timeout);
-            }
-
-            throw;
-        }
-
-        if (deadline.IsCancellationRequested)
-        {
-            await subscriber.Drain();
-        }
-
-        cancellationToken.ThrowIfCancellationRequested();
-        if (deadline.IsCancellationRequested)
-        {
-            throw new SubscriberCallTimedOut(partition, timeout);
-        }
-
-        return result;
+        return await WaitForAnswer(call, timeout, partition, started, cancellationToken);
     }
 }

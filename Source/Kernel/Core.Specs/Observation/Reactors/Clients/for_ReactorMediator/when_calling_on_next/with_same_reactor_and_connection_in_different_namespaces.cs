@@ -24,7 +24,7 @@ public class with_same_reactor_and_connection_in_different_namespaces : given.a_
             new ConnectionId("connection"),
             new EventStoreName("store"),
             new EventStoreNamespaceName("namespace-a"),
-            (_, _, tcs) =>
+            (_, _, tcs, _) =>
             {
                 _firstObserverCalled = true;
                 tcs.SetResult(ObserverSubscriberResult.Ok(EventSequenceNumber.First));
@@ -35,7 +35,7 @@ public class with_same_reactor_and_connection_in_different_namespaces : given.a_
             new ConnectionId("connection"),
             new EventStoreName("store"),
             new EventStoreNamespaceName("namespace-b"),
-            (_, _, tcs) =>
+            (_, _, tcs, _) =>
             {
                 _secondObserverCalled = true;
                 tcs.SetResult(ObserverSubscriberResult.Ok(EventSequenceNumber.First));

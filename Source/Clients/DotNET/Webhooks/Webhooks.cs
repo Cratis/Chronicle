@@ -36,7 +36,11 @@ public class Webhooks(IEventTypes eventTypes, IEventStore eventStore, ILogger<We
             Webhooks = [definition.ToContract()]
         };
 
-        await _servicesAccessor.Services.Webhooks.AddWebhooks(request);
+        var result = await _servicesAccessor.Services.Webhooks.AddWebhooks(request);
+        if (!result.IsSuccess)
+        {
+            logger.RegisterWebhookFailed(webhookId, string.Join("; ", result.ExceptionMessages.Concat(result.ValidationResults.Select(validation => validation.Message))));
+        }
     }
 
     /// <inheritdoc/>

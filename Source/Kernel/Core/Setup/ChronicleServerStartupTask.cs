@@ -19,6 +19,7 @@ using Cratis.Chronicle.Patterns;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Projections.Kernel;
 using Cratis.Chronicle.ReadModels;
+using Cratis.Chronicle.Releases;
 using Cratis.Chronicle.Setup;
 using Cratis.Chronicle.Setup.Authentication;
 using Cratis.Chronicle.Storage;
@@ -38,6 +39,9 @@ namespace Orleans.Hosting;
 /// <param name="kernelProjections"><see cref="IKernelProjections"/> for registering the projections the kernel declares for itself.</param>
 /// <param name="grainFactory"><see cref="IGrainFactory"/> for creating grains.</param>
 /// <param name="authenticationService"><see cref="IAuthenticationService"/> for managing authentication.</param>
+/// <param name="storageErrorClassifier"><see cref="IStorageErrorClassifier"/> for recognizing the active storage provider's own transient failures.</param>
+/// <param name="localSiloDetails">The caller's silo for patch-manager handover.</param>
+/// <param name="clusterReleases">The published releases for startup diagnostics.</param>
 /// <param name="logger">The logger.</param>
 /// <param name="timeProvider">Optional <see cref="TimeProvider"/> the retry backoff waits on; defaults to <see cref="TimeProvider.System"/>.</param>
 /// <param name="generationFloorAdmission">Optional read-only generation admission; defaults to the real storage-backed admission.</param>
@@ -50,6 +54,14 @@ namespace Orleans.Hosting;
 /// instability as a class is what breaks that loop, and is why this does not special-case whichever
 /// call site was unlucky enough to be the one that raced. See <see cref="SiblingSiloInstability"/>
 /// for what counts as instability and what is still allowed to fail on the first attempt.
+/// <para>
+/// Several steps also provision SQL Server/PostgreSQL databases and schemas the first time a store
+/// or namespace is touched, and several kernels can race that provisioning exactly as they can race
+/// a sibling silo. A command timeout or connection failure from that contention is the storage
+/// provider's own transient failure, not cluster instability, so it is recognized through the
+/// registered <see cref="IStorageErrorClassifier"/> instead of being folded into
+/// <see cref="SiblingSiloInstability"/>, which stays provider-agnostic.
+/// </para>
 /// </remarks>
 internal sealed class ChronicleServerStartupTask(
     IStorage storage,
@@ -60,10 +72,18 @@ internal sealed class ChronicleServerStartupTask(
     IKernelProjections kernelProjections,
     IGrainFactory grainFactory,
     IAuthenticationService authenticationService,
+    IStorageErrorClassifier storageErrorClassifier,
+    ILocalSiloDetails localSiloDetails,
+    IClusterReleases clusterReleases,
     ILogger<ChronicleServerStartupTask> logger,
     TimeProvider? timeProvider = null,
     IGenerationFloorAdmission? generationFloorAdmission = null) : ILifecycleParticipant<ISiloLifecycle>
 {
+    /// <summary>
+    /// The exact Orleans placement-failure prefix for this grain and interface.
+    /// </summary>
+    internal const string PatchManagerPlacementFailure = "No active nodes are compatible with grain patchmanager and interface Cratis.Chronicle.Patching.IPatchManager version ";
+
     /// <summary>
     /// How many times a step is attempted before its failure is believed.
     /// </summary>
@@ -77,7 +97,7 @@ internal sealed class ChronicleServerStartupTask(
 
     static readonly TimeSpan _initialRetryDelay = TimeSpan.FromSeconds(2);
 
-    static readonly TimeSpan _patchManagerRelocationDelay = TimeSpan.FromMilliseconds(500);
+    static readonly TimeSpan _patchManagerRelocationDelay = TimeSpan.FromSeconds(1);
 
     readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
 
@@ -89,6 +109,14 @@ internal sealed class ChronicleServerStartupTask(
             ServiceLifecycleStage.Active,
             Execute);
     }
+
+    /// <summary>
+    /// Recognizes only the patch manager's no-compatible-node response during manifest convergence.
+    /// </summary>
+    /// <param name="exception">The Orleans placement failure.</param>
+    /// <returns>Whether the bounded patch-manager relocation loop should retry.</returns>
+    internal static bool IsPatchManagerAwaitingManifest(OrleansException exception) =>
+        exception.Message.StartsWith(PatchManagerPlacementFailure, StringComparison.Ordinal);
 
     /// <summary>
     /// Determines whether an observer's activation is required for startup.
@@ -112,25 +140,7 @@ internal sealed class ChronicleServerStartupTask(
 
         // Apply patches before other grains start
         var patchManager = grainFactory.GetGrain<IPatchManager>(0);
-        await Step(nameof(IPatchManager.ApplyPatches), async () =>
-        {
-            for (var attempt = 0; attempt < MaxAttempts; attempt++)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                if (await patchManager.ApplyPatchesFor(Cratis.Chronicle.Sys.KernelVersion.Current) == PatchOutcome.Completed)
-                {
-                    return;
-                }
-
-                // The older activation deactivates once idle; give it time to go before asking again, so the next
-                // call activates the patch manager on a kernel at least as new as this one.
-                if (attempt < MaxAttempts - 1)
-                {
-                    await Task.Delay(_patchManagerRelocationDelay, _timeProvider, cancellationToken);
-                }
-            }
-            throw new InvalidOperationException("Patch manager could not relocate to a kernel at least as new as the caller.");
-        });
+        await Step(nameof(IPatchManager.ApplyPatches), () => ApplyPatches(patchManager, cancellationToken));
 
         await Step("EnsureDefaultSystemNamespace", grainFactory.GetGrain<INamespaces>(EventStoreName.System).EnsureDefault);
 
@@ -140,6 +150,14 @@ internal sealed class ChronicleServerStartupTask(
         var allEventStores = await storage.GetEventStores().WaitAsync(cancellationToken);
         foreach (var eventStore in allEventStores)
         {
+            // A registry entry without a usable name cannot be addressed as a grain; starting it would stop the silo
+            // from starting at all, so it is reported and left for an operator instead.
+            if (eventStore is null || string.IsNullOrWhiteSpace(eventStore.Value))
+            {
+                logger.SkippingEventStoreWithoutAName();
+                continue;
+            }
+
             if (eventStore != EventStoreName.System)
             {
                 await Step("DiscoverAndRegisterEventTypes", () => eventTypes.DiscoverAndRegister(eventStore));
@@ -215,11 +233,52 @@ internal sealed class ChronicleServerStartupTask(
             });
         }
 
-        await Step(nameof(IAuthenticationService.EnsureDefaultAdminUser), authenticationService.EnsureDefaultAdminUser);
+        await EnsureAdministrator(cancellationToken);
         await Step(nameof(IAuthenticationService.EnsureBootstrapClients), authenticationService.EnsureBootstrapClients);
 #if DEVELOPMENT
         await Step(nameof(IAuthenticationService.EnsureDefaultClientCredentials), authenticationService.EnsureDefaultClientCredentials);
 #endif
+    }
+
+    async Task ApplyPatches(IPatchManager patchManager, CancellationToken cancellationToken)
+    {
+        RequestContext.Set(PatchManagerRelocation.CallerSiloKey, localSiloDetails.SiloAddress);
+        try
+        {
+            var delay = _patchManagerRelocationDelay;
+            for (var attempt = 0; attempt < MaxAttempts; attempt++)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                try
+                {
+                    if (await patchManager.ApplyPatchesFor(Cratis.Chronicle.Sys.KernelVersion.Current) == PatchOutcome.Completed) return;
+                }
+                catch (OrleansException exception) when (IsPatchManagerAwaitingManifest(exception))
+                {
+                    // A v2 placement can arrive before the new silo's manifest has converged.
+                }
+
+                // The older activation deactivates once idle; back off exponentially, since under load its
+                // deactivation can take longer than a short fixed wait allows.
+                if (attempt < MaxAttempts - 1)
+                {
+                    await Task.Delay(delay, _timeProvider, cancellationToken);
+                    delay += delay;
+                }
+            }
+            logger.PatchManagerCouldNotRelocate(Cratis.Chronicle.Sys.KernelVersion.Current.ToString(), clusterReleases.Summarize().ToString());
+            throw new InvalidOperationException("Patch manager could not relocate to a kernel at least as new as the caller.");
+        }
+        finally
+        {
+            RequestContext.Remove(PatchManagerRelocation.CallerSiloKey);
+        }
+    }
+
+    async Task EnsureAdministrator(CancellationToken cancellationToken)
+    {
+        await RunStep(nameof(IAuthenticationService.EnsureDefaultAdminUser), authenticationService.EnsureDefaultAdminUser, cancellationToken);
+        await RunStep(nameof(Cratis.Chronicle.Security.IAdministratorRoster.EnsureAdministratorPrivilege), () => grainFactory.GetGrain<Cratis.Chronicle.Security.IAdministratorRoster>(Cratis.Chronicle.Concepts.Security.AdministratorRoster.Key).EnsureAdministratorPrivilege(), cancellationToken);
     }
 
     /// <summary>
@@ -230,9 +289,10 @@ internal sealed class ChronicleServerStartupTask(
     /// <param name="cancellationToken">Token for cancelling startup and retry backoff.</param>
     /// <returns>Awaitable task.</returns>
     /// <remarks>
-    /// Only the failures <see cref="SiblingSiloInstability.IsTransient"/> recognizes are retried.
-    /// Anything else - and anything still failing once the budget is spent - propagates, so a
-    /// genuine defect still fails the host on startup rather than being started around.
+    /// Only the failures <see cref="SiblingSiloInstability.IsTransient"/> or the registered
+    /// <see cref="IStorageErrorClassifier"/> recognize are retried. Anything else - and anything
+    /// still failing once the budget is spent - propagates, so a genuine defect still fails the
+    /// host on startup rather than being started around.
     /// </remarks>
     async Task RunStep(string step, Func<Task> action, CancellationToken cancellationToken)
     {
@@ -245,24 +305,26 @@ internal sealed class ChronicleServerStartupTask(
                 await action().WaitAsync(cancellationToken);
                 return;
             }
-            catch (Exception exception) when (SiblingSiloInstability.IsTransient(exception) && attempt < MaxAttempts)
+            catch (Exception exception) when (IsTransient(exception) && attempt < MaxAttempts)
             {
                 logger.RetryingStartupStep(exception, step, attempt, MaxAttempts, delay);
                 await Task.Delay(delay, _timeProvider, cancellationToken);
                 delay += delay;
             }
-            catch (Exception exception) when (SiblingSiloInstability.IsTransient(exception))
+            catch (Exception exception) when (IsTransient(exception))
             {
                 logger.StartupStepExhaustedRetries(exception, step, MaxAttempts);
                 throw;
             }
             catch (Exception exception) when (IncompatibleSiloRelease.IsLikely(exception))
             {
-                logger.StartupStepReachedIncompatibleSilo(exception, step);
+                logger.StartupStepReachedIncompatibleSilo(exception, step, Cratis.Chronicle.Sys.KernelVersion.Current.ToString(), clusterReleases.Summarize().ToString());
                 throw;
             }
         }
     }
+
+    bool IsTransient(Exception exception) => SiblingSiloInstability.IsTransient(exception) || storageErrorClassifier.IsTransient(exception);
 
     /// <summary>
     /// Registers the persisted projection definitions for an event store with the local silo.

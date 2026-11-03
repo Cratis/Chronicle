@@ -13,6 +13,12 @@ This guide shows an operator how to replace the nodes of a Chronicle kernel clus
 - A way to replace nodes one at a time, such as a Kubernetes `Deployment` or an Azure Container Apps revision with controlled overlap.
 - A backup of the database taken before the rollout. Chronicle can apply schema migrations when a new node starts, and it has no command to roll them back.
 
+## Supported source releases
+
+When upgrading from a version before 19.115.0, stop all nodes, or keep public client traffic off the cluster until every node runs 19.115.0.
+
+Rolling upgrades are supported from 19.111 onward. Upgrading from an older release needs a stop-all upgrade: stop every silo, then start the new release. Older releases lack the patch-manager handover or have changed grain interfaces that prevent the old and new silos from exchanging calls.
+
 ## Check that the two versions can share a cluster
 
 While nodes are being replaced, nodes of the old version and of the new one form one Orleans cluster and call each other's grains. That only works when the new version still serves every grain call the old version makes. When it does not, the first new node stops during startup, and the rollout stalls with the old nodes still running.
@@ -21,8 +27,8 @@ Use this table to decide how to upgrade:
 
 | Upgrading | Within one major | How to upgrade |
 | --- | --- | --- |
-| From 19.106 or later | Yes | Replace nodes one at a time. Every release from 19.107.0 is checked in CI against the release before it. |
-| From a 19.x release before 19.106 | Yes | Stop every node, then start the new version. Grain calls changed between some of those releases. |
+| From 19.111 or later | Yes | Replace nodes one at a time. Releases are checked in CI against the release before them. |
+| From a 19.x release before 19.111 | Yes | Stop every node, then start the new version. Older releases lack the patch-manager handover or have incompatible grain calls. |
 | To a new major | No | Stop every node, then start the new version. A major release may change grain calls. |
 
 To stop every node in Kubernetes, scale the deployment to zero and back, or use the `Recreate` strategy for that one upgrade. In Azure Container Apps, use single revision mode with no overlap. Stopping the old nodes first is safe; it is the overlap that fails.
@@ -34,6 +40,34 @@ Startup step 'DiscoverAndRegisterKernelProjections' failed because a silo in thi
 ```
 
 The exception beneath it is a `TypeLoadException` such as `Unable to resolve type alias "("inv",[Orleans.Runtime.GrainReference],[Cratis.Chronicle.Projections.IProjectionsManager,Cratis.Chronicle.Core],"F436C56F")"`. Versions before 19.107.0 show only the exception. Either way, roll back the new node, then stop every node and start the new version.
+
+## Roll out administrator authorization
+
+Keep `Authentication.EnforceAdministratorPolicyForOperations=false` on every node while replacing nodes
+with the administrator-policy release. Existing operational calls other than System-store operations then remain in audit mode.
+System-store reads and operations always require an administrator on upgraded nodes, regardless of this flag.
+Nodes that have not been upgraded retain their earlier behaviour. The new
+administrator-management service is always enforced on upgraded nodes when authentication is enabled;
+old nodes do not expose that service.
+
+After every node has been upgraded, review the would-deny warnings for user/application management,
+and other administrator-policy operations. Confirm that the operators who need those operations
+are active administrators, and obtain fresh user sessions carrying `chronicle_principal=user`. Refresh
+OpenIddict user tokens or sign in again for existing cookie and Identity bearer sessions. Applications
+cannot acquire administrator privilege, even if their token subject matches an administrator's identifier.
+
+Only then set `Authentication.EnforceAdministratorPolicyForOperations=true` consistently across the
+cluster. During a staggered configuration change, a call can still be audited rather than denied on a
+node that retains audit mode. This does not apply to System-store operations, which are always enforced on upgraded nodes.
+For other administrator-policy operations, enforcement is not cluster-wide until every node has the setting. Application-store
+operations are unaffected. See [Administrator authorization](configuration/authentication.md#administrator-authorization)
+for the configuration and external-authority limitations, and [The System event store](system-event-store.md) for recovery guidance.
+
+Every release that includes the administrator roster must recognize `GrantReason.AdministratorGrant`
+(value `3`) before administrator-management grants are written. A node whose enum converter does not
+recognize a persisted reason cannot safely replay that history. Do not roll back to such a version after
+writing those grants. A roster without active administrators must be recovered through the server-local
+recovery configuration, not by disabling policy enforcement on a reachable node.
 
 ## Know what a starting node does
 
@@ -72,7 +106,7 @@ A node binds its listeners before starting its silo, so a schema lock wait or st
 
 - **Startup probe.** Use `tcpSocket` on port 35000 or an HTTP probe on `/health/live`. Raising `failureThreshold` is not the fix for backlog-dependent startup restarts; do not use readiness as the startup probe.
 - **Liveness probe.** Use `/health/live`, which remains successful while the silo is starting, including while waiting on a schema lock.
-- **Shutdown.** The host allows 10 seconds for a graceful stop (`HostOptions.ShutdownTimeout`). Set the termination grace period at or above that and let the orchestrator send `SIGTERM`. The server treats a signal during startup as an orderly stop.
+- **Shutdown.** The Chronicle images forward `SIGTERM` to the kernel, which then leaves the cluster in an orderly way. The host allows 10 seconds for that graceful stop (`HostOptions.ShutdownTimeout`). Docker also waits only 10 seconds by default before killing the container, which leaves no margin, so give the container at least 30 seconds: `docker stop --time 30`, or `stop_grace_period: 30s` in Docker Compose. In Kubernetes, keep `terminationGracePeriodSeconds` at 30 seconds or more (30 is the default). The server treats a signal during startup as an orderly stop.
 - **Defunct entries.** A node that restarts joins as a new silo and never reuses an old identity. Old entries stay in the membership table until the sweep removes them. `defunctSiloExpiration` defaults to three hours and `defunctSiloCleanupPeriod` to one hour. They only control cleanup of dead entries, so do not raise them to make a rollout safer. See [Clustering](configuration/clustering.md).
 
 Orleans' own failure detection settings, such as probe timeouts and the number of missed probes, are not exposed by Chronicle's configuration. Chronicle sets only the defunct-silo cleanup and the response timeout. If a node restarts slowly, raise `clustering.responseTimeout` (`Cratis__Chronicle__Clustering__ResponseTimeout`, default 30 seconds), which governs how long the startup grain calls wait.

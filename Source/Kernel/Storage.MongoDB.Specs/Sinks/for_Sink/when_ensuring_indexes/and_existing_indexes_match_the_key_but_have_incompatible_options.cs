@@ -14,7 +14,7 @@ public class and_existing_indexes_match_the_key_but_have_incompatible_options : 
 
     [Fact] void should_create_the_requested_index() =>
         _indexManager.Received(1).CreateOneAsync(
-            Arg.Any<CreateIndexModel<BsonDocument>>(),
+            Arg.Is<CreateIndexModel<BsonDocument>>(model => model.Options.Name == $"chronicle_idx_{_indexedProperty.Path}"),
             Arg.Any<CreateOneIndexOptions>(),
             Arg.Any<CancellationToken>());
     [Fact] void should_not_fetch_the_collection_collation() =>

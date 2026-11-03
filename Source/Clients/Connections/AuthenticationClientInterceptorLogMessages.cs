@@ -13,7 +13,7 @@ internal static partial class AuthenticationClientInterceptorLogMessages
     [LoggerMessage(LogLevel.Trace, "No authentication token available, skipping authentication header for: {Method}")]
     internal static partial void NoTokenAvailable(this ILogger<AuthenticationClientInterceptor> logger, string method);
 
-    [LoggerMessage(LogLevel.Warning, "Failed to obtain authentication token for gRPC call: {Method}")]
+    [LoggerMessage(LogLevel.Debug, "Failed to obtain authentication token for gRPC call: {Method}")]
     internal static partial void FailedToObtainToken(this ILogger<AuthenticationClientInterceptor> logger, string method, Exception ex);
 
     [LoggerMessage(LogLevel.Warning, "Authentication failed (Unauthenticated) for {Method}, retrying with token refresh")]

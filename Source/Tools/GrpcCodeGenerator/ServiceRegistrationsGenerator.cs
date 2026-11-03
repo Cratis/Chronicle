@@ -77,6 +77,6 @@ public class ServiceRegistrationsGenerator(string targetNamespace)
         builder.AppendLine("}");
 
         Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
-        File.WriteAllText(outputPath, builder.ToString());
+        GeneratedFile.WriteIfChanged(outputPath, builder.ToString());
     }
 }

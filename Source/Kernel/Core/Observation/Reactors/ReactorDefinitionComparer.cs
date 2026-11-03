@@ -18,9 +18,16 @@ public class ReactorDefinitionComparer(IStorage storage) : IReactorDefinitionCom
         ReactorDefinition first,
         ReactorDefinition second)
     {
-        if (!await storage.GetEventStore(reactorKey.EventStore).Reactors.Has(reactorKey.ReactorId))
+        var reactors = storage.GetEventStore(reactorKey.EventStore).Reactors;
+        if (!await reactors.Has(reactorKey.ReactorId))
         {
             return ReactorDefinitionCompareResult.New;
+        }
+
+        if (first.EventTypes is null)
+        {
+            // A grain activated before another namespace stored the shared definition has empty state; load what it would have read.
+            first = await reactors.Get(reactorKey.ReactorId);
         }
 
         var firstEventTypes = first.EventTypes.Select(_ => _.EventType.Id).Order().ToArray();

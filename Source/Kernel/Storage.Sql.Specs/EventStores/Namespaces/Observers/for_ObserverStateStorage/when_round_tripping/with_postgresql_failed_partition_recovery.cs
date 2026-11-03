@@ -1,13 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Arc.EntityFrameworkCore;
-using Cratis.Arc.EntityFrameworkCore.Concepts;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Chronicle.Storage.Sql.Sinks;
-using Microsoft.EntityFrameworkCore;
 
 using KernelFailedPartition = Cratis.Chronicle.Concepts.Observation.FailedPartition;
 
@@ -49,7 +46,7 @@ public class with_postgresql_failed_partition_recovery(PostgreSqlFixture fixture
 
     async Task Because()
     {
-        await _storage.Save(new() { Identifier = "observer", FailedPartitions = [_partition], Initialization = new(ObserverInitializationState.NotInitialized, ["unfinished job", "unsettled handover"]) });
+        await _storage.Save(new() { Identifier = "observer", FailedPartitions = [_partition], Initialization = new(ObserverInitializationState.NotInitialized, ["unfinished job", "unsettled handover"]) }, Concepts.EventSequences.EventSequenceId.Log);
         var saved = await _storage.Get("observer");
         _restored = saved.FailedPartitions.Single();
         _initialization = saved.Initialization;
@@ -68,10 +65,5 @@ public class with_postgresql_failed_partition_recovery(PostgreSqlFixture fixture
 
     async Task Destroy() => await fixture.DropDatabase(_connectionString);
 
-    NamespaceDbContext CreateContext()
-    {
-        var builder = new DbContextOptionsBuilder<NamespaceDbContext>();
-        builder.UseDatabaseFromConnectionString(_connectionString).AddConceptAsSupport().WithoutServiceProviderCaching();
-        return new(builder.Options);
-    }
+    NamespaceDbContext CreateContext() => new(SpecDbContextOptions.Kernel<NamespaceDbContext>(_connectionString));
 }

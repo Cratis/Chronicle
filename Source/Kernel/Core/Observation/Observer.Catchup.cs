@@ -7,6 +7,7 @@ using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Chronicle.Observation.States;
+using Cratis.Chronicle.Storage.Observation;
 using Cratis.Monads;
 using Cratis.Orleans.Jobs;
 
@@ -17,7 +18,8 @@ public partial class Observer
     const int MinimumZeroWorkLapsBeforeBackingOff = 2;
     static readonly TimeSpan _catchUpBackoffBase = TimeSpan.FromSeconds(5);
     static readonly TimeSpan _catchUpBackoffCap = TimeSpan.FromMinutes(5);
-    static readonly TimeSpan[] _staleCatchUpRetryDelays = [TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(5)];
+
+    int _partitionHoldsVersion;
 
     bool IsBackingOffCatchUp => _catchUpBackoffUntil != default && DateTimeOffset.UtcNow < _catchUpBackoffUntil;
 
@@ -47,6 +49,7 @@ public partial class Observer
         try
         {
             jobId = await AcquireCatchUpJob();
+            ShadowGrantObserverWide(ClaimHolderKind.ObserverCatchUp, jobId, State.NextEventSequenceNumber);
         }
         finally
         {
@@ -150,7 +153,9 @@ public partial class Observer
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
         Skips.Completing(partition, FurthestOf(lastHandledEventSequenceNumber, lastScannedEventSequenceNumber));
         logger.PartitionCaughtUp(partition, lastHandledEventSequenceNumber);
+        ShadowHandOverPartition(partition);
         State.CatchingUpPartitions.Remove(partition);
+        _partitionHoldsVersion++;
         HandleNewLastHandledEventForPartition(partition, lastHandledEventSequenceNumber);
         await WriteStateAsync();
         await StartCatchupJobIfNeeded(partition, FurthestOf(lastHandledEventSequenceNumber, lastScannedEventSequenceNumber));
@@ -167,6 +172,32 @@ public partial class Observer
         return !lastHandled.IsActualValue || lastScanned > lastHandled ? lastScanned : lastHandled;
     }
 
+    async Task<ISet<Key>> PartitionHoldsReleasableAfterCatchUp()
+    {
+        if (State.CatchingUpPartitions.Count == 0) return new HashSet<Key>();
+
+        for (var attempt = 0; attempt < 3; attempt++)
+        {
+            var partitions = State.CatchingUpPartitions.ToArray();
+            var version = CurrentPartitionHoldsVersion();
+            try
+            {
+                var result = await storage.GetEventStore(_observerKey.EventStore).GetNamespace(_observerKey.Namespace).Jobs.GetOutstandingJobs();
+                if (!result.TryGetResult(out var jobs)) return new HashSet<Key>();
+                if (version != CurrentPartitionHoldsVersion()) continue;
+
+                var owned = jobs.PartitionsHeldBy<CatchUpObserverPartitionRequest>(_observerKey, DateTimeOffset.UtcNow);
+                return partitions.Where(partition => !owned.Contains(partition)).ToHashSet();
+            }
+            catch (Exception)
+            {
+                return new HashSet<Key>();
+            }
+        }
+
+        return new HashSet<Key>();
+    }
+
     async Task HandOverCaughtUpJob(JobId jobId, EventSequenceNumber lastHandledEventSequenceNumber, EventSequenceNumber lastScannedEventSequenceNumber)
     {
         // The job reports back before it is finalized, so it is still listed as running while routing decides
@@ -177,9 +208,14 @@ public partial class Observer
         // interleaving with this call already sees it.
         RememberConcludedCatchUpJob(jobId);
 
+        // The observer-wide job only owned the partitions it registered. A partition's own catch-up
+        // keeps its hold until it reports PartitionCaughtUp (#5379).
+        var releasable = await PartitionHoldsReleasableAfterCatchUp();
+
         var madeProgress = CatchUpMadeProgress(lastHandledEventSequenceNumber, lastScannedEventSequenceNumber);
         HandleNewLastHandledEvent(lastHandledEventSequenceNumber);
-        State.CatchingUpPartitions.Clear();
+        ShadowHandOverObserverWide();
+        State.CatchingUpPartitions.ExceptWith(releasable);
         if (lastScannedEventSequenceNumber.IsActualValue &&
             (!State.NextEventSequenceNumber.IsActualValue || State.NextEventSequenceNumber <= lastScannedEventSequenceNumber))
         {
@@ -193,14 +229,14 @@ public partial class Observer
         await WriteStateAsync();
 
         _isPreparingCatchup = false;
-        var settleInObserving = await NoteCatchUpLap(madeProgress);
+        var settleInObserving = NoteCatchUpLap(madeProgress);
 
-        if (IsRetired || _removed || _staleCatchUpRetryTimer is not null) return;
+        if (IsRetired || _removed) return;
         if (!IsQuarantined)
         {
             if (settleInObserving)
             {
-                await TransitionTo<Observing>();
+                await SettleCatchUpInObserving();
             }
             else
             {
@@ -229,19 +265,14 @@ public partial class Observer
     /// <remarks>
     /// A lap that moved nothing reaches the same verdict when routed again, so it neither resets the consecutive
     /// recovery count nor gets to start the next lap right away: from the second consecutive one the observer settles
-    /// into observing and the watchdog retries once an exponentially growing backoff has elapsed. When events of its
-    /// types still exist at Next, three short timer retries precede that backoff without increasing its initial delay.
+    /// into observing and the watchdog retries once an exponentially growing backoff has elapsed.
     /// </remarks>
-    async Task<bool> NoteCatchUpLap(bool madeProgress)
+    bool NoteCatchUpLap(bool madeProgress)
     {
-        _staleCatchUpRetryTimer?.Dispose();
-        _staleCatchUpRetryTimer = null;
         if (madeProgress)
         {
             _catchupRecoveryAttempts = 0;
             _zeroWorkCatchUps = 0;
-            _staleCatchUpLaps = 0;
-            _deferredStaleCatchUpLaps = 0;
             _catchUpBackoffUntil = default;
             return false;
         }
@@ -249,76 +280,15 @@ public partial class Observer
         _zeroWorkCatchUps++;
         _metrics?.ZeroWorkCatchUp();
         logger.CatchUpProducedNoWork(_zeroWorkCatchUps);
-        if (await RetryStaleCatchUpLap() || _zeroWorkCatchUps < MinimumZeroWorkLapsBeforeBackingOff)
+        if (_zeroWorkCatchUps < MinimumZeroWorkLapsBeforeBackingOff)
         {
             return false;
         }
 
-        var firstBackedOffLap = Math.Max(MinimumZeroWorkLapsBeforeBackingOff, _deferredStaleCatchUpLaps + 1);
-        var exponent = Math.Clamp(_zeroWorkCatchUps - firstBackedOffLap, 0, 10);
+        var exponent = Math.Min(_zeroWorkCatchUps - MinimumZeroWorkLapsBeforeBackingOff, 10);
         var backoff = TimeSpan.FromTicks(Math.Min(_catchUpBackoffBase.Ticks << exponent, _catchUpBackoffCap.Ticks));
         _catchUpBackoffUntil = DateTimeOffset.UtcNow + backoff;
         return true;
-    }
-
-    async Task<bool> RetryStaleCatchUpLap()
-    {
-        EventSequenceNumber tail;
-        try
-        {
-            var subscription = await GetSubscription();
-            tail = await _eventSequence.GetTailSequenceNumberForEventTypes(subscription.EventTypes);
-        }
-        catch (Exception exception)
-        {
-            logger.CatchUpTypeTailLookupFailed(exception);
-            _staleCatchUpLaps = 0;
-            return false;
-        }
-
-        if (!tail.IsActualValue || tail < State.NextEventSequenceNumber)
-        {
-            _staleCatchUpLaps = 0;
-            return false;
-        }
-
-        if (_staleCatchUpLaps >= _staleCatchUpRetryDelays.Length)
-        {
-            logger.StaleCatchUpRetriesExhausted(_staleCatchUpLaps, State.NextEventSequenceNumber, tail);
-            return false;
-        }
-
-        var delay = _staleCatchUpRetryDelays[_staleCatchUpLaps++];
-        _deferredStaleCatchUpLaps++;
-        _catchUpBackoffUntil = default;
-        logger.RetryingStaleCatchUp(_staleCatchUpLaps, delay, State.NextEventSequenceNumber, tail);
-        ScheduleStaleCatchUpRetry(delay);
-        return true;
-    }
-
-    void ScheduleStaleCatchUpRetry(TimeSpan delay)
-    {
-        var ownershipEpoch = _catchUpOwnershipEpoch;
-        _staleCatchUpRetryTimer = this.RegisterGrainTimer(
-            async cancellationToken =>
-            {
-                // Disposing a grain timer cancels the token it hands its callback, so read the token first.
-                if (cancellationToken.IsCancellationRequested)
-                {
-                    return;
-                }
-
-                _staleCatchUpRetryTimer?.Dispose();
-                _staleCatchUpRetryTimer = null;
-                if (IsRetired || _removed || IsQuarantined ||
-                    ownershipEpoch != _catchUpOwnershipEpoch || State.RunningState == ObserverRunningState.Replaying || !await IsSubscribed())
-                {
-                    return;
-                }
-
-                await TransitionTo<Routing>();
-            },
-            new GrainTimerCreationOptions { DueTime = delay, Period = Timeout.InfiniteTimeSpan });
     }
 
     /// <summary>
@@ -453,6 +423,8 @@ public partial class Observer
         if (IsRetired || _removed) return;
         logger.StartingCatchUpForPartition(partition, nextEventSequenceNumber);
         State.CatchingUpPartitions.Add(partition);
+        _partitionHoldsVersion++;
+        ShadowGrantPartition(partition, ClaimHolderKind.PartitionCatchUp, null, nextEventSequenceNumber);
         Skips.JobStarted(partition);
         await _jobsManager.Start<ICatchUpObserverPartition, CatchUpObserverPartitionRequest>(new(_observerKey, Definition.Type, partition, nextEventSequenceNumber, Definition.EventTypes) { ReaderScope = ReaderScope });
         await WriteStateAsync();

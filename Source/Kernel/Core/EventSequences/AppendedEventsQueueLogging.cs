@@ -35,6 +35,9 @@ internal static partial class AppendedEventsQueueLogMessages
     [LoggerMessage(LogLevel.Warning, "Dispatch to observer {ObserverKey} failed for sequence range {FirstEventSequenceNumber}-{LastEventSequenceNumber}; spilling it to catch-up")]
     internal static partial void DispatchFailedSpillingToCatchup(this ILogger<AppendedEventsQueue> logger, ObserverKey observerKey, EventSequenceNumber firstEventSequenceNumber, EventSequenceNumber lastEventSequenceNumber);
 
+    [LoggerMessage(LogLevel.Information, "Observer {ObserverKey} has fallen too far behind on its appended-events queue; spilling it to catch-up recovery")]
+    internal static partial void SpillingLaggingObserverToCatchup(this ILogger<AppendedEventsQueue> logger, ObserverKey observerKey);
+
     [LoggerMessage(LogLevel.Warning, "Failed to start catch-up for spilled observer {ObserverKey} (attempt {Attempt}); will retry")]
     internal static partial void SpillCatchupTriggerFailed(this ILogger<AppendedEventsQueue> logger, ObserverKey observerKey, int attempt, Exception exception);
 
@@ -43,4 +46,10 @@ internal static partial class AppendedEventsQueueLogMessages
 
     [LoggerMessage(LogLevel.Warning, "Queue was disposed before catch-up could be started for spilled observer {ObserverKey}; it stays behind until it re-subscribes or reactivates")]
     internal static partial void SpillCatchupTriggerAbandonedOnDispose(this ILogger<AppendedEventsQueue> logger, ObserverKey observerKey);
+
+    [LoggerMessage(LogLevel.Debug, "Live backlog for observer {ObserverKey} spans more than {Limit} partition runs; spilling it to catch-up")]
+    internal static partial void SpillingFragmentedObserverToCatchup(this ILogger<AppendedEventsQueue> logger, ObserverKey observerKey, int limit);
+
+    [LoggerMessage(LogLevel.Debug, "Observer {ObserverKey} was spilled again while its catch-up was being started; starting catch-up again")]
+    internal static partial void CatchupRequestedAgain(this ILogger<AppendedEventsQueue> logger, ObserverKey observerKey);
 }

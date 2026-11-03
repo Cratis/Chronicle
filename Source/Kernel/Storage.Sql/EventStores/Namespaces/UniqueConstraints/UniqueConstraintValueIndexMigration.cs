@@ -25,10 +25,10 @@ internal static class UniqueConstraintValueIndexMigration
     /// <param name="context">The context owning the connection.</param>
     /// <param name="logger">The migration logger.</param>
     /// <returns>The migration task.</returns>
-    internal static async Task EnsureValueIndexIsUnique(string tableName, UniqueConstraintDbContext context, ILogger<UniqueConstraintMigrator> logger)
+    internal static async Task EnsureValueIndexIsUnique(string tableName, DbContext context, ILogger<UniqueConstraintMigrator> logger)
     {
         // Hold off writers across the guards and DDL, including writers in other silos.
-        await using var transaction = await context.Database.BeginTransactionAsync();
+        await using var transaction = await BeginOwnedTransaction(context.Database);
         var sql = context.GetService<ISqlGenerationHelper>();
         var table = sql.DelimitIdentifier(tableName);
         var index = sql.DelimitIdentifier($"IX_{tableName}_Value");
@@ -37,11 +37,11 @@ internal static class UniqueConstraintValueIndexMigration
         var indexState = await ReadIndexState(context, tableName);
         if (indexState == 1)
         {
-            await transaction.CommitAsync();
+            await CommitOwned(transaction);
             return;
         }
 
-        var canIndex = !context.Database.IsSqlServer() || await EnsureSqlServerValueLength(context, tableName, table, index, logger);
+        var canIndex = !context.Database.IsSqlServer() || await EnsureSqlServerValueLength(context, tableName, logger);
         indexState = await ReadIndexState(context, tableName);
         var duplicates = await Scalar(context, $"SELECT COUNT(*) FROM (SELECT {sql.DelimitIdentifier("Value")} FROM {table} GROUP BY {sql.DelimitIdentifier("Value")} HAVING COUNT(*) > 1) AS duplicate_values");
         if (canIndex && (duplicates == 0 || indexState < 0))
@@ -54,7 +54,7 @@ internal static class UniqueConstraintValueIndexMigration
             await context.Database.ExecuteSqlRawAsync($"CREATE {(duplicates == 0 ? "UNIQUE " : string.Empty)}INDEX {index} ON {table} ({sql.DelimitIdentifier("Value")})");
         }
 
-        await transaction.CommitAsync();
+        await CommitOwned(transaction);
 
         if (duplicates > 0 && _warnedTables.TryAdd($"{context.Database.GetConnectionString()}:{tableName}", true))
         {
@@ -62,7 +62,13 @@ internal static class UniqueConstraintValueIndexMigration
         }
     }
 
-    static async Task LockTable(UniqueConstraintDbContext context, string table)
+    /// <summary>
+    /// Locks a delimited table against concurrent silo writers for the current transaction.
+    /// </summary>
+    /// <param name="context">The context owning the transaction.</param>
+    /// <param name="table">The provider-delimited table name.</param>
+    /// <returns>The lock task.</returns>
+    internal static async Task LockTable(DbContext context, string table)
     {
         if (context.Database.IsNpgsql())
         {
@@ -76,8 +82,21 @@ internal static class UniqueConstraintValueIndexMigration
         // SQLite's transaction owns the write lock before the read checks below.
     }
 
-    static async Task<bool> EnsureSqlServerValueLength(UniqueConstraintDbContext context, string tableName, string table, string index, ILogger<UniqueConstraintMigrator> logger)
+    /// <summary>
+    /// Begins a transaction unless the caller already owns one; the enclosing caller commits its own transaction.
+    /// </summary>
+    /// <param name="database">The database facade.</param>
+    /// <returns>The owned transaction, or null when joining the caller's.</returns>
+    static async Task<IDbContextTransaction?> BeginOwnedTransaction(DatabaseFacade database) =>
+        database.CurrentTransaction is null ? await database.BeginTransactionAsync() : null;
+
+    static Task CommitOwned(IDbContextTransaction? transaction) => transaction?.CommitAsync() ?? Task.CompletedTask;
+
+    static async Task<bool> EnsureSqlServerValueLength(DbContext context, string tableName, ILogger<UniqueConstraintMigrator> logger)
     {
+        var sql = context.GetService<ISqlGenerationHelper>();
+        var table = sql.DelimitIdentifier(tableName);
+        var index = sql.DelimitIdentifier($"IX_{tableName}_Value");
         var length = await Scalar(context, "SELECT CHARACTER_MAXIMUM_LENGTH FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = SCHEMA_NAME() AND TABLE_NAME = @table AND COLUMN_NAME = 'Value'", tableName);
         if (length == 200)
         {
@@ -86,7 +105,7 @@ internal static class UniqueConstraintValueIndexMigration
 
         // DATALENGTH includes trailing spaces and counts UTF-16 code units, unlike LEN.
         var oversized = await Scalar(context, $"SELECT COUNT_BIG(*) FROM {table} WHERE DATALENGTH([Value]) > 400");
-        var legacy = await Scalar(context, $"SELECT COUNT_BIG(*) FROM {table} WHERE DATALENGTH([Value]) <> 128 OR [Value] COLLATE Latin1_General_100_BIN2 LIKE '%[^0-9a-f]%'");
+        var legacy = await Scalar(context, $"SELECT COUNT_BIG(*) FROM {table} WHERE {UnhashedUniqueConstraintValues.Predicate(context)}");
         if (oversized > 0 || legacy > 0)
         {
             logger.SkippingValueColumnNarrowing(tableName, oversized, legacy);
@@ -99,7 +118,7 @@ internal static class UniqueConstraintValueIndexMigration
         return true;
     }
 
-    static Task<long> ReadIndexState(UniqueConstraintDbContext context, string tableName)
+    static Task<long> ReadIndexState(DbContext context, string tableName)
     {
         var query = "SELECT \"unique\" FROM pragma_index_list(@table) WHERE name = @index";
         if (context.Database.IsSqlServer())
@@ -114,11 +133,11 @@ internal static class UniqueConstraintValueIndexMigration
         return Scalar(context, query, tableName);
     }
 
-    static Task<int> DropIndex(UniqueConstraintDbContext context, string table, string index) => context.Database.IsSqlServer()
+    static Task<int> DropIndex(DbContext context, string table, string index) => context.Database.IsSqlServer()
         ? context.Database.ExecuteSqlRawAsync($"DROP INDEX IF EXISTS {index} ON {table}")
         : context.Database.ExecuteSqlRawAsync($"DROP INDEX IF EXISTS {index}");
 
-    static async Task<long> Scalar(UniqueConstraintDbContext context, string query, string? tableName = null)
+    static async Task<long> Scalar(DbContext context, string query, string? tableName = null)
     {
         await using var command = context.Database.GetDbConnection().CreateCommand();
 #pragma warning disable CA2100 // Identifiers are delimited by the provider; values are parameters.

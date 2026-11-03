@@ -249,25 +249,7 @@ public class Projections(
         RegisterExplicit<TReadModel>(new ModelBoundExplicitProjection(typeof(TReadModel)));
 
     /// <inheritdoc/>
-    public async Task Register()
-    {
-        await _servicesAccessor.Services.Projections.Register(new()
-        {
-            EventStore = eventStore.Name,
-            Owner = ProjectionOwner.Client,
-            Projections = [.. Definitions],
-
-            // The registration only claims to be the client's full set when discovery has run and every discovered
-            // artifact produced a definition. An artifact whose definition could not be built is excluded from the
-            // batch, and claiming a full set then would make the kernel retire a projection that still exists in
-            // the client.
-            Registrant = System.Reflection.Assembly.GetEntryAssembly()?.GetName().Name ?? string.Empty,
-            Version = SoftwareVersion,
-            ConnectionId = CurrentConnectionId,
-            FullSet = _discovered && ArtifactRegistrations.All(registration => registration.IsRegistered)
-        });
-        Registered?.Invoke();
-    }
+    public async Task Register() => await RegisterPrepared(PrepareRegistration());
 
     /// <inheritdoc/>
     public async Task<ProjectionQueryResult> Query(string declaration, string eventSequenceId = "event-log")
@@ -298,6 +280,37 @@ public class Projections(
     /// <inheritdoc/>
     string? IKnowReadModelContainerNames.GetContainerNameOverride(Type readModelType) =>
         _containerNames.GetValueOrDefault(readModelType);
+
+    /// <summary>
+    /// Builds the complete projection registration payload before any effects.
+    /// </summary>
+    /// <returns>The prepared registration payload.</returns>
+    internal RegisterRequest PrepareRegistration() => new()
+    {
+        EventStore = eventStore.Name,
+        Owner = ProjectionOwner.Client,
+        Projections = [.. Definitions],
+
+        // The registration only claims to be the client's full set when discovery has run and every discovered
+        // artifact produced a definition. An artifact whose definition could not be built is excluded from the
+        // batch, and claiming a full set then would make the kernel retire a projection that still exists in
+        // the client.
+        Registrant = System.Reflection.Assembly.GetEntryAssembly()?.GetName().Name ?? string.Empty,
+        Version = SoftwareVersion,
+        ConnectionId = CurrentConnectionId,
+        FullSet = _discovered && ArtifactRegistrations.All(registration => registration.IsRegistered)
+    };
+
+    /// <summary>
+    /// Sends a prepared projection payload and notifies registration listeners.
+    /// </summary>
+    /// <param name="request">The prepared payload.</param>
+    /// <returns>The registration operation.</returns>
+    internal async Task RegisterPrepared(RegisterRequest request)
+    {
+        await _servicesAccessor.Services.Projections.Register(request);
+        Registered?.Invoke();
+    }
 
     /// <summary>
     /// Add an explicit projection that is built by the next <see cref="Discover"/> rather than immediately.
@@ -334,8 +347,26 @@ public class Projections(
             }
 
             _registeredAtRuntime.Clear();
-            BuildAllExplicitProjections();
+            (_explicitRegistrations, _explicitFailures) = BuildExplicitProjections(_discoveredHandlersByModelType);
             Compose();
+        }
+    }
+
+    static IEnumerable<(Type Owner, ProjectionId Id, bool IsFluent)> DiscoveredOwners(
+        IDictionary<Type, ProjectionDefinition> definitions,
+        IDictionary<Type, IProjectionHandler> modelBoundHandlers) =>
+        definitions.Select(pair => (pair.Key, (ProjectionId)pair.Value.Identifier, true))
+            .Concat(modelBoundHandlers.Select(pair => (pair.Key, pair.Value.Id, false)));
+
+    static void ValidateProjectionOwners(IEnumerable<(Type Owner, ProjectionId Id, bool IsFluent)> owners)
+    {
+        foreach (var group in owners.GroupBy(owner => owner.Id))
+        {
+            var declarations = group.Select(owner => (owner.Owner, owner.IsFluent)).Distinct().ToArray();
+            if (declarations.Length > 1)
+            {
+                throw new MultipleProjectionsWithSameIdFound(group.Key, declarations.Select(declaration => declaration.Owner));
+            }
         }
     }
 
@@ -356,16 +387,11 @@ public class Projections(
     {
         var (modelBoundDefinitions, modelBoundFailures) = ModelBoundSource.Discover(clientArtifacts, namingPolicy, eventTypes, logger, eventStore.Name?.Value);
         ApplyGenerationDelivery(modelBoundDefinitions, modelBoundFailures);
-        var modelBoundHandlers = modelBoundDefinitions.ToDictionary(
-            kvp => kvp.Key,
-            kvp => new ProjectionHandler(eventStore, kvp.Value.Identifier, kvp.Key, kvp.Value.ReadModel, kvp.Value.EventSequenceId) as IProjectionHandler);
-
         var (definitionsByType, failures, containerNames) = FindAllProjectionDefinitions(
             eventTypes,
             clientArtifacts,
             artifactsActivator,
             jsonSerializerOptions);
-        _definitionsByType = definitionsByType;
 
         foreach (var (projectionType, definition) in definitionsByType)
         {
@@ -377,11 +403,13 @@ public class Projections(
             WarnAboutRootRemovalViaJoin(readModelType, definition);
         }
 
-        _handlersByType = _definitionsByType.ToDictionary(
+        var handlersByType = definitionsByType.ToDictionary(
                 kvp => kvp.Key,
-                kvp => new ProjectionHandler(eventStore, kvp.Value.Identifier, kvp.Key.GetReadModelType(), kvp.Value.ReadModel, kvp.Value.EventSequenceId) as IProjectionHandler);
+                kvp => CreateHandler(kvp.Value, kvp.Key.GetReadModelType(), containerNames.GetValueOrDefault(kvp.Key.GetReadModelType())) as IProjectionHandler);
 
-        _modelBoundHandlers = modelBoundHandlers;
+        var modelBoundHandlers = modelBoundDefinitions.ToDictionary(
+            kvp => kvp.Key,
+            kvp => CreateHandler(kvp.Value, kvp.Key, containerNames.GetValueOrDefault(kvp.Key)) as IProjectionHandler);
 
         // The read model index holds one handler per read model, and asking for a projection by the model it maintains
         // is the only handle a model-bound projection has. So a read model claimed twice leaves the second projection
@@ -391,7 +419,7 @@ public class Projections(
         var discoveredHandlersByModelType = new Dictionary<Type, IProjectionHandler>();
         var claimedBy = new Dictionary<Type, string>();
 
-        foreach (var kvp in _handlersByType)
+        foreach (var kvp in handlersByType)
         {
             var readModelType = kvp.Key.GetReadModelType();
             if (discoveredHandlersByModelType.TryAdd(readModelType, kvp.Value))
@@ -404,7 +432,7 @@ public class Projections(
             }
         }
 
-        foreach (var kvp in _modelBoundHandlers)
+        foreach (var kvp in modelBoundHandlers)
         {
             if (!discoveredHandlersByModelType.TryAdd(kvp.Key, kvp.Value))
             {
@@ -414,6 +442,11 @@ public class Projections(
 
         lock (_explicitLock)
         {
+            var (registrations, explicitFailures) = BuildExplicitProjections(discoveredHandlersByModelType);
+            ValidateProjectionOwners(DiscoveredOwners(definitionsByType, modelBoundHandlers).Concat(ExplicitOwners(registrations, discoveredHandlersByModelType)));
+            _definitionsByType = definitionsByType;
+            _handlersByType = handlersByType;
+            _modelBoundHandlers = modelBoundHandlers;
             _discoveredHandlersByModelType = discoveredHandlersByModelType;
             _discoveredContainerNames = containerNames;
 
@@ -431,7 +464,8 @@ public class Projections(
                     .. modelBoundFailures.Select(kvp => new ArtifactRegistration(kvp.Key, kvp.Value))
                 ]).ToImmutableList();
 
-            BuildAllExplicitProjections();
+            _explicitRegistrations = registrations;
+            _explicitFailures = explicitFailures;
             Compose();
         }
 
@@ -453,6 +487,7 @@ public class Projections(
                     // Asking for a discovered model-bound read model to be registered is asking for what is already there.
                     if (projection.IsModelBound && discovered.Id == projection.Id)
                     {
+                        ValidateProjectionOwners(CurrentOwners().Append((readModelType, projection.Id, false)));
                         return discovered;
                     }
 
@@ -466,6 +501,7 @@ public class Projections(
 
                 // Built here rather than deferred so that a mistake in the definition reaches the caller who made it.
                 registration = Build(projection);
+                ValidateProspectiveOwner(readModelType, registration);
                 _explicitProjections[readModelType] = projection;
                 _registeredAtRuntime.Add(readModelType);
                 _explicitRegistrations = new(_explicitRegistrations) { [readModelType] = registration };
@@ -496,20 +532,48 @@ public class Projections(
         return registration.Handler;
     }
 
+    IEnumerable<(Type Owner, ProjectionId Id, bool IsFluent)> ExplicitOwners(
+        IDictionary<Type, ExplicitProjectionRegistration> registrations,
+        Dictionary<Type, IProjectionHandler> discoveredHandlers) =>
+        registrations.Select(pair => (pair.Key, pair.Value.Handler.Id, false))
+
+            // A matching discovered model-bound declaration is an overlay, not a second owner. A fluent
+            // projection on that same read model, however, still owns its own projection identifier.
+            .Concat(_explicitProjections.Where(pair => discoveredHandlers.TryGetValue(pair.Key, out var handler) && handler.Id == pair.Value.Id)
+                .Select(pair => (pair.Key, pair.Value.Id, false)));
+
+    IEnumerable<(Type Owner, ProjectionId Id, bool IsFluent)> CurrentOwners()
+    {
+        // Pending options recipes also own identifiers, but preflight must not publish their builds.
+        var (registrations, _) = BuildExplicitProjections(_discoveredHandlersByModelType, onlyPending: true);
+        return DiscoveredOwners(_definitionsByType, _modelBoundHandlers)
+            .Concat(ExplicitOwners(registrations, _discoveredHandlersByModelType));
+    }
+
+    void ValidateProspectiveOwner(Type readModelType, ExplicitProjectionRegistration registration) =>
+        ValidateProjectionOwners(CurrentOwners().Where(owner => owner.IsFluent || owner.Owner != readModelType).Append((readModelType, registration.Handler.Id, false)));
+
     /// <summary>
-    /// Build every explicit projection anew, recording the ones that cannot be built rather than failing discovery.
+    /// Build explicit projections, recording the ones that cannot be built rather than failing discovery.
     /// </summary>
+    /// <param name="discoveredHandlers">The discovered projection handlers by read model type.</param>
+    /// <param name="onlyPending">Whether to stage only pending recipes, retaining already built registrations and failures.</param>
     /// <remarks>
     /// Must be called while holding the explicit lock. An explicit projection maintaining a read model that discovery
     /// found is dropped when it is the very same model-bound projection, and reported as a failure otherwise.
     /// </remarks>
-    void BuildAllExplicitProjections()
+    (Dictionary<Type, ExplicitProjectionRegistration> Registrations, Dictionary<Type, Exception> Failures) BuildExplicitProjections(Dictionary<Type, IProjectionHandler> discoveredHandlers, bool onlyPending = false)
     {
-        var registrations = new Dictionary<Type, ExplicitProjectionRegistration>();
-        var failures = new Dictionary<Type, Exception>();
+        var registrations = onlyPending ? new Dictionary<Type, ExplicitProjectionRegistration>(_explicitRegistrations) : new Dictionary<Type, ExplicitProjectionRegistration>();
+        var failures = onlyPending ? new Dictionary<Type, Exception>(_explicitFailures) : new Dictionary<Type, Exception>();
         foreach (var (readModelType, projection) in _explicitProjections)
         {
-            if (_discoveredHandlersByModelType.TryGetValue(readModelType, out var discovered))
+            if (onlyPending && (registrations.ContainsKey(readModelType) || failures.ContainsKey(readModelType)))
+            {
+                continue;
+            }
+
+            if (discoveredHandlers.TryGetValue(readModelType, out var discovered))
             {
                 if (!(projection.IsModelBound && discovered.Id == projection.Id))
                 {
@@ -533,8 +597,7 @@ public class Projections(
             }
         }
 
-        _explicitRegistrations = registrations;
-        _explicitFailures = failures;
+        return (registrations, failures);
     }
 
     void WarnAboutRootRemovalViaJoin(Type readModelType, ProjectionDefinition definition)
@@ -561,9 +624,12 @@ public class Projections(
         var definition = projection.Build(new(namingPolicy, eventTypes, jsonSerializerOptions, eventStore.Name?.Value, GenerationDelivery));
         ProjectionGenerationDeliveryValidation.Apply(definition, GenerationDelivery);
         WarnAboutRootRemovalViaJoin(projection.ReadModelType, definition);
-        var handler = new ProjectionHandler(eventStore, definition.Identifier, projection.ReadModelType, definition.ReadModel, definition.EventSequenceId);
+        var handler = CreateHandler(definition, projection.ReadModelType, projection.ContainerNameOverride);
         return new(definition, handler, projection.ContainerNameOverride);
     }
+
+    ProjectionHandler CreateHandler(ProjectionDefinition definition, Type readModelType, string? containerName) =>
+        new(eventStore, definition.Identifier, readModelType, containerName ?? namingPolicy.GetReadModelName(readModelType), definition.EventSequenceId);
 
     /// <summary>
     /// Compose what discovery found with what was registered explicitly into the state everything else reads.
@@ -620,7 +686,7 @@ public class Projections(
         var result = new Dictionary<Type, ProjectionDefinition>();
         var failures = new Dictionary<Type, Exception>();
         var variantDeclarations = new Dictionary<Type, FluentVariantDeclaration>();
-        var containerNames = new Dictionary<Type, string>();
+        var declaredContainerNames = new Dictionary<Type, string>();
         foreach (var projectionType in clientArtifacts.Projections)
         {
             var modelType = projectionType.GetInterface(typeof(IProjectionFor<>).Name)!.GetGenericArguments()[0]!;
@@ -635,7 +701,7 @@ public class Projections(
                     artifactsActivator,
                     jsonSerializerOptions,
                     variantDeclarations,
-                    containerNames,
+                    declaredContainerNames,
                     GenerationDelivery
                 ]) as Catch<ProjectionDefinition>)!;
             if (createProjectionDefinitionResult.TryGetException(out var exception))
@@ -649,6 +715,14 @@ public class Projections(
 
         VariantReclassifier.CrossWireGroups(result, variantDeclarations);
         ApplyGenerationDelivery(result, failures);
+
+        // An override only means something while the projection that declared it is still defined. Revalidation may have
+        // removed that projection, and a stale override must neither leak into the composed container map nor be skipped
+        // over when the handler for the read model reports its container.
+        var containerNames = result.Keys
+            .Where(declaredContainerNames.ContainsKey)
+            .GroupBy(type => type.GetReadModelType(), type => declaredContainerNames[type])
+            .ToDictionary(group => group.Key, group => group.First());
 
         return (result, failures, containerNames);
     }
@@ -684,7 +758,7 @@ public class Projections(
             IClientArtifactsActivator artifactsActivator,
             JsonSerializerOptions jsonSerializerOptions,
             IDictionary<Type, FluentVariantDeclaration> variantDeclarations,
-            IDictionary<Type, string> containerNames,
+            IDictionary<Type, string> declaredContainerNames,
             Observation.EventGenerationDelivery generationDelivery)
         {
             try
@@ -701,12 +775,13 @@ public class Projections(
 
                 if (builder.ContainerNameOverride is { } containerName)
                 {
-                    if (containerNames.TryGetValue(typeof(TReadModel), out var existing) && existing != containerName)
+                    var existing = declaredContainerNames.Where(declared => declared.Key.GetReadModelType() == typeof(TReadModel)).Select(declared => declared.Value).FirstOrDefault();
+                    if (existing is not null && existing != containerName)
                     {
                         throw new ConflictingContainerNamesForReadModel(typeof(TReadModel), existing, containerName);
                     }
 
-                    containerNames[typeof(TReadModel)] = containerName;
+                    declaredContainerNames[type] = containerName;
                 }
 
                 if (builder.VariantDeclaration is not null)

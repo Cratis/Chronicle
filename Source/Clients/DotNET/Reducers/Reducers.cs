@@ -19,7 +19,6 @@ using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Transactions;
 using Cratis.Serialization;
 using Cratis.Traces;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Reducers;
@@ -39,14 +38,14 @@ public partial class Reducers : IReducers
     readonly IEventTypes _eventTypes;
     readonly INamingPolicy _namingPolicy;
     readonly JsonSerializerOptions _jsonSerializerOptions;
-    readonly IIdentityProvider _identityProvider;
-    readonly IActivitySource<Reducers> _activitySource;
+    readonly ReducerDispatcher _dispatcher;
     readonly ILogger<Reducers> _logger;
     readonly IReducerObservers _reducerObservers;
     IReadOnlyDictionary<Type, IReducerHandler> _handlersByType = FrozenDictionary<Type, IReducerHandler>.Empty;
     IReadOnlyDictionary<Type, IReducerHandler> _handlersByModelType = FrozenDictionary<Type, IReducerHandler>.Empty;
 
     bool _registered;
+    bool _released;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Reducers"/> class.
@@ -77,16 +76,6 @@ public partial class Reducers : IReducers
         IActivitySource<Reducers> activitySource,
         ILogger<Reducers> logger)
     {
-        eventStore.Connection.Lifecycle.OnDisconnected += () =>
-        {
-            lock (ReadModelBuilderOwnership.SyncFor(eventStore, ReadModelOwnershipSync))
-            {
-                _registered = false;
-                RecreateHandlersForReconnect();
-            }
-
-            return Task.CompletedTask;
-        };
         _eventStore = eventStore;
         _servicesAccessor = (eventStore.Connection as IChronicleServicesAccessor)!;
         _clientArtifacts = clientArtifacts;
@@ -96,10 +85,18 @@ public partial class Reducers : IReducers
         _eventTypes = eventTypes;
         _namingPolicy = namingPolicy;
         _jsonSerializerOptions = jsonSerializerOptions;
-        _identityProvider = identityProvider;
         _reducerObservers = reducerObservers;
-        _activitySource = activitySource;
         _logger = logger;
+        _dispatcher = new ReducerDispatcher(
+            eventStore,
+            serviceProvider,
+            artifactActivator,
+            eventTypes,
+            jsonSerializerOptions,
+            identityProvider,
+            activitySource,
+            logger);
+        _eventStore.Connection.Lifecycle.OnDisconnected += ConnectionDisconnected;
     }
 
     /// <summary>
@@ -118,6 +115,16 @@ public partial class Reducers : IReducers
     /// </summary>
     internal int MaxConcurrentPartitions { get; init; } = PartitionedDeliveryScheduler.DefaultMaxConcurrentPartitions;
 
+    /// <summary>
+    /// Gets the delay before a reducer re-registers after its observation stream ended.
+    /// </summary>
+    internal TimeSpan ReconnectDelay { get; init; } = TimeSpan.FromSeconds(2);
+
+    /// <summary>
+    /// Gets how the re-registration work is started. Specs replace this to run the work deterministically.
+    /// </summary>
+    internal Func<Func<Task>, Task> ScheduleReconnectWork { get; init; } = work => Task.Run(work);
+
     /// <inheritdoc/>
     public Task Discover()
     {
@@ -132,7 +139,7 @@ public partial class Reducers : IReducers
     {
         lock (ReadModelBuilderOwnership.SyncFor(_eventStore, ReadModelOwnershipSync))
         {
-            if (_registered)
+            if (_registered || _released)
             {
                 return;
             }
@@ -333,6 +340,20 @@ public partial class Reducers : IReducers
     }
 
     /// <summary>
+    /// Releases the reducers of an event store whose creation failed and that no caller holds: stops reacting to the
+    /// connection lifecycle, closes the observe streams and makes a registration that is still in flight a no-op.
+    /// </summary>
+    internal void Release()
+    {
+        lock (ReadModelBuilderOwnership.SyncFor(_eventStore, ReadModelOwnershipSync))
+        {
+            _released = true;
+            _eventStore.Connection.Lifecycle.OnDisconnected -= ConnectionDisconnected;
+            DisconnectHandlers();
+        }
+    }
+
+    /// <summary>
     /// Get snapshots for a reduced read model by its key.
     /// </summary>
     /// <typeparam name="TReadModel">Type of the read model.</typeparam>
@@ -414,6 +435,22 @@ public partial class Reducers : IReducers
         return handler;
     }
 
+    Task ConnectionDisconnected()
+    {
+        lock (ReadModelBuilderOwnership.SyncFor(_eventStore, ReadModelOwnershipSync))
+        {
+            if (_released)
+            {
+                return Task.CompletedTask;
+            }
+
+            _registered = false;
+            RecreateHandlersForReconnect();
+        }
+
+        return Task.CompletedTask;
+    }
+
     void DisconnectHandlers()
     {
         foreach (var handler in _handlersByType.Values.ToList())
@@ -454,13 +491,19 @@ public partial class Reducers : IReducers
     {
         if (handler.EventTypes.Any())
         {
-            RegisterReducer(handler);
+            RegisterReducerWhenHostable(handler);
             return;
         }
 
         _logger.ReducerHasNoDispatchableMethods(
             handler.ReducerType,
             SkippedReducerMethods.Describe(handler.ReducerType, handler.ReadModelType, _eventTypes.AllClrTypes));
+    }
+
+    void RegisterReducerWhenHostable(IReducerHandler handler)
+    {
+        ClientObserverHosting.ThrowIfUnavailable(_eventStore.Connection, "Reducer", () => handler.Id.Value);
+        RegisterReducer(handler);
     }
 
     void RegisterReducer(IReducerHandler handler)
@@ -503,10 +546,38 @@ public partial class Reducers : IReducers
         var messages = new SerializedMessages<ReducerMessage>(new(new(registration)));
 #pragma warning restore CA2000 // Dispose objects before losing scope
 
-        #pragma warning disable CA2000 // Dispose objects before losing scope
+#pragma warning disable CA2000 // Dispose objects before losing scope
         var scheduler = new PartitionedDeliveryScheduler(MaxConcurrentPartitions);
 #pragma warning restore CA2000 // Dispose objects before losing scope
         var operationsToObserve = _servicesAccessor.Services.Reducers.Observe(messages.Messages, handler.CancellationToken);
+
+        // Re-establish the observation after the stream ends or fails. The kernel can end a reducer's stream without
+        // an error; without re-subscribing then, the reducer silently stops observing until the whole client
+        // reconnects. Only the reducer's own cancellation stops it, and the 2s delay avoids a hot loop.
+        void ScheduleReconnect()
+        {
+            if (handler.CancellationToken.IsCancellationRequested)
+            {
+                _ = scheduler.DrainAndDispose();
+                return;
+            }
+
+            _ = ScheduleReconnectWork(async () =>
+            {
+                try
+                {
+                    await scheduler.DrainAndDispose();
+                    await Task.Delay(ReconnectDelay, handler.CancellationToken);
+                    _logger.ReconnectingReducer(handler.Id);
+                    RegisterReducerWhenHostable(handler);
+                }
+                catch (OperationCanceledException) { }
+                catch (Exception ex)
+                {
+                    _logger.ReducerReconnectFailed(handler.Id, ex);
+                }
+            });
+        }
 
         // https://github.com/dotnet/reactive/issues/459
         operationsToObserve
@@ -559,17 +630,14 @@ public partial class Reducers : IReducers
                             break;
                     }
 
-                    _ = Task.Run(async () =>
-                    {
-                        try
-                        {
-                            await scheduler.DrainAndDispose();
-                            await Task.Delay(TimeSpan.FromSeconds(2), handler.CancellationToken);
-                            _logger.ReconnectingReducer(handler.Id);
-                            RegisterReducer(handler);
-                        }
-                        catch (OperationCanceledException) { }
-                    });
+                    ScheduleReconnect();
+                },
+                () =>
+                {
+                    scheduler.Stop();
+                    messages.Dispose();
+                    _logger.ReducerStreamCompleted(handler.Id);
+                    ScheduleReconnect();
                 });
     }
 
@@ -606,134 +674,8 @@ public partial class Reducers : IReducers
         }
     }
 
-    async Task ObserverMethod(SerializedMessages<ReducerMessage> messages, IReducerHandler handler, ReduceOperationMessage operation)
-    {
-        if (operation.ReplayState != ReplayState.None)
-        {
-            await HandleReplayNotification(handler, operation.ReplayState, operation.Partition);
-            return;
-        }
-
-        using var span = _activitySource.Handle(
-            _eventStore.Name,
-            _eventStore.Namespace,
-            handler.EventSequenceId,
-            handler.Id);
-
-        var lastSuccessfullyObservedEvent = EventSequenceNumber.Unavailable;
-        var exceptionMessages = Enumerable.Empty<string>();
-        var exceptionStackTrace = string.Empty;
-        var state = ObservationState.Success;
-        string? modelState = null;
-
-        var appendedEvents = operation.Events.Select(@event =>
-        {
-            var context = @event.Context.ToClient();
-            var handlerEventType = handler.EventTypes.FirstOrDefault(et => et.Id == context.EventType.Id);
-            var targetGeneration = handlerEventType?.Generation ?? context.EventType.Generation;
-            var eventType = _eventTypes.GetClrTypeFor(context.EventType.Id, targetGeneration);
-
-            string contentJson;
-            if (targetGeneration != context.EventType.Generation &&
-                @event.GenerationalContent.TryGetValue((int)targetGeneration.Value, out var genContent))
-            {
-                contentJson = genContent;
-                context = context with { EventType = context.EventType with { Generation = targetGeneration } };
-            }
-            else
-            {
-                contentJson = @event.Content;
-            }
-
-            var content = JsonSerializer.Deserialize(contentJson, eventType, _jsonSerializerOptions)!;
-            return new AppendedEvent(
-                context,
-                content);
-        }).ToList();
-
-        try
-        {
-            await using var serviceProviderScope = _serviceProvider.CreateAsyncScope();
-            _identityProvider.SetCurrentIdentity(Identity.System);
-            var initialState = operation.InitialState is null ? null : JsonSerializer.Deserialize(operation.InitialState, handler.ReadModelType, _jsonSerializerOptions);
-            var reduceResult = await handler.OnNext(appendedEvents, initialState, serviceProviderScope.ServiceProvider);
-
-            lastSuccessfullyObservedEvent = reduceResult.LastSuccessfullyObservedEvent;
-            if (reduceResult.IsSuccess)
-            {
-                modelState = reduceResult.ReadModelState is null ?
-                    null :
-                    JsonSerializer.Serialize(reduceResult.ReadModelState, _jsonSerializerOptions);
-            }
-            else
-            {
-                exceptionMessages = reduceResult.ErrorMessages;
-                exceptionStackTrace = reduceResult.StackTrace;
-                state = ObservationState.Failed;
-                _logger.ReducerFailed(
-                    handler.Id,
-                    appendedEvents[0].Context.SequenceNumber,
-                    appendedEvents[^1].Context.SequenceNumber,
-                    string.Join(Environment.NewLine, reduceResult.ErrorMessages));
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.ErrorWhileHandlingEvents(ex, appendedEvents[0].Context.SequenceNumber, appendedEvents[^1].Context.SequenceNumber, handler.Id);
-            exceptionMessages = ex.GetAllMessages();
-            exceptionStackTrace = ex.StackTrace ?? string.Empty;
-            state = ObservationState.Failed;
-        }
-
-        var result = new ReducerResult
-        {
-            Partition = operation.Partition,
-            DeliveryId = operation.DeliveryId,
-            ReadModelState = modelState,
-            State = state,
-            LastSuccessfulObservation = lastSuccessfullyObservedEvent,
-            ExceptionMessages = exceptionMessages.ToList(),
-            ExceptionStackTrace = exceptionStackTrace
-        };
-        messages.Publish(new(new(result)));
-    }
-
-    async Task HandleReplayNotification(IReducerHandler handler, ReplayState replayState, string partition)
-    {
-        if (handler.Invoker is SelfReducerInvoker self)
-        {
-            await self.ReplayHooks.Invoke(_serviceProvider, replayState, partition);
-            return;
-        }
-
-        await using var serviceProviderScope = _serviceProvider.CreateAsyncScope();
-        var activatedReducerResult = _artifactActivator.Activate(serviceProviderScope.ServiceProvider, handler.ReducerType);
-        if (activatedReducerResult.TryGetException(out var ex))
-        {
-            _logger.FailedActivatingReducerForReplayNotification(ex, handler.Id, replayState);
-            return;
-        }
-
-        await using var activatedReducer = activatedReducerResult.AsT0;
-        switch (replayState)
-        {
-            case ReplayState.BeginReplay when activatedReducer.Instance is ICanBeNotifiedWhenReplay notifiable:
-                await notifiable.BeginReplay();
-                break;
-
-            case ReplayState.EndReplay when activatedReducer.Instance is ICanBeNotifiedWhenReplay notifiable:
-                await notifiable.EndReplay();
-                break;
-
-            case ReplayState.BeginReplayPartition when activatedReducer.Instance is ICanBeNotifiedWhenPartitionReplayed notifiable:
-                await notifiable.BeginReplayPartition(partition);
-                break;
-
-            case ReplayState.EndReplayPartition when activatedReducer.Instance is ICanBeNotifiedWhenPartitionReplayed notifiable:
-                await notifiable.EndReplayPartition(partition);
-                break;
-        }
-    }
+    Task ObserverMethod(SerializedMessages<ReducerMessage> messages, IReducerHandler handler, ReduceOperationMessage operation) =>
+        _dispatcher.Dispatch(handler, operation, _eventStore.Namespace, result => messages.Publish(new(new(result))));
 
     bool ShouldReducerBeActive(Type reducerType, Type readModelType)
     {

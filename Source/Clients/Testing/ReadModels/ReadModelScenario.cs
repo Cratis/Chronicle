@@ -39,7 +39,7 @@ namespace Cratis.Chronicle.Testing.ReadModels;
 /// <param name="initialState">Optional initial state for the read model before any events are applied.</param>
 /// <param name="defaults">The <see cref="Defaults"/> to use for service resolution.</param>
 /// <param name="serviceProvider">Optional <see cref="IServiceProvider"/> for resolving reducer and projection instances.</param>
-public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults defaults, IServiceProvider? serviceProvider) : IDisposable
+public partial class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults defaults, IServiceProvider? serviceProvider) : IDisposable
     where TReadModel : class
 {
     readonly TReadModel? _initialState = initialState;
@@ -196,7 +196,7 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
     /// <c language="csharp">GetInstanceById</c> calls return the instances registered via
     /// <c language="csharp">Given.ForEventSourceId(...).ReadModel(...)</c>.
     /// </remarks>
-    public IReadModels ReadModels => EventStore().ReadModels;
+    public IReadModels ReadModels => SeededReadModels();
 
     /// <summary>
     /// Gets the <see cref="IClientArtifactsProvider"/> holding the artifacts Chronicle discovered — the same
@@ -220,9 +220,11 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
     /// </summary>
     /// <param name="define">Configures the projection for <typeparamref name="TReadModel"/>.</param>
     /// <returns>This scenario for chaining.</returns>
+    /// <exception cref="ReadModelSeedProjectionCannotChange">A named seed has already been registered.</exception>
     public ReadModelScenario<TReadModel> WithProjection(Action<IProjectionBuilderFor<TReadModel>> define)
     {
         ArgumentNullException.ThrowIfNull(define);
+        if (_namedReadModelSeeds.Count > 0) throw new ReadModelSeedProjectionCannotChange(typeof(TReadModel));
 
         var builder = new ProjectionBuilderFor<TReadModel>(
             Guid.NewGuid().ToString(), typeof(TReadModel), _namingPolicy, _eventTypes, _jsonSerializerOptions);
@@ -294,15 +296,21 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
     /// <param name="eventSourceId">The <see cref="EventSourceId"/> to associate the read model instance with.</param>
     /// <param name="readModel">The read model instance to register.</param>
     /// <exception cref="ReadModelAlreadySeeded">Thrown when this key was already seeded.</exception>
+    /// <exception cref="ConflictingReadModelSeeds">Thrown when a named seed already resolves to this identity.</exception>
     public void CollectReadModelFor(EventSourceId eventSourceId, TReadModel readModel)
     {
+        if (_namedReadModelSeeds.ContainsKey(eventSourceId))
+        {
+            throw new ConflictingReadModelSeeds(typeof(TReadModel), eventSourceId);
+        }
+
         if (!_readModelSeeds.TryAdd(eventSourceId, readModel))
         {
             throw new ReadModelAlreadySeeded(typeof(TReadModel), eventSourceId);
         }
 
         _processed = false;
-        _eventStore?.RegisterReadModelInstance(eventSourceId, readModel);
+        RegisterSeed(eventSourceId, readModel);
     }
 
     /// <summary>
@@ -369,6 +377,7 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
     public void Dispose()
     {
         _eventStore?.Dispose();
+        if (_borrowedStore is not null && _syntheticInputSequenceId is not null) _borrowedStore.TestingStore.RemoveSequence(_syntheticInputSequenceId);
         if (serviceProvider is null && Services.Any() && _resolvedServiceProvider is IDisposable disposable) disposable.Dispose();
         GC.SuppressFinalize(this);
     }
@@ -406,18 +415,12 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
 
     EventStoreForTesting EventStore()
     {
+        if (_borrowedStore is not null) return _borrowedStore;
         if (_eventStore is null)
         {
             _eventStore = new EventStoreForTesting(ResolvedServiceProvider(), defaults.ClientArtifactsProvider, defaults.ScenarioOptions, testingStore: null, eventLog: null, eventStore: defaults.EventStore.Name, @namespace: defaults.EventStore.Namespace);
             ((ReadModelsForTesting)_eventStore.ReadModels).DisableObservation();
-            ((ReadModelsForTesting)_eventStore.ReadModels).BeforeInstanceRead = () =>
-            {
-                if (_readModelSeeds.Count > 0) EnsureProcessed();
-            };
-            foreach (var (key, seed) in _readModelSeeds)
-            {
-                _eventStore.RegisterReadModelInstance(key, seed);
-            }
+            AttachSeeds((ReadModelsForTesting)_eventStore.ReadModels);
         }
 
         return _eventStore;
@@ -463,15 +466,15 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
             throw new ReadModelDependsOnSubstitutedLayer(typeof(TReadModel), Substitutions);
         }
 
-        if (_readModelSeeds.Count > 0 && FindReducerType(typeof(TReadModel)) is null && ProjectionDefinition() is null)
+        if (HasSeeds && FindReducerType(typeof(TReadModel)) is null && ProjectionDefinition() is null)
         {
             return;
         }
 
-        if (!_processed && (_collectedEvents.Count > 0 || _readModelSeeds.Count > 0))
+        if (!_processed && (_collectedEvents.Count > 0 || HasSeeds))
         {
             (_instance, _instances) = ProcessEvents(_collectedEvents).GetAwaiter().GetResult();
-            if (_readModelSeeds.Count > 0) ((ReadModelsForTesting)EventStore().ReadModels).ReplaceInstances(_instances);
+            if (HasSeeds) SeededReadModels().ReplaceInstances(_instances);
             _processed = true;
         }
     }
@@ -489,7 +492,9 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
             ProjectionDefinition = reducerType is null ? ProjectionDefinition() : null,
             InitialState = _initialState,
             SeededInstances = _readModelSeeds,
-            StrictEventSubscription = _strictEventSubscription
+            NamedSeededInstances = _namedReadModelSeeds.Values.ToArray(),
+            StrictEventSubscription = _strictEventSubscription,
+            SyntheticInputSequenceId = _syntheticInputSequenceId
         };
         return fold.Process(events);
     }

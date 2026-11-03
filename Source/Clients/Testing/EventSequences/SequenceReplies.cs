@@ -120,6 +120,9 @@ internal sealed class SequenceReplies(IEventSequences inner, DropReplyIntercepto
     public Task<QueryResult<IEnumerable<AppendedEventResponse>>> ForEventSourceIdAndEventTypes(ForEventSourceIdAndEventTypesRequest request, CallContext callContext = default) => inner.ForEventSourceIdAndEventTypes(request, callContext);
 
     /// <inheritdoc/>
+    public Task<QueryResult<IEnumerable<AppendedEventResponse>>> FromSequenceNumberWithErasedProperties(FromSequenceNumberWithErasedPropertiesRequest request, CallContext callContext = default) => inner.FromSequenceNumberWithErasedProperties(request, callContext);
+
+    /// <inheritdoc/>
     public Task<QueryResult<IEnumerable<AppendedEventResponse>>> FromSequenceNumber(FromSequenceNumberRequest request, CallContext callContext = default) => inner.FromSequenceNumber(request, callContext);
 
     /// <inheritdoc/>
@@ -130,6 +133,9 @@ internal sealed class SequenceReplies(IEventSequences inner, DropReplyIntercepto
 
     /// <inheritdoc/>
     public Task<QueryResult<IEnumerable<EventSequenceNamesResponse>>> AllEventSequences(AllEventSequencesRequest request, CallContext callContext = default) => inner.AllEventSequences(request, callContext);
+
+    /// <inheritdoc/>
+    public Task<QueryResult<EventSequencePageResponse>> Page(PageRequest request, CallContext callContext = default) => inner.Page(request, callContext);
 
     /// <inheritdoc/>
     public Task<QueryResult<EventSequenceTailResponse>> TailSequenceNumber(TailSequenceNumberRequest request, CallContext callContext = default) => inner.TailSequenceNumber(request, callContext);

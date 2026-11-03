@@ -130,7 +130,7 @@ Inside a frame, these raw reads need a read allowance:
 - `IReadModels`: `GetInstanceById`, `GetInstances`, `GetSnapshotsById`, `Observe`, `Watch`, `GetWatcherFor`
 - `IReducers`: `GetInstanceById`, `GetInstances`
 - Materialized read models: `GetInstances`, `ObserveInstances`
-- Event sequences: `HasEventsFor`, `GetMetadataAt`, `GetFromSequenceNumber`, `GetForEventSourceIdAndEventTypes`, `GetNextSequenceNumber`, `GetTailSequenceNumber`, `GetTailSequenceNumberForObserver`, `IsStreamCompleted`, `GetClosedStreams`, `VerifyContent`
+- Event sequences: `HasEventsFor`, `GetMetadataAt`, `GetFromSequenceNumber`, `GetPage`, `GetLatest`, `GetForEventSourceIdAndEventTypes`, `GetNextSequenceNumber`, `GetTailSequenceNumber`, `GetTailSequenceNumberForObserver`, `IsStreamCompleted`, `GetClosedStreams`, `VerifyContent`
 - `IProjections.Query` (an ad-hoc projection over the event log)
 - `IEventStore.GetNamespaces`
 

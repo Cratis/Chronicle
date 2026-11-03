@@ -6,22 +6,32 @@ using Orleans.Configuration;
 
 namespace Cratis.Chronicle.Integration.SqlClustering;
 
-public abstract class SqlClusterSpecification(bool postgres, ClusterChange change, string? initialImage = null) : Specification
+public abstract class SqlClusterSpecification(bool postgres, ClusterChange change, string? initialImage = null, bool verifyReconnect = false) : Specification
 {
     readonly SqlCluster _cluster = new(postgres, initialImage);
     readonly ClusterLoad _load = new(TransitionsFor(change));
+    int _verifiedRestarts;
 
     async Task Establish() => await _cluster.Start();
 
-    // A rolling upgrade replaces every node of the three-node cluster, and each replacement is a transition of its own.
-    static int TransitionsFor(ClusterChange change) => change == ClusterChange.RollingUpgrade ? 3 : 1;
+    /// <summary>
+    /// A rolling upgrade replaces every node of the three-node cluster, and a restart restarts every node one by one.
+    /// Each replaced or restarted node is a membership transition of its own, so both get one failure budget per node.
+    /// </summary>
+    /// <param name="change">The cluster topology change being exercised.</param>
+    /// <returns>The number of node transitions to verify.</returns>
+    static int TransitionsFor(ClusterChange change) => change is ClusterChange.RollingUpgrade or ClusterChange.Restart ? 3 : 1;
 
     async Task Because()
     {
         try
         {
-            await _load.Start(_cluster);
+            await _load.Start(_cluster, verifyReconnect);
             await _load.WaitForProgress(10);
+            if (verifyReconnect)
+            {
+                await _load.WaitForReconnectProgress(TimeSpan.FromSeconds(15));
+            }
             switch (change)
             {
                 case ClusterChange.Join:
@@ -76,6 +86,11 @@ public abstract class SqlClusterSpecification(bool postgres, ClusterChange chang
             throw;
         }
     }
+
+    /// <summary>
+    /// Verifies all three restarts completed their stopped-node and post-restart append and observer checks.
+    /// </summary>
+    protected void VerifyClientAndObserversKeptProgressingThroughEveryTransition() => _verifiedRestarts.ShouldEqual(3);
 
     async Task KillOne()
     {
@@ -137,12 +152,26 @@ public abstract class SqlClusterSpecification(bool postgres, ClusterChange chang
             // Docker may hand a restarted container another address, so only the old incarnation is identified exactly.
             _load.SiloDeparting(active);
             await node.StopAsync().WaitAsync(TimeSpan.FromSeconds(90));
+            if (verifyReconnect)
+            {
+                // Do not bring the original endpoint back until survivors acknowledge a fresh append and both
+                // observers handle it. Reconnecting to the restarted node cannot satisfy this 15-second deadline.
+                await _load.WaitForReconnectProgress(TimeSpan.FromSeconds(15));
+            }
             await node.StartAsync().WaitAsync(TimeSpan.FromSeconds(90));
             previous = await _cluster.WaitForMembership(entries =>
                 entries.Count(entry => entry.Status == (int)SiloStatus.Active) == 3 &&
                 entries.Any(entry => entry.Address == active.Address && entry.Generation == active.Generation && entry.Status == (int)SiloStatus.Dead),
                 TimeSpan.FromSeconds(90));
-            await _load.WaitForProgress(_load.Successes + 10);
+            if (verifyReconnect)
+            {
+                await _load.WaitForReconnectProgress(TimeSpan.FromSeconds(15));
+                _verifiedRestarts++;
+            }
+            else
+            {
+                await _load.WaitForProgress(_load.Successes + 10);
+            }
         }
     }
 }

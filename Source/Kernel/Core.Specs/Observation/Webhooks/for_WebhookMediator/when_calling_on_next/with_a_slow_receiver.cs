@@ -16,13 +16,18 @@ public class with_a_slow_receiver : given.a_webhook_mediator
     WebhookTarget _target;
     int _activeWhenTimeoutReturned;
     bool _returnedBeforeCleanup;
+    bool _cancelledBeforeDeadline;
+    bool _cancelledAtDeadline;
+    readonly given.DeliveryClock _clock = new();
     Task _delivery = Task.CompletedTask;
+    Exception? _timeout;
+    Exception? _retryTimeout;
 
     void Establish()
     {
         _target = new(new WebhookTargetUrl("https://example.com/webhook"), WebhookAuthorization.None, new Dictionary<string, string>());
         _receiver = new SlowReceiver();
-        _client = new HttpClient(_receiver) { BaseAddress = new Uri(_target.Url) };
+        _client = new HttpClient(_receiver) { BaseAddress = new Uri(_target.Url), Timeout = System.Threading.Timeout.InfiniteTimeSpan };
         _httpClientFactory.Create(_target).Returns(_client);
         _subscriber = Substitute.For<IWebhookObserverSubscriber>();
         _subscriber.OnNext(Arg.Any<Key>(), Arg.Any<IEnumerable<AppendedEvent>>(), Arg.Any<ObserverSubscriberContext>())
@@ -52,22 +57,35 @@ public class with_a_slow_receiver : given.a_webhook_mediator
 
     async Task Because()
     {
-        var delivery = Catch.Exception(() => _subscriber.OnNextWithin(TimeSpan.FromMilliseconds(100), "partition", [], new(null)));
+        var delivery = Catch.Exception(() => ObserverSubscriberExtensions.OnNextWebhook(_subscriber, new(TimeSpan.FromMilliseconds(100), _clock), "partition", [], new(null), CancellationToken.None));
+        await _receiver.Entered.Task;
+        _clock.Advance(TimeSpan.FromMilliseconds(99));
+        _cancelledBeforeDeadline = _receiver.Token.IsCancellationRequested;
+        _clock.Advance(TimeSpan.FromMilliseconds(1));
+        _cancelledAtDeadline = _receiver.Token.IsCancellationRequested;
         try
         {
-            await _receiver.CancellationStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            await _receiver.CancellationStarted.Task;
             _returnedBeforeCleanup = delivery.IsCompleted;
         }
         finally
         {
             _receiver.ReleaseCleanup.TrySetResult();
         }
-        await delivery;
+        _timeout = await delivery;
         _activeWhenTimeoutReturned = _receiver.Active;
-        await Catch.Exception(() => _subscriber.OnNextWithin(TimeSpan.FromMilliseconds(100), "partition", [], new(null)));
-        await _receiver.Finished.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        _receiver.Entered = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        var retry = Catch.Exception(() => ObserverSubscriberExtensions.OnNextWebhook(_subscriber, new(TimeSpan.FromMilliseconds(100), _clock), "partition", [], new(null), CancellationToken.None));
+        await _receiver.Entered.Task;
+        _clock.Advance(TimeSpan.FromMilliseconds(100));
+        _retryTimeout = await retry;
+        await _receiver.Finished.Task;
     }
 
+    [Fact] void should_not_cancel_before_the_deadline() => _cancelledBeforeDeadline.ShouldBeFalse();
+    [Fact] void should_cancel_at_the_deadline() => _cancelledAtDeadline.ShouldBeTrue();
+    [Fact] void should_report_the_delivery_timeout() => _timeout.ShouldBeOfExactType<SubscriberCallTimedOut>();
+    [Fact] void should_report_the_retry_timeout() => _retryTimeout.ShouldBeOfExactType<SubscriberCallTimedOut>();
     [Fact] void should_wait_for_cancellation_cleanup() => _returnedBeforeCleanup.ShouldBeFalse();
     [Fact] void should_cancel_and_drain_before_returning() => _activeWhenTimeoutReturned.ShouldEqual(0);
     [Fact] void should_never_overlap_the_retry() => _receiver.Peak.ShouldEqual(1);
@@ -80,6 +98,8 @@ public class with_a_slow_receiver : given.a_webhook_mediator
         public int Active;
         public int Peak;
         public int Cancelled;
+        public CancellationToken Token;
+        public TaskCompletionSource Entered = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public readonly TaskCompletionSource Finished = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public readonly TaskCompletionSource CancellationStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public readonly TaskCompletionSource ReleaseCleanup = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -95,6 +115,8 @@ public class with_a_slow_receiver : given.a_webhook_mediator
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             Peak = Math.Max(Peak, Interlocked.Increment(ref Active));
+            Token = cancellationToken;
+            Entered.TrySetResult();
             try
             {
                 await new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously).Task.WaitAsync(cancellationToken);

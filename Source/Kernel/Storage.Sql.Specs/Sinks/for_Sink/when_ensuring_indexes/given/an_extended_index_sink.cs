@@ -43,7 +43,7 @@ public abstract class an_extended_index_sink : Specification
         _definition = new("extended", Table, "Extended", ReadModelOwner.Client, ReadModelSource.Code, ReadModelObserverType.Projection, "extended", SinkDefinition.None, new Dictionary<ReadModelGeneration, JsonSchema> { [ReadModelGeneration.First] = schema }, [new("details.total"), new("lines.productId") { Properties = [new("lines.productId", true)] }]);
         var sink = (Sink)_harness.CreateSink(_definition);
         await sink.GetInstances();
-        _context = new(new DbContextOptionsBuilder().UseDatabaseFromConnectionString(_harness.ConnectionString).Options);
+        _context = new(SpecDbContextOptions.ForConnection<DbContext>(_harness.ConnectionString));
         _type = _context.Database.GetDatabaseType();
         _helper = _context.GetService<ISqlGenerationHelper>();
         var json = _type == DatabaseType.PostgreSql ? "CAST({2} AS jsonb)" : "{2}";
@@ -108,12 +108,16 @@ public abstract class an_extended_index_sink : Specification
 
     string Quote(string name) => _helper.DelimitIdentifier(name);
 
-    Task<string[]> Names() => _type switch
+    async Task<string[]> Names()
     {
-        DatabaseType.PostgreSql => _context.Database.SqlQuery<string>($"SELECT i.relname AS \"Value\" FROM pg_index x JOIN pg_class t ON t.oid=x.indrelid JOIN pg_class i ON i.oid=x.indexrelid JOIN pg_namespace n ON n.oid=t.relnamespace WHERE t.relname={Table} AND n.nspname=current_schema() AND NOT x.indisprimary").ToArrayAsync(),
-        DatabaseType.SqlServer => _context.Database.SqlQuery<string>($"SELECT name AS [Value] FROM sys.indexes WHERE object_id=OBJECT_ID({Table}) AND is_primary_key=0 AND name IS NOT NULL").ToArrayAsync(),
-        _ => _context.Database.SqlQuery<string>($"SELECT name AS Value FROM sqlite_master WHERE type='index' AND tbl_name={Table} AND sql IS NOT NULL").ToArrayAsync()
-    };
+        var names = await (_type switch
+        {
+            DatabaseType.PostgreSql => _context.Database.SqlQuery<string>($"SELECT i.relname AS \"Value\" FROM pg_index x JOIN pg_class t ON t.oid=x.indrelid JOIN pg_class i ON i.oid=x.indexrelid JOIN pg_namespace n ON n.oid=t.relnamespace WHERE t.relname={Table} AND n.nspname=current_schema() AND NOT x.indisprimary").ToArrayAsync(),
+            DatabaseType.SqlServer => _context.Database.SqlQuery<string>($"SELECT name AS [Value] FROM sys.indexes WHERE object_id=OBJECT_ID({Table}) AND is_primary_key=0 AND name IS NOT NULL").ToArrayAsync(),
+            _ => _context.Database.SqlQuery<string>($"SELECT name AS Value FROM sqlite_master WHERE type='index' AND tbl_name={Table} AND sql IS NOT NULL").ToArrayAsync()
+        });
+        return names.Where(name => !name.StartsWith("chronicle_imx_", StringComparison.Ordinal)).ToArray();
+    }
 
     Task<int> DescendingKeys() => _type switch
     {
