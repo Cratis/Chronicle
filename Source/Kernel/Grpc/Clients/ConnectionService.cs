@@ -8,6 +8,7 @@ using Cratis.Chronicle.Compatibility;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Contracts.Clients;
 using Cratis.Chronicle.Services.Host;
+using Grpc.Core;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -194,6 +195,7 @@ internal sealed class ConnectionService(
         ConnectRequest request,
         CancellationToken cancellationToken)
     {
+        var terminated = false;
         try
         {
             if (!await TryRegister(subject, connectedClients, request, cancellationToken))
@@ -248,6 +250,7 @@ internal sealed class ConnectionService(
                 logger.FailureDuringKeepAlive(request.ConnectionId, ex);
             }
 
+            terminated = true;
             subject.OnCompleted();
             openConnections.Closed(request.ConnectionId);
 
@@ -258,8 +261,17 @@ internal sealed class ConnectionService(
         }
         catch (Exception ex)
         {
+            ReportConnectionFailure(subject, request.ConnectionId, terminated, ex);
+        }
+    }
+
+    void ReportConnectionFailure(ReplaySubject<ConnectionKeepAlive> subject, string connectionId, bool terminated, Exception exception)
+    {
+        logger.ConnectionFailed(connectionId, exception);
+        if (!terminated)
+        {
             // Nothing is left to run this connection, so the client must be told rather than left waiting.
-            subject.OnError(ex);
+            subject.OnError(new RpcException(new Status(StatusCode.Unknown, "Connection failed")));
         }
     }
 
@@ -305,7 +317,14 @@ internal sealed class ConnectionService(
             }
             catch (Exception ex)
             {
-                subject.OnError(ex);
+                logger.ClientRegistrationFailed(request.ConnectionId, ex);
+                var status = ex switch
+                {
+                    TimeoutException => new Status(StatusCode.Unavailable, "Client registration timed out"),
+                    RpcException rpcException => new Status(rpcException.StatusCode, "Client registration failed"),
+                    _ => new Status(StatusCode.Unknown, "Client registration failed")
+                };
+                subject.OnError(new RpcException(status));
                 return false;
             }
         }

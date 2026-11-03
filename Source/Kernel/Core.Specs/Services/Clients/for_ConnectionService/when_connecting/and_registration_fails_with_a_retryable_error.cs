@@ -18,7 +18,8 @@ public class and_registration_fails_with_a_retryable_error : given.a_registratio
     }
 
     [Fact] void should_report_a_terminal_notification() => _terminalArrived.ShouldBeTrue();
-    [Fact] void should_preserve_the_original_retryable_error() => ReferenceEquals(_errors.SingleOrDefault(), _failure).ShouldBeTrue();
+    [Fact] void should_preserve_the_retryable_status_code() => ((RpcException)_errors.Single()).StatusCode.ShouldEqual(StatusCode.Unavailable);
+    [Fact] void should_not_expose_the_internal_message() => ((RpcException)_errors.Single()).Status.Detail.ShouldEqual("Client registration failed");
     [Fact] void should_report_only_one_error() => _errors.Count.ShouldEqual(1);
     [Fact] void should_not_convert_unavailable_to_cancellation() => _completed.ShouldEqual(0);
     [Fact] void should_not_send_a_heartbeat() => _heartbeats.ShouldEqual(0);

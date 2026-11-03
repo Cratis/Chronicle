@@ -16,7 +16,8 @@ public class and_registration_throws : given.a_registration_lifetime
     }
 
     [Fact] void should_report_a_terminal_notification() => _terminalArrived.ShouldBeTrue();
-    [Fact] void should_deliver_the_original_error() => ReferenceEquals(_errors.SingleOrDefault(), _failure).ShouldBeTrue();
+    [Fact] void should_not_expose_the_internal_message() => _errors.Single().Message.Contains(_failure.Message, StringComparison.Ordinal).ShouldBeFalse();
+    [Fact] void should_log_the_full_exception() => _logger.Entries.Any(_ => ReferenceEquals(_.Exception, _failure)).ShouldBeTrue();
     [Fact] void should_report_only_one_error() => _errors.Count.ShouldEqual(1);
     [Fact] void should_not_complete_normally() => _completed.ShouldEqual(0);
     [Fact] void should_not_send_a_heartbeat() => _heartbeats.ShouldEqual(0);

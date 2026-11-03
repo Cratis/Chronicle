@@ -8,7 +8,6 @@ using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Contracts.Clients;
 using Grpc.Core;
-using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using ProtoBuf.Grpc;
 
@@ -26,6 +25,7 @@ public class a_registration_lifetime : Specification
     protected readonly TaskCompletionSource _disconnected = new(TaskCreationOptions.RunContinuationsAsynchronously);
     protected readonly CancellationTokenSource _cancellation = new();
     protected readonly RegistrationClock _clock = new();
+    protected readonly ConnectionLogger _logger = new();
     protected readonly ConcurrentQueue<Exception> _errors = new();
     protected readonly ConcurrentQueue<string> _events = new();
     protected Func<Task> _register;
@@ -74,7 +74,7 @@ public class a_registration_lifetime : Specification
             localSiloDetails,
             new ConnectedClientsQuery(grainFactory, options),
             _openConnections,
-            NullLogger<KernelConnectionService>.Instance,
+            _logger,
             options)
         {
             RegistrationTimeProvider = _clock
