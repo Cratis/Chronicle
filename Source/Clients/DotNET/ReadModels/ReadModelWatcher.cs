@@ -115,7 +115,7 @@ public class ReadModelWatcher<TReadModel> : IReadModelWatcher<TReadModel>, IDisp
                     return;
                 }
 
-                var readModel = reducer is not null && changeset.Removed ? default : JsonSerializer.Deserialize<TReadModel>(changeset.ReadModel, _jsonSerializerOptions);
+                var readModel = DeserializeReadModel(changeset.ReadModel, reducer is not null, changeset.Removed);
                 var changeContext = EventContext.From(
                     _eventStore.Name,
                     changeset.Namespace,
@@ -167,6 +167,9 @@ public class ReadModelWatcher<TReadModel> : IReadModelWatcher<TReadModel>, IDisp
         ContractReadModels.ReadModelChangeType.Removed => ReadModelChangeType.Removed,
         _ => ReadModelChangeType.Modified
     };
+
+    TReadModel? DeserializeReadModel(string json, bool isReducer, bool removed) =>
+        isReducer && removed ? default : JsonSerializer.Deserialize<TReadModel>(json, _jsonSerializerOptions);
 
     Task ClientConnected()
     {
