@@ -105,21 +105,76 @@ internal sealed class ReactorDispatcher(
             handler.EventSequenceId,
             handler.Id);
 
-        var lastSuccessfullyObservedEvent = EventSequenceNumber.Unavailable;
-        var exceptionMessages = Enumerable.Empty<string>();
-        var exceptionStackTrace = string.Empty;
-        var state = ObservationState.Success;
+        var partitions = events.PartitionsOf();
+        var outcomes = new List<PartitionOutcome>(partitions.Count);
 
         if (handle is not null)
         {
-            foreach (var @event in events.Events)
+            foreach (var partition in partitions)
+            {
+                var outcome = await DispatchToDelegate(partition);
+                if (outcome is null)
+                {
+                    return;
+                }
+
+                outcomes.Add(outcome);
+            }
+
+            if (!cancellationToken.IsCancellationRequested)
+            {
+                PublishResult();
+            }
+            return;
+        }
+
+        await using var serviceProviderScope = serviceProvider.CreateAsyncScope();
+        var activatedReactorResult = artifactActivator.Activate(serviceProviderScope.ServiceProvider, handler.ReactorType);
+        if (activatedReactorResult.TryGetException(out var exception))
+        {
+            span?.Activity?.RecordFailure(exception);
+            outcomes.AddRange(partitions.Select(_ => PartitionOutcome.Failed(_.Partition ?? string.Empty, exception)));
+            PublishResult();
+            return;
+        }
+
+        await using var activatedReactor = activatedReactorResult.AsT0;
+        await using var middlewares = middlewaresActivator.Activate(serviceProviderScope.ServiceProvider);
+        var reactorInvoker = new ReactorInvoker(
+            eventTypes,
+            middlewares,
+            handler.ReactorType,
+            activatedReactor,
+            loggerFactory.CreateLogger<ReactorInvoker>(),
+            sideEffectHandlers,
+            eventStore,
+            reactorContextValuesBuilder,
+            argumentsResolver,
+            serviceProviderScope.ServiceProvider)
+        {
+            StoppingToken = cancellationToken,
+            RegisteredId = handler.Id,
+            RegisteredEventSequenceId = handler.EventSequenceId
+        };
+
+        foreach (var partition in partitions)
+        {
+            outcomes.Add(await DispatchToInstance(partition, reactorInvoker));
+        }
+
+        PublishResult();
+
+        async Task<PartitionOutcome?> DispatchToDelegate(PartitionEvents partition)
+        {
+            var lastSuccessfullyObservedEvent = EventSequenceNumber.Unavailable;
+            foreach (var @event in partition.Events)
             {
                 if (cancellationToken.IsCancellationRequested)
                 {
 #if CHRONICLE_ROLLING_DIAGNOSTICS
                     ReactorsDeliveryDiagnosticsLogging.Record(logger, 10, diagnosticStream, diagnosticBatch, events.DeliveryId, @event.Context.SequenceNumber);
 #endif
-                    return;
+                    return null;
                 }
 
                 logger.EventReceived(@event.Context.EventType.Id, handler.Id);
@@ -153,106 +208,76 @@ internal sealed class ReactorDispatcher(
 #if CHRONICLE_ROLLING_DIAGNOSTICS
                     ReactorsDeliveryDiagnosticsLogging.Record(logger, 10, diagnosticStream, diagnosticBatch, events.DeliveryId, @event.Context.SequenceNumber);
 #endif
-                    return;
+                    return null;
                 }
                 catch (Exception ex)
                 {
-                    FailedToHandleEventWithException(ex, @event.Context.EventType.Id);
-                    break;
+                    return FailedWithException(partition, lastSuccessfullyObservedEvent, ex, @event.Context.EventType.Id);
                 }
             }
 
-            if (!cancellationToken.IsCancellationRequested)
-            {
-                PublishResult();
-            }
-            return;
+            return Succeeded(partition, lastSuccessfullyObservedEvent);
         }
 
-        await using var serviceProviderScope = serviceProvider.CreateAsyncScope();
-        var activatedReactorResult = artifactActivator.Activate(serviceProviderScope.ServiceProvider, handler.ReactorType);
-        if (activatedReactorResult.TryGetException(out var exception))
+        async Task<PartitionOutcome> DispatchToInstance(PartitionEvents partition, ReactorInvoker reactorInvoker)
         {
-            FailedActivatingReactor(exception);
-            PublishResult();
-            return;
-        }
-
-        await using var activatedReactor = activatedReactorResult.AsT0;
-        await using var middlewares = middlewaresActivator.Activate(serviceProviderScope.ServiceProvider);
-        var reactorInvoker = new ReactorInvoker(
-            eventTypes,
-            middlewares,
-            handler.ReactorType,
-            activatedReactor,
-            loggerFactory.CreateLogger<ReactorInvoker>(),
-            sideEffectHandlers,
-            eventStore,
-            reactorContextValuesBuilder,
-            argumentsResolver,
-            serviceProviderScope.ServiceProvider)
-        {
-            StoppingToken = cancellationToken,
-            RegisteredId = handler.Id,
-            RegisteredEventSequenceId = handler.EventSequenceId
-        };
-
-        foreach (var @event in events.Events)
-        {
-            logger.EventReceived(@event.Context.EventType.Id, handler.Id);
-
-            try
+            var lastSuccessfullyObservedEvent = EventSequenceNumber.Unavailable;
+            foreach (var @event in partition.Events)
             {
-                var context = @event.Context.ToClient();
+                logger.EventReceived(@event.Context.EventType.Id, handler.Id);
 
-                var handlerEventType = handler.EventTypes.FirstOrDefault(et => et.Id == context.EventType.Id);
-                var targetGeneration = handlerEventType?.Generation ?? context.EventType.Generation;
-                var eventType = eventTypes.GetClrTypeFor(context.EventType.Id, targetGeneration);
-
-                string contentJson;
-                if (targetGeneration != context.EventType.Generation &&
-                    @event.GenerationalContent.TryGetValue((int)targetGeneration.Value, out var genContent))
+                try
                 {
-                    contentJson = genContent;
-                    context = context with { EventType = context.EventType with { Generation = targetGeneration } };
-                }
-                else
-                {
-                    contentJson = @event.Content;
-                }
+                    var context = @event.Context.ToClient();
 
-                var content = await eventSerializer.Deserialize(eventType, JsonNode.Parse(contentJson)!.AsObject());
+                    var handlerEventType = handler.EventTypes.FirstOrDefault(et => et.Id == context.EventType.Id);
+                    var targetGeneration = handlerEventType?.Generation ?? context.EventType.Generation;
+                    var eventType = eventTypes.GetClrTypeFor(context.EventType.Id, targetGeneration);
 
-                var handleResult = await handler.OnNext(context, content, reactorInvoker);
-                if (handleResult.IsFailed)
-                {
-                    FailedToHandleEvent(handleResult, @event.Context.EventType.Id);
-                    break;
-                }
+                    string contentJson;
+                    if (targetGeneration != context.EventType.Generation &&
+                        @event.GenerationalContent.TryGetValue((int)targetGeneration.Value, out var genContent))
+                    {
+                        contentJson = genContent;
+                        context = context with { EventType = context.EventType with { Generation = targetGeneration } };
+                    }
+                    else
+                    {
+                        contentJson = @event.Content;
+                    }
+
+                    var content = await eventSerializer.Deserialize(eventType, JsonNode.Parse(contentJson)!.AsObject());
+
+                    var handleResult = await handler.OnNext(context, content, reactorInvoker);
+                    if (handleResult.IsFailed)
+                    {
+                        return FailedToHandleEvent(partition, lastSuccessfullyObservedEvent, handleResult, @event.Context.EventType.Id);
+                    }
 #if CHRONICLE_ROLLING_DIAGNOSTICS
-                var previousSequence = lastSuccessfullyObservedEvent.Value;
+                    var previousSequence = lastSuccessfullyObservedEvent.Value;
 #endif
-                lastSuccessfullyObservedEvent = @event.Context.SequenceNumber;
+                    lastSuccessfullyObservedEvent = @event.Context.SequenceNumber;
 #if CHRONICLE_ROLLING_DIAGNOSTICS
-                ReactorsDeliveryDiagnosticsLogging.Record(logger, 7, diagnosticStream, diagnosticBatch, events.DeliveryId, lastSuccessfullyObservedEvent.Value, previousSequence);
+                    ReactorsDeliveryDiagnosticsLogging.Record(logger, 7, diagnosticStream, diagnosticBatch, events.DeliveryId, lastSuccessfullyObservedEvent.Value, previousSequence);
 #endif
+                }
+                catch (Exception ex)
+                {
+                    return FailedWithException(partition, lastSuccessfullyObservedEvent, ex, @event.Context.EventType.Id);
+                }
             }
-            catch (Exception ex)
-            {
-                FailedToHandleEventWithException(ex, @event.Context.EventType.Id);
-                break;
-            }
+
+            return Succeeded(partition, lastSuccessfullyObservedEvent);
         }
 
-        PublishResult();
+        static PartitionOutcome Succeeded(PartitionEvents partition, EventSequenceNumber lastSuccessfullyObservedEvent) =>
+            new(partition.Partition ?? string.Empty, ObservationState.Success, lastSuccessfullyObservedEvent, [], string.Empty);
 
-        void FailedToHandleEvent(ReactorInvocationResult invocationResult, EventTypeId eventTypeId)
+        PartitionOutcome FailedToHandleEvent(PartitionEvents partition, EventSequenceNumber lastSuccessfullyObservedEvent, ReactorInvocationResult invocationResult, EventTypeId eventTypeId)
         {
             span?.Activity?.RecordFailure("handling");
             var failureDetails = invocationResult.GetFailureDetails();
-            exceptionMessages = failureDetails.Messages.ToArray();
-            exceptionStackTrace = failureDetails.StackTrace;
-            state = ObservationState.Failed;
+            var exceptionMessages = failureDetails.Messages.ToArray();
 
             if (invocationResult.ExceptionResult.TryGetException(out var ex))
             {
@@ -265,6 +290,8 @@ internal sealed class ReactorDispatcher(
                     : string.Empty;
                 logger.ReactorSideEffectAppendFailed(eventTypeId, handler.Id, targetEventSourceIds, string.Join(Environment.NewLine, exceptionMessages));
             }
+
+            return new(partition.Partition ?? string.Empty, ObservationState.Failed, lastSuccessfullyObservedEvent, exceptionMessages, failureDetails.StackTrace);
         }
 
         void LogErrorWhileHandlingEvent(Exception ex, EventTypeId eventTypeId)
@@ -280,41 +307,36 @@ internal sealed class ReactorDispatcher(
             }
         }
 
-        void FailedToHandleEventWithException(Exception ex, EventTypeId eventTypeId)
+        PartitionOutcome FailedWithException(PartitionEvents partition, EventSequenceNumber lastSuccessfullyObservedEvent, Exception ex, EventTypeId eventTypeId)
         {
 #if CHRONICLE_ROLLING_DIAGNOSTICS
             ReactorsDeliveryDiagnosticsLogging.Record(logger, 11, diagnosticStream, diagnosticBatch, events.DeliveryId);
 #endif
             LogErrorWhileHandlingEvent(ex, eventTypeId);
-            exceptionMessages = ex.GetAllMessages();
-            exceptionStackTrace = ex.StackTrace ?? string.Empty;
-            state = ObservationState.Failed;
-        }
-
-        void FailedActivatingReactor(Exception ex)
-        {
-            span?.Activity?.RecordFailure(ex);
-            exceptionMessages = ex.GetAllMessages();
-            exceptionStackTrace = ex.StackTrace ?? string.Empty;
-            state = ObservationState.Failed;
+            return new(partition.Partition ?? string.Empty, ObservationState.Failed, lastSuccessfullyObservedEvent, ex.GetAllMessages(), ex.StackTrace ?? string.Empty);
         }
 
         void PublishResult()
         {
-            var result = new ReactorResult
-            {
-                Partition = events.Partition,
-                DeliveryId = events.DeliveryId,
-                State = state,
-                LastSuccessfulObservation = lastSuccessfullyObservedEvent,
-                ExceptionMessages = exceptionMessages.ToList(),
-                ExceptionStackTrace = exceptionStackTrace
-            };
-
+            var result = events.Partitions.Count > 0
+                ? new ReactorResult
+                {
+                    DeliveryId = events.DeliveryId,
+                    Partitions = [.. outcomes.Select(_ => _.ToContract())]
+                }
+                : new ReactorResult
+                {
+                    Partition = events.Partition,
+                    DeliveryId = events.DeliveryId,
+                    State = outcomes[0].State,
+                    LastSuccessfulObservation = outcomes[0].LastSuccessfulObservation,
+                    ExceptionMessages = [.. outcomes[0].ExceptionMessages],
+                    ExceptionStackTrace = outcomes[0].ExceptionStackTrace
+                };
 #if CHRONICLE_ROLLING_DIAGNOSTICS
+            var lastSuccessfullyObservedEvent = outcomes.Count > 0 ? outcomes[^1].LastSuccessfulObservation : EventSequenceNumber.Unavailable;
+            var state = outcomes.Count > 0 ? outcomes[^1].State : ObservationState.Success;
             ReactorsDeliveryDiagnosticsLogging.Record(logger, 8, diagnosticStream, diagnosticBatch, events.DeliveryId, lastSuccessfullyObservedEvent.Value, state: (int)state);
-#endif
-#if CHRONICLE_ROLLING_DIAGNOSTICS
             try
             {
                 publish(result);
