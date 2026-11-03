@@ -203,7 +203,7 @@ public partial class Sink : ISink, ICanReconcileIndexes, ISinkCompositeKeyLookup
             return _noFailedPartitions;
         }
 
-        await ApplyJoinsAndChildRemovals(scope, changeset, eventSequenceNumber);
+        await ApplyJoinsAndChildRemovals(scope, changeset, eventSequenceNumber, key.ArrayIndexers);
 
         var nonJoinedChanges = changeset.Changes
             .Where(c => c is not Joined and not ChildRemovedFromAll)
@@ -220,9 +220,9 @@ public partial class Sink : ISink, ICanReconcileIndexes, ISinkCompositeKeyLookup
             return _noFailedPartitions;
         }
 
-        ApplyChangesToEntity(entry, nonJoinedChanges);
+        ApplyChangesToEntity(entry, nonJoinedChanges, key.ArrayIndexers);
         AdvanceLastHandledSequenceNumber(entry, eventSequenceNumber);
-        await SaveRecoveringFromInsertRace(scope, entry, new PendingWrite(id, nonJoinedChanges, eventSequenceNumber));
+        await SaveRecoveringFromInsertRace(scope, entry, new PendingWrite(id, nonJoinedChanges, eventSequenceNumber, key.ArrayIndexers));
         await SqlCompositeKeyShadow.Stamp(scope.DbContext, key, id, _logger);
 
         return _noFailedPartitions;
@@ -238,13 +238,13 @@ public partial class Sink : ISink, ICanReconcileIndexes, ISinkCompositeKeyLookup
         }
     }
 
-    async Task ApplyJoinsAndChildRemovals(DbContextScope<ReadModelDbContext> scope, IChangeset<AppendedEvent, ExpandoObject> changeset, EventSequenceNumber eventSequenceNumber)
+    async Task ApplyJoinsAndChildRemovals(DbContextScope<ReadModelDbContext> scope, IChangeset<AppendedEvent, ExpandoObject> changeset, EventSequenceNumber eventSequenceNumber, ArrayIndexers ambientIndexers)
     {
         // Composite-key design §4.1: these paths lack target key parts. Leave shadows untouched;
         // never reconstruct composite parts from ambiguous or culture-sensitive legacy ids.
         foreach (var joined in changeset.Changes.OfType<Joined>())
         {
-            await ApplyJoinedChange(scope, joined, eventSequenceNumber);
+            await ApplyJoinedChange(scope, joined, eventSequenceNumber, ambientIndexers);
         }
 
         foreach (var childRemovedFromAll in changeset.Changes.OfType<ChildRemovedFromAll>())
@@ -312,7 +312,7 @@ public partial class Sink : ISink, ICanReconcileIndexes, ISinkCompositeKeyLookup
             }
 
             var reloadedEntry = scope.DbContext.Entries.Entry(reloaded);
-            ApplyChangesToEntity(reloadedEntry, write.Changes);
+            ApplyChangesToEntity(reloadedEntry, write.Changes, write.ArrayIndexers);
             AdvanceLastHandledSequenceNumber(reloadedEntry, write.SequenceNumber);
             await scope.DbContext.SaveChangesAsync();
             SqlStorageTelemetry.RecoveredCollision("read-model");
@@ -570,7 +570,7 @@ public partial class Sink : ISink, ICanReconcileIndexes, ISinkCompositeKeyLookup
         return entries.Provider.CreateQuery<DynamicReadModelEntity>(orderBy);
     }
 
-    async Task ApplyJoinedChange(DbContextScope<ReadModelDbContext> scope, Joined joined, EventSequenceNumber eventSequenceNumber)
+    async Task ApplyJoinedChange(DbContextScope<ReadModelDbContext> scope, Joined joined, EventSequenceNumber eventSequenceNumber, ArrayIndexers ambientIndexers)
     {
         var (segments, joinValue) = !joined.ArrayIndexers.IsEmpty
             ? GetChildJoinFilter(joined)
@@ -590,7 +590,7 @@ public partial class Sink : ISink, ICanReconcileIndexes, ISinkCompositeKeyLookup
         var modified = false;
         foreach (var entry in entries.Where(entry => EntryMatchesJoin(entry, rootColumn, segments, joinValue)))
         {
-            ApplyChangesToEntity(scope.DbContext.Entries.Entry(entry), joined.Changes);
+            ApplyChangesToEntity(scope.DbContext.Entries.Entry(entry), joined.Changes, ambientIndexers);
             AdvanceLastHandledSequenceNumber(scope.DbContext.Entries.Entry(entry), eventSequenceNumber);
             modified = true;
         }
@@ -883,7 +883,7 @@ public partial class Sink : ISink, ICanReconcileIndexes, ISinkCompositeKeyLookup
         return key.Value.ToString() ?? string.Empty;
     }
 
-    sealed record PendingWrite(string Id, Change[] Changes, EventSequenceNumber SequenceNumber);
+    sealed record PendingWrite(string Id, Change[] Changes, EventSequenceNumber SequenceNumber, ArrayIndexers ArrayIndexers);
 
     sealed record ObservedPage(long TotalCount, DynamicReadModelEntity[] Entries);
 
