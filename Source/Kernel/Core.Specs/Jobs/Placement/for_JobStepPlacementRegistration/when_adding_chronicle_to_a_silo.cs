@@ -34,6 +34,6 @@ public class when_adding_chronicle_to_a_silo : Specification
     [Fact] void should_register_the_strategy_by_its_wire_name() => _strategy.KeyedImplementationType.ShouldEqual(typeof(JobStepsPlacementStrategy));
     [Fact] void should_register_the_worker_director() => _director.KeyedImplementationType.ShouldEqual(typeof(JobWorkerPlacementDirector));
     [Fact] void should_register_the_conditional_properties_provider() => _services.Any(_ => _.ServiceType == typeof(IGrainPropertiesProvider) && _.ImplementationType == typeof(JobStepPlacementProperties)).ShouldBeTrue();
-    [Fact] void should_not_register_the_unconditional_properties_provider() => _services.Any(_ => !_.IsKeyedService && _.ImplementationType == typeof(JobStepsPlacementProperties)).ShouldBeFalse();
+    [Fact] void should_not_register_the_unconditional_properties_provider() => _services.Any(_ => _.ServiceType == typeof(IGrainPropertiesProvider) && _.ImplementationType == typeof(JobStepsPlacementProperties)).ShouldBeFalse();
     [Fact] void should_not_constrain_controllers() => _services.Any(_ => _.IsKeyedService && _.ServiceType == typeof(IPlacementDirector) && Equals(_.ServiceKey, typeof(JobsPlacementStrategy))).ShouldBeFalse();
 }
