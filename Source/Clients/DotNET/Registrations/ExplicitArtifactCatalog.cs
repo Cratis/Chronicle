@@ -6,6 +6,7 @@ using System.Collections.Immutable;
 using System.Reflection;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Constraints;
+using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.EventSources;
 using Cratis.Chronicle.Reactors;
 using Cratis.Chronicle.Reducers;
@@ -20,6 +21,7 @@ internal sealed class ExplicitArtifactCatalog : IClientArtifactsProvider
     readonly EventTypeDeclarations _eventDeclarations;
     readonly FrozenDictionary<(Type Type, ExplicitArtifactKind Kind), string> _identities;
     readonly FrozenSet<(Type Type, ExplicitArtifactKind Kind)> _nominations;
+    readonly FrozenDictionary<Type, string> _reactorSourceStores;
 
     /// <summary>
     /// Initializes a new instance of <see cref="ExplicitArtifactCatalog"/>.
@@ -66,6 +68,9 @@ internal sealed class ExplicitArtifactCatalog : IClientArtifactsProvider
 
         _eventDeclarations = new(EventTypes, snapshot.EventTypes);
         _identities = snapshot.Types.GroupBy(_ => (_.Type, _.Kind)).ToFrozenDictionary(_ => _.Key, MergeIdentity);
+        _reactorSourceStores = snapshot.Types.Where(_ => _.Kind == ExplicitArtifactKind.Reactor)
+            .GroupBy(_ => _.Type).Where(_ => _.Any(recipe => recipe.SourceEventStore is not null))
+            .ToFrozenDictionary(_ => _.Key, MergeReactorSourceStore);
         ExplicitMigrations = Nominated(ExplicitArtifactKind.Migration).Distinct().ToImmutableArray();
 
         IEnumerable<Type> Nominated(ExplicitArtifactKind kind) => snapshot.Types.Where(_ => _.Kind == kind).Select(_ => _.Type);
@@ -183,6 +188,14 @@ internal sealed class ExplicitArtifactCatalog : IClientArtifactsProvider
     internal ReactorId GetReactorIdFor(Type type) => GetIdentity(type, ExplicitArtifactKind.Reactor);
 
     /// <summary>
+    /// Resolves the registered reactor's peer-merged source event store.
+    /// </summary>
+    /// <param name="type">The reactor type.</param>
+    /// <returns>The configured source event store, or null when not supplied.</returns>
+    internal EventStoreName? GetReactorSourceStoreFor(Type type) =>
+        _reactorSourceStores.TryGetValue(type, out var store) ? new EventStoreName(store) : null;
+
+    /// <summary>
     /// Resolves the registered reducer's peer-merged identity.
     /// </summary>
     /// <param name="type">The reducer type.</param>
@@ -228,6 +241,26 @@ internal sealed class ExplicitArtifactCatalog : IClientArtifactsProvider
         }
 
         return identity?.Value ?? DefaultIdentity(type, kind);
+    }
+
+    static string MergeReactorSourceStore(IGrouping<Type, ExplicitArtifactRegistration> declarations)
+    {
+        var type = declarations.Key;
+        DeclaredFacet<string>? store = type.GetCustomAttribute<EventStoreAttribute>() is { } marker
+            ? new(marker.EventStore, nameof(EventStoreAttribute))
+            : null;
+        foreach (var recipe in declarations)
+        {
+            store = DeclaredFacet<string>.Merge(type, "source event store", store, recipe.SourceEventStore);
+        }
+        var reactorAttribute = type.GetCustomAttribute<ReactorAttribute>();
+        if (RegisteredObserverMetadata.HasExplicitSequence(type, reactorAttribute?.EventSequenceId))
+        {
+            throw new EventStoreCannotBeCombinedWithExplicitEventSequence(
+                type, store!.Value, type.GetCustomAttribute<EventSequenceAttribute>()?.Sequence ?? reactorAttribute!.EventSequenceId!);
+        }
+
+        return store!.Value;
     }
 
     static DeclaredFacet<string>? MarkerIdentity(Type type, ExplicitArtifactKind kind) => kind switch

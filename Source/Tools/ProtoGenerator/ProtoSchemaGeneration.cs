@@ -86,13 +86,11 @@ public static class ProtoSchemaGeneration
     /// <param name="outputDirectory">The directory to write them into.</param>
     /// <returns>The paths written.</returns>
     /// <remarks>
-    /// The previous contents are deleted rather than overwritten, so a file that stops being generated - a package
-    /// that was renamed or removed - cannot linger and keep describing a contract that no longer exists. It also
-    /// makes hand-patching a generated file impossible to keep rather than merely discouraged: three fields once
-    /// lived in eventsequences.proto that nothing in the contracts produced, and nothing noticed for months.
+    /// Stale top-level proto and descriptor files are removed so a package that was renamed or removed cannot
+    /// linger and keep describing a contract that no longer exists. Hand-applied edits are overwritten, but
+    /// unchanged files keep their timestamps so builds stay incremental.
     /// <para>
-    /// Deleting happens only once every schema has been generated, so a generator failure leaves the committed
-    /// files untouched rather than emptying the directory.
+    /// Generation completes before anything is touched, so a generator failure leaves the committed files intact.
     /// </para>
     /// Files in subdirectories are left alone - <c language="csharp">protobuf-net/bcl.proto</c> is protobuf-net's own file, an input
     /// to generation rather than an output of it.
@@ -101,20 +99,22 @@ public static class ProtoSchemaGeneration
     {
         Directory.CreateDirectory(outputDirectory);
 
-        foreach (var stale in Directory.GetFiles(outputDirectory, "*.proto").Concat(Directory.GetFiles(outputDirectory, "*.desc")))
+        var paths = schemas.Select(_ =>
+        {
+            var path = Path.Combine(outputDirectory, $"{_.Key}.proto");
+            GeneratedFile.WriteIfChanged(path, _.Value);
+            return path;
+        }).ToList();
+
+        var expected = schemas.Keys.Select(_ => $"{_}.proto").ToHashSet(StringComparer.Ordinal);
+        var staleProtos = Directory.GetFiles(outputDirectory, "*.proto").Where(_ => !expected.Contains(Path.GetFileName(_)));
+        var staleDescriptors = Directory.GetFiles(outputDirectory, "*.desc").Where(_ => Path.GetFileName(_) != DescriptorSetWriter.FileName);
+        foreach (var stale in staleProtos.Concat(staleDescriptors))
         {
             File.Delete(stale);
         }
 
-        return
-        [
-            .. schemas.Select(_ =>
-            {
-                var path = Path.Combine(outputDirectory, $"{_.Key}.proto");
-                File.WriteAllText(path, _.Value);
-                return path;
-            })
-        ];
+        return paths;
     }
 
     /// <summary>

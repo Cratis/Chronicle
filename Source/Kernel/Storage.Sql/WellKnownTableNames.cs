@@ -9,6 +9,11 @@ namespace Cratis.Chronicle.Storage.Sql;
 public static class WellKnownTableNames
 {
     /// <summary>
+    /// The table holding inert projection definition history.
+    /// </summary>
+    public const string ProjectionDefinitionHistory = "ProjectionDefinitionHistory";
+
+    /// <summary>
     /// The separately stored administrator privileges.
     /// </summary>
     public const string Administrators = "Administrators";

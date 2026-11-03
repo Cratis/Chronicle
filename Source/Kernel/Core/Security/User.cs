@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reactive.Subjects;
+using Cratis.Arc.Authorization;
 using Cratis.Arc.Queries.ModelBound;
 using Cratis.Chronicle.Grpc;
 using Cratis.Chronicle.Storage;
@@ -20,6 +21,7 @@ namespace Cratis.Chronicle.Security;
 /// <param name="HasLoggedIn">Whether the user's password credentials have been initialized.</param>
 [ReadModel]
 [BelongsTo(WellKnownServices.Users)]
+[Authorize(Policy = WellKnownAuthorizationPolicies.Administrator)]
 public record User(
     Guid Id,
     string Username,

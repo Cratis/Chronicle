@@ -31,9 +31,18 @@ internal static class MigrationPropertyNames
     /// <param name="expression">The typed member accessor.</param>
     /// <param name="namingPolicy">The event payload's JSON naming policy.</param>
     /// <returns>The serialized property path.</returns>
-    internal static PropertyName Resolve(LambdaExpression expression, JsonNamingPolicy? namingPolicy)
+    internal static PropertyName Resolve(LambdaExpression expression, JsonNamingPolicy? namingPolicy) =>
+        new(ResolvePath(expression.Body, namingPolicy));
+
+    /// <summary>
+    /// Resolves a member chain, where a <c language="csharp">Select</c> over a collection addresses every element of it.
+    /// </summary>
+    /// <param name="body">The body of the accessor, or of the element selector.</param>
+    /// <param name="namingPolicy">The event payload's JSON naming policy.</param>
+    /// <returns>The serialized property path, with <c language="csharp">[]</c> after a collection whose every element is addressed.</returns>
+    static string ResolvePath(Expression body, JsonNamingPolicy? namingPolicy)
     {
-        var current = expression.Body;
+        var current = body;
         if (current is UnaryExpression unary)
         {
             current = unary.Operand;
@@ -59,6 +68,13 @@ internal static class MigrationPropertyNames
             current = member.Expression;
         }
 
-        return new PropertyName(string.Join('.', members));
+        if (current is MethodCallExpression { Arguments: [var collection, var selector] } call &&
+            call.Method.Name == nameof(Enumerable.Select) &&
+            (selector is UnaryExpression { Operand: LambdaExpression quoted } ? quoted : selector as LambdaExpression) is { } elementSelector)
+        {
+            return $"{ResolvePath(collection, namingPolicy)}[].{ResolvePath(elementSelector.Body, namingPolicy)}";
+        }
+
+        return string.Join('.', members);
     }
 }

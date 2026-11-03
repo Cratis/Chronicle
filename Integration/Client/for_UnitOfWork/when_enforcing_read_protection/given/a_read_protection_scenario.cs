@@ -13,6 +13,10 @@ namespace Cratis.Chronicle.Integration.for_UnitOfWork.when_enforcing_read_protec
 
 public class a_read_protection_scenario(ChronicleFixture fixture) : Specification(fixture)
 {
+    IDisposable? _withheldConjunctions;
+
+    public virtual bool KernelSupportsConjunctions => true;
+    public bool AdvertisedConjunctions;
     public EventSourceId Source = EventSourceId.New();
     public UnitOfWork Unit;
     public DecisionReadCommitOwner Owner;
@@ -22,6 +26,15 @@ public class a_read_protection_scenario(ChronicleFixture fixture) : Specificatio
     public override IEnumerable<Type> EventTypes => [typeof(StockSet), typeof(StockSetV2), typeof(StockRemoved), typeof(RoutingFact)];
     public override IEnumerable<Type> EventTypeMigrators => [typeof(StockSetToV2Migrator)];
     public override IEnumerable<Type> ModelBoundProjections => [typeof(StockState)];
+
+    void Establish()
+    {
+        if (!KernelSupportsConjunctions)
+        {
+            _withheldConjunctions = ConjunctionSupport.Withhold(EventStore);
+        }
+        AdvertisedConjunctions = ConjunctionSupport.IsAdvertised(EventStore);
+    }
 
     public void CreateUnit()
     {
@@ -85,6 +98,7 @@ public class a_read_protection_scenario(ChronicleFixture fixture) : Specificatio
         }
         finally
         {
+            _withheldConjunctions?.Dispose();
             await base.DisposeAsync();
         }
     }

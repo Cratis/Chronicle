@@ -85,6 +85,7 @@ public partial class Database(IServiceProvider serviceProvider, IOptions<Chronic
 #endif
 
     readonly Lazy<ILogger> _liveQueryLogger = new(() => (serviceProvider.GetService<ILoggerFactory>() ?? NullLoggerFactory.Instance).CreateLogger(typeof(LiveQuery).FullName!));
+    readonly Lazy<ILogger> _readCommittedSnapshotLogger = new(() => (serviceProvider.GetService<ILoggerFactory>() ?? NullLoggerFactory.Instance).CreateLogger("SqlServerReadCommittedSnapshot"));
     readonly SqlConnectionResolution _resolution = SqlConnectionResolution.From(serviceProvider, options.Value.Storage);
     readonly DatabaseNameResolver _databaseNames = new(
         SqlConnectionStrings.WithPooling(
@@ -96,7 +97,7 @@ public partial class Database(IServiceProvider serviceProvider, IOptions<Chronic
     readonly System.Collections.Concurrent.ConcurrentDictionary<string, CachedDbContextOptions<ClusterDbContext>> _clusterOptions = new();
     readonly System.Collections.Concurrent.ConcurrentDictionary<string, CachedDbContextOptions<EventStoreDbContext>> _eventStoreOptions = new();
     readonly System.Collections.Concurrent.ConcurrentDictionary<string, CachedDbContextOptions<NamespaceDbContext>> _namespaceOptions = new();
-    readonly System.Collections.Concurrent.ConcurrentDictionary<string, CachedDbContextOptions<Cratis.Orleans.Storage.Sql.Jobs.JobsDbContext>> _jobsOptions = new();
+    readonly System.Collections.Concurrent.ConcurrentDictionary<string, CachedDbContextOptions<Orleans.Storage.Sql.Jobs.JobsDbContext>> _jobsOptions = new();
     readonly System.Collections.Concurrent.ConcurrentDictionary<string, CachedDbContextOptions<UniqueConstraintDbContext>> _uniqueConstraintOptions = new();
     readonly System.Collections.Concurrent.ConcurrentDictionary<string, CachedDbContextOptions<UniqueConstraintValuesDbContext>> _uniqueConstraintValuesOptions = new();
     readonly System.Collections.Concurrent.ConcurrentDictionary<string, CachedDbContextOptions<EventSequenceDbContext>> _eventSequenceOptions = new();
@@ -193,7 +194,7 @@ public partial class Database(IServiceProvider serviceProvider, IOptions<Chronic
     /// The jobs storage migrates its own tables through these options, so they resolve for
     /// <see cref="ConnectionPurpose.Runtime"/> only.
     /// </remarks>
-    public DbContextOptions<Cratis.Orleans.Storage.Sql.Jobs.JobsDbContext> GetJobsDbContextOptions(string eventStore, string @namespace)
+    public DbContextOptions<Orleans.Storage.Sql.Jobs.JobsDbContext> GetJobsDbContextOptions(string eventStore, string @namespace)
     {
         var identity = new DatabaseIdentity(DatabaseKind.Namespace, eventStore, @namespace);
 
@@ -626,7 +627,7 @@ public partial class Database(IServiceProvider serviceProvider, IOptions<Chronic
             ClearTableMigrationCache(string.Empty);
         }
 
-        serviceProvider.GetService<Cratis.Orleans.Storage.IJobsStorage>()?.Reset();
+        serviceProvider.GetService<Orleans.Storage.IJobsStorage>()?.Reset();
     }
 
     async Task<string[]> BoundDatabases()

@@ -2,12 +2,21 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Text.RegularExpressions;
 using Cratis.Chronicle.Connections;
+using Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Reactors;
+using Cratis.Chronicle.Reducers;
+using Cratis.Chronicle.Sinks;
+using Cratis.Traces;
 using Grpc.Core;
+using Microsoft.Extensions.DependencyInjection;
+#if CHRONICLE_ROLLING_DIAGNOSTICS
+using Microsoft.Extensions.Logging;
+#endif
 
 namespace Cratis.Chronicle.Integration.SqlClustering;
 
@@ -32,6 +41,12 @@ public sealed partial class ClusterLoad(int transitions = 1, TimeProvider? timeP
     readonly CancellationTokenSource _stop = new();
     readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
     readonly string _source = Guid.NewGuid().ToString();
+    readonly ClusterReconnectReducer _reconnectReducer = new();
+#if CHRONICLE_ROLLING_DIAGNOSTICS
+    readonly ClusterLoadDeliveryDiagnostics _deliveryDiagnostics = new();
+    ILoggerFactory? _diagnosticLoggerFactory;
+#endif
+    ServiceProvider? _services;
     ChronicleClient _client = null!;
     IEventStore _store = null!;
     IReactorHandler _reactor = null!;
@@ -47,24 +62,54 @@ public sealed partial class ClusterLoad(int transitions = 1, TimeProvider? timeP
     /// <param name="silo">The membership entry of the silo incarnation that is going away.</param>
     public void SiloDeparting(MembershipEntry silo) => _departedSilos[(silo.Address, silo.Generation)] = _timeProvider.GetTimestamp();
 
-    public async Task Start(SqlCluster cluster)
+    public async Task Start(SqlCluster cluster, bool verifyReconnect = false)
     {
-        var options = new ChronicleOptions(cluster.ConnectionString) { ConnectTimeout = 30 };
+        var options = new ChronicleOptions(cluster.ConnectionString) { ConnectTimeout = 30, DefaultSinkTypeId = WellKnownSinkTypes.SQL };
         options.ExplicitArtifacts.RegisterEventType<ClusterEventAppended>();
-        _client = new(options);
+        if (verifyReconnect)
+        {
+            options.ExplicitArtifacts.RegisterReducer<ClusterReconnectReducer>();
+
+            // EventStore's constructor requires a keyed IActivitySource<T> for EventSequence, Reactors and
+            // Reducers. A host-supplied service provider gets no graceful fallback the way the client's own
+            // DefaultServiceProvider has, so this stands in for the client-side tracing registration a real
+            // application host would add.
+            _services = new ServiceCollection()
+                .AddSingleton(_reconnectReducer)
+                .AddKeyedSingleton(typeof(IActivitySource<>), ClientActivity.SourceName, typeof(FallbackActivitySource<>))
+                .BuildServiceProvider();
+        }
+#if CHRONICLE_ROLLING_DIAGNOSTICS
+        _diagnosticLoggerFactory = LoggerFactory.Create(builder => builder
+            .SetMinimumLevel(LogLevel.Trace)
+            .AddFilter((category, level) => category == ClusterLoadDeliveryDiagnosticsLogging.Category && level == LogLevel.Trace)
+            .AddProvider(new ClusterLoadDeliveryDiagnosticsLogging(_deliveryDiagnostics)));
+        _client = new(options, serviceProvider: _services, loggerFactory: _diagnosticLoggerFactory);
+#else
+        _client = new(options, serviceProvider: _services);
+#endif
 
         // Automatic registration is what re-registers the reactor after the client reconnects to another node, the
         // way an application does; a manually registered store stays unregistered once its node goes away.
-        _store = await _client.GetEventStore("sql-clustering");
+        _store = await _client.GetEventStore(verifyReconnect ? "sql-clustering-reconnect" : "sql-clustering");
         _reactor = await _store.Reactors.Register(
             "cluster-integrity",
             builder => builder.WithEventType(_store.EventTypes.GetEventTypeFor(typeof(ClusterEventAppended))),
             (@event, _) =>
             {
+#if CHRONICLE_ROLLING_DIAGNOSTICS
+                var id = @event.Content[nameof(ClusterEventAppended.Id)]!.GetValue<Guid>();
+                _deliveryDiagnostics.Callback(id, @event.Context.SequenceNumber.Value, () => _observed.Enqueue((id, @event.Context.SequenceNumber)));
+#else
                 _observed.Enqueue((@event.Content[nameof(ClusterEventAppended.Id)]!.GetValue<Guid>(), @event.Context.SequenceNumber));
+#endif
                 return Task.CompletedTask;
             });
         await _reactor.WaitTillActive(TimeSpan.FromSeconds(60));
+        if (verifyReconnect)
+        {
+            await _store.Reducers.GetHandlerFor(typeof(ClusterReconnectReducer)).WaitTillActive(TimeSpan.FromSeconds(60));
+        }
         _load = Run();
     }
 
@@ -84,6 +129,61 @@ public sealed partial class ClusterLoad(int transitions = 1, TimeProvider? timeP
         }
     }
 
+    /// <summary>
+    /// Requires a newly submitted, acknowledged append and delivery of that exact event to both observers.
+    /// The single deadline includes append retries and observation, not just registration or active status.
+    /// </summary>
+    /// <param name="timeout">The complete failover and delivery budget.</param>
+    /// <returns>Awaitable task.</returns>
+    public async Task WaitForReconnectProgress(TimeSpan timeout)
+    {
+        using var deadline = new CancellationTokenSource(timeout);
+        using var poll = new PeriodicTimer(TimeSpan.FromMilliseconds(100));
+        while (true)
+        {
+            var id = Guid.NewGuid();
+            var result = await TryAppend(id, deadline.Token);
+            if (result is null)
+            {
+                await poll.WaitForNextTickAsync(deadline.Token);
+                continue;
+            }
+
+            var acknowledged = (id, result.SequenceNumber);
+            _acknowledged.Enqueue(acknowledged);
+            while (!_observed.Contains(acknowledged) || !_reconnectReducer.HasHandled(id, result.SequenceNumber))
+            {
+                await poll.WaitForNextTickAsync(deadline.Token);
+            }
+
+            return;
+        }
+    }
+
+    async Task<AppendResult?> TryAppend(Guid id, CancellationToken cancellationToken)
+    {
+        AppendResult result;
+        try
+        {
+            var append = _store.EventLog.Append(_source, new ClusterEventAppended(id));
+            _outstanding.Enqueue(append);
+            result = await append.WaitAsync(cancellationToken);
+        }
+        catch (Exception exception) when (IsUncertainAppend(exception) || IsAppendToDepartedSilo(exception.GetType().FullName, exception.Message, _departedSilos.Keys))
+        {
+            RecordFailedAppend(id, exception);
+            return null;
+        }
+
+        if (result.IsSuccess)
+        {
+            return result;
+        }
+
+        RecordFailedAppend(id, result);
+        return null;
+    }
+
     public async Task StopAndVerify()
     {
         await _stop.CancelAsync();
@@ -99,7 +199,14 @@ public sealed partial class ClusterLoad(int transitions = 1, TimeProvider? timeP
         var storedEvents = stored.Select(@event => (((ClusterEventAppended)@event.Content).Id, @event.Context.SequenceNumber)).ToArray();
         try
         {
-            await _reactor.WaitTillReachesEventSequenceNumber(stored.Max(@event => @event.Context.SequenceNumber), TimeSpan.FromSeconds(90));
+            // Three restarts' worth of queued load can leave a sizeable backlog for the observer to drain; give it
+            // more headroom than a single restart would need, especially on a loaded CI runner.
+            await _reactor.WaitTillReachesEventSequenceNumber(stored.Max(@event => @event.Context.SequenceNumber), TimeSpan.FromSeconds(180));
+
+            // Reaching the sequence number only proves the observer's position advanced; the handler's own
+            // enqueue onto _observed can still be a few scheduler ticks behind under load. Give it a bounded
+            // grace period to settle before asserting, rather than a sleep with no signal behind it.
+            await WaitForObservationsToSettle(storedEvents, TimeSpan.FromSeconds(15));
             var storedIds = stored.Select(@event => ((ClusterEventAppended)@event.Content).Id).ToArray();
             var storedSequences = stored.Select(@event => @event.Context.SequenceNumber.Value).Order().ToArray();
             Console.WriteLine($"Acknowledged={acknowledged.Length}, failed={_failures}, unknown={_unknown.Count}, stored={stored.Count}, observed={_observed.Count}");
@@ -112,7 +219,11 @@ public sealed partial class ClusterLoad(int transitions = 1, TimeProvider? timeP
         }
         catch
         {
+#if CHRONICLE_ROLLING_DIAGNOSTICS
+            await ClusterLoadDiagnostics.DumpSafely(_reactor, storedEvents, _observed, Console.Out, _deliveryDiagnostics);
+#else
             await ClusterLoadDiagnostics.Dump(_reactor, storedEvents, _observed, Console.Out);
+#endif
             throw;
         }
     }
@@ -126,10 +237,58 @@ public sealed partial class ClusterLoad(int transitions = 1, TimeProvider? timeP
         }
         finally
         {
+#if CHRONICLE_ROLLING_DIAGNOSTICS
+            try
+            {
+                _client?.Dispose();
+            }
+            finally
+            {
+                DisposeDeliveryDiagnostics();
+            }
+#else
             _client?.Dispose();
+#endif
+            if (_services is not null)
+            {
+                await _services.DisposeAsync();
+            }
             _stop.Dispose();
         }
     }
+
+    async Task WaitForObservationsToSettle(IEnumerable<(Guid Id, EventSequenceNumber Sequence)> stored, TimeSpan timeout)
+    {
+        var storedEvents = stored.ToHashSet();
+        using var deadline = new CancellationTokenSource(timeout);
+        using var poll = new PeriodicTimer(TimeSpan.FromMilliseconds(100));
+        while (!storedEvents.All(_observed.Contains))
+        {
+            try
+            {
+                await poll.WaitForNextTickAsync(deadline.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                return;
+            }
+        }
+    }
+
+#if CHRONICLE_ROLLING_DIAGNOSTICS
+    void DisposeDeliveryDiagnostics()
+    {
+        try
+        {
+            _diagnosticLoggerFactory?.Dispose();
+        }
+        catch
+        {
+            // Diagnostic teardown must not replace a workload failure or preservation assertion.
+        }
+        _deliveryDiagnostics.Dispose();
+    }
+#endif
 
     internal static void VerifyObservations(IEnumerable<(Guid Id, EventSequenceNumber Sequence)> stored, IEnumerable<(Guid Id, EventSequenceNumber Sequence)> observed)
     {
@@ -281,4 +440,9 @@ public sealed partial class ClusterLoad(int transitions = 1, TimeProvider? timeP
 
     [GeneratedRegex(@"Unable to connect to (?:endpoint )?S(?<address>[^:\s]+):\d+:(?<generation>-?\d+)[.,]", RegexOptions.CultureInvariant, 1000)]
     private static partial Regex DepartedEndpoint { get; }
+
+    sealed class FallbackActivitySource<T> : IActivitySource<T>
+    {
+        public ActivitySource ActualSource { get; } = new(typeof(T).FullName ?? typeof(T).Name);
+    }
 }
