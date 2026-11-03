@@ -56,17 +56,18 @@ public partial class Sink
     }
 
     /// <summary>
-    /// Resolves the key layout for reading an occurrence or backup table without provisioning anything.
+    /// Resolves the key layout for reading a table of the read model without provisioning anything.
     /// </summary>
     /// <remarks>
     /// A sink that was never initialized, after a restart or on a silo that does not own the read model, has not looked at the
     /// table, so it would read a table created in the earlier layout with the current one. The layout is read from the primary table
-    /// only when that table exists; nothing is created. It is looked up once per sink, and only when an occurrence is read.
+    /// only when that table exists; nothing is created. It is looked up once per sink, by every query that opens a table.
     /// </remarks>
     /// <returns>Awaitable task.</returns>
     async Task EnsureLayoutForRead()
     {
-        if (!_needsLayout)
+        // Once resolved, a read costs only these field checks.
+        if (!_needsLayout || Volatile.Read(ref _layoutResolvedForRead))
         {
             return;
         }
@@ -86,6 +87,10 @@ public partial class Sink
         try
         {
             resolved = await layout;
+            if (resolved)
+            {
+                Volatile.Write(ref _layoutResolvedForRead, true);
+            }
         }
         finally
         {
