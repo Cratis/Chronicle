@@ -529,6 +529,7 @@ class SparseIntegrationWorkflows(unittest.TestCase):
 
 
 VERSION_STAMPED_CLIENT_REBUILD = "Rebuild the client under test with a version above the previous release"
+ROLLING_DELIVERY_DIAGNOSTIC_REBUILD = "Build isolated rolling delivery diagnostic candidate"
 
 
 class IntegrationSingleBuildContracts(unittest.TestCase):
@@ -547,7 +548,7 @@ class IntegrationSingleBuildContracts(unittest.TestCase):
                 for step in steps:
                     command = step.get("run", "")
                     if lane == "sql-clustering" and step.get("name") == VERSION_STAMPED_CLIENT_REBUILD:
-                        # The one allowed rebuild: the rolling-upgrade leg stamps the client under test above the
+                        # The version-stamped rebuild: the rolling-upgrade leg stamps the client under test above the
                         # previous release so the compatibility check orders the two sides correctly (#5353).
                         self.assertEqual("matrix.provider == 'RollingUpgrade'", step.get("if"))
                         self.assertIn('-p:Version="$CRATIS_CHRONICLE_CLIENT_VERSION"', command)
@@ -555,6 +556,35 @@ class IntegrationSingleBuildContracts(unittest.TestCase):
                         self.assertEqual(1, len(re.findall(r"\bdotnet\b", command)))
                         self.assertRegex(command.strip(), r"^dotnet\s+build\s+Integration/SqlClustering/SqlClustering\.csproj\s")
                         self.assertNotRegex(command, r"[;&|`]|\$\(|\n")
+                        continue
+                    if lane == "sql-clustering" and step.get("name") == ROLLING_DELIVERY_DIAGNOSTIC_REBUILD:
+                        # #5300 needs a compile-time-enabled diagnostic variant; the normal build artifact must
+                        # remain diagnostics-free. Pin the entire script, including provenance and IL verification,
+                        # so only these two isolated builds are allowed, never another build/publish/pack/run/msbuild.
+                        self.assertEqual("matrix.provider == 'RollingUpgrade'", step.get("if"))
+                        self.assertEqual(
+                            'set -euo pipefail\n'
+                            'printf \'diagnostic-source=%s client-version=%s artifacts=%s\\n\' '
+                            '"$(git rev-parse HEAD)" "$CRATIS_CHRONICLE_CLIENT_VERSION" '
+                            '"$RUNNER_TEMP/rolling-delivery-diagnostics"\n'
+                            'dotnet build .github/scripts/rolling-delivery-il/RollingDeliveryIl.csproj '
+                            '-c Release -warnaserror \\\n'
+                            '  --artifacts-path "$RUNNER_TEMP/rolling-il-verifier" '
+                            '-o "$RUNNER_TEMP/rolling-il-tool"\n'
+                            'dotnet build Integration/SqlClustering/SqlClustering.csproj '
+                            '-c Release -warnaserror \\\n'
+                            '  -p:EnableDevelopmentSymbol=true -p:DisableProxyGenerator=true '
+                            '-p:DisableDockerBuild=true \\\n'
+                            '  -p:Version="$CRATIS_CHRONICLE_CLIENT_VERSION" '
+                            '-p:EnableRollingDeliveryDiagnostics=true \\\n'
+                            '  --artifacts-path "$RUNNER_TEMP/rolling-delivery-diagnostics"\n'
+                            'dotnet "$RUNNER_TEMP/rolling-il-tool/RollingDeliveryIl.dll" \\\n'
+                            '  Source/Clients/DotNET/bin/Release/net10.0/Cratis.Chronicle.dll \\\n'
+                            '  --enabled "$RUNNER_TEMP/rolling-delivery-diagnostics/bin/DotNET/'
+                            'release/Cratis.Chronicle.dll"\n'
+                            'grep -a -F -q -- "$CRATIS_CHRONICLE_CLIENT_VERSION" '
+                            '"$RUNNER_TEMP/rolling-delivery-diagnostics/bin/DotNET/release/Cratis.Chronicle.dll"\n',
+                            command)
                         continue
                     self.assertNotRegex(command, r"dotnet\s+(build|publish|run|msbuild)\b|GenerateProtoFiles")
 

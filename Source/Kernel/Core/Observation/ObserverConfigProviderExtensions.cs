@@ -40,10 +40,18 @@ public static class ObserverConfigProviderExtensions
         ObserverKey key)
     {
         var config = await provider.GetFor(key);
-        return config.SubscriberTimeout <= 0
+        return config.GetSubscriberTimeout();
+    }
+
+    /// <summary>
+    /// Gets the timeout for observer subscriber request from an already read configuration.
+    /// </summary>
+    /// <param name="config">The observer configuration.</param>
+    /// <returns>The timeout; zero means waiting indefinitely.</returns>
+    public static TimeSpan GetSubscriberTimeout(this Observers config) =>
+        config.SubscriberTimeout <= 0
             ? TimeSpan.Zero
             : TimeSpan.FromSeconds(config.SubscriberTimeout);
-    }
 
     /// <summary>
     /// Gets the most events to hand a subscriber in one call during catch-up, replay and partition recovery.

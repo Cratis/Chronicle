@@ -326,6 +326,12 @@ public partial class Observer
         {
             return true;
         }
+        var firstAddedEventSequenceNumber = await GetFirstEventSequenceNumberForAddedEventTypes();
+        if (IsRecoverySuperseded(recovery))
+        {
+            return true;
+        }
+
         var nextUnhandledEventSequenceNumber = getNextToHandleResult.Match(eventSequenceNumber => eventSequenceNumber, _ => EventSequenceNumber.Unavailable);
         var replayEvaluator = new ReplayEvaluator(GrainFactory, _subscription.ObserverKey.EventStore, _observerKey.Namespace);
         var needsReplay = await replayEvaluator.Evaluate(new(
@@ -335,7 +341,8 @@ public partial class Observer
             State,
             _subscription,
             tailSequenceNumber,
-            nextUnhandledEventSequenceNumber));
+            nextUnhandledEventSequenceNumber,
+            firstAddedEventSequenceNumber));
         if (IsRecoverySuperseded(recovery))
         {
             return true;
@@ -349,5 +356,19 @@ public partial class Observer
         logger.NeedsToReplay();
         await TransitionTo<Replay>();
         return true;
+    }
+
+    async Task<EventSequenceNumber?> GetFirstEventSequenceNumberForAddedEventTypes()
+    {
+        var previousEventTypes = Definition.EventTypes.ToHashSet();
+        var subscribedEventTypes = _subscription.EventTypes.ToHashSet();
+        if (!previousEventTypes.IsProperSubsetOf(subscribedEventTypes))
+        {
+            return null;
+        }
+
+        var addedEventTypes = subscribedEventTypes.Except(previousEventTypes).ToList();
+        var first = await _eventSequence.GetNextSequenceNumberGreaterOrEqualTo(EventSequenceNumber.First, addedEventTypes);
+        return first.Match(sequenceNumber => sequenceNumber, _ => EventSequenceNumber.Unavailable);
     }
 }

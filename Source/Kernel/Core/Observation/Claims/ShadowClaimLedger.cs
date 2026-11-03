@@ -16,6 +16,7 @@ internal sealed class ShadowClaimLedger
     readonly Dictionary<Key, PartitionClaim> _claims = [];
     ObserverWideClaim? _wide;
     OwnershipRevision _revision = OwnershipRevision.None;
+    PartitionClaim[]? _orderedClaims;
 
     /// <summary>
     /// Gets the observer-wide claim, if any.
@@ -36,7 +37,7 @@ internal sealed class ShadowClaimLedger
         var ledger = new ShadowClaimLedger { _wide = wide, _revision = revision ?? OwnershipRevision.None };
         foreach (var claim in claims ?? [])
         {
-            ledger._claims[claim.Partition] = claim;
+            ledger.SetClaim(claim.Partition, claim);
             ledger._revision = new(Math.Max(ledger._revision.Value, claim.Epoch.Value));
         }
 
@@ -84,7 +85,7 @@ internal sealed class ShadowClaimLedger
     /// <returns>Any exclusion violation, without preventing the grant.</returns>
     internal IReadOnlyList<(Key? Partition, ShadowClaimDivergence Divergence)> Grant(Key partition, ClaimHolderKind kind, JobId? job, EventSequenceNumber resume)
     {
-        _claims[partition] = new(partition, kind, job, NextEpoch(), resume, []);
+        SetClaim(partition, new(partition, kind, job, NextEpoch(), resume, []));
         return _wide is null ? [] : [(partition, ShadowClaimDivergence.ExclusionViolated)];
     }
 
@@ -98,7 +99,19 @@ internal sealed class ShadowClaimLedger
     internal IReadOnlyList<(Key? Partition, ShadowClaimDivergence Divergence)> GrantObserverWide(ClaimHolderKind kind, JobId? job, EventSequenceNumber resume)
     {
         _wide = new(kind, job, NextEpoch(), resume, []);
-        return _claims.Keys.Select(_ => ((Key?)_, ShadowClaimDivergence.ExclusionViolated)).ToArray();
+        if (_claims.Count == 0)
+        {
+            return [];
+        }
+
+        var violations = new (Key? Partition, ShadowClaimDivergence Divergence)[_claims.Count];
+        var index = 0;
+        foreach (var partition in _claims.Keys)
+        {
+            violations[index++] = (partition, ShadowClaimDivergence.ExclusionViolated);
+        }
+
+        return violations;
     }
 
     /// <summary>
@@ -143,7 +156,7 @@ internal sealed class ShadowClaimLedger
     /// <param name="partition">The partition handed over.</param>
     internal void HandOver(Key partition)
     {
-        if (_claims.Remove(partition))
+        if (RemoveClaim(partition))
         {
             _revision = _revision.Next();
         }
@@ -238,7 +251,33 @@ internal sealed class ShadowClaimLedger
     /// </summary>
     /// <returns>The partition claims, observer-wide claim, and current revision.</returns>
     internal (IReadOnlyList<PartitionClaim> Claims, ObserverWideClaim? Wide, OwnershipRevision Revision) Snapshot() =>
-        (_claims.Values.OrderBy(_ => _.Partition.ToString(), StringComparer.Ordinal).ToArray(), _wide, _revision);
+        (_orderedClaims ??= _claims.Values.OrderBy(_ => _.Partition.ToString(), StringComparer.Ordinal).ToArray(), _wide, _revision);
+
+    /// <summary>
+    /// Checks, without allocating, whether the claims already agree with the authoritative sets.
+    /// </summary>
+    /// <param name="replaying">The authoritative replaying partitions.</param>
+    /// <param name="catchingUp">The authoritative catching-up partitions.</param>
+    /// <param name="observerReplaying">Whether the observer is replaying.</param>
+    /// <returns>True when <see cref="Compare"/> reports nothing and <see cref="Reconcile"/> changes nothing; false only means the full path runs.</returns>
+    internal bool IsAligned(ISet<Key> replaying, ISet<Key> catchingUp, bool observerReplaying)
+    {
+        if (observerReplaying != (_wide?.Holder == ClaimHolderKind.ObserverReplay))
+        {
+            return false;
+        }
+
+        foreach (var claim in _claims.Values)
+        {
+            if (claim.Holder is ClaimHolderKind.PartitionReplay or ClaimHolderKind.PartitionCatchUp &&
+                claim.Holder != KindFromSets(claim.Partition, replaying, catchingUp))
+            {
+                return false;
+            }
+        }
+
+        return AllHaveClaims(replaying) && (_wide?.Holder == ClaimHolderKind.ObserverCatchUp || AllHaveClaims(catchingUp));
+    }
 
     static ClaimHolderKind KindFromSets(Key partition, ISet<Key> replaying, ISet<Key> catchingUp)
     {
@@ -248,6 +287,49 @@ internal sealed class ShadowClaimLedger
         }
 
         return catchingUp.Contains(partition) ? ClaimHolderKind.PartitionCatchUp : ClaimHolderKind.None;
+    }
+
+    bool AllHaveClaims(ISet<Key> partitions)
+    {
+        if (partitions.Count == 0)
+        {
+            return true;
+        }
+
+        if (partitions is HashSet<Key> hashSet)
+        {
+            foreach (var partition in hashSet)
+            {
+                if (!_claims.ContainsKey(partition))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        foreach (var partition in partitions)
+        {
+            if (!_claims.ContainsKey(partition))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    void SetClaim(Key partition, PartitionClaim claim)
+    {
+        _claims[partition] = claim;
+        _orderedClaims = null;
+    }
+
+    bool RemoveClaim(Key partition)
+    {
+        _orderedClaims = null;
+        return _claims.Remove(partition);
     }
 
     void AddMissingClaims(ISet<Key> partitions, ClaimHolderKind coveringKind, List<(Key? Partition, ShadowClaimDivergence Divergence)> divergences)

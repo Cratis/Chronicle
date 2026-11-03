@@ -1,20 +1,8 @@
 ---
-description: Mark a model-bound Chronicle projection forward-only with [NotRewindable] so it cannot be replayed or rewound from scratch.
+description: Set IsRewindable to false on a model-bound Chronicle projection definition with [NotRewindable].
 ---
 # Not Rewindable
 
-Mark a projection as not rewindable (forward-only) using `[NotRewindable]`:
+Mark a projection as not rewindable using `[NotRewindable]`. This sets `IsRewindable` to `false` on the projection definition and is distinct from observer replayability:
 
 <ChronicleClientTabs snippet="projections/model-bound/not-rewindable/basic" />
-
-## When to use
-
-- Audit logs or append-only data
-- Projections that should never be replayed from scratch
-- Time-sensitive data where replay would be incorrect
-
-## Best practices
-
-- Use for append-only scenarios where historical replay would be problematic
-- Consider carefully as this removes the ability to rebuild the projection from scratch
-- Ensure you have alternative recovery strategies if the projection becomes corrupted

@@ -99,7 +99,9 @@ Calling `Unsubscribe` with the subscription ID:
 - Removes the persistent subscription definition from the kernel
 - Existing inbox events are **not deleted** — they remain available for observation
 
-Once removed, no new events are forwarded to the inbox. If you later recreate the subscription with the same ID, forwarding resumes from that point forward.
+Removing a subscription stops forwarding but does not erase its forwarding observer's progress. Recreating the same subscription identity can resume from that retained checkpoint, including catching up on events published while it was disconnected. A new identity with no retained progress starts from the beginning of the retained source outbox.
+
+See [Subscription recovery](recovery) before replaying either the forwarding observer or a consumer inbox observer; these operations have different effects.
 
 ## Idempotent Registration
 
@@ -141,6 +143,8 @@ A common pattern is to register all subscriptions once during application startu
 - You prefer zero configuration and automatic routing
 
 ## See Also
+
+- [Subscription recovery](recovery) — fresh history, retained progress, and replay effects
 
 - [Implicit Event Store Subscriptions](implicit-subscriptions) — automatic subscription via `[EventStore]` attributes
 - [Outbox and Inbox](outbox-inbox) — conceptual explanation of how events flow between stores

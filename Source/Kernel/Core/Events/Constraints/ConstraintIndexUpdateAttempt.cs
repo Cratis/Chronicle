@@ -11,16 +11,17 @@ namespace Cratis.Chronicle.Events.Constraints;
 internal static class ConstraintIndexUpdateAttempt
 {
     /// <summary>
-    /// Attempts a cancellable write for at most one second and classifies its outcome.
+    /// Attempts a cancellable write for at most the attempt timeout and classifies its outcome.
     /// </summary>
     /// <param name="update">The storage write.</param>
+    /// <param name="attemptTimeout">The longest the write may run.</param>
     /// <param name="cancellationToken">The enclosing deadline.</param>
     /// <param name="timeProvider">The clock for the individual attempt.</param>
     /// <returns>The outcome and its optional error.</returns>
-    internal static async Task<(ConstraintIndexUpdateOutcome Outcome, Exception? Error)> Run(Func<CancellationToken, Task> update, CancellationToken cancellationToken, TimeProvider? timeProvider = null)
+    internal static async Task<(ConstraintIndexUpdateOutcome Outcome, Exception? Error)> Run(Func<CancellationToken, Task> update, TimeSpan attemptTimeout, CancellationToken cancellationToken, TimeProvider? timeProvider = null)
     {
         if (cancellationToken.IsCancellationRequested) return (ConstraintIndexUpdateOutcome.NotAttempted, null);
-        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(1), timeProvider ?? TimeProvider.System);
+        using var timeout = new CancellationTokenSource(attemptTimeout, timeProvider ?? TimeProvider.System);
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeout.Token);
         Task? write = null;
         try

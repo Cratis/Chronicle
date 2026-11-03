@@ -40,6 +40,27 @@ public partial class Observer
     }
 
     /// <inheritdoc/>
+    public async Task ReplayStepsCouldNotBePrepared()
+    {
+        if (IsRetired || _removed || !KeyOwnsDefinition) return;
+        if (!State.IsReplaying && State.RunningState != ObserverRunningState.Replaying) return;
+
+        using var scope = logger.BeginObserverScope(_observerId, _observerKey);
+        logger.ReplayStepsCouldNotBePrepared();
+        if (!State.IsReplaying)
+        {
+            State = State with { IsReplaying = true };
+            await WriteStateAsync();
+        }
+
+        if (!IsQuarantined)
+        {
+            // A refused transition keeps the replay pending for the next routing pass.
+            await TransitionTo<QuarantinedObserver>();
+        }
+    }
+
+    /// <inheritdoc/>
     public Task ReleaseRefusedPartitionReplay(Key partition, EventSequenceNumber heldBackFrom) => ReleaseRefusedPartitionReplay(partition, heldBackFrom, null);
 
     /// <inheritdoc/>

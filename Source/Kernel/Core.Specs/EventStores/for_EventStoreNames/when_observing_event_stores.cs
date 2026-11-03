@@ -28,20 +28,25 @@ public class when_observing_event_stores : Specification
     };
 
     IStorage _storage;
+    IEventStoreInitialization _initialization;
     IEnumerable<EventStoreNames> _emitted;
     string _json;
 
     void Establish()
     {
         _storage = Substitute.For<IStorage>();
+        _initialization = Substitute.For<IEventStoreInitialization>();
+        _initialization.EnsureAll(Arg.Any<IEnumerable<EventStoreName>>()).Returns(call => call.Arg<IEnumerable<EventStoreName>>());
         var stores = new ReplaySubject<IEnumerable<EventStoreName>>(1);
         stores.OnNext(new List<EventStoreName> { EventStoreName.System, "some-store" });
         _storage.ObserveEventStores().Returns(stores);
     }
 
-    void Because()
+    async Task Because()
     {
-        EventStoreNames.ObserveEventStores(_storage).Subscribe(names => _emitted = names);
+        var received = new TaskCompletionSource<IEnumerable<EventStoreNames>>(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var subscription = EventStoreNames.ObserveEventStores(_storage, _initialization).Subscribe(names => received.TrySetResult(names));
+        _emitted = await received.Task.WaitAsync(TimeSpan.FromSeconds(5));
         _json = JsonSerializer.Serialize<object>(_emitted, _serializerOptions);
     }
 

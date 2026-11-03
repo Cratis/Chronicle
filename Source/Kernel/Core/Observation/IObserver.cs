@@ -20,7 +20,7 @@ namespace Cratis.Chronicle.Observation;
 /// deliberately not part of this grain contract - state transitions are driven from within the observer
 /// implementation, never across a grain reference.
 /// </remarks>
-[Version(5)]
+[Version(6)]
 public interface IObserver : IGrainWithStringKey
 {
     /// <summary>
@@ -420,6 +420,12 @@ public interface IObserver : IGrainWithStringKey
     Task ReleaseRefusedReplay(ulong? ownershipEpoch);
 
     /// <summary>
+    /// Quarantines a replaying observer whose replay job could not prepare its steps, keeping the replay pending.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    Task ReplayStepsCouldNotBePrepared();
+
+    /// <summary>
     /// Releases a refused partition replay and probes catch-up from its persisted live-delivery lower bound.
     /// </summary>
     /// <param name="partition">The partition whose replay was refused.</param>
@@ -698,6 +704,11 @@ public interface IObserver : IGrainWithStringKey
     /// <summary>
     /// Notify that the observer has been caught up, including how far the catchup read.
     /// </summary>
+    /// <remarks>
+    /// Retained only for wire compatibility within the current major; scheduled for removal in the next major.
+    /// Has no production caller and skips concluded-job bookkeeping. Callers must use the job-owned
+    /// <see cref="CaughtUp(JobId, EventSequenceNumber, EventSequenceNumber)"/> overload instead.
+    /// </remarks>
     /// <param name="lastHandledEventSequenceNumber">The event sequence number of the last event that was handled in the catchup.</param>
     /// <param name="lastScannedEventSequenceNumber">The event sequence number of the last event the catchup read, handled or excluded by the observer's filters, or <see cref="EventSequenceNumber.Unavailable"/> when the catchup did not complete every step.</param>
     /// <returns>Awaitable task.</returns>

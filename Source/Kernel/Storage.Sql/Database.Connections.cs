@@ -12,6 +12,7 @@ using Cratis.Chronicle.Storage.Sql.Connections;
 using Cratis.Chronicle.Storage.Sql.EventStores;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces;
 using Cratis.Chronicle.Storage.Sql.Schema;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
@@ -95,6 +96,16 @@ public partial class Database
 
         return builder.Options;
     }
+
+    /// <summary>
+    /// A pooled session left in an unbound candidate database would block enabling read-committed snapshot on it.
+    /// </summary>
+    /// <param name="connectionString">The connection string.</param>
+    /// <returns>The connection string, unpooled for SQL Server.</returns>
+    static string WithoutSqlServerPooling(string connectionString) =>
+        connectionString.GetDatabaseType() == DatabaseType.SqlServer
+            ? new SqlConnectionStringBuilder(connectionString) { Pooling = false }.ConnectionString
+            : connectionString;
 
     static DbContextOptions<TDbContext> BuildOptions<TDbContext>(IServiceProvider serviceProvider, string connectionString, SchemaMode mode)
         where TDbContext : DbContext
@@ -275,7 +286,7 @@ public partial class Database
     /// <returns>The <see cref="SqlTarget"/>.</returns>
     SqlTarget MetadataTarget(string connectionString) =>
         new(
-            SqlConnectionStrings.WithPooling(connectionString, options.Value.Storage.PostgreSqlPooling),
+            WithoutSqlServerPooling(SqlConnectionStrings.WithPooling(connectionString, options.Value.Storage.PostgreSqlPooling)),
             options.Value.Storage.Schema,
             _resolution.IsConfigured ? _resolution.RequestFor(DatabaseIdentity.Cluster, ConnectionPurpose.Schema) : null);
 }

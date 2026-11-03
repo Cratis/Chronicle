@@ -212,7 +212,7 @@ interface [GrainInterfaceType("Cratis.Chronicle.Observation.EventStoreSubscripti
 interface [GrainInterfaceType("Cratis.Chronicle.Observation.IDrainableObserverSubscriber")] Cratis.Chronicle.Observation.IDrainableObserverSubscriber [Version(0)]
   99F6A550: Drain() -> Task
 
-interface [GrainInterfaceType("Cratis.Chronicle.Observation.IObserver")] Cratis.Chronicle.Observation.IObserver [Version(5)]
+interface [GrainInterfaceType("Cratis.Chronicle.Observation.IObserver")] Cratis.Chronicle.Observation.IObserver [Version(6)]
   FF1D5EC7: CanResumeFailedPartition(Cratis.Chronicle.Concepts.Keys.Key, Cratis.Chronicle.Concepts.Observation.FailedPartitionId?, System.Guid?) -> Task<bool>
   906EECAF: CatchUp() -> Task
   DD5E028F: CaughtUp(Cratis.Chronicle.Concepts.Events.EventSequenceNumber, Cratis.Chronicle.Concepts.Events.EventSequenceNumber) -> Task
@@ -267,6 +267,7 @@ interface [GrainInterfaceType("Cratis.Chronicle.Observation.IObserver")] Cratis.
   8793636E: ReplayPartition(Cratis.Chronicle.Concepts.Keys.Key) -> Task
   4F386154: ReplayPartition(Cratis.Chronicle.Concepts.Keys.Key, System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Events.EventType>) -> Task
   AA80A13C: ReplayPartitionTo(Cratis.Chronicle.Concepts.Keys.Key, Cratis.Chronicle.Concepts.Events.EventSequenceNumber) -> Task
+  B7ADE783: ReplayStepsCouldNotBePrepared() -> Task
   0E88E52D: Replayed(Cratis.Chronicle.Concepts.Events.EventSequenceNumber) -> Task
   FAA73CC9: Replayed(Cratis.Chronicle.Concepts.Events.EventSequenceNumber, ulong?) -> Task
   444B1A83: ReplayedSuccessfullySince(Cratis.Chronicle.Concepts.Events.EventSequenceNumber, System.Collections.Generic.IReadOnlyDictionary<Cratis.Chronicle.Concepts.Keys.Key, Cratis.Chronicle.Concepts.Events.EventSequenceNumber>, Cratis.Chronicle.Concepts.Events.EventType[], System.DateTimeOffset) -> Task
@@ -555,17 +556,19 @@ class [GrainType("readmodelreplaymanager")] Cratis.Chronicle.ReadModels.ReadMode
 
 class [GrainType("readmodelsmanager")] Cratis.Chronicle.ReadModels.ReadModelsManager
 
-interface [GrainInterfaceType("Cratis.Chronicle.Recommendations.IRecommendation")] Cratis.Chronicle.Recommendations.IRecommendation [Version(0)]
+interface [GrainInterfaceType("Cratis.Chronicle.Recommendations.IRecommendation")] Cratis.Chronicle.Recommendations.IRecommendation [Version(1)]
   AB0F8587: Ignore() -> Task
   33A190FF: Perform() -> Task
+  D73AD743: Unignore() -> Task
 
 interface [GrainInterfaceType("Cratis.Chronicle.Recommendations.IRecommendation`1")] Cratis.Chronicle.Recommendations.IRecommendation<TRequest> [Version(0)]
   F26C5DBC: Initialize(Cratis.Chronicle.Concepts.Recommendations.RecommendationDescription, TRequest) -> Task
 
-interface [GrainInterfaceType("Cratis.Chronicle.Recommendations.IRecommendationsManager")] Cratis.Chronicle.Recommendations.IRecommendationsManager [Version(0)]
+interface [GrainInterfaceType("Cratis.Chronicle.Recommendations.IRecommendationsManager")] Cratis.Chronicle.Recommendations.IRecommendationsManager [Version(1)]
   36E95E73: Add`2(Cratis.Chronicle.Concepts.Recommendations.RecommendationDescription, TRequest) -> Task<Cratis.Chronicle.Concepts.Recommendations.RecommendationId>
   1485AC13: Ignore(Cratis.Chronicle.Concepts.Recommendations.RecommendationId) -> Task
   4B1755BB: Perform(Cratis.Chronicle.Concepts.Recommendations.RecommendationId) -> Task
+  CBBE9EA0: Unignore(Cratis.Chronicle.Concepts.Recommendations.RecommendationId) -> Task
 
 class [GrainType("recommendation`1")] Cratis.Chronicle.Recommendations.Recommendation<TRequest>
 

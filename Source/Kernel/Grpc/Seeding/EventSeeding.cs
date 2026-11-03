@@ -42,6 +42,8 @@ internal sealed class EventSeeding(
     /// <inheritdoc/>
     public Task<global::Cratis.Chronicle.Contracts.Queries.QueryResult<global::Cratis.Chronicle.Contracts.Seeding.SeedDataResponse>> GetGlobalSeedData(global::Cratis.Chronicle.Contracts.Seeding.GetGlobalSeedDataRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         QueryExecutor.Execute<global::Cratis.Chronicle.Contracts.Seeding.SeedDataResponse>(
+            callContext,
+            new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore),
             async () =>
             {
                 var result = await global::Cratis.Chronicle.Seeding.SeedData.GetGlobalSeedData((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, grainFactory);
@@ -52,6 +54,8 @@ internal sealed class EventSeeding(
     /// <inheritdoc/>
     public Task<global::Cratis.Chronicle.Contracts.Queries.QueryResult<global::Cratis.Chronicle.Contracts.Seeding.SeedDataResponse>> GetNamespaceSeedData(global::Cratis.Chronicle.Contracts.Seeding.GetNamespaceSeedDataRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         QueryExecutor.Execute<global::Cratis.Chronicle.Contracts.Seeding.SeedDataResponse>(
+            callContext,
+            new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, request.Namespace),
             async () =>
             {
                 var result = await global::Cratis.Chronicle.Seeding.SeedData.GetNamespaceSeedData((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, grainFactory);
