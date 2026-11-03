@@ -271,7 +271,7 @@ internal sealed class ConnectionService(
         if (!terminated)
         {
             // Nothing is left to run this connection, so the client must be told rather than left waiting.
-            subject.OnError(exception);
+            subject.OnError(new RpcException(new Status(StatusCode.Unknown, "Connection failed")));
         }
     }
 
@@ -318,7 +318,13 @@ internal sealed class ConnectionService(
             catch (Exception ex)
             {
                 logger.ClientRegistrationFailed(request.ConnectionId, ex);
-                subject.OnError(new RpcException(new Status(StatusCode.Unavailable, "Client registration failed")));
+                var status = ex switch
+                {
+                    TimeoutException => new Status(StatusCode.Unavailable, "Client registration timed out"),
+                    RpcException rpcException => new Status(rpcException.StatusCode, "Client registration failed"),
+                    _ => new Status(StatusCode.Unknown, "Client registration failed")
+                };
+                subject.OnError(new RpcException(status));
                 return false;
             }
         }

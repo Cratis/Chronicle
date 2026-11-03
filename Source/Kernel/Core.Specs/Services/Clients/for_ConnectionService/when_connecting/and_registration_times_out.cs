@@ -26,7 +26,7 @@ public class and_registration_times_out : given.a_registration_lifetime
     [Fact] void should_not_terminate_before_the_explicit_deadline() => _terminalBeforeExpiry.ShouldBeFalse();
     [Fact] void should_report_a_terminal_notification() => _terminalArrived.ShouldBeTrue();
     [Fact] void should_report_a_retryable_registration_error() => ((RpcException)_errors.Single()).StatusCode.ShouldEqual(StatusCode.Unavailable);
-    [Fact] void should_not_expose_timeout_details() => ((RpcException)_errors.Single()).Status.Detail.ShouldEqual("Client registration failed");
+    [Fact] void should_report_a_generic_timeout_detail() => ((RpcException)_errors.Single()).Status.Detail.ShouldEqual("Client registration timed out");
     [Fact] void should_log_the_timeout() => _logger.Entries.Any(_ => _.Exception is TimeoutException).ShouldBeTrue();
     [Fact] void should_report_only_one_error() => _errors.Count.ShouldEqual(1);
     [Fact] void should_not_reclassify_timeout_as_cancellation() => _completed.ShouldEqual(0);

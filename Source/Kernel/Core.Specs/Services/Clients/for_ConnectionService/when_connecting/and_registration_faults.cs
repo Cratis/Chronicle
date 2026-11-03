@@ -19,7 +19,7 @@ public class and_registration_faults : given.a_registration_lifetime
     }
 
     [Fact] void should_report_a_terminal_notification() => _terminalArrived.ShouldBeTrue();
-    [Fact] void should_report_a_retryable_registration_error() => ((RpcException)_errors.Single()).StatusCode.ShouldEqual(StatusCode.Unavailable);
+    [Fact] void should_not_make_the_fault_retryable() => ((RpcException)_errors.Single()).StatusCode.ShouldEqual(StatusCode.Unknown);
     [Fact] void should_not_expose_the_internal_message() => ((RpcException)_errors.Single()).Status.Detail.ShouldEqual("Client registration failed");
     [Fact] void should_not_attach_the_internal_exception() => _errors.Single().InnerException.ShouldBeNull();
     [Fact] void should_not_attach_internal_debug_details() => ((RpcException)_errors.Single()).Status.DebugException.ShouldBeNull();
