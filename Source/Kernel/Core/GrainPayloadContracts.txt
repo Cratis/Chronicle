@@ -5,6 +5,130 @@
 orleans [Alias("ClearPartitionQuarantineResult")] Cratis.Chronicle.Concepts.Observation.ClearPartitionQuarantineResult
   [Id(0,Level=0,Constructor=true)] Outcome: Cratis.Chronicle.Concepts.Observation.ClearPartitionQuarantineOutcome
   [Id(1,Level=0,Constructor=true)] RetryOutcome: Cratis.Chronicle.Concepts.Observation.PartitionRecoveryOutcome
+enum Cratis.Choreography.Jobs.CannotResumeJobError : int
+  JobCannotBeResumed = 2
+  JobIsNotPrepared = 1
+  MissingStepPlan = 4
+  NotAdmitted = 3
+  Unknown = 0
+json Cratis.Choreography.Jobs.FailedResumingJobSteps
+  failedJobSteps: System.Collections.Generic.IEnumerable<Cratis.Choreography.Jobs.JobStepId>
+enum Cratis.Choreography.Jobs.JobError : int
+  JobIsStoppedOrCompleted = 0
+  PersistStateError = 3
+  StorageError = 2
+  UnknownError = 1
+concept Cratis.Choreography.Jobs.JobId : System.Guid
+enum Cratis.Choreography.Jobs.JobStepError : int
+  FailedToPersistState = 1
+  FailedToReportToJob = 2
+  StopTimedOut = 3
+  Unknown = 0
+concept Cratis.Choreography.Jobs.JobStepId : System.Guid
+json Cratis.Choreography.Jobs.JobStepIdentifier
+  jobId: Cratis.Choreography.Jobs.JobId
+  jobStepId: Cratis.Choreography.Jobs.JobStepId
+concept Cratis.Choreography.Jobs.JobStepName : string
+concept Cratis.Choreography.Jobs.JobStepPercentage : int
+json Cratis.Choreography.Jobs.JobStepProgress
+  message: Cratis.Choreography.Jobs.JobStepProgressMessage
+  percentage: Cratis.Choreography.Jobs.JobStepPercentage
+concept Cratis.Choreography.Jobs.JobStepProgressMessage : string
+orleans Cratis.Choreography.Jobs.JobStepResult
+  [Id(0)] _result: Cratis.Monads.Result<object,Cratis.Choreography.Jobs.PerformJobStepError>
+enum Cratis.Choreography.Jobs.JobStepStatus : int
+  CompletedSuccessfully = 3
+  CompletedWithFailure = 4
+  Failed = 6
+  Removing = 7
+  Running = 2
+  Scheduled = 1
+  Stopped = 5
+  Unknown = 0
+  Unreachable = 8
+json Cratis.Choreography.Jobs.JobStepStatusChanged
+  exceptionMessages: System.Collections.Generic.IEnumerable<string>
+  exceptionStackTrace: string
+  occurred: System.DateTimeOffset
+  status: Cratis.Choreography.Jobs.JobStepStatus
+concept Cratis.Choreography.Jobs.JobStepType : string
+orleans Cratis.Choreography.Jobs.PerformJobStepError
+  [Id(0,Level=0,Constructor=true)] PartialResult: object
+  [Id(1,Level=0,Constructor=true)] ErrorMessages: System.Collections.Generic.IList<string>
+  [Id(2,Level=0,Constructor=true)] ExceptionStackTrace: string
+  [Id(3,Level=0,Constructor=true)] Cancelled: bool
+enum Cratis.Choreography.Jobs.PrepareJobStepError : int
+  CannotPrepare = 2
+  UnexpectedErrorPreparing = 3
+  Unknown = 0
+  WrongRequestType = 1
+enum Cratis.Choreography.Jobs.RemoveJobError : int
+  CouldNotPersistRemoval = 3
+  JobIsAlreadyBeingRemoved = 2
+  JobIsCompleted = 1
+  Unknown = 0
+oneof Cratis.Choreography.Jobs.ResumeJobError
+  case0: Cratis.Choreography.Jobs.CannotResumeJobError
+  case1: Cratis.Choreography.Jobs.FailedResumingJobSteps
+enum Cratis.Choreography.Jobs.ResumeJobSuccess : int
+  JobAlreadyRunning = 2
+  JobIsCompleted = 1
+  JobIsNotRunning = 3
+  Success = 0
+enum Cratis.Choreography.Jobs.RetryFailedStepsError : int
+  CouldNotPersist = 3
+  JobIsNotCompletedWithFailures = 2
+  NotSupported = 1
+  Unknown = 0
+concept Cratis.Choreography.Jobs.Stages.JobStepStage : int
+enum Cratis.Choreography.Jobs.StartJobError : int
+  AllJobStepsFailedStarting = 3
+  AlreadyBeenPrepared = 5
+  AlreadyCompleted = 6
+  CouldNotPrepareJobSteps = 1
+  FailedStartingSomeJobSteps = 2
+  InvalidStepPlan = 8
+  NoJobStepsToStart = 4
+  NotAdmitted = 7
+  Unknown = 0
+enum Cratis.Choreography.Jobs.StartJobStepError : int
+  AlreadyStarted = 2
+  Completed = 3
+  NotPrepared = 1
+  Unknown = 0
+  UnrecoverableFailedState = 4
+enum Cratis.Choreography.Jobs.StopJobError : int
+  CouldNotPersistStop = 4
+  JobIsCompleted = 1
+  JobIsNotRunning = 3
+  Unknown = 0
+json Cratis.Choreography.Storage.Jobs.JobStepLease
+  activationId: System.Guid
+  attempt: int
+  lastHeartbeat: System.DateTimeOffset
+  owner: string
+enum Cratis.Choreography.Workers.GrainWithBackgroundTaskStatus : int
+  Completed = 2
+  Failed = 3
+  NotStarted = 0
+  Running = 1
+  Stopped = 4
+enum Cratis.Choreography.Workers.PerformWorkError : int
+  Cancelled = 1
+  None = 0
+  PerformingWorkError = 3
+  WorkerError = 2
+json Cratis.Choreography.Workers.PerformWorkResult<Cratis.Choreography.Jobs.JobStepResult>
+  error: Cratis.Choreography.Workers.PerformWorkError
+  exception: System.Exception
+  hasException: bool
+  hasResult: bool
+  isSuccess: bool
+  result: Cratis.Choreography.Jobs.JobStepResult
+enum Cratis.Choreography.Workers.WorkerGetResultError : int
+  NotFinished = 1
+  NotStarted = 0
+  WorkCancelled = 2
 json Cratis.Chronicle.Alerts.FailedPartitionSnapshot
   attemptCount: int
   attemptsInCurrentBudget: int
@@ -1256,18 +1380,6 @@ json Cratis.Chronicle.Storage.Sinks.FailedPartition
   outcomeUnknown: bool
   reason: string
 concept Cratis.Execution.CorrelationId : System.Guid
-oneof Cratis.Monads.Result<Cratis.Chronicle.Concepts.Events.EventSequenceNumber,Cratis.Chronicle.EventSequences.CompleteStreamError>
-  case0: Cratis.Chronicle.Concepts.Events.EventSequenceNumber
-  case1: Cratis.Chronicle.EventSequences.CompleteStreamError
-oneof Cratis.Monads.Result<Cratis.Chronicle.Concepts.Events.EventSequenceNumber,Cratis.Chronicle.EventSequences.GetSequenceNumberError>
-  case0: Cratis.Chronicle.Concepts.Events.EventSequenceNumber
-  case1: Cratis.Chronicle.EventSequences.GetSequenceNumberError
-oneof Cratis.Monads.Result<Cratis.Chronicle.Projections.Engine.ProjectionRegistrationError>
-  case0: OneOf.Types.None
-  case1: Cratis.Chronicle.Projections.Engine.ProjectionRegistrationError
-oneof Cratis.Monads.Result<Cratis.Chronicle.Sequences.ReopenStreamScopeError>
-  case0: OneOf.Types.None
-  case1: Cratis.Chronicle.Sequences.ReopenStreamScopeError
 oneof Cratis.Monads.Result<Cratis.Choreography.Jobs.JobError>
   case0: OneOf.Types.None
   case1: Cratis.Choreography.Jobs.JobError
@@ -1295,6 +1407,18 @@ oneof Cratis.Monads.Result<Cratis.Choreography.Jobs.StopJobError>
 oneof Cratis.Monads.Result<Cratis.Choreography.Workers.PerformWorkResult<Cratis.Choreography.Jobs.JobStepResult>,Cratis.Choreography.Workers.WorkerGetResultError>
   case0: Cratis.Choreography.Workers.PerformWorkResult<Cratis.Choreography.Jobs.JobStepResult>
   case1: Cratis.Choreography.Workers.WorkerGetResultError
+oneof Cratis.Monads.Result<Cratis.Chronicle.Concepts.Events.EventSequenceNumber,Cratis.Chronicle.EventSequences.CompleteStreamError>
+  case0: Cratis.Chronicle.Concepts.Events.EventSequenceNumber
+  case1: Cratis.Chronicle.EventSequences.CompleteStreamError
+oneof Cratis.Monads.Result<Cratis.Chronicle.Concepts.Events.EventSequenceNumber,Cratis.Chronicle.EventSequences.GetSequenceNumberError>
+  case0: Cratis.Chronicle.Concepts.Events.EventSequenceNumber
+  case1: Cratis.Chronicle.EventSequences.GetSequenceNumberError
+oneof Cratis.Monads.Result<Cratis.Chronicle.Projections.Engine.ProjectionRegistrationError>
+  case0: OneOf.Types.None
+  case1: Cratis.Chronicle.Projections.Engine.ProjectionRegistrationError
+oneof Cratis.Monads.Result<Cratis.Chronicle.Sequences.ReopenStreamScopeError>
+  case0: OneOf.Types.None
+  case1: Cratis.Chronicle.Sequences.ReopenStreamScopeError
 oneof Cratis.Monads.Result<OneOf.Types.None,System.Exception>
   case0: OneOf.Types.None
   case1: System.Exception
@@ -1304,130 +1428,6 @@ oneof Cratis.Monads.Result<int,Cratis.Choreography.Jobs.RetryFailedStepsError>
 oneof Cratis.Monads.Result<object,Cratis.Choreography.Jobs.PerformJobStepError>
   case0: object
   case1: Cratis.Choreography.Jobs.PerformJobStepError
-enum Cratis.Choreography.Jobs.CannotResumeJobError : int
-  JobCannotBeResumed = 2
-  JobIsNotPrepared = 1
-  MissingStepPlan = 4
-  NotAdmitted = 3
-  Unknown = 0
-json Cratis.Choreography.Jobs.FailedResumingJobSteps
-  failedJobSteps: System.Collections.Generic.IEnumerable<Cratis.Choreography.Jobs.JobStepId>
-enum Cratis.Choreography.Jobs.JobError : int
-  JobIsStoppedOrCompleted = 0
-  PersistStateError = 3
-  StorageError = 2
-  UnknownError = 1
-concept Cratis.Choreography.Jobs.JobId : System.Guid
-enum Cratis.Choreography.Jobs.JobStepError : int
-  FailedToPersistState = 1
-  FailedToReportToJob = 2
-  StopTimedOut = 3
-  Unknown = 0
-concept Cratis.Choreography.Jobs.JobStepId : System.Guid
-json Cratis.Choreography.Jobs.JobStepIdentifier
-  jobId: Cratis.Choreography.Jobs.JobId
-  jobStepId: Cratis.Choreography.Jobs.JobStepId
-concept Cratis.Choreography.Jobs.JobStepName : string
-concept Cratis.Choreography.Jobs.JobStepPercentage : int
-json Cratis.Choreography.Jobs.JobStepProgress
-  message: Cratis.Choreography.Jobs.JobStepProgressMessage
-  percentage: Cratis.Choreography.Jobs.JobStepPercentage
-concept Cratis.Choreography.Jobs.JobStepProgressMessage : string
-orleans Cratis.Choreography.Jobs.JobStepResult
-  [Id(0)] _result: Cratis.Monads.Result<object,Cratis.Choreography.Jobs.PerformJobStepError>
-enum Cratis.Choreography.Jobs.JobStepStatus : int
-  CompletedSuccessfully = 3
-  CompletedWithFailure = 4
-  Failed = 6
-  Removing = 7
-  Running = 2
-  Scheduled = 1
-  Stopped = 5
-  Unknown = 0
-  Unreachable = 8
-json Cratis.Choreography.Jobs.JobStepStatusChanged
-  exceptionMessages: System.Collections.Generic.IEnumerable<string>
-  exceptionStackTrace: string
-  occurred: System.DateTimeOffset
-  status: Cratis.Choreography.Jobs.JobStepStatus
-concept Cratis.Choreography.Jobs.JobStepType : string
-orleans Cratis.Choreography.Jobs.PerformJobStepError
-  [Id(0,Level=0,Constructor=true)] PartialResult: object
-  [Id(1,Level=0,Constructor=true)] ErrorMessages: System.Collections.Generic.IList<string>
-  [Id(2,Level=0,Constructor=true)] ExceptionStackTrace: string
-  [Id(3,Level=0,Constructor=true)] Cancelled: bool
-enum Cratis.Choreography.Jobs.PrepareJobStepError : int
-  CannotPrepare = 2
-  UnexpectedErrorPreparing = 3
-  Unknown = 0
-  WrongRequestType = 1
-enum Cratis.Choreography.Jobs.RemoveJobError : int
-  CouldNotPersistRemoval = 3
-  JobIsAlreadyBeingRemoved = 2
-  JobIsCompleted = 1
-  Unknown = 0
-oneof Cratis.Choreography.Jobs.ResumeJobError
-  case0: Cratis.Choreography.Jobs.CannotResumeJobError
-  case1: Cratis.Choreography.Jobs.FailedResumingJobSteps
-enum Cratis.Choreography.Jobs.ResumeJobSuccess : int
-  JobAlreadyRunning = 2
-  JobIsCompleted = 1
-  JobIsNotRunning = 3
-  Success = 0
-enum Cratis.Choreography.Jobs.RetryFailedStepsError : int
-  CouldNotPersist = 3
-  JobIsNotCompletedWithFailures = 2
-  NotSupported = 1
-  Unknown = 0
-concept Cratis.Choreography.Jobs.Stages.JobStepStage : int
-enum Cratis.Choreography.Jobs.StartJobError : int
-  AllJobStepsFailedStarting = 3
-  AlreadyBeenPrepared = 5
-  AlreadyCompleted = 6
-  CouldNotPrepareJobSteps = 1
-  FailedStartingSomeJobSteps = 2
-  InvalidStepPlan = 8
-  NoJobStepsToStart = 4
-  NotAdmitted = 7
-  Unknown = 0
-enum Cratis.Choreography.Jobs.StartJobStepError : int
-  AlreadyStarted = 2
-  Completed = 3
-  NotPrepared = 1
-  Unknown = 0
-  UnrecoverableFailedState = 4
-enum Cratis.Choreography.Jobs.StopJobError : int
-  CouldNotPersistStop = 4
-  JobIsCompleted = 1
-  JobIsNotRunning = 3
-  Unknown = 0
-json Cratis.Choreography.Storage.Jobs.JobStepLease
-  activationId: System.Guid
-  attempt: int
-  lastHeartbeat: System.DateTimeOffset
-  owner: string
-enum Cratis.Choreography.Workers.GrainWithBackgroundTaskStatus : int
-  Completed = 2
-  Failed = 3
-  NotStarted = 0
-  Running = 1
-  Stopped = 4
-enum Cratis.Choreography.Workers.PerformWorkError : int
-  Cancelled = 1
-  None = 0
-  PerformingWorkError = 3
-  WorkerError = 2
-json Cratis.Choreography.Workers.PerformWorkResult<Cratis.Choreography.Jobs.JobStepResult>
-  error: Cratis.Choreography.Workers.PerformWorkError
-  exception: System.Exception
-  hasException: bool
-  hasResult: bool
-  isSuccess: bool
-  result: Cratis.Choreography.Jobs.JobStepResult
-enum Cratis.Choreography.Workers.WorkerGetResultError : int
-  NotFinished = 1
-  NotStarted = 0
-  WorkCancelled = 2
 orleans [Alias("FastForwardResult")] Cratis.Chronicle.Concepts.Observation.FastForwardResult
   [Id(0,Level=0,Constructor=true)] Outcome: Cratis.Chronicle.Concepts.Observation.FastForwardOutcome
   [Id(1,Level=0,Constructor=true)] PreviousNextEventSequenceNumber: Cratis.Chronicle.Concepts.Events.EventSequenceNumber
