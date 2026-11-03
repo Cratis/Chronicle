@@ -121,24 +121,28 @@ An observer is either **per-event** or **batch**. What its class declares decide
 **Per-event mode** is today's code, unchanged.
 
 - Reactor handler methods take one event. Reducer `Reduce` methods take one event and the current state.
-- The client receives pages and loops them for you: for reactors, each partition's events in order; for reducers, one fold per partition, with partitions folded in parallel within a bound.
+- The client receives pages and loops them for you: for reactors, each partition's events in order; for reducers, one fold per partition.
 - You get the throughput of pages without writing anything new.
-- A per-event method may take the `BatchContext` as an extra parameter to read where the event came from.
+- Per-event methods cannot take `BatchContext`. It belongs to batch mode only.
 
-**Batch mode** means the class declares one batch method and no per-event methods.
+**Batch mode** means the class declares the event types it subscribes to with `[SubscribeTo]`, declares one batch method, and declares no per-event methods. The batch is untyped, and the method pattern-matches on the events.
 
 ```csharp
 [Reactor]
+[SubscribeTo(typeof(UserRegistered), typeof(UserRenamed), typeof(UserRemoved))]
 public class IndexUsers(ISearchIndex index) : IReactor
 {
-    public async Task Handle(EventBatch<IUserEvent> batch, BatchContext context)
+    public async Task Handle(EventBatch batch, BatchContext context)
     {
-        var documents = batch
-            .Where(e => e.Event is UserRegistered or UserRenamed)
-            .GroupBy(e => e.Context.EventSourceId)
-            .Select(g => UserDocument.From(g.Key, g.Select(e => e.Event)));
+        var operations = batch.Select(e => e.Event switch
+        {
+            UserRegistered registered => IndexOperation.Upsert(e.Context.EventSourceId, registered.Name),
+            UserRenamed renamed => IndexOperation.Upsert(e.Context.EventSourceId, renamed.NewName),
+            UserRemoved => IndexOperation.Delete(e.Context.EventSourceId),
+            _ => IndexOperation.None
+        });
 
-        var response = await index.BulkUpsert(documents, context.CancellationToken);
+        var response = await index.Bulk(operations, context.CancellationToken);
 
         foreach (var failure in response.Failures)
         {
@@ -149,52 +153,64 @@ public class IndexUsers(ISearchIndex index) : IReactor
 ```
 
 ```csharp
+[SubscribeTo(typeof(AccountOpened), typeof(MoneyDeposited), typeof(MoneyWithdrawn))]
 public record Account(AccountId Id, decimal Balance)
 {
-    public static IEnumerable<Reduced<Account>> Reduce(ReducerBatch<Account, IAccountEvent> batch, BatchContext context) =>
-        batch.Select(partition => partition.To(partition.Events.Aggregate(partition.Current ?? new(partition.Key, 0), Apply)));
-
-    static Account Apply(Account account, EventAndContext<IAccountEvent> e) => e.Event switch
-    {
-        MoneyDeposited d => account with { Balance = account.Balance + d.Amount },
-        MoneyWithdrawn w => account with { Balance = account.Balance - w.Amount },
-        _ => account
-    };
+    public static Account? Reduce(EventBatch events, Account? current, BatchContext context) =>
+        events.Aggregate(current, (account, e) => e.Event switch
+        {
+            AccountOpened => new Account(e.Context.EventSourceId, 0),
+            MoneyDeposited deposited => account! with { Balance = account.Balance + deposited.Amount },
+            MoneyWithdrawn withdrawn => account! with { Balance = account.Balance - withdrawn.Amount },
+            _ => account
+        });
 }
 ```
 
+**The batch method:**
+
+- **Reactor.**
+  - It takes `(EventBatch batch, BatchContext context)` and returns `Task` or `void`.
+  - It is called once per page, and the batch spans every partition in the page, in sequence order.
+  - **Returning events or other side effects from a batch method is not supported.** Any other return type is an analyzer error and a registration error. A batch reactor that needs to append does so through the event log it injects.
+- **Reducer.**
+  - It takes `(EventBatch events, TReadModel? current, BatchContext context)` and returns `TReadModel?` or `Task<TReadModel?>`. Returning `null` removes the read model, as today.
+  - It is called **once per event source** in the page. `events` holds that event source's events in order, and `current` is its stored state.
+  - The calls for the event sources of a page run in parallel within a bound, each with its own activation as today. A reducer stays a fold over one event source's events.
+  - It works on static self-reducers and on `IReducerFor<T>` alike.
+
 **The rules that keep the two modes from being confused:**
 
-1. **The mode is decided by the parameter type, not by the method name.**
-   - A method whose first parameter is `EventBatch<TEvent>` (reactor) or `ReducerBatch<TReadModel, TEvent>` (reducer) is the batch method.
-   - Any other handler method is per-event.
-2. **One batch method per observer, and nothing else.**
+1. **The mode is decided by the parameter type, not by the method name.** A method whose first parameter is `EventBatch` is the batch method. Any other handler method is per-event.
+2. **A batch observer declares its event types with `[SubscribeTo]`**, on the reactor class or on the reducer's read model or reducer class.
+   - These are exactly the event types the observer registers.
+   - A batch method without `[SubscribeTo]` is an error.
+   - `[SubscribeTo]` on a per-event observer is an error, because a per-event observer's types come from its methods.
+3. **One batch method per observer, and nothing else.**
    - A class with a batch method may not declare per-event handler methods.
    - A class may not declare two batch methods.
-   - Both are analyzer errors at compile time and registration errors at runtime, so a mixed class never connects.
-3. **The event types come from `TEvent`.**
-   - `TEvent` is either one event type or an interface or base type. An interface or base type means every `[EventType]` assignable to it.
-   - `object` is refused.
-   - These event types are the ones the observer registers, so the batch method can never be handed a type it cannot cast.
-4. **A batch is the whole page.** It spans partitions and is in sequence order, with each partition's events in their own order.
-   - The kernel decides when a page is sent and the observer's bounds decide how big it is. The implementor decides what to do with it: group by partition, by type, or not at all.
+   - A per-event method may not take `BatchContext`.
+   - Each of these is an analyzer error at compile time and a registration error at runtime, so a mixed class never connects.
+4. **Pattern matching is checked.** The analyzer warns when a batch method matches on an event type that is not in `[SubscribeTo]`, since that case can never be reached.
+5. **The kernel decides when a page is sent, and the observer's bounds decide how big it is.** The implementor decides what to do with it: group by partition, by type, or not at all.
 
 **`BatchContext`** is the same type for reactors and reducers, and is read-only:
 
 - `ObserverId`, `EventStore`, `Namespace`, `EventSequenceId`
 - `Origin`: `Live`, `CatchUp`, `Replay` or `Retry`; and `IsReplay`
-- `Partitions`, `EventCount`, `FirstSequenceNumber`, `LastSequenceNumber`
+- `Partitions`, `EventCount`, `FirstSequenceNumber`, `LastSequenceNumber`, all describing the page
 - `Deadline` and `CancellationToken`, from `DeliverWithinMilliseconds`
+
+**`EventBatch`** is an `IReadOnlyList<EventAndContext>` in sequence order. Each element carries `Event`, `Context` and its `ReactorDelivery`, so effects can still be keyed per event.
 
 **Reporting outcomes from a batch:**
 
-- **Return normally:** every partition succeeded.
-- **Throw:** every partition in the batch fails at its first event, and the kernel's normal failed-partition recovery takes over (decision 0004 parking, if accepted).
-- **`batch.Fail(partition, exception)` or `batch.Fail(eventContext, exception)`:** fails that partition from that event, or from its first event. The rest of the batch succeeds.
-  - For reactors, the earlier events of a failed partition count as handled.
-  - For reducers, a failed partition writes no state, as today.
-- **Reducer states:** a reducer batch method returns one `Reduced<TReadModel>` per partition it succeeded on. A partition it neither returned nor failed is reported as a failure, so a forgotten partition can never be silently skipped.
-- **Idempotency:** each element of an `EventBatch` carries its `ReactorDelivery`, so effects can still be keyed per event. Retries arrive as pages with `Origin = Retry`.
+- **Reactor:**
+  - Returning normally means every partition succeeded.
+  - Throwing fails every partition in the batch at its first event, and the kernel's normal failed-partition recovery takes over (decision 0004 parking, if accepted).
+  - `batch.Fail(partition, exception)` or `batch.Fail(eventContext, exception)` fails that partition from that event, or from its first event. The earlier events of that partition count as handled, and the rest of the batch succeeds.
+- **Reducer:** throwing, or calling `events.Fail(...)`, fails that one event source and writes no state, as today. The other event sources of the page are unaffected.
+- **Retries** arrive as pages with `Origin = Retry`.
 
 **Bounds** are declared on the observer, with `[BatchSize(MaxEvents = 1000, MaxDelayMilliseconds = 50)]` or the equivalent registration option.
 
@@ -213,12 +229,14 @@ TypeScript, Kotlin, Elixir and Python live in their own repositories. They follo
   - Rejected because it calls both kinds of method for one observer.
 - **When a batch method exists, prefer it and fall back to per-event methods for other types (not taken).** This is the confusion the review ruled out: which method runs would depend on the event type and on the class's other methods.
 - **A marker interface such as `IBatchReactor` (not taken).** It goes against convention-based discovery and adds a second way to say what the parameter type already says.
-- **An untyped `EventBatch`, with the event types listed in an attribute (open alternative to rule 3).**
-  - For: it avoids an interface shared by the events.
-  - Against: the batch is then untyped, and the list can drift from the code that switches on it.
-- **A reducer batch method called once per partition: `Reduce(IReadOnlyList<EventAndContext<TEvent>> events, TReadModel? current, BatchContext context)` (open alternative to the page-level method).**
-  - For: it is simpler and keeps a reducer a pure fold.
-  - Against: it cannot load supporting data once for many partitions, which is the main reason to batch a reducer.
+- **A typed `EventBatch<TEvent>`, where `TEvent` is an event type or an interface the events share (not taken, see the rulings below).**
+  - For: the batch is typed.
+  - Against: unrelated events would need a shared interface only so one consumer can read them together. `[SubscribeTo]` and pattern matching keep the events free of that, and the analyzer check in rule 4 keeps the list and the matches in step.
+- **A page-level reducer batch method that receives every event source of the page and returns a state per event source (not taken, see the rulings below).**
+  - For: it could load supporting data once for many event sources.
+  - Against: it is harder to write correctly, and a forgotten event source needs extra rules. One call per event source keeps a reducer a fold.
+- **Returning events from a batch reactor, as per-event handlers can (not supported now, see the rulings below).** The keyed appends of decision 0012 tie each appended event to one source event, which a batch method does not have.
+- **`BatchContext` in per-event methods too (not taken, see the rulings below).** It would blur the line between the modes that this record exists to keep sharp.
 - **Keep live delivery per partition and batch only catch-up and replay (rejected by the review ruling).** Live is where most production traffic is, and the queue already coalesces bursts that it then serializes.
 - **A batching delay on live delivery by default (not taken).** It would add latency to every single-event command for the benefit of bursts that the coalescing queue already batches. It stays an opt-in through `MaxBatchDelay`.
 - **Halt the whole page at the first failed partition (not taken).** Only projection walks need the global order that halting protects. Per-partition settlement gives the same cursor outcome as today's sequential loop.
@@ -237,7 +255,7 @@ TypeScript, Kotlin, Elixir and Python live in their own repositories. They follo
   2. **Live pages** from `AppendedEventsQueue`.
   3. **Pages for catch-up, replay and retry** of every observer kind.
   4. **The client wire messages and negotiation**, and the .NET per-event mode on pages.
-  5. **.NET batch mode.** `EventBatch<T>`, `ReducerBatch<T, TEvent>`, `BatchContext`, `[BatchSize]`, analyzer rules, and `Cratis.Chronicle.Testing` scenario support.
+  5. **.NET batch mode.** `EventBatch`, `BatchContext`, `[SubscribeTo]`, `[BatchSize]`, analyzer rules, and `Cratis.Chronicle.Testing` scenario support.
   6. **Documentation.**
 - **Out of scope:**
   - Webhook receivers beyond what decision 0020 already allows.
@@ -253,7 +271,7 @@ TypeScript, Kotlin, Elixir and Python live in their own repositories. They follo
   - A replay of N events over P partitions makes about N / page-size client calls instead of P.
   - A batch reactor that fails one partition with `batch.Fail` sees only that partition parked while the observer's cursor reaches the end of the page.
   - Paged delivery produces read models identical to per-partition delivery, for projections and for reducers in both modes.
-  - A class mixing a batch method and a per-event method fails to compile with the new analyzer rule.
+  - A class mixing a batch method and a per-event method fails to compile with the new analyzer rule, as do a batch method without `[SubscribeTo]`, a batch reactor method returning events, and a per-event method taking `BatchContext`.
   - A client that declares no page support still receives `EventsToObserve`.
 - **Verify by:**
   - Integration specs under `Integration/` for:
@@ -262,7 +280,7 @@ TypeScript, Kotlin, Elixir and Python live in their own repositories. They follo
     - reducer parity between paged and per-partition delivery
     - `Origin` on the context for live, catch-up, replay and retry
     - an old-shape client against the new kernel
-  - Analyzer specs for the mixed-mode and two-batch-method errors.
+  - Analyzer specs for each mode rule in point 5, and for the warning on a pattern match outside `[SubscribeTo]`.
   - A benchmark under `Benchmarks/` for 300 000 events over 100 000 event sources, live and in replay, reporting subscriber calls and wall time before and after.
 
 ## Consequences
@@ -275,16 +293,15 @@ TypeScript, Kotlin, Elixir and Python live in their own repositories. They follo
 - **Harder:**
   - The observer grain settles many partitions per call, and checks claims for each.
   - Reducer pages hold many states in memory, bounded by the page's byte limit.
+  - Batch-mode code pattern-matches on event types instead of getting one typed method per type.
   - A batch implementor must report partial failures explicitly or accept whole-batch failure.
 - **Forecloses:**
   - Mixing per-event and batch methods in one observer.
+  - Side effects returned from batch reactor methods, until a later record defines how they are attributed.
   - Promising any order across partitions beyond the page being in sequence order.
 - **Open questions:**
-  - **Rule 3, event types:** `TEvent` as an interface or base type, or an untyped batch with listed types.
-  - **Reducer batch method:** page-level, as above, or once per partition.
-  - **Effects returned from batch reactors:** how events returned from a batch method are attributed to source events for keyed appends ([decision 0012](0012-keyed-appends-travel-on-their-own-rpcs.md)).
-  - **Deferral:** whether a batch should be able to defer a partition, not only fail it.
-  - **Context in per-event mode:** whether per-event methods should see `BatchContext` at all, or only `Origin`.
+  - **Deferral:** whether a batch reactor should be able to defer a partition, not only fail it.
+  - **Concurrent reducer calls:** the bound on how many event sources of one page are reduced at once on the client.
 
 ## Rulings from review
 
@@ -293,3 +310,7 @@ Rulings given by Einar on 2026-11-03 while the record is still proposed. The res
 - **Every observer can take batches, on every path, live included.** One event at a time is not the model.
 - **Clients take batches, and the implementor decides how to handle them**, with a context type that carries what they need to decide.
 - **An observer's batch method and its per-event methods are never both called.** The design must make that impossible to get confused about.
+- **Batch observers declare their event types with an attribute**, `[SubscribeTo(...)]`, and pattern-match on the events inside the batch method.
+- **Batch reactor methods do not return events** for now.
+- **A reducer's batch method is called once per event source**, with the same pattern-matching approach.
+- **Per-event methods cannot use `BatchContext`.**
