@@ -37,4 +37,18 @@ public record BatchContext(
     /// Gets a value indicating whether the page is part of a replay.
     /// </summary>
     public bool IsReplay => Origin == ObservationOrigin.Replay;
+
+    /// <summary>
+    /// Gets a value indicating whether the kernel accepts deferred partitions for the page.
+    /// </summary>
+    internal bool CanDefer { get; init; } = true;
+
+    /// <summary>
+    /// Creates a context for an invocation that carries no page information.
+    /// </summary>
+    /// <param name="observerId">The <see cref="Observation.ObserverId"/>.</param>
+    /// <param name="eventSequenceId">The <see cref="EventSequences.EventSequenceId"/>.</param>
+    /// <returns>A <see cref="BatchContext"/>.</returns>
+    internal static BatchContext Unknown(ObserverId observerId, EventSequenceId eventSequenceId) =>
+        new(observerId, EventStoreName.NotSet, EventStoreNamespaceName.Default, eventSequenceId, ObservationOrigin.Unknown, [], 0, EventSequenceNumber.Unavailable, EventSequenceNumber.Unavailable, null, CancellationToken.None) { CanDefer = false };
 }

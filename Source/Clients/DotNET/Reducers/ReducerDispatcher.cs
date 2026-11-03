@@ -63,6 +63,7 @@ internal sealed class ReducerDispatcher(
             handler.Id);
 
         var partitions = operation.PartitionsOf();
+        var batchContext = CreateBatchContext();
         var outcomes = new PartitionOutcome[partitions.Count];
         await Parallel.ForEachAsync(
             Enumerable.Range(0, partitions.Count),
@@ -80,7 +81,7 @@ internal sealed class ReducerDispatcher(
                 Partition = operation.Partition,
                 DeliveryId = operation.DeliveryId,
                 ReadModelState = outcomes[0].ReadModelState,
-                State = outcomes[0].State,
+                State = outcomes[0].State == ObservationState.Deferred ? ObservationState.Failed : outcomes[0].State,
                 LastSuccessfulObservation = outcomes[0].LastSuccessfulObservation,
                 ExceptionMessages = [.. outcomes[0].ExceptionMessages],
                 ExceptionStackTrace = outcomes[0].ExceptionStackTrace
@@ -97,7 +98,14 @@ internal sealed class ReducerDispatcher(
                 await using var serviceProviderScope = serviceProvider.CreateAsyncScope();
                 identityProvider.SetCurrentIdentity(Identity.System);
                 var initialState = partition.InitialState is null ? null : JsonSerializer.Deserialize(partition.InitialState, handler.ReadModelType, jsonSerializerOptions);
-                var reduceResult = await handler.OnNext(appendedEvents, initialState, serviceProviderScope.ServiceProvider);
+                var reduceResult = handler is ReducerHandler reducerHandler
+                    ? await reducerHandler.OnNext(appendedEvents, initialState, serviceProviderScope.ServiceProvider, batchContext)
+                    : await handler.OnNext(appendedEvents, initialState, serviceProviderScope.ServiceProvider);
+
+                if (reduceResult.RetryAfter is { } retryAfter)
+                {
+                    return new(partitionKey, ObservationState.Deferred, EventSequenceNumber.Unavailable, [], string.Empty) { RetryAfter = retryAfter };
+                }
 
                 if (reduceResult.IsSuccess)
                 {
@@ -117,6 +125,26 @@ internal sealed class ReducerDispatcher(
                 logger.ErrorWhileHandlingEvents(ex, firstEvent, lastEvent, handler.Id);
                 return PartitionOutcome.Failed(partitionKey, ex);
             }
+        }
+
+        BatchContext CreateBatchContext()
+        {
+            var allEvents = partitions.SelectMany(_ => _.Events).Select(_ => _.Context.SequenceNumber).ToArray();
+            return new(
+                handler.Id.Value,
+                eventStore.Name,
+                @namespace,
+                handler.EventSequenceId,
+                operation.Origin.ToClient(),
+                [.. partitions.Select(_ => new EventSourceId(_.Partition ?? string.Empty))],
+                allEvents.Length,
+                allEvents.Length > 0 ? allEvents.Min() : EventSequenceNumber.Unavailable,
+                allEvents.Length > 0 ? allEvents.Max() : EventSequenceNumber.Unavailable,
+                operation.DeliverWithinMilliseconds > 0 ? DateTimeOffset.UtcNow.AddMilliseconds(operation.DeliverWithinMilliseconds) : null,
+                handler.CancellationToken)
+            {
+                CanDefer = operation.Partitions.Count > 0
+            };
         }
 
         AppendedEvent ToAppendedEvent(Contracts.Events.AppendedEvent @event)
