@@ -39,19 +39,4 @@ internal static partial class ChronicleServerStartupTaskLogging
 
     [LoggerMessage(LogLevel.Warning, "Skipping an event store registered without a name. Nothing can address it, so it is not started; remove the entry with an empty name from the cluster's event store registry")]
     internal static partial void SkippingEventStoreWithoutAName(this ILogger<ChronicleServerStartupTask> logger);
-
-    [LoggerMessage(LogLevel.Debug, "Recoverable startup work {Kind} for {Key} failed on attempt {Attempts}; retrying in {NextDelay}")]
-    internal static partial void RecoverableStartupWorkFailed(this ILogger<ChronicleServerStartupTask> logger, Exception exception, string kind, string key, int attempts, TimeSpan nextDelay);
-
-    [LoggerMessage(LogLevel.Error, "Recoverable startup work {Kind} for {Key} keeps failing after {Attempts} consecutive attempts; retrying in {NextDelay}. The kernel stays ready and keeps retrying in the background until it succeeds or the host stops")]
-    internal static partial void StartupWorkKeepsFailing(this ILogger<ChronicleServerStartupTask> logger, Exception exception, string kind, string key, int attempts, TimeSpan nextDelay);
-
-    [LoggerMessage(LogLevel.Information, "Recoverable startup work {Kind} for {Key} recovered after {Attempts} attempts")]
-    internal static partial void StartupWorkRecovered(this ILogger<ChronicleServerStartupTask> logger, string kind, string key, int attempts);
-
-    [LoggerMessage(LogLevel.Information, "Recoverable startup work finished in {Elapsed}")]
-    internal static partial void RecoverableStartupWorkCompleted(this ILogger<ChronicleServerStartupTask> logger, TimeSpan elapsed);
-
-    [LoggerMessage(LogLevel.Error, "The background startup pass stopped unexpectedly. Observers not yet activated are activated on demand when a client connects")]
-    internal static partial void RecoverableStartupWorkFaulted(this ILogger<ChronicleServerStartupTask> logger, Exception exception);
 }
