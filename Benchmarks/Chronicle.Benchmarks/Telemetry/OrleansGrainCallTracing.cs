@@ -268,13 +268,13 @@ public class OrleansGrainCallTracing : IDisposable
             Activity.Current = _caller;
         }
 
-        // Only head with tracing off honors an unsampled caller on the callee; every other case records the callee span.
-        var expectRecorded = !(Configuration == TracingConfiguration.HeadTracingOff && Caller == CallerContext.UnsampledParent);
+        // No configuration carries an unsampled caller's context into the grain, so the callee span is recorded in every case
+        // (under the caller's trace when it is sampled, otherwise as a root).
         var recorded = _verifiedCallee?.Recorded == true;
         _verifiedCallee = null;
-        if (recorded != expectRecorded)
+        if (!recorded)
         {
-            throw new InvalidOperationException($"{Configuration}/{Caller}: callee span recorded={recorded}, expected {expectRecorded}.");
+            throw new InvalidOperationException($"{Configuration}/{Caller}: callee span was not recorded.");
         }
     }
 
