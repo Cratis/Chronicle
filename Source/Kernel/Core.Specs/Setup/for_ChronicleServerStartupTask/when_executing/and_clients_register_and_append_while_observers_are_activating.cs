@@ -11,6 +11,7 @@ namespace Orleans.Hosting.for_ChronicleServerStartupTask.when_executing;
 public class and_clients_register_and_append_while_observers_are_activating : given.a_startup_task_with_a_persisted_reactor
 {
     readonly TaskCompletionSource _release = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    readonly TaskCompletionSource _activationPending = new(TaskCreationOptions.RunContinuationsAsynchronously);
     int _inFlight;
     int _maxInFlight;
     int _calls;
@@ -26,6 +27,7 @@ public class and_clients_register_and_append_while_observers_are_activating : gi
                 throw new TimeoutException();
             }
 
+            _activationPending.TrySetResult();
             await _release.Task;
         }
         finally
@@ -38,8 +40,8 @@ public class and_clients_register_and_append_while_observers_are_activating : gi
     {
         await Execute();
 
-        // While the pass is still retrying, the grain is free to serve the client's registration and appends.
-        await Task.Delay(100);
+        // Once the pass has retried and is waiting on the activation, the grain is free to serve the client's registration and appends.
+        await _activationPending.Task.WaitAsync(TimeSpan.FromSeconds(10));
         _release.SetResult();
         await RecoverableWork.WaitAsync(TimeSpan.FromSeconds(10));
     }

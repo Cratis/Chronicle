@@ -95,6 +95,8 @@
 2 Integration/Clustering/ClusteringFixture.cs
 1 Integration/Clustering/for_Clustering/when_replaying_a_collapsing_projection.cs
 1 Integration/Clustering/for_ScaledOutClients/ReactorInvocationSignal.cs
+1 Integration/Clustering/for_ScaledOutClients/when_the_kernel_drops_a_client_instance.cs
+1 Integration/Kernel/Setup/for_background_startup/when_clients_register_and_append_while_recovery_is_blocked.cs
 1 Integration/Kernel/for_JobsManager/given/TheJobStep.cs  # knob
 1 Integration/Kernel/for_JobsManager/when_starting/job_with_single_step/and_job_step_fails.cs
 2 Integration/SqlClustering/for_ClusterLoadDeliveryDiagnostics/when_capturing_the_enabled_transport.cs  # knob: 20 events/s pacing cadence for the diagnostics overhead measurement, not a wait
@@ -104,10 +106,12 @@
 1 Source/Clients/Connections.Specs/for_ConnectionWatchdog/when_keep_alive_is_fresh.cs
 1 Source/Clients/Connections.Specs/for_ConnectionWatchdog/when_starting_twice.cs
 1 Source/Clients/DotNET.Specs/EventSequences/for_EventSequence/when_immediate_appends_are_refused/with_an_await_continuation.cs  # interleave
+1 Source/Clients/DotNET.Specs/Events/for_EventTypeRegistryCache/given/CollectibleDispatchTypes.cs  # readiness: GC collect/finalize retry while a collectible assembly unloads
 1 Source/Clients/DotNET.Specs/Observation/for_AppendResultWaitForCompletionExtensions/when_waiting_for_completion/and_the_client_timeout_expires.cs  # knob
 1 Source/Clients/DotNET.Specs/Observation/for_AppendResultWaitForCompletionExtensions/when_waiting_for_completion/and_the_timeout_is_infinite.cs  # knob
 1 Source/Clients/XUnit.Integration/ChronicleFixture.cs  # readiness
 1 Source/Clients/XUnit.Integration/ChronicleOrleansFixture.cs
+1 Source/Kernel/Core.Specs/Clients/for_ClientDepartureNotifier/when_notifying_observers.cs  # interleave
 1 Source/Kernel/Core.Specs/ConcurrentCallGate.cs  # deadline
 1 Source/Kernel/Core.Specs/EventSequences/for_AppendedEventsQueue/when_enqueuing/with_backpressure/and_channel_capacity_is_exceeded.cs
 1 Source/Kernel/Core.Specs/Observation/Reactors/Kernel/for_Reactors/when_registering/and_many_tenants_start_concurrently.cs  # interleave
@@ -116,6 +120,8 @@
 1 Source/Kernel/Core.Specs/Projections/Engine/Pipelines/for_ProjectionHandleLock/when_the_same_event_source_id_is_acquired_concurrently.cs  # interleave
 1 Source/Kernel/Core.Specs/Projections/Engine/Pipelines/for_ProjectionPipeline/given/a_striped_pipeline_over_a_shared_read_model.cs  # interleave
 1 Source/Kernel/Core.Specs/Projections/for_ProjectionsManager/when_registering/and_more_definitions_than_the_concurrency_limit_are_new.cs  # knob
+1 Source/Kernel/Core.Specs/Setup/for_ChronicleServerStartupTask/when_executing/and_observer_activation_keeps_failing_across_a_restart.cs  # knob: activation double fails after a short delay
+1 Source/Kernel/Core.Specs/Setup/for_ChronicleServerStartupTask/when_executing/and_the_backlog_is_still_pending_when_startup_runs_again.cs
 1 Source/Kernel/Storage.MongoDB.Specs/EventSequences/ReplicaSetMongoDBFixture.cs  # readiness
 1 Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/EventSequences/for_EventCursor/given/a_cursor_over_a_context_whose_async_disposal_suspends.cs  # interleave
 1 Source/Kernel/Storage.Sql.Specs/for_DatabaseSchemaLock/given/two_concurrent_changes.cs  # interleave
