@@ -296,7 +296,7 @@ public partial class Observer
         {
             // No job owns the marker, so nothing would ever release it. The sink is untouched: hand the partition
             // back to catch-up from the captured bound, as a refused replay does, and report the failure.
-            await ReleaseRefusedPartitionReplay(partition, heldBackFrom);
+            await ReleaseRefusedPartitionReplay(partition, heldBackFrom, epochs[partition]);
             throw;
         }
     }
