@@ -9,7 +9,7 @@ public class and_one_updater_fails : given.a_constraint_validation_context_with_
 
     void Establish() => _firstValidatorIndexUpdater.Update(1, Arg.Any<CancellationToken>()).Returns(Task.FromException(new IOException("failed write")));
 
-    async Task Because() => _results = await _context.Update(1, CancellationToken.None);
+    async Task Because() => _results = await _context.Update(1, TimeSpan.FromSeconds(1), CancellationToken.None);
 
     [Fact] void should_report_both_updaters() => _results.Count().ShouldEqual(2);
     [Fact] void should_report_the_failed_updater() => _results.Single(result => result.Updater == _firstValidatorIndexUpdater).Outcome.ShouldEqual(ConstraintIndexUpdateOutcome.Failed);

@@ -27,7 +27,7 @@ public class a_store_futures_step : Specification
         _projectionFutures.AddFuture(Arg.Any<ProjectionFuture>()).Returns(Task.FromResult(1));
         _tracker = new ProjectionFuturesTracker { HasPending = false };
         _logger = Substitute.For<ILogger<StoreFutures>>();
-        _step = new StoreFutures(_projectionFutures, _tracker, _logger);
+        _step = new StoreFutures(_tracker, new ProjectionFuturesStore(_projectionFutures), _logger);
 
         _projection = Substitute.For<IProjection>();
         _event = AppendedEvent.EmptyWithEventType(new EventType("TestEvent", EventTypeGeneration.First));

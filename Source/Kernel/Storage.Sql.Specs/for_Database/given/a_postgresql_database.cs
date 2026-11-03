@@ -10,6 +10,7 @@ using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.UniqueConstraints;
 using Cratis.Chronicle.Storage.Sql.Sinks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Npgsql;
@@ -32,7 +33,7 @@ public class a_postgresql_database(PostgreSqlFixture fixture) : Specification
     {
         ConnectionString = await fixture.CreateDatabase();
         var migrator = new ReadModelMigrator(new TableMigrator<ReadModelDbContext>(NullLogger<TableMigrator<ReadModelDbContext>>.Instance), NullLogger<ReadModelMigrator>.Instance);
-        Services = new ServiceCollection().AddSingleton<IReadModelMigrator>(migrator).AddSingleton(JobsStorage).BuildServiceProvider();
+        Services = new ServiceCollection().AddSingleton(typeof(ILogger<>), typeof(NullLogger<>)).AddSingleton(typeof(ITableMigrator<>), typeof(TableMigrator<>)).AddSingleton<IReadModelMigrator>(migrator).AddSingleton(JobsStorage).BuildServiceProvider();
         Database = CreateDatabase();
     }
 

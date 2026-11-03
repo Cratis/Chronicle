@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Diagnostics;
 using System.Dynamic;
 using System.Reactive.Linq;
 using System.Text.Json;
@@ -43,6 +44,7 @@ namespace Cratis.Chronicle.Services.Observation.Reducers;
 /// <param name="activitySource">The <see cref="IActivitySource{T}"/> for tracing.</param>
 /// <param name="options"><see cref="IOptions{ChronicleOptions}"/> for how often to check the subscription of a connected client.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
+/// <param name="registrationGate">The silo-wide gate for observer registrations.</param>
 internal sealed class Reducers(
     IGrainFactory grainFactory,
     IReducerMediator reducerMediator,
@@ -50,7 +52,8 @@ internal sealed class Reducers(
     JsonSerializerOptions jsonSerializerOptions,
     [FromKeyedServices(WellKnown.MeterName)] IActivitySource<Reducers> activitySource,
     IOptions<ChronicleOptions> options,
-    ILogger<Reducers> logger) : IReducers
+    ILogger<Reducers> logger,
+    IObserverRegistrationGate registrationGate) : IReducers
 {
     /// <inheritdoc/>
     public IObservable<ReduceOperationMessage> Observe(IObservable<ReducerMessage> messages, CallContext context = default)
@@ -79,6 +82,12 @@ internal sealed class Reducers(
             switch (message.Content.Value)
             {
                 case RegisterReducer register:
+                    if (SystemStoreGuard.RegistrationRefusal(new(register.EventStore, register.Namespace, register.Reducer.ReducerId, register.Reducer.EventSequenceId, register.Reducer.ReadModel, register.ConnectionId)) is { } refusal)
+                    {
+                        registrationTcs.TrySetException(refusal);
+                        break;
+                    }
+
                     logger.Registering(
                         register.Reducer.ReducerId,
                         register.EventStore,
@@ -86,28 +95,7 @@ internal sealed class Reducers(
                         register.Reducer.EventSequenceId,
                         register.ConnectionId);
 
-                    grainFactory.GetReadModel(register.Reducer.ReadModel, register.EventStore).GetDefinition().ContinueWith(
-                        result =>
-                        {
-                            if (result.IsFaulted)
-                            {
-                                registrationTcs.TrySetException(CreateRegistrationFailure(register, result.Exception!));
-                            }
-                            else
-                            {
-                                model = result.Result;
-                                try
-                                {
-                                    ValidateReadModelDefinition(register, model);
-                                    registrationTcs.TrySetResult(register);
-                                }
-                                catch (Exception exception)
-                                {
-                                    registrationTcs.TrySetException(CreateRegistrationFailure(register, exception));
-                                }
-                            }
-                        },
-                        TaskScheduler.Current);
+                    registrationTcs.TrySetResult(register);
                     break;
 
                 case ReducerResult result:
@@ -144,39 +132,49 @@ internal sealed class Reducers(
         var eventStoreName = EventStoreName.NotSet;
         var namespaceName = EventStoreNamespaceName.NotSet;
         IObserver<ReduceOperationMessage>? observableObserver = null;
+        (ReducerEventsObserver? deliver, ReducerReplayObserver? replay) = (null, null);
 
         var observable = Observable.Create<ReduceOperationMessage>(
             async (observer, cancellationToken) =>
             {
                 observableObserver = observer;
+                using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, context.CancellationToken);
                 try
                 {
-                    var registration = await registrationTcs.Task;
+                    var registration = await registrationTcs.Task.WaitAsync(cancellation.Token);
                     connectionId = registration.ConnectionId;
                     observerId = registration.Reducer.ReducerId;
                     eventStoreName = registration.EventStore;
                     namespaceName = registration.Namespace;
 
-                    logger.Subscribing(
-                        registration.Reducer.ReducerId,
-                        registration.EventStore,
-                        registration.Namespace,
-                        registration.Reducer.EventSequenceId,
-                        registration.ConnectionId);
+                    var reducerDefinition = registration.Reducer.ToChronicle();
+                    using (await registrationGate.Enter(cancellation.Token))
+                    {
+                        try
+                        {
+                            model = await grainFactory.GetReadModel(registration.Reducer.ReadModel, registration.EventStore).GetDefinition();
+                            ValidateReadModelDefinition(registration, model);
+                        }
+                        catch (Exception exception)
+                        {
+                            throw CreateRegistrationFailure(registration, exception);
+                        }
 
-                    var key = new ConnectedObserverKey(
-                        registration.Reducer.ReducerId,
-                        registration.EventStore,
-                        registration.Namespace,
-                        registration.Reducer.EventSequenceId,
-                        registration.ConnectionId);
+                        logger.Subscribing(
+                            registration.Reducer.ReducerId,
+                            registration.EventStore,
+                            registration.Namespace,
+                            registration.Reducer.EventSequenceId,
+                            registration.ConnectionId);
 
-                    reducerMediator.Subscribe(
-                        registration.Reducer.ReducerId,
-                        registration.ConnectionId,
-                        registration.EventStore,
-                        registration.Namespace,
-                        (reduceOperation, tcs) =>
+                        var key = new ConnectedObserverKey(
+                            registration.Reducer.ReducerId,
+                            registration.EventStore,
+                            registration.Namespace,
+                            registration.Reducer.EventSequenceId,
+                            registration.ConnectionId);
+
+                        deliver = (reduceOperation, tcs) =>
                         {
                             var deliveryId = pendingDeliveries.Add(reduceOperation.Partition, tcs);
                             var initialState = reduceOperation.InitialState is null ? null : expandoObjectConverter.ToJsonObject(reduceOperation.InitialState, model.GetSchemaForLatestGeneration()).ToString();
@@ -190,28 +188,41 @@ internal sealed class Reducers(
                             };
 
                             observer.OnNext(message);
-                        });
+                        };
+                        replay = (replayState, partition) => observer.OnNext(new ReduceOperationMessage { Partition = partition, ReplayState = (Contracts.Observation.ReplayState)replayState });
 
-                    reducerMediator.SubscribeReplayNotifications(
-                        registration.Reducer.ReducerId,
-                        registration.ConnectionId,
-                        registration.EventStore,
-                        registration.Namespace,
-                        (replayState, partition) => observer.OnNext(new ReduceOperationMessage { Partition = partition, ReplayState = (Contracts.Observation.ReplayState)replayState }));
+                        reducerMediator.Subscribe(
+                            registration.Reducer.ReducerId,
+                            registration.ConnectionId,
+                            registration.EventStore,
+                            registration.Namespace,
+                            deliver);
 
-                    var reducerDefinition = registration.Reducer.ToChronicle();
-                    using (var span = activitySource.Register())
-                    {
-                        span?.Activity?.Tag(key, ObserverType.Reducer);
+                        reducerMediator.SubscribeReplayNotifications(
+                            registration.Reducer.ReducerId,
+                            registration.ConnectionId,
+                            registration.EventStore,
+                            registration.Namespace,
+                            replay);
 
-                        clientObserver = grainFactory.GetGrain<IReducer>(key);
+                        // The parent is the long-lived Observe request, which the server deliberately does not trace.
+                        var requestActivity = Activity.Current;
+                        Activity.Current = null;
                         try
                         {
+                            using var span = activitySource.Register();
+                            span?.Activity?.Tag(key, ObserverType.Reducer);
+
+                            clientObserver = grainFactory.GetGrain<IReducer>(key);
                             await clientObserver.SetDefinitionAndSubscribe(reducerDefinition);
                         }
                         catch (Exception exception)
                         {
                             throw CreateRegistrationFailure(registration, exception);
+                        }
+                        finally
+                        {
+                            Activity.Current = requestActivity;
                         }
                     }
 
@@ -220,7 +231,7 @@ internal sealed class Reducers(
                         TimeSpan.FromSeconds(options.Value.ConnectedClients.ReviseIntervalSeconds),
                         registration.ConnectionId,
                         logger,
-                        cancellationToken);
+                        cancellation.Token);
 
                     logger.Disconnected(
                         registration.Reducer.ReducerId,
@@ -243,13 +254,10 @@ internal sealed class Reducers(
                 finally
                 {
                     messagesSubscription.Dispose();
-                    reducerMediator.Disconnected(observerId, connectionId, eventStoreName, namespaceName);
+                    var ownsRegistration = DisconnectStream((observerId, connectionId, eventStoreName, namespaceName), deliver, replay);
                     pendingDeliveries.Disconnect(new(ObserverSubscriberResult.Disconnected(), new ExpandoObject()));
-                    if (clientObserver is not null)
-                    {
-                        await clientObserver.Unsubscribe();
-                        clientObserver = null;
-                    }
+                    await ReleaseRegistration(clientObserver, observerId, connectionId, ownsRegistration);
+                    clientObserver = null;
                 }
             });
 
@@ -260,7 +268,8 @@ internal sealed class Reducers(
             logger.ObserverStreamDisconnected(observerId, connectionId);
             pendingDeliveries.Disconnect(new(ObserverSubscriberResult.Disconnected(), new ExpandoObject()));
             observableObserver?.OnCompleted();
-            reducerMediator.Disconnected(observerId, connectionId, eventStoreName, namespaceName);
+            DisconnectStream((observerId, connectionId, eventStoreName, namespaceName), deliver, replay);
+
             register?.Dispose();
         });
 
@@ -312,5 +321,27 @@ internal sealed class Reducers(
                 registration,
                 new InvalidReadModelDefinitionForReducer(readModel.Identifier, "No key property could be inferred from the read model schema."));
         }
+    }
+
+    bool DisconnectStream(
+        (ObserverId ObserverId, ConnectionId ConnectionId, EventStoreName EventStore, EventStoreNamespaceName Namespace) key,
+        ReducerEventsObserver? deliver,
+        ReducerReplayObserver? replay) =>
+        deliver is null || replay is null || reducerMediator.Disconnected(key.ObserverId, key.ConnectionId, key.EventStore, key.Namespace, deliver, replay);
+
+    async Task ReleaseRegistration(IReducer? clientObserver, ObserverId observerId, ConnectionId connectionId, bool ownsRegistration)
+    {
+        if (clientObserver is null)
+        {
+            return;
+        }
+
+        if (ownsRegistration)
+        {
+            await clientObserver.Unsubscribe();
+            return;
+        }
+
+        logger.StreamReplacedKeepingSubscription(observerId, connectionId);
     }
 }

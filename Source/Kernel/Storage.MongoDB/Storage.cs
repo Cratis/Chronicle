@@ -25,6 +25,7 @@ namespace Cratis.Chronicle.Storage.MongoDB;
 /// <param name="jobsStorage">The <see cref="Cratis.Orleans.Storage.IJobsStorage"/> the job system resolves through.</param>
 /// <param name="options"><see cref="ChronicleOptions"/>.</param>
 /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
+/// <param name="systemEventStoreRelocation"><see cref="ISystemEventStoreRelocation"/> for moving the System event store's databases.</param>
 public class Storage(
     IDatabase database,
     Json.IExpandoObjectConverter expandoObjectConverter,
@@ -32,7 +33,8 @@ public class Storage(
     IInstancesOf<ISinkFactory> sinkFactories,
     Cratis.Orleans.Storage.IJobsStorage jobsStorage,
     IOptions<ChronicleOptions> options,
-    ILoggerFactory loggerFactory) : IStorage
+    ILoggerFactory loggerFactory,
+    ISystemEventStoreRelocation systemEventStoreRelocation) : IStorage
 {
     readonly ConcurrentDictionary<EventStoreName, IEventStoreStorage> _eventStores = new(CaseInsensitiveEventStoreNameComparer.Instance);
 
@@ -42,6 +44,9 @@ public class Storage(
     /// <inheritdoc/>
     public Task<IReadOnlyDictionary<EventStoreName, Concepts.Projections.Generations.Enablement.GenerationFloor>> ReadGenerationFloors() =>
         new ClusterStorage(database, expandoObjectConverter, jsonSerializerOptions, jobsStorage, options, loggerFactory).ReadGenerationFloors();
+
+    /// <inheritdoc/>
+    public Task MoveSystemEventStoreTo(SystemEventStoreLocation location) => systemEventStoreRelocation.MoveTo(location);
 
     /// <inheritdoc/>
     public async Task<IEnumerable<EventStoreName>> GetEventStores()

@@ -3,7 +3,9 @@
 
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
+using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Observation.Jobs;
+using Cratis.Chronicle.Storage.Observation;
 using Cratis.Orleans.Jobs;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -45,6 +47,9 @@ public partial class Observer
     [LoggerMessage(LogLevel.Warning, "Clamping live subscriber timeout from {ConfiguredTimeout} to {LiveTimeout} to leave Orleans response headroom")]
     static partial void LogLiveTimeoutClamped(ILogger logger, TimeSpan configuredTimeout, TimeSpan liveTimeout);
 
+    static bool ExceedsLiveBudget(Observers configuration, int eventCount) =>
+        configuration.LiveDeliveryBudget > 0 && eventCount > configuration.LiveDeliveryBudget;
+
     /// <summary>
     /// Gets the partition holds version that hold reconciliation compares before and after its job lookup.
     /// </summary>
@@ -56,10 +61,17 @@ public partial class Observer
     /// </remarks>
     int CurrentPartitionHoldsVersion() => _liveHandOversInFlight > 0 ? ++_partitionHoldsVersion : _partitionHoldsVersion;
 
-    async Task<bool> ExceedsLiveBudget(int eventCount)
+    TimeSpan ResponseTimeout()
     {
-        var configuration = await configurationProvider.GetFor(_observerKey);
-        return configuration.LiveDeliveryBudget > 0 && eventCount > configuration.LiveDeliveryBudget;
+        if (_responseTimeout is { } cached)
+        {
+            return cached;
+        }
+
+        var messaging = ServiceProvider.GetService<IOptions<SiloMessagingOptions>>()?.Value ?? new SiloMessagingOptions();
+        var responseTimeout = messaging.ResponseTimeout > messaging.SystemResponseTimeout ? messaging.ResponseTimeout : messaging.SystemResponseTimeout;
+        _responseTimeout = responseTimeout;
+        return responseTimeout;
     }
 
     /// <summary>
@@ -86,17 +98,23 @@ public partial class Observer
         try
         {
             LogLiveBatchDeferred(logger, events.Length, partition);
-            State.CatchingUpPartitions.Add(partition);
-            await WriteStateAsync();
+            var epochs = await GrantPartitionsBeforeStart([partition], ClaimHolderKind.PartitionCatchUp, sequenceNumber);
 
             // Writing state can find that another sequence owns the definition; an inert activation starts nothing.
             if (!_observerExists) return true;
 
+            var epoch = epochs[partition];
             var startResult = await _jobsManager.Start<ICatchUpObserverPartition, CatchUpObserverPartitionRequest>(
-                new(_observerKey, Definition.Type, partition, sequenceNumber, Definition.EventTypes) { ReaderScope = ReaderScope });
+                new(_observerKey, Definition.Type, partition, sequenceNumber, Definition.EventTypes) { ReaderScope = ReaderScope, OwnershipEpoch = epoch });
             if (startResult?.TryGetResult(out _) is true)
             {
                 Skips.JobStarted(partition);
+                return true;
+            }
+
+            // Refused because a later grant holds the partition: the catch-up started under it reads this batch too.
+            if (IsHeldByNewerClaim(partition, epoch))
+            {
                 return true;
             }
 
@@ -132,9 +150,7 @@ public partial class Observer
 
     TimeSpan GetLiveSubscriberTimeout(TimeSpan subscriberTimeout)
     {
-        var messaging = ServiceProvider.GetService<IOptions<SiloMessagingOptions>>()?.Value ?? new SiloMessagingOptions();
-        var responseTimeout = messaging.ResponseTimeout > messaging.SystemResponseTimeout ? messaging.ResponseTimeout : messaging.SystemResponseTimeout;
-        var liveTimeout = ClampLiveSubscriberTimeout(subscriberTimeout, responseTimeout);
+        var liveTimeout = ClampLiveSubscriberTimeout(subscriberTimeout, ResponseTimeout());
         if (liveTimeout != subscriberTimeout && Interlocked.Exchange(ref _liveTimeoutClampLogged, 1) == 0)
         {
             LogLiveTimeoutClamped(logger, subscriberTimeout, liveTimeout);

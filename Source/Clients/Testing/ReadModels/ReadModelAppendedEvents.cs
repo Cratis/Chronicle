@@ -42,11 +42,22 @@ internal static class ReadModelAppendedEvents
         return (instances.Values.FirstOrDefault(), instances);
     }
 
-    static Task<(TReadModel? Primary, IReadOnlyDictionary<EventSourceId, TReadModel> Instances)> ProcessGroup<TReadModel>(
+    static async Task<(TReadModel? Primary, IReadOnlyDictionary<EventSourceId, TReadModel> Instances)> ProcessGroup<TReadModel>(
         ReadModelFold<TReadModel> fold,
         IReadOnlyList<ReadModelEvent> events)
-        where TReadModel : class =>
-        fold.Process(events, events.Select(input => input.Context!).ToArray(), new EventSequenceId($"testing-appended-input-{Guid.NewGuid()}"));
+        where TReadModel : class
+    {
+        // The input sequence only exists for this fold; keeping it would grow a long-lived store with every fold.
+        var inputSequenceId = new EventSequenceId($"testing-appended-input-{Guid.NewGuid()}");
+        try
+        {
+            return await fold.Process(events, events.Select(input => input.Context!).ToArray(), inputSequenceId);
+        }
+        finally
+        {
+            fold.EventStore.TestingStore.RemoveSequence(inputSequenceId);
+        }
+    }
 
     static EventContext SyntheticContext<TReadModel>(ReadModelFold<TReadModel> fold, ReadModelEvent input, int index)
         where TReadModel : class =>

@@ -72,6 +72,15 @@ public class ReadModelsForTesting(IReadModels inner) : IReadModels
     /// </summary>
     internal Action? BeforeInstanceRead { get; set; }
 
+    /// <summary>
+    /// Gets a value indicating whether stream-scoped reads ignore the owning store's event log.
+    /// </summary>
+    /// <remarks>
+    /// A scenario that owns its store reads that store's log, which nothing appends to. A scenario borrowing
+    /// another store sets this, so its reads stay as empty as they would be on a store of its own.
+    /// </remarks>
+    internal bool IgnoresStoreLog { get; init; }
+
     /// <inheritdoc/>
     public Task Register() => inner.Register();
 
@@ -117,7 +126,7 @@ public class ReadModelsForTesting(IReadModels inner) : IReadModels
         ReadProtectionGuard.Read(nameof(GetInstanceById));
         if (_store is null) return await inner.GetInstanceById<TReadModel>(eventSourceId, eventStreamId);
         var scope = EventStreamReadModel.ScopeFor(typeof(TReadModel), _store.EventSources, eventSourceId, eventStreamId);
-        var events = await (_eventLog ?? _store.EventLog).GetFromSequenceNumber(EventSequenceNumber.First);
+        var events = await StreamReadEvents(_store);
         var source = new EventSourceId(scope.EventSourceId.Value);
         var selected = events.Where(@event =>
             @event.Context.EventSourceId.Value == source.Value &&
@@ -262,6 +271,9 @@ public class ReadModelsForTesting(IReadModels inner) : IReadModels
         if (readModelType.IsPassive()) return true;
         return store.Projections is IKnowPassiveProjections passive && passive.IsPassive(readModelType);
     }
+
+    async Task<IEnumerable<AppendedEvent>> StreamReadEvents(EventStoreForTesting store) =>
+        IgnoresStoreLog && _eventLog is null ? [] : await (_eventLog ?? store.EventLog).GetFromSequenceNumber(EventSequenceNumber.First);
 
     EventStoreForTesting StoreForObservation(Type readModelType)
     {

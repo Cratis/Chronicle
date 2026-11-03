@@ -48,6 +48,6 @@ public class a_pending_future_save : a_save_changes_step
             _operations.Add("resolve");
             return Task.CompletedTask;
         });
-        _step = new SaveChanges(_writingSink, Substitute.For<IChangesetStorage>(), true, Substitute.For<ILogger<SaveChanges>>(), _futures);
+        _step = new SaveChanges(new ProjectionFuturesStore(_futures), _writingSink, Substitute.For<IChangesetStorage>(), true, Substitute.For<ILogger<SaveChanges>>());
     }
 }

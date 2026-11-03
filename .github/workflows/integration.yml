@@ -56,9 +56,10 @@ jobs:
         id: client
         run: |
           echo "matrix=$(python3 .github/scripts/generate-integration-matrix.py ${ALL_PROVIDERS:+--all-providers})" >> "$GITHUB_OUTPUT"
-          echo "all-providers=${{ inputs.all-providers }}" >> "$GITHUB_OUTPUT"
+          echo "all-providers=$INPUT_ALL_PROVIDERS" >> "$GITHUB_OUTPUT"
         env:
           ALL_PROVIDERS: ${{ inputs.all-providers && 'true' || '' }}
+          INPUT_ALL_PROVIDERS: ${{ inputs.all-providers }}
 
       - name: Discover Kernel integration namespaces
         id: kernel
@@ -152,7 +153,7 @@ jobs:
               docker pull postgres:16
             fi
             if [ "${{ matrix.database }}" = "mssql" ]; then
-              docker pull mcr.microsoft.com/mssql/server:2025-latest
+              docker pull mcr.microsoft.com/mssql/server:2025-CU10-ubuntu-24.04
             fi
 
       - name: Run Client integration tests (${{ matrix.namespace }} ${{ matrix.shard }} | ${{ matrix.mode }} | ${{ matrix.database }})
@@ -433,6 +434,46 @@ jobs:
           -p:EnableDevelopmentSymbol=true -p:DisableProxyGenerator=true -p:DisableDockerBuild=true
           -p:Version="$CRATIS_CHRONICLE_CLIENT_VERSION"
 
+      # Only this candidate test shard consumes instrumentation. SDK artifacts layout isolates the
+      # entire dependency graph outside the checkout, so shipping bin/obj, packages and images cannot
+      # pick up enabled outputs. Keep the ordinary stamped build above for the absence comparison.
+      - name: Build isolated rolling delivery diagnostic candidate
+        if: matrix.provider == 'RollingUpgrade'
+        run: |
+          set -euo pipefail
+          printf 'diagnostic-source=%s client-version=%s artifacts=%s\n' "$(git rev-parse HEAD)" "$CRATIS_CHRONICLE_CLIENT_VERSION" "$RUNNER_TEMP/rolling-delivery-diagnostics"
+          dotnet build .github/scripts/rolling-delivery-il/RollingDeliveryIl.csproj -c Release -warnaserror \
+            --artifacts-path "$RUNNER_TEMP/rolling-il-verifier" -o "$RUNNER_TEMP/rolling-il-tool"
+          dotnet build Integration/SqlClustering/SqlClustering.csproj -c Release -warnaserror \
+            -p:EnableDevelopmentSymbol=true -p:DisableProxyGenerator=true -p:DisableDockerBuild=true \
+            -p:Version="$CRATIS_CHRONICLE_CLIENT_VERSION" -p:EnableRollingDeliveryDiagnostics=true \
+            --artifacts-path "$RUNNER_TEMP/rolling-delivery-diagnostics"
+          dotnet "$RUNNER_TEMP/rolling-il-tool/RollingDeliveryIl.dll" \
+            Source/Clients/DotNET/bin/Release/net10.0/Cratis.Chronicle.dll \
+            --enabled "$RUNNER_TEMP/rolling-delivery-diagnostics/bin/DotNET/release/Cratis.Chronicle.dll"
+          grep -a -F -q -- "$CRATIS_CHRONICLE_CLIENT_VERSION" "$RUNNER_TEMP/rolling-delivery-diagnostics/bin/DotNET/release/Cratis.Chronicle.dll"
+
+      # Evidence only: an explicit FAIL/INCONCLUSIVE must not suppress the rolling-loss run.
+      # Both arms execute existing outputs on this same hosted runner; no rebuild or coverage collector.
+      - name: Measure rolling delivery diagnostic overhead (evidence only)
+        if: matrix.provider == 'RollingUpgrade'
+        timeout-minutes: 8
+        continue-on-error: true
+        run: |
+          node .github/scripts/measure-rolling-delivery-overhead.mjs \
+            --normal Integration/SqlClustering/bin/Release/net10.0/Cratis.Chronicle.Integration.SqlClustering.dll \
+            --enabled "$RUNNER_TEMP/rolling-delivery-diagnostics/bin/SqlClustering/release/Cratis.Chronicle.Integration.SqlClustering.dll" \
+            --output "$RUNNER_TEMP/rolling-delivery-overhead"
+
+      - name: Upload rolling delivery overhead evidence immediately
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: rolling-delivery-overhead
+          path: ${{ runner.temp }}/rolling-delivery-overhead/
+          retention-days: 7
+
       - name: Pre-pull images
         uses: nick-fields/retry@v3
         with:
@@ -440,15 +481,18 @@ jobs:
           max_attempts: 5
           retry_wait_seconds: 15
           command: |
-            docker pull "${{ inputs.chronicle-image }}"
-            if [ "${{ matrix.provider }}" = "RollingUpgrade" ]; then
+            docker pull "$CHRONICLE_IMAGE"
+            if [ "$PROVIDER" = "RollingUpgrade" ]; then
               docker pull "$CRATIS_CHRONICLE_PREVIOUS_IMAGE"
             fi
-            if [ "${{ matrix.provider }}" != "SqlServer" ]; then
+            if [ "$PROVIDER" != "SqlServer" ]; then
               docker pull postgres:16
             else
-              docker pull mcr.microsoft.com/mssql/server:2022-CU20-ubuntu-22.04
+              docker pull mcr.microsoft.com/mssql/server:2025-CU10-ubuntu-24.04
             fi
+        env:
+          CHRONICLE_IMAGE: ${{ inputs.chronicle-image }}
+          PROVIDER: ${{ matrix.provider }}
 
       # Three kernel containers from the image the Client shards use. No retries: an append that
       # fails during a membership transition is part of the availability measurement.
@@ -456,16 +500,29 @@ jobs:
         env:
           CRATIS_CHRONICLE_LOCAL_IMAGE: ${{ inputs.chronicle-image }}
           TESTCONTAINERS_RYUK_DISABLED: true
-        run: >-
-          node .github/scripts/run-spec-project.mjs --project Integration/SqlClustering/SqlClustering.csproj
-          --filter "FullyQualifiedName~Cratis.Chronicle.Integration.SqlClustering.${{ matrix.provider }}"
-          --results-directory coverage-results
+        run: |
+          set -euo pipefail
+          if [ "${{ matrix.provider }}" = "RollingUpgrade" ]; then
+            export EnableRollingDeliveryDiagnostics=true
+            export ArtifactsPath="$RUNNER_TEMP/rolling-delivery-diagnostics"
+          fi
+          node .github/scripts/run-spec-project.mjs --project Integration/SqlClustering/SqlClustering.csproj \
+            --filter "FullyQualifiedName~Cratis.Chronicle.Integration.SqlClustering.${{ matrix.provider }}" \
+            --results-directory coverage-results
 
       - name: Assert SQL clustering specifications ran
         uses: ./.github/actions/assert-tests-ran
         with:
           path: ./coverage-results
           name: This SQL clustering provider
+
+      - name: Upload rolling delivery diagnostics evidence
+        if: always() && matrix.provider == 'RollingUpgrade'
+        uses: actions/upload-artifact@v4
+        with:
+          name: rolling-delivery-diagnostics
+          path: ${{ runner.temp }}/rolling-delivery-overhead/
+          retention-days: 7
 
       - name: Upload SQL clustering results
         if: always()

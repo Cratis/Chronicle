@@ -43,6 +43,7 @@ export * from './ExportedEvent';
 export * from './ExportEvents';
 export * from './ForEventSourceIdAndEventTypes';
 export * from './FromSequenceNumber';
+export * from './FromSequenceNumberWithErasedProperties';
 export * from './HasEventsForEventSourceId';
 export * from './IdempotencyKeyConflict';
 export * from './Identity';

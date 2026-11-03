@@ -35,7 +35,6 @@ using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Testing.Compliance;
 using Cratis.Chronicle.Transactions;
 using Cratis.Traces;
-using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using ClientEventLog = Cratis.Chronicle.EventSequences.IEventLog;
@@ -174,11 +173,11 @@ internal sealed class TestingServices : IServices
         _observers = new(() => new ObserversForTesting(new KernelObserversService(
             grainFactory,
             storage,
-            new KernelObserverRemover(grainFactory, storage, NullLogger<KernelObserverRemover>.Instance),
-            new InProcessAuthorizationService(),
-            new HttpContextAccessor())));
+            new KernelObserverRemover(grainFactory, storage, NullLogger<KernelObserverRemover>.Instance))));
 
         _failedPartitions = new(() => new KernelFailedPartitionsService(storage));
+
+        var registrationGate = new UnboundedObserverRegistrationGate();
 
         _reactors = new(() =>
             new KernelReactorsService(
@@ -188,7 +187,8 @@ internal sealed class TestingServices : IServices
                 jsonSerializerOptions,
                 new ActivitySource<KernelReactorsService>(),
                 Options.Create(new KernelCore::Cratis.Chronicle.Configuration.ChronicleOptions()),
-                NullLogger<KernelReactorsService>.Instance));
+                NullLogger<KernelReactorsService>.Instance,
+                registrationGate));
 
         _reducers = new(() =>
             new KernelReducersService(
@@ -198,7 +198,8 @@ internal sealed class TestingServices : IServices
                 jsonSerializerOptions,
                 new ActivitySource<KernelReducersService>(),
                 Options.Create(new KernelCore::Cratis.Chronicle.Configuration.ChronicleOptions()),
-                NullLogger<KernelReducersService>.Instance));
+                NullLogger<KernelReducersService>.Instance,
+                registrationGate));
 
         _projections = new(() =>
             new KernelProjectionsService(
@@ -298,7 +299,7 @@ internal sealed class TestingServices : IServices
         _server = new(() => new KernelServerService(null!));
 
         _eventStores = new(() =>
-            new KernelEventStoresService(commandPipeline.Value, grainFactory, storage, NullLogger<KernelEventStoresService>.Instance));
+            new KernelEventStoresService(commandPipeline.Value, grainFactory, storage, new KernelCore::Cratis.Chronicle.EventStores.EventStoreInitialization(storage, grainFactory, NullLogger<KernelCore::Cratis.Chronicle.EventStores.EventStoreInitialization>.Instance), NullLogger<KernelEventStoresService>.Instance));
 
         var readBindings = CreateReadBindings(storage, grainFactory);
         _readModels = new(() =>
@@ -434,4 +435,13 @@ internal sealed class TestingServices : IServices
             Options.Create(new KernelCore::Cratis.Chronicle.Configuration.ChronicleOptions()),
             storage,
             NullLogger<KernelWebhookRegistrar>.Instance);
+
+    sealed class UnboundedObserverRegistrationGate : KernelGrpc::Cratis.Chronicle.Services.Observation.IObserverRegistrationGate
+    {
+        public ValueTask<IDisposable> Enter(CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return ValueTask.FromResult(System.Reactive.Disposables.Disposable.Empty);
+        }
+    }
 }

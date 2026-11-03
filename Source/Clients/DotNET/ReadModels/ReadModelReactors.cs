@@ -28,24 +28,39 @@ public class ReadModelReactors(
     JsonSerializerOptions jsonSerializerOptions,
     ILogger<ReadModelReactors> logger) : IReadModelReactors
 {
+    readonly object _sync = new();
     readonly List<IDisposable> _subscriptions = [];
     bool _started;
+    bool _released;
 
     /// <inheritdoc/>
     public void Start()
     {
-        if (_started)
+        lock (_sync)
         {
-            return;
+            if (_released || _started)
+            {
+                return;
+            }
+
+            _started = true;
         }
 
-        _started = true;
-        foreach (var reactorType in clientArtifactsProvider.ReadModelReactors)
+        // Subscribing reaches into the services, so it never runs under the lock.
+        var started = new List<IDisposable>();
+        try
         {
-            foreach (var readModelType in ReadModelReactorMethods.GetReadModelTypesFor(reactorType))
+            foreach (var reactorType in clientArtifactsProvider.ReadModelReactors)
             {
-                SubscribeFor(reactorType, readModelType);
+                foreach (var readModelType in ReadModelReactorMethods.GetReadModelTypesFor(reactorType))
+                {
+                    SubscribeFor(reactorType, readModelType, started);
+                }
             }
+        }
+        finally
+        {
+            Publish(started);
         }
     }
 
@@ -55,60 +70,73 @@ public class ReadModelReactors(
     /// <inheritdoc/>
     public void Dispose()
     {
-        foreach (var subscription in _subscriptions)
-        {
-            subscription.Dispose();
-        }
-
-        _subscriptions.Clear();
-        _started = false;
+        DisposeAll(TakeSubscriptions(release: false));
         GC.SuppressFinalize(this);
     }
 
-    static ReadModelChangeType DetermineChangeType<TReadModel>(ReadModelChangeset<TReadModel> changeset, HashSet<string>? seenKeys)
+    /// <summary>
+    /// Releases the reactors of an event store whose creation failed and that no caller holds. Closes the
+    /// subscriptions and makes a <see cref="Start"/> that is still in flight a no-op.
+    /// </summary>
+    internal void Release() => DisposeAll(TakeSubscriptions(release: true));
+
+    static void DisposeAll(List<IDisposable> subscriptions)
     {
-        if (seenKeys is null)
+        foreach (var subscription in subscriptions)
         {
-            return changeset.ChangeType;
+            subscription.Dispose();
         }
-
-        var key = changeset.ModelKey.Value;
-        if (changeset.Removed)
-        {
-            seenKeys.Remove(key);
-            return ReadModelChangeType.Removed;
-        }
-
-        return seenKeys.Add(key) ? ReadModelChangeType.Added : ReadModelChangeType.Modified;
     }
 
-    void SubscribeFor(Type reactorType, Type readModelType)
+    List<IDisposable> TakeSubscriptions(bool release)
+    {
+        lock (_sync)
+        {
+            _released |= release;
+            _started = false;
+            var taken = _subscriptions.ToList();
+            _subscriptions.Clear();
+            return taken;
+        }
+    }
+
+    void Publish(List<IDisposable> started)
+    {
+        lock (_sync)
+        {
+            if (!_released && _started)
+            {
+                _subscriptions.AddRange(started);
+                return;
+            }
+        }
+
+        DisposeAll(started);
+    }
+
+    void SubscribeFor(Type reactorType, Type readModelType, List<IDisposable> subscriptions)
     {
         var subscribe = typeof(ReadModelReactors)
             .GetMethod(nameof(Subscribe), BindingFlags.Instance | BindingFlags.NonPublic)!
             .MakeGenericMethod(readModelType);
-        subscribe.Invoke(this, [reactorType]);
+        subscribe.Invoke(this, [reactorType, subscriptions]);
     }
 
-    void Subscribe<TReadModel>(Type reactorType)
+    void Subscribe<TReadModel>(Type reactorType, List<IDisposable> subscriptions)
     {
         if (Attribute.IsDefined(reactorType, typeof(MaterializedAttribute)))
         {
-            _subscriptions.Add(SubscribeMaterialized<TReadModel>(reactorType));
+            subscriptions.Add(SubscribeMaterialized<TReadModel>(reactorType));
             return;
         }
-
-        // Projections report the change type from the server; reducers compute changesets locally without one,
-        // so first-seen keys are tracked client-side to distinguish an addition from a modification.
-        var seenKeys = eventStore.Reducers.HasFor<TReadModel>() ? new HashSet<string>(StringComparer.Ordinal) : null;
 
         var subscription = eventStore.ReadModels.Watch<TReadModel>().Subscribe(changeset => DispatchAll(
             reactorType,
             typeof(TReadModel),
             changeset.ReadModel,
-            DetermineChangeType(changeset, seenKeys),
+            changeset.ChangeType,
             changeset.ChangeContext ?? EventContext.EmptyWithEventSourceId(changeset.ModelKey)));
-        _subscriptions.Add(subscription);
+        subscriptions.Add(subscription);
     }
 
     IDisposable SubscribeMaterialized<TReadModel>(Type reactorType)

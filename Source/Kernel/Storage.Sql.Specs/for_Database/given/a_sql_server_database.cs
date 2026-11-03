@@ -12,6 +12,7 @@ using Cratis.Chronicle.Storage.Sql.Sinks;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
@@ -34,7 +35,7 @@ public class a_sql_server_database(SqlServerFixture fixture) : Specification
     {
         ConnectionString = await fixture.CreateDatabase();
         var migrator = new ReadModelMigrator(new TableMigrator<ReadModelDbContext>(NullLogger<TableMigrator<ReadModelDbContext>>.Instance), NullLogger<ReadModelMigrator>.Instance);
-        Services = new ServiceCollection().AddSingleton<IReadModelMigrator>(migrator).BuildServiceProvider();
+        Services = new ServiceCollection().AddSingleton(typeof(ILogger<>), typeof(NullLogger<>)).AddSingleton(typeof(ITableMigrator<>), typeof(TableMigrator<>)).AddSingleton<IReadModelMigrator>(migrator).BuildServiceProvider();
         Database = new(
             Services,
             Options.Create(new ChronicleOptions { Storage = new() { Type = StorageType.MsSql, ConnectionDetails = ConnectionString } }),

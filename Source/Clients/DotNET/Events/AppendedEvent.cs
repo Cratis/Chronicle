@@ -11,6 +11,12 @@ namespace Cratis.Chronicle.Events;
 public record AppendedEvent(EventContext Context, object Content)
 {
     /// <summary>
+    /// Gets confirmed erased paths in the current content, using dotted members and bracketed indices.
+    /// Empty is not proof of no erasure. This does not describe original, revision or generational content.
+    /// </summary>
+    public IReadOnlyList<string> ErasedProperties => Context.ErasedProperties;
+
+    /// <summary>
     /// Represents an empty <see cref="AppendedEvent"/> with a specific event sequence number.
     /// </summary>
     /// <param name="eventSequenceNumber">Event sequence number it should hold.</param>

@@ -89,6 +89,11 @@ public class ReadModelDbContext(
     /// </summary>
     internal bool ExistingOnly { get; private set; }
 
+    /// <summary>
+    /// Gets the receipts of committed multi-write sink cycles.
+    /// </summary>
+    internal DbSet<SinkCycleReceipt> SinkCycleReceipts => Set<SinkCycleReceipt>();
+
     /// <inheritdoc/>
     public async Task EnsureTableExists()
     {
@@ -115,6 +120,12 @@ public class ReadModelDbContext(
         ExistingOnly = true;
         return this;
     }
+
+    /// <summary>
+    /// Creates the shared sink cycle receipt table, the first time a multi-write cycle needs it.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    internal Task EnsureSinkCycleReceipts() => migrator.EnsureSinkCycleReceipts(this);
 
     /// <summary>
     /// Clears stale migration state for this table and restores shadows after an old-kernel promotion.
@@ -155,6 +166,13 @@ public class ReadModelDbContext(
             entity.ToTable(WellKnownTableNames.ReplayPromotions);
             entity.HasKey(promotion => promotion.Id).HasName($"PK_{WellKnownTableNames.ReplayPromotions}");
             entity.Property(promotion => promotion.Id).HasMaxLength(64);
+        })
+        .Entity<SinkCycleReceipt>(entity =>
+        {
+            entity.ToTable(WellKnownTableNames.SinkCycleReceipts);
+            entity.HasKey(receipt => receipt.Id).HasName($"PK_{WellKnownTableNames.SinkCycleReceipts}");
+            entity.Property(receipt => receipt.CreatedAt).HasDefaultValueSql(SinkCycleReceipt.NowSql(databaseType)).ValueGeneratedOnAdd();
+            entity.HasIndex(receipt => receipt.CreatedAt);
         })
         .SharedTypeEntity<DynamicReadModelEntity>(tableName, entity =>
         {

@@ -5,6 +5,7 @@ using System.Collections.Concurrent;
 using Cratis.Arc.EntityFrameworkCore;
 using Cratis.Arc.EntityFrameworkCore.Json;
 using Cratis.Chronicle.Configuration;
+using Cratis.Chronicle.Storage.Sql.Schema;
 using Microsoft.Data.SqlClient;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
@@ -86,6 +87,27 @@ public class ReadModelMigrator(
     }
 
     /// <inheritdoc/>
+    public async Task EnsureSinkCycleReceipts(ReadModelDbContext context)
+    {
+        if (SinkCycleReceiptSchema.IsVerify(context))
+        {
+            // Verify never creates the table: it only checks, read-only, that it was provisioned explicitly.
+            await SinkCycleReceiptSchema.Validate(context);
+            return;
+        }
+
+        try
+        {
+            await tableMigrator.EnsureTableMigrated(WellKnownTableNames.SinkCycleReceipts, context, CreateSinkCycleReceipts);
+        }
+        catch (Exception exception) when (IsDuplicateTable(exception))
+        {
+            // Another silo may have created the shared table. Recheck through the migrator.
+            await tableMigrator.EnsureTableMigrated(WellKnownTableNames.SinkCycleReceipts, context, CreateSinkCycleReceipts);
+        }
+    }
+
+    /// <inheritdoc/>
     public void ClearMigrationCache(string connectionStringPrefix)
     {
         tableMigrator.ClearMigrationCacheForConnectionString(connectionStringPrefix);
@@ -108,6 +130,12 @@ public class ReadModelMigrator(
                 BackupTableName = table.StringColumn(migrationBuilder, nullable: true)
             },
             constraints: table => table.PrimaryKey($"PK_{tableName}", promotion => promotion.Id));
+        await tableMigrator.ExecuteMigrationOperations(context, migrationBuilder);
+    }
+
+    async Task CreateSinkCycleReceipts(ReadModelDbContext context, string tableName)
+    {
+        var migrationBuilder = SinkCycleReceiptSchema.CreateOperations(context.Database.ProviderName, tableName, context.Database.GetDatabaseType());
         await tableMigrator.ExecuteMigrationOperations(context, migrationBuilder);
     }
 

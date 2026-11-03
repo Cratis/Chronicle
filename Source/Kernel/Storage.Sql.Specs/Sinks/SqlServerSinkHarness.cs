@@ -22,10 +22,7 @@ namespace Cratis.Chronicle.Storage.Sql.Sinks;
 /// </summary>
 public class SqlServerSinkHarness : ISqlSinkHarness
 {
-    readonly ReadModelMigrator _migrator = new(
-        new TableMigrator<ReadModelDbContext>(Substitute.For<ILogger<TableMigrator<ReadModelDbContext>>>()),
-        Substitute.For<ILogger<ReadModelMigrator>>());
-    IReadOnlyList<ProjectedColumn> _columns = [];
+    ReadModelMigrator? _migrator;
 
     /// <inheritdoc/>
     public string ConnectionString { get; private set; } = string.Empty;
@@ -44,14 +41,24 @@ public class SqlServerSinkHarness : ISqlSinkHarness
     public IEnumerable<IInterceptor> Interceptors { get; init; } = [];
 
     /// <summary>
+    /// Gets a hook that adjusts the context options, such as installing an execution strategy that retries.
+    /// </summary>
+    public Action<DbContextOptionsBuilder<ReadModelDbContext>>? ConfigureOptions { get; init; }
+
+    /// <summary>
     /// Gets the logger for index diagnostics.
     /// </summary>
     public ILogger<Sink> Logger { get; init; } = Substitute.For<ILogger<Sink>>();
 
+    ReadModelMigrator Migrator => _migrator ??= new(
+        new RecordingTableMigrator<ReadModelDbContext>(
+            new TableMigrator<ReadModelDbContext>(Substitute.For<ILogger<TableMigrator<ReadModelDbContext>>>()),
+            () => Interceptors.OfType<SqlCommandCapture>().FirstOrDefault()),
+        Substitute.For<ILogger<ReadModelMigrator>>());
+
     /// <inheritdoc/>
     public ISink CreateSink(ReadModelDefinition definition)
     {
-        _columns = ProjectedColumns.ForSchema(definition.GetSchemaForLatestGeneration(), definition.Indexes);
         if (ConnectionString.Length == 0)
         {
             ConnectionString = Fixture!.CreateDatabase().GetAwaiter().GetResult();
@@ -59,9 +66,9 @@ public class SqlServerSinkHarness : ISqlSinkHarness
 
         var database = Substitute.For<IDatabase>();
         database.ReadModelTable(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<string>(), Arg.Any<IReadOnlyList<ProjectedColumn>>(), Arg.Any<ConnectionPurpose>())
-            .Returns(callInfo => OpenTable(callInfo.ArgAt<string>(2)));
+            .Returns(callInfo => OpenTable(callInfo.ArgAt<string>(2), callInfo.ArgAt<IReadOnlyList<ProjectedColumn>>(3)));
         database.ExistingReadModelTable(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<string>(), Arg.Any<IReadOnlyList<ProjectedColumn>>())
-            .Returns(callInfo => OpenExistingTable(callInfo.ArgAt<string>(2)));
+            .Returns(callInfo => OpenExistingTable(callInfo.ArgAt<string>(2), callInfo.ArgAt<IReadOnlyList<ProjectedColumn>>(3)));
 
         return new Sink(
             "test-event-store",
@@ -84,10 +91,10 @@ public class SqlServerSinkHarness : ISqlSinkHarness
         GC.SuppressFinalize(this);
     }
 
-    async Task<DbContextScope<ReadModelDbContext>> OpenTable(string containerName)
+    async Task<DbContextScope<ReadModelDbContext>> OpenTable(string containerName, IReadOnlyList<ProjectedColumn> columns)
     {
         var finished = Reads.Begin();
-        var context = OpenContext(containerName);
+        var context = OpenContext(containerName, columns);
         await Fixture!.Timings.Run("ef-table-ensure", context.EnsureTableExists);
         return new DbContextScope<ReadModelDbContext>(context, finished);
     }
@@ -96,12 +103,13 @@ public class SqlServerSinkHarness : ISqlSinkHarness
     /// Opens a container that must already exist, as an occurrence read does: never creating the table.
     /// </summary>
     /// <param name="containerName">The name of the container.</param>
+    /// <param name="columns">The columns for this read model.</param>
     /// <returns>A <see cref="DbContextScope{TDbContext}"/> for the container, or null when it does not exist.</returns>
-    async Task<DbContextScope<ReadModelDbContext>?> OpenExistingTable(string containerName)
+    async Task<DbContextScope<ReadModelDbContext>?> OpenExistingTable(string containerName, IReadOnlyList<ProjectedColumn> columns)
     {
         var finished = Reads.Begin();
-        var context = OpenContext(containerName);
-        if (await _migrator.ProbeExistingTable(containerName, context))
+        var context = OpenContext(containerName, columns);
+        if (await Migrator.ProbeExistingTable(containerName, context))
         {
             return new DbContextScope<ReadModelDbContext>(context, finished);
         }
@@ -111,15 +119,16 @@ public class SqlServerSinkHarness : ISqlSinkHarness
         return null;
     }
 
-    ReadModelDbContext OpenContext(string containerName)
+    ReadModelDbContext OpenContext(string containerName, IReadOnlyList<ProjectedColumn> columns)
     {
         var builder = new DbContextOptionsBuilder<ReadModelDbContext>();
         builder.UseDatabaseFromConnectionString(ConnectionString);
+        ConfigureOptions?.Invoke(builder);
         var options = builder.AddConceptAsSupport().WithoutServiceProviderCaching().AddInterceptors(Interceptors).Options;
 
         var fixture = Fixture!;
 #pragma warning disable CA2000 // Disposed by the sink through the returned scope.
-        var context = fixture.Timings.Measure("ef-context-construction", () => fixture.Track(new ReadModelDbContext(options, containerName, _columns, _migrator)));
+        var context = fixture.Timings.Measure("ef-context-construction", () => fixture.Track(new ReadModelDbContext(options, containerName, columns, Migrator)));
 #pragma warning restore CA2000
         return context;
     }

@@ -4,7 +4,7 @@ description: Subscribe a Chronicle reactor to events from an external event stor
 # Subscribe Reactors to External Event Stores
 
 :::note[Client coverage]
-External event store inbox routing is currently C#-only — it depends on the `[EventStore]` attribute on event types or reactors, which doesn't exist in Kotlin, Elixir, or TypeScript.
+External event store inbox routing is currently C#-only — it uses `[EventStore]` metadata on event types or reactors, or explicit reactor registration options. These routing declarations are not available in Kotlin, Elixir, or TypeScript.
 :::
 
 ## Automatic Inbox Routing
@@ -26,6 +26,12 @@ Chronicle resolves the reactor to the inbox for that source event store and impl
 
 <ChronicleClientTabs snippet="reactors/external-event-store-subscriptions/observer-level-event-store" />
 
+## Source Event Store from Configuration
+
+When the source event store name is only known at runtime, register the reactor with `ReactorRegistrationOptions.FromEventStore(name)` instead of adding an `[EventStore]` attribute. Chronicle resolves it to `inbox-<store>` and creates the same implicit outbox-to-inbox subscription. A different `[EventStore]` declaration or an explicit event sequence conflicts with this option. As with the attribute, a source equal to the current store still selects `inbox-<store>`, but does not create a subscription.
+
+<ChronicleClientTabs snippet="reactors/external-event-store-subscriptions/configured-source-event-store" />
+
 ## Implicit Combined Event Type Filtering
 
 For each source event store, Chronicle combines all reactor and reducer event types into one implicit subscription filter.
@@ -38,7 +44,7 @@ This means:
 
 ## Explicit Event Sequence Is Not Allowed with Observer EventStore
 
-When a reactor has `[EventStore("...")]`, do not combine it with:
+When a reactor has `[EventStore("...")]` or is registered with `ReactorRegistrationOptions.FromEventStore(name)`, do not combine it with:
 
 - `[EventSequence("...")]`
 - `[EventLog]`
@@ -46,8 +52,8 @@ When a reactor has `[EventStore("...")]`, do not combine it with:
 
 This is invalid and fails:
 
-- At runtime with `EventStoreCannotBeCombinedWithExplicitEventSequence`.
-- At compile time with analyzer rule `CHR0013`.
+- At runtime with `EventStoreCannotBeCombinedWithExplicitEventSequence`; registration options fail when the store is created.
+- At compile time with analyzer rule `CHR0013` for the attribute only.
 
 ## Forwarded metadata
 

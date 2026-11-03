@@ -19,6 +19,12 @@ namespace Cratis.Chronicle.Storage.MongoDB;
 public static class DatabaseNames
 {
     /// <summary>
+    /// The name the System event store's databases were named by before <see cref="Configuration.Storage.SystemDatabaseName"/>
+    /// existed: the event store name itself.
+    /// </summary>
+    public const string LegacySystemDatabaseName = "System";
+
+    /// <summary>
     /// The maximum length, in bytes, MongoDB allows for a database name.
     /// </summary>
     const int MaximumLengthInBytes = 63;
@@ -47,9 +53,10 @@ public static class DatabaseNames
     /// </summary>
     /// <param name="eventStore">The <see cref="EventStoreName"/> to get the database name for.</param>
     /// <param name="prefix">The prefix, or empty to preserve the database name.</param>
+    /// <param name="systemDatabaseName">The name the System event store's databases are named by.</param>
     /// <returns>The database name.</returns>
-    public static string ForEventStore(EventStoreName eventStore, string prefix = "") =>
-        Validated($"{prefix}{eventStore}+es", eventStore, null);
+    public static string ForEventStore(EventStoreName eventStore, string prefix = "", string systemDatabaseName = Configuration.Storage.DefaultSystemDatabaseName) =>
+        Validated($"{prefix}{NameFor(eventStore, systemDatabaseName)}+es", eventStore, null);
 
     /// <summary>
     /// Get the name of the database holding the event sequences of a namespace within an event store.
@@ -57,9 +64,10 @@ public static class DatabaseNames
     /// <param name="eventStore">The <see cref="EventStoreName"/> to get the database name for.</param>
     /// <param name="namespace">The <see cref="EventStoreNamespaceName"/> to get the database name for.</param>
     /// <param name="prefix">The prefix, or empty to preserve the database name.</param>
+    /// <param name="systemDatabaseName">The name the System event store's databases are named by.</param>
     /// <returns>The database name.</returns>
-    public static string ForEventStoreNamespace(EventStoreName eventStore, EventStoreNamespaceName @namespace, string prefix = "") =>
-        Validated($"{prefix}{eventStore}+es+{@namespace}", eventStore, @namespace);
+    public static string ForEventStoreNamespace(EventStoreName eventStore, EventStoreNamespaceName @namespace, string prefix = "", string systemDatabaseName = Configuration.Storage.DefaultSystemDatabaseName) =>
+        Validated($"{prefix}{NameFor(eventStore, systemDatabaseName)}+es+{@namespace}", eventStore, @namespace);
 
     /// <summary>
     /// Get the name of the database read models of a namespace within an event store are materialized into.
@@ -67,17 +75,45 @@ public static class DatabaseNames
     /// <param name="eventStore">The <see cref="EventStoreName"/> to get the database name for.</param>
     /// <param name="namespace">The <see cref="EventStoreNamespaceName"/> to get the database name for.</param>
     /// <param name="prefix">The prefix, or empty to preserve the database name.</param>
+    /// <param name="systemDatabaseName">The name the System event store's databases are named by.</param>
     /// <returns>The database name.</returns>
     /// <remarks>
     /// Unlike the event sequence databases, the default namespace is not suffixed — its read models live in the
     /// bare event store name. A reader that suffixes unconditionally therefore resolves a database that simply
     /// does not exist for the default namespace, and reads come back empty rather than failing.
     /// </remarks>
-    public static string ForReadModels(EventStoreName eventStore, EventStoreNamespaceName @namespace, string prefix = "") =>
-        Validated(
-            @namespace == EventStoreNamespaceName.Default ? $"{prefix}{eventStore}" : $"{prefix}{eventStore}+{@namespace}",
+    public static string ForReadModels(EventStoreName eventStore, EventStoreNamespaceName @namespace, string prefix = "", string systemDatabaseName = Configuration.Storage.DefaultSystemDatabaseName)
+    {
+        var name = NameFor(eventStore, systemDatabaseName);
+        return Validated(
+            @namespace == EventStoreNamespaceName.Default ? $"{prefix}{name}" : $"{prefix}{name}+{@namespace}",
             eventStore,
             @namespace);
+    }
+
+    /// <summary>
+    /// Get the event store a name found in place of the event store name in a database name stands for.
+    /// </summary>
+    /// <param name="name">The name as it appears in the database name.</param>
+    /// <param name="systemDatabaseName">The name the System event store's databases are named by.</param>
+    /// <returns>The <see cref="EventStoreName"/>.</returns>
+    public static EventStoreName EventStoreFor(string name, string systemDatabaseName = Configuration.Storage.DefaultSystemDatabaseName) =>
+        string.Equals(name, systemDatabaseName, StringComparison.OrdinalIgnoreCase) ? EventStoreName.System : new EventStoreName(name);
+
+    static string NameFor(EventStoreName eventStore, string systemDatabaseName)
+    {
+        if (string.Equals(eventStore.Value, EventStoreName.System.Value, StringComparison.OrdinalIgnoreCase))
+        {
+            return systemDatabaseName;
+        }
+
+        if (string.Equals(eventStore.Value, systemDatabaseName, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidDatabaseName(eventStore.Value, "the name is reserved for the System event store's databases", eventStore, null);
+        }
+
+        return eventStore.Value;
+    }
 
     static string Validated(string databaseName, EventStoreName eventStore, EventStoreNamespaceName? @namespace)
     {

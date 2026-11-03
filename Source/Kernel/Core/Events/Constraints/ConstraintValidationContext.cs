@@ -147,12 +147,24 @@ public record ConstraintValidationContext
     /// Attempts every updater independently and reports every result within its cancellation deadline.
     /// </summary>
     /// <param name="eventSequenceNumber">The event's position.</param>
+    /// <param name="attemptTimeout">The longest a single updater may run before it is abandoned.</param>
     /// <param name="cancellationToken">The enclosing turn's cancellation deadline.</param>
     /// <returns>One outcome per updater, including failures and abandoned attempts.</returns>
-    public async Task<IEnumerable<ConstraintIndexUpdateResult>> Update(EventSequenceNumber eventSequenceNumber, CancellationToken cancellationToken) =>
-        await Task.WhenAll(_indexUpdates.Select(async update =>
+    public async Task<IEnumerable<ConstraintIndexUpdateResult>> Update(EventSequenceNumber eventSequenceNumber, TimeSpan attemptTimeout, CancellationToken cancellationToken)
+    {
+        // Started eagerly in a loop with the values passed as arguments, so no closure has to capture them.
+        var attempts = new Task<ConstraintIndexUpdateResult>[_indexUpdates.Length];
+        for (var i = 0; i < attempts.Length; i++)
         {
-            var (outcome, error) = await ConstraintIndexUpdateAttempt.Run(token => update.Updater.Update(eventSequenceNumber, token), cancellationToken);
-            return new ConstraintIndexUpdateResult(update.Updater, outcome, error);
-        }));
+            attempts[i] = Attempt(_indexUpdates[i].Updater, eventSequenceNumber, attemptTimeout, cancellationToken);
+        }
+
+        return await Task.WhenAll(attempts);
+    }
+
+    static async Task<ConstraintIndexUpdateResult> Attempt(IUpdateConstraintIndex updater, EventSequenceNumber eventSequenceNumber, TimeSpan attemptTimeout, CancellationToken cancellationToken)
+    {
+        var (outcome, error) = await ConstraintIndexUpdateAttempt.Run(token => updater.Update(eventSequenceNumber, token), attemptTimeout, cancellationToken);
+        return new ConstraintIndexUpdateResult(updater, outcome, error);
+    }
 }

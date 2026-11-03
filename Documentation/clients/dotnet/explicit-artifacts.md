@@ -18,7 +18,7 @@ The generic and `Type` forms declare the same artifacts:
 | Generic form | Runtime-type form | Optional configuration |
 | --- | --- | --- |
 | `RegisterEventType<T>(configure)` | `RegisterEventType(type, configure)` | Event identity, generation, visibility, owning store, publication sequence |
-| `RegisterReactor<T>(id)` | `RegisterReactor(type, id)` | `ReactorId` |
+| `RegisterReactor<T>(id)` / `RegisterReactor<T>(options, id)` | `RegisterReactor(type, id)` / `RegisterReactor(type, options, id)` | `ReactorId`, source event store |
 | `RegisterReducer<T>(id)` | `RegisterReducer(type, id)` | `ReducerId` |
 | `RegisterConstraint<T>()` | `RegisterConstraint(type)` | None |
 | `RegisterEventSource<T>(name)` | `RegisterEventSource(type, name)` | Source name |

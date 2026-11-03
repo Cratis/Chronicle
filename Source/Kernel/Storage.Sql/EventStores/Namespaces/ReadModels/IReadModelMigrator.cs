@@ -32,6 +32,13 @@ public interface IReadModelMigrator
     Task EnsureReplayPromotions(ReadModelDbContext context);
 
     /// <summary>
+    /// Ensures the Chronicle-owned sink cycle receipt table exists in the read-model database.
+    /// </summary>
+    /// <param name="context">The context whose connection is used to create the table.</param>
+    /// <returns>Awaitable task.</returns>
+    Task EnsureSinkCycleReceipts(ReadModelDbContext context);
+
+    /// <summary>
     /// Clears cached migration state for all tables whose connection string starts with the given prefix.
     /// </summary>
     /// <param name="connectionStringPrefix">

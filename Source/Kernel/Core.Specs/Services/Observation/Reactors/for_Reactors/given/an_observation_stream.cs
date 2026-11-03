@@ -24,10 +24,13 @@ public class an_observation_stream : Specification
     protected ReactorEventsObserver _deliver;
     IDisposable _subscription;
 
+    private protected virtual IActivitySource<Reactors> CreateActivitySource() => new ActivitySource<Reactors>();
+
     async Task Establish()
     {
         var subscribed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var mediator = Substitute.For<IReactorMediator>();
+        mediator.Disconnected(Arg.Any<ReactorId>(), Arg.Any<ConnectionId>(), Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<ReactorEventsObserver>(), Arg.Any<ReactorReplayObserver>()).Returns(true);
         mediator.When(_ => _.Subscribe(Arg.Any<ReactorId>(), Arg.Any<ConnectionId>(), Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<ReactorEventsObserver>()))
             .Do(call =>
             {
@@ -39,9 +42,10 @@ public class an_observation_stream : Specification
             mediator,
             Substitute.For<IStorage>(),
             new JsonSerializerOptions(),
-            new ActivitySource<Reactors>(),
+            CreateActivitySource(),
             Options.Create(new ChronicleOptions()),
-            NullLogger<Reactors>.Instance);
+            NullLogger<Reactors>.Instance,
+            Substitute.For<IObserverRegistrationGate>());
         _subscription = reactors.Observe(_messages).Subscribe(_deliveries.Add);
         _messages.OnNext(new(new(new RegisterReactor
         {
