@@ -45,6 +45,76 @@ Observer configuration controls retry behavior, timeouts, watchdog monitoring, a
 | maxConcurrentPartitions | number | 32 | Upper bound on how many job steps (replay and catch-up work) run in parallel. The effective limit is the smaller of this value and `jobs.maxParallelSteps`. Despite the name it does not limit live event delivery. See [Job throttling](job-throttling.md) |
 | fanOutStrategy | string | round-robin | Strategy for distributing events across multiple connected instances of the same client. `round-robin` distributes deterministically by partition key, keeping every partition sticky to one instance and preserving per-partition ordering. `random` picks a random instance per delivery |
 
+## Per-observer host retry overrides
+
+Use the sibling `observerRetryOverrides` map to override retries for one fully qualified,
+non-webhook observer. For example, in root `chronicle.json`:
+
+```json
+{
+  "observers": {
+    "maxRetryAttempts": 10,
+    "backoffDelay": 1,
+    "exponentialBackoffDelayFactor": 2,
+    "maximumBackoffDelay": 600
+  },
+  "observerRetryOverrides": {
+    "orders-reactor#orders#production#event-log": {
+      "maxRetryAttempts": 2,
+      "backoffDelay": 5,
+      "exponentialBackoffDelayFactor": 3,
+      "maximumBackoffDelay": 20
+    }
+  }
+}
+```
+
+The exact key order is `observerId#eventStore#namespace#eventSequenceId`. Lookup is ordinal
+and case-sensitive, with no bare-id or wildcard matching. Each of the four fields is optional;
+omitted fields inherit the current global `observers` value. Other observer settings are unchanged.
+Ordinary host configuration, such as `appsettings.json`, places both sections under `Cratis:Chronicle`.
+
+For each new entry, the effective attempt limit must be non-negative (`0` means unlimited),
+base and maximum delays must be positive integer seconds, and the factor must be finite and at
+least `1`. Invalid entries fail startup validation. A cap smaller than the base is allowed.
+These checks do not retroactively validate global settings without an override entry.
+The delay is `backoffDelay * factor^attemptsInCurrentBudget`, capped before conversion to a
+time span, including when exponentiation overflows positively. The first failure uses exponent
+`1`: this example schedules `15` seconds, then `20` seconds, and quarantines on the third
+same-position failure. Reminder repeat periods remain at least one minute.
+
+The existing budget and recovery rules are unchanged: progress or clearing partition quarantine
+starts a fresh budget. Reducing the limit does not reset recorded attempts or introduce a new
+limit check in the recovery-not-completed callback, which can rearm an existing episode using
+its historical count. Already-armed reminders are not rescheduled by a configuration change.
+
+### Configuration sources and application
+
+At `AddConfiguration` invocation, prefixed environment values such as
+`Cratis__Chronicle__ObserverRetryOverrides__orders-reactor#orders#production#event-log__MaxRetryAttempts`
+override matching root-file leaves. Non-null leaves from this separate root-file/environment
+bootstrap configuration overwrite matching leaves in the supplied host configuration; absent
+leaves leave host values alone. This describes the bootstrap copy, not every later provider or
+registration order.
+
+Although the root file provider watches for changes, its values are copied into host configuration
+once. There is no change-token bridge from that provider to the bound options, and changing the
+process environment does not refresh those copied values, even on a host configuration reload.
+Use consistent configuration on every silo and restart or redeploy to apply operator changes.
+A genuine supplied host configuration change can produce a new bound options snapshot; the
+observer configuration provider reads the supplied monitor on its next lookup. This adds no
+automatic file/environment reload machinery.
+
+Keys require exactly four non-whitespace components, with no colons or extra `#` separators.
+`#` is unescaped in composite identities. Configuration paths are case-insensitive even though
+observer lookup is ordinal, so case-only entries cannot be relied on to coexist. Colon-containing
+identities are unsupported by this map, and environment `__` encoding cannot represent every
+opaque identity; prefer JSON for supported ordinary keys.
+
+These policies are host-only, not client declarations or persisted observer definitions. They
+provide no restart-storage policy coverage. Webhooks continue to use `webhooks.retry`, including
+their schedule and deferrals; this map does not provide per-observer webhook policies.
+
 ## Definition evolution
 
 Chronicle compares every newly registered projection and reducer definition with its stored definition. It then chooses the minimum operation it can prove correct:

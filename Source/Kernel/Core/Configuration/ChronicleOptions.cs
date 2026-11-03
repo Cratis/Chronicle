@@ -111,6 +111,12 @@ public class ChronicleOptions : IValidatableObject
     public Observers Observers { get; init; } = new Observers();
 
     /// <summary>
+    /// Gets host retry overrides keyed by observerId#eventStore#namespace#eventSequenceId.
+    /// Applies only to non-webhook observers; omitted fields inherit <see cref="Observers"/>.
+    /// </summary>
+    public IDictionary<string, ObserverRetryOverrides> ObserverRetryOverrides { get; init; } = new Dictionary<string, ObserverRetryOverrides>(StringComparer.Ordinal);
+
+    /// <summary>
     /// Gets the durable occurrence delivery configuration.
     /// </summary>
     public Occurrences Occurrences { get; init; } = new();
@@ -233,10 +239,56 @@ public class ChronicleOptions : IValidatableObject
             .Select(_ => new ValidationResult(
                 $"Alerts.Conditions['{_.Key}'].RaiseAfter must be non-negative; zero raises immediately.",
                 [$"{nameof(Alerts)}.{nameof(Alerts.Conditions)}[{_.Key}].{nameof(AlertConditionOptions.RaiseAfter)}"]));
-        foreach (var error in ValidateSingleWriterLease().Concat(alertErrors)) yield return error;
+        foreach (var error in ValidateSingleWriterLease().Concat(alertErrors).Concat(ValidateObserverRetryOverrides())) yield return error;
         if (!Webhooks.Probe.HasValidTiming)
         {
             yield return new ValidationResult("Invalid webhook probe timing settings.", [$"{nameof(Webhooks)}.{nameof(Configuration.Webhooks.Probe)}"]);
+        }
+    }
+
+    IEnumerable<ValidationResult> ValidateObserverRetryOverrides()
+    {
+        if (ObserverRetryOverrides is null)
+        {
+            yield return new ValidationResult("ObserverRetryOverrides must not be null.", [nameof(ObserverRetryOverrides)]);
+            yield break;
+        }
+
+        foreach (var entry in ObserverRetryOverrides)
+        {
+            var member = $"{nameof(ObserverRetryOverrides)}['{entry.Key}']";
+            var parts = entry.Key.Split(KeyHelper.Separator);
+            if (entry.Key.Contains(':') || parts.Length != 4 || parts.Any(string.IsNullOrWhiteSpace))
+            {
+                yield return new ValidationResult($"{member} must have four non-whitespace components: observerId#eventStore#namespace#eventSequenceId, without colons.", [member]);
+            }
+            if (entry.Value is null)
+            {
+                yield return new ValidationResult($"{member} must not be null.", [member]);
+                continue;
+            }
+
+            foreach (var error in ValidateRetryPolicy(entry.Value.ApplyTo(Observers), member)) yield return error;
+        }
+    }
+
+    static IEnumerable<ValidationResult> ValidateRetryPolicy(Observers policy, string member)
+    {
+        if (policy.MaxRetryAttempts < 0)
+        {
+            yield return new ValidationResult($"{member}.MaxRetryAttempts must be non-negative; zero means unlimited.", [$"{member}.MaxRetryAttempts"]);
+        }
+        if (policy.BackoffDelay <= 0)
+        {
+            yield return new ValidationResult($"{member}.BackoffDelay must be positive seconds.", [$"{member}.BackoffDelay"]);
+        }
+        if (policy.MaximumBackoffDelay <= 0)
+        {
+            yield return new ValidationResult($"{member}.MaximumBackoffDelay must be positive seconds.", [$"{member}.MaximumBackoffDelay"]);
+        }
+        if (!float.IsFinite(policy.ExponentialBackoffDelayFactor) || policy.ExponentialBackoffDelayFactor < 1)
+        {
+            yield return new ValidationResult($"{member}.ExponentialBackoffDelayFactor must be finite and at least one.", [$"{member}.ExponentialBackoffDelayFactor"]);
         }
     }
 
