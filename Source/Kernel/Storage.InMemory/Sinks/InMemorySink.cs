@@ -177,10 +177,16 @@ public partial class InMemorySink(
                         continue;
                     }
 
+                    var hasIdentity = ((IDictionary<string, object?>)row).TryGetValue("id", out var identity);
                     var joinedState = row.Clone();
                     foreach (var joined in matching)
                     {
                         joinedState = ApplyActualChanges(new Key(rowKey, ArrayIndexers.NoIndexers), joined.Changes, joinedState);
+                    }
+
+                    if (hasIdentity)
+                    {
+                        ((IDictionary<string, object?>)joinedState)["id"] = identity;
                     }
 
                     Collection[rowKey] = joinedState;

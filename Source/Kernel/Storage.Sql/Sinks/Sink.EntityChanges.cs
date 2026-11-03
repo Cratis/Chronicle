@@ -82,6 +82,12 @@ public partial class Sink
             return;
         }
 
+        // The sink owns the row identity from Key, matching MongoDB's IsMongoDBKey filter.
+        if (column.IsKey)
+        {
+            return;
+        }
+
         if (!column.IsJson)
         {
             if (difference.PropertyPath.Segments.Count() == 1)
