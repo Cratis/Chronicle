@@ -46,7 +46,10 @@ public class Features
     /// Whether replaying a single partition of an eligible projection rebuilds it in isolation, out of sight of the live read model. Default false.
     /// </summary>
     /// <remarks>
-    /// Reserved. Nothing consults it yet, so partition replays behave as they always have whatever its value.
+    /// Eligible means a namespaced projection whose partition is closed, a replay of every event type, a sink that can
+    /// replace a partition atomically, and no projection generations in play. The rebuilt partition is published in one
+    /// replace, so readers see either the old or the rebuilt document, never a partly replayed one. Anything else, or
+    /// this flag off, replays the partition in place as before.
     /// </remarks>
     public bool IsolatedPartitionReplay { get; init; }
 }

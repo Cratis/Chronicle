@@ -303,6 +303,10 @@ interface [GrainInterfaceType("Cratis.Chronicle.Observation.IObserverServiceClie
 interface [GrainInterfaceType("Cratis.Chronicle.Observation.IObserverSubscriber")] Cratis.Chronicle.Observation.IObserverSubscriber [Version(0)]
   CBFAC56F: OnNext(Cratis.Chronicle.Concepts.Keys.Key, System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Events.AppendedEvent>, Cratis.Chronicle.Observation.ObserverSubscriberContext) -> Task<Cratis.Chronicle.Observation.ObserverSubscriberResult>
 
+interface [GrainInterfaceType("Cratis.Chronicle.Observation.IProjectionPartitionRebuilder")] Cratis.Chronicle.Observation.IProjectionPartitionRebuilder [Version(0)]
+  8C863956: Begin(Cratis.Chronicle.Concepts.Observation.ObserverKey, Cratis.Chronicle.Concepts.Keys.Key) -> Task
+  A6B8E7A8: Publish(Cratis.Chronicle.Concepts.Events.EventSequenceNumber) -> Task<bool>
+
 class [GrainType("catchupobserver")] Cratis.Chronicle.Observation.Jobs.CatchUpObserver
 
 class [GrainType("catchupobserverpartition")] Cratis.Chronicle.Observation.Jobs.CatchUpObserverPartition
@@ -341,6 +345,8 @@ class [GrainType("observer")] Cratis.Chronicle.Observation.Observer
 class [GrainType("observerservice")] Cratis.Chronicle.Observation.ObserverService
 
 class [GrainType("observerserviceclient")] Cratis.Chronicle.Observation.ObserverServiceClient
+
+class [GrainType("projectionpartitionrebuilder")] Cratis.Chronicle.Observation.ProjectionPartitionRebuilder
 
 interface [GrainInterfaceType("Cratis.Chronicle.Observation.Reactors.Clients.IReactor")] Cratis.Chronicle.Observation.Reactors.Clients.IReactor [Version(0)]
   06514374: KeepSubscription(Cratis.Chronicle.Concepts.Observation.Reactors.ReactorDefinition) -> Task

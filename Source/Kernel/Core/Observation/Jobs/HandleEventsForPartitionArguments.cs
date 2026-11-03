@@ -35,4 +35,12 @@ public record HandleEventsForPartitionArguments(
     /// Gets the deferral that owns the recovery, or null when not deferred.
     /// </summary>
     public Guid? DeferralId { get; init; }
+
+    /// <summary>
+    /// Gets a value indicating whether the partition is rebuilt in isolation and published atomically, rather than replayed in place.
+    /// </summary>
+    /// <remarks>
+    /// Decided once, when the replay job prepares its steps. Step requests persisted before the property existed read as false.
+    /// </remarks>
+    public bool IsolatedRebuild { get; init; }
 }

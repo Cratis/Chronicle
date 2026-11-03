@@ -28,6 +28,7 @@ public class a_partition_replay_job : Specification
     protected ReplayObserverPartitionRequest _request;
     protected IStorage<JobStateWithLastHandledEvent> _stateStorage;
     protected Cratis.Chronicle.Storage.IEventStoreStorage _eventStore;
+    protected IPartitionRebuildAdmission _partitionRebuildAdmission;
 
     async Task Establish()
     {
@@ -58,7 +59,9 @@ public class a_partition_replay_job : Specification
             .Returns(Result<JobType, IJobTypes.GetForError>.Success(new JobType("ReplayObserverPartition")));
 
         _silo.AddService(new JsonSerializerOptions());
+        _partitionRebuildAdmission = Substitute.For<IPartitionRebuildAdmission>();
         _silo.AddService(storage);
+        _silo.AddService(_partitionRebuildAdmission);
         _silo.AddService(jobTypes);
         _silo.AddService(_replayStateServiceClient);
         _silo.AddService(NullLogger<IJob>.Instance);

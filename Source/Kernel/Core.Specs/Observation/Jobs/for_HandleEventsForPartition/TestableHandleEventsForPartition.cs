@@ -80,6 +80,16 @@ public class TestableHandleEventsForPartition(
     }
 
     /// <summary>
+    /// Makes the step rebuild its partition in isolation through the given rebuilder.
+    /// </summary>
+    /// <param name="rebuilder">The <see cref="IProjectionPartitionRebuilder"/> mock.</param>
+    public void SetupIsolatedRebuildForTesting(IProjectionPartitionRebuilder rebuilder)
+    {
+        _subscriberField.SetValue(this, rebuilder);
+        typeof(HandleEventsForPartition).GetField("_isolatedRebuild", BindingFlags.NonPublic | BindingFlags.Instance)!.SetValue(this, true);
+    }
+
+    /// <summary>
     /// Exposes the protected <see cref="HandleEventsForPartition.PerformStep"/> for testing.
     /// </summary>
     /// <param name="currentState">The current state of the job step.</param>

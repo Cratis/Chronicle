@@ -27,11 +27,22 @@ public partial class HandleEventsForPartition
             currentState.ObserverKey.Namespace,
             currentState.ObserverKey.EventSequenceId);
         await PinBulkWindows(currentState, subscription);
+        if (_isolatedRebuild)
+        {
+            _isolatedRangeEnd = currentState.EndEventSequenceNumber.IsActualValue
+                ? currentState.EndEventSequenceNumber
+                : await eventSequenceStorage.GetTailSequenceNumber();
+            if (!_isolatedRangeEnd.IsActualValue)
+            {
+                throw new InvalidOperationException("An isolated rebuild requires a finite captured event range");
+            }
+        }
+
         return await eventSequenceStorage.GetRange(
-            currentState.LastSuccessfullyHandledEventSequenceNumber == EventSequenceNumber.Unavailable
+            _isolatedRebuild || currentState.LastSuccessfullyHandledEventSequenceNumber == EventSequenceNumber.Unavailable
                 ? currentState.StartEventSequenceNumber
                 : currentState.LastSuccessfullyHandledEventSequenceNumber.Next(),
-            currentState.EndEventSequenceNumber,
+            _isolatedRebuild ? _isolatedRangeEnd : currentState.EndEventSequenceNumber,
             _eventSourceId,
             eventTypesToRead,
             cancellationToken: cancellationToken);
@@ -41,6 +52,7 @@ public partial class HandleEventsForPartition
     {
         _bulkWindowPin = null;
         _bulkObserver = null;
+        if (_isolatedRebuild) return;
         var isReducer = subscription.SubscriberType.IsAssignableTo(typeof(IReducerObserverSubscriber));
         var isProjection = subscription.IsCollapsingProjection || subscription.SubscriberType.IsAssignableTo(typeof(IProjectionObserverSubscriber));
         if (!isReducer && !isProjection) return;

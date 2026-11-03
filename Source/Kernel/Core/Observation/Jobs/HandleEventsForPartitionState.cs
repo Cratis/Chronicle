@@ -62,4 +62,9 @@ public class HandleEventsForPartitionState : JobStepState
     /// Gets or sets the <see cref="ObserverReaderScope"/> the step reads with. Null for a step persisted before steps carried a scope.
     /// </summary>
     public ObserverReaderScope? ReaderScope { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the step rebuilds its partition in isolation. False for a step persisted before steps carried it.
+    /// </summary>
+    public bool IsolatedRebuild { get; set; }
 }

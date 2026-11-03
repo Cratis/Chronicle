@@ -88,7 +88,7 @@ public partial class HandleEventsForPartition(
     /// live delivery path already carries. It equalizes the window with the live path; it does not make the
     /// subscriber idempotent.
     /// </remarks>
-    protected override bool CheckpointAfterEveryBatch => _isCollapsingProjection;
+    protected override bool CheckpointAfterEveryBatch => _isCollapsingProjection && !_isolatedRebuild;
 
     /// <inheritdoc/>
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
@@ -104,7 +104,7 @@ public partial class HandleEventsForPartition(
             // reaching PerformStep, which reports the disconnection the job knows how to handle.
             if (subscription.IsSubscribed)
             {
-                _subscriber = GrainFactory.GetGrain(subscription.SubscriberType, GetObserverSubscriberKey(subscription, State.Partition)) as IObserverSubscriber;
+                _subscriber = ResolveSubscriber(subscription, State.Partition, State.IsolatedRebuild);
                 _isCollapsingProjection = subscription.IsCollapsingProjection;
             }
         }
@@ -140,12 +140,13 @@ public partial class HandleEventsForPartition(
         State.Partition = request.Partition;
         State.StartEventSequenceNumber = request.StartEventSequenceNumber;
         State.EndEventSequenceNumber = request.EndEventSequenceNumber;
+        State.IsolatedRebuild = request.IsolatedRebuild;
         return ValueTask.CompletedTask;
     }
 
     /// <inheritdoc />
     protected override ValueTask<HandleEventsForPartitionResult?> CreateCancelledResultFromCurrentState(HandleEventsForPartitionState currentState) =>
-        ValueTask.FromResult<HandleEventsForPartitionResult?>(new(currentState.LastSuccessfullyHandledEventSequenceNumber));
+        ValueTask.FromResult<HandleEventsForPartitionResult?>(new(currentState.IsolatedRebuild ? EventSequenceNumber.Unavailable : currentState.LastSuccessfullyHandledEventSequenceNumber));
 
     /// <inheritdoc/>
     protected override async Task<Monads.Result<PrepareJobStepError>> PrepareStep(HandleEventsForPartitionArguments request)
@@ -159,7 +160,7 @@ public partial class HandleEventsForPartition(
 
             if (subscription.IsSubscribed)
             {
-                _subscriber = GrainFactory.GetGrain(subscription.SubscriberType, GetObserverSubscriberKey(subscription, request.Partition)) as IObserverSubscriber;
+                _subscriber = ResolveSubscriber(subscription, request.Partition, request.IsolatedRebuild);
                 _isCollapsingProjection = subscription.IsCollapsingProjection;
                 logger.SuccessfullyPrepared(request.Partition);
                 return Result.Success<PrepareJobStepError>();
@@ -194,6 +195,7 @@ public partial class HandleEventsForPartition(
                 logger.CancelledBeforeHandlingAnyEvents(currentState.Partition);
                 return JobStepResult.Failed(PerformJobStepError.CancelledWithNoResult());
             }
+            lastSuccessfullyHandledEventSequenceNumber = await BeginIsolatedRebuild(currentState, lastSuccessfullyHandledEventSequenceNumber);
             var scopedEventTypes = ObserverReaderScope
                 .ForRequest(currentState.ReaderScope, currentState.EventTypes)
                 .EventTypesToRead(currentState.EventTypes);
@@ -382,10 +384,7 @@ public partial class HandleEventsForPartition(
                 logger.HandledAllEvents(currentState.Partition, lastSuccessfullyHandledEventSequenceNumber);
             }
 
-            return JobStepResult.Succeeded(CreateResult(lastSuccessfullyHandledEventSequenceNumber) with
-            {
-                LastScannedEventSequenceNumber = lastScannedEventSequenceNumber
-            });
+            return await CompleteRange(currentState, lastSuccessfullyHandledEventSequenceNumber, lastScannedEventSequenceNumber);
         }
         catch (TaskCanceledException)
         {
@@ -433,27 +432,6 @@ public partial class HandleEventsForPartition(
         }
     }
 
-    /// <summary>
-    /// Creates the result for a failure the observer could not be told about. It is handed to the job as transient, so
-    /// the job runs the step again and reports the partition as failed when the attempts run out - a failure is never
-    /// left without a failed partition to retry it.
-    /// </summary>
-    /// <param name="partition">The partition the step was handling.</param>
-    /// <param name="failedAt">The sequence number the partition failed at.</param>
-    /// <param name="lastSuccessfullyHandled">The last successfully handled event sequence number.</param>
-    /// <param name="error">The failure.</param>
-    /// <returns>The <see cref="JobStepResult"/>.</returns>
-    static JobStepResult UnreportedFailure(Key partition, EventSequenceNumber failedAt, EventSequenceNumber lastSuccessfullyHandled, Exception error)
-    {
-        var messages = TransientTimeouts.ShortenForStep(error.GetAllMessages());
-        return JobStepResult.Failed(PerformJobStepError.FailedWithPartialResult(
-            CreateResult(lastSuccessfullyHandled) with { TransientFailure = new(partition, failedAt, messages) },
-            messages,
-            string.Empty));
-    }
-
-    static HandleEventsForPartitionResult CreateResult(EventSequenceNumber lastSuccessfullyHandled) => new(lastSuccessfullyHandled);
-
     static EventSequenceNumber GetLastScanned(EventSequenceNumber lastScanned, BoundedEventCursor events)
     {
         foreach (var @event in events.Current)
@@ -466,6 +444,28 @@ public partial class HandleEventsForPartition(
 
         return lastScanned;
     }
+
+    /// <summary>
+    /// Creates the result for a failure the observer could not be told about. It is handed to the job as transient, so
+    /// the job runs the step again and reports the partition as failed when the attempts run out - a failure is never
+    /// left without a failed partition to retry it.
+    /// </summary>
+    /// <param name="partition">The partition the step was handling.</param>
+    /// <param name="failedAt">The sequence number the partition failed at.</param>
+    /// <param name="lastSuccessfullyHandled">The last successfully handled event sequence number.</param>
+    /// <param name="error">The failure.</param>
+    /// <returns>The <see cref="JobStepResult"/>.</returns>
+    JobStepResult UnreportedFailure(Key partition, EventSequenceNumber failedAt, EventSequenceNumber lastSuccessfullyHandled, Exception error)
+    {
+        var messages = TransientTimeouts.ShortenForStep(error.GetAllMessages());
+        return JobStepResult.Failed(PerformJobStepError.FailedWithPartialResult(
+            CreateResult(lastSuccessfullyHandled) with { TransientFailure = new(partition, failedAt, messages) },
+            messages,
+            string.Empty));
+    }
+
+    HandleEventsForPartitionResult CreateResult(EventSequenceNumber lastSuccessfullyHandled) =>
+        new(_isolatedRebuild ? EventSequenceNumber.Unavailable : lastSuccessfullyHandled);
 
     async Task<bool> TryReportPartitionFailed(EventSequenceNumber failedAt, Exception error)
     {
@@ -490,7 +490,7 @@ public partial class HandleEventsForPartition(
     async Task<bool> ReportFromWork(EventSequenceNumber lastHandled)
     {
         await ConfirmBulkWindowDurability();
-        var reported = await TryInvokeOnActivation(() => ReportNewSuccessfullyHandledEvent(lastHandled));
+        var reported = await TryInvokeOnActivation(() => _isolatedRebuild ? Task.CompletedTask : ReportNewSuccessfullyHandledEvent(lastHandled));
         if (reported.TryGetError(out var rejection))
         {
             logger.CheckpointCallbackRejected(_eventSourceId, rejection, lastHandled);

@@ -16,11 +16,13 @@ namespace Cratis.Chronicle.Observation.Jobs;
 /// </summary>
 /// <param name="replayStateServiceClient"><see cref="IObserverServiceClient"/>.</param>
 /// <param name="storage"><see cref="IStorage"/> for reading the persisted projection definition on resume.</param>
+/// <param name="partitionRebuildAdmission"><see cref="IPartitionRebuildAdmission"/> deciding whether the partition is rebuilt in isolation.</param>
 /// <param name="jsonSerializerOptions">The serializer options used for JSON serialization.</param>
 /// <param name="logger">The logger.</param>
 public class ReplayObserverPartition(
     IObserverServiceClient replayStateServiceClient,
     IStorage storage,
+    IPartitionRebuildAdmission partitionRebuildAdmission,
     JsonSerializerOptions jsonSerializerOptions,
     ILogger<ReplayObserverPartition> logger) : Job<ReplayObserverPartitionRequest, JobStateWithLastHandledEvent>, IReplayObserverPartition
 {
@@ -135,6 +137,7 @@ public class ReplayObserverPartition(
     protected override async Task<IImmutableList<JobStepDetails>> PrepareSteps(ReplayObserverPartitionRequest request)
     {
         await EnsureReplaySupported(request);
+        var isolatedRebuild = await partitionRebuildAdmission.IsAdmitted(request);
         return new[]
         {
             CreateStep<IHandleEventsForPartition>(
@@ -147,7 +150,8 @@ public class ReplayObserverPartition(
                     EventObservationState.Replay,
                     request.EventTypes)
                 {
-                    ReaderScope = request.ReaderScope
+                    ReaderScope = request.ReaderScope,
+                    IsolatedRebuild = isolatedRebuild
                 })
         }.ToImmutableList();
     }

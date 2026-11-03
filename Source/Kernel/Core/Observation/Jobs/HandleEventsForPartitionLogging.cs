@@ -64,4 +64,7 @@ internal static partial class HandleEventsForPartitionLogging
 
     [LoggerMessage(LogLevel.Warning, "HandleEventsForPartition job step could not report partition {Partition} as failed at event sequence number {FailedAt}; the job runs the step again and reports it when the attempts run out")]
     internal static partial void FailedReportingPartitionFailed(this ILogger<HandleEventsForPartition> logger, Exception error, Key partition, EventSequenceNumber failedAt);
+
+    [LoggerMessage(LogLevel.Information, "Isolated rebuild of partition {Partition} up to event sequence number {Watermark} was superseded by a newer write; the job runs the step again")]
+    internal static partial void IsolatedRebuildSuperseded(this ILogger<HandleEventsForPartition> logger, Key partition, EventSequenceNumber watermark);
 }

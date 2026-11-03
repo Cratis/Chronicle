@@ -13,14 +13,16 @@ namespace Cratis.Chronicle.Observation.Jobs.for_ReplayObserverPartition;
 /// </summary>
 /// <param name="replayStateServiceClient">The replay state service client.</param>
 /// <param name="storage">The storage.</param>
+/// <param name="partitionRebuildAdmission">The partition rebuild admission.</param>
 /// <param name="jsonSerializerOptions">The serializer options.</param>
 /// <param name="logger">The logger.</param>
 public class TestableReplayObserverPartition(
     IObserverServiceClient replayStateServiceClient,
     Cratis.Chronicle.Storage.IStorage storage,
+    IPartitionRebuildAdmission partitionRebuildAdmission,
     JsonSerializerOptions jsonSerializerOptions,
     ILogger<ReplayObserverPartition> logger)
-    : ReplayObserverPartition(replayStateServiceClient, storage, jsonSerializerOptions, logger), IGrainType
+    : ReplayObserverPartition(replayStateServiceClient, storage, partitionRebuildAdmission, jsonSerializerOptions, logger), IGrainType
 {
     /// <inheritdoc/>
     public Type GrainType => typeof(IReplayObserverPartition);

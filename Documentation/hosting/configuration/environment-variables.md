@@ -39,7 +39,7 @@ the same way (`compliance.encryption.migrateFromDefaultStorage` becomes
 | Cratis__Chronicle__Features__Workbench | Enable Workbench UI |
 | Cratis__Chronicle__Features__ChangesetStorage | Enable changeset storage |
 | Cratis__Chronicle__Features__OAuthAuthority | Enable internal OAuth authority |
-| Cratis__Chronicle__Features__IsolatedPartitionReplay | Reserved: rebuild a replayed partition in isolation (default `false`, no effect yet) |
+| Cratis__Chronicle__Features__IsolatedPartitionReplay | Rebuild a replayed partition of an eligible projection in isolation and publish it in one replace, so readers never see a partly replayed document (default `false`, preview) |
 | Cratis__Chronicle__Storage__Type | Storage provider type |
 | Cratis__Chronicle__Storage__ConnectionDetails | Storage connection string |
 | Cratis__Chronicle__Storage__Schema | SQL schema for Chronicle's tables |
