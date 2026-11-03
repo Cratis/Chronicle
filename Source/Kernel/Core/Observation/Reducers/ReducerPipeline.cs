@@ -112,7 +112,7 @@ public class ReducerPipeline(
             {
                 initialForComparison = new ExpandoObject();
                 var declaredProperties = schema.GetFlattenedProperties().Select(property => property.Name).ToHashSet(StringComparer.Ordinal);
-                foreach (var (name, value) in initial.ExceptBy(["_id"], property => property.Key).Where(property => !WellKnownProperties.All.Contains(property.Key) || declaredProperties.Contains(property.Key)))
+                foreach (var (name, value) in initial.Where(property => property.Key != "_id" && (!WellKnownProperties.All.Contains(property.Key) || declaredProperties.Contains(property.Key))))
                 {
                     ((IDictionary<string, object?>)initialForComparison)[name] = value;
                 }
