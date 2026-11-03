@@ -57,7 +57,8 @@ public class two_observation_streams_for_the_same_connection : Specification
             new JsonSerializerOptions(),
             new ActivitySource<Reactors>(),
             Options.Create(new ChronicleOptions()),
-            _logger);
+            _logger,
+            Substitute.For<IObserverRegistrationGate>());
 
         _earlierSubscription = _reactors.Observe(_earlierMessages).Subscribe(_earlierDeliveries.Add);
         _earlierMessages.OnNext(Register());
