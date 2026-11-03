@@ -39,7 +39,7 @@ public class when_observing_failures : Specification
     void should_restart_the_count_after_a_successful_attempt()
     {
         Observe(4);
-        _tracker.Observe(new Dictionary<ConstraintName, ConstraintIndexReplayFailure>(), true);
+        _tracker.Observe(new Dictionary<ConstraintName, ConstraintIndexReplayFailure>(), true, 5);
         Observe(4).ShouldBeEmpty();
     }
 
@@ -103,7 +103,7 @@ public class when_observing_failures : Specification
     void should_keep_poison_settlements_after_a_replay_attempt_is_discarded()
     {
         Observe(5);
-        _tracker.Observe(new Dictionary<ConstraintName, ConstraintIndexReplayFailure>(), true);
+        _tracker.Observe(new Dictionary<ConstraintName, ConstraintIndexReplayFailure>(), true, 5);
         _tracker.Settled.ShouldContain(((ConstraintName)"unique", EventSequenceNumber.First));
     }
 
@@ -120,7 +120,7 @@ public class when_observing_failures : Specification
         IReadOnlyDictionary<ConstraintName, ConstraintIndexReplayFailure> result = new Dictionary<ConstraintName, ConstraintIndexReplayFailure>();
         for (var attempt = 0; attempt < attempts; attempt++)
         {
-            result = _tracker.Observe(new Dictionary<ConstraintName, ConstraintIndexReplayFailure> { ["unique"] = new(eventIdentified ? position ?? EventSequenceNumber.First : null, error ?? new FormatException()) }, storageSucceeded);
+            result = _tracker.Observe(new Dictionary<ConstraintName, ConstraintIndexReplayFailure> { ["unique"] = new(eventIdentified ? position ?? EventSequenceNumber.First : null, error ?? new FormatException()) }, storageSucceeded, 5);
         }
         return result;
     }

@@ -21,6 +21,7 @@ public class a_legacy_event_sequence : Specification
 
     protected sealed class LegacyEventSequence : IEventSequence
     {
+        public int TailCalls { get; private set; }
         public int AppendCalls { get; private set; }
         public int SingleSourceBatchCalls { get; private set; }
         public int RoutedBatchCalls { get; private set; }
@@ -50,7 +51,11 @@ public class a_legacy_event_sequence : Specification
         public Task<bool> HasEventsFor(EventSourceId eventSourceId) => throw new NotImplementedException();
         public Task<IImmutableList<AppendedEvent>> GetFromSequenceNumber(EventSequenceNumber sequenceNumber, EventSourceId? eventSourceId = default, IEnumerable<EventType>? filterEventTypes = default) => throw new NotImplementedException();
         public Task<EventSequenceNumber> GetNextSequenceNumber() => throw new NotImplementedException();
-        public Task<EventSequenceNumber> GetTailSequenceNumber(EventSourceId? eventSourceId = default, EventSourceType? eventSourceType = default, EventStreamType? eventStreamType = default, EventStreamId? eventStreamId = default, IEnumerable<EventType>? filterEventTypes = default) => throw new NotImplementedException();
+        public Task<EventSequenceNumber> GetTailSequenceNumber(EventSourceId? eventSourceId = default, EventSourceType? eventSourceType = default, EventStreamType? eventStreamType = default, EventStreamId? eventStreamId = default, IEnumerable<EventType>? filterEventTypes = default)
+        {
+            TailCalls++;
+            return Task.FromResult<EventSequenceNumber>(5460UL);
+        }
         public Task<EventSequenceNumber> GetTailSequenceNumberForObserver(Type type) => throw new NotImplementedException();
         public Task Revise(EventSequenceNumber sequenceNumber, object @event) => throw new NotImplementedException();
         public Task Redact(EventSequenceNumber sequenceNumber, RedactionReason reason) => throw new NotImplementedException();

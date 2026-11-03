@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Dynamic;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Cratis.Arc.Commands.ModelBound;
@@ -30,7 +29,7 @@ namespace Cratis.Chronicle.Sequences;
 /// </remarks>
 [Command]
 [BelongsTo(WellKnownServices.EventSequences)]
-public record VerifyContent(
+public partial record VerifyContent(
     EventStoreName EventStore,
     EventStoreNamespaceName Namespace,
     Concepts.EventSequences.EventSequenceId EventSequenceId,
@@ -104,53 +103,24 @@ public record VerifyContent(
                 schemas[generation] = (await eventStore.EventTypes.GetFor(EventType.Id, (uint)generation)).Schema;
             }
 
+            var history = await sequence.GetStoredGenerations(SequenceNumber);
+            var appended = GetAppendedGeneration(stored, history);
+            if (appended is null || !schemas.ContainsKey((int)appended.Value))
+            {
+                return new(ContentVerificationResult.Unavailable);
+            }
+            var definitions = await GetDefinitions(eventStore.EventTypes, history, appended, schemas.Keys);
+            if (definitions is null)
+            {
+                return new(ContentVerificationResult.Unavailable);
+            }
+
+            schemas = ResolveProtectionSchemas(schemas, appended);
+
             var expected = await metadataManager.TryPrepareGenerationsForComparison(
                 schema.Schema,
                 attempted,
-                async masked =>
-                {
-                    var source = expandoObjectConverter.ToExpandoObject(masked, schema.Schema);
-                    var lossless = ContentComparison.PreservesConversion(masked, source, schema.Schema);
-                    var inspected = new HashSet<ExpandoObject>(ReferenceEqualityComparer.Instance);
-                    var opaque = true;
-                    var migrated = await eventTypeMigrations.MigrateToAllGenerations(
-                        EventStore,
-                        new(EventType.Id, EventType.Generation, EventType.Tombstone),
-                        masked,
-                        source,
-                        (raw, generationSchema, converted) =>
-                        {
-                            lossless &= ContentComparison.PreservesConversion(raw, converted, generationSchema);
-                            inspected.Add(converted);
-                        },
-                        (operations, input) => opaque &= MigrationProvenance.CarriesProtectedValuesOpaquely(operations, input));
-
-                    // Verification keeps protected values opaque even though append migrates plaintext. A migration
-                    // that inspects them cannot be reproduced on a marker, whether or not the marker survived.
-                    if (!opaque || !lossless || migrated.Values.Any(content => !inspected.Contains(content)))
-                    {
-                        return null;
-                    }
-
-                    var result = new Dictionary<int, (JsonSchema Schema, JsonObject Content)>();
-                    foreach (var (generation, generationSchema) in schemas)
-                    {
-                        if (!migrated.TryGetValue((uint)generation, out var content))
-                        {
-                            return null;
-                        }
-
-                        var prepared = ContentComparison.Prepare(content, generationSchema, expandoObjectConverter, sequence);
-                        if (prepared is null)
-                        {
-                            return null;
-                        }
-
-                        result[generation] = (generationSchema, prepared);
-                    }
-
-                    return result;
-                },
+                masked => new ExpectedContent(this, eventTypeMigrations, expandoObjectConverter).Prepare(masked, schemas, definitions, sequence),
                 (generation, boundarySchema, value) =>
                 {
                     if (generation == (int)EventType.Generation)
@@ -173,6 +143,7 @@ public record VerifyContent(
             }
 
             var equal = true;
+            var originalEqual = false;
             foreach (var (generation, content) in stored.GenerationalContent)
             {
                 if (JsonNode.Parse(content) is not JsonObject document ||
@@ -184,15 +155,35 @@ public record VerifyContent(
                 }
 
                 // Finish every release before returning Different: a partially compared event is unavailable.
-                equal &= ContentComparison.Equals(released, expected[generation]);
+                var matches = ContentComparison.Equals(released, expected[generation]);
+                equal &= matches;
+                if (generation == appended.Value)
+                {
+                    originalEqual = matches;
+                }
             }
 
-            return new(equal ? ContentVerificationResult.Equal : ContentVerificationResult.Different);
+            if (equal)
+            {
+                return new(ContentVerificationResult.Equal);
+            }
+
+            return new(!originalEqual && CanProveOriginalDifference(appended, history)
+                ? ContentVerificationResult.Different
+                : ContentVerificationResult.Unavailable);
         }
         catch (Exception exception) when (exception is JsonException or FormatException or InvalidCastException or InvalidOperationException or OverflowException)
         {
             // Content that cannot be represented by the generation schema is not evidence of equality.
             return new(ContentVerificationResult.Unavailable);
         }
+    }
+
+    static Dictionary<int, JsonSchema> ResolveProtectionSchemas(Dictionary<int, JsonSchema> own, EventTypeGeneration? appendedGeneration)
+    {
+        var generations = own.Select(_ => ((EventTypeGeneration)(uint)_.Key, _.Value)).ToArray();
+        return own.ToDictionary(
+            _ => _.Key,
+            _ => (uint)_.Key == appendedGeneration?.Value ? _.Value : GenerationProtectionSchemas.For((uint)_.Key, generations));
     }
 }

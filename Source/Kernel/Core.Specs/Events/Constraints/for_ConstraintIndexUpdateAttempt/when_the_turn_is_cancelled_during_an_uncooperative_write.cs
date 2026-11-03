@@ -17,6 +17,7 @@ public class when_the_turn_is_cancelled_during_an_uncooperative_write : Specific
                 await _turn.CancelAsync();
                 await _write.Task;
             },
+            TimeSpan.FromSeconds(1),
             _turn.Token);
     }
 

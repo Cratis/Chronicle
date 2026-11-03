@@ -17,6 +17,16 @@ public class AlertIncidentsStorage(IEventStoreNamespaceDatabase database) : IAle
     readonly Lazy<IMongoCollection<AlertIncidentDocument>> _collection = new(() => AcknowledgedCollection(database));
     readonly ConcurrentDictionary<string, byte> _ensuredIndexes = new();
 
+    /// <summary>
+    /// Gets the alert incident indexes.
+    /// </summary>
+    internal static IReadOnlyList<CreateIndexModel<AlertIncidentDocument>> Indexes { get; } =
+    [
+        new(Builders<AlertIncidentDocument>.IndexKeys.Ascending(_ => _.EventStore).Ascending(_ => _.IsOpen).Ascending(_ => _.RaisedSequenceNumber).Ascending(_ => _.Id), new CreateIndexOptions { Name = "store-open-raised-id", Collation = Collation.Simple }),
+        new(Builders<AlertIncidentDocument>.IndexKeys.Ascending(_ => _.EventStore).Ascending(_ => _.Namespace).Ascending(_ => _.IsOpen).Ascending(_ => _.RaisedSequenceNumber).Ascending(_ => _.Id), new CreateIndexOptions { Name = "store-namespace-open-raised-id", Collation = Collation.Simple }),
+        new(Builders<AlertIncidentDocument>.IndexKeys.Ascending(_ => _.IsOpen).Ascending(_ => _.EventStore).Ascending(_ => _.Namespace), new CreateIndexOptions { Name = "open-store-namespace", Collation = Collation.Simple })
+    ];
+
     /// <inheritdoc/>
     public async Task<AlertIncidentWriteOutcome> Apply(AlertIncidentTransition transition, CancellationToken cancellationToken = default)
     {
@@ -199,9 +209,5 @@ public class AlertIncidentsStorage(IEventStoreNamespaceDatabase database) : IAle
         return new(items, rows.Count > limit ? new(items[^1].RaisedSequenceNumber!, items[^1].Id) : null);
     }
 
-    Task EnsureIndexes() => _collection.Value.EnsureIndexesOnceAsync(
-        _ensuredIndexes,
-        new(Builders<AlertIncidentDocument>.IndexKeys.Ascending(_ => _.EventStore).Ascending(_ => _.IsOpen).Ascending(_ => _.RaisedSequenceNumber).Ascending(_ => _.Id), new CreateIndexOptions { Name = "store-open-raised-id", Collation = Collation.Simple }),
-        new(Builders<AlertIncidentDocument>.IndexKeys.Ascending(_ => _.EventStore).Ascending(_ => _.Namespace).Ascending(_ => _.IsOpen).Ascending(_ => _.RaisedSequenceNumber).Ascending(_ => _.Id), new CreateIndexOptions { Name = "store-namespace-open-raised-id", Collation = Collation.Simple }),
-        new(Builders<AlertIncidentDocument>.IndexKeys.Ascending(_ => _.IsOpen).Ascending(_ => _.EventStore).Ascending(_ => _.Namespace), new CreateIndexOptions { Name = "open-store-namespace", Collation = Collation.Simple }));
+    Task EnsureIndexes() => _collection.Value.EnsureIndexesOnceAsync(_ensuredIndexes, Indexes.ToArray());
 }

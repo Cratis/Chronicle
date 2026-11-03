@@ -117,7 +117,7 @@ internal static class ChronicleClientServiceCollectionExtensions
 
         services.AddKeyedSingleton(typeof(IActivitySource<>), ClientActivity.SourceName, typeof(KeyedActivitySource<>));
 
-        return services;
+        return services.ConfigureChronicleClientServices();
     }
 
     static void RegisterDefaultDependencies(IServiceCollection services)

@@ -731,6 +731,7 @@ orleans Cratis.Chronicle.EventSequences.ConstraintIndexRebuildRunId
   [Id(0)] Value: System.Guid
   [Id(1)] Attempt: System.Guid
   [Id(2)] Started: System.DateTimeOffset
+  [Id(3)] JobId: Cratis.Orleans.Jobs.JobId
 json Cratis.Chronicle.EventSequences.EventToAppend
   causation: System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Auditing.Causation>
   content: System.Text.Json.Nodes.JsonObject

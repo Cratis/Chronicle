@@ -47,6 +47,8 @@ public class public_entries : when_committing_with_read_protection.given.a_trust
             ["filtered"] = () => _sequence.GetForEventSourceIdAndEventTypes("other-key", Poison<EventType>()),
             ["next"] = _sequence.GetNextSequenceNumber,
             ["tail"] = () => _sequence.GetTailSequenceNumber(),
+            ["cancellable tail"] = () => _sequence.GetTailSequenceNumberWithCancellation(CancellationToken.None, filterEventTypes: Poison<EventType>()),
+            ["cancelled tail"] = () => _sequence.GetTailSequenceNumberWithCancellation(new CancellationToken(true), filterEventTypes: Poison<EventType>()),
             ["observer tail"] = () => _sequence.GetTailSequenceNumberForObserver(typeof(object)),
             ["closed streams"] = () => _sequence.GetClosedStreams(),
             ["completed stream"] = () => _sequence.IsStreamCompleted("stream", "id"),
