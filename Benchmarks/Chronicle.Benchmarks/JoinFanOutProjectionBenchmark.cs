@@ -4,6 +4,7 @@
 using BenchmarkDotNet.Attributes;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Observation;
 
 namespace Cratis.Chronicle.Benchmarks;
 
