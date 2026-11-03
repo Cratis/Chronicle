@@ -126,12 +126,6 @@ jobs:
       - name: Spec executable runner contracts and forbid test-host dispatch
         run: node --test .github/scripts/test-mixed-spec-runners.mjs
 
-      - name: Spec coverage statistics honesty (missing input never advances the measurement date)
-        run: node --test .github/scripts/test-coverage-statistics.mjs
-
-      - name: Spec bounded nightly coverage admission without network
-        run: python3 -B .github/scripts/test-nightly-coverage-feed.py
-
       # Runs the real entrypoint against a fake server: no image is needed to prove that a container stop
       # reaches the server and that the container reports the server's own exit status (#5361).
       - name: Spec container entrypoint signal forwarding
@@ -888,9 +882,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 120
     needs: [already-ran, specs, integration, integration-api, mongodb]
-    permissions:
-      contents: read
-      actions: read
     outputs:
       coverage-cache-key: ${{ steps.export-coverage-key.outputs.key }}
 
@@ -941,33 +932,9 @@ jobs:
             -targetdir:"./coverage-reports" \
             -reporttypes:"Cobertura;JsonSummary" \
             -assemblyfilters:"-*.Specs;-xunit*;-NSubstitute*"
-          echo "COVERAGE_MEASURED_AT_MS=$(python3 -c 'import time; print(int(time.time() * 1000))')" >> "$GITHUB_ENV"
-
+          
           echo "Generated coverage report:"
           ls -la ./coverage-reports/
-
-      # This unsigned feed does not prove isolation of the external producer cache.
-      - name: Package nightly coverage feed
-        if: github.repository == 'Cratis/Chronicle' && github.event_name == 'schedule' && github.ref == 'refs/heads/main'
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: Cratis/Chronicle
-        run: |
-          python3 -B .github/scripts/nightly-coverage-feed.py package \
-            --summary ./coverage-reports/Summary.json --output "$RUNNER_TEMP/coverage-nightly-v1"
-
-      - name: Upload nightly coverage feed
-        if: github.repository == 'Cratis/Chronicle' && github.event_name == 'schedule' && github.ref == 'refs/heads/main'
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: coverage-nightly-v1-${{ github.run_id }}-${{ github.run_attempt }}
-          path: |
-            ${{ runner.temp }}/coverage-nightly-v1/Summary.json
-            ${{ runner.temp }}/coverage-nightly-v1/SHA256SUMS
-            ${{ runner.temp }}/coverage-nightly-v1/provenance.json
-          if-no-files-found: error
-          retention-days: 30
-          overwrite: false
 
       - name: Cache merged coverage
         uses: actions/cache@v4
