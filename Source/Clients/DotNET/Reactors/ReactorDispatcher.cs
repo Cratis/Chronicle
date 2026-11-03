@@ -157,12 +157,100 @@ internal sealed class ReactorDispatcher(
             RegisteredEventSequenceId = handler.EventSequenceId
         };
 
-        foreach (var partition in partitions)
+        if (reactorInvoker.Batches.Count == 0)
         {
-            outcomes.Add(await DispatchToInstance(partition, reactorInvoker));
+            foreach (var partition in partitions)
+            {
+                outcomes.Add(await DispatchToInstance(partition, reactorInvoker));
+            }
+        }
+        else
+        {
+            outcomes.AddRange(await DispatchWithBatches(reactorInvoker));
         }
 
         PublishResult();
+
+        async Task<IEnumerable<PartitionOutcome>> DispatchWithBatches(ReactorInvoker reactorInvoker)
+        {
+            var batchEventTypeIds = reactorInvoker.Batches
+                .SelectMany(_ => _.EventTypes)
+                .Select(_ => eventTypes.GetEventTypeFor(_).Id)
+                .ToHashSet();
+            var problems = new List<PartitionProblem>();
+            var batchEvents = new List<(string Partition, EventAndContext Event)>();
+            foreach (var partition in partitions)
+            {
+                foreach (var @event in partition.Events.Where(_ => batchEventTypeIds.Contains(_.Context.EventType.Id)))
+                {
+                    try
+                    {
+                        var (context, content) = await Deserialize(@event);
+                        batchEvents.Add((partition.Partition ?? string.Empty, new EventAndContext(content, context)));
+                    }
+                    catch (Exception ex)
+                    {
+                        problems.Add(PartitionProblem.Failed(partition.Partition ?? string.Empty, @event.Context.SequenceNumber, ex));
+                    }
+                }
+            }
+
+            batchEvents.Sort((left, right) => left.Event.Context.SequenceNumber.Value.CompareTo(right.Event.Context.SequenceNumber.Value));
+            problems.AddRange(await ReactorBatches.Run(reactorInvoker, batchEvents, CreateBatchContext(), events.Partitions.Count > 0));
+
+            foreach (var partition in partitions)
+            {
+                var perEvent = await DispatchToInstance(partition, reactorInvoker, batchEventTypeIds);
+                if (perEvent.State == ObservationState.Failed)
+                {
+                    problems.Add(new(perEvent.Partition, perEvent.FailedAt, ObservationState.Failed, perEvent.ExceptionMessages, perEvent.ExceptionStackTrace, TimeSpan.Zero));
+                }
+            }
+
+            return partitions.Select(partition => PartitionSettlement.Settle(
+                partition.Partition ?? string.Empty,
+                [.. partition.Events.Select(_ => (EventSequenceNumber)_.Context.SequenceNumber)],
+                problems));
+        }
+
+        BatchContext CreateBatchContext()
+        {
+            var allEvents = partitions.SelectMany(_ => _.Events).Select(_ => _.Context.SequenceNumber).ToArray();
+            return new(
+                handler.Id.Value,
+                eventStore.Name,
+                @namespace,
+                handler.EventSequenceId,
+                events.Origin.ToClient(),
+                [.. partitions.Select(_ => new EventSourceId(_.Partition ?? string.Empty))],
+                allEvents.Length,
+                allEvents.Length > 0 ? allEvents.Min() : EventSequenceNumber.Unavailable,
+                allEvents.Length > 0 ? allEvents.Max() : EventSequenceNumber.Unavailable,
+                events.DeliverWithinMilliseconds > 0 ? DateTimeOffset.UtcNow.AddMilliseconds(events.DeliverWithinMilliseconds) : null,
+                cancellationToken);
+        }
+
+        async Task<(EventContext Context, object Content)> Deserialize(Contracts.Events.AppendedEvent @event)
+        {
+            var context = @event.Context.ToClient();
+            var handlerEventType = handler.EventTypes.FirstOrDefault(et => et.Id == context.EventType.Id);
+            var targetGeneration = handlerEventType?.Generation ?? context.EventType.Generation;
+            var eventType = eventTypes.GetClrTypeFor(context.EventType.Id, targetGeneration);
+
+            string contentJson;
+            if (targetGeneration != context.EventType.Generation &&
+                @event.GenerationalContent.TryGetValue((int)targetGeneration.Value, out var genContent))
+            {
+                contentJson = genContent;
+                context = context with { EventType = context.EventType with { Generation = targetGeneration } };
+            }
+            else
+            {
+                contentJson = @event.Content;
+            }
+
+            return (context, await eventSerializer.Deserialize(eventType, JsonNode.Parse(contentJson)!.AsObject()));
+        }
 
         async Task<PartitionOutcome?> DispatchToDelegate(PartitionEvents partition)
         {
@@ -219,39 +307,21 @@ internal sealed class ReactorDispatcher(
             return Succeeded(partition, lastSuccessfullyObservedEvent);
         }
 
-        async Task<PartitionOutcome> DispatchToInstance(PartitionEvents partition, ReactorInvoker reactorInvoker)
+        async Task<PartitionOutcome> DispatchToInstance(PartitionEvents partition, ReactorInvoker reactorInvoker, IReadOnlySet<EventTypeId>? handledByBatches = null)
         {
             var lastSuccessfullyObservedEvent = EventSequenceNumber.Unavailable;
-            foreach (var @event in partition.Events)
+            foreach (var @event in partition.Events.Where(_ => handledByBatches?.Contains(_.Context.EventType.Id) != true))
             {
                 logger.EventReceived(@event.Context.EventType.Id, handler.Id);
 
                 try
                 {
-                    var context = @event.Context.ToClient();
-
-                    var handlerEventType = handler.EventTypes.FirstOrDefault(et => et.Id == context.EventType.Id);
-                    var targetGeneration = handlerEventType?.Generation ?? context.EventType.Generation;
-                    var eventType = eventTypes.GetClrTypeFor(context.EventType.Id, targetGeneration);
-
-                    string contentJson;
-                    if (targetGeneration != context.EventType.Generation &&
-                        @event.GenerationalContent.TryGetValue((int)targetGeneration.Value, out var genContent))
-                    {
-                        contentJson = genContent;
-                        context = context with { EventType = context.EventType with { Generation = targetGeneration } };
-                    }
-                    else
-                    {
-                        contentJson = @event.Content;
-                    }
-
-                    var content = await eventSerializer.Deserialize(eventType, JsonNode.Parse(contentJson)!.AsObject());
+                    var (context, content) = await Deserialize(@event);
 
                     var handleResult = await handler.OnNext(context, content, reactorInvoker);
                     if (handleResult.IsFailed)
                     {
-                        return FailedToHandleEvent(partition, lastSuccessfullyObservedEvent, handleResult, @event.Context.EventType.Id);
+                        return FailedToHandleEvent(partition, lastSuccessfullyObservedEvent, handleResult, @event.Context.EventType.Id) with { FailedAt = @event.Context.SequenceNumber };
                     }
 #if CHRONICLE_ROLLING_DIAGNOSTICS
                     var previousSequence = lastSuccessfullyObservedEvent.Value;
@@ -263,7 +333,7 @@ internal sealed class ReactorDispatcher(
                 }
                 catch (Exception ex)
                 {
-                    return FailedWithException(partition, lastSuccessfullyObservedEvent, ex, @event.Context.EventType.Id);
+                    return FailedWithException(partition, lastSuccessfullyObservedEvent, ex, @event.Context.EventType.Id) with { FailedAt = @event.Context.SequenceNumber };
                 }
             }
 
@@ -328,7 +398,7 @@ internal sealed class ReactorDispatcher(
                 {
                     Partition = events.Partition,
                     DeliveryId = events.DeliveryId,
-                    State = outcomes[0].State,
+                    State = outcomes[0].State == ObservationState.Deferred ? ObservationState.Failed : outcomes[0].State,
                     LastSuccessfulObservation = outcomes[0].LastSuccessfulObservation,
                     ExceptionMessages = [.. outcomes[0].ExceptionMessages],
                     ExceptionStackTrace = outcomes[0].ExceptionStackTrace

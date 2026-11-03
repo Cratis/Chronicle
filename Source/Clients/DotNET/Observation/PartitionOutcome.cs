@@ -32,6 +32,11 @@ internal sealed record PartitionOutcome(
     public string? ReadModelState { get; init; }
 
     /// <summary>
+    /// Gets the sequence number of the event the partition failed at, or <see cref="EventSequenceNumber.Unavailable"/>.
+    /// </summary>
+    public EventSequenceNumber FailedAt { get; init; } = EventSequenceNumber.Unavailable;
+
+    /// <summary>
     /// Creates an outcome where every event of the partition failed.
     /// </summary>
     /// <param name="partition">The partition.</param>
