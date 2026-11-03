@@ -48,6 +48,16 @@ Only the in-process and out-of-process fixtures are documented here; the others 
 
 `Cratis.Chronicle.Testing` brings in `Cratis.Arc` and `Cratis.Arc.Core`, including the ASP.NET Core shared framework. You do not need to reference Arc separately for Chronicle-only tests.
 
+### Application hosts that reference Testing
+
+When an application host references `Cratis.Chronicle.Testing`, registering the Chronicle client automatically keeps kernel commands and queries out of the application's Arc endpoints. This works whether Arc or Chronicle is registered first. Application commands, queries, and authorization policies are unchanged; the isolated in-process kernel pipeline still dispatches kernel commands.
+
+A host that also runs the kernel in the same container, such as the in-process silo of the xUnit integration fixtures, keeps every kernel command and query, because the kernel dispatches its own commands through that container's Arc pipeline. Chronicle recognizes such a host by the administrator authorization policy the kernel registers, whichever order the kernel and the client are registered in.
+
+Register individual Arc command-handler and query-performer providers rather than replacing the closed `IInstancesOf<ICommandHandlerProvider>` or `IInstancesOf<IQueryPerformerProvider>` collections. Testing rejects those custom collections with instructions for registering individual providers instead: during client registration when they come first, and when the host starts when they are registered after the client.
+
+Chronicle client integrations can implement `IChronicleClientServices` with a public parameterless constructor to add container-local registrations. Chronicle discovers these implementations through its type universe and invokes them during both web and non-web client registration. Implementations must be idempotent, because they run on every client registration and a host can register the client more than once; they do not run in the isolated kernel pipeline.
+
 ### Matching versions
 
 Chronicle and Arc have independent release numbers. Match `Cratis.Chronicle.Testing` to your Chronicle client release; its NuGet dependency list identifies the Arc version that release targets. For example, in the Chronicle.Testing 19.26.x version line, 19.26.0 targets Arc 22.30.0. Check each release's dependency list rather than assuming all releases in that line target the same Arc version. A `Cratis` meta-package release can target an earlier Chronicle client, so its version alone does not identify a matching Chronicle.Testing package.

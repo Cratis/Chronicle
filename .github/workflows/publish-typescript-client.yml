@@ -44,7 +44,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '23.x'
+          node-version: '24.x'
 
       - name: Upgrade npm for trusted publishing (requires >= 11.5.1)
         run: |

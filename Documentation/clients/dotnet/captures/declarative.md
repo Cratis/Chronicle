@@ -38,13 +38,13 @@ API source options:
 
 `FromApi(api, ...)` references a configured [External Service](/chronicle/external-services/) by name. The External Service holds the base URL and authentication, so no authentication is configured on the API source. If no route is configured, the External Service base URL is used directly.
 
-Webhook source options (webhook sources are inbound and configure their own authentication):
+Webhook source options:
 
 - `WithBasicAuth(username, password)`
 - `WithBearerToken(token)`
 - `WithOAuth(authority, clientId, clientSecret)`
 
-Authentication is never part of the capture declaration text, so that secrets and tokens do not live in capture definitions.
+Webhook sources do not support authentication yet. Webhook sources are not read, and the capture contract carries only the declaration text, so these options are not sent to the kernel, stored or enforced. Authentication is never part of the capture declaration text, so that secrets and tokens do not live in capture definitions.
 
 ## Defining identity
 

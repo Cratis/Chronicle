@@ -28,6 +28,7 @@ public static class AdministratorAuthorizationServiceCollectionExtensions
         services.AddAuthorizationCore();
         services.AddHttpContextAccessor();
         services.TryAddScoped<IAdministratorAuthorization, AdministratorAuthorization>();
+        services.TryAddScoped<ISystemStoreAccess, SystemStoreAccessVerdict>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IAuthorizationHandler, AdministratorAuthorizationHandler>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IAuthorizationHandler, SystemStoreOperationAuthorizationHandler>());
         services.PostConfigure<AuthorizationOptions>(options =>
