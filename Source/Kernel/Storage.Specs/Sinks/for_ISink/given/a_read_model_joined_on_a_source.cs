@@ -42,7 +42,7 @@ public abstract class a_read_model_joined_on_a_source<THarness> : Specification
             ReadModelObserverType.Projection,
             ReadModelObserverIdentifier.Unspecified,
             SinkDefinition.None,
-            new Dictionary<ReadModelGeneration, JsonSchema> { [ReadModelGeneration.First] = JsonSchema.FromJson(SchemaJson) },
+            new Dictionary<ReadModelGeneration, JsonSchema> { [ReadModelGeneration.First] = await JsonSchema.FromJsonAsync(SchemaJson) },
             []));
         dynamic owner = new ExpandoObject();
         owner.id = "owner-1";
