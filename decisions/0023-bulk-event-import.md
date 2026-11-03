@@ -1,6 +1,6 @@
 ---
 id: 0023-bulk-event-import
-title: Import large volumes of events into an event sequence through a resumable import session that stages and validates every event before committing any, commits in ordered chunks through a job, hands observers one catch-up, and reads JSON Lines files on the client
+title: Import large volumes of events into an event sequence through a resumable, chunked import session that stages and validates every event before committing any, commits in ordered chunks through a job without locking, and hands observers one catch-up
 status: proposed
 stage: none
 class: contract
@@ -20,12 +20,11 @@ applies-to:
   - Source/Kernel/Protobuf/**
   - Source/Clients/DotNET/EventSequences/**
   - Source/Clients/DotNET/Imports/**
-  - Source/Workbench/Features/EventStore/Namespaces/Sequences/**
   - Documentation/events/**
 ---
 
 <!-- markdownlint-disable-next-line MD025 -->
-# Import large volumes of events into an event sequence through a resumable import session that stages and validates every event before committing any, commits in ordered chunks through a job, hands observers one catch-up, and reads JSON Lines files on the client
+# Import large volumes of events into an event sequence through a resumable, chunked import session that stages and validates every event before committing any, commits in ordered chunks through a job without locking, and hands observers one catch-up
 
 ## Context
 
@@ -33,10 +32,9 @@ People need to bring existing history into Chronicle:
 
 - migrating from another event store or a CRUD system
 - moving an event store between environments
-- restoring a Workbench export
 - loading fixtures for load tests
 
-The volumes are 300 000 events and more, often from a file. Today there is no import, bulk or streaming append API, and nothing reads JSON Lines.
+The volumes are 300 000 events and more. Today there is no import, bulk or streaming append API.
 
 ### What exists today
 
@@ -58,7 +56,6 @@ The volumes are 300 000 events and more, often from a file. Today there is no im
   - MongoDB's 16 MB transaction and 60 s transaction lifetime
   - holding the event sequence grain, and so every other appender to that sequence, for the whole call
 - **Seeding loops `AppendMany` in chunks of 100** (`Core/Seeding/EventSeeding.cs:39,202`). It skips and logs a rejected chunk, so its result is a partial import with no report.
-- **Workbench export** (`ExportedEvent.ExportEvents`, `Core/Sequences/ExportedEvent.cs:72`) downloads one unpaged, pretty-printed JSON array. It lacks causation, subject, generation and event stream id, so an export cannot be imported back faithfully.
 - **Append contracts are generated from Arc `[Command]` records in `Source/Kernel/Core/Sequences`.** The generator emits unary commands, plus observable queries for server-to-client streams. A client-streaming RPC would be the first hand-written append contract, against the project rule that the wire is derived from Core.
 
 ## Decision
@@ -103,7 +100,7 @@ The event gets a **new sequence number** in the target sequence. Original sequen
 
 ### 3. Duplicates
 
-Each event may carry an `IdempotencyKey`, typically the source system's event id. The commit uses the keyed append path of [decision 0012](0012-keyed-appends-travel-on-their-own-rpcs.md), so re-running the same file against the same sequence reports `AlreadyAppended` for those events instead of duplicating them. Events without a key are not deduplicated.
+Each event may carry an `IdempotencyKey`, typically the source system's event id. The commit uses the keyed append path of [decision 0012](0012-keyed-appends-travel-on-their-own-rpcs.md), so re-running the same import against the same sequence reports `AlreadyAppended` for those events instead of duplicating them. Events without a key are not deduplicated.
 
 ### 4. Imported events reach every observer once, through the existing mechanics
 
@@ -112,29 +109,17 @@ Imported events are ordinary events. Every reactor, reducer and projection sees 
 `AppendImportChunk` does not push the events through the live queue, `IAppendedEventsQueues`, one chunk at a time:
 
 - When the commit job completes, each subscribed observer of the sequence whose event types intersect the import catches up once, with the existing `CatchUpObserver` job.
-- With [decision 0022](0022-batched-delivery-to-client-reactors-and-reducers.md), that catch-up runs as paged, multi-partition delivery, so a reactor with an `EventBatch<T>` handler receives the import in large batches.
+- With [decision 0022](0022-observers-receive-batches-on-every-path.md), that catch-up delivers pages, so an observer in batch mode receives the import in large batches.
 
 Live delivery of ordinary appends that interleave with the import continues as normal. The catch-up starts from each observer's own `NextEventSequenceNumber`, so nothing is skipped.
 
-### 5. A JSON Lines file format
+### 5. Reading the source is the client's business
 
-- The file format is UTF-8 JSON Lines, media type `application/x-ndjson`, extension `.jsonl`.
-- There is one event per line. Blank lines and lines starting with `//` are ignored.
-- A line:
+The kernel takes events, not files. Where the events come from (a file in any format, another database, an HTTP feed) is up to the client, which turns the source into an `IAsyncEnumerable` of events. The kernel never opens a path or URL a caller names.
 
-  ```json
-  {"eventType":"user-registered","generation":1,"eventSourceId":"3f2a…","eventSourceType":"Default","eventStreamType":"All","eventStreamId":"Default","occurred":"2024-03-01T10:15:00Z","correlationId":"…","subject":"…","causedBy":{"subject":"…","name":"…"},"tags":["migrated"],"namedTags":{"tenant":"acme"},"idempotencyKey":"legacy-123","sourceSequenceNumber":42,"content":{"name":"Jane"}}
-  ```
+### 6. Streaming over chunked calls
 
-- Only `eventType`, `eventSourceId` and `content` are required. `content` is a JSON object, not a JSON string.
-- The Workbench export gains this format, emitting every field above with `sourceSequenceNumber` set, so **export, then import, round-trips**.
-
-### 6. File import is a client feature, not a kernel file reader
-
-- The client streams the file line by line, keeps a bounded number of chunks in flight (proposed 4), and calls `AddImportChunk`.
-- Lines that fail to parse are reported by line number before anything is sent when `OnInvalid = Reject`.
-- The kernel never opens a path or URL a caller names. This avoids a server-side file read with the kernel's identity and the authorization surface that would come with it.
-- The Workbench upload uses the same session through the browser. A large-file upload of the raw file into kernel staging is a later, separate decision.
+The .NET client streams: it reads the caller's `IAsyncEnumerable` lazily, cuts it into chunks within the server's limits, and keeps a bounded number of `AddImportChunk` calls in flight (proposed 4). On the wire each chunk is its own call, acknowledged by its `ChunkIndex`. A dropped connection therefore loses nothing, and the import continues from the last acknowledged chunk.
 
 ### 7. .NET client API
 
@@ -144,9 +129,6 @@ ImportResult result = await eventStore.EventLog.Import(
     events,                              // IAsyncEnumerable<EventForEventSourceId> or IEnumerable<…>
     new ImportOptions { OnInvalid = OnInvalidEvent.Reject },
     progress);                           // IProgress<ImportProgress>?
-
-ImportResult result = await eventStore.EventLog.ImportJsonLines("events.jsonl", options, progress);
-ImportResult result = await eventStore.EventLog.ImportJsonLines(stream, options, progress);
 
 // Explicit session, for producers that are not a single enumerable (several threads, a resumable ETL).
 await using IEventImport import = await eventStore.EventLog.BeginImport(options);
@@ -160,25 +142,26 @@ IObservable<ImportProgress> progress = import.Progress;
   - `ImportId`, `State`
   - `EventsStaged`, `EventsCommitted`, `AlreadyAppended`
   - `FirstSequenceNumber`, `LastSequenceNumber`
-  - `Rejections` (each with an index or line number, the event type and the reasons)
+  - `Rejections` (each with the event's index in the import, the event type and the reasons)
 - `BeginImport(ImportId)` reattaches to an existing session, so a process that crashed mid-staging resumes from the last acknowledged chunk.
 - `EventForEventSourceId` gains the per-event fields an import needs that it does not yet have: `Occurred`, `CorrelationId`, `CausedBy`, `Tags`, `NamedTags` and `Generation`.
 
 ## Options considered
 
-- **Loop `AppendMany` in client-side chunks, as seeding does (not taken).** It needs no kernel change, but a rejected chunk 200 into a 300-chunk file leaves 199 committed and the rest not. There is no validate-first, no resume, no single catch-up, and every chunk goes through live fan-out.
-- **One client-streaming gRPC `Import` RPC (not taken).** It is natural for streaming, but it is the first hand-written append contract outside the generated wire. A dropped stream loses its position unless chunk acknowledgements are added, which rebuilds the session anyway. It is also unusable from the Workbench and from HTTP. Unary chunk commands give the same throughput with pipelining and come out of the generator unchanged.
+- **Loop `AppendMany` in client-side chunks, as seeding does (not taken).** It needs no kernel change, but a rejected chunk 200 into a 300-chunk import leaves 199 committed and the rest not. There is no validate-first, no resume, no single catch-up, and every chunk goes through live fan-out.
+- **One client-streaming gRPC `Import` RPC (not taken, see the rulings below).** It is natural for streaming, but it is the first hand-written append contract outside the generated wire. A dropped stream loses its position unless chunk acknowledgements are added, which rebuilds the session anyway. It is also unusable from the Workbench and from HTTP. Unary chunk commands give the same throughput with pipelining and come out of the generator unchanged. The client API still streams.
 - **One giant transaction for atomic visibility (not taken).** MongoDB's 16 MB and 60 s transaction limits rule it out at this volume, and it would block every appender to the sequence for minutes. Validate-everything-first followed by a resumable, never-rolled-back commit gives "all or nothing *rejected*" without that.
 - **Exclusive lock on the sequence during the commit, so imported events are contiguous (rejected, see the rulings below).** Importing must not lock the system in any way, so there is no exclusive mode, not even as an option.
 - **An `Import` observation flag that `[OnceOnly]` skips, so reactors can ignore imported history (rejected, see the rulings below).** Imported events are delivered once through the ordinary mechanics, like any other event.
 - **Let the caller choose `Replay` or `None` for observers after an import (not taken).** `Replay` would deliver earlier events to reactors a second time, and `None` would leave observers behind. Both break "each event is seen once".
 - **Preserve source sequence numbers as the stored sequence numbers (not taken).** This is only possible into an empty sequence with no gaps. It creates a second meaning for sequence numbers, which observers and constraint watermarks rely on. The source number travels in causation instead.
-- **Kernel reads a file path or URL (not taken now).** It is convenient for operators on the kernel host, but it gives callers a way to make the kernel read arbitrary files or fetch URLs with its identity. If it is needed, it belongs behind a separate decision with an allow-listed import directory.
+- **A JSON Lines file format and file import in the client (dropped, see the rulings below).** A file format would fix one shape for every source. Leaving the source to the client keeps the API to one thing: an enumerable of events.
+- **Kernel reads a file path or URL (not taken).** It would give callers a way to make the kernel read arbitrary files or fetch URLs with its identity.
 - **Live-deliver imported events (not taken as the default).** At this volume the appended-events queue spills to catch-up anyway, after first loading every observer's live path. A single deliberate catch-up, or a replay, is cheaper and predictable.
 
 ## Default if unanswered
 
-People import by looping `AppendMany` themselves, as seeding does. Large imports then end partially committed on the first rejected chunk, with no resume. The event sequence grain and the appended-events queue absorb 300 000 events of live fan-out. Exports cannot be re-imported faithfully. Every team that migrates writes its own fragile loader.
+People import by looping `AppendMany` themselves, as seeding does. Large imports then end partially committed on the first rejected chunk, with no resume. The event sequence grain and the appended-events queue absorb 300 000 events of live fan-out. Every team that migrates writes its own fragile loader.
 
 ## Timeline and scope
 
@@ -188,11 +171,10 @@ People import by looping `AppendMany` themselves, as seeding does. Large imports
   - the `ImportEvents` commit job
   - `AppendImportChunk` on the event sequence grain
   - the observer catch-up hand-off
-  - the JSON Lines format, and export in that format
   - the .NET client API
   - documentation under `Documentation/events/importing.mdx`
 - **Out of scope:**
-  - kernel-side file or URL reading
+  - file formats and file reading, in the kernel or the client
   - cross-sequence or cross-store imports in one session (one import targets one event sequence)
   - importing into the outbox
   - SDKs outside this repository
@@ -202,11 +184,10 @@ People import by looping `AppendMany` themselves, as seeding does. Large imports
 ## Verification
 
 - **Done when:**
-  - Importing a 300 000-event JSON Lines file into an empty MongoDB-backed store completes with every event committed once, `Occurred` and causation preserved, and one catch-up per affected observer.
+  - Importing 300 000 events from an `IAsyncEnumerable` into an empty MongoDB-backed store completes with every event committed once, `Occurred` and causation preserved, and one catch-up per affected observer.
   - Killing the kernel during staging and during the commit, then resuming, yields the same log with no duplicates.
-  - A file with one schema-invalid line commits nothing and reports that line.
-  - Re-importing the same file with idempotency keys reports every event `AlreadyAppended`.
-  - Export followed by import into a second store reproduces content, metadata and per-type order.
+  - An import with one schema-invalid event commits nothing and reports that event by index.
+  - Re-importing the same events with idempotency keys reports every event `AlreadyAppended`.
 - **Verify by:**
   - Integration specs under `Integration/` for:
     - reject-all on an invalid event
@@ -214,18 +195,17 @@ People import by looping `AppendMany` themselves, as seeding does. Large imports
     - idempotent re-import
     - interleaved ordinary appends during a commit
     - observer catch-up after commit
-    - round-trip of export and import
+    - resuming staging after a dropped connection, from the last acknowledged chunk
   - These run for the MongoDB, SQL and in-memory storage providers.
   - A benchmark under `Benchmarks/` importing 300 000 events, reporting staging and commit throughput.
 
 ## Consequences
 
 - **Easier:**
-  - Migrations and environment copies become one call or one file.
+  - Migrations and environment copies become one call.
   - A failed import leaves the log untouched.
   - Long imports survive restarts.
   - Ordinary writers keep working during an import.
-  - Export becomes a backup format that can be imported again.
 - **Harder:**
   - A new staging store to provision and expire in every provider.
   - Constraint validation over a whole import has to hold the import's claims, bounded by staging rather than memory.
@@ -244,3 +224,5 @@ Rulings given by Einar on 2026-11-03 while the record is still proposed. The res
 - **Observers see imported events once, through the existing mechanics.** Reactors and reducers handle imported events as normal. There is no import flag and no extra need for `[OnceOnly]`.
 - **Importing locks nothing.** No exclusive mode, no lock on the event sequence, no held-back writers.
 - **The C# client takes an `IAsyncEnumerable` of events.** The client-side API in point 7 is endorsed.
+- **Chunked unary calls on the wire, streaming in the client.** Chunking is kept for continuation after a dropped connection; there is no client-streaming RPC.
+- **No file import.** The JSON Lines format and the file-reading client API are dropped. The client chooses how to read its source.
