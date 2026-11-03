@@ -310,7 +310,13 @@ public partial class Sink
 
     static void SetTypedColumn(EntityEntry<DynamicReadModelEntity> entry, ProjectedColumn column, object? value)
     {
-        entry.Entity[column.Name] = CoerceForColumn(column, value);
+        var coercedValue = CoerceForColumn(column, value);
+        if (entry.Entity.TryGetValue(column.Name, out var existingValue) && Equals(existingValue, coercedValue))
+        {
+            return;
+        }
+
+        entry.Entity[column.Name] = coercedValue;
         entry.Property(column.Name).IsModified = true;
     }
 
