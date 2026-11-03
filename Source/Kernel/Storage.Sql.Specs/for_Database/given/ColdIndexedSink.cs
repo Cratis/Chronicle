@@ -63,12 +63,39 @@ static class ColdIndexedSink
     /// <param name="occurrence">The occurrence to read.</param>
     /// <returns>What the two queries returned.</returns>
     internal static Task<OccurrenceRead> ReadTheOccurrence(IDatabase database, string schema, string eventStore = "store", string @namespace = "namespace", string occurrence = Occurrence) =>
+        ReadThe(database, schema, eventStore, @namespace, occurrence);
+
+    /// <summary>
+    /// Reads the primary table, which is what a query without an occurrence reads, through the sink's list query and its live query.
+    /// </summary>
+    /// <param name="database">The real database.</param>
+    /// <param name="schema">The JSON schema of the read model.</param>
+    /// <param name="eventStore">The event store the sink belongs to.</param>
+    /// <param name="namespace">The namespace the sink belongs to.</param>
+    /// <returns>What the two queries returned.</returns>
+    internal static Task<OccurrenceRead> ReadThePrimaryTable(IDatabase database, string schema, string eventStore, string @namespace) =>
+        ReadThe(database, schema, eventStore, @namespace, null);
+
+    static Task<OccurrenceRead> ReadThe(IDatabase database, string schema, string eventStore, string @namespace, ReadModelContainerName? occurrence) =>
         Resolve(database, schema, eventStore, @namespace, async sink =>
         {
             var instances = await sink.GetInstances(occurrence, 0, 10, ReadModelInstanceVisibility.InitializedOnly);
             var observed = await sink.ObserveInstances(occurrence, 0, 10, ReadModelInstanceVisibility.InitializedOnly).Take(1).ToTask().WaitAsync(TimeSpan.FromSeconds(30));
             return new OccurrenceRead(instances.TotalCount, instances.Instances.Count(), observed.Count());
         });
+
+    /// <summary>
+    /// Resolves the sink without provisioning and lets <paramref name="read"/> use it, as a cold sink is used.
+    /// </summary>
+    /// <typeparam name="T">The type of what is read.</typeparam>
+    /// <param name="database">The real database.</param>
+    /// <param name="schemaJson">The JSON schema of the read model.</param>
+    /// <param name="eventStore">The event store the sink belongs to.</param>
+    /// <param name="namespace">The namespace the sink belongs to.</param>
+    /// <param name="read">What to do with the sink.</param>
+    /// <returns>What <paramref name="read"/> returned.</returns>
+    internal static Task<T> Cold<T>(IDatabase database, string schemaJson, string eventStore, string @namespace, Func<ISink, Task<T>> read) =>
+        Resolve(database, schemaJson, eventStore, @namespace, read);
 
     static async Task<T> Resolve<T>(IDatabase database, string schemaJson, string eventStore, string @namespace, Func<ISink, Task<T>> read)
     {

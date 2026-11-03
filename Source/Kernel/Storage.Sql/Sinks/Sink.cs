@@ -78,6 +78,7 @@ public partial class Sink : ISink, ICanReconcileIndexes, ISinkCompositeKeyLookup
     IReadOnlyList<ProjectedColumn> _columns;
     Task? _layout;
     Task<bool>? _readLayout;
+    bool _layoutResolvedForRead;
     LegacyCompositeKey? _compositeKey;
 
     /// <summary>
@@ -557,12 +558,15 @@ public partial class Sink : ISink, ICanReconcileIndexes, ISinkCompositeKeyLookup
     async Task<DbContextScope<ReadModelDbContext>?> OpenQueriedTable(ReadModelContainerName? occurrence)
     {
         var containerName = QueriedTableNameFor(occurrence);
+
+        // Every query resolves the key layout of the primary table first, so a sink that was never initialized does not
+        // read a table created in an earlier layout with the current one. Once resolved this is a field check.
+        await EnsureLayoutForRead();
         if (occurrence is null || containerName == _tableName)
         {
             return await _database.ReadModelTable(_eventStoreName, _namespace, containerName, _columns);
         }
 
-        await EnsureLayoutForRead();
         return await _database.ExistingReadModelTable(_eventStoreName, _namespace, containerName, _columns);
     }
 
