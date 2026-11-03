@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Reactive.Linq;
 using Cratis.Chronicle.Contracts.Clients;
 using Grpc.Core;
 
@@ -10,6 +11,7 @@ public class and_every_endpoint_fails_with_user_information_configured : given.a
 {
     const string Secret = "s3cret";
 
+    readonly List<ChronicleServerAddress> _checked = [];
     Exception? _result;
 
     protected override ChronicleConnectionString ConnectionString => new("chronicle://user:s3cret@localhost:35000");
@@ -17,12 +19,23 @@ public class and_every_endpoint_fails_with_user_information_configured : given.a
 
     async Task Because()
     {
-        // The first endpoint fails with a transport message that carries the secret; the second is incompatible.
-        _compatibility[_a] = () => Task.FromException<CompatibilityResponse>(new RpcException(new Status(StatusCode.Unavailable, "dial chronicle://user:s3cret@node-a:35000 failed")));
-        _compatibility[_b] = () => Task.FromResult(new CompatibilityResponse { IsCompatible = false, ServerVersion = "1.0.0" });
+        // The first endpoint fails at once, in the compatibility check and in its stream, with a message that carries the secret; the second is incompatible.
+        _compatibility[_a] = () =>
+        {
+            _checked.Add(_a);
+            return Task.FromException<CompatibilityResponse>(new RpcException(new Status(StatusCode.Unavailable, "dial chronicle://user:s3cret@node-a:35000 failed")));
+        };
+        _streams[_a] = () => Observable.Throw<ConnectionKeepAlive>(new RpcException(new Status(StatusCode.Unavailable, "stream chronicle://user:s3cret@node-a:35000 reset")));
+        _compatibility[_b] = () =>
+        {
+            _checked.Add(_b);
+            return Task.FromResult(new CompatibilityResponse { IsCompatible = false, ServerVersion = "1.0.0" });
+        };
         _result = await Catch.Exception(() => StartConnecting().WaitAsync(TimeSpan.FromSeconds(10), TimeProvider.System));
     }
 
+    [Fact] void should_have_checked_the_second_endpoint() => _checked.ShouldContain(_b);
+    [Fact] void should_fail_as_incompatible() => _result.ShouldBeOfExactType<IncompatibleServerException>();
     [Fact] void should_have_logged_something() => _logger.Messages.ShouldNotBeEmpty();
     [Fact] void should_not_expose_the_password_in_logged_messages() => _logger.Messages.ShouldNotContain(message => message.Contains(Secret, StringComparison.Ordinal));
     [Fact] void should_not_expose_the_username_in_logged_messages() => _logger.Messages.ShouldNotContain(message => message.Contains("//user", StringComparison.Ordinal));
