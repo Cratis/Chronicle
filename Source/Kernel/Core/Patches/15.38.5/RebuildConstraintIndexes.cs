@@ -2,12 +2,11 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Choreography.Jobs;
+using Cratis.Choreography.Patching;
 using Cratis.Chronicle.Concepts.Events.Constraints;
 using Cratis.Chronicle.Concepts.EventSequences;
-using Cratis.Chronicle.Concepts.System;
 using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.Namespaces;
-using Cratis.Chronicle.Patching;
 using Cratis.Chronicle.Storage;
 using Microsoft.Extensions.Logging;
 
@@ -64,12 +63,5 @@ public class RebuildConstraintIndexes(IStorage storage, IGrainFactory grainFacto
         }
 
         logger.PatchCompleted();
-    }
-
-    /// <inheritdoc/>
-    public Task Down()
-    {
-        logger.RollbackNotSupported();
-        return Task.CompletedTask;
     }
 }

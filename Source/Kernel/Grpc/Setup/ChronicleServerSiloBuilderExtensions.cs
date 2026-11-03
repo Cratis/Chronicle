@@ -19,6 +19,7 @@ using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Observation.Placement;
 using Cratis.Chronicle.Observation.Reactors.Clients;
 using Cratis.Chronicle.Observation.Reducers.Clients;
+using Cratis.Chronicle.Patching;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Releases;
 using Cratis.Chronicle.Schemas;
@@ -100,6 +101,7 @@ public static class ChronicleServerSiloBuilderExtensions
                 StepCheckpointFlushInterval = chronicleOptions.Jobs.StepCheckpointFlushInterval
             });
         });
+        builder.AddChroniclePatching();
         AddClusterReleaseSupport(builder.Services);
         builder.Services.TryAddSingleton<ITypeFormats, TypeFormats>();
         builder.Services.TryAddSingleton<Cratis.Chronicle.Services.Clients.OpenConnections>();

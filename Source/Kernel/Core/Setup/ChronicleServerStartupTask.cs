@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Choreography.Jobs;
+using Cratis.Choreography.Patching;
 using Cratis.Chronicle.Captures;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Observation;
@@ -15,7 +16,6 @@ using Cratis.Chronicle.Observation.EventStoreSubscriptions;
 using Cratis.Chronicle.Observation.Reactors.Kernel;
 using Cratis.Chronicle.Observation.Webhooks;
 using Cratis.Chronicle.Occurrences;
-using Cratis.Chronicle.Patching;
 using Cratis.Chronicle.Patterns;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Projections.Kernel;
@@ -40,7 +40,7 @@ namespace Orleans.Hosting;
 /// <param name="grainFactory"><see cref="IGrainFactory"/> for creating grains.</param>
 /// <param name="authenticationService"><see cref="IAuthenticationService"/> for managing authentication.</param>
 /// <param name="storageErrorClassifier"><see cref="IStorageErrorClassifier"/> for recognizing the active storage provider's own transient failures.</param>
-/// <param name="localSiloDetails">The caller's silo for patch-manager handover.</param>
+/// <param name="patchRunner">The <see cref="IPatchRunner"/> that applies pending patches.</param>
 /// <param name="clusterReleases">The published releases for startup diagnostics.</param>
 /// <param name="logger">The logger.</param>
 /// <param name="timeProvider">Optional <see cref="TimeProvider"/> the retry backoff waits on; defaults to <see cref="TimeProvider.System"/>.</param>
@@ -73,17 +73,12 @@ internal sealed class ChronicleServerStartupTask(
     IGrainFactory grainFactory,
     IAuthenticationService authenticationService,
     IStorageErrorClassifier storageErrorClassifier,
-    ILocalSiloDetails localSiloDetails,
+    IPatchRunner patchRunner,
     IClusterReleases clusterReleases,
     ILogger<ChronicleServerStartupTask> logger,
     TimeProvider? timeProvider = null,
     IGenerationFloorAdmission? generationFloorAdmission = null) : ILifecycleParticipant<ISiloLifecycle>
 {
-    /// <summary>
-    /// The exact Orleans placement-failure prefix for this grain and interface.
-    /// </summary>
-    internal const string PatchManagerPlacementFailure = "No active nodes are compatible with grain patchmanager and interface Cratis.Chronicle.Patching.IPatchManager version ";
-
     /// <summary>
     /// How many times a step is attempted before its failure is believed.
     /// </summary>
@@ -97,8 +92,6 @@ internal sealed class ChronicleServerStartupTask(
 
     static readonly TimeSpan _initialRetryDelay = TimeSpan.FromSeconds(2);
 
-    static readonly TimeSpan _patchManagerRelocationDelay = TimeSpan.FromSeconds(1);
-
     readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
 
     /// <inheritdoc/>
@@ -109,14 +102,6 @@ internal sealed class ChronicleServerStartupTask(
             ServiceLifecycleStage.Active,
             Execute);
     }
-
-    /// <summary>
-    /// Recognizes only the patch manager's no-compatible-node response during manifest convergence.
-    /// </summary>
-    /// <param name="exception">The Orleans placement failure.</param>
-    /// <returns>Whether the bounded patch-manager relocation loop should retry.</returns>
-    internal static bool IsPatchManagerAwaitingManifest(OrleansException exception) =>
-        exception.Message.StartsWith(PatchManagerPlacementFailure, StringComparison.Ordinal);
 
     /// <summary>
     /// Determines whether an observer's activation is required for startup.
@@ -139,8 +124,7 @@ internal sealed class ChronicleServerStartupTask(
         await Step("DiscoverAndRegisterSystemEventTypes", () => eventTypes.DiscoverAndRegister(EventStoreName.System));
 
         // Apply patches before other grains start
-        var patchManager = grainFactory.GetGrain<IPatchManager>(0);
-        await Step(nameof(IPatchManager.ApplyPatches), () => ApplyPatches(patchManager, cancellationToken));
+        await Step(nameof(IPatchRunner.ApplyPatches), () => ApplyPatches(cancellationToken));
 
         await Step("EnsureDefaultSystemNamespace", grainFactory.GetGrain<INamespaces>(EventStoreName.System).EnsureDefault);
 
@@ -240,38 +224,16 @@ internal sealed class ChronicleServerStartupTask(
 #endif
     }
 
-    async Task ApplyPatches(IPatchManager patchManager, CancellationToken cancellationToken)
+    async Task ApplyPatches(CancellationToken cancellationToken)
     {
-        RequestContext.Set(PatchManagerRelocation.CallerSiloKey, localSiloDetails.SiloAddress);
         try
         {
-            var delay = _patchManagerRelocationDelay;
-            for (var attempt = 0; attempt < MaxAttempts; attempt++)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                try
-                {
-                    if (await patchManager.ApplyPatchesFor(Cratis.Chronicle.Sys.KernelVersion.Current) == PatchOutcome.Completed) return;
-                }
-                catch (OrleansException exception) when (IsPatchManagerAwaitingManifest(exception))
-                {
-                    // A v2 placement can arrive before the new silo's manifest has converged.
-                }
-
-                // The older activation deactivates once idle; back off exponentially, since under load its
-                // deactivation can take longer than a short fixed wait allows.
-                if (attempt < MaxAttempts - 1)
-                {
-                    await Task.Delay(delay, _timeProvider, cancellationToken);
-                    delay += delay;
-                }
-            }
-            logger.PatchManagerCouldNotRelocate(Cratis.Chronicle.Sys.KernelVersion.Current.ToString(), clusterReleases.Summarize().ToString());
-            throw new InvalidOperationException("Patch manager could not relocate to a kernel at least as new as the caller.");
+            await patchRunner.ApplyPatches(cancellationToken);
         }
-        finally
+        catch (PatchManagerCouldNotRelocate)
         {
-            RequestContext.Remove(PatchManagerRelocation.CallerSiloKey);
+            logger.PatchManagerCouldNotRelocate(Cratis.Chronicle.Sys.KernelVersion.Current.ToString(), clusterReleases.Summarize().ToString());
+            throw;
         }
     }
 

@@ -26,7 +26,4 @@ internal static partial class RecordSubjectsOnUniqueConstraintClaimsLogMessages
 
     [LoggerMessage(LogLevel.Debug, "Completed RecordSubjectsOnUniqueConstraintClaims patch")]
     internal static partial void PatchCompleted(this ILogger<RecordSubjectsOnUniqueConstraintClaims> logger);
-
-    [LoggerMessage(LogLevel.Information, "RecordSubjectsOnUniqueConstraintClaims cannot be rolled back - claims of erased subjects are not restored")]
-    internal static partial void RollbackNotSupported(this ILogger<RecordSubjectsOnUniqueConstraintClaims> logger);
 }
