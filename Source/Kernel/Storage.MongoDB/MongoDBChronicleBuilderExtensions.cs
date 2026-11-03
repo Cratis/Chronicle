@@ -120,6 +120,7 @@ public static class MongoDBChronicleBuilderExtensions
             services.AddSingleton<IClusterStorage, ClusterStorage>();
             services.AddSingleton<ISingleWriterLeaseStorage, MongoDBSingleWriterLeaseStorage>();
             services.AddSingleton<ISystemStorage, SystemStorage>();
+            services.AddSingleton<ISystemEventStoreRelocation, SystemEventStoreRelocation>();
 
             // The Cratis.Orleans job system storage: the same MongoDB client, databases named exactly where
             // the kernel has always kept its job state, resolved per event store and namespace. Registered
