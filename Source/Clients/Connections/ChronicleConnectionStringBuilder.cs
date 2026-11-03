@@ -637,14 +637,19 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
     /// <param name="key">The option key.</param>
     /// <param name="convert">The conversion to apply.</param>
     /// <returns>The converted value.</returns>
-    /// <exception cref="FormatException">Thrown when the value cannot be converted.</exception>
+    /// <exception cref="FormatException">Thrown when the value is not in a valid format.</exception>
+    /// <exception cref="OverflowException">Thrown when the value is outside the range of the option type.</exception>
     T ConvertOption<T>(string key, Func<object, T> convert)
     {
         try
         {
             return convert(this[key]);
         }
-        catch (Exception ex) when (ex is FormatException or OverflowException)
+        catch (OverflowException)
+        {
+            throw new OverflowException($"The value of the '{key}' option is invalid.");
+        }
+        catch (FormatException)
         {
             throw new FormatException($"The value of the '{key}' option is invalid.");
         }

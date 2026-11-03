@@ -20,7 +20,8 @@ public class when_reading_settings_with_hostile_values : Specification
         Failure(() => _ = new ChronicleConnectionStringBuilder($"chronicle://localhost?skipKeepAlive={Marker}").SkipKeepAlive)
     ];
 
-    [Fact] void should_still_reject_every_value() => _failures.ShouldEachConformTo(_ => _ is FormatException);
+    [Fact] void should_reject_malformed_values_with_format_exceptions() => _failures.Where((_, index) => index != 1).ShouldEachConformTo(_ => _ is FormatException);
+    [Fact] void should_reject_the_overflowing_value_with_an_overflow_exception() => _failures[1].ShouldBeOfExactType<OverflowException>();
     [Fact] void should_not_expose_the_values_in_messages() => _failures.ShouldEachConformTo(_ => !_.Message.Contains(Marker, StringComparison.Ordinal) && !_.Message.Contains(Overflowing, StringComparison.Ordinal));
     [Fact] void should_not_expose_the_values_in_full_text() => _failures.ShouldEachConformTo(_ => !_.ToString().Contains(Marker, StringComparison.Ordinal) && !_.ToString().Contains(Overflowing, StringComparison.Ordinal));
     [Fact] void should_not_retain_an_inner_exception() => _failures.ShouldEachConformTo(_ => _.InnerException is null);
