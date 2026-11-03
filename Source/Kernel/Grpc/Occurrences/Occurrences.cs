@@ -85,6 +85,8 @@ internal sealed class Occurrences(
     /// <inheritdoc/>
     public Task<global::Cratis.Chronicle.Contracts.Queries.QueryResult<global::Cratis.Chronicle.Contracts.Occurrences.EffectReceiptRecordResponse?>> GetEffectReceipt(global::Cratis.Chronicle.Contracts.Occurrences.GetEffectReceiptRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         QueryExecutor.Execute<global::Cratis.Chronicle.Contracts.Occurrences.EffectReceiptRecordResponse?>(
+            callContext,
+            new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, request.Namespace),
             async () =>
             {
                 var result = await global::Cratis.Chronicle.Occurrences.EffectReceiptRecord.GetEffectReceipt((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, request.OccurrenceId, request.EffectKey, storage);
@@ -95,6 +97,8 @@ internal sealed class Occurrences(
     /// <inheritdoc/>
     public Task<global::Cratis.Chronicle.Contracts.Queries.QueryResult<global::Cratis.Chronicle.Contracts.Occurrences.OccurrenceSnapshotResponse?>> GetOccurrence(global::Cratis.Chronicle.Contracts.Occurrences.GetOccurrenceRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         QueryExecutor.Execute<global::Cratis.Chronicle.Contracts.Occurrences.OccurrenceSnapshotResponse?>(
+            callContext,
+            new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, request.Namespace),
             async () =>
             {
                 var result = await global::Cratis.Chronicle.Occurrences.OccurrenceSnapshot.GetOccurrence((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, request.Namespace, request.OccurrenceId, storage, request.ApplicationScope);
@@ -105,6 +109,8 @@ internal sealed class Occurrences(
     /// <inheritdoc/>
     public IObservable<global::Cratis.Chronicle.Contracts.Queries.QueryResult<IEnumerable<global::Cratis.Chronicle.Contracts.Occurrences.OccurrenceSnapshotResponse>>> ObserveOccurrences(global::Cratis.Chronicle.Contracts.Occurrences.ObserveOccurrencesRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         QueryExecutor.Execute<IEnumerable<global::Cratis.Chronicle.Contracts.Occurrences.OccurrenceSnapshotResponse>>(
+            callContext,
+            new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, request.Namespace),
             () => global::Cratis.Chronicle.Occurrences.OccurrenceSnapshot.ObserveOccurrences((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, request.Namespace, request.Trigger, storage, request.ApplicationScope)
                 .CompletedBy(callContext.CancellationToken)
                 .Select(_ => (IEnumerable<global::Cratis.Chronicle.Contracts.Occurrences.OccurrenceSnapshotResponse>)_.Select(ToOccurrenceSnapshotResponse).ToList()),

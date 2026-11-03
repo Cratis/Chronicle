@@ -54,16 +54,9 @@ Here are some common patterns for tagging reactors:
 
 ## Querying by Tag
 
-Tags stored in the event store definition can be used for:
+Reactor tags describe the reactor and are stored with its definition. Chronicle does not use them to activate or select reactors.
 
-- Filtering and searching for specific reactors
-- Organizing reactors in administrative interfaces
-- Generating documentation
-- Managing reactor deployments by tag
-- Monitoring and alerting based on tag groups
-- Controlling reactor activation by tag
-
-Note: The specific querying capabilities depend on your Chronicle setup and tooling.
+A reactor can filter on **event** tags to receive only events that carry a given tag. See [Filtering by tag](../events/filtering/by-tag.mdx).
 
 ## See Also
 

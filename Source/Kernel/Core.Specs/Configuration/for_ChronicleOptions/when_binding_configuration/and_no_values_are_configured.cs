@@ -51,4 +51,5 @@ public class and_no_values_are_configured : Specification
     [Fact] void should_default_the_health_port_to_not_set() => _options.Health.Port.ShouldBeNull();
     [Fact] void should_default_health_tls_to_enabled() => _options.Health.Tls.ShouldBeTrue();
     [Fact] void should_default_health_exclusive_to_disabled() => _options.Health.Exclusive.ShouldBeFalse();
+    [Fact] void should_not_enable_grpc_client_tracing() => _options.Telemetry.GrpcClientTracing.ShouldBeFalse();
 }

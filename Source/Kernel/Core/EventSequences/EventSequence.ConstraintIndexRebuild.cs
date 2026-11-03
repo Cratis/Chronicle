@@ -11,6 +11,7 @@ public partial class EventSequence
     readonly Dictionary<ConstraintName, int> _rebuildingConstraintIndexes = [];
     readonly Dictionary<ConstraintIndexRebuildRunId, ConstraintName[]> _constraintIndexRebuildRuns = [];
     readonly Dictionary<ConstraintIndexRebuildRunId, EventSequenceNumber> _constraintIndexRebuildStarts = [];
+    readonly Dictionary<ConstraintIndexRebuildRunId, DateTimeOffset> _constraintIndexRebuildHeldSince = [];
     readonly HashSet<ConstraintIndexRebuildRunId> _finishedConstraintIndexRebuilds = [];
     readonly Queue<ConstraintIndexRebuildRunId> _finishedConstraintIndexRebuildOrder = [];
     bool _rebuildOwnsBoundary;
@@ -34,19 +35,21 @@ public partial class EventSequence
                 logger.IgnoringFinishedConstraintIndexRebuild(_eventSequenceKey, runId);
                 return;
             }
-            await ConstraintIndexRebuilt(previous, _constraintIndexRebuildRuns[previous], ConstraintIndexRebuildOutcome.ProgressUnknown);
+            await EndConstraintIndexRebuild(previous, ConstraintIndexRebuildOutcome.ProgressUnknown, ConstraintIndexRebuildHandoffReason.ProgressUnknown);
         }
         SynchronizeIndexedDefinitions();
         var rebuilding = names.Distinct().ToArray();
         if (rebuilding.Length == 0) return;
         _constraintIndexRebuildRuns.Add(runId, rebuilding);
         _constraintIndexRebuildStarts.Add(runId, State.SequenceNumber);
+        RecordConstraintIndexRebuildHeld(runId);
         if (_replayScopes.Any(scope => rebuilding.Contains(scope.Definition.Name))) _constraintIndexReplay = null;
         if (rebuilding.Any(_catchUpDefinitionNames.Contains)) ResetRebuildCatchUp();
         foreach (var name in rebuilding)
         {
             _rebuildingConstraintIndexes[name] = _rebuildingConstraintIndexes.GetValueOrDefault(name) + 1;
         }
+        ReportRebuildingConstraintIndexes();
         UpdateConstraintIndexRepairTimer();
         if (State.ConstraintIndexCatchUpBelow is not null || !rebuilding.Any(IsUniqueConstraint)) return;
         State.ConstraintIndexCatchUpBelow = State.SequenceNumber;
@@ -55,7 +58,15 @@ public partial class EventSequence
     }
 
     /// <inheritdoc/>
-    public async Task ConstraintIndexRebuilt(ConstraintIndexRebuildRunId runId, IEnumerable<ConstraintName> names, ConstraintIndexRebuildOutcome outcome)
+    public Task ConstraintIndexRebuilt(ConstraintIndexRebuildRunId runId, IEnumerable<ConstraintName> names, ConstraintIndexRebuildOutcome outcome)
+    {
+        var reason = outcome.WroteAnything && outcome.ProcessedThrough is null
+            ? ConstraintIndexRebuildHandoffReason.ProgressUnknown
+            : ConstraintIndexRebuildHandoffReason.Rebuilt;
+        return EndConstraintIndexRebuild(runId, outcome, reason);
+    }
+
+    async Task EndConstraintIndexRebuild(ConstraintIndexRebuildRunId runId, ConstraintIndexRebuildOutcome outcome, ConstraintIndexRebuildHandoffReason reason)
     {
         if (ActiveConstraintIndexRebuild(runId) is not { } activeRun) return;
         runId = activeRun;
@@ -67,8 +78,7 @@ public partial class EventSequence
         }
         ReleaseRebuildingConstraintIndexes(rebuilt);
         if (rebuilt.Any(_catchUpDefinitionNames.Contains)) ResetRebuildCatchUp();
-        var unknown = outcome.WroteAnything && outcome.ProcessedThrough is null;
-        if (unknown)
+        if (reason is not ConstraintIndexRebuildHandoffReason.Rebuilt)
         {
             HandRebuildBoundaryToCatchUp(runId, rebuilt);
         }
@@ -77,13 +87,26 @@ public partial class EventSequence
             await RepairAfterRebuild(rebuilt, processed);
         }
 
-        await CompleteConstraintIndexRebuild(runId, rebuilt, unknown);
+        if (reason is ConstraintIndexRebuildHandoffReason.Failed) RefuseEndedRebuildUntilCatchUp(rebuilt);
+        await CompleteConstraintIndexRebuild(runId, rebuilt, reason);
     }
 
     ConstraintIndexRebuildRunId? ActiveConstraintIndexRebuild(ConstraintIndexRebuildRunId runId) =>
         runId.Attempt != Guid.Empty || _constraintIndexRebuildRuns.ContainsKey(runId)
             ? runId
             : _constraintIndexRebuildRuns.Keys.FirstOrDefault(candidate => candidate.Value == runId.Value);
+
+    void RefuseEndedRebuildUntilCatchUp(ConstraintName[] rebuilt)
+    {
+        var unique = rebuilt.Where(IsUniqueConstraint).ToArray();
+        if (unique.Length == 0) return;
+
+        // A missed handoff gives no assurance that any historical claims survived. Persist the
+        // catch-up refusal separately from the worker's mark until conservative replay completes.
+        State.ConstraintIndexCatchUpRefusing = (State.ConstraintIndexCatchUpRefusing ?? []).Union(unique).ToArray();
+    }
+
+    void ReportRebuildingConstraintIndexes() => _metrics?.ConstraintIndexesRebuilding(_rebuildingConstraintIndexes.Count);
 
     void ReleaseRebuildingConstraintIndexes(ConstraintName[] rebuilt)
     {
@@ -93,6 +116,7 @@ public partial class EventSequence
             if (count > 1) _rebuildingConstraintIndexes[name] = count - 1;
             else _rebuildingConstraintIndexes.Remove(name);
         }
+        ReportRebuildingConstraintIndexes();
     }
 
     void HandRebuildBoundaryToCatchUp(ConstraintIndexRebuildRunId runId, ConstraintName[] rebuilt)
@@ -114,7 +138,7 @@ public partial class EventSequence
         UpdateConstraintIndexWatermark();
         try
         {
-            await RunConstraintIndexRepairTurn(TimeSpan.FromSeconds(5), false, CancellationToken.None, persist: false);
+            await RunConstraintIndexRepairTurn(ConstraintIndexRepair.AppendRepairBudget, false, CancellationToken.None, persist: false);
         }
         catch (Exception error)
         {
@@ -122,24 +146,28 @@ public partial class EventSequence
         }
     }
 
-    async Task CompleteConstraintIndexRebuild(ConstraintIndexRebuildRunId runId, ConstraintName[] rebuilt, bool unknown)
+    async Task CompleteConstraintIndexRebuild(ConstraintIndexRebuildRunId runId, ConstraintName[] rebuilt, ConstraintIndexRebuildHandoffReason reason)
     {
         var boundary = State.ConstraintIndexCatchUpBelow;
-        var clear = _rebuildOwnsBoundary && _rebuildingConstraintIndexes.Count == 0 && !unknown;
+        var clear = _rebuildOwnsBoundary && _rebuildingConstraintIndexes.Count == 0 && reason is ConstraintIndexRebuildHandoffReason.Rebuilt;
         if (clear) State.ConstraintIndexCatchUpBelow = null;
         UpdateConstraintIndexWatermark();
         try
         {
             await PersistCatchUpState(CancellationToken.None);
+            _metrics?.ConstraintIndexRebuildEnded(reason.ToString());
             if (clear) _rebuildOwnsBoundary = false;
             _constraintIndexRebuildRuns.Remove(runId);
             _constraintIndexRebuildStarts.Remove(runId);
+            _constraintIndexRebuildHeldSince.Remove(runId);
+            _constraintIndexRebuildHeldReported.Remove(runId);
             RememberFinishedConstraintIndexRebuild(runId);
         }
         catch
         {
             if (clear) State.ConstraintIndexCatchUpBelow = boundary;
             foreach (var name in rebuilt) _rebuildingConstraintIndexes[name] = _rebuildingConstraintIndexes.GetValueOrDefault(name) + 1;
+            ReportRebuildingConstraintIndexes();
             throw;
         }
         finally

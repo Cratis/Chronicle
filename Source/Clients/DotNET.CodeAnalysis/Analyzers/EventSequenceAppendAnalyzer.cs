@@ -33,16 +33,13 @@ public class EventSequenceAppendAnalyzer : DiagnosticAnalyzer
     {
         context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
         context.EnableConcurrentExecution();
-        context.RegisterCompilationStartAction(start =>
-        {
-            var evidence = new Lazy<ExplicitRegistrationEvidence>(() => ExplicitRegistrationEvidence.Create(start.Compilation, start.CancellationToken));
-            start.RegisterSyntaxNodeAction(node => AnalyzeInvocation(node, evidence.Value), SyntaxKind.InvocationExpression);
-        });
+        context.RegisterSyntaxNodeAction(AnalyzeInvocation, SyntaxKind.InvocationExpression);
     }
 
-    static void AnalyzeInvocation(SyntaxNodeAnalysisContext context, ExplicitRegistrationEvidence evidence)
+    static void AnalyzeInvocation(SyntaxNodeAnalysisContext context)
     {
         var invocation = (InvocationExpressionSyntax)context.Node;
+        if (!IsAppend(invocation)) return;
         var symbolInfo = context.SemanticModel.GetSymbolInfo(invocation);
 
         if (symbolInfo.Symbol is not IMethodSymbol methodSymbol)
@@ -86,7 +83,8 @@ public class EventSequenceAppendAnalyzer : DiagnosticAnalyzer
         }
 
         // Previous generations are valid append payloads, independently of observer dispatch rules.
-        if (!evidence.IsEventType(eventType, context.Compilation) && !WellKnownTypes.HasEventTypeGenerationForAttribute(eventType))
+        if (!WellKnownTypes.HasEventTypeGenerationForAttribute(eventType) &&
+            !ExplicitRegistrationEvidence.IsKnownEventType(eventType, context.Compilation, context.CancellationToken))
         {
             var diagnostic = Diagnostic.Create(
                 Rule,
@@ -94,6 +92,12 @@ public class EventSequenceAppendAnalyzer : DiagnosticAnalyzer
                 eventType.Name);
             context.ReportDiagnostic(diagnostic);
         }
+    }
+
+    static bool IsAppend(InvocationExpressionSyntax invocation)
+    {
+        var name = InvocationName.Of(invocation);
+        return name == "Append" || name == "AppendMany";
     }
 
     static bool IsEventSequenceAppendMethod(IMethodSymbol methodSymbol)

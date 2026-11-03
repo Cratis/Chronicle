@@ -19,7 +19,7 @@ public class and_a_cancelled_write_throws_a_provider_error : given.a_constraint_
         });
     }
 
-    async Task Because() => _results = await _context.Update(1, _budget.Token);
+    async Task Because() => _results = await _context.Update(1, TimeSpan.FromSeconds(1), _budget.Token);
 
     void Destroy() => _budget.Dispose();
 

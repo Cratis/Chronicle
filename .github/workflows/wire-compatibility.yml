@@ -9,8 +9,8 @@ name: Wire Compatibility
 #   1. The committed proto files and descriptor set still match the contracts source. A stale descriptor set would
 #      make step 2 compare against something nobody is actually running.
 #   2. The wire contract at HEAD still serves every released minor of the current major - at or after the declared
-#      floor, where one applies to that major - reporting each one, so a break says which releases it breaks rather
-#      than only that something broke.
+#      floor, where one applies to that major, and at or before the release being cut - reporting each one, so a break
+#      says which releases it breaks rather than only that something broke.
 
 on:
   workflow_call:
@@ -94,6 +94,9 @@ jobs:
         id: baseline
         env:
           RELEASE_VERSION: ${{ inputs.version }}
+          TARGET_BRANCH: ${{ github.base_ref || github.ref_name }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
           LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
         run: |
           set -euo pipefail
@@ -108,22 +111,42 @@ jobs:
 
           if [ -n "$RELEASE_VERSION" ]; then
             MAJOR="${RELEASE_VERSION%%.*}"
-            echo "Baseline major $MAJOR, from the release version $RELEASE_VERSION."
+            CEILING="$RELEASE_VERSION"
+            echo "Baseline major $MAJOR, bounded by the release version $CEILING."
           else
-            # Read the whole list and take its first line rather than piping into head. Under pipefail, head
-            # closing the pipe kills git with SIGPIPE and the step exits 141 - intermittently, depending on
-            # whether git had finished writing, which is the worst way for a gate to fail.
-            ALL_TAGS="$(git tag --list 'v*' --sort=-v:refname)"
-            LATEST_TAG="${ALL_TAGS%%$'\n'*}"
-            if [ -z "$LATEST_TAG" ]; then
-              echo "::notice title=Wire compatibility not checked::No release tag exists yet, so there is no released contract to stay compatible with."
-              echo "skip=true" >> "$GITHUB_OUTPUT"
-              exit 0
+            CEILING=""
+            TAG=""
+            if [ "$TARGET_BRANCH" != "${DEFAULT_BRANCH:-main}" ]; then
+              LINE_TAGS="$(git tag --merged "${BASE_SHA:-HEAD}" --list 'v*' --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+([-+].+)?$' || true)"
+              TAG="${LINE_TAGS%%$'\n'*}"
+              if [ -n "$TAG" ]; then
+                CEILING="${TAG#v}"
+              else
+                echo "::warning title=Wire compatibility not bounded::No release tag is merged into $TARGET_BRANCH, so this run compares unbounded."
+              fi
             fi
-            MAJOR="${LATEST_TAG#v}"
-            MAJOR="${MAJOR%%.*}"
-            echo "Baseline major $MAJOR, from the latest tag $LATEST_TAG."
+
+            if [ -n "$TAG" ]; then
+              MAJOR="${TAG#v}"
+              MAJOR="${MAJOR%%.*}"
+              echo "Baseline major $MAJOR, ceiling $CEILING, the newest release on $TARGET_BRANCH."
+            else
+              # Read the whole list and take its first line rather than piping into head. Under pipefail, head
+              # closing the pipe kills git with SIGPIPE and the step exits 141 - intermittently, depending on
+              # whether git had finished writing, which is the worst way for a gate to fail.
+              ALL_TAGS="$(git tag --list 'v*' --sort=-v:refname)"
+              LATEST_TAG="${ALL_TAGS%%$'\n'*}"
+              if [ -z "$LATEST_TAG" ]; then
+                echo "::notice title=Wire compatibility not checked::No release tag exists yet, so there is no released contract to stay compatible with."
+                echo "skip=true" >> "$GITHUB_OUTPUT"
+                exit 0
+              fi
+              MAJOR="${LATEST_TAG#v}"
+              MAJOR="${MAJOR%%.*}"
+              echo "Baseline major $MAJOR, from the latest tag $LATEST_TAG; no ceiling."
+            fi
           fi
+          echo "ceiling=$CEILING" >> "$GITHUB_OUTPUT"
 
           # The floor names the major it belongs to, so it narrows that major and leaves every other one whole.
           FLOOR_MAJOR="${WIRE_BASELINE_FLOOR%%.*}"
@@ -138,12 +161,11 @@ jobs:
           echo "skip=false" >> "$GITHUB_OUTPUT"
           echo "major=$MAJOR" >> "$GITHUB_OUTPUT"
 
-      # Building Contracts regenerates the proto files and the descriptor set - the GenerateProtoFiles target
-      # deletes the previous ones and writes them again - so this both produces what is compared below and
-      # reveals a hand-patched generated file as a diff.
+      # Force regeneration even with cached outputs: stale files are removed and hand edits overwritten, while
+      # unchanged files keep their timestamps. This produces what is compared below and reveals hand patches.
       - name: Build Contracts, regenerating the wire contract
         if: steps.baseline.outputs.skip == 'false'
-        run: dotnet build Source/Kernel/Contracts/Contracts.csproj -c Release
+        run: dotnet build Source/Kernel/Contracts/Contracts.csproj -c Release -p:ForceCodeGeneration=true
 
       # A descriptor set that no longer describes the contracts source would make the comparison below meaningless -
       # it would pass by comparing the released contract against a stale copy of itself. The generated files are
@@ -168,6 +190,7 @@ jobs:
         if: steps.baseline.outputs.skip == 'false'
         env:
           SINCE: ${{ steps.baseline.outputs.since }}
+          CEILING: ${{ steps.baseline.outputs.ceiling }}
         run: |
           # Without pipefail the exit code below would be tee's, and every breaking change would report success.
           set -euo pipefail
@@ -177,6 +200,11 @@ jobs:
           FLOOR=()
           if [ -n "$SINCE" ]; then
             FLOOR=(--since "$SINCE")
+          fi
+
+          UP_TO=()
+          if [ -n "$CEILING" ]; then
+            UP_TO=(--up-to "$CEILING")
           fi
 
           # Only withdrawals belonging to the major under comparison are passed; the tool refuses the rest rather
@@ -191,6 +219,7 @@ jobs:
           dotnet run --project Source/Tools/WireCompatibility/WireCompatibility.csproj -- \
             --major "${{ steps.baseline.outputs.major }}" \
             ${FLOOR[@]+"${FLOOR[@]}"} \
+            ${UP_TO[@]+"${UP_TO[@]}"} \
             ${WITHDRAWN[@]+"${WITHDRAWN[@]}"} \
             --current "${{ env.PROTOBUF_DIRECTORY }}/chronicle.desc" \
             --allow-missing-baseline \

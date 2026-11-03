@@ -68,6 +68,10 @@ MongoDB health checks read the driver's monitored cluster state without borrowin
 pool saturation alone therefore does not make the MongoDB check unhealthy. This is not an active query
 or a guarantee that an application operation can immediately acquire a connection.
 
+### Index provisioning
+
+Use `--migrate-only` to provision kernel-owned indexes before deployment and `--verify-schema` to check them without DDL. Both exit without starting the kernel. `storage.schemaMode: Verify` adds a warning-only MongoDB startup check of System/Default, its event-store level, and global encryption; it does not disable lazy runtime index creation. See [MongoDB Index Operations](mongodb-index-operations.md) for scope discovery, permissions, jobs routing, and exit codes.
+
 ### Database-name prefix
 
 Set `storage.databaseNamePrefix` to isolate Chronicle's databases on a shared MongoDB server:

@@ -10,6 +10,7 @@ namespace Cratis.Chronicle.Tools.WireCompatibility;
 /// </summary>
 /// <param name="Major">The major version whose every released minor is a baseline.</param>
 /// <param name="Since">The oldest release still treated as a baseline, when a floor has been declared.</param>
+/// <param name="UpTo">The newest release treated as a baseline, inclusive, when a ceiling has been declared.</param>
 /// <param name="Withdrawn">Releases whose contract has been withdrawn, so they are not baselines.</param>
 /// <param name="BaselineVersion">An explicit baseline version, overriding <paramref name="Major"/>.</param>
 /// <param name="BaselineAssembly">A local contracts assembly to use as the baseline instead of downloading one.</param>
@@ -21,6 +22,7 @@ namespace Cratis.Chronicle.Tools.WireCompatibility;
 public record Options(
     int? Major,
     string? Since,
+    string? UpTo,
     IReadOnlyList<string> Withdrawn,
     string? BaselineVersion,
     string? BaselineAssembly,
@@ -39,6 +41,7 @@ public record Options(
         string.Empty,
         "  --major <n>              Compare against every released minor of major version n.",
         "  --since <version>        The oldest release to compare against. Must be in the same major as --major.",
+        "  --up-to <version>        The newest release to compare against, inclusive. Same major as --major.",
         "  --withdrawn <version>    A released version whose contract was withdrawn. Repeatable.",
         "  --baseline <version>     Compare against an explicit released version.",
         "  --baseline-assembly <p>  Compare against a local contracts assembly.",
@@ -61,6 +64,7 @@ public record Options(
     {
         int? major = null;
         string? since = null;
+        string? upTo = null;
         var withdrawn = new List<string>();
         string? baselineVersion = null;
         string? baselineAssembly = null;
@@ -79,6 +83,9 @@ public record Options(
                     break;
                 case "--since":
                     since = Next(args, ref index, "--since");
+                    break;
+                case "--up-to":
+                    upTo = Next(args, ref index, "--up-to");
                     break;
                 case "--withdrawn":
                     withdrawn.Add(Next(args, ref index, "--withdrawn"));
@@ -116,7 +123,7 @@ public record Options(
 
         if (selfTest)
         {
-            return new(null, null, [], null, null, current, importPath ?? Path.GetDirectoryName(Path.GetFullPath(current)) ?? ".", github, false, true);
+            return new(null, null, null, [], null, null, current, importPath ?? Path.GetDirectoryName(Path.GetFullPath(current)) ?? ".", github, false, true);
         }
 
         var baselines = new object?[] { major, baselineVersion, baselineAssembly }.Count(_ => _ is not null);
@@ -138,6 +145,21 @@ public record Options(
             throw new InvalidArguments($"--since {since} is not in major {major}, so it says nothing about which of that major's releases are baselines.");
         }
 
+        if (upTo is not null && major is null)
+        {
+            throw new InvalidArguments("--up-to only means something alongside --major, which is what decides the set of baselines it narrows.");
+        }
+
+        if (upTo is not null && !ReleaseVersion.IsValid(upTo))
+        {
+            throw new InvalidArguments($"--up-to {upTo} is not a release version (major.minor.patch, optionally with a pre-release suffix).");
+        }
+
+        if (upTo is not null && !string.Equals(upTo.Split('.')[0], major?.ToString(CultureInfo.InvariantCulture), StringComparison.Ordinal))
+        {
+            throw new InvalidArguments($"--up-to {upTo} is not in major {major}, so it says nothing about which of that major's releases are baselines.");
+        }
+
         // Withdrawing a release the tool would never have compared against reads exactly like a working exclusion,
         // so it is refused here rather than quietly excluding nothing.
         if (withdrawn.Count > 0 && major is null)
@@ -153,6 +175,7 @@ public record Options(
         return new(
             major,
             since,
+            upTo,
             withdrawn,
             baselineVersion,
             baselineAssembly,
