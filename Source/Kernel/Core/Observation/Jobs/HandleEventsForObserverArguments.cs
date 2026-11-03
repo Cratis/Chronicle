@@ -29,6 +29,9 @@ public record HandleEventsForObserverArguments(
     /// <inheritdoc/>
     public ulong? Revision { get; init; }
 
+    /// <inheritdoc/>
+    public ulong? OwnershipEpoch { get; init; }
+
     /// <summary>
     /// Gets a value indicating whether events belonging to a partition the observer has already recorded as failed
     /// are skipped rather than delivered.

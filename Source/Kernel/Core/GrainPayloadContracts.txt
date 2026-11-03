@@ -855,6 +855,7 @@ json Cratis.Chronicle.Observation.Jobs.CatchUpObserverPartitionRequest
   key: Cratis.Chronicle.Concepts.Keys.Key
   observerKey: Cratis.Chronicle.Concepts.Observation.ObserverKey
   observerType: Cratis.Chronicle.Concepts.Observation.ObserverType
+  ownershipEpoch: ulong?
   readerScope: Cratis.Chronicle.Concepts.Observation.ObserverReaderScope
   revision: ulong?
 json Cratis.Chronicle.Observation.Jobs.CatchUpObserverRequest
@@ -862,6 +863,7 @@ json Cratis.Chronicle.Observation.Jobs.CatchUpObserverRequest
   fromEventSequenceNumber: Cratis.Chronicle.Concepts.Events.EventSequenceNumber
   observerKey: Cratis.Chronicle.Concepts.Observation.ObserverKey
   observerType: Cratis.Chronicle.Concepts.Observation.ObserverType
+  ownershipEpoch: ulong?
   readerScope: Cratis.Chronicle.Concepts.Observation.ObserverReaderScope
   revision: ulong?
 json Cratis.Chronicle.Observation.Jobs.HandleEventsForObserverArguments
@@ -870,6 +872,7 @@ json Cratis.Chronicle.Observation.Jobs.HandleEventsForObserverArguments
   eventTypes: System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Events.EventType>
   observerKey: Cratis.Chronicle.Concepts.Observation.ObserverKey
   observerType: Cratis.Chronicle.Concepts.Observation.ObserverType
+  ownershipEpoch: ulong?
   readerScope: Cratis.Chronicle.Concepts.Observation.ObserverReaderScope
   revision: ulong?
   skipFailedPartitions: bool
@@ -902,6 +905,7 @@ json Cratis.Chronicle.Observation.Jobs.HandleEventsForPartitionArguments
   key: Cratis.Chronicle.Concepts.Keys.Key
   observerKey: Cratis.Chronicle.Concepts.Observation.ObserverKey
   observerType: Cratis.Chronicle.Concepts.Observation.ObserverType
+  ownershipEpoch: ulong?
   partition: Cratis.Chronicle.Concepts.Keys.Key
   readerScope: Cratis.Chronicle.Concepts.Observation.ObserverReaderScope
   revision: ulong?
@@ -939,6 +943,7 @@ json Cratis.Chronicle.Observation.Jobs.ReplayObserverPartitionRequest
   key: Cratis.Chronicle.Concepts.Keys.Key
   observerKey: Cratis.Chronicle.Concepts.Observation.ObserverKey
   observerType: Cratis.Chronicle.Concepts.Observation.ObserverType
+  ownershipEpoch: ulong?
   readerScope: Cratis.Chronicle.Concepts.Observation.ObserverReaderScope
   replaysAllEventTypes: bool
   revision: ulong?
@@ -947,6 +952,7 @@ json Cratis.Chronicle.Observation.Jobs.ReplayObserverRequest
   eventTypes: System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Events.EventType>
   observerKey: Cratis.Chronicle.Concepts.Observation.ObserverKey
   observerType: Cratis.Chronicle.Concepts.Observation.ObserverType
+  ownershipEpoch: ulong?
   readerScope: Cratis.Chronicle.Concepts.Observation.ObserverReaderScope
   revision: ulong?
 json Cratis.Chronicle.Observation.Jobs.RetryFailedPartitionRequest
@@ -957,6 +963,7 @@ json Cratis.Chronicle.Observation.Jobs.RetryFailedPartitionRequest
   key: Cratis.Chronicle.Concepts.Keys.Key
   observerKey: Cratis.Chronicle.Concepts.Observation.ObserverKey
   observerType: Cratis.Chronicle.Concepts.Observation.ObserverType
+  ownershipEpoch: ulong?
   readerScope: Cratis.Chronicle.Concepts.Observation.ObserverReaderScope
   revision: ulong?
 json Cratis.Chronicle.Observation.ObserverDetails
