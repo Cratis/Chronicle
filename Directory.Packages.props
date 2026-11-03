@@ -29,8 +29,8 @@
     <PackageVersion Include="Cratis.Arc.Connections.Azure" Version="22.156.4" />
     <PackageVersion Include="Cratis.Arc.EntityFrameworkCore" Version="22.156.4" />
     <PackageVersion Include="Cratis.Arc.MongoDB" Version="22.156.4" />
-    <!-- Build-time tool only, kept at 22.23.0: the 22.30.0 generator aborts on Core with "Microsoft.Extensions.Options has already been loaded into this MetadataLoadContext". -->
-    <PackageVersion Include="Cratis.Arc.ProxyGenerator.Build" Version="22.156.4" />
+    <!-- Build-time tool only, kept at 22.143.0: from 22.144.0 the generator changes the committed Workbench proxies and emits ArcSliceLocation, which needs a matching @cratis/arc frontend bump. -->
+    <PackageVersion Include="Cratis.Arc.ProxyGenerator.Build" Version="22.143.0" />
     <PackageVersion Include="Cratis.Arc.Swagger" Version="22.156.4" />
     <PackageVersion Include="Cratis.Arc.Testing" Version="22.156.4" />
     <PackageVersion Include="Cratis.Screenplay" Version="4.249.2" />
