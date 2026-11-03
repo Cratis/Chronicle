@@ -9,7 +9,6 @@ using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Orleans.Jobs;
-using Cratis.Orleans.Storage.Jobs;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Observation.States;
@@ -77,7 +76,7 @@ public class CatchingUpInFlight(
         var owned = await PartitionsOwnedByDurableCatchUp(state);
         var partitions = state.InFlightPartitions
             .Where(p =>
-                !(state.CatchingUpPartitions.Contains(p) && (owned is null || owned.Contains(p))) &&
+                !(state.CatchingUpPartitions.Contains(p) && owned?.Contains(p) != false) &&
                 !state.ReplayingPartitions.Contains(p) &&
                 !failuresState.State.IsFailed(p))
             .ToArray();
@@ -132,6 +131,14 @@ public class CatchingUpInFlight(
         return state;
     }
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// On leaving the state, no per-state mutable bookkeeping is held — the catching-up partitions are
+    /// recorded directly on <see cref="ObserverState"/> and persist across the transition. This hook is
+    /// kept as the explicit place to clean up state-specific bookkeeping should any be introduced later.
+    /// </remarks>
+    public override Task<ObserverState> OnLeave(ObserverState state) => Task.FromResult(state);
+
     /// <summary>
     /// Finds the in-flight partitions already held for catch-up that an outstanding partition catch-up job owns.
     /// </summary>
@@ -158,12 +165,4 @@ public class CatchingUpInFlight(
         logger.KeepingInFlightMarkersJobLookupFailed(held);
         return null;
     }
-
-    /// <inheritdoc/>
-    /// <remarks>
-    /// On leaving the state, no per-state mutable bookkeeping is held — the catching-up partitions are
-    /// recorded directly on <see cref="ObserverState"/> and persist across the transition. This hook is
-    /// kept as the explicit place to clean up state-specific bookkeeping should any be introduced later.
-    /// </remarks>
-    public override Task<ObserverState> OnLeave(ObserverState state) => Task.FromResult(state);
 }
