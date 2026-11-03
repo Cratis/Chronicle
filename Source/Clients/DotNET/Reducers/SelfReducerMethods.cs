@@ -4,6 +4,7 @@
 using System.Collections.Frozen;
 using System.Reflection;
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Observation;
 
 namespace Cratis.Chronicle.Reducers;
 
@@ -20,15 +21,15 @@ internal static class SelfReducerMethods
     /// </summary>
     /// <param name="model">The candidate model.</param>
     /// <returns>Whether a valid static reduction method is declared.</returns>
-    internal static bool HasSelfShape(Type model) => CanBeSelf(model) && ReduceMethods(model).Any(method => InvalidReason(model, method) is null);
+    internal static bool HasSelfShape(Type model) => CanBeSelf(model) && (ReduceMethods(model).Any(method => InvalidReason(model, method) is null) || BatchReduceMethods(model).Any());
 
     /// <summary>
     /// Includes near-misses for nonfatal discovery diagnostics.
     /// </summary>
     /// <param name="model">The candidate model.</param>
     /// <returns>Whether its methods warrant discovery inspection.</returns>
-    internal static bool IsDiscoveryCandidate(Type model) => CanBeSelf(model) && ReduceMethods(model).Any(method =>
-        method.IsStatic && (ReturnsModel(model, method) || method.GetParameters().ElementAtOrDefault(1)?.ParameterType == model));
+    internal static bool IsDiscoveryCandidate(Type model) => CanBeSelf(model) && (BatchReduceMethods(model).Any() || ReduceMethods(model).Any(method =>
+        method.IsStatic && (ReturnsModel(model, method) || method.GetParameters().ElementAtOrDefault(1)?.ParameterType == model)));
 
     /// <summary>
     /// Refuses an explicitly nominated near-miss rather than silently ignoring it.
@@ -71,7 +72,10 @@ internal static class SelfReducerMethods
 
     static bool CanBeSelf(Type model) => model.IsClass && !model.IsAbstract && !model.IsGenericType && !model.IsAssignableTo(typeof(IReducer));
 
-    static IEnumerable<MethodInfo> ReduceMethods(Type model) => DeclaredMethods(model).Where(method => method.Name == "Reduce" && !method.IsSpecialName);
+    static IEnumerable<MethodInfo> ReduceMethods(Type model) => DeclaredMethods(model).Where(method => method.Name == "Reduce" && !method.IsSpecialName && !method.TakesEventBatch());
+
+    static IEnumerable<MethodInfo> BatchReduceMethods(Type model) => DeclaredMethods(model).Where(method =>
+        method.Name == "Reduce" && method.IsStatic && method.IsPublic && method.TakesEventBatch() && method.GetParameters().ElementAtOrDefault(1)?.ParameterType == model);
 
     static bool ReturnsModel(Type model, MethodInfo method) => method.ReturnType == model || method.ReturnType == typeof(Task<>).MakeGenericType(model);
 
@@ -80,7 +84,7 @@ internal static class SelfReducerMethods
         var methods = ReduceMethods(model).ToArray();
         if (methods.Length == 0)
         {
-            throw new SelfReducerHasNoReduceMethods(model);
+            return BatchReduceMethods(model).Any() ? FrozenDictionary<Type, MethodInfo>.Empty : throw new SelfReducerHasNoReduceMethods(model);
         }
         foreach (var method in methods)
         {

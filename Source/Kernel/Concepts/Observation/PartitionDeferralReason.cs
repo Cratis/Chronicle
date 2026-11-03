@@ -26,5 +26,10 @@ public enum PartitionDeferralReason
     /// <summary>
     /// A failed delivery is waiting for its next scheduled attempt.
     /// </summary>
-    RetryBackoff = 3
+    RetryBackoff = 3,
+
+    /// <summary>
+    /// The observer asked for the partition to be delivered again later, without failing it.
+    /// </summary>
+    RequestedByObserver = 4
 }
