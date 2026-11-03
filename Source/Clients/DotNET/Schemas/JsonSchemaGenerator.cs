@@ -10,6 +10,7 @@ using System.Text.Json.Serialization.Metadata;
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Confidentiality;
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.ProtectedValues;
 using Cratis.Geospatial;
 using Cratis.Json;
 using Cratis.Reflection;
@@ -310,6 +311,21 @@ public partial class JsonSchemaGenerator : IJsonSchemaGenerator
         }
     }
 
+    static void ThrowIfConflictingEncryptionScopes(PropertyInfo property)
+    {
+        if (property.PropertyType.GetCustomAttribute<EncryptedAttribute>() is not { } typeEncryption) return;
+
+        var parameter = property.DeclaringType?.GetConstructors().MaxBy(_ => _.GetParameters().Length)?
+            .GetParameters().FirstOrDefault(_ => string.Equals(_.Name, property.Name, StringComparison.OrdinalIgnoreCase));
+        var propertyEncryption = property.GetCustomAttribute<EncryptedAttribute>() ??
+            property.DeclaringType?.GetCustomAttribute<EncryptedAttribute>() ??
+            parameter?.GetCustomAttribute<EncryptedAttribute>();
+        if (propertyEncryption is not null && propertyEncryption.Scope != typeEncryption.Scope)
+        {
+            throw new ConflictingEncryptionScopes(property.Name, typeEncryption.Scope, propertyEncryption.Scope);
+        }
+    }
+
     JsonNode TransformReadModelNode(JsonSchemaExporterContext context, JsonNode schema)
     {
         var transformed = TransformNode(context, schema, restorePropertiesWithDefaultValues: true, preserveUnformattedNullability: true);
@@ -468,6 +484,8 @@ public partial class JsonSchemaGenerator : IJsonSchemaGenerator
 
         if (property is null) return;
 
+        ThrowIfConflictingEncryptionScopes(property);
+
         if (_metadataResolver.HasMetadataFor(property))
         {
             AddComplianceMetadata(schema, _metadataResolver.GetMetadataFor(property));
@@ -571,11 +589,14 @@ public partial class JsonSchemaGenerator : IJsonSchemaGenerator
                     }
                 }
 
-                return new JsonObject
+                var arraySchema = new JsonObject
                 {
                     ["type"] = "array",
                     ["items"] = itemSchema
                 };
+                AddPropertyMetadata(arraySchema, attributeProvider);
+
+                return arraySchema;
             }
         }
 
