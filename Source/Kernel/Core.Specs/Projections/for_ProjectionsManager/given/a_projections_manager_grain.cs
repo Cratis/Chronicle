@@ -38,6 +38,7 @@ public class a_projections_manager_grain : Specification
     protected IProjectionFactory _projectionFactory;
     protected Engine.IProjection _engineProjection;
     protected AdvancingClock _clock;
+    protected IProjectionSubscriptionThrottle _throttle;
     protected IReadModelsManager _readModelsManager;
     protected Observation.IObserver _observerGrain;
     protected readonly Dictionary<string, Observation.IObserver> _observersByKey = [];
@@ -57,6 +58,8 @@ public class a_projections_manager_grain : Specification
     async Task Establish()
     {
         _silo = new TestKitSilo();
+        _throttle = CreateThrottle();
+        _silo.AddService(_throttle);
         _logger = Substitute.For<ILogger<ProjectionsManager>>();
         _logger.IsEnabled(Arg.Any<LogLevel>()).Returns(true);
         _silo.AddService(_logger);
@@ -175,6 +178,12 @@ public class a_projections_manager_grain : Specification
         SinkDefinition.None,
         new Dictionary<ReadModelGeneration, JsonSchema>(),
         []);
+
+    /// <summary>
+    /// Creates admission for this independent fixture.
+    /// </summary>
+    /// <returns>The activation's host admission gate.</returns>
+    protected virtual IProjectionSubscriptionThrottle CreateThrottle() => new ProjectionSubscriptionThrottle();
 
     void AddClusterMembership()
     {
