@@ -15,6 +15,9 @@ internal static partial class ReducerLogMessages
     [LoggerMessage(LogLevel.Information, "Client subscription for reducer '{ReducerId}' is waiting for the webhook to leave")]
     internal static partial void WaitingForWebhook(this ILogger<Reducer> logger, ReducerId reducerId);
 
+    [LoggerMessage(LogLevel.Warning, "Could not record reducer '{ObserverId}' for connection {ConnectionId}; takeover on disconnect falls back to the watchdog")]
+    internal static partial void FailedToRecordObserver(this ILogger<Reducer> logger, ObserverId observerId, ConnectionId connectionId, Exception exception);
+
     [LoggerMessage(LogLevel.Debug, "Starting client reducer {observerId} for event store {EventStore} on sequence {EventSequenceId} for namespace {@namespace}")]
     internal static partial void Starting(this ILogger<Reducer> logger, EventStoreName eventStore, ObserverId observerId, EventSequenceId eventSequenceId, EventStoreNamespaceName @namespace);
 
