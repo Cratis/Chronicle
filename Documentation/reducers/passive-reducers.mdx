@@ -35,6 +35,8 @@ Use `isActive: false` when you want the observer registered but not running:
 
 This does **not** make the model passive. Previously persisted state remains in its configured sink and is no longer maintained. By-id reads do not switch to event reconstruction unless the read model carries `[Passive]`.
 
+`Watch` on inactive reducers, `[Passive]` read models, and reducers without dispatchable handlers uses the local callback path, not a remote change stream. An inactive client's `GetInstanceById` can return another client's materialized state without folding events locally or emitting a callback. Non-removals report `Modified`, including the first callback for a key; removals report `Removed`. Context carries the model key, not the causing event's sequence number. Update read model reactors that relied on first-seen `Added` to handle `Modified` instead. See [Reacting to changes](../read-models/reacting-to-changes) for kernel-backed watching and delivery limits.
+
 ## Bounded analysis, not arbitrary-date history
 
 A bounded `GetInstances(eventCount)` reconstructs from a prefix of event-type-selected events. The prefix is taken **before** tag/source/stream metadata filtering; rejected events do not cause Chronicle to read farther to find N accepted events.

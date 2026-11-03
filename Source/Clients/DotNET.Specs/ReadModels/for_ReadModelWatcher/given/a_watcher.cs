@@ -23,6 +23,7 @@ public class a_watcher : Specification
     void Establish()
     {
         _eventStore = Substitute.For<IEventStore>();
+        _eventStore.Reducers.HasFor<SomeModel>().Returns(false);
         _eventStoreName = Guid.NewGuid().ToString();
         _eventStore.Name.Returns(_eventStoreName);
         _eventStore.Namespace.Returns(_eventStoreNamespace);
