@@ -38,7 +38,7 @@ public class ManualOccurrenceClock : TimeProvider
 
     public async Task<ManualTimer> WaitForTimer(TimeSpan dueTime, CancellationToken cancellationToken = default)
     {
-        using var guard = new CancellationTokenSource(TimeSpan.FromSeconds(5), TimeProvider.System);
+        using var guard = new CancellationTokenSource(TimeSpan.FromSeconds(5), System);
         using var linked = CancellationTokenSource.CreateLinkedTokenSource(guard.Token, cancellationToken);
         while (true)
         {

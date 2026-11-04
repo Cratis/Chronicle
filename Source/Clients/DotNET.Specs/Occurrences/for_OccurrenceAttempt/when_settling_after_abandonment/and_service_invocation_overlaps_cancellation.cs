@@ -24,7 +24,7 @@ public class and_service_invocation_overlaps_cancellation : Specification
             _readmission = lifetime.Admit(settlement: true) is not null;
             callback.TrySetResult();
         });
-        var ticket = lifetime.Admit(settlement: true)!;
+        var ticket = lifetime.Admit(settlement: true);
         var invocation = Task.Run(() => ticket.Invoke(_ =>
         {
             entered.TrySetResult();

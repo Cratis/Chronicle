@@ -16,7 +16,7 @@ public class and_a_renewal_was_accepted_before_the_deadline : Specification
         var clock = new ManualOccurrenceClock();
         await using var lifetime = new OccurrenceAttemptLifetime(clock, clock.GetTimestamp(), CancellationToken.None);
         clock.Advance(TimeSpan.FromSeconds(20));
-        _accepted = lifetime.Accept(lifetime.Admit()!);
+        _accepted = lifetime.Accept(lifetime.Admit());
         clock.Advance(TimeSpan.FromSeconds(50));
         await clock.WaitForTimer(TimeSpan.FromSeconds(10));
         _cancelled = lifetime.Token.IsCancellationRequested;

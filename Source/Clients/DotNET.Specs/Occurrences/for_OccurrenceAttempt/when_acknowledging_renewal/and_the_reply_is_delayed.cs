@@ -18,7 +18,7 @@ public class and_the_reply_is_delayed : Specification
         _clock.Advance(TimeSpan.FromSeconds(20));
         var admission = lifetime.Admit();
         _clock.Advance(TimeSpan.FromSeconds(30));
-        _accepted = lifetime.Accept(admission!);
+        _accepted = lifetime.Accept(admission);
         _clock.Advance(TimeSpan.FromSeconds(10));
         await _clock.WaitForTimer(TimeSpan.FromSeconds(20));
         _activeAtTheOldDeadline = !lifetime.Token.IsCancellationRequested;

@@ -21,7 +21,7 @@ public class and_admission_wins_cancellation : Specification
         var proceed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var settlement = Task.Run(async () =>
         {
-            var ticket = lifetime.Admit(settlement: true)!;
+            var ticket = lifetime.Admit(settlement: true);
             admitted.TrySetResult(ticket);
             await proceed.Task;
             await ticket.Invoke(token =>

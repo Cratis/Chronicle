@@ -15,12 +15,12 @@ public class and_the_deadline_callback_is_queued : Specification
     {
         await using var lifetime = new OccurrenceAttemptLifetime(_clock, _clock.GetTimestamp(), CancellationToken.None);
         _clock.Advance(TimeSpan.FromSeconds(20));
-        lifetime.Accept(lifetime.Admit()!);
+        lifetime.Accept(lifetime.Admit());
         _clock.Advance(TimeSpan.FromSeconds(30));
         var renewal = lifetime.Admit();
         _clock.Advance(TimeSpan.FromSeconds(10), deliverCallbacks: false);
         var queued = _clock.CaptureDueCallbacks();
-        lifetime.Accept(renewal!);
+        lifetime.Accept(renewal);
         foreach (var callback in queued) callback();
         await _clock.WaitForTimer(TimeSpan.FromSeconds(50));
         _activeAfterTheStaleCallback = !lifetime.Token.IsCancellationRequested;

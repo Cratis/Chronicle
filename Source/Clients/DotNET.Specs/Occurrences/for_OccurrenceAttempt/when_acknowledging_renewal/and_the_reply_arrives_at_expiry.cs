@@ -18,7 +18,7 @@ public class and_the_reply_arrives_at_expiry : Specification
         _clock.Advance(TimeSpan.FromSeconds(20));
         var renewal = lifetime.Admit();
         _clock.Advance(TimeSpan.FromSeconds(40), deliverCallbacks: false);
-        _accepted = lifetime.Accept(renewal!);
+        _accepted = lifetime.Accept(renewal);
         _cancelled = lifetime.Token.IsCancellationRequested;
         _admittedAfterwards = lifetime.Admit() is not null;
         foreach (var callback in _clock.CaptureDueCallbacks()) callback();

@@ -23,7 +23,7 @@ public class and_retry_admission_wins_abandonment : Specification
         using var session = new CancellationTokenSource();
         await using var lifetime = new OccurrenceAttemptLifetime(_clock, _clock.GetTimestamp(), session.Token);
         _clock.Advance(TimeSpan.FromSeconds(20));
-        var initial = lifetime.Admit()!;
+        var initial = lifetime.Admit();
         _initialError = await Catch.Exception(() => initial.Invoke(_ =>
         {
             _invocations++;
@@ -36,7 +36,7 @@ public class and_retry_admission_wins_abandonment : Specification
         var proceed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var retry = Task.Run(async () =>
         {
-            var admission = lifetime.Admit()!;
+            var admission = lifetime.Admit();
             admitted.TrySetResult(admission);
             await proceed.Task;
             await admission.Invoke(token =>

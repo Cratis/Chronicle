@@ -20,7 +20,7 @@ public class and_abandonment_wins_retry_admission : Specification
         using var session = new CancellationTokenSource();
         await using var lifetime = new OccurrenceAttemptLifetime(_clock, _clock.GetTimestamp(), session.Token);
         _clock.Advance(TimeSpan.FromSeconds(20));
-        var initial = lifetime.Admit()!;
+        var initial = lifetime.Admit();
         _initialError = await Catch.Exception(() => initial.Invoke(_ =>
         {
             _invocations++;
