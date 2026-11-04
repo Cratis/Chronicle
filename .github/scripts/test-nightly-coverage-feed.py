@@ -20,6 +20,7 @@ feed = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(feed)
 NOW = 1793546946000
 SHA = "a" * 40
+ARTIFACTS_33 = feed.REPO + "/actions/runs/33/artifacts?name=coverage-nightly-v1-33-2&per_page=100"
 REPORT = json.dumps({"coverage": {"assemblies": [{"name": "Cratis.Chronicle", "coverage": 72.5}]}}).encode()
 
 
@@ -68,7 +69,7 @@ class FakeGitHub:
             feed.REPO: self.repo, feed.WORKFLOW: self.workflow,
             feed.RUNS: {"total_count": len(self.runs), "workflow_runs": self.runs},
             feed.REPO + "/actions/runs/33": self.run,
-            feed.REPO + "/actions/runs/33/artifacts?per_page=100": {"total_count": len(self.artifacts), "artifacts": self.artifacts},
+            ARTIFACTS_33: self.listing("coverage-nightly-v1-33-2"),
             feed.REPO + "/actions/artifacts/44": self.artifact,
         }
         if path in self.changes:
@@ -76,6 +77,11 @@ class FakeGitHub:
         if path not in values:
             raise AssertionError("Unexpected endpoint: " + path)
         return copy.deepcopy(values[path])
+
+    def listing(self, name):
+        # Like GitHub: the name filter is exact and server-side, and one page holds at most 100 entries.
+        matches = [item for item in self.artifacts if item.get("name") == name]
+        return {"total_count": len(matches), "artifacts": matches[:100]}
 
     def archive(self, path):
         self.calls.append(path)
@@ -156,9 +162,9 @@ class Admission(unittest.TestCase):
         self.api.runs = [self.api.run, newer]
         original = self.api.json
         self.api.json = lambda path: ({"total_count": 0, "artifacts": []}
-                                    if path.endswith("/34/artifacts?per_page=100") else original(path))
+                                    if path.endswith("/34/artifacts?name=coverage-nightly-v1-34-2&per_page=100") else original(path))
         self.assertEqual(0, self.consume())
-        self.assertLess(self.api.calls.index(feed.REPO + "/actions/runs/33/artifacts?per_page=100"),
+        self.assertLess(self.api.calls.index(ARTIFACTS_33),
                         self.api.calls.index(feed.REPO + "/actions/artifacts/44/zip"))
 
     def test_rechecks_reject_changed_run_or_artifact(self):
@@ -263,6 +269,14 @@ class Admission(unittest.TestCase):
                 self.api.artifact.update(size_in_bytes=len(payload), digest='sha256:' + hashlib.sha256(payload).hexdigest())
                 self.assertEqual(1, self.consume())
                 self.assertFalse((self.output / 'Summary.json').exists())
+
+    def test_more_than_one_page_of_other_artifacts_still_admits_the_feed(self):
+        others = [dict(copy.deepcopy(self.api.artifact), id=1000 + index, name=f"other-artifact-{index}")
+                  for index in range(150)]
+        self.api.artifacts = others[:75] + [self.api.artifact] + others[75:]
+        self.assertEqual(0, self.consume())
+        self.assertIn(ARTIFACTS_33, self.api.calls)
+        self.assertIn(feed.REPO + "/actions/artifacts/44/zip", self.api.calls)
 
     def test_listing_bounds_stale_runs_and_required_metadata(self):
         self.api.runs *= 31

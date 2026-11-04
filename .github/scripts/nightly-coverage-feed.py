@@ -275,7 +275,9 @@ def select(api, repo_id, workflow_id, now):
         except Rejected:
             continue  # Untrusted candidates never grant archive access.
     for run in sorted(eligible, key=lambda r: (timestamp(r["created_at"]), r["id"]), reverse=True):
-        response = api.json(f"{REPO}/actions/runs/{run['id']}/artifacts?per_page=100")
+        # A nightly run uploads far more than one page of artifacts, so the listing is filtered to the exact feed
+        # name on the server. The bounded, complete-listing check below then still holds for the filtered result.
+        response = api.json(f"{REPO}/actions/runs/{run['id']}/artifacts?name={artifact_name(run)}&per_page=100")
         artifacts = response.get("artifacts")
         require(type(artifacts) is list and len(artifacts) <= 100 and type(response.get("total_count")) is int
                 and response["total_count"] == len(artifacts), "incomplete artifact listing")
