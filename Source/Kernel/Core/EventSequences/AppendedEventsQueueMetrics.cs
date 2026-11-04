@@ -1,12 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Diagnostics;
-using System.Diagnostics.Metrics;
-using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Diagnostics;
-using Cratis.Metrics;
 
 namespace Cratis.Chronicle.EventSequences;
 
@@ -14,135 +10,27 @@ namespace Cratis.Chronicle.EventSequences;
 #pragma warning disable MA0048 // File name must match type name
 #pragma warning disable SA1402 // File may only contain a single type
 
-internal static partial class AppendedEventsQueueMetrics
+internal sealed class AppendedEventsQueueMetrics(MetricSet metrics) : IDisposable
 {
-    const string SuspectedUndeliveredDescription = "Number of event deliveries to an observer whose dispatch failed; one event can count once per observer";
+    readonly IMetricInstrument<int> _enqueued = metrics.Counter<int>(WellKnownMetricNames.AppendedEventsQueueEnqueuedEvents, WellKnownMetricNames.AppendedEventsQueueEnqueuedEventsUnit, "Number of events enqueued");
+    readonly IMetricInstrument<int> _handled = metrics.Counter<int>(WellKnownMetricNames.AppendedEventsQueueHandledEvents, WellKnownMetricNames.AppendedEventsQueueHandledEventsUnit, "Number of events processed");
+    readonly IMetricInstrument<int> _failures = metrics.Counter<int>(WellKnownMetricNames.AppendedEventsQueueHandlingFailures, WellKnownMetricNames.AppendedEventsQueueHandlingFailuresUnit, "Number of events that has handling failures");
+    readonly IMetricInstrument<int> _spilled = metrics.Counter<int>(WellKnownMetricNames.AppendedEventsQueueSpilledEvents, WellKnownMetricNames.AppendedEventsQueueSpilledEventsUnit, "Number of events spilled to observer catch-up when the queue was full");
+    readonly IMetricInstrument<int> _budgetExceeded = metrics.Counter<int>(WellKnownMetricNames.AppendedEventsQueueCatchUpTriggerBudgetExceeded, WellKnownMetricNames.AppendedEventsQueueCatchUpTriggerBudgetExceededUnit, "Number of spilled observer catch-up triggers still failing after the warning budget");
+    readonly IMetricInstrument<int> _undelivered = metrics.Counter<int>(WellKnownMetricNames.AppendedEventsQueueSuspectedUndeliveredEvents, WellKnownMetricNames.AppendedEventsQueueSuspectedUndeliveredEventsUnit, "Number of event deliveries to an observer whose dispatch failed; one event can count once per observer", WellKnownTelemetryAttributes.ObserverId);
+    readonly IMetricInstrument<int> _observersSpilled = metrics.Counter<int>(WellKnownMetricNames.AppendedEventsQueueObserverSpills, WellKnownMetricNames.AppendedEventsQueueObserverSpillsUnit, "Number of times an observer was moved from live delivery to catch-up, by reason", WellKnownTelemetryAttributes.ObserverId, WellKnownTelemetryAttributes.ObserverSpillReason);
 
-    const string ObserversSpilledDescription = "Number of times an observer was moved from live delivery to catch-up, by reason";
-
-    static readonly Lock _suspectedUndeliveredLock = new();
-    static readonly Lock _observersSpilledLock = new();
-    static Counter<int>? _suspectedUndelivered;
-    static Counter<int>? _observersSpilled;
-
-    [Counter<int>(WellKnownMetricNames.AppendedEventsQueueEnqueuedEvents, "Number of events enqueued", WellKnownMetricNames.AppendedEventsQueueEnqueuedEventsUnit)]
-    internal static partial void EventsEnqueued(this IMeterScope<AppendedEventsQueue> meter, int numberOfEvents);
-
-    [Counter<int>(WellKnownMetricNames.AppendedEventsQueueHandledEvents, "Number of events processed", WellKnownMetricNames.AppendedEventsQueueHandledEventsUnit)]
-    internal static partial void EventsHandled(this IMeterScope<AppendedEventsQueue> meter, int numberOfEvents);
-
-    [Counter<int>(WellKnownMetricNames.AppendedEventsQueueHandlingFailures, "Number of events that has handling failures", WellKnownMetricNames.AppendedEventsQueueHandlingFailuresUnit)]
-    internal static partial void EventsHandlingFailures(this IMeterScope<AppendedEventsQueue> meter);
-
-    [Counter<int>(WellKnownMetricNames.AppendedEventsQueueSpilledEvents, "Number of events spilled to observer catch-up when the queue was full", WellKnownMetricNames.AppendedEventsQueueSpilledEventsUnit)]
-    internal static partial void EventsSpilledToCatchup(this IMeterScope<AppendedEventsQueue> meter, int numberOfEvents);
-
-    [Counter<int>(WellKnownMetricNames.AppendedEventsQueueCatchUpTriggerBudgetExceeded, "Number of spilled observer catch-up triggers still failing after the warning budget", WellKnownMetricNames.AppendedEventsQueueCatchUpTriggerBudgetExceededUnit)]
-    internal static partial void CatchupTriggerBudgetExceeded(this IMeterScope<AppendedEventsQueue> meter);
-
-    /// <summary>
-    /// Records event deliveries whose dispatch to an observer failed.
-    /// </summary>
-    /// <param name="meter">The <see cref="IMeterScope{T}"/> of the queue.</param>
-    /// <param name="numberOfEvents">The number of events whose dispatch to the observer failed.</param>
-    /// <param name="observerId">The <see cref="ObserverId"/> of the observer.</param>
-    /// <remarks>
-    /// The generator fix from Cratis/Fundamentals#1138 is consumed in Cratis.Metrics.Roslyn 7.25.0.
-    /// Keep this implementation's observer tagging and failure-path initialization unchanged until the
-    /// convention-name migration in Cratis/Chronicle#4459, alongside the observer failure counters.
-    /// </remarks>
-    internal static void EventsSuspectedUndelivered(this IMeterScope<AppendedEventsQueue> meter, int numberOfEvents, ObserverId observerId)
+    public void Dispose()
     {
-        var counter = Volatile.Read(ref _suspectedUndelivered);
-        if (counter is null)
-        {
-            if (meter.Meter is null)
-            {
-                return;
-            }
-
-            lock (_suspectedUndeliveredLock)
-            {
-                counter = _suspectedUndelivered ??= meter.Meter.CreateCounter<int>(WellKnownMetricNames.AppendedEventsQueueSuspectedUndeliveredEvents, unit: WellKnownMetricNames.AppendedEventsQueueSuspectedUndeliveredEventsUnit, description: SuspectedUndeliveredDescription);
-            }
-        }
-
-        var tags = default(TagList);
-        foreach (var (key, tag) in meter.Tags)
-        {
-            tags.Add(key, tag);
-        }
-
-        tags.Add(WellKnownTelemetryAttributes.ObserverId, observerId);
-        counter.Add(numberOfEvents, tags);
+        // Instruments belong to the injected meter, not to a queue.
     }
 
-    /// <summary>
-    /// Records that an observer was moved from live delivery to its catch-up path.
-    /// </summary>
-    /// <param name="meter">The <see cref="IMeterScope{T}"/> of the queue.</param>
-    /// <param name="observerId">The <see cref="ObserverId"/> of the spilled observer.</param>
-    /// <param name="reason">Why it was spilled, one of <see cref="AppendedEventsQueueSpillReasons"/>.</param>
-    /// <remarks>
-    /// Written by hand for the same reason as <see cref="EventsSuspectedUndelivered"/> (Cratis/Fundamentals#1138).
-    /// </remarks>
-    internal static void ObserverSpilledToCatchup(this IMeterScope<AppendedEventsQueue> meter, ObserverId observerId, string reason)
-    {
-        var counter = Volatile.Read(ref _observersSpilled);
-        if (counter is null)
-        {
-            if (meter.Meter is null)
-            {
-                return;
-            }
+    internal void EventsEnqueued(int numberOfEvents) => _enqueued.Record(numberOfEvents);
+    internal void EventsHandled(int numberOfEvents) => _handled.Record(numberOfEvents);
+    internal void EventsHandlingFailures() => _failures.Record(1);
+    internal void EventsSpilledToCatchup(int numberOfEvents) => _spilled.Record(numberOfEvents);
+    internal void CatchupTriggerBudgetExceeded() => _budgetExceeded.Record(1);
 
-            lock (_observersSpilledLock)
-            {
-                counter = _observersSpilled ??= meter.Meter.CreateCounter<int>(WellKnownMetricNames.AppendedEventsQueueObserverSpills, unit: WellKnownMetricNames.AppendedEventsQueueObserverSpillsUnit, description: ObserversSpilledDescription);
-            }
-        }
-
-        var tags = default(TagList);
-        foreach (var (key, tag) in meter.Tags)
-        {
-            tags.Add(key, tag);
-        }
-
-        tags.Add(WellKnownTelemetryAttributes.ObserverId, observerId);
-        tags.Add(WellKnownTelemetryAttributes.ObserverSpillReason, reason);
-        counter.Add(1, tags);
-    }
-}
-
-/// <summary>
-/// The reasons an observer is spilled from live delivery to catch-up, used as the <c language="csharp">Reason</c> tag of the spill counter.
-/// </summary>
-internal static class AppendedEventsQueueSpillReasons
-{
-    /// <summary>The queue was full.</summary>
-    internal const string QueueFull = "QueueFull";
-
-    /// <summary>Dispatching to the observer failed.</summary>
-    internal const string DispatchFailed = "DispatchFailed";
-
-    /// <summary>The observer's share of one dispatch exceeded the partition run limit.</summary>
-    internal const string FragmentedBacklog = "FragmentedBacklog";
-
-    /// <summary>The observer's own backlog in the queue exceeded the queue capacity.</summary>
-    internal const string LaggingBacklog = "LaggingBacklog";
-}
-
-internal static class AppendedEventsQueueMetricsScopes
-{
-    internal static IMeterScope<AppendedEventsQueue> BeginScope(
-        this IMeter<AppendedEventsQueue> meter,
-        EventSequenceKey eventSequenceKey,
-        AppendedEventsQueueId queueId) =>
-        meter.BeginScope(new Dictionary<string, object>
-        {
-            [WellKnownTelemetryAttributes.EventStoreName] = eventSequenceKey.EventStore,
-            [WellKnownTelemetryAttributes.EventStoreNamespace] = eventSequenceKey.Namespace,
-            [WellKnownTelemetryAttributes.EventSequenceId] = eventSequenceKey.EventSequenceId,
-            [WellKnownTelemetryAttributes.AppendedEventsQueueId] = queueId
-        });
+    internal void EventsSuspectedUndelivered(int numberOfEvents, ObserverId observerId) => _undelivered.Record(numberOfEvents, observerId);
+    internal void ObserverSpilledToCatchup(ObserverId observerId, string reason) => _observersSpilled.Record(1, observerId, reason);
 }

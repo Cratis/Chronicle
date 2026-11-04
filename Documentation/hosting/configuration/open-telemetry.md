@@ -80,9 +80,19 @@ OTEL_EXPORTER_OTLP_HEADERS=x-api-key=your-api-key
 
 ## Instrument names and migration
 
-Kernel metrics default to `cratis.chronicle.*` names, explicit UCUM units, and shared attribute keys. For example, `cratis.chronicle.observer.successful_observations` has unit `{observation}`. A Prometheus exporter using default translation is expected to expose it as `cratis_chronicle_observer_successful_observations_total`; descriptions remain HELP metadata, not part of the name. Chronicle consumes `Cratis.Metrics.Roslyn` 7.27.0, which includes the instrument-name fix released in 7.20.0. Translation depends on the backend; OTLP serialization coverage alone does not verify Prometheus exposition or HELP text.
+Kernel metrics default to `Telemetry:MetricNames=Legacy`, preserving their existing names, units, descriptions, and dimension keys. The tables below describe these default series. Set `Telemetry:MetricNames=Convention` to opt into `cratis.chronicle.*` names, explicit UCUM units, and shared attribute keys. For example, `cratis.chronicle.observer.successful_observations` has unit `{observation}`. A Prometheus exporter using default translation is expected to expose it as `cratis_chronicle_observer_successful_observations_total`; descriptions remain HELP metadata, not part of the name. Chronicle consumes `Cratis.Metrics.Roslyn` 7.27.0, which includes the instrument-name fix released in 7.20.0. Translation depends on the backend; OTLP serialization coverage alone does not verify Prometheus exposition or HELP text.
 
-Legacy instruments remain published for one minor release with their original metadata and dimensions. The tables below describe those compatibility series. Use the [telemetry name reference](telemetry-names.md) to migrate instrument names and dimensions together; never sum legacy and convention series. Legacy names and keys are deprecated for removal in the next major version. Failure counters remain lazy and retain their existing recording points.
+Use `Telemetry:MetricNames=Both` only as a temporary migration mode. It creates both instrument sets at producer construction and records each measurement to each set with its own dimensions. The single modes publish only their selected set. No listener bridge translates measurements. Both increases telemetry volume and series count; never sum legacy and convention series.
+
+```json
+{
+  "Telemetry": {
+    "MetricNames": "Convention"
+  }
+}
+```
+
+Use the [telemetry name reference](telemetry-names.md) to migrate dashboard queries and alerts, changing names and dimensions together. Restart the kernel after changing the mode. Convention names are planned to become the default in the next major version, when legacy names and keys are planned for removal. Failure counters retain their existing recording points and do not emit initial zero measurements.
 
 ## Metrics instrumented
 

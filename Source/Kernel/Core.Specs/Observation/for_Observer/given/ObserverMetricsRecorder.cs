@@ -4,7 +4,6 @@
 using System.Collections.Concurrent;
 using System.Diagnostics.Metrics;
 using Cratis.Chronicle.Concepts.Observation;
-using Cratis.Chronicle.Diagnostics.OpenTelemetry;
 
 namespace Cratis.Chronicle.Observation.for_Observer.given;
 
@@ -12,10 +11,8 @@ namespace Cratis.Chronicle.Observation.for_Observer.given;
 /// Records the measurements an observer reports on its meter, for the one observer the recorder was created for.
 /// </summary>
 /// <remarks>
-/// The generated metrics keep their instruments in static fields, bound to the first meter they are used with.
-/// All recorders therefore share one <see cref="Meter"/> that is never disposed, and tell the observers they listen
-/// to apart by the observer id each of them is given - which is also what keeps specs running in parallel from
-/// seeing each other's measurements.
+/// All recorders share one <see cref="Meter"/> that is never disposed, and distinguish observers by their ids
+/// so specs running in parallel do not see each other's measurements.
 /// </remarks>
 public sealed class ObserverMetricsRecorder : IDisposable
 {
@@ -23,8 +20,6 @@ public sealed class ObserverMetricsRecorder : IDisposable
     /// The <see cref="Meter"/> shared by every recorder.
     /// </summary>
     public static readonly Meter SharedMeter = new("Cratis.Chronicle.Core.Specs.Observer");
-
-    static readonly LegacyMetricNameBridge _bridge = new(meter => ReferenceEquals(meter, SharedMeter), LegacyTelemetryNames.Metrics);
 
     readonly MeterListener _listener = new();
     readonly ConcurrentQueue<RecordedMeasurement> _measurements = new();
@@ -35,7 +30,6 @@ public sealed class ObserverMetricsRecorder : IDisposable
     /// </summary>
     public ObserverMetricsRecorder()
     {
-        GC.KeepAlive(_bridge);
         ObserverId = Guid.NewGuid().ToString();
 
         _listener.InstrumentPublished = (instrument, listener) =>

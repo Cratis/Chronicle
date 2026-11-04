@@ -4,7 +4,6 @@
 using System.Diagnostics.Metrics;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
-using Cratis.Chronicle.Diagnostics;
 using Cratis.Chronicle.EventSequences.for_AppendedEventsQueue.given;
 
 namespace Cratis.Chronicle.EventSequences.for_AppendedEventsQueue.when_enqueuing.with_observer_that_is_unreachable;
@@ -33,7 +32,7 @@ public class and_catch_up_is_still_unreachable_after_the_warning_budget : given.
         _listener.InstrumentPublished = (instrument, listener) =>
         {
             if (ReferenceEquals(instrument.Meter, QueueMetricsRecorder.SharedMeter) &&
-                instrument.Name == WellKnownMetricNames.AppendedEventsQueueCatchUpTriggerBudgetExceeded)
+                instrument.Name == "chronicle-appended-events-queue-catchup-trigger-budget-exceeded")
             {
                 listener.EnableMeasurementEvents(instrument);
             }

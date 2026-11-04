@@ -4,7 +4,7 @@
 namespace Cratis.Chronicle.Diagnostics.OpenTelemetry;
 
 /// <summary>
-/// Describes a legacy metric, published next to its convention counterpart for one minor release.
+/// Describes a legacy metric, selected by default until the next major release.
 /// </summary>
 /// <param name="Name">The legacy instrument name.</param>
 /// <param name="Unit">The legacy unit, or null.</param>

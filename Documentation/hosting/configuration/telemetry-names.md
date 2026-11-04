@@ -3,13 +3,23 @@ title: Telemetry names
 description: Migrate Chronicle metrics, attributes, and client spans to the shared Cratis OpenTelemetry naming convention.
 ---
 
-Chronicle publishes kernel metrics under `cratis.chronicle.*`, with UCUM units and shared attribute keys. The public .NET registry is the `WellKnownTelemetryAttributes`, `WellKnownMetricNames`, `WellKnownSpanNames` and `WellKnownClientSpanNames` classes in `Cratis.Chronicle.Diagnostics`. Client metrics will use `cratis.chronicle.client.*`; this change does not add client metrics.
+Chronicle preserves existing kernel metric names and metadata by default (`Telemetry:MetricNames=Legacy`). Opt into `Telemetry:MetricNames=Convention` to publish metrics under `cratis.chronicle.*`, with UCUM units and shared attribute keys. The public .NET registry is the `WellKnownTelemetryAttributes`, `WellKnownMetricNames`, `WellKnownSpanNames` and `WellKnownClientSpanNames` classes in `Cratis.Chronicle.Diagnostics`. Client metrics will use `cratis.chronicle.client.*`; this change does not add client metrics.
 
 ## Compatibility and migration
 
-Legacy metric names and their original units, descriptions, and attribute keys remain published alongside the convention names for one minor release. Do not sum both series: they represent the same measurements. Switch dashboard queries and alerts to the new names and dimensions together. The legacy series and legacy span keys are deprecated for removal in the next major version.
+Choose the kernel's metric naming mode independently of client `Telemetry:SpanNames`:
 
-The retry-attempt counter is an exception: `chronicle-observer-partition-retry-attempts` remains at its original recording point, after delivery fencing succeeds. It has no convention counterpart. Use `cratis.chronicle.observer.partition_failures` to count failed handling attempts. If recording a fence throws, a failure is counted but a retry attempt is not.
+| `Telemetry:MetricNames` | Published instruments |
+| --- | --- |
+| `Legacy` (default) | Existing names, units, descriptions, and attribute keys only |
+| `Convention` (opt-in) | Convention names, UCUM units, and shared attribute keys only |
+| `Both` (opt-in migration mode) | Both precreated sets, with each measurement recorded once to each set |
+
+Both is intended for comparing old and new dashboards during migration. It increases telemetry volume and series count. Do not sum both series: they represent the same measurements. Switch dashboard queries and alerts to the new names and dimensions together, then switch to Convention. Instrument selection happens once when a producer is constructed; recording does not translate names or dimension keys. Restart the kernel when changing the mode.
+
+Convention is planned to become the default in the next major version, when legacy metric names and keys are planned for removal. Legacy span keys are also deprecated for removal in the next major version.
+
+The retry-attempt counter is an exception: `chronicle-observer-partition-retry-attempts` remains at its original recording point, after delivery fencing succeeds. It has no convention counterpart and is published only in Legacy and Both modes. Use `cratis.chronicle.observer.partition_failures` to count failed handling attempts. If recording a fence throws, a failure is counted but a retry attempt is not.
 
 Metric names below are raw OpenTelemetry names. Prometheus exporters typically replace dots with underscores and append `_total` to counters. Never include `_total` in the instrument name. Exporter translation settings can affect the final query spelling.
 

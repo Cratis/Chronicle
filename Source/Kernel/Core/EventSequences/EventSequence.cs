@@ -96,7 +96,7 @@ public partial class EventSequence(
     IClosedStreamsConstraintStorage? _closedStreamsStorage;
     EventSequenceId _eventSequenceId = EventSequenceId.Unspecified;
     EventSequenceKey _eventSequenceKey = EventSequenceKey.NotSet;
-    IMeterScope<EventSequence>? _metrics;
+    EventSequenceMetrics? _metrics;
     IAppendedEventsQueues? _appendedEventsQueues;
     IConstraintValidation? _constraints;
     ConstraintsVersion _constraintsVersion = ConstraintsVersion.NotSet;
@@ -121,7 +121,7 @@ public partial class EventSequence(
     {
         _eventSequenceKey = EventSequenceKey.Parse(this.GetPrimaryKeyString());
         _eventSequenceId = _eventSequenceKey.EventSequenceId;
-        _metrics = meter.BeginEventSequenceScope(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace);
+        _metrics = meter.BeginEventSequenceScope(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, options.Value.Telemetry.MetricNames);
 
         // Bootstrap ensures System/Default before registering its schemas and observers. Calling back
         // into Namespaces(System) here can deadlock when its Ensure is activating this sequence to append

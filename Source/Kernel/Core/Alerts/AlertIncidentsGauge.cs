@@ -21,6 +21,7 @@ public sealed class AlertIncidentsGauge : IAlertIncidentsGauge
 {
     readonly TimeProvider _timeProvider;
     readonly bool _enabled;
+    readonly MetricNames _names;
     volatile State _state = State.None;
 
     /// <summary>
@@ -33,35 +34,39 @@ public sealed class AlertIncidentsGauge : IAlertIncidentsGauge
     {
         _timeProvider = timeProvider ?? TimeProvider.System;
         _enabled = options?.Value.Alerts.IncidentMetricsEnabled ?? true;
+        _names = options?.Value.Telemetry.MetricNames ?? MetricNames.Legacy;
         if (!_enabled)
         {
             return;
         }
 
-        // Register both naming schemes explicitly so they share the same snapshot and ownership.
-        meter.ActualMeter?.CreateObservableGauge(
-            WellKnownMetricNames.AlertOpenIncidents,
-            Observe,
-            unit: WellKnownMetricNames.AlertOpenIncidentsUnit,
-            description: "Number of open alert incidents per observer, condition and severity, sampled periodically from incident storage");
-        meter.ActualMeter?.CreateObservableGauge(
-            WellKnownMetricNames.AlertOpenIncidentsAvailable,
-            ObserveAvailable,
-            unit: WellKnownMetricNames.AlertOpenIncidentsAvailableUnit,
-            description: "1 when this process owns a fresh open incident snapshot, 0 when it owns a missing or stale one; absent when this process is not the owner");
+        if (_names is MetricNames.Convention or MetricNames.Both)
+        {
+            meter.ActualMeter?.CreateObservableGauge(
+                WellKnownMetricNames.AlertOpenIncidents,
+                Observe,
+                unit: WellKnownMetricNames.AlertOpenIncidentsUnit,
+                description: "Number of open alert incidents per observer, condition and severity, sampled periodically from incident storage");
+            meter.ActualMeter?.CreateObservableGauge(
+                WellKnownMetricNames.AlertOpenIncidentsAvailable,
+                ObserveAvailable,
+                unit: WellKnownMetricNames.AlertOpenIncidentsAvailableUnit,
+                description: "1 when this process owns a fresh open incident snapshot, 0 when it owns a missing or stale one; absent when this process is not the owner");
+        }
 
-        // Observable gauges cannot be bridged, so the legacy names are registered next to the convention names for one
-        // minor release, with the legacy attribute keys. Removed in the next major version.
-        meter.ActualMeter?.CreateObservableGauge(
-            LegacyTelemetryNames.OpenIncidents,
-            ObserveLegacy,
-            unit: null,
-            description: "Number of open alert incidents per observer, condition and severity, sampled periodically from incident storage");
-        meter.ActualMeter?.CreateObservableGauge(
-            LegacyTelemetryNames.OpenIncidentsAvailable,
-            ObserveAvailable,
-            unit: null,
-            description: "1 when this process owns a fresh open incident snapshot, 0 when it owns a missing or stale one; absent when this process is not the owner");
+        if (_names is MetricNames.Legacy or MetricNames.Both)
+        {
+            meter.ActualMeter?.CreateObservableGauge(
+                LegacyTelemetryNames.OpenIncidents,
+                ObserveLegacy,
+                unit: null,
+                description: "Number of open alert incidents per observer, condition and severity, sampled periodically from incident storage");
+            meter.ActualMeter?.CreateObservableGauge(
+                LegacyTelemetryNames.OpenIncidentsAvailable,
+                ObserveAvailable,
+                unit: null,
+                description: "1 when this process owns a fresh open incident snapshot, 0 when it owns a missing or stale one; absent when this process is not the owner");
+        }
     }
 
     /// <inheritdoc/>
@@ -69,7 +74,7 @@ public sealed class AlertIncidentsGauge : IAlertIncidentsGauge
 
     /// <inheritdoc/>
     void IAlertIncidentsGauge.Publish(object owner, AlertIncidentsGaugeSnapshot snapshot) =>
-        _state = new(owner, snapshot);
+        _state = new(owner, snapshot, _names is MetricNames.Legacy or MetricNames.Both ? snapshot.WithLegacyTags() : []);
 
     /// <inheritdoc/>
     void IAlertIncidentsGauge.Clear(object owner)
@@ -91,9 +96,11 @@ public sealed class AlertIncidentsGauge : IAlertIncidentsGauge
     /// Gets the current measurements with the legacy attribute keys; empty when there is no fresh snapshot.
     /// </summary>
     /// <returns>The measurements.</returns>
-    internal IEnumerable<Measurement<long>> ObserveLegacy() => Observe().Select(measurement => new Measurement<long>(
-        measurement.Value,
-        measurement.Tags.ToArray().Select(tag => new KeyValuePair<string, object?>(LegacyTelemetryNames.ToLegacyMetricKey(tag.Key), tag.Value)).ToArray()));
+    internal IEnumerable<Measurement<long>> ObserveLegacy()
+    {
+        var state = _state;
+        return !_enabled || Fresh(state) is null ? [] : state.LegacyMeasurements ?? [];
+    }
 
     /// <summary>
     /// Gets the availability measurement; empty when this process has no owner.
@@ -108,7 +115,7 @@ public sealed class AlertIncidentsGauge : IAlertIncidentsGauge
     AlertIncidentsGaugeSnapshot? Fresh(State state) =>
         state.Snapshot is not null && _timeProvider.GetUtcNow() - state.Snapshot.TakenAt <= AlertIncidentsGaugeTiming.StalenessThreshold ? state.Snapshot : null;
 
-    sealed record State(object? Owner, AlertIncidentsGaugeSnapshot? Snapshot)
+    sealed record State(object? Owner, AlertIncidentsGaugeSnapshot? Snapshot, IReadOnlyList<Measurement<long>>? LegacyMeasurements = null)
     {
         internal static readonly State None = new(null, null);
     }

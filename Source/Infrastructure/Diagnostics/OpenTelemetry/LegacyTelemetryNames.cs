@@ -1,12 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Concepts;
-
 namespace Cratis.Chronicle.Diagnostics.OpenTelemetry;
 
 /// <summary>
-/// The opt-in legacy telemetry names available for one minor release next to the names in <see cref="WellKnownMetricNames"/>.
+/// The legacy telemetry metadata published by default until the next major release.
 /// All of this is removed in the next major version.
 /// </summary>
 internal static class LegacyTelemetryNames
@@ -32,12 +30,7 @@ internal static class LegacyTelemetryNames
     internal const string OpenIncidentsAvailable = "chronicle-alerts-open-incidents-available";
 
     /// <summary>
-    /// The names of the meters that carry kernel metrics.
-    /// </summary>
-    internal static readonly string[] Meters = [WellKnown.MeterName, "Cratis.Chronicle.Storage.Sql.CompositeKeyShadow"];
-
-    /// <summary>
-    /// Gets the legacy metrics keyed by the convention metric name. Observable gauges are not bridged and are registered twice instead.
+    /// Gets the legacy metrics keyed by the convention metric name. Observable gauges select their instruments directly.
     /// </summary>
     internal static readonly IReadOnlyDictionary<string, LegacyMetric[]> Metrics = new Dictionary<string, LegacyMetric[]>
     {
@@ -92,10 +85,9 @@ internal static class LegacyTelemetryNames
     };
 
     /// <summary>
-    /// Gets the metrics that are new in the convention names and have no legacy counterpart to publish. The open incident
-    /// gauges are observable, so they are registered twice by the gauge itself instead of being bridged.
+    /// Gets the observable metrics whose selected instruments are created directly by their snapshot publisher.
     /// </summary>
-    internal static readonly IReadOnlySet<string> MetricsWithoutBridge = new HashSet<string>
+    internal static readonly IReadOnlySet<string> ObservableMetrics = new HashSet<string>
     {
         WellKnownMetricNames.AlertOpenIncidents,
         WellKnownMetricNames.AlertOpenIncidentsAvailable

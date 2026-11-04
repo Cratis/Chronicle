@@ -42,7 +42,7 @@ Use the same key in the kernel and clients when you need the same id to have the
 
 Chronicle's append counters retain event name, store, and namespace dimensions, but never add `EventSourceId`. Observer failure counters exclude partition and event source id dimensions while retaining observer scope dimensions.
 
-Hashes do not fix metric cardinality: one hash per id still creates one series per id. These exclusions apply in every tracing mode, including `Raw`; changing trace configuration cannot add these metric dimensions back. [Convention metric names](telemetry-names.md) are published alongside the legacy names for one minor release. Migrate names and dimension keys together; do not sum the two series.
+Hashes do not fix metric cardinality: one hash per id still creates one series per id. These exclusions apply in every tracing mode, including `Raw`; changing trace configuration cannot add these metric dimensions back. [Convention metric names](telemetry-names.md) are opt-in through `Telemetry:MetricNames=Convention`; the default is `Legacy`. Use `Both` temporarily to publish both sets during migration. Migrate names and dimension keys together; do not sum the two series.
 
 ## Log levels during observer failures
 

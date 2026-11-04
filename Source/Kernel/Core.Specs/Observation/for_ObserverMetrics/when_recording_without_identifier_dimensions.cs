@@ -46,13 +46,7 @@ public class when_recording_without_identifier_dimensions : Specification
             events.ConstraintViolation("Event");
         }
 
-        var observer = new Meter<Observer>(_meter).BeginScope(new Dictionary<string, object>
-        {
-            ["Namespace"] = _namespace,
-            ["ObserverId"] = "observer",
-            ["Partition"] = "private-partition",
-            ["EventSourceId"] = "customer-42"
-        });
+        var observer = new Meter<Observer>(_meter).BeginObserverScope("observer", new("observer", "store", _namespace, "sequence"));
         observer.PartitionFailed();
         observer.LegacyPartitionRetryAttempt();
         observer.PartitionQuarantined();
@@ -62,7 +56,7 @@ public class when_recording_without_identifier_dimensions : Specification
     [Fact] void should_keep_one_series_per_append_counter() => _measurements.Where(_ => _.Name.StartsWith("chronicle-event-sequences-", StringComparison.Ordinal)).GroupBy(_ => _.Name).All(group => group.Select(_ => string.Join(';', _.Tags.Select(tag => $"{tag.Key}={tag.Value}"))).Distinct().Count() == 1).ShouldBeTrue();
     [Fact] void should_not_attach_an_event_source_id() => _measurements.SelectMany(_ => _.Tags).Any(_ => _.Key.Equals("EventSourceId", StringComparison.OrdinalIgnoreCase)).ShouldBeFalse();
     [Fact] void should_not_attach_a_partition() => _measurements.SelectMany(_ => _.Tags).Any(_ => _.Key.Equals("Partition", StringComparison.OrdinalIgnoreCase)).ShouldBeFalse();
-    [Fact] void should_keep_the_observer_dimension() => _measurements.Exists(_ => _.Tags.Any(tag => tag.Key == "ObserverId" && Equals(tag.Value, "observer"))).ShouldBeTrue();
+    [Fact] void should_keep_the_observer_dimension() => _measurements.Exists(_ => _.Tags.Any(tag => tag.Key == "ObserverId" && tag.Value?.ToString() == "observer")).ShouldBeTrue();
     [Fact] void should_record_all_failure_counters() => _measurements.Count(_ => _.Name.StartsWith("chronicle-observer-", StringComparison.Ordinal)).ShouldEqual(3);
 
     void Destroy()

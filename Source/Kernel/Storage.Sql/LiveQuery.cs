@@ -80,7 +80,7 @@ public static class LiveQuery
         IDatabase database,
         string name,
         IEqualityComparer<TResult>? comparer = null) =>
-        Observe(query, database.LiveQueryPollingInterval, comparer, name, database is Database sql ? sql.LiveQueryLogger : NullLogger.Instance, TimeProvider.System);
+        Observe(query, database.LiveQueryPollingInterval, comparer, name, database is Database sql ? sql.LiveQueryLogger : NullLogger.Instance, TimeProvider.System, static rows => rows, SqlStorageTelemetry.For(database));
 
     /// <summary>
     /// Observes a query, retrying failed polls with capped exponential backoff instead of faulting the subscription.
@@ -119,7 +119,7 @@ public static class LiveQuery
         string name,
         IEqualityComparer<TRow> comparer,
         Func<TRow[], IEnumerable<TResult>> project) =>
-        Observe(query, database.LiveQueryPollingInterval, comparer, name, database is Database sql ? sql.LiveQueryLogger : NullLogger.Instance, TimeProvider.System, project);
+        Observe(query, database.LiveQueryPollingInterval, comparer, name, database is Database sql ? sql.LiveQueryLogger : NullLogger.Instance, TimeProvider.System, project, SqlStorageTelemetry.For(database));
 
     /// <summary>
     /// Observes a query, comparing the polled rows and mapping them to results only when a change is detected.
@@ -131,6 +131,7 @@ public static class LiveQuery
     /// <param name="logger">The logger for poll failures and recovery.</param>
     /// <param name="timeProvider">The time provider used for delays.</param>
     /// <param name="project">Maps a changed snapshot of rows to the emitted results. Not invoked for unchanged polls.</param>
+    /// <param name="telemetry">The preselected instruments, or the legacy defaults.</param>
     /// <typeparam name="TRow">The type of each polled row.</typeparam>
     /// <typeparam name="TResult">The type of each emitted item.</typeparam>
     /// <returns>A subject whose subscriptions stop polling when disposed.</returns>
@@ -141,8 +142,10 @@ public static class LiveQuery
         string name,
         ILogger logger,
         TimeProvider timeProvider,
-        Func<TRow[], IEnumerable<TResult>> project)
+        Func<TRow[], IEnumerable<TResult>> project,
+        SqlStorageTelemetry? telemetry = null)
     {
+        var instruments = telemetry ?? SqlStorageTelemetry.Legacy;
         comparer ??= EqualityComparer<TRow>.Default;
 
         var observable = Observable.Create<IEnumerable<TResult>>(async (observer, cancellationToken) =>
@@ -164,7 +167,7 @@ public static class LiveQuery
                 {
                     failures++;
                     var delay = RetryDelayAfter(failures, pollingInterval);
-                    SqlStorageTelemetry.LiveQueryPollFailed(name, error);
+                    instruments.LiveQueryPollFailed(name, error);
                     logger.LiveQueryPollFailed(error, name, failures, delay);
                     if (!await Wait(delay, timeProvider, cancellationToken))
                     {

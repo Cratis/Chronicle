@@ -2,10 +2,13 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
+using Cratis.Chronicle.Configuration;
+using Cratis.Chronicle.Diagnostics;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces;
 
@@ -16,11 +19,13 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces;
 /// </summary>
 /// <typeparam name="TContext">The type of <see cref="DbContext"/>.</typeparam>
 /// <param name="logger">The <see cref="ILogger"/> for logging.</param>
-public class TableMigrator<TContext>(ILogger<TableMigrator<TContext>> logger) : ITableMigrator<TContext>
+/// <param name="options">The kernel configuration, if provided.</param>
+public class TableMigrator<TContext>(ILogger<TableMigrator<TContext>> logger, IOptions<ChronicleOptions>? options = null) : ITableMigrator<TContext>
     where TContext : DbContext
 {
     static readonly ConcurrentDictionary<string, bool> _migratedTables = new();
     static readonly ConcurrentDictionary<string, SemaphoreSlim> _migrationLocks = new();
+    readonly SqlStorageTelemetry _telemetry = new(options?.Value?.Telemetry.MetricNames ?? MetricNames.Legacy);
 
     /// <inheritdoc/>
     public async Task EnsureTableMigrated(string tableName, TContext context, Func<TContext, string, Task> createTableAction, Func<TContext, string, Task>? upgradeTableAction = null)
@@ -63,7 +68,7 @@ public class TableMigrator<TContext>(ILogger<TableMigrator<TContext>> logger) : 
                 }
                 else
                 {
-                    await DatabaseSchemaLock.Run(context, () => CreateOrUpgradeTable(tableName, context, createTableAction, upgradeTableAction));
+                    await DatabaseSchemaLock.Run(context, () => CreateOrUpgradeTable(tableName, context, createTableAction, upgradeTableAction), _telemetry);
                 }
 
                 _migratedTables.TryAdd(key, true);

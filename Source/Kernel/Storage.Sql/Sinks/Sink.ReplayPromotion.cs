@@ -43,7 +43,9 @@ public partial class Sink
         // replay -> primary collide. A database transaction also protects readers on other silos
         // and restores the previous tables if any step of the promotion fails.
         var strategy = scope.DbContext.Database.CreateExecutionStrategy();
-        await DatabaseSchemaLock.Run(scope.DbContext, () => strategy.ExecuteInTransactionAsync(
+        await DatabaseSchemaLock.Run(
+            scope.DbContext,
+            () => strategy.ExecuteInTransactionAsync(
             async () =>
             {
                 // Verification can fail to observe a commit after its acknowledgment is lost. Every attempt must
@@ -58,7 +60,8 @@ public partial class Sink
                 preservedLegacyBackup = await PromoteReplayTable(scope, promotion, recoveryName);
             },
 
-            () => SwapHasCommitted(scope.DbContext, marker)));
+            () => SwapHasCommitted(scope.DbContext, marker)),
+            _telemetry);
 
         if (preservedLegacyBackup)
         {

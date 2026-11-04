@@ -18,19 +18,19 @@ public class when_schema_lock_acquisition_fails : Specification
     {
         _listener.InstrumentPublished = (instrument, listener) =>
         {
-            if (instrument.Name == "cratis.chronicle.sql.schema_lock.wait_duration") listener.EnableMeasurementEvents(instrument);
+            if (instrument.Name == "chronicle-sql-schema-lock-wait") listener.EnableMeasurementEvents(instrument);
         };
         _listener.SetMeasurementEventCallback<double>((_, _, tags, _) =>
         {
             var labels = tags.ToArray().ToDictionary(tag => tag.Key, tag => tag.Value);
-            if (!Equals(labels["cratis.chronicle.sql.provider"], _provider)) return;
-            _outcome = (string?)labels["cratis.chronicle.sql.schema_lock.outcome"];
+            if (!Equals(labels["provider"], _provider)) return;
+            _outcome = (string?)labels["outcome"];
             _measurements++;
         });
         _listener.Start();
     }
 
-    async Task Because() => _error = await Catch.Exception(() => SqlStorageTelemetry.WaitForSchemaLock(() => Task.FromException(_failure), _provider));
+    async Task Because() => _error = await Catch.Exception(() => SqlStorageTelemetry.Legacy.WaitForSchemaLock(() => Task.FromException(_failure), _provider));
 
     void Destroy() => _listener.Dispose();
 

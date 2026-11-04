@@ -9,12 +9,14 @@ using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.EventSequences.Concurrency;
 using Cratis.Chronicle.Concepts.Identities;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Diagnostics;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Storage;
 using Cratis.Metrics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Cratis.Chronicle.Observation.Alerts;
 
@@ -34,13 +36,15 @@ namespace Cratis.Chronicle.Observation.Alerts;
 /// <param name="meter">The failure meter.</param>
 /// <param name="logger">The logger.</param>
 /// <param name="timeProvider">Optional clock.</param>
+/// <param name="options">The telemetry configuration.</param>
 public class ObserverAlerts(
     IStorage storage,
     IEventSerializer eventSerializer,
     ObserverAlertEvaluator evaluator,
     [FromKeyedServices(WellKnown.MeterName)] IMeter<ObserverAlerts> meter,
     ILogger<ObserverAlerts> logger,
-    TimeProvider? timeProvider = null) : Grain, IObserverAlerts
+    TimeProvider? timeProvider = null,
+    IOptions<ChronicleOptions>? options = null) : Grain, IObserverAlerts
 {
     /// <summary>
     /// Limits the append work performed by one reconciliation request.
@@ -50,11 +54,19 @@ public class ObserverAlerts(
     static readonly EventType[] _transitionTypes = [typeof(AlertRaised).GetEventType(), typeof(AlertEscalated).GetEventType(), typeof(AlertCleared).GetEventType()];
     readonly TimeProvider _clock = timeProvider ?? TimeProvider.System;
     readonly Dictionary<IncidentId, OpenIncident> _openIncidents = [];
+    ObserverAlertsMetrics _metrics = null!;
     bool _historyLoaded;
     EventSequenceNumber _tail = EventSequenceNumber.BeforeFirst;
 
     ObserverKey Key => ObserverKey.Parse(this.GetPrimaryKeyString());
     EventSourceId EventSource => $"{Key.EventStore}/{Key.Namespace}/{Key}";
+
+    /// <inheritdoc/>
+    public override Task OnActivateAsync(CancellationToken cancellationToken)
+    {
+        _metrics = new(meter, Key, options?.Value?.Telemetry.MetricNames ?? MetricNames.Legacy);
+        return Task.CompletedTask;
+    }
 
     /// <inheritdoc/>
     public async Task<ObserverAlertReceipt> Reconcile(ObserverAlertSnapshot snapshot)
@@ -168,15 +180,5 @@ public class ObserverAlerts(
         _historyLoaded = true;
     }
 
-    void RecordFailure()
-    {
-        using var scope = meter.BeginScope(new Dictionary<string, object>
-        {
-            [WellKnownTelemetryAttributes.ObserverId] = Key.ObserverId,
-            [WellKnownTelemetryAttributes.EventStoreName] = Key.EventStore,
-            [WellKnownTelemetryAttributes.EventStoreNamespace] = Key.Namespace,
-            [WellKnownTelemetryAttributes.EventSequenceId] = Key.EventSequenceId
-        });
-        scope.TransitionFailed();
-    }
+    void RecordFailure() => _metrics.TransitionFailed();
 }

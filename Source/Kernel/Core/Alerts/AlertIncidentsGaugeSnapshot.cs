@@ -3,6 +3,7 @@
 
 using System.Diagnostics.Metrics;
 using Cratis.Chronicle.Diagnostics;
+using Cratis.Chronicle.Diagnostics.OpenTelemetry;
 
 namespace Cratis.Chronicle.Alerts;
 
@@ -28,4 +29,10 @@ public sealed record AlertIncidentsGaugeSnapshot(DateTimeOffset TakenAt, IReadOn
             new KeyValuePair<string, object?>(WellKnownTelemetryAttributes.EventSequenceId, _.Bucket.EventSequenceId.Value),
             new KeyValuePair<string, object?>(WellKnownTelemetryAttributes.AlertCondition, _.Bucket.Condition.Value),
             new KeyValuePair<string, object?>(WellKnownTelemetryAttributes.AlertSeverity, _.Bucket.Severity.ToString()))).ToArray());
+
+    /// <summary>Prepares the legacy tags once, when publishing the snapshot, rather than during collection.</summary>
+    /// <returns>The measurements with legacy attribute keys.</returns>
+    internal Measurement<long>[] WithLegacyTags() => Measurements.Select(measurement => new Measurement<long>(
+        measurement.Value,
+        measurement.Tags.ToArray().Select(tag => new KeyValuePair<string, object?>(LegacyTelemetryNames.ToLegacyMetricKey(tag.Key), tag.Value)).ToArray())).ToArray();
 }

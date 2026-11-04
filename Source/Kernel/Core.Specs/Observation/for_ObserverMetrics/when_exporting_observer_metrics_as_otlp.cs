@@ -47,7 +47,9 @@ public class when_exporting_observer_metrics_as_otlp : Specification
 
     void Because()
     {
-        var observer = new Meter<Observer>(ObserverMetricsRecorder.SharedMeter).BeginScope(_tags);
+        var observer = new Meter<Observer>(ObserverMetricsRecorder.SharedMeter).BeginObserverScope(
+            (string)_tags["ObserverId"],
+            new((string)_tags["ObserverId"], (string)_tags["EventStore"], (string)_tags["Namespace"], (string)_tags["EventSequenceId"]));
         observer.SuccessfulObservation();
         observer.PartitionFailed();
         _flushed = _provider.ForceFlush(10_000);

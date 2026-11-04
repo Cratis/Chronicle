@@ -12,6 +12,12 @@ namespace Cratis.Chronicle.Configuration;
 public class Telemetry
 {
     /// <summary>
+    /// Gets or inits the metric naming mode. Legacy is the default until the next major release;
+    /// Convention opts into the shared names, and Both publishes both sets during migration.
+    /// </summary>
+    public MetricNames MetricNames { get; init; } = MetricNames.Legacy;
+
+    /// <summary>
     /// Gets or inits how event source ids are included in spans. The default is Raw.
     /// </summary>
     public EventSourceIdTracing EventSourceIdTracing { get; init; } = EventSourceIdTracing.Raw;

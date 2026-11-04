@@ -4,7 +4,6 @@
 using System.Diagnostics.Metrics;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
-using Cratis.Chronicle.Diagnostics;
 
 namespace Cratis.Chronicle.Observation.for_Observer.when_handling;
 
@@ -28,7 +27,7 @@ public class and_the_skip_measurement_cannot_be_recorded : given.an_observer_wit
         {
             InstrumentPublished = (instrument, listener) =>
             {
-                if (ReferenceEquals(instrument.Meter, given.ObserverMetricsRecorder.SharedMeter) && instrument.Name == WellKnownMetricNames.ObserverSuspectedSkippedEvents)
+                if (ReferenceEquals(instrument.Meter, given.ObserverMetricsRecorder.SharedMeter) && instrument.Name == "chronicle-observer-events-suspected-skipped")
                 {
                     listener.EnableMeasurementEvents(instrument);
                 }
@@ -36,7 +35,7 @@ public class and_the_skip_measurement_cannot_be_recorded : given.an_observer_wit
         };
         _failingListener.SetMeasurementEventCallback<int>((instrument, measurement, tags, state) =>
         {
-            if (tags.ToArray().Any(_ => _.Key == WellKnownTelemetryAttributes.ObserverId && _observerId.Equals(_.Value)))
+            if (tags.ToArray().Any(_ => _.Key == "ObserverId" && _observerId.Equals(_.Value)))
             {
                 _measurementWasAttempted = true;
                 throw new InvalidOperationException("The measurement listener failed");

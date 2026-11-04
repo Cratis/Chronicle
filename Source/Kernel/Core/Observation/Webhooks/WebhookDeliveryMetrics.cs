@@ -10,21 +10,26 @@ namespace Cratis.Chronicle.Observation.Webhooks;
 /// <summary>
 /// Records target-level circuit health without observer, path, or event-store cardinality.
 /// </summary>
-internal static class WebhookDeliveryMetrics
+internal sealed class WebhookDeliveryMetrics
 {
     static readonly Meter _meter = new(WellKnown.MeterName);
-    static readonly Counter<long> _circuitOpened = _meter.CreateCounter<long>(WellKnownMetricNames.WebhookCircuitOpenings, unit: WellKnownMetricNames.WebhookCircuitOpeningsUnit, description: "Number of webhook circuit openings per target authority");
-    static readonly Counter<long> _circuitRejected = _meter.CreateCounter<long>(WellKnownMetricNames.WebhookCircuitRejections, unit: WellKnownMetricNames.WebhookCircuitRejectionsUnit, description: "Number of webhook deliveries deferred because the target circuit is open");
+    readonly IMetricInstrument<long> _circuitOpened;
+    readonly IMetricInstrument<long> _circuitRejected;
 
-    /// <summary>
-    /// Records a target circuit opening.
-    /// </summary>
-    /// <param name="authority">The normalized scheme, host, and port.</param>
-    internal static void CircuitOpened(string authority) => _circuitOpened.Add(1, new KeyValuePair<string, object?>(WellKnownTelemetryAttributes.WebhookAuthority, authority));
+    /// <summary>Initializes a new instance of the <see cref="WebhookDeliveryMetrics"/> class.</summary>
+    /// <param name="names">The naming mode.</param>
+    internal WebhookDeliveryMetrics(MetricNames names)
+    {
+        var metrics = new MetricSet(_meter, names);
+        _circuitOpened = metrics.Counter<long>(WellKnownMetricNames.WebhookCircuitOpenings, WellKnownMetricNames.WebhookCircuitOpeningsUnit, "Number of webhook circuit openings per target authority", WellKnownTelemetryAttributes.WebhookAuthority);
+        _circuitRejected = metrics.Counter<long>(WellKnownMetricNames.WebhookCircuitRejections, WellKnownMetricNames.WebhookCircuitRejectionsUnit, "Number of webhook deliveries deferred because the target circuit is open", WellKnownTelemetryAttributes.WebhookAuthority);
+    }
 
-    /// <summary>
-    /// Records a delivery rejected by an open target circuit.
-    /// </summary>
+    /// <summary>Records a target circuit opening.</summary>
     /// <param name="authority">The normalized scheme, host, and port.</param>
-    internal static void CircuitRejected(string authority) => _circuitRejected.Add(1, new KeyValuePair<string, object?>(WellKnownTelemetryAttributes.WebhookAuthority, authority));
+    internal void CircuitOpened(string authority) => _circuitOpened.Record(1, authority);
+
+    /// <summary>Records a delivery rejected by an open target circuit.</summary>
+    /// <param name="authority">The normalized scheme, host, and port.</param>
+    internal void CircuitRejected(string authority) => _circuitRejected.Record(1, authority);
 }

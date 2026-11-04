@@ -16,6 +16,8 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces;
 /// <param name="database">The <see cref="IDatabase"/> to use for storage operations.</param>
 public class NamespaceStorage(EventStoreName eventStore, IDatabase database) : INamespaceStorage
 {
+    readonly SqlStorageTelemetry _telemetry = SqlStorageTelemetry.For(database);
+
     /// <inheritdoc/>
     public async Task Create(EventStoreNamespaceName name, DateTimeOffset created)
     {
@@ -43,7 +45,7 @@ public class NamespaceStorage(EventStoreName eventStore, IDatabase database) : I
                 throw;
             }
 
-            SqlStorageTelemetry.RecoveredCollision("namespace");
+            _telemetry.RecoveredCollision("namespace");
         }
     }
 

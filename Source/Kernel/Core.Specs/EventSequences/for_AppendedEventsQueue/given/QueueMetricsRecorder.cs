@@ -3,7 +3,6 @@
 
 using System.Collections.Concurrent;
 using System.Diagnostics.Metrics;
-using Cratis.Chronicle.Diagnostics.OpenTelemetry;
 
 namespace Cratis.Chronicle.EventSequences.for_AppendedEventsQueue.given;
 
@@ -11,8 +10,7 @@ namespace Cratis.Chronicle.EventSequences.for_AppendedEventsQueue.given;
 /// Records the suspected-undelivered measurements a queue reports on its meter, for the one observer the recorder was created for.
 /// </summary>
 /// <remarks>
-/// The queue keeps this counter in a static field bound to the first meter it is used with, so every recorder shares
-/// one <see cref="Meter"/> that is never disposed and tells specs apart by the observer id.
+/// Every recorder shares one <see cref="Meter"/> that is never disposed and tells specs apart by the observer id.
 /// </remarks>
 public sealed class QueueMetricsRecorder : IDisposable
 {
@@ -30,8 +28,6 @@ public sealed class QueueMetricsRecorder : IDisposable
     /// The <see cref="Meter"/> shared by every recorder.
     /// </summary>
     public static readonly Meter SharedMeter = new("Cratis.Chronicle.Core.Specs.AppendedEventsQueue");
-
-    static readonly LegacyMetricNameBridge _bridge = new(meter => ReferenceEquals(meter, SharedMeter), LegacyTelemetryNames.Metrics);
 
     readonly MeterListener _listener = new();
     readonly ConcurrentQueue<int> _measurements = new();
@@ -52,7 +48,6 @@ public sealed class QueueMetricsRecorder : IDisposable
     /// <param name="observerId">Optional id of the observer to record for; a new one when not given.</param>
     public QueueMetricsRecorder(string instrumentName, string? observerId = null)
     {
-        GC.KeepAlive(_bridge);
         ObserverId = observerId ?? Guid.NewGuid().ToString();
         _listener.InstrumentPublished = (instrument, listener) =>
         {

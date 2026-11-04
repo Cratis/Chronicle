@@ -11,6 +11,7 @@ using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.Webhooks;
 using Cratis.Chronicle.Configuration;
+using Cratis.Chronicle.Diagnostics;
 using Cratis.Chronicle.Observation.Webhooks.Validation;
 using Cratis.DependencyInjection;
 using Cratis.Monads;
@@ -31,6 +32,8 @@ namespace Cratis.Chronicle.Observation.Webhooks;
 [Singleton]
 public class WebhookMediator(IWebhookHttpClientFactory webhookHttpClientFactory, JsonSerializerOptions jsonSerializerOptions, IOptions<ChronicleOptions>? options = null, ILogger<WebhookMediator>? logger = null) : IWebhookMediator
 {
+    readonly WebhookDeliveryMetrics _metrics = new(options?.Value?.Telemetry.MetricNames ?? MetricNames.Legacy);
+
     /// <inheritdoc/>
     public async Task<Catch> OnNext(EventStoreName? eventStore, WebhookTarget webhookTarget, Key partition, IEnumerable<AppendedEvent> events, string? accessToken = null, TimeSpan? timeout = null, CancellationToken cancellationToken = default)
     {
@@ -69,7 +72,7 @@ public class WebhookMediator(IWebhookHttpClientFactory webhookHttpClientFactory,
             var now = DateTimeOffset.UtcNow;
             var delay = error.RetryAfter ?? TimeSpan.FromSeconds(options?.Value.Webhooks.CircuitBreakerBreakDurationSeconds ?? 15);
             var authority = new Uri(webhookTarget.Url).GetLeftPart(UriPartial.Authority);
-            WebhookDeliveryMetrics.CircuitRejected(authority);
+            _metrics.CircuitRejected(authority);
             (logger ?? NullLogger<WebhookMediator>.Instance).TargetUnavailable(authority, now + delay);
             return new(EventSequenceNumber.Unavailable, WebhookDeliveryErrors.SafeError(webhookTarget, error), new(Guid.NewGuid(), PartitionDeferralReason.CircuitOpen, now, now + delay, batch.FirstOrDefault()?.Context.SequenceNumber ?? EventSequenceNumber.First));
         }
