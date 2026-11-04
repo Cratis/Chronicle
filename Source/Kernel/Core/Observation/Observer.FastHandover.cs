@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Observation.States;
 using Cratis.Chronicle.Observation.Webhooks;
@@ -31,7 +32,7 @@ public partial class Observer
     /// The checks are repeated after the last await and the target is added without awaiting in between, because
     /// interleaving calls may move the observer out of the steady state while this turn waits on storage.
     /// </remarks>
-    async Task<bool> TryHandOverToAnotherClientInstance<TObserverSubscriber>(
+    Task<bool> TryHandOverToAnotherClientInstance<TObserverSubscriber>(
         ObserverType type,
         IEnumerable<EventType> eventTypes,
         SiloAddress siloAddress,
@@ -39,6 +40,63 @@ public partial class Observer
         bool isReplayable,
         ObserverFilters? filters,
         EventGenerationDelivery generationDelivery)
+        where TObserverSubscriber : IObserverSubscriber =>
+        TryAddClientInstanceTarget<TObserverSubscriber>(
+            type,
+            eventTypes,
+            siloAddress,
+            connectedClient,
+            isReplayable,
+            filters,
+            generationDelivery,
+            () => _startAtTailWhenSubscribed = false);
+
+    /// <summary>
+    /// Re-adds another instance of an observed client in memory only, for the keep-alive restore.
+    /// </summary>
+    /// <param name="type">The registered <see cref="ObserverType"/>.</param>
+    /// <param name="eventTypes">The registered event types.</param>
+    /// <param name="siloAddress">The silo the client instance is connected to.</param>
+    /// <param name="connectedClient">The client instance being restored.</param>
+    /// <param name="isReplayable">Whether the registration is replayable.</param>
+    /// <param name="filters">The registered filters.</param>
+    /// <param name="generationDelivery">The registered generation delivery.</param>
+    /// <param name="schemas">The event type schemas read for this restore.</param>
+    /// <typeparam name="TObserverSubscriber">The subscriber type.</typeparam>
+    /// <returns>True if the instance was added as a fan-out target; false if the full reconcile must run.</returns>
+    /// <remarks>
+    /// The restore keeps <c language="csharp">_startAtTailWhenSubscribed</c> untouched because the full reconcile never changes it, and it
+    /// applies the schemas only on success, so a fallback leaves the observer exactly as the full reconcile finds it today.
+    /// </remarks>
+    Task<bool> TryRestoreAsAnotherClientInstance<TObserverSubscriber>(
+        ObserverType type,
+        IEnumerable<EventType> eventTypes,
+        SiloAddress siloAddress,
+        ConnectedClient connectedClient,
+        bool isReplayable,
+        ObserverFilters? filters,
+        EventGenerationDelivery generationDelivery,
+        IEnumerable<EventTypeSchema> schemas)
+        where TObserverSubscriber : IObserverSubscriber =>
+        TryAddClientInstanceTarget<TObserverSubscriber>(
+            type,
+            eventTypes,
+            siloAddress,
+            connectedClient,
+            isReplayable,
+            filters,
+            generationDelivery,
+            () => _eventTypeSchemas = schemas.ToDictionary(schema => schema.Type));
+
+    async Task<bool> TryAddClientInstanceTarget<TObserverSubscriber>(
+        ObserverType type,
+        IEnumerable<EventType> eventTypes,
+        SiloAddress siloAddress,
+        ConnectedClient connectedClient,
+        bool isReplayable,
+        ObserverFilters? filters,
+        EventGenerationDelivery generationDelivery,
+        Action onAdded)
         where TObserverSubscriber : IObserverSubscriber
     {
         var registration = new HandoverRegistration(type, GetOwner<TObserverSubscriber>(), eventTypes, isReplayable, generationDelivery);
@@ -51,7 +109,7 @@ public partial class Observer
         if (!CanHandOverTo<TObserverSubscriber>(registration, filters) || !StoredDefinitionMatches(registration)) return false;
 
         ApplySubscription<TObserverSubscriber>(eventTypes, siloAddress, connectedClient, isReplayable, filters, generationDelivery);
-        _startAtTailWhenSubscribed = false;
+        onAdded();
         RecordedHandlingState();
         return true;
     }
