@@ -1,13 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Dynamic;
-using Cratis.Chronicle.Changes;
-using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Concepts.Keys;
-using Cratis.Chronicle.Properties;
-using Cratis.Chronicle.Storage.MongoDB.Sinks;
-using Cratis.Chronicle.Storage.Sinks;
 using Cratis.Chronicle.Storage.MongoDB.Generations.Fencing;
 using MongoDB.Bson;
 
@@ -26,6 +19,8 @@ public class and_a_late_first_own_event_arrives_after_a_newer_join(ChronicleInPr
         _root = await Read("root");
     }
 
-    // An event delivered for the first time is always applied, even when it is older than other writes to the document.
+    /// <summary>
+    /// An event delivered for the first time is always applied, even when it is older than other writes to the document.
+    /// </summary>
     [Fact] void should_apply_the_own_event() => _root["count"].ToInt32().ShouldEqual(1);
 }

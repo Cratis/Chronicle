@@ -1,13 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Dynamic;
-using Cratis.Chronicle.Changes;
-using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Concepts.Keys;
-using Cratis.Chronicle.Properties;
-using Cratis.Chronicle.Storage.MongoDB.Sinks;
-using Cratis.Chronicle.Storage.Sinks;
 using Cratis.Chronicle.Storage.MongoDB.Generations.Fencing;
 using MongoDB.Bson;
 using MongoDB.Driver;

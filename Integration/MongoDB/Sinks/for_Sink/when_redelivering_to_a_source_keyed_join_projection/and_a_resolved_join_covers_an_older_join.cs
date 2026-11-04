@@ -1,13 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Dynamic;
-using Cratis.Chronicle.Changes;
-using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Concepts.Keys;
-using Cratis.Chronicle.Properties;
-using Cratis.Chronicle.Storage.MongoDB.Sinks;
-using Cratis.Chronicle.Storage.Sinks;
 using Cratis.Chronicle.Storage.MongoDB.Generations.Fencing;
 using MongoDB.Bson;
 
@@ -29,7 +22,9 @@ public class and_a_resolved_join_covers_an_older_join(ChronicleInProcessFixture 
         _root = await Read("root");
     }
 
-    // A resolved join of an older event must neither lower the slot nor overwrite the data of the newer join.
+    /// <summary>
+    /// A resolved join of an older event must neither lower the slot nor overwrite the data of the newer join.
+    /// </summary>
     [Fact] void should_not_lower_the_join_slot() => _slotBeforeTheRedelivery[Applied]["j"].AsBsonDocument.Single().Value["n"].ToInt64().ShouldEqual(20);
     [Fact] void should_not_let_the_older_resolved_join_overwrite_the_newer_data() => _root["count"].ToInt32().ShouldEqual(3);
     [Fact] void should_still_apply_the_own_write_of_its_event() => _root["x"].ToInt32().ShouldEqual(1);

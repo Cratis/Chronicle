@@ -4,10 +4,8 @@
 using System.Dynamic;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Storage.MongoDB.Sinks;
-using Cratis.Chronicle.Storage.MongoDB.Generations.Fencing;
 using Cratis.Chronicle.Storage.Sinks;
 using MongoDB.Bson;
 using MongoDB.Driver;

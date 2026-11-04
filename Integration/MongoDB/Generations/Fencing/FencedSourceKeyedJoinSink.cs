@@ -3,7 +3,6 @@
 
 using System.Dynamic;
 using Cratis.Chronicle.Changes;
-using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.ReadModels;
@@ -91,9 +90,12 @@ public class FencedSourceKeyedJoinSink(ChronicleInProcessFixture fixture) : Inte
 
     protected Task<BsonDocument> Read(string id) => _documents.Find(Builders<BsonDocument>.Filter.Eq("_id", id)).SingleAsync();
 
-    async Task Destroy()
+    public override void Dispose()
     {
+        _sink?.Dispose();
         _writes?.Dispose();
-        await _client.DropDatabaseAsync(_databaseName);
+        base.Dispose();
     }
+
+    async Task Destroy() => await _client.DropDatabaseAsync(_databaseName);
 }
