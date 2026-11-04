@@ -5,6 +5,7 @@ using System.Collections.Concurrent;
 using System.Text.RegularExpressions;
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Reactors;
 using Grpc.Core;
 
@@ -99,6 +100,7 @@ public sealed partial class ClusterLoad(int transitions = 1) : IAsyncDisposable
             var storedIds = stored.Select(@event => ((ClusterEventAppended)@event.Content).Id).ToArray();
             var storedSequences = stored.Select(@event => @event.Context.SequenceNumber.Value).Order().ToArray();
             Console.WriteLine($"Acknowledged={acknowledged.Length}, failed={_failures}, unknown={_unknown.Count}, stored={stored.Count}, observed={_observed.Count}");
+            Console.WriteLine(DescribePayloadIds(storedIds, allowed, acknowledged.Select(append => append.Id)));
             storedIds.Distinct().Count().ShouldEqual(storedIds.Length);
             storedIds.All(allowed.Contains).ShouldBeTrue();
             acknowledged.All(append => storedIds.Contains(append.Id)).ShouldBeTrue();
@@ -136,6 +138,17 @@ public sealed partial class ClusterLoad(int transitions = 1) : IAsyncDisposable
         storedEvents.All(observedEvents.Contains).ShouldBeTrue();
         observedEvents.All(storedEvents.Contains).ShouldBeTrue();
     }
+
+    internal static string DescribePayloadIds(IEnumerable<Guid> stored, IEnumerable<Guid> allowed, IEnumerable<Guid> acknowledged)
+    {
+        var storedIds = stored.ToHashSet();
+        var unexpected = storedIds.Except(allowed).Order().ToArray();
+        var missing = acknowledged.Except(storedIds).Order().ToArray();
+        return $"Unexpected stored payload IDs ({unexpected.Length}): {string.Join(", ", unexpected)}; missing acknowledged payload IDs ({missing.Length}): {string.Join(", ", missing)}";
+    }
+
+    internal static bool IsUncertainAppend(AppendResult result) =>
+        !result.IsSuccess && result.Errors.Contains(AppendError.AppendOutcomeUnknown);
 
     internal static bool IsUncertainAppend(Exception exception) =>
         exception is RpcException or TimeoutException or ConnectionUnavailable or ConnectionTimedOut ||
@@ -190,6 +203,11 @@ public sealed partial class ClusterLoad(int transitions = 1) : IAsyncDisposable
                 }
                 else
                 {
+                    if (IsUncertainAppend(result))
+                    {
+                        _unknown.Enqueue(id);
+                    }
+
                     Failed($"{id}: {string.Join(';', result.Errors)}");
                 }
             }
