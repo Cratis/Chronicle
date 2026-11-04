@@ -71,7 +71,9 @@ public static class ChronicleServerSiloBuilderExtensions
             options.DefaultVersionSelectorStrategy = nameof(AllCompatibleVersions);
         });
 
-        builder.AddIncomingGrainCallFilter<CorrelationIdIncomingCallFilter>();
+        // Off by default; enabling requires a whole-cluster restart because silos
+        // with different directory implementations cannot share a cluster.
+        builder.AddConfiguredGrainDirectory().AddIncomingGrainCallFilter<CorrelationIdIncomingCallFilter>();
         builder.AddIncomingGrainCallFilter<SerializableFailureIncomingCallFilter>();
         builder.AddOutgoingGrainCallFilter<CorrelationIdOutgoingCallFilter>();
         builder.AddIncomingGrainCallFilter<UserIdentityIncomingCallFilter>();
