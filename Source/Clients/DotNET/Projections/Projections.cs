@@ -392,7 +392,13 @@ public class Projections(
     {
         var (modelBoundDefinitions, modelBoundFailures) = ModelBoundSource.Discover(clientArtifacts, namingPolicy, eventTypes, logger, eventStore.Name?.Value);
         ApplyGenerationDelivery(modelBoundDefinitions, modelBoundFailures);
-        var (definitionsByType, failures, containerNames) = DiscoverFluentDefinitions();
+        var (definitionsByType, failures, containerNames) = FluentSource is null
+            ? FindAllProjectionDefinitions(
+                eventTypes,
+                clientArtifacts,
+                artifactsActivator,
+                jsonSerializerOptions)
+            : DiscoverFluentDefinitions();
 
         foreach (var (projectionType, definition) in definitionsByType)
         {
