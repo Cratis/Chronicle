@@ -60,11 +60,21 @@ public class Reactor(
         }
         var compareResult = await reactorDefinitionComparer.Compare(key, State, definition);
 
-        var isUnchanged = State.EventTypes is not null && ReactorDefinitionIdentity.IsIdentical(State, definition);
+        var previousDefinition = State;
+        var isUnchanged = previousDefinition.EventTypes is not null && ReactorDefinitionIdentity.IsIdentical(previousDefinition, definition);
         State = definition;
         if (!isUnchanged)
         {
-            await WriteStateAsync();
+            try
+            {
+                await WriteStateAsync();
+            }
+            catch
+            {
+                // Keep the stored definition in memory, so a retry on this activation does not see the unpersisted one as identical.
+                State = previousDefinition;
+                throw;
+            }
         }
 
         if (compareResult == ReactorDefinitionCompareResult.Different)
