@@ -786,7 +786,8 @@ public partial class EventSequence(
         Subject? subject,
         IReadOnlyCollection<NamedTag> namedTags,
         EventSourceName? eventSource,
-        EventPublication? publication)
+        EventPublication? publication,
+        EventSequenceNumber? compensationFor = null)
     {
         AppendedEvent committed;
         try
@@ -838,7 +839,7 @@ public partial class EventSequence(
                     });
                 }
 
-                if (eventSource?.IsSet == true)
+                if (eventSource?.IsSet == true || compensationFor is not null)
                 {
                     return await AppendThroughEventSource(
                         new EventToAppendToStorage(
@@ -858,7 +859,8 @@ public partial class EventSequence(
                             subject)
                         {
                             NamedTags = namedTags,
-                            EventSource = eventSource,
+                            EventSource = eventSource ?? EventSourceName.NotSet,
+                            CompensationFor = compensationFor,
                             GenerationalContent = migratedContent,
                             ContentHashes = contentHashes
                         });
@@ -902,6 +904,7 @@ public partial class EventSequence(
             {
                 attempted = new EventToAppendToStorage(State.SequenceNumber, eventSourceType, eventSourceId, eventStreamType, eventStreamId, eventType, correlationId, CausationForStorage(causation), identity, tags, occurred ?? _timeProvider.GetUtcNow(), compliantEvent, contentHashes.TryGetValue(eventType.Generation, out var hash) ? hash : EventHash.NotSet, subject)
                 {
+                    CompensationFor = compensationFor,
                     GenerationalContent = migratedContent,
                     ContentHashes = contentHashes
                 };
