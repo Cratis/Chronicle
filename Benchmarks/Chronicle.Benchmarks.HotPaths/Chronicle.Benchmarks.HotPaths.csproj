@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- In-process micro benchmarks of hot common paths. Unlike Chronicle.Benchmarks they need no Docker, kernel or
+       Mongo, and no kernel image is built, so they can be run and compared across commits in a few minutes. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <DisableProxyGenerator>true</DisableProxyGenerator>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BenchmarkDotNet" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The client and the kernel mirror concept names, so the client is aliased as it is in Core.Specs. -->
+    <ProjectReference Include="../../Source/Clients/DotNET/DotNET.csproj">
+      <Aliases>Client</Aliases>
+    </ProjectReference>
+    <ProjectReference Include="../../Source/Kernel/Core/Core.csproj" />
+    <ProjectReference Include="../../Source/Kernel/Concepts/Concepts.csproj" />
+    <ProjectReference Include="../../Source/Kernel/Contracts/Contracts.csproj" />
+  </ItemGroup>
+
+</Project>

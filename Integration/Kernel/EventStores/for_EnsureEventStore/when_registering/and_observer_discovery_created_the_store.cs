@@ -84,7 +84,7 @@ public class and_observer_discovery_created_the_store(context context) : Given<c
             var definitions = (await Services.GetRequiredService<IStorage>().GetEventStore(_storeName).Observers.GetAll()).ToArray();
             DefinitionsAreUnique = definitions.Length > 0 && definitions.DistinctBy(definition => definition.Identifier).Count() == definitions.Length;
             Initialized = await Services.GetRequiredService<IStorage>().GetEventStore(_storeName).IsInitialized();
-            ProjectionRegistrations = Services.GetRequiredService<given.CountingKernelProjections>().CallsFor(_storeName);
+            ProjectionRegistrations = ((given.CountingKernelProjections)Services.GetRequiredService<IKernelProjections>()).CallsFor(_storeName);
         }
     }
 

@@ -70,6 +70,7 @@ public static class ChronicleServerSiloBuilderExtensions
         });
 
         builder.AddIncomingGrainCallFilter<CorrelationIdIncomingCallFilter>();
+        builder.AddIncomingGrainCallFilter<SerializableFailureIncomingCallFilter>();
         builder.AddOutgoingGrainCallFilter<CorrelationIdOutgoingCallFilter>();
         builder.AddIncomingGrainCallFilter<UserIdentityIncomingCallFilter>();
         builder.AddOutgoingGrainCallFilter<UserIdentityOutgoingCallFilter>();
@@ -162,6 +163,7 @@ public static class ChronicleServerSiloBuilderExtensions
 
         builder.Services.AddSingleton<IServices>(sp =>
         {
+            Cratis.Chronicle.Services.SystemStoreGuard.InProcessServices = sp;
             var grainFactory = sp.GetRequiredService<IGrainFactory>();
             var storage = sp.GetRequiredService<IStorage>();
             var expandoObjectConverter = sp.GetRequiredService<IExpandoObjectConverter>();

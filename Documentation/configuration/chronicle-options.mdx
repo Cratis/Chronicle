@@ -154,7 +154,7 @@ Controls which sink type is used when registering projections and reducers with 
 | Value | Description |
 |---|---|
 | `WellKnownSinkTypes.MongoDB` | Stores read models in MongoDB (default) |
-| `WellKnownSinkTypes.SQL` | Stores read models in a SQL database as JSON documents |
+| `WellKnownSinkTypes.SQL` | Stores read models in a SQL database as typed scalar columns (the key in a non-JSON column), with nested objects and collections in JSON columns. See [Sinks](../sinks/) |
 
 | | |
 |---|---|

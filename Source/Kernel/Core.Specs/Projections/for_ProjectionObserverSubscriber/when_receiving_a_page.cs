@@ -5,7 +5,6 @@ using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Observation;
-using Cratis.Chronicle.Storage;
 
 namespace Cratis.Chronicle.Projections.for_ProjectionObserverSubscriber;
 
@@ -30,7 +29,7 @@ public class when_receiving_a_page : given.a_page_subscriber
     [Fact] void should_keep_run_keys_in_order() => _notifications.Select(_ => _.ReadModelKey).ShouldEqual(new ReadModelKey[] { "parent", "child", "parent" });
     [Fact] void should_keep_change_types_in_order() => _notifications.Select(_ => _.Change.ChangeType).ShouldEqual(_expectedChangeTypes);
     [Fact] void should_keep_event_positions_in_order() => _notifications.Select(_ => _.Change.EventSequenceNumber).ShouldEqual(new EventSequenceNumber[] { 1, 2, 3 });
-    [Fact] void should_keep_each_runs_model() => _notifications.Select(_ => _.ReadModel[WellKnownProperties.LastHandledEventSequenceNumber]!.GetValue<ulong>()).ShouldEqual(new ulong[] { 1, 2, 3 });
+    [Fact] void should_keep_each_runs_model() => _notifications.Select(_ => _.ReadModel["position"].GetValue<ulong>()).ShouldEqual(new ulong[] { 1, 2, 3 });
     [Fact] void should_keep_event_timestamps() => _notifications.Select(_ => _.Change.Occurred).ShouldEqual(_events.Select(_ => _.Context.Occurred));
     [Fact] void should_keep_event_correlations() => _notifications.Select(_ => _.Change.CorrelationId).ShouldEqual(_events.Select(_ => _.Context.CorrelationId));
     [Fact] void should_not_notify_individual_runs() => _notifier.DidNotReceive().Notify(_key.Namespace, Arg.Any<ReadModelKey>(), Arg.Any<JsonObject>(), Arg.Any<ReadModelChangeContext>());

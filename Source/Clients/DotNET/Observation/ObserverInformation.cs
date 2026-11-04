@@ -23,4 +23,10 @@ public record ObserverInformation(
     ObserverRunningState RunningState,
     EventSequenceNumber LastHandledEventSequenceNumber,
     EventSequenceNumber NextEventSequenceNumber,
-    ulong HandledEventCount);
+    ulong HandledEventCount)
+{
+    /// <summary>
+    /// Gets the UTC time the observer last entered its current running state (for example, "disconnected since"); null when unknown.
+    /// </summary>
+    public DateTimeOffset? RunningStateChangedAt { get; init; }
+}

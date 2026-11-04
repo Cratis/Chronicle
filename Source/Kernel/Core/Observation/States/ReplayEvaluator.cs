@@ -51,7 +51,11 @@ public class ReplayEvaluator(
         context.Definition.IsReplayable && NeedsToReplay(context);
 
     static bool NeedsToReplay(ReplayEvaluationContext context) =>
-        HasDefinitionChanged(context) && HasEventsInSequence(context);
+        HasDefinitionChanged(context) && HasEventsInSequence(context) && HasHistoryForAddedEventTypes(context);
+
+    static bool HasHistoryForAddedEventTypes(ReplayEvaluationContext context) =>
+        context.FirstEventSequenceNumberForAddedEventTypes is not { } first ||
+        (first.IsActualValue && first < context.State.NextEventSequenceNumber);
 
     static bool HasEventsInSequence(ReplayEvaluationContext context) =>
         context.TailEventSequenceNumber.IsActualValue && context.TailEventSequenceNumberForEventTypes.IsActualValue;

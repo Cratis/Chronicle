@@ -1,5 +1,7 @@
 - name: Overview
   href: ./index.md
+- name: Library guidance
+  href: ./library-guidance.md
 - name: Integration Tests
   href: ./integration-tests.md
 - name: Interpreting Integration Timings

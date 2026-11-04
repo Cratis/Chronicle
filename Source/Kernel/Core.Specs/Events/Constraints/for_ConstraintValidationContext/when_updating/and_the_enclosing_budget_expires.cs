@@ -21,7 +21,7 @@ public class and_the_enclosing_budget_expires : given.a_constraint_validation_co
         });
     }
 
-    async Task Because() => _results = await _context.Update(1, _deadline.Token);
+    async Task Because() => _results = await _context.Update(1, TimeSpan.FromSeconds(1), _deadline.Token);
 
     void Destroy()
     {

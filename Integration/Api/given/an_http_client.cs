@@ -19,6 +19,12 @@ public class an_http_client : Specification
 
     protected HttpClient Client { get; private set; }
 
+    /// <summary>
+    /// Gets the bearer token for this client's identity.
+    /// </summary>
+    /// <returns>The access token.</returns>
+    protected virtual Task<string> GetAccessToken() => _fixture.GetAccessToken();
+
     async Task Establish()
     {
         var handler = new HttpClientHandler();
@@ -45,7 +51,7 @@ public class an_http_client : Specification
             handler);
 
         // Add bearer token authentication
-        var accessToken = await _fixture.GetAccessToken();
+        var accessToken = await GetAccessToken();
         Client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken);
     }
 }

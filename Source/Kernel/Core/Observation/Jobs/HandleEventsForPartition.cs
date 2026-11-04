@@ -220,7 +220,7 @@ public partial class HandleEventsForPartition(
                 : MaxEventsPerBatch;
             using var events = new BoundedEventCursor(storageEvents, maximumEventsPerCall);
 
-            var subscriberContext = CreateSubscriberContext(subscription, currentState.Partition);
+            var subscriberContext = CreateSubscriberContext(subscription, currentState);
             var subscriberTimeout = await configurationProvider.GetSubscriberTimeoutForObserver(currentState.ObserverKey);
             await DrainAbandonedDeliveryBeforeHandling(subscription, currentState, cancellationToken);
 
@@ -503,12 +503,17 @@ public partial class HandleEventsForPartition(
     JobStepResult ClosedResult(EventSequenceNumber lastSuccessfullyHandled) =>
         JobStepResult.Failed(PerformJobStepError.CancelledWithPartialResult(CreateResult(lastSuccessfullyHandled)));
 
-    ObserverSubscriberContext CreateSubscriberContext(ObserverSubscription subscription, Key partition)
+    ObserverSubscriberContext CreateSubscriberContext(ObserverSubscription subscription, HandleEventsForPartitionState state)
     {
         var deliveryTarget = subscription.SubscriberType.IsAssignableTo(typeof(IAmOwnedByClient))
             ? _deliveryTarget
-            : subscriberSelector.Select(subscription, partition);
-        return new(deliveryTarget.ConnectedClient ?? subscription.Arguments);
+            : subscriberSelector.Select(subscription, state.Partition);
+        return new(deliveryTarget.ConnectedClient ?? subscription.Arguments)
+        {
+            Origin = state.EpisodeId is not null || state.DeferralId is not null
+                ? ObservationOrigin.Retry
+                : state.EventObservationState.ToObservationOrigin()
+        };
     }
 
     async Task DrainAbandonedDeliveryBeforeHandling(ObserverSubscription subscription, HandleEventsForPartitionState state, CancellationToken cancellationToken)

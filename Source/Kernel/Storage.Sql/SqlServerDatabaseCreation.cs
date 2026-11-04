@@ -4,6 +4,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Storage.Sql;
 
@@ -29,9 +30,9 @@ internal static class SqlServerDatabaseCreation
     /// </remarks>
     /// <param name="connectionString">The target connection string.</param>
     /// <param name="prepareConnection">Prepares the connection with its resolved identity.</param>
-    /// <param name="create">The existence check and optional creation.</param>
+    /// <param name="create">The existence check and optional creation; told whether the lock is held.</param>
     /// <returns>The provisioning operation.</returns>
-    internal static async Task RunWithLock(string connectionString, Func<System.Data.Common.DbConnection, Task> prepareConnection, Func<Task> create)
+    internal static async Task RunWithLock(string connectionString, Func<System.Data.Common.DbConnection, Task> prepareConnection, Func<bool, Task> create)
     {
         var builder = new SqlConnectionStringBuilder(connectionString) { Pooling = false };
         var resource = DatabaseSchemaLock.ResourceFor(builder.InitialCatalog);
@@ -44,7 +45,7 @@ internal static class SqlServerDatabaseCreation
         }
         catch (SqlException ex) when (_masterUnavailable.Contains(ex.Number))
         {
-            await create();
+            await create(false);
             return;
         }
 
@@ -52,7 +53,7 @@ internal static class SqlServerDatabaseCreation
         await creationLock.Acquire(connection, resource, DatabaseSchemaLock.DefaultTimeout);
         try
         {
-            await create();
+            await create(true);
         }
         finally
         {
@@ -64,9 +65,10 @@ internal static class SqlServerDatabaseCreation
     /// Creates a database with bounded, database-specific logical and physical filenames.
     /// </summary>
     /// <param name="connectionString">The target connection string.</param>
+    /// <param name="logger">The logger a blocked read-committed snapshot change is reported to.</param>
     /// <param name="prepareConnection">Optional callback preparing the connection before it opens, for instance with a resolved identity.</param>
     /// <returns>The creation operation.</returns>
-    internal static async Task Create(string connectionString, Func<System.Data.Common.DbConnection, Task>? prepareConnection = null)
+    internal static async Task Create(string connectionString, ILogger logger, Func<System.Data.Common.DbConnection, Task>? prepareConnection = null)
     {
         var builder = new SqlConnectionStringBuilder(connectionString);
         var database = builder.InitialCatalog;
@@ -91,16 +93,23 @@ internal static class SqlServerDatabaseCreation
             "        + N', FILENAME = N''' + REPLACE(@dataPath + @file + N'.mdf', N'''', N'''''') + N''')' " +
             "        + N' LOG ON (NAME = ' + QUOTENAME(@file + N'_log', '''') " +
             "        + N', FILENAME = N''' + REPLACE(@logPath + @file + N'.ldf', N'''', N'''''') + N''')'; " +
-            "EXEC sp_executesql @sql; " +
-            "IF SERVERPROPERTY('EngineEdition') <> 5 " +
-            "BEGIN " +
-            "    SET @sql = N'ALTER DATABASE ' + QUOTENAME(@database) + N' SET READ_COMMITTED_SNAPSHOT ON'; " +
-            "    EXEC sp_executesql @sql; " +
-            "END;";
+            "EXEC sp_executesql @sql;";
         command.Parameters.AddWithValue("database", database);
         var file = "chronicle_" + Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(database)));
         command.Parameters.AddWithValue("file", file);
-        await command.ExecuteNonQueryAsync();
+        try
+        {
+            await command.ExecuteNonQueryAsync();
+        }
+        catch (SqlException ex) when (ex.Number == 1801)
+        {
+            // Only CREATE may ignore a duplicate. Never classify an ALTER failure as a duplicate by its message.
+            SqlConnection.ClearAllPools();
+            return;
+        }
+
+        // Only a database this call created is altered.
+        await SqlServerReadCommittedSnapshot.Enable(connectionString, prepareConnection, logger);
 
         // A failed open before creation leaves the pool in its blocking period, so the next open of the new
         // database would fail as if it did not exist. EF Core's own creator clears the pools for the same reason.

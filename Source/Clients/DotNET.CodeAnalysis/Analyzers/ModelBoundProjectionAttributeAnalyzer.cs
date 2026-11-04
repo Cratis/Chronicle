@@ -48,27 +48,23 @@ public class ModelBoundProjectionAttributeAnalyzer : DiagnosticAnalyzer
     {
         context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
         context.EnableConcurrentExecution();
-        context.RegisterCompilationStartAction(start =>
-        {
-            var evidence = new Lazy<ExplicitRegistrationEvidence>(() => ExplicitRegistrationEvidence.Create(start.Compilation, start.CancellationToken));
-            start.RegisterSymbolAction(symbol => AnalyzeNamedType(symbol, evidence.Value), SymbolKind.NamedType);
-            start.RegisterSymbolAction(symbol => AnalyzeProperty(symbol, evidence.Value), SymbolKind.Property);
-        });
+        context.RegisterSymbolAction(AnalyzeNamedType, SymbolKind.NamedType);
+        context.RegisterSymbolAction(AnalyzeProperty, SymbolKind.Property);
     }
 
-    static void AnalyzeNamedType(SymbolAnalysisContext context, ExplicitRegistrationEvidence evidence)
+    static void AnalyzeNamedType(SymbolAnalysisContext context)
     {
         var namedTypeSymbol = (INamedTypeSymbol)context.Symbol;
-        AnalyzeAttributes(context, namedTypeSymbol.GetAttributes(), namedTypeSymbol.Locations, evidence);
+        AnalyzeAttributes(context, namedTypeSymbol.GetAttributes(), namedTypeSymbol.Locations);
     }
 
-    static void AnalyzeProperty(SymbolAnalysisContext context, ExplicitRegistrationEvidence evidence)
+    static void AnalyzeProperty(SymbolAnalysisContext context)
     {
         var propertySymbol = (IPropertySymbol)context.Symbol;
-        AnalyzeAttributes(context, propertySymbol.GetAttributes(), propertySymbol.Locations, evidence);
+        AnalyzeAttributes(context, propertySymbol.GetAttributes(), propertySymbol.Locations);
     }
 
-    static void AnalyzeAttributes(SymbolAnalysisContext context, ImmutableArray<AttributeData> attributes, ImmutableArray<Location> locations, ExplicitRegistrationEvidence evidence)
+    static void AnalyzeAttributes(SymbolAnalysisContext context, ImmutableArray<AttributeData> attributes, ImmutableArray<Location> locations)
     {
         foreach (var attribute in attributes)
         {
@@ -88,7 +84,7 @@ public class ModelBoundProjectionAttributeAnalyzer : DiagnosticAnalyzer
             if (attribute.AttributeClass.TypeArguments.Length > 0)
             {
                 var eventType = attribute.AttributeClass.TypeArguments[0];
-                if (!evidence.IsEventType(eventType, context.Compilation))
+                if (!ExplicitRegistrationEvidence.IsKnownEventType(eventType, context.Compilation, context.CancellationToken))
                 {
                     var diagnostic = Diagnostic.Create(
                         Rule,
