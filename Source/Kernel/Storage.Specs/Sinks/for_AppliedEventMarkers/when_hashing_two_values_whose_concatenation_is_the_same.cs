@@ -10,8 +10,8 @@ public class when_hashing_two_values_whose_concatenation_is_the_same : Specifica
 
     void Because()
     {
-        _first = AppliedEventMarkers.StreamHash("ab", "c");
-        _second = AppliedEventMarkers.StreamHash("a", "bc");
+        _first = AppliedEventMarkers.StreamHash("ab", "seq", "c");
+        _second = AppliedEventMarkers.StreamHash("a", "seq", "bc");
     }
 
     [Fact] void should_differ() => _first.ShouldNotEqual(_second);

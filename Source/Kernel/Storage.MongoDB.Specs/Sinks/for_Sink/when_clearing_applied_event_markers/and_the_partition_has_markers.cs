@@ -61,12 +61,13 @@ public class and_the_partition_has_markers : Specification
 
     async Task Because() => await _sink.ClearAppliedEventMarkers(
         "ns",
+        "the-sequence",
         new Key("partition-1", ArrayIndexers.NoIndexers),
         [new AppliedEventMarkerJoin(_definitionId, "event-type", "customerId")]);
 
     [Fact] void should_target_the_document_of_the_partition() => _oneFilter.ShouldEqual(new BsonDocument("_id", "partition-1"));
     [Fact] void should_unset_the_own_slots() => _oneUpdate.ShouldEqual(BsonDocument.Parse("""{ "$unset": { "__applied.f": 1 } }"""));
     [Fact] void should_target_the_documents_joined_by_the_stream_of_the_partition() =>
-        _manyFilter.ShouldEqual(new BsonDocument($"__applied.j.{_definitionId}.s", AppliedEventMarkers.StreamHash("ns", "partition-1")));
+        _manyFilter.ShouldEqual(new BsonDocument($"__applied.j.{_definitionId}.s", AppliedEventMarkers.StreamHash("ns", "the-sequence", "partition-1")));
     [Fact] void should_unset_the_slot_of_the_join() => _manyUpdate.ShouldEqual(BsonDocument.Parse($$"""{ "$unset": { "__applied.j.{{_definitionId}}": 1 } }"""));
 }

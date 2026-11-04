@@ -19,12 +19,13 @@ public static class AppliedEventMarkers
     const char Separator = '\u001f';
 
     /// <summary>
-    /// Gets the identity of an event stream, scoped to the namespace.
+    /// Gets the identity of an event stream, scoped to the namespace and the event sequence.
     /// </summary>
     /// <param name="namespace">The event store namespace.</param>
+    /// <param name="eventSequence">The id of the event sequence the events are read from. Two writers of one document that consume different sequences must not share a slot.</param>
     /// <param name="value">The value identifying the stream: an event source id, or a join key.</param>
     /// <returns>A fixed length, url safe string.</returns>
-    public static string StreamHash(string @namespace, string value) => Hash($"{@namespace}{Separator}{value}", 16);
+    public static string StreamHash(string @namespace, string eventSequence, string value) => Hash($"{@namespace}{Separator}{eventSequence}{Separator}{value}", 16);
 
     /// <summary>
     /// Gets the identity of a root join definition.

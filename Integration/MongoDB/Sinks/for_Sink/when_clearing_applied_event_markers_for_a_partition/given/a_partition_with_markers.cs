@@ -17,7 +17,7 @@ public class a_partition_with_markers(ChronicleInProcessFixture fixture) : when_
     protected static IReadOnlyList<AppliedEventMarkerJoin> Joins => [new(DefinitionId, "joined", "joinId")];
 
     protected Task Clear(Sink sink, string partition) =>
-        (sink as ISinkAppliedEventMarkers ?? throw new InvalidOperationException("The sink does not clear applied event markers")).ClearAppliedEventMarkers(Namespace, partition, Joins);
+        (sink as ISinkAppliedEventMarkers ?? throw new InvalidOperationException("The sink does not clear applied event markers")).ClearAppliedEventMarkers(Namespace, Cratis.Chronicle.Concepts.EventSequences.EventSequenceId.Log, partition, Joins);
 
     protected static bool HasJoinSlot(BsonDocument document) =>
         document.TryGetValue(Applied, out var applied) && applied.AsBsonDocument.TryGetValue("j", out var joins) && joins.AsBsonDocument.Contains(DefinitionId);

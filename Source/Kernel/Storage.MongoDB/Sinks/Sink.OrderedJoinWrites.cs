@@ -20,7 +20,9 @@ public partial class Sink
     /// Each segment is its own write. With a fence they share one transaction unless the batch is split because it is too
     /// large, and then they are committed separately, so this does not promise atomicity. Without a fence a failure between
     /// segments leaves the earlier ones written; the redelivered changeset is unguarded and rewrites every segment, so it converges.
-    /// Guarded writes keep the single pass, because a stamped watermark would make a redelivery skip the later segments.
+    /// Watermark-guarded writes keep the single pass, because a stamped watermark would make a redelivery skip the later segments.
+    /// Marked writes (applied event markers) are segmented like any other: every segment records a marker slot of its own,
+    /// so a redelivery skips exactly the segments that were written and repeats none, and the order of the changeset holds.
     /// </remarks>
     /// <param name="changeset">The changeset to write.</param>
     /// <param name="eventSequenceNumber">The event sequence number of the write.</param>
@@ -33,13 +35,7 @@ public partial class Sink
         WritePlan plan,
         SinkWriteOptions options)
     {
-        if (IsGuardedWrite(options.Mode, plan, eventSequenceNumber) || !IsOrderedByConverter(plan))
-        {
-            return null;
-        }
-
-        // With markers recorded the converter writes the whole changeset as one guarded update in change order.
-        return MarkersFor(changeset, eventSequenceNumber, plan, options) is { RecordOwnSlot: true }
+        return IsGuardedWrite(options.Mode, plan, eventSequenceNumber) || !IsOrderedByConverter(plan)
             ? null
             : ChangesetWriteOrder.SegmentsFor(changeset.Changes);
     }

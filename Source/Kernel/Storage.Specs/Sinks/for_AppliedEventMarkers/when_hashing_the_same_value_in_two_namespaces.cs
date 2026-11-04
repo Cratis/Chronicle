@@ -10,8 +10,8 @@ public class when_hashing_the_same_value_in_two_namespaces : Specification
 
     void Because()
     {
-        _first = AppliedEventMarkers.StreamHash("one", "source");
-        _second = AppliedEventMarkers.StreamHash("two", "source");
+        _first = AppliedEventMarkers.StreamHash("one", "seq", "source");
+        _second = AppliedEventMarkers.StreamHash("two", "seq", "source");
     }
 
     [Fact] void should_differ() => _first.ShouldNotEqual(_second);

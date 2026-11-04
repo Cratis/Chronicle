@@ -10,8 +10,8 @@ public class when_hashing_the_same_stream_twice : Specification
 
     void Because()
     {
-        _first = AppliedEventMarkers.StreamHash("ns", "source");
-        _second = AppliedEventMarkers.StreamHash("ns", "source");
+        _first = AppliedEventMarkers.StreamHash("ns", "seq", "source");
+        _second = AppliedEventMarkers.StreamHash("ns", "seq", "source");
     }
 
     [Fact] void should_be_the_same() => _first.ShouldEqual(_second);

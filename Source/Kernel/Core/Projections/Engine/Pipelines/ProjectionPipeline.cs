@@ -116,7 +116,7 @@ public partial class ProjectionPipeline(
     /// <inheritdoc/>
     public Task ClearAppliedEventMarkers(EventStoreNamespaceName @namespace, Key partition) =>
         projection.MarkedJoins.Count > 0 && sink is ISinkAppliedEventMarkers markers
-            ? markers.ClearAppliedEventMarkers(@namespace, partition, projection.MarkedJoins)
+            ? markers.ClearAppliedEventMarkers(@namespace, projection.EventSequenceId, partition, projection.MarkedJoins)
             : Task.CompletedTask;
 
     /// <inheritdoc/>

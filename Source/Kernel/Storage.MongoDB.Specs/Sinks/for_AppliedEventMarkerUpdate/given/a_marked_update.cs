@@ -15,7 +15,7 @@ public class a_marked_update : Specification
 
     internal static AppliedEventMarkerGroup Own(UpdateDefinition<BsonDocument>? update, long sequenceNumber = 5) => new(update, new(OwnSlot, "own-stream", sequenceNumber));
 
-    internal static AppliedEventMarkerGroup Join(UpdateDefinition<BsonDocument>? update, BsonValue key, long sequenceNumber = 5) => new(update, new(JoinSlot, "join-stream", sequenceNumber), new("customerId", key));
+    internal static AppliedEventMarkerGroup Join(UpdateDefinition<BsonDocument>? update, BsonValue key, long sequenceNumber = 5, string onProperty = "customerId") => new(update, new(JoinSlot, "join-stream", sequenceNumber), new(onProperty, key));
 
     protected static UpdateDefinitionBuilder<BsonDocument> Updates => Builders<BsonDocument>.Update;
 

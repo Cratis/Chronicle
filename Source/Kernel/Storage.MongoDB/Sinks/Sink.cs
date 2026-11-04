@@ -8,6 +8,7 @@ using System.Runtime.ExceptionServices;
 using System.Text.RegularExpressions;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
@@ -334,15 +335,21 @@ public partial class Sink(
         SinkWriteMode mode) => ApplyChangesCore(key, changeset, eventSequenceNumber, new SinkWriteOptions(mode));
 
     /// <inheritdoc/>
-    public async Task<IEnumerable<FailedPartition>> ApplyChangesImmediately(
+    public Task<IEnumerable<FailedPartition>> ApplyChangesImmediately(
         Key key,
         IChangeset<AppendedEvent, ExpandoObject> changeset,
         EventSequenceNumber eventSequenceNumber,
-        SinkWriteMode mode)
+        SinkWriteMode mode) => ApplyChangesImmediately(key, changeset, eventSequenceNumber, new SinkWriteOptions(mode));
+
+    async Task<IEnumerable<FailedPartition>> ApplyChangesImmediately(
+        Key key,
+        IChangeset<AppendedEvent, ExpandoObject> changeset,
+        EventSequenceNumber eventSequenceNumber,
+        SinkWriteOptions options)
     {
         if (!_isBulkMode)
         {
-            return await ApplyChanges(key, changeset, eventSequenceNumber, mode);
+            return await ApplyChangesCore(key, changeset, eventSequenceNumber, options);
         }
 
         var drain = await DrainBulk();
@@ -350,7 +357,7 @@ public partial class Sink(
         var failures = new List<FailedPartition>();
         try
         {
-            failures.AddRange(await ApplyChangesCore(key, changeset, eventSequenceNumber, new SinkWriteOptions(mode, drainedBatches)));
+            failures.AddRange(await ApplyChangesCore(key, changeset, eventSequenceNumber, options with { DrainedBatches = drainedBatches }));
         }
         catch (MongoWriteException exception) when (exception.WriteError is not null && exception.WriteConcernError is null)
         {
@@ -2025,7 +2032,7 @@ public partial class Sink(
         public string For(int operationIndex) => ByOperation.TryGetValue(operationIndex, out var reason) ? reason : First;
     }
 
-    sealed record SinkWriteOptions(SinkWriteMode Mode, HashSet<BulkBatch>? DrainedBatches = null, Key? Partition = null)
+    sealed record SinkWriteOptions(SinkWriteMode Mode, HashSet<BulkBatch>? DrainedBatches = null, Key? Partition = null, string EventSequence = WellKnownEventSequences.EventLog)
     {
         public bool IsImmediate => DrainedBatches is not null;
 

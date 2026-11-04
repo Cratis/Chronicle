@@ -44,7 +44,7 @@ internal sealed class AppliedEventMarkerGroups(AppliedEventMarkerContext context
     public void AddResolvedJoin(UpdateDefinition<BsonDocument>? update, ResolvedJoin resolved, AppendedEvent source, JoinFilterTarget target)
     {
         var definitionId = AppliedEventMarkers.DefinitionId(source.Context.EventType.Id.Value, resolved.OnProperty.Path);
-        var stream = AppliedEventMarkers.StreamHash(source.Context.Namespace.Value, source.Context.EventSourceId.Value);
+        var stream = AppliedEventMarkers.StreamHash(source.Context.Namespace.Value, context.EventSequence, source.Context.EventSourceId.Value);
         _groups.Add(new(update, new(AppliedEventMarkerSlots.Join(definitionId), stream, (long)source.Context.SequenceNumber.Value), target));
     }
 

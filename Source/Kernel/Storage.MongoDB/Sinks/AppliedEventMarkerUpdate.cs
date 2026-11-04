@@ -107,17 +107,45 @@ internal static class AppliedEventMarkerUpdate
                 continue;
             }
 
-            var own = operations[index].LastOrDefault(_ => _.Path == onProperty);
+            var own = operations[index].LastOrDefault(_ => ReplacesOrSets(_.Path, onProperty));
             if (own is null)
             {
                 continue;
             }
 
             var guard = NotApplied(groups[index].Slot, groups[index].Stream, groups[index].SequenceNumber);
-            reference = new BsonDocument("$cond", new BsonArray { guard, Literal(own.Value ?? BsonNull.Value), reference });
+            reference = new BsonDocument("$cond", new BsonArray { guard, Literal(ValueAt(own, onProperty)), reference });
         }
 
         return reference;
+    }
+
+    /// <summary>
+    /// Gets whether a write sets the reference: it is on the property itself, or replaces or removes an object the property is inside.
+    /// </summary>
+    /// <param name="path">The path the write is on.</param>
+    /// <param name="property">The property the join is on.</param>
+    /// <returns>True when the write decides the value of the property.</returns>
+    static bool ReplacesOrSets(string path, string property) =>
+        path == property || property.StartsWith(path + ".", StringComparison.Ordinal);
+
+    static BsonValue ValueAt(Operation operation, string property)
+    {
+        var value = operation.Value ?? BsonNull.Value;
+        if (operation.Path == property)
+        {
+            return value;
+        }
+
+        foreach (var segment in property[(operation.Path.Length + 1)..].Split('.'))
+        {
+            if (value is not BsonDocument document || !document.TryGetValue(segment, out value))
+            {
+                return BsonNull.Value;
+            }
+        }
+
+        return value;
     }
 
     static Operation[] Parse(AppliedEventMarkerGroup group)

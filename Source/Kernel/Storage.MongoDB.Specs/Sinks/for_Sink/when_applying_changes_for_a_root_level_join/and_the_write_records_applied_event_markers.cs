@@ -17,7 +17,8 @@ public class and_the_write_records_applied_event_markers : given.a_sink_over_a_s
 
     async Task Because() => await Apply();
 
-    [Fact] void should_run_the_join_and_then_write_the_own_update_once() => _writes.Select(_ => _.Kind).ShouldEqual(["many", "one"]);
-    [Fact] void should_write_a_pipeline() => _writes[1].Update.ToString().ShouldContain("__applied");
-    [Fact] void should_filter_on_the_document_id_alone() => _writes[1].Filter!.ElementCount.ShouldEqual(1);
+    [Fact] void should_write_the_direct_change_and_then_the_join_in_change_order() => _writes.Select(_ => _.Kind).ShouldEqual(["one", "many"]);
+    [Fact] void should_write_the_direct_change_as_a_pipeline_recording_its_marker() => _writes[0].Update.ToString().ShouldContain("__applied");
+    [Fact] void should_filter_the_direct_change_on_the_document_id_alone() => _writes[0].Filter!.ElementCount.ShouldEqual(1);
+    [Fact] void should_record_the_marker_of_the_join_in_its_own_slot() => _writes[1].Update.ToString().ShouldContain("__applied");
 }

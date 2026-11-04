@@ -112,10 +112,16 @@ public class SaveChanges(ISink sink, IChangesetStorage changesetStorage, bool gu
     Task<IEnumerable<FailedPartition>> ApplyMainChanges(IProjection projection, ProjectionEventContext context, PendingFutureSave[] foldedFutureSaves)
     {
         var mode = WriteModeFor(projection, context);
-        return foldedFutureSaves.Length > 0
+        var immediately = foldedFutureSaves.Length > 0;
+        return mode == SinkWriteMode.OncePerSourceEvent && sink is ISinkAppliedEventMarkers markers
+            ? markers.ApplyChangesOncePerSourceEvent(context.Key, context.Changeset, context.Event.Context.SequenceNumber, new(projection.EventSequenceId, immediately))
+            : ApplyUnmarked(context, mode, immediately);
+    }
+
+    Task<IEnumerable<FailedPartition>> ApplyUnmarked(ProjectionEventContext context, SinkWriteMode mode, bool immediately) =>
+        immediately
             ? sink.ApplyChangesImmediately(context.Key, context.Changeset, context.Event.Context.SequenceNumber, mode)
             : sink.ApplyChanges(context.Key, context.Changeset, context.Event.Context.SequenceNumber, mode);
-    }
 
     async Task ApplyPendingFutureSaves(ProjectionEventContext context)
     {

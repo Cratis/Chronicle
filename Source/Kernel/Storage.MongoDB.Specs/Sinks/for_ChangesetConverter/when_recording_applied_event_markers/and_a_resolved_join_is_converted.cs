@@ -35,7 +35,7 @@ public class and_a_resolved_join_is_converted : given.a_changeset_converter_reco
 
     [Fact] void should_write_one_guarded_pipeline() => _result.IsConditional.ShouldBeTrue();
     [Fact] void should_record_the_slot_of_the_join_definition() => Json(_result).ShouldContain($"\"__applied.j.{AppliedEventMarkers.DefinitionId("join-type", "joinId")}\"");
-    [Fact] void should_identify_the_stream_of_the_join_event() => Json(_result).ShouldContain(AppliedEventMarkers.StreamHash("other-ns", "join-source"));
+    [Fact] void should_identify_the_stream_of_the_join_event() => Json(_result).ShouldContain(AppliedEventMarkers.StreamHash("other-ns", EventSequence, "join-source"));
     [Fact] void should_carry_the_sequence_number_of_the_join_event() => Json(_result).ShouldContain("\"n\" : 7");
     [Fact] void should_write_the_join_unguarded_by_a_slot_when_the_source_is_not_an_event() => Json(_withoutEvent).ShouldNotContain("__applied.j.");
 

@@ -87,7 +87,7 @@ public class FencedSourceKeyedJoinSink(ChronicleInProcessFixture fixture) : Inte
 
     protected Task Clear(string partition) =>
         (_sink as ISinkAppliedEventMarkers ?? throw new InvalidOperationException("The sink does not clear applied event markers"))
-            .ClearAppliedEventMarkers(Namespace, partition, [new AppliedEventMarkerJoin(DefinitionId, "joined", "joinId")]);
+            .ClearAppliedEventMarkers(Namespace, Cratis.Chronicle.Concepts.EventSequences.EventSequenceId.Log, partition, [new AppliedEventMarkerJoin(DefinitionId, "joined", "joinId")]);
 
     protected Task<BsonDocument> Read(string id) => _documents.Find(Builders<BsonDocument>.Filter.Eq("_id", id)).SingleAsync();
 

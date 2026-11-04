@@ -19,15 +19,16 @@ public class a_changeset_converter_recording_markers : a_changeset_converter
     protected const string EventTypeId = "event-type";
     protected const string SourceValue = "source-1";
     protected const string Namespace = "ns";
+    protected const string EventSequence = "seq";
 
     protected Key _key = new("root-key", ArrayIndexers.NoIndexers);
     protected BsonDocument _joinFilter;
     protected BsonDocument _joinUpdate;
     protected int _joinWrites;
 
-    protected static string Stream => Cratis.Chronicle.Storage.Sinks.AppliedEventMarkers.StreamHash(Namespace, SourceValue);
+    protected static string Stream => Cratis.Chronicle.Storage.Sinks.AppliedEventMarkers.StreamHash(Namespace, EventSequence, SourceValue);
 
-    internal AppliedEventMarkerContext Context(bool recordOwnSlot = true) => new(Namespace, SourceValue, EventTypeId, 42UL, recordOwnSlot);
+    internal AppliedEventMarkerContext Context(bool recordOwnSlot = true) => new(Namespace, EventSequence, SourceValue, EventTypeId, 42UL, recordOwnSlot);
 
     protected static PropertiesChanged<ExpandoObject> Direct() =>
         new(new ExpandoObject(), [new PropertyDifference("name", "Before", "After")]);
