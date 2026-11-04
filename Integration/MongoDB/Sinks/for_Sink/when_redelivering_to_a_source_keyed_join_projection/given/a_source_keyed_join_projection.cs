@@ -32,6 +32,14 @@ public class a_source_keyed_join_projection(ChronicleInProcessFixture fixture) :
     protected static ResolvedJoin ResolvedOf(AppendedEvent source, params (string Property, int Value)[] values) =>
         new(new ExpandoObject(), JoinedStream, new PropertyPath("joinId"), ArrayIndexers.NoIndexers, [Direct(values)], source);
 
+    protected static PropertiesChanged<ExpandoObject> DirectText(params (string Property, string Value)[] values) =>
+        new(new ExpandoObject(), values.Select(_ => new PropertyDifference(new PropertyPath(_.Property), null, _.Value)).ToArray());
+
+    protected static ResolvedJoin ResolvedFor(string key, AppendedEvent source, params (string Property, int Value)[] values) =>
+        new(new ExpandoObject(), key, new PropertyPath("joinId"), ArrayIndexers.NoIndexers, [Direct(values)], source);
+
+    protected static BsonDocument SlotOf(BsonDocument document) => document[Applied]["j"].AsBsonDocument.Single().Value.AsBsonDocument;
+
     protected Task Apply(Sink sink, AppendedEvent incoming, params Change[] changes) =>
         sink.ApplyChanges(RootKey, ChangesetOf(incoming, changes), incoming.Context.SequenceNumber, SinkWriteMode.OncePerSourceEvent);
 }

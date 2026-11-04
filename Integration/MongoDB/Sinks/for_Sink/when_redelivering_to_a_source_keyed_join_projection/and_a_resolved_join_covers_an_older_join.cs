@@ -29,7 +29,8 @@ public class and_a_resolved_join_covers_an_older_join(ChronicleInProcessFixture 
         _root = await Read("root");
     }
 
-    // A resolved join must never lower its slot, otherwise the redelivered newer join would be admitted again.
+    // A resolved join of an older event must neither lower the slot nor overwrite the data of the newer join.
     [Fact] void should_not_lower_the_join_slot() => _slotBeforeTheRedelivery[Applied]["j"].AsBsonDocument.Single().Value["n"].ToInt64().ShouldEqual(20);
-    [Fact] void should_suppress_the_redelivered_join() => _root["count"].ToInt32().ShouldEqual(2);
+    [Fact] void should_not_let_the_older_resolved_join_overwrite_the_newer_data() => _root["count"].ToInt32().ShouldEqual(3);
+    [Fact] void should_still_apply_the_own_write_of_its_event() => _root["x"].ToInt32().ShouldEqual(1);
 }
