@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Choreography.Jobs;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
 
@@ -22,7 +23,7 @@ public class when_observer_is_caught_up_having_read_past_the_last_handled_event 
         };
     }
 
-    Task Because() => _observer.CaughtUp(3UL, 7UL);
+    Task Because() => _observer.CaughtUp(JobId.New(), 3UL, 7UL);
 
     [Fact] void should_count_only_the_handled_event_as_handled() => _stateStorage.State.LastHandledEventSequenceNumber.ShouldEqual((EventSequenceNumber)3UL);
     [Fact] void should_move_past_the_last_event_read() => _stateStorage.State.NextEventSequenceNumber.ShouldEqual((EventSequenceNumber)8UL);

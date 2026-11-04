@@ -32,4 +32,10 @@ public class RegisterReducer
     /// </summary>
     [ProtoMember(4)]
     public ReducerDefinition Reducer { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether and how the client receives events as pages spanning several partitions.
+    /// </summary>
+    [ProtoMember(5)]
+    public PageDelivery? PageDelivery { get; set; }
 }

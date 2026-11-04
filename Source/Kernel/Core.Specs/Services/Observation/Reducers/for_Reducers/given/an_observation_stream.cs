@@ -27,10 +27,15 @@ public class an_observation_stream : Specification
     protected ReducerEventsObserver _deliver;
     IDisposable _subscription;
 
+    private protected virtual IActivitySource<Reducers> CreateActivitySource() => new ActivitySource<Reducers>();
+
+    protected virtual PageDelivery? PageDelivery => null;
+
     async Task Establish()
     {
         var subscribed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var mediator = Substitute.For<IReducerMediator>();
+        mediator.Disconnected(Arg.Any<ReducerId>(), Arg.Any<ConnectionId>(), Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<ReducerEventsObserver>(), Arg.Any<ReducerReplayObserver>()).Returns(true);
         mediator.When(_ => _.Subscribe(Arg.Any<ReducerId>(), Arg.Any<ConnectionId>(), Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<ReducerEventsObserver>()))
             .Do(call =>
             {
@@ -58,7 +63,7 @@ public class an_observation_stream : Specification
             mediator,
             Substitute.For<IExpandoObjectConverter>(),
             new JsonSerializerOptions(),
-            new ActivitySource<Reducers>(),
+            CreateActivitySource(),
             Options.Create(new ChronicleOptions()),
             NullLogger<Reducers>.Instance);
         _subscription = reducers.Observe(_messages).Subscribe(_deliveries.Add);
@@ -67,6 +72,7 @@ public class an_observation_stream : Specification
             ConnectionId = "connection",
             EventStore = "store",
             Namespace = "namespace",
+            PageDelivery = PageDelivery,
             Reducer = new Contracts.Observation.Reducers.ReducerDefinition { ReducerId = "reducer", EventSequenceId = "event-log", ReadModel = "model" }
         })));
         await subscribed.Task.WaitAsync(TimeSpan.FromSeconds(5));

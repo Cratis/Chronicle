@@ -26,9 +26,15 @@ internal static class ObserverEventTypes
     /// <param name="eventTypes">The event registry.</param>
     /// <param name="currentStore">The current client's store.</param>
     /// <param name="handledEventTypes">The owning invoker's accepted event identities.</param>
+    /// <param name="configuredStore">The optional configured source event store.</param>
     /// <returns>The single source store, or null when there is none or several.</returns>
-    internal static string? GetSourceStore(Type observerType, IEventTypes eventTypes, EventStoreName currentStore, IEnumerable<EventType> handledEventTypes)
+    internal static string? GetSourceStore(Type observerType, IEventTypes eventTypes, EventStoreName currentStore, IEnumerable<EventType> handledEventTypes, EventStoreName? configuredStore = null)
     {
+        if (configuredStore is not null)
+        {
+            return configuredStore.Value;
+        }
+
         if (observerType.GetCustomAttribute<EventStoreAttribute>() is { } declaredStore)
         {
             return declaredStore.EventStore;
@@ -49,6 +55,11 @@ internal static class ObserverEventTypes
     /// <exception cref="MultipleEventStoresDefined">Handlers declare multiple source stores.</exception>
     internal static EventSequenceId InferSequence(Type observerType, IEventTypes eventTypes, EventStoreName currentStore, IEnumerable<EventType> handledEventTypes)
     {
+        if (CanUseSequenceCache(eventTypes, currentStore))
+        {
+            return ObserverSequenceCache.Infer(observerType, (EventTypes)eventTypes, currentStore, handledEventTypes);
+        }
+
         var stores = GetStores(handledEventTypes, eventTypes, currentStore);
         if (stores.Length > 1)
         {
@@ -59,6 +70,9 @@ internal static class ObserverEventTypes
             ? new EventSequenceId($"{EventSequenceId.InboxPrefix}{stores[0]}")
             : EventSequenceId.Log;
     }
+
+    static bool CanUseSequenceCache(IEventTypes eventTypes, EventStoreName? currentStore) =>
+        eventTypes.GetType() == typeof(EventTypes) && currentStore is not null;
 
     static string[] GetStores(IEnumerable<EventType> handledEventTypes, IEventTypes eventTypes, EventStoreName currentStore)
     {

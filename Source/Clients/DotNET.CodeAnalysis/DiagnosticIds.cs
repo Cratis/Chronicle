@@ -156,7 +156,7 @@ public static class DiagnosticIds
     public const string AutoMapSameNamePropertyCollision = "CHR0025";
 
     /// <summary>
-    /// A [Key] or [Subject] attribute is placed on a property whose type derives from EventSourceId&lt;T&gt;.
+    /// A redundant [Key] attribute is placed on a property whose type derives from EventSourceId&lt;T&gt;.
     /// </summary>
     public const string KeyOrSubjectOnEventSourceId = "CHR0026";
 

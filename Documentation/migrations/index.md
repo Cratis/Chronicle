@@ -78,5 +78,6 @@ Register new generations **only after every kernel silo has been upgraded**. New
 
 ## Topics
 
+- [Event Type Migrations](../concepts/event-type-migrations.mdx) — the operation-by-operation reference for every client
 - [C# client usage](dotnet-client)
 - [Explicit registration](explicit-registration) — nominate migration recipes for registered generation identities

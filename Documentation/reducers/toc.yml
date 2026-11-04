@@ -8,6 +8,8 @@
   href: passive-reducers.mdx
 - name: Event Processing
   href: event-processing.mdx
+- name: Reducing Events in Batches
+  href: batches.mdx
 - name: Event Sequence
   href: event-sequence.mdx
 - name: Subscribe to External Event Stores

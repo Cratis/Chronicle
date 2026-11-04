@@ -80,6 +80,11 @@ public class ReactorInvoker(
     internal EventSequenceId? RegisteredEventSequenceId { get; init; }
 
     /// <summary>
+    /// Gets the methods of the reactor that take an <see cref="EventBatch"/>.
+    /// </summary>
+    internal IReadOnlyList<BatchMethod> Batches => _methodsByEventType.Batch;
+
+    /// <summary>
     /// Gets all <see cref="EventType"/> for a specific reactor type.
     /// </summary>
     /// <param name="eventTypes"><see cref="IEventTypes"/> for looking up event types.</param>
@@ -177,6 +182,23 @@ public class ReactorInvoker(
             {
                 logger.ReactorMiddlewareAfterInvokeFailed(reactorId, eventTypeName, ex);
             }
+        }
+    }
+
+    /// <summary>
+    /// Calls a batch method of the reactor.
+    /// </summary>
+    /// <param name="method">The <see cref="BatchMethod"/> to call.</param>
+    /// <param name="batch">The <see cref="EventBatch"/> to call it with.</param>
+    /// <param name="context">The <see cref="BatchContext"/> of the page.</param>
+    /// <returns>Awaitable task.</returns>
+    internal async Task InvokeBatch(BatchMethod method, EventBatch batch, BatchContext context)
+    {
+        var arguments = method.ArgumentsFor([batch], context, serviceProvider ?? EmptyServiceProvider.Instance);
+        var result = method.Method.Invoke(method.Method.IsStatic ? null : activatedReactor.Instance, BindingFlags.DoNotWrapExceptions, null, arguments, null);
+        if (result is Task task)
+        {
+            await task;
         }
     }
 
@@ -287,13 +309,14 @@ public class ReactorInvoker(
     /// <param name="Live">The handlers to run as events happen.</param>
     /// <param name="Replay">The handlers marked with <see cref="ReplayAttribute"/>, which take over during a replay.</param>
     /// <param name="OnceOnly">The handlers marked with <see cref="OnceOnlyAttribute"/>, which never run for a replayed event.</param>
-    record HandlerMethods(FrozenDictionary<Type, MethodInfo> Live, FrozenDictionary<Type, MethodInfo> Replay, FrozenSet<MethodInfo> OnceOnly)
+    /// <param name="Batch">The methods that take an <see cref="EventBatch"/>.</param>
+    record HandlerMethods(FrozenDictionary<Type, MethodInfo> Live, FrozenDictionary<Type, MethodInfo> Replay, FrozenSet<MethodInfo> OnceOnly, IReadOnlyList<BatchMethod> Batch)
     {
         /// <summary>
         /// Gets every event type handled, whichever path handles it. An event type handled only by a replay
         /// handler still has to be subscribed to, or the replay would have nothing to deliver.
         /// </summary>
-        public IEnumerable<Type> AllEventTypes => Live.Keys.Union(Replay.Keys);
+        public IEnumerable<Type> AllEventTypes => Live.Keys.Union(Replay.Keys).Union(Batch.SelectMany(_ => _.EventTypes));
 
         /// <summary>
         /// Resolves the handler to run for an event type, given the state the event is being observed in.
@@ -379,7 +402,29 @@ public class ReactorInvoker(
                 }
             }
 
-            return new(liveMethodsByEventType.ToFrozenDictionary(), replayMethodsByEventType.ToFrozenDictionary(), onceOnlyMethods.ToFrozenSet());
+            var batchMethods = GetBatchMethods(targetType, eventTypes, liveMethodsByEventType, replayMethodsByEventType);
+            return new(liveMethodsByEventType.ToFrozenDictionary(), replayMethodsByEventType.ToFrozenDictionary(), onceOnlyMethods.ToFrozenSet(), batchMethods);
+        }
+
+        static IReadOnlyList<BatchMethod> GetBatchMethods(Type targetType, IEnumerable<Type> eventTypes, Dictionary<Type, MethodInfo> live, Dictionary<Type, MethodInfo> replay)
+        {
+            Observation.BatchMethods.ThrowIfAnyTakesBatchContext(targetType, live.Values.Concat(replay.Values));
+            var batchMethods = Observation.BatchMethods.For(targetType, eventTypes);
+            foreach (var batchMethod in batchMethods)
+            {
+                if (batchMethod.Method.ReturnType != typeof(void) && batchMethod.Method.ReturnType != typeof(Task))
+                {
+                    throw new InvalidBatchMethodReturnType(targetType, batchMethod.Method.Name, batchMethod.Method.ReturnType);
+                }
+
+                var handledPerEvent = batchMethod.EventTypes.FirstOrDefault(_ => live.ContainsKey(_) || replay.ContainsKey(_));
+                if (handledPerEvent is not null)
+                {
+                    throw new EventTypeObservedByMoreThanOneMethod(targetType, handledPerEvent);
+                }
+            }
+
+            return batchMethods;
         }
     }
 }

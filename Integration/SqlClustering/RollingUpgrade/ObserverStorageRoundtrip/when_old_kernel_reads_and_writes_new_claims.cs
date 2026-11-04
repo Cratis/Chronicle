@@ -87,7 +87,7 @@ public class when_old_kernel_reads_and_writes_new_claims : Specification
     [Fact] void should_preserve_the_revision() => _after.OwnershipRevision.ShouldEqual(new OwnershipRevision(7));
     [Fact] void should_remain_readable_by_the_new_provider() => _after.PartitionClaims.Single().Epoch.ShouldEqual(new ClaimEpoch(3));
 
-    async Task Cleanup()
+    async Task Destroy()
     {
         if (_fixture is not null) await _fixture.DisposeAsync();
     }

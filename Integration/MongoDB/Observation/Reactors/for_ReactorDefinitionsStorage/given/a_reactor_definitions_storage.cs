@@ -32,7 +32,7 @@ public class a_reactor_definitions_storage(ChronicleInProcessFixture fixture) : 
         await Task.CompletedTask;
     }
 
-    async Task Cleanup() => await _mongoDatabase.Client.DropDatabaseAsync(_databaseName);
+    async Task Destroy() => await _mongoDatabase.Client.DropDatabaseAsync(_databaseName);
 
     /// <summary>
     /// Creates a reactor definition with the given id.

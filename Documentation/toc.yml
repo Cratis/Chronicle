@@ -74,6 +74,8 @@
   href: code-analysis/toc.yml
 - name: Testing
   href: testing/toc.yml
+- name: Operations
+  href: operations/toc.yml
 - name: Troubleshooting
   href: troubleshooting/toc.yml
 - name: Workbench

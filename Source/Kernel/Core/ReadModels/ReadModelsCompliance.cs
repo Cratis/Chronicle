@@ -85,36 +85,37 @@ public class ReadModelsCompliance(
 
         var identifier = instance[WellKnownProperties.Subject]?.GetValue<string>();
         var subjects = ReadModelSubjects.From(instance[WellKnownProperties.Subjects]);
-        if (identifier is null && subjects.Count == 0)
+        return await ReleaseJson(eventStore, eventStoreNamespace, schema, instance, identifier, subjects);
+    }
+
+    /// <inheritdoc/>
+    public async Task<JsonObject> ReleaseJson(
+        EventStoreName eventStore,
+        EventStoreNamespaceName eventStoreNamespace,
+        JsonSchema schema,
+        JsonObject instance,
+        string? subject,
+        IReadOnlyDictionary<string, string> subjects)
+    {
+        if (!schema.HasSchemaMetadata())
         {
             return instance;
         }
 
-        // Kernel bookkeeping is stamped onto the document by the kernel itself — the identity marker read above,
-        // the sink's last-handled watermark, the projection engine's initialization flag. The compliance manager
-        // walks every property it is handed against the read model schema and rejects anything the schema does not
-        // declare, so any of them left on fails the whole release. The ExpandoObject release paths get that for
-        // free from their schema round-trip, which carries only schema-declared properties; this path has no
-        // round-trip and has to be explicit. The invariant is that the manager receives exactly the schema's
-        // document, so strip the whole set — stripping only the marker this method happens to read leaves the next
-        // property stamped upstream to reintroduce the same failure.
-        //
-        // Which of them come off is decided against the schema's own flattened properties, the same lookup the
-        // compliance walk does: a read model is free to expose a bookkeeping property as its own, and several
-        // declare __lastHandledEventSequenceNumber, in which case it is a property like any other and has to
-        // survive. Strip on a copy — the caller keeps the document it passed in.
-        var declaredByTheSchema = schema.GetFlattenedProperties().Select(_ => _.Name).ToHashSet(StringComparer.Ordinal);
-        var withoutBookkeeping = (instance.DeepClone() as JsonObject)!;
-        foreach (var property in WellKnownProperties.All.Where(_ => !declaredByTheSchema.Contains(_)))
+        if (subject is null && subjects.Count == 0)
         {
-            withoutBookkeeping.Remove(property);
+            return instance;
         }
 
+        // The manager walks every property it is handed against the read model schema and rejects anything the schema
+        // does not declare, so kernel bookkeeping is taken off first (Cratis/Chronicle#3585). Callers that go through
+        // ReadModelChangeBookkeeping.Split have already done it; the strip is kept as a defensive guard.
+        var withoutBookkeeping = ReadModelChangeBookkeeping.WithoutUndeclaredBookkeeping(instance, schema);
         return await HandleBySubject(
             withoutBookkeeping,
-            identifier,
-            subjects,
-            (subject, slice) => complianceManager.Release(eventStore, eventStoreNamespace, schema, subject, slice));
+            subject,
+            subjects.ToDictionary(_ => _.Key, _ => _.Value, StringComparer.Ordinal),
+            (owner, slice) => complianceManager.Release(eventStore, eventStoreNamespace, schema, owner, slice));
     }
 
     /// <inheritdoc/>
