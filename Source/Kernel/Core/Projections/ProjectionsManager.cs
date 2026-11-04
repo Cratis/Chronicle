@@ -189,8 +189,8 @@ public partial class ProjectionsManager(
     public async Task Register(IEnumerable<ProjectionDefinition> definitions, ProjectionOwner? fullSetOwner = null, string? registrant = null, string? version = null)
     {
         var submitted = definitions as IReadOnlyList<ProjectionDefinition> ?? [.. definitions];
-        var signature = ProjectionRegistrationSignature.For(submitted, fullSetOwner, registrant, version);
-        if (await IsRepeatOfRecentRegistration(signature))
+        var signature = TryComputeRegistrationSignature(submitted, fullSetOwner, registrant, version);
+        if (signature is not null && await IsRepeatOfRecentRegistration(signature, submitted))
         {
             logger.SkippingRepeatedRegistration(_eventStoreName, registrant ?? string.Empty, submitted.Count);
             return;
@@ -277,6 +277,7 @@ public partial class ProjectionsManager(
     {
         var namespaces = (await GrainFactory.GetGrain<INamespaces>(_eventStoreName).GetAll()).ToArray();
         var definitionList = FilterUnsupportedKernelDefinitions(StampWithVersion(definitions, version));
+        _lastRegistrationSignature = null;
         _removingProjections.ExceptWith(definitionList.Select(definition => definition.Identifier));
 
         Announce(definitionList);
@@ -593,6 +594,7 @@ public partial class ProjectionsManager(
             }
         }
 
+        _lastRegistrationSignature = null;
         State.Projections = projections;
     }
 

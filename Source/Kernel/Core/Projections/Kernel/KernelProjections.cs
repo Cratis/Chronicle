@@ -7,7 +7,6 @@ using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.ReadModels;
-using Cratis.Chronicle.Setup;
 using Cratis.DependencyInjection;
 using Cratis.Types;
 using Microsoft.Extensions.Options;
@@ -67,15 +66,8 @@ public class KernelProjections(
         var signature = TryComputeSignature(projections);
         if (signature is not null)
         {
-            try
-            {
-                await manager.RegisterShared(signature, projections, ProjectionOwner.Kernel);
-                return;
-            }
-            catch (Exception exception) when (IncompatibleSiloRelease.IsLikely(exception))
-            {
-                // A silo running the previous interface can still accept the ordinary registration.
-            }
+            await SharedProjectionRegistration.Register(manager, signature, projections, ProjectionOwner.Kernel);
+            return;
         }
 
         await manager.Register(projections, ProjectionOwner.Kernel);

@@ -96,7 +96,7 @@ internal sealed class Projections(
                 return;
             }
 
-            await projectionsManager.RegisterShared(signature, projections, fullSetOwner, registrant, version);
+            await SharedProjectionRegistration.Register(projectionsManager, signature, projections, fullSetOwner, registrant, version);
         }
         catch (Exception exception)
         {

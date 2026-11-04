@@ -10,6 +10,19 @@ namespace Cratis.Chronicle.Projections;
 
 public partial class ProjectionsManager
 {
+    static string? TryComputeRegistrationSignature(IEnumerable<ProjectionDefinition> definitions, ProjectionOwner? fullSetOwner, string? registrant, string? version)
+    {
+        try
+        {
+            return ProjectionRegistrationSignature.For(definitions, fullSetOwner, registrant, version);
+        }
+        catch (Exception)
+        {
+            // Hashing is an optimization; unhashable definitions still use ordinary registration.
+            return null;
+        }
+    }
+
     static List<ProjectionDefinition> StampWithVersion(IEnumerable<ProjectionDefinition> definitions, string? version) =>
         [.. definitions.Select(definition => string.IsNullOrWhiteSpace(version) ? definition : definition with { Version = version })];
 
@@ -17,13 +30,27 @@ public partial class ProjectionsManager
     /// Whether this exact registration just completed, with nothing since that it would have to react to.
     /// </summary>
     /// <param name="signature">The signature of the incoming registration.</param>
+    /// <param name="definitions">The submitted definitions.</param>
     /// <returns>True when it can be answered without doing the work again.</returns>
-    async Task<bool> IsRepeatOfRecentRegistration(string signature)
+    async Task<bool> IsRepeatOfRecentRegistration(string signature, IEnumerable<ProjectionDefinition> definitions)
     {
-        if (_lastRegistrationSignature != signature ||
-            _registrationNamespaces is null ||
-            !_pendingRevival.IsEmpty ||
-            _clock.GetUtcNow() - _lastRegistrationCompletedAt > IdenticalRegistrationWindow)
+        if (_lastRegistrationSignature != signature || _registrationNamespaces is null)
+        {
+            return false;
+        }
+
+        if (!_pendingRevival.IsEmpty || _clock.GetUtcNow() - _lastRegistrationCompletedAt > IdenticalRegistrationWindow)
+        {
+            return false;
+        }
+
+        if (definitions.Any(definition => _removingProjections.Contains(definition.Identifier)))
+        {
+            return false;
+        }
+
+        var registeredIds = State.Projections.Select(definition => definition.Identifier).ToHashSet();
+        if (definitions.Any(definition => !registeredIds.Contains(definition.Identifier)))
         {
             return false;
         }
