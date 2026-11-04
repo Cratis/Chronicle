@@ -6,33 +6,41 @@ using System.Diagnostics;
 namespace Cratis.Chronicle.Diagnostics;
 
 /// <summary>
-/// Records directly without consulting configuration or translating tag keys on the measurement path.
+/// Records directly with a concrete value-type recorder and cached scope tags.
 /// </summary>
 /// <typeparam name="T">The measurement type.</typeparam>
-/// <param name="record">The precreated instrument's recording operation.</param>
+/// <typeparam name="TRecorder">The concrete instrument recorder.</typeparam>
+/// <param name="recorder">The precreated instrument's recorder.</param>
 /// <param name="tags">The cached scope tags.</param>
 /// <param name="firstKey">The preselected first additional tag key.</param>
 /// <param name="secondKey">The preselected second additional tag key.</param>
-internal sealed class SingleMetricInstrument<T>(Action<T, TagList> record, TagList tags, string firstKey, string secondKey) : IMetricInstrument<T>
+internal sealed class SingleMetricInstrument<T, TRecorder>(TRecorder recorder, TagList tags, string firstKey, string secondKey)
     where T : struct
+    where TRecorder : struct, IMetricRecorder<T>
 {
-    /// <inheritdoc/>
-    public void Record(T value) => record(value, tags);
+    /// <summary>Records a measurement with the cached scope tags.</summary>
+    /// <param name="value">The measurement.</param>
+    internal void Record(T value) => recorder.Record(value, in tags);
 
-    /// <inheritdoc/>
-    public void Record(T value, object? tag)
+    /// <summary>Records a measurement with an additional tag.</summary>
+    /// <param name="value">The measurement.</param>
+    /// <param name="tag">The additional tag value.</param>
+    internal void Record(T value, object? tag)
     {
         var measurementTags = tags;
         measurementTags.Add(firstKey, tag);
-        record(value, measurementTags);
+        recorder.Record(value, in measurementTags);
     }
 
-    /// <inheritdoc/>
-    public void Record(T value, object? firstTag, object? secondTag)
+    /// <summary>Records a measurement with two additional tags.</summary>
+    /// <param name="value">The measurement.</param>
+    /// <param name="firstTag">The first additional tag value.</param>
+    /// <param name="secondTag">The second additional tag value.</param>
+    internal void Record(T value, object? firstTag, object? secondTag)
     {
         var measurementTags = tags;
         measurementTags.Add(firstKey, firstTag);
         measurementTags.Add(secondKey, secondTag);
-        record(value, measurementTags);
+        recorder.Record(value, in measurementTags);
     }
 }

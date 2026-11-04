@@ -13,9 +13,9 @@ namespace Cratis.Chronicle.Storage.Sql;
 internal sealed class SqlStorageMetrics
 {
     static readonly Meter _meter = new(WellKnown.MeterName);
-    readonly IMetricInstrument<double> _schemaLockWait;
-    readonly IMetricInstrument<int> _liveQueryPollFailed;
-    readonly IMetricInstrument<int> _upsertCollisionRecovered;
+    readonly MetricInstrument<double, HistogramMetricRecorder<double>> _schemaLockWait;
+    readonly MetricInstrument<int, CounterMetricRecorder<int>> _liveQueryPollFailed;
+    readonly MetricInstrument<int, CounterMetricRecorder<int>> _upsertCollisionRecovered;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SqlStorageMetrics"/> class.

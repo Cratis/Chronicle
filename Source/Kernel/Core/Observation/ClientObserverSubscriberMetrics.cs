@@ -13,9 +13,9 @@ namespace Cratis.Chronicle.Observation;
 internal sealed class ClientObserverSubscriberMetrics
 {
     static readonly Meter _meter = new(WellKnown.MeterName);
-    readonly IMetricInstrument<long> _lateResults;
-    readonly IMetricInstrument<long> _holdExpirations;
-    readonly IMetricInstrument<double> _fenceDuration;
+    readonly MetricInstrument<long, CounterMetricRecorder<long>> _lateResults;
+    readonly MetricInstrument<long, CounterMetricRecorder<long>> _holdExpirations;
+    readonly MetricInstrument<double, HistogramMetricRecorder<double>> _fenceDuration;
 
     /// <summary>Initializes a new instance of the <see cref="ClientObserverSubscriberMetrics"/> class.</summary>
     /// <param name="names">The naming mode.</param>

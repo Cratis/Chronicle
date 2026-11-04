@@ -27,8 +27,8 @@ internal sealed partial class SqlCompositeKeyShadow
     internal const string ColumnName = "__compositeKey";
     const int MaximumLength = 850;
     static readonly Meter _meter = new("Cratis.Chronicle.Storage.Sql.CompositeKeyShadow");
-    readonly IMetricInstrument<long> _failures;
-    readonly IMetricInstrument<long> _collisions;
+    readonly MetricInstrument<long, CounterMetricRecorder<long>> _failures;
+    readonly MetricInstrument<long, CounterMetricRecorder<long>> _collisions;
 
     /// <summary>Initializes a new instance of the <see cref="SqlCompositeKeyShadow"/> class.</summary>
     /// <param name="names">The metric naming mode.</param>

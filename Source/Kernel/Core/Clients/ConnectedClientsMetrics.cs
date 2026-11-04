@@ -13,7 +13,7 @@ namespace Cratis.Chronicle.Clients;
 /// <param name="names">The naming mode.</param>
 internal sealed class ConnectedClientsMetrics(IMeter<ConnectedClients> meter, MetricNames names)
 {
-    readonly IMetricInstrument<int> _count = new MetricSet(meter.ActualMeter, names).Gauge<int>(
+    readonly MetricInstrument<int, GaugeMetricRecorder<int>> _count = new MetricSet(meter.ActualMeter, names).Gauge<int>(
         WellKnownMetricNames.ConnectedClientCount,
         WellKnownMetricNames.ConnectedClientCountUnit,
         "Number of connected clients");

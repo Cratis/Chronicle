@@ -13,8 +13,8 @@ namespace Cratis.Chronicle.Observation.Webhooks;
 internal sealed class WebhookDeliveryMetrics
 {
     static readonly Meter _meter = new(WellKnown.MeterName);
-    readonly IMetricInstrument<long> _circuitOpened;
-    readonly IMetricInstrument<long> _circuitRejected;
+    readonly MetricInstrument<long, CounterMetricRecorder<long>> _circuitOpened;
+    readonly MetricInstrument<long, CounterMetricRecorder<long>> _circuitRejected;
 
     /// <summary>Initializes a new instance of the <see cref="WebhookDeliveryMetrics"/> class.</summary>
     /// <param name="names">The naming mode.</param>

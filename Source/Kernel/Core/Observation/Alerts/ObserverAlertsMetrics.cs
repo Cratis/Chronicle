@@ -15,7 +15,7 @@ namespace Cratis.Chronicle.Observation.Alerts;
 /// <param name="names">The naming mode.</param>
 internal sealed class ObserverAlertsMetrics(IMeter<ObserverAlerts> meter, ObserverKey key, MetricNames names)
 {
-    readonly IMetricInstrument<int> _failures = new MetricSet(
+    readonly MetricInstrument<int, CounterMetricRecorder<int>> _failures = new MetricSet(
         meter.ActualMeter,
         names,
         [

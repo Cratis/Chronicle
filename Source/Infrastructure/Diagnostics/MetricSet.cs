@@ -42,12 +42,8 @@ internal sealed class MetricSet
     /// <param name="firstKey">The first additional convention tag key.</param>
     /// <param name="secondKey">The second additional convention tag key.</param>
     /// <returns>The precreated counter or pair of counters.</returns>
-    internal IMetricInstrument<T> Counter<T>(string name, string? unit, string? description = null, string firstKey = "", string secondKey = "")
-        where T : struct => Create<T>(name, unit, description, firstKey, secondKey, metadata =>
-        {
-            var counter = _meter?.CreateCounter<T>(metadata.Name, metadata.Unit, metadata.Description);
-            return (value, tags) => counter?.Add(value, tags);
-        });
+    internal MetricInstrument<T, CounterMetricRecorder<T>> Counter<T>(string name, string? unit, string? description = null, string firstKey = "", string secondKey = "")
+        where T : struct => Create<T, CounterMetricRecorder<T>>(name, unit, description, firstKey, secondKey, metadata => new CounterMetricRecorder<T>(_meter?.CreateCounter<T>(metadata.Name, metadata.Unit, metadata.Description)));
 
     /// <summary>Creates a gauge in the selected naming mode.</summary>
     /// <typeparam name="T">The measurement type.</typeparam>
@@ -57,12 +53,8 @@ internal sealed class MetricSet
     /// <param name="firstKey">The first additional convention tag key.</param>
     /// <param name="secondKey">The second additional convention tag key.</param>
     /// <returns>The precreated gauge or pair of gauges.</returns>
-    internal IMetricInstrument<T> Gauge<T>(string name, string? unit, string? description = null, string firstKey = "", string secondKey = "")
-        where T : struct => Create<T>(name, unit, description, firstKey, secondKey, metadata =>
-        {
-            var gauge = _meter?.CreateGauge<T>(metadata.Name, metadata.Unit, metadata.Description);
-            return (value, tags) => gauge?.Record(value, tags);
-        });
+    internal MetricInstrument<T, GaugeMetricRecorder<T>> Gauge<T>(string name, string? unit, string? description = null, string firstKey = "", string secondKey = "")
+        where T : struct => Create<T, GaugeMetricRecorder<T>>(name, unit, description, firstKey, secondKey, metadata => new GaugeMetricRecorder<T>(_meter?.CreateGauge<T>(metadata.Name, metadata.Unit, metadata.Description)));
 
     /// <summary>Creates a histogram in the selected naming mode.</summary>
     /// <typeparam name="T">The measurement type.</typeparam>
@@ -72,41 +64,39 @@ internal sealed class MetricSet
     /// <param name="firstKey">The first additional convention tag key.</param>
     /// <param name="secondKey">The second additional convention tag key.</param>
     /// <returns>The precreated histogram or pair of histograms.</returns>
-    internal IMetricInstrument<T> Histogram<T>(string name, string? unit, string? description = null, string firstKey = "", string secondKey = "")
-        where T : struct => Create<T>(name, unit, description, firstKey, secondKey, metadata =>
-        {
-            var histogram = _meter?.CreateHistogram<T>(metadata.Name, metadata.Unit, metadata.Description);
-            return (value, tags) => histogram?.Record(value, tags);
-        });
+    internal MetricInstrument<T, HistogramMetricRecorder<T>> Histogram<T>(string name, string? unit, string? description = null, string firstKey = "", string secondKey = "")
+        where T : struct => Create<T, HistogramMetricRecorder<T>>(name, unit, description, firstKey, secondKey, metadata => new HistogramMetricRecorder<T>(_meter?.CreateHistogram<T>(metadata.Name, metadata.Unit, metadata.Description)));
 
     /// <summary>Creates the legacy-only retry counter at its original recording point.</summary>
     /// <returns>The legacy counter, or a no-op in convention mode.</returns>
-    internal IMetricInstrument<int> PartitionRetryAttempts()
+    internal MetricInstrument<int, CounterMetricRecorder<int>> PartitionRetryAttempts()
     {
         var counter = _names is MetricNames.Convention ? null : _meter?.CreateCounter<int>(
             LegacyTelemetryNames.PartitionRetryAttempts, description: LegacyTelemetryNames.PartitionRetryAttemptsDescription);
-        return new SingleMetricInstrument<int>((value, tags) => counter?.Add(value, tags), _legacyTags, string.Empty, string.Empty);
+        return new MetricInstrument<int, CounterMetricRecorder<int>>(new SingleMetricInstrument<int, CounterMetricRecorder<int>>(
+            new CounterMetricRecorder<int>(counter), _legacyTags, string.Empty, string.Empty));
     }
 
-    IMetricInstrument<T> Create<T>(string name, string? unit, string? description, string firstKey, string secondKey, Func<LegacyMetric, Action<T, TagList>> create)
+    MetricInstrument<T, TRecorder> Create<T, TRecorder>(string name, string? unit, string? description, string firstKey, string secondKey, Func<LegacyMetric, TRecorder> create)
         where T : struct
+        where TRecorder : struct, IMetricRecorder<T>
     {
         var convention = new LegacyMetric(name, unit, description);
         var legacy = LegacyTelemetryNames.Metrics[name][0];
         return _names switch
         {
-            MetricNames.Legacy => CreateLegacy(legacy),
-            MetricNames.Convention => CreateConvention(convention),
-            MetricNames.Both => new DualMetricInstrument<T>(CreateLegacy(legacy), CreateConvention(convention)),
+            MetricNames.Legacy => new MetricInstrument<T, TRecorder>(CreateLegacy(legacy)),
+            MetricNames.Convention => new MetricInstrument<T, TRecorder>(CreateConvention(convention)),
+            MetricNames.Both => new MetricInstrument<T, TRecorder>(CreateLegacy(legacy), CreateConvention(convention)),
             _ => throw new InvalidOperationException($"Unsupported metric naming mode: {_names}")
         };
 
-        IMetricInstrument<T> CreateLegacy(LegacyMetric metadata) => new SingleMetricInstrument<T>(
+        SingleMetricInstrument<T, TRecorder> CreateLegacy(LegacyMetric metadata) => new(
             create(metadata),
             _legacyTags,
             LegacyTelemetryNames.ToLegacyMetricKey(firstKey),
             LegacyTelemetryNames.ToLegacyMetricKey(secondKey));
 
-        IMetricInstrument<T> CreateConvention(LegacyMetric metadata) => new SingleMetricInstrument<T>(create(metadata), _conventionTags, firstKey, secondKey);
+        SingleMetricInstrument<T, TRecorder> CreateConvention(LegacyMetric metadata) => new(create(metadata), _conventionTags, firstKey, secondKey);
     }
 }
