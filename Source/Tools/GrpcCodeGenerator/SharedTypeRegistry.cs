@@ -17,7 +17,7 @@ namespace Cratis.Chronicle.Tools.GrpcCodeGenerator;
 /// here carries no concurrency risk - the same simplification <see cref="TransportTypes"/> already relies on.
 /// <para>
 /// Candidacy is decided by namespace, not by which assembly loaded the type. A Core artifact can reference a type
-/// from a project Core itself depends on - <c language="csharp">Cratis.Orleans.Jobs.JobStatus</c> is a real example, already the type
+/// from a project Core itself depends on - <c language="csharp">Cratis.Choreography.Jobs.JobStatus</c> is a real example, already the type
 /// Core's own storage layer uses - and that is exactly as much "not a contract yet" as a type Core declares
 /// directly. Gating on the Core assembly alone would miss it and try to invent a second, redundant mirror.
 /// </para>
@@ -26,7 +26,7 @@ public static class SharedTypeRegistry
 {
     /// <summary>
     /// Kernel projects Core depends on and reuses types from, that sit as an extra namespace segment between the
-    /// Chronicle root and the area name - "Cratis.Orleans.Jobs" mirrors into "Cratis.Chronicle.Contracts.Jobs",
+    /// Chronicle root and the area name - "Cratis.Choreography.Jobs" mirrors into "Cratis.Chronicle.Contracts.Jobs",
     /// not "...Contracts.Concepts.Jobs". Core's own types have no such segment ("Cratis.Chronicle.Jobs" already
     /// mirrors directly), so this only fires for a type reused from one of these known internal layers.
     /// </summary>
@@ -119,11 +119,11 @@ public static class SharedTypeRegistry
     {
         var segments = sourceNamespace.Split('.');
 
-        // Types reused from the Cratis.Orleans packages (the job system's concepts and storage types) carry the
-        // "Cratis.Orleans" root rather than Chronicle's own; their area name still mirrors into the same
-        // Contracts area it always did - "Cratis.Orleans.Jobs" into "Cratis.Chronicle.Contracts.Jobs" - with
+        // Types reused from the Cratis.Choreography packages (the job system's concepts and storage types) carry the
+        // "Cratis.Choreography" root rather than Chronicle's own; their area name still mirrors into the same
+        // Contracts area it always did - "Cratis.Choreography.Jobs" into "Cratis.Chronicle.Contracts.Jobs" - with
         // the "Storage" layer segment treated as transparent the way "Concepts" is under the Chronicle root.
-        if (sourceNamespace.StartsWith("Cratis.Orleans.", StringComparison.Ordinal))
+        if (sourceNamespace.StartsWith("Cratis.Choreography.", StringComparison.Ordinal))
         {
             var orleansSegments = segments.Skip(2).ToArray();
             if (orleansSegments.Length > 0 && orleansSegments[0] == "Storage")
@@ -165,8 +165,8 @@ public static class SharedTypeRegistry
     static bool IsCandidate(Type type)
     {
         var @namespace = type.Namespace ?? string.Empty;
-        var isCratisOrleansOwned = @namespace.StartsWith("Cratis.Orleans.", StringComparison.Ordinal);
-        var isChronicleOwned = isCratisOrleansOwned ||
+        var isCratisChoreographyOwned = @namespace.StartsWith("Cratis.Choreography.", StringComparison.Ordinal);
+        var isChronicleOwned = isCratisChoreographyOwned ||
             @namespace == _chronicleRootNamespace || @namespace.StartsWith($"{_chronicleRootNamespace}.", StringComparison.Ordinal);
         var isAlreadyAContract = @namespace == _baseNamespace || @namespace.StartsWith($"{_baseNamespace}.", StringComparison.Ordinal);
 

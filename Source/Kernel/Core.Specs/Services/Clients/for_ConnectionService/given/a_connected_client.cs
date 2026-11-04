@@ -40,7 +40,7 @@ public class a_connected_client : Specification
         _connectedClients = Substitute.For<IConnectedClients>();
         _connectedClients.WhenForAnyArgs(_ => _.OnClientConnected(default!, default!, default, default, default!, default!, default!)).Do(_ => _somethingHappened.Release());
         _connectedClients.WhenForAnyArgs(_ => _.OnClientRestored(default!, default!, default, default, default!, default!, default!)).Do(_ => _somethingHappened.Release());
-        _connectedClients.WhenForAnyArgs(_ => _.IsConnected(default!)).Do(_ => _somethingHappened.Release());
+        _connectedClients.WhenForAnyArgs(_ => _.OnClientPing(default!)).Do(_ => _somethingHappened.Release());
         _connectedClients.OnClientDisconnected(Arg.Any<ConnectionId>(), Arg.Any<string>()).Returns(_ =>
         {
             _somethingHappened.Release();
@@ -113,6 +113,8 @@ public class a_connected_client : Specification
         DateTimeOffset.UtcNow + TimeSpan.FromMinutes(1),
         TimeSpan.FromSeconds(4),
         out _);
+
+    protected Task Cancel() => _cancellation.CancelAsync();
 
     protected Task Respond() => _connectionService.ConnectionKeepAlive(new ConnectionKeepAlive { ConnectionId = TheConnection });
 

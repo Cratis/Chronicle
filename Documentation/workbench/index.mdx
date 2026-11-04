@@ -90,6 +90,19 @@ support, SLA, security, compatibility, and production suitability are outside
 this page's claim scope.
 :::
 
+### Inspect an event from a failed attempt
+
+In **Failed partitions**, select a partition and follow an attempt's sequence
+number to inspect that exact event in the observer's event sequence. The inspector
+shows the selected store, namespace, sequence and number, and reuses the event
+details view. It does not offer compensation, revision or recovery actions.
+
+Use **Return to failed partitions** to return to the same scope and select the
+originating failure if it still exists. A later user selection or deselection
+cancels pending return selection. Missing observers, events or failures are
+reported rather than replaced with a different event or partition. Inspection is
+limited to whole sequence numbers from 0 through 2147483647.
+
 ## Continue
 
 <CardGrid>
@@ -101,5 +114,8 @@ this page's claim scope.
   </SimpleCard>
   <SimpleCard title="Cratis CLI" icon="rocket" link="/cli/">
     Use terminal inspection and diagnostic workflows.
+  </SimpleCard>
+  <SimpleCard title="Operating Chronicle" icon="setting" link="/chronicle/operations/">
+    Diagnose and recover failed observers and partitions.
   </SimpleCard>
 </CardGrid>

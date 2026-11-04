@@ -3,9 +3,9 @@
 
 using System.Collections.Concurrent;
 using Cratis.Arc.MongoDB;
+using Cratis.Choreography.Storage.MongoDB.Serialization;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Configuration;
-using Cratis.Orleans.Storage.MongoDB.Serialization;
 using Microsoft.Extensions.Options;
 using MongoDB.Driver;
 
@@ -94,7 +94,7 @@ public class Database : IDatabase
             return database;
         }
 
-        var databaseName = DatabaseNames.ForReadModels(eventStore, @namespace, _storageOptions.Value.DatabaseNamePrefix);
+        var databaseName = DatabaseNames.ForReadModels(eventStore, @namespace, _storageOptions.Value.DatabaseNamePrefix, _storageOptions.Value.SystemDatabaseName);
         if (_connections is not null)
         {
             database = _connections.GetDatabase(StorageConnectionKind.ReadModels, databaseName, eventStore.Value, @namespace.Value);

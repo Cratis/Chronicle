@@ -36,8 +36,9 @@ public static class DescriptorSetWriter
             return errors;
         }
 
-        using var stream = File.Create(Path.Combine(protoDirectory, FileName));
+        using var stream = new MemoryStream();
         ProtoBuf.Serializer.Serialize(stream, set);
+        GeneratedFile.WriteIfChanged(Path.Combine(protoDirectory, FileName), stream.ToArray());
         return errors;
     }
 

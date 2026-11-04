@@ -30,7 +30,7 @@ public class a_sqlserver_provider(SqlServerFixture fixture) : for_Database.given
     {
         var factories = Substitute.For<IInstancesOf<ISinkFactory>>();
         factories.GetEnumerator().Returns(_ => Enumerable.Empty<ISinkFactory>().GetEnumerator());
-        using var cluster = new ClusterStorage(Provider, factories, Substitute.For<Cratis.Orleans.Storage.IJobsStorage>(), new JsonSerializerOptions(), Substitute.For<Json.IExpandoObjectConverter>());
+        using var cluster = new ClusterStorage(Provider, factories, Substitute.For<Cratis.Choreography.Storage.IJobsStorage>(), new JsonSerializerOptions(), Substitute.For<Json.IExpandoObjectConverter>());
         var storage = new Chronicle.Storage.Storage(cluster, Substitute.For<ISystemStorage>(), factories);
         await new GenerationFloorAdmission(storage).Admit(CancellationToken.None);
     }

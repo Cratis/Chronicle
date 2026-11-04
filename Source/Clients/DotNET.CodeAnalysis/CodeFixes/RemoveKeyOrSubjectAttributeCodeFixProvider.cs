@@ -15,12 +15,12 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 namespace Cratis.Chronicle.CodeAnalysis.CodeFixes;
 
 /// <summary>
-/// Code fix provider that removes a redundant [Key] or [Subject] attribute from an EventSourceId&lt;T&gt; member.
+/// Code fix provider that removes a redundant [Key] attribute from an EventSourceId&lt;T&gt; member.
 /// </summary>
 [ExportCodeFixProvider(LanguageNames.CSharp, Name = nameof(RemoveKeyOrSubjectAttributeCodeFixProvider)), Shared]
 public class RemoveKeyOrSubjectAttributeCodeFixProvider : CodeFixProvider
 {
-    const string Title = "Remove redundant attribute";
+    const string Title = "Remove redundant [Key] attribute";
 
     /// <inheritdoc/>
     public sealed override ImmutableArray<string> FixableDiagnosticIds => ImmutableArray.Create(
@@ -41,6 +41,13 @@ public class RemoveKeyOrSubjectAttributeCodeFixProvider : CodeFixProvider
         var diagnostic = context.Diagnostics.First();
         var attribute = root.FindNode(diagnostic.Location.SourceSpan)?.FirstAncestorOrSelf<AttributeSyntax>();
         if (attribute == null)
+        {
+            return;
+        }
+
+        var semanticModel = await context.Document.GetSemanticModelAsync(context.CancellationToken).ConfigureAwait(false);
+        if (semanticModel?.GetSymbolInfo(attribute, context.CancellationToken).Symbol is not IMethodSymbol constructor ||
+            constructor.ContainingType.ToDisplayString() != WellKnownTypes.KeyAttributeName)
         {
             return;
         }

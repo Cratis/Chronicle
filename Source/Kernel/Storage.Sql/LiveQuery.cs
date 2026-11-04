@@ -99,17 +99,59 @@ public static class LiveQuery
         IEqualityComparer<TResult>? comparer,
         string name,
         ILogger logger,
-        TimeProvider timeProvider)
+        TimeProvider timeProvider) =>
+        Observe(query, pollingInterval, comparer, name, logger, timeProvider, static rows => rows);
+
+    /// <summary>
+    /// Observes a query for a SQL storage, comparing the polled rows and mapping them to results only when a change is detected.
+    /// </summary>
+    /// <param name="query">Reads the current rows.</param>
+    /// <param name="database">The database whose polling interval and live-query logger to use.</param>
+    /// <param name="name">The bounded query name used in logs and metrics.</param>
+    /// <param name="comparer">The row equality comparer used to detect changes.</param>
+    /// <param name="project">Maps a changed snapshot of rows to the emitted results. Not invoked for unchanged polls.</param>
+    /// <typeparam name="TRow">The type of each polled row.</typeparam>
+    /// <typeparam name="TResult">The type of each emitted item.</typeparam>
+    /// <returns>A subject whose subscriptions stop polling when disposed.</returns>
+    internal static ISubject<IEnumerable<TResult>> Observe<TRow, TResult>(
+        Func<Task<IEnumerable<TRow>>> query,
+        IDatabase database,
+        string name,
+        IEqualityComparer<TRow> comparer,
+        Func<TRow[], IEnumerable<TResult>> project) =>
+        Observe(query, database.LiveQueryPollingInterval, comparer, name, database is Database sql ? sql.LiveQueryLogger : NullLogger.Instance, TimeProvider.System, project);
+
+    /// <summary>
+    /// Observes a query, comparing the polled rows and mapping them to results only when a change is detected.
+    /// </summary>
+    /// <param name="query">Reads the current rows.</param>
+    /// <param name="pollingInterval">The interval between successful polls, and the first retry delay.</param>
+    /// <param name="comparer">The row equality comparer, or null for the default.</param>
+    /// <param name="name">The bounded query name used in logs and metrics.</param>
+    /// <param name="logger">The logger for poll failures and recovery.</param>
+    /// <param name="timeProvider">The time provider used for delays.</param>
+    /// <param name="project">Maps a changed snapshot of rows to the emitted results. Not invoked for unchanged polls.</param>
+    /// <typeparam name="TRow">The type of each polled row.</typeparam>
+    /// <typeparam name="TResult">The type of each emitted item.</typeparam>
+    /// <returns>A subject whose subscriptions stop polling when disposed.</returns>
+    internal static ISubject<IEnumerable<TResult>> Observe<TRow, TResult>(
+        Func<Task<IEnumerable<TRow>>> query,
+        TimeSpan pollingInterval,
+        IEqualityComparer<TRow>? comparer,
+        string name,
+        ILogger logger,
+        TimeProvider timeProvider,
+        Func<TRow[], IEnumerable<TResult>> project)
     {
-        comparer ??= EqualityComparer<TResult>.Default;
+        comparer ??= EqualityComparer<TRow>.Default;
 
         var observable = Observable.Create<IEnumerable<TResult>>(async (observer, cancellationToken) =>
         {
-            IReadOnlyCollection<TResult>? previous = null;
+            IReadOnlyCollection<TRow>? previous = null;
             var failures = 0;
             while (!cancellationToken.IsCancellationRequested)
             {
-                TResult[] current;
+                TRow[] current;
                 try
                 {
                     current = (await query()).ToArray();
@@ -140,7 +182,7 @@ public static class LiveQuery
 
                 if (previous is null || !current.SequenceEqual(previous, comparer))
                 {
-                    observer.OnNext(current);
+                    observer.OnNext(project(current));
                     previous = current;
                 }
 

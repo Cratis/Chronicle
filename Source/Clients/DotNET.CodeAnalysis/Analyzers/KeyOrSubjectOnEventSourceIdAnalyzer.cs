@@ -10,7 +10,7 @@ using Microsoft.CodeAnalysis.Diagnostics;
 namespace Cratis.Chronicle.CodeAnalysis.Analyzers;
 
 /// <summary>
-/// Analyzer that reports a <c language="csharp">[Key]</c> or <c language="csharp">[Subject]</c> attribute placed on a property or record
+/// Analyzer that reports a redundant <c language="csharp">[Key]</c> attribute placed on a property or record
 /// positional parameter whose type derives from <c language="csharp">EventSourceId&lt;T&gt;</c>.
 /// </summary>
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
@@ -18,12 +18,12 @@ public class KeyOrSubjectOnEventSourceIdAnalyzer : DiagnosticAnalyzer
 {
     static readonly DiagnosticDescriptor Rule = new(
         id: DiagnosticIds.KeyOrSubjectOnEventSourceId,
-        title: "[Key] or [Subject] on an EventSourceId<T> is redundant",
-        messageFormat: "'{0}' is typed as '{1}', which derives from EventSourceId<T> and already is the key/stream identity and compliance subject. Remove the [{2}] attribute.",
+        title: "[Key] on an EventSourceId<T> is redundant",
+        messageFormat: "'{0}' is typed as '{1}', which derives from EventSourceId<T> and already is the key/stream identity. Remove the [{2}] attribute.",
         category: "Usage",
         defaultSeverity: DiagnosticSeverity.Warning,
         isEnabledByDefault: true,
-        description: "A property or record parameter whose type derives from EventSourceId<T> already is both the key (stream identity) and the compliance subject. [Key] and [Subject] exist for non-EventSourceId<T> values; on an EventSourceId<T> they are at best redundant and at worst mask an ambiguous multi-identity design that should be split into distinct types rather than annotated around. Remove the attribute.");
+        description: "A property or record parameter whose type derives from EventSourceId<T> already is the key (stream identity). Remove the redundant [Key] attribute. An explicit [Subject] can identify a different compliance subject and is not redundant based on its type.");
 
     /// <inheritdoc/>
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(Rule);
@@ -50,7 +50,7 @@ public class KeyOrSubjectOnEventSourceIdAnalyzer : DiagnosticAnalyzer
             ReportForMember(context, property, property.Type);
         }
 
-        // For a positional record, [Key]/[Subject] without an explicit target lands on the constructor
+        // For a positional record, [Key] without an explicit target lands on the constructor
         // parameter rather than the generated property, so the parameters must be inspected too.
         var primaryConstructor = typeSymbol.InstanceConstructors
             .OrderByDescending(constructor => constructor.Parameters.Length)
@@ -74,15 +74,7 @@ public class KeyOrSubjectOnEventSourceIdAnalyzer : DiagnosticAnalyzer
 
         foreach (var attribute in member.GetAttributes())
         {
-            var attributeName = attribute.AttributeClass?.ToDisplayString();
-            var displayName = attributeName switch
-            {
-                WellKnownTypes.KeyAttributeName => "Key",
-                WellKnownTypes.SubjectAttributeName => "Subject",
-                _ => null
-            };
-
-            if (displayName is null)
+            if (attribute.AttributeClass?.ToDisplayString() != WellKnownTypes.KeyAttributeName)
             {
                 continue;
             }
@@ -95,7 +87,7 @@ public class KeyOrSubjectOnEventSourceIdAnalyzer : DiagnosticAnalyzer
                 location,
                 member.Name,
                 memberType.Name,
-                displayName));
+                "Key"));
         }
     }
 }

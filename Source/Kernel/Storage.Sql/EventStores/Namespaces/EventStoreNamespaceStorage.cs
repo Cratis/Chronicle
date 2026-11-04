@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json;
+using Cratis.Choreography.Storage.Jobs;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Storage.Alerts;
@@ -17,7 +18,6 @@ using Cratis.Chronicle.Storage.ReadModels;
 using Cratis.Chronicle.Storage.Recommendations;
 using Cratis.Chronicle.Storage.Seeding;
 using Cratis.Chronicle.Storage.Sinks;
-using Cratis.Orleans.Storage.Jobs;
 using Cratis.Types;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -33,11 +33,11 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces;
 /// <param name="namespace">The name of the namespace.</param>
 /// <param name="database">The <see cref="IDatabase"/> to use for storage operations.</param>
 /// <param name="sinkFactories"><see cref="IInstancesOf{T}"/> for getting all <see cref="ISinkFactory"/> instances.</param>
-/// <param name="jobsStorage">The <see cref="Orleans.Storage.IJobsStorage"/> resolving jobs storage for an event store namespace.</param>
+/// <param name="jobsStorage">The <see cref="Choreography.Storage.IJobsStorage"/> resolving jobs storage for an event store namespace.</param>
 /// <param name="jsonSerializerOptions">The global <see cref="JsonSerializerOptions"/>.</param>
 /// <param name="eventTypesStorage">The event store's shared event type storage.</param>
 /// <param name="converter">The schema-aware content converter.</param>
-public class EventStoreNamespaceStorage(EventStoreName eventStore, EventStoreNamespaceName @namespace, IDatabase database, IInstancesOf<ISinkFactory> sinkFactories, Orleans.Storage.IJobsStorage jobsStorage, JsonSerializerOptions jsonSerializerOptions, Chronicle.Storage.EventTypes.IEventTypesStorage eventTypesStorage, Json.IExpandoObjectConverter converter) : IEventStoreNamespaceStorage
+public class EventStoreNamespaceStorage(EventStoreName eventStore, EventStoreNamespaceName @namespace, IDatabase database, IInstancesOf<ISinkFactory> sinkFactories, Choreography.Storage.IJobsStorage jobsStorage, JsonSerializerOptions jsonSerializerOptions, Chronicle.Storage.EventTypes.IEventTypesStorage eventTypesStorage, Json.IExpandoObjectConverter converter) : IEventStoreNamespaceStorage
 {
     readonly Sql.EventStores.Occurrences.OccurrencesStorage<NamespaceDbContext> _occurrences = new(() => database.Namespace(eventStore, @namespace));
 

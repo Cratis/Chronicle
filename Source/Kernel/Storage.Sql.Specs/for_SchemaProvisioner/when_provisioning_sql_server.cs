@@ -31,7 +31,7 @@ public class when_provisioning_sql_server(SqlServerFixture fixture) : for_Databa
         });
         var database = services.GetRequiredService<Database>();
         _startupFailure = await Catch.Exception(() => new ClusterDbContextMigrator(database).Execute(CancellationToken.None));
-        await using var jobs = await database.SchemaContext<Cratis.Orleans.Storage.Sql.Jobs.JobsDbContext>(new DatabaseIdentity(DatabaseKind.Namespace, Store, "production"), static options => new Cratis.Orleans.Storage.Sql.Jobs.JobsDbContext(options), true);
+        await using var jobs = await database.SchemaContext<Cratis.Choreography.Storage.Sql.Jobs.JobsDbContext>(new DatabaseIdentity(DatabaseKind.Namespace, Store, "production"), static options => new Cratis.Choreography.Storage.Sql.Jobs.JobsDbContext(options), true);
         _pendingJobs = (await jobs.Database.GetPendingMigrationsAsync()).ToArray();
     }
 

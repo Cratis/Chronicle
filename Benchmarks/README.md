@@ -61,6 +61,18 @@ The projection is read cold (a fresh session, so a newly activated grain folds t
 appended since the last read), warm after one event appended to the key, and warm after one event appended to another
 key. The passive reducer has no cache, so it is read once per iteration.
 
+### SinkCacheKeyBenchmark
+
+An in-process micro-benchmark that needs neither Docker nor the Chronicle container. It compares the MongoDB sink's
+cache identity for a read-model key before and after scale-independent decimal keys (#5427): the BSON value's string
+form against `SinkCacheKey.For`, which keeps that string form for keys without a Decimal128. It also compares grouping
+1000 prefetch keys by the BSON value against `SinkCacheKey.Identity`, which the prefetch groups by.
+
+Parameters:
+- KeyKind: String, Int64, Guid, CompositeStrings, Decimal, CompositeDecimal
+
+Run it alone with `dotnet run -c Release --project Benchmarks/Chronicle.Benchmarks -- --filter '*SinkCacheKey*'`.
+
 ### Future Benchmarks
 
 The following observer benchmarks are planned but require additional infrastructure:
@@ -426,7 +438,7 @@ The JSON `Environment` block records the topology name and each silo's role
 assignment (`Jobs` is null when the kernel has no separate Jobs role).
 
 One JSON record reports the commit (`GITHUB_SHA`, `COMMIT_SHA`, or Git; otherwise
-`unknown`), kernel and Cratis.Orleans informational versions, OS, CPU count and
+`unknown`), kernel and Cratis.Choreography informational versions, OS, CPU count and
 memory available to the process (subject to container limits), and the exact settings.
 `StartupFence` is the acknowledged tail before requesting rebuild; `F` is the tail
 after stopping producers and awaiting their in-flight acknowledgements.

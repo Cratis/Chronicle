@@ -22,7 +22,7 @@ public class and_the_read_model_is_never_registered : given.all_dependencies
 
     async Task Because()
     {
-        _service.Watch(new WatchRequest { EventStore = "test-store", ReadModelIdentifier = "test-read-model" })
+        _service.Watch(new WatchRequest { EventStore = "test-store", Namespace = "test-namespace", ReadModelIdentifier = "test-read-model" })
             .Subscribe(_ => { }, error => _faulted.TrySetResult(error));
 
         _result = await _faulted.Task.WaitAsync(TimeSpan.FromSeconds(8));

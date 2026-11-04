@@ -51,4 +51,17 @@ public class ReduceOperationMessage
     /// </remarks>
     [ProtoMember(6)]
     public ulong DeliverWithinMilliseconds { get; set; }
+
+    /// <summary>
+    /// Gets or sets the events and initial states as a page of partitions. Set instead of <see cref="Partition"/>,
+    /// <see cref="InitialState"/> and <see cref="Events"/> for a client that enabled <see cref="PageDelivery"/> at registration.
+    /// </summary>
+    [ProtoMember(7)]
+    public IList<ReducerPartition> Partitions { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the path the events came from.
+    /// </summary>
+    [ProtoMember(8)]
+    public ObservationOrigin Origin { get; set; }
 }
