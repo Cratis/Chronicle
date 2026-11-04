@@ -2,6 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using Cratis.Choreography.Jobs;
+using Cratis.Choreography.StateMachines;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.Events;
@@ -21,8 +23,6 @@ using Cratis.Chronicle.Observation.Webhooks.Validation;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Metrics;
-using Cratis.Orleans.Jobs;
-using Cratis.Orleans.StateMachines;
 using Cratis.Traces;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -508,6 +508,7 @@ public partial class Observer(
             observerDefinition,
             failures,
             _jobsManager,
+            storage,
             loggerFactory.CreateLogger<CatchingUpInFlight>()),
 
         new Observing(
@@ -576,6 +577,15 @@ public partial class Observer(
             connectedClient.ConnectionId != connectionId)
         {
             LogClientDisconnected(connectionId, "not the subscribed client, dropping any superseded registration");
+            DropSupersededRegistration(connectionId);
+            return;
+        }
+
+        if (_subscription.IsSubscribed && _subscription.Arguments is not ConnectedClient)
+        {
+            // Served by something that is not a connected client instance (a webhook, for example), so a connection
+            // identifier says nothing about it. Only the registration that connection superseded can go.
+            LogClientDisconnected(connectionId, "not served by a connected client, dropping any superseded registration");
             DropSupersededRegistration(connectionId);
             return;
         }
@@ -805,6 +815,7 @@ public partial class Observer(
                 }
             }
 
+            _persistedStateWrites++;
             if (revision == _alertRevision)
             {
                 _alertStateNeedsPersistence = false;

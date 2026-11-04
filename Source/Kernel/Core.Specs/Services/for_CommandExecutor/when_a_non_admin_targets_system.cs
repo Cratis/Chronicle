@@ -24,7 +24,7 @@ public class when_a_non_admin_targets_system : global::Cratis.Chronicle.Security
         {
             var context = new CommandContext(
                 CorrelationId.New(), _command.GetType(), _command, [], new CommandContextValues(), ServiceProvider: CreateServices());
-            return await new SystemStoreCommandFilter().OnExecution(context);
+            return await new SystemStoreAuthorizationCommandFilter().OnExecution(context);
         });
     }
 

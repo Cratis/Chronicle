@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Contracts.ReadModels;
+using Cratis.Chronicle.EventStores;
 using Cratis.Chronicle.Namespaces;
 
 namespace Cratis.Chronicle.Statistics.for_StatisticsReader.given;
@@ -11,6 +12,7 @@ public class a_statistics_reader : Specification
     protected IReadModels _readModels;
     protected INamespaces _namespaces;
     protected StatisticsReader _reader;
+    protected IEventStoreInitialization _initialization = Substitute.For<IEventStoreInitialization>();
 
     void Establish()
     {
@@ -19,6 +21,6 @@ public class a_statistics_reader : Specification
         _namespaces.GetAll().Returns([]);
         var grainFactory = Substitute.For<IGrainFactory>();
         grainFactory.GetGrain<INamespaces>("store").Returns(_namespaces);
-        _reader = new(_readModels, grainFactory);
+        _reader = new(_readModels, grainFactory, _initialization);
     }
 }

@@ -74,6 +74,7 @@ public static class administrator_surface_policy
         ["Observation.ObserverInformationForEventType"] = "read-only observer diagnostics",
         ["Observation.ObserverInformation"] = "read-only observer diagnostics",
         ["Observation.FailedPartitionDetails"] = "read-only observer diagnostics",
+        ["Observation.FailedPartitionGroup"] = "read-only observer diagnostics",
         ["Observation.Webhooks.WebhookDetails"] = "read-only webhook definitions",
         ["Occurrences.EffectReceiptRecord"] = "read-only occurrence diagnostics",
         ["Occurrences.OccurrenceSnapshot"] = "read-only occurrence diagnostics",

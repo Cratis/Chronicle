@@ -57,7 +57,7 @@
     <Target Name="_PrepareProtoGeneration"
             Condition=" '$(TargetFramework)' == 'net10.0' AND '$(IsPackaging)' != 'true' AND '$(DisableProtoGeneration)' != 'true' AND '$(DesignTimeBuild)' != 'true' ">
         <PropertyGroup>
-            <_ProtoGenerationStamp>$(MSBuildProjectDirectory)/$(IntermediateOutputPath)GenerateProtoFiles.stamp</_ProtoGenerationStamp>
+            <_ProtoGenerationStamp>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '$(IntermediateOutputPath)', 'GenerateProtoFiles.stamp'))</_ProtoGenerationStamp>
         </PropertyGroup>
         <Delete Files="$(_ProtoGenerationStamp)" Condition="'$(ForceCodeGeneration)' == 'true'" />
         <ItemGroup>

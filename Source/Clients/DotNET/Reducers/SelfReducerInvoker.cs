@@ -5,6 +5,7 @@ using System.Collections.Frozen;
 using System.Collections.Immutable;
 using System.Reflection;
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.ReadModels;
 
 namespace Cratis.Chronicle.Reducers;
@@ -12,9 +13,10 @@ namespace Cratis.Chronicle.Reducers;
 /// <summary>
 /// Invokes static self-reduction through the shared reducer-handler contract without model activation.
 /// </summary>
-internal sealed class SelfReducerInvoker : IReducerInvoker
+internal sealed class SelfReducerInvoker : IReducerInvoker, IBatchReducerInvoker
 {
     readonly FrozenDictionary<Type, MethodInfo> _methods;
+    readonly BatchMethod? _batchMethod;
 
     /// <summary>
     /// Initializes a static invoker from the owning registry.
@@ -27,8 +29,14 @@ internal sealed class SelfReducerInvoker : IReducerInvoker
         ReadModelType = readModelType;
         ContainerName = containerName;
         _methods = SelfReducerMethods.Get(eventTypes, readModelType);
+        _batchMethod = ReducerBatchMethods.Find(readModelType, readModelType, eventTypes.AllClrTypes, _methods.Count > 0);
+        if (_batchMethod is { Method.IsStatic: false })
+        {
+            throw new InvalidReducerBatchMethod(readModelType, _batchMethod.Method.Name, "A self-reducing read model's batch method is public and static.");
+        }
+
         ReplayHooks = new(eventTypes, readModelType);
-        EventTypes = _methods.Keys.Select(eventTypes.GetEventTypeFor).ToImmutableList();
+        EventTypes = _methods.Keys.Concat(_batchMethod?.EventTypes ?? []).Select(eventTypes.GetEventTypeFor).ToImmutableList();
     }
 
     /// <summary>
@@ -46,8 +54,17 @@ internal sealed class SelfReducerInvoker : IReducerInvoker
     public ReadModelContainerName ContainerName { get; }
 
     /// <inheritdoc/>
-    public async Task<ReduceResult> Invoke(IServiceProvider serviceProvider, IEnumerable<EventAndContext> eventsAndContexts, object? initialReadModelContent)
+    public Task<ReduceResult> Invoke(IServiceProvider serviceProvider, IEnumerable<EventAndContext> eventsAndContexts, object? initialReadModelContent) =>
+        Invoke(serviceProvider, eventsAndContexts, initialReadModelContent, BatchContext.Unknown(ObserverId.Unspecified, EventSequences.EventSequenceId.Log));
+
+    /// <inheritdoc/>
+    public async Task<ReduceResult> Invoke(IServiceProvider serviceProvider, IEnumerable<EventAndContext> eventsAndContexts, object? initialReadModelContent, BatchContext context)
     {
+        if (_batchMethod is not null)
+        {
+            return await ReducerBatchMethods.Invoke(_batchMethod, null, serviceProvider, eventsAndContexts, initialReadModelContent, context);
+        }
+
         var current = initialReadModelContent;
         var last = EventSequenceNumber.Unavailable;
         var dispatched = 0;

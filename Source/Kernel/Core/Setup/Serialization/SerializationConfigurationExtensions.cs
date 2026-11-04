@@ -3,13 +3,13 @@
 
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Cratis.Choreography.Serialization;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Projections.Json;
 using Cratis.Chronicle.EventTypes;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Properties;
 using Cratis.Json;
-using Cratis.Orleans.Serialization;
 using Microsoft.Extensions.DependencyInjection;
 using Orleans.Serialization;
 using Orleans.Serialization.Cloning;
@@ -80,6 +80,7 @@ public static class SerializationConfigurationExtensions
                 .AddCompleteSerializer<ExpandoObjectSerializer>()
                 .AddLinqCollectionCopier();
             builder.Services.AddSingleton<ITypeFilter, CratisTypesFilter>();
+            builder.Services.AddSingleton<ITypeFilter, GeneratedGenericInvokablesTypeFilter>();
         });
         return services;
     }

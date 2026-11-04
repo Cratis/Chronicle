@@ -172,6 +172,9 @@ jobs:
       - name: Spec the gRPC generator targeting
         run: node --test .github/scripts/test-grpc-generator-targeting.mjs
 
+      - name: Spec the generator stamp paths
+        run: node --test .github/scripts/test-generator-stamp-paths.mjs
+
       # Shared org cache: pull requests restore only; the nightly build and default-branch runs save (Cratis/Workflows#164).
       - name: Cache NuGet packages
         uses: Cratis/Workflows/.github/actions/dotnet-cache@main
@@ -254,6 +257,19 @@ jobs:
             dotnet build "$project" --configuration Release -p:IsPackaging=true -p:SkipAnalyzersForTargetFramework=net10.0 -p:DisableProxyGenerator=true -p:DisableDockerBuild=true
           done
           dotnet build ./Source/Kernel/Contracts/Contracts.csproj --configuration Release -p:IsPackaging=true -p:SkipAnalyzersForTargetFramework=net10.0 -p:DisableProxyGenerator=true -p:DisableDockerBuild=true
+
+      # Fail closed before any pack/image/artifact collection. The verifier is stdlib-only, outside
+      # the solution and package filters, and all of its own outputs stay outside the checkout.
+      - name: Validate rolling diagnostic guards and shipped-client absence
+        run: |
+          set -euo pipefail
+          node .github/scripts/verify-rolling-delivery-build.mjs
+          dotnet build .github/scripts/rolling-delivery-il/RollingDeliveryIl.csproj -c Release -warnaserror \
+            --artifacts-path "$RUNNER_TEMP/rolling-il-verifier" -o "$RUNNER_TEMP/rolling-il-tool"
+          for framework in net8.0 net9.0 net10.0; do
+            dotnet "$RUNNER_TEMP/rolling-il-tool/RollingDeliveryIl.dll" \
+              "Source/Clients/DotNET/bin/Release/$framework/Cratis.Chronicle.dll"
+          done
 
       # A package can build and still fail to restore for a consumer: a transitive dependency resolves below what
       # another package declares (NU1605) or outside an exact constraint (NU1608), which only shows up once the

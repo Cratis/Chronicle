@@ -26,6 +26,8 @@ public class an_observation_stream : Specification
 
     private protected virtual IActivitySource<Reactors> CreateActivitySource() => new ActivitySource<Reactors>();
 
+    protected virtual PageDelivery? PageDelivery => null;
+
     async Task Establish()
     {
         var subscribed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -44,13 +46,15 @@ public class an_observation_stream : Specification
             new JsonSerializerOptions(),
             CreateActivitySource(),
             Options.Create(new ChronicleOptions()),
-            NullLogger<Reactors>.Instance);
+            NullLogger<Reactors>.Instance,
+            Substitute.For<IObserverRegistrationGate>());
         _subscription = reactors.Observe(_messages).Subscribe(_deliveries.Add);
         _messages.OnNext(new(new(new RegisterReactor
         {
             ConnectionId = "connection",
             EventStore = "store",
             Namespace = "namespace",
+            PageDelivery = PageDelivery,
             Reactor = new Contracts.Observation.Reactors.ReactorDefinition { ReactorId = "reactor", EventSequenceId = "event-log" }
         })));
         await subscribed.Task.WaitAsync(TimeSpan.FromSeconds(5));

@@ -67,7 +67,7 @@
          NonDerivedGrpcServices is left alone, so a hand-written contract for one of those survives a run. -->
     <Target Name="_PrepareGrpcContractGeneration" Condition=" '$(TargetFramework)' != '' AND '$(RuntimeIdentifier)' == '' AND '$(DisableGrpcContractGeneration)' != 'true' ">
         <PropertyGroup>
-            <_GrpcContractGenerationStamp>$(MSBuildProjectDirectory)/$(IntermediateOutputPath)GenerateGrpcContracts.stamp</_GrpcContractGenerationStamp>
+            <_GrpcContractGenerationStamp>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '$(IntermediateOutputPath)', 'GenerateGrpcContracts.stamp'))</_GrpcContractGenerationStamp>
         </PropertyGroup>
         <Delete Files="$(_GrpcContractGenerationStamp)" Condition="'$(ForceCodeGeneration)' == 'true'" />
         <ItemGroup>
@@ -131,8 +131,8 @@
         <PackageReference Include="Microsoft.Extensions.Telemetry.Abstractions" />
         <PackageReference Include="Microsoft.Orleans.BroadcastChannel" />
         <PackageReference Include="Microsoft.Orleans.Sdk" />
-        <PackageReference Include="Cratis.Orleans" />
-        <PackageReference Include="Cratis.Orleans.Storage.MongoDB" />
+        <PackageReference Include="Cratis.Choreography" />
+        <PackageReference Include="Cratis.Choreography.Storage.MongoDB" />
         <PackageReference Include="Microsoft.Orleans.Server" />
         <PackageReference Include="Microsoft.Orleans.Reminders" />
         <PackageReference Include="Microsoft.Orleans.Streaming" />

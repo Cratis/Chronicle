@@ -28,7 +28,8 @@ public class when_registries_have_equal_type_sets : Specification
         _invoker = new(other, typeof(State), "state");
     }
 
-    [Fact] void should_reuse_the_immutable_map() => _second.ShouldBeSame(_first);
+    [Fact] void should_share_the_immutable_map() => _second.ShouldBeSame(_first);
+    [Fact] void should_build_an_equivalent_map() => (_second.Count == _first.Count && _first.All(pair => _second[pair.Key] == pair.Value)).ShouldBeTrue();
     [Fact] void should_keep_exact_method_precedence() => _second[typeof(First)].GetParameters()[0].ParameterType.ShouldEqual(typeof(First));
     [Fact] void should_keep_interface_dispatch() => _second[typeof(Second)].GetParameters()[0].ParameterType.ShouldEqual(typeof(IEvent));
     [Fact] void should_resolve_identities_from_the_owning_registry() => _invoker.EventTypes.Select(type => type.Id.Value).ShouldContainOnly("other-First", "other-Second");

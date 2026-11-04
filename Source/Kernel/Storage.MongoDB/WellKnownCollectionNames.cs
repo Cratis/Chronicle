@@ -11,6 +11,11 @@ namespace Cratis.Chronicle.Storage.MongoDB;
 public static class WellKnownCollectionNames
 {
     /// <summary>
+    /// The collection holding inert projection definition history.
+    /// </summary>
+    public const string ProjectionDefinitionHistory = "projection-definition-history";
+
+    /// <summary>
     /// The separately stored administrator privileges.
     /// </summary>
     public const string Administrators = "administrators";
@@ -124,6 +129,11 @@ public static class WellKnownCollectionNames
     /// The collection that holds failed job steps.
     /// </summary>
     public const string FailedJobSteps = "failed-job-steps";
+
+    /// <summary>
+    /// The collection that holds job step plans.
+    /// </summary>
+    public const string JobStepPlans = "job-step-plans";
 
     /// <summary>
     /// The collection that holds recommendations.

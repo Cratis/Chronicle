@@ -51,11 +51,11 @@ public static class SqlChronicleBuilderExtensions
         builder.Services.AddSingleton<IStorageErrorClassifier, SqlStorageErrorClassifier>();
         builder.Services.AddSingleton<Cratis.Chronicle.Storage.Generations.Bindings.IMaterializationBindingStorage, Cratis.Chronicle.Storage.Sql.Generations.SqlMaterializationBindingStorage>();
 
-        // The Cratis.Orleans job system storage: jobs DbContext options resolved per event store and
+        // The Cratis.Choreography job system storage: jobs DbContext options resolved per event store and
         // namespace onto the same database the namespace's own DbContext uses.
-        builder.Services.AddSingleton<Cratis.Orleans.Storage.IJobsStorage>(sp => new Cratis.Orleans.Storage.Sql.SqlJobsStorage(
-            sp.GetRequiredService<Cratis.Orleans.Jobs.IJobTypes>(),
-            Microsoft.Extensions.Options.Options.Create(new Cratis.Orleans.Storage.Sql.SqlJobsStorageOptions
+        builder.Services.AddSingleton<Cratis.Choreography.Storage.IJobsStorage>(sp => new Cratis.Choreography.Storage.Sql.SqlJobsStorage(
+            sp.GetRequiredService<Cratis.Choreography.Jobs.IJobTypes>(),
+            Microsoft.Extensions.Options.Options.Create(new Cratis.Choreography.Storage.Sql.SqlJobsStorageOptions
             {
                 OptionsResolver = (scope, @namespace) => sp.GetRequiredService<IDatabase>().GetJobsDbContextOptions(scope, @namespace)
             }),

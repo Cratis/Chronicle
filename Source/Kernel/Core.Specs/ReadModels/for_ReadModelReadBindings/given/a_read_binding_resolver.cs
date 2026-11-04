@@ -2,10 +2,12 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
+using Cratis.Chronicle.Storage.ReadModels;
 using Cratis.Chronicle.Storage.Sinks;
 
 namespace Cratis.Chronicle.ReadModels.for_ReadModelReadBindings.given;
@@ -18,6 +20,7 @@ public class a_read_binding_resolver : Specification
     protected ISink _sink;
     protected ReadModelDefinition _definition;
     protected IReadModelInstanceVisibilities _visibilities;
+    protected IReadModelReplayManager _replayManager;
     protected ReadModelReadBindings _resolver;
     protected ReadModelReadBinding _binding;
 
@@ -37,6 +40,7 @@ public class a_read_binding_resolver : Specification
         _sink = Substitute.For<ISink>();
         _sinks = Substitute.For<ISinks>();
         _sinks.GetFor(_definition, _definition.ContainerName).Returns(_sink);
+        _sinks.GetWithoutProvisioning(_definition).Returns(_sink);
         var storage = Substitute.For<IStorage>();
         var eventStoreStorage = Substitute.For<IEventStoreStorage>();
         var namespaceStorage = Substitute.For<IEventStoreNamespaceStorage>();
@@ -45,6 +49,11 @@ public class a_read_binding_resolver : Specification
         namespaceStorage.Sinks.Returns(_sinks);
         _visibilities = Substitute.For<IReadModelInstanceVisibilities>();
         _visibilities.GetFor(EventStore, Namespace, _definition).Returns(ReadModelInstanceVisibility.InitializedOnly);
-        _resolver = new(storage, _visibilities);
+        _replayManager = Substitute.For<IReadModelReplayManager>();
+        _replayManager.GetOccurrences().Returns(
+            [new ReadModelOccurrence(ObserverId.Unspecified, DateTimeOffset.UnixEpoch, new ReadModelType(_definition.Identifier, ReadModelGeneration.First), _definition.ContainerName, "historical-container")]);
+        var grainFactory = Substitute.For<IGrainFactory>();
+        grainFactory.GetGrain<IReadModelReplayManager>(Arg.Any<string>()).Returns(_replayManager);
+        _resolver = new(storage, grainFactory, _visibilities);
     }
 }

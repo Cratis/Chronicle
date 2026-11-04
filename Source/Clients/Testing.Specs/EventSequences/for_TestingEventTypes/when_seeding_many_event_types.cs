@@ -2,12 +2,13 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 extern alias KernelConcepts;
+extern alias KernelStorage;
 
 using System.Collections.Immutable;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Migrations;
 using Cratis.Chronicle.Schemas;
-using Cratis.Chronicle.Storage.EventTypes;
+using KernelStorage::Cratis.Chronicle.Storage.EventTypes;
 using KernelEvents = KernelConcepts::Cratis.Chronicle.Concepts.Events;
 
 namespace Cratis.Chronicle.Testing.EventSequences.for_TestingEventTypes;

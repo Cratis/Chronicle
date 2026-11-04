@@ -59,9 +59,9 @@
         <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
         <!-- The embedded kernel's job system now comes from these packages; without the reference the
              Arc-generated module initializer cannot bind them and every scenario fails at startup. -->
-        <PackageReference Include="Cratis.Orleans" />
-        <PackageReference Include="Cratis.Orleans.Storage" />
-        <PackageReference Include="Cratis.Orleans.Storage.MongoDB" />
+        <PackageReference Include="Cratis.Choreography" />
+        <PackageReference Include="Cratis.Choreography.Storage" />
+        <PackageReference Include="Cratis.Choreography.Storage.MongoDB" />
         <!-- Embedded kernel assemblies are compiled against these packages. Declare them directly so
              consumers cannot resolve lower transitive versions than those assemblies require. -->
         <PackageReference Include="Cratis.Metrics.Roslyn" />

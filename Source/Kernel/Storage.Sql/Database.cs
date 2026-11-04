@@ -97,7 +97,7 @@ public partial class Database(IServiceProvider serviceProvider, IOptions<Chronic
     readonly System.Collections.Concurrent.ConcurrentDictionary<string, CachedDbContextOptions<ClusterDbContext>> _clusterOptions = new();
     readonly System.Collections.Concurrent.ConcurrentDictionary<string, CachedDbContextOptions<EventStoreDbContext>> _eventStoreOptions = new();
     readonly System.Collections.Concurrent.ConcurrentDictionary<string, CachedDbContextOptions<NamespaceDbContext>> _namespaceOptions = new();
-    readonly System.Collections.Concurrent.ConcurrentDictionary<string, CachedDbContextOptions<Orleans.Storage.Sql.Jobs.JobsDbContext>> _jobsOptions = new();
+    readonly System.Collections.Concurrent.ConcurrentDictionary<string, CachedDbContextOptions<Choreography.Storage.Sql.Jobs.JobsDbContext>> _jobsOptions = new();
     readonly System.Collections.Concurrent.ConcurrentDictionary<string, CachedDbContextOptions<UniqueConstraintDbContext>> _uniqueConstraintOptions = new();
     readonly System.Collections.Concurrent.ConcurrentDictionary<string, CachedDbContextOptions<UniqueConstraintValuesDbContext>> _uniqueConstraintValuesOptions = new();
     readonly System.Collections.Concurrent.ConcurrentDictionary<string, CachedDbContextOptions<EventSequenceDbContext>> _eventSequenceOptions = new();
@@ -190,11 +190,26 @@ public partial class Database(IServiceProvider serviceProvider, IOptions<Chronic
     }
 
     /// <inheritdoc/>
+    public async Task<DbContextScope<NamespaceDbContext>?> ExistingNamespace(EventStoreName eventStore, EventStoreNamespaceName @namespace)
+    {
+#pragma warning disable CA2000
+        var dbContext = await CreateExistingContext(new ExistingContextRequest<NamespaceDbContext>(
+            new(DatabaseKind.Namespace, eventStore.Value, @namespace.Value),
+            $"namespace-read:{eventStore.Value}:{@namespace.Value}",
+            _namespaceOptions,
+            static options => new NamespaceDbContext(options),
+            (context, _) => TableMigrator<NamespaceDbContext>.TableExists(context, WellKnownTableNames.ReplayedReadModels)));
+#pragma warning restore CA2000
+
+        return dbContext is null ? null : new DbContextScope<NamespaceDbContext>(dbContext, static () => { });
+    }
+
+    /// <inheritdoc/>
     /// <remarks>
     /// The jobs storage migrates its own tables through these options, so they resolve for
     /// <see cref="ConnectionPurpose.Runtime"/> only.
     /// </remarks>
-    public DbContextOptions<Orleans.Storage.Sql.Jobs.JobsDbContext> GetJobsDbContextOptions(string eventStore, string @namespace)
+    public DbContextOptions<Choreography.Storage.Sql.Jobs.JobsDbContext> GetJobsDbContextOptions(string eventStore, string @namespace)
     {
         var identity = new DatabaseIdentity(DatabaseKind.Namespace, eventStore, @namespace);
 
@@ -259,6 +274,14 @@ public partial class Database(IServiceProvider serviceProvider, IOptions<Chronic
             containerName,
             (options, name) => new ReadModelDbContext(options, name, columns, serviceProvider.GetRequiredService<IReadModelMigrator>()),
             purpose);
+
+    /// <inheritdoc/>
+    public Task<DbContextScope<ReadModelDbContext>?> ExistingReadModelTable(EventStoreName eventStore, EventStoreNamespaceName @namespace, string containerName, IReadOnlyList<ProjectedColumn> columns) =>
+        GetExistingReadModelDbContext(
+            eventStore,
+            @namespace,
+            containerName,
+            (options, name) => new ReadModelDbContext(options, name, columns, serviceProvider.GetRequiredService<IReadModelMigrator>()));
 
     /// <inheritdoc/>
     public void ClearTableMigrationCache(string connectionStringPrefix)
@@ -627,7 +650,7 @@ public partial class Database(IServiceProvider serviceProvider, IOptions<Chronic
             ClearTableMigrationCache(string.Empty);
         }
 
-        serviceProvider.GetService<Orleans.Storage.IJobsStorage>()?.Reset();
+        serviceProvider.GetService<Choreography.Storage.IJobsStorage>()?.Reset();
     }
 
     async Task<string[]> BoundDatabases()

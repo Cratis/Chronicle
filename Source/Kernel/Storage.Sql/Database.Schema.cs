@@ -3,12 +3,12 @@
 
 using Cratis.Arc.Connections;
 using Cratis.Arc.EntityFrameworkCore;
+using Cratis.Choreography.Storage.Sql.Jobs;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Storage.Sql.Cluster;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences;
 using Cratis.Chronicle.Storage.Sql.Schema;
-using Cratis.Orleans.Storage.Sql.Jobs;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage;
@@ -81,7 +81,7 @@ public partial class Database
     }
 
     /// <summary>
-    /// Prepares or verifies the read-model database without creating dynamic tables.
+    /// Prepares or verifies the read-model database and its sink cycle receipts without creating dynamic tables.
     /// </summary>
     /// <param name="identity">The namespace identity.</param>
     /// <param name="verify">Whether only read-only checks are permitted.</param>
@@ -93,14 +93,20 @@ public partial class Database
         if (verify)
         {
             await VerifyDatabase(context, target);
-        }
-        else if (target.ConnectionString.GetDatabaseType() == DatabaseType.Sqlite)
-        {
-            await CreateDatabaseIfMissing(context, target, DatabaseType.Sqlite);
+            await SinkCycleReceiptSchema.Validate(context);
         }
         else
         {
-            await EnsureDatabaseExists(context, target);
+            if (target.ConnectionString.GetDatabaseType() == DatabaseType.Sqlite)
+            {
+                await CreateDatabaseIfMissing(context, target, DatabaseType.Sqlite);
+            }
+            else
+            {
+                await EnsureDatabaseExists(context, target);
+            }
+
+            await SinkCycleReceiptSchema.Provision(context, serviceProvider);
         }
 
         return context.Database.GetDbConnection().Database;

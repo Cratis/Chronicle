@@ -4,6 +4,7 @@
 using System.Collections.Immutable;
 using System.Dynamic;
 using System.Text.Json.Nodes;
+using Cratis.Choreography.Jobs;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Auditing;
 using Cratis.Chronicle.Concepts.Events;
@@ -24,7 +25,6 @@ using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Chronicle.Storage.Identities;
 using Cratis.Metrics;
 using Cratis.Monads;
-using Cratis.Orleans.Jobs;
 using Cratis.Traces;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -192,6 +192,7 @@ public class an_event_sequence : Specification
         _stateStorage.State = new EventSequenceState { ConstraintIndexWatermark = EventSequenceNumber.First };
 
         _eventSequence = await CreateEventSequence();
+        _eventSequence?.ConstraintIndexRetryJitterSample = () => 0.5;
     }
 
     /// <summary>

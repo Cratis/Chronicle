@@ -32,7 +32,7 @@ public class a_failed_partition_storage(ChronicleInProcessFixture fixture) : Int
         await Task.CompletedTask;
     }
 
-    async Task Cleanup() => await _mongoDatabase.Client.DropDatabaseAsync(_databaseName);
+    async Task Destroy() => await _mongoDatabase.Client.DropDatabaseAsync(_databaseName);
 
     protected static FailedPartition CreateFailedPartition(ObserverId observerId, Key partition) =>
         new()

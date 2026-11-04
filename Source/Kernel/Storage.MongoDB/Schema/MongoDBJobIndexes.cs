@@ -7,7 +7,7 @@ using MongoDB.Driver;
 namespace Cratis.Chronicle.Storage.MongoDB.Schema;
 
 /// <summary>
-/// Mirrors the internal job indexes in Cratis.Orleans.Storage.MongoDB 1.32.3, pinned by a drift spec.
+/// Mirrors the internal job indexes in Cratis.Choreography.Storage.MongoDB 2.1.2, pinned by a drift spec.
 /// </summary>
 internal static class MongoDBJobIndexes
 {
@@ -29,5 +29,13 @@ internal static class MongoDBJobIndexes
     internal static IReadOnlyList<CreateIndexModel<BsonDocument>> Steps { get; } =
     [
         new(new BsonDocument("_id.jobId", 1), new CreateIndexOptions { Name = "jobId", Background = true })
+    ];
+
+    /// <summary>
+    /// Gets the indexes on job step plans.
+    /// </summary>
+    internal static IReadOnlyList<CreateIndexModel<BsonDocument>> StepPlans { get; } =
+    [
+        new(new BsonDocument { { "jobId", 1 }, { "incarnation", 1 }, { "index", 1 } }, new CreateIndexOptions { Name = "jobId_incarnation_index", Background = true })
     ];
 }
