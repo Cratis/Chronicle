@@ -40,13 +40,24 @@ public class and_another_client_instance_subscribes_while_the_observer_is_leavin
 
     async Task Because()
     {
-        var subscribing = SubscribeSecondClient();
-        var leaving = _observer.TransitionTo<Routing>();
-        _leavingObserving.ShouldBeTrue();
-        _bindingQuery.SetResult(true);
-        await subscribing;
-        _unsubscribing.TrySetResult();
-        await leaving;
+        // Wall-clock deadline: the spec's own time provider is controlled and would never elapse.
+        var deadline = TimeSpan.FromSeconds(10);
+        try
+        {
+            var subscribing = SubscribeSecondClient();
+            var leaving = _observer.TransitionTo<Routing>();
+            _leavingObserving.ShouldBeTrue();
+            _bindingQuery.SetResult(true);
+            await subscribing.WaitAsync(deadline, TimeProvider.System);
+            _unsubscribing.TrySetResult();
+            await leaving.WaitAsync(deadline, TimeProvider.System);
+        }
+        finally
+        {
+            // Release both gates so a failed assertion or a timeout never leaves the observer awaiting them.
+            _bindingQuery.TrySetResult(true);
+            _unsubscribing.TrySetResult();
+        }
     }
 
     [Fact] void should_run_the_full_subscribe() => _fullSubscribeRan.ShouldBeTrue();
