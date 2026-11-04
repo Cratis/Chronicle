@@ -59,7 +59,7 @@ public partial class UnitOfWork
             RequireImmediateAppendOwner(owner);
             if (IsCompleted) return;
             if (_completing) throw new UnitOfWorkIsCompleting(CorrelationId);
-            using var span = _activitySource.Rollback(CorrelationId.ToString());
+            using var span = _activitySource.Rollback(CorrelationId.ToString(), SpanNames);
             CompleteRollback();
         }
         _onCompleted(this);

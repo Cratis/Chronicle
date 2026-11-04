@@ -7,6 +7,7 @@ using Cratis.Arc.Connections;
 using Cratis.Arc.EntityFrameworkCore;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Configuration;
+using Cratis.Chronicle.Diagnostics;
 using Cratis.Chronicle.Storage.Sql.Cluster;
 using Cratis.Chronicle.Storage.Sql.Connections;
 using Cratis.Chronicle.Storage.Sql.EventStores;
@@ -22,7 +23,6 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 #if DEVELOPMENT
 using System.Collections.Frozen;
-using Cratis.Chronicle.Diagnostics;
 using Microsoft.Data.SqlClient;
 using Microsoft.Data.Sqlite;
 using Npgsql;
@@ -91,7 +91,8 @@ public partial class Database(IServiceProvider serviceProvider, IOptions<Chronic
         SqlConnectionStrings.WithPooling(
             SqlConnectionStrings.WithSchema(options.Value.Storage.ConnectionDetails, options.Value.Storage.Schema),
             options.Value.Storage.PostgreSqlPooling),
-        SqlConnectionResolution.From(serviceProvider, options.Value.Storage).PrepareRawConnection);
+        SqlConnectionResolution.From(serviceProvider, options.Value.Storage).PrepareRawConnection,
+        options.Value.Telemetry.MetricNames);
 
     readonly System.Collections.Concurrent.ConcurrentDictionary<DatabaseMigrationLock, long> _migrationGenerations = new();
     readonly System.Collections.Concurrent.ConcurrentDictionary<string, CachedDbContextOptions<ClusterDbContext>> _clusterOptions = new();
@@ -119,6 +120,12 @@ public partial class Database(IServiceProvider serviceProvider, IOptions<Chronic
     /// Gets the logger for live-query polling diagnostics.
     /// </summary>
     internal ILogger LiveQueryLogger => _liveQueryLogger.Value;
+
+    /// <summary>Gets the SQL instruments selected for this database.</summary>
+    internal SqlStorageTelemetry Telemetry { get; } = new(options.Value.Telemetry.MetricNames);
+
+    /// <summary>Gets the metric naming mode selected for this database.</summary>
+    internal MetricNames MetricNames { get; } = options.Value.Telemetry.MetricNames;
 
     bool CanCreateSchema => options.Value.Storage.CreateIfMissing && !VerifySchema;
 
