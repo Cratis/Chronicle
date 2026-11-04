@@ -47,7 +47,7 @@ public class and_replicas_register_the_same_artifacts_concurrently_with_a_small_
         /// <summary>
         /// Diagnostic only: the number of kernel log entries carrying a MongoWaitQueueFullException. Observer activation and
         /// event sequence reads triggered by registration are not covered by the registration gate. This becomes a strict
-        /// assertion (zero) once the follow-up issue to #5514 is fixed.
+        /// assertion (zero) once https://github.com/Cratis/Chronicle/issues/5650 is fixed.
         /// </summary>
         public int WaitQueueFullEntries => _logs.WaitQueueFullEntries;
 
