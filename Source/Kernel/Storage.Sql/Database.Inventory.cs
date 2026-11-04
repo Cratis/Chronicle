@@ -29,9 +29,19 @@ public partial class Database
             return new Dictionary<DatabaseIdentity, string>();
         }
 
-        await using var scope = await Cluster();
-        var rows = await scope.DbContext.DatabaseNames.AsNoTracking().ToListAsync();
+        await using var context = ReadOnlyCluster();
+        var rows = await context.DatabaseNames.AsNoTracking().ToListAsync();
         return rows.ToDictionary(_ => _.Identity, _ => _.PhysicalName);
+    }
+
+    /// <summary>
+    /// Reads the names of the registered event stores.
+    /// </summary>
+    /// <returns>The names.</returns>
+    internal async Task<IReadOnlyList<string>> RegisteredEventStores()
+    {
+        await using var context = ReadOnlyCluster();
+        return await context.EventStores.AsNoTracking().Select(_ => _.Name).ToListAsync();
     }
 
     /// <summary>
@@ -114,6 +124,12 @@ public partial class Database
         SqliteException sqlite => sqlite.SqliteErrorCode == 1 && sqlite.Message.Contains("no such table", StringComparison.OrdinalIgnoreCase),
         _ => exception.InnerException is not null && IsMissingTable(exception.InnerException)
     };
+
+    /// <summary>
+    /// Creates a context on the cluster database that only reads: nothing is migrated and no name is reserved.
+    /// </summary>
+    /// <returns>The <see cref="ClusterDbContext"/>, owned by the caller.</returns>
+    ClusterDbContext ReadOnlyCluster() => new(BuildOptions<ClusterDbContext>(ClusterTarget(ConnectionPurpose.Runtime)));
 
     async Task<bool> Exists(SqlTarget target, bool placed)
     {

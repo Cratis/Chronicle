@@ -20,8 +20,7 @@ namespace Cratis.Chronicle.Storage.Sql.Cluster;
 /// The owners are the event stores in the registry, the owners named by the permanent database bindings and always the System event store.
 /// Each database is identified by the server, the database as that provider compares database names, and the schema:
 /// PostgreSQL by ordinal name, SQL Server by the representative the server's collation gives the name, and SQLite by the normalized
-/// full path of the file. Nothing is bound, created or migrated; the one write that reading the cluster implies is the reservation
-/// of the cluster database's own name, which every read of the registry makes.
+/// full path of the file. Nothing is bound, created, migrated or reserved: the cluster is read through a context that only reads.
 /// </remarks>
 /// <param name="database">The <see cref="Database"/>.</param>
 internal sealed class SqlResourceInventory(Database database) : IResourceInventory
@@ -93,12 +92,9 @@ internal sealed class SqlResourceInventory(Database database) : IResourceInvento
             [EventStoreName.System.Value] = []
         };
 
-        await using (var scope = await database.Cluster())
+        foreach (var name in await database.RegisteredEventStores())
         {
-            foreach (var name in await scope.DbContext.EventStores.AsNoTracking().Select(_ => _.Name).ToListAsync())
-            {
-                owners.TryAdd(name, []);
-            }
+            owners.TryAdd(name, []);
         }
 
         foreach (var identity in bindings.Keys.Where(_ => _.Kind != DatabaseKind.Cluster))

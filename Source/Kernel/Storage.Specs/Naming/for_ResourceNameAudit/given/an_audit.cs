@@ -14,6 +14,7 @@ public class an_audit : Specification
     protected IResourceNameGate _gate;
     protected IResourceNameReservations _reservations;
     protected ResourceNameAudit _audit;
+    protected ManualTimeProvider _time;
 
     void Establish()
     {
@@ -21,7 +22,8 @@ public class an_audit : Specification
         _snapshot = ResourceNameSnapshot.NotReady();
         _gate = Substitute.For<IResourceNameGate>();
         _reservations = Substitute.For<IResourceNameReservations>();
-        _audit = new([_inventory], _snapshot, _gate, ResourceNameExemptions.None, NullLogger<ResourceNameAudit>.Instance, TimeProvider.System);
+        _time = new();
+        _audit = new([_inventory], _snapshot, _gate, ResourceNameExemptions.None, NullLogger<ResourceNameAudit>.Instance, _time);
     }
 
     protected static ResourceUse Use(string store, string identity, string? @namespace = null) =>
@@ -29,6 +31,16 @@ public class an_audit : Specification
 
     protected void Returns(params ResourceUse[] uses) => _inventory.Read(Arg.Any<CancellationToken>()).Returns(Task.FromResult<IEnumerable<ResourceUse>>(uses));
 
-    protected Task Run(NameCollisionHandling mode = NameCollisionHandling.Quarantine, TimeSpan? timeout = null, Func<Exception, bool>? isTransient = null) =>
-        _audit.RunAsync(mode, timeout ?? _budget, isTransient ?? (_ => false), CancellationToken.None);
+    protected async Task Run(NameCollisionHandling mode = NameCollisionHandling.Quarantine, TimeSpan? timeout = null, Func<Exception, bool>? isTransient = null)
+    {
+        // Moves the manual time forward while the audit waits, so nothing depends on the wall clock.
+        var run = _audit.RunAsync(mode, timeout ?? _budget, isTransient ?? (_ => false), CancellationToken.None);
+        for (var step = 0; !run.IsCompleted && step < 10_000; step++)
+        {
+            _time.Advance(TimeSpan.FromSeconds(1));
+            await Task.Yield();
+        }
+
+        await run;
+    }
 }
