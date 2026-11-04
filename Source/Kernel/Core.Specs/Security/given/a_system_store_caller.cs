@@ -34,7 +34,7 @@ public class a_system_store_caller : Specification
             Options.Create(new ChronicleOptions { Authentication = _authentication }), _privileges, NullLogger<AdministratorAuthorization>.Instance);
         return new ServiceCollection()
             .AddSingleton<IHttpContextAccessor>(new HttpContextAccessor { HttpContext = new DefaultHttpContext { User = _caller! } })
-            .AddSingleton<ISystemStoreAccess>(new SystemStoreAccessVerdict(authorization))
+            .AddSingleton<ISystemStoreAccess>(new SystemStoreAccessVerdict(new AuthorizationDecisions(authorization, Options.Create(new ChronicleOptions { Authentication = _authentication }), NullLogger<AuthorizationDecisions>.Instance)))
             .BuildServiceProvider();
     }
 

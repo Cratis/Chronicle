@@ -21,6 +21,17 @@ A different `healthCheckEndpoint` moves all three routes: `/probe` also exposes 
 
 Until ready, the kernel refuses non-health traffic, including the Workbench and static files, with HTTP 503 and `Retry-After`, or gRPC `Unavailable`. Catch-up that continues in the background after startup does not hold readiness back. A startup failure still fails the host.
 
+### MongoDB health
+
+The `mongodb` check reads the shared MongoDB driver's monitored cluster state. It does not create a
+client, borrow a pool connection or run a database command. A connected writable server is healthy;
+connected servers without a writable server are degraded; no connected servers is unhealthy, with
+heartbeat failures included in the description. This reflects the last monitored state, not an active
+query or available pool capacity. See [MongoDB connection pool](storage.mdx#mongodb-connection-pool).
+
+Always use `/health/live` for liveness, not `/health` or `/health/ready`: storage trouble should affect
+readiness, not restart a running process. With a custom endpoint, use its `/live` subpath.
+
 ## Configuration
 
 Set a `health` section with a `port` to expose the health endpoint on a dedicated port. When `port` is not set, nothing changes — the health endpoint stays on the main port.
@@ -70,6 +81,12 @@ shutdown. It is not registered for `MongoDB` clustering, `InMemory` storage or a
 
 A node still waiting for acquisition has not completed silo startup and is not ready. The lease does not
 bind an early health listener or advertise a ready standby. See [Clustering](clustering.md#single-writer-lease).
+
+## Storage authorization
+
+The `storage-authorization` check (tagged `ready`) reports `Degraded` while a storage permission failure is recorded. HTTP stays **200**, keeping the kernel in rotation. The log entry names the database, collection, and refused operation without exposing connection details.
+
+The failure clears after the next successful access completes index setup for that collection. If database names differ from those granted to the storage user, check [the database-name prefix](storage.mdx).
 
 ## Restricting the dedicated port to health only
 

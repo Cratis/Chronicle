@@ -2,6 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using Cratis.Choreography.Jobs;
+using Cratis.Choreography.StateMachines;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.Events;
@@ -11,6 +13,7 @@ using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.DevelopmentTools;
+using Cratis.Chronicle.Diagnostics;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Observation.Jobs;
@@ -21,8 +24,6 @@ using Cratis.Chronicle.Observation.Webhooks.Validation;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Metrics;
-using Cratis.Orleans.Jobs;
-using Cratis.Orleans.StateMachines;
 using Cratis.Traces;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -114,7 +115,7 @@ public partial class Observer(
     bool _removed;
     IEventSequence _eventSequence = null!;
     IAppendedEventsQueues _appendedEventsQueues = null!;
-    IMeterScope<Observer>? _metrics;
+    ObserverMetrics? _metrics;
     bool _isPreparingCatchup;
     int _catchUpHandoversInFlight;
 
@@ -209,7 +210,7 @@ public partial class Observer(
 
         var eventSequenceKey = new EventSequenceKey(_observerKey.EventSequenceId, _observerKey.EventStore, _observerKey.Namespace);
         _appendedEventsQueues = GrainFactory.GetGrain<IAppendedEventsQueues>(eventSequenceKey);
-        _metrics = meter.BeginObserverScope(_observerId, _observerKey);
+        _metrics = meter.BeginObserverScope(_observerId, _observerKey, optionsMonitor.CurrentValue?.Telemetry.MetricNames ?? MetricNames.Legacy);
 
         var config = await configurationProvider.GetFor(_observerKey);
         _statePersistenceBatchInterval = config.StatePersistenceBatchInterval < 1 ? 1 : config.StatePersistenceBatchInterval;
@@ -376,6 +377,12 @@ public partial class Observer(
                 await namespaceStorage.InFlightEvents.Remove(_observerId, inFlight.Partition, inFlight.EventSequenceNumber);
             }
 
+            var pruned = await Recommendations.IgnoredRecommendations.Remove(namespaceStorage.Recommendations, Recommendations.IgnoredRecommendations.ForRemovedObserver(await namespaceStorage.Recommendations.GetAll(), _observerId, _observerKey.EventSequenceId));
+            if (pruned > 0)
+            {
+                logger.PrunedIgnoredRecommendations(pruned);
+            }
+
             // The deletion can commit and then throw. Seal this activation before attempting it so neither
             // callbacks nor deactivation can recreate the record. Reactivation consults authoritative storage.
             _removed = true;
@@ -508,6 +515,7 @@ public partial class Observer(
             observerDefinition,
             failures,
             _jobsManager,
+            storage,
             loggerFactory.CreateLogger<CatchingUpInFlight>()),
 
         new Observing(
@@ -738,7 +746,15 @@ public partial class Observer(
     /// <inheritdoc/>
     protected override async Task OnAfterEnteringState(IState<ObserverState> state)
     {
+        _stateTransitionInProgress = false;
         KeepWhatWasRecordedDuringTransitionHook();
+        if (state is States.Replay { StartRefusal: { } refusal })
+        {
+            // Nothing drives this replay forward, so it settles no owed recovery; routing decides that afresh.
+            await SettleRefusedReplayStart(refusal);
+            return;
+        }
+
         if (state is QuarantinedObserver) await ReconcileWebhookProbe();
         if (SettlesOwedRecovery(state))
         {
@@ -814,6 +830,7 @@ public partial class Observer(
                 }
             }
 
+            _persistedStateWrites++;
             if (revision == _alertRevision)
             {
                 _alertStateNeedsPersistence = false;
@@ -977,6 +994,13 @@ public partial class Observer(
         {
             var eventTypeSchemas = await storage.GetEventStore(_observerKey.EventStore).EventTypes.GetFor(eventTypes);
             _eventTypeSchemas = eventTypeSchemas.ToDictionary(s => s.Type);
+
+            // Another instance of a client already being observed for needs only to be added as a fan-out target.
+            if (!additive && !recovering && !automatic && subscriberArgs is ConnectedClient connectedClient &&
+                await TryHandOverToAnotherClientInstance<TObserverSubscriber>(type, eventTypes, siloAddress, connectedClient, isReplayable, filters, generationDelivery))
+            {
+                return;
+            }
 
             using var scope = logger.BeginObserverScope(_observerId, _observerKey);
 

@@ -11,7 +11,7 @@ internal static class GenerationGateCollections
     /// <summary>
     /// The writer gate collection.
     /// </summary>
-    internal const string Gates = "fence-gates";
+    internal const string Gates = WellKnownCollectionNames.FenceGates;
 
     /// <summary>
     /// The revocation epoch.

@@ -18,7 +18,7 @@ public static class FenceCollections
     /// <summary>
     /// The collection holding one receipt per committed fenced batch.
     /// </summary>
-    public const string Receipts = "fence-receipts";
+    public const string Receipts = WellKnownCollectionNames.FenceReceipts;
 
     /// <summary>
     /// The gate record field holding the owner epoch.

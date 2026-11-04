@@ -6,6 +6,7 @@ using System.Net.Sockets;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Security;
 using Cratis.Chronicle.Server.Authentication;
+using Cratis.Chronicle.Setup;
 using Cratis.Chronicle.Storage;
 using Cratis.DependencyInjection;
 using Microsoft.AspNetCore.Builder;
@@ -78,6 +79,9 @@ public class a_held_silo : Specification
         }
         builder.Services.AddSingleton<IInitialAdminSetupTokens, InitialAdminSetupTokens>();
         builder.Services.AddSingleton(Substitute.For<IAdministratorPrivileges>());
+        var kernelProjectionRetries = Substitute.For<IKernelProjectionRegistrationRetries>();
+        kernelProjectionRetries.Pending.Returns([]);
+        builder.Services.AddSingleton(kernelProjectionRetries);
         builder.Services.UseDeferredSiloStart();
         _app = builder.Build();
         _app.Use(async (context, next) =>

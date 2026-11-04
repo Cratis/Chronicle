@@ -2,6 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using Cratis.Choreography.Jobs;
+using Cratis.Choreography.Storage.Jobs;
 using Cratis.Chronicle.Alerts;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
@@ -18,10 +20,9 @@ using Cratis.Chronicle.Observation.Webhooks.Validation;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Chronicle.Storage.Observation;
+using Cratis.Chronicle.Storage.Recommendations;
 using Cratis.Metrics;
 using Cratis.Monads;
-using Cratis.Orleans.Jobs;
-using Cratis.Orleans.Storage.Jobs;
 using Cratis.Traces;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -72,6 +73,7 @@ public class an_observer : Specification
     protected IEventStoreNamespaceStorage _eventStoreNamespaceStorage;
     protected IJobStorage _jobStorage;
     protected IInFlightEventsStorage _inFlightEventsStorage;
+    protected IRecommendationStorage _recommendationStorage;
     protected IObserverHandledCountsStorage _observerHandledCountsStorage;
     protected IEventTypesStorage _eventTypesStorage;
     protected IEventSequenceStorage _eventSequenceStorage;
@@ -174,6 +176,9 @@ public class an_observer : Specification
         _storage.GetEventStore(Arg.Any<EventStoreName>()).Returns(_eventStoreStorage);
         _eventStoreStorage.EventTypes.Returns(_eventTypesStorage);
         _eventStoreStorage.GetNamespace(Arg.Any<EventStoreNamespaceName>()).Returns(_eventStoreNamespaceStorage);
+        _recommendationStorage = Substitute.For<IRecommendationStorage>();
+        _eventStoreNamespaceStorage.Recommendations.Returns(_recommendationStorage);
+        _recommendationStorage.GetAll().Returns(ImmutableList<RecommendationState>.Empty);
         _eventStoreNamespaceStorage.InFlightEvents.Returns(_inFlightEventsStorage);
         _inFlightEventsStorage.GetFor(Arg.Any<ObserverId>()).Returns([]);
         _eventStoreNamespaceStorage.ObserverHandledCounts.Returns(_observerHandledCountsStorage);
@@ -254,7 +259,7 @@ public class an_observer : Specification
 
     void ConfigureDefaultJobStorage()
     {
-        _jobStorage.GetJob(Arg.Any<JobId>()).Returns(call => Task.FromResult<Catch<JobState, Cratis.Orleans.Storage.Jobs.JobError>>(new JobState
+        _jobStorage.GetJob(Arg.Any<JobId>()).Returns(call => Task.FromResult<Catch<JobState, Cratis.Choreography.Storage.Jobs.JobError>>(new JobState
         {
             Id = call.Arg<JobId>(),
             Status = JobStatus.Running

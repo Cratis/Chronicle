@@ -19,7 +19,7 @@ namespace Cratis.Chronicle.Storage.MongoDB;
 /// <param name="database">The <see cref="IDatabase"/> instance.</param>
 /// <param name="expandoObjectConverter">The <see cref="Json.IExpandoObjectConverter"/> instance.</param>
 /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> instance.</param>
-/// <param name="jobsStorage">The <see cref="Cratis.Orleans.Storage.IJobsStorage"/> the job system resolves through.</param>
+/// <param name="jobsStorage">The <see cref="Cratis.Choreography.Storage.IJobsStorage"/> the job system resolves through.</param>
 /// <param name="options">The <see cref="IOptions{ChronicleOptions}"/> instance.</param>
 /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> instance.</param>
 /// <param name="gate">Optional <see cref="Naming.IResourceNameGate"/> checking names when a namespace is opened.</param>
@@ -27,7 +27,7 @@ public class ClusterStorage(
     IDatabase database,
     Json.IExpandoObjectConverter expandoObjectConverter,
     JsonSerializerOptions jsonSerializerOptions,
-    Cratis.Orleans.Storage.IJobsStorage jobsStorage,
+    Cratis.Choreography.Storage.IJobsStorage jobsStorage,
     IOptions<ChronicleOptions> options,
     ILoggerFactory loggerFactory,
     Naming.IResourceNameGate? gate = null) : IClusterStorage
@@ -39,7 +39,7 @@ public class ClusterStorage(
         foreach (var store in (await GetEventStores()).Concat(await DiscoverEventStores()).Append(EventStoreName.System)
             .Distinct(CaseInsensitiveEventStoreNameComparer.Instance).OrderBy(_ => _.Value, StringComparer.Ordinal))
         {
-            var collection = database.GetEventStoreDatabase(store).GetCollection<BsonDocument>("generation-floor");
+            var collection = database.GetEventStoreDatabase(store).GetCollection<BsonDocument>(WellKnownCollectionNames.GenerationFloor);
             if (await new Generations.GenerationFloorStorage(collection).Get() is { } floor)
             {
                 floors.Add(store, floor);

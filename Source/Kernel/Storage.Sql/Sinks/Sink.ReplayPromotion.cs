@@ -26,7 +26,7 @@ public partial class Sink
         // Open the scope on the replay table so the DbContext we use for DDL is bound to
         // the rebuilt table. Other scopes may still be reading the primary table. The swap renames
         // tables, so it connects as the schema identity when connection resolution distinguishes one.
-        await using var scope = await _database.ReadModelTable(_eventStoreName, _namespace, replayName, _columns, ConnectionPurpose.Schema);
+        await using var scope = await OpenScope(replayName, ConnectionPurpose.Schema);
 
         await scope.DbContext.EnsureReplayPromotions();
         var replayHasRows = await scope.DbContext.Entries.AsNoTracking().AnyAsync();
@@ -43,7 +43,9 @@ public partial class Sink
         // replay -> primary collide. A database transaction also protects readers on other silos
         // and restores the previous tables if any step of the promotion fails.
         var strategy = scope.DbContext.Database.CreateExecutionStrategy();
-        await DatabaseSchemaLock.Run(scope.DbContext, () => strategy.ExecuteInTransactionAsync(
+        await DatabaseSchemaLock.Run(
+            scope.DbContext,
+            () => strategy.ExecuteInTransactionAsync(
             async () =>
             {
                 // Verification can fail to observe a commit after its acknowledgment is lost. Every attempt must
@@ -58,7 +60,8 @@ public partial class Sink
                 preservedLegacyBackup = await PromoteReplayTable(scope, promotion, recoveryName);
             },
 
-            () => SwapHasCommitted(scope.DbContext, marker)));
+            () => SwapHasCommitted(scope.DbContext, marker)),
+            _telemetry);
 
         if (preservedLegacyBackup)
         {
@@ -192,7 +195,7 @@ public partial class Sink
     /// </summary>
     async Task NamePrimaryKeyAfterPrimaryTable()
     {
-        await using var scope = await _database.ReadModelTable(_eventStoreName, _namespace, _tableName, _columns);
+        await using var scope = await OpenScope(_tableName);
         await PrimaryKeyConstraints.NameAfterTable(scope, _tableName);
     }
 

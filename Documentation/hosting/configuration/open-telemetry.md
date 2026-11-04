@@ -78,11 +78,21 @@ OTEL_EXPORTER_OTLP_ENDPOINT=https://otlp.example.com
 OTEL_EXPORTER_OTLP_HEADERS=x-api-key=your-api-key
 ```
 
-## Generated instrument names
+## Instrument names and migration
 
-Chronicle consumes `Cratis.Metrics.Roslyn` 7.27.0, which includes the instrument-name fix released in 7.20.0. Generated counters and gauges now keep the description in the instrument's description metadata, not its unit. For example, the successful-observation counter has the instrument name `chronicle-observer-successful-observations`, no unit, and description `Number of successful observations per observer in a given event store and namespace`. A Prometheus exporter using default translation is expected to expose `chronicle_observer_successful_observations_total` with that description as its HELP text, rather than including the description in the metric name. Translation depends on the backend; OTLP serialization coverage alone does not verify Prometheus exposition or HELP text.
+Kernel metrics default to `Telemetry:MetricNames=Legacy`, preserving their existing names, units, descriptions, and dimension keys. The tables below describe these default series. Set `Telemetry:MetricNames=Convention` to opt into `cratis.chronicle.*` names, explicit UCUM units, and shared attribute keys. For example, `cratis.chronicle.observer.successful_observations` has unit `{observation}`. A Prometheus exporter using default translation is expected to expose it as `cratis_chronicle_observer_successful_observations_total`; descriptions remain HELP metadata, not part of the name. Chronicle consumes `Cratis.Metrics.Roslyn` 7.27.0, which includes the instrument-name fix released in 7.20.0. Translation depends on the backend; OTLP serialization coverage alone does not verify Prometheus exposition or HELP text.
 
-The observer failure counters and suspected-undelivered queue counter remain hand-written to preserve their failure-path initialization and observer tagging. They no longer need a workaround for generated names. Revisit that implementation with the [convention-name migration](https://github.com/Cratis/Chronicle/issues/4459), keeping the existing instrument names during this fix. That migration is separate and still pending; coordinate dashboard and alert changes with it rather than assuming the generator upgrade also renames instruments to the convention.
+Use `Telemetry:MetricNames=Both` only as a temporary migration mode. It creates both instrument sets at producer construction and records each measurement to each set with its own dimensions. The single modes publish only their selected set. No listener bridge translates measurements. Both increases telemetry volume and series count; never sum legacy and convention series.
+
+```json
+{
+  "Telemetry": {
+    "MetricNames": "Convention"
+  }
+}
+```
+
+Use the [telemetry name reference](telemetry-names.md) to migrate dashboard queries and alerts, changing names and dimensions together. Restart the kernel after changing the mode. Convention names are planned to become the default in the next major version, when legacy names and keys are planned for removal. Failure counters retain their existing recording points and do not emit initial zero measurements.
 
 ## Metrics instrumented
 
@@ -214,8 +224,8 @@ Chronicle traces the following activity sources:
 | Source | Description |
 | --- | --- |
 | `Cratis.Chronicle` | Chronicle internal operations |
-| `Microsoft.Orleans.Runtime` | Orleans runtime activities |
-| `Microsoft.Orleans.Application` | Orleans application activities |
+| `Microsoft.Orleans.Runtime` | Orleans runtime activities (opt-in) |
+| `Microsoft.Orleans.Application` | Orleans grain-call activities (opt-in) |
 | HTTP client | Outgoing HTTP requests |
 | ASP.NET Core | Incoming HTTP and unary gRPC requests, excluding health checks and connection keep-alive |
 | gRPC client | Outgoing gRPC calls (opt-in) |
@@ -251,3 +261,33 @@ Kernel gRPC client instrumentation is disabled by default to reduce trace volume
 The equivalent environment variable is `Cratis__Chronicle__Telemetry__GrpcClientTracing=true`.
 HTTP client tracing remains enabled. These exclusions do not disable metrics or change OTLP
 exporter, endpoint, or resource configuration.
+
+### Orleans trace volume
+
+Chronicle's own telemetry setup (`AddChronicleTelemetry`) **no longer exports Orleans runtime and grain-call spans by default**. These sources accounted
+for about 99% of kernel spans during replay. Chronicle spans remain enabled, and Orleans
+`AddActivityPropagation()` remains in place: trace context continues across grain calls without
+exporting their carrier activities. Chronicle spans in the called grain keep the caller's trace id,
+but their direct parent is an unexported Orleans span, so a trace viewer may show a missing
+intermediate parent. Calls outside an existing trace do not create carrier activities.
+
+To restore Orleans spans, set `Cratis:Chronicle:Telemetry:OrleansTracing=true`:
+
+```json
+{
+    "cratis": {
+        "chronicle": {
+            "telemetry": {
+                "orleansTracing": true
+            }
+        }
+    }
+}
+```
+
+The equivalent environment variable is `Cratis__Chronicle__Telemetry__OrleansTracing=true`.
+`OTEL_TRACES_SAMPLER` and `OTEL_TRACES_SAMPLER_ARG` retain their OpenTelemetry behavior; Chronicle
+sets no sampler override. Exporter, endpoint, resource, and metric configuration are unchanged.
+
+The default applies only to `AddChronicleTelemetry`. The public `TracerProviderBuilder.AddChronicleInstrumentation()`
+extension is unchanged and still adds both Orleans sources; pass `false` to its `bool` overload to leave them out.

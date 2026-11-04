@@ -2,14 +2,14 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using Cratis.Choreography.Jobs;
+using Cratis.Choreography.Storage.Jobs;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Observation.EventStoreSubscriptions;
 using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Monads;
-using Cratis.Orleans.Jobs;
-using Cratis.Orleans.Storage.Jobs;
 
 namespace Cratis.Chronicle.Observation.for_Observer;
 
@@ -59,8 +59,19 @@ public class when_clearing_quarantine_after_automatic_reconciliation_with_pendin
             _resumedJobs.Add(callInfo.Arg<JobId>());
             return Task.FromResult(true);
         });
-        _jobsManager.GetJobs(Arg.Any<JobQuery>()).Returns(_ => Task.FromResult<IImmutableList<JobState>>(
-            ImmutableList.Create(AsReportingResumed(catchupJob), AsReportingResumed(retryJob))));
+
+        // The partition is catching up under its own durable partition catch-up job, listed by the jobs manager and the
+        // job storage alike. A hold with no such job is what a crash between granting it and starting the job leaves
+        // behind, and that one is restarted.
+        JobState partitionCatchupJob = new()
+        {
+            Id = JobId.New(),
+            Status = JobStatus.Running,
+            Request = new CatchUpObserverPartitionRequest(_observerKey, ObserverType.External, _catchingUpPartition, EventSequenceNumber.First, [EventType.Unknown])
+        };
+        IImmutableList<JobState> Listed() => ImmutableList.Create(AsReportingResumed(catchupJob), AsReportingResumed(retryJob), partitionCatchupJob);
+        _jobsManager.GetJobs(Arg.Any<JobQuery>()).Returns(_ => Task.FromResult(Listed()));
+        _jobStorage.GetJobs(Arg.Any<JobQuery>()).Returns(_ => Task.FromResult(Catch<IImmutableList<JobState>>.Success(Listed())));
         _jobsManager.Start<ICatchUpObserverPartition, CatchUpObserverPartitionRequest>(Arg.Any<CatchUpObserverPartitionRequest>())
             .Returns(Result<JobId, StartJobError>.Success(JobId.New()));
         await _observer.Subscribe<IEventStoreSubscriptionObserverSubscriber>(ObserverType.External, [EventType.Unknown], SiloAddress.Zero, "target", automatic: true);
@@ -78,13 +89,17 @@ public class when_clearing_quarantine_after_automatic_reconciliation_with_pendin
     [Fact] void should_be_active() => _stateStorage.State.RunningState.ShouldEqual(ObserverRunningState.Active);
     [Fact] void should_resume_the_stopped_catchup_job() => _jobsManager.Received(1).Resume(_catchupJobId);
     [Fact] void should_resume_the_stopped_retry_job() => _jobsManager.Received(1).Resume(_retryJobId);
-    [Fact] void should_not_duplicate_the_stopped_retry_job() => _jobsManager.DidNotReceive()
+    [Fact]
+    void should_not_duplicate_the_stopped_retry_job() => _jobsManager.DidNotReceive()
         .Start<IRetryFailedPartition, RetryFailedPartitionRequest>(Arg.Is<RetryFailedPartitionRequest>(request => request.Key == _failedPartition.Partition));
-    [Fact] void should_leave_the_individually_quarantined_partition_alone() => _jobsManager.DidNotReceive()
+    [Fact]
+    void should_leave_the_individually_quarantined_partition_alone() => _jobsManager.DidNotReceive()
         .Start<IRetryFailedPartition, RetryFailedPartitionRequest>(Arg.Is<RetryFailedPartitionRequest>(request => request.Key == _quarantinedPartition.Partition));
-    [Fact] void should_recover_the_in_flight_partition() => _jobsManager.Received(1)
+    [Fact]
+    void should_recover_the_in_flight_partition() => _jobsManager.Received(1)
         .Start<ICatchUpObserverPartition, CatchUpObserverPartitionRequest>(Arg.Is<CatchUpObserverPartitionRequest>(request => request.Key == _inFlightPartition));
-    [Fact] void should_not_duplicate_existing_partition_catchup() => _jobsManager.DidNotReceive()
+    [Fact]
+    void should_not_duplicate_existing_partition_catchup() => _jobsManager.DidNotReceive()
         .Start<ICatchUpObserverPartition, CatchUpObserverPartitionRequest>(Arg.Is<CatchUpObserverPartitionRequest>(request => request.Key == _catchingUpPartition));
 
     JobState AsReportingResumed(JobState job) => _resumedJobs.Contains(job.Id)

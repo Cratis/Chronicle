@@ -1,10 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Choreography.Jobs;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Storage.Observation;
-using Cratis.Orleans.Jobs;
 
 namespace Cratis.Chronicle.Observation.Claims;
 
@@ -17,6 +17,11 @@ internal sealed class ShadowClaimLedger
     ObserverWideClaim? _wide;
     OwnershipRevision _revision = OwnershipRevision.None;
     PartitionClaim[]? _orderedClaims;
+
+    /// <summary>
+    /// Gets the observer-wide claim, if any.
+    /// </summary>
+    internal ObserverWideClaim? ObserverWide => _wide;
 
     /// <summary>
     /// Restores stored claims, identifying records predating the shadow protocol.
@@ -110,6 +115,42 @@ internal sealed class ShadowClaimLedger
     }
 
     /// <summary>
+    /// Gets the claim held for a partition, if any.
+    /// </summary>
+    /// <param name="partition">The partition.</param>
+    /// <returns>The <see cref="PartitionClaim"/>, or null when the partition is not claimed.</returns>
+    internal PartitionClaim? ClaimFor(Key partition) => _claims.GetValueOrDefault(partition);
+
+    /// <summary>
+    /// Records the job started under the observer-wide claim granted with the given epoch.
+    /// </summary>
+    /// <param name="epoch">The epoch the job was started under.</param>
+    /// <param name="job">The <see cref="JobId"/> of the job.</param>
+    /// <remarks>
+    /// Changes neither the epoch nor the revision. A claim granted since then is left as it is.
+    /// </remarks>
+    internal void AttachObserverWideJob(ClaimEpoch epoch, JobId job)
+    {
+        if (_wide is not null && _wide.Epoch == epoch)
+        {
+            _wide = _wide with { Job = job };
+        }
+    }
+
+    /// <summary>
+    /// Releases a partition claim of the given kind, leaving a claim of any other kind in place.
+    /// </summary>
+    /// <param name="partition">The partition handed over.</param>
+    /// <param name="holder">The <see cref="ClaimHolderKind"/> handing it over.</param>
+    internal void HandOver(Key partition, ClaimHolderKind holder)
+    {
+        if (_claims.TryGetValue(partition, out var claim) && claim.Holder == holder)
+        {
+            HandOver(partition);
+        }
+    }
+
+    /// <summary>
     /// Releases a partition claim, advancing the revision only when it was held.
     /// </summary>
     /// <param name="partition">The partition handed over.</param>
@@ -122,6 +163,25 @@ internal sealed class ShadowClaimLedger
     }
 
     /// <summary>
+    /// Gets whether the claim of the given kind on a scope belongs to other work than the job reporting back.
+    /// </summary>
+    /// <param name="holder">The <see cref="ClaimHolderKind"/> the reporting job runs as.</param>
+    /// <param name="partition">The partition, or null for the observer-wide claim.</param>
+    /// <param name="job">The reporting <see cref="JobId"/>, or null when it is not known.</param>
+    /// <param name="epoch">The ownership epoch the reporting job was started under, or null when it carries none.</param>
+    /// <returns>True when such a claim is held under another job or epoch; false when none is held or it cannot be told.</returns>
+    /// <remarks>
+    /// With no claim of that kind there is no newer work to protect, so a report is never judged stale for it.
+    /// </remarks>
+    internal bool IsHeldByOtherWork(ClaimHolderKind holder, Key? partition, JobId? job, ulong? epoch)
+    {
+        var held = HeldClaim(holder, partition);
+        if (held is not { } claim) return false;
+        if (job is not null && claim.Job is not null) return claim.Job != job;
+        return epoch is not null && epoch != claim.Epoch.Value;
+    }
+
+    /// <summary>
     /// Releases the observer-wide claim, advancing the revision only when it was held.
     /// </summary>
     internal void HandOverObserverWide()
@@ -130,6 +190,23 @@ internal sealed class ShadowClaimLedger
         {
             _wide = null;
             _revision = _revision.Next();
+        }
+    }
+
+    /// <summary>
+    /// Releases the observer-wide claim held by a job of the given kind, leaving a claim granted to other work in place.
+    /// </summary>
+    /// <param name="holder">The <see cref="ClaimHolderKind"/> handing it over.</param>
+    /// <param name="job">The <see cref="JobId"/> of the job handing it over.</param>
+    /// <remarks>
+    /// A claim not yet attached to a job is released too: the job was started under it but the attachment was not persisted.
+    /// </remarks>
+    internal void HandOverObserverWide(ClaimHolderKind holder, JobId job)
+    {
+        // A claim with no job attached yet takes the handing-over job as its own.
+        if (_wide?.Holder == holder && (_wide.Job ?? job) == job)
+        {
+            HandOverObserverWide();
         }
     }
 
@@ -251,8 +328,13 @@ internal sealed class ShadowClaimLedger
 
     bool RemoveClaim(Key partition)
     {
+        if (!_claims.Remove(partition))
+        {
+            return false;
+        }
+
         _orderedClaims = null;
-        return _claims.Remove(partition);
+        return true;
     }
 
     void AddMissingClaims(ISet<Key> partitions, ClaimHolderKind coveringKind, List<(Key? Partition, ShadowClaimDivergence Divergence)> divergences)
@@ -289,5 +371,15 @@ internal sealed class ShadowClaimLedger
     {
         _revision = _revision.Next();
         return new(_revision.Value);
+    }
+
+    (JobId? Job, ClaimEpoch Epoch)? HeldClaim(ClaimHolderKind holder, Key? partition)
+    {
+        if (partition is null)
+        {
+            return _wide?.Holder == holder ? (_wide.Job, _wide.Epoch) : null;
+        }
+
+        return _claims.TryGetValue(partition, out var claim) && claim.Holder == holder ? (claim.Job, claim.Epoch) : null;
     }
 }

@@ -1,8 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Concepts.System;
-using Cratis.Chronicle.Patching;
+using Cratis.Choreography.Patching;
 using Cratis.Chronicle.Storage;
 using Microsoft.Extensions.Logging;
 
@@ -29,12 +28,5 @@ public class MoveSystemEventStoreDatabases(IStorage storage, ILogger<MoveSystemE
     {
         logger.MovingToConfiguredLocation();
         await storage.MoveSystemEventStoreTo(SystemEventStoreLocation.Configured);
-    }
-
-    /// <inheritdoc/>
-    public async Task Down()
-    {
-        logger.MovingToLegacyLocation();
-        await storage.MoveSystemEventStoreTo(SystemEventStoreLocation.Legacy);
     }
 }

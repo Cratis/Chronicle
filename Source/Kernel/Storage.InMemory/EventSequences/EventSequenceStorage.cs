@@ -787,7 +787,8 @@ public partial class EventSequenceStorage(
         IDictionary<EventTypeGeneration, EventHash> contentHashes,
         Subject? subject = null,
         IReadOnlyCollection<NamedTag>? namedTags = null,
-        EventSourceName? eventSource = null)
+        EventSourceName? eventSource = null,
+        EventSequenceNumber? compensationFor = null)
     {
         // Default reads use the highest stored generation; append acknowledgments retain the appended one.
         var highestGeneration = content.Keys.MaxBy(_ => _.Value) ?? eventType.Generation;
@@ -810,6 +811,7 @@ public partial class EventSequenceStorage(
         {
             NamedTags = namedTags ?? [],
             EventSource = eventSource ?? EventSourceName.NotSet,
+            CompensationFor = compensationFor,
             AppendedGeneration = eventType.Generation
         };
 
@@ -884,7 +886,8 @@ public partial class EventSequenceStorage(
                     e.ContentHashes,
                     e.Subject,
                     e.NamedTags,
-                    e.EventSource);
+                    e.EventSource,
+                    e.CompensationFor);
 
                 stored.Add(appendedEvent);
                 appended.Add(ToAppendAcknowledgment(appendedEvent, e.EventType, e.GenerationalContent, e.ContentHashes));

@@ -9,11 +9,13 @@ using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.Webhooks;
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Observation.Webhooks.given;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Security;
 using Cratis.Chronicle.Setup.Serialization;
 using Cratis.Chronicle.Storage.Observation.Webhooks;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Orleans.Core;
 using Orleans.TestKit;
 
@@ -30,7 +32,10 @@ public class a_webhook_delivery : Events.for_EventGenerationRelease.given.a_rele
     protected ObserverSubscriberResult _deliveryResult;
     protected PayloadReceiver _receiver;
     protected Key _partition;
-    HttpClient _httpClient;
+    protected HttpClient _httpClient;
+    protected RecordingLogger<WebhookObserverSubscriber> _logger;
+
+    protected virtual WebhookTarget Target => new("https://example.com/webhook", WebhookAuthorization.None, new Dictionary<string, string>());
 
     async Task Establish()
     {
@@ -65,7 +70,7 @@ public class a_webhook_delivery : Events.for_EventGenerationRelease.given.a_rele
             }
         ];
         _partition = new("person", ArrayIndexers.NoIndexers);
-        _webhookDefinition = new("webhook", WebhookOwner.Client, "log", [_pin], new("https://example.com/webhook", WebhookAuthorization.None, new Dictionary<string, string>()))
+        _webhookDefinition = new("webhook", WebhookOwner.Client, "log", [_pin], Target)
         {
             GenerationDelivery = EventGenerationDelivery.Pinned
         };
@@ -79,6 +84,8 @@ public class a_webhook_delivery : Events.for_EventGenerationRelease.given.a_rele
         _webhook.GetDefinition().Returns(_ => _webhookDefinition);
         _silo.AddProbe(_ => _webhook);
         _eventTypes.GetFor(_pin.Id, _pin.Generation).Returns(_schemas[_pin]);
+        _logger = new();
+        _silo.AddService<ILogger<WebhookObserverSubscriber>>(_logger);
         _silo.AddService(_storage);
         _silo.AddService<IEventGenerationRelease>(_release);
         _silo.AddService(Substitute.For<IOAuthClient>());
@@ -103,6 +110,8 @@ public class a_webhook_delivery : Events.for_EventGenerationRelease.given.a_rele
     {
         public List<string> Payloads { get; } = [];
         public HttpStatusCode StatusCode { get; set; } = HttpStatusCode.OK;
+        public string? ReasonPhrase { get; set; }
+        public Exception? Failure { get; set; }
         public TaskCompletionSource RequestReceived { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public Task ResponseGate { get; set; } = Task.CompletedTask;
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
@@ -110,7 +119,8 @@ public class a_webhook_delivery : Events.for_EventGenerationRelease.given.a_rele
             Payloads.Add(await request.Content!.ReadAsStringAsync(cancellationToken));
             RequestReceived.TrySetResult();
             await ResponseGate.WaitAsync(cancellationToken);
-            return new(StatusCode);
+            if (Failure is not null) throw Failure;
+            return new(StatusCode) { ReasonPhrase = ReasonPhrase };
         }
     }
 }

@@ -22,7 +22,7 @@ public class when_getting_event_stores_with_name_checks : Specification
         _snapshot = ResourceNameSnapshot.NotReady();
         _snapshot.Publish([], []);
         var gate = new ResourceNameGate(_snapshot, new FakeReservations(), ResourceNameExemptions.None, NullLogger<ResourceNameGate>.Instance);
-        _storages = new(new KnownInstancesOf<ISinkFactory>([]), Substitute.For<Cratis.Orleans.Storage.IJobsStorage>(), gate);
+        _storages = new(new KnownInstancesOf<ISinkFactory>([]), Substitute.For<Cratis.Choreography.Storage.IJobsStorage>(), gate);
         _storages.GetOrCreate("orders");
     }
 

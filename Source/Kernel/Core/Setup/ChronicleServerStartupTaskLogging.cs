@@ -13,6 +13,9 @@ namespace Orleans.Hosting;
 /// </summary>
 internal static partial class ChronicleServerStartupTaskLogging
 {
+    [LoggerMessage(LogLevel.Error, "Kernel projection registration for event store '{EventStore}' exhausted {MaxAttempts} startup attempts. The silo will start and keep retrying in the background; registration health stays degraded until it succeeds.")]
+    internal static partial void DeferringKernelProjectionRegistration(this ILogger<ChronicleServerStartupTask> logger, EventStoreName eventStore, int maxAttempts);
+
     [LoggerMessage(LogLevel.Warning, "Failed rehydrating occurrences for {EventStore}/{Namespace}. Startup will continue; existing queue reminders can wake the work later")]
     internal static partial void FailedRehydratingOccurrences(this ILogger<ChronicleServerStartupTask> logger, Exception exception, EventStoreName eventStore, EventStoreNamespaceName? @namespace);
 

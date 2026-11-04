@@ -1,13 +1,14 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Choreography.Storage;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Compliance;
+using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.InMemory;
 using Cratis.Chronicle.Storage.InMemory.Compliance;
 using Cratis.Chronicle.Storage.Naming;
-using Cratis.Orleans.Storage;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Cratis.Chronicle.Setup;
@@ -54,9 +55,10 @@ public static class InMemoryChronicleBuilderExtensions
             services.AddSingleton<IEncryptionKeyStorage, EncryptionKeyStorage>();
             services.AddSingleton<IStorage, Cratis.Chronicle.Storage.InMemory.Storage>();
             services.AddSingleton<IStorageErrorClassifier, InMemoryStorageErrorClassifier>();
+            services.AddSingleton<IReservedEventSequenceIds, InMemoryReservedEventSequenceIds>();
             services.AddSingleton<Cratis.Chronicle.Storage.Generations.Bindings.IMaterializationBindingStorage, Cratis.Chronicle.Storage.InMemory.Generations.Bindings.InMemoryMaterializationBindingStorage>();
             services.AddGenerationCatalog();
-            services.AddCratisOrleansInMemoryJobsStorage();
+            services.AddCratisChoreographyInMemoryJobsStorage();
         });
 
         return builder;

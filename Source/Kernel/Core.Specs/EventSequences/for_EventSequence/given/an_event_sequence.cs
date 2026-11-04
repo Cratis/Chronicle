@@ -4,6 +4,7 @@
 using System.Collections.Immutable;
 using System.Dynamic;
 using System.Text.Json.Nodes;
+using Cratis.Choreography.Jobs;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Auditing;
 using Cratis.Chronicle.Concepts.Events;
@@ -14,6 +15,7 @@ using Cratis.Chronicle.Concepts.Identities;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.EventSequences.Migrations;
+using Cratis.Chronicle.EventTypes;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Patterns;
@@ -24,11 +26,11 @@ using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Chronicle.Storage.Identities;
 using Cratis.Metrics;
 using Cratis.Monads;
-using Cratis.Orleans.Jobs;
 using Cratis.Traces;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using NSubstitute.Extensions;
 using Orleans.TestKit;
 
 namespace Cratis.Chronicle.EventSequences.for_EventSequence.given;
@@ -37,6 +39,7 @@ public class an_event_sequence : Specification
 {
     protected static readonly EventStoreName EventStore = "test-store";
     protected static readonly EventStoreNamespaceName EventStoreNamespace = "test-namespace";
+    protected IEventTypeSchemaCache _schemaCache = new OwnGenerationSchemaCache();
 
     protected TestKitSilo _silo = new();
     protected EventSequence _eventSequence;
@@ -49,6 +52,7 @@ public class an_event_sequence : Specification
     protected global::Orleans.Core.IStorage<EventSequenceState> _stateStorage;
 
     protected IStorage _storage;
+    protected IReservedEventSequenceIds _reservedEventSequenceIds = Substitute.For<IReservedEventSequenceIds>();
     protected IEventStoreStorage _eventStoreStorage;
     protected IEventStoreNamespaceStorage _namespaceStorage;
     protected IEventSequenceStorage _eventSequenceStorage;
@@ -73,6 +77,7 @@ public class an_event_sequence : Specification
     protected virtual TimeProvider EventTimeProvider => TimeProvider.System;
     protected virtual Telemetry Telemetry => new();
     protected virtual EventSequenceId SequenceId => EventSequenceId.Log;
+    protected long StateWrites => _silo.StorageStats<EventSequence, EventSequenceState>().Writes;
     protected virtual int StatePersistenceInterval => 1000;
     protected virtual CausationPropertyRetention CausationPropertyRetention => CausationPropertyRetention.Retain;
 
@@ -192,6 +197,7 @@ public class an_event_sequence : Specification
         _stateStorage.State = new EventSequenceState { ConstraintIndexWatermark = EventSequenceNumber.First };
 
         _eventSequence = await CreateEventSequence();
+        _eventSequence?.ConstraintIndexRetryJitterSample = () => 0.5;
     }
 
     /// <summary>
@@ -199,8 +205,12 @@ public class an_event_sequence : Specification
     /// </summary>
     protected void ConfigureSilo()
     {
+        var cache = Substitute.For<IEventTypeSchemaCache>();
+        cache.ReturnsForAll<ValueTask<JsonSchema>>(async call => await _schemaCache.GetProtectionSchemaFor(call.ArgAt<EventStoreName>(0), call.ArgAt<EventTypeId>(1), call.ArgAt<EventTypeGeneration>(2), call.ArgAt<JsonSchema>(3)));
+        _silo.AddService(cache);
         _silo.AddService(EventTimeProvider);
         _silo.AddService(_storage);
+        _silo.AddService(_reservedEventSequenceIds);
         _silo.AddService<IStorageErrorClassifier>(new Storage.InMemory.InMemoryStorageErrorClassifier());
         _silo.AddService(_constraintValidationFactory);
         _silo.AddService(_eventTypeMigrations);
@@ -231,12 +241,22 @@ public class an_event_sequence : Specification
     }
 
     /// <summary>
+    /// Configures the sequence name before grain activation.
+    /// </summary>
+    protected virtual void ConfigureSequenceName()
+    {
+    }
+
+    /// <summary>
     /// Creates the grain under test. Overridable so a spec can substitute a variant of <see cref="EventSequence"/>
     /// whose infrastructure misbehaves in a way the substituted collaborators cannot express.
     /// </summary>
     /// <returns>The <see cref="EventSequence"/> to exercise.</returns>
-    protected virtual async Task<EventSequence> CreateEventSequence() =>
-        await _silo.CreateGrainAsync<EventSequence>(_eventSequenceKey.ToString());
+    protected virtual async Task<EventSequence> CreateEventSequence()
+    {
+        ConfigureSequenceName();
+        return await _silo.CreateGrainAsync<EventSequence>(_eventSequenceKey.ToString());
+    }
 
     /// <summary>
     /// Append a single event with no concurrency scope, tags or causation.

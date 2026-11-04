@@ -27,11 +27,11 @@ namespace Cratis.Chronicle.Storage.InMemory;
 /// </para>
 /// </remarks>
 /// <param name="sinkFactories">All discovered <see cref="ISinkFactory"/> instances.</param>
-/// <param name="jobsStorage">The <see cref="Cratis.Orleans.Storage.IJobsStorage"/> resolving jobs storage for a scope and namespace.</param>
+/// <param name="jobsStorage">The <see cref="Cratis.Choreography.Storage.IJobsStorage"/> resolving jobs storage for a scope and namespace.</param>
 /// <param name="gate">Optional <see cref="Chronicle.Storage.Naming.IResourceNameGate"/> checking event store and namespace names.</param>
 public sealed class EventStoreStorages(
     IInstancesOf<ISinkFactory> sinkFactories,
-    Cratis.Orleans.Storage.IJobsStorage jobsStorage,
+    Cratis.Choreography.Storage.IJobsStorage jobsStorage,
     Chronicle.Storage.Naming.IResourceNameGate? gate = null) : IDisposable
 {
     readonly ConcurrentDictionary<EventStoreName, IEventStoreStorage> _eventStores = new();
@@ -50,7 +50,7 @@ public sealed class EventStoreStorages(
     /// <param name="eventTypesFactory">The event-types storage factory.</param>
     internal EventStoreStorages(
         IInstancesOf<ISinkFactory> sinkFactories,
-        Cratis.Orleans.Storage.IJobsStorage jobsStorage,
+        Cratis.Choreography.Storage.IJobsStorage jobsStorage,
         Func<EventStoreName, IEventTypesStorage> eventTypesFactory)
         : this(sinkFactories, jobsStorage)
     {

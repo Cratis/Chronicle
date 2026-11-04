@@ -5,7 +5,7 @@ using System.Dynamic;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Events.Constraints;
-using Cratis.Chronicle.Concepts.EventTypes;
+using Cratis.Chronicle.EventTypes;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.EventTypes;
@@ -20,10 +20,9 @@ namespace Cratis.Chronicle.Events.Constraints;
 /// <param name="eventTypes">The schemas to read.</param>
 /// <param name="metadata">The compliance metadata manager.</param>
 /// <param name="converter">The content converter.</param>
-public class StoredConstraintEventContent(EventStoreName eventStore, EventStoreNamespaceName @namespace, IEventTypesStorage eventTypes, IJsonSchemaMetadataManager metadata, IExpandoObjectConverter converter)
+/// <param name="schemaCache">The effective protection schema cache.</param>
+public class StoredConstraintEventContent(EventStoreName eventStore, EventStoreNamespaceName @namespace, IEventTypesStorage eventTypes, IJsonSchemaMetadataManager metadata, IExpandoObjectConverter converter, IEventTypeSchemaCache schemaCache)
 {
-    readonly Dictionary<EventType, EventTypeSchema> _schemas = [];
-
     /// <summary>
     /// Identifies erased subject inputs that cannot produce a readable claim.
     /// </summary>
@@ -43,11 +42,11 @@ public class StoredConstraintEventContent(EventStoreName eventStore, EventStoreN
     public async Task<ExpandoObject> Release(AppendedEvent @event, CancellationToken cancellationToken = default)
     {
         var schema = await SchemaFor(@event, cancellationToken);
-        if (!schema.Schema.HasSchemaMetadata()) return @event.Content;
+        if (!schema.HasSchemaMetadata()) return @event.Content;
         var identifier = @event.Context.Subject.IsSet ? @event.Context.Subject.Value : @event.Context.EventSourceId.Value;
-        var json = converter.ToJsonObject(@event.Content, schema.Schema);
-        var released = await metadata.Release(eventStore, @namespace, schema.Schema, identifier, json).WaitAsync(cancellationToken);
-        return converter.ToExpandoObject(released, schema.Schema);
+        var json = converter.ToJsonObject(@event.Content, schema);
+        var released = await metadata.Release(eventStore, @namespace, schema, identifier, json).WaitAsync(cancellationToken);
+        return converter.ToExpandoObject(released, schema);
     }
 
     /// <summary>
@@ -57,16 +56,11 @@ public class StoredConstraintEventContent(EventStoreName eventStore, EventStoreN
     /// <param name="cancellationToken">The read deadline.</param>
     /// <returns>The property names.</returns>
     public async Task<IReadOnlyCollection<string>> PersonalPropertiesOf(AppendedEvent @event, CancellationToken cancellationToken = default) =>
-        ConstraintPersonalData.PropertiesOf((await SchemaFor(@event, cancellationToken)).Schema);
+        ConstraintPersonalData.PropertiesOf(await SchemaFor(@event, cancellationToken));
 
-    async Task<EventTypeSchema> SchemaFor(AppendedEvent @event, CancellationToken cancellationToken)
+    async Task<JsonSchema> SchemaFor(AppendedEvent @event, CancellationToken cancellationToken)
     {
-        if (!_schemas.TryGetValue(@event.Context.EventType, out var schema))
-        {
-            schema = await eventTypes.GetFor(@event.Context.EventType.Id, @event.Context.EventType.Generation).WaitAsync(cancellationToken);
-            _schemas[@event.Context.EventType] = schema;
-        }
-
-        return schema;
+        var schema = await eventTypes.GetFor(@event.Context.EventType.Id, @event.Context.EventType.Generation).WaitAsync(cancellationToken);
+        return await schemaCache.GetProtectionSchemaFor(eventStore, @event.Context.EventType.Id, @event.Context.EventType.Generation, schema.Schema);
     }
 }

@@ -79,6 +79,7 @@ public class EventSequence(
         new ActivitySource<EventSequence>(new System.Diagnostics.ActivitySource(ClientActivity.SourceName));
 
     readonly EventSourceIdTagging _eventSourceIdTagging = new(telemetry ?? new());
+    readonly ClientSpanNames _spanNames = telemetry?.SpanNames ?? ClientSpanNames.Legacy;
     readonly IChronicleServicesAccessor _servicesAccessor = (connection as IChronicleServicesAccessor)!;
     readonly IActivitySource<EventSequence> _activitySource = activitySource ?? DefaultActivitySource;
     readonly ILogger<EventSequence> _logger = (concurrencyScopeStrategies as ConcurrencyScopeStrategies)?.Logger ?? NullLogger<EventSequence>.Instance;
@@ -716,6 +717,47 @@ public class EventSequence(
     }
 
     /// <inheritdoc/>
+    public async Task<AppendResult> Compensate(
+        EventSequenceNumber compensationFor,
+        object @event,
+        CorrelationId? correlationId = default,
+        IEnumerable<string>? tags = default,
+        DateTimeOffset? occurred = default)
+    {
+        ImmediateAppendGuard.Append(nameof(Compensate));
+        ReadProtectionGuard.Append(nameof(Compensate));
+        var preparedEvent = await Prepare(@event);
+        correlationId ??= correlationIdAccessor.Current;
+        var causation = causationManager.GetCurrentChain();
+        var identity = identityProvider.GetCurrent();
+        var allTags = preparedEvent.Tags.Concat(tags ?? []).Distinct().ToList();
+
+        var response = await _servicesAccessor.Services.Sequences.Compensate(new()
+        {
+            EventStore = eventStoreName,
+            Namespace = @namespace,
+            EventSequenceId = eventSequenceId,
+            CompensationFor = compensationFor,
+            EventType = preparedEvent.EventType.ToSequencesContract(),
+            Content = preparedEvent.Content,
+            CorrelationId = correlationId,
+            Tags = allTags,
+            Occurred = ToWireOccurred(occurred),
+            Causation = causation.ToSequencesContract(),
+            CausedBy = identity.ToSequencesContract()
+        }).EnsureSuccess();
+
+        return ResolveViolationMessages(response.ToClient()) with
+        {
+            EventStore = eventStoreName,
+            EventStoreNamespace = @namespace,
+            EventSequenceId = eventSequenceId,
+            EventTypes = [preparedEvent.EventType],
+            Observers = GetObservers()
+        };
+    }
+
+    /// <inheritdoc/>
     public async Task Redact(EventSequenceNumber sequenceNumber, RedactionReason reason)
     {
         ReadProtectionGuard.Append(nameof(Redact), "event redaction");
@@ -750,6 +792,22 @@ public class EventSequence(
             EventTypes = eventTypeIds,
             Causation = causation.ToSequencesContract(),
             CausedBy = identity.ToSequencesContract()
+        }).EnsureSuccess();
+    }
+
+    /// <inheritdoc/>
+    public async Task<Guid> Copy(EventSourceId sourceId, EventSourceId targetId, params Type[] clrEventTypes)
+    {
+        ReadProtectionGuard.Append(nameof(Copy), "event copy");
+        var eventTypeIds = clrEventTypes.Select(t => eventTypes.GetEventTypeFor(t).Id.Value).ToList();
+        return await _servicesAccessor.Services.Sequences.CopyEventsForEventSource(new()
+        {
+            EventStore = eventStoreName,
+            Namespace = @namespace,
+            EventSequenceId = eventSequenceId,
+            SourceId = sourceId,
+            TargetId = targetId,
+            EventTypes = eventTypeIds
         }).EnsureSuccess();
     }
 
@@ -1008,14 +1066,9 @@ public class EventSequence(
         var resolvedEventStreamId = ResolveEventStreamId(eventStreamId);
         var resolvedEventSourceType = ResolveEventSourceType(eventSourceType);
         using var span = _activitySource.Append(
-            eventStoreName.Value,
-            @namespace.Value,
-            eventSequenceId.Value,
-            resolvedEventSourceType.Value);
-        if (_eventSourceIdTagging.ForSpan(eventSourceId.Value) is { } tracedEventSourceId)
-        {
-            span?.Activity?.SetTag("event_source_id", tracedEventSourceId);
-        }
+            new(eventStoreName.Value, @namespace.Value, eventSequenceId.Value, resolvedEventSourceType.Value),
+            _spanNames,
+            _eventSourceIdTagging.ForSpan(eventSourceId.Value));
 
         try
         {
@@ -1206,7 +1259,7 @@ public class EventSequence(
         IdempotencyKey? idempotencyKey = default)
     {
         ExplicitConcurrencyScope.ValidateRoute(concurrencyScope, routing, ConcurrencyOptions);
-        using var span = _activitySource.AppendMany(eventStoreName.Value, @namespace.Value, eventSequenceId.Value);
+        using var span = _activitySource.AppendMany(new(eventStoreName.Value, @namespace.Value, eventSequenceId.Value), _spanNames);
 
         try
         {
@@ -1349,7 +1402,7 @@ public class EventSequence(
         IEnumerable<KeyValuePair<EventSourceId, ConcurrencyScope>>? concurrencyScopes = default,
         ReadProtectionCommit? readProtectionCommit = null)
     {
-        using var span = _activitySource.AppendMany(eventStoreName.Value, @namespace.Value, eventSequenceId.Value);
+        using var span = _activitySource.AppendMany(new(eventStoreName.Value, @namespace.Value, eventSequenceId.Value), _spanNames);
 
         try
         {

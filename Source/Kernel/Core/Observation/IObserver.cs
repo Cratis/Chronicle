@@ -1,12 +1,12 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Choreography.Jobs;
 using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Storage.Observation;
-using Cratis.Orleans.Jobs;
 using Orleans.CodeGeneration;
 using Orleans.Concurrency;
 
@@ -20,7 +20,7 @@ namespace Cratis.Chronicle.Observation;
 /// deliberately not part of this grain contract - state transitions are driven from within the observer
 /// implementation, never across a grain reference.
 /// </remarks>
-[Version(5)]
+[Version(6)]
 public interface IObserver : IGrainWithStringKey
 {
     /// <summary>
@@ -396,6 +396,15 @@ public interface IObserver : IGrainWithStringKey
     Task Replayed(EventSequenceNumber lastHandledEventSequenceNumber);
 
     /// <summary>
+    /// Notify that a replay started under the given ownership epoch has been replayed.
+    /// </summary>
+    /// <param name="lastHandledEventSequenceNumber">The <see cref="EventSequenceNumber"/> it has been replayed to.</param>
+    /// <param name="ownershipEpoch">The ownership epoch the replay was started under, or null when it carries none.</param>
+    /// <remarks>Ignored when a newer replay holds the observer-wide claim under another epoch.</remarks>
+    /// <returns>Awaitable task.</returns>
+    Task Replayed(EventSequenceNumber lastHandledEventSequenceNumber, ulong? ownershipEpoch);
+
+    /// <summary>
     /// Releases a refused full replay without changing progress or resolving failed partitions.
     /// </summary>
     /// <remarks>Leaves retired, removed and non-replaying observers unchanged; quarantined observers remain quarantined.</remarks>
@@ -403,10 +412,26 @@ public interface IObserver : IGrainWithStringKey
     Task ReleaseRefusedReplay();
 
     /// <summary>
+    /// Releases a refused full replay started under the given ownership epoch without changing progress or resolving failed partitions.
+    /// </summary>
+    /// <param name="ownershipEpoch">The ownership epoch the replay was started under, or null when it carries none.</param>
+    /// <remarks>Ignored when a newer replay holds the observer-wide claim under another epoch.</remarks>
+    /// <returns>Awaitable task.</returns>
+    Task ReleaseRefusedReplay(ulong? ownershipEpoch);
+
+    /// <summary>
     /// Quarantines a replaying observer whose replay job could not prepare its steps, keeping the replay pending.
     /// </summary>
     /// <returns>Awaitable task.</returns>
     Task ReplayStepsCouldNotBePrepared();
+
+    /// <summary>
+    /// Quarantines a replaying observer whose replay job, started under the given ownership epoch, could not prepare its steps, keeping the replay pending.
+    /// </summary>
+    /// <param name="ownershipEpoch">The ownership epoch the replay was started under, or null when it carries none.</param>
+    /// <remarks>Ignored when a newer replay holds the observer-wide claim under another epoch.</remarks>
+    /// <returns>Awaitable task.</returns>
+    Task ReplayStepsCouldNotBePrepared(ulong? ownershipEpoch);
 
     /// <summary>
     /// Releases a refused partition replay and probes catch-up from its persisted live-delivery lower bound.
@@ -418,6 +443,16 @@ public interface IObserver : IGrainWithStringKey
     Task ReleaseRefusedPartitionReplay(Key partition, EventSequenceNumber heldBackFrom);
 
     /// <summary>
+    /// Releases a refused partition replay started under the given ownership epoch and probes catch-up from its persisted live-delivery lower bound.
+    /// </summary>
+    /// <param name="partition">The partition whose replay was refused.</param>
+    /// <param name="heldBackFrom">The first held-back position, or unavailable for a legacy job requiring operator recovery.</param>
+    /// <param name="ownershipEpoch">The ownership epoch the replay was started under, or null when it carries none.</param>
+    /// <remarks>Ignored when a newer replay holds the partition's claim under another epoch.</remarks>
+    /// <returns>Awaitable task.</returns>
+    Task ReleaseRefusedPartitionReplay(Key partition, EventSequenceNumber heldBackFrom, ulong? ownershipEpoch);
+
+    /// <summary>
     /// Complete a replay, resolving only failures already present when it began.
     /// </summary>
     /// <param name="lastHandledEventSequenceNumber">The last event handled by the replay.</param>
@@ -426,6 +461,18 @@ public interface IObserver : IGrainWithStringKey
     /// <param name="replayStartedAt">The time before replay steps were prepared.</param>
     /// <returns>Awaitable task.</returns>
     Task ReplayedSuccessfullySince(EventSequenceNumber lastHandledEventSequenceNumber, IReadOnlyDictionary<Key, EventSequenceNumber> replayedPartitions, EventType[] replayedEventTypes, DateTimeOffset replayStartedAt);
+
+    /// <summary>
+    /// Complete a replay started under the given ownership epoch, resolving only failures already present when it began.
+    /// </summary>
+    /// <param name="lastHandledEventSequenceNumber">The last event handled by the replay.</param>
+    /// <param name="replayedPartitions">Partitions and their successfully handled sequence numbers.</param>
+    /// <param name="replayedEventTypes">The event types read during the replay.</param>
+    /// <param name="replayStartedAt">The time before replay steps were prepared.</param>
+    /// <param name="ownershipEpoch">The ownership epoch the replay was started under, or null when it carries none.</param>
+    /// <remarks>Ignored when a newer replay holds the observer-wide claim under another epoch.</remarks>
+    /// <returns>Awaitable task.</returns>
+    Task ReplayedSuccessfullySince(EventSequenceNumber lastHandledEventSequenceNumber, IReadOnlyDictionary<Key, EventSequenceNumber> replayedPartitions, EventType[] replayedEventTypes, DateTimeOffset replayStartedAt, ulong? ownershipEpoch);
 
     /// <summary>
     /// Notify that the partition has been replayed.
@@ -461,6 +508,18 @@ public interface IObserver : IGrainWithStringKey
     /// <param name="replayedEventTypes">The event types included in the replay, or empty when the replay cannot prove it handled the partition's failed event. Non-empty only proves a complete all-type replay. When no read or held-back boundary is known (legacy jobs or HeldBackFrom at <see cref="EventSequenceNumber.First"/>), catch-up falls back to the partition's start.</param>
     /// <returns>Awaitable task.</returns>
     Task PartitionReplayed(Key partition, EventSequenceNumber lastHandledEventSequenceNumber, EventSequenceNumber lastScannedEventSequenceNumber, EventType[] replayedEventTypes);
+
+    /// <summary>
+    /// Notify that a partition replay started under the given ownership epoch finished, including how far the replay read.
+    /// </summary>
+    /// <param name="partition">The partition being replayed.</param>
+    /// <param name="lastHandledEventSequenceNumber">The last event sequence number handled by the replay, or <see cref="EventSequenceNumber.Unavailable"/> when it handled nothing.</param>
+    /// <param name="lastScannedEventSequenceNumber">The event sequence number of the last event the replay read for the partition, as for <see cref="PartitionReplayed(Key, EventSequenceNumber, EventSequenceNumber, EventType[])"/>.</param>
+    /// <param name="replayedEventTypes">The event types included in the replay, as for <see cref="PartitionReplayed(Key, EventSequenceNumber, EventSequenceNumber, EventType[])"/>.</param>
+    /// <param name="ownershipEpoch">The ownership epoch the replay was started under, or null when it carries none.</param>
+    /// <remarks>Ignored when a newer replay holds the partition's claim under another epoch.</remarks>
+    /// <returns>Awaitable task.</returns>
+    Task PartitionReplayed(Key partition, EventSequenceNumber lastHandledEventSequenceNumber, EventSequenceNumber lastScannedEventSequenceNumber, EventType[] replayedEventTypes, ulong? ownershipEpoch);
 
     /// <summary>
     /// Notify that the partition has failed.
@@ -690,6 +749,17 @@ public interface IObserver : IGrainWithStringKey
     /// <param name="lastScannedEventSequenceNumber">The event sequence number of the last event the catchup read for the partition, handled or excluded by the observer's filters, or <see cref="EventSequenceNumber.Unavailable"/> when the catchup did not complete.</param>
     /// <returns>Awaitable task.</returns>
     Task PartitionCaughtUp(Key partition, EventSequenceNumber lastHandledEventSequenceNumber, EventSequenceNumber lastScannedEventSequenceNumber);
+
+    /// <summary>
+    /// Notify that a partition catch-up started under the given ownership epoch was caught up, including how far it read.
+    /// </summary>
+    /// <param name="partition">The partition that has caught up.</param>
+    /// <param name="lastHandledEventSequenceNumber">The event sequence number of the last event that was handled in the catchup.</param>
+    /// <param name="lastScannedEventSequenceNumber">The event sequence number of the last event the catchup read for the partition, or <see cref="EventSequenceNumber.Unavailable"/> when the catchup did not complete.</param>
+    /// <param name="ownershipEpoch">The ownership epoch the catch-up was started under, or null when it carries none.</param>
+    /// <remarks>Ignored when a newer catch-up holds the partition's claim under another epoch.</remarks>
+    /// <returns>Awaitable task.</returns>
+    Task PartitionCaughtUp(Key partition, EventSequenceNumber lastHandledEventSequenceNumber, EventSequenceNumber lastScannedEventSequenceNumber, ulong? ownershipEpoch);
 
     /// <summary>
     /// Attempt to recover a failed partition.

@@ -24,7 +24,7 @@ public class a_legacy_installation : Specification
         _snapshot = ResourceNameSnapshot.NotReady();
         _snapshot.Publish([], []);
         _gate = new(_snapshot, new InMemoryResourceNameReservations(), new ResourceNameExemptions([(_legacyStore.Value, [])]), NullLogger<ResourceNameGate>.Instance);
-        _storages = new(new KnownInstancesOf<ISinkFactory>([]), Substitute.For<Cratis.Orleans.Storage.IJobsStorage>(), _gate);
+        _storages = new(new KnownInstancesOf<ISinkFactory>([]), Substitute.For<Cratis.Choreography.Storage.IJobsStorage>(), _gate);
         _storage = new Storage.InMemory.Storage(_storages, Substitute.For<Storage.ISystemStorage>());
 
         // The legacy names are already in use, as the check of the names in use records them when the server starts.

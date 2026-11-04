@@ -23,7 +23,7 @@ public class an_event_store_storage_with_name_checks : Specification
         _storage = new EventStoreStorage(
             _eventStore,
             @namespace => new Chronicle.Storage.Sinks.Sinks(_eventStore, @namespace, new KnownInstancesOf<ISinkFactory>([])),
-            Substitute.For<Cratis.Orleans.Storage.IJobsStorage>(),
+            Substitute.For<Cratis.Choreography.Storage.IJobsStorage>(),
             new NamespaceOpeningGuard(gate, () => Task.FromResult<IEnumerable<string>>([_eventStore.Value])));
     }
 }

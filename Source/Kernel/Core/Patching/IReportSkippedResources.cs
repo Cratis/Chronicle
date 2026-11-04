@@ -10,7 +10,7 @@ namespace Cratis.Chronicle.Patching;
 /// </summary>
 /// <remarks>
 /// <para>
-/// A patch that left an event store or namespace out has not reached it. The <see cref="PatchManager"/> therefore does
+/// A patch that left an event store or namespace out has not reached it. The <see cref="ChroniclePatchStorage"/> therefore does
 /// not record the patch as applied while <see cref="SkippedResources"/> has anything in it, and does not move the
 /// system version past it, so the patch runs again on a later startup, once the quarantine is resolved.
 /// </para>

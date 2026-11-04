@@ -17,7 +17,7 @@ public class and_sql_server_values_are_pre_hash_rows(SqlServerFixture fixture) :
     async Task Establish()
     {
         var connectionString = await fixture.CreateDatabase();
-        await CreateLegacyTable(connectionString, true, () => fixture.DropDatabase(connectionString));
+        await CreateLegacyTable(connectionString, true, () => fixture.QueueDatabaseDrop(connectionString));
         await AddClaim("owner", "legacy@example.com");
     }
 

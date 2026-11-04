@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Diagnostics;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Observation;
@@ -14,8 +15,11 @@ namespace Cratis.Chronicle.Observation;
 /// <param name="logger">The logger.</param>
 /// <param name="observer">The observer.</param>
 /// <param name="partition">The partition.</param>
-internal class ClientDeliveryWait(TimeProvider clock, ILogger logger, ObserverKey observer, Key partition)
+/// <param name="metrics">The subscriber's precreated instruments.</param>
+internal class ClientDeliveryWait(TimeProvider clock, ILogger logger, ObserverKey observer, Key partition, ClientObserverSubscriberMetrics? metrics = null)
 {
+    readonly ClientObserverSubscriberMetrics _metrics = metrics ?? new(MetricNames.Legacy);
+
     /// <summary>Rejects a delivery that waited in the grain queue past its deadline.</summary>
     /// <param name="context">The dispatch context.</param>
     /// <returns>Whether dispatch must be skipped.</returns>
@@ -43,7 +47,7 @@ internal class ClientDeliveryWait(TimeProvider clock, ILogger logger, ObserverKe
             if (context.DeliverBy is { } deliverBy && clock.GetUtcNow() >= deliverBy)
             {
                 logger.LateResultForAbandonedDelivery(observer, partition, observerResult(result).State, clock.GetUtcNow() - deliverBy);
-                ClientObserverSubscriberMetrics.LateResult(observerResult(result).State);
+                _metrics.LateResult(observerResult(result).State);
                 throw new AbandonedDeliveryDiscarded();
             }
             return result;
@@ -51,14 +55,14 @@ internal class ClientDeliveryWait(TimeProvider clock, ILogger logger, ObserverKe
         catch (TimeoutException) when (context.AbandonAt is { } abandonAt && clock.GetUtcNow() >= abandonAt)
         {
             logger.AbandonedDeliveryHoldExpired(observer, partition);
-            ClientObserverSubscriberMetrics.HoldExpired();
+            _metrics.HoldExpired();
             throw new AbandonedDeliveryDiscarded();
         }
         finally
         {
             if (context.DeliverBy is { } deliverBy && clock.GetUtcNow() >= deliverBy)
             {
-                ClientObserverSubscriberMetrics.FenceDuration(clock.GetUtcNow() - deliverBy);
+                _metrics.FenceDuration(clock.GetUtcNow() - deliverBy);
             }
         }
     }

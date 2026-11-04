@@ -21,6 +21,7 @@ using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.EventSequences.Concurrency;
 using Cratis.Chronicle.EventSequences.Migrations;
 using Cratis.Chronicle.EventSequences.Placement;
+using Cratis.Chronicle.EventTypes;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Patterns;
@@ -42,6 +43,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Orleans.BroadcastChannel;
 using Orleans.Providers;
+using ReservedEventSequenceRules = Cratis.Chronicle.Sequences.ReservedEventSequenceRules;
 
 namespace Cratis.Chronicle.EventSequences;
 
@@ -49,6 +51,7 @@ namespace Cratis.Chronicle.EventSequences;
 /// Represents an implementation of <see cref="IEventSequence"/>.
 /// </summary>
 /// <param name="storage"><see cref="IStorage"/> for accessing the underlying storage.</param>
+/// <param name="reservedEventSequenceIds">The active provider's reserved sequence names.</param>
 /// <param name="constraintValidatorSetFactory"><see cref="IConstraintValidationFactory"/> for creating a set of constraint validators.</param>
 /// <param name="eventTypeMigrations"><see cref="IEventTypeMigrations"/> for migrating events between generations.</param>
 /// <param name="patternCapture">The pattern capture subscriptions to reconcile.</param>
@@ -62,6 +65,7 @@ namespace Cratis.Chronicle.EventSequences;
 /// <param name="options"><see cref="IOptions{T}"/> for <see cref="ChronicleOptions"/>.</param>
 /// <param name="logger"><see cref="ILogger{T}"/> for logging.</param>
 /// <param name="concurrencyValidatorLogger"><see cref="ILogger{T}"/> for the <see cref="ConcurrencyValidator"/> created per append.</param>
+/// <param name="schemaCache">The effective protection schema cache.</param>
 /// <param name="constraintIndexReplayLogger">The constraint replay logger.</param>
 /// <param name="encryptionKeyStorage">The read-only key lookup used to compare keyed retries.</param>
 /// <param name="timeProvider">The clock for default occurrence times and effect receipts; defaults to the system clock.</param>
@@ -69,6 +73,7 @@ namespace Cratis.Chronicle.EventSequences;
 [EventSequencePlacement]
 public partial class EventSequence(
     IStorage storage,
+    IReservedEventSequenceIds reservedEventSequenceIds,
     IConstraintValidationFactory constraintValidatorSetFactory,
     IEventTypeMigrations eventTypeMigrations,
     IPatternCapture patternCapture,
@@ -82,6 +87,7 @@ public partial class EventSequence(
     IOptions<ChronicleOptions> options,
     ILogger<EventSequence> logger,
     ILogger<ConcurrencyValidator> concurrencyValidatorLogger,
+    IEventTypeSchemaCache schemaCache,
     ILogger<ConstraintIndexReplay>? constraintIndexReplayLogger = null,
     IEncryptionKeyStorage? encryptionKeyStorage = null,
     TimeProvider? timeProvider = null) : Grain<EventSequenceState>, IEventSequence, IOnBroadcastChannelSubscribed
@@ -96,7 +102,7 @@ public partial class EventSequence(
     IClosedStreamsConstraintStorage? _closedStreamsStorage;
     EventSequenceId _eventSequenceId = EventSequenceId.Unspecified;
     EventSequenceKey _eventSequenceKey = EventSequenceKey.NotSet;
-    IMeterScope<EventSequence>? _metrics;
+    EventSequenceMetrics? _metrics;
     IAppendedEventsQueues? _appendedEventsQueues;
     IConstraintValidation? _constraints;
     ConstraintsVersion _constraintsVersion = ConstraintsVersion.NotSet;
@@ -106,6 +112,7 @@ public partial class EventSequence(
     int _statePersistenceInterval = 1;
     int _appendsSinceStateWrite;
     bool _stateWrittenSinceActivation;
+    bool _mayWriteSequence = true;
     IEventSequenceStorage EventSequenceStorage => _eventSequenceStorage ??= storage.GetEventStore(_eventSequenceKey.EventStore).GetNamespace(_eventSequenceKey.Namespace).GetEventSequence(_eventSequenceId);
     IEventSourcesStorage EventSourcesStorage => storage.GetEventStore(_eventSequenceKey.EventStore).EventSources;
     IEventTypesStorage EventTypesStorage => _eventTypesStorage ??= storage.GetEventStore(_eventSequenceKey.EventStore).EventTypes;
@@ -121,7 +128,16 @@ public partial class EventSequence(
     {
         _eventSequenceKey = EventSequenceKey.Parse(this.GetPrimaryKeyString());
         _eventSequenceId = _eventSequenceKey.EventSequenceId;
-        _metrics = meter.BeginEventSequenceScope(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace);
+        if (ReservedEventSequenceRules.MayBeReserved(reservedEventSequenceIds, _eventSequenceKey.EventStore, _eventSequenceKey.Namespace, _eventSequenceId))
+        {
+            _mayWriteSequence = await ReservedEventSequenceRules.Exists(storage, _eventSequenceKey.EventStore, _eventSequenceKey.Namespace, _eventSequenceId);
+        }
+        _metrics = meter.BeginEventSequenceScope(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, options.Value.Telemetry.MetricNames);
+        if (!_mayWriteSequence)
+        {
+            await base.OnActivateAsync(cancellationToken);
+            return;
+        }
 
         // Bootstrap ensures System/Default before registering its schemas and observers. Calling back
         // into Namespaces(System) here can deadlock when its Ensure is activating this sequence to append
@@ -178,6 +194,7 @@ public partial class EventSequence(
     /// </remarks>
     public override async Task OnDeactivateAsync(DeactivationReason reason, CancellationToken cancellationToken)
     {
+        if (!_mayWriteSequence) return;
         _constraintIndexRepairTimer?.Dispose();
         _constraintIndexRepairTimer = null;
         DisposeSpillRetry();
@@ -215,6 +232,7 @@ public partial class EventSequence(
     /// </remarks>
     public async Task RefreshConstraints()
     {
+        if (!_mayWriteSequence) return;
         var version = await ConstraintsGrain.GetVersion();
         _constraints = await constraintValidatorSetFactory.Create(_eventSequenceKey);
         _constraintsVersion = version;
@@ -230,6 +248,7 @@ public partial class EventSequence(
     /// <inheritdoc/>
     public Task<EventSequenceNumber> GetTailSequenceNumberForEventTypes(IEnumerable<EventType> eventTypes)
     {
+        if (!_mayWriteSequence) return Task.FromResult(EventSequenceNumber.Unavailable);
         logger.GettingTailSequenceNumberForEventTypes(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, _eventSequenceId, eventTypes);
 
         var sequenceNumber = EventSequenceNumber.Unavailable;
@@ -257,6 +276,7 @@ public partial class EventSequence(
         IEnumerable<EventType>? eventTypes = null,
         EventSourceId? eventSourceId = null)
     {
+        if (!_mayWriteSequence) return GetSequenceNumberError.NotFound;
         try
         {
             logger.GettingNextSequenceNumberGreaterOrEqualThan(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, _eventSequenceId, sequenceNumber, eventTypes ?? []);
@@ -283,6 +303,7 @@ public partial class EventSequence(
         EventStreamType? eventStreamType = null,
         EventStreamId? eventStreamId = null)
     {
+        if (!_mayWriteSequence) throw new ReservedEventSequenceName(_eventSequenceId);
         var content = eventSerializer.Serialize(@event);
         var eventType = @event.GetType().GetEventType();
 
@@ -335,8 +356,11 @@ public partial class EventSequence(
         IEnumerable<Tag> tags,
         ConcurrencyScope concurrencyScope,
         DateTimeOffset? occurred = null,
-        Subject? subject = null) =>
-        await Append(eventSourceType, eventSourceId, eventStreamType, eventStreamId, eventType, content, correlationId, causation, causedBy, tags, concurrencyScope, occurred, subject, []);
+        Subject? subject = null)
+    {
+        if (!_mayWriteSequence) throw new ReservedEventSequenceName(_eventSequenceId);
+        return await Append(eventSourceType, eventSourceId, eventStreamType, eventStreamId, eventType, content, correlationId, causation, causedBy, tags, concurrencyScope, occurred, subject, []);
+    }
 
     /// <inheritdoc/>
     public async Task<AppendResult> Append(
@@ -354,8 +378,11 @@ public partial class EventSequence(
         DateTimeOffset? occurred,
         Subject? subject,
         IReadOnlyCollection<NamedTag> namedTags,
-        EventSourceName? eventSource = null) =>
-        await AppendValidated(eventSourceType, eventSourceId, eventStreamType, eventStreamId, eventType, content, correlationId, causation, causedBy, tags, concurrencyScope, occurred, subject, namedTags, eventSource);
+        EventSourceName? eventSource = null)
+    {
+        if (!_mayWriteSequence) throw new ReservedEventSequenceName(_eventSequenceId);
+        return await AppendValidated(eventSourceType, eventSourceId, eventStreamType, eventStreamId, eventType, content, correlationId, causation, causedBy, tags, concurrencyScope, occurred, subject, namedTags, eventSource);
+    }
 
     /// <inheritdoc/>
     public async Task<AppendManyResult> AppendMany(
@@ -363,8 +390,11 @@ public partial class EventSequence(
         CorrelationId correlationId,
         IEnumerable<Causation> causation,
         Identity causedBy,
-        ConcurrencyScopes concurrencyScopes) =>
-        await AppendManyValidated(events, correlationId, causation, causedBy, concurrencyScopes);
+        ConcurrencyScopes concurrencyScopes)
+    {
+        if (!_mayWriteSequence) throw new ReservedEventSequenceName(_eventSequenceId);
+        return await AppendManyValidated(events, correlationId, causation, causedBy, concurrencyScopes);
+    }
 
     /// <inheritdoc/>
     public async Task Revise(
@@ -375,6 +405,7 @@ public partial class EventSequence(
         IEnumerable<Causation> causation,
         Identity causedBy)
     {
+        if (!_mayWriteSequence) throw new ReservedEventSequenceName(_eventSequenceId);
         if (string.Equals(_eventSequenceKey.EventStore.Value, EventStoreName.System.Value, StringComparison.OrdinalIgnoreCase))
         {
             throw new SystemEventStoreEventsAreImmutable();
@@ -393,7 +424,8 @@ public partial class EventSequence(
         }
 
         var eventSchema = await EventTypesStorage.GetFor(eventType.Id, eventType.Generation);
-        var (contentAsExpandoObject, _) = await MakeEventCompliant(@event.Context.EventSourceId, eventSchema, content, @event.Context.Subject);
+        var protectionSchema = await schemaCache.GetProtectionSchemaFor(_eventSequenceKey.EventStore, eventType.Id, eventType.Generation, eventSchema.Schema);
+        var (contentAsExpandoObject, _) = await MakeEventCompliant(@event.Context.EventSourceId, protectionSchema, content, @event.Context.Subject);
         var hash = eventHashCalculator.Calculate(eventType.Id, @event.Context.EventSourceId, contentAsExpandoObject);
 
         await PrepareConstraintIndexesForRevision(@event);
@@ -419,6 +451,7 @@ public partial class EventSequence(
         IEnumerable<Causation> causation,
         Identity causedBy)
     {
+        if (!_mayWriteSequence) throw new ReservedEventSequenceName(_eventSequenceId);
         if (string.Equals(_eventSequenceKey.EventStore.Value, EventStoreName.System.Value, StringComparison.OrdinalIgnoreCase))
         {
             throw new SystemEventStoreEventsAreImmutable();
@@ -462,6 +495,7 @@ public partial class EventSequence(
         IEnumerable<Causation> causation,
         Identity causedBy)
     {
+        if (!_mayWriteSequence) throw new ReservedEventSequenceName(_eventSequenceId);
         if (string.Equals(_eventSequenceKey.EventStore.Value, EventStoreName.System.Value, StringComparison.OrdinalIgnoreCase))
         {
             throw new SystemEventStoreEventsAreImmutable();
@@ -486,14 +520,18 @@ public partial class EventSequence(
     }
 
     /// <inheritdoc/>
-    public Task<Result<EventSequenceNumber, CompleteStreamError>> CompleteStream(EventStreamType eventStreamType, EventStreamId eventStreamId) =>
-        CompleteStream(new ClosedStreamScope(
+    public Task<Result<EventSequenceNumber, CompleteStreamError>> CompleteStream(EventStreamType eventStreamType, EventStreamId eventStreamId)
+    {
+        if (!_mayWriteSequence) throw new ReservedEventSequenceName(_eventSequenceId);
+        return CompleteStream(new ClosedStreamScope(
             EventStreamType: eventStreamType.Value.Length == 0 ? EventStreamType.All : eventStreamType,
             EventStreamId: eventStreamId.Value.Length == 0 ? EventStreamId.Default : eventStreamId));
+    }
 
     /// <inheritdoc/>
     public async Task<Result<EventSequenceNumber, CompleteStreamError>> CompleteStream(ClosedStreamScope scope, EventSequenceNumber? expectedTailSequenceNumber = default)
     {
+        if (!_mayWriteSequence) throw new ReservedEventSequenceName(_eventSequenceId);
         scope = scope.Normalized();
         if (scope.IsEmpty) return CompleteStreamError.EmptyScope;
         if (scope.IsDefaultStreamOnly) return CompleteStreamError.DefaultStreamCannotBeCompleted;
@@ -521,11 +559,12 @@ public partial class EventSequence(
 
     /// <inheritdoc/>
     public async Task<bool> IsStreamCompleted(ClosedStreamScope scope) =>
-        (await ClosedStreamsStorage.GetCovering(scope, await ClosedStreamsStorage.GetDimensionsInUse())).Any();
+        _mayWriteSequence && (await ClosedStreamsStorage.GetCovering(scope, await ClosedStreamsStorage.GetDimensionsInUse())).Any();
 
     /// <inheritdoc/>
     public async Task<Result<Sequences.ReopenStreamScopeError>> ReopenCompletedStream(ClosedStreamScope scope, string reason, CorrelationId correlationId, IEnumerable<Causation> causation, Identity causedBy)
     {
+        if (!_mayWriteSequence) throw new ReservedEventSequenceName(_eventSequenceId);
         scope = scope.Normalized();
         var exactClosures = (await ClosedStreamsStorage.GetAll()).Where(closure => closure.Scope == scope).ToArray();
         if (!exactClosures.Any(closure => closure.Owner == ClosedStreamOwner.Manual))
@@ -786,7 +825,8 @@ public partial class EventSequence(
         Subject? subject,
         IReadOnlyCollection<NamedTag> namedTags,
         EventSourceName? eventSource,
-        EventPublication? publication)
+        EventPublication? publication,
+        EventSequenceNumber? compensationFor = null)
     {
         AppendedEvent committed;
         try
@@ -838,7 +878,7 @@ public partial class EventSequence(
                     });
                 }
 
-                if (eventSource?.IsSet == true)
+                if (eventSource?.IsSet == true || compensationFor is not null)
                 {
                     return await AppendThroughEventSource(
                         new EventToAppendToStorage(
@@ -858,7 +898,8 @@ public partial class EventSequence(
                             subject)
                         {
                             NamedTags = namedTags,
-                            EventSource = eventSource,
+                            EventSource = eventSource ?? EventSourceName.NotSet,
+                            CompensationFor = compensationFor,
                             GenerationalContent = migratedContent,
                             ContentHashes = contentHashes
                         });
@@ -902,6 +943,7 @@ public partial class EventSequence(
             {
                 attempted = new EventToAppendToStorage(State.SequenceNumber, eventSourceType, eventSourceId, eventStreamType, eventStreamId, eventType, correlationId, CausationForStorage(causation), identity, tags, occurred ?? _timeProvider.GetUtcNow(), compliantEvent, contentHashes.TryGetValue(eventType.Generation, out var hash) ? hash : EventHash.NotSet, subject)
                 {
+                    CompensationFor = compensationFor,
                     GenerationalContent = migratedContent,
                     ContentHashes = contentHashes
                 };
@@ -1058,7 +1100,8 @@ public partial class EventSequence(
                 return schemaError;
             }
 
-            var (compliantEventAsExpandoObject, compliantContent) = await MakeEventCompliant(eventSourceId, eventSchema, content, subject, keyUses);
+            var protectionSchema = await schemaCache.GetProtectionSchemaFor(_eventSequenceKey.EventStore, eventType.Id, eventType.Generation, eventSchema.Schema);
+            var (compliantEventAsExpandoObject, compliantContent) = await MakeEventCompliant(eventSourceId, protectionSchema, content, subject, keyUses);
 
             // Constraint validation and index updates must operate on the ORIGINAL, pre-compliance content.
             // PII encryption is non-deterministic (a fresh data key and nonce per value), so hashing the
@@ -1072,7 +1115,7 @@ public partial class EventSequence(
                 : expandoObjectConverter.ToExpandoObject(content, eventSchema.Schema);
             var personalData = new ConstraintPersonalDataOfEvent(
                 subject?.IsSet == true ? subject : new Subject(eventSourceId.Value),
-                ConstraintPersonalData.PropertiesOf(eventSchema.Schema));
+                ConstraintPersonalData.PropertiesOf(protectionSchema));
             var constraintContext = await EstablishConstraintContext(eventSourceId, eventType, correlationId, plaintextEventAsExpandoObject, eventSourceType, eventStreamType, eventStreamId, batchClaims, personalData);
             if (constraintContext.TryGetError(out var error))
             {
@@ -1146,21 +1189,22 @@ public partial class EventSequence(
         return AppendResult.Failed(correlationId, [ex is EventPublicationConflict ? AppendError.EventPublicationConflict : ex.Message]);
     }
 
-    async Task<(ExpandoObject ExpandoObject, JsonObject CompliantContent)> MakeEventCompliant(EventSourceId eventSourceId, EventTypeSchema eventSchema, JsonObject content, Subject? subject = null, List<ProtectedValueUse>? keyUses = null)
+    async Task<(ExpandoObject ExpandoObject, JsonObject CompliantContent)> MakeEventCompliant(EventSourceId eventSourceId, JsonSchema schema, JsonObject content, Subject? subject = null, List<ProtectedValueUse>? keyUses = null)
     {
         var complianceIdentifier = subject?.IsSet == true ? subject.Value : eventSourceId.Value;
         JsonObject compliantEvent;
         if (keyUses is null)
         {
-            compliantEvent = await jsonComplianceManagerProvider.Apply(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, eventSchema.Schema, complianceIdentifier, content);
+            compliantEvent = await jsonComplianceManagerProvider.Apply(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, schema, complianceIdentifier, content);
         }
         else
         {
-            var reported = await jsonComplianceManagerProvider.ApplyReportingKeys(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, eventSchema.Schema, complianceIdentifier, content);
+            var reported = await jsonComplianceManagerProvider.ApplyReportingKeys(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, schema, complianceIdentifier, content);
             compliantEvent = reported.Value;
             keyUses.AddRange(reported.Uses);
         }
-        var expandoObject = expandoObjectConverter.ToExpandoObject(compliantEvent, eventSchema.Schema);
+
+        var expandoObject = expandoObjectConverter.ToExpandoObject(compliantEvent, schema);
         return (expandoObject, compliantEvent);
     }
 
@@ -1334,6 +1378,7 @@ public partial class EventSequence(
 
     async Task OnConstraintsChanged(ConstraintsChanged payload)
     {
+        if (!_mayWriteSequence) return;
         _constraints = await constraintValidatorSetFactory.Create(_eventSequenceKey);
     }
 

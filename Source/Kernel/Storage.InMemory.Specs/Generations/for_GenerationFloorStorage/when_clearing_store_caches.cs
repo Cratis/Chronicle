@@ -13,7 +13,7 @@ public class when_clearing_store_caches : Specification
     int _history;
     async Task Establish()
     {
-        _stores = new(new KnownInstancesOf<ISinkFactory>([]), Substitute.For<Orleans.Storage.IJobsStorage>());
+        _stores = new(new KnownInstancesOf<ISinkFactory>([]), Substitute.For<Choreography.Storage.IJobsStorage>());
         var floor = new GenerationFloor(new(1), new(1), [], new(Guid.NewGuid()), 0, DateTimeOffset.MinValue, "", "");
         await _stores.GetOrCreate("orders").GenerationFloor.Advance(new(floor, 0, "spec", "test", new(true, "spec")));
     }

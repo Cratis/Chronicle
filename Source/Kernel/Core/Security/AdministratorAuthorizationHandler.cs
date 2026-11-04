@@ -6,14 +6,15 @@ using Microsoft.AspNetCore.Authorization;
 namespace Cratis.Chronicle.Security;
 
 /// <summary>
-/// Evaluates the administrator requirement using the authoritative check.
+/// Evaluates the administrator requirement through the authorization decision point.
 /// </summary>
-/// <param name="authorization">The administrator authorization check.</param>
-public class AdministratorAuthorizationHandler(IAdministratorAuthorization authorization) : AuthorizationHandler<AdministratorRequirement>
+/// <param name="decisions">The authorization decision point.</param>
+public class AdministratorAuthorizationHandler(IAuthorizationDecisions decisions) : AuthorizationHandler<AdministratorRequirement>
 {
     /// <inheritdoc/>
     protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context, AdministratorRequirement requirement)
     {
-        if (await authorization.IsAuthorized(context.User)) context.Succeed(requirement);
+        var decision = await decisions.Decide(context.User, WellKnownCapabilities.AdministerSecurity, AuthorizationScope.Kernel);
+        if (decision.IsAllowed) context.Succeed(requirement);
     }
 }

@@ -5,10 +5,13 @@ using System.Security.Claims;
 using BenchmarkDotNet.Attributes;
 using Cratis.Arc.Commands;
 using Cratis.Arc.Queries;
+using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Security;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 
 namespace Cratis.Chronicle.Benchmarks.SystemStoreGuard;
 
@@ -51,7 +54,7 @@ public class ArcFilterBenchmark
     {
         var services = new ServiceCollection()
             .AddSingleton<IHttpContextAccessor>(new HttpContextAccessor { HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal() } })
-            .AddSingleton<ISystemStoreAccess>(new SystemStoreAccessVerdict(_probe))
+            .AddSingleton<ISystemStoreAccess>(new SystemStoreAccessVerdict(new AuthorizationDecisions(_probe, Options.Create(new ChronicleOptions()), NullLogger<AuthorizationDecisions>.Instance)))
             .BuildServiceProvider();
 
         var arguments = new QueryArguments { ["eventStore"] = "bench", ["namespace"] = "Default" };

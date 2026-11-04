@@ -14,7 +14,7 @@ public class when_reading : Specification
 
     async Task Establish()
     {
-        _storages = new(new KnownInstancesOf<ISinkFactory>([]), Substitute.For<Cratis.Orleans.Storage.IJobsStorage>());
+        _storages = new(new KnownInstancesOf<ISinkFactory>([]), Substitute.For<Cratis.Choreography.Storage.IJobsStorage>());
         var storage = _storages.GetOrCreate("orders");
         await storage.Namespaces.Ensure("acme");
         _countBefore = _storages.Names.Count();

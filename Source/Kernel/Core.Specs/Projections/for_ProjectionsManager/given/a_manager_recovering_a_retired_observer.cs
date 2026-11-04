@@ -39,6 +39,7 @@ public class a_manager_recovering_a_retired_observer : Observation.for_Observer.
         _jobsManager.ClearReceivedCalls();
 
         _managerSilo = new TestKitSilo();
+        _managerSilo.AddService<IProjectionSubscriptionThrottle>(new ProjectionSubscriptionThrottle());
         var comparer = Substitute.For<IProjectionDefinitionComparer>();
         comparer.Compare(Arg.Any<ProjectionKey>(), Arg.Any<ProjectionDefinition>(), Arg.Any<ProjectionDefinition>()).Returns(ProjectionDefinitionCompareResult.Same);
         _managerSilo.AddService(comparer);

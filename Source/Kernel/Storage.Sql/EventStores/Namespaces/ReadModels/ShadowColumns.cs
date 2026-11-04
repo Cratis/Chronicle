@@ -45,8 +45,12 @@ internal static partial class ShadowColumns
             }
             return new AddColumnOperation
             {
-                Name = name, Table = context.TableName, ClrType = typeof(string), ColumnType = definition.ColumnType,
-                IsNullable = true, DefaultValue = null,
+                Name = name,
+                Table = context.TableName,
+                ClrType = typeof(string),
+                ColumnType = definition.ColumnType,
+                IsNullable = true,
+                DefaultValue = null,
                 ComputedColumnSql = definition.GeneratedSql?.Invoke(helper.DelimitIdentifier(column.Name)),
                 IsStored = definition.GeneratedSql is null ? null : false
             };
@@ -84,7 +88,7 @@ internal static partial class ShadowColumns
         {
             return await operation();
         }
-        catch (Exception exception) when (IsMissingColumn(exception))
+        catch (Exception exception) when (IsMissingColumn(exception) && context.Database.CurrentTransaction is null)
         {
             await context.RepairShadowColumns();
             return await operation();

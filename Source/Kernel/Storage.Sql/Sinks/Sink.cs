@@ -8,12 +8,14 @@ using System.Linq.Expressions;
 using System.Reactive.Linq;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Cratis.Arc.Connections;
 using Cratis.Arc.EntityFrameworkCore;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
+using Cratis.Chronicle.Diagnostics;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
@@ -69,11 +71,18 @@ public partial class Sink : ISink, ICanReconcileIndexes, ISinkCompositeKeyLookup
     readonly IReadOnlyCollection<IndexDefinition> _indexes;
     readonly ReadModelIdentifier _readModelIdentifier;
     readonly string _tableName;
-    readonly IReadOnlyList<ProjectedColumn> _columns;
+    readonly bool _needsLayout;
     readonly ReplayingTables _replayingTables;
     readonly ILogger<Sink> _logger;
-    readonly LegacyCompositeKey? _compositeKey;
+    readonly SqlStorageTelemetry _telemetry;
+    readonly SqlCompositeKeyShadow _compositeKeyShadow;
     readonly ConcurrentDictionary<string, bool> _reportedKeyRebuildFailures = new();
+    readonly object _layoutLock = new();
+    IReadOnlyList<ProjectedColumn> _columns;
+    Task? _layout;
+    Task<bool>? _readLayout;
+    bool _layoutResolvedForRead;
+    LegacyCompositeKey? _compositeKey;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Sink"/> class.
@@ -115,6 +124,8 @@ public partial class Sink : ISink, ICanReconcileIndexes, ISinkCompositeKeyLookup
         ILogger<Sink> logger)
     {
         _logger = logger;
+        _telemetry = SqlStorageTelemetry.For(database);
+        _compositeKeyShadow = new(database is Database sql ? sql.MetricNames : MetricNames.Legacy);
         _replayingTables = replayingTables;
         _eventStoreName = eventStoreName;
         _namespace = @namespace;
@@ -126,7 +137,14 @@ public partial class Sink : ISink, ICanReconcileIndexes, ISinkCompositeKeyLookup
         _tableName = readModel.ContainerName.Value;
         _columns = ProjectedColumns.ForSchema(_schema, _indexes);
         _compositeKey = LegacyCompositeKey.For(_schema, _columns.First(c => c.IsKey));
+        _needsLayout = ReadModelKeyNames.RequiresLayoutResolution(_schema);
     }
+
+    /// <summary>
+    /// Gets or sets how the sink reads the layout of its table. Only read model schemas that spell their identifier other
+    /// than <c language="csharp">Id</c> or <c language="csharp">id</c> read it, once per sink instance.
+    /// </summary>
+    internal Func<DatabaseFacade, DatabaseType, string, Task<TableLayout>> ReadTableLayout { get; set; } = PrimaryKeyColumns.LayoutOf;
 
     /// <inheritdoc/>
     public SinkTypeId TypeId => WellKnownSinkTypes.SQL;
@@ -161,7 +179,7 @@ public partial class Sink : ISink, ICanReconcileIndexes, ISinkCompositeKeyLookup
     public async Task<ExpandoObject?> FindInPrimaryOrDefault(Key key)
     {
         var id = GetIdString(key);
-        await using var scope = await _database.ReadModelTable(_eventStoreName, _namespace, _tableName, _columns);
+        await using var scope = await OpenScope(_tableName);
         var entity = await scope.DbContext.Entries.AsNoTracking().FirstOrDefaultAsync(BuildIdPredicate(id));
         return entity is null ? null : MaterializeInstance(entity);
     }
@@ -203,6 +221,11 @@ public partial class Sink : ISink, ICanReconcileIndexes, ISinkCompositeKeyLookup
             return _noFailedPartitions;
         }
 
+        if (IsMultiWrite(changeset.Changes))
+        {
+            return await ApplyCycle(new CycleWrite { Scope = scope, Key = key, Id = id, Changeset = changeset, SequenceNumber = eventSequenceNumber, Mode = mode });
+        }
+
         await ApplyJoinsAndChildRemovals(scope, changeset, eventSequenceNumber, key.ArrayIndexers);
 
         var nonJoinedChanges = changeset.Changes
@@ -223,7 +246,7 @@ public partial class Sink : ISink, ICanReconcileIndexes, ISinkCompositeKeyLookup
         ApplyChangesToEntity(entry, nonJoinedChanges, key.ArrayIndexers);
         AdvanceLastHandledSequenceNumber(entry, eventSequenceNumber);
         await SaveRecoveringFromInsertRace(scope, entry, new PendingWrite(id, nonJoinedChanges, eventSequenceNumber, key.ArrayIndexers));
-        await SqlCompositeKeyShadow.Stamp(scope.DbContext, key, id, _logger);
+        await _compositeKeyShadow.Stamp(scope.DbContext, key, id, _logger);
 
         return _noFailedPartitions;
     }
@@ -298,7 +321,7 @@ public partial class Sink : ISink, ICanReconcileIndexes, ISinkCompositeKeyLookup
         {
             await scope.DbContext.SaveChangesAsync();
         }
-        catch (DbUpdateException ex) when (IsUniqueViolation(ex) && entry.State == EntityState.Added)
+        catch (DbUpdateException ex) when (IsUniqueViolation(ex) && entry.State == EntityState.Added && scope.DbContext.Database.CurrentTransaction is null)
         {
             // Lost the insert race against another concurrent ApplyChanges for the same key.
             // The row now exists; detach our Added entity, reload from DB, re-apply the changes
@@ -315,7 +338,7 @@ public partial class Sink : ISink, ICanReconcileIndexes, ISinkCompositeKeyLookup
             ApplyChangesToEntity(reloadedEntry, write.Changes, write.ArrayIndexers);
             AdvanceLastHandledSequenceNumber(reloadedEntry, write.SequenceNumber);
             await scope.DbContext.SaveChangesAsync();
-            SqlStorageTelemetry.RecoveredCollision("read-model");
+            _telemetry.RecoveredCollision("read-model");
         }
     }
 
@@ -390,7 +413,7 @@ public partial class Sink : ISink, ICanReconcileIndexes, ISinkCompositeKeyLookup
     {
         // Do not migrate the backup being removed: a truncated logical name may now address another
         // replay's backup. Resolve ownership through the marker table on the primary's connection.
-        await using var scope = await _database.ReadModelTable(_eventStoreName, _namespace, _tableName, _columns);
+        await using var scope = await OpenScope(_tableName);
         await scope.DbContext.EnsureReplayPromotions();
         var database = scope.DbContext.Database;
         var physicalName = PrimaryKeyNames.TableIdentifier(database.GetDatabaseType(), containerName.Value);
@@ -417,7 +440,7 @@ public partial class Sink : ISink, ICanReconcileIndexes, ISinkCompositeKeyLookup
     /// <inheritdoc/>
     public async Task PrepareInitialRun()
     {
-        await using var scope = await _database.ReadModelTable(_eventStoreName, _namespace, ActiveTableName, _columns);
+        await using var scope = await OpenScope(ActiveTableName);
         scope.DbContext.Entries.RemoveRange(scope.DbContext.Entries);
         await scope.DbContext.SaveChangesAsync();
     }
@@ -428,8 +451,19 @@ public partial class Sink : ISink, ICanReconcileIndexes, ISinkCompositeKeyLookup
     /// Opens a fresh scope routed at <see cref="ActiveTableName"/>. Caller owns the scope and
     /// is responsible for saving and disposing it.
     /// </summary>
-    Task<DbContextScope<ReadModelDbContext>> OpenActiveScope() =>
-        _database.ReadModelTable(_eventStoreName, _namespace, ActiveTableName, _columns);
+    Task<DbContextScope<ReadModelDbContext>> OpenActiveScope() => OpenScope(ActiveTableName);
+
+    /// <summary>
+    /// Opens a table of the read model with the key layout the table has, resolving that layout first.
+    /// </summary>
+    /// <param name="table">The name of the table to open.</param>
+    /// <param name="purpose">The <see cref="ConnectionPurpose"/> of the connection.</param>
+    /// <returns>The scope, which the caller owns.</returns>
+    async Task<DbContextScope<ReadModelDbContext>> OpenScope(string table, ConnectionPurpose purpose = ConnectionPurpose.Runtime)
+    {
+        await EnsureLayout();
+        return await _database.ReadModelTable(_eventStoreName, _namespace, table, _columns, purpose);
+    }
 
     /// <inheritdoc/>
     public async Task<Option<Key>> TryFindRootKeyByChildValue(PropertyPath childPropertyPath, object childValue)
@@ -445,6 +479,7 @@ public partial class Sink : ISink, ICanReconcileIndexes, ISinkCompositeKeyLookup
             return Option<Key>.None();
         }
 
+        await EnsureLayout();
         var rootColumn = FindColumn(pathSegments[0].Value);
         var keyColumn = _columns.FirstOrDefault(c => c.IsKey);
         if (rootColumn?.IsJson != true || keyColumn is null)
@@ -484,8 +519,9 @@ public partial class Sink : ISink, ICanReconcileIndexes, ISinkCompositeKeyLookup
     /// <inheritdoc/>
     public async Task<ReadModelInstances> GetInstances(ReadModelContainerName? occurrence, int skip, int take, ReadModelInstanceVisibility visibility)
     {
-        var containerName = QueriedTableNameFor(occurrence);
-        await using var scope = await _database.ReadModelTable(_eventStoreName, _namespace, containerName, _columns);
+        await using var scope = await OpenQueriedTable(occurrence);
+        if (scope is null) return new ReadModelInstances([], 0);
+
         var totalCount = await VisibleInstances(scope.DbContext.Entries.AsNoTracking(), visibility).CountAsync();
         var entries = await ReadOrderedPage(scope.DbContext, skip, take, visibility);
         return new ReadModelInstances(entries.Select(MaterializeInstance), totalCount);
@@ -504,8 +540,9 @@ public partial class Sink : ISink, ICanReconcileIndexes, ISinkCompositeKeyLookup
         // never stays bound to a table a replay promotion has renamed away.
         async Task<IEnumerable<ObservedPage>> ReadPage()
         {
-            var containerName = QueriedTableNameFor(occurrence);
-            await using var scope = await _database.ReadModelTable(_eventStoreName, _namespace, containerName, _columns);
+            await using var scope = await OpenQueriedTable(occurrence);
+            if (scope is null) return [new ObservedPage(0, [])];
+
             var totalCount = await VisibleInstances(scope.DbContext.Entries.AsNoTracking(), visibility).CountAsync();
             var entries = (await ReadOrderedPage(scope.DbContext, skip, take, visibility)).ToArray();
             return [new ObservedPage(totalCount, entries)];
@@ -515,6 +552,27 @@ public partial class Sink : ISink, ICanReconcileIndexes, ISinkCompositeKeyLookup
             .Select(pages => pages.Single().Entries.Select(MaterializeInstance).ToArray().AsEnumerable())
             .Catch<IEnumerable<ExpandoObject>, Exception>(error =>
                 Observable.Throw<IEnumerable<ExpandoObject>>(new FailedToObserveReadModelInstances(TypeId, _readModelIdentifier, QueriedTableNameFor(occurrence), error)));
+    }
+
+    /// <summary>
+    /// Opens the table instances are read from for a query.
+    /// </summary>
+    /// <param name="occurrence">The explicitly requested <see cref="ReadModelContainerName"/>, if any.</param>
+    /// <returns>The scope for the table, or null when an explicitly requested occurrence has no table.</returns>
+    /// <remarks>Only the primary table is provisioned on read; an occurrence never creates a table or a database.</remarks>
+    async Task<DbContextScope<ReadModelDbContext>?> OpenQueriedTable(ReadModelContainerName? occurrence)
+    {
+        var containerName = QueriedTableNameFor(occurrence);
+
+        // Every query resolves the key layout of the primary table first, so a sink that was never initialized does not
+        // read a table created in an earlier layout with the current one. Once resolved this is a field check.
+        await EnsureLayoutForRead();
+        if (occurrence is null || containerName == _tableName)
+        {
+            return await _database.ReadModelTable(_eventStoreName, _namespace, containerName, _columns);
+        }
+
+        return await _database.ExistingReadModelTable(_eventStoreName, _namespace, containerName, _columns);
     }
 
     /// <summary>

@@ -38,7 +38,7 @@ public class when_getting_a_namespace_after_it_is_quarantined : Specification, I
             "orders",
             database,
             Substitute.For<IInstancesOf<ISinkFactory>>(),
-            Substitute.For<Orleans.Storage.IJobsStorage>(),
+            Substitute.For<Choreography.Storage.IJobsStorage>(),
             new JsonSerializerOptions(),
             Substitute.For<Json.IExpandoObjectConverter>(),
             null,

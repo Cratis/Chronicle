@@ -18,5 +18,5 @@ public class a_sql_server_database(SqlServerFixture fixture) : a_database
 
     internal override async Task CreateDatabase() => ConnectionString = await fixture.CreateDatabase();
 
-    internal override Task DropDatabase() => fixture.DropDatabase(ConnectionString);
+    internal override Task DropDatabase() => fixture.QueueDatabaseDrop(ConnectionString);
 }

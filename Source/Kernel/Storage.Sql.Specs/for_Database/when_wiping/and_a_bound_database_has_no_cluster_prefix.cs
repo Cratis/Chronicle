@@ -15,8 +15,8 @@ public class and_a_bound_database_has_no_cluster_prefix(PostgreSqlFixture fixtur
     string _target;
     string _binding;
     long _rows;
-    DbContextOptions<Cratis.Orleans.Storage.Sql.Jobs.JobsDbContext> _before;
-    DbContextOptions<Cratis.Orleans.Storage.Sql.Jobs.JobsDbContext> _after;
+    DbContextOptions<Cratis.Choreography.Storage.Sql.Jobs.JobsDbContext> _before;
+    DbContextOptions<Cratis.Choreography.Storage.Sql.Jobs.JobsDbContext> _after;
 
     async Task Establish()
     {

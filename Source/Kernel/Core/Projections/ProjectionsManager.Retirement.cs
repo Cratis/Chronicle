@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Choreography.Jobs;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.Replaying;
@@ -13,7 +14,6 @@ using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Chronicle.Observation.States;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Recommendations;
-using Cratis.Orleans.Jobs;
 
 namespace Cratis.Chronicle.Projections;
 
@@ -29,6 +29,7 @@ public partial class ProjectionsManager
     /// <inheritdoc/>
     public async Task Forget(ProjectionId identifier)
     {
+        _lastRegistrationSignature = null;
         if (State.Projections.All(projection => projection.Identifier != identifier) &&
             !await storage.GetEventStore(_eventStoreName).Projections.Has(identifier))
         {
@@ -75,6 +76,7 @@ public partial class ProjectionsManager
                 await projectionsService.Unregister(_eventStoreName, orphan.Identifier);
                 await GrainFactory.GetGrain<IProjection>(new ProjectionKey(orphan.Identifier, _eventStoreName)).Remove();
 
+                _lastRegistrationSignature = null;
                 State.Projections = State.Projections.Where(projection => projection.Identifier != orphan.Identifier).ToList();
 
                 await AddReplayRecommendationForContainerSuccessors(orphan, namespaces, readModelDefinitions);

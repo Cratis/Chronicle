@@ -30,6 +30,7 @@ public class RedundantAutoMapCallAnalyzer : DiagnosticAnalyzer
         "IProjectionBuilder",
         "IFromBuilder",
         "IJoinBuilder",
+        "IChildrenJoinBuilder",
         "IChildrenBuilder"
     ];
 
@@ -176,7 +177,7 @@ public class RedundantAutoMapCallAnalyzer : DiagnosticAnalyzer
             GetRootParameter(access.Expression, semanticModel, roots) is not { } root || !parameters.Contains(root) ||
             semanticModel.GetDeclaredSymbol(parameter) is not IParameterSymbol symbol ||
             symbol.Type is not INamedTypeSymbol type ||
-            type.Name is not ("IProjectionBuilderFor" or "IFromBuilder" or "IJoinBuilder" or "IChildrenBuilder" or "INestedBuilder"))
+            type.Name is not ("IProjectionBuilderFor" or "IFromBuilder" or "IJoinBuilder" or "IChildrenJoinBuilder" or "IChildrenBuilder" or "INestedBuilder"))
         {
             return;
         }

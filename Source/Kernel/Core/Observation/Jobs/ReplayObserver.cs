@@ -3,12 +3,12 @@
 
 using System.Collections.Immutable;
 using System.Text.Json;
+using Cratis.Choreography.Jobs;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Storage;
 using Cratis.Monads;
-using Cratis.Orleans.Jobs;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Observation.Jobs;
@@ -97,7 +97,7 @@ public class ReplayObserver(
         {
             await EnsureReplaySupported();
         }
-        catch (GlobalProjectionReplayNotSupported)
+        catch (ReplayNotSupported)
         {
             return Result.Failed<ResumeJobSuccess, ResumeJobError>(CannotResumeJobError.JobCannotBeResumed);
         }
@@ -323,8 +323,10 @@ public class ReplayObserver(
             finalized = false;
             release = true;
         }
-        catch (Exception exception)
+        catch (Exception exception) when (exception is not ReplayNotSupported)
         {
+            // A refusal is not a failed finalization: it propagates, its notification already scheduled, so nothing
+            // reports the replay as completed and the observer does not advance past work that was never promoted.
             logger.ReplayFinalizationFailed(exception);
             finalized = false;
         }
@@ -372,7 +374,7 @@ public class ReplayObserver(
         // Do not await from job.Start's turn: Replay() on the observer may still be waiting on us.
         // The notification is kept and retried rather than dropped, so a failed one is not silently lost.
         CompletionNotification = release
-            ? NotifyObserverOfRefusal(observer)
+            ? NotifyObserverOfRefusal(observer, Request)
             : NotifyObserverOfCompletion(observer, canResolve, coveredPartitions, eventTypes, State.LastHandledEventSequenceNumber);
     }
 
@@ -403,14 +405,14 @@ public class ReplayObserver(
         return true;
     }
 
-    Task NotifyObserverOfRefusal(IObserver observer) => NotifyObserverWithRetry(observer.ReleaseRefusedReplay);
+    Task NotifyObserverOfRefusal(IObserver observer, ReplayObserverRequest request) => NotifyObserverWithRetry(() => observer.ReleaseRefusedReplay(request));
 
-    Task NotifyObserverOfUnpreparedReplay(IObserver observer) => NotifyObserverWithRetry(observer.ReplayStepsCouldNotBePrepared);
+    Task NotifyObserverOfUnpreparedReplay(IObserver observer) => NotifyObserverWithRetry(() => observer.ReplayStepsCouldNotBePrepared(Request));
 
     Task NotifyObserverOfCompletion(IObserver observer, bool canResolve, IReadOnlyDictionary<Key, EventSequenceNumber> coveredPartitions, EventType[] eventTypes, EventSequenceNumber lastHandledEventSequenceNumber) =>
         NotifyObserverWithRetry(() => canResolve
-            ? observer.ReplayedSuccessfullySince(lastHandledEventSequenceNumber, coveredPartitions, eventTypes, State.ReplayStartedAt)
-            : observer.Replayed(lastHandledEventSequenceNumber));
+            ? observer.ReplayedSuccessfullySince(Request, lastHandledEventSequenceNumber, coveredPartitions, eventTypes, State.ReplayStartedAt)
+            : observer.Replayed(Request, lastHandledEventSequenceNumber));
 
     async Task NotifyObserverWithRetry(Func<Task> notify)
     {
@@ -453,8 +455,9 @@ public class ReplayObserver(
         try
         {
             await GlobalProjectionReplay.EnsureSupported(storage, request.ObserverKey, request.ObserverType, State, WriteStateAsync);
+            await GenerationInitializationReplay.EnsureContinueAllowed(storage, request, State, WriteStateAsync);
         }
-        catch (GlobalProjectionReplayNotSupported)
+        catch (ReplayNotSupported)
         {
             if (!_refusalNotificationScheduled)
             {
@@ -463,7 +466,7 @@ public class ReplayObserver(
 
                 // Refusal is not completion: it must not replace the observer's retained cursor.
                 // Do not await the observer from Start: its replay turn may still be waiting for this job.
-                CompletionNotification = NotifyObserverOfRefusal(observer);
+                CompletionNotification = NotifyObserverOfRefusal(observer, request);
             }
 
             throw;

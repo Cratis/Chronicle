@@ -5,6 +5,7 @@ using Cratis.Arc.EntityFrameworkCore;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Storage.Sql.EventStores;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces;
+using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences;
 using Microsoft.EntityFrameworkCore;
 
 namespace Cratis.Chronicle.Storage.Sql.Cluster;
@@ -93,7 +94,7 @@ internal sealed class DatabaseOwnership(SqlDatabaseCatalog catalog, Func<string,
 
         // Dynamic table names are supplied by the application, but their engine-owned column shapes are fixed.
         namespaceTables.UnionWith(tables.Where(pair => IsNamespaceTable(pair.Value)).Select(pair => pair.Key));
-        namespaceTables.UnionWith(["Jobs", "JobSteps", "FailedJobSteps", "__cratis_named_tags"]);
+        namespaceTables.UnionWith([WellKnownTableNames.Jobs, WellKnownTableNames.JobSteps, WellKnownTableNames.FailedJobSteps, EventSequenceMigrator.NamedTagsTable]);
         return kind switch
         {
             DatabaseKind.EventStore => history.Any(migration => !IsNamespaceMigration(migration)) || tables.Keys.Any(storeTables.Contains),
@@ -103,7 +104,7 @@ internal sealed class DatabaseOwnership(SqlDatabaseCatalog catalog, Func<string,
     }
 
     /// <summary>
-    /// Tests whether a migration belongs to a namespace database: the namespace schema (NS-*) or the Cratis.Orleans jobs schema (Cratis-Orleans-Jobs-*).
+    /// Tests whether a migration belongs to a namespace database: the namespace schema (NS-*) or the Cratis.Choreography jobs schema (Cratis-Orleans-Jobs-*).
     /// </summary>
     /// <param name="migration">The migration identifier.</param>
     /// <returns>Whether the migration belongs to a namespace database.</returns>

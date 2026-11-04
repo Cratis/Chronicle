@@ -34,7 +34,7 @@ deadline. If the circuit is still open, delivery is rejected without sending an 
 request and the partition is deferred again. Automatic recovery does not override deadlines.
 
 The `chronicle-webhook-circuit-opened` and `chronicle-webhook-circuit-rejected` counters
-are tagged by normalized target `authority`. Circuit-open deferrals also log the authority
+are tagged by normalized target `authority`. With `Telemetry:MetricNames=Convention` (opt-in) they are published as `cratis.chronicle.webhook.circuit_openings` and `cratis.chronicle.webhook.circuit_rejections`, tagged `cratis.chronicle.webhook.authority`. Circuit-open deferrals also log the authority
 and deadline; paths, observer identifiers, and event-store names are not metric tags.
 
 ## Receiver back-pressure and permanent failures
@@ -102,7 +102,7 @@ deadlines and outcomes without payloads, URLs or credentials. Counters
 `chronicle-webhook-probe-scheduled`, `chronicle-webhook-probe-attempts`,
 `chronicle-webhook-probe-failures`, `chronicle-webhook-probe-successes`,
 `chronicle-webhook-probe-deferred`, `chronicle-webhook-probe-skipped`,
-`chronicle-webhook-probe-cancelled`, and `chronicle-webhook-probe-resumes` distinguish scheduling from actual delivery and resumption.
+`chronicle-webhook-probe-cancelled`, and `chronicle-webhook-probe-resumes` distinguish scheduling from actual delivery and resumption. These are the default names. Opt in to `Telemetry:MetricNames=Convention` (or `Both` while migrating) to publish them under `cratis.chronicle.webhook.*`; see the [telemetry name reference](/chronicle/hosting/configuration/telemetry-names/). Do not sum series when using `Both`: each measurement is recorded to both sets.
 Disable automatic checks with `Cratis:Chronicle:Webhooks:Probe:Enabled=false`; manual clear,
 retry, retirement and removal remain available. Unsubscribe, explicit re-registration and
 operator recovery invalidate the old probe so a late callback cannot resume a new lifecycle.

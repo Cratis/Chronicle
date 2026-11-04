@@ -69,6 +69,11 @@ public static class WellKnownGrainStorageProviders
     public const string WebhooksManager = "webhooks-manager";
 
     /// <summary>
+    /// The name of the storage provider used for webhook signing key rings.
+    /// </summary>
+    public const string WebhookSigningKeys = "webhook-signing-keys";
+
+    /// <summary>
     /// The name of the storage provider used for event store subscriptions manager.
     /// </summary>
     public const string EventStoreSubscriptionsManager = "event-store-subscriptions-manager";
@@ -112,11 +117,6 @@ public static class WellKnownGrainStorageProviders
     /// The name of the storage provider used for data protection keys.
     /// </summary>
     public const string DataProtectionKeys = "data-protection-keys";
-
-    /// <summary>
-    /// The name of the storage provider used for patch manager.
-    /// </summary>
-    public const string PatchManager = "patch-manager";
 
     /// <summary>
     /// The name of the storage provider used for system grain.

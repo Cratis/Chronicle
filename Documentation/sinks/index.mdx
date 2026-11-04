@@ -93,6 +93,8 @@ The SQL sink gives each read model type its own table, with columns derived from
 
 A composite key is stored as one value, its parts joined with `_`, and reads return the key object. When a key part contains `_`, is empty, or cannot be read back as its declared type, the instance is returned without its key and the kernel logs a warning. Such keys can also collide; that is tracked in [#5335](https://github.com/Cratis/Chronicle/issues/5335).
 
+A read model whose identifier is spelled `ID` (or any casing other than `Id` or `id`) gets a key column spelled exactly like the property. Tables created by earlier releases keep the synthesized `Id` key they were created with, and the sink reads their layout once, when it first uses the table.
+
 Updates from the projection engine touch only the columns that changed. Tables are created automatically on first use via `IReadModelMigrator`. You do not need to write migrations by hand.
 
 Declared top-level scalar indexes are ensured idempotently. Populated primary tables use background
@@ -118,6 +120,28 @@ JSON predicates deliberately admit a superset of matches; Chronicle's existing p
 value comparison still determine which rows and children are actually updated.
 
 This allows teams using SQL databases (SQL Server, PostgreSQL, SQLite) to take advantage of Chronicle projections without maintaining a MongoDB instance.
+
+### Null nested objects
+
+When a projection sets a nested object property to `null` (for example, an event property mapped
+to it carries `null`), the SQL sink stores SQL `NULL` in that object's JSON column, and reads return
+the property as `null`, the same as MongoDB. Removing a nested object with `RemovedWith` works
+differently: it stores the JSON literal `null` in the column, which also reads back as `null`. A later change to one of the
+object's properties creates the object again. An empty object is still stored as `{}` and read back
+as an empty object. Collection columns keep their existing storage.
+
+Kernels before this change stored a `null` nested object as `{}`. Keep the following in mind when you upgrade:
+
+- Existing rows are not converted. A stored `{}` can mean either an empty object or a `null` written
+  by an older kernel, and Chronicle cannot tell them apart, so it never rewrites them in bulk. To
+  correct a read model, replay it once every kernel writing to it runs the new version; this needs
+  the event history that produced the rows.
+- Older kernels read the new `NULL` values correctly. Until every kernel in a cluster is upgraded,
+  an older kernel still writes `{}`, and rolling back to an older version brings those writes back.
+- If you query the tables directly, `column IS NULL` matches only objects set to `null` by the new
+  kernel on SQLite, PostgreSQL and SQL Server alike. It does not match `{}`, and it does not match a JSON
+  `null` literal (`'null'::jsonb` on PostgreSQL, the text `null` on SQL Server and SQLite).
+  To match `{}` use `column = '{}'::jsonb` on PostgreSQL and `column = '{}'` on SQL Server and SQLite.
 
 ### Decimal columns
 

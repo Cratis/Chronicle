@@ -30,6 +30,9 @@
         <InternalsVisibleTo Include="Cratis.Chronicle.XUnit.Integration" />
         <InternalsVisibleTo Include="Cratis.Chronicle.XUnit.Integration.v3" />
         <InternalsVisibleTo Include="Cratis.Chronicle.Testing" />
+        <!-- Storage specs race the real protection cache against each provider's definition cache. -->
+        <InternalsVisibleTo Include="Cratis.Chronicle.Storage.MongoDB.Specs" />
+        <InternalsVisibleTo Include="Cratis.Chronicle.Storage.Sql.Specs" />
         <!-- Cratis.Chronicle.Server used to need this only because the generated gRPC service
              implementations lived here and were internal. They now live in Cratis.Chronicle.Grpc,
              which is what Server actually needs internal access to - see Grpc.csproj. The one
@@ -118,6 +121,7 @@
     </ItemGroup>
 
     <ItemGroup>
+        <PackageReference Include="BouncyCastle.Cryptography" />
         <PackageReference Include="Cratis.Arc.Core" />
         <PackageReference Include="Cratis.Metrics.Roslyn" />
         <PackageReference Include="Cratis.Screenplay" />
@@ -131,8 +135,8 @@
         <PackageReference Include="Microsoft.Extensions.Telemetry.Abstractions" />
         <PackageReference Include="Microsoft.Orleans.BroadcastChannel" />
         <PackageReference Include="Microsoft.Orleans.Sdk" />
-        <PackageReference Include="Cratis.Orleans" />
-        <PackageReference Include="Cratis.Orleans.Storage.MongoDB" />
+        <PackageReference Include="Cratis.Choreography" />
+        <PackageReference Include="Cratis.Choreography.Storage.MongoDB" />
         <PackageReference Include="Microsoft.Orleans.Server" />
         <PackageReference Include="Microsoft.Orleans.Reminders" />
         <PackageReference Include="Microsoft.Orleans.Streaming" />

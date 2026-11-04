@@ -1,10 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Choreography.Patching;
 using Cratis.Chronicle.Concepts;
-using Cratis.Chronicle.Concepts.System;
 using Cratis.Chronicle.Namespaces;
-using Cratis.Chronicle.Patching;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Patches;
@@ -45,9 +44,6 @@ public class RemoveNotSetObserverReminders(IReminderTable reminderTable, ILogger
 
         logger.RemovedReminders(rows.Length);
     }
-
-    /// <inheritdoc/>
-    public Task Down() => Task.CompletedTask;
 
     static bool IsNotSetObserverReminder(ReminderEntry row) =>
         row.GrainId.Type.ToString() == ObserverGrainType

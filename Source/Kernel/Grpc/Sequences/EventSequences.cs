@@ -92,6 +92,13 @@ internal sealed class EventSequences(
             response => ToAppendResponse(response));
 
     /// <inheritdoc/>
+    public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult<global::Cratis.Chronicle.Contracts.Sequences.AppendResponse>> Compensate(global::Cratis.Chronicle.Contracts.Sequences.CompensateRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
+        CommandExecutor.Execute<global::Cratis.Chronicle.EventSequences.AppendResult, global::Cratis.Chronicle.Contracts.Sequences.AppendResponse>(
+            commandPipeline,
+            new global::Cratis.Chronicle.Sequences.Compensate((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, (global::Cratis.Chronicle.Concepts.EventSequences.EventSequenceId)request.EventSequenceId, request.CompensationFor, request.EventType.ToApi(), request.Content, request.CorrelationId, request.Tags, request.Occurred, request.Causation?.Select(x => x.ToApi()), request.CausedBy?.ToApi()),
+            response => ToAppendResponse(response));
+
+    /// <inheritdoc/>
     public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult<global::Cratis.Chronicle.Contracts.Sequences.CompleteStreamResponse>> CompleteStream(global::Cratis.Chronicle.Contracts.Sequences.CompleteStreamRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         CommandExecutor.Execute<global::Cratis.Chronicle.Sequences.CompleteStreamOutcome, global::Cratis.Chronicle.Contracts.Sequences.CompleteStreamResponse>(
             commandPipeline,
@@ -104,6 +111,13 @@ internal sealed class EventSequences(
             commandPipeline,
             new global::Cratis.Chronicle.Sequences.CompleteStreamScope((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, (global::Cratis.Chronicle.Concepts.EventSequences.EventSequenceId)request.EventSequenceId, request.EventSourceId, request.EventSourceType, request.EventStreamType, request.EventStreamId, request.ExpectedTailSequenceNumber),
             response => ToCompleteStreamResponse(response));
+
+    /// <inheritdoc/>
+    public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult<global::System.Guid>> CopyEventsForEventSource(global::Cratis.Chronicle.Contracts.Sequences.CopyEventsForEventSourceRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
+        CommandExecutor.Execute<global::System.Guid, global::System.Guid>(
+            commandPipeline,
+            new global::Cratis.Chronicle.Sequences.CopyEventsForEventSource((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, (global::Cratis.Chronicle.Concepts.EventSequences.EventSequenceId)request.EventSequenceId, (global::Cratis.Chronicle.Concepts.Events.EventSourceId)request.SourceId, (global::Cratis.Chronicle.Concepts.Events.EventSourceId)request.TargetId, request.EventTypes),
+            response => response);
 
     /// <inheritdoc/>
     public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult> Redact(global::Cratis.Chronicle.Contracts.Sequences.RedactRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>

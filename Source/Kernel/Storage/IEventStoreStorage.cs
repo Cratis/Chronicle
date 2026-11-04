@@ -113,6 +113,11 @@ public interface IEventStoreStorage
     IWebhookDefinitionsStorage Webhooks { get; }
 
     /// <summary>
+    /// Gets the <see cref="IWebhookSigningKeysStorage"/> for the event store.
+    /// </summary>
+    IWebhookSigningKeysStorage WebhookSigningKeys { get; }
+
+    /// <summary>
     /// Gets the <see cref="IExternalServiceDefinitionsStorage"/> for the event store.
     /// </summary>
     IExternalServiceDefinitionsStorage ExternalServices { get; }

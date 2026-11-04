@@ -10,15 +10,20 @@ public class and_the_partition_is_already_catching_up : given.a_catching_up_in_f
 {
     readonly Key _partition = "partition";
 
-    void Establish() => _storedState = _storedState with
+    void Establish()
     {
-        InFlightPartitions = new HashSet<Key> { _partition },
-        CatchingUpPartitions = new HashSet<Key> { _partition }
-    };
+        _storedState = _storedState with
+        {
+            InFlightPartitions = new HashSet<Key> { _partition },
+            CatchingUpPartitions = new HashSet<Key> { _partition }
+        };
+        HasOutstandingJobs(PartitionCatchUpJob(_partition));
+    }
 
     async Task Because() => _resultingStoredState = await _state.OnEnter(_storedState);
 
-    [Fact] void should_not_start_another_job() => _jobsManager.DidNotReceive()
+    [Fact]
+    void should_not_start_another_job() => _jobsManager.DidNotReceive()
         .Start<ICatchUpObserverPartition, CatchUpObserverPartitionRequest>(Arg.Any<CatchUpObserverPartitionRequest>());
     [Fact] void should_remove_the_marker() => _resultingStoredState.InFlightPartitions.ShouldBeEmpty();
     [Fact] void should_not_mutate_the_handed_markers() => _storedState.InFlightPartitions.ShouldContain(_partition);

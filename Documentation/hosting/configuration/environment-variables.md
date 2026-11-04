@@ -33,6 +33,7 @@ the same way (`compliance.encryption.migrateFromDefaultStorage` becomes
 | --- | --- |
 | Cratis__Chronicle__Port | The Chronicle port — HTTPS with HTTP/2 and HTTP/1.1 by default; HTTP/2-only h2c when TLS is disabled |
 | Cratis__Chronicle__HealthCheckEndpoint | Health check endpoint path |
+| Cratis__Chronicle__Telemetry__OrleansTracing | Export Orleans runtime and grain-call spans (default `false`); trace context propagation remains enabled; see [OpenTelemetry](open-telemetry.md#orleans-trace-volume) |
 | Cratis__Chronicle__Telemetry__GrpcClientTracing | Enable kernel gRPC client tracing (default `false`); see [OpenTelemetry trace volume defaults](open-telemetry.md#trace-volume-defaults) |
 | Cratis__Chronicle__Health__Port | Dedicated HTTP/1.1 port for the health endpoint |
 | Cratis__Chronicle__Health__Tls | Whether the dedicated health port uses TLS (default `true`) |
@@ -40,6 +41,7 @@ the same way (`compliance.encryption.migrateFromDefaultStorage` becomes
 | Cratis__Chronicle__Features__Workbench | Enable Workbench UI |
 | Cratis__Chronicle__Features__ChangesetStorage | Enable changeset storage |
 | Cratis__Chronicle__Features__OAuthAuthority | Enable internal OAuth authority |
+| Cratis__Chronicle__Features__IsolatedPartitionReplay | Reserved: rebuild a replayed partition in isolation (default `false`, no effect yet) |
 | Cratis__Chronicle__Storage__Type | Storage provider type |
 | Cratis__Chronicle__Storage__ConnectionDetails | Storage connection string |
 | Cratis__Chronicle__Storage__Schema | SQL schema for Chronicle's tables |
@@ -50,6 +52,7 @@ the same way (`compliance.encryption.migrateFromDefaultStorage` becomes
 | Cratis__Chronicle__Observers__SubscriberTimeout | Seconds an observer waits for its subscriber to answer (0 = indefinitely during catch-up and replay; live waits remain bounded by the Orleans response timeout) |
 | Cratis__Chronicle__Observers__LiveDeliveryBudget | Maximum events delivered inline in a live call (default 100); larger batches are deferred to partition catch-up (0 or less disables the limit) |
 | Cratis__Chronicle__Observers__MaxConcurrentPartitions | Upper bound on parallel job steps, applied together with `Jobs__MaxParallelSteps` (does not limit live event delivery) |
+| Cratis__Chronicle__Observers__MaxConcurrentRegistrations | Maximum concurrent gRPC reactor and reducer registrations per silo (default 0, unlimited; values below 1 disable the gate). Does not limit event append or observer delivery |
 | Cratis__Chronicle__Observers__MaxRetryAttempts | Maximum retry attempts for observers |
 | Cratis__Chronicle__Observers__BackoffDelay | Initial observer backoff delay in seconds |
 | Cratis__Chronicle__Observers__ExponentialBackoffDelayFactor | Exponential backoff multiplier |

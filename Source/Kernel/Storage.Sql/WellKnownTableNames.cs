@@ -174,6 +174,11 @@ public static class WellKnownTableNames
     public const string ReplayPromotions = "chronicle_replay_promotions";
 
     /// <summary>
+    /// The read-model database table that records committed multi-write sink cycles, so a retry after a lost commit acknowledgment does not apply a cycle twice.
+    /// </summary>
+    public const string SinkCycleReceipts = "chronicle_sink_cycle_receipts";
+
+    /// <summary>
     /// The table that holds read model definitions.
     /// </summary>
     public const string ReadModelDefinitions = "ReadModelDefinitions";
@@ -242,6 +247,11 @@ public static class WellKnownTableNames
     /// The table that holds webhook definitions.
     /// </summary>
     public const string WebhookDefinitions = "WebhookDefinitions";
+
+    /// <summary>
+    /// The table that holds webhook signing keys.
+    /// </summary>
+    public const string WebhookSigningKeys = "WebhookSigningKeys";
 
     /// <summary>
     /// The table that holds external service definitions.
@@ -342,4 +352,54 @@ public static class WellKnownTableNames
     /// The namespace table that holds atomic effect receipts.
     /// </summary>
     public const string EffectReceipts = "EffectReceipts";
+
+    /// <summary>
+    /// The table that holds generation initialization receipts.
+    /// </summary>
+    public const string GenerationInitializationReceipts = "GenerationInitializationReceipts";
+
+    /// <summary>
+    /// The table that holds generation initialization blockers.
+    /// </summary>
+    public const string GenerationInitializationBlockers = "GenerationInitializationBlockers";
+
+    /// <summary>
+    /// The table that holds the generation floor.
+    /// </summary>
+    public const string GenerationFloor = "GenerationFloor";
+
+    /// <summary>
+    /// The table that holds generation floor history.
+    /// </summary>
+    public const string GenerationFloorHistory = "GenerationFloorHistory";
+
+    /// <summary>
+    /// The table that holds lifecycle fan-out intents.
+    /// </summary>
+    public const string LifecycleFanOutIntents = "LifecycleFanOutIntents";
+
+    /// <summary>
+    /// The table that holds trigger definitions.
+    /// </summary>
+    public const string TriggerDefinitions = "TriggerDefinitions";
+
+    /// <summary>
+    /// The table that holds event store initialization markers.
+    /// </summary>
+    public const string EventStoreInitialization = "EventStoreInitialization";
+
+    /// <summary>
+    /// The table that holds database name bindings.
+    /// </summary>
+    public const string DatabaseNames = "DatabaseNames";
+
+    /// <summary>
+    /// The table that holds patch versions.
+    /// </summary>
+    public const string PatchVersions = "PatchVersions";
+
+    /// <summary>
+    /// The mapped table that holds event types.
+    /// </summary>
+    public const string EventType = "EventType";
 }

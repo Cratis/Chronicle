@@ -75,6 +75,40 @@ public partial class Reducers : IReducers
         IReducerObservers reducerObservers,
         IActivitySource<Reducers> activitySource,
         ILogger<Reducers> logger)
+        : this(eventStore, clientArtifacts, serviceProvider, artifactActivator, reducerValidator, eventTypes, namingPolicy, jsonSerializerOptions, identityProvider, reducerObservers, activitySource, logger, ClientSpanNames.Legacy)
+    {
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Reducers"/> class with the selected client span names.
+    /// </summary>
+    /// <param name="eventStore">The <see cref="IEventStore"/> the reducers belong to.</param>
+    /// <param name="clientArtifacts">The <see cref="IClientArtifactsProvider"/>.</param>
+    /// <param name="serviceProvider">The <see cref="IServiceProvider"/>.</param>
+    /// <param name="artifactActivator">The <see cref="IClientArtifactsActivator"/>.</param>
+    /// <param name="reducerValidator">The <see cref="IReducerValidator"/>.</param>
+    /// <param name="eventTypes">The <see cref="IEventTypes"/>.</param>
+    /// <param name="namingPolicy">The <see cref="INamingPolicy"/>.</param>
+    /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/>.</param>
+    /// <param name="identityProvider">The <see cref="IIdentityProvider"/>.</param>
+    /// <param name="reducerObservers">The <see cref="IReducerObservers"/>.</param>
+    /// <param name="activitySource">The <see cref="IActivitySource{T}"/> for tracing.</param>
+    /// <param name="logger">The logger.</param>
+    /// <param name="spanNames">The <see cref="ClientSpanNames"/> to use for client spans.</param>
+    internal Reducers(
+        IEventStore eventStore,
+        IClientArtifactsProvider clientArtifacts,
+        IServiceProvider serviceProvider,
+        IClientArtifactsActivator artifactActivator,
+        IReducerValidator reducerValidator,
+        IEventTypes eventTypes,
+        INamingPolicy namingPolicy,
+        JsonSerializerOptions jsonSerializerOptions,
+        IIdentityProvider identityProvider,
+        IReducerObservers reducerObservers,
+        IActivitySource<Reducers> activitySource,
+        ILogger<Reducers> logger,
+        ClientSpanNames spanNames)
     {
         _eventStore = eventStore;
         _servicesAccessor = (eventStore.Connection as IChronicleServicesAccessor)!;
@@ -95,7 +129,10 @@ public partial class Reducers : IReducers
             jsonSerializerOptions,
             identityProvider,
             activitySource,
-            logger);
+            logger)
+        {
+            SpanNames = spanNames
+        };
         _eventStore.Connection.Lifecycle.OnDisconnected += ConnectionDisconnected;
     }
 

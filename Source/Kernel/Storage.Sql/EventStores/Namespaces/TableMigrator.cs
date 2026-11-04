@@ -2,10 +2,13 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
+using Cratis.Chronicle.Configuration;
+using Cratis.Chronicle.Diagnostics;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces;
 
@@ -16,11 +19,13 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces;
 /// </summary>
 /// <typeparam name="TContext">The type of <see cref="DbContext"/>.</typeparam>
 /// <param name="logger">The <see cref="ILogger"/> for logging.</param>
-public class TableMigrator<TContext>(ILogger<TableMigrator<TContext>> logger) : ITableMigrator<TContext>
+/// <param name="options">The kernel configuration, if provided.</param>
+public class TableMigrator<TContext>(ILogger<TableMigrator<TContext>> logger, IOptions<ChronicleOptions>? options = null) : ITableMigrator<TContext>
     where TContext : DbContext
 {
     static readonly ConcurrentDictionary<string, bool> _migratedTables = new();
     static readonly ConcurrentDictionary<string, SemaphoreSlim> _migrationLocks = new();
+    readonly SqlStorageTelemetry _telemetry = new(options?.Value?.Telemetry.MetricNames ?? MetricNames.Legacy);
 
     /// <inheritdoc/>
     public async Task EnsureTableMigrated(string tableName, TContext context, Func<TContext, string, Task> createTableAction, Func<TContext, string, Task>? upgradeTableAction = null)
@@ -63,7 +68,7 @@ public class TableMigrator<TContext>(ILogger<TableMigrator<TContext>> logger) : 
                 }
                 else
                 {
-                    await DatabaseSchemaLock.Run(context, () => CreateOrUpgradeTable(tableName, context, createTableAction, upgradeTableAction));
+                    await DatabaseSchemaLock.Run(context, () => CreateOrUpgradeTable(tableName, context, createTableAction, upgradeTableAction), _telemetry);
                 }
 
                 _migratedTables.TryAdd(key, true);
@@ -138,17 +143,57 @@ public class TableMigrator<TContext>(ILogger<TableMigrator<TContext>> logger) : 
 
             if (context.Database.IsSqlServer())
             {
-                command.CommandText = $"SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = SCHEMA_NAME() AND TABLE_NAME = '{tableName}' AND COLUMN_NAME = '{columnName}'";
+                command.CommandText = "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = SCHEMA_NAME() AND TABLE_NAME = @table AND COLUMN_NAME = @column";
             }
             else if (context.Database.IsNpgsql())
             {
-                command.CommandText = $"SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = '{tableName}' AND column_name = '{columnName}'";
+                command.CommandText = "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = @table AND column_name = @column";
             }
             else
             {
-                command.CommandText = $"SELECT COUNT(*) FROM pragma_table_xinfo('{tableName}') WHERE name = '{columnName}'";
+                command.CommandText = "SELECT COUNT(*) FROM pragma_table_xinfo(@table) WHERE name = @column";
             }
 
+            command.AddName("table", tableName);
+            command.AddName("column", columnName);
+            var result = await command.ExecuteScalarAsync();
+            return Convert.ToInt32(result) > 0;
+        }
+        finally
+        {
+            await connection.CloseAsync();
+        }
+    }
+
+    /// <summary>
+    /// Gets whether a table exists in the current schema of the database the context is connected to.
+    /// </summary>
+    /// <param name="context">The context whose connection is used.</param>
+    /// <param name="tableName">The name of the table, which is passed as a parameter and never as command text.</param>
+    /// <returns>True if the table exists; false otherwise.</returns>
+    internal static async Task<bool> TableExists(TContext context, string tableName)
+    {
+        var connection = context.Database.GetDbConnection();
+        await connection.OpenAsync();
+
+        try
+        {
+            await using var command = connection.CreateCommand();
+
+            if (context.Database.IsSqlServer())
+            {
+                command.CommandText = "SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = SCHEMA_NAME() AND TABLE_NAME = @table";
+            }
+            else if (context.Database.IsNpgsql())
+            {
+                command.CommandText = "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = current_schema() AND table_name = @table";
+            }
+            else
+            {
+                command.CommandText = "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name=@table";
+            }
+
+            command.AddName("table", tableName);
             var result = await command.ExecuteScalarAsync();
             return Convert.ToInt32(result) > 0;
         }
@@ -174,37 +219,6 @@ public class TableMigrator<TContext>(ILogger<TableMigrator<TContext>> logger) : 
             }
 
             return false;
-        }
-    }
-
-    static async Task<bool> TableExists(TContext context, string tableName)
-    {
-        var connection = context.Database.GetDbConnection();
-        await connection.OpenAsync();
-
-        try
-        {
-            await using var command = connection.CreateCommand();
-
-            if (context.Database.IsSqlServer())
-            {
-                command.CommandText = $"SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = SCHEMA_NAME() AND TABLE_NAME = '{tableName}'";
-            }
-            else if (context.Database.IsNpgsql())
-            {
-                command.CommandText = $"SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = current_schema() AND table_name = '{tableName}'";
-            }
-            else
-            {
-                command.CommandText = $"SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='{tableName}'";
-            }
-
-            var result = await command.ExecuteScalarAsync();
-            return Convert.ToInt32(result) > 0;
-        }
-        finally
-        {
-            await connection.CloseAsync();
         }
     }
 

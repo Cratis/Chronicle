@@ -19,6 +19,8 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.Observers;
 /// <param name="database">The <see cref="IDatabase"/> to use for storage operations.</param>
 public class ObserverStateStorage(EventStoreName eventStore, EventStoreNamespaceName @namespace, IDatabase database) : IObserverStateStorage
 {
+    readonly SqlStorageTelemetry _telemetry = SqlStorageTelemetry.For(database);
+
     /// <inheritdoc/>
     public async Task<IEnumerable<Observation.ObserverState>> GetAll()
     {
@@ -100,7 +102,7 @@ public class ObserverStateStorage(EventStoreName eventStore, EventStoreNamespace
                 throw;
             }
 
-            SqlStorageTelemetry.RecoveredCollision("observer-state");
+            _telemetry.RecoveredCollision("observer-state");
             return await SaveState(scope.DbContext, entity, winner);
         }
     }

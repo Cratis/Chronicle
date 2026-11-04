@@ -27,7 +27,7 @@ public class and_the_skip_measurement_cannot_be_recorded : given.an_observer_wit
         {
             InstrumentPublished = (instrument, listener) =>
             {
-                if (ReferenceEquals(instrument.Meter, given.ObserverMetricsRecorder.SharedMeter) && instrument.Name == EventsSuspectedSkipped)
+                if (ReferenceEquals(instrument.Meter, given.ObserverMetricsRecorder.SharedMeter) && instrument.Name == "chronicle-observer-events-suspected-skipped")
                 {
                     listener.EnableMeasurementEvents(instrument);
                 }

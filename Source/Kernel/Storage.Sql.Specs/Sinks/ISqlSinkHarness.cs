@@ -14,4 +14,9 @@ public interface ISqlSinkHarness : ISinkHarness
     /// Gets the connection string for the specification's database.
     /// </summary>
     string ConnectionString { get; }
+
+    /// <summary>
+    /// Gets the activity of the table scopes the harness has handed to sinks.
+    /// </summary>
+    ReadActivity Reads { get; }
 }
