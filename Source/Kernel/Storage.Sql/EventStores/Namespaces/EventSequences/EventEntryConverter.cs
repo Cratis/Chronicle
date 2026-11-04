@@ -576,6 +576,7 @@ public static class EventEntryConverter
         {
             NamedTags = namedTags ?? [],
             EventSource = ToEventSourceName(entry),
+            CompensationFor = entry.CompensationFor is { } compensationFor ? new EventSequenceNumber(compensationFor) : null,
             AppendedGeneration = entry.AppendedGeneration is { } appended ? new EventTypeGeneration(appended) : null
         };
 

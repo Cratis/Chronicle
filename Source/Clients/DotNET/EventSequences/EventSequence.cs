@@ -716,6 +716,47 @@ public class EventSequence(
     }
 
     /// <inheritdoc/>
+    public async Task<AppendResult> Compensate(
+        EventSequenceNumber compensationFor,
+        object @event,
+        CorrelationId? correlationId = default,
+        IEnumerable<string>? tags = default,
+        DateTimeOffset? occurred = default)
+    {
+        ImmediateAppendGuard.Append(nameof(Compensate));
+        ReadProtectionGuard.Append(nameof(Compensate));
+        var preparedEvent = await Prepare(@event);
+        correlationId ??= correlationIdAccessor.Current;
+        var causation = causationManager.GetCurrentChain();
+        var identity = identityProvider.GetCurrent();
+        var allTags = preparedEvent.Tags.Concat(tags ?? []).Distinct().ToList();
+
+        var response = await _servicesAccessor.Services.Sequences.Compensate(new()
+        {
+            EventStore = eventStoreName,
+            Namespace = @namespace,
+            EventSequenceId = eventSequenceId,
+            CompensationFor = compensationFor,
+            EventType = preparedEvent.EventType.ToSequencesContract(),
+            Content = preparedEvent.Content,
+            CorrelationId = correlationId,
+            Tags = allTags,
+            Occurred = ToWireOccurred(occurred),
+            Causation = causation.ToSequencesContract(),
+            CausedBy = identity.ToSequencesContract()
+        }).EnsureSuccess();
+
+        return ResolveViolationMessages(response.ToClient()) with
+        {
+            EventStore = eventStoreName,
+            EventStoreNamespace = @namespace,
+            EventSequenceId = eventSequenceId,
+            EventTypes = [preparedEvent.EventType],
+            Observers = GetObservers()
+        };
+    }
+
+    /// <inheritdoc/>
     public async Task Redact(EventSequenceNumber sequenceNumber, RedactionReason reason)
     {
         ReadProtectionGuard.Append(nameof(Redact), "event redaction");
