@@ -138,7 +138,8 @@ public class RetryFailedPartition(
                 {
                     ReaderScope = request.ReaderScope,
                     EpisodeId = request.EpisodeId,
-                    DeferralId = request.DeferralId
+                    DeferralId = request.DeferralId,
+                    ReplayEpoch = request.ReplayEpoch
                 })
         }.ToImmutableList();
 

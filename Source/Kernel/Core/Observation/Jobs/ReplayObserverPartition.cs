@@ -5,6 +5,7 @@ using System.Collections.Immutable;
 using System.Text.Json;
 using Cratis.Choreography.Jobs;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Storage;
 using Cratis.Monads;
 using Microsoft.Extensions.Logging;
@@ -147,7 +148,8 @@ public class ReplayObserverPartition(
                     EventObservationState.Replay,
                     request.EventTypes)
                 {
-                    ReaderScope = request.ReaderScope
+                    ReaderScope = request.ReaderScope,
+                    ReplayEpoch = new ReplayEpoch(JobId.Value)
                 })
         }.ToImmutableList();
     }

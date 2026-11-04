@@ -32,6 +32,7 @@ public class with_postgresql_failed_partition_recovery(PostgreSqlFixture fixture
             ObserverId = "observer",
             Partition = "partition",
             IsQuarantined = true,
+            ReplayEpoch = Guid.Parse("aaaaaaaa-0000-0000-0000-00000000000b"),
             AttemptsBeforeBudgetReset = 1,
             RecoveryCursor = new(new(51), FailedPartitionRecoveryMode.Replay, new(80)),
             RecoveryOwner = new(Guid.NewGuid(), Guid.NewGuid(), 3, FailedPartitionRecoveryState.Resuming, 7),
@@ -55,6 +56,7 @@ public class with_postgresql_failed_partition_recovery(PostgreSqlFixture fixture
     [Fact] void should_keep_initialization() => _initialization.State.ShouldEqual(ObserverInitializationState.NotInitialized);
     [Fact] void should_keep_every_refusal_reason() => _initialization.RefusalReasons.ShouldEqual("unfinished job", "unsettled handover");
     [Fact] void should_keep_the_exact_cursor_and_replay_boundary() => _restored.RecoveryCursor.ShouldEqual(_partition.RecoveryCursor);
+    [Fact] void should_keep_the_replay_epoch() => _restored.ReplayEpoch.ShouldEqual(new ReplayEpoch(Guid.Parse("aaaaaaaa-0000-0000-0000-00000000000b")));
     [Fact] void should_keep_the_whole_recovery_owner() => _restored.RecoveryOwner.ShouldEqual(_partition.RecoveryOwner);
     [Fact] void should_keep_the_hold_reason_type_and_start() => _restored.Hold.ShouldEqual(_partition.Hold);
     [Fact] void should_keep_attempts() => _restored.Attempts.Count().ShouldEqual(2);

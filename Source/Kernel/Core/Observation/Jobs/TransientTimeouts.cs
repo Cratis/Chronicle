@@ -16,7 +16,7 @@ namespace Cratis.Chronicle.Observation.Jobs;
 /// </summary>
 /// <remarks>
 /// A grain call that outlives its response timeout says the callee was too busy to answer, not that handling the
-/// events went wrong. Escalating it to <see cref="IObserver.PartitionFailed"/> sends one more call to the very grain
+/// events went wrong. Escalating it to <see cref="IObserver.PartitionFailed(Concepts.Keys.Key, Concepts.Events.EventSequenceNumber, IEnumerable{string}, string, Concepts.Observation.FailureKind, Concepts.Observation.FailedPartitionId, System.Guid?, WebhookDeliveryFailurePolicy)"/> sends one more call to the very grain
 /// that is already behind, which times out too, and turns a slow grain into a cascade of failed partitions.
 /// </remarks>
 internal static class TransientTimeouts

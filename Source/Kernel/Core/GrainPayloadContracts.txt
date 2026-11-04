@@ -392,6 +392,7 @@ json Cratis.Chronicle.Concepts.Observation.FailedPartition
   partition: Cratis.Chronicle.Concepts.Keys.Key
   recoveryCursor: Cratis.Chronicle.Concepts.Observation.FailedPartitionRecoveryCursor
   recoveryOwner: Cratis.Chronicle.Concepts.Observation.FailedPartitionRecoveryOwner
+  replayEpoch: Cratis.Chronicle.Concepts.Observation.ReplayEpoch
   webhookDisposition: Cratis.Chronicle.Concepts.Observation.WebhookFailureDisposition?
   webhookRecoveryId: System.Guid?
 json Cratis.Chronicle.Concepts.Observation.FailedPartitionAttempt
@@ -520,6 +521,7 @@ json Cratis.Chronicle.Concepts.Observation.Reducers.ReducerDefinition
   readModel: Cratis.Chronicle.Concepts.ReadModels.ReadModelIdentifier
   tags: System.Collections.Generic.IEnumerable<string>
 concept Cratis.Chronicle.Concepts.Observation.Reducers.ReducerId : string
+concept Cratis.Chronicle.Concepts.Observation.ReplayEpoch : System.Guid
 json Cratis.Chronicle.Concepts.Observation.Replaying.ReplayCandidateReason
   type: Cratis.Chronicle.Concepts.Observation.Replaying.ReplayCandidateReasonType
 concept Cratis.Chronicle.Concepts.Observation.Replaying.ReplayCandidateReasonType : string
@@ -1074,6 +1076,7 @@ json Cratis.Chronicle.Observation.Jobs.HandleEventsForPartitionArguments
   ownershipEpoch: ulong?
   partition: Cratis.Chronicle.Concepts.Keys.Key
   readerScope: Cratis.Chronicle.Concepts.Observation.ObserverReaderScope
+  replayEpoch: Cratis.Chronicle.Concepts.Observation.ReplayEpoch
   revision: ulong?
   startEventSequenceNumber: Cratis.Chronicle.Concepts.Events.EventSequenceNumber
 json Cratis.Chronicle.Observation.Jobs.HandleEventsForPartitionState
@@ -1092,6 +1095,7 @@ json Cratis.Chronicle.Observation.Jobs.HandleEventsForPartitionState
   partition: Cratis.Chronicle.Concepts.Keys.Key
   progress: Cratis.Choreography.Jobs.JobStepProgress
   readerScope: Cratis.Chronicle.Concepts.Observation.ObserverReaderScope
+  replayEpoch: Cratis.Chronicle.Concepts.Observation.ReplayEpoch
   stage: Cratis.Choreography.Jobs.Stages.JobStepStage
   startEventSequenceNumber: Cratis.Chronicle.Concepts.Events.EventSequenceNumber
   status: Cratis.Choreography.Jobs.JobStepStatus
@@ -1131,6 +1135,7 @@ json Cratis.Chronicle.Observation.Jobs.RetryFailedPartitionRequest
   observerType: Cratis.Chronicle.Concepts.Observation.ObserverType
   ownershipEpoch: ulong?
   readerScope: Cratis.Chronicle.Concepts.Observation.ObserverReaderScope
+  replayEpoch: Cratis.Chronicle.Concepts.Observation.ReplayEpoch
   revision: ulong?
 json Cratis.Chronicle.Observation.ObserverDetails
   key: Cratis.Chronicle.Concepts.Observation.ObserverKey
@@ -1156,6 +1161,7 @@ custom Cratis.Chronicle.Observation.ObserverSubscription
 json Cratis.Chronicle.Observation.PartitionFailureContext
   deliveryFence: Cratis.Chronicle.Concepts.Observation.DeliveryFenceContext
   policy: Cratis.Chronicle.Observation.WebhookDeliveryFailurePolicy
+  replayEpoch: Cratis.Chronicle.Concepts.Observation.ReplayEpoch
 json Cratis.Chronicle.Observation.States.ReplayCandidateRequest
   observerId: Cratis.Chronicle.Concepts.Observation.ObserverId
   observerKey: Cratis.Chronicle.Concepts.Observation.ObserverKey

@@ -157,7 +157,8 @@ public class ReplayObserver(
                     EventObservationState.Replay,
                     request.EventTypes)
                 {
-                    ReaderScope = request.ReaderScope
+                    ReaderScope = request.ReaderScope,
+                    ReplayEpoch = new ReplayEpoch(JobId.Value)
                 });
             steps.Add(step);
             if (failedKeys.Contains(key))

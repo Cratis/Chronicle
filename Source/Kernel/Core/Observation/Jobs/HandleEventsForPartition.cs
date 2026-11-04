@@ -133,6 +133,7 @@ public partial class HandleEventsForPartition(
     {
         State.EpisodeId = request.EpisodeId;
         State.DeferralId = request.DeferralId;
+        State.ReplayEpoch = request.ReplayEpoch;
         State.ObserverKey = request.ObserverKey;
         State.EventObservationState = request.EventObservationState;
         State.EventTypes = request.EventTypes.ToArray();
@@ -302,7 +303,14 @@ public partial class HandleEventsForPartition(
                                 await ReportHandledEvents(currentState.Partition, handledEvents, eventObserverResult.LastSuccessfulObservation, cancellationToken);
                             }
 
-                            await _observer.PartitionDeferred(currentState.Partition, eventObserverResult.Deferral!, currentState.EpisodeId, currentState.DeferralId);
+                            if (currentState.ReplayEpoch is { } replayEpoch)
+                            {
+                                await _observer.PartitionDeferred(currentState.Partition, eventObserverResult.Deferral!, currentState.EpisodeId, currentState.DeferralId, replayEpoch);
+                            }
+                            else
+                            {
+                                await _observer.PartitionDeferred(currentState.Partition, eventObserverResult.Deferral!, currentState.EpisodeId, currentState.DeferralId);
+                            }
                             return JobStepResult.Failed(PerformJobStepError.CancelledWithPartialResult(CreateResult(lastSuccessfullyHandledEventSequenceNumber) with { Deferral = eventObserverResult.Deferral }));
                         case ObserverSubscriberState.Failed:
                             failed = true;
@@ -360,7 +368,14 @@ public partial class HandleEventsForPartition(
                             string.Empty));
                     }
 
-                    await _observer.PartitionFailed(_eventSourceId, failedAt, exceptionMessages, exceptionStackTrace, failureKind, currentState.EpisodeId, currentState.DeferralId, failurePolicy);
+                    if (currentState.ReplayEpoch is { } replayEpoch)
+                    {
+                        await _observer.PartitionFailed(_eventSourceId, failedAt, exceptionMessages, exceptionStackTrace, failureKind, currentState.EpisodeId, currentState.DeferralId, new PartitionFailureContext(failurePolicy, null, replayEpoch));
+                    }
+                    else
+                    {
+                        await _observer.PartitionFailed(_eventSourceId, failedAt, exceptionMessages, exceptionStackTrace, failureKind, currentState.EpisodeId, currentState.DeferralId, failurePolicy);
+                    }
                     return JobStepResult.Failed(PerformJobStepError.FailedWithPartialResult(
                         CreateResult(lastSuccessfullyHandledEventSequenceNumber),
                         TransientTimeouts.ShortenForStep(exceptionMessages),
@@ -471,7 +486,14 @@ public partial class HandleEventsForPartition(
     {
         try
         {
-            await _observer.PartitionFailed(_eventSourceId, failedAt, error.GetAllMessages(), error.StackTrace ?? string.Empty, error.ToFailureKind(), State.EpisodeId, State.DeferralId);
+            if (State.ReplayEpoch is { } replayEpoch)
+            {
+                await _observer.PartitionFailed(_eventSourceId, failedAt, error.GetAllMessages(), error.StackTrace ?? string.Empty, error.ToFailureKind(), State.EpisodeId, State.DeferralId, new PartitionFailureContext(WebhookDeliveryFailurePolicy.Retry, null, replayEpoch));
+            }
+            else
+            {
+                await _observer.PartitionFailed(_eventSourceId, failedAt, error.GetAllMessages(), error.StackTrace ?? string.Empty, error.ToFailureKind(), State.EpisodeId, State.DeferralId);
+            }
             return true;
         }
         catch (Exception reportError)
@@ -510,6 +532,7 @@ public partial class HandleEventsForPartition(
             : subscriberSelector.Select(subscription, state.Partition);
         return new(deliveryTarget.ConnectedClient ?? subscription.Arguments)
         {
+            ReplayEpoch = state.ReplayEpoch,
             Origin = state.EpisodeId is not null || state.DeferralId is not null
                 ? ObservationOrigin.Retry
                 : state.EventObservationState.ToObservationOrigin()
