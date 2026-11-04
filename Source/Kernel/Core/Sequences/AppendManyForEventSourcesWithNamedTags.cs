@@ -34,7 +34,7 @@ public record AppendManyForEventSourcesWithNamedTags(
     IEnumerable<Causation>? Causation = default,
     Identity? CausedBy = default,
     IEnumerable<EventSourceConcurrencyScope>? ConcurrencyScopes = default,
-    Occurrences.EffectReceipt? EffectReceipt = default) : IEventSequenceWriteCommand
+    Occurrences.EffectReceipt? EffectReceipt = default)
 {
     /// <summary>
     /// Handles the batch through the existing append pipeline.

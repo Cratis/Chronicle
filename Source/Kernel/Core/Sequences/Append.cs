@@ -57,7 +57,7 @@ public record Append(
     Identity? CausedBy = default,
     ConcurrencyScope? ConcurrencyScope = default,
     string? EventSource = default,
-    Occurrences.EffectReceipt? EffectReceipt = default) : IEventSequenceWriteCommand
+    Occurrences.EffectReceipt? EffectReceipt = default)
 {
     /// <summary>
     /// Handles the command by appending the event.

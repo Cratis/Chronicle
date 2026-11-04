@@ -39,7 +39,7 @@ public record AppendManyWithNamedTags(
     IEnumerable<Causation>? Causation = default,
     Identity? CausedBy = default,
     ConcurrencyScope? ConcurrencyScope = default,
-    Occurrences.EffectReceipt? EffectReceipt = default) : IEventSequenceWriteCommand
+    Occurrences.EffectReceipt? EffectReceipt = default)
 {
     /// <summary>
     /// Handles the batch through the existing append pipeline.

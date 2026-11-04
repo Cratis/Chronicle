@@ -24,7 +24,7 @@ public record CompleteStream(
     EventStoreNamespaceName Namespace,
     Concepts.EventSequences.EventSequenceId EventSequenceId,
     EventStreamType EventStreamType,
-    EventStreamId EventStreamId) : IEventSequenceWriteCommand
+    EventStreamId EventStreamId)
 {
     /// <summary>
     /// Handles the command by completing the stream.

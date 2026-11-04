@@ -30,7 +30,7 @@ public record CompleteStreamScope(
     string? EventSourceType = default,
     string? EventStreamType = default,
     string? EventStreamId = default,
-    ulong? ExpectedTailSequenceNumber = default) : IEventSequenceWriteCommand
+    ulong? ExpectedTailSequenceNumber = default)
 {
     /// <summary>
     /// Complete the scope through its event sequence grain.
