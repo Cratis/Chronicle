@@ -33,7 +33,11 @@ public class and_replicas_register_the_same_artifacts_concurrently_with_a_small_
         public const int Namespaces = 2;
         public static readonly TimeSpan Bound = TimeSpan.FromSeconds(30);
 
+        readonly List<IChronicleClient> _clients = [];
+
         readonly WaitQueueFullLogDetector _logs = new();
+        public bool WorkloadTimedOut;
+        public bool ProbeTimedOut;
         public bool ProbeRegistered;
         public bool ProbeAppended;
         public Exception? ProbeFailure;
@@ -61,7 +65,7 @@ public class and_replicas_register_the_same_artifacts_concurrently_with_a_small_
         {
             // The pool is restricted for this kernel only; the shared fixtures keep the driver defaults.
             var server = $"mongodb://localhost:{MongoDBContainer.GetMappedPublicPort(27017)}/?directConnection=true&maxPoolSize=5&waitQueueMultiple=1";
-            builder.WithMongoDB(server, Constants.EventStore);
+            builder.WithMongoDB(server, Constants.EventStore, databaseNamePrefix: DatabaseNamePrefix);
             builder.SiloBuilder.ConfigureServices(services =>
             {
                 services.PostConfigure<MongoDBOptions>(options => options.Server = server);
@@ -75,20 +79,41 @@ public class and_replicas_register_the_same_artifacts_concurrently_with_a_small_
             _logs.Dispose();
         }
 
+        protected override Task OnDisposeAsync()
+        {
+            // Every client this spec built is disposed before the base teardown disposes the per-context kernel.
+            foreach (var client in _clients.OfType<IDisposable>())
+            {
+                client.Dispose();
+            }
+
+            _clients.Clear();
+            return base.OnDisposeAsync();
+        }
+
         async Task Because()
         {
-            var eventStoreName = $"registration-load-{Guid.NewGuid():N}";
+            var eventStoreName = $"rl-{Guid.NewGuid().ToString("N")[..8]}";
             var replicas = Enumerable.Range(0, Replicas).Select(_ => CreateReplica()).ToArray();
             var registrations = replicas.SelectMany(replica => Enumerable.Range(0, Namespaces).Select(index => (replica, @namespace: $"tenant-{index}"))).ToArray();
             Registrations = registrations.Length;
 
             var stopwatch = Stopwatch.StartNew();
-            var results = await Task.WhenAll(registrations.Select(_ => Register(_.replica, eventStoreName, _.@namespace)));
-            Elapsed = stopwatch.Elapsed;
-
-            Failures = [.. results.OfType<Exception>()];
-            Succeeded = results.Count(_ => _ is null);
-            Completed = results.Length;
+            try
+            {
+                // One deadline covers the whole concurrent workload: getting the stores, registering and waiting.
+                var results = await Task.WhenAll(registrations.Select(_ => Register(_.replica, eventStoreName, _.@namespace))).WaitAsync(Bound);
+                Elapsed = stopwatch.Elapsed;
+                Failures = [.. results.OfType<Exception>()];
+                Succeeded = results.Count(_ => _ is null);
+                Completed = results.Length;
+            }
+            catch (TimeoutException ex)
+            {
+                WorkloadTimedOut = true;
+                Elapsed = stopwatch.Elapsed;
+                Failures = [ex];
+            }
 
             await Probe(eventStoreName);
             Console.WriteLine($"DIAGNOSTIC wait-queue-full log entries: {WaitQueueFullEntries}");
@@ -99,17 +124,28 @@ public class and_replicas_register_the_same_artifacts_concurrently_with_a_small_
             // A fresh connection registers the same set in a new namespace and appends an event, showing the kernel recovered.
             try
             {
-                var store = await CreateReplica().GetEventStore(eventStoreName, "probe");
-                await store.DiscoverAll();
-                await store.RegisterAll();
-                ProbeRegistered = (await store.WaitForRegistration(Bound)).IsSuccess;
-                var append = await store.EventLog.Append("customer", new CustomerNamed("Probe"));
-                ProbeAppended = append.IsSuccess;
+                // A separate deadline covers the whole probe: registration and the append.
+                await RunProbe(eventStoreName).WaitAsync(Bound);
+            }
+            catch (TimeoutException ex)
+            {
+                ProbeTimedOut = true;
+                ProbeFailure = ex;
             }
             catch (Exception ex)
             {
                 ProbeFailure = ex;
             }
+        }
+
+        async Task RunProbe(string eventStoreName)
+        {
+            var store = await CreateReplica().GetEventStore(eventStoreName, "probe");
+            await store.DiscoverAll();
+            await store.RegisterAll();
+            ProbeRegistered = (await store.WaitForRegistration(Bound)).IsSuccess;
+            var append = await store.EventLog.Append("customer", new CustomerNamed("Probe"));
+            ProbeAppended = append.IsSuccess;
         }
 
         IChronicleClient CreateReplica()
@@ -121,13 +157,15 @@ public class and_replicas_register_the_same_artifacts_concurrently_with_a_small_
                 Services.GetRequiredService<ILocalSiloDetails>(),
                 loggerFactory);
             connection.SetServices(((IChronicleServicesAccessor)Services.GetRequiredService<IChronicleConnection>()).Services);
-            return new ChronicleClient(
+            var client = new ChronicleClient(
                 connection,
                 Services.GetRequiredService<IOptions<ChronicleOptions>>().Value,
                 Services.GetRequiredService<IClientArtifactsProvider>(),
                 Services,
                 Services.GetRequiredService<IIdentityProvider>(),
                 loggerFactory: loggerFactory);
+            _clients.Add(client);
+            return client;
         }
 
         async Task<Exception?> Register(IChronicleClient client, string eventStoreName, string @namespace)
@@ -154,6 +192,8 @@ public class and_replicas_register_the_same_artifacts_concurrently_with_a_small_
 
     [Fact] void should_not_fail_any_registration() => Context.Failures.ShouldBeEmpty();
     [Fact] void should_complete_every_registration() => Context.Succeeded.ShouldEqual(context.Replicas * context.Namespaces);
+    [Fact] void should_not_time_out_the_workload() => Context.WorkloadTimedOut.ShouldBeFalse();
+    [Fact] void should_not_time_out_the_probe() => Context.ProbeTimedOut.ShouldBeFalse();
     [Fact] void should_complete_within_the_bound() => Context.Elapsed.ShouldBeLessThan(context.Bound);
     [Fact] void should_register_a_probe_from_a_new_connection() => Context.ProbeRegistered.ShouldBeTrue();
     [Fact] void should_append_an_event_after_the_load() => Context.ProbeAppended.ShouldBeTrue();

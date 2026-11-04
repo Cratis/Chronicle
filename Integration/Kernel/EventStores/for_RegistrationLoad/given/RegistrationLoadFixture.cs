@@ -3,4 +3,11 @@
 
 namespace Cratis.Chronicle.Kernel.Integration.EventStores.for_RegistrationLoad.given;
 
-public class RegistrationLoadFixture : ChronicleInProcessFixture;
+public class RegistrationLoadFixture : ChronicleInProcessFixture
+{
+    /// <inheritdoc/>
+    /// <remarks>
+    /// Each context gets its own kernel host, which is disposed with the context, so the small-pool kernel never outlives this spec.
+    /// </remarks>
+    public override bool UsesPerContextMongoDBHost => true;
+}
