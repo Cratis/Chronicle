@@ -87,7 +87,8 @@ public partial class EventSequenceStorage
                     PublicationId = persistIdentities ? eventToAppend.Identity?.Id : null,
                     PublicationFingerprint = persistIdentities ? eventToAppend.Identity?.Fingerprint : null,
                     NamedTags = eventToAppend.NamedTags.Select(tag => new NamedTagDocument(tag.Name.Value, tag.Value)).ToArray(),
-                    EventSource = eventToAppend.EventSource.IsSet ? eventToAppend.EventSource : null
+                    EventSource = eventToAppend.EventSource.IsSet ? eventToAppend.EventSource : null,
+                    CompensationFor = eventToAppend.CompensationFor
                 };
 
                 eventsToInsert.Add(@event);
@@ -113,6 +114,7 @@ public partial class EventSequenceStorage
                     {
                         NamedTags = eventToAppend.NamedTags,
                         EventSource = eventToAppend.EventSource,
+                        CompensationFor = eventToAppend.CompensationFor,
                         AppendedGeneration = eventToAppend.EventType.Generation
                     },
                     eventToAppend.GenerationalContent[eventToAppend.EventType.Generation])

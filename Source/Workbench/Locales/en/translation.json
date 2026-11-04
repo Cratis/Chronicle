@@ -530,6 +530,7 @@
                     "appendEvent": "Append Event",
                     "redact": "Redact",
                     "revise": "Revise",
+                    "compensate": "Compensate",
                     "export": "Export",
                     "run": "Run",
                     "newQuery": "New query",
@@ -594,6 +595,11 @@
                         "confirmTitle": "Confirm Revision",
                         "confirmMessage": "The following observers will be replayed after this revision:",
                         "confirmNoObservers": "No observers will be replayed. Proceed with revision?"
+                    },
+                    "compensate": {
+                        "title": "Compensate Event",
+                        "okLabel": "Compensate",
+                        "eventType": "Compensation Event Type"
                     },
                     "deleteQuery": {
                         "title": "Delete query",

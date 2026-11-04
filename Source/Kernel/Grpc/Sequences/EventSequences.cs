@@ -92,6 +92,13 @@ internal sealed class EventSequences(
             response => ToAppendResponse(response));
 
     /// <inheritdoc/>
+    public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult<global::Cratis.Chronicle.Contracts.Sequences.AppendResponse>> Compensate(global::Cratis.Chronicle.Contracts.Sequences.CompensateRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
+        CommandExecutor.Execute<global::Cratis.Chronicle.EventSequences.AppendResult, global::Cratis.Chronicle.Contracts.Sequences.AppendResponse>(
+            commandPipeline,
+            new global::Cratis.Chronicle.Sequences.Compensate((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, (global::Cratis.Chronicle.Concepts.EventSequences.EventSequenceId)request.EventSequenceId, request.CompensationFor, request.EventType.ToApi(), request.Content, request.CorrelationId, request.Tags, request.Occurred, request.Causation?.Select(x => x.ToApi()), request.CausedBy?.ToApi()),
+            response => ToAppendResponse(response));
+
+    /// <inheritdoc/>
     public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult<global::Cratis.Chronicle.Contracts.Sequences.CompleteStreamResponse>> CompleteStream(global::Cratis.Chronicle.Contracts.Sequences.CompleteStreamRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         CommandExecutor.Execute<global::Cratis.Chronicle.Sequences.CompleteStreamOutcome, global::Cratis.Chronicle.Contracts.Sequences.CompleteStreamResponse>(
             commandPipeline,

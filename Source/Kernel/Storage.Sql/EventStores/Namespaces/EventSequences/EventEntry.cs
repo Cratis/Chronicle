@@ -101,6 +101,12 @@ public class EventEntry
     public string? EventSource { get; set; }
 
     /// <summary>
+    /// Gets or sets the sequence number of the event this event compensates for.
+    /// Null for events that are not compensations, including events stored before compensations existed.
+    /// </summary>
+    public ulong? CompensationFor { get; set; }
+
+    /// <summary>
     /// Gets or sets the publication identity hash used for binary, collation-independent uniqueness.
     /// </summary>
 #pragma warning disable CA1819 // EF Core requires byte-array properties for portable binary SQL columns.

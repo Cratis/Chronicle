@@ -145,6 +145,7 @@ public partial class EventSequenceMigrator(
                 Compensations = table.JsonColumn<IDictionary<string, string>>(migrationBuilder),
                 Subject = table.StringColumn(migrationBuilder, nullable: true),
                 EventSource = table.StringColumn(migrationBuilder, nullable: true),
+                CompensationFor = table.Column<ulong>(nullable: true),
                 Tags = table.StringColumn(migrationBuilder),
                 PublicationIdentityHash = table.Column<byte[]>(maxLength: 32, nullable: true),
                 PublicationId = table.StringColumn(migrationBuilder, nullable: true),
@@ -240,6 +241,19 @@ public partial class EventSequenceMigrator(
                 nullable: true);
 
             await tableMigrator.ExecuteMigrationOperations(context, eventSourceMigration);
+        }
+
+        if (!await tableMigrator.ColumnExists(context, tableName, nameof(EventEntry.CompensationFor)))
+        {
+            logger.AddingCompensationForColumn(tableName);
+
+            var compensationMigration = new MigrationBuilder(context.Database.ProviderName);
+            compensationMigration.AddColumn<ulong>(
+                name: nameof(EventEntry.CompensationFor),
+                table: tableName,
+                nullable: true);
+
+            await tableMigrator.ExecuteMigrationOperations(context, compensationMigration);
         }
 
         await EnsureParentHistoryIndex(context, tableName);
