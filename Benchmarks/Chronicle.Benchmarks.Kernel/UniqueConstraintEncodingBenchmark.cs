@@ -104,6 +104,7 @@ public class UniqueConstraintEncodingBenchmark
 /// Compares the cost of computing the scope of a unique constraint with the v1 scope key and the v2 scope token.
 /// </summary>
 /// <remarks>
+/// The <c>ScopeStreamId</c> cases repeat one scope, which the keyed encoder serves from its cache. The <c>ScopeStreamIdMiss</c> cases use a different scope on every call.
 /// This is a separate class from <see cref="UniqueConstraintEncodingBenchmark"/> so the scope cases do not repeat for every value shape.
 /// </remarks>
 [MemoryDiagnoser]
@@ -112,12 +113,17 @@ public class UniqueConstraintEncodingBenchmark
 [Config(typeof(UniqueConstraintEncodingScopeConfiguration))]
 public class UniqueConstraintEncodingBenchmarkScope
 {
+    // More distinct scopes than the keyed encoder caches, so the cycling miss cases never hit its cache.
+    const int MissCount = 1 << 16;
     static readonly byte[] _key = Encoding.ASCII.GetBytes("benchmark-key-0123456789abcdef!!");
     readonly UniqueConstraintKeyedEncoder _encoder = new(_key);
     readonly ConstraintScope _unscoped = ConstraintScope.None;
     readonly ConstraintScope _streamIdScope = new(EventStreamId: "branch-1");
     readonly EventStreamId _streamId = "branch-1";
     readonly ResolvedConstraintScope _resolved = new(EventStreamId: "branch-1");
+    readonly EventStreamId[] _missIds = Enumerable.Range(0, MissCount).Select(index => new EventStreamId($"stream-{index}")).ToArray();
+    readonly ResolvedConstraintScope[] _missScopes = Enumerable.Range(0, MissCount).Select(index => new ResolvedConstraintScope(EventStreamId: $"stream-{index}")).ToArray();
+    int _miss;
 
     /// <summary>
     /// Computes the v1 key for a constraint without scope.
@@ -166,6 +172,32 @@ public class UniqueConstraintEncodingBenchmarkScope
     [Benchmark]
     [BenchmarkCategory("ScopeStreamId")]
     public string V2ScopeStreamId() => _encoder.EncodeScope(_resolved).Value;
+
+    /// <summary>
+    /// Computes the v1 key for a different event stream id on every call.
+    /// </summary>
+    /// <returns>The key.</returns>
+    [Benchmark(Baseline = true)]
+    [BenchmarkCategory("ScopeStreamIdMiss")]
+    public string V1ScopeStreamIdMiss() => _streamIdScope.BuildScopeKey(null, null, _missIds[NextMiss()]);
+
+    /// <summary>
+    /// Computes the token with the archived, unoptimised v2 encoder for a different event stream id on every call.
+    /// </summary>
+    /// <returns>The token text.</returns>
+    [Benchmark]
+    [BenchmarkCategory("ScopeStreamIdMiss")]
+    public string ArchivedV2ScopeStreamIdMiss() => ArchivedUniqueConstraintEncoder.EncodeScope(_key, _missScopes[NextMiss()]).Value;
+
+    /// <summary>
+    /// Computes the v2 token for a different event stream id on every call, so the scope cache never hits.
+    /// </summary>
+    /// <returns>The token text.</returns>
+    [Benchmark]
+    [BenchmarkCategory("ScopeStreamIdMiss")]
+    public string V2ScopeStreamIdMiss() => _encoder.EncodeScope(_missScopes[NextMiss()]).Value;
+
+    int NextMiss() => _miss = (_miss + 1) & (MissCount - 1);
 
     sealed class UniqueConstraintEncodingScopeConfiguration : ManualConfig
     {
