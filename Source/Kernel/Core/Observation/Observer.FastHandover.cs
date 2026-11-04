@@ -29,7 +29,9 @@ public partial class Observer
     /// re-reading state, rewriting the definition and state, rotating the alert lifecycle and re-running recovery for
     /// every replica is pure storage load. Anything that is not that steady case runs the full subscribe unchanged.
     /// The checks are repeated after the last await and the target is added without awaiting in between, because
-    /// interleaving calls may move the observer out of the steady state while this turn waits on storage.
+    /// interleaving calls may move the observer out of the steady state while this turn waits on storage. A transition
+    /// started by such a call keeps the current state and its running state until leaving and entering have run, so
+    /// the state is only trusted while no transition is in progress.
     /// </remarks>
     async Task<bool> TryHandOverToAnotherClientInstance<TObserverSubscriber>(
         ObserverType type,
@@ -43,12 +45,13 @@ public partial class Observer
     {
         var registration = new HandoverRegistration(type, GetOwner<TObserverSubscriber>(), eventTypes, isReplayable, generationDelivery);
         if (!CanHandOverTo<TObserverSubscriber>(registration, filters)) return false;
-        if (await GetCurrentState() is not Observing) return false;
+        if (!await IsObservingWithNoTransitionInProgress()) return false;
         if (!await _appendedEventsQueues.IsSubscribed(_observerKey)) return false;
         if (!await StoredStateBelongsToThisLifecycle()) return false;
         await observerDefinition.ReadStateAsync();
 
         if (!CanHandOverTo<TObserverSubscriber>(registration, filters) || !StoredDefinitionMatches(registration)) return false;
+        if (!await IsObservingWithNoTransitionInProgress()) return false;
 
         ApplySubscription<TObserverSubscriber>(eventTypes, siloAddress, connectedClient, isReplayable, filters, generationDelivery);
         _startAtTailWhenSubscribed = false;
@@ -63,6 +66,17 @@ public partial class Observer
         _subscription.IsReplayable == registration.IsReplayable &&
         IsSteadilyObserving() &&
         HasNoPendingRecovery();
+
+    /// <summary>
+    /// Checks that the observer is in Observing and not leaving it or entering another state.
+    /// </summary>
+    /// <returns>True if the observer is settled in Observing.</returns>
+    /// <remarks>
+    /// The state machine hands out its current state as an already completed task, so awaiting this never yields and
+    /// nothing can interleave between this check and the code that follows it.
+    /// </remarks>
+    async Task<bool> IsObservingWithNoTransitionInProgress() =>
+        !_stateTransitionInProgress && await GetCurrentState() is Observing;
 
     bool IsSteadilyObserving() =>
         State.RunningState == ObserverRunningState.Active &&
