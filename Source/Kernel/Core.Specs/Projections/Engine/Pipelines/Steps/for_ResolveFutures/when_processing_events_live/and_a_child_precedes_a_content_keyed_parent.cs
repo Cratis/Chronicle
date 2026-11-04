@@ -65,6 +65,7 @@ public class and_a_child_precedes_a_content_keyed_parent : Cratis.Chronicle.Proj
             _tracker,
             Substitute.For<ITypeFormats>(),
             new ObjectComparer(),
+            Substitute.For<ICanProtectFutureChangesets>(),
             NullLogger<ResolveFutures>.Instance,
             _storage,
             _sink);
