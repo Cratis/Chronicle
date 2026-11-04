@@ -17,11 +17,26 @@ public interface IReadModelMigrator
     Task EnsureTableMigrated(string tableName, ReadModelDbContext context);
 
     /// <summary>
+    /// Looks at an existing table without changing anything: never creates the table, adds a column or builds an index.
+    /// </summary>
+    /// <param name="tableName">The name of the table to look at.</param>
+    /// <param name="context">The <see cref="ReadModelDbContext"/> instance, which is not changed.</param>
+    /// <returns>True only if the table exists with every column the context expects; false otherwise. Nothing was changed either way.</returns>
+    Task<bool> ProbeExistingTable(string tableName, ReadModelDbContext context);
+
+    /// <summary>
     /// Ensures the Chronicle-owned replay promotion marker table exists in the read-model database.
     /// </summary>
     /// <param name="context">The context whose connection is used for the promotion transaction.</param>
     /// <returns>Awaitable task.</returns>
     Task EnsureReplayPromotions(ReadModelDbContext context);
+
+    /// <summary>
+    /// Ensures the Chronicle-owned sink cycle receipt table exists in the read-model database.
+    /// </summary>
+    /// <param name="context">The context whose connection is used to create the table.</param>
+    /// <returns>Awaitable task.</returns>
+    Task EnsureSinkCycleReceipts(ReadModelDbContext context);
 
     /// <summary>
     /// Clears cached migration state for all tables whose connection string starts with the given prefix.

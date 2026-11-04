@@ -80,6 +80,7 @@ public static class SerializationConfigurationExtensions
                 .AddCompleteSerializer<ExpandoObjectSerializer>()
                 .AddLinqCollectionCopier();
             builder.Services.AddSingleton<ITypeFilter, CratisTypesFilter>();
+            builder.Services.AddSingleton<ITypeFilter, GeneratedGenericInvokablesTypeFilter>();
         });
         return services;
     }

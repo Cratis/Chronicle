@@ -21,25 +21,72 @@ namespace Cratis.Chronicle.Projections.Engine.Pipelines.Steps;
 /// <summary>
 /// Represents an implementation of <see cref="ICanPerformProjectionPipelineStep"/> that resolves pending futures.
 /// </summary>
-/// <param name="projectionFutures"><see cref="IProjectionFutures"/> for managing futures.</param>
-/// <param name="futuresTracker"><see cref="ProjectionFuturesTracker"/> shared with the <see cref="StoreFutures"/> step.</param>
-/// <param name="typeFormats"><see cref="ITypeFormats"/> for resolving actual CLR types for schemas.</param>
-/// <param name="objectComparer"><see cref="IObjectComparer"/> for creating changesets when resolving futures.</param>
-/// <param name="futureChangesetProtection">Protection for resolved future changesets.</param>
-/// <param name="logger"><see cref="ILogger"/> for logging.</param>
-/// <param name="eventSequenceStorage"><see cref="IEventSequenceStorage"/> for retrying deferred keys.</param>
-/// <param name="sink"><see cref="ISink"/> for retrying deferred keys.</param>
-public class ResolveFutures(
-    IProjectionFutures projectionFutures,
-    ProjectionFuturesTracker futuresTracker,
-    ITypeFormats typeFormats,
-    IObjectComparer objectComparer,
-    ICanProtectFutureChangesets futureChangesetProtection,
-    ILogger<ResolveFutures> logger,
-    IEventSequenceStorage eventSequenceStorage,
-    ISink sink) : ICanPerformProjectionPipelineStep
+public class ResolveFutures : ICanPerformProjectionPipelineStep
 {
     readonly HashSet<ProjectionFutureId> _failedFutures = [];
+    readonly IProjectionFuturesStore _projectionFutures;
+    readonly ProjectionFuturesTracker _futuresTracker;
+    readonly ITypeFormats _typeFormats;
+    readonly IObjectComparer _objectComparer;
+    readonly ICanProtectFutureChangesets _futureChangesetProtection;
+    readonly ILogger<ResolveFutures> _logger;
+    readonly IEventSequenceStorage _eventSequenceStorage;
+    readonly ISink _sink;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ResolveFutures"/> class.
+    /// </summary>
+    /// <param name="projectionFutures"><see cref="IProjectionFutures"/> for managing futures.</param>
+    /// <param name="futuresTracker"><see cref="ProjectionFuturesTracker"/> shared with the <see cref="StoreFutures"/> step.</param>
+    /// <param name="typeFormats"><see cref="ITypeFormats"/> for resolving actual CLR types for schemas.</param>
+    /// <param name="objectComparer"><see cref="IObjectComparer"/> for creating changesets when resolving futures.</param>
+    /// <param name="futureChangesetProtection">Protection for resolved future changesets.</param>
+    /// <param name="logger"><see cref="ILogger"/> for logging.</param>
+    /// <param name="eventSequenceStorage"><see cref="IEventSequenceStorage"/> for retrying deferred keys.</param>
+    /// <param name="sink"><see cref="ISink"/> for retrying deferred keys.</param>
+    public ResolveFutures(
+        IProjectionFutures projectionFutures,
+        ProjectionFuturesTracker futuresTracker,
+        ITypeFormats typeFormats,
+        IObjectComparer objectComparer,
+        ICanProtectFutureChangesets futureChangesetProtection,
+        ILogger<ResolveFutures> logger,
+        IEventSequenceStorage eventSequenceStorage,
+        ISink sink)
+        : this(futuresTracker, new ProjectionFuturesStore(projectionFutures), typeFormats, objectComparer, futureChangesetProtection, logger, eventSequenceStorage, sink)
+    {
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ResolveFutures"/> class.
+    /// </summary>
+    /// <param name="futuresTracker"><see cref="ProjectionFuturesTracker"/> shared with the <see cref="StoreFutures"/> step.</param>
+    /// <param name="futuresStore"><see cref="IProjectionFuturesStore"/> for managing futures.</param>
+    /// <param name="typeFormats"><see cref="ITypeFormats"/> for resolving actual CLR types for schemas.</param>
+    /// <param name="objectComparer"><see cref="IObjectComparer"/> for creating changesets when resolving futures.</param>
+    /// <param name="futureChangesetProtection">Protection for resolved future changesets.</param>
+    /// <param name="logger"><see cref="ILogger"/> for logging.</param>
+    /// <param name="eventSequenceStorage"><see cref="IEventSequenceStorage"/> for retrying deferred keys.</param>
+    /// <param name="sink"><see cref="ISink"/> for retrying deferred keys.</param>
+    internal ResolveFutures(
+        ProjectionFuturesTracker futuresTracker,
+        IProjectionFuturesStore futuresStore,
+        ITypeFormats typeFormats,
+        IObjectComparer objectComparer,
+        ICanProtectFutureChangesets futureChangesetProtection,
+        ILogger<ResolveFutures> logger,
+        IEventSequenceStorage eventSequenceStorage,
+        ISink sink)
+    {
+        _projectionFutures = futuresStore;
+        _futuresTracker = futuresTracker;
+        _typeFormats = typeFormats;
+        _objectComparer = objectComparer;
+        _futureChangesetProtection = futureChangesetProtection;
+        _logger = logger;
+        _eventSequenceStorage = eventSequenceStorage;
+        _sink = sink;
+    }
 
     /// <inheritdoc/>
     /// <remarks>
@@ -56,22 +103,22 @@ public class ResolveFutures(
         }
 
         // Nothing has been stored since resolution last drained the futures store, so skip the grain call
-        if (!futuresTracker.HasPending)
+        if (!_futuresTracker.HasPending)
         {
             return context;
         }
 
         // Attempt to resolve any pending futures now that we've processed a new event
-        var futures = await projectionFutures.GetFutures();
+        var futures = await _projectionFutures.GetFutures();
 
         _failedFutures.IntersectWith(futures.Select(future => future.Id));
         if (!futures.Any())
         {
-            futuresTracker.HasPending = false;
+            _futuresTracker.HasPending = false;
             return context;
         }
 
-        logger.FoundPendingFutures(futures.Count(), projection.Identifier);
+        _logger.FoundPendingFutures(futures.Count(), projection.Identifier);
         using var resolutionScope = ParentKeyResolutionScope.ForDeferredRelease(context.Event.Context.SequenceNumber);
 
         // Keep trying to resolve futures until we can't resolve any more
@@ -82,14 +129,14 @@ public class ResolveFutures(
         while (resolvedAny)
         {
             resolvedAny = false;
-            futures = await projectionFutures.GetFutures();
+            futures = await _projectionFutures.GetFutures();
 
             foreach (var future in futures.Where(future => !queuedFutures.Contains(future.Id)))
             {
                 try
                 {
                     var parentIdentifierPath = future.ParentPath + future.ParentIdentifiedByProperty;
-                    var type = projection.TargetReadModelSchema.GetTargetTypeForPropertyPath(parentIdentifierPath, typeFormats);
+                    var type = projection.TargetReadModelSchema.GetTargetTypeForPropertyPath(parentIdentifierPath, _typeFormats);
                     var parentKey = future.ParentKey.Value;
                     if (type is not null && !future.ParentPath.IsRoot)
                     {
@@ -111,8 +158,8 @@ public class ResolveFutures(
                         continue;
                     }
 
-                    logger.FoundChildProjection(childProjection.Path, future.Id);
-                    logger.CheckingParentInCurrentState(future.Id);
+                    _logger.FoundChildProjection(childProjection.Path, future.Id);
+                    _logger.CheckingParentInCurrentState(future.Id);
 
                     // Check if parent exists in the current changeset's state, collecting the full indexer
                     // chain needed to navigate from root to the parent. For parents nested beyond one level,
@@ -122,15 +169,15 @@ public class ResolveFutures(
                     if (!parentFound)
                     {
                         // Parent still doesn't exist, skip this future
-                        logger.ParentNotInCurrentState(future.Id);
+                        _logger.ParentNotInCurrentState(future.Id);
                         continue;
                     }
 
-                    logger.ParentExistsInCurrentState(future.Id);
-                    logger.ResolvedKeyCallingOnNext(future.ParentKey, future.Id);
+                    _logger.ParentExistsInCurrentState(future.Id);
+                    _logger.ResolvedKeyCallingOnNext(future.ParentKey, future.Id);
 
                     var childIdentifierPath = future.ChildPath + future.IdentifiedByProperty;
-                    var childType = projection.TargetReadModelSchema.GetTargetTypeForPropertyPath(childIdentifierPath, typeFormats);
+                    var childType = projection.TargetReadModelSchema.GetTargetTypeForPropertyPath(childIdentifierPath, _typeFormats);
 
                     var childKey = ChildKeyFor(future, retriedKey);
 
@@ -156,7 +203,7 @@ public class ResolveFutures(
                     // operation after the main changeset save, avoiding MongoDB's restriction on
                     // pushing to a child of an array element being pushed in the same update.
                     var futureChangeset = new Changeset<AppendedEvent, ExpandoObject>(
-                        objectComparer,
+                        _objectComparer,
                         future.Event,
                         context.Changeset.CurrentState);
 
@@ -178,7 +225,7 @@ public class ResolveFutures(
 
                     await QueueFutureSave(context, new PendingFutureSave(key, futureChangeset) { FutureId = future.Id }, queuedFutures);
                     _failedFutures.Remove(future.Id);
-                    logger.ResolvedFuture(future.Id, future.ProjectionId);
+                    _logger.ResolvedFuture(future.Id, future.ProjectionId);
                     resolvedAny = true;
                     if (future.Event.Context.SequenceNumber > latestResolvedEvent.Context.SequenceNumber)
                     {
@@ -193,7 +240,7 @@ public class ResolveFutures(
         }
 
         // Queued writes remain persisted too, so a failed save keeps the tracker pending.
-        futuresTracker.HasPending = futures.Any();
+        _futuresTracker.HasPending = futures.Any();
 
         return context with { Event = latestResolvedEvent };
     }
@@ -542,7 +589,7 @@ public class ResolveFutures(
 
     ValueTask ProtectFutureChangeset(IProjection projection, ProjectionEventContext context) =>
         context.Changeset.HasChanges
-            ? futureChangesetProtection.ProtectFutureChangeset(projection, context)
+            ? _futureChangesetProtection.ProtectFutureChangeset(projection, context)
             : ValueTask.CompletedTask;
 
     async Task<(bool Found, List<ArrayIndexer> ParentIndexers, ResolvedKey? RetriedKey)> FindParentForFuture(
@@ -578,7 +625,7 @@ public class ResolveFutures(
         }
 
         var resolver = childProjection.GetKeyResolverFor(future.Event.Context.EventType);
-        if (await resolver(eventSequenceStorage, sink, future.Event) is not ResolvedKey resolved ||
+        if (await resolver(_eventSequenceStorage, _sink, future.Event) is not ResolvedKey resolved ||
             !KeyValueEquality.AreEqual(resolved.Key.Value, context.Key.Value))
         {
             return null;
@@ -592,11 +639,11 @@ public class ResolveFutures(
     {
         if (_failedFutures.Add(future.Id))
         {
-            logger.FailedToResolveFuture(exception, future.Id, future.ProjectionId);
+            _logger.FailedToResolveFuture(exception, future.Id, future.ProjectionId);
         }
         else
         {
-            logger.FutureStillUnresolved(exception, future.Id, future.ProjectionId);
+            _logger.FutureStillUnresolved(exception, future.Id, future.ProjectionId);
         }
     }
 
@@ -610,7 +657,7 @@ public class ResolveFutures(
         }
         else
         {
-            await projectionFutures.ResolveFuture(futureId);
+            await _projectionFutures.ResolveFuture(futureId);
         }
     }
 }
