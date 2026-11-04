@@ -109,4 +109,10 @@ public class EventContext
     /// </summary>
     [ProtoMember(16)]
     public string EventSource { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the CompensationFor.
+    /// </summary>
+    [ProtoMember(17)]
+    public global::System.UInt64? CompensationFor { get; set; }
 }

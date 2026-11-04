@@ -202,7 +202,7 @@ public partial class EventSequence
             EventSequenceStorage,
             namespaceStorage.GetUniqueConstraintsStorage(_eventSequenceId),
             ClosedStreamsStorage,
-            new StoredConstraintEventContent(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, EventTypesStorage, jsonComplianceManagerProvider, expandoObjectConverter),
+            new StoredConstraintEventContent(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, EventTypesStorage, jsonComplianceManagerProvider, expandoObjectConverter, schemaCache),
             constraintIndexReplayLogger ?? Microsoft.Extensions.Logging.Abstractions.NullLogger<ConstraintIndexReplay>.Instance,
             _replayScopes,
             _replayEndPoint,

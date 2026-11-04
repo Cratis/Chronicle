@@ -24,12 +24,18 @@ public record EventSequenceSinkConfiguration(EventType EventType, EventSequenceI
     /// Ensures the destination is one an event target may publish to.
     /// </summary>
     /// <exception cref="EventLogIsNotAPublicationTarget">Thrown when the destination is the event log.</exception>
+    /// <exception cref="EventSequenceDestinationContainsKeySeparator">Thrown when the destination contains the key separator and would be read as another sequence.</exception>
     /// <exception cref="PrivateEventCannotBePublishedToOutbox">Thrown when the outbox is the destination and the event type is not public.</exception>
     public void EnsureDestinationAllowed()
     {
         if (Destination == EventSequenceId.Log)
         {
             throw new EventLogIsNotAPublicationTarget(EventType);
+        }
+
+        if (Destination.Value.Contains(KeyHelper.Separator))
+        {
+            throw new EventSequenceDestinationContainsKeySeparator(Destination);
         }
 
         if (Destination == EventSequenceId.Outbox && !IsPublic)

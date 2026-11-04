@@ -18,7 +18,7 @@ public class and_sql_server_values_exceed_200_characters(SqlServerFixture fixtur
     async Task Establish()
     {
         var connectionString = await fixture.CreateDatabase();
-        await CreateLegacyTable(connectionString, true, () => fixture.DropDatabase(connectionString));
+        await CreateLegacyTable(connectionString, true, () => fixture.QueueDatabaseDrop(connectionString));
         await AddClaim("first", _oversizedValue);
         await AddClaim("second", _oversizedValue);
     }

@@ -15,8 +15,8 @@ namespace Cratis.Chronicle.Storage.MongoDB.Occurrences;
 public partial class OccurrencesStorage(IMongoDatabase database) : IOccurrencesStorage, IScheduleStorage
 {
     readonly ConcurrentDictionary<string, byte> _ensuredIndexes = new();
-    readonly IMongoCollection<BsonDocument> _occurrences = database.GetCollection<BsonDocument>("occurrences");
-    readonly IMongoCollection<BsonDocument> _fences = database.GetCollection<BsonDocument>("occurrence-claim-fences");
+    readonly IMongoCollection<BsonDocument> _occurrences = database.GetCollection<BsonDocument>(WellKnownCollectionNames.Occurrences);
+    readonly IMongoCollection<BsonDocument> _fences = database.GetCollection<BsonDocument>(WellKnownCollectionNames.OccurrenceClaimFences);
 
     /// <summary>
     /// Gets the occurrence indexes.

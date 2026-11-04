@@ -67,7 +67,10 @@ BATCHES = {
 }
 
 # Namespaces that run in a restricted set of configurations, or not at all in this matrix.
-CONFIG_RESTRICTED = ("SqlServerAlertIncidents", "for_KernelTlsLifecycle", "for_ContainerStartup")
+CONFIG_RESTRICTED = (
+    "SqlServerAlertIncidents", "for_KernelTlsLifecycle", "for_PerProcessActivation",
+    "for_OccurrenceProcessRecovery", "for_ContainerStartup",
+)
 
 # Number of parallel shards per namespace. Any namespace not listed here runs as
 # a single job. Tuned from observed CI wall-clock: Projections (617 facts) was
@@ -302,10 +305,14 @@ def build_include(suite, databases, batches):
         # Run it once in the SQL Server lane instead of starting SQL Server in every backend lane.
         if name == "SqlServerAlertIncidents":
             namespace_configs = [config for config in configs if config[1] == "mssql"]
-        # The kernel TLS lifecycle specs own the out-of-process MongoDB kernel container they start and kill,
-        # and assert that configuration; any other lane has no such container to own.
-        if name == "for_KernelTlsLifecycle":
+        # Kernel TLS lifecycle specs own an out-of-process MongoDB kernel container;
+        # PerProcess activation specs need its gRPC listener and cover client identity once.
+        if name in {"for_KernelTlsLifecycle", "for_PerProcessActivation"}:
             namespace_configs = [config for config in configs if config[0] == "outofprocess" and config[1] == "mongodb"]
+        # Process recovery owns a PostgreSQL database and an external kernel regardless of lane settings.
+        # Schedule it only once, in the lane matching the infrastructure it actually exercises.
+        if name == "for_OccurrenceProcessRecovery":
+            namespace_configs = [config for config in configs if config[0] == "outofprocess" and config[1] == "postgresql"]
         for mode, database, needs_docker in namespace_configs:
             include.append({**entry, "mode": mode, "database": database, "needs-docker": needs_docker})
     return include

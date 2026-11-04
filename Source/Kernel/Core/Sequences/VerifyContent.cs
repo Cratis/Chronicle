@@ -115,10 +115,12 @@ public partial record VerifyContent(
                 return new(ContentVerificationResult.Unavailable);
             }
 
-            schemas = ResolveProtectionSchemas(schemas, appended);
+            // Every selected definition shares the registered generations; only migrations differ by provenance.
+            schemas = ResolveProtectionSchemas(schemas, definitions[(int)appended.Value]);
 
+            // Append protects inherited boundaries before migration, just like explicitly classified ones.
             var expected = await metadataManager.TryPrepareGenerationsForComparison(
-                schema.Schema,
+                schemas[(int)EventType.Generation],
                 attempted,
                 masked => new ExpectedContent(this, eventTypeMigrations, expandoObjectConverter).Prepare(masked, schemas, definitions, sequence),
                 (generation, boundarySchema, value) =>
@@ -179,11 +181,15 @@ public partial record VerifyContent(
         }
     }
 
-    static Dictionary<int, JsonSchema> ResolveProtectionSchemas(Dictionary<int, JsonSchema> own, EventTypeGeneration? appendedGeneration)
+    static Dictionary<int, JsonSchema> ResolveProtectionSchemas(Dictionary<int, JsonSchema> own, EventTypeDefinition? definition)
     {
-        var generations = own.Select(_ => ((EventTypeGeneration)(uint)_.Key, _.Value)).ToArray();
+        // Append inherits protection from every registered generation, not only those stored for this event.
+        var registered = (definition?.Generations ?? [])
+            .Where(_ => !own.ContainsKey((int)_.Generation.Value))
+            .Select(_ => (_.Generation, _.Schema));
+        var generations = own.Select(_ => ((EventTypeGeneration)(uint)_.Key, _.Value)).Concat(registered).ToArray();
         return own.ToDictionary(
             _ => _.Key,
-            _ => (uint)_.Key == appendedGeneration?.Value ? _.Value : GenerationProtectionSchemas.For((uint)_.Key, generations));
+            _ => GenerationProtectionSchemas.For((uint)_.Key, generations));
     }
 }

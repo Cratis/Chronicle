@@ -46,7 +46,7 @@ public class a_sink : Specification
             new(SinkConfigurationId.None, WellKnownSinkTypes.EventSequence, _configuration),
             new Dictionary<ReadModelGeneration, JsonSchema> { [ReadModelGeneration.First] = schema },
             []);
-        _sink = new(StoreName, Tenant, _definition, _configuration, _destinations.Grains, _destinations.Storage, _destinations.Converter);
+        _sink = new(StoreName, Tenant, _definition, _configuration, _destinations.Grains, _destinations.Storage, _destinations.Converter, _destinations.ReservedIds);
     }
 
     protected static string TotalOf(ExpandoObject? state) => ((IDictionary<string, object?>)state!)["Total"]!.ToString()!;

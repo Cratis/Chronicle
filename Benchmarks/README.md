@@ -389,6 +389,13 @@ above and the `CATCHUP_PATTERNS_WAIT_SECONDS` bound. `PatternsElapsedMillisecond
 confirmation delay. Unacknowledged appends, observer or patterns timeouts, and snapshot mismatches fail
 the run with a non-zero exit.
 
+## Container hosting profile
+
+The opt-in `--container-profile` mode compares constrained kernel containers without
+changing production defaults. Its `plan` subcommand starts no processes. See the
+[container-profile harness guide](Chronicle.Benchmarks/ContainerProfile/README.md) for
+safe builds, the core/full matrices, measurement commands and metric definitions.
+
 ## Results
 
 Benchmark results are exported in JSON format compatible with BenchmarkDotNet and GitHub Actions benchmark visualization.

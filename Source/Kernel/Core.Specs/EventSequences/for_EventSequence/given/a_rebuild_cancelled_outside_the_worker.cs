@@ -20,6 +20,7 @@ public class a_rebuild_cancelled_outside_the_worker : a_rebuilding_constraint_in
         _eventStoreStorage.Constraints.GetDefinitions().Returns(_ => _registeredConstraints.ToArray());
         var stepSilo = new TestKitSilo();
         stepSilo.AddService(_storage);
+        stepSilo.AddService(_schemaCache);
         stepSilo.AddService(_complianceManager);
         stepSilo.AddService(_expandoObjectConverter);
         stepSilo.AddService(Substitute.For<IJobStepThrottle>());

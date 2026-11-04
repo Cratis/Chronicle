@@ -7,7 +7,6 @@ using System.Text.Json.Nodes;
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Compliance.GDPR;
 using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Events.EventSequences;
 using Cratis.Chronicle.ProtectedValues;
 using Cratis.Chronicle.Schemas;
@@ -63,7 +62,7 @@ public class and_release_fails : Specification
         store.GetNamespace(_context.Namespace).Returns(ns);
         store.EventTypes.Returns(types);
         ns.GetEventSequence(_request.Sequence).Returns(_sequenceStorage);
-        types.GetFor(type.Id, type.Generation).Returns(new EventTypeSchema(type, EventTypeOwner.Server, EventTypeSource.Code, schema));
+        types.GetDefinition(type.Id).Returns(new EventTypeDefinition(type.Id, EventTypeOwner.Server, false, [new(type.Generation, schema)], []));
         _reactor = new EventSequencesReactor(factory, new JsonSerializerOptions(), NullLogger<EventSequencesReactor>.Instance, storage, manager);
     }
 

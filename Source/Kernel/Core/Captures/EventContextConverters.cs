@@ -40,7 +40,8 @@ internal static class EventContextConverters
         Tags = context.Tags.Select(_ => _.Value),
         NamedTags = context.NamedTags.Select(tag => new Contracts.Events.NamedTag { Name = tag.Name.Value, Value = tag.Value }).ToList(),
         Hash = context.Hash,
-        ObservationState = context.ObservationState.ToContract()
+        ObservationState = context.ObservationState.ToContract(),
+        CompensationFor = context.CompensationFor is { } compensationFor ? compensationFor.Value : null
     };
 
     static Contracts.Auditing.Causation ToContract(this Concepts.Auditing.Causation causation) => new()

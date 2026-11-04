@@ -43,7 +43,7 @@ public class with_sql_server_handled_counts(SqlServerFixture fixture) : Specific
     [Fact] void should_keep_the_count_for_each_event_type() => _saved.HandledEventCountPerEventType.ShouldContainOnly(new Dictionary<EventTypeId, EventCount> { ["event-a"] = 4, ["event-b"] = 3 });
     [Fact] void should_keep_only_the_saved_event_types() => _saved.HandledEventCountPerEventType.Count.ShouldEqual(2);
 
-    async Task Destroy() => await fixture.DropDatabase(_connectionString);
+    async Task Destroy() => await fixture.QueueDatabaseDrop(_connectionString);
 
     NamespaceDbContext CreateContext()
     {

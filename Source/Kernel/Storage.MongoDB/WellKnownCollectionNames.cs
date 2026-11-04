@@ -264,4 +264,34 @@ public static class WellKnownCollectionNames
     /// The collection that holds data protection keys.
     /// </summary>
     public const string DataProtectionKeys = "data-protection-keys";
+
+    /// <summary>
+    /// The collection that holds infrastructure occurrences.
+    /// </summary>
+    public const string Occurrences = "occurrences";
+
+    /// <summary>
+    /// The collection that holds occurrence claim fences.
+    /// </summary>
+    public const string OccurrenceClaimFences = "occurrence-claim-fences";
+
+    /// <summary>
+    /// The collection that holds schedule definitions.
+    /// </summary>
+    public const string ScheduleDefinitions = "schedule-definitions";
+
+    /// <summary>
+    /// The collection that holds schedule cursors.
+    /// </summary>
+    public const string ScheduleCursors = "schedule-cursors";
+
+    /// <summary>
+    /// The collection that holds skipped schedule ranges.
+    /// </summary>
+    public const string SkippedRanges = "skipped-ranges";
+
+    /// <summary>
+    /// The collection that holds effect receipts.
+    /// </summary>
+    public const string EffectReceipts = "effect-receipts";
 }

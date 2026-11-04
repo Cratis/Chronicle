@@ -144,7 +144,10 @@ class for_generating_the_matrix(unittest.TestCase):
             return {
                 (entry["namespace"], entry["shard"], entry["filter"])
                 for entry in include
-                if entry["namespace"] != "Cratis.Chronicle.Integration.SqlServerAlertIncidents"
+                if entry["namespace"] not in {
+                    "Cratis.Chronicle.Integration.SqlServerAlertIncidents",
+                    "Cratis.Chronicle.Integration.for_OccurrenceProcessRecovery",
+                }
             }
 
         self.assertEqual(shards(_run()), shards(_run("--all-providers")))
@@ -154,6 +157,27 @@ class for_generating_the_matrix(unittest.TestCase):
             self.assertEqual(
                 {"namespace", "shard", "filter", "members", "mode", "database", "needs-docker"},
                 set(entry))
+
+    def test_per_process_activation_runs_only_out_of_process_with_mongodb(self):
+        for arguments in ((), ("--all-providers",)):
+            entries = [entry for entry in _run(*arguments)
+                       if "for_PerProcessActivation" in entry["filter"]]
+            self.assertTrue(entries)
+            for entry in entries:
+                self.assertEqual("outofprocess", entry["mode"])
+                self.assertEqual("mongodb", entry["database"])
+
+    def test_process_recovery_runs_only_out_of_process_with_postgresql(self):
+        entries = [entry for entry in _run()
+                   if "for_OccurrenceProcessRecovery" in entry["filter"]]
+        self.assertEqual([], entries)
+        for arguments in (("--all-providers",), ("--databases", "postgresql")):
+            entries = [entry for entry in _run(*arguments)
+                       if "for_OccurrenceProcessRecovery" in entry["filter"]]
+            self.assertTrue(entries)
+            for entry in entries:
+                self.assertEqual("outofprocess", entry["mode"])
+                self.assertEqual("postgresql", entry["database"])
 
     def test_an_unknown_backend_fails_the_run(self):
         completed = subprocess.run(
@@ -183,7 +207,10 @@ def _members(entry):
 class for_batched_namespaces(unittest.TestCase):
     """Short namespaces share a job; nothing may be dropped, duplicated or silently joined."""
 
-    CONFIG_RESTRICTED = ("SqlServerAlertIncidents", "for_KernelTlsLifecycle", "for_ContainerStartup")
+    CONFIG_RESTRICTED = (
+        "SqlServerAlertIncidents", "for_KernelTlsLifecycle", "for_PerProcessActivation",
+        "for_OccurrenceProcessRecovery", "for_ContainerStartup",
+    )
 
     def test_the_kernel_and_clustering_suites_cover_every_directory_exactly_once(self):
         for suite, root in (("kernel", "Integration/Kernel"), ("clustering", "Integration/Clustering")):
@@ -195,7 +222,8 @@ class for_batched_namespaces(unittest.TestCase):
                 self.assertEqual(sorted(prefix + name for name in _directories(root)), sorted(covered))
 
     def test_the_kernel_and_clustering_suites_have_the_expected_job_counts(self):
-        self.assertEqual(5, len(_run("--suite", "kernel")))
+        # The new for_Observer namespace stays solo, alongside Occurrences and Statistics.
+        self.assertEqual(6, len(_run("--suite", "kernel")))
         self.assertEqual(2, len(_run("--suite", "clustering")))
 
     def test_kernel_and_clustering_filters_end_with_a_dot_so_a_namespace_is_not_a_prefix(self):
@@ -260,6 +288,27 @@ class for_batched_namespaces(unittest.TestCase):
     def test_a_namespace_in_a_batch_that_is_sharded_is_rejected(self):
         with self.assertRaises(ValueError):
             _build("client", {"client": [["Projections", "for_Reactors"]]})
+
+    def test_configuration_restricted_namespaces_cannot_be_batched(self):
+        for name in self.CONFIG_RESTRICTED:
+            with self.subTest(namespace=name), self.assertRaises(ValueError):
+                _build("client", {"client": [[name, "for_PublicClientApis"]]})
+
+    def test_special_cases_keep_their_solo_lanes_when_all_providers_run(self):
+        include = _run("--all-providers")
+        lanes = {
+            "SqlServerAlertIncidents": ("outofprocess", "mssql"),
+            "for_KernelTlsLifecycle": ("outofprocess", "mongodb"),
+            "for_PerProcessActivation": ("outofprocess", "mongodb"),
+            "for_OccurrenceProcessRecovery": ("outofprocess", "postgresql"),
+        }
+        for name, lane in lanes.items():
+            with self.subTest(namespace=name):
+                entries = [entry for entry in include if entry["namespace"] == matrix.NAMESPACE_PREFIX + name]
+                self.assertEqual(1, len(entries))
+                self.assertEqual(lane, (entries[0]["mode"], entries[0]["database"]))
+                self.assertEqual("", entries[0]["members"])
+                self.assertEqual(matrix._shards_for(name)[0][1], entries[0]["filter"])
 
 
 if __name__ == "__main__":

@@ -14,7 +14,5 @@ public class PatchesComplexPatch(
             logger.LogInformation("Discovered and registered event types");
         }
     }
-
-    public Task Down() => Task.CompletedTask;
 }
 ```

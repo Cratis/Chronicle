@@ -249,5 +249,5 @@ public partial class EventSequence
         return definitions.Where(definition => !deferredNames.Contains(definition.Name));
     }
 
-    StoredConstraintEventContent CatchUpContent() => new(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, EventTypesStorage, jsonComplianceManagerProvider, expandoObjectConverter);
+    StoredConstraintEventContent CatchUpContent() => new(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, EventTypesStorage, jsonComplianceManagerProvider, expandoObjectConverter, schemaCache);
 }

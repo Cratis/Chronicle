@@ -14,7 +14,7 @@ These platforms host one kernel instance, not a highly available cluster. A rest
 - Make sure the old instance has stopped before a new one starts against the same store. Two kernels on one store block each other.
 - An App Service sidecar scales with the web app. Keep the app at one instance.
 
-The time until the kernel answers on its port grows with the number of event stores, namespaces and observers. Size the startup probe for a fully loaded store, not an empty one.
+The time until the kernel answers on its port grows with the number of event stores, namespaces and observers. Size the startup probe for a fully loaded store, not an empty one. To size the container memory limit, see [Size the kernel for a container](container-resources.md).
 
 The kernel waits up to 10 seconds for a graceful shutdown, so size the platform's termination grace period accordingly. Observer progress that is not saved before the process stops is not lost: those events are delivered again after the restart (at-least-once).
 

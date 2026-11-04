@@ -9,7 +9,4 @@ internal static partial class MoveSystemEventStoreDatabasesLogging
 {
     [LoggerMessage(LogLevel.Information, "Moving the System event store's data to its configured location")]
     internal static partial void MovingToConfiguredLocation(this ILogger<MoveSystemEventStoreDatabases> logger);
-
-    [LoggerMessage(LogLevel.Information, "Moving the System event store's data back to its legacy location")]
-    internal static partial void MovingToLegacyLocation(this ILogger<MoveSystemEventStoreDatabases> logger);
 }
