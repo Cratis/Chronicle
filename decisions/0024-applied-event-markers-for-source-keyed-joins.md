@@ -1,5 +1,5 @@
 ---
-id: 0021-applied-event-markers-for-source-keyed-joins
+id: 0024-applied-event-markers-for-source-keyed-joins
 title: Make redelivery a no-op for event-source-keyed MongoDB read models with root joins by recording applied-event markers on the document
 status: accepted
 stage: none
