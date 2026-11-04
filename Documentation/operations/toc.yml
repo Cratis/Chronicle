@@ -6,3 +6,5 @@
   href: diagnostics.md
 - name: Recover a failed partition
   href: recover-a-failed-partition.md
+- name: Resource names
+  href: resource-names.md

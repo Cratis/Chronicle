@@ -251,7 +251,18 @@ When you host Chronicle programmatically, select the in-memory backend with the 
 | schema | string | No | SQL schema Chronicle keeps its tables in. Defaults to empty, the database user's default schema; ignored by MongoDB and SQLite |
 | createIfMissing | boolean | No | Whether Chronicle creates missing databases and schemas. Defaults to `true` |
 | connectionResolution | object | No | Resolves the server, database, schema and identity per event store, namespace and purpose. See [storage connection resolution](storage-connection-resolution.md) |
+| nameCollisions | string | No | What startup does when names overlap in storage: `Quarantine` (default) or `Refuse`. See [name checks](#name-checks) |
+| nameAuditTimeout | timespan | No | Time budget for reading the names in use at startup. Defaults to `00:05:00` |
 
+
+## Name checks
+
+At startup the kernel reads the names in use and groups the ones that would share storage.
+
+- `Quarantine` (default) makes every owner of an overlap unavailable and starts. Other names keep working.
+- `Refuse` stops the kernel from starting when any overlap exists.
+
+`nameAuditTimeout` limits how long the read may take; the kernel does not start when it runs out. See [Resource names](../../operations/resource-names.md) for the log lines and recovery.
 
 ## Single-writer lease storage
 
