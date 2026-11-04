@@ -102,13 +102,14 @@ internal sealed class OccurrenceWorker(IEventStore eventStore, TriggerId trigger
                     LeaseSeconds = OccurrenceAttempt.LeaseSeconds,
                     Max = 1
                 };
-                var claims = await service.ClaimOccurrences(request, new CallContext(new CallOptions(cancellationToken: cancellationToken))).EnsureSuccess();
+                var claimStarted = timeProvider.GetTimestamp();
+                var claims = await OccurrenceAttemptLifetime.Wait(service.ClaimOccurrences(request, new CallContext(new CallOptions(cancellationToken: cancellationToken))).EnsureSuccess(), cancellationToken);
                 var batch = claims.Claims.ToArray();
                 if (batch.Length == 0) break;
                 foreach (var claim in batch)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-                    await attempt.Run(claim, cancellationToken);
+                    await attempt.Run(claim, claimStarted, cancellationToken);
                 }
             }
         }

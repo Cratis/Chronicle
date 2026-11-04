@@ -56,11 +56,13 @@ internal sealed class OccurrenceAttempt(
     /// Invokes a handler and settles its lease, or abandons ownership on cancellation.
     /// </summary>
     /// <param name="claim">The durable claim.</param>
+    /// <param name="claimStarted">The monotonic timestamp at claim admission.</param>
     /// <param name="cancellationToken">The connection/session cancellation.</param>
     /// <returns>The attempt work, including renewal shutdown.</returns>
-    internal async Task Run(OccurrenceClaimDetails claim, CancellationToken cancellationToken)
+    internal async Task Run(OccurrenceClaimDetails claim, long claimStarted, CancellationToken cancellationToken)
     {
-        var lifetime = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        await using var lifetime = new OccurrenceAttemptLifetime(timeProvider, claimStarted, cancellationToken);
+        if (lifetime.Admit() is null) return;
         var context = new OccurrenceContext(
             claim.Id,
             claim.Trigger,
@@ -79,13 +81,16 @@ internal sealed class OccurrenceAttempt(
         try
         {
             using var scope = causation.BeginScope("Occurrence", Properties(context));
-            await Handle(claim, context, lifetime.Token);
+            await Handle(claim, context, lifetime);
+        }
+        catch (OperationCanceledException) when (lifetime.Token.IsCancellationRequested)
+        {
+            // A locally abandoned operation may still finish at the server.
         }
         finally
         {
-            await lifetime.CancelAsync();
+            lifetime.Abandon();
             await renewal;
-            lifetime.Dispose();
             identity.ClearCurrentIdentity();
         }
     }
@@ -105,8 +110,10 @@ internal sealed class OccurrenceAttempt(
         return properties;
     }
 
-    async Task Handle(OccurrenceClaimDetails claim, OccurrenceContext context, CancellationToken cancellationToken)
+    async Task Handle(OccurrenceClaimDetails claim, OccurrenceContext context, OccurrenceAttemptLifetime lifetime)
     {
+        if (lifetime.Admit() is null) return;
+        var cancellationToken = lifetime.Token;
         try
         {
             await Invoke(claim.Payload, context, cancellationToken);
@@ -116,8 +123,10 @@ internal sealed class OccurrenceAttempt(
             // Disconnect, shutdown or supersession leaves the durable lease for reclamation.
             return;
         }
-        catch (Exception exception) when (!cancellationToken.IsCancellationRequested)
+        catch (Exception exception)
         {
+            var admission = lifetime.Admit(settlement: true);
+            if (admission is null) return;
             var failure = new FailOccurrenceRequest
             {
                 EventStore = eventStore.Name,
@@ -128,10 +137,11 @@ internal sealed class OccurrenceAttempt(
                 Epoch = claim.Epoch,
                 Error = exception.ToString()
             };
-            await service.FailOccurrence(failure, new CallContext(new CallOptions(cancellationToken: cancellationToken))).EnsureSuccess();
+            await admission.Invoke(token => service.FailOccurrence(failure, new CallContext(new CallOptions(cancellationToken: token))).EnsureSuccess());
             return;
         }
-        if (cancellationToken.IsCancellationRequested) return;
+        var settlement = lifetime.Admit(settlement: true);
+        if (settlement is null) return;
         var completion = new CompleteOccurrenceRequest
         {
             EventStore = eventStore.Name,
@@ -141,7 +151,7 @@ internal sealed class OccurrenceAttempt(
             OccurrenceId = claim.Id,
             Epoch = claim.Epoch
         };
-        var result = await service.CompleteOccurrence(completion, new CallContext(new CallOptions(cancellationToken: cancellationToken))).EnsureSuccess();
+        var result = await settlement.Invoke(token => service.CompleteOccurrence(completion, new CallContext(new CallOptions(cancellationToken: token))).EnsureSuccess());
         if (result.Status is not (OccurrenceLeaseResult.Updated or OccurrenceLeaseResult.AlreadyCompleted or OccurrenceLeaseResult.OccurrenceLeaseLost))
         {
             throw new TriggerNotValid("The kernel returned an unknown completion result.");
@@ -166,39 +176,55 @@ internal sealed class OccurrenceAttempt(
         }
     }
 
-    async Task Renew(OccurrenceClaimDetails claim, CancellationTokenSource lifetime)
+    async Task Renew(OccurrenceClaimDetails claim, OccurrenceAttemptLifetime lifetime)
     {
         try
         {
             using var timer = new PeriodicTimer(TimeSpan.FromSeconds(LeaseSeconds / 3), timeProvider);
             while (await timer.WaitForNextTickAsync(lifetime.Token))
             {
-                var renewal = new RenewOccurrenceLeaseRequest
-                {
-                    EventStore = eventStore.Name,
-                    Namespace = deliveryScope?.Namespace ?? eventStore.Namespace,
-                    ApplicationScope = deliveryScope?.ApplicationScope ?? false,
-                    Trigger = claim.Trigger,
-                    OccurrenceId = claim.Id,
-                    Epoch = claim.Epoch,
-                    LeaseSeconds = LeaseSeconds
-                };
-                var result = await service.RenewOccurrenceLease(renewal, new CallContext(new CallOptions(cancellationToken: lifetime.Token))).EnsureSuccess();
-                if (result.Status != OccurrenceLeaseResult.Updated)
-                {
-                    await lifetime.CancelAsync();
-                    return;
-                }
+                if (!await RenewCycle(claim, lifetime)) return;
             }
         }
-        catch (OperationCanceledException) when (lifetime.IsCancellationRequested)
+        catch (OperationCanceledException) when (lifetime.Token.IsCancellationRequested)
         {
             // The attempt has ended; no renewal may survive it.
         }
         catch (Exception exception)
         {
             logger.OccurrenceLeaseRenewalFailed(exception, claim.Id);
-            await lifetime.CancelAsync();
+            lifetime.Abandon();
+        }
+    }
+
+    async Task<bool> RenewCycle(OccurrenceClaimDetails claim, OccurrenceAttemptLifetime lifetime)
+    {
+        var request = new RenewOccurrenceLeaseRequest
+        {
+            EventStore = eventStore.Name,
+            Namespace = deliveryScope?.Namespace ?? eventStore.Namespace,
+            ApplicationScope = deliveryScope?.ApplicationScope ?? false,
+            Trigger = claim.Trigger,
+            OccurrenceId = claim.Id,
+            Epoch = claim.Epoch,
+            LeaseSeconds = LeaseSeconds
+        };
+        for (var attempt = 0; ; attempt++)
+        {
+            var admission = lifetime.Admit();
+            if (admission is null) return false;
+            try
+            {
+                var result = await admission.Invoke(token => service.RenewOccurrenceLease(request, new CallContext(new CallOptions(cancellationToken: token))).EnsureSuccess());
+                if (result.Status == OccurrenceLeaseResult.Updated) return lifetime.Accept(admission);
+                lifetime.Abandon();
+                return false;
+            }
+            catch (RpcException exception) when (exception.StatusCode == StatusCode.Unavailable && attempt < 2)
+            {
+                if (!lifetime.CanRetry()) return false;
+                await Task.Delay(TimeSpan.FromSeconds(1), timeProvider, lifetime.Token);
+            }
         }
     }
 }
