@@ -46,4 +46,17 @@ public class EventsToObserve
     /// </remarks>
     [ProtoMember(5)]
     public ulong DeliverWithinMilliseconds { get; set; }
+
+    /// <summary>
+    /// Gets or sets the events as a page of partitions. Set instead of <see cref="Partition"/> and <see cref="Events"/>
+    /// for a client that enabled <see cref="PageDelivery"/> at registration.
+    /// </summary>
+    [ProtoMember(6)]
+    public IList<PartitionEvents> Partitions { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the path the events came from.
+    /// </summary>
+    [ProtoMember(7)]
+    public ObservationOrigin Origin { get; set; }
 }

@@ -361,6 +361,7 @@ json Cratis.Chronicle.Concepts.Observation.PartitionDeferral
 enum Cratis.Chronicle.Concepts.Observation.PartitionDeferralReason : int
   CircuitOpen = 1
   None = 0
+  RequestedByObserver = 4
   RetryAfter = 2
   RetryBackoff = 3
 enum Cratis.Chronicle.Concepts.Observation.PartitionRecoveryOutcome : int
@@ -732,6 +733,26 @@ orleans Cratis.Chronicle.EventSequences.ConstraintIndexRebuildRunId
   [Id(1)] Attempt: System.Guid
   [Id(2)] Started: System.DateTimeOffset
   [Id(3)] JobId: Cratis.Orleans.Jobs.JobId
+json Cratis.Chronicle.EventSequences.Copy.CopyEventSourceEventsRequest
+  eventSequenceId: Cratis.Chronicle.Concepts.EventSequences.EventSequenceId
+  eventTypes: System.Collections.Generic.IReadOnlyCollection<Cratis.Chronicle.Concepts.Events.EventTypeId>
+  sourceId: Cratis.Chronicle.Concepts.Events.EventSourceId
+  targetId: Cratis.Chronicle.Concepts.Events.EventSourceId
+json Cratis.Chronicle.EventSequences.Copy.CopyEventSourceEventsStepState
+  attempt: int
+  eventSequenceId: Cratis.Chronicle.Concepts.EventSequences.EventSequenceId
+  eventTypes: System.Collections.Generic.IList<Cratis.Chronicle.Concepts.Events.EventTypeId>
+  id: Cratis.Orleans.Jobs.JobStepIdentifier
+  isPrepared: bool
+  lease: Cratis.Orleans.Storage.Jobs.JobStepLease
+  name: Cratis.Orleans.Jobs.JobStepName
+  progress: Cratis.Orleans.Jobs.JobStepProgress
+  sourceId: Cratis.Chronicle.Concepts.Events.EventSourceId
+  stage: Cratis.Orleans.Jobs.Stages.JobStepStage
+  status: Cratis.Orleans.Jobs.JobStepStatus
+  statusChanges: System.Collections.Generic.IList<Cratis.Orleans.Jobs.JobStepStatusChanged>
+  targetId: Cratis.Chronicle.Concepts.Events.EventSourceId
+  type: Cratis.Orleans.Jobs.JobStepType
 json Cratis.Chronicle.EventSequences.EventToAppend
   causation: System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Auditing.Causation>
   content: System.Text.Json.Nodes.JsonObject
@@ -1471,6 +1492,8 @@ orleans [Alias("ProjectionFuture")] Cratis.Chronicle.Concepts.Projections.Projec
   [Id(7,Level=0,Constructor=true)] ParentKey: Cratis.Chronicle.Concepts.Keys.Key
   [Id(8,Level=0,Constructor=true)] Created: System.DateTimeOffset
 orleans [Alias("ReadModelChangeContext")] Cratis.Chronicle.Concepts.ReadModels.ReadModelChangeContext
+  [Id(4)] Subject: string
+  [Id(5)] Subjects: System.Collections.Generic.IReadOnlyDictionary<string,string>
   [Id(0,Level=0,Constructor=true)] ChangeType: Cratis.Chronicle.Concepts.ReadModels.ReadModelChangeType
   [Id(1,Level=0,Constructor=true)] EventSequenceNumber: Cratis.Chronicle.Concepts.Events.EventSequenceNumber
   [Id(2,Level=0,Constructor=true)] Occurred: System.DateTimeOffset

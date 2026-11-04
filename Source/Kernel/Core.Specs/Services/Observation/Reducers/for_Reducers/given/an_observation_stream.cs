@@ -29,6 +29,8 @@ public class an_observation_stream : Specification
 
     private protected virtual IActivitySource<Reducers> CreateActivitySource() => new ActivitySource<Reducers>();
 
+    protected virtual PageDelivery? PageDelivery => null;
+
     async Task Establish()
     {
         var subscribed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -70,6 +72,7 @@ public class an_observation_stream : Specification
             ConnectionId = "connection",
             EventStore = "store",
             Namespace = "namespace",
+            PageDelivery = PageDelivery,
             Reducer = new Contracts.Observation.Reducers.ReducerDefinition { ReducerId = "reducer", EventSequenceId = "event-log", ReadModel = "model" }
         })));
         await subscribed.Task.WaitAsync(TimeSpan.FromSeconds(5));

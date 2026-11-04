@@ -6,6 +6,7 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
+using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.Reactors;
 using Cratis.DependencyInjection;
 
@@ -51,11 +52,12 @@ public class ReactorMediator : IReactorMediator
         Key partition,
         IEnumerable<AppendedEvent> events,
         TaskCompletionSource<ObserverSubscriberResult> taskCompletionSource,
-        TimeSpan? deliverWithin = null)
+        TimeSpan? deliverWithin = null,
+        ObservationOrigin origin = ObservationOrigin.Unknown)
     {
         if (_observers.TryGetValue(new(reactorId, connectionId, eventStore, @namespace), out var observable))
         {
-            observable(partition, events, taskCompletionSource, deliverWithin);
+            observable(partition, events, taskCompletionSource, deliverWithin, origin);
         }
         else
         {

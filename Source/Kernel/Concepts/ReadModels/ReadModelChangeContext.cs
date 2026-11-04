@@ -18,4 +18,21 @@ public record ReadModelChangeContext(
     ReadModelChangeType ChangeType,
     EventSequenceNumber EventSequenceNumber,
     DateTimeOffset Occurred,
-    CorrelationId CorrelationId);
+    CorrelationId CorrelationId)
+{
+    /// <summary>
+    /// Gets the compliance subject the read model instance belongs to, or <see langword="null"/> when none was sent.
+    /// </summary>
+    /// <remarks>
+    /// Kernel bookkeeping travels here rather than on the change document, so that the document holds only the
+    /// properties its schema declares. <see langword="null"/> is what a silo of an earlier release produces.
+    /// </remarks>
+    [Id(4)]
+    public string? Subject { get; init; }
+
+    /// <summary>
+    /// Gets the compliance subject of each top-level property that differs from <see cref="Subject"/>, or <see langword="null"/> when none was sent.
+    /// </summary>
+    [Id(5)]
+    public IReadOnlyDictionary<string, string>? Subjects { get; init; }
+}

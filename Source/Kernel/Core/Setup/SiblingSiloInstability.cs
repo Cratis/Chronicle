@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections;
 using MongoDB.Driver;
 using Orleans.Runtime.Messaging;
 
@@ -17,15 +18,23 @@ namespace Cratis.Chronicle.Setup;
 /// for: the same call succeeds seconds later once membership settles.
 /// <para>
 /// A temporarily full Mongo connection wait queue is also retried within the same finite budget:
-/// concurrent registration can saturate admission without indicating a permanent storage defect. That
-/// includes the same failure after it has crossed a silo boundary, where it arrives as an
-/// <see cref="InvalidOperationException"/> naming the original type.
+/// concurrent registration can saturate admission without indicating a permanent storage defect.
 /// Everything else - a genuine bug in the grain or a serialization mismatch - fails immediately.
 /// Exhausting the budget still fails startup; retries do not make an unavailable store healthy.
 /// </para>
 /// </remarks>
 public static class SiblingSiloInstability
 {
+    /// <summary>
+    /// The data key for a trusted silo's storage admission category.
+    /// </summary>
+    internal const string StorageAdmissionCategoryKey = "Cratis.Chronicle.StorageAdmission.Category";
+
+    /// <summary>
+    /// The category for an exact MongoDB wait-queue-full failure.
+    /// </summary>
+    internal const string MongoWaitQueueFullCategory = "MongoWaitQueueFull.v1";
+
     /// <summary>
     /// Determines whether an exception is a sibling silo that has not stabilized yet, rather than a
     /// failure of the work itself, or temporary saturation of storage admission.
@@ -39,21 +48,15 @@ public static class SiblingSiloInstability
         OrleansMessageRejectionException => true,
         ConnectionFailedException => true,
         MongoWaitQueueFullException => true,
-        InvalidOperationException => IsCarriedWaitQueueFull(exception),
-        _ => false
+        _ => IsCategorizedStorageAdmissionFailure(exception)
     };
 
-    /// <summary>
-    /// Determines whether the exception is a Mongo wait queue failure that crossed a silo boundary.
-    /// </summary>
-    /// <remarks>
-    /// A failure of a type the cluster cannot serialize - the Mongo driver's own exceptions - crosses a silo
-    /// boundary as an <see cref="InvalidOperationException"/> whose message starts with the original type's
-    /// full name (see SerializableFailureIncomingCallFilter). Without this, the same saturation that is
-    /// retried on the silo it happened on would terminate startup when it happened on a sibling.
-    /// </remarks>
-    /// <param name="exception">The <see cref="Exception"/> to judge.</param>
-    /// <returns><see langword="true"/> when it is the carried form of the wait queue failure.</returns>
-    static bool IsCarriedWaitQueueFull(Exception exception) =>
-        exception.Message.StartsWith($"{typeof(MongoWaitQueueFullException).FullName}:", StringComparison.Ordinal);
+    static bool IsCategorizedStorageAdmissionFailure(Exception exception) =>
+        exception?.GetType() == typeof(InvalidOperationException) &&
+        exception.InnerException is null &&
+        exception.Data.Cast<DictionaryEntry>().Any(entry =>
+            entry.Key is string key &&
+            entry.Value is string value &&
+            string.Equals(key, StorageAdmissionCategoryKey, StringComparison.Ordinal) &&
+            string.Equals(value, MongoWaitQueueFullCategory, StringComparison.Ordinal));
 }
