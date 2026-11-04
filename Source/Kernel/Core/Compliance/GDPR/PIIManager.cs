@@ -47,7 +47,7 @@ public class PIIManager(
         var key = GetKey();
         List<Exception> failures = [];
         var (eventStores, skipped) = await EventStoresToReach(key, failures);
-        ReportSkipped(skipped, identifier, key);
+        ReportSkipped(skipped, identifier, key, failures);
 
         // Fencing every event store before destroying anything in any of them is what closes the window the
         // per-store erasure could not: between the first delete and the last, one store still held the key and
@@ -66,6 +66,9 @@ public class PIIManager(
         // has no time-to-live and nothing else to clear it. Evicting is idempotent and cheap, so it always runs.
         await ForEach(eventStores, failures, eventStore => cacheClient.Evict(eventStore, key.Namespace, identifier));
 
+        // A quarantined event store or namespace was not reached, so a key may still be held there. That is not an
+        // erasure, and it is reported as incomplete - never as a success - while the stores that could be reached are
+        // still erased above.
         if (failures.Count > 0)
         {
             logger.SubjectErasureIncomplete(BindingFor(identifier), key.Namespace, failures.Count, eventStores.Count, Names(eventStores));
@@ -82,7 +85,7 @@ public class PIIManager(
         var key = GetKey();
         List<Exception> failures = [];
         var (eventStores, skipped) = await EventStoresToReach(key, failures);
-        ReportSkipped(skipped, identifier, key);
+        ReportSkipped(skipped, identifier, key, failures);
 
         await ForEach(eventStores, failures, eventStore => keyStore.AllowNewKeyFor(eventStore, key.Namespace, identifier));
 
@@ -143,7 +146,7 @@ public class PIIManager(
         }
     }
 
-    async Task<(IReadOnlyList<EventStoreName> Reached, IReadOnlyList<EventStoreName> Skipped)> EventStoresToReach(PIIManagerKey key, List<Exception> failures)
+    async Task<(IReadOnlyList<EventStoreName> Reached, SkippedResources Skipped)> EventStoresToReach(PIIManagerKey key, List<Exception> failures)
     {
         try
         {
@@ -153,23 +156,30 @@ public class PIIManager(
             // A quarantined event store refuses to be opened, so it is left out and reported rather than allowed to
             // fail every erasure for as long as it is quarantined. The named event store stays in: its failure is
             // then reported for what it is, an erasure that did not reach the store the caller asked for.
-            var usable = await UsableEventStores.From(storage, resourceNames, logger);
-            return ([.. usable.Usable.Append(key.EventStore).Distinct()], usable.Skipped.Where(_ => _ != key.EventStore).ToArray());
+            // The same goes for a quarantined namespace: it is only this manager's namespace that is erased, so it is
+            // left out, and reported, in every event store but the named one.
+            var usable = await UsableEventStores.From(storage, resourceNames, logger, key.Namespace);
+            var skipped = new SkippedResources(
+                [.. usable.SkippedResources.EventStores.Where(_ => _ != key.EventStore)],
+                [.. usable.SkippedResources.Namespaces.Where(_ => _.EventStore != key.EventStore)]);
+            var namespaceSkippedIn = skipped.Namespaces.Select(_ => _.EventStore).ToHashSet();
+            return ([.. usable.Usable.Where(_ => !namespaceSkippedIn.Contains(_)).Append(key.EventStore).Distinct()], skipped);
         }
         catch (Exception error)
         {
             // Losing the listing must not lose the erasure. The event store the caller named is erased either way,
             // and the failure is reported so a partial reach is never mistaken for a complete one.
             failures.Add(error);
-            return ([key.EventStore], []);
+            return ([key.EventStore], SkippedResources.None);
         }
     }
 
-    void ReportSkipped(IReadOnlyList<EventStoreName> skipped, EncryptionKeyIdentifier identifier, PIIManagerKey key)
+    void ReportSkipped(SkippedResources skipped, EncryptionKeyIdentifier identifier, PIIManagerKey key, List<Exception> failures)
     {
-        if (skipped.Count > 0)
+        if (skipped.Any)
         {
-            logger.QuarantinedEventStoresNotReached(BindingFor(identifier), key.Namespace, skipped.Count, string.Join(", ", skipped.Select(_ => ResourceNameText.Escape(_.Value))));
+            logger.QuarantinedEventStoresNotReached(BindingFor(identifier), key.Namespace, skipped.Count, skipped.Describe());
+            failures.Add(new QuarantinedResourcesNotReached(skipped.Describe()));
         }
     }
 

@@ -12,4 +12,7 @@ internal static partial class UsableEventStoresLogging
 {
     [LoggerMessage(LogLevel.Warning, "Leaving out the quarantined event store '{EventStore}'. It is reached once its name collision is resolved")]
     internal static partial void LeavingOutQuarantinedEventStore(this ILogger logger, string eventStore);
+
+    [LoggerMessage(LogLevel.Warning, "Leaving out the quarantined namespace '{Namespace}' of event store '{EventStore}'. It is reached once its name collision is resolved")]
+    internal static partial void LeavingOutQuarantinedNamespace(this ILogger logger, string @namespace, string eventStore);
 }

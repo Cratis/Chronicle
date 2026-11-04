@@ -16,7 +16,7 @@ public class and_a_pending_patch_meets_a_quarantined_event_store : given.a_patch
     }
 
     [Fact] void should_complete_startup() => _error.ShouldBeNull();
-    [Fact] void should_reach_the_event_store_that_is_not_quarantined() => _storage.Received(1).GetEventStore(Healthy);
+    [Fact] void should_reach_the_event_store_that_is_not_quarantined() => _storage.Received().GetEventStore(Healthy);
     [Fact] void should_not_open_the_quarantined_event_store() => _storage.DidNotReceive().GetEventStore(Held);
     [Fact] void should_not_record_the_patch_as_applied() => _systemStorage.Patches.DidNotReceive().Save(Arg.Any<Concepts.Patching.Patch>());
     [Fact] void should_not_move_the_system_version_past_the_patch() => _system.DidNotReceive().SetVersion(Arg.Any<SemanticVersion>());

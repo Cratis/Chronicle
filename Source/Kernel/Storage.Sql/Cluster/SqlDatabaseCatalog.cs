@@ -41,15 +41,16 @@ internal sealed class SqlDatabaseCatalog(string connectionString, Func<DbConnect
     /// Tests whether a candidate database already exists.
     /// </summary>
     /// <param name="name">The physical name.</param>
+    /// <param name="cancellationToken">The <see cref="CancellationToken"/> that stops the query.</param>
     /// <returns>Whether it exists.</returns>
-    internal async Task<bool> Exists(string name)
+    internal async Task<bool> Exists(string name, CancellationToken cancellationToken = default)
     {
         await using var connection = await Open(Provider == DatabaseType.PostgreSql ? "postgres" : "master");
         var sql = Provider == DatabaseType.PostgreSql
             ? "SELECT COUNT(*) FROM pg_database WHERE datname::text COLLATE \"C\" = @name"
             : "SELECT COUNT(*) FROM sys.databases WHERE name = @name";
         await using var command = Command(connection, sql, ("name", name));
-        return Convert.ToInt64(await command.ExecuteScalarAsync()) != 0;
+        return Convert.ToInt64(await command.ExecuteScalarAsync(cancellationToken)) != 0;
     }
 
     /// <summary>
@@ -76,12 +77,13 @@ internal sealed class SqlDatabaseCatalog(string connectionString, Func<DbConnect
     /// Groups names the server treats as one database name, under its collation.
     /// </summary>
     /// <param name="names">The names.</param>
+    /// <param name="cancellationToken">The <see cref="CancellationToken"/> that stops the query.</param>
     /// <returns>Each name with the representative of the names the server considers equal to it.</returns>
     /// <remarks>
     /// Only SQL Server compares database names under a collation, so on other providers every name is its own representative.
     /// The catalog is only read.
     /// </remarks>
-    internal async Task<IReadOnlyDictionary<string, string>> Groups(IReadOnlyCollection<string> names)
+    internal async Task<IReadOnlyDictionary<string, string>> Groups(IReadOnlyCollection<string> names, CancellationToken cancellationToken = default)
     {
         var groups = new Dictionary<string, string>(StringComparer.Ordinal);
         if (Provider != DatabaseType.SqlServer || names.Count == 0)
@@ -99,8 +101,8 @@ internal sealed class SqlDatabaseCatalog(string connectionString, Func<DbConnect
             connection,
             "SELECT n.value AS name, MIN(n.value) OVER (PARTITION BY n.value COLLATE DATABASE_DEFAULT) AS representative FROM OPENJSON(@names) WITH (value nvarchar(450) '$') n",
             ("names", System.Text.Json.JsonSerializer.Serialize(names.Distinct(StringComparer.Ordinal))));
-        await using var reader = await command.ExecuteReaderAsync();
-        while (await reader.ReadAsync())
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        while (await reader.ReadAsync(cancellationToken))
         {
             groups[reader.GetString(0)] = reader.GetString(1);
         }

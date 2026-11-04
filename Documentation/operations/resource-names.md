@@ -42,10 +42,10 @@ Recovery is offline. Chronicle does not merge or move storage on its own.
 
 ## Upgrade patches and erasure while a name is unavailable
 
-A quarantined event store cannot be opened, so operations that visit every event store leave it out and log a warning for it (`Leaving out the quarantined event store ...`). This is what keeps the kernel starting.
+A quarantined event store cannot be opened, and a quarantined namespace is dropped from what its event store lists. Operations that visit every event store leave both out and log a warning for each (`Leaving out the quarantined event store ...`, `Leaving out the quarantined namespace ...`). This is what keeps the kernel starting.
 
-- **Upgrade patches** (the ones that rebuild or clean constraint data in every event store): a patch that left an event store out is not recorded as applied, and the system version is not moved past it. It runs again at the next startup, once the quarantine is lifted, and then reaches the store it missed. These patches are safe to repeat on stores they already reached.
-- **Encryption key erasure for a subject**: the event stores that are not quarantined are erased as usual, and the log names the quarantined ones the erasure did not reach (`did not reach the ... quarantined event stores`). Repeat the erasure after the quarantine is lifted. Until then a key kept in a quarantined event store is not erased.
+- **Upgrade patches** (the ones that rebuild or clean constraint data in every event store): a patch that left an event store or namespace out is not recorded as applied, and the system version is not moved past it. It runs again at the next startup, once the quarantine is lifted, and then reaches what it missed. These patches are safe to repeat on stores they already reached.
+- **Encryption key erasure for a subject**: the event stores that are not quarantined are erased as usual, but the erasure fails with an incomplete outcome and is not logged as done while a quarantined event store, or a quarantined namespace of the erased one, was left out. The log names what was not reached (`did not reach the ... quarantined event stores or namespaces`). Repeat the erasure after the quarantine is lifted. Until then a key kept there is not erased. Authorizing a new key behaves the same way.
 
 ## Reserved names
 

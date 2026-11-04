@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.System;
 using Cratis.Chronicle.EventSequences;
@@ -21,10 +20,10 @@ namespace Cratis.Chronicle.Patches;
 /// <param name="grainFactory">The grain factory for namespace and sequence discovery.</param>
 /// <param name="logger">The logger.</param>
 /// <param name="resourceNames">The optional <see cref="IResourceNameSnapshot"/> that tells which event stores are quarantined, and so are left out.</param>
-public class RemoveUnhashedUniqueConstraintValues(IStorage storage, IGrainFactory grainFactory, ILogger<RemoveUnhashedUniqueConstraintValues> logger, IResourceNameSnapshot? resourceNames = null) : ICanApplyPatch, IReportSkippedEventStores
+public class RemoveUnhashedUniqueConstraintValues(IStorage storage, IGrainFactory grainFactory, ILogger<RemoveUnhashedUniqueConstraintValues> logger, IResourceNameSnapshot? resourceNames = null) : ICanApplyPatch, IReportSkippedResources
 {
     /// <inheritdoc/>
-    public IReadOnlyList<EventStoreName> SkippedEventStores { get; private set; } = [];
+    public SkippedResources SkippedResources { get; private set; } = SkippedResources.None;
 
     /// <inheritdoc/>
     public SemanticVersion Version => new(19, 112, 0);
@@ -33,7 +32,7 @@ public class RemoveUnhashedUniqueConstraintValues(IStorage storage, IGrainFactor
     public async Task Up()
     {
         var eventStores = await UsableEventStores.From(storage, resourceNames, logger);
-        SkippedEventStores = eventStores.Skipped;
+        SkippedResources = eventStores.SkippedResources;
         foreach (var eventStore in eventStores.Usable)
         {
             var eventStoreStorage = storage.GetEventStore(eventStore);

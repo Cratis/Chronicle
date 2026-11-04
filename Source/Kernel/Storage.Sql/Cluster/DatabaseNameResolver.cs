@@ -79,15 +79,17 @@ internal sealed class DatabaseNameResolver(string connectionString, Func<DbConne
     /// Tests whether a database exists on the configured server.
     /// </summary>
     /// <param name="name">The physical name.</param>
+    /// <param name="cancellationToken">The <see cref="CancellationToken"/> that stops the query.</param>
     /// <returns>Whether it exists.</returns>
-    internal Task<bool> Exists(string name) => _catalog.Exists(name);
+    internal Task<bool> Exists(string name, CancellationToken cancellationToken = default) => _catalog.Exists(name, cancellationToken);
 
     /// <summary>
     /// Groups names the server treats as one database name.
     /// </summary>
     /// <param name="names">The names.</param>
+    /// <param name="cancellationToken">The <see cref="CancellationToken"/> that stops the query.</param>
     /// <returns>Each name with its representative.</returns>
-    internal Task<IReadOnlyDictionary<string, string>> Groups(IReadOnlyCollection<string> names) => _catalog.Groups(names);
+    internal Task<IReadOnlyDictionary<string, string>> Groups(IReadOnlyCollection<string> names, CancellationToken cancellationToken = default) => _catalog.Groups(names, cancellationToken);
 
     /// <summary>
     /// Gets the name a database would be bound to when it has no binding yet. Nothing is bound, created or written.

@@ -4,7 +4,6 @@
 using Cratis.Chronicle.Concepts.Patching;
 using Cratis.Chronicle.Concepts.System;
 using Cratis.Chronicle.Storage;
-using Cratis.Chronicle.Storage.Naming;
 using Cratis.Chronicle.Sys;
 using Cratis.Types;
 using Microsoft.Extensions.Logging;
@@ -98,15 +97,29 @@ public class PatchManager(
     }
 
     /// <summary>
-    /// Gets the system version after a patch has been handled. Once a patch has been deferred the version must not move
-    /// past it, whatever applies after it.
+    /// Gets the highest version the system can be moved to: the version of the last patch in the unbroken run of
+    /// completed patches that starts at the oldest candidate. The version never moves past a patch that is not
+    /// completed, whatever applies after it - and moves on again once that patch completes, even when later patches
+    /// were recorded in the meantime.
     /// </summary>
-    /// <param name="latest">The version recorded so far.</param>
-    /// <param name="patch">The patch that was just applied.</param>
-    /// <param name="versionBlocked">Whether an earlier patch was deferred.</param>
-    /// <returns>The version to record.</returns>
-    static SemanticVersion? VersionAfter(SemanticVersion? latest, ICanApplyPatch patch, bool versionBlocked) =>
-        versionBlocked ? latest : patch.Version;
+    /// <param name="orderedCandidates">The candidate patches, oldest first.</param>
+    /// <param name="completed">The names of the patches that are recorded as applied.</param>
+    /// <returns>The version to record, or null when the oldest candidate is not completed.</returns>
+    static SemanticVersion? HighestContiguousCompletedVersion(IEnumerable<ICanApplyPatch> orderedCandidates, HashSet<string> completed)
+    {
+        SemanticVersion? version = null;
+        foreach (var patch in orderedCandidates)
+        {
+            if (!completed.Contains(patch.Name))
+            {
+                break;
+            }
+
+            version = patch.Version;
+        }
+
+        return version;
+    }
 
     PatchOutcome RelocateToCaller()
     {
@@ -152,10 +165,8 @@ public class PatchManager(
             logger.FoundPatchesToApply(patchesToApply.Count);
         }
 
-        SemanticVersion? latestVersion = null;
         var appliedCount = 0;
         var deferredCount = 0;
-        var versionBlocked = false;
 
         foreach (var patch in patchesToApply)
         {
@@ -166,19 +177,18 @@ public class PatchManager(
                 logger.ApplyingPatch(patchName, patch.Version, _kernelVersion);
                 await patch.Up();
 
-                // A patch that left quarantined event stores out has not reached them. It is not recorded as applied,
+                // A patch that left quarantined event stores or namespaces out has not reached them. It is not recorded as applied,
                 // and the system version stays below it, so it runs again on a later startup. Patches after it are
                 // recorded by name, so they are not repeated.
                 if (IsDeferred(patch))
                 {
-                    versionBlocked = true;
                     deferredCount++;
                     continue;
                 }
 
                 await RecordApplied(patch);
 
-                latestVersion = VersionAfter(latestVersion, patch, versionBlocked);
+                alreadyAppliedPatchNames.Add(patchName);
                 appliedCount++;
                 logger.PatchAppliedSuccessfully(patchName);
             }
@@ -189,6 +199,7 @@ public class PatchManager(
             }
         }
 
+        var latestVersion = HighestContiguousCompletedVersion(candidatePatches, alreadyAppliedPatchNames);
         if (latestVersion is not null)
         {
             await system.SetVersion(latestVersion);
@@ -214,12 +225,12 @@ public class PatchManager(
 
     bool IsDeferred(ICanApplyPatch patch)
     {
-        if (patch is not IReportSkippedEventStores { SkippedEventStores.Count: > 0 } skipped)
+        if (patch is not IReportSkippedResources { SkippedResources.Any: true } skipped)
         {
             return false;
         }
 
-        logger.PatchDeferred(patch.Name, string.Join(", ", skipped.SkippedEventStores.Select(_ => ResourceNameText.Escape(_.Value))));
+        logger.PatchDeferred(patch.Name, skipped.SkippedResources.Describe());
         return true;
     }
 

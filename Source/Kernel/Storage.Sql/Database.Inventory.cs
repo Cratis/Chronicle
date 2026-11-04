@@ -92,8 +92,9 @@ public partial class Database
     /// Groups the database names the server treats as equal.
     /// </summary>
     /// <param name="names">The database names.</param>
+    /// <param name="cancellationToken">The <see cref="CancellationToken"/> that stops the query.</param>
     /// <returns>Each name with its representative.</returns>
-    internal Task<IReadOnlyDictionary<string, string>> Representatives(IReadOnlyCollection<string> names) => _databaseNames.Groups(names);
+    internal Task<IReadOnlyDictionary<string, string>> Representatives(IReadOnlyCollection<string> names, CancellationToken cancellationToken = default) => _databaseNames.Groups(names, cancellationToken);
 
     /// <summary>
     /// Reads the names of the namespaces recorded in an event store database, if it exists.
@@ -104,7 +105,7 @@ public partial class Database
     /// <returns>The namespace names. Empty when the database or its table does not exist.</returns>
     internal async Task<IReadOnlyList<string>> NamespacesOf(SqlTarget target, bool placed, CancellationToken cancellationToken)
     {
-        if (!await Exists(target, placed))
+        if (!await Exists(target, placed, cancellationToken))
         {
             return [];
         }
@@ -134,16 +135,16 @@ public partial class Database
     /// <returns>The <see cref="ClusterDbContext"/>, owned by the caller.</returns>
     ClusterDbContext ReadOnlyCluster() => new(ReadOptions<ClusterDbContext>(ClusterTarget(ConnectionPurpose.Runtime)));
 
-    async Task<bool> Exists(SqlTarget target, bool placed)
+    async Task<bool> Exists(SqlTarget target, bool placed, CancellationToken cancellationToken)
     {
         switch (target.ConnectionString.GetDatabaseType())
         {
             case DatabaseType.Sqlite:
                 return File.Exists(new SqliteConnectionStringBuilder(target.ConnectionString).DataSource);
             case DatabaseType.PostgreSql when !placed:
-                return await _databaseNames.Exists(new NpgsqlConnectionStringBuilder(target.ConnectionString).Database!);
+                return await _databaseNames.Exists(new NpgsqlConnectionStringBuilder(target.ConnectionString).Database!, cancellationToken);
             case DatabaseType.SqlServer when !placed:
-                return await _databaseNames.Exists(new SqlConnectionStringBuilder(target.ConnectionString).InitialCatalog);
+                return await _databaseNames.Exists(new SqlConnectionStringBuilder(target.ConnectionString).InitialCatalog, cancellationToken);
             default:
                 return true;
         }

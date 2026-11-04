@@ -55,7 +55,7 @@ internal sealed class SqlResourceInventory(Database database) : IResourceInvento
         }
 
         cancellationToken.ThrowIfCancellationRequested();
-        var representatives = await database.Representatives([.. pending.Select(_ => DatabaseOf(_.Target.ConnectionString)).Distinct(StringComparer.Ordinal)]);
+        var representatives = await database.Representatives([.. pending.Select(_ => DatabaseOf(_.Target.ConnectionString)).Distinct(StringComparer.Ordinal)], cancellationToken);
         return [.. pending.Select(_ => new ResourceUse(_.Owner, _.Kind, IdentityOf(_.Target, representatives)))];
     }
 
