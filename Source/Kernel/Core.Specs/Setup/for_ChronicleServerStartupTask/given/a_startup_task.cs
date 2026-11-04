@@ -30,6 +30,7 @@ using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Releases;
 using Cratis.Chronicle.Setup.Authentication;
+using Cratis.Chronicle.Setup.Execution;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Chronicle.Storage.Observation.Reactors;
@@ -50,6 +51,7 @@ public class a_startup_task : Specification
     protected IKernelProjections _kernelProjections = null!;
     protected IGrainFactory _grainFactory = null!;
     IAuthenticationService _authenticationService = null!;
+    protected IStorageErrorClassifier _storageErrorClassifier = null!;
     protected bool _bootstrapClientsEnsured;
     protected IEventStoreStorage _eventStoreStorage = null!;
     protected IEventStoreNamespaceStorage _namespaceStorage = null!;
@@ -92,6 +94,7 @@ public class a_startup_task : Specification
             _kernelProjections,
             _grainFactory,
             _authenticationService,
+            _storageErrorClassifier,
             _localSiloDetails,
             _clusterReleases,
             new StartupLogger(_logMessages),
@@ -110,6 +113,7 @@ public class a_startup_task : Specification
         _kernelProjections = Substitute.For<IKernelProjections>();
         _grainFactory = Substitute.For<IGrainFactory>();
         _authenticationService = new TestAuthenticationService(() => _bootstrapClientsEnsured = true);
+        _storageErrorClassifier = Substitute.For<IStorageErrorClassifier>();
         _eventStoreStorage = Substitute.For<IEventStoreStorage>();
         _namespaceStorage = Substitute.For<IEventStoreNamespaceStorage>();
         _observerStateStorage = Substitute.For<IObserverStateStorage>();
@@ -183,6 +187,13 @@ public class a_startup_task : Specification
         _grainFactory.GetGrain<IObserver>(_reducerObserverKey).Returns(_reducerObserver);
         _grainFactory.GetGrain<IObserver>(_reactorObserverKey).Returns(_reactorObserver);
         _namespaces.GetAll().Returns(Task.FromResult<IEnumerable<EventStoreNamespaceName>>([_namespace]));
+    }
+
+    protected static async Task FailThroughIncomingCallFilter(Exception exception)
+    {
+        var context = Substitute.For<IIncomingGrainCallContext>();
+        context.Invoke().Returns(Task.FromException(exception));
+        await new SerializableFailureIncomingCallFilter().Invoke(context);
     }
 
     protected Task Execute() => Execute(CancellationToken.None);

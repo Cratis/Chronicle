@@ -48,6 +48,9 @@ public partial class OccurrencesStorage
     /// <inheritdoc/>
     public async Task<bool> TryCommitTurn(ScheduleTurn turn)
     {
+        // A reply lost after a successful commit is not detected here. The retry observes the already advanced cursor,
+        // fails the version check below and returns false, and the engine recomputes from the stored cursor.
+        // Occurrences and skipped ranges are only inserted when absent, so a recomputed turn adds no duplicates.
         if (turn.Next.Token != turn.Observed.Token || turn.Next.Version != turn.Observed.Version + 1 || turn.Next.RegisteredRevision != turn.Observed.RegisteredRevision || turn.Next.AppliedRevision != turn.Observed.RegisteredRevision)
         {
             return false;

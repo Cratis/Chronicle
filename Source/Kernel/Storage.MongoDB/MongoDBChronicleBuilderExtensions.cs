@@ -8,6 +8,7 @@ using Cratis.Chronicle.Storage.Compliance;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.MongoDB;
 using Cratis.Chronicle.Storage.MongoDB.EventSequences;
+using Cratis.Chronicle.Storage.MongoDB.Schema;
 using Cratis.Chronicle.Storage.MongoDB.Sinks;
 using Cratis.Chronicle.Storage.SingleWriter;
 using Cratis.Compliance.MongoDB;
@@ -41,8 +42,14 @@ public static class MongoDBChronicleBuilderExtensions
     /// </remarks>
     public static IChronicleBuilder WithMongoDB(this IChronicleBuilder builder, ChronicleOptions options)
     {
-        builder.WithMongoDB(options.Storage.ConnectionDetails, WellKnownDatabaseNames.Chronicle, options.Clustering.Type == ClusteringType.MongoDB, options.Storage.DatabaseNamePrefix);
-        builder.ConfigureServices(services => services.AddStorageConnectionResolution(WellKnownConnectionStorage.MongoDB, options.Storage.ConnectionResolution));
+        builder.WithMongoDB(options.Storage.ConnectionDetails, WellKnownDatabaseNames.Chronicle, options.Clustering.Type == ClusteringType.MongoDB, options.Storage.DatabaseNamePrefix, options.Storage.SystemDatabaseName);
+        builder.ConfigureServices(services =>
+        {
+            services.AddStorageConnectionResolution(WellKnownConnectionStorage.MongoDB, options.Storage.ConnectionResolution);
+            services.AddSingleton<MongoDBIndexProvisioner>();
+            services.AddSingleton<IMongoDBIndexProvisioner>(provider => provider.GetRequiredService<MongoDBIndexProvisioner>());
+        });
+        builder.SiloBuilder.AddStartupTask<VerifyMongoDBIndexes>(ServiceLifecycleStage.First);
         return builder;
     }
 
@@ -54,15 +61,20 @@ public static class MongoDBChronicleBuilderExtensions
     /// <param name="database">Name of the database to use. Defaults to the <see cref="WellKnownDatabaseNames.Chronicle"/>.</param>
     /// <param name="useClustering">Whether to also use MongoDB for Orleans cluster membership, letting multiple nodes form one cluster.</param>
     /// <param name="databaseNamePrefix">The prefix prepended to every database name. Empty preserves the default names.</param>
+    /// <param name="systemDatabaseName">The name the System event store's databases are named by, in place of the event store name.</param>
     /// <returns><see cref="IChronicleBuilder"/> for continuation.</returns>
-    public static IChronicleBuilder WithMongoDB(this IChronicleBuilder builder, string server, string database = WellKnownDatabaseNames.Chronicle, bool useClustering = false, string databaseNamePrefix = "")
+    public static IChronicleBuilder WithMongoDB(this IChronicleBuilder builder, string server, string database = WellKnownDatabaseNames.Chronicle, bool useClustering = false, string databaseNamePrefix = "", string systemDatabaseName = Configuration.Storage.DefaultSystemDatabaseName)
     {
         var settings = GetMongoClientSettings(server);
-        database = Cratis.Chronicle.Storage.MongoDB.DatabaseNames.WithPrefix(database, databaseNamePrefix);
+        database = Storage.MongoDB.DatabaseNames.WithPrefix(database, databaseNamePrefix);
 
         builder.ConfigureServices(services =>
         {
-            services.Configure<MongoDBStorageOptions>(options => options.DatabaseNamePrefix = databaseNamePrefix);
+            services.Configure<MongoDBStorageOptions>(options =>
+            {
+                options.DatabaseNamePrefix = databaseNamePrefix;
+                options.SystemDatabaseName = systemDatabaseName;
+            });
             var mongoClientDescriptor = services.LastOrDefault(_ => !_.IsKeyedService && _.ServiceType == typeof(IMongoClient));
             if (mongoClientDescriptor is null || mongoClientDescriptor.Lifetime != ServiceLifetime.Singleton)
             {
@@ -110,18 +122,19 @@ public static class MongoDBChronicleBuilderExtensions
             services.AddSingleton<IClusterStorage, ClusterStorage>();
             services.AddSingleton<ISingleWriterLeaseStorage, MongoDBSingleWriterLeaseStorage>();
             services.AddSingleton<ISystemStorage, SystemStorage>();
+            services.AddSingleton<ISystemEventStoreRelocation, SystemEventStoreRelocation>();
 
             // The Cratis.Orleans job system storage: the same MongoDB client, databases named exactly where
             // the kernel has always kept its job state, resolved per event store and namespace. Registered
             // as IJobsStorage - that is the type the package's JobsManager grain and the kernel's storage
             // trees inject; a registration keyed only on the concrete type leaves IJobsStorage unresolved.
-            services.AddSingleton<Cratis.Orleans.Storage.IJobsStorage>(sp => new MongoDBJobsStorage(
+            services.AddSingleton<Orleans.Storage.IJobsStorage>(sp => new MongoDBJobsStorage(
                 sp.GetRequiredService<IMongoDBClientManager>().GetClientFor(settings),
                 sp.GetRequiredService<IJobTypes>(),
                 sp.GetRequiredService<ICustomSerializers>(),
                 Options.Create(new MongoDBJobsStorageOptions
                 {
-                    DatabaseNameResolver = (scope, @namespace) => Cratis.Chronicle.Storage.MongoDB.DatabaseNames.ForEventStoreNamespace(scope, @namespace, databaseNamePrefix)
+                    DatabaseNameResolver = (scope, @namespace) => Storage.MongoDB.DatabaseNames.ForEventStoreNamespace(scope, @namespace, databaseNamePrefix, systemDatabaseName)
                 })));
             services.AddSingleton<ICustomSerializers, CustomSerializers>();
 
@@ -129,16 +142,16 @@ public static class MongoDBChronicleBuilderExtensions
             // kernel's serializers and serialization providers live in Cratis.Chronicle assemblies, so without
             // this they are discovered and skipped - the driver then reads those documents its own way, which
             // throws nothing and shows up only as a document read back in the wrong shape.
-            services.Configure<Cratis.Orleans.Storage.MongoDB.Serialization.CustomSerializersOptions>(
+            services.Configure<CustomSerializersOptions>(
                 _ => _.AssemblyNameFragments.Add("Cratis.Chronicle"));
 
             services.AddSingleton<JobStateSerializer>();
             services.AddSingleton<IStorage, Storage.Storage>();
             services.AddSingleton<IStorageErrorClassifier, MongoDBStorageErrorClassifier>();
             services.AddSingleton<IReservedEventSequenceIds, MongoDBReservedEventSequenceIds>();
-            services.AddSingleton<Cratis.Chronicle.Storage.Generations.Bindings.IMaterializationBindingStorage, Cratis.Chronicle.Storage.MongoDB.Generations.Bindings.MongoDBMaterializationBindingStorage>();
+            services.AddSingleton<Storage.Generations.Bindings.IMaterializationBindingStorage, Storage.MongoDB.Generations.Bindings.MongoDBMaterializationBindingStorage>();
             services.AddGenerationCatalog();
-            services.AddSingleton<Cratis.Chronicle.Storage.MongoDB.Generations.Gates.IGenerationGateWrites, Cratis.Chronicle.Storage.MongoDB.Generations.Gates.MongoDBGenerationGateWrites>();
+            services.AddSingleton<Storage.MongoDB.Generations.Gates.IGenerationGateWrites, Storage.MongoDB.Generations.Gates.MongoDBGenerationGateWrites>();
 
             services.AddHealthChecks().AddMongoDb(
                 _ => new MongoClient(settings),

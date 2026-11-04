@@ -18,6 +18,15 @@ public partial class OccurrencesStorage(IMongoDatabase database) : IOccurrencesS
     readonly IMongoCollection<BsonDocument> _occurrences = database.GetCollection<BsonDocument>(WellKnownCollectionNames.Occurrences);
     readonly IMongoCollection<BsonDocument> _fences = database.GetCollection<BsonDocument>(WellKnownCollectionNames.OccurrenceClaimFences);
 
+    /// <summary>
+    /// Gets the occurrence indexes.
+    /// </summary>
+    internal static IReadOnlyList<CreateIndexModel<BsonDocument>> Indexes { get; } =
+    [
+        new(Builders<BsonDocument>.IndexKeys.Ascending("trigger").Ascending("state"), new CreateIndexOptions { Name = "trigger-state" }),
+        new(Builders<BsonDocument>.IndexKeys.Ascending("schedule").Ascending("state"), new CreateIndexOptions { Name = "schedule-state" })
+    ];
+
     /// <inheritdoc/>
     public async Task<OccurrenceRecordResult> Record(Occurrence occurrence)
     {
@@ -56,6 +65,9 @@ public partial class OccurrencesStorage(IMongoDatabase database) : IOccurrencesS
     /// <inheritdoc/>
     public async Task<IEnumerable<Occurrence>> Claim(TriggerId trigger, string worker, DateTimeOffset now, TimeSpan duration, int max, int maxInFlight)
     {
+        // A claim whose reply is lost is not detected here: the commit stands, the occurrence stays Leased
+        // for the unreachable worker, and it is reclaimed through OccurrenceClaimSelection once the lease expires.
+        // The reclaim increments the epoch, so a late completion from the first claim is fenced out.
         await EnsureIndexes();
         await EnsureFence(trigger);
         using var session = await database.Client.StartSessionAsync();
@@ -143,10 +155,7 @@ public partial class OccurrencesStorage(IMongoDatabase database) : IOccurrencesS
         return result.MatchedCount == 1 ? OccurrenceLeaseResult.Updated : OccurrenceLeaseResult.OccurrenceLeaseLost;
     }
 
-    Task EnsureIndexes() => _occurrences.EnsureIndexesOnceAsync(
-        _ensuredIndexes,
-        new(Builders<BsonDocument>.IndexKeys.Ascending("trigger").Ascending("state"), new CreateIndexOptions { Name = "trigger-state" }),
-        new(Builders<BsonDocument>.IndexKeys.Ascending("schedule").Ascending("state"), new CreateIndexOptions { Name = "schedule-state" }));
+    Task EnsureIndexes() => _occurrences.EnsureIndexesOnceAsync(_ensuredIndexes, Indexes.ToArray());
 
     async Task EnsureFence(TriggerId trigger)
     {

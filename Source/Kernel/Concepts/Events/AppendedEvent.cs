@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
+using System.Text.Json.Serialization;
 
 namespace Cratis.Chronicle.Concepts.Events;
 
@@ -12,6 +13,13 @@ namespace Cratis.Chronicle.Concepts.Events;
 /// <param name="Content">The content in the form of an <see cref="ExpandoObject"/>.</param>
 public record AppendedEvent(EventContext Context, ExpandoObject Content)
 {
+    /// <summary>
+    /// Gets confirmed erased paths in the current released content, using dotted members and bracketed indices.
+    /// Empty does not prove absence of erasure; revisions and generational content are not covered.
+    /// </summary>
+    [JsonIgnore]
+    public IReadOnlyList<string> ErasedProperties { get; init; } = [];
+
     /// <summary>
     /// Gets the original content of the event as a JSON string, before any revisions were applied.
     /// Only populated when the event has been revised.

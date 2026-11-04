@@ -182,13 +182,17 @@ public partial class Observer
 
     static TimeSpan GetNextRetryDelay(FailedPartition failure, Observers config)
     {
-        var time = TimeSpan.FromSeconds(config.BackoffDelay * Math.Pow(config.ExponentialBackoffDelayFactor, failure.AttemptsInCurrentBudget));
+        var seconds = config.BackoffDelay * Math.Pow(config.ExponentialBackoffDelayFactor, failure.AttemptsInCurrentBudget);
         var maxTime = TimeSpan.FromSeconds(config.MaximumBackoffDelay);
 
-        if (time > maxTime)
+        // Cap before converting: a large attempt count (for example after the retry policy shrank, or with unlimited
+        // retries) can make the exponential delay too large for TimeSpan, or infinite.
+        if (seconds > config.MaximumBackoffDelay)
         {
             return maxTime;
         }
+
+        var time = TimeSpan.FromSeconds(seconds);
 
         if (time == TimeSpan.Zero)
         {

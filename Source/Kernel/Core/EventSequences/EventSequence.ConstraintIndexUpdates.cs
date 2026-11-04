@@ -26,7 +26,7 @@ public partial class EventSequence
 
     async Task UpdateConstraintIndexes(IEnumerable<(ConstraintValidationContext Context, EventSequenceNumber SequenceNumber)> contexts)
     {
-        using var budget = new CancellationTokenSource(TimeSpan.FromSeconds(2), ConstraintIndexTimeProvider);
+        using var budget = new CancellationTokenSource(ConstraintIndexRepair.PostCommitBudget, ConstraintIndexTimeProvider);
         var batches = new ConstraintIndexBatches();
         foreach (var (context, number) in contexts)
         {
@@ -100,10 +100,10 @@ public partial class EventSequence
         CancellationToken cancellationToken)
     {
         var outcome = ConstraintIndexUpdateOutcome.NotAttempted;
-        for (var attempt = 0; attempt < 3 && !cancellationToken.IsCancellationRequested; attempt++)
+        for (var attempt = 0; attempt < ConstraintIndexRepair.UpdateAttempts && !cancellationToken.IsCancellationRequested; attempt++)
         {
             if (attempt > 0 && !await WaitBeforeConstraintIndexRetry(attempt, cancellationToken)) return ConstraintIndexUpdateOutcome.NotAttempted;
-            (outcome, var error) = await ConstraintIndexUpdateAttempt.Run(write, cancellationToken, ConstraintIndexTimeProvider);
+            (outcome, var error) = await ConstraintIndexUpdateAttempt.Run(write, ConstraintIndexRepair.AttemptTimeout, cancellationToken, ConstraintIndexTimeProvider);
             ObserveConstraintIndexUpdate(outcome, error, name, number);
             if (outcome is not (ConstraintIndexUpdateOutcome.Failed or ConstraintIndexUpdateOutcome.Abandoned)) break;
         }

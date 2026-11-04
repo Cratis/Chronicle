@@ -16,7 +16,10 @@ public partial class EventSequenceStorage : IEffectReceiptStorage
     /// <inheritdoc/>
     public async Task<EffectReceipt?> GetEffectReceipt(string id)
     {
-        var document = await ReceiptCollection.Find(new BsonDocument("_id", id)).SingleOrDefaultAsync();
+        var document = await ReceiptCollection
+            .WithReadConcern(ReadConcern.Majority)
+            .WithReadPreference(ReadPreference.Primary)
+            .Find(new BsonDocument("_id", id)).SingleOrDefaultAsync();
         return document is null ? null : JsonSerializer.Deserialize<EffectReceipt>(document["data"].AsString);
     }
 

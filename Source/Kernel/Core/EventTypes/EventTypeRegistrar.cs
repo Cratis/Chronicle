@@ -334,12 +334,25 @@ public sealed class EventTypeRegistrar(IGrainFactory grainFactory)
 
         foreach (var segment in JsonPropertyPaths.Split(path))
         {
-            if (!current.ActualProperties.TryGetValue(segment, out var property))
+            var addressesElements = segment.EndsWith(JsonPropertyPaths.ElementMarker, StringComparison.Ordinal);
+            var name = addressesElements ? segment[..^JsonPropertyPaths.ElementMarker.Length] : segment;
+
+            if (!current.ActualProperties.TryGetValue(name, out var property))
             {
                 return false;
             }
 
             current = property.ActualSchema;
+
+            if (addressesElements)
+            {
+                if (current.Item is null)
+                {
+                    return false;
+                }
+
+                current = current.Item.ActualSchema;
+            }
         }
 
         return true;

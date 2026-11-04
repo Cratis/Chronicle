@@ -21,6 +21,14 @@ public class FailedPartitionStorage(IEventStoreNamespaceDatabase database) : IFa
     readonly IMongoCollection<FailedPartition> _collection = database.GetCollection<FailedPartition>(WellKnownCollectionNames.FailedPartitions);
     readonly ConcurrentDictionary<string, byte> _ensuredIndexes = new();
 
+    /// <summary>
+    /// Gets the failed partition indexes.
+    /// </summary>
+    internal static IReadOnlyList<CreateIndexModel<FailedPartition>> Indexes { get; } =
+    [
+        new(Builders<FailedPartition>.IndexKeys.Ascending(_ => _.ObserverId), new CreateIndexOptions { Name = "observerId", Background = true })
+    ];
+
     /// <inheritdoc/>
     public ISubject<IEnumerable<FailedPartition>> ObserveAllFor(ObserverId? observerId = default)
     {
@@ -85,10 +93,5 @@ public class FailedPartitionStorage(IEventStoreNamespaceDatabase database) : IFa
         };
     }
 
-    Task EnsureIndexes() =>
-        _collection.EnsureIndexesOnceAsync(
-            _ensuredIndexes,
-            new CreateIndexModel<FailedPartition>(
-                Builders<FailedPartition>.IndexKeys.Ascending(_ => _.ObserverId),
-                new CreateIndexOptions { Name = "observerId", Background = true }));
+    Task EnsureIndexes() => _collection.EnsureIndexesOnceAsync(_ensuredIndexes, Indexes.ToArray());
 }

@@ -44,4 +44,17 @@ public class ReactorResult
     /// </summary>
     [ProtoMember(6)]
     public ulong DeliveryId { get; set; }
+
+    /// <summary>
+    /// Gets or sets how long to wait, in milliseconds, before the partition is delivered again when it was deferred.
+    /// </summary>
+    [ProtoMember(7)]
+    public ulong RetryAfterMilliseconds { get; set; }
+
+    /// <summary>
+    /// Gets or sets one result per partition of a page. Set instead of the single-partition fields when answering
+    /// a page delivered through <see cref="EventsToObserve.Partitions"/>.
+    /// </summary>
+    [ProtoMember(8)]
+    public IList<PartitionResult> Partitions { get; set; } = [];
 }

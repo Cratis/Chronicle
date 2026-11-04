@@ -15,8 +15,10 @@ namespace Cratis.Chronicle.Testing.Occurrences;
 /// <param name="time">The clock used by detached contexts.</param>
 public sealed class OccurrenceContextBuilder(ScenarioTime time)
 {
+    readonly OccurrenceId _id = new(Guid.NewGuid().ToString());
     TriggerId _trigger = new("testing");
-    OccurrenceId _id = new(Guid.NewGuid().ToString());
+    OccurrenceId? _explicitId;
+    string? _idempotencyId;
     OccurrenceKind _kind;
     DateTimeOffset? _recordedAt;
     DateTimeOffset? _dueAt;
@@ -56,16 +58,22 @@ public sealed class OccurrenceContextBuilder(ScenarioTime time)
     /// <returns>This builder.</returns>
     public OccurrenceContextBuilder WithId(OccurrenceId id)
     {
-        _id = id;
+        _explicitId = id;
         return this;
     }
 
     /// <summary>
-    /// Derives an identity using the kernel's ingress encoding and the currently selected trigger.
+    /// Derives an identity using the kernel's ingress encoding and the trigger selected when the context is built,
+    /// so the call order relative to <see cref="For{TTrigger}"/> and <see cref="ForTrigger"/> does not matter.
+    /// An identity set with <see cref="WithId"/> wins over the derived one.
     /// </summary>
     /// <param name="idempotencyId">The caller's retry identity.</param>
     /// <returns>This builder.</returns>
-    public OccurrenceContextBuilder WithIdempotencyId(string idempotencyId) => WithId(new(Storage.Occurrences.OccurrenceIdentities.ForIngress(new(_trigger.Value), idempotencyId).Value));
+    public OccurrenceContextBuilder WithIdempotencyId(string idempotencyId)
+    {
+        _idempotencyId = idempotencyId;
+        return this;
+    }
 
     /// <summary>
     /// Selects the occurrence kind.
@@ -140,12 +148,17 @@ public sealed class OccurrenceContextBuilder(ScenarioTime time)
         var storage = eventStore.TestingStore.Store.GetNamespace(new KernelConcepts::Cratis.Chronicle.Concepts.EventStoreNamespaceName(eventStore.Namespace.Value)).Occurrences;
         if (_attempt < 1 || _epoch < 1 || (await storage.GetForTrigger(new(_trigger.Value))).Any()) throw new OccurrenceContextCannotBeClaimed();
         var at = _recordedAt ?? eventStore.Time.Now;
-        var recorded = await storage.Record(new(new(_id.Value), new(_trigger.Value), (Storage.Occurrences.OccurrenceKind)_kind, "testing-context", "{}", 1, at, _dueAt, null, Storage.Occurrences.OccurrenceState.Pending, _attempt - 1, _epoch - 1, null, null, null, null));
+        var id = ResolveId();
+        var recorded = await storage.Record(new(new(id.Value), new(_trigger.Value), (Storage.Occurrences.OccurrenceKind)_kind, "testing-context", "{}", 1, at, _dueAt, null, Storage.Occurrences.OccurrenceState.Pending, _attempt - 1, _epoch - 1, null, null, null, null));
         if (recorded != Storage.Occurrences.OccurrenceRecordResult.Recorded) throw new OccurrenceContextCannotBeClaimed();
         var claims = await storage.Claim(new(_trigger.Value), "scenario-context", eventStore.Time.Now, TimeSpan.FromSeconds(60), 1, 1);
-        if (claims.SingleOrDefault()?.Id.Value != _id.Value) throw new OccurrenceContextCannotBeClaimed();
-        return Context(at) with { Namespace = eventStore.Namespace };
+        if (claims.SingleOrDefault()?.Id.Value != id.Value) throw new OccurrenceContextCannotBeClaimed();
+        return Context(at, id) with { Namespace = eventStore.Namespace };
     }
 
-    OccurrenceContext Context(DateTimeOffset recordedAt) => new(_id, _trigger, _kind, _dueAt, recordedAt, null, _attempt, new(_id, _epoch));
+    OccurrenceId ResolveId() => _explicitId ?? (_idempotencyId is null ? _id : new(Storage.Occurrences.OccurrenceIdentities.ForIngress(new(_trigger.Value), _idempotencyId).Value));
+
+    OccurrenceContext Context(DateTimeOffset recordedAt) => Context(recordedAt, ResolveId());
+
+    OccurrenceContext Context(DateTimeOffset recordedAt, OccurrenceId id) => new(id, _trigger, _kind, _dueAt, recordedAt, null, _attempt, new(id, _epoch));
 }
