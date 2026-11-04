@@ -3,12 +3,12 @@
 
 using System.Text.Json;
 using Cratis.Arc.MongoDB;
+using Cratis.Choreography.Storage.MongoDB.Serialization;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Projections.Generations.Enablement;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Storage.MongoDB.EventSequences;
 using Cratis.Chronicle.Storage.Sinks;
-using Cratis.Orleans.Storage.MongoDB.Serialization;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using MongoDB.Bson;
@@ -37,7 +37,7 @@ public class a_provider(ReplicaSetMongoDBFixture fixture) : Specification
         _database = new(manager, mongoOptions, Substitute.For<ICustomSerializers>(), names);
         var factories = Substitute.For<IInstancesOf<ISinkFactory>>();
         factories.GetEnumerator().Returns(_ => Enumerable.Empty<ISinkFactory>().GetEnumerator());
-        _storage = new(_database, Substitute.For<Json.IExpandoObjectConverter>(), new JsonSerializerOptions(), factories, Substitute.For<Cratis.Orleans.Storage.IJobsStorage>(), options, NullLoggerFactory.Instance, Substitute.For<ISystemEventStoreRelocation>());
+        _storage = new(_database, Substitute.For<Json.IExpandoObjectConverter>(), new JsonSerializerOptions(), factories, Substitute.For<Cratis.Choreography.Storage.IJobsStorage>(), options, NullLoggerFactory.Instance, Substitute.For<ISystemEventStoreRelocation>());
         _reset = new(options, mongoOptions, manager, names);
         _registry = _database.GetCollection<EventStore>();
     }

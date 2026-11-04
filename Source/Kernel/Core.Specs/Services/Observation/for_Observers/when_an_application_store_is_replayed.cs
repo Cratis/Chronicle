@@ -1,9 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Choreography.Jobs;
 using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Security.given;
-using Cratis.Orleans.Jobs;
 using IObserver = Cratis.Chronicle.Observation.IObserver;
 
 namespace Cratis.Chronicle.Services.Observation.for_Observers;

@@ -2,11 +2,11 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using Cratis.Choreography.Jobs;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Chronicle.Storage.Observation;
-using Cratis.Orleans.Jobs;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Observation.States;
@@ -95,7 +95,7 @@ public class CatchingUpInFlight(
                     var error = startResult?.TryGetError(out var startError) is true ? startError : default;
                     logger.CouldNotStartInFlightCatchUpForPartition(partition, error);
 
-                    // NotAdmitted refuses before persisting or starting the new job (Cratis.Orleans 1.32.1 Job.Start).
+                    // NotAdmitted refuses before persisting or starting the new job (Cratis.Choreography 1.32.1 Job.Start).
                     // Other errors, including Unknown, may follow dispatched steps; keep their markers as with exceptions.
                     // TODO(#4496): reconcile durable jobs before retrying ambiguous starts.
                     if (error == StartJobError.NotAdmitted)

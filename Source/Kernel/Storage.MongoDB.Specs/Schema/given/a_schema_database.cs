@@ -3,10 +3,10 @@
 
 using System.Collections.Concurrent;
 using Cratis.Arc.MongoDB;
+using Cratis.Choreography.Storage.MongoDB.Serialization;
 using Cratis.Chronicle.Concepts.Events.Constraints;
 using Cratis.Chronicle.Storage.MongoDB.Events.Constraints;
 using Cratis.Chronicle.Storage.MongoDB.Sinks;
-using Cratis.Orleans.Storage.MongoDB.Serialization;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using MongoDB.Bson;

@@ -22,7 +22,7 @@ namespace Cratis.Chronicle.Storage.MongoDB;
 /// <param name="expandoObjectConverter"><see cref="Json.IExpandoObjectConverter"/> for conversions.</param>
 /// <param name="jsonSerializerOptions">The global <see cref="JsonSerializerOptions"/>.</param>
 /// <param name="sinkFactories"><see cref="IInstancesOf{T}"/> for getting all <see cref="ISinkFactory"/> instances.</param>
-/// <param name="jobsStorage">The <see cref="Cratis.Orleans.Storage.IJobsStorage"/> the job system resolves through.</param>
+/// <param name="jobsStorage">The <see cref="Cratis.Choreography.Storage.IJobsStorage"/> the job system resolves through.</param>
 /// <param name="options"><see cref="ChronicleOptions"/>.</param>
 /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
 /// <param name="systemEventStoreRelocation"><see cref="ISystemEventStoreRelocation"/> for moving the System event store's databases.</param>
@@ -31,7 +31,7 @@ public class Storage(
     Json.IExpandoObjectConverter expandoObjectConverter,
     JsonSerializerOptions jsonSerializerOptions,
     IInstancesOf<ISinkFactory> sinkFactories,
-    Cratis.Orleans.Storage.IJobsStorage jobsStorage,
+    Cratis.Choreography.Storage.IJobsStorage jobsStorage,
     IOptions<ChronicleOptions> options,
     ILoggerFactory loggerFactory,
     ISystemEventStoreRelocation systemEventStoreRelocation) : IStorage

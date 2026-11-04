@@ -4,14 +4,14 @@
 using System.Collections.Immutable;
 using Cratis.Arc.EntityFrameworkCore;
 using Cratis.Arc.EntityFrameworkCore.Concepts;
-using Cratis.Orleans.Jobs;
-using Cratis.Orleans.Storage.Jobs;
-using Cratis.Orleans.Storage.Sql;
+using Cratis.Choreography.Jobs;
+using Cratis.Choreography.Storage.Jobs;
+using Cratis.Choreography.Storage.Sql;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
-using JobsDbContext = Cratis.Orleans.Storage.Sql.Jobs.JobsDbContext;
+using JobsDbContext = Cratis.Choreography.Storage.Sql.Jobs.JobsDbContext;
 using Result = Cratis.Monads.Result;
 
 namespace Cratis.Chronicle.Storage.Sql.Jobs.for_jobs_storage;
@@ -26,7 +26,7 @@ public class when_the_kernel_resolves_it_for_an_event_store_namespace : Specific
 {
     string _databaseDirectory;
     string _databaseFile;
-    Cratis.Orleans.Storage.JobsStorage _storage;
+    Cratis.Choreography.Storage.JobsStorage _storage;
     Exception _error;
     IImmutableList<JobState> _jobs = [];
 
