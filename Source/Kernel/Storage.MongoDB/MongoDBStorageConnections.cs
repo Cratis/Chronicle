@@ -66,6 +66,26 @@ public class MongoDBStorageConnections(
         return clientManager.GetClientFor(settings).GetDatabase(resolved.Database ?? derivedName);
     }
 
+    /// <inheritdoc/>
+    public async Task<(string Scope, string Database)> Placement(StorageConnectionKind kind, string derivedName, string eventStore = "", string @namespace = "")
+    {
+        var configured = new MongoUrl(mongoDBOptions.Value.Server);
+        if (!resolution.IsConfigured)
+        {
+            return (ScopeOf(configured.Servers), derivedName);
+        }
+
+        var request = resolution.RequestFor(_purpose, kind, eventStore, @namespace);
+        var resolved = await resolution.Resolve(_purpose, kind, eventStore, @namespace);
+        var resolver = resolution.Resolver;
+        var hooks = _hooks.GetOrAdd(request.ToKey(), static (_, state) => new(state.Resolver, state.Request, TimeProvider.System), (Resolver: resolver, Request: request));
+        var settings = resolved.ToMongoClientSettings(configured, hooks);
+        return (ScopeOf(settings.Servers), resolved.Database ?? derivedName);
+    }
+
+    static string ScopeOf(IEnumerable<MongoServerAddress> servers) =>
+        string.Join(',', servers.Select(_ => $"{_.Host.ToLowerInvariant()}:{_.Port}").Order(StringComparer.Ordinal));
+
     MongoClientSettings WithDirectConnection(MongoClientSettings settings)
     {
         if (mongoDBOptions.Value.DirectConnection == true)

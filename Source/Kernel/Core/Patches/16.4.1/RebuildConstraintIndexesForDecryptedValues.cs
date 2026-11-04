@@ -6,8 +6,12 @@ using Cratis.Choreography.Patching;
 using Cratis.Chronicle.Concepts.Events.Constraints;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Events.Constraints;
+using Cratis.Chronicle.EventStores;
 using Cratis.Chronicle.Namespaces;
+using Cratis.Chronicle.Patching;
 using Cratis.Chronicle.Storage;
+using Cratis.Chronicle.Storage.Naming;
+using Cratis.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Patches;
@@ -24,8 +28,13 @@ namespace Cratis.Chronicle.Patches;
 /// <param name="storage"><see cref="IStorage"/> for accessing storage.</param>
 /// <param name="grainFactory"><see cref="IGrainFactory"/> for getting grains.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
-public class RebuildConstraintIndexesForDecryptedValues(IStorage storage, IGrainFactory grainFactory, ILogger<RebuildConstraintIndexesForDecryptedValues> logger) : ICanApplyPatch
+/// <param name="resourceNames">The optional <see cref="IResourceNameSnapshot"/> that tells which event stores are quarantined, and so are left out.</param>
+[Singleton]
+public class RebuildConstraintIndexesForDecryptedValues(IStorage storage, IGrainFactory grainFactory, ILogger<RebuildConstraintIndexesForDecryptedValues> logger, IResourceNameSnapshot? resourceNames = null) : ICanApplyPatch, IReportSkippedResources
 {
+    /// <inheritdoc/>
+    public SkippedResources SkippedResources { get; private set; } = SkippedResources.None;
+
     /// <inheritdoc/>
     public SemanticVersion Version => new(16, 4, 1);
 
@@ -34,8 +43,9 @@ public class RebuildConstraintIndexesForDecryptedValues(IStorage storage, IGrain
     {
         logger.StartingPatch();
 
-        var eventStores = await storage.GetEventStores();
-        foreach (var eventStore in eventStores)
+        var eventStores = await UsableEventStores.From(storage, resourceNames, logger);
+        SkippedResources = eventStores.SkippedResources;
+        foreach (var eventStore in eventStores.Usable)
         {
             var eventStoreStorage = storage.GetEventStore(eventStore);
             var definitions = await eventStoreStorage.Constraints.GetDefinitions();

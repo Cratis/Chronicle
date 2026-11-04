@@ -19,7 +19,7 @@ public class a_storage_with_legacy_event_store_names : Specification
         _clusterStorage.GetEventStores().Returns(Task.FromResult<IEnumerable<EventStoreName>>(LegacyNames()));
         _changes = new();
         _clusterStorage.ObserveEventStores().Returns(_changes);
-        _storage = new(_clusterStorage, Substitute.For<ISystemStorage>(), Substitute.For<IInstancesOf<ISinkFactory>>());
+        _storage = new(_clusterStorage, Substitute.For<ISystemStorage>(), Substitute.For<IInstancesOf<ISinkFactory>>(), Substitute.For<Chronicle.Storage.Naming.IResourceNameGate>());
     }
 
     protected static EventStoreName[] LegacyNames() =>

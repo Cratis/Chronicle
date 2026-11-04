@@ -19,6 +19,11 @@ public static class WellKnownTableNames
     public const string Administrators = "Administrators";
 
     /// <summary>
+    /// The reserved event store and namespace names.
+    /// </summary>
+    public const string ResourceNameReservations = "ResourceNameReservations";
+
+    /// <summary>
     /// The kernel single-writer lease.
     /// </summary>
     public const string SingleWriterLeases = "SingleWriterLeases";

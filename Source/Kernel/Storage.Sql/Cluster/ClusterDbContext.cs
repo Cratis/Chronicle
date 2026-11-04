@@ -70,6 +70,11 @@ public class ClusterDbContext(DbContextOptions<ClusterDbContext> options) : Base
     public DbSet<ScopeEntity> Scopes { get; set; }
 
     /// <summary>
+    /// Gets or sets the DbSet for reserved resource names.
+    /// </summary>
+    public DbSet<ResourceNameReservationEntity> ResourceNameReservations { get; set; }
+
+    /// <summary>
     /// Gets the permanent logical database bindings.
     /// </summary>
     internal DbSet<DatabaseNameBinding> DatabaseNames => Set<DatabaseNameBinding>();
@@ -80,6 +85,7 @@ public class ClusterDbContext(DbContextOptions<ClusterDbContext> options) : Base
         base.OnModelCreating(modelBuilder);
         MembershipModel.Configure(modelBuilder, Database.ProviderName);
         SingleWriterLeaseModel.Configure(modelBuilder, Database.ProviderName);
+        ConfigureReservations(modelBuilder);
         modelBuilder.Entity<DatabaseNameBinding>(entity =>
         {
             entity.ToTable(WellKnownTableNames.DatabaseNames);
@@ -100,6 +106,21 @@ public class ClusterDbContext(DbContextOptions<ClusterDbContext> options) : Base
             {
                 entity.Property(row => row.PhysicalName).UseCollation("C");
             }
+        });
+    }
+
+    void ConfigureReservations(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<ResourceNameReservationEntity>(entity =>
+        {
+            var reservationCollation = Database.ProviderName switch
+            {
+                "Microsoft.EntityFrameworkCore.SqlServer" => "Latin1_General_100_BIN2",
+                "Npgsql.EntityFrameworkCore.PostgreSQL" => "C",
+                _ => "BINARY"
+            };
+            entity.Property(row => row.Key).HasMaxLength(450).UseCollation(reservationCollation);
+            entity.Property(row => row.Owner).HasMaxLength(450).UseCollation(reservationCollation);
         });
     }
 }

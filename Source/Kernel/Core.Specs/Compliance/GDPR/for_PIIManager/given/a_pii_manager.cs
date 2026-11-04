@@ -6,6 +6,7 @@ using System.Text;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Compliance;
+using Cratis.Chronicle.Storage.Naming;
 using Orleans.TestKit;
 
 namespace Cratis.Chronicle.Compliance.GDPR.for_PIIManager.given;
@@ -28,6 +29,7 @@ public class a_pii_manager : Specification
     protected IEncryptionKeyStorage _keyStore;
     protected IEncryptionKeyCacheClient _cacheClient;
     protected IStorage _storage;
+    protected ResourceNameSnapshot _resourceNames;
     protected RecordingLogger<PIIManager> _logger;
     protected PIIManager _manager;
 
@@ -43,6 +45,7 @@ public class a_pii_manager : Specification
         _cacheClient = Substitute.For<IEncryptionKeyCacheClient>();
         _storage = Substitute.For<IStorage>();
         _logger = new RecordingLogger<PIIManager>();
+        _resourceNames = new ResourceNameSnapshot();
 
         _storage.GetEventStores().Returns([EventStore, OtherEventStore]);
         _keyStore.TryGetFor(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Identifier, Arg.Any<EncryptionKeyRevision?>()).Returns(Key);
@@ -52,6 +55,7 @@ public class a_pii_manager : Specification
         _silo.AddService(_keyStore);
         _silo.AddService(_cacheClient);
         _silo.AddService(_storage);
+        _silo.AddService<IResourceNameSnapshot>(_resourceNames);
         _silo.AddService<Microsoft.Extensions.Logging.ILogger<PIIManager>>(_logger);
 
         _manager = await _silo.CreateGrainAsync<PIIManager>(Guid.Empty, new PIIManagerKey(EventStore, EventStoreNamespace));

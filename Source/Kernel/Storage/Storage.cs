@@ -4,6 +4,7 @@
 using System.Collections.Concurrent;
 using System.Reactive.Subjects;
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Storage.Naming;
 using Cratis.Chronicle.Storage.Sinks;
 using Cratis.Reactive;
 using Cratis.Types;
@@ -16,12 +17,17 @@ namespace Cratis.Chronicle.Storage;
 /// <param name="clusterStorage">The <see cref="IClusterStorage"/> instance.</param>
 /// <param name="systemStorage">The <see cref="ISystemStorage"/> instance.</param>
 /// <param name="sinkFactories"><see cref="ISinkFactory"/> instances.</param>
+/// <param name="gate">The <see cref="IResourceNameGate"/> checking event store names.</param>
 public class Storage(
     IClusterStorage clusterStorage,
     ISystemStorage systemStorage,
-    IInstancesOf<ISinkFactory> sinkFactories) : IStorage
+    IInstancesOf<ISinkFactory> sinkFactories,
+    IResourceNameGate gate) : IStorage
 {
-    readonly ConcurrentDictionary<EventStoreName, IEventStoreStorage> _eventStores = new(CaseInsensitiveEventStoreNameComparer.Instance);
+    /// <summary>
+    /// The cached event stores, keyed case-insensitively so case variants share one slot; the entry keeps the owner's exact name.
+    /// </summary>
+    readonly ConcurrentDictionary<EventStoreName, CachedEventStore> _eventStores = new(CaseInsensitiveEventStoreNameComparer.Instance);
 
     /// <inheritdoc/>
     public ISystemStorage System => systemStorage;
@@ -50,10 +56,11 @@ public class Storage(
     public IEventStoreStorage GetEventStore(EventStoreName eventStore)
     {
         ThrowIfEventStoreNameIsInvalid(eventStore);
+        gate.EnsureAvailable(eventStore);
 
         if (_eventStores.TryGetValue(eventStore, out var existing))
         {
-            return existing;
+            return existing.For(eventStore);
         }
 
         // TODO: This logic should be replaced by formalizing event stores as a Grain and it ensuring existence. Service layer should do this.
@@ -64,7 +71,13 @@ public class Storage(
         var existingEventStore = eventStores.SingleOrDefault(e => e == eventStore);
         if (existingEventStore is null)
         {
+            var creation = new ResourceCreation(eventStore, null, eventStores.Select(_ => _.Value));
+            Task.Run(() => gate.EnsureCanCreate(creation)).GetAwaiter().GetResult();
             Task.Run(() => clusterStorage.SaveEventStore(eventStore)).GetAwaiter().GetResult();
+        }
+        else
+        {
+            gate.MarkRegistered(eventStore);
         }
 
         var created = clusterStorage.CreateStorageForEventStore(
@@ -72,7 +85,7 @@ public class Storage(
             (eventStoreNamespaceName) =>
                 new Sinks.Sinks(eventStore, eventStoreNamespaceName, sinkFactories));
 
-        return _eventStores.GetOrAdd(eventStore, created);
+        return _eventStores.GetOrAdd(eventStore, static (name, storage) => new CachedEventStore(name, storage), created).For(eventStore);
     }
 
     /// <inheritdoc/>
@@ -91,5 +104,19 @@ public class Storage(
         {
             throw new InvalidEventStoreName(eventStore, "EventStoreName cannot be '[NotSet]'. It must be properly configured.");
         }
+    }
+
+    sealed record CachedEventStore(EventStoreName Owner, IEventStoreStorage Storage)
+    {
+        /// <summary>
+        /// Gets the storage for the exact owner name. A case variant shares the slot but is a different name, so it is refused as a cold silo refuses it.
+        /// </summary>
+        /// <param name="eventStore">The requested name.</param>
+        /// <returns>The cached storage.</returns>
+        /// <exception cref="ResourceNameConflict">The requested name is a case variant of the owner.</exception>
+        public IEventStoreStorage For(EventStoreName eventStore) =>
+            string.Equals(Owner.Value, eventStore.Value, StringComparison.Ordinal)
+                ? Storage
+                : throw new ResourceNameConflict(ResourceNameConflictKind.EventStoreCaseVariant);
     }
 }

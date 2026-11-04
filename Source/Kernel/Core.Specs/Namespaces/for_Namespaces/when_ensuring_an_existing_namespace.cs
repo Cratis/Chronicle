@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.Namespaces.for_Namespaces;
 
 public class when_ensuring_an_existing_namespace : given.a_namespaces_grain
 {
-    void Establish() => _state.Namespaces.Add(new NamespaceState("FUTURE", DateTimeOffset.UtcNow));
+    void Establish() => _state.Namespaces.Add(new NamespaceState(_namespace, DateTimeOffset.UtcNow));
 
     async Task Because() => await _namespaces.Ensure(_namespace);
 

@@ -4,8 +4,12 @@
 using Cratis.Choreography.Patching;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.EventStores;
 using Cratis.Chronicle.Namespaces;
+using Cratis.Chronicle.Patching;
 using Cratis.Chronicle.Storage;
+using Cratis.Chronicle.Storage.Naming;
+using Cratis.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Patches;
@@ -16,15 +20,22 @@ namespace Cratis.Chronicle.Patches;
 /// <param name="storage">The storage to clean.</param>
 /// <param name="grainFactory">The grain factory for namespace and sequence discovery.</param>
 /// <param name="logger">The logger.</param>
-public class RemoveUnhashedUniqueConstraintValues(IStorage storage, IGrainFactory grainFactory, ILogger<RemoveUnhashedUniqueConstraintValues> logger) : ICanApplyPatch
+/// <param name="resourceNames">The optional <see cref="IResourceNameSnapshot"/> that tells which event stores are quarantined, and so are left out.</param>
+[Singleton]
+public class RemoveUnhashedUniqueConstraintValues(IStorage storage, IGrainFactory grainFactory, ILogger<RemoveUnhashedUniqueConstraintValues> logger, IResourceNameSnapshot? resourceNames = null) : ICanApplyPatch, IReportSkippedResources
 {
+    /// <inheritdoc/>
+    public SkippedResources SkippedResources { get; private set; } = SkippedResources.None;
+
     /// <inheritdoc/>
     public SemanticVersion Version => new(19, 112, 0);
 
     /// <inheritdoc/>
     public async Task Up()
     {
-        foreach (var eventStore in await storage.GetEventStores())
+        var eventStores = await UsableEventStores.From(storage, resourceNames, logger);
+        SkippedResources = eventStores.SkippedResources;
+        foreach (var eventStore in eventStores.Usable)
         {
             var eventStoreStorage = storage.GetEventStore(eventStore);
             var namespaces = await grainFactory.GetGrain<INamespaces>(eventStore).GetAll();
