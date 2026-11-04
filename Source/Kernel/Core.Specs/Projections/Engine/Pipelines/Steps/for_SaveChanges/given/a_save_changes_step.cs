@@ -44,8 +44,8 @@ public class a_save_changes_step : Specification
             NeedsInitialState: false);
     }
 
-    protected SaveChanges CreateStep(bool guardWritesOnWatermark) =>
-        new(_sink, Substitute.For<IChangesetStorage>(), guardWritesOnWatermark, Substitute.For<ILogger<SaveChanges>>());
+    protected SaveChanges CreateStep(bool guardWritesOnWatermark, bool recordAppliedEventMarkers = true) =>
+        new(_sink, Substitute.For<IChangesetStorage>(), guardWritesOnWatermark, recordAppliedEventMarkers, Substitute.For<ILogger<SaveChanges>>());
 
     protected SinkWriteMode WriteMode => _sink.WriteModes.Single();
 

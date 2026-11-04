@@ -11,7 +11,8 @@ Read model configuration controls how many revert containers Chronicle keeps aft
 {
   "readModels": {
     "replayedVersionsToKeep": 1,
-    "maxBatchSize": 500
+    "maxBatchSize": 500,
+    "recordAppliedEventMarkers": false
   }
 }
 ```
@@ -20,6 +21,7 @@ Read model configuration controls how many revert containers Chronicle keeps aft
 | --- | --- | --- | --- |
 | replayedVersionsToKeep | number | 1 | Number of replay occurrences to keep per read model. `snapshotsToKeep` is an alias that sets the same value. |
 | maxBatchSize | number | 500 | Maximum number of items per read-model batch. Must be greater than zero |
+| recordAppliedEventMarkers | boolean | false | MongoDB only. Writes a projection's data and its applied-event markers in one guarded update, so a redelivered, stale or late event never replaces newer data. Requires MongoDB 5.0 or later. |
 
 There is no age-based setting. Chronicle counts occurrences; it does not look at how old they are.
 
@@ -65,6 +67,14 @@ cratis chronicle read-models occurrences <READ_MODEL_TYPE>
 On MongoDB, you can find containers Chronicle does not track by comparing the collection names in the database with the `containerName` and `revertContainerName` values in the `replayed-read-models` collection. A collection named like a revert container but missing from that collection is untracked. On SQL, the occurrences are in the `ReplayedReadModels` table, but some databases shorten long table names, so a physical table name may not match the recorded name exactly. Check such tables by hand rather than by exact name. Do not delete a `replay-<container>` container while its read model is replaying.
 
 Chronicle makes no promise about how long a revert container exists. Do not rely on it for data retention or legal requirements.
+
+## Applied event markers
+
+A projection keyed by the event source id that joins other projections' data by event source id receives its own events and the joined events out of order. A redelivery of either could replace newer data with older data. With `recordAppliedEventMarkers` turned on, the MongoDB sink records which source event each field group last applied under `__applied` in the document, and writes data and markers in a single aggregation pipeline update. A write applies only when its event is newer than the recorded marker, and a resolved join applies only while the document still references that join target.
+
+The setting is off by default and takes effect for the MongoDB sink only. It needs MongoDB 5.0 or later, and it also requires `guardSinkWritesOnWatermark` (on by default).
+
+Turn it off to return to the previous behavior; this takes effect on the next write. Markers written earlier are then stale. Before turning it on again after a period off, stop and drain the writers, then either unset `__applied` on the affected collections or replay the projection.
 
 ## Fenced sink writes
 

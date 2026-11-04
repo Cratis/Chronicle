@@ -42,7 +42,7 @@ public class and_a_projection_publishes_over_several_events : given.a_sink
                 new Resolve(),
                 new SetInitialState(_sink, NullLogger<SetInitialState>.Instance),
                 new Accumulate(),
-                new SaveChanges(_sink, Substitute.For<IChangesetStorage>(), true, NullLogger<SaveChanges>.Instance)
+                new SaveChanges(_sink, Substitute.For<IChangesetStorage>(), true, false, NullLogger<SaveChanges>.Instance)
             ],
             new ProjectionHandleLock(),
             Substitute.For<IReplayScopedCache>(),

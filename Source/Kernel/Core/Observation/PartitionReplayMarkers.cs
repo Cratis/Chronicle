@@ -3,8 +3,10 @@
 
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Projections.Engine;
 using Cratis.Chronicle.Projections.Engine.Pipelines;
+using Microsoft.Extensions.Options;
 
 namespace Cratis.Chronicle.Observation;
 
@@ -13,14 +15,16 @@ namespace Cratis.Chronicle.Observation;
 /// </summary>
 /// <param name="projections"><see cref="IProjectionsManager"/> for finding the projection.</param>
 /// <param name="projectionPipelineManager"><see cref="IProjectionPipelineManager"/> for finding its pipeline.</param>
+/// <param name="options">The <see cref="ChronicleOptions"/>; markers are only recorded, and so only cleared, when they are turned on.</param>
 public class PartitionReplayMarkers(
     IProjectionsManager projections,
-    IProjectionPipelineManager projectionPipelineManager) : IPartitionReplayMarkers
+    IProjectionPipelineManager projectionPipelineManager,
+    IOptions<ChronicleOptions> options) : IPartitionReplayMarkers
 {
     /// <inheritdoc/>
     public async Task ClearFor(ObserverDetails observerDetails, Key partition)
     {
-        if (observerDetails.Type != ObserverType.Projection)
+        if (!options.Value.ReadModels.RecordAppliedEventMarkers || observerDetails.Type != ObserverType.Projection)
         {
             return;
         }

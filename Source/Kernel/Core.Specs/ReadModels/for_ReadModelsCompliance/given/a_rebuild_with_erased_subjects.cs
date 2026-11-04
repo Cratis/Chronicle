@@ -166,7 +166,7 @@ public class a_rebuild_with_erased_subjects : Specification
             context = await new DecryptInitialState(_compliance, "store", "Default").Perform(_engine, context);
             context = await new HandleEvent(_events, _destination.Sink, NullLogger<HandleEvent>.Instance).Perform(_engine, context);
             context = await new EncryptChangeset(_compliance, _comparer, "store", "Default").Perform(_engine, context);
-            await new SaveChanges(_destination.Sink, Substitute.For<IChangesetStorage>(), false, NullLogger<SaveChanges>.Instance).Perform(_engine, context);
+            await new SaveChanges(_destination.Sink, Substitute.For<IChangesetStorage>(), false, false, NullLogger<SaveChanges>.Instance).Perform(_engine, context);
         }
         await Observe("document");
     }

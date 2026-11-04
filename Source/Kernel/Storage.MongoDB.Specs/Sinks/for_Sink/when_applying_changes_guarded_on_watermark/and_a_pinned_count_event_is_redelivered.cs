@@ -79,7 +79,7 @@ public class and_a_pinned_count_event_is_redelivered(MongoDBFixture fixture) : g
             new ResolveKey(sequence, _sink, formats, NullLogger<ResolveKey>.Instance),
             new SetInitialState(_sink, NullLogger<SetInitialState>.Instance),
             new HandleEvent(sequence, _sink, NullLogger<HandleEvent>.Instance),
-            new SaveChanges(_sink, changes, true, NullLogger<SaveChanges>.Instance)
+            new SaveChanges(_sink, changes, true, false, NullLogger<SaveChanges>.Instance)
         ];
         _pipeline = new(_projection, _sink, changes, new ObjectComparer(), steps, new ProjectionHandleLock(), Substitute.For<IReplayScopedCache>(), NullLogger<ProjectionPipeline>.Instance);
         _event = new(new EventContext(first, EventSourceType.Default, "counter-1", EventStreamType.All, EventStreamId.Default, 10, DateTimeOffset.UtcNow, "store", "namespace", CorrelationId.New(), [], Identity.System, [], EventHash.NotSet), new ExpandoObject());

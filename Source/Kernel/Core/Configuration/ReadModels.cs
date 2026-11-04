@@ -51,8 +51,21 @@ public class ReadModels
     /// a projection whose key collapses several event sources onto one document (a join, a constant key or a parent
     /// hierarchy) is deliberately written out of order and is never guarded, with one exception: a projection keyed by the
     /// event source id that has root joins keyed by the event source id is written once per source event, tracked by applied
-    /// event markers in the document. Turning this off restores the previous
-    /// behavior exactly.
+    /// event markers in the document, which happens only when <see cref="RecordAppliedEventMarkers"/> is turned on.
+    /// Turning this off restores the previous behavior exactly.
     /// </remarks>
     public bool GuardSinkWritesOnWatermark { get; init; } = true;
+
+    /// <summary>
+    /// Gets a value indicating whether a projection marked for applied event markers writes its data and its markers in one
+    /// guarded update, making a redelivered, stale or late event a no-op.
+    /// </summary>
+    /// <remarks>
+    /// Applies to the MongoDB sink only, and to projections keyed by the event source id that have root joins keyed by the
+    /// event source id (see the applied event marker classification). It requires MongoDB 5.0 or later,
+    /// because the write is an aggregation pipeline update. It takes effect only when <see cref="GuardSinkWritesOnWatermark"/>
+    /// is also turned on. Off by default. Markers left in documents from an earlier period are stale, so before turning this on
+    /// again after a period off, drain the writers and either unset the __applied field on the affected collections or replay the projection.
+    /// </remarks>
+    public bool RecordAppliedEventMarkers { get; init; }
 }

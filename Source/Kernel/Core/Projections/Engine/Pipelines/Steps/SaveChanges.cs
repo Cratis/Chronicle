@@ -18,10 +18,11 @@ namespace Cratis.Chronicle.Projections.Engine.Pipelines.Steps;
 /// <param name="sink"><see cref="ISink"/> to use.</param>
 /// <param name="changesetStorage"><see cref="IChangesetStorage"/> for storing changesets as they occur.</param>
 /// <param name="guardWritesOnWatermark">Whether a write may be made conditional on advancing the read model's watermark.</param>
+/// <param name="recordAppliedEventMarkers">Whether a projection marked for applied event markers is written once per source event.</param>
 /// <param name="logger"><see cref="ILogger{T}"/> for logging.</param>
 /// <param name="projectionFutures">The persisted futures to acknowledge after successful writes.</param>
 /// <param name="changesetContainer">The container changesets are recorded under, when it is not the read model's own container - as for a materialization generation's destination.</param>
-public class SaveChanges(ISink sink, IChangesetStorage changesetStorage, bool guardWritesOnWatermark, ILogger<SaveChanges> logger, IProjectionFutures? projectionFutures = null, ReadModelContainerName? changesetContainer = null) : ICanPerformProjectionPipelineStep
+public class SaveChanges(ISink sink, IChangesetStorage changesetStorage, bool guardWritesOnWatermark, bool recordAppliedEventMarkers, ILogger<SaveChanges> logger, IProjectionFutures? projectionFutures = null, ReadModelContainerName? changesetContainer = null) : ICanPerformProjectionPipelineStep
 {
     /// <inheritdoc/>
     public async ValueTask<ProjectionEventContext> Perform(IProjection projection, ProjectionEventContext context)
@@ -175,11 +176,12 @@ public class SaveChanges(ISink sink, IChangesetStorage changesetStorage, bool gu
     /// root joins, see <see cref="AppliedEventMarkerClassification"/>) is written with <see cref="SinkWriteMode.OncePerSourceEvent"/>
     /// instead, including the creating event, because its joins are written out of order by design and the markers, not a
     /// watermark, decide whether a write was already applied. On a redelivery of that same creating event the instance is
-    /// already there, so the write is guarded and correctly does nothing.
+    /// already there, so the write is guarded and correctly does nothing. Markers are recorded only when the
+    /// RecordAppliedEventMarkers read model option is turned on; otherwise a marked projection is written as any other.
     /// </remarks>
     SinkWriteMode WriteModeFor(IProjection projection, ProjectionEventContext context)
     {
-        if (guardWritesOnWatermark && projection.MarkedJoins.Count > 0)
+        if (guardWritesOnWatermark && recordAppliedEventMarkers && projection.MarkedJoins.Count > 0)
         {
             return SinkWriteMode.OncePerSourceEvent;
         }

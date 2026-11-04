@@ -6,8 +6,10 @@ using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Projections;
+using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Projections.Engine;
 using Cratis.Chronicle.Projections.Engine.Pipelines;
+using Microsoft.Extensions.Options;
 
 namespace Cratis.Chronicle.Observation.for_PartitionReplayMarkers.given;
 
@@ -20,6 +22,7 @@ public class a_partition_replay_markers_service : Specification
     protected ObserverKey _observerKey;
     protected Key _partition;
     protected PartitionReplayMarkers _markers;
+    protected ChronicleOptions _options;
 
     void Establish()
     {
@@ -31,6 +34,7 @@ public class a_partition_replay_markers_service : Specification
         _partition = (Key)"some-partition";
         _projections.GetCurrent(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<ProjectionId>()).Returns(_projection);
         _pipelineManager.GetFor(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), _projection).Returns(_pipeline);
-        _markers = new(_projections, _pipelineManager);
+        _options = new() { ReadModels = new() { RecordAppliedEventMarkers = true } };
+        _markers = new(_projections, _pipelineManager, Options.Create(_options));
     }
 }
