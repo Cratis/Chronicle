@@ -20,3 +20,5 @@
   href: event-sources.md
 - name: Behavior Patterns
   href: patterns.md
+- name: Compensating events
+  href: compensation.md

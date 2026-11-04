@@ -1,10 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Choreography.Jobs;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Observation.States;
-using Cratis.Orleans.Jobs;
 
 namespace Cratis.Chronicle.Observation.for_Observer.when_catchup_completes;
 
@@ -16,6 +16,7 @@ public class and_the_observer_is_quarantined : given.a_quarantined_observer
         _stateStorage.State.CatchingUpPartitions.Add("partition");
         await _observer.CatchUp();
         _jobsManager.ClearReceivedCalls();
+        _storageStats.ResetCounts();
     }
 
     async Task Because()

@@ -3,7 +3,7 @@
 
 using System.Collections.Immutable;
 using System.Text.Json;
-using Cratis.Orleans.Jobs;
+using Cratis.Choreography.Jobs;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Observation.Jobs.for_ReplayObserverPartition;

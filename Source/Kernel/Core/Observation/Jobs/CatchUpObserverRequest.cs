@@ -24,4 +24,7 @@ public record CatchUpObserverRequest(
 
     /// <inheritdoc/>
     public ulong? Revision { get; init; }
+
+    /// <inheritdoc/>
+    public ulong? OwnershipEpoch { get; init; }
 }

@@ -1,0 +1,42 @@
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+using Microsoft.Data.SqlClient;
+
+namespace Cratis.Chronicle.Storage.Sql.Sinks.for_Sink.when_resolving_the_key_layout;
+
+[Collection(SqlServerCollection.Name)]
+public class and_the_table_is_new_on_sql_server(SqlServerFixture fixture) : given.a_sink_on_a_database_provider
+{
+    protected override ISqlSinkHarness CreateHarness() => new SqlServerSinkHarness { Fixture = fixture };
+
+    protected override Task Execute(string sql) => throw new NotSupportedException("This spec does not seed a legacy table.");
+
+    protected override async Task<string[]> ReadKeys(string column)
+    {
+        await using var connection = new SqlConnection(_harness.ConnectionString);
+        await connection.OpenAsync();
+        await using var command = connection.CreateCommand();
+        if (column != "ID")
+        {
+            throw new InvalidOperationException("Expected an ID key.");
+        }
+
+        command.CommandText = "SELECT [ID] FROM [keyed_models] ORDER BY 1";
+        await using var reader = await command.ExecuteReaderAsync();
+        var keys = new List<string>();
+        while (await reader.ReadAsync())
+        {
+            keys.Add(reader.GetString(0));
+        }
+
+        return [.. keys];
+    }
+
+    Task Because() => WriteAndReadLayout();
+
+    [Fact] void should_create_a_single_key_column_spelled_as_the_identifier() => _layout.PrimaryKey.Single().ShouldEqual("ID");
+    [Fact] void should_not_create_a_synthesized_key_column() => _layout.Columns.ShouldNotContain("Id");
+    [Fact] void should_store_the_keys_in_the_identifier_column() => _keys.ShouldEqual(["one", "two"]);
+    [Fact] void should_read_the_layout_once() => _layoutReads.ShouldEqual(1);
+}

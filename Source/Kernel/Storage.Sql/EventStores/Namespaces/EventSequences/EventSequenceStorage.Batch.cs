@@ -71,6 +71,7 @@ public partial class EventSequenceStorage
                     eventToAppend.ContentHashes,
                     eventToAppend.Subject?.IsSet == true ? eventToAppend.Subject : null);
                 eventEntry.EventSource = eventToAppend.EventSource.IsSet ? eventToAppend.EventSource.Value : null;
+                eventEntry.CompensationFor = eventToAppend.CompensationFor?.Value;
                 if (persistIdentities && eventToAppend.Identity is { } identity)
                 {
                     eventEntry.PublicationIdentityHash = PublicationIdentityHash(identity.Id);
@@ -104,6 +105,7 @@ public partial class EventSequenceStorage
                 {
                     NamedTags = eventToAppend.NamedTags,
                     EventSource = eventToAppend.EventSource,
+                    CompensationFor = eventToAppend.CompensationFor,
                     AppendedGeneration = eventToAppend.EventType.Generation
                 };
 

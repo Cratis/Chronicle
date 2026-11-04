@@ -11,6 +11,12 @@ namespace Cratis.Chronicle.Services.Clients;
 
 internal static partial class ConnectionServiceLogMessages
 {
+    [LoggerMessage(LogLevel.Error, "Could not register client connection {ConnectionId}")]
+    internal static partial void ClientRegistrationFailed(this ILogger<ConnectionService> logger, string connectionId, Exception exception);
+
+    [LoggerMessage(LogLevel.Error, "Failure while running or closing connection {ConnectionId}")]
+    internal static partial void ConnectionFailed(this ILogger<ConnectionService> logger, string connectionId, Exception exception);
+
     [LoggerMessage(LogLevel.Error, "Failure during keep alive for connection {ConnectionId}")]
     internal static partial void FailureDuringKeepAlive(this ILogger<ConnectionService> logger, string connectionId, Exception exception);
 

@@ -131,6 +131,37 @@ public class ObserverStateStorage(IEventStoreNamespaceDatabase namespaceDatabase
     }
 
     /// <inheritdoc/>
+    public async Task<DateTimeOffset?> GetRunningStateChangedAt(ObserverId observerId)
+    {
+        return await _collection
+            .Find(_ => _.Id == observerId)
+            .Project(_ => _.RunningStateChangedAt)
+            .FirstOrDefaultAsync().ConfigureAwait(false);
+    }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyDictionary<ObserverId, DateTimeOffset>> GetRunningStatesChangedAt()
+    {
+        var known = await _collection
+            .Find(Builders<ObserverState>.Filter.Ne(_ => _.RunningStateChangedAt, null))
+            .Project(_ => new { _.Id, _.RunningStateChangedAt })
+            .ToListAsync().ConfigureAwait(false);
+        return known.ToDictionary(_ => _.Id, _ => _.RunningStateChangedAt!.Value);
+    }
+
+    /// <inheritdoc/>
+    public async Task<bool> SaveRunningStateChangedAt(ObserverId observerId, DateTimeOffset? runningStateChangedAt, EventSequenceId owner)
+    {
+        var filter = Builders<ObserverState>.Filter.Eq(_ => _.Id, observerId) &
+            (Builders<ObserverState>.Filter.Eq(_ => _.Owner, owner) | Builders<ObserverState>.Filter.Eq(_ => _.Owner, null));
+        var update = runningStateChangedAt is null
+            ? Builders<ObserverState>.Update.Unset(_ => _.RunningStateChangedAt)
+            : Builders<ObserverState>.Update.Set(_ => _.RunningStateChangedAt, runningStateChangedAt);
+        var result = await _collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
+        return result.MatchedCount > 0;
+    }
+
+    /// <inheritdoc/>
     public async Task ClaimOwnership(ObserverId observerId, EventSequenceId owner) =>
         await _collection.UpdateOneAsync(_ => _.Id == observerId, Builders<ObserverState>.Update.Set(_ => _.Owner, owner)).ConfigureAwait(false);
 
@@ -141,10 +172,17 @@ public class ObserverStateStorage(IEventStoreNamespaceDatabase namespaceDatabase
     /// <inheritdoc/>
     public async Task Rename(ObserverId currentId, ObserverId newId)
     {
-        var update = Builders<ObserverState>.Update.Set(os => os.Id, newId);
-        await _collection.UpdateOneAsync(
-            os => os.Id == currentId,
-            update);
+        if (currentId == newId) return;
+        var state = await _collection.Find(os => os.Id == currentId).FirstOrDefaultAsync();
+        if (state is null) return;
+
+        state.Id = newId;
+        WriteModel<ObserverState>[] writes =
+        [
+            new InsertOneModel<ObserverState>(state),
+            new DeleteOneModel<ObserverState>(Builders<ObserverState>.Filter.Eq(os => os.Id, currentId))
+        ];
+        await _collection.BulkWriteAsync(writes, new BulkWriteOptions { IsOrdered = true });
     }
 
     async Task SplitLegacyPerPartitionCounts(ObserverId observerId, IDictionary<string, IDictionary<string, ulong>> legacyCounts)

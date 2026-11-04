@@ -2,12 +2,21 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Events.Constraints;
+using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Events.Constraints;
+using Cratis.Chronicle.Observation;
 
 namespace Cratis.Chronicle.EventSequences;
 
 public partial class EventSequence
 {
+    static readonly WebhookProbe _constraintRepairBackoff = new() { InitialDelaySeconds = 1, MaximumDelaySeconds = 60 };
+
+    /// <summary>
+    /// Gets or sets the jitter sample source for constraint repair and catch-up retries.
+    /// </summary>
+    internal Func<double>? ConstraintIndexRetryJitterSample { get; set; }
+
     void PrepareConstraintIndexRepair()
     {
         SynchronizeIndexedDefinitions();
@@ -18,10 +27,10 @@ public partial class EventSequence
     {
         PrepareConstraintIndexRepair();
         var now = ConstraintIndexTimeProvider.GetUtcNow();
-        if (now < _nextConstraintRepairAttempt || (_lastAppendRepairEnded is { } ended && now - ended < TimeSpan.FromSeconds(5))) return;
+        if (now < _nextConstraintRepairAttempt || (_lastAppendRepairEnded is { } ended && now - ended < ConstraintIndexRepair.AppendRepairInterval)) return;
         try
         {
-            await RunConstraintIndexRepairTurn(TimeSpan.FromSeconds(5), false, CancellationToken.None);
+            await RunConstraintIndexRepairTurn(ConstraintIndexRepair.AppendRepairBudget, false, CancellationToken.None);
         }
         finally
         {
@@ -88,7 +97,7 @@ public partial class EventSequence
 
     IReadOnlyDictionary<ConstraintName, ConstraintIndexReplayFailure> SettleConstraintIndexPoison(ConstraintIndexReplayResult result)
     {
-        var poisoned = _constraintIndexPoisonTracker.Observe(result.Failed, _constraintIndexReplay!.StorageCallSucceeded);
+        var poisoned = _constraintIndexPoisonTracker.Observe(result.Failed, _constraintIndexReplay!.StorageCallSucceeded, ConstraintIndexRepair.PoisonThreshold);
         foreach (var (name, failure) in poisoned)
         {
             _constraintIndexReplay.SettlePoison(name, failure.Position!);
@@ -169,8 +178,12 @@ public partial class EventSequence
 
     void BackOffConstraintRepair()
     {
-        _constraintRepairFailures++;
-        _nextConstraintRepairAttempt = ConstraintIndexTimeProvider.GetUtcNow().AddSeconds(Math.Min(60, Math.Pow(2, Math.Min(6, _constraintRepairFailures - 1))));
+        if (_constraintRepairFailures < int.MaxValue) _constraintRepairFailures++;
+        _nextConstraintRepairAttempt = WebhookProbeSchedule.NextDue(
+            _constraintRepairBackoff,
+            _constraintRepairFailures - 1,
+            ConstraintIndexRetryJitterSample?.Invoke() ?? Random.Shared.NextDouble(),
+            ConstraintIndexTimeProvider.GetUtcNow());
     }
 
     void CountReplaySettledErrors(int count)
@@ -192,9 +205,11 @@ public partial class EventSequence
             new StoredConstraintEventContent(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, EventTypesStorage, jsonComplianceManagerProvider, expandoObjectConverter),
             constraintIndexReplayLogger ?? Microsoft.Extensions.Logging.Abstractions.NullLogger<ConstraintIndexReplay>.Instance,
             _replayScopes,
-            _replayEndPoint)
+            _replayEndPoint,
+            ConstraintIndexRepair.FoldKeyLimit)
         {
             ConstraintIndexTimeProvider = ConstraintIndexTimeProvider,
+            AttemptTimeout = ConstraintIndexRepair.AttemptTimeout,
             StorageErrorClassifier = _storageErrorClassifier,
             SettledPoison = _constraintIndexPoisonTracker.Settled
         };

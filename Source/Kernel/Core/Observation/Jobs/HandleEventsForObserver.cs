@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Choreography.Jobs;
+using Cratis.Choreography.Storage.Jobs;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
@@ -14,8 +16,6 @@ using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Chronicle.Storage.Sinks;
 using Cratis.Monads;
-using Cratis.Orleans.Jobs;
-using Cratis.Orleans.Storage.Jobs;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -39,7 +39,7 @@ namespace Cratis.Chronicle.Observation.Jobs;
 /// <param name="eventGenerationRelease">The pinned generation release boundary.</param>
 /// <param name="timeProvider">The delivery fence clock.</param>
 public class HandleEventsForObserver(
-    [PersistentState(nameof(JobStepState), Orleans.WellKnownGrainStorageProviders.JobSteps)]
+    [PersistentState(nameof(JobStepState), Choreography.WellKnownGrainStorageProviders.JobSteps)]
     IPersistentState<HandleEventsForObserverState> state,
     IJobStepThrottle throttle,
     IStorage storage,
@@ -60,6 +60,7 @@ public class HandleEventsForObserver(
     readonly SemaphoreSlim _flushGate = new(1, 1);
     TimeSpan _abandonedDeliveryHold;
     DeliveryFenceContext? _deliveryFence;
+    ObservationOrigin _origin = ObservationOrigin.CatchUp;
     IEventSequenceStorage? _eventSequenceStorage;
     IObserver _observer = null!;
     ObserverSubscription _subscription = ObserverSubscription.Unsubscribed;
@@ -205,6 +206,7 @@ public class HandleEventsForObserver(
     {
         var lastSuccessfullyHandledEventSequenceNumber = EventSequenceNumber.Unavailable;
         DeliversPages = currentState.EventObservationState == EventObservationState.Replay;
+        _origin = currentState.EventObservationState.ToObservationOrigin();
         _replayReports = DeliversPages ? new() : null;
 
         // PerformStep runs outside the activation. Only grain calls may access persistent State.
@@ -1004,7 +1006,7 @@ public class HandleEventsForObserver(
             // violation" when accessed here, so an explicitly injected IGrainFactory (a plain thread-safe
             // service) is used instead of the ambient property.
             var subscriber = grainFactory.GetGrain(_subscription.SubscriberType, _subscription.GetSubscriberKeyFor(partition, target.SiloAddress)) as IObserverSubscriber;
-            var subscriberContext = new ObserverSubscriberContext(target.ConnectedClient ?? _subscription.Arguments).WithDeadlines(subscriberTimeout, _abandonedDeliveryHold, _clock);
+            var subscriberContext = new ObserverSubscriberContext(target.ConnectedClient ?? _subscription.Arguments) { Origin = _origin }.WithDeadlines(subscriberTimeout, _abandonedDeliveryHold, _clock);
             _deliveryFence = AbandonedDeliveryDrain.Capture(_subscription, partition, target, subscriberContext);
             if (page) onPageDispatch?.Invoke();
             var result = page

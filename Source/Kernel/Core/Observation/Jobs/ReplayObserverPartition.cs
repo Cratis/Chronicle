@@ -3,10 +3,10 @@
 
 using System.Collections.Immutable;
 using System.Text.Json;
+using Cratis.Choreography.Jobs;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Storage;
 using Cratis.Monads;
-using Cratis.Orleans.Jobs;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Observation.Jobs;
@@ -113,7 +113,7 @@ public class ReplayObserverPartition(
         lastScanned = ScannedBelowHeldBackDeliveryWhenNothingWasRead(lastScanned, replayedEventTypes);
 
         var (handled, scanned) = await CoverageHeldBelowLiveDelivery(observer, State.LastHandledEventSequenceNumber, lastScanned);
-        await observer.PartitionReplayed(Request.Key, handled, scanned, replayedEventTypes);
+        await observer.PartitionReplayed(Request, Request.Key, handled, scanned, replayedEventTypes);
     }
 
     /// <inheritdoc/>
@@ -242,5 +242,5 @@ public class ReplayObserverPartition(
     }
 
     async Task NotifyObserverOfRefusal(ReplayObserverPartitionRequest request) => await GrainFactory.GetGrain<IObserver>(request.ObserverKey)
-        .ReleaseRefusedPartitionReplay(request.Key, request.HeldBackFrom);
+        .ReleaseRefusedPartitionReplay(request, request.Key, request.HeldBackFrom);
 }

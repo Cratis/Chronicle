@@ -65,9 +65,10 @@ class OAuthTokenProvider(
             .POST(HttpRequest.BodyPublishers.ofString(requestBody))
             .build()
 
-        val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
+        val response = send(request)
         if (response.statusCode() != 200) {
-            throw IllegalStateException("Token request failed with status ${response.statusCode()}: ${response.body()}")
+            // Never include the response body, reason phrase or error_description: a token endpoint can reflect the submitted credentials.
+            throw IllegalStateException("Token request failed with status ${response.statusCode()} (${OAuthErrorCodes.describe(response.body())})")
         }
 
         val body = response.body()
@@ -90,5 +91,44 @@ class OAuthTokenProvider(
         return token
     }
 
+    // Transport and protocol failures can carry text from the token endpoint (for example a malformed status line),
+    // so neither their message nor the exception itself is kept; only the exception type is reported.
+    private fun send(request: HttpRequest): HttpResponse<String> =
+        try {
+            httpClient.send(request, HttpResponse.BodyHandlers.ofString())
+        } catch (e: InterruptedException) {
+            Thread.currentThread().interrupt()
+            throw IllegalStateException("Token request was interrupted")
+        } catch (e: java.io.IOException) {
+            throw IllegalStateException("Token request failed (${e.javaClass.simpleName})")
+        }
+
     private fun urlEncode(value: String) = URLEncoder.encode(value, StandardCharsets.UTF_8)
+}
+
+/**
+ * Extracts the loggable part of a failed token response: the standard OAuth error code and nothing else.
+ */
+internal object OAuthErrorCodes {
+    const val NO_ERROR_CODE = "no standard OAuth error code in the response"
+
+    private val allowed = setOf(
+        "invalid_request",
+        "invalid_client",
+        "invalid_grant",
+        "unauthorized_client",
+        "unsupported_grant_type",
+        "invalid_scope",
+        "access_denied",
+        "unsupported_response_type",
+        "server_error",
+        "temporarily_unavailable",
+    )
+
+    private val errorPattern = Regex("\"error\"\\s*:\\s*\"([^\"]*)\"")
+
+    fun describe(responseBody: String?): String {
+        val code = responseBody?.let { errorPattern.find(it)?.groupValues?.get(1) }
+        return if (code != null && code in allowed) "error=$code" else NO_ERROR_CODE
+    }
 }

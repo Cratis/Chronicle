@@ -100,6 +100,14 @@ public interface IEventSequences
     [Operation]
     Task<CommandResult<AppendResponse>> AppendWithNamedTags(AppendWithNamedTagsRequest request, CallContext callContext = default);
     /// <summary>
+    /// Executes the Compensate command.
+    /// </summary>
+    /// <param name = "request">The Compensate request.</param>
+    /// <param name = "callContext">The gRPC call context.</param>
+    /// <returns>The command result.</returns>
+    [Operation]
+    Task<CommandResult<AppendResponse>> Compensate(CompensateRequest request, CallContext callContext = default);
+    /// <summary>
     /// Executes the CompleteStream command.
     /// </summary>
     /// <param name = "request">The CompleteStream request.</param>
@@ -115,6 +123,14 @@ public interface IEventSequences
     /// <returns>The command result.</returns>
     [Operation]
     Task<CommandResult<CompleteStreamResponse>> CompleteStreamScope(CompleteStreamScopeRequest request, CallContext callContext = default);
+    /// <summary>
+    /// Executes the CopyEventsForEventSource command.
+    /// </summary>
+    /// <param name = "request">The CopyEventsForEventSource request.</param>
+    /// <param name = "callContext">The gRPC call context.</param>
+    /// <returns>The command result.</returns>
+    [Operation]
+    Task<CommandResult<Guid>> CopyEventsForEventSource(CopyEventsForEventSourceRequest request, CallContext callContext = default);
     /// <summary>
     /// Executes the Redact command.
     /// </summary>
@@ -187,6 +203,14 @@ public interface IEventSequences
     /// <returns>The query result.</returns>
     [Operation]
     Task<QueryResult<IEnumerable<AppendedEventResponse>>> ForEventSourceIdAndEventTypes(ForEventSourceIdAndEventTypesRequest request, CallContext callContext = default);
+    /// <summary>
+    /// Executes the FromSequenceNumberWithErasedProperties query.
+    /// </summary>
+    /// <param name = "request">The query request parameters.</param>
+    /// <param name = "callContext">The gRPC call context.</param>
+    /// <returns>The query result.</returns>
+    [Operation]
+    Task<QueryResult<IEnumerable<AppendedEventResponse>>> FromSequenceNumberWithErasedProperties(FromSequenceNumberWithErasedPropertiesRequest request, CallContext callContext = default);
     /// <summary>
     /// Executes the FromSequenceNumber query.
     /// </summary>
@@ -1496,6 +1520,79 @@ public class AppendWithNamedTagsRequest
 }
 
 /// <summary>
+/// Represents the CompensateRequest message.
+/// </summary>
+[ProtoContract]
+public class CompensateRequest
+{
+    /// <summary>
+    /// Gets or sets the EventStore.
+    /// </summary>
+    [ProtoMember(1)]
+    public string EventStore { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the Namespace.
+    /// </summary>
+    [ProtoMember(2)]
+    public string Namespace { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the EventSequenceId.
+    /// </summary>
+    [ProtoMember(3)]
+    public string EventSequenceId { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the CompensationFor.
+    /// </summary>
+    [ProtoMember(4)]
+    public global::System.UInt64 CompensationFor { get; set; }
+
+    /// <summary>
+    /// Gets or sets the EventType.
+    /// </summary>
+    [ProtoMember(5)]
+    public global::Cratis.Chronicle.Contracts.Sequences.EventType EventType { get; set; } = new();
+
+    /// <summary>
+    /// Gets or sets the Content.
+    /// </summary>
+    [ProtoMember(6)]
+    public string Content { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the CorrelationId.
+    /// </summary>
+    [ProtoMember(7)]
+    public Guid? CorrelationId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the Tags.
+    /// </summary>
+    [ProtoMember(8)]
+    public IEnumerable<string>? Tags { get; set; }
+
+    /// <summary>
+    /// Gets or sets the Occurred.
+    /// </summary>
+    [ProtoMember(9)]
+    public global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset Occurred { get; set; }
+
+    /// <summary>
+    /// Gets or sets the Causation.
+    /// </summary>
+    [ProtoMember(10)]
+    public IEnumerable<global::Cratis.Chronicle.Contracts.Sequences.Causation>? Causation { get; set; }
+
+    /// <summary>
+    /// Gets or sets the CausedBy.
+    /// </summary>
+    [ProtoMember(11)]
+    public global::Cratis.Chronicle.Contracts.Sequences.Identity? CausedBy { get; set; }
+}
+
+/// <summary>
 /// Represents the CompleteStreamRequest message.
 /// </summary>
 [ProtoContract]
@@ -1610,6 +1707,49 @@ public class CompleteStreamScopeRequest
     /// </summary>
     [ProtoMember(8)]
     public global::System.UInt64? ExpectedTailSequenceNumber { get; set; }
+}
+
+/// <summary>
+/// Represents the CopyEventsForEventSourceRequest message.
+/// </summary>
+[ProtoContract]
+public class CopyEventsForEventSourceRequest
+{
+    /// <summary>
+    /// Gets or sets the EventStore.
+    /// </summary>
+    [ProtoMember(1)]
+    public string EventStore { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the Namespace.
+    /// </summary>
+    [ProtoMember(2)]
+    public string Namespace { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the EventSequenceId.
+    /// </summary>
+    [ProtoMember(3)]
+    public string EventSequenceId { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the SourceId.
+    /// </summary>
+    [ProtoMember(4)]
+    public string SourceId { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the TargetId.
+    /// </summary>
+    [ProtoMember(5)]
+    public string TargetId { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the EventTypes.
+    /// </summary>
+    [ProtoMember(6)]
+    public IEnumerable<string> EventTypes { get; set; } = new List<string>();
 }
 
 /// <summary>
@@ -1966,6 +2106,12 @@ public class AppendedEventResponse
     /// </summary>
     [ProtoMember(7)]
     public global::System.UInt32? RevisedGeneration { get; set; }
+
+    /// <summary>
+    /// Gets or sets the ErasedProperties.
+    /// </summary>
+    [ProtoMember(8)]
+    public IEnumerable<string> ErasedProperties { get; set; } = new List<string>();
 }
 
 /// <summary>
@@ -2204,6 +2350,49 @@ public class ForEventSourceIdAndEventTypesRequest
     /// </summary>
     [ProtoMember(9)]
     public string? EventSourceType { get; set; }
+}
+
+/// <summary>
+/// Represents the FromSequenceNumberWithErasedPropertiesRequest message.
+/// </summary>
+[ProtoContract]
+public class FromSequenceNumberWithErasedPropertiesRequest
+{
+    /// <summary>
+    /// Gets or sets the eventStore.
+    /// </summary>
+    [ProtoMember(1)]
+    public string EventStore { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the namespace.
+    /// </summary>
+    [ProtoMember(2)]
+    public string Namespace { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the eventSequenceId.
+    /// </summary>
+    [ProtoMember(3)]
+    public string EventSequenceId { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the fromEventSequenceNumber.
+    /// </summary>
+    [ProtoMember(4)]
+    public global::System.UInt64 FromEventSequenceNumber { get; set; }
+
+    /// <summary>
+    /// Gets or sets the eventSourceId.
+    /// </summary>
+    [ProtoMember(5)]
+    public string? EventSourceId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the eventTypeIds.
+    /// </summary>
+    [ProtoMember(6)]
+    public string? EventTypeIds { get; set; }
 }
 
 /// <summary>

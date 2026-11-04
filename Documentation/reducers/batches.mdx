@@ -1,0 +1,32 @@
+---
+description: Reduce all of a partition's events in one Chronicle reducer method, declare its event types with Observes, and pattern-match on them.
+---
+# Reducing events in batches
+
+Chronicle delivers events to a reducer in **pages**, and the client folds each partition of a page separately. Per-event
+`Reduce` methods keep working as they always have. A **batch method** is called once per partition instead, with all of
+that partition's events of the types it observes and the current read model, and returns the new read model. A reducer
+stays a fold over one partition's events in order.
+
+<ChronicleClientTabs snippet="reducers/batches/self-reducing" />
+
+## Declaring a batch method
+
+A batch method takes an `EventBatch` first and the current read model second, and returns the read model, or a task of
+it. Returning `null` removes the read model, as it does from a per-event method. It may also take a `BatchContext`, a
+`CancellationToken`, and services. Declare each event type it observes with `[Observes<TEvent>]`.
+
+On a [self-reducing read model](self-reducing-read-models) the batch method is a public static method named `Reduce`.
+On a separate reducer implementing `IReducerFor<TReadModel>` it can have any name.
+
+A reducer has per-event methods or one batch method, never both, because splitting its events between methods would
+break the fold. Chronicle refuses to register a reducer that declares both, more than one batch method, or a batch
+method that does not take and return the read model.
+
+## Reporting outcomes
+
+Throwing, or calling `Fail` on the batch, fails the partition and writes no state, as a failing per-event method does.
+Calling `Defer` delivers the partition again after the delay you give, without failing it and without writing state.
+The other partitions of the page are not affected.
+
+Partitions of one page are reduced in parallel on the client.

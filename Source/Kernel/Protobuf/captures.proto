@@ -92,6 +92,7 @@ message EventContext {
    repeated NamedTag NamedTags = 17;
    string EventSource = 18;
    uint32 AppendedGeneration = 19;
+   uint64 CompensationFor = 20;
 }
 enum EventObservationState {
    None = 0;

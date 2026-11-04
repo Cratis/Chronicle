@@ -5,14 +5,19 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Observation.States;
+using Cratis.Chronicle.Storage.Observation;
 
 namespace Cratis.Chronicle.Observation;
 
 public partial class Observer
 {
     /// <inheritdoc/>
-    public async Task ReleaseRefusedReplay()
+    public Task ReleaseRefusedReplay() => ReleaseRefusedReplay(null);
+
+    /// <inheritdoc/>
+    public async Task ReleaseRefusedReplay(ulong? ownershipEpoch)
     {
+        if (IgnoresStaleRelease(ClaimHolderKind.ObserverReplay, null, ownershipEpoch)) return;
         if (IsRetired || _removed || !KeyOwnsDefinition || (!State.IsReplaying && State.RunningState != ObserverRunningState.Replaying)) return;
 
         Skips.Reset();
@@ -35,8 +40,37 @@ public partial class Observer
     }
 
     /// <inheritdoc/>
-    public async Task ReleaseRefusedPartitionReplay(Key partition, EventSequenceNumber heldBackFrom)
+    public Task ReplayStepsCouldNotBePrepared() => ReplayStepsCouldNotBePrepared(null);
+
+    /// <inheritdoc/>
+    public async Task ReplayStepsCouldNotBePrepared(ulong? ownershipEpoch)
     {
+        if (IgnoresStaleRelease(ClaimHolderKind.ObserverReplay, null, ownershipEpoch)) return;
+        if (IsRetired || _removed || !KeyOwnsDefinition) return;
+        if (!State.IsReplaying && State.RunningState != ObserverRunningState.Replaying) return;
+
+        using var scope = logger.BeginObserverScope(_observerId, _observerKey);
+        logger.ReplayStepsCouldNotBePrepared();
+        if (!State.IsReplaying)
+        {
+            State = State with { IsReplaying = true };
+            await WriteStateAsync();
+        }
+
+        if (!IsQuarantined)
+        {
+            // A refused transition keeps the replay pending for the next routing pass.
+            await TransitionTo<QuarantinedObserver>();
+        }
+    }
+
+    /// <inheritdoc/>
+    public Task ReleaseRefusedPartitionReplay(Key partition, EventSequenceNumber heldBackFrom) => ReleaseRefusedPartitionReplay(partition, heldBackFrom, null);
+
+    /// <inheritdoc/>
+    public async Task ReleaseRefusedPartitionReplay(Key partition, EventSequenceNumber heldBackFrom, ulong? ownershipEpoch)
+    {
+        if (IgnoresStaleRelease(ClaimHolderKind.PartitionReplay, partition, ownershipEpoch)) return;
         if (IsRetired || _removed || !KeyOwnsDefinition || !State.ReplayingPartitions.Contains(partition)) return;
 
         // Keep ownership until the catch-up decision, but claim no replay coverage or successful delivery.

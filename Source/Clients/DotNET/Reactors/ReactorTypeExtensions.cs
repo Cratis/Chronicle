@@ -130,14 +130,16 @@ public static class ReactorTypeExtensions
     /// <param name="eventTypes">The event registry.</param>
     /// <param name="currentStore">The current client's store.</param>
     /// <param name="sideEffectHandlers">The owning invoker's synchronous return classification.</param>
+    /// <param name="artifacts">The optional owning artifact provider.</param>
     /// <returns>The selected event sequence.</returns>
-    internal static EventSequenceId GetEventSequenceId(this Type type, IEventTypes eventTypes, EventStoreName currentStore, IReactorSideEffectHandlers? sideEffectHandlers = null) =>
+    internal static EventSequenceId GetEventSequenceId(this Type type, IEventTypes eventTypes, EventStoreName currentStore, IReactorSideEffectHandlers? sideEffectHandlers = null, IClientArtifactsProvider? artifacts = null) =>
         RegisteredObserverMetadata.SequenceFor(
             type,
             type.GetCustomAttribute<ReactorAttribute>()?.EventSequenceId,
             eventTypes,
             currentStore,
-            () => ReactorInvoker.GetEventTypesFor(eventTypes, type, sideEffectHandlers));
+            () => ReactorInvoker.GetEventTypesFor(eventTypes, type, sideEffectHandlers),
+            RegisteredObserverMetadata.ReactorSourceStoreFor(artifacts, type));
 
     static EventSequenceId InferEventSequenceIdFromHandlerMethods(Type reactorType, string? currentEventStoreName)
     {

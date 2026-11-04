@@ -9,5 +9,5 @@ public class and_a_downcast_discarded_the_only_difference : given.a_migrated_eve
 
     async Task Because() => _result = await Verify();
 
-    [Fact] void should_not_recognize_the_matching_downcast_as_a_duplicate() => _result.Result.ShouldEqual(ContentVerificationResult.Different);
+    [Fact] void should_not_claim_a_difference_from_an_unproven_reconstruction() => _result.Result.ShouldEqual(ContentVerificationResult.Unavailable);
 }

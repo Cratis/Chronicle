@@ -1,15 +1,18 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { DialogButtons, DialogResult, useConfirmationDialog, useDialog } from '@cratis/arc.react/dialogs';
 import strings from 'Strings';
 import { AppendedEvent } from 'Features/Sequences';
 import { GetReplayableObserversForEventTypes } from 'Features/Observation';
+import { ObserveEventTypes } from 'Features/EventTypes';
 import { ObserverType } from 'Features/Contracts/Observation';
 import { AppendEventDialog } from '../Add/AppendEventDialog';
 import { RedactEventDialog, RedactEventDialogProps } from '../RedactEventDialog';
 import { ReviseDialog, ReviseDialogProps } from '../ReviseDialog';
+import { CompensateDialog, CompensateDialogProps } from '../CompensateDialog';
+import { getCompensationEventTypes } from '../getCompensationEventTypes';
 
 /**
  * How long to wait after an event is written before re-reading, so the append has settled.
@@ -45,7 +48,9 @@ export const useEventActions = (
     const [AppendEventWrapper, showAppendEvent] = useDialog(AppendEventDialog);
     const [RedactEventWrapper, showRedactEvent] = useDialog<RedactEventDialogProps>(RedactEventDialog);
     const [ReviseWrapper, showRevise] = useDialog<ReviseDialogProps>(ReviseDialog);
+    const [CompensateWrapper, showCompensate] = useDialog<CompensateDialogProps>(CompensateDialog);
     const [showConfirmation] = useConfirmationDialog();
+    const [eventTypes] = ObserveEventTypes.use({ eventStore });
 
     const sequenceStrings = strings.eventStore.namespaces.sequences;
 
@@ -99,5 +104,18 @@ export const useEventActions = (
         refreshAfter(result);
     }, [selectedEvent, showConfirmation, showRevise, eventStore, namespace, sequenceStrings, refreshAfter]);
 
-    return { AppendEventWrapper, RedactEventWrapper, ReviseWrapper, append, redact, revise };
+    const compensationTypes = useMemo(
+        () => selectedEvent ? getCompensationEventTypes(eventTypes.data, selectedEvent.context.eventType.id) : [],
+        [eventTypes.data, selectedEvent]);
+
+    const canCompensate = compensationTypes.length > 0;
+
+    const compensate = useCallback(async () => {
+        if (!selectedEvent || !canCompensate) return;
+
+        const [result] = await showCompensate({ event: selectedEvent, eventStore, namespace, eventSequenceId, compensationTypes });
+        refreshAfter(result);
+    }, [selectedEvent, canCompensate, showCompensate, eventStore, namespace, eventSequenceId, compensationTypes, refreshAfter]);
+
+    return { AppendEventWrapper, RedactEventWrapper, ReviseWrapper, CompensateWrapper, append, redact, revise, compensate, canCompensate };
 };

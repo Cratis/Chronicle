@@ -13,24 +13,31 @@ namespace Cratis.Chronicle.Storage.Sql.Sinks;
 
 public partial class Sink
 {
+    static bool IsGuardedCycle(IChangeset<AppendedEvent, ExpandoObject> changeset) =>
+        IsMultiWrite(changeset.Changes) && !changeset.HasBeenRemoved();
+
     async Task<IEnumerable<FailedPartition>> ApplyGuardedUpsert(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset, EventSequenceNumber sequenceNumber)
     {
         var id = GetIdString(key);
         var incoming = checked((long)sequenceNumber.Value);
         var changes = changeset.Changes.Where(change => change is not Joined and not ChildRemovedFromAll).ToArray();
+        if (IsGuardedCycle(changeset))
+        {
+            return await ApplyGuardedCycle(key, changeset, new PendingWrite(id, changes, sequenceNumber, key.ArrayIndexers));
+        }
+
         var joinsApplied = false;
         while (true)
         {
             await using var scope = await OpenActiveScope();
-            var rows = scope.DbContext.Entries.Where(BuildIdPredicate(id));
             if (changeset.HasBeenRemoved())
             {
-                await rows.Where(row => EF.Property<long?>(row, WellKnownProperties.LastHandledEventSequenceNumber) == null || EF.Property<long?>(row, WellKnownProperties.LastHandledEventSequenceNumber) < incoming).ExecuteDeleteAsync();
+                await DeleteRowsNotNewerThan(scope, id, incoming);
                 return _noFailedPartitions;
             }
             if (!joinsApplied)
             {
-                await ApplyJoinsAndChildRemovals(scope, changeset, sequenceNumber);
+                await ApplyJoinsAndChildRemovals(scope, changeset, sequenceNumber, key.ArrayIndexers);
                 joinsApplied = true;
             }
             if (changes.Length == 0 || !await ShouldWriteDirectChanges(scope, id, changeset, changes))
@@ -38,12 +45,36 @@ public partial class Sink
                 return _noFailedPartitions;
             }
 
-            if (await TryApplyGuardedChanges(scope, key, new PendingWrite(id, changes, sequenceNumber)))
+            if (await TryApplyGuardedChanges(scope, key, new PendingWrite(id, changes, sequenceNumber, key.ArrayIndexers)))
             {
                 return _noFailedPartitions;
             }
         }
     }
+
+    async Task<IEnumerable<FailedPartition>> ApplyGuardedCycle(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset, PendingWrite write)
+    {
+        await using var cycleScope = await OpenActiveScope();
+        await RunInCycleTransaction(cycleScope, write.SequenceNumber, write.Changes.Length > 0, async () =>
+        {
+            await ApplyJoinsAndChildRemovals(cycleScope, changeset, write.SequenceNumber, key.ArrayIndexers);
+            if (write.Changes.Length == 0 || !await ShouldWriteDirectChanges(cycleScope, write.Id, changeset, write.Changes))
+            {
+                return false;
+            }
+
+            // A lost compare-and-swap reruns the whole cycle, so joins are applied once, on current state.
+            return await TryApplyGuardedChanges(cycleScope, key, write)
+                ? true
+                : throw new CycleRerun();
+        });
+        return _noFailedPartitions;
+    }
+
+    Task<int> DeleteRowsNotNewerThan(DbContextScope<ReadModelDbContext> scope, string id, long incoming) =>
+        scope.DbContext.Entries.Where(BuildIdPredicate(id))
+            .Where(row => EF.Property<long?>(row, WellKnownProperties.LastHandledEventSequenceNumber) == null || EF.Property<long?>(row, WellKnownProperties.LastHandledEventSequenceNumber) < incoming)
+            .ExecuteDeleteAsync();
 
     async Task<bool> TryApplyGuardedChanges(DbContextScope<ReadModelDbContext> scope, Key key, PendingWrite write)
     {
@@ -53,7 +84,7 @@ public partial class Sink
         {
             return true;
         }
-        ApplyChangesToEntity(entry, write.Changes);
+        ApplyChangesToEntity(entry, write.Changes, write.ArrayIndexers);
         AdvanceLastHandledSequenceNumber(entry, write.SequenceNumber);
         if (entry.State == EntityState.Added)
         {
@@ -63,7 +94,7 @@ public partial class Sink
         // Compare the value read, not merely < incoming: a concurrent earlier event must be
         // incorporated by recomputing the changes, rather than overwritten with stale state.
         var desired = entry.Entity;
-        scope.DbContext.ChangeTracker.Clear();
+        ClearReadModelTracking(scope.DbContext);
         var updated = await scope.DbContext.Entries.Where(BuildIdPredicate(write.Id))
             .Where(row => EF.Property<long?>(row, WellKnownProperties.LastHandledEventSequenceNumber) == original)
             .ExecuteUpdateAsync(setters => SetReplacementValues(setters, desired));

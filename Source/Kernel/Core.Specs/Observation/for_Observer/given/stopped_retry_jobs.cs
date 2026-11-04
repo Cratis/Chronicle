@@ -1,22 +1,22 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Choreography.Jobs;
+using Cratis.Choreography.Storage.Jobs;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Observation.Jobs;
-using Cratis.Orleans.Jobs;
-using Cratis.Orleans.Storage.Jobs;
 
 namespace Cratis.Chronicle.Observation.for_Observer.given;
 
 /// <summary>
-/// Builds stopped retry jobs, as Cratis.Orleans lists them: a job that reached its steps has a status change for it.
+/// Builds stopped retry jobs, as Cratis.Choreography lists them: a job that reached its steps has a status change for it.
 /// </summary>
 public static class stopped_retry_jobs
 {
     /// <summary>
-    /// Builds a stopped retry job that was stopped before it was prepared, so Cratis.Orleans refuses to resume it.
+    /// Builds a stopped retry job that was stopped before it was prepared, so Cratis.Choreography refuses to resume it.
     /// </summary>
     /// <param name="observerKey">The observer the job belongs to.</param>
     /// <param name="partition">The partition the job retries.</param>
