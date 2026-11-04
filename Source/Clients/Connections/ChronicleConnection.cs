@@ -135,7 +135,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         _loggerFactory = loggerFactory;
         if (ServerCertificateValidationWarning.AppliesTo(skipTlsValidation, connectionString))
         {
-            _logger.ServerCertificateValidationDisabled(string.Join(", ", connectionString.ServerAddresses));
+            _logger.ServerCertificateValidationDisabled(connectionString.Redacted);
         }
 
         _certificatePath = certificatePath;
@@ -267,7 +267,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
             throw new ConnectionTimedOut();
         }
 
-        _logger.NotAcceptingConnectionsYet(CurrentServerAddress.ToString(), _connectTimeout);
+        _logger.NotAcceptingConnectionsYet(DescribeEndpoint(CurrentServerAddress), _connectTimeout);
     }
 
     /// <summary>
@@ -309,21 +309,21 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         catch (RpcException ex) when (ex.StatusCode == StatusCode.Unavailable)
         {
             // The connect attempt's own outcome (warning, error or connected) reports the transport state.
-            _logger.CompatibilityCheckUnreachable(ex.Message);
+            _logger.CompatibilityCheckUnreachable(ex.GetType().Name);
             return;
         }
         catch (RpcException ex)
         {
             // Not being able to ask says nothing about whether the two sides agree, and a transport problem here
             // would surface again on the very next call with a better message than this one could give.
-            _logger.FailedToCheckCompatibility(ex.Message);
+            _logger.FailedToCheckCompatibility(ex.GetType().Name);
             return;
         }
 
         if (!response.IsCompatible)
         {
             var message = IncompatibilityMessage.Build(
-                _currentServerAddress?.ToString() ?? _connectionString.Redacted,
+                DescribeCurrentEndpoint(),
                 response.ServerVersion,
                 response.ServerProtocolVersion,
                 response.Incompatibilities);
@@ -416,7 +416,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         var lastFailure = _lastConnectFailure;
         if (lastFailure is not null && _timeProvider.GetUtcNow() - lastFailure.Value < TimeSpan.FromSeconds(_connectTimeout))
         {
-            throw new ConnectionUnavailable(_connectionString.Redacted);
+            throw new ConnectionUnavailable(_connectionString);
         }
     }
 
@@ -558,7 +558,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
             }
             catch (TimeoutException)
             {
-                _logger.EndpointHandshakeFailed(address.ToString(), "the compatibility check timed out");
+                _logger.EndpointHandshakeFailed(DescribeEndpoint(address), "the compatibility check timed out");
                 return false;
             }
         }
@@ -650,7 +650,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         }
         catch (Exception ex) when (ex is TimeoutException or ConnectionUnavailable or RpcException)
         {
-            _logger.EndpointHandshakeFailed(address.ToString(), ex.Message);
+            _logger.EndpointHandshakeFailed(DescribeEndpoint(address), ex is RpcException rpc ? rpc.StatusCode.ToString() : ex.Message);
             return false;
         }
     }
@@ -674,7 +674,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
             if (!result.IsCompatible)
             {
                 var message = IncompatibilityMessage.Build(
-                    _currentServerAddress?.ToString() ?? _connectionString.Redacted,
+                    DescribeCurrentEndpoint(),
                     serverVersion: string.Empty,
                     serverProtocolVersion: string.Empty,
                     result.Errors);
@@ -687,9 +687,25 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         }
         catch (RpcException ex)
         {
-            _logger.FailedToRetrieveServerDescriptorSet(ex.Message);
+            _logger.FailedToRetrieveServerDescriptorSet(ex.GetType().Name);
         }
     }
+
+    /// <summary>
+    /// Describes a server for diagnostics. When the connection string's attribution is uncertain the address could
+    /// really be user information, so the opaque replacement is used instead of the address.
+    /// </summary>
+    /// <param name="address">The server to describe.</param>
+    /// <returns>The address, or the opaque replacement.</returns>
+    string DescribeEndpoint(ChronicleServerAddress address) =>
+        _connectionString.Redacted == ConnectionStringDiagnostics.Redacted ? ConnectionStringDiagnostics.Redacted : address.ToString();
+
+    /// <summary>
+    /// Describes the server currently in use, or the connection, for diagnostics.
+    /// </summary>
+    /// <returns>The safe description.</returns>
+    string DescribeCurrentEndpoint() =>
+        _currentServerAddress is null ? _connectionString.Redacted : DescribeEndpoint(_currentServerAddress);
 
     void ConnectIfNotConnected()
     {
@@ -709,7 +725,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
             // still connects over TLS (server-authenticated) — it simply does not present a client
             // certificate for mutual TLS. This is the common case against a TLS server with no mutual-TLS.
             certificate = !string.IsNullOrEmpty(_certificatePath)
-                ? CertificateLoader.LoadCertificate(_certificatePath!, _certificatePassword)
+                ? CertificateLoader.LoadCertificate(_certificatePath, _certificatePassword)
                 : null;
             var httpHandler = new SocketsHttpHandler
             {
@@ -722,7 +738,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
             if (certificate is not null)
             {
                 httpHandler.SslOptions.ClientCertificates = new X509CertificateCollection { certificate };
-                _logger.UsingClientCertificate(_certificatePath!);
+                _logger.UsingClientCertificate(ConnectionStringDiagnostics.Redacted);
             }
 #pragma warning restore CA2000
 
@@ -760,7 +776,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
                     }
                 });
 
-            _logger.ChannelCreated(address);
+            _logger.ChannelCreated(_connectionString.Redacted);
             return channel;
         }
         catch
@@ -813,7 +829,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         if (handshake.Task.IsCompletedSuccessfully)
         {
             _lastDroppedAddress = address;
-            _logger.KeepAliveStreamEnded(address.ToString());
+            _logger.KeepAliveStreamEnded(DescribeEndpoint(address));
             _watchDog.RequestReconnect();
         }
     }
