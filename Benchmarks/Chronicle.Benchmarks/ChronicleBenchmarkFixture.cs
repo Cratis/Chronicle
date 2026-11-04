@@ -106,6 +106,7 @@ public class ChronicleBenchmarkFixture : IAsyncDisposable
             .WithEnvironment("Cratis__Chronicle__Tls__CertificatePassword", CertificatePassword)
             .WithEnvironment("Cratis__Chronicle__EncryptionCertificate__CertificatePath", "/app/certs/chronicle.pfx")
             .WithEnvironment("Cratis__Chronicle__EncryptionCertificate__CertificatePassword", CertificatePassword)
+            .WithEnvironment("Cratis__Chronicle__ReadModels__RecordAppliedEventMarkers", "true")
             .WithNetwork(_network)
             .WithWaitStrategy(waitStrategy)
             .WithStartupCallback((container, ct) =>
