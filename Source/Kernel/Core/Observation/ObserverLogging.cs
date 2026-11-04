@@ -275,6 +275,9 @@ internal static partial class ObserverLogMessages
     [LoggerMessage(LogLevel.Information, "Removing observer by operator request - unsubscribing, stopping its jobs and deactivating it")]
     internal static partial void RemovingObserver(this ILogger<Observer> logger);
 
+    [LoggerMessage(LogLevel.Information, "Pruned {Count} ignored recommendation(s) for the removed observer")]
+    internal static partial void PrunedIgnoredRecommendations(this ILogger<Observer> logger, int count);
+
     [LoggerMessage(LogLevel.Information, "Retiring observer - unsubscribing, discarding its failed partitions and clearing its alerts as removed while retaining quarantine")]
     internal static partial void RetiringObserver(this ILogger<Observer> logger);
 

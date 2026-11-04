@@ -27,6 +27,7 @@ public class and_an_ignored_recommendation_has_a_different_request : all_depende
 
     async Task Because() => _error = await Catch.Exception(async () => _result = await _manager.Add<ITheRecommendation, TheRequest>("Some description", new TheRequest(43)));
 
+    [Fact] void should_keep_the_ignored_recommendation() => _recommendationStorage.DidNotReceive().Remove(Arg.Any<RecommendationId>());
     [Fact] void should_not_fail() => _error.ShouldBeNull();
     [Fact] void should_return_a_new_id() => _result.ShouldNotEqual(_ignoredId);
     [Fact] void should_initialize_a_new_recommendation_grain() => _theRecommendation.Received(1).Initialize(Arg.Any<RecommendationDescription>(), Arg.Any<TheRequest>());

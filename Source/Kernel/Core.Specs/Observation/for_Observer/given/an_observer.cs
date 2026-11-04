@@ -20,6 +20,7 @@ using Cratis.Chronicle.Observation.Webhooks.Validation;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Chronicle.Storage.Observation;
+using Cratis.Chronicle.Storage.Recommendations;
 using Cratis.Metrics;
 using Cratis.Monads;
 using Cratis.Traces;
@@ -72,6 +73,7 @@ public class an_observer : Specification
     protected IEventStoreNamespaceStorage _eventStoreNamespaceStorage;
     protected IJobStorage _jobStorage;
     protected IInFlightEventsStorage _inFlightEventsStorage;
+    protected IRecommendationStorage _recommendationStorage;
     protected IObserverHandledCountsStorage _observerHandledCountsStorage;
     protected IEventTypesStorage _eventTypesStorage;
     protected IEventSequenceStorage _eventSequenceStorage;
@@ -174,6 +176,9 @@ public class an_observer : Specification
         _storage.GetEventStore(Arg.Any<EventStoreName>()).Returns(_eventStoreStorage);
         _eventStoreStorage.EventTypes.Returns(_eventTypesStorage);
         _eventStoreStorage.GetNamespace(Arg.Any<EventStoreNamespaceName>()).Returns(_eventStoreNamespaceStorage);
+        _recommendationStorage = Substitute.For<IRecommendationStorage>();
+        _eventStoreNamespaceStorage.Recommendations.Returns(_recommendationStorage);
+        _recommendationStorage.GetAll().Returns(ImmutableList<RecommendationState>.Empty);
         _eventStoreNamespaceStorage.InFlightEvents.Returns(_inFlightEventsStorage);
         _inFlightEventsStorage.GetFor(Arg.Any<ObserverId>()).Returns([]);
         _eventStoreNamespaceStorage.ObserverHandledCounts.Returns(_observerHandledCountsStorage);
