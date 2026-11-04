@@ -358,6 +358,7 @@ public partial class EventStore : IEventStore
         else
         {
             Connection.Lifecycle.OnConnected += RegisterReactorsAgainAfterReconnect;
+            Connection.Lifecycle.OnConnected += RegisterReducersAgainAfterReconnect;
         }
     }
 
@@ -851,6 +852,8 @@ public partial class EventStore : IEventStore
     }
 
     Task RegisterReactorsAgainAfterReconnect() => (Reactors as Reactors.Reactors)?.RegisterAgainAfterReconnect() ?? Task.CompletedTask;
+
+    Task RegisterReducersAgainAfterReconnect() => (Reducers as Reducers.Reducers)?.RegisterAgainAfterReconnect() ?? Task.CompletedTask;
 
     Task RegisterClientHostedObservers(bool hostsClientObservers)
     {

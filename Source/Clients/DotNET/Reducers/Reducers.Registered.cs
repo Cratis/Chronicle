@@ -22,17 +22,20 @@ public partial class Reducers
         }
         var descriptor = Catalog.GetForRegistration(reducerType);
         var modelType = descriptor.ReadModelType;
-        lock (ReadModelBuilderOwnership.SyncFor(_eventStore, ReadModelOwnershipSync))
+        IReducerHandler? registered = null;
+        WithCurrentServices(services =>
         {
             ReadModelBuilderOwnership.Validate(_eventStore, _clientArtifacts, Catalog, modelType, reducerType, descriptor.IsSelfReducing);
             var handler = CreateHandlerFor(reducerType, modelType);
-            RegisterWhenDispatchable(handler);
+            RegisterWhenDispatchable(handler, services);
+            MarkRegistered(reducerType);
             var byType = new Dictionary<Type, IReducerHandler>(_handlersByType) { { reducerType, handler } };
             var byModel = new Dictionary<Type, IReducerHandler>(_handlersByModelType) { { modelType, handler } };
             _handlersByType = byType.ToFrozenDictionary();
             _handlersByModelType = byModel.ToFrozenDictionary();
-            return Task.FromResult<IReducerHandler>(handler);
-        }
+            registered = handler;
+        });
+        return Task.FromResult(registered ?? throw ReleasedRegistration());
     }
 
     /// <inheritdoc/>
