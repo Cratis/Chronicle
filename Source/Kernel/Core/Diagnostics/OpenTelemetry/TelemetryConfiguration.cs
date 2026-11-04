@@ -47,14 +47,21 @@ public static class TelemetryConfiguration
     /// Configures Chronicle instrumentation with default <see cref="ChronicleOptions"/>, without overriding standard OTEL resource or export settings.
     /// </summary>
     /// <param name="options">The shared telemetry options.</param>
-    public static void Configure(CratisOpenTelemetryOptions options) => Configure(options, new ChronicleOptions());
+    /// <remarks>
+    /// Internal on purpose: it does not register the identifier span processor, so a host that called it directly
+    /// would export grain ids. Hosts use <see cref="AddChronicleOpenTelemetry"/>.
+    /// </remarks>
+    internal static void Configure(CratisOpenTelemetryOptions options) => Configure(options, new ChronicleOptions());
 
     /// <summary>
     /// Configures Chronicle instrumentation, honoring the health check endpoint and telemetry options from the configuration, without overriding standard OTEL resource or export settings.
     /// </summary>
     /// <param name="options">The shared telemetry options.</param>
     /// <param name="configuration">The <see cref="IConfiguration"/> holding the Chronicle options and the standard OTEL keys.</param>
-    public static void Configure(CratisOpenTelemetryOptions options, IConfiguration configuration)
+    /// <remarks>
+    /// Internal on purpose, for the same reason as the overload above: hosts use <see cref="AddChronicleOpenTelemetry"/>.
+    /// </remarks>
+    internal static void Configure(CratisOpenTelemetryOptions options, IConfiguration configuration)
     {
         MaybeSetHttp2Unencrypted(configuration);
         Configure(options, configuration.GetSection(ChronicleOptions.SectionPath).Get<ChronicleOptions>() ?? new());

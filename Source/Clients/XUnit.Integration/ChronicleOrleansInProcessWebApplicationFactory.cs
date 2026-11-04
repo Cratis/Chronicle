@@ -17,7 +17,6 @@ using Cratis.Chronicle.Identities;
 using Cratis.Chronicle.Setup;
 using Cratis.DependencyInjection;
 using Cratis.Json;
-using Cratis.OpenTelemetry;
 using Cratis.Serialization;
 using Cratis.Traces;
 using KernelCore::Cratis.Chronicle.Diagnostics.OpenTelemetry;
@@ -112,7 +111,7 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
             .ConfigureServices((ctx, services) =>
             {
                 services.AddCratisArcMeter();
-                services.AddOpenTelemetry().WithCratis(ctx.Configuration, TelemetryConfiguration.Configure);
+                services.AddChronicleOpenTelemetry(ctx.Configuration);
                 services.AddControllers();
 
                 services.PostConfigure<ChronicleClientOptions>(options => options.EventStore = Constants.EventStore);
