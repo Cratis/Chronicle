@@ -41,7 +41,7 @@ internal sealed class ExternalAuthorityTokenProvider : ITokenProvider, IDisposab
     readonly HttpClient _discoveryClient;
     readonly SemaphoreSlim _discoveryLock = new(1, 1);
     OAuthTokenProvider? _inner;
-    Exception? _lastCause;
+    TokenFailureCategory? _lastFailure;
     DateTimeOffset _lastFailedDiscovery = DateTimeOffset.MinValue;
 
     /// <summary>
@@ -85,7 +85,7 @@ internal sealed class ExternalAuthorityTokenProvider : ITokenProvider, IDisposab
         HttpMessageHandler handler,
         TimeProvider timeProvider)
     {
-        _authority = ExternalTokenEndpoints.Require(authority);
+        _authority = ExternalTokenEndpoints.Require(authority, TokenEndpointSource.Authority);
         _clientId = clientId;
         _clientSecret = clientSecret;
         _scope = scope;
@@ -135,14 +135,14 @@ internal sealed class ExternalAuthorityTokenProvider : ITokenProvider, IDisposab
                 return _inner;
             }
 
-            if (_lastCause is not null && !bypassThrottle && _timeProvider.GetUtcNow() - _lastFailedDiscovery < _failedDiscoveryRetryDelay)
+            if (_lastFailure is { } failure && !bypassThrottle && _timeProvider.GetUtcNow() - _lastFailedDiscovery < _failedDiscoveryRetryDelay)
             {
-                throw new TokenEndpointDiscoveryFailed(ExternalTokenEndpoints.Describe(_authority), _lastCause);
+                throw new TokenEndpointDiscoveryFailed(failure);
             }
 
             var endpoint = await Discover(cancellationToken);
-            _lastCause = null;
-            _inner = new OAuthTokenProvider(endpoint, _clientId, _clientSecret, _scope, _tokenLogger, _handler, _timeProvider);
+            _lastFailure = null;
+            _inner = new OAuthTokenProvider(endpoint, _clientId, _clientSecret, _scope, _tokenLogger, _handler, _timeProvider, TokenEndpointSource.Discovered);
             return _inner;
         }
         finally
@@ -153,8 +153,7 @@ internal sealed class ExternalAuthorityTokenProvider : ITokenProvider, IDisposab
 
     async Task<Uri> Discover(CancellationToken cancellationToken)
     {
-        var authority = ExternalTokenEndpoints.Describe(_authority);
-        _logger.DiscoveringTokenEndpoint(authority);
+        _logger.DiscoveringTokenEndpoint();
         try
         {
             var discoveryUri = new Uri($"{_authority.AbsoluteUri.TrimEnd('/')}{DiscoveryPath}");
@@ -181,10 +180,10 @@ internal sealed class ExternalAuthorityTokenProvider : ITokenProvider, IDisposab
 
             if (!ExternalTokenEndpoints.TryParse(tokenEndpoint, out var endpoint))
             {
-                throw new InsecureTokenEndpoint(Uri.TryCreate(tokenEndpoint, UriKind.Absolute, out var offending) ? ExternalTokenEndpoints.Describe(offending) : "(missing or invalid token_endpoint)");
+                throw new InsecureTokenEndpoint(TokenEndpointSource.Discovered);
             }
 
-            _logger.DiscoveredTokenEndpoint(authority, ExternalTokenEndpoints.Describe(endpoint));
+            _logger.DiscoveredTokenEndpoint();
             return endpoint;
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -194,10 +193,12 @@ internal sealed class ExternalAuthorityTokenProvider : ITokenProvider, IDisposab
         catch (Exception ex)
         {
             // Includes the HttpClient timeout, which surfaces as a cancellation the caller did not ask for.
-            _logger.TokenEndpointDiscoveryFailed(authority, ex);
-            _lastCause = ex;
+            // Only a code-owned category survives: the exception can name the host or carry remote text.
+            var category = TokenDiagnostics.Categorize(ex);
+            _logger.TokenEndpointDiscoveryFailed(TokenDiagnostics.Label(category));
+            _lastFailure = category;
             _lastFailedDiscovery = _timeProvider.GetUtcNow();
-            throw new TokenEndpointDiscoveryFailed(authority, ex);
+            throw new TokenEndpointDiscoveryFailed(category);
         }
     }
 }

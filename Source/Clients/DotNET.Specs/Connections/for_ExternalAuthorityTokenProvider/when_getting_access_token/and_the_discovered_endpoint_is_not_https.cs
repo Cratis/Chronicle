@@ -12,6 +12,8 @@ public class and_the_discovered_endpoint_is_not_https : given.an_external_author
     async Task Because() => _result = await Catch.Exception(() => _provider.GetAccessToken());
 
     [Fact] void should_throw_discovery_failed() => _result.ShouldBeOfExactType<TokenEndpointDiscoveryFailed>();
-    [Fact] void should_name_the_insecure_endpoint_as_the_cause() => _result.InnerException.ShouldBeOfExactType<InsecureTokenEndpoint>();
+    [Fact] void should_report_the_invalid_response_category() => _result.Message.Contains("reason: invalid response", StringComparison.Ordinal).ShouldBeTrue();
+    [Fact] void should_not_keep_the_cause() => _result.InnerException.ShouldBeNull();
+    [Fact] void should_not_name_the_endpoint() => _result.Message.Contains("idp.example.com", StringComparison.Ordinal).ShouldBeFalse();
     [Fact] void should_not_post_credentials() => _handler.TokenRequests.ShouldBeEmpty();
 }

@@ -16,5 +16,6 @@ public class and_the_transport_is_unavailable : given.a_token_provider_with_cont
     [Fact] void should_fail_with_the_transport_error() => _error.ShouldBeOfExactType<HttpRequestException>();
     [Fact] void should_not_log_an_error() => _logger.AtLevel(LogLevel.Error).ShouldBeEmpty();
     [Fact] void should_not_log_a_warning() => _logger.AtLevel(LogLevel.Warning).ShouldBeEmpty();
-    [Fact] void should_keep_the_details_at_debug() => _logger.AtLevel(LogLevel.Debug).Any(_ => _.Exception is not null).ShouldBeTrue();
+    [Fact] void should_keep_the_category_at_debug() => _logger.AtLevel(LogLevel.Debug).Any(_ => _.Message.Contains("reason: unreachable", StringComparison.Ordinal)).ShouldBeTrue();
+    [Fact] void should_not_log_the_exception() => _logger.Entries.All(_ => _.Exception is null).ShouldBeTrue();
 }
