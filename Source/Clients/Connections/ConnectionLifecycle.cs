@@ -23,6 +23,8 @@ public class ConnectionLifecycle(ILogger<ConnectionLifecycle> logger) : IConnect
     /// net8.0 as well, and that type is net9.0 and later. The net10.0 build the gate runs would not have noticed.
     /// </remarks>
     readonly object _handlers = new();
+    readonly object _generationGate = new();
+    Task _disconnecting = Task.CompletedTask;
     Connected _onConnected = Nothing;
     Disconnected _onDisconnected = Nothing;
 
@@ -99,11 +101,15 @@ public class ConnectionLifecycle(ILogger<ConnectionLifecycle> logger) : IConnect
     public ConnectionId ConnectionId { get; private set; } = ConnectionId.New();
 
     /// <inheritdoc/>
+    /// <remarks>
+    /// Generations are ordered: the <c language="csharp">Disconnected</c> callbacks of one generation complete and the
+    /// <see cref="ConnectionId"/> rotates before the next <c language="csharp">Connected</c> sets <see cref="IsConnected"/> and runs its
+    /// handlers. A disconnect that starts after <c language="csharp">Connected</c> has set <see cref="IsConnected"/> overlaps that
+    /// generation's own handlers, which is accepted; the generation after it is fenced behind that disconnect.
+    /// </remarks>
     public async Task Connected()
     {
-        // Set IsConnected = true before invoking handlers so that any handler that accesses
-        // services via IChronicleServicesAccessor does not deadlock on the connection lock.
-        IsConnected = true;
+        await WaitForPreviousDisconnect();
 
         logger.Connected();
 
@@ -134,9 +140,46 @@ public class ConnectionLifecycle(ILogger<ConnectionLifecycle> logger) : IConnect
     }
 
     /// <inheritdoc/>
-    public async Task Disconnected()
+    public Task Disconnected()
     {
-        IsConnected = false;
+        lock (_generationGate)
+        {
+            IsConnected = false;
+
+            // Handlers are dispatched through Task.Run, so none of them runs inline under the gate.
+            var run = RunDisconnected();
+            _disconnecting = _disconnecting.IsCompleted ? run : Task.WhenAll(_disconnecting, run);
+            return run;
+        }
+    }
+
+    static Task Nothing() => Task.CompletedTask;
+
+    async Task WaitForPreviousDisconnect()
+    {
+        // IsConnected is set before the handlers run so that a handler accessing services through
+        // IChronicleServicesAccessor does not deadlock on the connection lock.
+        while (true)
+        {
+            Task fence;
+            lock (_generationGate)
+            {
+                if (_disconnecting.IsCompleted)
+                {
+                    IsConnected = true;
+                    return;
+                }
+
+                fence = _disconnecting;
+            }
+
+            logger.WaitingForDisconnectToComplete();
+            await fence;
+        }
+    }
+
+    async Task RunDisconnected()
+    {
         logger.Disconnected();
         var tasks = _onDisconnected.GetInvocationList().Select(_ => ExecutionContextDetached.Start(() => Task.Run(async () =>
         {
@@ -154,6 +197,4 @@ public class ConnectionLifecycle(ILogger<ConnectionLifecycle> logger) : IConnect
 
         ConnectionId = ConnectionId.New();
     }
-
-    static Task Nothing() => Task.CompletedTask;
 }

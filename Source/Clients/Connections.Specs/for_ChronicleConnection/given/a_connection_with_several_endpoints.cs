@@ -65,17 +65,29 @@ public class a_connection_with_several_endpoints : Specification
         CreateConnection(resolver);
     }
 
+    /// <summary>
+    /// What the substitute lifecycle does when the connection reports it connected. Specs override this to hold or fail the connected handlers.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    protected virtual Task OnLifecycleConnected()
+    {
+        _isConnected = true;
+        SignalChange();
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// What the server address resolver returns. Specs override this to hold or count resolution.
+    /// </summary>
+    /// <returns>The servers to connect to.</returns>
+    protected virtual Task<IReadOnlyList<ChronicleServerAddress>> Resolve() => Task.FromResult(Servers);
+
     void CreateLifecycle()
     {
         _lifecycle = Substitute.For<IConnectionLifecycle>();
         _lifecycle.IsConnected.Returns(_ => _isConnected);
         _lifecycle.ConnectionId.Returns(ConnectionId.New());
-        _lifecycle.Connected().Returns(_ =>
-        {
-            _isConnected = true;
-            SignalChange();
-            return Task.CompletedTask;
-        });
+        _lifecycle.Connected().Returns(_ => OnLifecycleConnected());
         _lifecycle.Disconnected().Returns(_ =>
         {
             _isConnected = false;
@@ -89,7 +101,7 @@ public class a_connection_with_several_endpoints : Specification
     {
         var resolver = Substitute.For<IChronicleServerAddressResolver>();
         resolver.Resolve(Arg.Any<ChronicleConnectionString>())
-            .Returns(_ => Task.FromResult<IReadOnlyList<ChronicleServerAddress>>(Servers));
+            .Returns(_ => Resolve());
 
         return resolver;
     }
@@ -228,7 +240,7 @@ public class a_connection_with_several_endpoints : Specification
         }
     }
 
-    void SignalChange()
+    protected void SignalChange()
     {
         lock (_changeGate)
         {

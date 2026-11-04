@@ -57,7 +57,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     readonly bool _skipKeepAlive;
     readonly IChronicleServerAddressResolver _serverAddressResolver;
     readonly ILoadBalancerStrategy _loadBalancerStrategy;
-    readonly SemaphoreSlim _connectLock = new(1, 1);
+    readonly object _attemptGate = new();
     readonly ConnectionWatchdog _watchDog;
     readonly TimeProvider _timeProvider;
     ChronicleServerAddress? _currentServerAddress;
@@ -69,6 +69,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     ChronicleServerAddress? _lastDroppedAddress;
     DateTimeOffset? _lastConnectFailure;
     bool _hasEverConnected;
+    ConnectAttempt? _inFlight;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ChronicleConnection"/> class.
@@ -207,7 +208,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         cancellationToken.ThrowIfCancellationRequested();
         if (!Lifecycle.IsConnected)
         {
-            await Connect().WaitAsync(cancellationToken);
+            await Connect(respectFailureBackoff: true, cancellationToken);
         }
 
         return _services;
@@ -216,7 +217,6 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     /// <inheritdoc/>
     public void Dispose()
     {
-        _connectLock.Dispose();
         _channel?.Dispose();
         _keepAliveSubscription?.Dispose();
         if (_tokenProvider is IDisposable disposableTokenProvider)
@@ -230,15 +230,15 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     }
 
     /// <inheritdoc/>
-    /// <exception cref="ConnectionTimedOut">Thrown when the connect attempt, or the wait for one already in flight, exceeds the connect timeout.</exception>
+    /// <exception cref="ConnectionTimedOut">Thrown when the connect attempt this caller started exceeds the connect timeout, or when this caller's wait for an attempt already in flight exceeds the connect timeout in either the transport or the connected-handler phase; the attempt itself continues.</exception>
     /// <exception cref="ConnectionUnavailable">Thrown when a recent attempt failed and the back-off after it has not elapsed yet.</exception>
     /// <remarks>
     /// Every failure mode here has to end in a return or a throw. A client whose reconnect never completes used to
     /// absorb the thread of every caller instead: the connect lock was waited on without a deadline, so callers
     /// queued behind each attempt as well as their own, and an arrival rate above the connect timeout grew that
-    /// queue without bound (#3948).
+    /// queue without bound (#3948). Callers now join the one attempt in flight, each with a deadline of its own.
     /// </remarks>
-    public Task Connect() => Connect(respectFailureBackoff: true);
+    public Task Connect() => Connect(respectFailureBackoff: true, CancellationToken.None);
 
     /// <inheritdoc/>
     public void RequestReconnect() => _watchDog.RequestReconnect();
@@ -253,7 +253,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     /// connection that could then never come back - every later call kept failing against a kernel that was
     /// reachable again.
     /// </remarks>
-    internal async Task Reconnect() => await Connect(respectFailureBackoff: false);
+    internal async Task Reconnect() => await Connect(respectFailureBackoff: false, CancellationToken.None);
 
     /// <summary>
     /// Handles a timed-out connection attempt, failing the caller only after a connection has been established.
@@ -337,7 +337,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         _logger.CompatibilityCheckPassed(ChronicleClientIdentity.Version, ChronicleClientIdentity.ProtocolVersion, response.ServerVersion, response.ServerProtocolVersion);
     }
 
-    async Task Connect(bool respectFailureBackoff)
+    async Task Connect(bool respectFailureBackoff, CancellationToken waiterToken)
     {
         if (Lifecycle.IsConnected)
         {
@@ -349,13 +349,49 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
             ThrowIfWithinConnectFailureBackoff();
         }
 
-        var connectTimeout = TimeSpan.FromSeconds(_connectTimeout);
-        if (!await _connectLock.WaitAsync(connectTimeout, _cancellationToken))
+        ConnectAttempt attempt;
+        bool isStarter;
+        lock (_attemptGate)
         {
-            RecordConnectFailure();
-            throw new ConnectionTimedOut();
+            isStarter = _inFlight is null;
+            if (isStarter)
+            {
+                _inFlight = new ConnectAttempt();
+            }
+
+            attempt = _inFlight!;
         }
 
+        if (isStarter)
+        {
+            // Detached, so no waiter's ambient state or token flows into an attempt that every other waiter shares.
+            attempt.Completion = ExecutionContextDetached.Start(() => Task.Run(() => RunAttempt(respectFailureBackoff, attempt)));
+            await attempt.Completion.WaitAsync(waiterToken);
+            return;
+        }
+
+        await JoinAttempt(attempt, waiterToken);
+    }
+
+    async Task JoinAttempt(ConnectAttempt attempt, CancellationToken waiterToken)
+    {
+        var deadline = TimeSpan.FromSeconds(_connectTimeout);
+        using var linked = CancellationTokenSource.CreateLinkedTokenSource(waiterToken, _cancellationToken);
+        try
+        {
+            // A fresh deadline per phase: the time the connected handlers take is not charged to the transport.
+            await attempt.TransportEstablished.Task.WaitAsync(deadline, _timeProvider, linked.Token);
+            await attempt.Completion.WaitAsync(deadline, _timeProvider, linked.Token);
+        }
+        catch (TimeoutException)
+        {
+            // This waiter's patience ran out, not the kernel's: the attempt continues and no back-off is armed.
+            throw new ConnectionTimedOut();
+        }
+    }
+
+    async Task RunAttempt(bool respectFailureBackoff, ConnectAttempt attempt)
+    {
         try
         {
             if (Lifecycle.IsConnected)
@@ -380,8 +416,26 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         }
         finally
         {
-            _connectLock.Release();
+            attempt.TransportEstablished.TrySetResult();
+            lock (_attemptGate)
+            {
+                if (ReferenceEquals(_inFlight, attempt))
+                {
+                    _inFlight = null;
+                }
+            }
         }
+    }
+
+    void SignalTransportEstablished()
+    {
+        ConnectAttempt? attempt;
+        lock (_attemptGate)
+        {
+            attempt = _inFlight;
+        }
+
+        attempt?.TransportEstablished.TrySetResult();
     }
 
     /// <summary>
@@ -569,6 +623,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         {
             _logger.Connected();
             _hasEverConnected = true;
+            SignalTransportEstablished();
             await ExecutionContextDetached.Start(() => Task.Run(Lifecycle.Connected));
             return true;
         }
@@ -645,6 +700,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
             await handshake.Task.WaitAsync(budget, _timeProvider);
             _logger.Connected();
             _hasEverConnected = true;
+            SignalTransportEstablished();
             await ExecutionContextDetached.Start(() => Task.Run(Lifecycle.Connected));
             return true;
         }
