@@ -15,9 +15,9 @@ public class QuarantineRecoveryReactor : IReactor
 
     public enum RecoveryMode
     {
-        Succeed,
-        Fail,
-        BlockUntilReleased
+        Succeed = 0,
+        Fail = 1,
+        BlockUntilReleased = 2
     }
 
     public RecoveryMode Mode
