@@ -62,6 +62,11 @@ public class ProjectionFactory(
     IEventGenerationRelease? eventGenerationRelease = null) : IProjectionFactory
 {
     /// <summary>
+    /// The versioned algorithm for complete, registration-metadata-independent definition content.
+    /// </summary>
+    internal const string DefinitionDigestAlgorithm = "definition-content-sha256/v1";
+
+    /// <summary>
     /// Gets the serializer options that write a definition in full, with dictionaries in a form that does not depend on enumeration order.
     /// </summary>
     internal static readonly JsonSerializerOptions FingerprintOptions = new()
@@ -152,6 +157,19 @@ public class ProjectionFactory(
         };
         var canonical = Canonicalize(JsonSerializer.SerializeToNode(normalized, FingerprintOptions));
         return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(canonical!.ToJsonString())));
+    }
+
+    /// <summary>
+    /// Computes the full definition content digest without registration metadata.
+    /// This is not the pipeline-reuse fingerprint or a replay identity.
+    /// </summary>
+    /// <param name="definition">The original accepted definition.</param>
+    /// <returns>The SHA-256 content digest.</returns>
+    internal static ProjectionDefinitionDigest DefinitionDigestFor(ProjectionDefinition definition)
+    {
+        var normalized = definition with { LastUpdated = default, Version = default, HasLegacyStorageFields = false };
+        var canonical = Canonicalize(JsonSerializer.SerializeToNode(normalized, FingerprintOptions));
+        return new(Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(canonical!.ToJsonString()))));
     }
 
     /// <summary>

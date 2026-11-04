@@ -29,6 +29,7 @@ namespace Cratis.Chronicle.Projections;
 /// <param name="languageService"><see cref="Generator"/> for generating projection declaration language strings.</param>
 /// <param name="storage"><see cref="IStorage"/> for accessing storage.</param>
 /// <param name="localSiloDetails"><see cref="ILocalSiloDetails"/> for getting the local silo details.</param>
+/// <param name="clusterMembership"><see cref="IClusterMembershipService"/> for noticing silos that leave the cluster.</param>
 /// <param name="logger">The logger.</param>
 /// <param name="timeProvider">The <see cref="TimeProvider"/> the registration subscribe budget is measured against. Defaults to the system clock.</param>
 [ImplicitChannelSubscription]
@@ -40,6 +41,7 @@ public partial class ProjectionsManager(
     ILanguageService languageService,
     IStorage storage,
     ILocalSiloDetails localSiloDetails,
+    IClusterMembershipService clusterMembership,
     ILogger<ProjectionsManager> logger,
     TimeProvider? timeProvider = null) : Grain<ProjectionsManagerState>, IProjectionsManager, IOnBroadcastChannelSubscribed, IDisposable
 {
@@ -141,6 +143,7 @@ public partial class ProjectionsManager(
     public override Task OnActivateAsync(CancellationToken cancellationToken)
     {
         _eventStoreName = this.GetPrimaryKeyString();
+        WatchForSiloDepartures();
         ScheduleSetDefinitionAndSubscribe();
         return Task.CompletedTask;
     }
@@ -157,6 +160,7 @@ public partial class ProjectionsManager(
     {
         _subscribeTimer?.Dispose();
         _resubscribeTimer?.Dispose();
+        _siloDepartureTimer?.Dispose();
         _subscriptionThrottle.Dispose();
         GC.SuppressFinalize(this);
     }
@@ -256,6 +260,7 @@ public partial class ProjectionsManager(
 
     async Task RegisterDefinitions(IEnumerable<ProjectionDefinition> definitions, ProjectionOwner? fullSetOwner, string? registrant, string? version)
     {
+        CheckForDepartedSilos();
         var timing = new RegistrationTiming(_clock);
         try
         {

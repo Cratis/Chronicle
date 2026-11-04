@@ -24,10 +24,15 @@ public class an_observation_stream : Specification
     protected ReactorEventsObserver _deliver;
     IDisposable _subscription;
 
+    private protected virtual IActivitySource<Reactors> CreateActivitySource() => new ActivitySource<Reactors>();
+
+    protected virtual PageDelivery? PageDelivery => null;
+
     async Task Establish()
     {
         var subscribed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var mediator = Substitute.For<IReactorMediator>();
+        mediator.Disconnected(Arg.Any<ReactorId>(), Arg.Any<ConnectionId>(), Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<ReactorEventsObserver>(), Arg.Any<ReactorReplayObserver>()).Returns(true);
         mediator.When(_ => _.Subscribe(Arg.Any<ReactorId>(), Arg.Any<ConnectionId>(), Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<ReactorEventsObserver>()))
             .Do(call =>
             {
@@ -39,7 +44,7 @@ public class an_observation_stream : Specification
             mediator,
             Substitute.For<IStorage>(),
             new JsonSerializerOptions(),
-            new ActivitySource<Reactors>(),
+            CreateActivitySource(),
             Options.Create(new ChronicleOptions()),
             NullLogger<Reactors>.Instance);
         _subscription = reactors.Observe(_messages).Subscribe(_deliveries.Add);
@@ -48,6 +53,7 @@ public class an_observation_stream : Specification
             ConnectionId = "connection",
             EventStore = "store",
             Namespace = "namespace",
+            PageDelivery = PageDelivery,
             Reactor = new Contracts.Observation.Reactors.ReactorDefinition { ReactorId = "reactor", EventSequenceId = "event-log" }
         })));
         await subscribed.Task.WaitAsync(TimeSpan.FromSeconds(5));

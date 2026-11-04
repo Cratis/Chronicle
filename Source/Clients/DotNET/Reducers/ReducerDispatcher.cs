@@ -62,13 +62,92 @@ internal sealed class ReducerDispatcher(
             handler.EventSequenceId,
             handler.Id);
 
-        var lastSuccessfullyObservedEvent = EventSequenceNumber.Unavailable;
-        var exceptionMessages = Enumerable.Empty<string>();
-        var exceptionStackTrace = string.Empty;
-        var state = ObservationState.Success;
-        string? modelState = null;
+        var partitions = operation.PartitionsOf();
+        var batchContext = CreateBatchContext();
+        var outcomes = new PartitionOutcome[partitions.Count];
+        await Parallel.ForEachAsync(
+            Enumerable.Range(0, partitions.Count),
+            new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount },
+            async (index, _) => outcomes[index] = await Reduce(partitions[index]));
 
-        var appendedEvents = operation.Events.Select(@event =>
+        publish(operation.Partitions.Count > 0
+            ? new ReducerResult
+            {
+                DeliveryId = operation.DeliveryId,
+                Partitions = [.. outcomes.Select(_ => _.ToContract())]
+            }
+            : new ReducerResult
+            {
+                Partition = operation.Partition,
+                DeliveryId = operation.DeliveryId,
+                ReadModelState = outcomes[0].ReadModelState,
+                State = outcomes[0].State == ObservationState.Deferred ? ObservationState.Failed : outcomes[0].State,
+                LastSuccessfulObservation = outcomes[0].LastSuccessfulObservation,
+                ExceptionMessages = [.. outcomes[0].ExceptionMessages],
+                ExceptionStackTrace = outcomes[0].ExceptionStackTrace
+            });
+
+        async Task<PartitionOutcome> Reduce(ReducerPartition partition)
+        {
+            var partitionKey = partition.Partition ?? string.Empty;
+            var firstEvent = partition.Events.Count > 0 ? (EventSequenceNumber)partition.Events[0].Context.SequenceNumber : EventSequenceNumber.Unavailable;
+            var lastEvent = partition.Events.Count > 0 ? (EventSequenceNumber)partition.Events[^1].Context.SequenceNumber : EventSequenceNumber.Unavailable;
+            try
+            {
+                var appendedEvents = partition.Events.Select(ToAppendedEvent).ToList();
+                await using var serviceProviderScope = serviceProvider.CreateAsyncScope();
+                identityProvider.SetCurrentIdentity(Identity.System);
+                var initialState = partition.InitialState is null ? null : JsonSerializer.Deserialize(partition.InitialState, handler.ReadModelType, jsonSerializerOptions);
+                var reduceResult = handler is ReducerHandler reducerHandler
+                    ? await reducerHandler.OnNext(appendedEvents, initialState, serviceProviderScope.ServiceProvider, batchContext)
+                    : await handler.OnNext(appendedEvents, initialState, serviceProviderScope.ServiceProvider);
+
+                if (reduceResult.RetryAfter is { } retryAfter)
+                {
+                    return new(partitionKey, ObservationState.Deferred, EventSequenceNumber.Unavailable, [], string.Empty) { RetryAfter = retryAfter };
+                }
+
+                if (reduceResult.IsSuccess)
+                {
+                    return new(partitionKey, ObservationState.Success, reduceResult.LastSuccessfullyObservedEvent, [], string.Empty)
+                    {
+                        ReadModelState = reduceResult.ReadModelState is null ? null : JsonSerializer.Serialize(reduceResult.ReadModelState, jsonSerializerOptions)
+                    };
+                }
+
+                span?.Activity?.RecordFailure(reduceResult.ExceptionType ?? "reducer_error");
+                logger.ReducerFailed(handler.Id, firstEvent, lastEvent, string.Join(Environment.NewLine, reduceResult.ErrorMessages));
+                return new(partitionKey, ObservationState.Failed, reduceResult.LastSuccessfullyObservedEvent, reduceResult.ErrorMessages, reduceResult.StackTrace);
+            }
+            catch (Exception ex)
+            {
+                span?.Activity?.RecordFailure(ex);
+                logger.ErrorWhileHandlingEvents(ex, firstEvent, lastEvent, handler.Id);
+                return PartitionOutcome.Failed(partitionKey, ex);
+            }
+        }
+
+        BatchContext CreateBatchContext()
+        {
+            var allEvents = partitions.SelectMany(_ => _.Events).Select(_ => _.Context.SequenceNumber).ToArray();
+            return new(
+                handler.Id.Value,
+                eventStore.Name,
+                @namespace,
+                handler.EventSequenceId,
+                operation.Origin.ToClient(),
+                [.. partitions.Select(_ => new EventSourceId(_.Partition ?? string.Empty))],
+                allEvents.Length,
+                allEvents.Length > 0 ? allEvents.Min() : EventSequenceNumber.Unavailable,
+                allEvents.Length > 0 ? allEvents.Max() : EventSequenceNumber.Unavailable,
+                operation.DeliverWithinMilliseconds > 0 ? DateTimeOffset.UtcNow.AddMilliseconds(operation.DeliverWithinMilliseconds) : null,
+                handler.CancellationToken)
+            {
+                CanDefer = operation.Partitions.Count > 0
+            };
+        }
+
+        AppendedEvent ToAppendedEvent(Contracts.Events.AppendedEvent @event)
         {
             var context = @event.Context.ToClient();
             var handlerEventType = handler.EventTypes.FirstOrDefault(et => et.Id == context.EventType.Id);
@@ -88,58 +167,8 @@ internal sealed class ReducerDispatcher(
             }
 
             var content = JsonSerializer.Deserialize(contentJson, eventType, jsonSerializerOptions)!;
-            return new AppendedEvent(
-                context,
-                content);
-        }).ToList();
-
-        try
-        {
-            await using var serviceProviderScope = serviceProvider.CreateAsyncScope();
-            identityProvider.SetCurrentIdentity(Identity.System);
-            var initialState = operation.InitialState is null ? null : JsonSerializer.Deserialize(operation.InitialState, handler.ReadModelType, jsonSerializerOptions);
-            var reduceResult = await handler.OnNext(appendedEvents, initialState, serviceProviderScope.ServiceProvider);
-
-            lastSuccessfullyObservedEvent = reduceResult.LastSuccessfullyObservedEvent;
-            if (reduceResult.IsSuccess)
-            {
-                modelState = reduceResult.ReadModelState is null ?
-                    null :
-                    JsonSerializer.Serialize(reduceResult.ReadModelState, jsonSerializerOptions);
-            }
-            else
-            {
-                span?.Activity?.RecordFailure(reduceResult.ExceptionType ?? "reducer_error");
-                exceptionMessages = reduceResult.ErrorMessages;
-                exceptionStackTrace = reduceResult.StackTrace;
-                state = ObservationState.Failed;
-                logger.ReducerFailed(
-                    handler.Id,
-                    appendedEvents[0].Context.SequenceNumber,
-                    appendedEvents[^1].Context.SequenceNumber,
-                    string.Join(Environment.NewLine, reduceResult.ErrorMessages));
-            }
+            return new AppendedEvent(context, content);
         }
-        catch (Exception ex)
-        {
-            span?.Activity?.RecordFailure(ex);
-            logger.ErrorWhileHandlingEvents(ex, appendedEvents[0].Context.SequenceNumber, appendedEvents[^1].Context.SequenceNumber, handler.Id);
-            exceptionMessages = ex.GetAllMessages();
-            exceptionStackTrace = ex.StackTrace ?? string.Empty;
-            state = ObservationState.Failed;
-        }
-
-        var result = new ReducerResult
-        {
-            Partition = operation.Partition,
-            DeliveryId = operation.DeliveryId,
-            ReadModelState = modelState,
-            State = state,
-            LastSuccessfulObservation = lastSuccessfullyObservedEvent,
-            ExceptionMessages = exceptionMessages.ToList(),
-            ExceptionStackTrace = exceptionStackTrace
-        };
-        publish(result);
     }
 
     async Task HandleReplayNotification(IReducerHandler handler, ReplayState replayState, string partition)

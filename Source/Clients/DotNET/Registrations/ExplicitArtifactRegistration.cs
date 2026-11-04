@@ -9,4 +9,5 @@ namespace Cratis.Chronicle.Registrations;
 /// <param name="Type">The nominated CLR type.</param>
 /// <param name="Kind">The artifact kind.</param>
 /// <param name="Identity">The optional supplied identity.</param>
-internal sealed record ExplicitArtifactRegistration(Type Type, ExplicitArtifactKind Kind, DeclaredFacet<string>? Identity);
+/// <param name="SourceEventStore">The optional supplied source event store.</param>
+internal sealed record ExplicitArtifactRegistration(Type Type, ExplicitArtifactKind Kind, DeclaredFacet<string>? Identity, DeclaredFacet<string>? SourceEventStore = null);

@@ -84,6 +84,8 @@ public partial class Observer(
 
     ObserverId _observerId = ObserverId.Unspecified;
     ObserverKey _observerKey = ObserverKey.NotSet;
+    string _observerKeyText = string.Empty;
+    TimeSpan? _responseTimeout;
     ObserverSubscription _subscription = ObserverSubscription.Unsubscribed;
     IJobsManager _jobsManager = null!;
     bool _stateWritingSuspended;
@@ -191,8 +193,10 @@ public partial class Observer(
     public override async Task OnActivation(CancellationToken cancellationToken)
     {
         _observerKey = ObserverKey.Parse(this.GetPrimaryKeyString());
+        _observerKeyText = _observerKey.ToString();
         _observerId = _observerKey.ObserverId;
         State = State with { Identifier = _observerId };
+        await SeedRunningStateHistory();
         SeedSuspectedSkipOwnership();
 
         _jobsManager = GrainFactory.GetJobsManager(_observerKey.EventStore, _observerKey.Namespace);
@@ -576,6 +580,15 @@ public partial class Observer(
             return;
         }
 
+        if (_subscription.IsSubscribed && _subscription.Arguments is not ConnectedClient)
+        {
+            // Served by something that is not a connected client instance (a webhook, for example), so a connection
+            // identifier says nothing about it. Only the registration that connection superseded can go.
+            LogClientDisconnected(connectionId, "not served by a connected client, dropping any superseded registration");
+            DropSupersededRegistration(connectionId);
+            return;
+        }
+
         LogClientDisconnected(connectionId, "unsubscribing");
         await Unsubscribe();
     }
@@ -711,6 +724,7 @@ public partial class Observer(
             {
                 TrackQuarantineAlertFor(observerState);
                 State = State with { RunningState = observerState.RunningState };
+                ApplyRunningState(observerState.RunningState);
             }
         }
         finally
@@ -759,6 +773,7 @@ public partial class Observer(
             if (IsQuarantined)
             {
                 State = State with { RunningState = ObserverRunningState.Quarantined };
+                _runningStateChangedAt = _quarantineRunningStateChangedAt;
             }
 
             // A state-machine OnEnter can return an earlier record after awaiting a job callback. Preserve the
@@ -780,6 +795,7 @@ public partial class Observer(
             try
             {
                 await base.WriteStateAsync();
+                if (_runningStateChangedAtPending) await PersistRunningStateChangedAt();
             }
             catch (ObserverKeyDoesNotMatchDefinition)
             {
@@ -789,6 +805,7 @@ public partial class Observer(
                 try
                 {
                     await base.WriteStateAsync();
+                    if (_runningStateChangedAtPending) await PersistRunningStateChangedAt();
                 }
                 catch (ObserverKeyDoesNotMatchDefinition)
                 {
@@ -905,6 +922,8 @@ public partial class Observer(
         {
             State = State with { RunningState = ObserverRunningState.Quarantined };
         }
+
+        await ReloadRunningStateHistory(storageWasReset);
 
         // A reload during a transition hook is newer than the snapshot the hook was handed; keep it from being reverted.
         RecordedHandlingState();
@@ -1031,6 +1050,8 @@ public partial class Observer(
 
     void DiscardQuarantineFromWipedWorld()
     {
+        // The entry time belongs to the discarded episode, not to a future quarantine.
+        _quarantineRunningStateChangedAt = null;
         _webhookProbe = null;
         _armWebhookProbe = false;
         _recoverSubscriptionAfterQuarantine = false;

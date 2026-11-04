@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+#pragma warning disable SA1402
+
 using Cratis.Chronicle.EventSequences.Concurrency;
 using Cratis.Chronicle.EventSources;
 using Cratis.Chronicle.Transactions;
@@ -9,8 +11,16 @@ using context = Cratis.Chronicle.Integration.for_UnitOfWork.when_enforcing_read_
 
 namespace Cratis.Chronicle.Integration.for_UnitOfWork.when_enforcing_read_protection;
 
+public abstract class with_covering_explicit_and_source_less_routing<TContext>(TContext context) : Given<TContext>(context)
+    where TContext : with_covering_explicit_and_source_less_routing.context
+{
+    [Fact] public void should_commit_against_the_real_kernel() => Context.Error.ShouldBeNull();
+    [Fact] public void should_accept_both_independent_conditions() => Context.Unit.IsSuccess.ShouldBeTrue();
+    [Fact] public void should_store_the_planned_event() => Context.Count.ShouldEqual(2);
+}
+
 [Collection(ChronicleCollection.Name)]
-public class with_covering_explicit_and_source_less_routing(context context) : Given<context>(context)
+public class with_covering_explicit_and_source_less_routing(context context) : with_covering_explicit_and_source_less_routing<context>(context)
 {
     public class context(ChronicleFixture fixture) : given.a_read_protection_scenario(fixture)
     {
@@ -35,10 +45,8 @@ public class with_covering_explicit_and_source_less_routing(context context) : G
         }
     }
 
-    [Fact] void should_commit_against_the_real_kernel() => Context.Error.ShouldBeNull();
-    [Fact] void should_accept_both_independent_conditions() => Context.Unit.IsSuccess.ShouldBeTrue();
+    [Fact] void should_take_the_conjunction_route() => Context.AdvertisedConjunctions.ShouldBeTrue();
     [Fact] void should_keep_the_explicit_source_boundary() => Context.Unit.GetAppendConditions().Single(_ => _.EventSourceId is not null).After.Value.ShouldEqual(0UL);
-    [Fact] void should_keep_declared_routing_on_a_separate_internal_label() => Context.Unit.GetAppendConditions().Single(_ => _.EventSourceId is null).Label.ShouldEqual($"$read-protection/routing/{Context.Source}/0");
+    [Fact] void should_keep_declared_routing_on_the_same_label() => Context.Unit.GetAppendConditions().Single(_ => _.EventSourceId is null).Label.ShouldEqual(Context.Source.Value);
     [Fact] void should_keep_the_source_less_filtered_boundary() => Context.Unit.GetAppendConditions().Single(_ => _.EventSourceId is null).After.Value.ShouldEqual(1UL);
-    [Fact] void should_store_the_planned_event() => Context.Count.ShouldEqual(2);
 }

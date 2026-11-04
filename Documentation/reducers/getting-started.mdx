@@ -78,7 +78,7 @@ You can customize the reducer using the `[Reducer]` attribute:
 **Attribute parameters:**
 
 - `id` - Custom identifier for the reducer (defaults to the fully qualified type name)
-- `eventSequence` - The event sequence to observe (defaults to the event log)
+- `eventSequence` - The event sequence to observe. When not specified, it is inferred from the handled event types: normally the event log, or the inbox of the source event store when the handled events belong to one foreign source store. Handled events from more than one source store are rejected. See [Event sequences](event-sequence.mdx)
 - `isActive` - Whether the reducer actively observes events (defaults to `true`)
 
 Use the client tab's configuration shape. TypeScript expresses identity and sequence through the

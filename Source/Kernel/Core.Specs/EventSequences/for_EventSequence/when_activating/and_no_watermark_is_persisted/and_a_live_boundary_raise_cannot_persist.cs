@@ -27,7 +27,7 @@ public class and_a_live_boundary_raise_cannot_persist : given.a_catching_up_sequ
                 if (call.ArgAt<EventSequenceNumber>(2) < (EventSequenceNumber)3) _clock.Advance(TimeSpan.FromSeconds(2));
             });
         await Tick();
-        _eventSequence.ConstraintIndexCatchUpKeyLimit = 1;
+        _eventSequence.ConstraintIndexRepair = new() { CatchUpExclusionLimit = 1 };
         _eventSequenceStorage.AppendMany(Arg.Any<IEnumerable<EventToAppendToStorage>>()).Returns(call => _log.AppendMany(call.Arg<IEnumerable<EventToAppendToStorage>>()));
         _snapshots.BeforeWrite = () =>
         {

@@ -79,6 +79,7 @@ public partial class EventStore : IEventStore
     readonly string? _nominatedObserverKind;
     readonly string? _nominatedObserverId;
     readonly StoreClientArtifactsProvider? _storeArtifacts;
+    readonly ReadModelWatcherManager? _readModelWatchers;
     SingleFlightRegistration? _registerAllFlight;
     AsyncLocal<bool>? _backgroundRegistrationRetryContext;
     int _backgroundRegistrationRetryActive;
@@ -294,7 +295,7 @@ public partial class EventStore : IEventStore
         FailedPartitions = new FailedPartitions(this);
         Observers = new Observers(this);
 
-        var readModelsWatcherManager = new ReadModelWatcherManager(new ReadModelWatcherFactory(this, jsonSerializerOptions));
+        var readModelsWatcherManager = _readModelWatchers = new ReadModelWatcherManager(new ReadModelWatcherFactory(this, jsonSerializerOptions));
         var materializedReadModels = new MaterializedReadModels(
             this,
             projections,
@@ -932,17 +933,17 @@ public partial class EventStore : IEventStore
                 reactorHandlers,
                 type => type,
                 handler => handler.ReactorType,
-                (type, handler) => (Type: type, HandledEventTypes: handler.EventTypes))
+                (type, handler) => (Type: type, HandledEventTypes: handler.EventTypes, ConfiguredStore: RegisteredObserverMetadata.ReactorSourceStoreFor(_clientArtifactsProvider, type)))
             .Concat(_clientArtifactsProvider.Reducers
                 .Where(r => !RegisteredObserverMetadata.HasExplicitSequence(r, r.GetCustomAttribute<ReducerAttribute>()?.EventSequenceId))
                 .Join(
                     Reducers.GetAllHandlers(),
                     type => type,
                     handler => handler.ReducerType,
-                    (type, handler) => (Type: type, HandledEventTypes: handler.EventTypes)))
+                    (type, handler) => (Type: type, HandledEventTypes: handler.EventTypes, ConfiguredStore: (EventStoreName?)null)))
             .Select(observer =>
             {
-                var sourceStore = ObserverEventTypes.GetSourceStore(observer.Type, EventTypes, _eventStoreName, observer.HandledEventTypes);
+                var sourceStore = ObserverEventTypes.GetSourceStore(observer.Type, EventTypes, _eventStoreName, observer.HandledEventTypes, observer.ConfiguredStore);
                 return (observer.HandledEventTypes, sourceStore);
             })
             .Where(item => item.sourceStore is not null && item.sourceStore != currentStoreName)

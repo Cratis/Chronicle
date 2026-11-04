@@ -247,6 +247,7 @@ public class Webhooks(
                     localSiloDetails.SiloAddress,
                     definition.GenerationDelivery,
                     subscriberArgs: EventGenerationDelivery.Pinned,
+                    isReplayable: definition.IsReplayable,
                     reactivateRetired: !automatic,
                     automatic: automatic);
             }
@@ -256,6 +257,7 @@ public class Webhooks(
                     ObserverType.External,
                     definition.EventTypes.ToArray(),
                     localSiloDetails.SiloAddress,
+                    isReplayable: definition.IsReplayable,
                     reactivateRetired: !automatic,
                     automatic: automatic);
             }

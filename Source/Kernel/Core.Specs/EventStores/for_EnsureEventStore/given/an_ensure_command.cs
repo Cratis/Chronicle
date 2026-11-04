@@ -9,6 +9,7 @@ using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Observation.Reactors.Kernel;
 using Cratis.Chronicle.Projections.Kernel;
 using Cratis.Chronicle.Storage;
+using Microsoft.Extensions.Logging.Abstractions;
 using Orleans.TestKit;
 
 namespace Cratis.Chronicle.EventStores.for_EnsureEventStore.given;
@@ -28,6 +29,7 @@ public class an_ensure_command : Specification
     protected IEventStoreInitializer _initializerReference;
     IGrainFactory _grains;
     EnsureEventStore _command;
+    EventStoreInitialization _initialization;
 
     async Task Establish()
     {
@@ -59,7 +61,8 @@ public class an_ensure_command : Specification
         _initializerReference.Ensure().Returns(_ => _initializer.Ensure());
         _grains.GetGrain<IEventStoreInitializer>(_name.Value).Returns(_initializerReference);
         _command = new(_name);
+        _initialization = new(_storage, _grains, NullLogger<EventStoreInitialization>.Instance);
     }
 
-    protected Task Ensure() => _command.Handle(_grains, _storage, _eventTypes, _reactors);
+    protected Task Ensure() => _command.Handle(_grains, _initialization, _eventTypes, _reactors);
 }

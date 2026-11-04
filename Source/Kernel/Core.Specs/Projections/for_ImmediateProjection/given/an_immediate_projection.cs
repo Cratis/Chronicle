@@ -39,6 +39,7 @@ public class an_immediate_projection : Specification
     protected IExpandoObjectConverter _expandoObjectConverter;
     protected ILogger<ImmediateProjection> _logger;
     protected IReadModelInstanceVisibilities _visibilities;
+    protected ReadModelDefinition _readModelDefinition;
 
     protected virtual ImmediateProjectionStreamScope? StreamScope => null;
     protected virtual ProjectionSessionId? SessionId => null;
@@ -66,7 +67,8 @@ public class an_immediate_projection : Specification
         namespaceStorage.GetEventSequence(EventSequenceId.Log).Returns(_eventSequenceStorage);
 
         _projection.SubscribeDefinitionsChanged(Arg.Any<INotifyProjectionDefinitionsChanged>()).Returns(Task.CompletedTask);
-        _readModel.GetDefinition().Returns(CreateReadModelDefinition());
+        _readModelDefinition = CreateReadModelDefinition();
+        _readModel.GetDefinition().Returns(_readModelDefinition);
 
         _silo.AddService(storage);
         _silo.AddService(_expandoObjectConverter);

@@ -20,11 +20,32 @@ namespace Cratis.Chronicle.XUnit.Integration;
 internal class MutableServiceRegistry
 {
     readonly ConcurrentDictionary<Type, Func<IServiceProvider, object>> _factories = new();
+    ContainerFallbackPolicy? _fallbackPolicy;
 
     /// <summary>
     /// Gets the service types currently registered in the registry.
     /// </summary>
     public IEnumerable<Type> RegisteredTypes => [.. _factories.Keys];
+
+    /// <summary>
+    /// Installs the immutable built-container policy once, before exposing the provider.
+    /// </summary>
+    /// <param name="policy">The policy retained across <see cref="Clear"/>.</param>
+    /// <exception cref="InvalidOperationException">The policy has already been installed.</exception>
+    public void InstallFallbackPolicy(ContainerFallbackPolicy policy)
+    {
+        if (Interlocked.CompareExchange(ref _fallbackPolicy, policy, null) is not null)
+        {
+            throw new InvalidOperationException("The container fallback policy is already installed.");
+        }
+    }
+
+    /// <summary>
+    /// Returns a value indicating whether <paramref name="serviceType"/> must not be resolved from the built container.
+    /// </summary>
+    /// <param name="serviceType">The service type to check.</param>
+    /// <returns><see langword="true"/> if the container fallback is rejected; otherwise <see langword="false"/>.</returns>
+    public bool IsContainerFallbackRejected(Type serviceType) => Volatile.Read(ref _fallbackPolicy)?.Rejects(serviceType) ?? false;
 
     /// <summary>
     /// Removes all factories from the registry so the next test starts with a clean slate.
