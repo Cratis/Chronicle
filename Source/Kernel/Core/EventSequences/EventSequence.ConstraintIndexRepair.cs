@@ -18,10 +18,10 @@ public partial class EventSequence
     {
         PrepareConstraintIndexRepair();
         var now = ConstraintIndexTimeProvider.GetUtcNow();
-        if (now < _nextConstraintRepairAttempt || (_lastAppendRepairEnded is { } ended && now - ended < TimeSpan.FromSeconds(5))) return;
+        if (now < _nextConstraintRepairAttempt || (_lastAppendRepairEnded is { } ended && now - ended < ConstraintIndexRepair.AppendRepairInterval)) return;
         try
         {
-            await RunConstraintIndexRepairTurn(TimeSpan.FromSeconds(5), false, CancellationToken.None);
+            await RunConstraintIndexRepairTurn(ConstraintIndexRepair.AppendRepairBudget, false, CancellationToken.None);
         }
         finally
         {
@@ -88,7 +88,7 @@ public partial class EventSequence
 
     IReadOnlyDictionary<ConstraintName, ConstraintIndexReplayFailure> SettleConstraintIndexPoison(ConstraintIndexReplayResult result)
     {
-        var poisoned = _constraintIndexPoisonTracker.Observe(result.Failed, _constraintIndexReplay!.StorageCallSucceeded);
+        var poisoned = _constraintIndexPoisonTracker.Observe(result.Failed, _constraintIndexReplay!.StorageCallSucceeded, ConstraintIndexRepair.PoisonThreshold);
         foreach (var (name, failure) in poisoned)
         {
             _constraintIndexReplay.SettlePoison(name, failure.Position!);
@@ -192,9 +192,11 @@ public partial class EventSequence
             new StoredConstraintEventContent(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, EventTypesStorage, jsonComplianceManagerProvider, expandoObjectConverter),
             constraintIndexReplayLogger ?? Microsoft.Extensions.Logging.Abstractions.NullLogger<ConstraintIndexReplay>.Instance,
             _replayScopes,
-            _replayEndPoint)
+            _replayEndPoint,
+            ConstraintIndexRepair.FoldKeyLimit)
         {
             ConstraintIndexTimeProvider = ConstraintIndexTimeProvider,
+            AttemptTimeout = ConstraintIndexRepair.AttemptTimeout,
             StorageErrorClassifier = _storageErrorClassifier,
             SettledPoison = _constraintIndexPoisonTracker.Settled
         };

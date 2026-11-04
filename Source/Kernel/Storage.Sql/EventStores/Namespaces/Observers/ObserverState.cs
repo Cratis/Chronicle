@@ -40,6 +40,14 @@ public class ObserverState
     public ulong? OwnershipRevision { get; set; }
 
     /// <summary>
+    /// Gets or sets when the running state last changed, absent on legacy rows.
+    /// </summary>
+    /// <remarks>
+    /// Deliberately not mapped by the state converters and preserved by state saves.
+    /// </remarks>
+    public DateTimeOffset? RunningStateChangedAt { get; set; }
+
+    /// <summary>
     /// Gets or sets the serialized type-set control, or null before initialization.
     /// </summary>
     [ConcurrencyCheck]

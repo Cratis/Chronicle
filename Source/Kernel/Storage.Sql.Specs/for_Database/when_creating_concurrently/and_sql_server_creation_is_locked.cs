@@ -22,7 +22,7 @@ public class and_sql_server_creation_is_locked(SqlServerFixture fixture) : given
         await SqlServerDatabaseCreation.RunWithLock(
             ConnectionString,
             _ => Task.CompletedTask,
-            async () => _contenderFailure = await Catch.Exception(() => SqlServerDatabaseSchemaLock.Instance.Acquire(contender, resource, TimeSpan.Zero)));
+            async _ => _contenderFailure = await Catch.Exception(() => SqlServerDatabaseSchemaLock.Instance.Acquire(contender, resource, TimeSpan.Zero)));
         _afterRelease = await Catch.Exception(() => SqlServerDatabaseSchemaLock.Instance.Acquire(contender, resource, TimeSpan.Zero));
         if (_afterRelease is null)
         {

@@ -5,6 +5,7 @@ using System.Dynamic;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Cratis.Choreography.Jobs;
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Compliance.GDPR;
 using Cratis.Chronicle.Concepts;
@@ -19,7 +20,6 @@ using Cratis.Chronicle.Storage.Compliance;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Monads;
-using Cratis.Orleans.Jobs;
 using Microsoft.Extensions.Logging.Abstractions;
 using Orleans.TestKit;
 
@@ -126,7 +126,7 @@ public class protected_events : Specification
         silo.AddService(new JsonSerializerOptions());
         silo.AddService(Substitute.For<IJobStepThrottle>());
         silo.AddService(NullLogger<MigrateExistingEventsForTypeStep>.Instance);
-        silo.AddPersistentStateStorage<MigrateExistingEventsForTypeStepState>(nameof(MigrateExistingEventsForTypeStepState), Cratis.Orleans.WellKnownGrainStorageProviders.JobSteps);
+        silo.AddPersistentStateStorage<MigrateExistingEventsForTypeStepState>(nameof(MigrateExistingEventsForTypeStepState), Cratis.Choreography.WellKnownGrainStorageProviders.JobSteps);
         _step = await silo.CreateGrainAsync<MigrateExistingEventsForTypeStep>(JobStepId.New(), new JobStepKey(JobId.New(), Store, Namespace));
         _state = new MigrateExistingEventsForTypeStepState { EventTypeId = typeId };
     }

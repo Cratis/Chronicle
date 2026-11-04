@@ -117,6 +117,20 @@ public class ChronicleOptions : IValidatableObject
     public Observers Observers { get; init; } = new Observers();
 
     /// <summary>
+    /// Gets the retry overrides for individual observers, keyed by the full observer key.
+    /// </summary>
+    /// <remarks>
+    /// The key is an exact, case-sensitive match on <c language="csharp">ObserverId#EventStore#Namespace#EventSequenceId</c>.
+    /// Settings an entry leaves out inherit the global <see cref="Observers"/> values. Webhooks use <see cref="Webhooks"/> retry settings and ignore these overrides.
+    /// </remarks>
+    public IDictionary<string, ObserverRetryOverride> ObserverRetryOverrides { get; init; } = new Dictionary<string, ObserverRetryOverride>(StringComparer.Ordinal);
+
+    /// <summary>
+    /// Gets the constraint-index repair configuration: retries, time budgets, cadence and memory caps.
+    /// </summary>
+    public ConstraintIndexRepairOptions ConstraintIndexRepair { get; init; } = new();
+
+    /// <summary>
     /// Gets the durable occurrence delivery configuration.
     /// </summary>
     public Occurrences Occurrences { get; init; } = new();
@@ -253,6 +267,8 @@ public class ChronicleOptions : IValidatableObject
                 $"Alerts.Conditions['{_.Key}'].RaiseAfter must be non-negative; zero raises immediately.",
                 [$"{nameof(Alerts)}.{nameof(Alerts.Conditions)}[{_.Key}].{nameof(AlertConditionOptions.RaiseAfter)}"]));
         foreach (var error in ValidateSingleWriterLease().Concat(alertErrors)) yield return error;
+        foreach (var error in ObserverRetryOverrides.SelectMany(_ => _.Value.Validate(_.Key))) yield return error;
+        foreach (var error in ConstraintIndexRepair.Validate()) yield return error;
         if (!Webhooks.Probe.HasValidTiming)
         {
             yield return new ValidationResult("Invalid webhook probe timing settings.", [$"{nameof(Webhooks)}.{nameof(Configuration.Webhooks.Probe)}"]);

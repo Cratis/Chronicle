@@ -128,6 +128,9 @@ internal static class AppendedEventsQueueSpillReasons
 
     /// <summary>The observer's share of one dispatch exceeded the partition run limit.</summary>
     internal const string FragmentedBacklog = "FragmentedBacklog";
+
+    /// <summary>The observer's own backlog in the queue exceeded the queue capacity.</summary>
+    internal const string LaggingBacklog = "LaggingBacklog";
 }
 
 internal static class AppendedEventsQueueMetricsScopes

@@ -28,7 +28,8 @@ public class RecommendationConverter
             Description = recommendationState.Description.Value,
             Type = recommendationState.Type.Value,
             Occurred = recommendationState.Occurred,
-            RequestJson = JsonSerializer.Serialize((object?)recommendationState.Request)
+            RequestJson = JsonSerializer.Serialize((object?)recommendationState.Request),
+            IsIgnored = recommendationState.IsIgnored
         };
     }
 
@@ -47,7 +48,8 @@ public class RecommendationConverter
             Description = entity.Description,
             Type = recommendationType,
             Occurred = entity.Occurred,
-            Request = DeserializeRequest(recommendationType, entity.RequestJson)
+            Request = DeserializeRequest(recommendationType, entity.RequestJson),
+            IsIgnored = entity.IsIgnored
         };
     }
 

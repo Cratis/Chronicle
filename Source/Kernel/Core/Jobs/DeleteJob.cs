@@ -16,12 +16,12 @@ namespace Cratis.Chronicle.Jobs;
 [Command]
 [Cratis.Arc.Authorization.Authorize(Policy = Security.WellKnownAuthorizationPolicies.AdministratorOperations)]
 [BelongsTo(WellKnownServices.Jobs)]
-public record DeleteJob(EventStoreName EventStore, EventStoreNamespaceName Namespace, Cratis.Orleans.Jobs.JobId JobId)
+public record DeleteJob(EventStoreName EventStore, EventStoreNamespaceName Namespace, Cratis.Choreography.Jobs.JobId JobId)
 {
     /// <summary>
-    /// Handles the command by invoking <see cref="Cratis.Orleans.Jobs.IJobsManager.Delete"/> on the jobs manager grain.
+    /// Handles the command by invoking <see cref="Cratis.Choreography.Jobs.IJobsManager.Delete"/> on the jobs manager grain.
     /// </summary>
-    /// <param name="grainFactory">The <see cref="Cratis.Orleans.Jobs.IJobsManager"/> to get the jobs manager grain with.</param>
+    /// <param name="grainFactory">The <see cref="Cratis.Choreography.Jobs.IJobsManager"/> to get the jobs manager grain with.</param>
     /// <returns>Awaitable task.</returns>
     public Task Handle(IGrainFactory grainFactory) =>
         grainFactory.GetJobsManager(EventStore, Namespace).Delete(JobId);

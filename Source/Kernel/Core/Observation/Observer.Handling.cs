@@ -3,6 +3,7 @@
 
 using System.Collections.Immutable;
 using System.Diagnostics;
+using Cratis.Choreography.Jobs;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
@@ -10,10 +11,6 @@ using Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Observation.Webhooks;
 using Cratis.Chronicle.Storage.Observation;
-using Cratis.Orleans.Jobs;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
-using Orleans.Configuration;
 
 namespace Cratis.Chronicle.Observation;
 
@@ -80,10 +77,7 @@ public partial class Observer
     /// <inheritdoc/>
     public async Task Handle(Key partition, IEnumerable<AppendedEvent> events)
     {
-        using var span = activitySource.Handle();
-        span?.Activity?.Tag(_observerKey);
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
-
         if (!events.Any())
         {
             return;
@@ -93,6 +87,14 @@ public partial class Observer
         {
             NoteHeldBackEvents(partition, events);
             return;
+        }
+
+        using var span = activitySource.Handle();
+        span?.Activity?.Tag(_observerKey);
+        span?.Activity?.Tag(Definition.Type);
+        if (span?.Activity is { IsAllDataRequested: true } activity && events.TryGetNonEnumeratedCount(out var eventCount))
+        {
+            activity.TagEventCount(eventCount);
         }
 
         try
@@ -223,7 +225,8 @@ public partial class Observer
             return;
         }
 
-        if (_pendingHandledCounts.Count >= MaxPendingHandledCountPartitions)
+        if (_pendingHandledCounts.Count >= MaxPendingHandledCountPartitions ||
+            _pendingLivePartitionCounts.Count >= MaxPendingHandledCountPartitions)
         {
             BringCoalescedWriteForward();
             return;
@@ -238,6 +241,7 @@ public partial class Observer
     /// <returns>Awaitable task.</returns>
     async Task FlushPendingHandledCounts()
     {
+        await FlushPendingLivePartitionCounts();
         if (_pendingHandledCounts.Count == 0)
         {
             return;
@@ -306,7 +310,8 @@ public partial class Observer
 
     void EnsureCoalescedWriteTimer()
     {
-        if (_coalescedWriteTimer is not null || (_pendingHandledCounts.Count == 0 && !_failureStateWritePending))
+        if (_coalescedWriteTimer is not null ||
+            (_pendingHandledCounts.Count == 0 && _pendingLivePartitionCounts.Count == 0 && !_failureStateWritePending))
         {
             return;
         }
@@ -469,7 +474,8 @@ public partial class Observer
 
         var eventsToHandle = events.Where(_ => _.Context.SequenceNumber >= tailEventSequenceNumber).ToArray();
         NoteDiscardedEvents(partition, events, tailEventSequenceNumber);
-        if (await ExceedsLiveBudget(eventsToHandle.Length) && await HandOverLargeLiveBatchToCatchUp(partition, eventsToHandle))
+        var configuration = await configurationProvider.GetFor(_observerKeyText);
+        if (ExceedsLiveBudget(configuration, eventsToHandle.Length) && await HandOverLargeLiveBatchToCatchUp(partition, eventsToHandle))
         {
             return;
         }
@@ -497,7 +503,7 @@ public partial class Observer
                     tailEventSequenceNumber = firstEvent.Context.SequenceNumber;
                     var decryptedEvents = await DecryptEvents(eventsToHandle);
 
-                    var subscriberTimeout = GetLiveSubscriberTimeout(await configurationProvider.GetSubscriberTimeoutForObserver(_observerKey));
+                    var subscriberTimeout = GetLiveSubscriberTimeout(configuration.GetSubscriberTimeout());
                     var hold = await GetClientDeliveryHold();
 
                     ObserverSubscriberResult result;
@@ -513,7 +519,7 @@ public partial class Observer
                         var key = _subscription.GetSubscriberKeyFor(partition, siloAddress);
 
                         var subscriber = (GrainFactory.GetGrain(_subscription.SubscriberType, key) as IObserverSubscriber)!;
-                        var context = new ObserverSubscriberContext(target.ConnectedClient ?? _subscription.Arguments).WithDeadlines(subscriberTimeout, hold, _clock);
+                        var context = new ObserverSubscriberContext(target.ConnectedClient ?? _subscription.Arguments) { Origin = ObservationOrigin.Live }.WithDeadlines(subscriberTimeout, hold, _clock);
                         deliveryFence = AbandonedDeliveryDrain.Capture(_subscription, partition, target, context);
                         result = await subscriber.OnNextWithin(subscriberTimeout, partition, decryptedEvents, context);
 
@@ -612,9 +618,9 @@ public partial class Observer
                     await WriteStateAsync();
                 }
 
-                if (_observerExists && handledCountsPerEventType.Count > 0)
+                if (_observerExists)
                 {
-                    await GetObserverHandledCountsStorage().Increment(_observerId, partition, handledCountsPerEventType);
+                    await CoalesceLiveHandledCounts(partition, handledCountsPerEventType);
                 }
             }
             catch (Exception ex)
@@ -757,8 +763,6 @@ public partial class Observer
 
     void RememberHandledEventsReportsForTheResponseTimeout()
     {
-        var messaging = ServiceProvider.GetService<IOptions<SiloMessagingOptions>>()?.Value ?? new SiloMessagingOptions();
-        var responseTimeout = messaging.ResponseTimeout > messaging.SystemResponseTimeout ? messaging.ResponseTimeout : messaging.SystemResponseTimeout;
-        _handledEventsReports.Window = HandledEventsReportDeduplication.WindowFor(responseTimeout);
+        _handledEventsReports.Window = HandledEventsReportDeduplication.WindowFor(ResponseTimeout());
     }
 }

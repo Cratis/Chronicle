@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Diagnostics;
+using Cratis.Chronicle.Integration;
 using Cratis.Chronicle.Storage.Sql.Diagnostics;
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
@@ -78,15 +79,15 @@ public sealed class SqlServerFixture : IAsyncLifetime
     /// <inheritdoc/>
     public async ValueTask InitializeAsync()
     {
-        _container = new ContainerBuilder("mcr.microsoft.com/mssql/server:2022-latest")
+        var builder = new ContainerBuilder(SqlServerContainerImage.Name)
             .WithEnvironment("ACCEPT_EULA", "Y")
             .WithEnvironment("MSSQL_SA_PASSWORD", Password)
             .WithPortBinding(Port, assignRandomHostPort: true)
             .WithWaitStrategy(Wait.ForUnixContainer().UntilCommandIsCompleted(
                 ["/opt/mssql-tools18/bin/sqlcmd", "-C", "-S", "tcp:127.0.0.1,1433", "-U", "sa", "-P", Password, "-l", "3", "-Q", "SELECT 1"],
-                wait => wait.WithTimeout(TimeSpan.FromSeconds(90))))
-            .Build();
-        await Timings.Run("sql-container-start", () => _container.StartAsync());
+                wait => wait.WithTimeout(TimeSpan.FromSeconds(90))));
+        await Timings.Run("sql-container-start", async () =>
+            _container = await ContainerStartup.ForDocker(builder.Build).Start(c => _container = c, null, CancellationToken.None));
     }
 
     /// <inheritdoc/>

@@ -58,7 +58,7 @@ public class when_recording_observer_initialization(ReplicaSetMongoDBFixture fix
         Substitute.For<Json.IExpandoObjectConverter>(),
         new JsonSerializerOptions(),
         _ => new Chronicle.Storage.Sinks.Sinks("orders", "default", new KnownInstancesOf<ISinkFactory>([])),
-        Substitute.For<Orleans.Storage.IJobsStorage>(),
+        Substitute.For<Choreography.Storage.IJobsStorage>(),
         Options.Create(new ChronicleOptions()),
         NullLoggerFactory.Instance);
 }
