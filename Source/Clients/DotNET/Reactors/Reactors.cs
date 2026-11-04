@@ -4,6 +4,7 @@
 using System.Collections.Frozen;
 using System.Reactive.Linq;
 using System.Reactive.Threading.Tasks;
+using System.Runtime.ExceptionServices;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Contracts;
@@ -190,6 +191,7 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
             {
                 RegisterReactor(registration, _servicesAccessor.Services);
                 registration.IsRegistered = true;
+                registration.RegisterOnReconnect = false;
             }
             _registered = true;
         }
@@ -408,6 +410,58 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
     }
 
     /// <summary>
+    /// Registers previously registered reactors after reconnect for stores without automatic registration.
+    /// </summary>
+    /// <returns>A task representing the registration.</returns>
+    /// <exception cref="AggregateException">Multiple reactors could not register again.</exception>
+    internal Task RegisterAgainAfterReconnect()
+    {
+        if (_released || !_eventStore.Connection.Lifecycle.IsConnected)
+        {
+            return Task.CompletedTask;
+        }
+
+        // Resolving the services can connect synchronously; connection callbacks also need the static lock.
+        var services = _servicesAccessor.Services;
+        List<Exception> failures = [];
+        lock (_registerLock)
+        {
+            if (_released || !_eventStore.Connection.Lifecycle.IsConnected)
+            {
+                return Task.CompletedTask;
+            }
+
+            foreach (var registration in _handlers.Values.Where(_ => _.RegisterOnReconnect && !_.IsRegistered && !_.Handler.CancellationToken.IsCancellationRequested))
+            {
+                var id = registration.Handler.Id;
+                _logger.RegisteringReactorAgainAfterReconnect(id);
+                try
+                {
+                    RegisterReactor(registration, services);
+                    registration.IsRegistered = true;
+                    registration.RegisterOnReconnect = false;
+                }
+                catch (Exception ex)
+                {
+                    _logger.RegisteringReactorAgainAfterReconnectFailed(id, ex);
+                    failures.Add(ex);
+                }
+            }
+        }
+
+        if (failures.Count == 1)
+        {
+            ExceptionDispatchInfo.Capture(failures[0]).Throw();
+        }
+        if (failures.Count > 1)
+        {
+            throw new AggregateException(failures);
+        }
+
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
     /// Releases the reactors of an event store whose creation failed and that no caller holds: stops reacting to the
     /// connection lifecycle, closes the observe streams and makes a registration that is still in flight a no-op.
     /// </summary>
@@ -570,7 +624,12 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
     {
         var registrations = _handlers.Values.ToArray();
         DisconnectHandlers();
-        _handlers = registrations.Select(RecreateRegistration).ToFrozenDictionary(_ => _.Handler.Id);
+        _handlers = registrations.Select(registration =>
+        {
+            var recreated = RecreateRegistration(registration);
+            recreated.RegisterOnReconnect = registration.IsRegistered || registration.RegisterOnReconnect;
+            return recreated;
+        }).ToFrozenDictionary(_ => _.Handler.Id);
     }
 
     ReactorRegistration RecreateRegistration(ReactorRegistration registration)
@@ -579,7 +638,8 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
         return registration with
         {
             Handler = CreateHandler(handler.Id, handler.ReactorType, handler.EventSequenceId, handler.EventTypes),
-            IsRegistered = false
+            IsRegistered = false,
+            RegisterOnReconnect = false
         };
     }
 
@@ -784,5 +844,10 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
         /// Gets or sets whether the subscription has been sent on the current connection.
         /// </summary>
         public bool IsRegistered { get; set; }
+
+        /// <summary>
+        /// Gets or sets whether the reactor was registered on a dropped connection and not yet on the current one.
+        /// </summary>
+        public bool RegisterOnReconnect { get; set; }
     }
 }

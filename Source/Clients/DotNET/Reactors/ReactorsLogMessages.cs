@@ -48,6 +48,12 @@ internal static partial class ReactorsLogMessages
     [LoggerMessage(LogLevel.Warning, "Reactor observation stream for '{Id}' completed without error — re-subscribing so the reactor keeps observing (a cross-store/inbox observer whose stream the kernel closes rather than tails would otherwise silently stop)")]
     internal static partial void RegisteringReactorStreamCompleted(this ILogger<Reactors> logger, ReactorId id);
 
+    [LoggerMessage(LogLevel.Information, "Registering Reactor '{Id}' again after the client reconnected")]
+    internal static partial void RegisteringReactorAgainAfterReconnect(this ILogger<Reactors> logger, ReactorId id);
+
+    [LoggerMessage(LogLevel.Error, "Reactor '{Id}' could not register again after the client reconnected")]
+    internal static partial void RegisteringReactorAgainAfterReconnectFailed(this ILogger<Reactors> logger, ReactorId id, Exception exception);
+
     [LoggerMessage(LogLevel.Error, "Reactor '{Id}' could not re-register after its observation stream ended")]
     internal static partial void ReactorReconnectFailed(this ILogger<Reactors> logger, ReactorId id, Exception exception);
 
