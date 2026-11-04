@@ -54,6 +54,15 @@ public class when_notifying_observers : Specification
         }
 
         silo.AddProbe<IObserver>(identity => _observers[identity.ToString()]);
+
+        // The test kit's grain factory caches probes in a plain Dictionary on first lookup, which is not safe for the
+        // concurrent lookups the notifier makes. Resolve every probe once here so the notifier only reads the cache;
+        // otherwise a racing insert throws inside the notifier, which logs it and skips that observer.
+        foreach (var key in _keys)
+        {
+            silo.GrainFactory.GetGrain<IObserver>(key);
+        }
+
         _notifier = new ClientDepartureNotifier(silo.GrainFactory, Substitute.For<ILogger<ClientDepartureNotifier>>());
         await Task.CompletedTask;
     }

@@ -84,9 +84,24 @@ public class ReadModelDbContext(
     /// </summary>
     internal DbSet<ReplayPromotion> ReplayPromotions => Set<ReplayPromotion>();
 
+    /// <summary>
+    /// Gets a value indicating whether this context only serves a table that already exists, and so never changes its schema.
+    /// </summary>
+    internal bool ExistingOnly { get; private set; }
+
+    /// <summary>
+    /// Gets the receipts of committed multi-write sink cycles.
+    /// </summary>
+    internal DbSet<SinkCycleReceipt> SinkCycleReceipts => Set<SinkCycleReceipt>();
+
     /// <inheritdoc/>
     public async Task EnsureTableExists()
     {
+        if (ExistingOnly)
+        {
+            throw new InvalidOperationException($"Table '{tableName}' is read as it is; a read never creates or alters it.");
+        }
+
         await migrator.EnsureTableMigrated(tableName, this);
     }
 
@@ -97,11 +112,32 @@ public class ReadModelDbContext(
     internal Task EnsureReplayPromotions() => migrator.EnsureReplayPromotions(this);
 
     /// <summary>
+    /// Forbids this context from changing the table, so a read only ever looks at what is there.
+    /// </summary>
+    /// <returns>This context.</returns>
+    internal ReadModelDbContext ServeExisting()
+    {
+        ExistingOnly = true;
+        return this;
+    }
+
+    /// <summary>
+    /// Creates the shared sink cycle receipt table, the first time a multi-write cycle needs it.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    internal Task EnsureSinkCycleReceipts() => migrator.EnsureSinkCycleReceipts(this);
+
+    /// <summary>
     /// Clears stale migration state for this table and restores shadows after an old-kernel promotion.
     /// </summary>
     /// <returns>An awaitable task.</returns>
     internal Task RepairShadowColumns()
     {
+        if (ExistingOnly)
+        {
+            return Task.CompletedTask;
+        }
+
         migrator.ClearMigrationCache($"{Database.GetConnectionString()}:{TableName}");
         return EnsureTableExists();
     }
@@ -130,6 +166,13 @@ public class ReadModelDbContext(
             entity.ToTable(WellKnownTableNames.ReplayPromotions);
             entity.HasKey(promotion => promotion.Id).HasName($"PK_{WellKnownTableNames.ReplayPromotions}");
             entity.Property(promotion => promotion.Id).HasMaxLength(64);
+        })
+        .Entity<SinkCycleReceipt>(entity =>
+        {
+            entity.ToTable(WellKnownTableNames.SinkCycleReceipts);
+            entity.HasKey(receipt => receipt.Id).HasName($"PK_{WellKnownTableNames.SinkCycleReceipts}");
+            entity.Property(receipt => receipt.CreatedAt).HasDefaultValueSql(SinkCycleReceipt.NowSql(databaseType)).ValueGeneratedOnAdd();
+            entity.HasIndex(receipt => receipt.CreatedAt);
         })
         .SharedTypeEntity<DynamicReadModelEntity>(tableName, entity =>
         {

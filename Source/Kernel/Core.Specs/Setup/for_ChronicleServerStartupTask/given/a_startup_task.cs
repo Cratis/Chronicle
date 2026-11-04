@@ -29,6 +29,7 @@ using Cratis.Chronicle.Projections.Kernel;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Releases;
+using Cratis.Chronicle.Setup;
 using Cratis.Chronicle.Setup.Authentication;
 using Cratis.Chronicle.Setup.Execution;
 using Cratis.Chronicle.Storage;
@@ -41,7 +42,8 @@ namespace Orleans.Hosting.for_ChronicleServerStartupTask.given;
 
 public class a_startup_task : Specification
 {
-    ChronicleServerStartupTask _startupTask = null!;
+    private protected ChronicleServerStartupTask _startupTask = null!;
+    protected IKernelProjectionRegistrationRetries _kernelProjectionRetries = null!;
     protected IStorage _storage = null!;
     protected IEventTypes _eventTypes = null!;
     protected IReactors _reactors = null!;
@@ -95,6 +97,7 @@ public class a_startup_task : Specification
             _storageErrorClassifier,
             _patchRunner,
             _clusterReleases,
+            _kernelProjectionRetries,
             new StartupLogger(_logMessages),
             _timeProvider);
     }
@@ -109,6 +112,7 @@ public class a_startup_task : Specification
         _patternCapture = Substitute.For<IPatternCapture>();
         _projectionsServiceClient = Substitute.For<IProjectionsServiceClient>();
         _kernelProjections = Substitute.For<IKernelProjections>();
+        _kernelProjectionRetries = Substitute.For<IKernelProjectionRegistrationRetries>();
         _grainFactory = Substitute.For<IGrainFactory>();
         _authenticationService = new TestAuthenticationService(() => _bootstrapClientsEnsured = true);
         _storageErrorClassifier = Substitute.For<IStorageErrorClassifier>();

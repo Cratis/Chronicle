@@ -60,6 +60,10 @@ Maps a property from its old name in the source generation to its new name in th
 
 Provides a literal default for a property that did not exist in the source generation. Chronicle applies this value to any event stored before the property was introduced.
 
+When the default is an object, its members are named with the client's JSON naming policy (`[JsonPropertyName]` takes precedence), the same way the event's payload and schema are. The same applies to object values in `MapValues`, so a map can match object payloads under those policies. Scalars, enums (rendered as their underlying number), concepts and raw string paths are unchanged, and so is the output under the default naming policy.
+
+This changes persisted migration content for clients that use a camelCase or custom naming policy, and therefore changes the migration hash. Content derived after the upgrade uses the corrected names; generations that were already derived are not corrected. Upgrade all clients of an event store promptly: while old and new clients alternate registrations, each replacement of the current definition flips it, clears its cache and re-subscribes pattern capture. Registering the same definition again is idempotent.
+
 <ChronicleClientTabs snippet="migrations/dotnet-client/default-value" variants="csharp" />
 
 ## Properties inside a nested object
