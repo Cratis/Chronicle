@@ -17,6 +17,10 @@ namespace Cratis.Chronicle.Observation.Webhooks.Signing;
 /// <remarks>
 /// The grain is the only writer of the signing keys and is not reentrant, so rotations serialize per event store.
 /// A key is never returned before it is persisted. Events carry no key material.
+/// Ordering is append-before-persist, deliberately. The system event log is the audit authority and the grain state converges on retry,
+/// because retirement and the active key are re-evaluated from state on every call. A failed persist after a successful append leaves at
+/// worst an orphan Generated event or a duplicate Retired/Superseded event when the retry completes the transition. Persisting first would
+/// allow a key to sign without an audit event, and a retirement whose append failed after the secret was erased would never be re-appended.
 /// </remarks>
 /// <param name="encryption">The <see cref="IEncryption"/> protecting private keys at rest.</param>
 /// <param name="logger">The logger.</param>
