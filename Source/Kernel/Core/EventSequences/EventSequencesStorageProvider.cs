@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
+using Cratis.Chronicle.Sequences;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.EventTypes;
@@ -17,7 +18,8 @@ namespace Cratis.Chronicle.EventSequences;
 /// Initializes a new instance of the <see cref="EventSequencesStorageProvider"/> class.
 /// </remarks>
 /// <param name="storage"><see cref="IStorage"/> for accessing storage for the cluster.</param>
-public class EventSequencesStorageProvider(IStorage storage) : IGrainStorage
+/// <param name="reservedEventSequenceIds">The active provider's reserved sequence names.</param>
+public class EventSequencesStorageProvider(IStorage storage, IReservedEventSequenceIds reservedEventSequenceIds) : IGrainStorage
 {
     /// <inheritdoc/>
     public Task ClearStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState) => Task.CompletedTask;
@@ -34,6 +36,12 @@ public class EventSequencesStorageProvider(IStorage storage) : IGrainStorage
     {
         var actualGrainState = (grainState as IGrainState<EventSequenceState>)!;
         var key = EventSequenceKey.Parse(grainId.Key.ToString()!);
+        if (ReservedEventSequenceRules.MayBeReserved(reservedEventSequenceIds, key.EventStore, key.Namespace, key.EventSequenceId) &&
+            !await ReservedEventSequenceRules.Exists(storage, key.EventStore, key.Namespace, key.EventSequenceId))
+        {
+            actualGrainState.State = new EventSequenceState();
+            return;
+        }
 
         var eventTypesStorage = storage.GetEventStore(key.EventStore).EventTypes;
         var eventSequenceStorage = storage.GetEventStore(key.EventStore).GetNamespace(key.Namespace).GetEventSequence(key.EventSequenceId);
