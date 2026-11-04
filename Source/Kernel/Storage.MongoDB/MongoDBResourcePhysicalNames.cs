@@ -20,15 +20,16 @@ public class MongoDBResourcePhysicalNames(IDatabase database, IOptions<MongoDBSt
     public IReadOnlyCollection<string> For(EventStoreName eventStore, EventStoreNamespaceName? @namespace)
     {
         var prefix = options.Value.DatabaseNamePrefix;
+        var systemDatabaseName = options.Value.SystemDatabaseName;
         if (@namespace is null)
         {
-            return [DatabaseNames.ComposeForEventStore(eventStore, prefix)];
+            return [DatabaseNames.ComposeForEventStore(eventStore, prefix, systemDatabaseName)];
         }
 
         return
         [
-            DatabaseNames.ComposeForEventStoreNamespace(eventStore, @namespace, prefix),
-            DatabaseNames.ComposeForReadModels(eventStore, @namespace, prefix)
+            DatabaseNames.ComposeForEventStoreNamespace(eventStore, @namespace, prefix, systemDatabaseName),
+            DatabaseNames.ComposeForReadModels(eventStore, @namespace, prefix, systemDatabaseName)
         ];
     }
 

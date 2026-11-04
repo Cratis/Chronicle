@@ -19,6 +19,12 @@ namespace Cratis.Chronicle.Storage.MongoDB;
 public static class DatabaseNames
 {
     /// <summary>
+    /// The name the System event store's databases were named by before <see cref="Configuration.Storage.SystemDatabaseName"/>
+    /// existed: the event store name itself.
+    /// </summary>
+    public const string LegacySystemDatabaseName = "System";
+
+    /// <summary>
     /// The maximum length, in bytes, MongoDB allows for a database name.
     /// </summary>
     const int MaximumLengthInBytes = 63;
@@ -47,9 +53,13 @@ public static class DatabaseNames
     /// </summary>
     /// <param name="eventStore">The <see cref="EventStoreName"/> to get the database name for.</param>
     /// <param name="prefix">The prefix, or empty to preserve the database name.</param>
+    /// <param name="systemDatabaseName">The name the System event store's databases are named by.</param>
     /// <returns>The database name.</returns>
-    public static string ForEventStore(EventStoreName eventStore, string prefix = "") =>
-        Validated(ComposeForEventStore(eventStore, prefix), eventStore, null);
+    public static string ForEventStore(EventStoreName eventStore, string prefix = "", string systemDatabaseName = Configuration.Storage.DefaultSystemDatabaseName)
+    {
+        NameFor(eventStore, systemDatabaseName);
+        return Validated(ComposeForEventStore(eventStore, prefix, systemDatabaseName), eventStore, null);
+    }
 
     /// <summary>
     /// Get the name of the database holding the event sequences of a namespace within an event store.
@@ -57,9 +67,13 @@ public static class DatabaseNames
     /// <param name="eventStore">The <see cref="EventStoreName"/> to get the database name for.</param>
     /// <param name="namespace">The <see cref="EventStoreNamespaceName"/> to get the database name for.</param>
     /// <param name="prefix">The prefix, or empty to preserve the database name.</param>
+    /// <param name="systemDatabaseName">The name the System event store's databases are named by.</param>
     /// <returns>The database name.</returns>
-    public static string ForEventStoreNamespace(EventStoreName eventStore, EventStoreNamespaceName @namespace, string prefix = "") =>
-        Validated(ComposeForEventStoreNamespace(eventStore, @namespace, prefix), eventStore, @namespace);
+    public static string ForEventStoreNamespace(EventStoreName eventStore, EventStoreNamespaceName @namespace, string prefix = "", string systemDatabaseName = Configuration.Storage.DefaultSystemDatabaseName)
+    {
+        NameFor(eventStore, systemDatabaseName);
+        return Validated(ComposeForEventStoreNamespace(eventStore, @namespace, prefix, systemDatabaseName), eventStore, @namespace);
+    }
 
     /// <summary>
     /// Get the name of the database read models of a namespace within an event store are materialized into.
@@ -67,6 +81,7 @@ public static class DatabaseNames
     /// <param name="eventStore">The <see cref="EventStoreName"/> to get the database name for.</param>
     /// <param name="namespace">The <see cref="EventStoreNamespaceName"/> to get the database name for.</param>
     /// <param name="prefix">The prefix, or empty to preserve the database name.</param>
+    /// <param name="systemDatabaseName">The name the System event store's databases are named by.</param>
     /// <returns>The database name.</returns>
     /// <remarks>
     /// Unlike the event sequence databases, the default namespace is not suffixed — its read models live in the
@@ -74,9 +89,10 @@ public static class DatabaseNames
     /// does not exist for the default namespace, and reads come back empty rather than failing.
     /// </remarks>
     /// <exception cref="InvalidDatabaseName">The composed name is not usable, including when it is the cluster database.</exception>
-    public static string ForReadModels(EventStoreName eventStore, EventStoreNamespaceName @namespace, string prefix = "")
+    public static string ForReadModels(EventStoreName eventStore, EventStoreNamespaceName @namespace, string prefix = "", string systemDatabaseName = Configuration.Storage.DefaultSystemDatabaseName)
     {
-        var databaseName = ComposeForReadModels(eventStore, @namespace, prefix);
+        NameFor(eventStore, systemDatabaseName);
+        var databaseName = ComposeForReadModels(eventStore, @namespace, prefix, systemDatabaseName);
         if (databaseName.Equals(ComposeClusterDatabase(prefix), StringComparison.OrdinalIgnoreCase))
         {
             throw new InvalidDatabaseName(databaseName, "it is the database Chronicle keeps its cluster state in", eventStore, @namespace.Value);
@@ -90,8 +106,10 @@ public static class DatabaseNames
     /// </summary>
     /// <param name="eventStore">The <see cref="EventStoreName"/> to compose the database name for.</param>
     /// <param name="prefix">The prefix, or empty to preserve the database name.</param>
+    /// <param name="systemDatabaseName">The name the System event store's databases are named by.</param>
     /// <returns>The composed database name.</returns>
-    public static string ComposeForEventStore(EventStoreName eventStore, string prefix = "") => $"{prefix}{eventStore}+es";
+    public static string ComposeForEventStore(EventStoreName eventStore, string prefix = "", string systemDatabaseName = Configuration.Storage.DefaultSystemDatabaseName) =>
+        $"{prefix}{PhysicalNameFor(eventStore, systemDatabaseName)}+es";
 
     /// <summary>
     /// Compose the name of the database holding the event sequences of a namespace, without validating it.
@@ -99,9 +117,10 @@ public static class DatabaseNames
     /// <param name="eventStore">The <see cref="EventStoreName"/> to compose the database name for.</param>
     /// <param name="namespace">The <see cref="EventStoreNamespaceName"/> to compose the database name for.</param>
     /// <param name="prefix">The prefix, or empty to preserve the database name.</param>
+    /// <param name="systemDatabaseName">The name the System event store's databases are named by.</param>
     /// <returns>The composed database name.</returns>
-    public static string ComposeForEventStoreNamespace(EventStoreName eventStore, EventStoreNamespaceName @namespace, string prefix = "") =>
-        $"{prefix}{eventStore}+es+{@namespace}";
+    public static string ComposeForEventStoreNamespace(EventStoreName eventStore, EventStoreNamespaceName @namespace, string prefix = "", string systemDatabaseName = Configuration.Storage.DefaultSystemDatabaseName) =>
+        $"{prefix}{PhysicalNameFor(eventStore, systemDatabaseName)}+es+{@namespace}";
 
     /// <summary>
     /// Compose the name of the database read models of a namespace are materialized into, without validating it.
@@ -109,9 +128,13 @@ public static class DatabaseNames
     /// <param name="eventStore">The <see cref="EventStoreName"/> to compose the database name for.</param>
     /// <param name="namespace">The <see cref="EventStoreNamespaceName"/> to compose the database name for.</param>
     /// <param name="prefix">The prefix, or empty to preserve the database name.</param>
+    /// <param name="systemDatabaseName">The name the System event store's databases are named by.</param>
     /// <returns>The composed database name.</returns>
-    public static string ComposeForReadModels(EventStoreName eventStore, EventStoreNamespaceName @namespace, string prefix = "") =>
-        @namespace == EventStoreNamespaceName.Default ? $"{prefix}{eventStore}" : $"{prefix}{eventStore}+{@namespace}";
+    public static string ComposeForReadModels(EventStoreName eventStore, EventStoreNamespaceName @namespace, string prefix = "", string systemDatabaseName = Configuration.Storage.DefaultSystemDatabaseName)
+    {
+        var name = PhysicalNameFor(eventStore, systemDatabaseName);
+        return @namespace == EventStoreNamespaceName.Default ? $"{prefix}{name}" : $"{prefix}{name}+{@namespace}";
+    }
 
     /// <summary>
     /// Compose the name of the database holding the cluster state, without validating it.
@@ -119,6 +142,33 @@ public static class DatabaseNames
     /// <param name="prefix">The prefix, or empty to preserve the database name.</param>
     /// <returns>The composed database name.</returns>
     public static string ComposeClusterDatabase(string prefix = "") => $"{prefix}{WellKnownDatabaseNames.Chronicle}";
+
+    /// <summary>
+    /// Get the event store a name found in place of the event store name in a database name stands for.
+    /// </summary>
+    /// <param name="name">The name as it appears in the database name.</param>
+    /// <param name="systemDatabaseName">The name the System event store's databases are named by.</param>
+    /// <returns>The <see cref="EventStoreName"/>.</returns>
+    public static EventStoreName EventStoreFor(string name, string systemDatabaseName = Configuration.Storage.DefaultSystemDatabaseName) =>
+        string.Equals(name, systemDatabaseName, StringComparison.OrdinalIgnoreCase) ? EventStoreName.System : new EventStoreName(name);
+
+    static string NameFor(EventStoreName eventStore, string systemDatabaseName)
+    {
+        if (string.Equals(eventStore.Value, EventStoreName.System.Value, StringComparison.OrdinalIgnoreCase))
+        {
+            return systemDatabaseName;
+        }
+
+        if (string.Equals(eventStore.Value, systemDatabaseName, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidDatabaseName(eventStore.Value, "the name is reserved for the System event store's databases", eventStore, null);
+        }
+
+        return eventStore.Value;
+    }
+
+    static string PhysicalNameFor(EventStoreName eventStore, string systemDatabaseName) =>
+        string.Equals(eventStore.Value, EventStoreName.System.Value, StringComparison.OrdinalIgnoreCase) ? systemDatabaseName : eventStore.Value;
 
     static string Validated(string databaseName, EventStoreName eventStore, EventStoreNamespaceName? @namespace)
     {

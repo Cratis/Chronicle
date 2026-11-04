@@ -26,7 +26,7 @@ public class a_cluster_storage_with_generation_floors(ReplicaSetMongoDBFixture f
         var factories = Substitute.For<IInstancesOf<ISinkFactory>>();
         factories.GetEnumerator().Returns(_ => Enumerable.Empty<ISinkFactory>().GetEnumerator());
         _clusterStorage = new(_database, Substitute.For<Json.IExpandoObjectConverter>(), new JsonSerializerOptions(), Substitute.For<Cratis.Orleans.Storage.IJobsStorage>(), Options.Create(new ChronicleOptions()), NullLoggerFactory.Instance);
-        _sharedStorage = new(_clusterStorage, _storage.System, factories);
+        _sharedStorage = new(_clusterStorage, _storage.System, factories, Substitute.For<Chronicle.Storage.Naming.IResourceNameGate>());
         await Advance(2);
         await WriteFloor(_unregistered);
         await WriteFloor(EventStoreName.System);

@@ -103,6 +103,11 @@ public interface IEventStoreStorage
     IProjectionDefinitionsStorage Projections { get; }
 
     /// <summary>
+    /// Gets the inert projection definition history for the event store.
+    /// </summary>
+    IProjectionDefinitionHistoryStorage ProjectionDefinitionHistory { get; }
+
+    /// <summary>
     /// Gets the <see cref="IWebhookDefinitionsStorage"/> for the event store.
     /// </summary>
     IWebhookDefinitionsStorage Webhooks { get; }

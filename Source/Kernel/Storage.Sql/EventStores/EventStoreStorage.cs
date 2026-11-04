@@ -87,6 +87,9 @@ public class EventStoreStorage(EventStoreName eventStore, IDatabase database, II
     public IProjectionDefinitionsStorage Projections { get; } = new Projections.ProjectionDefinitionsStorage(eventStore, database);
 
     /// <inheritdoc/>
+    public IProjectionDefinitionHistoryStorage ProjectionDefinitionHistory { get; } = new Projections.ProjectionDefinitionHistoryStorage(eventStore, database);
+
+    /// <inheritdoc/>
     public IWebhookDefinitionsStorage Webhooks { get; } = new Webhooks.WebhookDefinitionsStorage(eventStore, database);
 
     /// <inheritdoc/>

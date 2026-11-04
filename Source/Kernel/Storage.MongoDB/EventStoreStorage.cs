@@ -115,6 +115,9 @@ public class EventStoreStorage(
     public IProjectionDefinitionsStorage Projections { get; } = new ProjectionDefinitionsStorage(eventStoreDatabase);
 
     /// <inheritdoc/>
+    public IProjectionDefinitionHistoryStorage ProjectionDefinitionHistory { get; } = new ProjectionDefinitionHistoryStorage(eventStoreDatabase);
+
+    /// <inheritdoc/>
     public IWebhookDefinitionsStorage Webhooks { get; } = new WebhookDefinitionsStorage(eventStoreDatabase);
 
     /// <inheritdoc/>

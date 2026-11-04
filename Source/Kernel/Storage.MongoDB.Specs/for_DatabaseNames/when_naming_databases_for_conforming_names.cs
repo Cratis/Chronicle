@@ -1,8 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Concepts;
-
 namespace Cratis.Chronicle.Storage.MongoDB.for_DatabaseNames;
 
 public class when_naming_databases_for_conforming_names : Specification

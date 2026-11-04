@@ -12,7 +12,9 @@ using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.Sinks;
 using Microsoft.Extensions.Logging;
+using Orleans.Concurrency;
 using Orleans.Providers;
+using Orleans.Serialization.Invocation;
 
 namespace Cratis.Chronicle.Projections;
 
@@ -27,6 +29,7 @@ namespace Cratis.Chronicle.Projections;
 /// <param name="visibilities"><see cref="IReadModelInstanceVisibilities"/> deciding whether roots stored as uninitialized are returned.</param>
 /// <param name="logger">Logger for logging.</param>
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.Projections)]
+[MayInterleave(nameof(IsDefinitionChangeNotification))]
 public class ImmediateProjection(
     IStorage storage,
     IExpandoObjectConverter expandoObjectConverter,
@@ -54,6 +57,15 @@ public class ImmediateProjection(
     ImmediateProjectionKey? _projectionKey;
     ReadModelDefinition? _readModelDefinition;
     IProjection? _projection;
+    ProjectionDefinition? _pendingDefinition;
+    bool _readInProgress;
+
+    /// <summary>
+    /// Determines whether an incoming request is a projection definition notification.
+    /// </summary>
+    /// <param name="request">The incoming request.</param>
+    /// <returns>Whether the request may interleave with this grain's work.</returns>
+    public static bool IsDefinitionChangeNotification(IInvokable request) => request?.GetInterfaceType() == typeof(INotifyProjectionDefinitionsChanged);
 
     /// <inheritdoc/>
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
@@ -99,8 +111,17 @@ public class ImmediateProjection(
     /// <inheritdoc/>
     public Task OnProjectionDefinitionsChanged(ProjectionDefinition definition)
     {
-        State = definition;
-        _readModelDefinition = null;
+        // Acknowledging a notification must not invalidate the metadata held by an active read.
+        // Notifications arrive in grain-turn order; only the latest one needs to be applied on exit.
+        if (_readInProgress)
+        {
+            _pendingDefinition = definition;
+        }
+        else
+        {
+            ApplyDefinition(definition);
+        }
+
         return Task.CompletedTask;
     }
 
@@ -111,6 +132,7 @@ public class ImmediateProjection(
 
         logger.GettingModelInstance();
 
+        _readInProgress = true;
         try
         {
             // The Projection grain is the single, authoritative holder of the definition. The snapshot taken at activation
@@ -178,6 +200,15 @@ public class ImmediateProjection(
             logger.FailedGettingModelInstance(ex);
             throw;
         }
+        finally
+        {
+            _readInProgress = false;
+            if (_pendingDefinition is { } pending)
+            {
+                _pendingDefinition = null;
+                ApplyDefinition(pending);
+            }
+        }
     }
 
     /// <inheritdoc/>
@@ -185,6 +216,16 @@ public class ImmediateProjection(
     {
         DeactivateSession();
         return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Applies a projection definition and invalidates the cached read model metadata.
+    /// </summary>
+    /// <param name="definition">The definition to apply.</param>
+    protected virtual void ApplyDefinition(ProjectionDefinition definition)
+    {
+        State = definition;
+        _readModelDefinition = null;
     }
 
     /// <summary>

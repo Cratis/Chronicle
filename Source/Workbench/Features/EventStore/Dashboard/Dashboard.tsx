@@ -14,6 +14,7 @@ import { NamespacesWidget } from './NamespacesWidget';
 import { ObserversOverTimeWidget } from './ObserversOverTimeWidget';
 import { readEventCountsForNamespaces, readHealthForNamespaces } from './readers';
 import { ServerHealthWidget } from './ServerHealthWidget';
+import { readStatistics } from './statistics';
 import { ThroughputWidget } from './ThroughputWidget';
 import { TopEventTypesWidget } from './TopEventTypesWidget';
 import { usePolling } from './usePolling';
@@ -30,6 +31,7 @@ export const Dashboard = () => {
     const basePath = `${useRelativePath('event-store')}/${eventStore}`;
 
     const [statistics] = StatisticsForEventStore.use({ eventStore });
+    const figures = readStatistics(statistics);
     const [namespacesResult] = ObserveNamespaces.use({ eventStore });
     const namespaces = useMemo(() => namespacesResult.data.map(_ => _.name), [namespacesResult.data]);
     const namespacesKey = namespaces.join('|');
@@ -47,7 +49,7 @@ export const Dashboard = () => {
                 <ServerHealthWidget
                     className='dashboard__rail'
                     eventStore={eventStore}
-                    totalEvents={statistics.isReady && statistics.isSuccess ? Number(statistics.data.totalEvents ?? 0) : undefined}
+                    totalEvents={figures.totalEvents}
                     basePath={basePath}
                     updatedAt={perNamespace.updatedAt} />
 
@@ -59,8 +61,8 @@ export const Dashboard = () => {
 
                 <ObserversOverTimeWidget observers={health?.observers} scope={eventStore} />
                 <TopEventTypesWidget
-                    perEventType={statistics.isReady && statistics.isSuccess ? statistics.data.perEventType ?? [] : undefined}
-                    failed={statistics.isReady && !statistics.isSuccess} />
+                    perEventType={figures.perEventType}
+                    failed={figures.failed} />
 
                 <NamespacesWidget
                     className='dashboard__full'
