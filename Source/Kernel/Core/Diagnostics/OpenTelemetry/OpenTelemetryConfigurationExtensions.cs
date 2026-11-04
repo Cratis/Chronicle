@@ -36,16 +36,26 @@ public static class OpenTelemetryConfigurationExtensions
     }
 
     /// <summary>
-    /// Add Chronicle instrumentation to the <see cref="TracerProviderBuilder"/>.
+    /// Add Chronicle instrumentation to the <see cref="TracerProviderBuilder"/>, including the Orleans runtime and grain-call sources.
     /// </summary>
+    /// <remarks>
+    /// Orleans spans are off by default only in <see cref="AddChronicleTelemetry"/>; this overload keeps including them.
+    /// </remarks>
     /// <param name="builder">The <see cref="TracerProviderBuilder"/> to add to.</param>
     /// <returns>The <see cref="TracerProviderBuilder"/> for continuation.</returns>
-    public static TracerProviderBuilder AddChronicleInstrumentation(this TracerProviderBuilder builder)
+    public static TracerProviderBuilder AddChronicleInstrumentation(this TracerProviderBuilder builder) =>
+        builder.AddChronicleInstrumentation(true);
+
+    /// <summary>
+    /// Add Chronicle instrumentation, optionally including Orleans runtime and grain-call spans.
+    /// </summary>
+    /// <param name="builder">The <see cref="TracerProviderBuilder"/> to add to.</param>
+    /// <param name="orleansTracing">Whether to export Orleans spans. <see cref="AddChronicleTelemetry"/> passes the kernel configuration value, which defaults to false.</param>
+    /// <returns>The <see cref="TracerProviderBuilder"/> for continuation.</returns>
+    public static TracerProviderBuilder AddChronicleInstrumentation(this TracerProviderBuilder builder, bool orleansTracing)
     {
-        builder
-            .AddSource("Microsoft.Orleans.Runtime")
-            .AddSource("Microsoft.Orleans.Application")
-            .AddSource(ChronicleActivity.SourceName);
+        builder.AddSource(ChronicleActivity.SourceName);
+        if (orleansTracing) builder.AddSource(OrleansActivitySources.All);
 
         return builder;
     }
@@ -60,6 +70,8 @@ public static class OpenTelemetryConfigurationExtensions
     public static IServiceCollection AddChronicleTelemetry(this IServiceCollection services, IConfiguration configuration, string serviceName = "Chronicle")
     {
         var chronicle = configuration.GetSection(ChronicleOptions.SectionPath).Get<ChronicleOptions>() ?? new();
+        if (!chronicle.Telemetry.OrleansTracing) services.AddHostedService<OrleansTraceContextPropagation>();
+
         var otlpOptions = configuration.GetSection("OTEL_EXPORTER_OTLP").Get<OtlpExporterOptions>();
         MaybeSetHttp2Unencrypted(otlpOptions);
 
@@ -70,7 +82,7 @@ public static class OpenTelemetryConfigurationExtensions
             .WithTracing(tracing =>
             {
                 var tracingBuilder = tracing
-                    .AddChronicleInstrumentation()
+                    .AddChronicleInstrumentation(chronicle.Telemetry.OrleansTracing)
                     .AddProcessor(new IdentifierSpanProcessor())
                     .AddHttpClientInstrumentation()
                     .AddAspNetCoreInstrumentation(options => options.Filter = context =>

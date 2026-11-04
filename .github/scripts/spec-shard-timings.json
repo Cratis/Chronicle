@@ -1,0 +1,43 @@
+{
+    "version": 1,
+    "units": "seconds",
+    "date": "2026-11-01",
+    "method": "Arithmetic means (rounded to 2 decimals) of sequential project completion intervals from eight successful PR jobs, including collector/validation and first-project inventory overhead. Performance-only proxies, not pure test durations or established feedback savings; scheduled main cross-check excluded.",
+    "samples": [
+        { "run": "41224903959", "job": "124610643653" },
+        { "run": "41235143055", "job": "124641659478" },
+        { "run": "41236794796", "job": "124646516904" },
+        { "run": "41238430809", "job": "124651601224" },
+        { "run": "41245773919", "job": "124673324017" },
+        { "run": "41248100483", "job": "124680173440" },
+        { "run": "41288239718", "job": "124797917528" },
+        { "run": "41313371011", "job": "124873069434" }
+    ],
+    "defaultSeconds": 60,
+    "measurements": [
+        { "project": "Benchmarks/Chronicle.Benchmarks.Clustering.Specs/Chronicle.Benchmarks.Clustering.Specs.csproj", "seconds": 20.47 },
+        { "project": "Source/Infrastructure.Specs/Infrastructure.Specs.csproj", "seconds": 2.85 },
+        { "project": "Source/Clients/AspNetCore.Specs/AspNetCore.Specs.csproj", "seconds": 4.51 },
+        { "project": "Source/Clients/Aspire.Specs/Aspire.Specs.csproj", "seconds": 2.72 },
+        { "project": "Source/Clients/Connections.Specs/Connections.Specs.csproj", "seconds": 3.41 },
+        { "project": "Source/Clients/DotNET.CodeAnalysis.Specs/DotNET.CodeAnalysis.Specs.csproj", "seconds": 33.49 },
+        { "project": "Source/Clients/DotNET.Specs/DotNET.Specs.csproj", "seconds": 33.38 },
+        { "project": "Source/Clients/Testing.Specs/Testing.Specs.csproj", "seconds": 41.48 },
+        { "project": "Source/Kernel/Compatibility.Specs/Compatibility.Specs.csproj", "seconds": 2.59 },
+        { "project": "Source/Kernel/Concepts.Specs/Concepts.Specs.csproj", "seconds": 2.88 },
+        { "project": "Source/Kernel/Core.Specs/Core.Specs.csproj", "seconds": 295.33 },
+        { "project": "Source/Kernel/Server.Specs/Server.Specs.csproj", "seconds": 15.74 },
+        { "project": "Source/Kernel/Storage.AzureKeyVault.Specs/Storage.AzureKeyVault.Specs.csproj", "seconds": 16.18 },
+        { "project": "Source/Kernel/Storage.Vault.Specs/Storage.Vault.Specs.csproj", "seconds": 13.81 },
+        { "project": "Source/Tools/GrainCompatibility.Specs/GrainCompatibility.Specs.csproj", "seconds": 5.34 },
+        { "project": "Source/Tools/GrpcCodeGenerator.Specs/GrpcCodeGenerator.Specs.csproj", "seconds": 6.09 },
+        { "project": "Source/Tools/LegacyContracts.Specs/LegacyContracts.Specs.csproj", "seconds": 1.61 },
+        { "project": "Source/Tools/ProtoGenerator.Specs/ProtoGenerator.Specs.csproj", "seconds": 1.69 },
+        { "project": "Source/Tools/WireCompatibility.Specs/WireCompatibility.Specs.csproj", "seconds": 2.23 },
+        { "project": "Source/Clients/XUnit.Integration.Specs/XUnit.Integration.Specs.csproj", "seconds": 13.02 },
+        { "project": "Source/Clients/XUnit.Integration.v3.Specs/XUnit.Integration.v3.Specs.csproj", "seconds": 7.50 },
+        { "project": "Source/Kernel/Storage.Specs/Storage.Specs.csproj", "seconds": 3.37 },
+        { "project": "Source/Kernel/Storage.InMemory.Specs/Storage.InMemory.Specs.csproj", "seconds": 14.34 },
+        { "project": "Source/Kernel/Storage.MongoDB.Specs/Storage.MongoDB.Specs.csproj", "seconds": 133.06 }
+    ]
+}

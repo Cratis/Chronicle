@@ -164,14 +164,14 @@ Why unknown data kinds are not ignored: this is the one part of the envelope tha
 
 ### Authentication and signatures
 
-- Every envelope delivery is signed per Standard Webhooks: `webhook-id`, `webhook-timestamp` (Unix seconds) and `webhook-signature` over `id.timestamp.body`. The default is Ed25519 (`v1a`), so a receiver holds only a public key; HMAC-SHA256 (`v1`) is an opt-in alternative for receivers that only support shared secrets. Every delivery carries the id of the signing key in the `Cratis-Key-Id` header; several signatures can be sent at once for an overlap, and the header may list every signing key id in signature order ([0024](0024-delivery-signing-key-custody.md)). The header is advisory only: receivers verify against their trusted key set, never rejecting on the header value alone; see the [Amendment](#amendment-2026-11-01-cratis-key-id-is-advisory).
+- Every envelope delivery is signed per Standard Webhooks: `webhook-id`, `webhook-timestamp` (Unix seconds) and `webhook-signature` over `id.timestamp.body`. The default is Ed25519 (`v1a`), so a receiver holds only a public key; HMAC-SHA256 (`v1`) is an opt-in alternative for receivers that only support shared secrets. Every delivery carries the id of the signing key in the `Cratis-Key-Id` header; several signatures can be sent at once for an overlap, and the header may list every signing key id in signature order ([0025](0025-delivery-signing-key-custody.md)). The header is advisory only: receivers verify against their trusted key set, never rejecting on the header value alone; see the [Amendment](#amendment-2026-11-01-cratis-key-id-is-advisory).
 - An HMAC `v1` secret is unique per target, as the Standard Webhooks specification requires for symmetric keys; a shared secret would let one receiver forge deliveries to another. An Ed25519 key may be shared by the targets of one event store, because receivers hold only the public key. Receivers take the public key from configuration, never from the request.
 - No published Standard Webhooks library verifies `v1a`, and .NET has no built-in Ed25519 ([dotnet/runtime#63174](https://github.com/dotnet/runtime/issues/63174)). The kernel signs and the .NET receiver verifies `v1a` with code owned by this repository on top of one named Ed25519 library. `v1` is the interoperable choice for receivers in other languages.
 - Receivers verify the signature in constant time, reject timestamps outside a tolerance (proposed 5 minutes), and never follow redirects.
 - The existing transport authentication modes stay available and combine with signing: Basic, Bearer, OAuth client credentials, managed identity and static headers (for example a platform function key). `None` without a signature requires an explicit `AllowUnauthenticated` setting and logs a startup warning ([#5117](https://github.com/Cratis/Chronicle/issues/5117)).
 - Signing is opt-in for generic webhooks, which keep today's body.
 - The existing target rules stay part of the contract: HTTPS outside development, cloud metadata addresses only through an explicit allow-list (`Source/Kernel/Core/Observation/Webhooks/Validation/WebhookTargetPolicy.cs` L76-L87), and no redirects (`Source/Kernel/Core/Setup/WebhookHttpClientExtensions.cs` L78).
-- Key custody (scope, storage under the kernel's `IEncryption`, rotation, distribution of the public key) is decided in [decision 0024](0024-delivery-signing-key-custody.md) ([Q1](#q1-one-record-or-a-split), [Q9](#q9-signing-key-scope-and-rotation)).
+- Key custody (scope, storage under the kernel's `IEncryption`, rotation, distribution of the public key) is decided in [decision 0025](0025-delivery-signing-key-custody.md) ([Q1](#q1-one-record-or-a-split), [Q9](#q9-signing-key-scope-and-rotation)).
 
 ### Replay, catch-up and redaction
 
@@ -361,7 +361,7 @@ Decided on 2026-10-30 by woksin (Q-146). HTTP delivery v1 delivers live events o
 - Deduplication prevents repeated effects. It does not make receiver state correct. After a timeout the kernel can retry while the first execution is still running, so two executions of the same event can overlap. Take a per-partition lock, or check the order of `sequenceNumber` in the same transaction.
 - Deduplicate per event on the canonical key ([Q21](#q21-canonical-per-event-identity)), not per request: batch boundaries change on a partial acknowledgement or a halved batch.
 - Redactions are not pushed. A redaction event reaches the receiver only as a live event. Data the receiver already stored is not corrected by the kernel, so removing or redacting it is the receiver's responsibility. Encrypted or redacted delivery is [#5132](https://github.com/Cratis/Chronicle/issues/5132). This record makes no compliance claim.
-- Verify the signature on every request, take the event store and namespace from the signed body and not from the route, and take the public key from configuration. A proxy that strips identity headers does not authenticate the body; see [decision 0024](0024-delivery-signing-key-custody.md).
+- Verify the signature on every request, take the event store and namespace from the signed body and not from the route, and take the public key from configuration. A proxy that strips identity headers does not authenticate the body; see [decision 0025](0025-delivery-signing-key-custody.md).
 
 ## Amendment: delivery defaults and timeouts
 
@@ -372,7 +372,7 @@ Decided on 2026-10-30 by woksin (Q-146, "all recommended"), and confirmed by L0'
 | HTTP reactor and reducer delivery timeout | 30 seconds, configurable | The client option `Serverless:Delivery:Timeout` ([#5118](https://github.com/Cratis/Chronicle/issues/5118)). The kernel enforces it and sends the `Cratis-Delivery-Deadline` header ([#5116](https://github.com/Cratis/Chronicle/issues/5116)) |
 | Webhook request timeout | 60 seconds | The kernel, unchanged (`Source/Kernel/Core/Configuration/Webhooks.cs`, `RequestTimeoutSeconds`, key `Cratis:Chronicle:Webhooks:RequestTimeoutSeconds`) |
 | Timestamp tolerance | 5 minutes | The receiver ([#5119](https://github.com/Cratis/Chronicle/issues/5119)) |
-| Signature algorithm | Ed25519 `v1a`, HMAC opt-in | [#5117](https://github.com/Cratis/Chronicle/issues/5117) and [#5119](https://github.com/Cratis/Chronicle/issues/5119), per [decision 0024](0024-delivery-signing-key-custody.md) |
+| Signature algorithm | Ed25519 `v1a`, HMAC opt-in | [#5117](https://github.com/Cratis/Chronicle/issues/5117) and [#5119](https://github.com/Cratis/Chronicle/issues/5119), per [decision 0025](0025-delivery-signing-key-custody.md) |
 | Batch limit | 100 events and 4 MiB | The kernel ([#5116](https://github.com/Cratis/Chronicle/issues/5116)) |
 | Concurrency caps | 8 partitions per observer, 16 requests per target | The kernel ([#5116](https://github.com/Cratis/Chronicle/issues/5116)) |
 | Drain before an observer switches from stream to HTTP | Required | The kernel, until the ownership protocol of [decision 0018](0018-partition-ownership-protocol.md) is implemented. The client keeps its fail-closed fuse until then |
@@ -387,7 +387,7 @@ Each question below keeps the recommendation it was put with. The verdict covers
 
 | Question | Status | Note |
 | --- | --- | --- |
-| Q1 | Decided as recommended | Key custody splits into a follow-up record. Key custody is decided in decision 0024. |
+| Q1 | Decided as recommended | Key custody splits into a follow-up record. Key custody is decided in decision 0025. |
 | Q2 | Decided differently | Pinned public shape as recommended; the body carries a list of per-partition batches. |
 | Q3, Q4 | Decided as recommended | |
 | Q5 | Settled for v1 by the amendment | HTTP delivery v1 is live-only, so no replay epoch or replay receipt applies. The per-event dedup key is decided under Q21. |

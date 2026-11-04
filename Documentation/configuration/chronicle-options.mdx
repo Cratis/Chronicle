@@ -34,9 +34,6 @@ All bindable settings live under `Cratis:Chronicle`:
       "Tls": {
         "CertificatePath": "/certs/client.pfx",
         "CertificatePassword": "secret"
-      },
-      "Authentication": {
-        "Authority": "https://login.example.com"
       }
     }
   }
@@ -323,7 +320,7 @@ Lease duration is selected by the claim or renew request, not this section: zero
 
 ### Authentication
 
-OAuth/OIDC authority configuration. When `Authority` is not set, the Chronicle internal OAuth authority is used.
+OAuth/OIDC authority configuration for the client-credentials token. The .NET client requests its token from, in order of precedence: `TokenEndpoint`, the token endpoint discovered from `Authority` (`{Authority}/.well-known/openid-configuration`), or the Chronicle server's own `/connect/token`.
 
 | | |
 |---|---|
@@ -332,7 +329,26 @@ OAuth/OIDC authority configuration. When `Authority` is not set, the Chronicle i
 
 | Nested property | Type | Description |
 |---|---|---|
-| `Authority` | `string?` | OAuth/OIDC authority URL |
+| `Authority` | `string?` | OAuth/OIDC authority URL used to discover the token endpoint |
+| `TokenEndpoint` | `string?` | Token endpoint used as is; takes precedence over `Authority` |
+| `Scope` | `string?` | Scope sent with the token request; requires `TokenEndpoint` or `Authority` |
+
+Optional external-provider example. Leave `Authentication` out to keep requesting tokens from the Chronicle server, and replace the placeholder values with your own provider:
+
+```json
+{
+  "Cratis": {
+    "Chronicle": {
+      "Authentication": {
+        "Authority": "https://login.example.com",
+        "Scope": "api://chronicle/.default"
+      }
+    }
+  }
+}
+```
+
+These options apply only to client credentials, so API key and `auth=none` connections ignore them. `Authority` and `TokenEndpoint` must be absolute `https` URLs without user info, and the .NET client always validates the certificate of an external authority. The connection string must carry its own client credentials, because the development credentials are never sent to an external authority. `AddCratisChronicleConnection` and the other SDKs don't support these options yet.
 
 ## ChronicleClientOptions properties
 

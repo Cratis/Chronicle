@@ -378,31 +378,14 @@ public class ChronicleClient : IChronicleClient, IDisposable
         return (causationManager, jsonSchemaGenerator, concurrencyScopeStrategies, artifactActivator);
     }
 
-    ITokenProvider CreateTokenProvider(ChronicleOptions options, bool skipTlsValidation)
-    {
-        if (options.ConnectionString.AuthenticationMode == AuthenticationMode.ClientCredentials)
-        {
-            var username = options.ConnectionString.Username;
-            var password = options.ConnectionString.Password;
-            if (string.IsNullOrEmpty(username) &&
-                string.IsNullOrEmpty(password))
-            {
-                username = ChronicleConnectionString.DevelopmentClient;
-                password = ChronicleConnectionString.DevelopmentClientSecret;
-            }
-
-            return new OAuthTokenProvider(
-                () => _connection is ChronicleConnection connection
-                    ? connection.CurrentServerAddress
-                    : options.ConnectionString.ServerAddress,
-                username!,
-                password!,
-                skipTlsValidation,
-                _loggerFactory.CreateLogger<OAuthTokenProvider>());
-        }
-
-        return new NoOpTokenProvider();
-    }
+    ITokenProvider CreateTokenProvider(ChronicleOptions options, bool skipTlsValidation) =>
+        TokenProviderFactory.Create(
+            options,
+            () => _connection is ChronicleConnection connection
+                ? connection.CurrentServerAddress
+                : options.ConnectionString.ServerAddress,
+            skipTlsValidation,
+            _loggerFactory);
 
     void InitializeJsonSerializationOptions()
     {

@@ -1,11 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Choreography.Jobs;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Monads;
-using Cratis.Orleans.Jobs;
 
 namespace Cratis.Chronicle.Observation.for_Observer;
 
@@ -27,5 +27,5 @@ public class when_replaying : given.an_observer_with_subscription
 
     [Fact] void should_return_the_started_replay_job() => _result.ShouldEqual(_replayJob);
     [Fact] void should_set_running_state_to_replaying() => _stateStorage.State.RunningState.ShouldEqual(ObserverRunningState.Replaying);
-    [Fact] void should_write_state_once() => _storageStats.Writes.ShouldEqual(1);
+    [Fact] void should_write_the_claim_before_starting_and_then_the_replay_state() => _storageStats.Writes.ShouldEqual(2);
 }

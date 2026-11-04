@@ -1,11 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Choreography.Patching;
 using Cratis.Chronicle.Concepts.EventSequences;
-using Cratis.Chronicle.Concepts.System;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Namespaces;
-using Cratis.Chronicle.Patching;
 using Cratis.Chronicle.Storage;
 using Microsoft.Extensions.Logging;
 
@@ -40,12 +39,5 @@ public class RemoveUnhashedUniqueConstraintValues(IStorage storage, IGrainFactor
                 }
             }
         }
-    }
-
-    /// <inheritdoc/>
-    public Task Down()
-    {
-        logger.RestoreBackupRequired();
-        return Task.CompletedTask;
     }
 }

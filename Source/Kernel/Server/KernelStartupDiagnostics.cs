@@ -25,6 +25,19 @@ internal static class KernelStartupDiagnostics
     }
 
     /// <summary>
+    /// Reports the experimental grain directory and its cluster restart requirement when enabled.
+    /// </summary>
+    /// <param name="options">The Chronicle configuration.</param>
+    /// <param name="logger">The kernel logger.</param>
+    internal static void ReportGrainDirectory(ChronicleOptions options, ILogger<Kernel> logger)
+    {
+        if (options.Clustering.DistributedGrainDirectoryEnabled)
+        {
+            logger.DistributedGrainDirectoryEnabled();
+        }
+    }
+
+    /// <summary>
     /// Reports a subscriber timeout that the Orleans response timeout on subscriber calls bounds.
     /// </summary>
     /// <param name="options">The Chronicle configuration.</param>

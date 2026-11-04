@@ -1,17 +1,16 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Choreography.Jobs;
+using Cratis.Choreography.Patching;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Events.Constraints;
 using Cratis.Chronicle.Concepts.EventSequences;
-using Cratis.Chronicle.Concepts.System;
 using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Namespaces;
-using Cratis.Chronicle.Patching;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventTypes;
-using Cratis.Orleans.Jobs;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Patches;
@@ -81,13 +80,6 @@ public class RecordSubjectsOnUniqueConstraintClaims(IStorage storage, IGrainFact
         }
 
         logger.PatchCompleted();
-    }
-
-    /// <inheritdoc/>
-    public Task Down()
-    {
-        logger.RollbackNotSupported();
-        return Task.CompletedTask;
     }
 
     static async Task<UniqueConstraintDefinition[]> PersonalDataConstraints(IEventTypesStorage eventTypes, IEnumerable<UniqueConstraintDefinition> definitions)

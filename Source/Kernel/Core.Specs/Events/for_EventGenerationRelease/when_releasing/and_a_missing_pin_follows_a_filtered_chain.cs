@@ -31,7 +31,7 @@ public class and_a_missing_pin_follows_a_filtered_chain : given.a_release_bounda
             GenerationalContent = new Dictionary<int, string> { [1] = Original }
         };
         _metadata.ReleaseStrict(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<JsonSchema>(), Arg.Any<string>(), Arg.Any<JsonObject>()).Returns(call => call.ArgAt<JsonObject>(4));
-        _release = new(_storage, new EventCompliance(_metadata, _converter), new EventTypeMigrations(_storage, _converter), _metadata, _converter);
+        _release = new(_storage, new EventCompliance(_metadata, _converter, new OwnGenerationSchemaCache()), new EventTypeMigrations(_storage, _converter), _metadata, _converter, new OwnGenerationSchemaCache());
     }
 
     async Task Because() => _result = await _release.Release(_event.Context.EventStore, [_pin], _schemas, [_event]);

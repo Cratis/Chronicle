@@ -129,4 +129,10 @@ public class EventContext
     /// </summary>
     [ProtoMember(19)]
     public uint AppendedGeneration { get; set; }
+
+    /// <summary>
+    /// Gets or sets the sequence number of the event this event compensates for, or null when it is not a compensation.
+    /// </summary>
+    [ProtoMember(20)]
+    public ulong? CompensationFor { get; set; }
 }

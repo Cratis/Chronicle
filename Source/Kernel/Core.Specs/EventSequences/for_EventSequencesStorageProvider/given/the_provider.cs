@@ -16,6 +16,7 @@ public class the_provider : Specification
 {
     protected EventSequencesStorageProvider provider = null!;
     protected IStorage storage = null!;
+    protected IReservedEventSequenceIds reservedEventSequenceIds = null!;
     protected IEventStoreStorage eventStoreStorage = null!;
     protected IEventStoreNamespaceStorage eventStoreNamespaceStorage = null!;
     protected IEventTypesStorage eventTypesStorage = null!;
@@ -24,11 +25,12 @@ public class the_provider : Specification
     void Establish()
     {
         storage = Substitute.For<IStorage>();
+        reservedEventSequenceIds = Substitute.For<IReservedEventSequenceIds>();
         eventStoreStorage = Substitute.For<IEventStoreStorage>();
         eventStoreNamespaceStorage = Substitute.For<IEventStoreNamespaceStorage>();
         eventTypesStorage = Substitute.For<IEventTypesStorage>();
         eventSequenceStorage = Substitute.For<IEventSequenceStorage>();
-        provider = new(storage);
+        provider = new(storage, reservedEventSequenceIds);
 
         storage.GetEventStore(Arg.Any<EventStoreName>()).Returns(eventStoreStorage);
         eventStoreStorage.GetNamespace(Arg.Any<EventStoreNamespaceName>()).Returns(eventStoreNamespaceStorage);

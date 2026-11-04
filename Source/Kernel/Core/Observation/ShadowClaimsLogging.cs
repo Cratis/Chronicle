@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Observation.Claims;
+using Cratis.Chronicle.Storage.Observation;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Observation;
@@ -47,4 +48,15 @@ internal static partial class ShadowClaimsLogging
     /// <param name="exception">The restore failure.</param>
     [LoggerMessage(LogLevel.Warning, "Observer {ObserverId} could not restore its shadow claims; the shadow ledger starts empty and delivery is unchanged")]
     internal static partial void ShadowClaimsRestoreFailed(this ILogger<Observer> logger, ObserverId observerId, Exception exception);
+
+    /// <summary>
+    /// Logs that a job reported back after its claim had passed to newer work, so the claim was kept.
+    /// </summary>
+    /// <param name="logger">The observer logger.</param>
+    /// <param name="observerId">The observer identifier.</param>
+    /// <param name="holder">The kind of work the stale job ran as.</param>
+    /// <param name="partition">The partition, or null for observer-wide work.</param>
+    /// <param name="ownershipEpoch">The epoch the stale job was started under, or null when only its job identifier told.</param>
+    [LoggerMessage(LogLevel.Information, "Observer {ObserverId} ignored a stale {Holder} release for partition {Partition} from epoch {OwnershipEpoch}; the claim belongs to newer work")]
+    internal static partial void IgnoredStaleClaimRelease(this ILogger<Observer> logger, ObserverId observerId, ClaimHolderKind holder, string? partition, ulong? ownershipEpoch);
 }

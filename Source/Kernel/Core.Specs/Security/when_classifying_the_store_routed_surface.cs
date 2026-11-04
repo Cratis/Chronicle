@@ -22,6 +22,7 @@ public class when_classifying_the_store_routed_surface : Specification
     static readonly IReadOnlyDictionary<string, string> _withoutStoreParameter = new Dictionary<string, string>(StringComparer.Ordinal)
     {
         ["Servers.ServerInstanceDetails"] = "lists server instances; has no store",
+        ["Diagnostics.StorageAuthorizationDiagnostic"] = "lists cluster-wide storage authorization failures; has no store",
         ["Occurrences.LifecycleOccurrenceResult"] = "a result record; it has no query of its own",
         ["EventStores.EventStoreNames"] = "lists names only",
         ["Security.AdminPasswordStatus"] = "anonymous bootstrap status",

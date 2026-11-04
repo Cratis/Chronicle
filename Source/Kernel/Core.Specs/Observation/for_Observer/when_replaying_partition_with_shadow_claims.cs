@@ -21,5 +21,5 @@ public class when_replaying_partition_with_shadow_claims : given.an_observer_wit
     [Fact] void should_keep_the_partition_identity() => _stateStorage.State.PartitionClaims.Single().Partition.ShouldEqual((Key)"partition");
     [Fact] void should_resume_after_the_last_handled_event() => _stateStorage.State.PartitionClaims.Single().ResumePosition.ShouldEqual((EventSequenceNumber)42UL);
     [Fact] void should_allocate_the_first_revision() => _stateStorage.State.OwnershipRevision.ShouldEqual(new OwnershipRevision(1));
-    [Fact] void should_report_the_expected_unhooked_replay_intent() => _metrics.For("chronicle-observer-claim-divergences").Single().Tags["divergence"].ShouldEqual("DerivedSetWithoutClaim");
+    [Fact] void should_not_report_the_replay_intent_as_unhooked() => _metrics.For("chronicle-observer-claim-divergences").ShouldBeEmpty();
 }

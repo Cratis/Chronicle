@@ -26,6 +26,16 @@ public interface ISinks
     Task<ISink> GetFor(ReadModelDefinition readModel);
 
     /// <summary>
+    /// Get a <see cref="ISink"/> for reading an occurrence, without creating any storage or indexes for it.
+    /// </summary>
+    /// <param name="readModel"><see cref="ReadModelDefinition"/> to get for.</param>
+    /// <returns><see cref="ISink"/> instance.</returns>
+    /// <remarks>
+    /// The sink is shared with <see cref="GetFor(ReadModelDefinition)"/>, which initializes it when it is first asked for.
+    /// </remarks>
+    Task<ISink> GetWithoutProvisioning(ReadModelDefinition readModel);
+
+    /// <summary>
     /// Get a <see cref="ISink"/> that writes to an explicit destination container instead of the read model's own container.
     /// </summary>
     /// <param name="readModel"><see cref="ReadModelDefinition"/> to get for.</param>

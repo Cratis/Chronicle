@@ -37,7 +37,8 @@
             "events": "Events",
             "eventTypes": "Event types",
             "namespaces": "Namespaces",
-            "unavailable": "Key figures unavailable"
+            "unavailable": "Key figures unavailable",
+            "notAuthorized": "Not authorized on {databases}"
         },
         "subtitle": "Pick an event store to open its dashboard",
         "addEventStore": "Add event store"
@@ -70,6 +71,7 @@
         "patternHeatmap": "Pattern heatmap",
         "observers": "Observers",
         "failedPartitions": "Failed partitions",
+        "failedPartitionGroups": "Failed partition groups",
         "readModels": "Read Models",
         "identities": "Identities",
         "closedStreams": "Closed Streams",
@@ -528,6 +530,7 @@
                     "appendEvent": "Append Event",
                     "redact": "Redact",
                     "revise": "Revise",
+                    "compensate": "Compensate",
                     "export": "Export",
                     "run": "Run",
                     "newQuery": "New query",
@@ -592,6 +595,11 @@
                         "confirmTitle": "Confirm Revision",
                         "confirmMessage": "The following observers will be replayed after this revision:",
                         "confirmNoObservers": "No observers will be replayed. Proceed with revision?"
+                    },
+                    "compensate": {
+                        "title": "Compensate Event",
+                        "okLabel": "Compensate",
+                        "eventType": "Compensation Event Type"
                     },
                     "deleteQuery": {
                         "title": "Delete query",
@@ -795,6 +803,36 @@
                 },
                 "filteredByObserver": "Showing failed partitions for observer {observerId}.",
                 "clearObserverFilter": "Show all"
+            },
+            "failedPartitionGroups": {
+                "title": "Failed partition groups",
+                "empty": "No failed partitions found",
+                "notRootCause": "Partitions are grouped by observer and failure kind. A group means a shared failure kind, not a confirmed root cause.",
+                "columns": {
+                    "observer": "Observer",
+                    "kind": "Failure kind",
+                    "partitions": "Partitions",
+                    "quarantined": "Quarantined",
+                    "firstObserved": "First observed",
+                    "lastObserved": "Last observed"
+                },
+                "kinds": {
+                    "unknown": "Unknown",
+                    "handling": "Handling",
+                    "timeout": "Timeout",
+                    "disconnected": "Disconnected",
+                    "waitingForHandler": "Waiting for handler"
+                },
+                "details": {
+                    "observer": "Observer",
+                    "kind": "Failure kind",
+                    "partitions": "Partitions",
+                    "quarantined": "Quarantined",
+                    "firstObserved": "First observed",
+                    "lastObserved": "Last observed",
+                    "examples": "Example partitions (most recent, up to 10)",
+                    "viewFailedPartitions": "View failed partitions"
+                }
             },
             "closedStreams": {
                 "title": "Closed Streams",
@@ -1036,6 +1074,11 @@
         }
     },
     "components": {
+        "storageAuthorization": {
+            "title": "Chronicle's storage user is missing a permission",
+            "failure": "{operation} on {database}.{collection} was refused (Unauthorized)",
+            "hint": "Grant the storage user access to these databases, or set storage.databaseNamePrefix. Check the kernel log and the storage-authorization health check."
+        },
         "projectionEditor": {
             "tooltips": {
                 "help": "Show Projection Declaration Language help panel"

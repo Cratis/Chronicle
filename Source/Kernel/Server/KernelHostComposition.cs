@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Security;
+using Cratis.Chronicle.Setup;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 
 namespace Cratis.Chronicle.Server;
@@ -39,8 +40,17 @@ internal static class KernelHostComposition
                 warmups);
         });
         services.AddSingleton<KernelStartupState>();
-        services.AddHealthChecks().AddCheck<KernelReadinessHealthCheck>("kernel-ready", tags: ["ready"]);
+        services.AddHealthChecks()
+            .AddCheck<KernelReadinessHealthCheck>("kernel-ready", tags: ["ready"])
+            .AddCheck<KernelProjectionsRegistrationHealthCheck>("kernel-projections-registration", tags: ["ready"]);
     }
+
+    /// <summary>
+    /// Registers storage authorization diagnostics as a readiness check.
+    /// </summary>
+    /// <param name="services">The host services.</param>
+    internal static void AddStorageAuthorizationHealthCheck(this IServiceCollection services) =>
+        services.AddHealthChecks().AddCheck<StorageAuthorizationHealthCheck>("storage-authorization", tags: ["ready"]);
 
     /// <summary>
     /// Maps readiness checks at the configured endpoint and its ready subpath, and liveness without checks.

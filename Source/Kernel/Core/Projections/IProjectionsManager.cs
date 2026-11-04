@@ -5,6 +5,7 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
+using Orleans.CodeGeneration;
 using Orleans.Concurrency;
 
 namespace Cratis.Chronicle.Projections;
@@ -12,6 +13,7 @@ namespace Cratis.Chronicle.Projections;
 /// <summary>
 /// Defines a system that is responsible for supervises projections in the system.
 /// </summary>
+[Version(1)]
 public interface IProjectionsManager : IGrainWithStringKey
 {
     /// <summary>
@@ -71,6 +73,26 @@ public interface IProjectionsManager : IGrainWithStringKey
     /// </param>
     /// <returns>Awaitable task.</returns>
     Task Register(IEnumerable<ProjectionDefinition> definitions, ProjectionOwner? fullSetOwner = null, string? registrant = null, string? version = null);
+
+    /// <summary>
+    /// Register a set of <see cref="ProjectionDefinition"/>, sharing the work with every identical registration in flight.
+    /// </summary>
+    /// <param name="signature">
+    /// The <see cref="ProjectionRegistrationSignature"/> of the registration, computed by the caller from the content
+    /// it is sending so that the grain's turn is not spent on it.
+    /// </param>
+    /// <param name="definitions">The definitions to register.</param>
+    /// <param name="fullSetOwner">The owner whose full set this is, if any; as for <see cref="Register"/>.</param>
+    /// <param name="registrant">The application registering, if it identified itself; as for <see cref="Register"/>.</param>
+    /// <param name="version">The registering application's version, if known; as for <see cref="Register"/>.</param>
+    /// <returns>Awaitable task, completing when the shared registration has.</returns>
+    /// <remarks>
+    /// After a kernel restart every replica of a client, and each of its retries, registers the same set. Queueing each
+    /// behind the last made the queue outlast the callers' timeout, and the callers' retries then lengthened it. A
+    /// registration whose signature matches one already in flight waits for that one instead, and gets its outcome.
+    /// </remarks>
+    [AlwaysInterleave]
+    Task RegisterShared(string signature, IEnumerable<ProjectionDefinition> definitions, ProjectionOwner? fullSetOwner = null, string? registrant = null, string? version = null);
 
     /// <summary>
     /// Removes an orphaned projection and its observer in every namespace, serialized with registration.

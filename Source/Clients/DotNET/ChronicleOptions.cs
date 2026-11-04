@@ -456,5 +456,49 @@ public class ChronicleOptions(
                 "Telemetry:EventSourceIdHashKey must be at least 32 characters when Hashed is used",
                 [$"{nameof(Telemetry)}.{nameof(Telemetry.EventSourceIdHashKey)}"]);
         }
+
+        foreach (var result in ValidateAuthentication())
+        {
+            yield return result;
+        }
+    }
+
+    IEnumerable<ValidationResult> ValidateAuthentication()
+    {
+        const string httpsMessage = "must be an absolute https URL without user info";
+        var hasAuthority = !string.IsNullOrWhiteSpace(Authentication.Authority);
+        var hasTokenEndpoint = !string.IsNullOrWhiteSpace(Authentication.TokenEndpoint);
+
+        if (hasAuthority && !ExternalTokenEndpoints.TryParse(Authentication.Authority, out _))
+        {
+            yield return new ValidationResult($"Authentication:Authority {httpsMessage}", [$"{nameof(Authentication)}.{nameof(Authentication.Authority)}"]);
+        }
+
+        if (hasTokenEndpoint && !ExternalTokenEndpoints.TryParse(Authentication.TokenEndpoint, out _))
+        {
+            yield return new ValidationResult($"Authentication:TokenEndpoint {httpsMessage}", [$"{nameof(Authentication)}.{nameof(Authentication.TokenEndpoint)}"]);
+        }
+
+        if (!hasAuthority && !hasTokenEndpoint)
+        {
+            if (!string.IsNullOrWhiteSpace(Authentication.Scope))
+            {
+                yield return new ValidationResult(
+                    "Authentication:Scope requires Authentication:TokenEndpoint or Authentication:Authority",
+                    [$"{nameof(Authentication)}.{nameof(Authentication.Scope)}"]);
+            }
+
+            yield break;
+        }
+
+        // Reading the mode is only safe when it cannot throw: no API key, and no half-specified credentials.
+        if (string.IsNullOrEmpty(ConnectionString.ApiKey) &&
+            TokenProviderFactory.LacksExplicitCredentials(ConnectionString) &&
+            ConnectionString.AuthenticationMode == AuthenticationMode.ClientCredentials)
+        {
+            yield return new ValidationResult(
+                "An external token authority requires client credentials (username and password) in the connection string; the development credentials are never sent to it",
+                [$"{nameof(Authentication)}.{nameof(Authentication.TokenEndpoint)}"]);
+        }
     }
 }

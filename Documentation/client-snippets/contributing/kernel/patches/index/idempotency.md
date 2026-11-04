@@ -21,7 +21,5 @@ public class PatchesIdempotentPatch(IStorage storage, ILogger<PatchesIdempotentP
 
         // Proceed with migration
     }
-
-    public Task Down() => Task.CompletedTask;
 }
 ```

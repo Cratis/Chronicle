@@ -75,7 +75,7 @@ Chronicle gets an **import session**. An import is a durable object with an id. 
   - It then validates constraints over the whole import in staging order, against the persisted indexes plus the import's own claims. This is the batch rule `ConstraintBatchClaims` already applies, extended to the import.
   - If anything is rejected and `OnInvalid = Reject` (the default), the import fails and **nothing is committed**.
   - Otherwise it starts the commit job.
-- **The commit job** (`ImportEvents`, a `Cratis.Orleans` job) commits staged events in staging order. It calls a new event sequence grain method, `AppendImportChunk`, with chunks of `Imports.CommitChunkSize` (proposed 1 000 events).
+- **The commit job** (`ImportEvents`, a `Cratis.Choreography` job) commits staged events in staging order. It calls a new event sequence grain method, `AppendImportChunk`, with chunks of `Imports.CommitChunkSize` (proposed 1 000 events).
   - Each chunk follows the existing path: PII encryption, migration, hashing, numbering, one storage transaction, and constraint index updates.
   - Nothing is locked. Constraints are checked again on every chunk, because an ordinary writer can claim a unique value between `CompleteImport` and the chunk's commit. An event that loses such a race is not committed and is reported as a rejection on the `ImportResult`. The rest of the import continues, since the committed chunks are never rolled back.
   - The grain is released between chunks, so ordinary appends interleave with the import instead of waiting behind it.

@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Patching;
+using Cratis.Choreography.Patching;
 
 namespace Orleans.Hosting.for_ChronicleServerStartupTask.when_executing;
 
@@ -9,14 +9,13 @@ public class and_the_patch_manager_never_relocates : given.a_startup_task
 {
     Exception? _failure;
 
-    void Establish() => _patchManager.ApplyPatchesFor(Arg.Any<Cratis.Chronicle.Concepts.System.SemanticVersion>())
-        .Returns(Task.FromResult(PatchOutcome.Relocate));
+    void Establish() => _patchRunner.ApplyPatches(Arg.Any<CancellationToken>())
+        .Returns(_ => Task.FromException(new PatchManagerCouldNotRelocate(new SemanticVersion(19, 100, 0))));
 
     async Task Because() => _failure = await Catch.Exception(Execute);
 
     [Fact] void should_log_the_release_mix() => LogMessages.Any(_ => _.Contains("unpublished: 0", StringComparison.Ordinal) && _.Contains(Cratis.Chronicle.Sys.KernelVersion.Current.ToString(), StringComparison.Ordinal)).ShouldBeTrue();
     [Fact] void should_request_the_release_summary() => _clusterReleases.Received(1).Summarize();
-    [Fact] void should_fail_startup() => _failure.ShouldBeOfExactType<InvalidOperationException>();
-    [Fact] void should_back_off_exponentially_from_one_second_between_attempts() => RequestedDelays.SequenceEqual([TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(4), TimeSpan.FromSeconds(8)]).ShouldBeTrue();
-    [Fact] async Task should_stop_after_the_bounded_attempts() => await _patchManager.Received(5).ApplyPatchesFor(Arg.Any<Cratis.Chronicle.Concepts.System.SemanticVersion>());
+    [Fact] void should_fail_startup_with_the_failure_of_the_patch_runner() => _failure.ShouldBeOfExactType<PatchManagerCouldNotRelocate>();
+    [Fact] async Task should_ask_the_runner_once() => await _patchRunner.Received(1).ApplyPatches(Arg.Any<CancellationToken>());
 }
