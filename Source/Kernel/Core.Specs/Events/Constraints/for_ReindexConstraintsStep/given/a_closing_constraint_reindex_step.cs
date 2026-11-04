@@ -8,6 +8,7 @@ using Cratis.Chronicle.Concepts.Events.Constraints;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.EventTypes;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
@@ -17,6 +18,7 @@ using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Chronicle.Storage.InMemory.EventSequences;
 using Cratis.Monads;
 using Microsoft.Extensions.Logging.Abstractions;
+using NSubstitute.Extensions;
 using Orleans.TestKit;
 
 namespace Cratis.Chronicle.Events.Constraints.for_ReindexConstraintsStep.given;
@@ -36,6 +38,11 @@ public class a_closing_constraint_reindex_step : Specification
     protected readonly JobId _jobId = JobId.New();
     protected ConstraintIndexRebuildRunId _runId = new(Guid.NewGuid());
     protected CancellationToken _cancellationToken;
+    protected IStorage _storage;
+    protected IEventTypesStorage _eventTypes;
+    protected IJsonSchemaMetadataManager _metadata;
+    protected IExpandoObjectConverter _converter;
+    protected IEventTypeSchemaCache _schemaCache = new OwnGenerationSchemaCache();
 
     async Task Establish()
     {
@@ -47,20 +54,20 @@ public class a_closing_constraint_reindex_step : Specification
         _closures.Reopen(Arg.Any<ClosedStreamOwner>(), Arg.Any<ClosedStreamScope>(), Arg.Any<CancellationToken>()).Returns(call => _rows.Reopen(call.Arg<ClosedStreamOwner>(), call.Arg<ClosedStreamScope>(), call.Arg<CancellationToken>()));
         _closures.Close(Arg.Any<ClosedStream>(), Arg.Any<CancellationToken>()).Returns(call => _rows.Close(call.Arg<ClosedStream>(), call.Arg<CancellationToken>()));
 
-        var storage = Substitute.For<IStorage>();
+        _storage = Substitute.For<IStorage>();
         var eventStore = Substitute.For<IEventStoreStorage>();
         var @namespace = Substitute.For<IEventStoreNamespaceStorage>();
-        var eventTypes = Substitute.For<IEventTypesStorage>();
+        _eventTypes = Substitute.For<IEventTypesStorage>();
         var sequence = Substitute.For<IEventSequenceStorage>();
-        storage.GetEventStore(Arg.Any<Concepts.EventStoreName>()).Returns(eventStore);
+        _storage.GetEventStore(Arg.Any<Concepts.EventStoreName>()).Returns(eventStore);
         eventStore.GetNamespace(Arg.Any<Concepts.EventStoreNamespaceName>()).Returns(@namespace);
         eventStore.Constraints.GetDefinitions().Returns(_ => _definitions.ToArray());
-        eventStore.EventTypes.Returns(eventTypes);
+        eventStore.EventTypes.Returns(_eventTypes);
         @namespace.GetEventSequence(EventSequenceId.Log).Returns(sequence);
         @namespace.GetClosedStreamsConstraints(EventSequenceId.Log).Returns(_closures);
         _uniqueStorage = Substitute.For<IUniqueConstraintsStorage>();
         @namespace.GetUniqueConstraintsStorage(EventSequenceId.Log).Returns(_uniqueStorage);
-        eventTypes.GetFor(Arg.Any<EventTypeId>(), Arg.Any<EventTypeGeneration?>()).Returns(call =>
+        _eventTypes.GetFor(Arg.Any<EventTypeId>(), Arg.Any<EventTypeGeneration?>()).Returns(call =>
             new EventTypeSchema(new EventType(call.Arg<EventTypeId>(), EventTypeGeneration.First), EventTypeOwner.Server, EventTypeSource.Code, new JsonSchema()));
         sequence.GetFromSequenceNumber(EventSequenceNumber.First, cancellationToken: Arg.Any<CancellationToken>()).Returns(_ => new EventCursor(_events));
 
@@ -72,10 +79,17 @@ public class a_closing_constraint_reindex_step : Specification
             return Task.CompletedTask;
         });
         silo.AddProbe(_ => _sequence);
-        silo.AddService(storage);
-        silo.AddService(Substitute.For<IJsonSchemaMetadataManager>());
-        silo.AddService(Substitute.For<IExpandoObjectConverter>());
+        silo.AddService(_storage);
+        _metadata = Substitute.For<IJsonSchemaMetadataManager>();
+        _converter = Substitute.For<IExpandoObjectConverter>();
+        silo.AddService(_metadata);
+        silo.AddService(_converter);
         silo.AddService(Substitute.For<IJobStepThrottle>());
+
+        // Forwards so a specification can swap in the real cache after the grain is created.
+        var schemaCache = Substitute.For<IEventTypeSchemaCache>();
+        schemaCache.ReturnsForAll<ValueTask<JsonSchema>>(async call => await _schemaCache.GetProtectionSchemaFor(call.ArgAt<Concepts.EventStoreName>(0), call.ArgAt<EventTypeId>(1), call.ArgAt<EventTypeGeneration>(2), call.ArgAt<JsonSchema>(3)));
+        silo.AddService(schemaCache);
         silo.AddService(NullLogger<ReindexConstraintsStep>.Instance);
         silo.AddPersistentStateStorage<ReindexConstraintsStepState>(nameof(ReindexConstraintsStepState), Cratis.Choreography.WellKnownGrainStorageProviders.JobSteps);
         _step = await silo.CreateGrainAsync<ReindexConstraintsStep>(_runId.Value, new JobStepKey(_jobId, "store", "ns"));

@@ -5,6 +5,7 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.EventSequences.Migrations;
+using Cratis.Chronicle.EventTypes;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Patterns;
 using Cratis.Chronicle.Schemas;
@@ -35,6 +36,7 @@ namespace Cratis.Chronicle.EventSequences.for_EventSequence.given;
 /// <param name="options"><see cref="IOptions{T}"/> for <see cref="ChronicleOptions"/>.</param>
 /// <param name="logger"><see cref="ILogger{T}"/> for logging.</param>
 /// <param name="concurrencyValidatorLogger"><see cref="ILogger{T}"/> for the concurrency validator.</param>
+/// <param name="schemaCache">The effective protection schema cache.</param>
 /// <param name="constraintIndexReplayLogger">The constraint replay logger.</param>
 public class EventSequenceThatCannotPersistState(
     IStorage storage,
@@ -51,6 +53,7 @@ public class EventSequenceThatCannotPersistState(
     IOptions<ChronicleOptions> options,
     ILogger<EventSequence> logger,
     ILogger<Concurrency.ConcurrencyValidator> concurrencyValidatorLogger,
+    IEventTypeSchemaCache schemaCache,
     ILogger<ConstraintIndexReplay> constraintIndexReplayLogger) : EventSequence(
         storage,
         constraintValidatorSetFactory,
@@ -66,6 +69,7 @@ public class EventSequenceThatCannotPersistState(
         options,
         logger,
         concurrencyValidatorLogger,
+        schemaCache,
         constraintIndexReplayLogger)
 {
     /// <inheritdoc/>

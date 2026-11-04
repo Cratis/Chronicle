@@ -89,17 +89,18 @@ public partial class EventSequence
 
             // Establish index updates from the durable winner, never from the retry's possibly different payload.
             // Like reindexing, release protected content before hashing constraint values.
-            var schema = await EventTypesStorage.GetFor(context.EventType.Id, context.EventType.Generation);
+            var ownSchema = await EventTypesStorage.GetFor(context.EventType.Id, context.EventType.Generation);
+            var schema = await schemaCache.GetProtectionSchemaFor(_eventSequenceKey.EventStore, context.EventType.Id, context.EventType.Generation, ownSchema.Schema);
             var content = @event.Content;
-            if (schema.Schema.HasSchemaMetadata())
+            if (schema.HasSchemaMetadata())
             {
                 var subject = context.Subject.IsSet ? context.Subject.Value : context.EventSourceId.Value;
-                var json = expandoObjectConverter.ToJsonObject(content, schema.Schema);
-                var released = await jsonComplianceManagerProvider.Release(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, schema.Schema, subject, json);
-                content = expandoObjectConverter.ToExpandoObject(released, schema.Schema);
+                var json = expandoObjectConverter.ToJsonObject(content, schema);
+                var released = await jsonComplianceManagerProvider.Release(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, schema, subject, json);
+                content = expandoObjectConverter.ToExpandoObject(released, schema);
             }
 
-            updates.Add((_constraints!.Establish(context.EventSourceId, context.EventType.Id, content, context.EventSourceType, context.EventStreamType, context.EventStreamId, subject: ConstraintPersonalData.SubjectOf(context), personalProperties: ConstraintPersonalData.PropertiesOf(schema.Schema)), number));
+            updates.Add((_constraints!.Establish(context.EventSourceId, context.EventType.Id, content, context.EventSourceType, context.EventStreamType, context.EventStreamId, subject: ConstraintPersonalData.SubjectOf(context), personalProperties: ConstraintPersonalData.PropertiesOf(schema)), number));
         }
 
         State.SequenceNumber = last.Next();

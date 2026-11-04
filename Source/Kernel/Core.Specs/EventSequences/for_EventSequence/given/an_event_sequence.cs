@@ -15,6 +15,7 @@ using Cratis.Chronicle.Concepts.Identities;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.EventSequences.Migrations;
+using Cratis.Chronicle.EventTypes;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Patterns;
@@ -29,6 +30,7 @@ using Cratis.Traces;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using NSubstitute.Extensions;
 using Orleans.TestKit;
 
 namespace Cratis.Chronicle.EventSequences.for_EventSequence.given;
@@ -37,6 +39,7 @@ public class an_event_sequence : Specification
 {
     protected static readonly EventStoreName EventStore = "test-store";
     protected static readonly EventStoreNamespaceName EventStoreNamespace = "test-namespace";
+    protected IEventTypeSchemaCache _schemaCache = new OwnGenerationSchemaCache();
 
     protected TestKitSilo _silo = new();
     protected EventSequence _eventSequence;
@@ -200,6 +203,9 @@ public class an_event_sequence : Specification
     /// </summary>
     protected void ConfigureSilo()
     {
+        var cache = Substitute.For<IEventTypeSchemaCache>();
+        cache.ReturnsForAll<ValueTask<JsonSchema>>(async call => await _schemaCache.GetProtectionSchemaFor(call.ArgAt<EventStoreName>(0), call.ArgAt<EventTypeId>(1), call.ArgAt<EventTypeGeneration>(2), call.ArgAt<JsonSchema>(3)));
+        _silo.AddService(cache);
         _silo.AddService(EventTimeProvider);
         _silo.AddService(_storage);
         _silo.AddService<IStorageErrorClassifier>(new Storage.InMemory.InMemoryStorageErrorClassifier());
