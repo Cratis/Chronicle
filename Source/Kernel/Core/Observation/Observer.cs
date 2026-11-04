@@ -740,6 +740,7 @@ public partial class Observer(
     /// <inheritdoc/>
     protected override async Task OnAfterEnteringState(IState<ObserverState> state)
     {
+        _stateTransitionInProgress = false;
         KeepWhatWasRecordedDuringTransitionHook();
         if (state is QuarantinedObserver) await ReconcileWebhookProbe();
         if (SettlesOwedRecovery(state))
