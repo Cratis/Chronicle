@@ -29,6 +29,8 @@ public class an_observation_stream : Specification
 
     private protected virtual IActivitySource<Reducers> CreateActivitySource() => new ActivitySource<Reducers>();
 
+    protected virtual PageDelivery? PageDelivery => null;
+
     async Task Establish()
     {
         var subscribed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -63,13 +65,15 @@ public class an_observation_stream : Specification
             new JsonSerializerOptions(),
             CreateActivitySource(),
             Options.Create(new ChronicleOptions()),
-            NullLogger<Reducers>.Instance);
+            NullLogger<Reducers>.Instance,
+            Substitute.For<IObserverRegistrationGate>());
         _subscription = reducers.Observe(_messages).Subscribe(_deliveries.Add);
         _messages.OnNext(new(new(new RegisterReducer
         {
             ConnectionId = "connection",
             EventStore = "store",
             Namespace = "namespace",
+            PageDelivery = PageDelivery,
             Reducer = new Contracts.Observation.Reducers.ReducerDefinition { ReducerId = "reducer", EventSequenceId = "event-log", ReadModel = "model" }
         })));
         await subscribed.Task.WaitAsync(TimeSpan.FromSeconds(5));

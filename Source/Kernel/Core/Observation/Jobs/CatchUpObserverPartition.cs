@@ -3,8 +3,8 @@
 
 using System.Collections.Immutable;
 using System.Text.Json;
+using Cratis.Choreography.Jobs;
 using Cratis.Chronicle.Concepts.Events;
-using Cratis.Orleans.Jobs;
 using Microsoft.Extensions.Logging;
 namespace Cratis.Chronicle.Observation.Jobs;
 
@@ -35,7 +35,7 @@ public class CatchUpObserverPartition(
             logger.NoEventsWereHandled(nameof(CatchUpObserverPartition));
             return;
         }
-        await observer.PartitionCaughtUp(Request.Key, State.LastHandledEventSequenceNumber, lastScanned);
+        await observer.PartitionCaughtUp(Request, Request.Key, State.LastHandledEventSequenceNumber, lastScanned);
     }
 
     /// <inheritdoc/>

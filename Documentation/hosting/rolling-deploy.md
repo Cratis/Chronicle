@@ -86,7 +86,7 @@ Look for schema changes in the release notes. A release that only adds tables or
 
 ### 2. Upgrade one node first
 
-Chronicle has no separate migration command or migrate-only mode. The first node that starts on the new version performs the migrations. Replace one node, and wait until it logs that it started successfully before replacing the next:
+By default (`SchemaMode=Migrate`), the first node that starts on the new version performs the migrations. To apply them as a separate deployment step instead, run the new version with `--migrate-only` before the rollout and start the nodes with `SchemaMode=Verify`; see [SQL schema operations](configuration/sql-schema-operations.md). Either way, replace one node, and wait until it logs that it started successfully before replacing the next:
 
 ```text
 Cratis Chronicle Server started successfully - ready and listening on port 35000 for gRPC (HTTP/2) and Workbench, API and OAuth (HTTP/1.1)
@@ -130,7 +130,7 @@ If a new version cannot run against the migrated schema, restore the backup from
 
 Set `Cratis__Chronicle__Storage__CreateIfMissing=false` when a platform provisions databases and schemas. A missing database fails with `DatabaseDoesNotExist` and a missing schema with `SchemaDoesNotExist`, each naming what to create.
 
-This option stops Chronicle creating databases and schemas only. **Migrations still run in the existing databases**, so the identity Chronicle migrates as still needs rights to create and alter tables in its schema. The `Schema` and `Runtime` identities from [connection resolution](configuration/storage-connection-resolution.md#what-chronicle-asks) can be different logins, but both are used by the kernel process. Chronicle has no separate job that migrates the schema ahead of time, so you cannot run the kernel with only `db_datareader` and `db_datawriter` on its own tables.
+This option stops Chronicle creating databases and schemas only. **Migrations still run in the existing databases**, so the identity Chronicle migrates as still needs rights to create and alter tables in its schema. The `Schema` and `Runtime` identities from [connection resolution](configuration/storage-connection-resolution.md#what-chronicle-asks) can be different logins. You can apply versioned migrations ahead of time with a separate [`--migrate-only` step](configuration/sql-schema-operations.md#provision-before-starting-replicas) that uses the `Schema` identity. The kernel still creates dynamic tables when they are first used, even in Verify mode: event-sequence tables for new sequences, unique-constraint tables and read-model tables, including those created when a projection is rebuilt. So the runtime identity still needs rights to create those tables, and you cannot run the kernel with only `db_datareader` and `db_datawriter` on its own tables.
 
 Each new event store and each new namespace needs a database or schema provisioned ahead of its first use. Without it, the first access fails, and that access can happen after the rollout has finished.
 
@@ -139,7 +139,7 @@ Each new event store and each new namespace needs a database or schema provision
 - **No zero-downtime guarantee.** Orleans reactivates the grains of a stopped node on the remaining nodes, but Chronicle does not state how long that takes or what clients see meanwhile. Test a rollout against a copy of your data before relying on it.
 - **No mixed versions across a major, or from before 19.106.** Grain calls are kept compatible within a major from 19.106 onwards. Other upgrades need every node stopped first.
 - **No rollback while mixed.** A grain that moved to a new node cannot move back to an old node that lacks what the new version added. Roll back by stopping every node and starting the previous version.
-- **No migration job and no migrate-only mode.** The nodes migrate.
+- **No DDL-free runtime.** A separate [`--migrate-only` step](configuration/sql-schema-operations.md) applies versioned migrations, but nodes still create dynamic tables when they are first used, including in Verify mode.
 - **No schema version gate.** Chronicle does not enforce expand-then-contract database migrations, or limit migrations to the newest node. A change that removes or renames a column breaks nodes still running the old version. Plan those releases as a cluster stop and start, or keep each release additive.
 - **No readiness check for membership or startup.** See step 5.
 - **No schema downgrade.** Restore from backup.

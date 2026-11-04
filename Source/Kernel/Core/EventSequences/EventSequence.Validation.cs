@@ -42,7 +42,8 @@ public partial class EventSequence
         Subject? subject,
         IReadOnlyCollection<NamedTag> namedTags,
         EventSourceName? eventSource,
-        EventPublication? publication = null)
+        EventPublication? publication = null,
+        EventSequenceNumber? compensationFor = null)
     {
         using var span = activitySource.Append();
         span?.Activity?.Tag(_eventSequenceKey.EventStore);
@@ -53,7 +54,7 @@ public partial class EventSequence
         span?.Activity?.Tag(eventType);
         try
         {
-            var result = await AppendValidatedCore(eventSourceType, eventSourceId, eventStreamType, eventStreamId, eventType, content, correlationId, causation, causedBy, tags, concurrencyScope, occurred, subject, namedTags, eventSource, publication);
+            var result = await AppendValidatedCore(eventSourceType, eventSourceId, eventStreamType, eventStreamId, eventType, content, correlationId, causation, causedBy, tags, concurrencyScope, occurred, subject, namedTags, eventSource, publication, compensationFor);
             span?.Activity?.RecordAppendOutcome(result);
             return result;
         }
@@ -80,7 +81,8 @@ public partial class EventSequence
         Subject? subject,
         IReadOnlyCollection<NamedTag> namedTags,
         EventSourceName? eventSource,
-        EventPublication? publication = null)
+        EventPublication? publication = null,
+        EventSequenceNumber? compensationFor = null)
     {
         try
         {
@@ -129,7 +131,8 @@ public partial class EventSequence
                 subject,
                 namedTags,
                 eventSource,
-                publication);
+                publication,
+                compensationFor);
 
             return appendResult.ReportingConcurrencyCheck(concurrencyScope.ShouldBeValidated);
         }

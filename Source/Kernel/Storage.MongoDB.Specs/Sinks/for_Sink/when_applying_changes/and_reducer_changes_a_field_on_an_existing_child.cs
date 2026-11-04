@@ -179,6 +179,9 @@ public class and_reducer_changes_a_field_on_an_existing_child(context ctx) : ICl
             public Task<JsonObject> ReleaseJson(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, JsonSchema schema, JsonObject instance) =>
                 Task.FromResult(instance);
 
+            public Task<JsonObject> ReleaseJson(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, JsonSchema schema, JsonObject instance, string? subject, IReadOnlyDictionary<string, string> subjects) =>
+                Task.FromResult(instance);
+
             public Task<ExpandoObject> Release(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, JsonSchema schema, ExpandoObject instance) =>
                 Task.FromResult(instance);
 

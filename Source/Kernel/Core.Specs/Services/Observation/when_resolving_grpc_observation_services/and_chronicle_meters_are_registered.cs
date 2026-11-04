@@ -15,6 +15,8 @@ namespace Cratis.Chronicle.Services.Observation.when_resolving_grpc_observation_
 public class and_chronicle_meters_are_registered : Specification
 {
     ServiceProvider _serviceProvider;
+    IObserverRegistrationGate _firstGate;
+    IObserverRegistrationGate _secondGate;
     Exception? _reactorsException;
     Exception? _reducersException;
 
@@ -29,6 +31,7 @@ public class and_chronicle_meters_are_registered : Specification
         services.AddSingleton(Substitute.For<IStorage>());
         services.AddSingleton(Substitute.For<IExpandoObjectConverter>());
         services.AddSingleton(new JsonSerializerOptions());
+        services.AddSingleton<IObserverRegistrationGate, ObserverRegistrationGate>();
         services.AddSingleton<ReactorsService>();
         services.AddSingleton<ReducersService>();
 
@@ -37,6 +40,9 @@ public class and_chronicle_meters_are_registered : Specification
 
     void Because()
     {
+        _firstGate = _serviceProvider.GetRequiredService<IObserverRegistrationGate>();
+        using var scope = _serviceProvider.CreateScope();
+        _secondGate = scope.ServiceProvider.GetRequiredService<IObserverRegistrationGate>();
         try
         {
             _ = _serviceProvider.GetRequiredService<ReactorsService>();
@@ -60,4 +66,6 @@ public class and_chronicle_meters_are_registered : Specification
 
     [Fact] void should_resolve_reactors_service() => _reactorsException.ShouldBeNull();
     [Fact] void should_resolve_reducers_service() => _reducersException.ShouldBeNull();
+    [Fact] void should_resolve_the_registration_gate() => _firstGate.ShouldNotBeNull();
+    [Fact] void should_share_one_registration_gate_across_scopes() => ReferenceEquals(_secondGate, _firstGate).ShouldBeTrue();
 }

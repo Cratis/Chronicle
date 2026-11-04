@@ -1,8 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Orleans.Jobs;
-using Cratis.Orleans.Storage.Jobs;
+using Cratis.Choreography.Jobs;
+using Cratis.Choreography.Storage.Jobs;
 
 namespace Cratis.Chronicle.Generations.Enablement.for_GenerationLegacyWork;
 

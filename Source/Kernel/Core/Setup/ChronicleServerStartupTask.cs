@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Choreography.Jobs;
 using Cratis.Chronicle.Captures;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Observation;
@@ -23,7 +24,6 @@ using Cratis.Chronicle.Releases;
 using Cratis.Chronicle.Setup;
 using Cratis.Chronicle.Setup.Authentication;
 using Cratis.Chronicle.Storage;
-using Cratis.Orleans.Jobs;
 using Microsoft.Extensions.Logging;
 
 namespace Orleans.Hosting;
@@ -42,6 +42,7 @@ namespace Orleans.Hosting;
 /// <param name="storageErrorClassifier"><see cref="IStorageErrorClassifier"/> for recognizing the active storage provider's own transient failures.</param>
 /// <param name="localSiloDetails">The caller's silo for patch-manager handover.</param>
 /// <param name="clusterReleases">The published releases for startup diagnostics.</param>
+/// <param name="kernelProjectionRetries">The background retries for deferred kernel projection registrations.</param>
 /// <param name="logger">The logger.</param>
 /// <param name="timeProvider">Optional <see cref="TimeProvider"/> the retry backoff waits on; defaults to <see cref="TimeProvider.System"/>.</param>
 /// <param name="generationFloorAdmission">Optional read-only generation admission; defaults to the real storage-backed admission.</param>
@@ -75,6 +76,7 @@ internal sealed class ChronicleServerStartupTask(
     IStorageErrorClassifier storageErrorClassifier,
     ILocalSiloDetails localSiloDetails,
     IClusterReleases clusterReleases,
+    IKernelProjectionRegistrationRetries kernelProjectionRetries,
     ILogger<ChronicleServerStartupTask> logger,
     TimeProvider? timeProvider = null,
     IGenerationFloorAdmission? generationFloorAdmission = null) : ILifecycleParticipant<ISiloLifecycle>
@@ -107,7 +109,12 @@ internal sealed class ChronicleServerStartupTask(
         lifecycle.Subscribe(
             nameof(ChronicleServerStartupTask),
             ServiceLifecycleStage.Active,
-            Execute);
+            Execute,
+            _ =>
+            {
+                kernelProjectionRetries.Stop();
+                return Task.CompletedTask;
+            });
     }
 
     /// <summary>
@@ -183,9 +190,9 @@ internal sealed class ChronicleServerStartupTask(
             var projectionsManager = grainFactory.GetGrain<IProjectionsManager>(eventStore);
             await Step("EnsureProjections", projectionsManager.Ensure);
 
-            // Before the persisted definitions are registered below, so the kernel's own projections are part of
-            // the set that pass registers rather than a second registration racing it.
-            await Step("DiscoverAndRegisterKernelProjections", () => kernelProjections.DiscoverAndRegister(eventStore));
+            // Persisted kernel definitions are registered with the local engine below even when this is
+            // deferred. Changed definitions reach every silo's engine when the background retry succeeds.
+            await RegisterKernelProjections(eventStore, cancellationToken);
 
             var webhooksManager = grainFactory.GetGrain<IWebhooks>(eventStore);
             await Step("EnsureWebhooks", webhooksManager.Ensure);
@@ -238,6 +245,15 @@ internal sealed class ChronicleServerStartupTask(
 #if DEVELOPMENT
         await Step(nameof(IAuthenticationService.EnsureDefaultClientCredentials), authenticationService.EnsureDefaultClientCredentials);
 #endif
+    }
+
+    async Task RegisterKernelProjections(EventStoreName eventStore, CancellationToken cancellationToken)
+    {
+        if (!await TryRunStep("DiscoverAndRegisterKernelProjections", () => kernelProjections.DiscoverAndRegister(eventStore), cancellationToken))
+        {
+            logger.DeferringKernelProjectionRegistration(eventStore, MaxAttempts);
+            kernelProjectionRetries.Defer(eventStore);
+        }
     }
 
     async Task ApplyPatches(IPatchManager patchManager, CancellationToken cancellationToken)
@@ -294,7 +310,10 @@ internal sealed class ChronicleServerStartupTask(
     /// still failing once the budget is spent - propagates, so a genuine defect still fails the
     /// host on startup rather than being started around.
     /// </remarks>
-    async Task RunStep(string step, Func<Task> action, CancellationToken cancellationToken)
+    async Task RunStep(string step, Func<Task> action, CancellationToken cancellationToken) =>
+        await TryRunStep(step, action, cancellationToken, failOnExhaustion: true);
+
+    async Task<bool> TryRunStep(string step, Func<Task> action, CancellationToken cancellationToken, bool failOnExhaustion = false)
     {
         var delay = _initialRetryDelay;
         for (var attempt = 1; ; attempt++)
@@ -303,7 +322,7 @@ internal sealed class ChronicleServerStartupTask(
             try
             {
                 await action().WaitAsync(cancellationToken);
-                return;
+                return true;
             }
             catch (Exception exception) when (IsTransient(exception) && attempt < MaxAttempts)
             {
@@ -313,6 +332,7 @@ internal sealed class ChronicleServerStartupTask(
             }
             catch (Exception exception) when (IsTransient(exception))
             {
+                if (!failOnExhaustion) return false;
                 logger.StartupStepExhaustedRetries(exception, step, MaxAttempts);
                 throw;
             }

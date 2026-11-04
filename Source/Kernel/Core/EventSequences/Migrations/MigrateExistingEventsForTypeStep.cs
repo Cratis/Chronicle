@@ -1,11 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Choreography.Jobs;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
 using Cratis.Monads;
-using Cratis.Orleans.Jobs;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.EventSequences.Migrations;
@@ -22,7 +22,7 @@ namespace Cratis.Chronicle.EventSequences.Migrations;
 /// <param name="converter">The schema-guided converter.</param>
 /// <param name="hashCalculator">The protected content hash calculator.</param>
 public class MigrateExistingEventsForTypeStep(
-    [PersistentState(nameof(MigrateExistingEventsForTypeStepState), Cratis.Orleans.WellKnownGrainStorageProviders.JobSteps)]
+    [PersistentState(nameof(MigrateExistingEventsForTypeStepState), Cratis.Choreography.WellKnownGrainStorageProviders.JobSteps)]
     IPersistentState<MigrateExistingEventsForTypeStepState> state,
     IJobStepThrottle throttle,
     IStorage storage,

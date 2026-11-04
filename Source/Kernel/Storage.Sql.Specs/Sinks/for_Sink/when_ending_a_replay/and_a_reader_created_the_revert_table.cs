@@ -1,11 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Contract = Cratis.Chronicle.Storage.Sinks.for_ISink.given;
-
 namespace Cratis.Chronicle.Storage.Sql.Sinks.for_Sink.when_ending_a_replay;
 
-public class and_a_reader_created_the_revert_table : Contract.an_accumulating_read_model<SqlSinkHarness>
+public class and_a_reader_created_the_revert_table : for_Sink.given.an_accumulating_sql_read_model<SqlSinkHarness>
 {
     Exception? _error;
     int? _primary;
@@ -15,7 +13,9 @@ public class and_a_reader_created_the_revert_table : Contract.an_accumulating_re
         await _sink.ApplyChanges(_key, ChangesetSettingCountTo(1), 41UL);
         await _sink.BeginReplay(ReplayContext());
         await _sink.ApplyChanges(_key, ChangesetSettingCountTo(2), 42UL);
-        await _sink.GetInstances(ReplayContext().RevertContainerName);
+
+        // Something other than an occurrence read leaves an empty table under the revert name; occurrence reads never create tables.
+        await _sqlHarness.CreateSink(CreateReadModelDefinition() with { ContainerName = ReplayContext().RevertContainerName }).GetInstances();
     }
 
     async Task Because()

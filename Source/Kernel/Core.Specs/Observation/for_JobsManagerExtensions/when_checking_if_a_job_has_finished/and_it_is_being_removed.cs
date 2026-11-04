@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Orleans.Jobs;
+using Cratis.Choreography.Jobs;
 
 namespace Cratis.Chronicle.Observation.for_JobsManagerExtensions.when_checking_if_a_job_has_finished;
 

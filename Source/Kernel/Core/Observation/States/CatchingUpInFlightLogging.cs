@@ -1,10 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Choreography.Jobs;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
-using Cratis.Orleans.Jobs;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Observation.States;
@@ -26,6 +26,12 @@ internal static partial class CatchingUpInFlightLogMessages
 
     [LoggerMessage(LogLevel.Error, "Failed to enqueue in-flight catch-up for one or more partitions; transitioning observer to quarantine")]
     internal static partial void FailedToCatchUpInFlightPartitions(this ILogger<CatchingUpInFlight> logger, Exception exception);
+
+    [LoggerMessage(LogLevel.Warning, "Could not look up the jobs owning in-flight partitions held for catch-up")]
+    internal static partial void InFlightCatchUpOwnershipLookupThrew(this ILogger<CatchingUpInFlight> logger, Exception exception);
+
+    [LoggerMessage(LogLevel.Warning, "Keeping {Count} in-flight marker(s) held for catch-up, as the jobs owning them could not be looked up")]
+    internal static partial void KeepingInFlightMarkersJobLookupFailed(this ILogger<CatchingUpInFlight> logger, int count);
 }
 
 internal static class CatchingUpInFlightScopes

@@ -57,7 +57,8 @@ public class two_observation_streams_for_the_same_connection : Specification
             new JsonSerializerOptions(),
             new ActivitySource<Reactors>(),
             Options.Create(new ChronicleOptions()),
-            _logger);
+            _logger,
+            Substitute.For<IObserverRegistrationGate>());
 
         _earlierSubscription = _reactors.Observe(_earlierMessages).Subscribe(_earlierDeliveries.Add);
         _earlierMessages.OnNext(Register());
@@ -114,8 +115,8 @@ public class two_observation_streams_for_the_same_connection : Specification
         public void SubscribeReplayNotifications(ReactorId reactorId, ConnectionId connectionId, EventStoreName eventStore, EventStoreNamespaceName @namespace, ReactorReplayObserver target) =>
             inner.SubscribeReplayNotifications(reactorId, connectionId, eventStore, @namespace, target);
 
-        public void OnNext(ReactorId reactorId, ConnectionId connectionId, EventStoreName eventStore, EventStoreNamespaceName @namespace, Key partition, IEnumerable<AppendedEvent> events, TaskCompletionSource<ObserverSubscriberResult> taskCompletionSource, TimeSpan? deliverWithin = null) =>
-            inner.OnNext(reactorId, connectionId, eventStore, @namespace, partition, events, taskCompletionSource, deliverWithin);
+        public void OnNext(ReactorId reactorId, ConnectionId connectionId, EventStoreName eventStore, EventStoreNamespaceName @namespace, Key partition, IEnumerable<AppendedEvent> events, TaskCompletionSource<ObserverSubscriberResult> taskCompletionSource, TimeSpan? deliverWithin = null, Concepts.Observation.ObservationOrigin origin = Concepts.Observation.ObservationOrigin.Unknown) =>
+            inner.OnNext(reactorId, connectionId, eventStore, @namespace, partition, events, taskCompletionSource, deliverWithin, origin);
 
         public void OnBeginReplay(ReactorId reactorId, EventStoreName eventStore, EventStoreNamespaceName @namespace) =>
             inner.OnBeginReplay(reactorId, eventStore, @namespace);

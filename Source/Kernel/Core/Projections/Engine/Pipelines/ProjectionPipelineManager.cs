@@ -7,11 +7,13 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Generations;
 using Cratis.Chronicle.Configuration;
+using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Projections.Engine.Pipelines.Steps;
 using Cratis.Chronicle.Projections.Generations;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
+using Cratis.Chronicle.Storage.Changes;
 using Cratis.Chronicle.Storage.Sinks;
 using Cratis.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -84,7 +86,7 @@ public class ProjectionPipelineManager(
         // that sink rather than begin replay again (which would clear already replayed data).
         var sink = await sinkStorage.Sinks.GetFor(projection.ReadModel);
         var projectionFutures = grainFactory.GetProjectionFutures(eventStore, @namespace, projection.Identifier);
-        var newPipeline = Build(eventStore, @namespace, projection, namespaceStorage, sink, projectionFutures, key, null);
+        var newPipeline = Build(eventStore, @namespace, projection, namespaceStorage, namespaceStorage.Changesets, sink, new ProjectionFuturesStore(projectionFutures), key, null);
         _pipelines[key] = new(newPipeline, projection.DefinitionFingerprint);
         return newPipeline;
     }
@@ -113,9 +115,26 @@ public class ProjectionPipelineManager(
         // Futures, like observer state, belong to the generation's observer. Generation 1's observer is the projection
         // itself, so its futures stay where they always were.
         var projectionFutures = grainFactory.GetProjectionFutures(eventStore, @namespace, generation.ObserverId);
-        var newPipeline = Build(eventStore, @namespace, projection, namespaceStorage, sink, projectionFutures, key, generation);
+        var newPipeline = Build(eventStore, @namespace, projection, namespaceStorage, namespaceStorage.Changesets, sink, new ProjectionFuturesStore(projectionFutures), key, generation);
         _pipelines[key] = new(newPipeline, projection.DefinitionFingerprint);
         return newPipeline;
+    }
+
+    /// <inheritdoc/>
+    public IProjectionPipeline CreateIsolated(
+        EventStoreName eventStore,
+        EventStoreNamespaceName @namespace,
+        EngineProjection projection,
+        ISink sink)
+    {
+        var namespaceStorage = storage.GetEventStore(eventStore).GetNamespace(@namespace);
+
+        // Never cached and never keyed like the live pipeline, so the live pipeline, its handle lock and its cache entry stay as they are.
+        // The pipeline holds its own lock, so the key is released again rather than accumulating one entry per rebuild.
+        var isolatedKey = $"{KeyHelper.Combine(eventStore, @namespace, projection.Identifier)}/isolated/{Guid.NewGuid():N}";
+        var pipeline = Build(eventStore, @namespace, projection, namespaceStorage, new PartitionRebuildChangesets(), sink, new PartitionRebuildFutures(), isolatedKey, null);
+        _handleLocks.TryRemove(isolatedKey, out _);
+        return pipeline;
     }
 
     /// <inheritdoc/>
@@ -156,14 +175,15 @@ public class ProjectionPipelineManager(
         EventStoreNamespaceName @namespace,
         EngineProjection projection,
         IEventStoreNamespaceStorage namespaceStorage,
+        IChangesetStorage changesetStorage,
         ISink sink,
-        IProjectionFutures projectionFutures,
+        IProjectionFuturesStore projectionFutures,
         string key,
         MaterializationGenerationIdentity? generation)
     {
         var replayScopedStorage = new ReplayScopedEventSequenceStorage(namespaceStorage.GetEventSequence(projection.EventSequenceId));
         var futuresTracker = new ProjectionFuturesTracker();
-        var resolveFuturesStep = new ResolveFutures(projectionFutures, futuresTracker, typeFormats, objectComparer, loggerFactory.CreateLogger<ResolveFutures>(), replayScopedStorage, sink);
+        var resolveFuturesStep = new ResolveFutures(futuresTracker, projectionFutures, typeFormats, objectComparer, loggerFactory.CreateLogger<ResolveFutures>(), replayScopedStorage, sink);
 
         IEnumerable<ICanPerformProjectionPipelineStep> steps =
         [
@@ -172,9 +192,9 @@ public class ProjectionPipelineManager(
             new DecryptInitialState(readModelsCompliance, eventStore, @namespace),
             new HandleEvent(replayScopedStorage, sink, loggerFactory.CreateLogger<HandleEvent>()),
             new EncryptChangeset(readModelsCompliance, objectComparer, eventStore, @namespace),
-            new StoreFutures(projectionFutures, futuresTracker, loggerFactory.CreateLogger<StoreFutures>()),
+            new StoreFutures(futuresTracker, projectionFutures, loggerFactory.CreateLogger<StoreFutures>()),
             resolveFuturesStep,
-            new SaveChanges(sink, namespaceStorage.Changesets, options.Value.ReadModels.GuardSinkWritesOnWatermark, loggerFactory.CreateLogger<SaveChanges>(), projectionFutures, generation?.Destination)
+            new SaveChanges(projectionFutures, sink, changesetStorage, options.Value.ReadModels.GuardSinkWritesOnWatermark, loggerFactory.CreateLogger<SaveChanges>(), generation?.Destination)
         ];
 
         var handleLock = _handleLocks.GetOrAdd(key, _ => new ProjectionHandleLock());
@@ -182,7 +202,7 @@ public class ProjectionPipelineManager(
         return new ProjectionPipeline(
             projection,
             sink,
-            namespaceStorage.Changesets,
+            changesetStorage,
             objectComparer,
             steps,
             handleLock,
