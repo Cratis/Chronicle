@@ -1,13 +1,13 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Choreography.Jobs;
 using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.EventSequences;
-using Cratis.Orleans.Jobs;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Observation;
@@ -278,6 +278,9 @@ internal static partial class ObserverLogMessages
     [LoggerMessage(LogLevel.Information, "Retiring observer - unsubscribing, discarding its failed partitions and clearing its alerts as removed while retaining quarantine")]
     internal static partial void RetiringObserver(this ILogger<Observer> logger);
 
+    [LoggerMessage(LogLevel.Warning, "Replay could not prepare its job steps; quarantining the observer with the replay pending until the quarantine is cleared")]
+    internal static partial void ReplayStepsCouldNotBePrepared(this ILogger<Observer> logger);
+
     [LoggerMessage(LogLevel.Warning, "A catch-up job concluded without moving the observer forward ({ConsecutiveLaps} in a row)")]
     internal static partial void CatchUpProducedNoWork(this ILogger<Observer> logger, int consecutiveLaps);
 
@@ -289,6 +292,24 @@ internal static partial class ObserverLogMessages
 
     [LoggerMessage(LogLevel.Warning, "Observer '{ObserverId}' was activated on event sequence '{KeyEventSequenceId}', but it observes event sequence '{DefinitionEventSequenceId}'. The activation stays inert and persists nothing")]
     internal static partial void ActivatedOnAnotherEventSequence(this ILogger<Observer> logger, ObserverId observerId, EventSequenceId keyEventSequenceId, EventSequenceId definitionEventSequenceId);
+
+    [LoggerMessage(LogLevel.Information, "Resuming stalled observer job {JobId}")]
+    internal static partial void ResumingStalledObserverJob(this ILogger<Observer> logger, JobId jobId);
+
+    [LoggerMessage(LogLevel.Debug, "Stalled observer job {JobId} was not resumed: {Reason}")]
+    internal static partial void StalledObserverJobNotResumed(this ILogger<Observer> logger, JobId jobId, string reason);
+
+    [LoggerMessage(LogLevel.Debug, "Stalled observer job {JobId} is no longer running")]
+    internal static partial void StalledObserverJobNoLongerRunning(this ILogger<Observer> logger, JobId jobId);
+
+    [LoggerMessage(LogLevel.Warning, "Resuming stalled observer job {JobId} failed; retrying on the next watchdog tick")]
+    internal static partial void ResumingStalledObserverJobWillRetry(this ILogger<Observer> logger, JobId jobId);
+
+    [LoggerMessage(LogLevel.Warning, "Resuming stalled observer job {JobId} failed")]
+    internal static partial void ResumingStalledObserverJobFailed(this ILogger<Observer> logger, JobId jobId, Exception exception);
+
+    [LoggerMessage(LogLevel.Warning, "Looking for stalled observer jobs failed")]
+    internal static partial void FindingStalledObserverJobsFailed(this ILogger<Observer> logger, Exception exception);
 }
 
 internal static class ObserverScopes

@@ -36,10 +36,14 @@
         <PackageReference Include="protobuf-net.Grpc" />
     </ItemGroup>
 
+    <ItemGroup>
+        <ProjectReference Include="../../Tools/ProtoGenerator/ProtoGenerator.csproj" ReferenceOutputAssembly="false" PrivateAssets="all" OutputItemType="ProtoGeneratorAssembly" SkipGetTargetFrameworkProperties="true" GlobalPropertiesToRemove="TargetFramework;TargetFrameworks;RuntimeIdentifier;IsPackaging" />
+    </ItemGroup>
+
     <!--
-        The proto files and the descriptor set under ../Protobuf are generated from these contracts, and generating
-        them on every build is what keeps that true. The generator deletes what was there before writing, so a
-        hand-applied edit to a generated file cannot survive a build - it is removed, not merely overwritten.
+        The proto files and the descriptor set under ../Protobuf are generated when the contracts, the tool or
+        a generated file changes. Stale files are deleted and hand-applied edits are overwritten; unchanged files
+        keep their timestamps so a no-op rebuild stays incremental.
 
         This exists because hand-patching happened: eventsequences.proto carried three fields that nothing in the
         contracts produced, added by hand when the generator was silently failing (#3712), and the published clients
@@ -47,13 +51,29 @@
         truth for the wire format.
 
         Runs for one target framework only - the output does not differ per framework - and never while packing,
-        where the same files would be written three times over. Pass -p:DisableProtoGeneration=true to skip it.
+        where the same files would be written three times over. Pass -p:DisableProtoGeneration=true to skip it,
+        or -p:ForceCodeGeneration=true to regenerate even when the inputs are unchanged.
     -->
+    <Target Name="_PrepareProtoGeneration"
+            Condition=" '$(TargetFramework)' == 'net10.0' AND '$(IsPackaging)' != 'true' AND '$(DisableProtoGeneration)' != 'true' AND '$(DesignTimeBuild)' != 'true' ">
+        <PropertyGroup>
+            <_ProtoGenerationStamp>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '$(IntermediateOutputPath)', 'GenerateProtoFiles.stamp'))</_ProtoGenerationStamp>
+        </PropertyGroup>
+        <Delete Files="$(_ProtoGenerationStamp)" Condition="'$(ForceCodeGeneration)' == 'true'" />
+        <ItemGroup>
+            <_ProtoGenerationInput Include="$(TargetPath);@(ProtoGeneratorAssembly);$(MSBuildThisFileDirectory)../Protobuf/*.proto;$(MSBuildThisFileDirectory)../Protobuf/*.desc;$(MSBuildThisFileDirectory)../Protobuf/protobuf-net/**/*.proto" />
+        </ItemGroup>
+    </Target>
+
     <Target Name="GenerateProtoFiles"
             AfterTargets="Build"
+            DependsOnTargets="_PrepareProtoGeneration"
+            Inputs="@(_ProtoGenerationInput)"
+            Outputs="$(_ProtoGenerationStamp)"
             Condition=" '$(TargetFramework)' == 'net10.0' AND '$(IsPackaging)' != 'true' AND '$(DisableProtoGeneration)' != 'true' AND '$(DesignTimeBuild)' != 'true' ">
         <Message Text="Generating proto files and descriptor set from the contracts" Importance="high" />
-        <Exec Command="dotnet run --project &quot;$(MSBuildThisFileDirectory)../../Tools/ProtoGenerator/ProtoGenerator.csproj&quot; -- &quot;$(TargetPath)&quot; &quot;$(MSBuildThisFileDirectory)../Protobuf&quot;" />
+        <Exec Command="dotnet &quot;@(ProtoGeneratorAssembly)&quot; &quot;$(TargetPath)&quot; &quot;$(MSBuildThisFileDirectory)../Protobuf&quot;" />
+        <Touch Files="$(_ProtoGenerationStamp)" AlwaysCreate="true" />
     </Target>
 
     <!-- Workaround for MSBuild GetTargetPath issue with multi-targeted projects referenced with PrivateAssets=all -->

@@ -30,5 +30,7 @@
   href: revision.md
 - name: Redaction
   href: redaction.mdx
+- name: Copying events
+  href: copying.mdx
 - name: Public events
   href: public-events.md

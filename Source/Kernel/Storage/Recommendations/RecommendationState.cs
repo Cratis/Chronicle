@@ -39,4 +39,12 @@ public class RecommendationState
     /// Gets or sets the request associated with the recommendation.
     /// </summary>
     public IRecommendationRequest Request { get; set; } = default!;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the recommendation has been ignored.
+    /// </summary>
+    /// <remarks>
+    /// An ignored recommendation is kept rather than deleted, so the same recommendation, raised again with an identical request, is recognized and not shown again.
+    /// </remarks>
+    public bool IsIgnored { get; set; }
 }

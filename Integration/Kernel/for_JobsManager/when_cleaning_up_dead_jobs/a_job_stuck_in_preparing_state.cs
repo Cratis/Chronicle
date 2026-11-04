@@ -1,12 +1,12 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Choreography.Storage.Jobs;
 using Cratis.Chronicle.Integration.Specifications.for_JobsManager.given;
 using Cratis.Chronicle.Jobs;
-using Cratis.Orleans.Storage.Jobs;
 using context = Cratis.Chronicle.Kernel.Integration.for_JobsManager.when_cleaning_up_dead_jobs.a_job_stuck_in_preparing_state.context;
-using JobId = Cratis.Orleans.Jobs.JobId;
-using JobStatus = Cratis.Orleans.Jobs.JobStatus;
+using JobId = Cratis.Choreography.Jobs.JobId;
+using JobStatus = Cratis.Choreography.Jobs.JobStatus;
 
 namespace Cratis.Chronicle.Kernel.Integration.for_JobsManager.when_cleaning_up_dead_jobs;
 

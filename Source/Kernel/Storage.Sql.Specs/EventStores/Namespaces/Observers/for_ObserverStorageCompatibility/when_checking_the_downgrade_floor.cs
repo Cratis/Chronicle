@@ -41,7 +41,7 @@ public class when_checking_the_downgrade_floor : ObserverStorageCompatibilityCon
     }
 
     protected override IEventStoreStorage OpenStore() => new EventStoreStorage(
-        "orders", _database, Substitute.For<IInstancesOf<ISinkFactory>>(), Substitute.For<Orleans.Storage.IJobsStorage>(), new JsonSerializerOptions(), Substitute.For<Json.IExpandoObjectConverter>());
+        "orders", _database, Substitute.For<IInstancesOf<ISinkFactory>>(), Substitute.For<Choreography.Storage.IJobsStorage>(), new JsonSerializerOptions(), Substitute.For<Json.IExpandoObjectConverter>());
 
     protected override IObserverStateStorage OpenObservers() => new ObserverStateStorage("orders", "default", _database);
 

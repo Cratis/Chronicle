@@ -1,9 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Choreography.Storage.Sql.Jobs;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Storage.Sql.Schema;
-using Cratis.Orleans.Storage.Sql.Jobs;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 

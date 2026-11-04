@@ -2,12 +2,14 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Recommendations;
+using Orleans.CodeGeneration;
 
 namespace Cratis.Chronicle.Recommendations;
 
 /// <summary>
 /// Defines a system that manages recommendations.
 /// </summary>
+[Version(1)]
 public interface IRecommendationsManager : IGrainWithIntegerCompoundKey
 {
     /// <summary>
@@ -35,4 +37,11 @@ public interface IRecommendationsManager : IGrainWithIntegerCompoundKey
     /// <param name="recommendationId">The <see cref="RecommendationId"/> to ignore.</param>
     /// <returns>Awaitable task.</returns>
     Task Ignore(RecommendationId recommendationId);
+
+    /// <summary>
+    /// Unignore a recommendation, making it active again.
+    /// </summary>
+    /// <param name="recommendationId">The <see cref="RecommendationId"/> to unignore.</param>
+    /// <returns>Awaitable task.</returns>
+    Task Unignore(RecommendationId recommendationId);
 }

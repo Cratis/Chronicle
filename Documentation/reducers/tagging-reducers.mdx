@@ -55,14 +55,9 @@ Here are some common patterns for tagging reducers:
 
 ## Querying by Tag
 
-Tags stored in the event store definition can be used for:
+Reducer tags describe the reducer and are stored with its definition. Chronicle does not use them to activate or select reducers.
 
-- Filtering and searching for specific reducers
-- Organizing reducers in administrative interfaces
-- Generating documentation
-- Managing reducer deployments by tag
-
-Note: The specific querying capabilities depend on your Chronicle setup and tooling.
+A reducer can filter on **event** tags to receive only events that carry a given tag. See [Filtering by tag](../events/filtering/by-tag.mdx).
 
 ## See Also
 

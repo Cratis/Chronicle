@@ -3,12 +3,12 @@
 
 using System.Collections.Immutable;
 using System.Text.Json;
+using Cratis.Choreography.Jobs;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Storage;
 using Cratis.Monads;
-using Cratis.Orleans.Jobs;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Observation.Jobs;
@@ -221,8 +221,9 @@ public class ReplayObserver(
     /// and adopt this job before the sinks are switched and the steps start. That cannot deadlock: the observer then finds
     /// this job already running and does not call back into it. If the observer does not enter replay with this job, the
     /// resume fails rather than run steps beside live handling. <see cref="CanResume"/> already refuses an observer that
-    /// cannot replay, so this is left for an observer that changed state in between; the job is then left running with no
-    /// steps until the job framework reverts a failed resume (Cratis/Orleans#62).
+    /// cannot replay, so this is left for an observer that changed state in between; the job framework then holds
+    /// window fills and due step retries while the resume is owed. The job's watchdog retries the hook with a growing
+    /// delay until it succeeds (Cratis/Chronicle#5401).
     /// </para>
     /// </remarks>
     /// <exception cref="ObserverDidNotEnterReplay">The observer did not enter replay with this job.</exception>
@@ -256,8 +257,8 @@ public class ReplayObserver(
     {
         await TransientTimeouts.ReportPartitionFailedWhenAttemptsAreExhausted(GrainFactory.GetGrain<IObserver>(Request.ObserverKey), result, jsonSerializerOptions);
         State.HandleResult(result, jsonSerializerOptions);
-        if (result.TryGetFullResult<HandleEventsForPartitionResult>(out var handled, out _, jsonSerializerOptions) &&
-            handled?.LastHandledEventSequenceNumber.IsActualValue == true)
+        var handled = result.TryGetError(out _) ? null : HandleEventsStepResults.ReadProgress(result, jsonSerializerOptions);
+        if (handled?.LastHandledEventSequenceNumber.IsActualValue == true)
         {
             for (var index = 0; index < State.ReplayPartitionSteps.Count; index++)
             {
@@ -287,7 +288,7 @@ public class ReplayObserver(
     {
         await EnsureReplaySupported();
         using var scope = logger.BeginJobScope(JobId, JobKey);
-        var release = ReleasesAbandonedReplayAtRetainedCursor;
+        var quarantine = ReleasesAbandonedReplayAtRetainedCursor;
         try
         {
             await FinalizeOrAbandon(promote: false);
@@ -299,9 +300,9 @@ public class ReplayObserver(
 
         var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
 
-        // Preparing failed; never report a successful replay. Avoid waiting on Replay()'s own turn.
-        CompletionNotification = release
-            ? NotifyObserverOfRefusal(observer)
+        // Preparation failure never releases the replay intent. Avoid waiting on Replay()'s own turn.
+        CompletionNotification = quarantine
+            ? NotifyObserverOfUnpreparedReplay(observer)
             : NotifyObserverOfCompletion(observer, false, new Dictionary<Key, EventSequenceNumber>(), [], EventSequenceNumber.Unavailable);
     }
 
@@ -405,6 +406,8 @@ public class ReplayObserver(
     }
 
     Task NotifyObserverOfRefusal(IObserver observer) => NotifyObserverWithRetry(observer.ReleaseRefusedReplay);
+
+    Task NotifyObserverOfUnpreparedReplay(IObserver observer) => NotifyObserverWithRetry(observer.ReplayStepsCouldNotBePrepared);
 
     Task NotifyObserverOfCompletion(IObserver observer, bool canResolve, IReadOnlyDictionary<Key, EventSequenceNumber> coveredPartitions, EventType[] eventTypes, EventSequenceNumber lastHandledEventSequenceNumber) =>
         NotifyObserverWithRetry(() => canResolve

@@ -4,6 +4,7 @@
 using System.Collections.Immutable;
 using System.Dynamic;
 using System.Text.Json.Nodes;
+using Cratis.Choreography.Jobs;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Auditing;
 using Cratis.Chronicle.Concepts.Events;
@@ -24,7 +25,6 @@ using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Chronicle.Storage.Identities;
 using Cratis.Metrics;
 using Cratis.Monads;
-using Cratis.Orleans.Jobs;
 using Cratis.Traces;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -70,6 +70,7 @@ public class an_event_sequence : Specification
     protected List<IConstraintDefinition> _registeredConstraints;
     protected ILogger<EventSequence> _eventSequenceLogger = NullLogger<EventSequence>.Instance;
 
+    protected virtual TimeProvider EventTimeProvider => TimeProvider.System;
     protected virtual Telemetry Telemetry => new();
     protected virtual EventSequenceId SequenceId => EventSequenceId.Log;
     protected virtual int StatePersistenceInterval => 1000;
@@ -80,6 +81,7 @@ public class an_event_sequence : Specification
     /// every append, so specs about picking up constraint changes do not have to wait out a production interval.
     /// </summary>
     protected virtual TimeSpan ConstraintsVersionCheckInterval => TimeSpan.Zero;
+    protected virtual Configuration.ConstraintIndexRepairOptions ConstraintIndexRepairConfiguration => new();
 
     async Task Establish()
     {
@@ -197,6 +199,7 @@ public class an_event_sequence : Specification
     /// </summary>
     protected void ConfigureSilo()
     {
+        _silo.AddService(EventTimeProvider);
         _silo.AddService(_storage);
         _silo.AddService<IStorageErrorClassifier>(new Storage.InMemory.InMemoryStorageErrorClassifier());
         _silo.AddService(_constraintValidationFactory);
@@ -214,7 +217,8 @@ public class an_event_sequence : Specification
                 StatePersistenceInterval = StatePersistenceInterval,
                 ConstraintsVersionCheckInterval = ConstraintsVersionCheckInterval,
                 CausationPropertyRetention = CausationPropertyRetention
-            }
+            },
+            ConstraintIndexRepair = ConstraintIndexRepairConfiguration
         }));
         _silo.AddService(_eventSequenceLogger);
         _silo.AddService(NullLogger<ConstraintIndexReplay>.Instance);
@@ -237,8 +241,9 @@ public class an_event_sequence : Specification
     /// <summary>
     /// Append a single event with no concurrency scope, tags or causation.
     /// </summary>
+    /// <param name="occurred">An optional explicit occurrence time.</param>
     /// <returns>The <see cref="AppendResult"/> of the append.</returns>
-    protected Task<AppendResult> AppendAnEvent() => _eventSequence.Append(
+    protected Task<AppendResult> AppendAnEvent(DateTimeOffset? occurred = null) => _eventSequence.Append(
         EventSourceType.Default,
         _eventSourceId,
         EventStreamType.All,
@@ -249,7 +254,8 @@ public class an_event_sequence : Specification
         [],
         Identity.System,
         [],
-        Concepts.EventSequences.Concurrency.ConcurrencyScope.None);
+        Concepts.EventSequences.Concurrency.ConcurrencyScope.None,
+        occurred);
 
     /// <summary>
     /// Build a single already validated and compliant event ready to be appended to storage, bypassing the

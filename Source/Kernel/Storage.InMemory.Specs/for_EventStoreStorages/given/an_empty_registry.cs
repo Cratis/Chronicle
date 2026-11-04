@@ -9,7 +9,7 @@ public class an_empty_registry : Specification
 {
     protected EventStoreStorages _storages;
 
-    void Establish() => _storages = new(new KnownInstancesOf<ISinkFactory>([]), Substitute.For<Cratis.Orleans.Storage.IJobsStorage>());
+    void Establish() => _storages = new(new KnownInstancesOf<ISinkFactory>([]), Substitute.For<Cratis.Choreography.Storage.IJobsStorage>());
 
     void Destroy() => _storages.Dispose();
 }

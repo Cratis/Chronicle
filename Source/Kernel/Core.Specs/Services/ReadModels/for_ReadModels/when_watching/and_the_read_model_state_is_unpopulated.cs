@@ -27,7 +27,7 @@ public class and_the_read_model_state_is_unpopulated : given.all_dependencies
 
     async Task Because()
     {
-        _service.Watch(new WatchRequest { EventStore = "test-store", ReadModelIdentifier = "test-read-model" })
+        _service.Watch(new WatchRequest { EventStore = "test-store", Namespace = "test-namespace", ReadModelIdentifier = "test-read-model" })
             .Subscribe(change =>
             {
                 if (change.Subscribed)

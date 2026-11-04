@@ -3,6 +3,8 @@
 
 using System.Collections.Immutable;
 using System.Text.Json;
+using Cratis.Choreography.Jobs;
+using Cratis.Choreography.Storage.Jobs;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
@@ -11,8 +13,6 @@ using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Storage.Keys;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Monads;
-using Cratis.Orleans.Jobs;
-using Cratis.Orleans.Storage.Jobs;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Orleans.Core;
@@ -44,6 +44,13 @@ public class a_replay_observer_job : Specification
     protected IStorage<JobStateWithLastHandledEvent> _stateStorage;
 
     protected static IObserverKeys CreateKeys(params Key[] keys) => new ObserverKeysForTesting(keys);
+
+    /// <summary>
+    /// Gives derived specifications a chance to register services before the job grain is created.
+    /// </summary>
+    protected virtual void ConfigureSilo()
+    {
+    }
 
     async Task Establish()
     {
@@ -99,6 +106,7 @@ public class a_replay_observer_job : Specification
         _stateStorage = _silo.StorageManager.GetStorage<JobStateWithLastHandledEvent>(
             typeof(TestableReplayObserver).FullName!);
 
+        ConfigureSilo();
         _job = await _silo.CreateGrainAsync<TestableReplayObserver>(_jobId, _jobKey);
     }
 }

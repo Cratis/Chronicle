@@ -51,13 +51,13 @@ public interface IDatabase
     Task<DbContextScope<NamespaceDbContext>> Namespace(EventStoreName eventStore, EventStoreNamespaceName @namespace);
 
     /// <summary>
-    /// Gets the <see cref="DbContextOptions{JobsDbContext}"/> for the Cratis.Orleans job system's storage in
+    /// Gets the <see cref="DbContextOptions{JobsDbContext}"/> for the Cratis.Choreography job system's storage in
     /// the database of an event store namespace - the same database the namespace's own DbContext uses.
     /// </summary>
     /// <param name="eventStore">The event store to get for.</param>
     /// <param name="namespace">The namespace within the event store to get for.</param>
     /// <returns>The resolved <see cref="DbContextOptions{JobsDbContext}"/>.</returns>
-    DbContextOptions<Cratis.Orleans.Storage.Sql.Jobs.JobsDbContext> GetJobsDbContextOptions(string eventStore, string @namespace);
+    DbContextOptions<Cratis.Choreography.Storage.Sql.Jobs.JobsDbContext> GetJobsDbContextOptions(string eventStore, string @namespace);
 
     /// <summary>
     /// Gets a database context scope for a specific unique constraint table within a namespace.

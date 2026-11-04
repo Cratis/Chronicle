@@ -2,12 +2,14 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Recommendations;
+using Orleans.CodeGeneration;
 
 namespace Cratis.Chronicle.Recommendations;
 
 /// <summary>
 /// Defines a system for a recommendation in the system.
 /// </summary>
+[Version(1)]
 public interface IRecommendation : IGrainWithGuidCompoundKey
 {
     /// <summary>
@@ -21,6 +23,12 @@ public interface IRecommendation : IGrainWithGuidCompoundKey
     /// </summary>
     /// <returns>Awaitable task.</returns>
     Task Ignore();
+
+    /// <summary>
+    /// Unignore the recommendation, making it active again.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    Task Unignore();
 }
 
 /// <summary>

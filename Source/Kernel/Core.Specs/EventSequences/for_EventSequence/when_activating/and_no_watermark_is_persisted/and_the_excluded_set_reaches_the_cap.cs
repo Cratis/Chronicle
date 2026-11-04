@@ -13,7 +13,7 @@ public class and_the_excluded_set_reaches_the_cap : given.a_catching_up_sequence
     async Task Establish()
     {
         for (ulong number = 0; number < 1001; number++) await Seed(number, email: "historical");
-        _eventSequence.ConstraintIndexCatchUpKeyLimit = 1;
+        _eventSequence.ConstraintIndexRepair = new() { CatchUpExclusionLimit = 1 };
         await Tick();
     }
 
