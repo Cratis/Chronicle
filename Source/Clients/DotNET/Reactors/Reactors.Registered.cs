@@ -16,10 +16,11 @@ public partial class Reactors
         {
             throw new ConflictingArtifactKind(reactorType, nameof(ExplicitArtifactKind.Reactor), nameof(ExplicitArtifactKind.Reducer));
         }
+        var services = _servicesAccessor.Services;
         lock (_registerLock)
         {
             var registration = CreateRegistrationFor(reactorType);
-            AddRegistration(registration);
+            AddRegistration(registration, services);
             return Task.FromResult<IReactorHandler>(registration.Handler);
         }
     }

@@ -13,9 +13,11 @@ public class and_it_was_never_registered : for_Reactors.given.an_observed_reacto
         _reactors.Add("unregistered", builder => builder.On<OrderPlaced>(_ => { }));
         await _reactors.Discover();
         _connectionLifecycle.OnDisconnected += Raise.Event<Disconnected>();
+        _servicesAccessor.ClearReceivedCalls();
     }
 
     Task Because() => _reactors.RegisterAgainAfterReconnect();
 
     [Fact] void should_not_register_the_discovered_reactor() => _definitions.ShouldBeEmpty();
+    [Fact] void should_not_resolve_services() => _ = _servicesAccessor.DidNotReceive().Services;
 }
