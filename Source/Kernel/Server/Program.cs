@@ -267,7 +267,7 @@ hostBuilder
    .ConfigureServices((context, services) =>
    {
        services.AddCodeFirstGrpcReflection();
-       services.AddOpenTelemetry().WithCratis(context.Configuration, TelemetryConfiguration.Configure);
+       services.AddOpenTelemetry().WithCratis(context.Configuration, options => TelemetryConfiguration.Configure(options, context.Configuration));
 
        services
           .AddBindingsByConvention()

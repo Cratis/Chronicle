@@ -1,7 +1,12 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Configuration;
+using Cratis.Chronicle.Diagnostics.Identifiers;
 using Cratis.OpenTelemetry;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using OpenTelemetry.Instrumentation.AspNetCore;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
 
@@ -13,17 +18,62 @@ namespace Cratis.Chronicle.Diagnostics.OpenTelemetry;
 public static class TelemetryConfiguration
 {
     /// <summary>
-    /// Configures Chronicle instrumentation without overriding standard OTEL resource or export settings.
+    /// Configures Chronicle instrumentation with default <see cref="ChronicleOptions"/>, without overriding standard OTEL resource or export settings.
     /// </summary>
     /// <param name="options">The shared telemetry options.</param>
-    public static void Configure(CratisOpenTelemetryOptions options)
+    public static void Configure(CratisOpenTelemetryOptions options) => Configure(options, new ChronicleOptions());
+
+    /// <summary>
+    /// Configures Chronicle instrumentation, honoring the health check endpoint and telemetry options from the configuration, without overriding standard OTEL resource or export settings.
+    /// </summary>
+    /// <param name="options">The shared telemetry options.</param>
+    /// <param name="configuration">The <see cref="IConfiguration"/> holding the Chronicle options and the standard OTEL keys.</param>
+    public static void Configure(CratisOpenTelemetryOptions options, IConfiguration configuration)
+    {
+        MaybeSetHttp2Unencrypted(configuration);
+        Configure(options, configuration.GetSection(ChronicleOptions.SectionPath).Get<ChronicleOptions>() ?? new());
+    }
+
+    static void Configure(CratisOpenTelemetryOptions options, ChronicleOptions chronicle)
     {
         options.ServiceName = "Chronicle";
         options.IncludeExceptionDetails = true;
-        options.ConfigureTracing = tracing => tracing
-            .AddChronicleInstrumentation()
-            .AddGrpcClientInstrumentation();
+        options.ConfigureTracing = tracing => ConfigureTracing(tracing, chronicle);
         options.ConfigureMetrics = ConfigureMetrics;
+    }
+
+    static void ConfigureTracing(TracerProviderBuilder tracing, ChronicleOptions chronicle)
+    {
+        // The shared setup already adds HTTP client, ASP.NET Core and runtime instrumentation and the OTLP exporters.
+        // Only the ASP.NET Core filter is replaced, through its options, so that instrumentation is not added twice.
+        var healthCheckEndpoint = chronicle.HealthCheckEndpoint;
+        tracing
+            .ConfigureServices(services => services.Configure<AspNetCoreTraceInstrumentationOptions>(instrumentation =>
+                instrumentation.Filter = context => ServerRequestTraceFilter.ShouldTrace(healthCheckEndpoint, context.Request.Path.Value)))
+            .AddChronicleInstrumentation()
+            .AddProcessor(_ => new IdentifierSpanProcessor());
+
+        if (chronicle.Telemetry.GrpcClientTracing)
+        {
+            tracing.AddGrpcClientInstrumentation();
+        }
+    }
+
+    static void MaybeSetHttp2Unencrypted(IConfiguration configuration)
+    {
+        var endpoints = new[]
+        {
+            configuration["OTEL_EXPORTER_OTLP_ENDPOINT"],
+            configuration["OTEL_EXPORTER_OTLP_TRACES_ENDPOINT"],
+            configuration["OTEL_EXPORTER_OTLP_METRICS_ENDPOINT"],
+            configuration["OTEL_EXPORTER_OTLP_LOGS_ENDPOINT"],
+            configuration["OTEL_EXPORTER_OTLP:Endpoint"]
+        }.Where(_ => !string.IsNullOrWhiteSpace(_)).ToArray();
+
+        if (endpoints.Length == 0 || endpoints.Any(_ => Uri.TryCreate(_, UriKind.Absolute, out var uri) && uri.Scheme.Equals("http", StringComparison.OrdinalIgnoreCase)))
+        {
+            AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
+        }
     }
 
     static void ConfigureMetrics(MeterProviderBuilder metrics)

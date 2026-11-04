@@ -38,7 +38,7 @@ Log export includes both the formatted message and logging scopes, including obs
 
 ### Hosting API
 
-Custom kernel hosts use `AddOpenTelemetry().WithCratis(configuration, TelemetryConfiguration.Configure)`. `WithCratis` comes from `Cratis.OpenTelemetry`; `TelemetryConfiguration` comes from `Cratis.Chronicle.Diagnostics.OpenTelemetry` and adds Chronicle instrumentation and fallback defaults. The `AddChronicleTelemetry` extension is deprecated and delegates to this shared setup. It is retained for source compatibility without compiler warnings, not removed.
+Custom kernel hosts use `AddOpenTelemetry().WithCratis(configuration, options => TelemetryConfiguration.Configure(options, configuration))`. Passing the configuration applies the configured health check endpoint to trace filtering, enables gRPC client tracing when `Cratis:Chronicle:Telemetry:GrpcClientTracing` is `true`, and enables HTTP/2 without TLS for plain `http` OTLP endpoints. `WithCratis` comes from `Cratis.OpenTelemetry`; `TelemetryConfiguration` comes from `Cratis.Chronicle.Diagnostics.OpenTelemetry` and adds Chronicle instrumentation and fallback defaults. The `AddChronicleTelemetry` extension is deprecated and delegates to this shared setup. It is retained for source compatibility without compiler warnings, not removed.
 
 ## Event source ids and log levels
 
@@ -230,7 +230,7 @@ Chronicle traces the following activity sources:
 | `Microsoft.Orleans.Application` | Orleans application activities |
 | HTTP client | Outgoing HTTP requests |
 | ASP.NET Core | Incoming HTTP and unary gRPC requests, excluding health checks and connection keep-alive |
-| gRPC client | Outgoing gRPC calls (opt-in) |
+| gRPC client | Outgoing gRPC calls (opt-in with `Cratis:Chronicle:Telemetry:GrpcClientTracing`) |
 
 ### Trace volume defaults
 
