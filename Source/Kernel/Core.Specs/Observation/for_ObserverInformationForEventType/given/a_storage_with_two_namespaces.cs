@@ -34,7 +34,7 @@ public class a_storage_with_two_namespaces : Specification
             _namespaceChanges,
             new NamespaceState("ns-a", DateTimeOffset.UtcNow),
             new NamespaceState("ns-b", DateTimeOffset.UtcNow)));
-        eventStore.Observers.ObserveAll().Returns(_ => Tracked<ObserverDefinition>(_definitionChanges, Definition()));
+        eventStore.Observers.ObserveAll().Returns(_ => Tracked(_definitionChanges, Definition()));
         eventStore.GetNamespace(Arg.Any<EventStoreNamespaceName>()).Returns(_ =>
         {
             var @namespace = Substitute.For<IEventStoreNamespaceStorage>();
