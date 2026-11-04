@@ -41,6 +41,16 @@ public interface IConnectionLifecycle
     Task DisconnectCompleted() => Task.CompletedTask;
 
     /// <summary>
+    /// Bounds every wait on the disconnect fence, so a disconnect handler that awaits a connect cannot deadlock it.
+    /// </summary>
+    /// <param name="timeout">How long a wait may last before it fails with <see cref="ConnectionTimedOut"/>.</param>
+    /// <param name="timeProvider">The <see cref="TimeProvider"/> measuring the timeout.</param>
+    /// <param name="cancellationToken">Connection lifetime token that abandons a wait.</param>
+    void BoundDisconnectFence(TimeSpan timeout, TimeProvider timeProvider, CancellationToken cancellationToken)
+    {
+    }
+
+    /// <summary>
     /// Called when the client is disconnected to the kernel.
     /// </summary>
     /// <returns>Awaitable task.</returns>

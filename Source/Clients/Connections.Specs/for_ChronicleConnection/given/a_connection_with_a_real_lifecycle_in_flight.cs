@@ -1,8 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Microsoft.Extensions.Logging.Abstractions;
-
 namespace Cratis.Chronicle.Connections.for_ChronicleConnection.given;
 
 /// <summary>
@@ -14,11 +12,13 @@ public class a_connection_with_a_real_lifecycle_in_flight : a_connection_with_a_
 {
     protected ObservableLifecycle _real;
     protected TaskCompletionSource _fenceAwaited;
+    protected SignallingLifecycleLogger _lifecycleLogger;
 
     protected override IConnectionLifecycle CreateRealLifecycle()
     {
         _fenceAwaited = NewGate();
-        _real = new ObservableLifecycle(new ConnectionLifecycle(NullLogger<ConnectionLifecycle>.Instance), _fenceAwaited);
+        _lifecycleLogger = new SignallingLifecycleLogger();
+        _real = new ObservableLifecycle(new ConnectionLifecycle(_lifecycleLogger), _fenceAwaited);
         return _real;
     }
 
@@ -46,8 +46,13 @@ public class a_connection_with_a_real_lifecycle_in_flight : a_connection_with_a_
 
         public Task DisconnectCompleted()
         {
+            // The inner wait has armed its deadline by the time it returns, so the signal means a spec may advance the clock.
+            var waiting = inner.DisconnectCompleted();
             fenceAwaited.TrySetResult();
-            return inner.DisconnectCompleted();
+            return waiting;
         }
+
+        public void BoundDisconnectFence(TimeSpan timeout, TimeProvider timeProvider, CancellationToken cancellationToken) =>
+            inner.BoundDisconnectFence(timeout, timeProvider, cancellationToken);
     }
 }

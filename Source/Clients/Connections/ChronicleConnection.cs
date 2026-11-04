@@ -132,6 +132,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         Lifecycle = connectionLifecycle;
         _correlationIdAccessor = correlationIdAccessor;
         _cancellationToken = cancellationToken;
+        Lifecycle.BoundDisconnectFence(TimeSpan.FromSeconds(connectTimeout), _timeProvider, cancellationToken);
         _logger = logger;
         _loggerFactory = loggerFactory;
         if (ServerCertificateValidationWarning.AppliesTo(skipTlsValidation, connectionString))

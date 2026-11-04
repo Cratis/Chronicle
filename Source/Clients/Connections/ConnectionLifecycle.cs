@@ -24,6 +24,9 @@ public class ConnectionLifecycle(ILogger<ConnectionLifecycle> logger) : IConnect
     /// </remarks>
     readonly object _handlers = new();
     readonly object _generationGate = new();
+    TimeSpan _fenceTimeout = Timeout.InfiniteTimeSpan;
+    TimeProvider _fenceTime = TimeProvider.System;
+    CancellationToken _fenceToken;
     Task _disconnecting = Task.CompletedTask;
     Connected _onConnected = Nothing;
     Disconnected _onDisconnected = Nothing;
@@ -154,47 +157,74 @@ public class ConnectionLifecycle(ILogger<ConnectionLifecycle> logger) : IConnect
     }
 
     /// <inheritdoc/>
-    public async Task DisconnectCompleted()
+    public Task DisconnectCompleted() => WaitForDisconnects(false);
+
+    /// <inheritdoc/>
+    public void BoundDisconnectFence(TimeSpan timeout, TimeProvider timeProvider, CancellationToken cancellationToken)
     {
-        while (true)
-        {
-            Task disconnecting;
-            lock (_generationGate)
-            {
-                if (_disconnecting.IsCompleted)
-                {
-                    return;
-                }
-
-                disconnecting = _disconnecting;
-            }
-
-            await disconnecting;
-        }
+        _fenceTimeout = timeout;
+        _fenceTime = timeProvider;
+        _fenceToken = cancellationToken;
     }
 
     static Task Nothing() => Task.CompletedTask;
 
-    async Task WaitForPreviousDisconnect()
+    Task WaitForPreviousDisconnect() => WaitForDisconnects(true);
+
+    async Task WaitForDisconnects(bool connecting)
     {
         // IsConnected is set before the handlers run so that a handler accessing services through
         // IChronicleServicesAccessor does not deadlock on the connection lock.
-        while (true)
+        Task fence;
+        lock (_generationGate)
         {
-            Task fence;
-            lock (_generationGate)
+            if (_disconnecting.IsCompleted)
             {
-                if (_disconnecting.IsCompleted)
+                if (connecting)
                 {
                     IsConnected = true;
-                    return;
                 }
 
-                fence = _disconnecting;
+                return;
             }
 
-            logger.WaitingForDisconnectToComplete();
-            await fence;
+            fence = _disconnecting;
+        }
+
+        // A disconnect handler that itself awaits a connect would otherwise wait on this fence forever,
+        // so the whole wait is bounded by the connect timeout and the connection lifetime.
+        using var deadline = new CancellationTokenSource(_fenceTimeout, _fenceTime);
+        using var linked = CancellationTokenSource.CreateLinkedTokenSource(deadline.Token, _fenceToken);
+        try
+        {
+            while (true)
+            {
+                if (connecting)
+                {
+                    logger.WaitingForDisconnectToComplete();
+                }
+
+                await fence.WaitAsync(linked.Token);
+
+                lock (_generationGate)
+                {
+                    if (_disconnecting.IsCompleted)
+                    {
+                        if (connecting)
+                        {
+                            IsConnected = true;
+                        }
+
+                        return;
+                    }
+
+                    fence = _disconnecting;
+                }
+            }
+        }
+        catch (OperationCanceledException) when (deadline.IsCancellationRequested && !_fenceToken.IsCancellationRequested)
+        {
+            throw new ConnectionTimedOut();
         }
     }
 
