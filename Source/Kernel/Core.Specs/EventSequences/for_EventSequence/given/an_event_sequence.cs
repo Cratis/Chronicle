@@ -52,6 +52,7 @@ public class an_event_sequence : Specification
     protected global::Orleans.Core.IStorage<EventSequenceState> _stateStorage;
 
     protected IStorage _storage;
+    protected IReservedEventSequenceIds _reservedEventSequenceIds = Substitute.For<IReservedEventSequenceIds>();
     protected IEventStoreStorage _eventStoreStorage;
     protected IEventStoreNamespaceStorage _namespaceStorage;
     protected IEventSequenceStorage _eventSequenceStorage;
@@ -76,6 +77,7 @@ public class an_event_sequence : Specification
     protected virtual TimeProvider EventTimeProvider => TimeProvider.System;
     protected virtual Telemetry Telemetry => new();
     protected virtual EventSequenceId SequenceId => EventSequenceId.Log;
+    protected long StateWrites => _silo.StorageStats<EventSequence, EventSequenceState>().Writes;
     protected virtual int StatePersistenceInterval => 1000;
     protected virtual CausationPropertyRetention CausationPropertyRetention => CausationPropertyRetention.Retain;
 
@@ -208,6 +210,7 @@ public class an_event_sequence : Specification
         _silo.AddService(cache);
         _silo.AddService(EventTimeProvider);
         _silo.AddService(_storage);
+        _silo.AddService(_reservedEventSequenceIds);
         _silo.AddService<IStorageErrorClassifier>(new Storage.InMemory.InMemoryStorageErrorClassifier());
         _silo.AddService(_constraintValidationFactory);
         _silo.AddService(_eventTypeMigrations);
@@ -238,12 +241,22 @@ public class an_event_sequence : Specification
     }
 
     /// <summary>
+    /// Configures the sequence name before grain activation.
+    /// </summary>
+    protected virtual void ConfigureSequenceName()
+    {
+    }
+
+    /// <summary>
     /// Creates the grain under test. Overridable so a spec can substitute a variant of <see cref="EventSequence"/>
     /// whose infrastructure misbehaves in a way the substituted collaborators cannot express.
     /// </summary>
     /// <returns>The <see cref="EventSequence"/> to exercise.</returns>
-    protected virtual async Task<EventSequence> CreateEventSequence() =>
-        await _silo.CreateGrainAsync<EventSequence>(_eventSequenceKey.ToString());
+    protected virtual async Task<EventSequence> CreateEventSequence()
+    {
+        ConfigureSequenceName();
+        return await _silo.CreateGrainAsync<EventSequence>(_eventSequenceKey.ToString());
+    }
 
     /// <summary>
     /// Append a single event with no concurrency scope, tags or causation.

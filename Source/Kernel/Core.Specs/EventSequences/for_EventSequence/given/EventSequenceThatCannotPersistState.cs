@@ -10,6 +10,7 @@ using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Patterns;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
+using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Metrics;
 using Cratis.Traces;
 using Microsoft.Extensions.DependencyInjection;
@@ -23,6 +24,7 @@ namespace Cratis.Chronicle.EventSequences.for_EventSequence.given;
 /// unavailable at the moment the warm-start snapshot is taken after a durable append.
 /// </summary>
 /// <param name="storage"><see cref="IStorage"/> for accessing the underlying storage.</param>
+/// <param name="reservedEventSequenceIds">The active provider's reserved sequence names.</param>
 /// <param name="constraintValidatorSetFactory"><see cref="IConstraintValidationFactory"/> for creating a set of constraint validators.</param>
 /// <param name="eventTypeMigrations"><see cref="IEventTypeMigrations"/> for migrating events between generations.</param>
 /// <param name="patternCapture">The pattern capture subscriptions.</param>
@@ -40,6 +42,7 @@ namespace Cratis.Chronicle.EventSequences.for_EventSequence.given;
 /// <param name="constraintIndexReplayLogger">The constraint replay logger.</param>
 public class EventSequenceThatCannotPersistState(
     IStorage storage,
+    IReservedEventSequenceIds reservedEventSequenceIds,
     IConstraintValidationFactory constraintValidatorSetFactory,
     IEventTypeMigrations eventTypeMigrations,
     IPatternCapture patternCapture,
@@ -56,6 +59,7 @@ public class EventSequenceThatCannotPersistState(
     IEventTypeSchemaCache schemaCache,
     ILogger<ConstraintIndexReplay> constraintIndexReplayLogger) : EventSequence(
         storage,
+        reservedEventSequenceIds,
         constraintValidatorSetFactory,
         eventTypeMigrations,
         patternCapture,

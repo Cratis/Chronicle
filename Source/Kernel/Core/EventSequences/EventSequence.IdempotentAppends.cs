@@ -27,6 +27,7 @@ public partial class EventSequence
     /// <inheritdoc/>
     public async Task<IdempotentAppendResult> AppendWithIdempotencyKey(EventToAppend @event, IdempotencyKey idempotencyKey, CorrelationId correlationId, IEnumerable<Causation> causation, Identity causedBy, ConcurrencyScope concurrencyScope)
     {
+        if (!_mayWriteSequence) throw new ReservedEventSequenceName(_eventSequenceId);
         var requests = new List<KeyedAppend> { new(@event, idempotencyKey) };
         var scopes = new ConcurrencyScopes(new Dictionary<EventSourceId, ConcurrencyScope> { [@event.EventSourceId] = concurrencyScope });
         await AppendKeyedBatch(requests, correlationId, causation, causedBy, scopes);

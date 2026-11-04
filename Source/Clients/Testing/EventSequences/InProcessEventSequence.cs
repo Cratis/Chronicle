@@ -122,6 +122,7 @@ internal static class InProcessEventSequence
         {
             grain = new KernelEventSequences::EventSequence(
                 storage,
+                new global::Cratis.Chronicle.Storage.InMemory.InMemoryReservedEventSequenceIds(),
                 new KernelConstraints::ConstraintValidationFactory(storage),
                 eventTypeMigrations,
                 new NoOpPatternCapture(),
