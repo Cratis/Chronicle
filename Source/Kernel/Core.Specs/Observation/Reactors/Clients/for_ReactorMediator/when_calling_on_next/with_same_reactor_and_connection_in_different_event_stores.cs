@@ -24,7 +24,7 @@ public class with_same_reactor_and_connection_in_different_event_stores : given.
             new ConnectionId("connection"),
             new EventStoreName("store-a"),
             EventStoreNamespaceName.Default,
-            (_, _, tcs, _) =>
+            (_, _, tcs, _, _) =>
             {
                 _firstObserverCalled = true;
                 tcs.SetResult(ObserverSubscriberResult.Ok(EventSequenceNumber.First));
@@ -35,7 +35,7 @@ public class with_same_reactor_and_connection_in_different_event_stores : given.
             new ConnectionId("connection"),
             new EventStoreName("store-b"),
             EventStoreNamespaceName.Default,
-            (_, _, tcs, _) =>
+            (_, _, tcs, _, _) =>
             {
                 _secondObserverCalled = true;
                 tcs.SetResult(ObserverSubscriberResult.Ok(EventSequenceNumber.First));

@@ -5,6 +5,7 @@ using System.Dynamic;
 using System.Reactive.Linq;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
@@ -56,6 +57,11 @@ internal sealed class ReadModels(
     /// Gets or sets the delay between attempts to resolve a read model definition.
     /// </summary>
     internal TimeSpan ReadModelDefinitionRetryDelay { get; set; } = TimeSpan.FromMilliseconds(100);
+
+    /// <summary>
+    /// Gets or sets the interval at which a live watch re-registers itself with its changeset notifier.
+    /// </summary>
+    internal TimeSpan WatchRegistrationRefreshInterval { get; set; } = TimeSpan.FromSeconds(30);
 
     /// <inheritdoc/>
     public async Task RegisterMany(RegisterManyRequest request, CallContext context = default)
@@ -488,9 +494,16 @@ internal sealed class ReadModels(
             // dispatch from the notifier grain was silently dropped on slower backends.
             changesetMediator.Subscribe(subscriptionId, async (namespaceName, readModelKey, readModelInstance, change) =>
             {
+                // Defence in depth: the notifier is scoped to this watch's event store and namespace, but a changeset
+                // of any other namespace is dropped before it is released with that namespace's keys.
+                if (namespaceName != (EventStoreNamespaceName)request.Namespace)
+                {
+                    return;
+                }
+
                 // Decrypt through the shared release path so observable queries resolve the compliance
                 // subject exactly like one-shot queries (explicit __subject, else inferred from _id/id).
-                var decrypted = await ReleaseJsonForReadModel(request.EventStore, namespaceName, schema, readModelInstance);
+                var decrypted = await ReleaseJsonForReadModel(request.EventStore, namespaceName, schema, readModelInstance, change: change);
                 observer.OnNext(new ReadModelChangeset
                 {
                     Namespace = namespaceName,
@@ -520,7 +533,7 @@ internal sealed class ReadModels(
                 subscriptionId.ToString("N"),
                 localSiloDetails.SiloAddress.ToParsableString());
             var subscriber = grainFactory.GetGrain<IReadModelChangesetSubscriber>(subscriberKey);
-            var notifier = grainFactory.GetGrain<IProjectionChangesetNotifier>(definition.ObserverIdentifier);
+            var notifier = grainFactory.GetGrain<IProjectionChangesetNotifier>(new ProjectionChangesetNotifierKey(definition.ObserverIdentifier.Value, request.EventStore, request.Namespace));
             await notifier.Subscribe(subscriber);
 
             try
@@ -529,7 +542,7 @@ internal sealed class ReadModels(
                 // from this point on reaches the forwarder registered above.
                 observer.OnNext(new ReadModelChangeset { Subscribed = true });
 
-                await Task.Delay(Timeout.Infinite, context.CancellationToken).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
+                await RefreshWatchRegistration(notifier, subscriber, context.CancellationToken);
             }
             finally
             {
@@ -537,6 +550,34 @@ internal sealed class ReadModels(
                 changesetMediator.Unsubscribe(subscriptionId);
             }
         });
+    }
+
+    async Task RefreshWatchRegistration(IProjectionChangesetNotifier notifier, IReadModelChangesetSubscriber subscriber, CancellationToken cancellationToken)
+    {
+        // The notifier keeps its registrations in memory, so a lost activation forgets this watch. Registering again is
+        // idempotent and reactivates the notifier. A transient failure must not end the stream: the client only watches
+        // again on reconnect, so the next tick simply tries again.
+        while (!cancellationToken.IsCancellationRequested)
+        {
+            await Task.Delay(WatchRegistrationRefreshInterval, TimeProvider.System, cancellationToken).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return;
+            }
+
+            try
+            {
+                await notifier.Subscribe(subscriber);
+            }
+            catch (Exception)
+            {
+                // Stop a canceled watch; otherwise the next tick retries the registration.
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    return;
+                }
+            }
+        }
     }
 
     async Task<GetInstanceByKeyResponse> GetMaterializedInstanceByKey(GetInstanceByKeyRequest request, Concepts.ReadModels.ReadModelDefinition definition)
@@ -734,7 +775,8 @@ internal sealed class ReadModels(
         string @namespace,
         JsonSchema schema,
         JsonObject readModel,
-        string? preferredSubject = null)
+        string? preferredSubject = null,
+        ReadModelChangeContext? change = null)
     {
         // A read model projected directly from stored (encrypted) events still holds its [PII] and [Encrypted]
         // fields encrypted under the resolved subject. The subject is resolved identically for one-shot and
@@ -747,31 +789,30 @@ internal sealed class ReadModels(
         // The document handed in is never modified. On the observable path it belongs to the changeset the notifier
         // pushed, not to this call, so stamping bookkeeping onto it would leave an internal marker on an object
         // this method does not own.
-        var stamped = (readModel.DeepClone() as JsonObject)!;
-        if (!schema.HasSchemaMetadata())
+        //
+        // Kernel bookkeeping never reaches compliance: the subject lineage comes from the change (or, for a producer
+        // of an earlier release and for one-shot reads, from the document) and the document is split from it first
+        // (Cratis/Chronicle#3588). Watches restore an actual watermark after release, whether or not the model is
+        // PII. One-shot callers retain their own watermark handling.
+        var (payload, storedSubject, subjects) = ReadModelChangeBookkeeping.Split(readModel, change, schema);
+        var released = payload;
+        if (schema.HasSchemaMetadata())
         {
-            stamped.Remove(WellKnownProperties.Subject);
-            stamped.Remove(WellKnownProperties.Subjects);
-            return stamped;
+            // Persisted event lineage is authoritative; a request key is only a fallback for older state.
+            var fallbackSubject = !string.IsNullOrWhiteSpace(preferredSubject) && preferredSubject != ReadModelKey.Unspecified.Value
+                ? preferredSubject
+                : InferSubjectFromJson(payload);
+            var resolvedSubject = !string.IsNullOrWhiteSpace(storedSubject) ? storedSubject : fallbackSubject;
+            released = await complianceHelper.ReleaseJson(eventStore, @namespace, schema, payload, resolvedSubject, subjects);
         }
 
-        // Persisted event lineage is authoritative; a request key is only a fallback for older state.
-        var storedSubject = readModel[WellKnownProperties.Subject]?.GetValue<string>();
-        var fallbackSubject = !string.IsNullOrWhiteSpace(preferredSubject) && preferredSubject != ReadModelKey.Unspecified.Value
-            ? preferredSubject
-            : InferSubjectFromJson(readModel);
-        var resolvedSubject = !string.IsNullOrWhiteSpace(storedSubject) ? storedSubject : fallbackSubject;
-        if (!string.IsNullOrWhiteSpace(resolvedSubject))
-        {
-            stamped[WellKnownProperties.Subject] = resolvedSubject;
-        }
-
-        // The strip stays even though the compliance manager releases onto a clone that never carried the marker:
-        // an implementation that hands back the instance it was given returns the stamped document, and the marker
-        // must never reach the client.
-        var released = await complianceHelper.ReleaseJson(eventStore, @namespace, schema, stamped);
         released.Remove(WellKnownProperties.Subject);
         released.Remove(WellKnownProperties.Subjects);
+        if (change?.EventSequenceNumber.IsActualValue == true)
+        {
+            released[WellKnownProperties.LastHandledEventSequenceNumber] = JsonValue.Create(change.EventSequenceNumber.Value);
+        }
+
         return released;
 
         static string? InferSubjectFromJson(JsonObject json)

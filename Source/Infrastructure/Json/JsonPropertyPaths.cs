@@ -17,6 +17,11 @@ namespace Cratis.Chronicle.Json;
 /// </remarks>
 public static class JsonPropertyPaths
 {
+    /// <summary>
+    /// The suffix of a path segment that addresses every element of the collection the segment names.
+    /// </summary>
+    public const string ElementMarker = "[]";
+
     const char Separator = '.';
 
     /// <summary>
@@ -52,21 +57,83 @@ public static class JsonPropertyPaths
     /// Writes a value at the dotted property path, creating the objects along the way.
     /// </summary>
     /// <param name="root">The <see cref="JsonObject"/> to write into.</param>
-    /// <param name="path">The dotted property path.</param>
+    /// <param name="path">The dotted property path. A segment ending in <c language="csharp">[]</c> addresses every element of a collection.</param>
     /// <param name="value">The value to write, which may be <see langword="null"/>.</param>
     /// <remarks>
-    /// A segment that is missing, or that holds something other than an object, is replaced by a fresh object so the
-    /// remaining segments have somewhere to live. Writing into a payload whose nested object has not been created
-    /// yet - which is exactly what a migration adding a value inside one does - is the normal case, not an error.
+    /// A segment that is missing, or that holds a scalar, is replaced by a fresh object so the remaining segments have
+    /// somewhere to live. Writing into a payload whose nested object has not been created yet - which is exactly what
+    /// a migration adding a value inside one does - is the normal case, not an error. A segment that holds a collection
+    /// is never replaced: a path must say <c language="csharp">[]</c> to reach into one, and without it the write is refused rather than
+    /// silently destroying the collection.
     /// </remarks>
-    public static void Set(JsonObject root, string path, JsonNode? value)
+    /// <exception cref="CannotWritePropertyPathThroughCollection">Thrown when a segment without <c language="csharp">[]</c> holds a collection.</exception>
+    public static void Set(JsonObject root, string path, JsonNode? value) => Write(root, Split(path), value, onlyWhenAbsent: false);
+
+    /// <summary>
+    /// Writes a value at the dotted property path where the path carries none yet - for every element when the path addresses a collection.
+    /// </summary>
+    /// <param name="root">The <see cref="JsonObject"/> to write into.</param>
+    /// <param name="path">The dotted property path. A segment ending in <c language="csharp">[]</c> addresses every element of a collection.</param>
+    /// <param name="value">The value to write, which may be <see langword="null"/>.</param>
+    /// <remarks>
+    /// Present-but-null counts as present: a default fills in a property the payload does not carry, not one that carries no value.
+    /// </remarks>
+    /// <exception cref="CannotWritePropertyPathThroughCollection">Thrown when a segment without <c language="csharp">[]</c> holds a collection.</exception>
+    public static void SetWhereAbsent(JsonObject root, string path, JsonNode? value) => Write(root, Split(path), value, onlyWhenAbsent: true);
+
+    /// <summary>
+    /// Gets whether a path addresses the elements of a collection.
+    /// </summary>
+    /// <param name="path">The dotted property path.</param>
+    /// <returns><see langword="true"/> when any segment ends in <c language="csharp">[]</c>; otherwise <see langword="false"/>.</returns>
+    public static bool AddressesElements(string path) => path.Contains(ElementMarker, StringComparison.Ordinal);
+
+    /// <summary>
+    /// Splits a dotted property path into its segments.
+    /// </summary>
+    /// <param name="path">The dotted property path.</param>
+    /// <returns>The segments of the path.</returns>
+    public static string[] Split(string path) => path.Split(Separator, StringSplitOptions.RemoveEmptyEntries);
+
+    static void Write(JsonObject root, string[] segments, JsonNode? value, bool onlyWhenAbsent)
     {
-        var segments = Split(path);
         var current = root;
 
-        for (var index = 0; index < segments.Length - 1; index++)
+        for (var index = 0; index < segments.Length; index++)
         {
             var segment = segments[index];
+            var isLast = index == segments.Length - 1;
+
+            if (segment.EndsWith(ElementMarker, StringComparison.Ordinal))
+            {
+                var name = segment[..^ElementMarker.Length];
+                if (current[name] is JsonArray elements)
+                {
+                    foreach (var element in elements.OfType<JsonObject>())
+                    {
+                        Write(element, segments[(index + 1)..], value?.DeepClone(), onlyWhenAbsent);
+                    }
+                }
+
+                // A collection that is not there has no elements to write into.
+                return;
+            }
+
+            if (isLast)
+            {
+                if (!onlyWhenAbsent || !current.ContainsKey(segment))
+                {
+                    current[segment] = value;
+                }
+
+                return;
+            }
+
+            if (current[segment] is JsonArray)
+            {
+                throw new CannotWritePropertyPathThroughCollection(segment);
+            }
+
             if (current[segment] is not JsonObject next)
             {
                 next = [];
@@ -75,14 +142,5 @@ public static class JsonPropertyPaths
 
             current = next;
         }
-
-        current[segments[^1]] = value;
     }
-
-    /// <summary>
-    /// Splits a dotted property path into its segments.
-    /// </summary>
-    /// <param name="path">The dotted property path.</param>
-    /// <returns>The segments of the path.</returns>
-    public static string[] Split(string path) => path.Split(Separator, StringSplitOptions.RemoveEmptyEntries);
 }

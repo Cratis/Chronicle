@@ -41,7 +41,7 @@ interface [GrainInterfaceType("Cratis.Chronicle.Captures.ICapturesManager")] Cra
 
 class [GrainType("connectedclients")] Cratis.Chronicle.Clients.ConnectedClients
 
-interface [GrainInterfaceType("Cratis.Chronicle.Clients.IConnectedClients")] Cratis.Chronicle.Clients.IConnectedClients [Version(1)]
+interface [GrainInterfaceType("Cratis.Chronicle.Clients.IConnectedClients")] Cratis.Chronicle.Clients.IConnectedClients [Version(2)]
   AE0E91A3: DeclaresProjection(Cratis.Chronicle.Concepts.EventStoreName, Cratis.Chronicle.Concepts.Projections.ProjectionId) -> Task<bool>
   4317FD1C: GetAllConnectedClients() -> Task<System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Clients.ConnectedClient>>
   9372A2C1: GetConnectedClient(Cratis.Chronicle.Concepts.Clients.ConnectionId) -> Task<Cratis.Chronicle.Concepts.Clients.ConnectedClient>
@@ -54,6 +54,7 @@ interface [GrainInterfaceType("Cratis.Chronicle.Clients.IConnectedClients")] Cra
   CC76998D: OnClientRestored(Cratis.Chronicle.Concepts.Clients.ConnectionId, string, bool, int, string, string, string) -> Task
   0ADB857B: RecordDeclaredProjectionVersions(Cratis.Chronicle.Concepts.Clients.ConnectionId, Cratis.Chronicle.Concepts.EventStoreName, System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Projections.ProjectionId>, string?) -> Task
   27E68A56: RecordDeclaredProjections(Cratis.Chronicle.Concepts.Clients.ConnectionId, Cratis.Chronicle.Concepts.EventStoreName, System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Projections.ProjectionId>) -> Task
+  1F595548: RecordObserver(Cratis.Chronicle.Concepts.Clients.ConnectionId, Cratis.Chronicle.Concepts.Observation.ObserverKey) -> Task
   710D6431: ReserveConnection() -> Task
 
 class [GrainType("encryptionkeycachegrainservice")] Cratis.Chronicle.Compliance.EncryptionKeyCacheGrainService
@@ -73,6 +74,14 @@ interface [GrainInterfaceType("Cratis.Chronicle.DevelopmentTools.IObserverDevelo
 class [GrainType("appendedeventsqueue")] Cratis.Chronicle.EventSequences.AppendedEventsQueue
 
 class [GrainType("appendedeventsqueues")] Cratis.Chronicle.EventSequences.AppendedEventsQueues
+
+class [GrainType("copyeventsourceevents")] Cratis.Chronicle.EventSequences.Copy.CopyEventSourceEvents
+
+class [GrainType("copyeventsourceeventsstep")] Cratis.Chronicle.EventSequences.Copy.CopyEventSourceEventsStep
+
+interface [GrainInterfaceType("Cratis.Chronicle.EventSequences.Copy.ICopyEventSourceEvents")] Cratis.Chronicle.EventSequences.Copy.ICopyEventSourceEvents [Version(0)]
+
+interface [GrainInterfaceType("Cratis.Chronicle.EventSequences.Copy.ICopyEventSourceEventsStep")] Cratis.Chronicle.EventSequences.Copy.ICopyEventSourceEventsStep [Version(0)]
 
 class [GrainType("eventsequence")] Cratis.Chronicle.EventSequences.EventSequence
 
