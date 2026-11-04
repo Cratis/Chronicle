@@ -283,7 +283,10 @@ def generate_source() -> str:
         "using System.Reactive.Linq;",
         "using KernelStorageSql::Orleans.Hosting;",
         "using KernelStorageSql::Cratis.Chronicle.Setup;",
-        "using KernelStorageSql::Cratis.Chronicle.Patching;",
+        "using Cratis.Choreography.Patching;",
+        # The patches snippets' unqualified SemanticVersion is the one above; Cratis.Chronicle.Concepts.System
+        # has its own SemanticVersion concept, so the bare name is otherwise ambiguous.
+        "using SemanticVersion = Cratis.Choreography.Patching.SemanticVersion;",
         "using KernelStorageSql::Cratis.Chronicle.Storage;",
         "using KernelStorageSql::Cratis.Chronicle.Concepts.System;",
         "using Microsoft.Extensions.Logging;",
@@ -425,6 +428,7 @@ def generate_project() -> str:
             <Aliases>KernelStorageSql</Aliases>
         </ProjectReference>
         <PackageReference Include="MongoDB.Driver" />
+        <PackageReference Include="Cratis.Choreography" />
         <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
         <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
         <PackageReference Include="Cratis.Specifications" />
