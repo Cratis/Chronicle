@@ -44,7 +44,7 @@ public partial class ConstraintIndexReplay
             return;
         }
         WritingConstraint = difference.Name;
-        var (outcome, error) = await ConstraintIndexUpdateAttempt.Run(difference.Claim, cancellationToken, ConstraintIndexTimeProvider);
+        var (outcome, error) = await ConstraintIndexUpdateAttempt.Run(difference.Claim, AttemptTimeout, cancellationToken, ConstraintIndexTimeProvider);
         WritingConstraint = null;
         if (MustRetry(difference, outcome))
         {
@@ -81,7 +81,7 @@ public partial class ConstraintIndexReplay
     async Task<bool> Write(ConstraintIndexReplayDifference difference, Func<CancellationToken, Task> write, CancellationToken cancellationToken)
     {
         WritingConstraint = difference.Name;
-        var (outcome, error) = await ConstraintIndexUpdateAttempt.Run(write, cancellationToken, ConstraintIndexTimeProvider);
+        var (outcome, error) = await ConstraintIndexUpdateAttempt.Run(write, AttemptTimeout, cancellationToken, ConstraintIndexTimeProvider);
         WritingConstraint = null;
         return Record(difference, outcome, error, cancellationToken);
     }

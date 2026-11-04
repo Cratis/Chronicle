@@ -59,16 +59,38 @@ public static class HealthOnlyPortPolicy
     /// </remarks>
     public static bool IsHealthCheckEndpoint(string? healthCheckEndpoint, string? path)
     {
-        if (string.IsNullOrWhiteSpace(healthCheckEndpoint)) return false;
+        var requested = NormalizeRequestPath(path);
+        foreach (var healthCheckPath in GetHealthCheckPaths(healthCheckEndpoint))
+        {
+            if (string.Equals(healthCheckPath, requested, StringComparison.OrdinalIgnoreCase)) return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Gets the request paths that address the configured health check endpoint: the endpoint itself and its live and ready subpaths.
+    /// </summary>
+    /// <param name="healthCheckEndpoint">The configured health check endpoint.</param>
+    /// <returns>The paths, compared case-insensitively against <see cref="NormalizeRequestPath"/>; empty when no endpoint is configured.</returns>
+    internal static string[] GetHealthCheckPaths(string? healthCheckEndpoint)
+    {
+        if (string.IsNullOrWhiteSpace(healthCheckEndpoint)) return [];
 
         var prefix = healthCheckEndpoint.Trim().Trim('/');
         prefix = prefix.Length == 0 ? string.Empty : $"/{prefix}";
 
-        var requested = (path ?? string.Empty).TrimEnd('/');
-        if (requested.Length == 0) requested = "/";
+        return [prefix.Length == 0 ? "/" : prefix, $"{prefix}/live", $"{prefix}/ready"];
+    }
 
-        return string.Equals(prefix.Length == 0 ? "/" : prefix, requested, StringComparison.OrdinalIgnoreCase)
-            || string.Equals($"{prefix}/live", requested, StringComparison.OrdinalIgnoreCase)
-            || string.Equals($"{prefix}/ready", requested, StringComparison.OrdinalIgnoreCase);
+    /// <summary>
+    /// Normalizes a request path the way routing does: a trailing slash is ignored. Allocates only when there is one to remove.
+    /// </summary>
+    /// <param name="path">The request path.</param>
+    /// <returns>The normalized path.</returns>
+    internal static string NormalizeRequestPath(string? path)
+    {
+        var requested = (path ?? string.Empty).TrimEnd('/');
+        return requested.Length == 0 ? "/" : requested;
     }
 }

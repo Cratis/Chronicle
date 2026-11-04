@@ -126,6 +126,11 @@ class for_inherited_storage_specs(unittest.TestCase):
 class for_generating_the_matrix(unittest.TestCase):
     """The generated matrix, against the repository's real integration namespaces."""
 
+    def test_container_startup_runs_only_in_the_fast_unit_lane(self):
+        for arguments in ((), ("--all-providers",)):
+            include = _run(*arguments)
+            self.assertFalse(any(entry["namespace"].endswith(".for_ContainerStartup") for entry in include))
+
     def test_a_pull_request_run_covers_the_pull_request_databases(self):
         self.assertEqual(set(matrix.PULL_REQUEST_DATABASES), _databases_of(_run()))
 

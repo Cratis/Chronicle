@@ -22,7 +22,7 @@ public class and_quarantine_begins_during_automatic_reconciliation_replay_evalua
         _eventSequence.GetNextSequenceNumberGreaterOrEqualTo(Arg.Any<EventSequenceNumber>(), Arg.Any<IEnumerable<EventType>>()).Returns(_ =>
         {
             // A changed definition makes replay evaluation reach its recommendation await.
-            _definitionStorage.State = _definitionStorage.State with { EventTypes = [] };
+            _definitionStorage.State = _definitionStorage.State with { EventTypes = [new("previous", 1)] };
             return Result<EventSequenceNumber, GetSequenceNumberError>.Success(42UL);
         });
         var recommendations = Substitute.For<IRecommendationsManager>();

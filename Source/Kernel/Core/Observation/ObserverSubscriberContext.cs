@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.Observation;
+
 namespace Cratis.Chronicle.Observation;
 
 /// <summary>
@@ -18,6 +20,11 @@ public record ObserverSubscriberContext(object? Metadata)
     /// Gets the deadline after which the subscriber stops holding the abandoned call open.
     /// </summary>
     public DateTimeOffset? AbandonAt { get; init; }
+
+    /// <summary>
+    /// Gets the path the events being delivered came from.
+    /// </summary>
+    public ObservationOrigin Origin { get; init; }
 
     /// <summary>
     /// Gets how long is left before the caller stops accepting a result.

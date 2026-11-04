@@ -2,6 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import strings from 'Strings';
+import { Link, useParams } from 'react-router-dom';
+import { withViewModel } from '@cratis/arc.react.mvvm';
+import { EventStoreAndNamespaceParams } from 'Shared';
+import { FailedPartitionDetailsViewModel, FailedPartitionDetailsProps } from './FailedPartitionDetailsViewModel';
 import { FailedPartitionDetails as FailedPartition } from 'Features/Observation';
 import { IDetailsComponentProps } from '@cratis/components/DataPage';
 import { getFailedPartitionAttemptsNewestFirst } from './getFailedPartitionAttemptsNewestFirst';
@@ -10,6 +14,11 @@ import { getFailedPartitionStatus } from './getFailedPartitionStatus';
 import { getFailedPartitionStatusLabel } from './getFailedPartitionStatusLabel';
 
 export const FailedPartitionDetails = ({ item }: IDetailsComponentProps<FailedPartition>) => {
+    const params = useParams<EventStoreAndNamespaceParams>();
+    return <FailedPartitionDetailsView item={item} eventStore={params.eventStore!} namespace={params.namespace!} />;
+};
+
+const FailedPartitionDetailsView = withViewModel<FailedPartitionDetailsViewModel, FailedPartitionDetailsProps>(FailedPartitionDetailsViewModel, ({ viewModel, props: { item } }) => {
     const detailStrings = strings.eventStore.namespaces.failedPartitions.details;
     const attempts = getFailedPartitionAttemptsNewestFirst(item);
 
@@ -33,12 +42,20 @@ export const FailedPartitionDetails = ({ item }: IDetailsComponentProps<FailedPa
             </dl>
 
             <h3 className={css.attemptsTitle}>{detailStrings.attempts}</h3>
+            {viewModel.state !== 'ready' && <p role='status'>{detailStrings.inspection[viewModel.state]}</p>}
+            {(viewModel.state === 'failed' || viewModel.state === 'denied') && (
+                <button type='button' onClick={() => viewModel.retry()}>{detailStrings.inspection.retry}</button>
+            )}
             <div className={css.attempts}>
                 {attempts.map((attempt, attemptIndex) => (
                     <div key={`${attempt.sequenceNumber}-${attemptIndex}`} className={css.attempt}>
                         <div className={css.attemptHeader}>
                             <span className={css.attemptOccurred}>{attempt.occurred.toLocaleString()}</span>
-                            <span className={css.attemptSequenceNumber}>{`${detailStrings.sequenceNumber}: ${attempt.sequenceNumber}`}</span>
+                            {viewModel.eventPath(attempt.sequenceNumber)
+                                ? <Link className={css.attemptSequenceNumber} to={viewModel.eventPath(attempt.sequenceNumber)!} aria-label={`${detailStrings.inspection.inspect}: ${viewModel.eventSequenceId}, ${detailStrings.sequenceNumber}: ${attempt.sequenceNumber}`}>
+                                    {`${detailStrings.sequenceNumber}: ${attempt.sequenceNumber}`}
+                                </Link>
+                                : <span className={css.attemptSequenceNumber}>{`${detailStrings.sequenceNumber}: ${attempt.sequenceNumber}`} — {detailStrings.inspection.unavailable}</span>}
                         </div>
                         {attempt.messages.length > 0 && (
                             <>
@@ -59,4 +76,4 @@ export const FailedPartitionDetails = ({ item }: IDetailsComponentProps<FailedPa
             </div>
         </div>
     );
-};
+});

@@ -3,6 +3,7 @@
 
 using System.Text.Json;
 using Cratis.Arc.Queries;
+using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
@@ -137,6 +138,7 @@ internal static class EventSequenceQuerying
     /// <param name="eventStreamType">Optional event stream type to narrow to.</param>
     /// <param name="eventStreamId">Optional event stream to narrow to.</param>
     /// <param name="eventSourceType">Optional event source type to narrow to.</param>
+    /// <param name="reportErasure">Whether to report confirmed erased paths in current content.</param>
     /// <returns>Every matching event, unpaged.</returns>
     internal static async Task<IEnumerable<AppendedEvent>> ReadFromSequenceNumber(
         IStorage storage,
@@ -150,7 +152,8 @@ internal static class EventSequenceQuerying
         string? eventTypeIds = default,
         string? eventStreamType = default,
         string? eventStreamId = default,
-        string? eventSourceType = default)
+        string? eventSourceType = default,
+        bool reportErasure = false)
     {
         var eventSequence = storage.GetEventStore(eventStore).GetNamespace(@namespace).GetEventSequence(eventSequenceId);
 
@@ -193,7 +196,7 @@ internal static class EventSequenceQuerying
             }
         }
 
-        var released = await ReleaseCompliance(appendedEvents, storage, eventStore, eventCompliance);
+        var released = await ReleaseCompliance(appendedEvents, storage, eventStore, reportErasure ? eventCompliance.ReleaseReportingErasure : eventCompliance.Release);
         return released.ToApi(jsonSerializerOptions);
     }
 
@@ -279,15 +282,21 @@ internal static class EventSequenceQuerying
     /// <param name="eventStore">The event store the events belong to.</param>
     /// <param name="eventCompliance">The <see cref="IEventCompliance"/> to release with.</param>
     /// <returns>The events, with PII content decrypted where applicable.</returns>
-    internal static async Task<IEnumerable<Concepts.Events.AppendedEvent>> ReleaseCompliance(
+    internal static Task<IEnumerable<Concepts.Events.AppendedEvent>> ReleaseCompliance(
         IEnumerable<Concepts.Events.AppendedEvent> events,
         IStorage storage,
         string eventStore,
-        IEventCompliance eventCompliance)
+        IEventCompliance eventCompliance) => ReleaseCompliance(events, storage, eventStore, eventCompliance.Release);
+
+    static async Task<IEnumerable<Concepts.Events.AppendedEvent>> ReleaseCompliance(
+        IEnumerable<Concepts.Events.AppendedEvent> events,
+        IStorage storage,
+        string eventStore,
+        Func<IEnumerable<Concepts.Events.AppendedEvent>, IDictionary<Concepts.Events.EventType, EventTypeSchema>, Task<Concepts.Events.AppendedEvent[]>> release)
     {
         var materialized = events as ICollection<Concepts.Events.AppendedEvent> ?? events.ToList();
         var eventTypeSchemas = await storage.GetEventStore(eventStore).EventTypes.GetFor(materialized.Select(e => e.Context.EventType).Distinct());
         var schemasByEventType = eventTypeSchemas.ToDictionary(schema => schema.Type);
-        return await eventCompliance.Release(materialized, schemasByEventType);
+        return await release(materialized, schemasByEventType);
     }
 }

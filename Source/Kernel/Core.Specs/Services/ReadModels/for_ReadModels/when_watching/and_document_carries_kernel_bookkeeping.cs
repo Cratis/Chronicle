@@ -86,7 +86,7 @@ public class and_document_carries_kernel_bookkeeping : given.all_dependencies
     async Task Because()
     {
         _service.Watch(
-            new WatchRequest { EventStore = "test-store", ReadModelIdentifier = "test-read-model" },
+            new WatchRequest { EventStore = "test-store", Namespace = "test-namespace", ReadModelIdentifier = "test-read-model" },
             default).Subscribe(_emitted.Add);
 
         var forwarder = await _forwarderCaptured.Task.WaitAsync(TimeSpan.FromSeconds(5));
@@ -108,7 +108,7 @@ public class and_document_carries_kernel_bookkeeping : given.all_dependencies
                 Concepts.ReadModels.ReadModelChangeType.Added,
                 Concepts.Events.EventSequenceNumber.First,
                 DateTimeOffset.UtcNow,
-                Cratis.Execution.CorrelationId.NotSet)));
+                CorrelationId.NotSet)));
     }
 
     [Fact] void should_not_fail() => _exception.ShouldBeNull();

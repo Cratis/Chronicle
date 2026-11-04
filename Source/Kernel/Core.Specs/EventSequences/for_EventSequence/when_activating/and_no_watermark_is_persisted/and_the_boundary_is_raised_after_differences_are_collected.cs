@@ -28,7 +28,7 @@ public class and_the_boundary_is_raised_after_differences_are_collected : given.
             });
         await Tick();
         _initialWrites = _claimWrites;
-        _eventSequence.ConstraintIndexCatchUpKeyLimit = 1;
+        _eventSequence.ConstraintIndexRepair = new() { CatchUpExclusionLimit = 1 };
         _snapshots.BeforeWrite = () =>
         {
             _persistedBeforeLiveRemoval |= !_unique.ReceivedCalls().Any(call => call.GetMethodInfo().Name == "Remove" && call.GetArguments()[0] is EventSourceId source && source.Value == "third");

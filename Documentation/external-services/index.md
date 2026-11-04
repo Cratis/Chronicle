@@ -75,8 +75,8 @@ permits that host's private addresses. `AllowInsecureHttp` defaults to `false` a
 Development runtime environment. The corresponding environment variables use
 `Cratis__Chronicle__ExternalServices__`, for example `Cratis__Chronicle__ExternalServices__Validation`.
 
-Every capture request carries its event store. Absolute routes are validated against their final
-host just like relative routes. Redirects and system proxies are disabled. DNS is validated when
+Every capture request carries its event store. A capture route resolves against the External Service URL and must stay on its scheme, host and port; a route to any other origin is refused before a request is sent, so the service's authentication and headers only go to that service.
+Redirects and system proxies are disabled. DNS is validated when
 opening each connection. Requests using explicit host allowances close their connections after each
 request so one store's approval cannot be reused by another, even when an approved host currently
 resolves publicly. Unapproved public destinations retain pooling in modes that permit them. This policy covers HTTP

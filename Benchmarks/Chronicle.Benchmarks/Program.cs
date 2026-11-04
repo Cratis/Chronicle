@@ -6,20 +6,23 @@ using Cratis.Chronicle.Benchmarks.ContainerProfile;
 
 namespace Cratis.Chronicle.Benchmarks;
 
-/// <summary>The benchmark entry point, with an opt-in container profiling command.</summary>
+#pragma warning disable IDE0210 // A namespaced entry point avoids a type-discovery collision with the server's Program.
+
+/// <summary>
+/// Runs the selected benchmarks and reports their outcome, with an opt-in container profiling command.
+/// </summary>
 internal static class Program
 {
-    /// <summary>Runs the profiling command or the existing BenchmarkDotNet path.</summary>
-    /// <param name="args">The command-line arguments.</param>
-    /// <returns>The selected runner's exit code.</returns>
-    public static async Task<int> Main(string[] args)
+    static async Task<int> Main(string[] args)
     {
         if (args.Length > 0 && args[0] == "--container-profile")
         {
             return await ProfileCli.Run(args[1..]);
         }
+
         var benchmarkArguments = HasFilter(args) ? args : ["--filter", "*", .. args];
         var summaries = BenchmarkSwitcher.FromAssembly(typeof(AppendBenchmark).Assembly).Run(benchmarkArguments);
+
         return BenchmarkRunOutcome.ExitCodeFor(summaries, Console.Error);
     }
 

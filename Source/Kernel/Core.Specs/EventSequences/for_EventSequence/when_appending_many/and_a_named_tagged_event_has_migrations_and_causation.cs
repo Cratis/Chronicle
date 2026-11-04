@@ -7,7 +7,9 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Auditing;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences.Concurrency;
+using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Identities;
+using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.EventSequences;
 
 namespace Cratis.Chronicle.EventSequences.for_EventSequence.when_appending_many;
@@ -19,15 +21,21 @@ public class and_a_named_tagged_event_has_migrations_and_causation : given.an_ev
     ExpandoObject _upcast;
     AppendManyResult _result;
 
-    void Establish()
+    async Task Establish()
     {
+        var sourceSchema = await JsonSchema.FromJsonAsync("""{"type":"object","properties":{"legacyValue":{"type":"string"}}}""");
+        var targetSchema = await JsonSchema.FromJsonAsync("""{"type":"object","properties":{"value":{"type":"string"}}}""");
+        _eventTypesStorage.GetDefinition(_eventType.Id).Returns(new EventTypeDefinition(
+            _eventType.Id, EventTypeOwner.None, false, [new(1, sourceSchema), new(2, targetSchema)], []));
+        _eventTypesStorage.GetFor(_eventType.Id, _eventType.Generation)
+            .Returns(new EventTypeSchema(_eventType, EventTypeOwner.Server, EventTypeSource.Code, sourceSchema));
         _original = new ExpandoObject();
         ((IDictionary<string, object?>)_original)["legacyValue"] = "original";
         _upcast = new ExpandoObject();
         ((IDictionary<string, object?>)_upcast)["value"] = "migrated";
-        _complianceManager.Apply(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<Cratis.Chronicle.Schemas.JsonSchema>(), Arg.Any<string>(), Arg.Any<JsonObject>())
+        _complianceManager.Apply(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<JsonSchema>(), Arg.Any<string>(), Arg.Any<JsonObject>())
             .Returns(new JsonObject { ["legacyValue"] = "original" });
-        _expandoObjectConverter.ToExpandoObject(Arg.Any<JsonObject>(), Arg.Any<Cratis.Chronicle.Schemas.JsonSchema>()).Returns(_original);
+        _expandoObjectConverter.ToExpandoObject(Arg.Any<JsonObject>(), Arg.Any<JsonSchema>()).Returns(_original);
         _eventTypeMigrations.MigrateToAllGenerations(Arg.Any<EventStoreName>(), Arg.Any<EventType>(), Arg.Any<JsonObject>(), Arg.Any<ExpandoObject>())
             .Returns(new Dictionary<EventTypeGeneration, ExpandoObject>
             {

@@ -21,6 +21,6 @@ public class when_a_split_update_is_not_idempotent(ReplicaSetMongoDBFixture fixt
         _changed = await _models.CountDocumentsAsync(Builders<BsonDocument>.Filter.AnyEq("children", "child"));
     }
 
-    [Fact] void should_refuse_an_unsafe_retry() => _error.ShouldBeOfExactType<InvalidOperationException>();
+    [Fact] void should_refuse_an_unsafe_retry() => _error.ShouldBeOfExactType<NonIdempotentWriteCannotBeSplit>();
     [Fact] void should_not_push_children() => _changed.ShouldEqual(0L);
 }

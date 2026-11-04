@@ -23,6 +23,7 @@ internal sealed class ComplianceService(IGrainFactory grainFactory, IJsonSchemaM
     /// <inheritdoc/>
     public async Task<ReleaseResponse> Release(ReleaseRequest request, CallContext context = default)
     {
+        await SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace));
         try
         {
             var schema = await JsonSchema.FromJsonAsync(request.Schema);
@@ -57,12 +58,18 @@ internal sealed class ComplianceService(IGrainFactory grainFactory, IJsonSchemaM
     }
 
     /// <inheritdoc/>
-    public Task DeleteEncryptionKey(DeleteEncryptionKeyRequest request, CallContext context = default) =>
-        GetPIIManager(request.EventStore, request.Namespace).DeleteEncryptionKeyFor(request.Identifier);
+    public async Task DeleteEncryptionKey(DeleteEncryptionKeyRequest request, CallContext context = default)
+    {
+        await SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace));
+        await GetPIIManager(request.EventStore, request.Namespace).DeleteEncryptionKeyFor(request.Identifier);
+    }
 
     /// <inheritdoc/>
-    public Task AllowNewEncryptionKey(AllowNewEncryptionKeyRequest request, CallContext context = default) =>
-        GetPIIManager(request.EventStore, request.Namespace).AllowNewEncryptionKeyFor(request.Identifier);
+    public async Task AllowNewEncryptionKey(AllowNewEncryptionKeyRequest request, CallContext context = default)
+    {
+        await SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace));
+        await GetPIIManager(request.EventStore, request.Namespace).AllowNewEncryptionKeyFor(request.Identifier);
+    }
 
     Task<JsonObject> ReleaseContent(ReleaseRequest request, JsonSchema schema, JsonObject json) =>
         request.Strict
