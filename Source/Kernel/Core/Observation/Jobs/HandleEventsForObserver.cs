@@ -60,6 +60,7 @@ public class HandleEventsForObserver(
     readonly SemaphoreSlim _flushGate = new(1, 1);
     TimeSpan _abandonedDeliveryHold;
     DeliveryFenceContext? _deliveryFence;
+    ObservationOrigin _origin = ObservationOrigin.CatchUp;
     IEventSequenceStorage? _eventSequenceStorage;
     IObserver _observer = null!;
     ObserverSubscription _subscription = ObserverSubscription.Unsubscribed;
@@ -79,6 +80,19 @@ public class HandleEventsForObserver(
     /// Gets or sets how long to wait before a handling attempt that timed out is made again. Exposed for testing.
     /// </summary>
     internal TimeSpan TransientRetryDelay { get; set; } = TransientTimeouts.DefaultRetryDelay;
+
+    /// <summary>
+    /// Gets or sets the most events one subscriber call may carry. Exposed for testing.
+    /// </summary>
+    internal int MaxEventsPerBatch { get; set; } = BoundedEventCursor.DefaultMaximumEventsPerBatch;
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// A collapsing projection writes to documents shared by several partitions that the read model watermark cannot
+    /// guard, so a redelivered slice may be applied twice. Checkpointing after every slice keeps that window to the
+    /// slice in flight. Partitioned subscribers keep the configured checkpoint interval.
+    /// </remarks>
+    protected override bool CheckpointAfterEveryBatch => _subscription.IsCollapsingProjection;
 
     bool DeliversPages { get; set; }
 
@@ -192,6 +206,7 @@ public class HandleEventsForObserver(
     {
         var lastSuccessfullyHandledEventSequenceNumber = EventSequenceNumber.Unavailable;
         DeliversPages = currentState.EventObservationState == EventObservationState.Replay;
+        _origin = currentState.EventObservationState.ToObservationOrigin();
         _replayReports = DeliversPages ? new() : null;
 
         // PerformStep runs outside the activation. Only grain calls may access persistent State.
@@ -238,7 +253,7 @@ public class HandleEventsForObserver(
             // A storage batch can hold thousands of events; a client or webhook subscriber gets them a bounded call
             // at a time, so its timeout guards a known amount of work and every answered call is checkpointed.
             var maxEventsPerCall = await configurationProvider.GetMaxEventsPerSubscriberCallForObserver(currentState.ObserverKey, _subscription.SubscriberType);
-            using var events = BoundedEventCursor.Over(
+            var storageEvents = Storage.EventSequences.BoundedEventCursor.Over(
                 await eventSequenceStorage.GetRange(
                     currentState.LastSuccessfullyHandledEventSequenceNumber == EventSequenceNumber.Unavailable
                         ? currentState.StartEventSequenceNumber
@@ -247,6 +262,14 @@ public class HandleEventsForObserver(
                     eventTypes: eventTypesToRead,
                     cancellationToken: cancellationToken),
                 maxEventsPerCall);
+
+            // Replay pages are sized by the read model batch size and keep the storage batches whole. Every other
+            // delivery is sliced, so one subscriber call never carries a whole storage batch.
+            var maximumEventsPerCall = _subscription.SubscriberType.IsAssignableTo(typeof(IUnpartitionedObserverSubscriber))
+                ? Math.Min(MaxEventsPerBatch, ObserverSubscriberExtensions.MaximumEventsPerUnpartitionedCall)
+                : MaxEventsPerBatch;
+            var deliversPages = DeliversPages && _subscription.SubscriberType.IsAssignableTo(typeof(IObserverPageSubscriber));
+            using var events = new BoundedEventCursor(storageEvents, deliversPages ? int.MaxValue : maximumEventsPerCall);
 
             // A failed partition belongs to the retry job working on it. Reading the set once, before the walk,
             // keeps this step from asking the observer per batch; a partition that starts failing while the walk
@@ -460,7 +483,7 @@ public class HandleEventsForObserver(
         }
     }
 
-    static AppendedEvent[] SetObservationStateIfSpecified(EventObservationState eventObservationState, IEventCursor events)
+    static AppendedEvent[] SetObservationStateIfSpecified(EventObservationState eventObservationState, BoundedEventCursor events)
     {
         if (eventObservationState != EventObservationState.None)
         {
@@ -983,7 +1006,7 @@ public class HandleEventsForObserver(
             // violation" when accessed here, so an explicitly injected IGrainFactory (a plain thread-safe
             // service) is used instead of the ambient property.
             var subscriber = grainFactory.GetGrain(_subscription.SubscriberType, _subscription.GetSubscriberKeyFor(partition, target.SiloAddress)) as IObserverSubscriber;
-            var subscriberContext = new ObserverSubscriberContext(target.ConnectedClient ?? _subscription.Arguments).WithDeadlines(subscriberTimeout, _abandonedDeliveryHold, _clock);
+            var subscriberContext = new ObserverSubscriberContext(target.ConnectedClient ?? _subscription.Arguments) { Origin = _origin }.WithDeadlines(subscriberTimeout, _abandonedDeliveryHold, _clock);
             _deliveryFence = AbandonedDeliveryDrain.Capture(_subscription, partition, target, subscriberContext);
             if (page) onPageDispatch?.Invoke();
             var result = page

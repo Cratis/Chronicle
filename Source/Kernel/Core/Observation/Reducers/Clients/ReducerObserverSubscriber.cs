@@ -6,7 +6,9 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.Reducers;
+using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Observation.Placement;
+using Cratis.Chronicle.Projections;
 using Microsoft.Extensions.Logging;
 using Orleans.Providers;
 
@@ -55,6 +57,7 @@ public class ReducerObserverSubscriber(
     readonly TimeProvider _clock = timeProvider ?? TimeProvider.System;
     ObserverKey _key = ObserverKey.NotSet;
     IReducerPipeline? _pipeline;
+    IProjectionChangesetNotifier _changesetNotifier = default!;
     DateTimeOffset _pipelineBuiltAt = DateTimeOffset.MinValue;
 
     /// <inheritdoc/>
@@ -64,6 +67,7 @@ public class ReducerObserverSubscriber(
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
         (_key, _) = this.GetKeys();
+        _changesetNotifier = GrainFactory.GetGrain<IProjectionChangesetNotifier>(new ProjectionChangesetNotifierKey(_key.ObserverId, _key.EventStore, _key.Namespace));
         await HandlePipeline();
     }
 
@@ -99,9 +103,8 @@ public class ReducerObserverSubscriber(
                 events,
                 partition);
 
-            await (_pipeline?.Reduce(reducerContext, CreateReducerDelegate(reducerContext, connectedClient, context, tcs)) ?? Task.CompletedTask);
-
-            return await tcs.Task;
+            var notification = _pipeline is null ? null : await _pipeline.Reduce(reducerContext, CreateReducerDelegate(reducerContext, connectedClient, context, tcs));
+            return await NotifyChange(await tcs.Task, notification);
         }
         catch (AbandonedDeliveryDiscarded)
         {
@@ -129,11 +132,37 @@ public class ReducerObserverSubscriber(
     /// this subscriber - live handling, catch-up, replay and retry - starts the batch over from the stored state.
     /// </remarks>
     /// <param name="result">The <see cref="ObserverSubscriberResult"/> the client reported.</param>
+    /// <param name="events">The events the client was asked to reduce.</param>
     /// <returns>The <see cref="ObserverSubscriberResult"/> to report to the observer.</returns>
-    static ObserverSubscriberResult AsHandledByThePipeline(ObserverSubscriberResult result) =>
-        result.State == ObserverSubscriberState.Failed
-            ? result with { LastSuccessfulObservation = EventSequenceNumber.Unavailable }
-            : result;
+    static ObserverSubscriberResult AsHandledByThePipeline(ObserverSubscriberResult result, IEnumerable<AppendedEvent> events) =>
+        result.State switch
+        {
+            ObserverSubscriberState.Failed => result with { LastSuccessfulObservation = EventSequenceNumber.Unavailable },
+
+            // A reducer writes no state for a deferred batch either, so the whole batch is delivered again.
+            ObserverSubscriberState.Deferred => (result with
+            {
+                LastSuccessfulObservation = EventSequenceNumber.Unavailable,
+                Deferral = result.Deferral is { } deferral ? deferral with { ResumeFrom = EventSequenceNumber.Unavailable } : null
+            }).ResumingDeferralWithin(events),
+            _ => result
+        };
+
+    async Task<ObserverSubscriberResult> NotifyChange(ObserverSubscriberResult result, ReadModelChangeNotification? notification)
+    {
+        if (result.State != ObserverSubscriberState.Ok || notification is null) return result;
+
+        try
+        {
+            await _changesetNotifier.Notify(_key.Namespace, notification.ReadModelKey, notification.ReadModel, notification.Change);
+            return result;
+        }
+        catch (Exception ex)
+        {
+            logger.NotificationFailed(ex, _key.ObserverId, _key.EventStore, _key.Namespace);
+            return result;
+        }
+    }
 
     async Task<bool> PrepareDelivery(ClientDeliveryWait deliveryWait, ObserverSubscriberContext context)
     {
@@ -161,11 +190,11 @@ public class ReducerObserverSubscriber(
                 client.ConnectionId,
                 _key.EventStore,
                 _key.Namespace,
-                new(reduction.Key, events, initialState) { DeliverWithin = context.RemainingDeliveryTime(_clock) },
+                new(reduction.Key, events, initialState) { DeliverWithin = context.RemainingDeliveryTime(_clock), Origin = context.Origin },
                 reducerSubscriberResultTCS);
 
             var result = await deliveryWait.For(reducerSubscriberResultTCS.Task, result => result.ObserverResult, context);
-            completion.SetResult(AsHandledByThePipeline(result.ObserverResult));
+            completion.SetResult(AsHandledByThePipeline(result.ObserverResult, events));
             return result;
         };
 

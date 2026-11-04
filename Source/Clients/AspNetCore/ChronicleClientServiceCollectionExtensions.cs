@@ -34,6 +34,14 @@ public static class ChronicleClientServiceCollectionExtensions
         services.AddReactorSideEffectHandlers();
         services.AddChronicleOccurrenceLifecycle();
         services.AddHttpContextAccessor();
+        services.AddOptions<ChronicleAspNetCoreOptions>()
+            .Configure<IEnumerable<ChronicleTelemetryConfiguration>>((options, configurations) =>
+            {
+                foreach (var configuration in configurations)
+                {
+                    configuration.Configure(options.Telemetry);
+                }
+            });
 
         services.AddSingleton(sp =>
         {
@@ -118,7 +126,7 @@ public static class ChronicleClientServiceCollectionExtensions
 
         services.AddKeyedSingleton(typeof(IActivitySource<>), ClientActivity.SourceName, typeof(KeyedActivitySource<>));
 
-        return services;
+        return services.ConfigureChronicleClientServices();
     }
 
     sealed class KeyedActivitySource<T>(IServiceProvider serviceProvider, [ServiceKey] string? key = null) : IActivitySource<T>

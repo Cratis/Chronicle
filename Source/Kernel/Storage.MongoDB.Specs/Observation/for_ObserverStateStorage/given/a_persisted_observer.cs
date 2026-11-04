@@ -36,7 +36,7 @@ public class a_persisted_observer(MongoDBFixture fixture) : Specification
             RetirementResults = [new(Guid.NewGuid(), _type, ObserverEventTypeRetirementOutcome.Retired, new(3), [])],
             PendingChange = new(new(8), DateTimeOffset.UtcNow, new(42), [new("event-b")], [])
         };
-        await _storage.Save(new() { Identifier = "observer", TypeSetControl = _control });
+        await _storage.Save(new() { Identifier = "observer", TypeSetControl = _control }, Concepts.EventSequences.EventSequenceId.Log);
     }
 
     async Task Destroy() => await _client.DropDatabaseAsync(_databaseName);

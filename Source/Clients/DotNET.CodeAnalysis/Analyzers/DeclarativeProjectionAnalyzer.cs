@@ -45,12 +45,12 @@ public class DeclarativeProjectionAnalyzer : DiagnosticAnalyzer
         context.EnableConcurrentExecution();
         context.RegisterCompilationStartAction(start =>
         {
-            var evidence = new Lazy<ExplicitRegistrationEvidence>(() => ExplicitRegistrationEvidence.Create(start.Compilation, start.CancellationToken));
-            start.RegisterSyntaxNodeAction(node => AnalyzeInvocation(node, evidence.Value), SyntaxKind.InvocationExpression);
+            var names = new Lazy<ImmutableHashSet<string>>(() => ProjectionBuilderMethods.Names(start.Compilation, start.CancellationToken));
+            start.RegisterSyntaxNodeAction(node => AnalyzeInvocation(node, names), SyntaxKind.InvocationExpression);
         });
     }
 
-    static void AnalyzeInvocation(SyntaxNodeAnalysisContext context, ExplicitRegistrationEvidence evidence)
+    static void AnalyzeInvocation(SyntaxNodeAnalysisContext context, Lazy<ImmutableHashSet<string>> names)
     {
         var invocation = (InvocationExpressionSyntax)context.Node;
 
@@ -60,13 +60,15 @@ public class DeclarativeProjectionAnalyzer : DiagnosticAnalyzer
             return;
         }
 
+        if (!IsCandidate(invocation, names)) return;
+
         if (!(context.SemanticModel.GetSymbolInfo(invocation).Symbol is IMethodSymbol methodSymbol))
         {
             return;
         }
 
         // Check if the method name indicates a projection builder method (From, Join, etc.)
-        if (!IsProjectionBuilderMethod(methodSymbol))
+        if (!ProjectionBuilderMethods.IsBuilder(methodSymbol.ContainingType))
         {
             return;
         }
@@ -77,6 +79,14 @@ public class DeclarativeProjectionAnalyzer : DiagnosticAnalyzer
             return;
         }
 
+        AnalyzeEventTypeArguments(context, invocation, genericMethod);
+    }
+
+    static bool IsCandidate(InvocationExpressionSyntax invocation, Lazy<ImmutableHashSet<string>> names) =>
+        InvocationName.Of(invocation) is { } name && names.Value.Contains(name);
+
+    static void AnalyzeEventTypeArguments(SyntaxNodeAnalysisContext context, InvocationExpressionSyntax invocation, IMethodSymbol genericMethod)
+    {
         // Only the argument in an event position can be an event. A builder method's other type parameters are
         // the child read-model type of Children<TChildModel>, the key type of IdentifiedBy<TProperty>, the
         // join-key property type of On<TProperty> and so on - none of which is, or could be, an event type.
@@ -96,7 +106,7 @@ public class DeclarativeProjectionAnalyzer : DiagnosticAnalyzer
                 continue;
             }
 
-            if (!evidence.IsEventType(typeArgument, context.Compilation))
+            if (!ExplicitRegistrationEvidence.IsKnownEventType(typeArgument, context.Compilation, context.CancellationToken))
             {
                 var diagnostic = Diagnostic.Create(
                     Rule,
@@ -105,28 +115,5 @@ public class DeclarativeProjectionAnalyzer : DiagnosticAnalyzer
                 context.ReportDiagnostic(diagnostic);
             }
         }
-    }
-
-    static bool IsProjectionBuilderMethod(IMethodSymbol methodSymbol)
-    {
-        // Check if the containing type is a projection builder
-        var containingType = methodSymbol.ContainingType;
-        if (containingType == null)
-        {
-            return false;
-        }
-
-        // Use the original generic definition to avoid false matches where an unrelated
-        // type appears only in a type argument (e.g. IReadModelPropertiesBuilder<T, E, IFromBuilder<T, E>>
-        // would contain "IFromBuilder" in its bound display string but is not itself a builder type
-        // that accepts event type arguments).
-        var typeName = containingType.OriginalDefinition.ToDisplayString();
-
-        // Check for IProjectionBuilderFor<T> or related interfaces
-        return typeName.Contains("IProjectionBuilderFor") ||
-               typeName.Contains("IProjectionBuilder") ||
-               typeName.Contains("IFromBuilder") ||
-               typeName.Contains("IJoinBuilder") ||
-               typeName.Contains("IChildrenBuilder");
     }
 }

@@ -40,6 +40,10 @@ Log export includes both the formatted message and logging scopes, including obs
 
 Custom kernel hosts use `AddOpenTelemetry().WithCratis(configuration, TelemetryConfiguration.Configure)`. `WithCratis` comes from `Cratis.OpenTelemetry`; `TelemetryConfiguration` comes from `Cratis.Chronicle.Diagnostics.OpenTelemetry` and adds Chronicle instrumentation and fallback defaults. The `AddChronicleTelemetry` extension is deprecated and delegates to this shared setup. It is retained for source compatibility without compiler warnings, not removed.
 
+## Event source ids and log levels
+
+Event source ids are `Raw` in traces by default. Opt into `Hashed` or `Omitted` separately in the kernel and clients. Orleans grain-instance ids are always removed before span export, and Chronicle append metrics do not use event source ids as dimensions. These settings do not redact logs. See [event source ids in telemetry](/chronicle/hosting/configuration/telemetry-identifiers/) for configuration, key rotation, metric dimensions, and observer log levels.
+
 ## Local development with .NET Aspire Dashboard
 
 The Kernel ships with a `docker-compose.yml` that starts the [.NET Aspire Dashboard](https://learn.microsoft.com/en-us/dotnet/aspire/fundamentals/dashboard/overview) as a lightweight all-in-one OTLP receiver and telemetry viewer.
@@ -86,6 +90,12 @@ OTEL_EXPORTER_OTLP_ENDPOINT=https://otlp.example.com
 OTEL_EXPORTER_OTLP_HEADERS=x-api-key=your-api-key
 ```
 
+## Generated instrument names
+
+Chronicle consumes `Cratis.Metrics.Roslyn` 7.27.0, which includes the instrument-name fix released in 7.20.0. Generated counters and gauges now keep the description in the instrument's description metadata, not its unit. For example, the successful-observation counter has the instrument name `chronicle-observer-successful-observations`, no unit, and description `Number of successful observations per observer in a given event store and namespace`. A Prometheus exporter using default translation is expected to expose `chronicle_observer_successful_observations_total` with that description as its HELP text, rather than including the description in the metric name. Translation depends on the backend; OTLP serialization coverage alone does not verify Prometheus exposition or HELP text.
+
+The observer failure counters and suspected-undelivered queue counter remain hand-written to preserve their failure-path initialization and observer tagging. They no longer need a workaround for generated names. Revisit that implementation with the [convention-name migration](https://github.com/Cratis/Chronicle/issues/4459), keeping the existing instrument names during this fix. That migration is separate and still pending; coordinate dashboard and alert changes with it rather than assuming the generator upgrade also renames instruments to the convention.
+
 ## Metrics instrumented
 
 Chronicle instruments the following meters:
@@ -97,7 +107,7 @@ Chronicle instruments the following meters:
 | `Grpc.AspNetCore.Server` | gRPC server request metrics |
 | .NET runtime | GC, thread pool, and memory metrics from the .NET runtime |
 
-### SQL startup and contention
+### SQL startup, contention and live queries
 
 SQL storage publishes these instruments on the `Cratis.Chronicle` meter:
 
@@ -105,6 +115,7 @@ SQL storage publishes these instruments on the `Cratis.Chronicle` meter:
 | --- | --- | --- | --- |
 | `chronicle-sql-schema-lock-wait` | Histogram (seconds) | `provider`, `outcome` | Elapsed database schema-lock acquisition time, including failed waits. Outcomes are `acquired` and `failed`. |
 | `chronicle-sql-upsert-collisions-recovered` | Counter | `operation` | Concurrent inserts handled by an existing SQL recovery or idempotency path. Unhandled conflicts and ordinary updates do not increment it. |
+| `chronicle-sql-live-query-poll-failures` | Counter | `query`, `kind` | A failed SQL live-query poll. The query is retried with backoff (polling interval doubling to 30 s, or the polling interval if longer) and the subscription stays open. `kind` is `transient` or `other`; a sustained `other` rate needs an operator. |
 
 Schema-lock timing excludes opening the connection, migration execution, and the
 in-process migration semaphore. SQLite has no database schema lock and emits no
@@ -152,6 +163,16 @@ These counters show suspicions, not proof. A catch-up job may have delivered an 
 
 When one of them increases, see [An observer may have skipped events](/chronicle/troubleshooting/#an-observer-may-have-skipped-events).
 
+### Spills to catch-up
+
+The appended-events queue counts every time it moves an observer from live delivery to catch-up. The instrument has the appended-events queue tags `EventStore`, `Namespace`, `EventSequenceId` and `QueueId`, plus `ObserverId` and `Reason`.
+
+| Instrument | Prometheus name | Counts |
+| --- | --- | --- |
+| `chronicle-appended-events-queue-observers-spilled-to-catchup` | `chronicle_appended_events_queue_observers_spilled_to_catchup_total` | Observers moved from live delivery to catch-up, once per observer and spill. |
+
+`Reason` is `QueueFull` when the queue overflowed, `DispatchFailed` when delivery to the observer failed, and `FragmentedBacklog` when the observer's share of one dispatch would have needed more than 256 sequential per-partition deliveries. Like the failure counters, an observer only has a series once it has been spilled.
+
 ### Open alert incident metrics
 
 Open alert incident metrics are enabled by default. To opt out, set
@@ -198,6 +219,8 @@ To be alerted when an observer's partitions keep failing or run out of retries, 
 
 These are the server's sources. The Chronicle client in your application emits its own spans on the `Cratis.Chronicle.Client` source, which you register yourself; see [Trace Chronicle client operations with OpenTelemetry](../client-tracing).
 
+Failed append and observer handle operations set Error status and `error.type` to an exception type or a low-cardinality failure code, without recording exception messages. Append spans also carry `cratis.chronicle.append.outcome`: `success`, `error`, `concurrency_violation`, or `constraint_violation`.
+
 Chronicle traces the following activity sources:
 
 | Source | Description |
@@ -206,5 +229,37 @@ Chronicle traces the following activity sources:
 | `Microsoft.Orleans.Runtime` | Orleans runtime activities |
 | `Microsoft.Orleans.Application` | Orleans application activities |
 | HTTP client | Outgoing HTTP requests |
-| ASP.NET Core | Incoming HTTP and gRPC requests |
-| gRPC client | Outgoing gRPC calls |
+| ASP.NET Core | Incoming HTTP and unary gRPC requests, excluding health checks and connection keep-alive |
+| gRPC client | Outgoing gRPC calls (opt-in) |
+
+### Trace volume defaults
+
+Chronicle excludes connection keep-alive requests, the configured health endpoint (including its `/live`
+and `/ready` routes), and all client-streaming, server-streaming, or duplex gRPC requests from server
+traces. Streaming calls can remain open for the lifetime of a client; tracing them would produce
+long-running spans rather than useful delivery traces. Reactor and reducer registration is traced
+as a separate root operation, without the untraced stream request as its parent.
+
+Queue enqueue and dispatch operations do not create spans. Accepted, non-empty observer deliveries
+produce `cratis.chronicle.observer.handle` spans with `cratis.observer.id`, `cratis.eventstore.name`,
+`cratis.eventstore.namespace`, `cratis.eventsequence.id`, `cratis.observer.type`, and the numeric
+`cratis.event.count` tags.
+
+Kernel gRPC client instrumentation is disabled by default to reduce trace volume. To opt in, set
+`Cratis:Chronicle:Telemetry:GrpcClientTracing` to `true`:
+
+```json
+{
+    "cratis": {
+        "chronicle": {
+            "telemetry": {
+                "grpcClientTracing": true
+            }
+        }
+    }
+}
+```
+
+The equivalent environment variable is `Cratis__Chronicle__Telemetry__GrpcClientTracing=true`.
+HTTP client tracing remains enabled. These exclusions do not disable metrics or change OTLP
+exporter, endpoint, or resource configuration.

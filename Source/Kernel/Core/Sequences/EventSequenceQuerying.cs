@@ -3,6 +3,7 @@
 
 using System.Text.Json;
 using Cratis.Arc.Queries;
+using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
@@ -137,6 +138,7 @@ internal static class EventSequenceQuerying
     /// <param name="eventStreamType">Optional event stream type to narrow to.</param>
     /// <param name="eventStreamId">Optional event stream to narrow to.</param>
     /// <param name="eventSourceType">Optional event source type to narrow to.</param>
+    /// <param name="reportErasure">Whether to report confirmed erased paths in current content.</param>
     /// <returns>Every matching event, unpaged.</returns>
     internal static async Task<IEnumerable<AppendedEvent>> ReadFromSequenceNumber(
         IStorage storage,
@@ -150,7 +152,8 @@ internal static class EventSequenceQuerying
         string? eventTypeIds = default,
         string? eventStreamType = default,
         string? eventStreamId = default,
-        string? eventSourceType = default)
+        string? eventSourceType = default,
+        bool reportErasure = false)
     {
         var eventSequence = storage.GetEventStore(eventStore).GetNamespace(@namespace).GetEventSequence(eventSequenceId);
 
@@ -193,8 +196,82 @@ internal static class EventSequenceQuerying
             }
         }
 
-        var released = await ReleaseCompliance(appendedEvents, storage, eventStore, eventCompliance);
+        var released = await ReleaseCompliance(appendedEvents, storage, eventStore, reportErasure ? eventCompliance.ReleaseReportingErasure : eventCompliance.Release);
         return released.ToApi(jsonSerializerOptions);
+    }
+
+    /// <summary>
+    /// Reads a bounded window with one lookahead event and releases only the returned page's content.
+    /// </summary>
+    /// <param name="storage">The storage provider.</param>
+    /// <param name="eventCompliance">The compliance release service.</param>
+    /// <param name="jsonSerializerOptions">The JSON serializer options.</param>
+    /// <param name="eventStore">The event store.</param>
+    /// <param name="namespace">The namespace.</param>
+    /// <param name="eventSequenceId">The sequence.</param>
+    /// <param name="from">The inclusive start in read order, or null for the beginning or tail.</param>
+    /// <param name="count">The page size, between 1 and 1000.</param>
+    /// <param name="backward">Whether to read newest first.</param>
+    /// <param name="until">The inclusive stop in read order, or null for no bound.</param>
+    /// <param name="criteria">The filters applied in storage.</param>
+    /// <param name="eventStreamId">The optional event stream identifier.</param>
+    /// <returns>The page in read order and the next inclusive start when more matching events exist.</returns>
+    /// <exception cref="InvalidEventSequencePage">The count is outside 1..1000 or a supplied bound is a special sequence number.</exception>
+    internal static async Task<EventSequencePage> ReadWindow(
+        IStorage storage,
+        IEventCompliance eventCompliance,
+        JsonSerializerOptions jsonSerializerOptions,
+        string eventStore,
+        string @namespace,
+        string eventSequenceId,
+        ulong? from,
+        int count,
+        bool backward,
+        ulong? until,
+        EventSequenceQueryCriteria criteria,
+        string? eventStreamId)
+    {
+        if (count is < 1 or > 1000)
+        {
+            throw new InvalidEventSequencePage("The page count must be between 1 and 1000.");
+        }
+
+        if ((from is { } start && !((Concepts.Events.EventSequenceNumber)start).IsActualValue) ||
+            (until is { } stop && !((Concepts.Events.EventSequenceNumber)stop).IsActualValue))
+        {
+            throw new InvalidEventSequencePage("The page bounds must be actual event sequence numbers.");
+        }
+
+        var lower = backward ? until ?? Concepts.Events.EventSequenceNumber.First.Value : from ?? Concepts.Events.EventSequenceNumber.First.Value;
+        var upper = backward ? from ?? long.MaxValue : until ?? long.MaxValue;
+        var sequence = storage.GetEventStore(eventStore).GetNamespace(@namespace).GetEventSequence(eventSequenceId);
+        using var cursor = await sequence.GetWindow(
+            lower,
+            upper,
+            count + 1,
+            backward,
+            criteria.EventSourceId,
+            criteria.EventSourceType,
+            criteria.EventStreamType,
+            eventStreamId is null ? null : (Concepts.Events.EventStreamId)eventStreamId,
+            criteria.EventTypes,
+            criteria.Tags);
+        var window = new List<Concepts.Events.AppendedEvent>(count + 1);
+        while (window.Count <= count && await cursor.MoveNext())
+        {
+            window.AddRange(cursor.Current.Take(count + 1 - window.Count));
+        }
+
+        var returned = window.Take(count).ToArray();
+        var released = await ReleaseCompliance(returned, storage, eventStore, eventCompliance);
+        ulong? next = null;
+        if (window.Count > count)
+        {
+            var last = returned[^1].Context.SequenceNumber.Value;
+            next = backward ? last - 1 : last + 1;
+        }
+
+        return new(released.ToApi(jsonSerializerOptions), next);
     }
 
     /// <summary>
@@ -205,15 +282,21 @@ internal static class EventSequenceQuerying
     /// <param name="eventStore">The event store the events belong to.</param>
     /// <param name="eventCompliance">The <see cref="IEventCompliance"/> to release with.</param>
     /// <returns>The events, with PII content decrypted where applicable.</returns>
-    internal static async Task<IEnumerable<Concepts.Events.AppendedEvent>> ReleaseCompliance(
+    internal static Task<IEnumerable<Concepts.Events.AppendedEvent>> ReleaseCompliance(
         IEnumerable<Concepts.Events.AppendedEvent> events,
         IStorage storage,
         string eventStore,
-        IEventCompliance eventCompliance)
+        IEventCompliance eventCompliance) => ReleaseCompliance(events, storage, eventStore, eventCompliance.Release);
+
+    static async Task<IEnumerable<Concepts.Events.AppendedEvent>> ReleaseCompliance(
+        IEnumerable<Concepts.Events.AppendedEvent> events,
+        IStorage storage,
+        string eventStore,
+        Func<IEnumerable<Concepts.Events.AppendedEvent>, IDictionary<Concepts.Events.EventType, EventTypeSchema>, Task<Concepts.Events.AppendedEvent[]>> release)
     {
         var materialized = events as ICollection<Concepts.Events.AppendedEvent> ?? events.ToList();
         var eventTypeSchemas = await storage.GetEventStore(eventStore).EventTypes.GetFor(materialized.Select(e => e.Context.EventType).Distinct());
         var schemasByEventType = eventTypeSchemas.ToDictionary(schema => schema.Type);
-        return await eventCompliance.Release(materialized, schemasByEventType);
+        return await release(materialized, schemasByEventType);
     }
 }

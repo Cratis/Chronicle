@@ -88,7 +88,15 @@ public sealed record Services(
     IConnectionService Connections,
     IEventSources EventSources) : IServices
 {
+    Security.IAdministrators? _administrators;
     Occurrences.IOccurrences? _occurrences;
+
+    /// <inheritdoc/>
+    public Security.IAdministrators Administrators
+    {
+        get => _administrators ?? throw new NotSupportedException("Administrators are not supported by this service container.");
+        init => _administrators = value;
+    }
 
     /// <inheritdoc/>
     public Occurrences.IOccurrences Occurrences

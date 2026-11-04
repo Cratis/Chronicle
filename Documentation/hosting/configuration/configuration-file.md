@@ -5,6 +5,24 @@ description: Chronicle Server loads its settings from a chronicle.json file in t
 
 Chronicle Server loads configuration from a `chronicle.json` file in the application root directory. In containers, this file is typically mounted at `/app/chronicle.json`.
 
+## Outbound HTTP destinations
+
+The top-level `webhooks` and `externalServices` sections independently validate webhook receivers and
+HTTP capture sources. Both accept `validation`, `allowInsecureHttp`, `allowedHosts`, and
+`eventStoreAllowedHosts`. `validation` defaults to `Warn` in Development builds and
+`BlockLocalAddresses` otherwise. For example:
+
+```json
+{
+  "webhooks": { "validation": "BlockLocalAddresses", "allowedHosts": ["hooks.example.com"] },
+  "externalServices": { "validation": "BlockLocalAddresses", "allowedHosts": ["api.example.com"] }
+}
+```
+
+For private-network approvals, additional modes, metadata protection, and migration guidance, see
+[Webhook target validation](../../webhooks/index.mdx#target-validation) and
+[HTTP capture destination policy](../../external-services/index.md#http-capture-destination-policy).
+
 ## Example Configuration
 
 ```json
@@ -37,6 +55,13 @@ Chronicle Server loads configuration from a `chronicle.json` file in the applica
     "authentication": {
         "authority": null,
         "defaultAdminUsername": "admin",
+        "signInThrottling": {
+            "maxFailedAttempts": 5,
+            "maxFailedAttemptsPerUsername": 50,
+            "windowSeconds": 300,
+            "lockoutSeconds": 300,
+            "maxTrackedEntries": 10000
+        },
         "adminUser": {
             "username": "admin",
             "password": "your-secure-password",
@@ -71,6 +96,7 @@ Environment variables can override any of these values. See [Configuration Prece
 | observers | Retry and timeout settings for observers |
 | readModels | Replay retention settings for replay-generated read model versions |
 | events | Event queue configuration |
+| constraintIndexRepair | Constraint-index repair budgets, retries and memory caps |
 | authentication | Authentication, default admin username, and initial admin user bootstrap |
 | tls | TLS certificate for the main Chronicle port by default; explicit `tls.enabled=false` requires a private h2c backend behind an HTTPS proxy |
 | encryptionCertificate | Certificate protecting OAuth keys, webhook credentials, and Data Protection keys — required in production |

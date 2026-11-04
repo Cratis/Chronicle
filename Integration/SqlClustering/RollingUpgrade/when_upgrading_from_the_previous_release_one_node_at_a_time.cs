@@ -18,7 +18,7 @@ public class when_upgrading_from_the_previous_release_one_node_at_a_time() : Sql
     Environment.GetEnvironmentVariable("CRATIS_CHRONICLE_PREVIOUS_IMAGE") ?? "cratis/chronicle:latest-development-slim")
 {
 #pragma warning disable xUnit1004
-    [Fact(Skip = "Reactors miss acknowledged events after a one-node-at-a-time upgrade - https://github.com/Cratis/Chronicle/issues/5300 and https://github.com/Cratis/Chronicle/issues/5350")]
+    [Fact(Skip = "Flaky: reactors miss acknowledged events or stall during the one-node-at-a-time upgrade, also before this change - https://github.com/Cratis/Chronicle/issues/5300")]
 #pragma warning restore xUnit1004
     public Task should_preserve_acknowledged_events_without_double_appends_and_observe_every_stored_event() => VerifyAcknowledgedEventsAreObserved();
 }

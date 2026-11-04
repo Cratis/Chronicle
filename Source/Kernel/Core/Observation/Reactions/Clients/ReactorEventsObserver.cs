@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
+using Cratis.Chronicle.Concepts.Observation;
 
 namespace Cratis.Chronicle.Observation.Reactors.Clients;
 
@@ -13,4 +14,5 @@ namespace Cratis.Chronicle.Observation.Reactors.Clients;
 /// <param name="events">Collection of <see cref="AppendedEvent"/> to observe.</param>
 /// <param name="taskCompletionSource"><see cref="TaskCompletionSource{T}"/> to return <see cref="ObserverSubscriberResult"/> to.</param>
 /// <param name="deliverWithin">How long the kernel waits for the result, or null when it waits without a deadline.</param>
-public delegate void ReactorEventsObserver(Key partition, IEnumerable<AppendedEvent> events, TaskCompletionSource<ObserverSubscriberResult> taskCompletionSource, TimeSpan? deliverWithin = null);
+/// <param name="origin">The <see cref="ObservationOrigin"/> the events came from.</param>
+public delegate void ReactorEventsObserver(Key partition, IEnumerable<AppendedEvent> events, TaskCompletionSource<ObserverSubscriberResult> taskCompletionSource, TimeSpan? deliverWithin = null, ObservationOrigin origin = ObservationOrigin.Unknown);

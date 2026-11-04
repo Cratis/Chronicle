@@ -9,6 +9,7 @@ using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.EventSequences.Concurrency;
 using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Identities;
+using Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
 using Cratis.Chronicle.EventSequences.Concurrency;
 using Cratis.Chronicle.EventSources;
 using Cratis.Chronicle.Storage.EventSequences;
@@ -26,6 +27,44 @@ public partial class EventSequence
     Func<ValueTask<IEnumerable<ConcurrencyViolation>>>? _concurrencyValidationForRetry;
 
     async Task<AppendResult> AppendValidated(
+        EventSourceType eventSourceType,
+        EventSourceId eventSourceId,
+        EventStreamType eventStreamType,
+        EventStreamId eventStreamId,
+        EventType eventType,
+        JsonObject content,
+        CorrelationId correlationId,
+        IEnumerable<Causation> causation,
+        Identity causedBy,
+        IEnumerable<Tag> tags,
+        ConcurrencyScope concurrencyScope,
+        DateTimeOffset? occurred,
+        Subject? subject,
+        IReadOnlyCollection<NamedTag> namedTags,
+        EventSourceName? eventSource,
+        EventPublication? publication = null)
+    {
+        using var span = activitySource.Append();
+        span?.Activity?.Tag(_eventSequenceKey.EventStore);
+        span?.Activity?.Tag(_eventSequenceKey.Namespace);
+        span?.Activity?.Tag(_eventSequenceKey.EventSequenceId);
+        span?.Activity?.Tag(eventSourceType);
+        span?.Activity?.Tag(eventSourceId, _spanIdentifiers);
+        span?.Activity?.Tag(eventType);
+        try
+        {
+            var result = await AppendValidatedCore(eventSourceType, eventSourceId, eventStreamType, eventStreamId, eventType, content, correlationId, causation, causedBy, tags, concurrencyScope, occurred, subject, namedTags, eventSource, publication);
+            span?.Activity?.RecordAppendOutcome(result);
+            return result;
+        }
+        catch (Exception ex)
+        {
+            span?.Activity?.RecordFailure(ex);
+            throw;
+        }
+    }
+
+    async Task<AppendResult> AppendValidatedCore(
         EventSourceType eventSourceType,
         EventSourceId eventSourceId,
         EventStreamType eventStreamType,

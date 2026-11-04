@@ -15,11 +15,53 @@ internal static class ClusterLoadDiagnostics
         IReactorHandler reactor,
         IEnumerable<(Guid Id, EventSequenceNumber Sequence)> stored,
         IEnumerable<(Guid Id, EventSequenceNumber Sequence)> observed,
-        TextWriter output)
+        TextWriter output,
+        ClusterLoadDeliveryDiagnostics? deliveryDiagnostics = null)
     {
-        await output.WriteLineAsync($"Observer {reactor.Id}: {DescribeMissingSequences(stored, observed)}");
+        var storedEvents = stored.ToArray();
+        var observedEvents = observed.ToHashSet();
+        await output.WriteLineAsync($"Observer {reactor.Id}: {DescribeMissingSequences(storedEvents, observedEvents)}");
+
+        // This surface has no Occurred or acknowledgment timestamps. Preserve the stored input's order as a
+        // correlation aid without pretending it is the order in which concurrent append responses arrived.
+        var missingPositions = storedEvents.Select((@event, index) => (@event, index))
+            .Where(item => !observedEvents.Contains(item.@event))
+            .OrderBy(item => item.@event.Sequence.Value)
+            .Take(SequenceLimit)
+            .Select(item => $"{item.@event.Sequence.Value}@{item.index}");
+        await output.WriteLineAsync($"Observer {reactor.Id}: missing sequence@stored-order-index (zero-based, first {SequenceLimit}): {string.Join(", ", missingPositions)}");
+        if (deliveryDiagnostics is not null)
+        {
+            await output.WriteAsync(deliveryDiagnostics.Describe(
+                storedEvents.Select(@event => (@event.Id, @event.Sequence.Value)),
+                observedEvents.Select(@event => (@event.Id, @event.Sequence.Value))));
+        }
         await DumpState(reactor, output);
         await DumpFailedPartitions(reactor, output);
+    }
+
+    internal static async Task DumpSafely(
+        IReactorHandler reactor,
+        IEnumerable<(Guid Id, EventSequenceNumber Sequence)> stored,
+        IEnumerable<(Guid Id, EventSequenceNumber Sequence)> observed,
+        TextWriter output,
+        ClusterLoadDeliveryDiagnostics? deliveryDiagnostics = null)
+    {
+        try
+        {
+            await Dump(reactor, stored, observed, output, deliveryDiagnostics);
+        }
+        catch
+        {
+            try
+            {
+                await output.WriteLineAsync("Delivery diagnostic capture failed; preserving the original assertion.");
+            }
+            catch
+            {
+                // Even an unavailable output writer must not replace the original assertion.
+            }
+        }
     }
 
     internal static string DescribeMissingSequences(

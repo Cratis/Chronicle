@@ -61,7 +61,7 @@ public static class OpenTelemetryConfigurationExtensions
     {
         services.AddOpenTelemetry().WithCratis(configuration, options =>
         {
-            TelemetryConfiguration.Configure(options);
+            TelemetryConfiguration.Configure(options, configuration);
             options.ServiceName = serviceName;
         });
         return services;

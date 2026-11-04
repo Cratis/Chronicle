@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Immutable;
+using System.Net;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
@@ -33,18 +35,24 @@ public class a_projections_manager_grain : Specification
     protected IProjectionsServiceClient _projectionsServiceClient;
     protected IProjectionDefinitionComparer _definitionComparer;
     protected IProjection _projectionGrain;
+    protected IProjectionFactory _projectionFactory;
+    protected Engine.IProjection _engineProjection;
+    protected AdvancingClock _clock;
     protected IReadModelsManager _readModelsManager;
     protected Observation.IObserver _observerGrain;
     protected readonly Dictionary<string, Observation.IObserver> _observersByKey = [];
     protected INamespaces _namespaces;
-    protected Cratis.Orleans.Jobs.IJobsManager _jobsManager;
+    protected Orleans.Jobs.IJobsManager _jobsManager;
     protected Recommendations.IRecommendationsManager _recommendationsManager;
-    protected Storage.Observation.IFailedPartitionsStorage _failedPartitionsStorage;
+    protected IFailedPartitionsStorage _failedPartitionsStorage;
     protected Storage.IEventStoreStorage _eventStoreStorage;
     protected ProjectionsManagerState _state;
     protected IStorage<ProjectionsManagerState> _stateStorage;
-    protected Storage.Observation.IObserverStateStorage _observerStates;
+    protected IObserverStateStorage _observerStates;
     protected IEnumerable<ReadModelDefinition> _readModelDefinitions = [];
+    protected IClusterMembershipService _clusterMembership;
+    protected ClusterMembershipSnapshot _membership;
+    protected static readonly SiloAddress _otherSilo = SiloAddress.New(new IPEndPoint(IPAddress.Loopback, 11112), 1);
 
     async Task Establish()
     {
@@ -56,10 +64,10 @@ public class a_projections_manager_grain : Specification
         _definitionComparer = Substitute.For<IProjectionDefinitionComparer>();
         _silo.AddService(_definitionComparer);
 
-        var engineProjection = Substitute.For<Engine.IProjection>();
+        var engineProjection = _engineProjection = Substitute.For<Engine.IProjection>();
         engineProjection.EventTypes.Returns([]);
         engineProjection.IsEventSourceKeyed.Returns(true);
-        var projectionFactory = Substitute.For<IProjectionFactory>();
+        var projectionFactory = _projectionFactory = Substitute.For<IProjectionFactory>();
         projectionFactory
             .Create(
                 Arg.Any<EventStoreName>(),
@@ -70,10 +78,13 @@ public class a_projections_manager_grain : Specification
             .Returns(engineProjection);
         _silo.AddService(projectionFactory);
 
+        _clock = new AdvancingClock();
+        _silo.AddService<TimeProvider>(_clock);
+
         _projectionsServiceClient = Substitute.For<IProjectionsServiceClient>();
         _projectionsServiceClient
             .Register(Arg.Any<EventStoreName>(), Arg.Any<IEnumerable<ProjectionDefinition>>())
-            .Returns(Task.FromResult(Cratis.Monads.Result<ProjectionRegistrationError>.Success()));
+            .Returns(Task.FromResult(Monads.Result<ProjectionRegistrationError>.Success()));
         _silo.AddService(_projectionsServiceClient);
 
         _silo.AddService(Substitute.For<ILanguageService>());
@@ -84,7 +95,7 @@ public class a_projections_manager_grain : Specification
         eventStoreStorage.EventTypes.GetLatestForAllEventTypes().Returns([]);
         var namespaceStorage = Substitute.For<Storage.IEventStoreNamespaceStorage>();
         eventStoreStorage.GetNamespace(Arg.Any<EventStoreNamespaceName>()).Returns(namespaceStorage);
-        _failedPartitionsStorage = Substitute.For<Storage.Observation.IFailedPartitionsStorage>();
+        _failedPartitionsStorage = Substitute.For<IFailedPartitionsStorage>();
         namespaceStorage.FailedPartitions.Returns(_failedPartitionsStorage);
         _observerStates = namespaceStorage.Observers;
         _silo.AddService(storage);
@@ -92,6 +103,8 @@ public class a_projections_manager_grain : Specification
         var siloDetails = Substitute.For<ILocalSiloDetails>();
         siloDetails.SiloAddress.Returns(SiloAddress.Zero);
         _silo.AddService(siloDetails);
+
+        AddClusterMembership();
 
         _namespaces = Substitute.For<INamespaces>();
         _namespaces.GetAll().Returns([EventStoreNamespaceName.Default]);
@@ -108,10 +121,10 @@ public class a_projections_manager_grain : Specification
         _observerGrain.IsSubscribed().Returns(true);
         _observerGrain.IsSubscriptionEstablished().Returns(true);
         _observerGrain.GetState().Returns(new ObserverState());
-        _silo.AddProbe<Observation.IObserver>(key => _observersByKey.TryGetValue(key.ToString(), out var observer) ? observer : _observerGrain);
+        _silo.AddProbe(key => _observersByKey.TryGetValue(key.ToString(), out var observer) ? observer : _observerGrain);
 
-        _jobsManager = Substitute.For<Cratis.Orleans.Jobs.IJobsManager>();
-        _jobsManager.GetAllJobs().Returns(System.Collections.Immutable.ImmutableList<Cratis.Orleans.Storage.Jobs.JobState>.Empty);
+        _jobsManager = Substitute.For<Orleans.Jobs.IJobsManager>();
+        _jobsManager.GetAllJobs().Returns(ImmutableList<Orleans.Storage.Jobs.JobState>.Empty);
         _silo.AddProbe(_ => _jobsManager);
 
         _recommendationsManager = Substitute.For<Recommendations.IRecommendationsManager>();
@@ -124,6 +137,16 @@ public class a_projections_manager_grain : Specification
 
         _grain = await _silo.CreateGrainAsync<ProjectionsManager>(EventStore);
     }
+
+    /// <summary>
+    /// Changes the status of a silo in the membership the manager sees.
+    /// </summary>
+    /// <param name="silo">The silo whose status changes.</param>
+    /// <param name="status">The new status.</param>
+    protected void SiloChanged(SiloAddress silo, SiloStatus status) =>
+        _membership = new ClusterMembershipSnapshot(
+            _membership.Members.SetItem(silo, new ClusterMember(silo, status, silo.ToString())),
+            new MembershipVersion(_membership.Version.Value + 1));
 
     internal static ProjectionDefinition CreateDefinition(ProjectionId identifier, ReadModelIdentifier readModel) => new(
         ProjectionOwner.Client,
@@ -152,4 +175,16 @@ public class a_projections_manager_grain : Specification
         SinkDefinition.None,
         new Dictionary<ReadModelGeneration, JsonSchema>(),
         []);
+
+    void AddClusterMembership()
+    {
+        _clusterMembership = Substitute.For<IClusterMembershipService>();
+        _membership = new ClusterMembershipSnapshot(
+            ImmutableDictionary<SiloAddress, ClusterMember>.Empty
+                .Add(SiloAddress.Zero, new ClusterMember(SiloAddress.Zero, SiloStatus.Active, "zero"))
+                .Add(_otherSilo, new ClusterMember(_otherSilo, SiloStatus.Active, "other")),
+            new MembershipVersion(1));
+        _clusterMembership.CurrentSnapshot.Returns(_ => _membership);
+        _silo.AddService(_clusterMembership);
+    }
 }

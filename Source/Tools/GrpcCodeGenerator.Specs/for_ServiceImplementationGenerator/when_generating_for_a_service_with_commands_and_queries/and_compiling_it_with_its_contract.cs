@@ -38,6 +38,10 @@ public class and_compiling_it_with_its_contract : given.a_generated_service
     [Fact] void should_convert_the_wire_value_to_the_concept_the_command_declares() => _code.ShouldContain("(global::TestAssembly.Catalog.ProductId)request.Id");
     [Fact] void should_map_the_read_model_onto_its_response_message() => _code.ShouldContain("static global::Generated.TestAssembly.Catalog.ProductResponse ToProductResponse(");
     [Fact] void should_let_a_query_that_can_answer_with_nothing_do_so() => _code.ShouldContain("result is null ? null : ToProductResponse(result)");
+    [Fact] void should_route_a_query_that_addresses_an_event_store_through_the_guard() => _code.ShouldContain("new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore");
+    [Fact] void should_route_read_model_names_and_identifiers_through_the_guard() => _code.ShouldContain("new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, request.ReadModel, request.ReadModelIdentifier)");
+    [Fact] void should_hand_the_call_context_to_the_guard_for_an_observable_query() => _code.ShouldContain("QueryExecutor.Execute<");
+    [Fact] void should_not_route_a_query_that_addresses_no_event_store() => _code.ShouldContain("QueryExecutor.Execute<");
     [Fact] void should_complete_an_observable_query_with_the_call_context() => _code.ShouldContain(".CompletedBy(callContext.CancellationToken)");
 
     bool AllowsAnonymous(string method) => Resolve(_generated.TypeName).GetMethod(method)!.GetCustomAttributesData()

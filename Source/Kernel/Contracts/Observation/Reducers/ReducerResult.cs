@@ -50,4 +50,17 @@ public class ReducerResult
     /// </summary>
     [ProtoMember(7)]
     public ulong DeliveryId { get; set; }
+
+    /// <summary>
+    /// Gets or sets how long to wait, in milliseconds, before the partition is delivered again when it was deferred.
+    /// </summary>
+    [ProtoMember(8)]
+    public ulong RetryAfterMilliseconds { get; set; }
+
+    /// <summary>
+    /// Gets or sets one result per partition of a page. Set instead of the single-partition fields when answering
+    /// a page delivered through <see cref="ReduceOperationMessage.Partitions"/>.
+    /// </summary>
+    [ProtoMember(9)]
+    public IList<PartitionResult> Partitions { get; set; } = [];
 }

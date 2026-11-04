@@ -21,10 +21,11 @@ namespace Cratis.Chronicle.Security;
 /// <param name="UserId">The unique identifier of the admin user.</param>
 /// <param name="Password">The plain-text password to set.</param>
 /// <param name="ConfirmedPassword">Confirmation of the password; must match <paramref name="Password"/>.</param>
+/// <param name="SetupToken">The operator-provided initial setup token.</param>
 [Command]
 [AllowAnonymous]
 [BelongsTo(WellKnownServices.Users)]
-public record SetInitialAdminPassword(UserId UserId, Password Password, Password ConfirmedPassword)
+public record SetInitialAdminPassword(UserId UserId, Password Password, Password ConfirmedPassword, InitialAdminSetupToken SetupToken)
 {
     /// <summary>
     /// Handles the command by verifying the user has not yet logged in and appending a <see cref="UserPasswordChanged"/> event.
@@ -33,6 +34,7 @@ public record SetInitialAdminPassword(UserId UserId, Password Password, Password
     /// <param name="storage">The <see cref="IStorage"/> to load the user record from.</param>
     /// <param name="options">The configured administrator.</param>
     /// <param name="eventSerializer">The event serializer.</param>
+    /// <param name="setupTokens">The initial administrator setup tokens.</param>
     /// <param name="correlationId">The server-generated correlation identifier for the password change.</param>
     /// <returns>Awaitable task, completing only when the credentials are persisted.</returns>
     /// <exception cref="PasswordConfirmationMismatch">Thrown when the confirmed password does not match the password.</exception>
@@ -40,11 +42,17 @@ public record SetInitialAdminPassword(UserId UserId, Password Password, Password
     /// <exception cref="InitialAdminPasswordAlreadyUsed">Thrown when the user has already logged in and has an initial password set.</exception>
     /// <exception cref="InitialPasswordCanOnlyBeSetForAdministrator">Thrown for a different administrator identity.</exception>
     /// <exception cref="InitialPasswordCouldNotBeSet">Thrown when appending fails.</exception>
-    public async Task Handle(IGrainFactory grainFactory, IStorage storage, IOptions<Configuration.ChronicleOptions> options, IEventSerializer eventSerializer, [GeneratedValue] CorrelationId correlationId)
+    /// <exception cref="InvalidInitialAdminSetupToken">Thrown when the setup token is missing or invalid.</exception>
+    public async Task Handle(IGrainFactory grainFactory, IStorage storage, IOptions<Configuration.ChronicleOptions> options, IEventSerializer eventSerializer, IInitialAdminSetupTokens setupTokens, [GeneratedValue] CorrelationId correlationId)
     {
         if (Password != ConfirmedPassword)
         {
             throw new PasswordConfirmationMismatch();
+        }
+
+        if (!setupTokens.IsValid(UserId, SetupToken))
+        {
+            throw new InvalidInitialAdminSetupToken();
         }
 
         var user = await storage.System.Users.GetById(UserId) ?? throw new UserNotFound(UserId);

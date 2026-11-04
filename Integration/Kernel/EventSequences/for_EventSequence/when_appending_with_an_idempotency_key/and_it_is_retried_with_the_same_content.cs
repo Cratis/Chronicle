@@ -3,7 +3,6 @@
 
 // The kernel's AppendOutcome and IdempotencyConflictReason share their full names with the .NET client's types,
 // and this project references both assemblies, so the outcome is compared by name.
-
 using context = Cratis.Chronicle.Kernel.Integration.EventSequences.for_EventSequence.when_appending_with_an_idempotency_key.and_it_is_retried_with_the_same_content.context;
 
 namespace Cratis.Chronicle.Kernel.Integration.EventSequences.for_EventSequence.when_appending_with_an_idempotency_key;

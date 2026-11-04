@@ -299,6 +299,9 @@ public partial class Observer
     async Task DeliverReleasedWebhookProbe(WebhookProbeDelivery delivery)
     {
         var (control, failure, _, _, _) = delivery;
+
+        // The recovery writes absolute counts derived from this read, so it must include held-back live counts.
+        await FlushPendingLivePartitionCounts();
         var partitionCounts = (await storage.GetEventStore(_observerKey.EventStore).GetNamespace(_observerKey.Namespace).ObserverHandledCounts.GetFor(_observerId, failure.Partition)).ToDictionary(_ => _.Key, _ => _.Value);
         if (!CurrentWebhookProbe(control, failure)) return;
         var options = await GetWebhookProbeConfiguration();
@@ -434,7 +437,7 @@ public partial class Observer
             failure.WebhookDisposition = WebhookFailureDisposition.Gone;
             failure.IsQuarantined = true;
             ChangeAlertState();
-            await failures.WriteStateAsync();
+            await WriteFailedPartitions();
         }
         finally
         {
@@ -459,7 +462,7 @@ public partial class Observer
                 ResetWebhookProbeBudget(eligible, control.Id);
             }
             ChangeAlertState();
-            await failures.WriteStateAsync();
+            await WriteFailedPartitions();
             await WriteStateAsync();
             return true;
         }
@@ -522,7 +525,7 @@ public partial class Observer
             var cursor = failure.EffectiveRecoveryCursor;
             failure.RecoveryCursor = new(next, cursor.Mode, cursor.ReplayBoundary);
             failure.RecoveryOwner = null;
-            await failures.WriteStateAsync();
+            await WriteFailedPartitions();
         }
         finally
         {

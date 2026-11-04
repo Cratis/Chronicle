@@ -85,8 +85,8 @@ public interface IEventStore
     /// <summary>
     /// Gets occurrence effect receipts bound to this store and namespace.
     /// </summary>
-    /// <exception cref="EffectReceiptsNotSupported">This implementation does not support occurrences.</exception>
-    IOccurrences Occurrences => throw new EffectReceiptsNotSupported();
+    /// <exception cref="OccurrencesNotSupported">This implementation does not support occurrences.</exception>
+    IOccurrences Occurrences => throw new OccurrencesNotSupported();
 
     /// <summary>
     /// Gets the <see cref="IReducers"/> for the event store.
@@ -202,6 +202,16 @@ public interface IEventStore
     /// </summary>
     /// <returns>Awaitable task.</returns>
     Task RegisterAll();
+
+    /// <summary>
+    /// Registers definitions as a deployment step without starting observers or seeding events.
+    /// </summary>
+    /// <param name="generation">A monotonic deployment generation; zero sends no generation.</param>
+    /// <param name="cancellationToken">Cancellation for waiting for services and between registration steps.</param>
+    /// <returns>The fingerprint and generation of the registered definitions.</returns>
+    /// <exception cref="DefinitionsRegistrationNotSupported">The implementation does not support definitions registration.</exception>
+    Task<DefinitionsRegistration> RegisterDefinitions(DeploymentGeneration? generation = default, CancellationToken cancellationToken = default) =>
+        throw new DefinitionsRegistrationNotSupported(GetType());
 
     /// <summary>
     /// Get an event sequence by id.

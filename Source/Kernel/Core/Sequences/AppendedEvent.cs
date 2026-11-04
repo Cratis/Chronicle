@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Cratis.Arc.Queries;
 using Cratis.Arc.Queries.ModelBound;
 using Cratis.Chronicle.Concepts;
@@ -23,6 +24,7 @@ namespace Cratis.Chronicle.Sequences;
 /// <param name="Revisions">The revisions applied to this event.</param>
 /// <param name="GenerationalContent">Content for each generation stored for this event, keyed by generation number.</param>
 /// <param name="RevisedGeneration">The generation of the most recent revision, also when storage keeps no revision history. Null when unrevised.</param>
+/// <param name="ErasedProperties">Confirmed erased paths in current content only; not an erasure audit.</param>
 [ReadModel]
 [BelongsTo(WellKnownServices.EventSequences)]
 public record AppendedEvent(
@@ -32,8 +34,56 @@ public record AppendedEvent(
     string OriginalContent,
     IEnumerable<EventRevision> Revisions,
     IEnumerable<KeyValuePair<int, string>> GenerationalContent,
-    uint? RevisedGeneration = null)
+    uint? RevisedGeneration,
+    [property: JsonIgnore] IEnumerable<string> ErasedProperties)
 {
+#pragma warning disable SA1313 // Preserve released constructor parameter names for existing named arguments.
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AppendedEvent"/> class without erased-path metadata.
+    /// </summary>
+    /// <param name="Id">The sequence number.</param>
+    /// <param name="Context">The event context.</param>
+    /// <param name="Content">The current JSON content.</param>
+    /// <param name="OriginalContent">The original JSON content.</param>
+    /// <param name="Revisions">The event revisions.</param>
+    /// <param name="GenerationalContent">The content by generation.</param>
+    /// <param name="RevisedGeneration">The latest revision generation.</param>
+    public AppendedEvent(string Id, EventContext Context, string Content, string OriginalContent, IEnumerable<EventRevision> Revisions, IEnumerable<KeyValuePair<int, string>> GenerationalContent, uint? RevisedGeneration = null)
+        : this(Id, Context, Content, OriginalContent, Revisions, GenerationalContent, RevisedGeneration, [])
+    {
+    }
+#pragma warning restore SA1313
+
+    /// <summary>
+    /// Gets confirmed erased paths for JSON responses, omitting empty metadata for all reads.
+    /// </summary>
+    [JsonPropertyName("erasedProperties")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public IEnumerable<string>? ErasedPropertiesForJson => ErasedProperties.Any() ? ErasedProperties : null;
+
+#pragma warning disable SA1313 // Preserve released deconstruction parameter names for existing named arguments.
+    /// <summary>
+    /// Deconstructs the response using its original seven-member shape.
+    /// </summary>
+    /// <param name="Id">The sequence number.</param>
+    /// <param name="Context">The event context.</param>
+    /// <param name="Content">The current content.</param>
+    /// <param name="OriginalContent">The original content.</param>
+    /// <param name="Revisions">The revisions.</param>
+    /// <param name="GenerationalContent">The content by generation.</param>
+    /// <param name="RevisedGeneration">The latest revision generation.</param>
+    public void Deconstruct(out string Id, out EventContext Context, out string Content, out string OriginalContent, out IEnumerable<EventRevision> Revisions, out IEnumerable<KeyValuePair<int, string>> GenerationalContent, out uint? RevisedGeneration)
+    {
+        Id = this.Id;
+        Context = this.Context;
+        Content = this.Content;
+        OriginalContent = this.OriginalContent;
+        Revisions = this.Revisions;
+        GenerationalContent = this.GenerationalContent;
+        RevisedGeneration = this.RevisedGeneration;
+    }
+#pragma warning restore SA1313
+
     /// <summary>
     /// Query events in an event sequence, narrowed and ordered by the values a saved query carries.
     /// </summary>
@@ -228,12 +278,48 @@ public record AppendedEvent(
             eventStore,
             @namespace,
             eventSequenceId,
-            Concepts.Events.EventSequenceNumber.First,
+            EventSequenceNumber.First,
             eventSourceId,
             eventTypeIds,
             eventStreamType,
             eventStreamId,
             eventSourceType);
+
+    /// <summary>
+    /// Gets events from a sequence number with confirmed erased paths in current released content only.
+    /// Paths use dotted members and bracketed indices. Empty metadata is not proof of no erasure.
+    /// </summary>
+    /// <param name="storage">The event storage.</param>
+    /// <param name="eventCompliance">The compliance release service.</param>
+    /// <param name="jsonSerializerOptions">The content serializer options.</param>
+    /// <param name="eventStore">The event store.</param>
+    /// <param name="namespace">The namespace.</param>
+    /// <param name="eventSequenceId">The event sequence.</param>
+    /// <param name="fromEventSequenceNumber">The inclusive first sequence number.</param>
+    /// <param name="eventSourceId">Optional event source filter.</param>
+    /// <param name="eventTypeIds">Optional comma separated event type filters.</param>
+    /// <returns>Released events with erased paths, not an erasure audit.</returns>
+    public static Task<IEnumerable<AppendedEvent>> FromSequenceNumberWithErasedProperties(
+        IStorage storage,
+        IEventCompliance eventCompliance,
+        JsonSerializerOptions jsonSerializerOptions,
+        EventStoreName eventStore,
+        EventStoreNamespaceName @namespace,
+        EventSequenceId eventSequenceId,
+        ulong fromEventSequenceNumber,
+        EventSourceId? eventSourceId = default,
+        string? eventTypeIds = default) =>
+        EventSequenceQuerying.ReadFromSequenceNumber(
+            storage,
+            eventCompliance,
+            jsonSerializerOptions,
+            eventStore,
+            @namespace,
+            eventSequenceId,
+            fromEventSequenceNumber,
+            eventSourceId?.Value,
+            eventTypeIds,
+            reportErasure: true);
 
     /// <summary>
     /// Gets every event from a specific sequence number onward, optionally narrowed to an event source and event

@@ -43,7 +43,8 @@ jobs:
       - name: Build the matrix evaluator
         run: |
           set -euo pipefail
-          dotnet build Source/Tools/LegacyContracts/LegacyContracts.csproj --configuration Release
+          # The solution's Release build owns analyzers for this tool; generators still run.
+          dotnet build Source/Tools/LegacyContracts/LegacyContracts.csproj --configuration Release -p:RunAnalyzers=false
 
       - name: Prove the matrix evaluator rejects planted failures
         run: |

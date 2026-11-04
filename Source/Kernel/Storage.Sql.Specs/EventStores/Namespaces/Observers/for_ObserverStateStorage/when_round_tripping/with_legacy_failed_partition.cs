@@ -15,7 +15,7 @@ public class with_legacy_failed_partition : given.an_observer_state_storage
 
     async Task Establish()
     {
-        await _storage.Save(new() { Identifier = "observer" });
+        await _storage.Save(new() { Identifier = "observer" }, Concepts.EventSequences.EventSequenceId.Log);
         const string partitions = """
             [{"Id":"11111111-1111-1111-1111-111111111111","Partition":"partition","ObserverId":"observer","Attempts":[{"Occurred":"2026-10-17T12:00:00+00:00","SequenceNumber":42,"Messages":[],"StackTrace":""}],"IsResolved":false}]
             """;
@@ -27,7 +27,7 @@ public class with_legacy_failed_partition : given.an_observer_state_storage
     {
         var state = await _storage.Get("observer");
         _restored = state.FailedPartitions.Single();
-        await _storage.Save(state);
+        await _storage.Save(state, Concepts.EventSequences.EventSequenceId.Log);
         await using var context = CreateContext();
         _savedJson = await context.Database.SqlQueryRaw<string>("SELECT FailedPartitions AS Value FROM Observers WHERE Id = 'observer'").SingleAsync();
     }

@@ -20,7 +20,7 @@ public class and_all_values_are_provided : Specification
         _scenario.Services.AddSingleton(storage);
     }
 
-    async Task Because() => _result = await _scenario.Validate(new SetInitialAdminPassword(Guid.NewGuid(), "some-password-123", "some-password-123"));
+    async Task Because() => _result = await _scenario.Validate(new SetInitialAdminPassword(Guid.NewGuid(), "some-password-123", "some-password-123", "setup-token"));
 
     [Fact] void should_be_valid() => _result.ShouldBeValid();
 }

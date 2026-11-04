@@ -3,6 +3,7 @@
 
 using System.Reactive.Subjects;
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Chronicle.Storage.Sql.EventStores.Occurrences;
@@ -27,7 +28,12 @@ public class ObserverStateStorage(EventStoreName eventStore, EventStoreNamespace
     }
 
     /// <inheritdoc/>
-    public ISubject<IEnumerable<Observation.ObserverState>> ObserveAll() => LiveQuery.Observe(GetAll, database.LiveQueryPollingInterval);
+    /// <remarks>
+    /// Polls the SQL rows and compares them structurally, including the running state timestamp column, so a
+    /// timestamp-only write emits (#5483) and an unchanged poll does not. States are mapped only on emission.
+    /// </remarks>
+    public ISubject<IEnumerable<Observation.ObserverState>> ObserveAll() =>
+        LiveQuery.Observe(GetAllRows, database, "observer-states", ObserverStateRowComparer.Instance, MapAll);
 
     /// <inheritdoc/>
     public async Task<Observation.ObserverState> Get(ObserverId observerId)
@@ -65,7 +71,7 @@ public class ObserverStateStorage(EventStoreName eventStore, EventStoreNamespace
     }
 
     /// <inheritdoc/>
-    public async Task Save(Observation.ObserverState state)
+    public async Task<bool> Save(Observation.ObserverState state, EventSequenceId owner)
     {
         // EF change-tracking rejects a null primary key. Mirror the Get path tolerance: an
         // observer whose grain key decoded to an empty ObserverId has no real identity to
@@ -73,43 +79,82 @@ public class ObserverStateStorage(EventStoreName eventStore, EventStoreNamespace
         // input. Returning here keeps storage-layer behavior aligned across backends.
         if (state.Identifier is null || string.IsNullOrEmpty(state.Identifier.Value))
         {
-            return;
+            return true;
         }
 
         await using var scope = await database.Namespace(eventStore, @namespace);
-        for (var attempt = 0; attempt < 2; attempt++)
+        var entity = state.ToSql();
+        entity.Owner = owner.Value;
+        var existing = await scope.DbContext.Observers.AsTracking()
+            .FirstOrDefaultAsync(observer => observer.Id == entity.Id);
+        try
         {
-            var entity = state.ToSql();
-            var existing = await scope.DbContext.Observers.AsTracking()
-                .FirstOrDefaultAsync(observer => observer.Id == entity.Id);
-            if (existing is null)
-            {
-                await scope.DbContext.Observers.AddAsync(entity);
-            }
-            else
-            {
-                PreserveControl(entity, existing);
-
-                // A competing control write after this read must still fail the concurrency check.
-                scope.DbContext.Entry(existing).CurrentValues.SetValues(entity);
-            }
-
-            try
-            {
-                await scope.DbContext.SaveChangesAsync();
-                return;
-            }
-            catch (DbUpdateException error) when (attempt == 0 && existing is null && StorageWriteConflicts.IsUnique(error))
-            {
-                scope.DbContext.ChangeTracker.Clear();
-                if (!await scope.DbContext.Observers.AnyAsync(observer => observer.Id == entity.Id))
-                {
-                    throw;
-                }
-
-                SqlStorageTelemetry.RecoveredCollision("observer-state");
-            }
+            return await SaveState(scope.DbContext, entity, existing);
         }
+        catch (DbUpdateException error) when (existing is null && StorageWriteConflicts.IsUnique(error))
+        {
+            scope.DbContext.ChangeTracker.Clear();
+            var winner = await scope.DbContext.Observers.AsTracking().FirstOrDefaultAsync(observer => observer.Id == entity.Id);
+            if (winner is null)
+            {
+                throw;
+            }
+
+            SqlStorageTelemetry.RecoveredCollision("observer-state");
+            return await SaveState(scope.DbContext, entity, winner);
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task ClaimOwnership(ObserverId observerId, EventSequenceId owner)
+    {
+        await using var scope = await database.Namespace(eventStore, @namespace);
+        await scope.DbContext.Observers.Where(observer => observer.Id == observerId)
+            .ExecuteUpdateAsync(set => set.SetProperty(observer => observer.Owner, owner.Value));
+    }
+
+    /// <inheritdoc/>
+    public async Task<DateTimeOffset?> GetRunningStateChangedAt(ObserverId observerId)
+    {
+        if (observerId is null || string.IsNullOrEmpty(observerId.Value))
+        {
+            return null;
+        }
+
+        await using var scope = await database.Namespace(eventStore, @namespace);
+        var observerIdValue = observerId.Value;
+        return await scope.DbContext.Observers
+            .Where(observer => observer.Id == observerIdValue)
+            .Select(observer => observer.RunningStateChangedAt)
+            .FirstOrDefaultAsync();
+    }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyDictionary<ObserverId, DateTimeOffset>> GetRunningStatesChangedAt()
+    {
+        await using var scope = await database.Namespace(eventStore, @namespace);
+        var known = await scope.DbContext.Observers
+            .Where(observer => observer.RunningStateChangedAt != null)
+            .Select(observer => new { observer.Id, observer.RunningStateChangedAt })
+            .ToListAsync();
+        return known.ToDictionary(_ => _.Id, _ => _.RunningStateChangedAt!.Value);
+    }
+
+    /// <inheritdoc/>
+    public async Task<bool> SaveRunningStateChangedAt(ObserverId observerId, DateTimeOffset? runningStateChangedAt, EventSequenceId owner)
+    {
+        if (observerId is null || string.IsNullOrEmpty(observerId.Value))
+        {
+            return false;
+        }
+
+        await using var scope = await database.Namespace(eventStore, @namespace);
+        var observerIdValue = observerId.Value;
+        var ownerValue = owner.Value;
+        var updated = await scope.DbContext.Observers
+            .Where(observer => observer.Id == observerIdValue && (observer.Owner == null || observer.Owner == ownerValue))
+            .ExecuteUpdateAsync(set => set.SetProperty(observer => observer.RunningStateChangedAt, runningStateChangedAt));
+        return updated > 0;
     }
 
     /// <inheritdoc/>
@@ -145,6 +190,11 @@ public class ObserverStateStorage(EventStoreName eventStore, EventStoreNamespace
         var renamed = new ObserverState
         {
             Id = newId,
+            Owner = existing.Owner,
+            PartitionClaims = existing.PartitionClaims,
+            ObserverWideClaim = existing.ObserverWideClaim,
+            OwnershipRevision = existing.OwnershipRevision,
+            RunningStateChangedAt = existing.RunningStateChangedAt,
             TypeSetControl = existing.TypeSetControl,
             Initialization = existing.Initialization,
             DeliveryFences = existing.DeliveryFences,
@@ -192,6 +242,39 @@ public class ObserverStateStorage(EventStoreName eventStore, EventStoreNamespace
         }
     }
 
+    static Observation.ObserverState[] MapAll(ObserverState[] rows) => rows.Select(row => row.ToKernel()).ToArray();
+
+    static async Task<bool> SaveState(NamespaceDbContext context, ObserverState entity, ObserverState? existing)
+    {
+        if (existing is null)
+        {
+            await context.Observers.AddAsync(entity);
+        }
+        else
+        {
+            if (existing.Owner is not null && existing.Owner != entity.Owner) return false;
+            PreserveControl(entity, existing);
+            entity.RunningStateChangedAt = existing.RunningStateChangedAt;
+
+            // Owner is a concurrency token: the UPDATE atomically requires the read owner (this sequence or null).
+            // Keep the existing control token as well, so competing control writes still fail their concurrency check.
+            context.Entry(existing).CurrentValues.SetValues(entity);
+        }
+
+        try
+        {
+            await context.SaveChangesAsync();
+            return true;
+        }
+        catch (DbUpdateConcurrencyException error)
+        {
+            var entry = error.Entries.Single();
+            var current = await entry.GetDatabaseValuesAsync();
+            if (current is null || !Equals(current[nameof(ObserverState.Owner)], entry.OriginalValues[nameof(ObserverState.Owner)])) return false;
+            throw;
+        }
+    }
+
     static void PreserveControl(ObserverState entity, ObserverState existing)
     {
         // On an insert collision the progress fields take the losing writer's values, matching
@@ -211,5 +294,11 @@ public class ObserverStateStorage(EventStoreName eventStore, EventStoreNamespace
         }
 
         entity.Initialization ??= existing.Initialization;
+    }
+
+    async Task<IEnumerable<ObserverState>> GetAllRows()
+    {
+        await using var scope = await database.Namespace(eventStore, @namespace);
+        return await scope.DbContext.Observers.ToListAsync();
     }
 }

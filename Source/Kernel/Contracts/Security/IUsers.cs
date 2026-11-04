@@ -186,6 +186,12 @@ public class SetInitialAdminPasswordRequest
     /// </summary>
     [ProtoMember(3)]
     public string ConfirmedPassword { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the SetupToken.
+    /// </summary>
+    [ProtoMember(4)]
+    public string SetupToken { get; set; } = string.Empty;
 }
 
 /// <summary>

@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
-using System.Text.Json;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
@@ -22,6 +21,7 @@ using Microsoft.Extensions.Logging;
 
 using EngineProjection = Cratis.Chronicle.Projections.Engine.IProjection;
 using EngineProjectionsManager = Cratis.Chronicle.Projections.Engine.IProjectionsManager;
+using SinkFailedPartition = Cratis.Chronicle.Storage.Sinks.FailedPartition;
 
 namespace Cratis.Chronicle.Projections;
 
@@ -72,7 +72,7 @@ public class ProjectionObserverSubscriber(
         // Direct grain-to-observer notification — the previous Orleans MemoryStreams pub-sub
         // propagated subscribers to the producer's PullingAgent on a periodic refresh that
         // could lag the first publish and silently drop it under load.
-        _changesetNotifier = GrainFactory.GetGrain<IProjectionChangesetNotifier>(_key.ObserverId);
+        _changesetNotifier = GrainFactory.GetGrain<IProjectionChangesetNotifier>(new ProjectionChangesetNotifierKey(_key.ObserverId, _key.EventStore, _key.Namespace));
 
         var projection = GrainFactory.GetGrain<IProjection>(new ProjectionKey(_key.ObserverId, _key.EventStore));
         await projection.SubscribeDefinitionsChanged(this.AsReference<INotifyProjectionDefinitionsChanged>());
@@ -85,6 +85,13 @@ public class ProjectionObserverSubscriber(
     /// <inheritdoc/>
     public override async Task OnDeactivateAsync(DeactivationReason reason, CancellationToken cancellationToken)
     {
+        if (reason.ReasonCode == DeactivationReasonCode.ShuttingDown)
+        {
+            // The projection grain is deactivating with the silo too, so the call could not complete.
+            logger.SkippingDefinitionUnsubscribeDuringShutdown(_key);
+            return;
+        }
+
         var projection = GrainFactory.GetGrain<IProjection>(new ProjectionKey(_key.ObserverId, _key.EventStore));
         await projection.UnsubscribeDefinitionsChanged(this.AsReference<INotifyProjectionDefinitionsChanged>());
     }
@@ -207,10 +214,7 @@ public class ProjectionObserverSubscriber(
             return;
         }
 
-        if (_pipeline is null)
-        {
-            await HandlePipeline();
-        }
+        await EnsurePipeline();
 
         if (_pipeline is null)
         {
@@ -227,14 +231,40 @@ public class ProjectionObserverSubscriber(
         }
     }
 
+    ReadModelChangeNotification CreateNotification(string partition, IChangeset<AppendedEvent, ExpandoObject> changeset, bool isNewInstance, AppendedEvent lastEvent)
+    {
+        var model = expandoObjectConverter.ToJsonObject(changeset.CurrentState, _schema!);
+        if (ReadModelChangeBookkeeping.DeclaresProperty(_schema!, WellKnownProperties.LastHandledEventSequenceNumber))
+        {
+            model[WellKnownProperties.LastHandledEventSequenceNumber] = JsonValue.Create(lastEvent.Context.SequenceNumber.Value);
+        }
+
+        ReadModelChangeBookkeeping.CopyLegacySubjectLineage(changeset.CurrentState, model);
+        var (subject, subjects) = ReadModelChangeBookkeeping.LineageOf(changeset.CurrentState);
+        var changeType = (changeset.HasBeenRemoved(), isNewInstance) switch
+        {
+            (true, _) => ReadModelChangeType.Removed,
+            (false, true) => ReadModelChangeType.Added,
+            _ => ReadModelChangeType.Modified
+        };
+        var change = new ReadModelChangeContext(changeType, lastEvent.Context.SequenceNumber, lastEvent.Context.Occurred, lastEvent.Context.CorrelationId)
+        {
+            Subject = subject,
+            Subjects = subjects
+        };
+        return new(partition, model, change);
+    }
+
+    bool CanNotify(ExpandoObject state) =>
+        _definition.IsActive &&
+        ((_projection is not null && ProjectionInitialization.IsChildOnly(_projection)) || !ReadModelInitialization.IsUninitialized(state));
+
     async Task<(ObserverSubscriberResult Result, ReadModelChangeNotification? Notification)> HandleRun(Key partition, IEnumerable<AppendedEvent> events)
     {
-        if (_pipeline is null)
-        {
-            // Retry the build on every delivery: a pipeline that failed to build (e.g. from a stale definition)
-            // heals as soon as the definition is corrected, without requiring the grain to be reactivated.
-            await HandlePipeline();
-        }
+        // Retry the build on every delivery: a pipeline that failed to build (e.g. from a stale definition)
+        // heals as soon as the definition is corrected, without requiring the grain to be reactivated.
+        // A definition written after activation is also picked up here.
+        await EnsurePipeline();
 
         if (_pipeline is null)
         {
@@ -311,15 +341,10 @@ public class ProjectionObserverSubscriber(
                 // Check if there are any failed partitions from bulk operations
                 if (pipelineContext.FailedPartitions.Any())
                 {
-                    var observer = GrainFactory.GetGrain<IObserver>(new ObserverKey(_key.ObserverId, _key.EventStore, _key.Namespace, _key.EventSequenceId));
-                    foreach (var failedPartition in pipelineContext.FailedPartitions)
+                    var failure = await HandleBulkFailures(partition, events, pipelineContext.FailedPartitions);
+                    if (failure is not null)
                     {
-                        await observer.PartitionFailed(
-                            failedPartition.EventSourceId,
-                            failedPartition.EventSequenceNumber,
-                            [ProjectionBulkFailures.MessageFor(failedPartition)],
-                            string.Empty,
-                            FailureKind.Handling);
+                        return (failure, null);
                     }
                 }
 
@@ -328,40 +353,9 @@ public class ProjectionObserverSubscriber(
             }
 
             // Note: We don't want to send changesets if the projection is not active
-            if (changeset?.HasChanges == true && _definition.IsActive)
+            if (changeset?.HasChanges == true && CanNotify(changeset.CurrentState))
             {
-                var model = expandoObjectConverter.ToJsonObject(changeset.CurrentState, _schema!);
-
-                // Mirror the metadata fields that the storage sink writes so that watched models
-                // match what a direct read from the underlying store returns.
-                model[WellKnownProperties.LastHandledEventSequenceNumber] =
-                    JsonValue.Create((ulong)lastSuccessfullyObservedEvent!.Context.SequenceNumber);
-
-                var stateDict = (IDictionary<string, object?>)changeset.CurrentState;
-                if (stateDict.TryGetValue(WellKnownProperties.Subject, out var subjectValue) && subjectValue is string subject)
-                {
-                    model[WellKnownProperties.Subject] = JsonValue.Create(subject);
-                }
-
-                if (stateDict.TryGetValue(WellKnownProperties.Subjects, out var subjectsValue))
-                {
-                    model[WellKnownProperties.Subjects] = JsonSerializer.SerializeToNode(subjectsValue);
-                }
-
-                var changeType = (changeset.HasBeenRemoved(), isNewInstance) switch
-                {
-                    (true, _) => ReadModelChangeType.Removed,
-                    (false, true) => ReadModelChangeType.Added,
-                    _ => ReadModelChangeType.Modified
-                };
-
-                var change = new ReadModelChangeContext(
-                    changeType,
-                    lastSuccessfullyObservedEvent!.Context.SequenceNumber,
-                    lastSuccessfullyObservedEvent.Context.Occurred,
-                    lastSuccessfullyObservedEvent.Context.CorrelationId);
-
-                notification = new(partition.ToString(), model, change);
+                notification = CreateNotification(partition.ToString(), changeset, isNewInstance, lastSuccessfullyObservedEvent!);
             }
 
             return (ObserverSubscriberResult.Ok(lastSuccessfullyObservedEvent!.Context.SequenceNumber), notification);
@@ -375,6 +369,50 @@ public class ProjectionObserverSubscriber(
                 ex.GetAllMessages(),
                 ex.StackTrace ?? string.Empty), null);
         }
+    }
+
+    async Task<ObserverSubscriberResult?> HandleBulkFailures(Key partition, IEnumerable<AppendedEvent> events, IEnumerable<SinkFailedPartition> failedPartitions)
+    {
+        var observer = GrainFactory.GetGrain<IObserver>(new ObserverKey(_key.ObserverId, _key.EventStore, _key.Namespace, _key.EventSequenceId));
+        foreach (var failedPartition in failedPartitions.Where(_ => _.EventSourceId != partition))
+        {
+            await observer.PartitionFailed(
+                failedPartition.EventSourceId,
+                failedPartition.EventSequenceNumber,
+                [ProjectionBulkFailures.MessageFor(failedPartition)],
+                string.Empty,
+                FailureKind.Handling);
+        }
+
+        var deliveryFailure = failedPartitions.FirstOrDefault(_ => _.EventSourceId == partition);
+        if (deliveryFailure is null)
+        {
+            return null;
+        }
+
+        var lastHandled = events.TakeWhile(_ => _.Context.SequenceNumber < deliveryFailure.EventSequenceNumber)
+            .LastOrDefault()?.Context.SequenceNumber ?? EventSequenceNumber.Unavailable;
+        return ObserverSubscriberResult.Failed(lastHandled, ProjectionBulkFailures.MessageFor(deliveryFailure));
+    }
+
+    async Task EnsurePipeline()
+    {
+        if (_pipeline is not null)
+        {
+            return;
+        }
+
+        if (_definition.ReadModel is null)
+        {
+            // SetDefinition awaits subscriber notifications, so read storage rather than calling that grain.
+            var definitions = storage.GetEventStore(_key.EventStore).Projections;
+            if (await definitions.Has(_key.ObserverId))
+            {
+                _definition = await definitions.Get(_key.ObserverId);
+            }
+        }
+
+        await HandlePipeline();
     }
 
     async Task<ObserverSubscriberResult?> RefreshWhenEngineHasNewerDefinition()

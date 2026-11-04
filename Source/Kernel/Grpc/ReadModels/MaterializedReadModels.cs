@@ -27,18 +27,14 @@ internal sealed class MaterializedReadModels(
     /// <inheritdoc/>
     public async Task<GetInstancesResponse> GetInstances(GetInstancesRequest request, CallContext context = default)
     {
+        await SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace, request.ReadModel, request.Occurrence));
         var readModel = grainFactory.GetReadModel(request.ReadModel, request.EventStore);
         var definition = await readModel.GetKnownDefinition(request.ReadModel);
         var occurrence = string.IsNullOrEmpty(request.Occurrence) ? null : (ReadModelContainerName)request.Occurrence;
         var binding = await readBindings.Resolve(request.EventStore, request.Namespace, definition, occurrence);
-        var sink = binding.Sink;
-        occurrence = binding.Occurrence;
         var skip = Math.Max(0, request.Page * request.PageSize);
 
-        var (instances, totalCount) = await sink.GetInstances(
-            occurrence,
-            skip,
-            request.PageSize);
+        var (instances, totalCount) = await binding.GetInstances(skip, request.PageSize);
 
         var schema = definition.GetSchemaForLatestGeneration();
         var releasedInstances = await complianceHelper.Release(
@@ -60,18 +56,21 @@ internal sealed class MaterializedReadModels(
     /// <inheritdoc/>
     public IObservable<ObserveInstancesResponse> ObserveInstances(ObserveInstancesRequest request, CallContext context = default)
     {
+        return SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace, request.ReadModel, request.Occurrence), () => ObserveGuardedInstances(request));
+    }
+
+    IObservable<ObserveInstancesResponse> ObserveGuardedInstances(ObserveInstancesRequest request)
+    {
         return Observable.FromAsync(async () =>
         {
             var readModel = grainFactory.GetReadModel(request.ReadModel, request.EventStore);
             var definition = await readModel.GetKnownDefinition(request.ReadModel);
             var occurrence = string.IsNullOrEmpty(request.Occurrence) ? null : (ReadModelContainerName)request.Occurrence;
             var binding = await readBindings.Resolve(request.EventStore, request.Namespace, definition, occurrence);
-            var sink = binding.Sink;
-            occurrence = binding.Occurrence;
             var skip = Math.Max(0, request.Page * request.PageSize);
 
             var schema = definition.GetSchemaForLatestGeneration();
-            return (sink, occurrence, skip, schema);
+            return (binding, skip, schema);
         })
 
         // Pages are released and counted one at a time and in order, so a slower earlier page can never overtake a
@@ -79,7 +78,7 @@ internal sealed class MaterializedReadModels(
         // sink emits faster than a slow client or release can drain, and every page queued would cost a release, a
         // count and a page read to deliver a snapshot that a newer one has already replaced.
         .SelectMany(state =>
-            state.sink.ObserveInstances(state.occurrence, state.skip, request.PageSize)
+            state.binding.ObserveInstances(state.skip, request.PageSize)
                 .SelectLatestSequentially(
                     async instances =>
                     {
@@ -90,7 +89,7 @@ internal sealed class MaterializedReadModels(
                             instances);
 
                         var instancesAsJson = releasedInstances.Select(instance => JsonSerializer.Serialize(instance.WithoutInitializationState(state.schema))).ToList();
-                        var (_, totalCount) = await state.sink.GetInstances(state.occurrence, state.skip, request.PageSize);
+                        var (_, totalCount) = await state.binding.GetInstances(state.skip, request.PageSize);
 
                         return new ObserveInstancesResponse
                         {

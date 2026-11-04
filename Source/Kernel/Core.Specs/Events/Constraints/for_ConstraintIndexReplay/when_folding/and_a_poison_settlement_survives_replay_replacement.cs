@@ -29,7 +29,7 @@ public class and_a_poison_settlement_survives_replay_replacement : given.a_repla
     async Task Because()
     {
         var failures = new Dictionary<ConstraintName, ConstraintIndexReplayFailure> { [_definition.Name] = new((EventSequenceNumber)1, new FormatException("missing schema")) };
-        for (var attempt = 0; attempt < 5; attempt++) _tracker.Observe(failures, true);
+        for (var attempt = 0; attempt < 5; attempt++) _tracker.Observe(failures, true, 5);
 
         // A fresh replay represents either a hard deadline or definition synchronization discarding the old fold.
         _replay = new(_sequence, _unique, _closureStorage, _content, Substitute.For<ILogger<ConstraintIndexReplay>>(), [new(_definition, EventSequenceNumber.First)], 2)

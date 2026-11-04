@@ -45,6 +45,12 @@ public record ConcurrencyScope(
         default);
 
     /// <summary>
+    /// Gets the mutation epoch of the event sequence observed when a decision read was taken. When set, the append
+    /// is refused if a revision or redaction has changed the history since.
+    /// </summary>
+    public EventSequenceMutationEpoch? MutationEpoch { get; init; }
+
+    /// <summary>
     /// Gets a value indicating whether this <see cref="ConcurrencyScope"/> should be validated.
     /// </summary>
     /// <returns>true if it should be validated, false if not.</returns>

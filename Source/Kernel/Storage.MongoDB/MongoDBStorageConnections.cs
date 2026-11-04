@@ -29,6 +29,20 @@ public class MongoDBStorageConnections(
     IMongoDBClientManager clientManager) : IMongoDBStorageConnections
 {
     readonly ConcurrentDictionary<string, MongoDBConnectionResolutionHooks> _hooks = new();
+    readonly ConnectionPurpose _purpose = ConnectionPurpose.Runtime;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="MongoDBStorageConnections"/> class for an explicit connection purpose.
+    /// </summary>
+    /// <param name="mongoDBOptions">The MongoDB options.</param>
+    /// <param name="resolution">The storage connection resolution.</param>
+    /// <param name="clientManager">The MongoDB client manager.</param>
+    /// <param name="purpose">The purpose of the connection identity.</param>
+    internal MongoDBStorageConnections(IOptions<MongoDBOptions> mongoDBOptions, IStorageConnectionResolution resolution, IMongoDBClientManager clientManager, ConnectionPurpose purpose)
+        : this(mongoDBOptions, resolution, clientManager)
+    {
+        _purpose = purpose;
+    }
 
     /// <inheritdoc/>
     public IMongoDatabase GetDatabase(StorageConnectionKind kind, string derivedName, string eventStore = "", string @namespace = "")
@@ -40,10 +54,10 @@ public class MongoDBStorageConnections(
         }
 
         var resolver = resolution.Resolver;
-        var request = resolution.RequestFor(ConnectionPurpose.Runtime, kind, eventStore, @namespace);
+        var request = resolution.RequestFor(_purpose, kind, eventStore, @namespace);
 
         // Databases are opened from synchronous paths. The resolution is cached, so this only waits when it is not.
-        var resolved = resolution.Resolve(ConnectionPurpose.Runtime, kind, eventStore, @namespace).GetAwaiter().GetResult();
+        var resolved = resolution.Resolve(_purpose, kind, eventStore, @namespace).GetAwaiter().GetResult();
 
         var hooks = _hooks.GetOrAdd(request.ToKey(), static (_, state) => new(state.Resolver, state.Request, TimeProvider.System), (Resolver: resolver, Request: request));
         var settings = WithDirectConnection(resolved.ToMongoClientSettings(configured, hooks));

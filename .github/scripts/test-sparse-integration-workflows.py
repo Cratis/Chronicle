@@ -25,6 +25,14 @@ EFFECTIVE_LABEL = ("(github.event.action == 'labeled' && github.event.label.name
                    "'run-integration' || 'none')")
 
 
+GATE = "already-ran"
+
+
+def prerequisites_of(job):
+    """The job's needs without the already-ran gate, which every job carries."""
+    return [name for name in job["needs"] if name != GATE]
+
+
 def workflow(filename):
     # PyYAML treats `on` as YAML 1.1's boolean true; BaseLoader keeps GitHub's key intact.
     with (WORKFLOWS / filename).open(encoding="utf-8") as file:
@@ -38,6 +46,7 @@ class ConditionContext:
     results: dict
     cancelled: bool = False
     actor: str = "contributor"
+    gate_skip: str = "false"
 
     def bindings(self):
         values = {
@@ -45,8 +54,11 @@ class ConditionContext:
             "github.actor": self.actor,
             "inputs.integration_requested": self.requested,
             "cancelled()": self.cancelled,
+            "always()": True,
         }
         values.update({f"needs.{name}.result": result for name, result in self.results.items()})
+        # The already-ran gate only skips a prior-success schedule run; every context here is a normal run.
+        values["needs.already-ran.outputs.skip"] = self.gate_skip
         return values
 
 
@@ -76,7 +88,8 @@ def condition_allows(job, context):
     assertions below prove which jobs must complete before DEVELOPMENT is eligible.
     """
     expression = job["if"].removeprefix("${{").removesuffix("}}").strip()
-    if not implicit_success_allows(expression, job["needs"], context.results):
+    results = {GATE: "success", **context.results}
+    if not implicit_success_allows(expression, job["needs"], results):
         return False
     return evaluate_boolean_condition(expression, context.bindings())
 
@@ -352,10 +365,26 @@ class SparseIntegrationWorkflows(unittest.TestCase):
                         if step["name"] == "Download all coverage artifacts")
         self.assertEqual("coverage-results-*", download["with"]["pattern"])
 
+    def test_every_job_is_skipped_when_the_workflow_already_succeeded_on_this_commit(self):
+        jobs = self.build["jobs"]
+        gate = jobs[GATE]
+        self.assertEqual({"actions": "read"}, gate["permissions"])
+        self.assertEqual("Cratis/Workflows/.github/actions/skip-if-already-ran@main", gate["steps"][0]["uses"])
+        self.assertNotIn("with", gate["steps"][0])  # default events: schedule only
+        for job_id, job in jobs.items():
+            if job_id == GATE:
+                continue
+            with self.subTest(job=job_id):
+                self.assertIn(GATE, job["needs"])
+                self.assertIn("needs.already-ran.outputs.skip != 'true'", job["if"])
+                everything_else = ConditionContext("schedule", True, {n: "success" for n in prerequisites_of(job)},
+                                                   gate_skip="true")
+                self.assertFalse(condition_allows(job, everything_else))
+
     def test_stable_specs_check_requires_every_shard_to_succeed(self):
         aggregate = self.build["jobs"]["specs"]
-        self.assertEqual("always()", aggregate["if"])
-        self.assertEqual(["specs-other", "specs-sql"], aggregate["needs"])
+        self.assertEqual("${{ needs.already-ran.outputs.skip != 'true' && (always()) }}", aggregate["if"])
+        self.assertEqual(["specs-other", "specs-sql"], prerequisites_of(aggregate))
         step = aggregate["steps"][0]
         self.assertEqual("${{ needs.specs-other.result }}", step["env"]["OTHER_RESULT"])
         self.assertEqual("${{ needs.specs-sql.result }}", step["env"]["SQL_RESULT"])
@@ -369,19 +398,22 @@ class SparseIntegrationWorkflows(unittest.TestCase):
         jobs = self.build["jobs"]
         parallel = jobs["dotnet-build-development"]
         requested = jobs["dotnet-build-development-requested"]
-        self.assertEqual("github.event_name != 'pull_request'", parallel["if"])
-        self.assertEqual("github.event_name == 'pull_request' && inputs.integration_requested",
+        self.assertEqual("needs.already-ran.outputs.skip != 'true' && (github.event_name != 'pull_request')",
+                         parallel["if"])
+        self.assertEqual("needs.already-ran.outputs.skip != 'true' && "
+                         "(github.event_name == 'pull_request' && inputs.integration_requested)",
                          requested["if"])
-        self.assertEqual(["wire-compatibility", "grain-compatibility"], parallel["needs"])
-        self.assertEqual(["wire-compatibility", "grain-compatibility", "specs"], requested["needs"])
-        self.assertEqual(["specs-other", "specs-sql"], jobs["specs"]["needs"])
+        self.assertEqual(["wire-compatibility", "grain-compatibility"], prerequisites_of(parallel))
+        # The requested PR build runs in parallel with the specs; the integration job keeps the specs gate.
+        self.assertEqual(["wire-compatibility", "grain-compatibility"], prerequisites_of(requested))
+        self.assertEqual(["specs-other", "specs-sql"], prerequisites_of(jobs["specs"]))
         for job_id in ("specs-other", "specs-sql"):
-            self.assertEqual(["dotnet-build"], jobs[job_id]["needs"])
-        self.assertEqual(["wire-compatibility", "grain-compatibility"], jobs["dotnet-build"]["needs"])
+            self.assertEqual(["dotnet-build"], prerequisites_of(jobs[job_id]))
+        self.assertEqual(["wire-compatibility", "grain-compatibility"], prerequisites_of(jobs["dotnet-build"]))
         for key in ("steps", "permissions", "runs-on", "timeout-minutes"):
             self.assertEqual(parallel[key], requested[key], key)
         steps = requested["steps"]
-        self.assertEqual(8, len(steps))
+        self.assertEqual(9, len(steps))
         build = next(step for step in steps if step.get("name") == "Build with DEVELOPMENT symbol")
         self.assertEqual("dotnet build --configuration Release -p:EnableDevelopmentSymbol=true "
                          "-p:DisableProxyGenerator=true -p:DisableDockerBuild=true", build["run"])
@@ -391,6 +423,25 @@ class SparseIntegrationWorkflows(unittest.TestCase):
         self.assertEqual("build-output-development", jobs["integration"]["with"]["build-output-artifact"])
         self.assertEqual("${{ needs.dotnet-build.outputs.chronicle-image }}",
                          jobs["integration"]["with"]["chronicle-image"])
+
+    def test_ci_builds_are_stamped_before_their_first_dotnet_build(self):
+        build_jobs = {
+            "dotnet-build": self.build["jobs"]["dotnet-build"],
+            "dotnet-build-development": self.build["jobs"]["dotnet-build-development"],
+            "dotnet-build-development-requested": self.build["jobs"]["dotnet-build-development-requested"],
+            "hot-core build": self.hot_core["jobs"]["build"],
+        }
+        for name, job in build_jobs.items():
+            with self.subTest(job=name):
+                steps = job["steps"]
+                stamp = next(i for i, step in enumerate(steps) if step.get("name") == "Stamp the build version")
+                first_build = next(i for i, step in enumerate(steps) if "dotnet build" in step.get("run", ""))
+                self.assertLess(stamp, first_build)
+                self.assertEqual('python3 .github/scripts/derive-build-version.py >> "$GITHUB_ENV"',
+                                 steps[stamp]["run"])
+        steps = build_jobs["dotnet-build"]["steps"]
+        names = [step.get("name") for step in steps]
+        self.assertLess(names.index("Build"), names.index("Assert the build carries the stamped version"))
 
     def test_development_eligibility_for_specs_success_failure_cancel_and_skip(self):
         jobs = self.build["jobs"]
@@ -403,14 +454,13 @@ class SparseIntegrationWorkflows(unittest.TestCase):
                 gates = wire == "success" and grain == "success"
                 self.assertEqual(event != "pull_request" and gates,
                                  condition_allows(jobs["dotnet-build-development"], context))
-                self.assertEqual(event == "pull_request" and requested and
-                                 specs == "success" and gates,
+                self.assertEqual(event == "pull_request" and requested and gates,
                                  condition_allows(jobs["dotnet-build-development-requested"], context))
 
     def test_integration_requires_selected_output_but_allows_skipped_sibling(self):
         job = self.build["jobs"]["integration"]
         self.assertEqual({"dotnet-build", "specs", "dotnet-build-development",
-                          "dotnet-build-development-requested"}, set(job["needs"]))
+                          "dotnet-build-development-requested"}, set(prerequisites_of(job)))
         states = ("success", "failure", "cancelled", "skipped")
         for event, requested, specs, development, release, cancelled in product(
                 ("pull_request", "schedule", "workflow_dispatch"), (False, True),
@@ -424,16 +474,16 @@ class SparseIntegrationWorkflows(unittest.TestCase):
             with self.subTest(event=event, requested=requested, results=results, cancelled=cancelled):
                 context = ConditionContext(event, requested, results, cancelled)
                 self.assertEqual(expected, condition_allows(job, context))
-        dependabot = ConditionContext("schedule", False, {name: "success" for name in job["needs"]},
+        dependabot = ConditionContext("schedule", False, {name: "success" for name in prerequisites_of(job)},
                                       actor="dependabot[bot]")
         self.assertFalse(condition_allows(job, dependabot))
 
     def test_coverage_cannot_be_cached_if_any_integration_dependency_failed_or_was_skipped(self):
         coverage = self.build["jobs"]["coverage-merge-and-cache"]
-        self.assertEqual({"specs", "integration", "integration-api", "mongodb"}, set(coverage["needs"]))
+        self.assertEqual({"specs", "integration", "integration-api", "mongodb"}, set(prerequisites_of(coverage)))
         self.assertIn("github.event_name != 'pull_request_target'", coverage["if"])
         self.assertIn("!cancelled()", coverage["if"])
-        for dependency in coverage["needs"]:
+        for dependency in prerequisites_of(coverage):
             self.assertIn(f"needs.{dependency}.result == 'success'", coverage["if"])
 
     def test_coverage_allows_successful_paths_despite_skipped_development_ancestor(self):
@@ -462,8 +512,8 @@ class SparseIntegrationWorkflows(unittest.TestCase):
         states = ("success", "failure", "cancelled", "skipped", "")
         for event, cancelled, results in product(
                 ("pull_request", "schedule", "workflow_dispatch", "pull_request_target"),
-                (False, True), product(states, repeat=len(coverage["needs"]))):
-            prerequisites = dict(zip(coverage["needs"], results))
+                (False, True), product(states, repeat=len(prerequisites_of(coverage)))):
+            prerequisites = dict(zip(prerequisites_of(coverage), results))
             context = ConditionContext(event, True, prerequisites, cancelled)
             expected = (event != "pull_request_target" and not cancelled
                         and all(result == "success" for result in results))
@@ -472,13 +522,14 @@ class SparseIntegrationWorkflows(unittest.TestCase):
         # Ordinary PRs skip integration; Dependabot also skips the matrix. Keep
         # their existing coverage behavior through immediate prerequisite results.
         for actor in ("contributor", "dependabot[bot]"):
-            results = dict.fromkeys(coverage["needs"], "success")
+            results = dict.fromkeys(prerequisites_of(coverage), "success")
             results["integration"] = "skipped"
             context = ConditionContext("pull_request", False, results, actor=actor)
             self.assertFalse(condition_allows(coverage, context))
 
 
 VERSION_STAMPED_CLIENT_REBUILD = "Rebuild the client under test with a version above the previous release"
+ROLLING_DELIVERY_DIAGNOSTIC_REBUILD = "Build isolated rolling delivery diagnostic candidate"
 
 
 class IntegrationSingleBuildContracts(unittest.TestCase):
@@ -497,7 +548,7 @@ class IntegrationSingleBuildContracts(unittest.TestCase):
                 for step in steps:
                     command = step.get("run", "")
                     if lane == "sql-clustering" and step.get("name") == VERSION_STAMPED_CLIENT_REBUILD:
-                        # The one allowed rebuild: the rolling-upgrade leg stamps the client under test above the
+                        # The version-stamped rebuild: the rolling-upgrade leg stamps the client under test above the
                         # previous release so the compatibility check orders the two sides correctly (#5353).
                         self.assertEqual("matrix.provider == 'RollingUpgrade'", step.get("if"))
                         self.assertIn('-p:Version="$CRATIS_CHRONICLE_CLIENT_VERSION"', command)
@@ -505,6 +556,35 @@ class IntegrationSingleBuildContracts(unittest.TestCase):
                         self.assertEqual(1, len(re.findall(r"\bdotnet\b", command)))
                         self.assertRegex(command.strip(), r"^dotnet\s+build\s+Integration/SqlClustering/SqlClustering\.csproj\s")
                         self.assertNotRegex(command, r"[;&|`]|\$\(|\n")
+                        continue
+                    if lane == "sql-clustering" and step.get("name") == ROLLING_DELIVERY_DIAGNOSTIC_REBUILD:
+                        # #5300 needs a compile-time-enabled diagnostic variant; the normal build artifact must
+                        # remain diagnostics-free. Pin the entire script, including provenance and IL verification,
+                        # so only these two isolated builds are allowed, never another build/publish/pack/run/msbuild.
+                        self.assertEqual("matrix.provider == 'RollingUpgrade'", step.get("if"))
+                        self.assertEqual(
+                            'set -euo pipefail\n'
+                            'printf \'diagnostic-source=%s client-version=%s artifacts=%s\\n\' '
+                            '"$(git rev-parse HEAD)" "$CRATIS_CHRONICLE_CLIENT_VERSION" '
+                            '"$RUNNER_TEMP/rolling-delivery-diagnostics"\n'
+                            'dotnet build .github/scripts/rolling-delivery-il/RollingDeliveryIl.csproj '
+                            '-c Release -warnaserror \\\n'
+                            '  --artifacts-path "$RUNNER_TEMP/rolling-il-verifier" '
+                            '-o "$RUNNER_TEMP/rolling-il-tool"\n'
+                            'dotnet build Integration/SqlClustering/SqlClustering.csproj '
+                            '-c Release -warnaserror \\\n'
+                            '  -p:EnableDevelopmentSymbol=true -p:DisableProxyGenerator=true '
+                            '-p:DisableDockerBuild=true \\\n'
+                            '  -p:Version="$CRATIS_CHRONICLE_CLIENT_VERSION" '
+                            '-p:EnableRollingDeliveryDiagnostics=true \\\n'
+                            '  --artifacts-path "$RUNNER_TEMP/rolling-delivery-diagnostics"\n'
+                            'dotnet "$RUNNER_TEMP/rolling-il-tool/RollingDeliveryIl.dll" \\\n'
+                            '  Source/Clients/DotNET/bin/Release/net10.0/Cratis.Chronicle.dll \\\n'
+                            '  --enabled "$RUNNER_TEMP/rolling-delivery-diagnostics/bin/DotNET/'
+                            'release/Cratis.Chronicle.dll"\n'
+                            'grep -a -F -q -- "$CRATIS_CHRONICLE_CLIENT_VERSION" '
+                            '"$RUNNER_TEMP/rolling-delivery-diagnostics/bin/DotNET/release/Cratis.Chronicle.dll"\n',
+                            command)
                         continue
                     self.assertNotRegex(command, r"dotnet\s+(build|publish|run|msbuild)\b|GenerateProtoFiles")
 
@@ -596,6 +676,30 @@ sys.exit(1 if failed else 0)
                          jobs["discover"]["outputs"]["rolling-upgrade-enabled"])
         report = next(step for step in jobs["discover"]["steps"] if step.get("id") == "exclusions")
         self.assertEqual("python3 .github/scripts/integration_lane_exclusions.py", report["run"])
+
+    def test_rolling_upgrade_skips_only_listed_releases_and_each_names_why(self):
+        root = WORKFLOWS.parents[1]
+        listed = root / ".github/rolling-upgrade-unusable-releases.txt"
+        step = next(step for step in workflow("integration.yml")["jobs"]["sql-clustering-rolling-upgrade"]["steps"]
+                    if step.get("name") == "Resolve previous release image")
+        self.assertIn(".github/rolling-upgrade-unusable-releases.txt", step["run"])
+        for line in listed.read_text().splitlines():
+            if not line.strip() or line.startswith("#"):
+                continue
+            with self.subTest(line=line):
+                self.assertRegex(line, r"^v\d+\.\d+\.\d+ # .*\(#\d+\)$",
+                                 "Each unusable release is one tag with the reason and its issue")
+        tags = "v19.114.4\nv19.115.0\n"
+        for contents, expected in (("v19.115.0 # broken (#1)\n", "v19.114.4"), ("# none\n", "v19.115.0")):
+            with self.subTest(contents=contents), tempfile.TemporaryDirectory() as directory:
+                (Path(directory) / ".github").mkdir()
+                (Path(directory) / ".github/rolling-upgrade-unusable-releases.txt").write_text(contents)
+                selection = step["run"].split("\nimage_tag=")[0]
+                script = "git() { printf '%s' \"$TAGS\"; }\n" + selection + "\necho \"$release_tag\""
+                result = subprocess.run(["bash", "-c", "set -euo pipefail\n" + script], cwd=directory,
+                                        env={**os.environ, "TAGS": tags}, capture_output=True, text=True, check=False)
+                self.assertEqual(0, result.returncode, result.stderr)
+                self.assertEqual(expected, result.stdout.strip().splitlines()[-1])
 
     def test_declaration_is_visible_and_one_line_removal_reenables_the_job(self):
         for declarations in (exclusions.EXCLUDED_LANES.copy(), {}):
