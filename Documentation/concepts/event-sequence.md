@@ -32,6 +32,7 @@ Chronicle has formalized the following event sequences:
 An event sequence is stored under its identifier, so Chronicle refuses to create a new event sequence
 whose name it uses for its own storage, for example `observers`, `jobs` or `event-sequences`, or a name
 ending in `+constraint`. Pick a different name. Event sequences that already exist are unaffected.
+The same applies to an event sequence a projection or reducer publishes to, and such a destination may not contain `#`.
 
 ## Event Type generations
 
