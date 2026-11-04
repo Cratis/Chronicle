@@ -39,12 +39,30 @@ public record UsableEventStores(IReadOnlyList<EventStoreName> Usable, SkippedRes
         IStorage storage,
         IResourceNameSnapshot? resourceNames,
         ILogger logger,
-        EventStoreNamespaceName? @namespace = null)
+        EventStoreNamespaceName? @namespace = null) =>
+        await From(await storage.GetEventStores(), eventStore => NamespacesOf(storage, eventStore, @namespace), resourceNames, logger);
+
+    /// <summary>
+    /// Sorts the given event stores into usable and quarantined ones, leaving out the quarantined ones and logging a warning for each.
+    /// </summary>
+    /// <param name="eventStores">The event stores of the installation.</param>
+    /// <param name="namespacesOf">Lists the namespaces of a usable event store. Only called when something is quarantined.</param>
+    /// <param name="resourceNames">The optional <see cref="IResourceNameSnapshot"/>. Without one, nothing is quarantined.</param>
+    /// <param name="logger">The <see cref="ILogger"/> the skipped resources are reported to.</param>
+    /// <returns>The <see cref="UsableEventStores"/>.</returns>
+    /// <remarks>
+    /// For callers that list event stores and namespaces from the storage itself rather than through <see cref="IStorage"/>.
+    /// </remarks>
+    public static async Task<UsableEventStores> From(
+        IEnumerable<EventStoreName> eventStores,
+        Func<EventStoreName, Task<IEnumerable<EventStoreNamespaceName>>> namespacesOf,
+        IResourceNameSnapshot? resourceNames,
+        ILogger logger)
     {
         var usable = new List<EventStoreName>();
         var skipped = new List<EventStoreName>();
         var skippedNamespaces = new List<(EventStoreName EventStore, EventStoreNamespaceName Namespace)>();
-        foreach (var eventStore in await storage.GetEventStores())
+        foreach (var eventStore in eventStores)
         {
             if (resourceNames?.IsQuarantined(eventStore) == true)
             {
@@ -59,17 +77,23 @@ public record UsableEventStores(IReadOnlyList<EventStoreName> Usable, SkippedRes
                 continue;
             }
 
-            foreach (var name in await NamespacesOf(storage, eventStore, @namespace))
-            {
-                if (resourceNames.IsQuarantined(eventStore, name))
-                {
-                    logger.LeavingOutQuarantinedNamespace(ResourceNameText.Escape(name.Value), ResourceNameText.Escape(eventStore.Value));
-                    skippedNamespaces.Add((eventStore, name));
-                }
-            }
+            skippedNamespaces.AddRange(QuarantinedNamespaces(eventStore, await namespacesOf(eventStore), resourceNames, logger));
         }
 
         return new(usable, new SkippedResources(skipped, skippedNamespaces));
+    }
+
+    static IEnumerable<(EventStoreName EventStore, EventStoreNamespaceName Namespace)> QuarantinedNamespaces(
+        EventStoreName eventStore,
+        IEnumerable<EventStoreNamespaceName> namespaces,
+        IResourceNameSnapshot resourceNames,
+        ILogger logger)
+    {
+        foreach (var name in namespaces.Where(name => resourceNames.IsQuarantined(eventStore, name)))
+        {
+            logger.LeavingOutQuarantinedNamespace(ResourceNameText.Escape(name.Value), ResourceNameText.Escape(eventStore.Value));
+            yield return (eventStore, name);
+        }
     }
 
     static async Task<IEnumerable<EventStoreNamespaceName>> NamespacesOf(IStorage storage, EventStoreName eventStore, EventStoreNamespaceName? @namespace) =>

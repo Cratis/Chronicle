@@ -35,6 +35,7 @@ public static class SqlChronicleBuilderExtensions
     public static IChronicleBuilder WithSql(this IChronicleBuilder builder, ChronicleOptions options)
     {
         builder.SiloBuilder.AddStartupTask<ClusterDbContextMigrator>(ServiceLifecycleStage.First);
+        builder.SiloBuilder.AddStartupTask<ReadModelSchemaVerification>(ReadModelSchemaVerification.Stage);
 
         SqlSchemaServices.Add(builder.Services, options);
         builder.Services.AddSingleton<ReplayingTables>();
