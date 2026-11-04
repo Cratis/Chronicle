@@ -19,12 +19,12 @@ namespace Cratis.Chronicle.Jobs;
 [Command]
 [Cratis.Arc.Authorization.Authorize(Policy = Security.WellKnownAuthorizationPolicies.AdministratorOperations)]
 [BelongsTo(WellKnownServices.Jobs)]
-public record StopJobWithResult(EventStoreName EventStore, EventStoreNamespaceName Namespace, Cratis.Orleans.Jobs.JobId JobId)
+public record StopJobWithResult(EventStoreName EventStore, EventStoreNamespaceName Namespace, Cratis.Choreography.Jobs.JobId JobId)
 {
     /// <summary>
-    /// Handles the command by invoking <see cref="Cratis.Orleans.Jobs.IJobsManager.Stop"/> on the jobs manager grain.
+    /// Handles the command by invoking <see cref="Cratis.Choreography.Jobs.IJobsManager.Stop"/> on the jobs manager grain.
     /// </summary>
-    /// <param name="grainFactory">The <see cref="Cratis.Orleans.Jobs.IJobsManager"/> to get the jobs manager grain with.</param>
+    /// <param name="grainFactory">The <see cref="Cratis.Choreography.Jobs.IJobsManager"/> to get the jobs manager grain with.</param>
     /// <returns>The <see cref="StopJobOutcome"/> telling whether the job took the stop, and why not when it did not.</returns>
     public async Task<StopJobOutcome> Handle(IGrainFactory grainFactory) =>
         JobCommandOutcomes.ForStop(await grainFactory.GetJobsManager(EventStore, Namespace).Stop(JobId));

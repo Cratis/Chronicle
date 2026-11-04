@@ -21,7 +21,7 @@ namespace Cratis.Chronicle.Storage.Sql.Sinks;
 /// </summary>
 public partial class Sink
 {
-    void ApplyChangesToEntity(EntityEntry<DynamicReadModelEntity> entry, IEnumerable<Change> changes)
+    void ApplyChangesToEntity(EntityEntry<DynamicReadModelEntity> entry, IEnumerable<Change> changes, ArrayIndexers ambientIndexers)
     {
         foreach (var change in changes)
         {
@@ -36,7 +36,7 @@ public partial class Sink
                     break;
 
                 case ChildRemoved childRemoved:
-                    ApplyChildRemoved(entry, childRemoved);
+                    ApplyChildRemoved(entry, childRemoved, ambientIndexers);
                     break;
 
                 case NestedCleared nestedCleared:
@@ -44,11 +44,11 @@ public partial class Sink
                     break;
 
                 case Joined joined:
-                    ApplyChangesToEntity(entry, joined.Changes);
+                    ApplyChangesToEntity(entry, joined.Changes, ambientIndexers);
                     break;
 
                 case ResolvedJoin resolvedJoin:
-                    ApplyChangesToEntity(entry, resolvedJoin.Changes);
+                    ApplyChangesToEntity(entry, resolvedJoin.Changes, ambientIndexers);
                     break;
             }
         }
@@ -199,24 +199,23 @@ public partial class Sink
         entry.Property(column.Name).IsModified = true;
     }
 
-    void ApplyChildRemoved(EntityEntry<DynamicReadModelEntity> entry, ChildRemoved childRemoved)
+    void ApplyChildRemoved(EntityEntry<DynamicReadModelEntity> entry, ChildRemoved childRemoved, ArrayIndexers ambientIndexers)
     {
-        var column = FindColumn(childRemoved.ChildrenProperty.Segments.First().Value);
+        var segments = childRemoved.ChildrenProperty.Segments.ToArray();
+        var column = FindColumn(segments[0].Value);
         if (column?.IsJson != true)
         {
             return;
         }
 
-        if (LoadJsonColumnState(entry, column) is not IList<object?> current)
+        var current = LoadJsonColumnState(entry, column);
+        var removal = new ChildRemoval(segments, childRemoved.IdentifiedByProperty, childRemoved.Key);
+        if (!RemoveNestedChild(current, removal, ambientIndexers))
         {
             return;
         }
 
-        var identifier = childRemoved.IdentifiedByProperty;
-        var keyAsString = childRemoved.Key?.ToString();
-        var retained = current.Where(item => !IsRemovedChild(item, identifier, childRemoved.Key, keyAsString)).ToList();
-
-        entry.Entity[column.Name] = SerializeJsonColumn(retained, column);
+        entry.Entity[column.Name] = SerializeJsonColumn(current, column);
         entry.Property(column.Name).IsModified = true;
     }
 

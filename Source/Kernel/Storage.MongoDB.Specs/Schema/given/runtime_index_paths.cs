@@ -2,6 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json;
+using Cratis.Choreography.Jobs;
+using Cratis.Choreography.Storage.MongoDB.Jobs;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Events.Constraints;
 using Cratis.Chronicle.Concepts.EventSequences;
@@ -17,8 +19,6 @@ using Cratis.Chronicle.Storage.MongoDB.Occurrences;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Chronicle.Storage.Occurrences;
 using Cratis.Compliance.MongoDB;
-using Cratis.Orleans.Jobs;
-using Cratis.Orleans.Storage.MongoDB.Jobs;
 using Microsoft.Extensions.Logging.Abstractions;
 using MongoDB.Bson;
 using MongoDB.Driver;

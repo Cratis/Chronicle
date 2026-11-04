@@ -116,6 +116,14 @@ public interface IEventSequences
     [Operation]
     Task<CommandResult<CompleteStreamResponse>> CompleteStreamScope(CompleteStreamScopeRequest request, CallContext callContext = default);
     /// <summary>
+    /// Executes the CopyEventsForEventSource command.
+    /// </summary>
+    /// <param name = "request">The CopyEventsForEventSource request.</param>
+    /// <param name = "callContext">The gRPC call context.</param>
+    /// <returns>The command result.</returns>
+    [Operation]
+    Task<CommandResult<Guid>> CopyEventsForEventSource(CopyEventsForEventSourceRequest request, CallContext callContext = default);
+    /// <summary>
     /// Executes the Redact command.
     /// </summary>
     /// <param name = "request">The Redact request.</param>
@@ -1618,6 +1626,49 @@ public class CompleteStreamScopeRequest
     /// </summary>
     [ProtoMember(8)]
     public global::System.UInt64? ExpectedTailSequenceNumber { get; set; }
+}
+
+/// <summary>
+/// Represents the CopyEventsForEventSourceRequest message.
+/// </summary>
+[ProtoContract]
+public class CopyEventsForEventSourceRequest
+{
+    /// <summary>
+    /// Gets or sets the EventStore.
+    /// </summary>
+    [ProtoMember(1)]
+    public string EventStore { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the Namespace.
+    /// </summary>
+    [ProtoMember(2)]
+    public string Namespace { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the EventSequenceId.
+    /// </summary>
+    [ProtoMember(3)]
+    public string EventSequenceId { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the SourceId.
+    /// </summary>
+    [ProtoMember(4)]
+    public string SourceId { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the TargetId.
+    /// </summary>
+    [ProtoMember(5)]
+    public string TargetId { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the EventTypes.
+    /// </summary>
+    [ProtoMember(6)]
+    public IEnumerable<string> EventTypes { get; set; } = new List<string>();
 }
 
 /// <summary>

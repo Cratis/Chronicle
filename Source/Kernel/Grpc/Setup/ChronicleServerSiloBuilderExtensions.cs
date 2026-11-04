@@ -3,6 +3,7 @@
 
 using System.Text.Json;
 using Cratis.Arc;
+using Cratis.Choreography.Jobs;
 using Cratis.Chronicle;
 using Cratis.Chronicle.Alerts;
 using Cratis.Chronicle.Clients;
@@ -29,7 +30,6 @@ using Cratis.Chronicle.Setup;
 using Cratis.Chronicle.Setup.Execution;
 using Cratis.Chronicle.Setup.Serialization;
 using Cratis.Chronicle.Storage;
-using Cratis.Orleans.Jobs;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
@@ -38,7 +38,7 @@ using Orleans.Configuration;
 using Orleans.Metadata;
 using Orleans.Versions.Compatibility;
 using Orleans.Versions.Selector;
-using OrleansJobsOptions = Cratis.Orleans.Jobs.JobsOptions;
+using OrleansJobsOptions = Cratis.Choreography.Jobs.JobsOptions;
 
 namespace Orleans.Hosting;
 
@@ -82,8 +82,8 @@ public static class ChronicleServerSiloBuilderExtensions
         builder.Services.TryAddSingleton<IJobTypes, JobTypes>();
         builder.Services.TryAddSingleton<IJobStepThrottle, JobStepThrottle>();
 
-        // The package's JobsManager/Job/JobStep grains and JobStepThrottle resolve Cratis.Orleans.Jobs.JobsOptions,
-        // not ChronicleOptions - this host never calls AddCratisOrleans (it wires the pieces individually), so
+        // The package's JobsManager/Job/JobStep grains and JobStepThrottle resolve Cratis.Choreography.Jobs.JobsOptions,
+        // not ChronicleOptions - this host never calls AddCratisChoreography (it wires the pieces individually), so
         // nothing maps one to the other unless it happens here. MaxParallelSteps preserves the pre-rip-out cap:
         // the old JobStepThrottle capped at min(Jobs.GetEffectiveMaxParallelSteps(), Observers.MaxConcurrentPartitions);
         // the package's throttle only applies GetEffectiveMaxParallelSteps() to whatever MaxParallelSteps carries,

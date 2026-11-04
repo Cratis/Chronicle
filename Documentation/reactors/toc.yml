@@ -10,6 +10,8 @@
   href: fluent-registration.mdx
 - name: Returning Side Effects
   href: side-effects.mdx
+- name: Handling Events in Batches
+  href: batches.mdx
 - name: Event Sequence
   href: event-sequence.mdx
 - name: Subscribe to External Event Stores

@@ -7,7 +7,7 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Storage;
 using Cratis.Json;
 
-namespace Cratis.Chronicle.EventStores.for_EventStoreNames;
+namespace Cratis.Chronicle.EventStores.for_EventStoreNames.when_observing_event_stores;
 
 /// <summary>
 /// The names travel to the Workbench through a serializer that picks the collection converter from the
@@ -15,7 +15,7 @@ namespace Cratis.Chronicle.EventStores.for_EventStoreNames;
 /// first generic argument, which makes the concept-collection converter claim a sequence of strings and blow up
 /// on the way out - the in-memory backend hands over a list, which is exactly the shape that triggers it.
 /// </summary>
-public class when_observing_event_stores : Specification
+public class and_serializing_event_stores : Specification
 {
     static readonly JsonSerializerOptions _serializerOptions = new()
     {

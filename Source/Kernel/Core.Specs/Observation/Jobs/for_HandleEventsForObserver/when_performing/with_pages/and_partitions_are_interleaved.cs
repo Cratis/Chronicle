@@ -16,5 +16,5 @@ public class and_partitions_are_interleaved : given.a_page_job_step
     [Fact] void should_preserve_global_order() => _pages[0].Select(_ => _.Context.SequenceNumber).ShouldEqual(new EventSequenceNumber[] { 1, 2, 3 });
     [Fact] void should_not_call_the_partition_method() => _handledBatches.ShouldBeEmpty();
     [Fact] void should_checkpoint_the_page() => _stateStorage.State.LastSuccessfullyHandledEventSequenceNumber.ShouldEqual((EventSequenceNumber)3UL);
-    [Fact] void should_report_each_partitions_maximum() => _observer.Received(1).ReportHandledEventsBatch(Arg.Any<Cratis.Orleans.Jobs.JobStepId>(), Arg.Is<IReadOnlyList<HandledEventsReport>>(reports => reports.Any(r => r.Partition == (Key)"module" && r.HandledUpTo == (EventSequenceNumber)3UL) && reports.Any(r => r.Partition == (Key)"feature" && r.HandledUpTo == (EventSequenceNumber)2UL)));
+    [Fact] void should_report_each_partitions_maximum() => _observer.Received(1).ReportHandledEventsBatch(Arg.Any<Cratis.Choreography.Jobs.JobStepId>(), Arg.Is<IReadOnlyList<HandledEventsReport>>(reports => reports.Any(r => r.Partition == (Key)"module" && r.HandledUpTo == (EventSequenceNumber)3UL) && reports.Any(r => r.Partition == (Key)"feature" && r.HandledUpTo == (EventSequenceNumber)2UL)));
 }
