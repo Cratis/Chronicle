@@ -45,6 +45,29 @@ internal static class UniqueConstraintEncoder
     internal static Option<UniqueConstraintValue> Encode(IncrementalHash hmac, IReadOnlyList<UniqueConstraintComponent> components, bool ignoreCasing = false) =>
         Encode(default, hmac, components, ignoreCasing);
 
+    /// <summary>
+    /// Builds the unhashed v2 preimage: a version prefix, the component count, then each framed component.
+    /// </summary>
+    /// <param name="components">The schema-converted properties, in declaration order.</param>
+    /// <param name="ignoreCasing">Whether to lowercase string leaves.</param>
+    /// <returns>The preimage bytes.</returns>
+    /// <exception cref="UnsupportedUniqueConstraintFormat">A format or nested array is unsupported.</exception>
+    /// <exception cref="NonFiniteUniqueConstraintNumber">A number is not finite.</exception>
+    internal static byte[] GetPreimage(IReadOnlyList<UniqueConstraintComponent> components, bool ignoreCasing = false)
+    {
+        Span<byte> initial = stackalloc byte[StackBufferSize];
+        var writer = new UniqueConstraintPreimageWriter(initial);
+        try
+        {
+            WritePreimage(ref writer, components, ignoreCasing);
+            return writer.Written.ToArray();
+        }
+        finally
+        {
+            writer.Dispose();
+        }
+    }
+
     static Option<UniqueConstraintValue> Encode(ReadOnlySpan<byte> key, IncrementalHash? hmac, IReadOnlyList<UniqueConstraintComponent> components, bool ignoreCasing)
     {
         if (AllNull(components))
@@ -64,29 +87,6 @@ internal static class UniqueConstraintEncoder
             Span<byte> hash = stackalloc byte[HashSize];
             UniqueConstraintHmac.Compute(key, hmac, writer.Written, hash);
             return new UniqueConstraintValue(Convert.ToHexStringLower(hash));
-        }
-        finally
-        {
-            writer.Dispose();
-        }
-    }
-
-    /// <summary>
-    /// Builds the unhashed v2 preimage: a version prefix, the component count, then each framed component.
-    /// </summary>
-    /// <param name="components">The schema-converted properties, in declaration order.</param>
-    /// <param name="ignoreCasing">Whether to lowercase string leaves.</param>
-    /// <returns>The preimage bytes.</returns>
-    /// <exception cref="UnsupportedUniqueConstraintFormat">A format or nested array is unsupported.</exception>
-    /// <exception cref="NonFiniteUniqueConstraintNumber">A number is not finite.</exception>
-    internal static byte[] GetPreimage(IReadOnlyList<UniqueConstraintComponent> components, bool ignoreCasing = false)
-    {
-        Span<byte> initial = stackalloc byte[StackBufferSize];
-        var writer = new UniqueConstraintPreimageWriter(initial);
-        try
-        {
-            WritePreimage(ref writer, components, ignoreCasing);
-            return writer.Written.ToArray();
         }
         finally
         {

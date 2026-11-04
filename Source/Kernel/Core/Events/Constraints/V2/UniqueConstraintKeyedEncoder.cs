@@ -11,11 +11,11 @@ namespace Cratis.Chronicle.Events.Constraints.V2;
 /// Encodes values and scopes with one store key, caching the token of the unscoped constraint.
 /// </summary>
 /// <remarks>
-/// The instance is thread-safe. It copies the key, so later changes to the caller's buffer have no effect.
+/// The instance is thread-safe. Dispose it to release the per-thread HMAC state; it must not be used afterwards. It copies the key, so later changes to the caller's buffer have no effect.
 /// Each thread keeps its own reusable HMAC state, so the key padding is not recomputed on every call.
 /// Scope tokens are cached per instance, because a scope repeats across appends; the cache is a fixed-size, direct-mapped array whose entries are overwritten in place, so it is bounded and never allocates after construction.
 /// </remarks>
-internal sealed class UniqueConstraintKeyedEncoder
+internal sealed class UniqueConstraintKeyedEncoder : IDisposable
 {
     /// <summary>
     /// The number of scope token slots in the cache. Must be a power of two.
@@ -26,10 +26,11 @@ internal sealed class UniqueConstraintKeyedEncoder
 
     readonly ScopeSlot[] _slots = new ScopeSlot[ScopeCacheLimit];
     readonly Lock[] _locks = Enumerable.Range(0, Stripes).Select(_ => new Lock()).ToArray();
-    int _occupied;
     readonly byte[] _key;
     readonly ThreadLocal<IncrementalHash> _hmac;
     readonly UniqueConstraintScopeToken _unscoped;
+    int _occupied;
+    int _disposed;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="UniqueConstraintKeyedEncoder"/> class.
@@ -38,7 +39,7 @@ internal sealed class UniqueConstraintKeyedEncoder
     internal UniqueConstraintKeyedEncoder(ReadOnlySpan<byte> key)
     {
         _key = key.ToArray();
-        _hmac = new(() => IncrementalHash.CreateHMAC(HashAlgorithmName.SHA256, _key));
+        _hmac = new(() => IncrementalHash.CreateHMAC(HashAlgorithmName.SHA256, _key), trackAllValues: true);
         _unscoped = UniqueConstraintScopeToken.Encode(_key, null);
     }
 
@@ -46,6 +47,20 @@ internal sealed class UniqueConstraintKeyedEncoder
     /// Gets the number of occupied scope cache slots, which never exceeds <see cref="ScopeCacheLimit"/>.
     /// </summary>
     internal int CachedScopeCount => Volatile.Read(ref _occupied);
+
+    /// <inheritdoc/>
+    public void Dispose()
+    {
+        if (Interlocked.Exchange(ref _disposed, 1) == 1)
+        {
+            return;
+        }
+        foreach (var hmac in _hmac.Values)
+        {
+            hmac.Dispose();
+        }
+        _hmac.Dispose();
+    }
 
     /// <summary>
     /// Produces a keyed value, or no claim when every component is null.

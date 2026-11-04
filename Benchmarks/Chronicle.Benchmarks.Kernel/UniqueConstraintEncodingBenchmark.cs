@@ -27,7 +27,7 @@ namespace Cratis.Chronicle.Benchmarks.Kernel;
 [GroupBenchmarksBy(BenchmarkLogicalGroupRule.ByCategory, BenchmarkLogicalGroupRule.ByParams)]
 [CategoriesColumn]
 [Config(typeof(UniqueConstraintEncodingConfiguration))]
-public class UniqueConstraintEncodingBenchmark
+public class UniqueConstraintEncodingBenchmark : IDisposable
 {
     static readonly byte[] _key = Encoding.ASCII.GetBytes("benchmark-key-0123456789abcdef!!");
     readonly UniqueConstraintKeyedEncoder _encoder = new(_key);
@@ -94,6 +94,9 @@ public class UniqueConstraintEncodingBenchmark
     [BenchmarkCategory("Value")]
     public Option<UniqueConstraintValue> V2Value() => _encoder.EncodeValue(_v2Components, _ignoreCasing);
 
+    /// <inheritdoc/>
+    public void Dispose() => _encoder.Dispose();
+
     sealed class UniqueConstraintEncodingConfiguration : ManualConfig
     {
         public UniqueConstraintEncodingConfiguration() => AddJob(Job.MediumRun.WithToolchain(InProcessEmitToolchain.Instance));
@@ -111,7 +114,7 @@ public class UniqueConstraintEncodingBenchmark
 [GroupBenchmarksBy(BenchmarkLogicalGroupRule.ByCategory)]
 [CategoriesColumn]
 [Config(typeof(UniqueConstraintEncodingScopeConfiguration))]
-public class UniqueConstraintEncodingBenchmarkScope
+public class UniqueConstraintEncodingBenchmarkScope : IDisposable
 {
     // More distinct scopes than the keyed encoder caches, so the cycling miss cases never hit its cache.
     const int MissCount = 1 << 16;
@@ -196,6 +199,9 @@ public class UniqueConstraintEncodingBenchmarkScope
     [Benchmark]
     [BenchmarkCategory("ScopeStreamIdMiss")]
     public string V2ScopeStreamIdMiss() => _encoder.EncodeScope(_missScopes[NextMiss()]).Value;
+
+    /// <inheritdoc/>
+    public void Dispose() => _encoder.Dispose();
 
     int NextMiss() => _miss = (_miss + 1) & (MissCount - 1);
 
