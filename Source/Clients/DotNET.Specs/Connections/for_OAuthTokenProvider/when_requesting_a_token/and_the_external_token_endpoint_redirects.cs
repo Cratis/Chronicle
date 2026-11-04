@@ -27,5 +27,6 @@ public class and_the_external_token_endpoint_redirects : given.a_token_provider_
     [Fact] void should_not_log_the_remote_reason_phrase() => _log.Entries.Any(_ => _.Contains("leak-marker")).ShouldBeFalse();
     [Fact] void should_not_retain_the_remote_reason_phrase() => _result.ToString().Contains("leak-marker", StringComparison.Ordinal).ShouldBeFalse();
     [Fact] void should_post_only_once() => _handler.Requests.Count.ShouldEqual(1);
-    [Fact] void should_name_the_endpoint_in_the_log() => _log.Entries.Any(_ => _.Level == LogLevel.Error && _.Message.Contains("https://idp.example.com/oauth2/token", StringComparison.Ordinal)).ShouldBeTrue();
+    [Fact] void should_only_name_the_endpoint_source_in_the_log() => _log.Entries.Any(_ => _.Level == LogLevel.Error && _.Message.Contains("configured token endpoint", StringComparison.Ordinal)).ShouldBeTrue();
+    [Fact] void should_not_log_the_endpoint() => _log.Entries.Any(_ => _.Contains("idp.example.com") || _.Contains("oauth2/token")).ShouldBeFalse();
 }
