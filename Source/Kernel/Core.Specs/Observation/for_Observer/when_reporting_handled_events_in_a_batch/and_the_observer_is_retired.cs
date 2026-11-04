@@ -2,9 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reflection;
+using Cratis.Choreography.Jobs;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
-using Cratis.Orleans.Jobs;
 
 namespace Cratis.Chronicle.Observation.for_Observer.when_reporting_handled_events_in_a_batch;
 

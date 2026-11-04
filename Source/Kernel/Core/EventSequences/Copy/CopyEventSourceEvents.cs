@@ -2,8 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
-using Cratis.Orleans.Jobs;
-using Cratis.Orleans.Storage.Jobs;
+using Cratis.Choreography.Jobs;
+using Cratis.Choreography.Storage.Jobs;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.EventSequences.Copy;

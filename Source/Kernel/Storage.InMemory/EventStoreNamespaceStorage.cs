@@ -2,6 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
+using Cratis.Choreography.Storage;
+using Cratis.Choreography.Storage.Jobs;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Storage.Alerts;
@@ -27,8 +29,6 @@ using Cratis.Chronicle.Storage.ReadModels;
 using Cratis.Chronicle.Storage.Recommendations;
 using Cratis.Chronicle.Storage.Seeding;
 using Cratis.Chronicle.Storage.Sinks;
-using Cratis.Orleans.Storage;
-using Cratis.Orleans.Storage.Jobs;
 using InMemoryReadModels = Cratis.Chronicle.Storage.InMemory.ReadModels;
 
 namespace Cratis.Chronicle.Storage.InMemory;

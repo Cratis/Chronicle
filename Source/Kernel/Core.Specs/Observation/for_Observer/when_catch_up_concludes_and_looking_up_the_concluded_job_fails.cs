@@ -2,12 +2,12 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using Cratis.Choreography.Jobs;
+using Cratis.Choreography.Storage.Jobs;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Monads;
-using Cratis.Orleans.Jobs;
-using Cratis.Orleans.Storage.Jobs;
 
 namespace Cratis.Chronicle.Observation.for_Observer;
 
@@ -35,7 +35,7 @@ public class when_catch_up_concludes_and_looking_up_the_concluded_job_fails : gi
 
         _jobStorage
             .GetJob(_concludedJob)
-            .Returns(Task.FromResult<Catch<JobState, Cratis.Orleans.Storage.Jobs.JobError>>(new JobStorageUnavailable()));
+            .Returns(Task.FromResult<Catch<JobState, Cratis.Choreography.Storage.Jobs.JobError>>(new JobStorageUnavailable()));
 
         _jobsManager
             .Start<ICatchUpObserver, CatchUpObserverRequest>(Arg.Any<CatchUpObserverRequest>())
