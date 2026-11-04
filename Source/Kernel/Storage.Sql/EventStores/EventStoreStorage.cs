@@ -92,6 +92,9 @@ public class EventStoreStorage(EventStoreName eventStore, IDatabase database, II
     public IWebhookDefinitionsStorage Webhooks { get; } = new Webhooks.WebhookDefinitionsStorage(eventStore, database);
 
     /// <inheritdoc/>
+    public IWebhookSigningKeysStorage WebhookSigningKeys { get; } = new Webhooks.WebhookSigningKeysStorage(eventStore, database);
+
+    /// <inheritdoc/>
     public IExternalServiceDefinitionsStorage ExternalServices { get; } = new ExternalServices.ExternalServiceDefinitionsStorage(eventStore, database);
 
     /// <inheritdoc/>

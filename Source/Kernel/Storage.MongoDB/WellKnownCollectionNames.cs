@@ -156,6 +156,11 @@ public static class WellKnownCollectionNames
     public const string WebhookDefinitions = "webhooks";
 
     /// <summary>
+    /// The collection that holds webhook signing keys.
+    /// </summary>
+    public const string WebhookSigningKeys = "webhook-signing-keys";
+
+    /// <summary>
     /// The collection that holds registered event source definitions.
     /// </summary>
     public const string EventSources = "event-sources";

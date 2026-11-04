@@ -93,6 +93,11 @@ public class EventStoreDbContext(DbContextOptions<EventStoreDbContext> options) 
     public DbSet<WebhookDefinition> WebhookDefinitions { get; set; }
 
     /// <summary>
+    /// Gets or sets the webhook signing keys DbSet.
+    /// </summary>
+    public DbSet<Webhooks.WebhookSigningKey> WebhookSigningKeys { get; set; }
+
+    /// <summary>
     /// Gets or sets the event source definitions DbSet.
     /// </summary>
     public DbSet<EventSourceDefinition> EventSourceDefinitions { get; set; }
@@ -160,6 +165,10 @@ public class EventStoreDbContext(DbContextOptions<EventStoreDbContext> options) 
         // which would default to table "ReadModels" and collide with user projection sink tables
         // whose read model type is named "ReadModel" (pluralized to "ReadModels" by DefaultNamingPolicy).
         modelBuilder.Entity<ReadModelDefinition>().ToTable(WellKnownTableNames.ReadModelDefinitions);
+
+        modelBuilder.Entity<Webhooks.WebhookSigningKey>()
+            .ToTable(WellKnownTableNames.WebhookSigningKeys)
+            .HasKey(row => row.KeyId);
 
         modelBuilder.Entity<ProjectionDefinitionHistoryRow>()
             .ToTable(WellKnownTableNames.ProjectionDefinitionHistory)
