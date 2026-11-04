@@ -95,15 +95,12 @@ public class ReadModelWatcher<TReadModel> : IReadModelWatcher<TReadModel>, IDisp
         // never leaks the subscription established for the previous connection.
         prior?.Dispose();
 
-        var reducer = _eventStore.Reducers.HasFor<TReadModel>()
-            ? _eventStore.Reducers.GetHandlerForReadModelType(typeof(TReadModel))
-            : null;
         var request = new ContractReadModels.WatchRequest
         {
             EventStore = _eventStore.Name,
             Namespace = _eventStore.Namespace,
             ReadModelIdentifier = typeof(TReadModel).GetReadModelIdentifier(),
-            EventSequenceId = reducer?.EventSequenceId ?? EventSequences.EventSequenceId.Log
+            EventSequenceId = EventSequences.EventSequenceId.Log
         };
         _serverObservable = _servicesAccessor.Services.ReadModels.Watch(request);
         var subscription = _serverObservable.Subscribe(
@@ -115,7 +112,7 @@ public class ReadModelWatcher<TReadModel> : IReadModelWatcher<TReadModel>, IDisp
                     return;
                 }
 
-                var readModel = DeserializeReadModel(changeset.ReadModel, reducer is not null, changeset.Removed);
+                var readModel = JsonSerializer.Deserialize<TReadModel>(changeset.ReadModel, _jsonSerializerOptions);
                 var changeContext = EventContext.From(
                     _eventStore.Name,
                     changeset.Namespace,
@@ -167,9 +164,6 @@ public class ReadModelWatcher<TReadModel> : IReadModelWatcher<TReadModel>, IDisp
         ContractReadModels.ReadModelChangeType.Removed => ReadModelChangeType.Removed,
         _ => ReadModelChangeType.Modified
     };
-
-    TReadModel? DeserializeReadModel(string json, bool isReducer, bool removed) =>
-        isReducer && removed ? default : JsonSerializer.Deserialize<TReadModel>(json, _jsonSerializerOptions);
 
     Task ClientConnected()
     {

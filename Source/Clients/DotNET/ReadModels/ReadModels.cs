@@ -325,7 +325,7 @@ public partial class ReadModels(
     {
         ReadProtectionGuard.Read(nameof(Watch));
         EventStreamReadModel.RequireStreamScope(typeof(TReadModel));
-        if (reducers.HasFor<TReadModel>() && !reducers.GetHandlerForReadModelType(typeof(TReadModel)).IsObservedByKernel())
+        if (reducers.HasFor<TReadModel>())
         {
             return reducerObservers.GetWatcher<TReadModel>().Observable
                 .Select(changeset => new ReadModelChangeset<TReadModel>(
@@ -335,11 +335,6 @@ public partial class ReadModels(
                     changeset.Removed,
                     changeset.Removed ? ReadModelChangeType.Removed : ReadModelChangeType.Modified,
                     EventContext.EmptyWithEventSourceId(changeset.ModelKey)));
-        }
-
-        if (reducers.HasFor<TReadModel>())
-        {
-            return readModelWatcherManager.GetWatcher<TReadModel>().Observable;
         }
 
         if (!projections.HasFor<TReadModel>())
