@@ -3,6 +3,8 @@
 
 using System.Collections.Concurrent;
 using System.Reactive.Subjects;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Schemas;
@@ -205,8 +207,34 @@ public partial class EventTypesStorage : IEventTypesStorage, IDisposable
                         ? stored : generation;
                 }))
                 .ToList(),
-            Migrations = incoming.Migrations.Any() ? incoming.Migrations : existing.Migrations
+            Migrations = MergeMigrations(existing.Migrations, incoming.Migrations)
         };
+
+    static List<EventTypeMigrationDefinition> MergeMigrations(IEnumerable<EventTypeMigrationDefinition> stored, IEnumerable<EventTypeMigrationDefinition> incoming)
+    {
+        var previous = stored.ToList();
+        var migrations = previous.ToDictionary(_ => (_.FromGeneration, _.ToGeneration));
+        foreach (var migration in incoming)
+        {
+            migrations[(migration.FromGeneration, migration.ToGeneration)] = migration;
+        }
+        if (previous.Count == migrations.Count && previous.TrueForAll(migration => MigrationEquals(migration, migrations[(migration.FromGeneration, migration.ToGeneration)])))
+        {
+            return previous;
+        }
+        return migrations.Values.OrderBy(_ => _.FromGeneration.Value).ThenBy(_ => _.ToGeneration.Value).ToList();
+    }
+
+    static bool MigrationEquals(EventTypeMigrationDefinition stored, EventTypeMigrationDefinition incoming) =>
+        JsonNode.DeepEquals(stored.UpcastJmesPath, incoming.UpcastJmesPath) &&
+        JsonNode.DeepEquals(stored.DowncastJmesPath, incoming.DowncastJmesPath) &&
+        JsonNode.DeepEquals(Operations(stored), Operations(incoming));
+
+    static JsonNode? Operations(EventTypeMigrationDefinition migration) => JsonSerializer.SerializeToNode(migration.Operations.Select(_ => new
+    {
+        _.Operation,
+        Details = JsonSerializer.SerializeToNode(_.Details, _.Details.GetType())
+    }));
 
     bool RegisterSimple(EventType type, JsonSchema schema, EventTypeOwner owner, EventTypeSource source, EventTypeVisibility visibility, string origin) =>
         ApplyDefinition(
@@ -237,7 +265,7 @@ public partial class EventTypesStorage : IEventTypesStorage, IDisposable
             var merged = existing is null ? definition : Merge(existing, definition);
             var changed = sourceChanged || existing is null || existing.Owner != merged.Owner ||
                 existing.Tombstone != merged.Tombstone ||
-                !existing.Generations.SequenceEqual(merged.Generations) ||
+                !existing.Generations.OrderBy(_ => _.Generation.Value).SequenceEqual(merged.Generations.OrderBy(_ => _.Generation.Value)) ||
                 !existing.Migrations.SequenceEqual(merged.Migrations);
             if (changed)
             {

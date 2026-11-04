@@ -8,6 +8,8 @@ using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Configs;
 using BenchmarkDotNet.Jobs;
 using BenchmarkDotNet.Toolchains.InProcess.Emit;
+using Cratis.Choreography.Jobs;
+using Cratis.Choreography.Storage;
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Compliance.GDPR;
 using Cratis.Chronicle.Concepts;
@@ -21,8 +23,6 @@ using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.Compliance;
 using Cratis.Chronicle.Storage.InMemory;
 using Cratis.Chronicle.Storage.Sinks;
-using Cratis.Orleans.Jobs;
-using Cratis.Orleans.Storage;
 using Cratis.Types;
 using Microsoft.Extensions.Logging.Abstractions;
 

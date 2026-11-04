@@ -37,6 +37,7 @@ namespace Cratis.Chronicle.Services.Observation.Reactors;
 /// <param name="activitySource">The <see cref="IActivitySource{T}"/> for tracing.</param>
 /// <param name="options"><see cref="IOptions{ChronicleOptions}"/> for how often to check the subscription of a connected client.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
+/// <param name="registrationGate">The silo-wide gate for observer registrations.</param>
 internal sealed class Reactors(
     IGrainFactory grainFactory,
     IReactorMediator reactorMediator,
@@ -44,7 +45,8 @@ internal sealed class Reactors(
     JsonSerializerOptions jsonSerializerOptions,
     [FromKeyedServices(WellKnown.MeterName)] IActivitySource<Reactors> activitySource,
     IOptions<ChronicleOptions> options,
-    ILogger<Reactors> logger) : IReactors
+    ILogger<Reactors> logger,
+    IObserverRegistrationGate registrationGate) : IReactors
 {
     /// <inheritdoc/>
     public IObservable<EventsToObserve> Observe(IObservable<ReactorMessage> messages, CallContext context = default)
@@ -77,22 +79,12 @@ internal sealed class Reactors(
                     break;
 
                 case ReactorResult result:
-                    var state = result.State switch
+                    foreach (var (partition, subscriberResult) in ToSubscriberResults(result))
                     {
-                        ObservationState.None => ObserverSubscriberState.None,
-                        ObservationState.Success => ObserverSubscriberState.Ok,
-                        ObservationState.Failed => ObserverSubscriberState.Failed,
-                        _ => ObserverSubscriberState.None
-                    };
-                    var subscriberResult = new ObserverSubscriberResult(
-                        state,
-                        result.LastSuccessfulObservation,
-                        result.ExceptionMessages,
-                        result.ExceptionStackTrace);
-
-                    if (!pendingDeliveries.TryComplete(result.DeliveryId, result.Partition, subscriberResult))
-                    {
-                        logger.UnknownDeliveryResult(result.DeliveryId, result.Partition);
+                        if (!pendingDeliveries.TryComplete(result.DeliveryId, partition, subscriberResult))
+                        {
+                            logger.UnknownDeliveryResult(result.DeliveryId, partition);
+                        }
                     }
 
                     break;
@@ -108,10 +100,11 @@ internal sealed class Reactors(
         var observable = Observable.Create<EventsToObserve>(async (observer, cancellationToken) =>
         {
             observableObserver = observer;
+            using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, context.CancellationToken);
 
             try
             {
-                var registration = await registrationTcs.Task;
+                var registration = await registrationTcs.Task.WaitAsync(cancellation.Token);
                 connectionId = registration.ConnectionId;
                 observerId = registration.Reactor.ReactorId;
                 eventStoreName = registration.EventStore;
@@ -131,17 +124,29 @@ internal sealed class Reactors(
                     registration.Reactor.EventSequenceId,
                     registration.ConnectionId);
 
-                deliver = (partition, events, tcs, deliverWithin) =>
+                var deliversPages = registration.PageDelivery?.Enabled == true;
+                deliver = (partition, events, tcs, deliverWithin, origin) =>
                 {
                     var deliveryId = pendingDeliveries.Add(partition, tcs);
                     var eventsToObserve = events.Select(_ => _.ToContract(jsonSerializerOptions)).ToArray();
-                    observer.OnNext(new EventsToObserve
+                    var message = new EventsToObserve
                     {
-                        Partition = partition.Value.ToString()!,
-                        Events = eventsToObserve,
                         DeliveryId = deliveryId,
-                        DeliverWithinMilliseconds = DeliveryDeadlines.ToMilliseconds(deliverWithin)
-                    });
+                        DeliverWithinMilliseconds = DeliveryDeadlines.ToMilliseconds(deliverWithin),
+                        Origin = origin.ToContract()
+                    };
+
+                    if (deliversPages)
+                    {
+                        message.Partitions = [new PartitionEvents { Partition = partition.Value.ToString()!, Events = eventsToObserve }];
+                    }
+                    else
+                    {
+                        message.Partition = partition.Value.ToString()!;
+                        message.Events = eventsToObserve;
+                    }
+
+                    observer.OnNext(message);
                 };
                 replay = (replayState, partition) => observer.OnNext(new EventsToObserve { Partition = partition, ReplayState = (Contracts.Observation.ReplayState)replayState });
 
@@ -160,20 +165,22 @@ internal sealed class Reactors(
                     replay);
 
                 var definition = registration.Reactor.ToChronicle();
-
-                // The parent is the long-lived Observe request, which the server deliberately does not trace.
-                var requestActivity = Activity.Current;
-                Activity.Current = null;
-                try
+                using (await registrationGate.Enter(cancellation.Token))
                 {
-                    using var span = activitySource.Register();
-                    span?.Activity?.Tag(key, ObserverType.Reactor);
-                    clientObserver = grainFactory.GetGrain<IReactor>(key);
-                    await clientObserver.SetDefinitionAndSubscribe(definition);
-                }
-                finally
-                {
-                    Activity.Current = requestActivity;
+                    // The parent is the long-lived Observe request, which the server deliberately does not trace.
+                    var requestActivity = Activity.Current;
+                    Activity.Current = null;
+                    try
+                    {
+                        using var span = activitySource.Register();
+                        span?.Activity?.Tag(key, ObserverType.Reactor);
+                        clientObserver = grainFactory.GetGrain<IReactor>(key);
+                        await clientObserver.SetDefinitionAndSubscribe(definition);
+                    }
+                    finally
+                    {
+                        Activity.Current = requestActivity;
+                    }
                 }
 
                 await ClientSubscriptionKeeper.KeepWhileConnected(
@@ -181,7 +188,7 @@ internal sealed class Reactors(
                     TimeSpan.FromSeconds(options.Value.ConnectedClients.ReviseIntervalSeconds),
                     registration.ConnectionId,
                     logger,
-                    cancellationToken);
+                    cancellation.Token);
 
                 logger.Disconnected(
                     registration.Reactor.ReactorId,
@@ -241,6 +248,11 @@ internal sealed class Reactors(
         var definition = await eventStore.Reactors.Get(new(request.ReactorId));
         return new HasReactorResponse { Exists = true, EventSequenceId = definition.EventSequenceId.Value };
     }
+
+    IEnumerable<(string Partition, ObserverSubscriberResult Result)> ToSubscriberResults(ReactorResult result) =>
+        result.Partitions.Count > 0
+            ? result.Partitions.Select(_ => (_.Partition, _.ToObserverSubscriberResult(TimeProvider.System)))
+            : [(result.Partition, ObservationResultConverters.ToObserverSubscriberResult(result.State, result.LastSuccessfulObservation, result.ExceptionMessages, result.ExceptionStackTrace, result.RetryAfterMilliseconds, TimeProvider.System))];
 
     bool DisconnectStream(
         (ObserverId ObserverId, ConnectionId ConnectionId, EventStoreName EventStore, EventStoreNamespaceName Namespace) key,

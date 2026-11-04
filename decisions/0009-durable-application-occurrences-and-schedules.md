@@ -72,8 +72,8 @@ Accepted on 2026-10-14 by L0 on woksin's delegation for Cratis/Chronicle#4911, w
   They are coarse wake-ups. Observer retries have a one-minute floor (`Core/Observation/Observer.Failing.cs:18, 57, 256-263`). A reminder carries no payload, only the current `TickStatus` (`Core/Captures/Capturer.cs:89`).
 - **The nearest precedent, `Capturer`.** It recovers from a persistent reminder after a restart (`Capturer.cs:66, 113-135`). It then appends (`:173`) and saves its observation (`:176-178`) as two unfenced writes. A crash between them, or a second activation, appends again.
 - **Grain timers** run periodic work inside one activation (`Core/EventSequences/EventSequence.cs:147-154`; `Core/Observation/Observer.Watchdog.cs:27-36`). The captures manager reconciles from a timer (`Core/Captures/CapturesManager.cs:46`).
-- **Cratis.Orleans jobs** (version 1.16.3, `Directory.Packages.props:77`):
-  - they are finite, prepared work, resumed at startup (Cratis/Orleans v1.16.3 `Source/Orleans/Jobs/JobsManager.cs:316-345`, called from `Core/Setup/ChronicleServerStartupTask.cs:168`);
+- **Cratis.Choreography jobs** (version 1.16.3, `Directory.Packages.props:77`):
+  - they are finite, prepared work, resumed at startup (Cratis/Choreography v1.16.3 `Source/Orleans/Jobs/JobsManager.cs:316-345`, called from `Core/Setup/ChronicleServerStartupTask.cs:168`);
   - a step "may be performed twice" by contract (`JobStep.cs:152-158`);
   - steps persist through the `JobSteps` provider (`Core/Events/Constraints/ReindexConstraintsStep.cs:35`);
   - there are no leases and no fencing tokens.
@@ -381,7 +381,7 @@ The ranges come from Screenplay `SemanticModelValidator.Automation.cs:189-195` a
 - the fallback authorization policy;
 - Core-to-wire generation.
 
-Cratis.Orleans jobs are not used (Options).
+Cratis.Choreography jobs are not used (Options).
 
 ### 10. Not promised, and out of the domain
 
@@ -403,7 +403,7 @@ Cratis.Orleans jobs are not used (Options).
 - **A hosted service or timer in each generated app.** It fires once per instance and misses restarts. Making it correct means rebuilding sections 2 and 6 in every app, with no atomic link to the commit. Not taken.
 - **Domain tick events in the log.** Screenplay 0022 rejected them because they invent facts. They would also stay forever, reach every observer and replay, and carry no lease or receipt. Not taken.
 - **Orleans reminders as the scheduler.** They have a one-minute floor (`Observer.Failing.cs:18`), no payload, no record of the instants they missed, and no receipts. Kept only as a wake-up.
-- **One Cratis.Orleans job per schedule or occurrence.** Jobs are finite, a step may run twice (`JobStep.cs:152-158`), there is no lease or fence, and rehydration is wholesale. Not taken.
+- **One Cratis.Choreography job per schedule or occurrence.** Jobs are finite, a step may run twice (`JobStep.cs:152-158`), there is no lease or fence, and rehydration is wholesale. Not taken.
 - **Orleans persistent grain state.** Writes are unconditional (`FailedPartitionGrainStorageProvider.cs:33-45`), so the last writer wins. Not taken.
 - **0007 keyed appends as the only receipt.** No-event and refused effects leave no row, and there is no response to return. A re-executed command with different events conflicts permanently, and Arc could not skip re-execution. Not taken; receipts sit beside 0007.
 - **Fencing every effect append against the lease.** That needs a transaction spanning the occurrence store and the event store, which no provider offers. Receipt uniqueness gives the same result for Chronicle effects. Not taken.

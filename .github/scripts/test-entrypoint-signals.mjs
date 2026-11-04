@@ -28,10 +28,11 @@ stop() {
   exit "\${STOP_STATUS:-0}"
 }
 trap 'stop TERM' TERM
+echo 'server stdout'
 touch ready
 if [ -n "\${EXIT_ON_ITS_OWN:-}" ]; then
   sleep 0.2
-  [ -n "\${SIGNAL_PARENT_ON_EXIT:-}" ] && kill -TERM "$PPID"
+  [ -n "\${SIGNAL_PARENT_ON_EXIT:-}" ] && kill -TERM "$(cat entrypoint.pid)"
   exit "$EXIT_ON_ITS_OWN"
 fi
 for _ in $(seq 1 30); do
@@ -70,6 +71,7 @@ async function run(environment, act = async () => {}) {
         child.stderr.on('data', chunk => { output += chunk; });
         const exited = new Promise(resolve => child.on('exit', (code, signal) => resolve({ code, signal })));
         const timer = setTimeout(() => child.kill('SIGKILL'), deadline);
+        await writeFile(path.join(directory, 'entrypoint.pid'), String(child.pid));
         await waitFor(path.join(directory, 'ready'));
         await act(child);
         const result = await exited;
@@ -112,12 +114,13 @@ test('exits with the server status when the server exits on its own', async () =
     const result = await run({ EXIT_ON_ITS_OWN: '5' });
     assert.deepEqual(result.signals, [], result.output);
     assert.equal(result.code, 5, result.output);
+    assert.ok(result.output.includes('server stdout'), result.output);
 });
 
-// The signal lands either while wait -n is still waiting or just after it reaped the server; both
-// orders must report the server's own status rather than 127 or 128 + 15. The forwarded TERM can also
-// reach the server before it exits, so its stop status is the same 4. Which order happens is up to the
-// scheduler; the window after wait -n returns is too short to force from outside the script.
+// Signal the entrypoint itself, even when a separate shell reaps the server. The signal lands
+// while wait -n is waiting or as it returns; both orders must report the server's own status.
+// The forwarded TERM can also reach the server before it exits, so its stop status is the same 4.
+// Repeated Linux runs exercise both orders without adding sleeps to the supervision code.
 test('keeps the server status when TERM arrives as the server exits', async () => {
     for (let attempt = 0; attempt < 5; attempt++) {
         const result = await run({ EXIT_ON_ITS_OWN: '4', SIGNAL_PARENT_ON_EXIT: '1', STOP_STATUS: '4' });
@@ -125,10 +128,10 @@ test('keeps the server status when TERM arrives as the server exits', async () =
     }
 });
 
-// Up to the end of the re-wait loop: what follows only stops mongod, which pr_entrypoint.sh always starts.
+// Up to MongoDB cleanup, which differs because pr_entrypoint.sh always starts mongod.
 function supervision(script) {
     const start = script.indexOf('server_pid=""');
-    const end = script.indexOf('\n  done\n', start);
+    const end = script.indexOf('\nif [ "$shutdown_requested" = true ]; then', start);
     assert.ok(start >= 0 && end > start, 'supervision block not found');
     return script.slice(start, end);
 }

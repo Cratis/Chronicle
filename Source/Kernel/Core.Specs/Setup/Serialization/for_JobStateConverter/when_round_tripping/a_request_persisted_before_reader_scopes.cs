@@ -3,9 +3,9 @@
 
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Cratis.Choreography.Jobs;
+using Cratis.Choreography.Storage.Jobs;
 using Cratis.Chronicle.Observation.Jobs;
-using Cratis.Orleans.Jobs;
-using Cratis.Orleans.Storage.Jobs;
 
 namespace Cratis.Chronicle.Setup.Serialization.for_JobStateConverter.when_round_tripping;
 

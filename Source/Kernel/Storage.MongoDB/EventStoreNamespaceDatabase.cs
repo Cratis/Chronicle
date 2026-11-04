@@ -49,7 +49,7 @@ public class EventStoreNamespaceDatabase : IEventStoreNamespaceDatabase
         IOptions<MongoDBStorageOptions>? storageOptions = null,
         IMongoDBStorageConnections? connections = null)
     {
-        var databaseName = DatabaseNames.ForEventStoreNamespace(eventStore, @namespace, storageOptions?.Value.DatabaseNamePrefix ?? string.Empty);
+        var databaseName = DatabaseNames.ForEventStoreNamespace(eventStore, @namespace, storageOptions?.Value.DatabaseNamePrefix ?? string.Empty, storageOptions?.Value.SystemDatabaseName ?? Configuration.Storage.DefaultSystemDatabaseName);
         if (connections is not null)
         {
             _database = connections.GetDatabase(StorageConnectionKind.Namespace, databaseName, eventStore.Value, @namespace.Value);

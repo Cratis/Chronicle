@@ -84,8 +84,12 @@ function metadataMatch(text, target) {
 function normalized(target) {
     const text = readText(target).replace(/\r\n?/g, '\n');
     if (!text.includes(marker)) return { text, generated: false };
-    const [start, end] = metadataMatch(text, target).indices.groups.time;
-    return { text: text.slice(0, start) + '<generation-time>' + text.slice(end), generated: true };
+    const match = metadataMatch(text, target);
+    const [start, end] = match.indices.groups.time;
+    // Generic Source names include assembly versions that vary with the CI build number.
+    // Normalize only that header prefix; versions in proxy content must still be compared.
+    const source = text.slice(match.index, start).replace(/\bVersion=\d+(?:\.\d+){3}\b/g, 'Version=<build-version>');
+    return { text: text.slice(0, match.index) + source + '<generation-time>' + text.slice(end), generated: true };
 }
 
 function requireDebugPopulation(directory, proxies) {

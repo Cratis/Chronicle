@@ -27,7 +27,11 @@ public static class MongoDBSchemaServices
             mongo.Server = options.Storage.ConnectionDetails;
             mongo.Database = DatabaseNames.WithPrefix(WellKnownDatabaseNames.Chronicle, options.Storage.DatabaseNamePrefix);
         });
-        services.Configure<MongoDBStorageOptions>(mongo => mongo.DatabaseNamePrefix = options.Storage.DatabaseNamePrefix);
+        services.Configure<MongoDBStorageOptions>(mongo =>
+        {
+            mongo.DatabaseNamePrefix = options.Storage.DatabaseNamePrefix;
+            mongo.SystemDatabaseName = options.Storage.SystemDatabaseName;
+        });
         services.AddSingleton<IMongoDBStorageConnections>(provider => new MongoDBStorageConnections(
             provider.GetRequiredService<IOptions<MongoDBOptions>>(),
             provider.GetRequiredService<IStorageConnectionResolution>(),

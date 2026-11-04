@@ -438,7 +438,7 @@ The JSON `Environment` block records the topology name and each silo's role
 assignment (`Jobs` is null when the kernel has no separate Jobs role).
 
 One JSON record reports the commit (`GITHUB_SHA`, `COMMIT_SHA`, or Git; otherwise
-`unknown`), kernel and Cratis.Orleans informational versions, OS, CPU count and
+`unknown`), kernel and Cratis.Choreography informational versions, OS, CPU count and
 memory available to the process (subject to container limits), and the exact settings.
 `StartupFence` is the acknowledged tail before requesting rebuild; `F` is the tail
 after stopping producers and awaiting their in-flight acknowledgements.

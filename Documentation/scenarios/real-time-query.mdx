@@ -37,6 +37,10 @@ For list views and grids, skip the replay: `Materialized` reads the instances th
 
 Dispose the subscription when you're done. If you need explicit lifecycle control — for example awaiting the watcher's `Subscribed` before producing events — use `GetWatcherFor<Book>()` instead.
 
+:::note
+During a rolling upgrade, change watches may not receive changes from silos still on the previous version; re-establish watches once all silos run this version.
+:::
+
 ## Observe a live page
 
 `Materialized.ObserveInstances` pushes a fresh page snapshot whenever the stored data changes — a live dashboard or table with no polling:
