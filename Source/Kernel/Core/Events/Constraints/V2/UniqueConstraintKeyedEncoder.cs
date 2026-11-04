@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Collections.Concurrent;
 using System.Security.Cryptography;
 using Cratis.Chronicle.Concepts.Events.Constraints;
 using Cratis.Monads;
@@ -14,17 +13,20 @@ namespace Cratis.Chronicle.Events.Constraints.V2;
 /// <remarks>
 /// The instance is thread-safe. It copies the key, so later changes to the caller's buffer have no effect.
 /// Each thread keeps its own reusable HMAC state, so the key padding is not recomputed on every call.
-/// Scope tokens are cached per instance, because a scope repeats across appends; the cache is bounded and is cleared when it is full.
+/// Scope tokens are cached per instance, because a scope repeats across appends; the cache is a fixed-size, direct-mapped array whose entries are overwritten in place, so it is bounded and never allocates after construction.
 /// </remarks>
 internal sealed class UniqueConstraintKeyedEncoder
 {
     /// <summary>
-    /// The number of scope tokens kept before the cache is cleared.
+    /// The number of scope token slots in the cache. Must be a power of two.
     /// </summary>
     internal const int ScopeCacheLimit = 1024;
 
-    readonly ConcurrentDictionary<ScopeParts, UniqueConstraintScopeToken> _scopes = new();
-    int _scopeCount;
+    const int Stripes = 16;
+
+    readonly ScopeSlot[] _slots = new ScopeSlot[ScopeCacheLimit];
+    readonly Lock[] _locks = Enumerable.Range(0, Stripes).Select(_ => new Lock()).ToArray();
+    int _occupied;
     readonly byte[] _key;
     readonly ThreadLocal<IncrementalHash> _hmac;
     readonly UniqueConstraintScopeToken _unscoped;
@@ -41,9 +43,9 @@ internal sealed class UniqueConstraintKeyedEncoder
     }
 
     /// <summary>
-    /// Gets the approximate number of cached scope tokens, which never exceeds the limit by more than the number of concurrent callers.
+    /// Gets the number of occupied scope cache slots, which never exceeds <see cref="ScopeCacheLimit"/>.
     /// </summary>
-    internal int CachedScopeCount => _scopes.Count;
+    internal int CachedScopeCount => Volatile.Read(ref _occupied);
 
     /// <summary>
     /// Produces a keyed value, or no claim when every component is null.
@@ -67,20 +69,37 @@ internal sealed class UniqueConstraintKeyedEncoder
         {
             return _unscoped;
         }
-        var parts = new ScopeParts(scope.EventSourceType?.Value, scope.EventStreamType?.Value, scope.EventStreamId?.Value);
-        if (_scopes.TryGetValue(parts, out var cached))
+        var source = scope.EventSourceType?.Value;
+        var streamType = scope.EventStreamType?.Value;
+        var streamId = scope.EventStreamId?.Value;
+        var index = HashCode.Combine(source, streamType, streamId) & (ScopeCacheLimit - 1);
+        var gate = _locks[index & (Stripes - 1)];
+        lock (gate)
         {
-            return cached;
+            ref var slot = ref _slots[index];
+            if (slot.Token is not null && slot.Matches(source, streamType, streamId))
+            {
+                return slot.Token;
+            }
         }
         var token = UniqueConstraintScopeToken.Encode(_hmac.Value!, scope);
-        if (Interlocked.Increment(ref _scopeCount) > ScopeCacheLimit)
+        lock (gate)
         {
-            _scopes.Clear();
-            Interlocked.Exchange(ref _scopeCount, 1);
+            ref var slot = ref _slots[index];
+            if (slot.Token is null)
+            {
+                Interlocked.Increment(ref _occupied);
+            }
+            slot = new ScopeSlot(source, streamType, streamId, token);
         }
-        _scopes[parts] = token;
         return token;
     }
 
-    readonly record struct ScopeParts(string? EventSourceType, string? EventStreamType, string? EventStreamId);
+    readonly record struct ScopeSlot(string? EventSourceType, string? EventStreamType, string? EventStreamId, UniqueConstraintScopeToken? Token)
+    {
+        internal bool Matches(string? source, string? streamType, string? streamId) =>
+            string.Equals(EventSourceType, source, StringComparison.Ordinal) &&
+            string.Equals(EventStreamType, streamType, StringComparison.Ordinal) &&
+            string.Equals(EventStreamId, streamId, StringComparison.Ordinal);
+    }
 }
