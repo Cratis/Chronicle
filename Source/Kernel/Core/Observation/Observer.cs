@@ -742,6 +742,13 @@ public partial class Observer(
     {
         _stateTransitionInProgress = false;
         KeepWhatWasRecordedDuringTransitionHook();
+        if (state is States.Replay { StartRefusal: { } refusal })
+        {
+            // Nothing drives this replay forward, so it settles no owed recovery; routing decides that afresh.
+            await SettleRefusedReplayStart(refusal);
+            return;
+        }
+
         if (state is QuarantinedObserver) await ReconcileWebhookProbe();
         if (SettlesOwedRecovery(state))
         {
