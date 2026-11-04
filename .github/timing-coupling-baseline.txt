@@ -110,13 +110,10 @@
 1 Source/Clients/DotNET.Specs/Observation/for_AppendResultWaitForCompletionExtensions/when_waiting_for_completion/and_the_timeout_is_infinite.cs  # knob
 1 Source/Clients/XUnit.Integration/ChronicleFixture.cs  # readiness
 1 Source/Clients/XUnit.Integration/ChronicleOrleansFixture.cs
-<<<<<<< HEAD
 # MongoDB pending-drop readiness has no awaitable driver event; retry the server command,
 # not a fixed settle duration. Helper specs inject a virtual clock and immediate delay (#5521).
 1 Source/Clients/XUnit.Integration/MongoDBDatabaseDropper.cs  # readiness: server-command drop-settle backoff
-=======
 1 Source/Kernel/Core.Specs/Clients/for_ClientDepartureNotifier/when_notifying_observers.cs  # interleave
->>>>>>> origin/main
 1 Source/Kernel/Core.Specs/ConcurrentCallGate.cs  # deadline
 1 Source/Kernel/Core.Specs/EventSequences/for_AppendedEventsQueue/when_enqueuing/with_backpressure/and_channel_capacity_is_exceeded.cs
 1 Source/Kernel/Core.Specs/Observation/Reactors/Kernel/for_Reactors/when_registering/and_many_tenants_start_concurrently.cs  # interleave
