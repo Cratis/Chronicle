@@ -45,6 +45,34 @@ public partial class Observer
     /// </summary>
     int RetryJobDropsAvailable => _retryJobDropBudget ?? MaxRetryJobDropsPerTurn;
 
+    /// <summary>
+    /// Forgets the retry counts of episodes that are no longer failing.
+    /// </summary>
+    /// <param name="counts">The remembered retry counts, pruned in place.</param>
+    /// <param name="unresolved">The failed partitions that are still unresolved.</param>
+    internal static void ForgetResolvedRetryCounts(Dictionary<FailedPartitionId, int> counts, IEnumerable<FailedPartition> unresolved)
+    {
+        if (counts.Count == 0) return;
+
+        var unresolvedIds = new HashSet<FailedPartitionId>();
+        foreach (var partition in unresolved)
+        {
+            unresolvedIds.Add(partition.Id);
+        }
+
+        // Collected before removing, as the keys cannot be removed while they are being enumerated.
+        var resolved = new List<FailedPartitionId>();
+        foreach (var id in counts.Keys)
+        {
+            if (!unresolvedIds.Contains(id)) resolved.Add(id);
+        }
+
+        foreach (var id in resolved)
+        {
+            counts.Remove(id);
+        }
+    }
+
     void ConsumeRetryJobDrops(int dropped)
     {
         if (_retryJobDropBudget is not null)
@@ -124,10 +152,7 @@ public partial class Observer
         if (!_observerExists || !KeyOwnsDefinition) return;
 
         // Forget the counts of episodes that are no longer failing, so the map stays bounded by the failed partitions.
-        foreach (var id in _retriesWithoutJob.Keys.Where(id => !Failures.Partitions.Any(_ => _.Id == id)).ToArray())
-        {
-            _retriesWithoutJob.Remove(id);
-        }
+        ForgetResolvedRetryCounts(_retriesWithoutJob, Failures.Partitions);
 
         _retriesWithoutJob.TryGetValue(failure.Id, out var retries);
         retries++;
