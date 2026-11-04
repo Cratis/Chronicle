@@ -49,6 +49,7 @@ public static class InMemoryChronicleBuilderExtensions
             services.AddSingleton<ISystemStorage, SystemStorage>();
             services.AddSingleton<IClusterStorage, ClusterStorage>();
             services.AddSingleton<Cratis.Chronicle.Storage.Naming.IResourceNameReservations, InMemoryResourceNameReservations>();
+            services.AddSingleton<Cratis.Chronicle.Storage.Naming.IResourceInventory, InMemoryResourceInventory>();
             services.AddResourceNameGate();
             services.AddSingleton<IEncryptionKeyStorage, EncryptionKeyStorage>();
             services.AddSingleton<IStorage, Cratis.Chronicle.Storage.InMemory.Storage>();
