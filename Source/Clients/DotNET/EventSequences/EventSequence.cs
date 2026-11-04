@@ -795,6 +795,22 @@ public class EventSequence(
     }
 
     /// <inheritdoc/>
+    public async Task<Guid> Copy(EventSourceId sourceId, EventSourceId targetId, params Type[] clrEventTypes)
+    {
+        ReadProtectionGuard.Append(nameof(Copy), "event copy");
+        var eventTypeIds = clrEventTypes.Select(t => eventTypes.GetEventTypeFor(t).Id.Value).ToList();
+        return await _servicesAccessor.Services.Sequences.CopyEventsForEventSource(new()
+        {
+            EventStore = eventStoreName,
+            Namespace = @namespace,
+            EventSequenceId = eventSequenceId,
+            SourceId = sourceId,
+            TargetId = targetId,
+            EventTypes = eventTypeIds
+        }).EnsureSuccess();
+    }
+
+    /// <inheritdoc/>
     public async Task<Result<EventSequenceNumber, CompleteStreamError>> CompleteStream(EventStreamType eventStreamType, EventStreamId eventStreamId)
     {
         ReadProtectionGuard.CompleteStream(new(eventStoreName, @namespace, eventSequenceId));

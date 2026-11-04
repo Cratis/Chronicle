@@ -11,6 +11,7 @@ namespace Cratis.Chronicle.Projections.for_ProjectionChangesetNotifier.given;
 
 public class a_subscribed_notifier : Specification
 {
+    protected TestKitSilo _silo;
     protected ProjectionChangesetNotifier _notifier;
     protected readonly EventStoreNamespaceName _namespace = "the-namespace";
     protected IReadModelChangesetSubscriber[] _subscribers;
@@ -18,7 +19,7 @@ public class a_subscribed_notifier : Specification
 
     async Task Establish()
     {
-        var silo = new TestKitSilo();
+        var silo = _silo = new TestKitSilo();
         silo.AddService(Substitute.For<ILogger<ProjectionChangesetNotifier>>());
         _notifier = await silo.CreateGrainAsync<ProjectionChangesetNotifier>("the-projection");
         _subscribers = [Substitute.For<IReadModelChangesetSubscriber>(), Substitute.For<IReadModelChangesetSubscriber>()];

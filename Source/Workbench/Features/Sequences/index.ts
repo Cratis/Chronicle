@@ -27,6 +27,7 @@ export * from './CompleteStreamScope';
 export * from './ConcurrencyScope';
 export * from './ContentVerification';
 export * from './ContentVerificationResult';
+export * from './CopyEventsForEventSource';
 export * from './EventContext';
 export * from './EventForEventSourceId';
 export * from './EventForEventSourceIdWithNamedTags';

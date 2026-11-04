@@ -1,23 +1,46 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Collections.Concurrent;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 
 namespace Cratis.Chronicle.Events;
 
 /// <summary>
-/// Shares immutable discovery results that depend only on CLR types, not registry identities.
+/// Shares immutable discovery results between registries whose artifact, model and event type set are equal.
 /// </summary>
 /// <typeparam name="TValue">The immutable discovery result.</typeparam>
 /// <remarks>
-/// Entries never keep a type alive: results hang off the artifact through a <see cref="ConditionalWeakTable{TKey, TValue}"/>
-/// and event type sets are held weakly, so collectible assemblies and test hosts can unload.
+/// <para>
+/// The cache is a trie of ephemerons. Every link is a <see cref="ConditionalWeakTable{TKey, TValue}"/> keyed on one of
+/// the CLR types the result was discovered for - the artifact, the model and each event type - and the result hangs off
+/// the last link, so no wrapper object ever serves as a key. A link keeps its subtree alive only while its key type is.
+/// </para>
+/// <para>
+/// A result references the types it was discovered for, and a dependent handle keeps its value alive whenever its key
+/// is alive, even after the table owning it became unreachable. A link keyed on a type that outlives an earlier link
+/// would therefore pin the result and, through it, the earlier link's type. Links are ordered so that never happens:
+/// non-collectible types first, then the collectible ones, which must all come from one assembly and so share one
+/// lifetime. A set whose collectible types span several assemblies has no such order and is built without sharing.
+/// </para>
+/// <para>
+/// Sets of non-collectible types are shared for the life of the process; a set touching a collectible assembly is shared
+/// while that assembly is loaded and becomes collectable with it. Lookups happen only while a registry builds its
+/// discovery results, never per event. A hit takes no lock; a miss builds under the leaf's lock so equal sets build
+/// once, and a failed build stores nothing.
+/// </para>
 /// </remarks>
 internal sealed class EventTypeSetCache<TValue>
     where TValue : class
 {
-    readonly ConditionalWeakTable<Type, ArtifactEntries> _artifacts = new();
+    readonly Node _root = new();
+
+    enum Role
+    {
+        Artifact = 0,
+        Model = 1,
+        Event = 2
+    }
 
     /// <summary>
     /// Gets the result for an artifact, model and unordered event type set.
@@ -26,114 +49,127 @@ internal sealed class EventTypeSetCache<TValue>
     /// <param name="artifact">The artifact being discovered.</param>
     /// <param name="model">The artifact's model.</param>
     /// <param name="build">The discovery operation.</param>
-    /// <returns>The shared result.</returns>
-    internal TValue Get(IEnumerable<Type> types, Type artifact, Type model, Func<IEnumerable<Type>, TValue> build) =>
-        _artifacts.GetValue(artifact, static _ => new()).Get(model, [.. types], build);
-
-    sealed class ArtifactEntries
+    /// <returns>The shared result, or an unshared one when the types have no safe link order.</returns>
+    internal TValue Get(IEnumerable<Type> types, Type artifact, Type model, Func<IEnumerable<Type>, TValue> build)
     {
-        readonly ConcurrentDictionary<TypeSetKey, Lazy<TValue>> _entries = new(TypeSetKey.Comparer);
-
-        public TValue Get(Type model, HashSet<Type> types, Func<IEnumerable<Type>, TValue> build)
+        var links = Links(types, artifact, model);
+        if (!ShareOneCollectibleLifetime(links))
         {
-            var probe = TypeSetKey.Probe(model, types);
-            if (!_entries.TryGetValue(probe, out var entry))
-            {
-                RemoveCollected();
-                entry = _entries.GetOrAdd(TypeSetKey.Weak(model, types), static (_, state) => new Lazy<TValue>(() => state.Build(state.Types)), (Build: build, Types: types));
-            }
+            return build(EventTypes(links));
+        }
 
-            try
+        Array.Sort(links);
+        var node = _root;
+        var previous = default(Link);
+        foreach (var link in links)
+        {
+            if (link != previous)
             {
-                return entry.Value;
-            }
-            catch
-            {
-                RemoveFailed(entry);
-                throw;
+                node = node.Next(link);
+                previous = link;
             }
         }
 
-        void RemoveFailed(Lazy<TValue> failed)
+        return node.GetOrBuild(links, build);
+    }
+
+    static Type[] EventTypes(Link[] links) => [.. links.Where(link => link.Role == Role.Event).Select(link => link.Type).Distinct()];
+
+    static Link[] Links(IEnumerable<Type> types, Type artifact, Type model)
+    {
+        var eventTypes = types.TryGetNonEnumeratedCount(out _) ? types : types.ToArray();
+        var links = new Link[eventTypes.Count() + 2];
+        links[0] = new(Role.Artifact, artifact);
+        links[1] = new(Role.Model, model);
+        var index = 2;
+        foreach (var type in eventTypes)
         {
-            foreach (var pair in _entries.Where(pair => ReferenceEquals(pair.Value, failed)))
+            links[index++] = new(Role.Event, type);
+        }
+
+        return links;
+    }
+
+    static bool ShareOneCollectibleLifetime(Link[] links)
+    {
+        Assembly? collectible = null;
+        foreach (var link in links)
+        {
+            if (!link.Type.IsCollectible)
             {
-                _entries.TryRemove(pair);
+                continue;
+            }
+
+            collectible ??= link.Type.Assembly;
+            if (IsComposed(link.Type) || collectible != link.Type.Assembly)
+            {
+                return false;
             }
         }
 
-        void RemoveCollected()
+        return true;
+    }
+
+    static bool IsComposed(Type type) => type.IsConstructedGenericType || type.HasElementType;
+
+    /// <summary>
+    /// One step of the path, ordered non-collectible first, then by role and identity. Being comparable itself lets a
+    /// sort run without allocating a comparer. Ties between distinct types only cost a second build; they never share
+    /// between sets.
+    /// </summary>
+    /// <param name="Role">What the type is to the discovery.</param>
+    /// <param name="Type">The type.</param>
+    readonly record struct Link(Role Role, Type Type) : IComparable<Link>
+    {
+        public static bool operator <(Link left, Link right) => left.CompareTo(right) < 0;
+        public static bool operator >(Link left, Link right) => left.CompareTo(right) > 0;
+        public static bool operator <=(Link left, Link right) => left.CompareTo(right) <= 0;
+        public static bool operator >=(Link left, Link right) => left.CompareTo(right) >= 0;
+
+        public int CompareTo(Link other)
         {
-            foreach (var pair in _entries.Where(pair => pair.Key.IsCollected))
-            {
-                _entries.TryRemove(pair);
-            }
+            var order = Type.IsCollectible.CompareTo(other.Type.IsCollectible);
+            order = order != 0 ? order : Role.CompareTo(other.Role);
+            order = order != 0 ? order : RuntimeHelpers.GetHashCode(Type).CompareTo(RuntimeHelpers.GetHashCode(other.Type));
+            return order != 0 ? order : Type.MetadataToken.CompareTo(other.Type.MetadataToken);
         }
     }
 
-    /// <summary>
-    /// An unordered type set compared by membership; stored keys hold their types weakly, lookups probe with a set.
-    /// </summary>
-    sealed class TypeSetKey
+    sealed class Node
     {
-        readonly Type _model;
-        readonly int _hash;
-        readonly HashSet<Type>? _probe;
-        readonly WeakReference<Type>[] _weak = [];
+        readonly object _lock = new();
+        readonly ConditionalWeakTable<Type, Node>?[] _children = new ConditionalWeakTable<Type, Node>?[3];
+        TValue? _value;
 
-        TypeSetKey(Type model, HashSet<Type> types, bool weak)
+        public Node Next(Link link) => Children(link.Role).GetValue(link.Type, static _ => new());
+
+        public TValue GetOrBuild(Link[] links, Func<IEnumerable<Type>, TValue> build)
         {
-            _model = model;
-            _hash = HashCode.Combine(model, types.Count, types.Aggregate(0, (hash, type) => hash ^ type.GetHashCode()));
-            if (weak)
+            var value = Volatile.Read(ref _value);
+            if (value is not null)
             {
-                _weak = [.. types.Select(type => new WeakReference<Type>(type))];
+                return value;
             }
-            else
+
+            lock (_lock)
             {
-                _probe = types;
+                value = _value ?? build(EventTypes(links));
+                Volatile.Write(ref _value, value);
+                return value;
             }
         }
 
-        public static IEqualityComparer<TypeSetKey> Comparer { get; } = new KeyComparer();
-
-        public bool IsCollected => _weak.Any(reference => !reference.TryGetTarget(out _));
-
-        int Count => _probe?.Count ?? _weak.Length;
-
-        public static TypeSetKey Probe(Type model, HashSet<Type> types) => new(model, types, weak: false);
-
-        public static TypeSetKey Weak(Type model, HashSet<Type> types) => new(model, types, weak: true);
-
-        bool Contains(Type type)
+        ConditionalWeakTable<Type, Node> Children(Role role)
         {
-            if (_probe is not null) return _probe.Contains(type);
-            foreach (var reference in _weak)
+            ref var slot = ref _children[(int)role];
+            var children = Volatile.Read(ref slot);
+            if (children is not null)
             {
-                if (reference.TryGetTarget(out var target) && target == type) return true;
+                return children;
             }
 
-            return false;
-        }
-
-        bool HasSameMembersAs(TypeSetKey other)
-        {
-            if (_model != other._model || Count != other.Count) return false;
-            if (_probe is not null) return other._probe is not null ? _probe.SetEquals(other._probe) : other.HasSameMembersAs(this);
-            foreach (var reference in _weak)
-            {
-                if (!reference.TryGetTarget(out var type) || !other.Contains(type)) return false;
-            }
-
-            return true;
-        }
-
-        sealed class KeyComparer : IEqualityComparer<TypeSetKey>
-        {
-            public bool Equals(TypeSetKey? x, TypeSetKey? y) =>
-                ReferenceEquals(x, y) || (x is not null && y is not null && x.HasSameMembersAs(y));
-
-            public int GetHashCode(TypeSetKey obj) => obj._hash;
+            children = new();
+            return Interlocked.CompareExchange(ref slot, children, null) ?? children;
         }
     }
 }

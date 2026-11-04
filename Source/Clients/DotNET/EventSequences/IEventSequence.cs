@@ -702,6 +702,21 @@ public interface IEventSequence
     Task Redact(EventSourceId eventSourceId, RedactionReason reason, params Type[] clrEventTypes);
 
     /// <summary>
+    /// Copy events from one <see cref="EventSourceId"/> to another within this event sequence, as a durable background job.
+    /// </summary>
+    /// <param name="sourceId">The <see cref="EventSourceId"/> to copy events from.</param>
+    /// <param name="targetId">The <see cref="EventSourceId"/> to append the copies to.</param>
+    /// <param name="clrEventTypes">Optionally the specific event types to copy. When none are given, events of every type are copied.</param>
+    /// <returns>The identifier of the job performing the copy, which can be followed through the jobs service.</returns>
+    /// <remarks>
+    /// The copies are new events appended after the existing ones, so they get new sequence numbers and are observed like any other append.
+    /// The source events are left untouched. The job is durable and resumes after a restart without appending any copy twice.
+    /// </remarks>
+    /// <exception cref="EventCopyNotSupported">The implementation does not support copying events.</exception>
+    Task<Guid> Copy(EventSourceId sourceId, EventSourceId targetId, params Type[] clrEventTypes)
+        => throw new EventCopyNotSupported();
+
+    /// <summary>
     /// Complete a stream so that no further events can be appended to it.
     /// </summary>
     /// <param name="eventStreamType">The <see cref="EventStreamType"/> identifying the stream's type.</param>

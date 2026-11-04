@@ -19,6 +19,7 @@ public class public_entries : when_committing_with_read_protection.given.a_trust
             ["revise"] = () => _sequence.Revise(EventSequenceNumber.First, null!),
             ["redact position"] = () => _sequence.Redact(EventSequenceNumber.First, "reason"),
             ["redact source"] = () => _sequence.Redact((EventSourceId)"source", "reason", null!),
+            ["copy"] = () => _sequence.Copy("source", "target"),
             ["prepared"] = () => _sequence.AppendPrepared("source", null!),
             ["prepared routed"] = () => _sequence.AppendPreparedThroughEventSource(typeof(object), "source", null!),
             ["single"] = () => _sequence.Append("source", new object()),
