@@ -157,11 +157,13 @@ public class PIIManager(
             // fail every erasure for as long as it is quarantined. The named event store stays in: its failure is
             // then reported for what it is, an erasure that did not reach the store the caller asked for.
             // The same goes for a quarantined namespace: it is only this manager's namespace that is erased, so it is
-            // left out, and reported, in every event store but the named one.
+            // left out of the other event stores and reported. In the named event store it is reported too, while the
+            // event store stays in the attempt: reaching a quarantined namespace is not possible, and saying so is
+            // what keeps the outcome incomplete.
             var usable = await UsableEventStores.From(storage, resourceNames, logger, key.Namespace);
             var skipped = new SkippedResources(
                 [.. usable.SkippedResources.EventStores.Where(_ => _ != key.EventStore)],
-                [.. usable.SkippedResources.Namespaces.Where(_ => _.EventStore != key.EventStore)]);
+                [.. usable.SkippedResources.Namespaces]);
             var namespaceSkippedIn = skipped.Namespaces.Select(_ => _.EventStore).ToHashSet();
             return ([.. usable.Usable.Where(_ => !namespaceSkippedIn.Contains(_)).Append(key.EventStore).Distinct()], skipped);
         }
