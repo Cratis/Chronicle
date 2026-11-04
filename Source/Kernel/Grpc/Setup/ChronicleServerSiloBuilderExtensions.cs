@@ -29,6 +29,7 @@ using Cratis.Chronicle.Setup;
 using Cratis.Chronicle.Setup.Execution;
 using Cratis.Chronicle.Setup.Serialization;
 using Cratis.Chronicle.Storage;
+using Cratis.Chronicle.Storage.Naming;
 using Cratis.Orleans.Jobs;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -140,6 +141,12 @@ public static class ChronicleServerSiloBuilderExtensions
         builder.Services.AddChronicleMeters();
         var chronicleBuilder = new ChronicleBuilder(builder, builder.Services, builder.Configuration);
         configure?.Invoke(chronicleBuilder);
+        if (builder.Services.Any(_ => _.ServiceType == typeof(IResourceNameGate)))
+        {
+            builder.Services.AddResourceNameAudit();
+            builder.Services.AddSingleton<ILifecycleParticipant<ISiloLifecycle>, ResourceNameAuditStartup>();
+        }
+
         return builder;
     }
 
