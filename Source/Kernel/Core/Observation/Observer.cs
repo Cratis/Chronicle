@@ -980,6 +980,13 @@ public partial class Observer(
             var eventTypeSchemas = await storage.GetEventStore(_observerKey.EventStore).EventTypes.GetFor(eventTypes);
             _eventTypeSchemas = eventTypeSchemas.ToDictionary(s => s.Type);
 
+            // Another instance of a client already being observed for needs only to be added as a fan-out target.
+            if (!additive && !recovering && !automatic && subscriberArgs is ConnectedClient connectedClient &&
+                await TryHandOverToAnotherClientInstance<TObserverSubscriber>(type, eventTypes, siloAddress, connectedClient, isReplayable, filters, generationDelivery))
+            {
+                return;
+            }
+
             using var scope = logger.BeginObserverScope(_observerId, _observerKey);
 
             // Ordinary subscription and automatic reconciliation re-read storage, including after a shared
