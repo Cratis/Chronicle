@@ -96,6 +96,9 @@ internal sealed class SequenceReplies(IEventSequences inner, DropReplyIntercepto
     public Task<CommandResult> Redact(RedactRequest request, CallContext callContext = default) => inner.Redact(request, callContext);
 
     /// <inheritdoc/>
+    public Task<CommandResult<Guid>> CopyEventsForEventSource(CopyEventsForEventSourceRequest request, CallContext callContext = default) => inner.CopyEventsForEventSource(request, callContext);
+
+    /// <inheritdoc/>
     public Task<CommandResult> RedactForEventSource(RedactForEventSourceRequest request, CallContext callContext = default) => inner.RedactForEventSource(request, callContext);
 
     /// <inheritdoc/>

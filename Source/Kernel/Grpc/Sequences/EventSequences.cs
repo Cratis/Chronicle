@@ -106,6 +106,13 @@ internal sealed class EventSequences(
             response => ToCompleteStreamResponse(response));
 
     /// <inheritdoc/>
+    public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult<global::System.Guid>> CopyEventsForEventSource(global::Cratis.Chronicle.Contracts.Sequences.CopyEventsForEventSourceRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
+        CommandExecutor.Execute<global::System.Guid, global::System.Guid>(
+            commandPipeline,
+            new global::Cratis.Chronicle.Sequences.CopyEventsForEventSource((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, (global::Cratis.Chronicle.Concepts.EventSequences.EventSequenceId)request.EventSequenceId, (global::Cratis.Chronicle.Concepts.Events.EventSourceId)request.SourceId, (global::Cratis.Chronicle.Concepts.Events.EventSourceId)request.TargetId, request.EventTypes),
+            response => response);
+
+    /// <inheritdoc/>
     public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult> Redact(global::Cratis.Chronicle.Contracts.Sequences.RedactRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         CommandExecutor.Execute(
             commandPipeline,
