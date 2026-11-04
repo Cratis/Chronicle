@@ -47,7 +47,7 @@ The Ed25519 key encoding and the library remain open under [#5117](https://githu
 
 ## Amendment 2026-11-04: Q5 decided
 
-Decided on 2026-11-04 by the coordinator for [#5117](https://github.com/Cratis/Chronicle/issues/5117), and flagged for maintainer review in the pull request; this settles only Q5, which the verdict left open. The rest of the accepted text stands.
+Decided on 2026-11-04 for [#5117](https://github.com/Cratis/Chronicle/issues/5117), pending confirmation by the record's decider in the pull request; this settles only Q5, which the verdict left open. The rest of the accepted text stands.
 
 The rule (option A′):
 
