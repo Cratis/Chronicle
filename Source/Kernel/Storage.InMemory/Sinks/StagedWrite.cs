@@ -61,15 +61,15 @@ internal sealed class StagedWrite(IDictionary<object, ExpandoObject> published)
     /// <param name="advancesWatermark">Whether publishing it moves the row's last handled event sequence number forward.</param>
     public void Stage(object key, ExpandoObject candidate, bool advancesWatermark)
     {
+        if (!_candidates.ContainsKey(key))
+        {
+            _changedKeys.Add(key);
+        }
+
         _candidates[key] = candidate;
         if (advancesWatermark)
         {
             _advancing.Add(key);
-        }
-
-        if (!_changedKeys.Contains(key))
-        {
-            _changedKeys.Add(key);
         }
     }
 

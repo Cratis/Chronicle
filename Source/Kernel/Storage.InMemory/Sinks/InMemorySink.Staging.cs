@@ -6,7 +6,6 @@ using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Dynamic;
-using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Storage.Sinks;
 
 namespace Cratis.Chronicle.Storage.InMemory.Sinks;
@@ -54,7 +53,18 @@ public partial class InMemorySink
         }
 
         var keyedWrite = new KeyedWrite(key, keyValue, IsRejectedWatermarkWrite(keyValue, eventSequenceNumber, mode));
-        StageKeyedChanges(staged, keyedWrite, changes, changeset.InitialState.Clone());
+        var state = changeset.InitialState.Clone();
+        if (changes.Any(change => change is Joined or ChildRemovedFromAll))
+        {
+            StageKeyedChanges(staged, keyedWrite, changes, state);
+        }
+        else if (!keyedWrite.IsRejected)
+        {
+            state = ApplyActualChanges(key, changes, state);
+            ((IDictionary<string, object?>)state)["id"] = Detached(key.Value);
+            staged.Stage(keyValue, state, advancesWatermark: true);
+        }
+
         return staged;
     }
 
@@ -110,33 +120,6 @@ public partial class InMemorySink
         ((IDictionary<string, object?>)state)["id"] = Detached(keyedWrite.Key.Value);
         staged.Stage(keyedWrite.KeyValue, state, advancesWatermark: true);
         return state;
-    }
-
-    void StageRootJoins(StagedWrite staged, Joined[] rootJoins)
-    {
-        if (rootJoins.Length == 0)
-        {
-            return;
-        }
-
-        foreach (var rowKey in staged.RowKeys())
-        {
-            var current = staged.Current(rowKey)!;
-            var matching = rootJoins.Where(joined =>
-                joined.Changes.Any() && TryFindValueInDocument(current, joined.OnProperty.Segments.ToArray(), 0, joined.Key)).ToArray();
-            if (matching.Length == 0)
-            {
-                continue;
-            }
-
-            var candidate = staged.CandidateFor(rowKey);
-            foreach (var joined in matching)
-            {
-                candidate = ApplyActualChanges(new Key(rowKey, ArrayIndexers.NoIndexers), joined.Changes, candidate);
-            }
-
-            staged.Stage(rowKey, candidate, advancesWatermark: true);
-        }
     }
 
     void StageChildJoins(StagedWrite staged, Joined[] childJoins)
