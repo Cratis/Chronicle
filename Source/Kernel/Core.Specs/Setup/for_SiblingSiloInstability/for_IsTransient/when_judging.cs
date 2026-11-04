@@ -23,7 +23,7 @@ public class when_judging : Specification
         _timeout = new TimeoutException("Response did not arrive on time");
     }
 
-    [Fact] void should_retry_a_wait_queue_failure_that_crossed_a_silo_boundary() => SiblingSiloInstability.IsTransient(_carriedWaitQueueFull).ShouldBeTrue();
+    [Fact] void should_not_retry_an_uncategorized_message_that_only_looks_like_a_wait_queue_failure() => SiblingSiloInstability.IsTransient(_carriedWaitQueueFull).ShouldBeFalse();
     [Fact] void should_retry_a_wait_queue_failure_produced_by_the_serializable_failure_filter() => SiblingSiloInstability.IsTransient(SerializableFailureIncomingCallFilter.Replace(new MongoDB.Driver.MongoWaitQueueFullException("The wait queue is full."))).ShouldBeTrue();
     [Fact] void should_retry_a_timeout() => SiblingSiloInstability.IsTransient(_timeout).ShouldBeTrue();
     [Fact] void should_not_retry_another_carried_storage_failure() => SiblingSiloInstability.IsTransient(_otherCarriedMongoFailure).ShouldBeFalse();
