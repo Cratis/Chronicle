@@ -195,7 +195,7 @@ class for_batched_namespaces(unittest.TestCase):
                 self.assertEqual(sorted(prefix + name for name in _directories(root)), sorted(covered))
 
     def test_the_kernel_and_clustering_suites_have_the_expected_job_counts(self):
-        self.assertEqual(4, len(_run("--suite", "kernel")))
+        self.assertEqual(5, len(_run("--suite", "kernel")))
         self.assertEqual(2, len(_run("--suite", "clustering")))
 
     def test_kernel_and_clustering_filters_end_with_a_dot_so_a_namespace_is_not_a_prefix(self):
