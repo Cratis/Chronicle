@@ -21,6 +21,9 @@ static class TelemetryHotPathAdapter
     const BindingFlags Methods = BindingFlags.Static | BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
     static readonly string[] _routingValues = ["store", "namespace", "log", "customer"];
 
+    /// <summary>Gets whether this revision supports the kernel metric naming modes.</summary>
+    internal static bool HasMetricNamingModes => !typeof(EventSequence).Assembly.GetType("Cratis.Chronicle.EventSequences.EventSequenceMetrics")!.GetMethod("AppendedEvent", Methods)!.IsStatic;
+
     /// <summary>Creates the production metric scope using the API available in this revision.</summary>
     /// <typeparam name="T">The meter owner.</typeparam>
     /// <param name="meter">The listener-backed meter.</param>
