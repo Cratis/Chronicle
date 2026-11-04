@@ -4,6 +4,7 @@
 using System.Collections.Frozen;
 using System.Reactive.Linq;
 using System.Reactive.Threading.Tasks;
+using System.Runtime.ExceptionServices;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Contracts;
@@ -43,6 +44,7 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
     readonly List<(ReactorId Id, Action<IReactorBuilder> Define)> _pendingDefinitions = [];
     IReadOnlyDictionary<ReactorId, ReactorRegistration> _handlers = FrozenDictionary<ReactorId, ReactorRegistration>.Empty;
 
+    long _connectionGeneration;
     bool _registered;
     bool _released;
 
@@ -155,7 +157,7 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
                 throw new ReactorAlreadyRegistered(duplicate.Key);
             }
 
-            var registrations = reactorTypes.Select(CreateRegistrationFor).ToArray();
+            var registrations = reactorTypes.Select(CreateDiscoveredRegistration).ToArray();
             DisconnectHandlers();
             _registered = false;
             _handlers = registrations
@@ -174,40 +176,33 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
     /// <inheritdoc/>
     public Task Register()
     {
-        if (_registered)
+        if (_registered || _released)
         {
             return Task.CompletedTask;
         }
 
-        lock (_registerLock)
+        WithCurrentServices(services =>
         {
             if (_registered || _released)
             {
-                return Task.CompletedTask;
+                return;
             }
 
             foreach (var registration in _handlers.Values.Where(_ => !_.IsRegistered))
             {
-                RegisterReactor(registration, _servicesAccessor.Services);
+                RegisterReactor(registration, services);
                 registration.IsRegistered = true;
+                registration.RegisterOnReconnect = false;
             }
             _registered = true;
-        }
+        });
 
         return Task.CompletedTask;
     }
 
     /// <inheritdoc/>
     public Task<IReactorHandler> Register<TReactor>()
-        where TReactor : IReactor
-    {
-        lock (_registerLock)
-        {
-            var registration = CreateRegistrationFor(typeof(TReactor));
-            AddRegistration(registration);
-            return Task.FromResult<IReactorHandler>(registration.Handler);
-        }
-    }
+        where TReactor : IReactor => AddRegistration(() => CreateRegistrationFor(typeof(TReactor)));
 
     /// <inheritdoc/>
     public Task<IReactorHandler> Register(ReactorId id, Action<IReactorDefinitionBuilder> configure, Func<ReactorEvent, CancellationToken, Task> handle)
@@ -217,12 +212,12 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
         var builder = new ReactorDefinitionBuilder();
         configure(builder);
         var definition = builder.Build(id);
-        lock (_registerLock)
+        return AddRegistration(() =>
         {
 #pragma warning disable CA2000 // Ownership of the handler transfers to the registration.
             var handler = CreateHandler(id, typeof(object), definition.EventSequenceId, definition.EventTypes);
 #pragma warning restore CA2000
-            var registration = new ReactorRegistration(
+            return new ReactorRegistration(
                 handler,
                 definition.IsReplayable,
                 [],
@@ -230,9 +225,7 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
                 EventSourceType.Unspecified,
                 EventStreamType.All,
                 handle);
-            AddRegistration(registration);
-            return Task.FromResult<IReactorHandler>(handler);
-        }
+        });
     }
 
     /// <inheritdoc/>
@@ -251,12 +244,7 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
     public Task<IReactorHandler> Register(IReactorDefinition definition)
     {
         ArgumentNullException.ThrowIfNull(definition);
-        lock (_registerLock)
-        {
-            var registration = CreateRegistrationFor(definition);
-            AddRegistration(registration);
-            return Task.FromResult<IReactorHandler>(registration.Handler);
-        }
+        return AddRegistration(() => CreateRegistrationFor(definition));
     }
 
     /// <inheritdoc/>
@@ -408,6 +396,52 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
     }
 
     /// <summary>
+    /// Registers previously registered reactors after reconnect for stores without automatic registration.
+    /// </summary>
+    /// <returns>A task representing the registration.</returns>
+    /// <exception cref="AggregateException">Multiple reactors could not register again.</exception>
+    internal Task RegisterAgainAfterReconnect()
+    {
+        if (_released || !_eventStore.Connection.Lifecycle.IsConnected)
+        {
+            return Task.CompletedTask;
+        }
+        if (!_handlers.Values.Any(_ => _.RegisterOnReconnect))
+        {
+            return Task.CompletedTask;
+        }
+
+        List<Exception> failures = [];
+        WithCurrentServices(services =>
+        {
+            if (_released || !_eventStore.Connection.Lifecycle.IsConnected)
+            {
+                return;
+            }
+
+            foreach (var registration in _handlers.Values.Where(ShouldRegisterAfterReconnect))
+            {
+                var id = registration.Handler.Id;
+                _logger.RegisteringReactorAgainAfterReconnect(id);
+                try
+                {
+                    RegisterReactor(registration, services);
+                    registration.IsRegistered = true;
+                    registration.RegisterOnReconnect = false;
+                }
+                catch (Exception ex)
+                {
+                    _logger.RegisteringReactorAgainAfterReconnectFailed(id, ex);
+                    failures.Add(ex);
+                }
+            }
+        });
+
+        ThrowRegistrationFailures(failures);
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
     /// Releases the reactors of an event store whose creation failed and that no caller holds: stops reacting to the
     /// connection lifecycle, closes the observe streams and makes a registration that is still in flight a no-op.
     /// </summary>
@@ -421,12 +455,37 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
         }
     }
 
+    static bool ShouldRegisterAfterReconnect(ReactorRegistration registration) =>
+        registration.RegisterOnReconnect && !registration.IsRegistered && !registration.Handler.CancellationToken.IsCancellationRequested;
+
+    static void ThrowRegistrationFailures(List<Exception> failures)
+    {
+        if (failures.Count == 1)
+        {
+            ExceptionDispatchInfo.Capture(failures[0]).Throw();
+        }
+        if (failures.Count > 1)
+        {
+            throw new AggregateException(failures);
+        }
+    }
+
     static void ThrowIfUnknownReactorId(IReactorHandler? handler, ReactorId reactorId)
     {
         if (handler is null)
         {
             throw new UnknownReactorId(reactorId);
         }
+    }
+
+    ReactorRegistration CreateDiscoveredRegistration(Type reactorType)
+    {
+        var registration = CreateRegistrationFor(reactorType);
+        if (_handlers.TryGetValue(registration.Handler.Id, out var previous))
+        {
+            registration.RegisterOnReconnect = previous.RegisterOnReconnect;
+        }
+        return registration;
     }
 
     ReactorRegistration CreateRegistrationFor(Type reactorType)
@@ -517,28 +576,67 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
         return handler;
     }
 
-    void AddRegistration(ReactorRegistration registration)
+    void WithCurrentServices(Action<IServices> register)
     {
-        if (_handlers.ContainsKey(registration.Handler.Id))
+        while (true)
         {
-            registration.Handler.Disconnect();
-            (registration.Handler as IDisposable)?.Dispose();
-            throw new ReactorAlreadyRegistered(registration.Handler.Id);
-        }
+            long generation;
+            lock (_registerLock)
+            {
+                if (_released)
+                {
+                    return;
+                }
+                generation = _connectionGeneration;
+            }
 
-        try
-        {
-            RegisterReactor(registration, _servicesAccessor.Services);
-            registration.IsRegistered = true;
-            _handlers = _handlers.Append(new KeyValuePair<ReactorId, ReactorRegistration>(registration.Handler.Id, registration))
-                .ToFrozenDictionary();
+            // Resolving services can connect synchronously, so connection callbacks must be able to take the lock.
+            var services = _servicesAccessor.Services;
+            lock (_registerLock)
+            {
+                if (_released)
+                {
+                    return;
+                }
+                if (generation != _connectionGeneration)
+                {
+                    continue;
+                }
+                register(services);
+                return;
+            }
         }
-        catch
+    }
+
+    Task<IReactorHandler> AddRegistration(Func<ReactorRegistration> create)
+    {
+        IReactorHandler? handler = null;
+        WithCurrentServices(services =>
         {
-            registration.Handler.Disconnect();
-            registration.Handler.Dispose();
-            throw;
-        }
+            var registration = create();
+            if (_handlers.ContainsKey(registration.Handler.Id))
+            {
+                registration.Handler.Disconnect();
+                (registration.Handler as IDisposable)?.Dispose();
+                throw new ReactorAlreadyRegistered(registration.Handler.Id);
+            }
+
+            try
+            {
+                RegisterReactor(registration, services);
+                registration.IsRegistered = true;
+                _handlers = _handlers.Append(new KeyValuePair<ReactorId, ReactorRegistration>(registration.Handler.Id, registration))
+                    .ToFrozenDictionary();
+                handler = registration.Handler;
+            }
+            catch
+            {
+                registration.Handler.Disconnect();
+                registration.Handler.Dispose();
+                throw;
+            }
+        });
+        return Task.FromResult(handler ?? throw new ObjectDisposedException(nameof(Reactors)));
     }
 
     Task ConnectionDisconnected()
@@ -550,6 +648,7 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
                 return Task.CompletedTask;
             }
 
+            _connectionGeneration++;
             _registered = false;
             RecreateHandlersForReconnect();
         }
@@ -570,7 +669,12 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
     {
         var registrations = _handlers.Values.ToArray();
         DisconnectHandlers();
-        _handlers = registrations.Select(RecreateRegistration).ToFrozenDictionary(_ => _.Handler.Id);
+        _handlers = registrations.Select(registration =>
+        {
+            var recreated = RecreateRegistration(registration);
+            recreated.RegisterOnReconnect = registration.IsRegistered || registration.RegisterOnReconnect;
+            return recreated;
+        }).ToFrozenDictionary(_ => _.Handler.Id);
     }
 
     ReactorRegistration RecreateRegistration(ReactorRegistration registration)
@@ -590,10 +694,7 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
     {
         var handler = registration.Handler;
 
-        // Resolving the services connects synchronously when disconnected, so do it
-        // outside the static lock that other event stores' connection callbacks need.
-        var services = _servicesAccessor.Services;
-        lock (_registerLock)
+        WithCurrentServices(services =>
         {
             if (cancellationToken.IsCancellationRequested || _released || !IsCurrentHandler(handler))
             {
@@ -603,7 +704,7 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
 
             _logger.ReconnectingReactor(handler.Id);
             RegisterReactor(registration, services);
-        }
+        });
     }
 
     void RegisterReactor(ReactorRegistration registration, IServices services)
@@ -784,5 +885,10 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
         /// Gets or sets whether the subscription has been sent on the current connection.
         /// </summary>
         public bool IsRegistered { get; set; }
+
+        /// <summary>
+        /// Gets or sets whether the reactor was registered on a dropped connection and not yet on the current one.
+        /// </summary>
+        public bool RegisterOnReconnect { get; set; }
     }
 }
