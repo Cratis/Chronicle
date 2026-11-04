@@ -443,8 +443,12 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
 
     /// <summary>
     /// Releases the reactors of an event store whose creation failed and that no caller holds: stops reacting to the
-    /// connection lifecycle, closes the observe streams and makes a registration that is still in flight a no-op.
+    /// connection lifecycle and closes the observe streams.
     /// </summary>
+    /// <remarks>
+    /// After release, parameterless <see cref="Register()"/> and reconnect registration are no-ops. Registration
+    /// overloads that return a handler throw <see cref="ObjectDisposedException"/>, including registrations still in flight.
+    /// </remarks>
     internal void Release()
     {
         lock (_registerLock)
@@ -636,7 +640,11 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
                 throw;
             }
         });
-        return Task.FromResult(handler ?? throw new ObjectDisposedException(nameof(Reactors)));
+        if (handler is null)
+        {
+            throw new ObjectDisposedException(nameof(Reactors), "Cannot register a reactor after its event store has been released.");
+        }
+        return Task.FromResult(handler);
     }
 
     Task ConnectionDisconnected()
