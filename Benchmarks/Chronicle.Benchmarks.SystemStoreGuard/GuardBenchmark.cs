@@ -3,7 +3,10 @@
 
 using System.Security.Claims;
 using BenchmarkDotNet.Attributes;
+using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Security;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 
 namespace Cratis.Chronicle.Benchmarks.SystemStoreGuard;
 
@@ -39,9 +42,12 @@ public class GuardBenchmark
     [GlobalSetup]
     public void Setup()
     {
-        _adminAccess = new(_admin);
-        _nonAdminAccess = new(_nonAdmin);
+        _adminAccess = new(Decisions(_admin));
+        _nonAdminAccess = new(Decisions(_nonAdmin));
     }
+
+    static AuthorizationDecisions Decisions(SystemStoreAuthorizationProbe probe) =>
+        new(probe, Options.Create(new ChronicleOptions()), NullLogger<AuthorizationDecisions>.Instance);
 
     /// <summary>
     /// No guard: the cost of reading the same values.

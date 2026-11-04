@@ -40,6 +40,7 @@ public class a_reactor : Specification
         store.EventTypes.Returns(types);
         ns.GetEventSequence(Arg.Any<Concepts.EventSequences.EventSequenceId>()).Returns(sequenceStorage);
         types.GetFor(Arg.Any<EventTypeId>(), Arg.Any<EventTypeGeneration>()).Returns(new EventTypeSchema(EventType, EventTypeOwner.Server, EventTypeSource.Code, schema));
+        types.GetDefinition(EventType.Id).Returns(new EventTypeDefinition(EventType.Id, EventTypeOwner.Server, false, [new EventTypeGenerationDefinition(EventType.Generation, schema)], []));
         sequenceStorage.GetEventAt(Arg.Any<EventSequenceNumber>()).Returns(call => new AppendedEvent(ContextFor("user-store"), new ExpandoObject()));
 
         var metadataManager = Substitute.For<IJsonSchemaMetadataManager>();

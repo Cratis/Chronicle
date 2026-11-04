@@ -44,8 +44,8 @@ public class and_a_pinned_generation_has_protected_personal_data : given.an_obse
             return content;
         });
         var converter = new ExpandoObjectConverter(Substitute.For<ITypeFormats>());
-        var compliance = new EventCompliance(metadata, converter);
-        var release = new EventGenerationRelease(_storage, compliance, Substitute.For<IEventTypeMigrations>(), metadata, converter);
+        var compliance = new EventCompliance(metadata, converter, new OwnGenerationSchemaCache());
+        var release = new EventGenerationRelease(_storage, compliance, Substitute.For<IEventTypeMigrations>(), metadata, converter, new OwnGenerationSchemaCache());
         _eventCompliance.Release(Arg.Any<IEnumerable<AppendedEvent>>(), Arg.Any<IDictionary<EventType, EventTypeSchema>>()).Returns(call => compliance.Release(call.Arg<IEnumerable<AppendedEvent>>(), call.Arg<IDictionary<EventType, EventTypeSchema>>()));
         _eventGenerationRelease.Release(Arg.Any<EventStoreName>(), Arg.Any<IEnumerable<EventType>>(), Arg.Any<IDictionary<EventType, EventTypeSchema>>(), Arg.Any<IEnumerable<AppendedEvent>>()).Returns(call => release.Release(call.Arg<EventStoreName>(), call.Arg<IEnumerable<EventType>>(), call.Arg<IDictionary<EventType, EventTypeSchema>>(), call.Arg<IEnumerable<AppendedEvent>>()));
         _appended = new(EventContext.Empty with { EventType = new(_pin.Id, 1), SequenceNumber = 42UL, Subject = "person", AppendedGeneration = 1 }, converter.ToExpandoObject(new JsonObject { ["name"] = "ciphertext" }, firstSchema))

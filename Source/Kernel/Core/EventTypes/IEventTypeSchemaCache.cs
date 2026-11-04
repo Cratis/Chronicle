@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Schemas;
 
 namespace Cratis.Chronicle.EventTypes;
 
@@ -24,6 +25,16 @@ public interface IEventTypeSchemaCache
     /// the next call retries it.
     /// </exception>
     string GetSchemaJsonFor(EventStoreName eventStore, EventTypeId eventTypeId, EventTypeGeneration generation);
+
+    /// <summary>
+    /// Gets effective protection from the current definition snapshot, including its owning generation schema.
+    /// </summary>
+    /// <param name="eventStore">The event store.</param>
+    /// <param name="eventTypeId">The event type.</param>
+    /// <param name="generation">The content generation.</param>
+    /// <param name="ownSchema">The caller's own generation schema. It never decides the result, which always comes from the definition snapshot.</param>
+    /// <returns>The effective protection schema.</returns>
+    ValueTask<JsonSchema> GetProtectionSchemaFor(EventStoreName eventStore, EventTypeId eventTypeId, EventTypeGeneration generation, JsonSchema ownSchema);
 
     /// <summary>
     /// Evict every cached generation of a specific <see cref="EventTypeId"/> within one event store.

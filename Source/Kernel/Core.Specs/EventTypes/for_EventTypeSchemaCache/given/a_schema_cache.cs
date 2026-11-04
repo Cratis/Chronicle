@@ -19,6 +19,7 @@ public class a_schema_cache : Specification
     protected static readonly EventTypeGeneration _firstGeneration = EventTypeGeneration.First;
     protected static readonly EventTypeGeneration _secondGeneration = new(2);
 
+    protected IStorage _storage;
     protected IEventTypesStorage _eventTypesStorage;
     protected IEventTypeSchemaCache _cache;
 
@@ -31,10 +32,10 @@ public class a_schema_cache : Specification
 
         var eventStoreStorage = Substitute.For<IEventStoreStorage>();
         eventStoreStorage.EventTypes.Returns(_eventTypesStorage);
-        var storage = Substitute.For<IStorage>();
-        storage.GetEventStore(Arg.Any<EventStoreName>()).Returns(eventStoreStorage);
+        _storage = Substitute.For<IStorage>();
+        _storage.GetEventStore(Arg.Any<EventStoreName>()).Returns(eventStoreStorage);
 
-        _cache = new EventTypeSchemaCache(storage);
+        _cache = new EventTypeSchemaCache(_storage);
     }
 
     protected int SchemaLookups() =>

@@ -15,7 +15,7 @@ public class and_sql_server_has_cached_skipped_narrowing(SqlServerFixture fixtur
     async Task Establish()
     {
         var connectionString = await fixture.CreateDatabase();
-        await CreateLegacyTable(connectionString, true, () => fixture.DropDatabase(connectionString));
+        await CreateLegacyTable(connectionString, true, () => fixture.QueueDatabaseDrop(connectionString));
 #pragma warning disable EF1002 // The fixture delimits its own table name.
         await _context.Database.ExecuteSqlRawAsync($"ALTER TABLE {_table} ALTER COLUMN [Value] NVARCHAR(MAX) COLLATE SQL_Latin1_General_CP1_CI_AS NOT NULL");
 #pragma warning restore EF1002

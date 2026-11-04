@@ -185,7 +185,7 @@ public class a_sql_server_database(SqlServerFixture fixture) : Specification
                 }
             }
 
-            await fixture.DropDatabase(ConnectionString);
+            await fixture.QueueDatabaseDrop(ConnectionString);
         }
 
         await Services.DisposeAsync();

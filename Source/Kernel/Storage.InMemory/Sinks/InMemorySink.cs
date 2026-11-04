@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Collections;
 using System.Dynamic;
 using System.Globalization;
 using System.Reactive.Linq;
@@ -154,110 +153,25 @@ public partial class InMemorySink(
     /// <inheritdoc/>
     public Task<IEnumerable<FailedPartition>> ApplyChanges(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset, EventSequenceNumber eventSequenceNumber, SinkWriteMode mode)
     {
-        var state = changeset.InitialState.Clone();
-        var rootJoins = changeset.Changes.OfType<Joined>().Where(joined => joined.ArrayIndexers.IsEmpty).ToArray();
-        if (!changeset.HasBeenRemoved() && rootJoins.Length > 0)
-        {
-            // Root joins enrich existing rows selected by their join column, not by the incoming
-            // event source id. Never create a phantom row for a join-only event. In particular,
-            // the root all-event mapper is inside the Joined change, not a keyed From change.
-            var updatedKeys = new List<object>();
-            bool wrotePrimary;
-            lock (_collectionLock)
-            {
-                // Decided together with the write: reading the flag after the lock is released could see a replay
-                // that began in between and drop the announcement of a write that did reach the primary collection.
-                wrotePrimary = !_isReplaying;
-                foreach (var (rowKey, row) in Collection.ToArray())
-                {
-                    var matching = rootJoins.Where(joined =>
-                        joined.Changes.Any() && TryFindValueInDocument(row, joined.OnProperty.Segments.ToArray(), 0, joined.Key)).ToArray();
-                    if (matching.Length == 0)
-                    {
-                        continue;
-                    }
-
-                    var joinedState = row.Clone();
-                    foreach (var joined in matching)
-                    {
-                        joinedState = ApplyActualChanges(new Key(rowKey, ArrayIndexers.NoIndexers), joined.Changes, joinedState);
-                    }
-
-                    Collection[rowKey] = joinedState;
-                    AdvanceWatermark(rowKey, eventSequenceNumber);
-                    updatedKeys.Add(rowKey);
-                }
-            }
-
-            foreach (var updatedKey in updatedKeys)
-            {
-                NotifyChanged(updatedKey, wrotePrimary);
-            }
-
-            if (rootJoins.All(joined => !joined.HasKeyedFrom))
-            {
-                return Task.FromResult<IEnumerable<FailedPartition>>([]);
-            }
-        }
-
-        var keyValue = GetKeyValue(key);
-
-        if (changeset.HasBeenRemoved())
-        {
-            return ApplyRemoval(keyValue, eventSequenceNumber, mode);
-        }
-
-        var childJoins = ApplyChildJoins(changeset, eventSequenceNumber);
-
-        // Removing a child from every model that matches spans documents, so it cannot be expressed by
-        // applying changes to the one being written - the persistent sinks run it across the container
-        // at this point, and leaving it out here dropped it silently.
-        foreach (var childRemovedFromAll in changeset.Changes.OfType<ChildRemovedFromAll>())
-        {
-            RemoveChildFromAll(childRemovedFromAll);
-        }
-
-        foreach (var childRemovedFromAll in changeset.Changes.OfType<ChildRemovedFromAll>())
-        {
-            RemoveChildFromDocument(state, childRemovedFromAll);
-        }
-
-        if (rootJoins.Any(joined => joined.HasKeyedFrom) || childJoins.Length > 0)
-        {
-            // The joined update may have touched this same row. Apply only the direct changes
-            // on top of the now-current row, without replaying the join against the From key.
-            lock (_collectionLock)
-            {
-                if (Collection.TryGetValue(keyValue, out var joinedRow))
-                {
-                    state = joinedRow.Clone();
-                }
-            }
-        }
-
-        var directChanges = changeset.Changes.Where(change => change is not Joined joined || !(rootJoins.Contains(joined) || childJoins.Contains(joined))).ToArray();
-        if (childJoins.Length > 0 && directChanges.Length == 0)
-        {
-            return Task.FromResult<IEnumerable<FailedPartition>>([]);
-        }
-
-        var result = ApplyActualChanges(key, directChanges, state);
-        ((dynamic)result).id = key.Value;
-        bool wroteToPrimary;
+        // Every row the update touches is evaluated as a private candidate first, so an evaluation failure leaves the
+        // published rows and their watermarks exactly as they were and a retry of the same sequence number is admitted.
+        // Only completed candidates are published, together, and observers are told once the lock is released.
+        StagedWrite staged;
+        bool wrotePrimary;
         lock (_collectionLock)
         {
-            if (IsRejectedWatermarkWrite(keyValue, eventSequenceNumber, mode))
-            {
-                return Task.FromResult<IEnumerable<FailedPartition>>([]);
-            }
+            staged = Stage(key, changeset, eventSequenceNumber, mode);
 
-            Collection[keyValue] = result;
-            AdvanceWatermark(keyValue, eventSequenceNumber);
-            wroteToPrimary = !_isReplaying;
+            // Decided together with the write: reading the flag after the lock is released could see a replay
+            // that began in between and drop the announcement of a write that did reach the primary collection.
+            wrotePrimary = !_isReplaying;
+            Publish(staged, eventSequenceNumber);
         }
 
-        // Notify observers of the change
-        NotifyChanged(keyValue, wroteToPrimary);
+        foreach (var changedKey in staged.ChangedKeys)
+        {
+            NotifyChanged(changedKey, wrotePrimary);
+        }
 
         return Task.FromResult<IEnumerable<FailedPartition>>([]);
     }
@@ -534,51 +448,6 @@ public partial class InMemorySink(
                lastHandled < eventSequenceNumber.Value;
     }
 
-    Joined[] ApplyChildJoins(IChangeset<AppendedEvent, ExpandoObject> changeset, EventSequenceNumber eventSequenceNumber)
-    {
-        // Child joins enrich every stored parent holding the child, even when the changeset's initial state is empty.
-        // Apply them before a removal takes the child away, and consume them so they cannot replace a root directly.
-        var joins = changeset.Changes.OfType<Joined>()
-            .Where(joined => !joined.ArrayIndexers.IsEmpty)
-            .ToArray();
-        if (joins.Length == 0)
-        {
-            return joins;
-        }
-
-        var updatedKeys = new List<object>();
-        bool wrotePrimary;
-        lock (_collectionLock)
-        {
-            wrotePrimary = !_isReplaying;
-            foreach (var joined in joins)
-            {
-                updatedKeys.AddRange(ApplyJoinToRowsHoldingTheChild(joined, eventSequenceNumber));
-            }
-        }
-
-        foreach (var updatedKey in updatedKeys.Distinct())
-        {
-            NotifyChanged(updatedKey, wrotePrimary);
-        }
-
-        return joins;
-    }
-
-    List<object> ApplyJoinToRowsHoldingTheChild(Joined joined, EventSequenceNumber eventSequenceNumber)
-    {
-        var indexer = joined.ArrayIndexers.All.Last();
-        var childPath = indexer.ArrayProperty + indexer.IdentifierProperty;
-        var rows = Collection.Where(row => joined.Changes.Any() && TryFindValueInDocument(row.Value, childPath.Segments.ToArray(), 0, indexer.Identifier)).ToArray();
-        foreach (var (rowKey, row) in rows)
-        {
-            Collection[rowKey] = ApplyActualChanges(new Key(rowKey, joined.ArrayIndexers), joined.Changes, row.Clone());
-            AdvanceWatermark(rowKey, eventSequenceNumber);
-        }
-
-        return rows.Select(row => row.Key).ToList();
-    }
-
     void AdvanceWatermark(object keyValue, EventSequenceNumber eventSequenceNumber)
     {
         // A sentinel is not a position in the sequence; storing one would pin the watermark at the top of the
@@ -590,103 +459,6 @@ public partial class InMemorySink(
                     ? Math.Max(current, eventSequenceNumber.Value)
                     : eventSequenceNumber.Value;
         }
-    }
-
-    void RemoveChildFromAll(ChildRemovedFromAll childRemoved)
-    {
-        lock (_collectionLock)
-        {
-            foreach (var document in Collection.Values)
-            {
-                RemoveChildFromDocument(document, childRemoved);
-            }
-        }
-    }
-
-    void RemoveChildFromDocument(ExpandoObject document, ChildRemovedFromAll childRemoved) =>
-        RemoveChildFromPath(document, childRemoved.ChildrenProperty.Segments.Select(_ => _.Value).ToArray(), 0, childRemoved);
-
-    void RemoveChildFromPath(IDictionary<string, object?> document, string[] segments, int index, ChildRemovedFromAll childRemoved)
-    {
-        if (index >= segments.Length || !document.TryGetValue(segments[index], out var value) || value is null)
-        {
-            return;
-        }
-
-        if (index == segments.Length - 1)
-        {
-            if (value is IList children)
-            {
-                var child = children.Cast<object>().FindByKey(childRemoved.IdentifiedByProperty, childRemoved.Key);
-                if (child is not null)
-                {
-                    children.Remove(child);
-                }
-            }
-
-            return;
-        }
-
-        if (value is IDictionary<string, object?> nested)
-        {
-            RemoveChildFromPath(nested, segments, index + 1, childRemoved);
-        }
-        else if (value is IEnumerable collection)
-        {
-            foreach (var item in collection.OfType<IDictionary<string, object?>>())
-            {
-                RemoveChildFromPath(item, segments, index + 1, childRemoved);
-            }
-        }
-    }
-
-    ExpandoObject ApplyActualChanges(Key key, IEnumerable<Change> changes, ExpandoObject state)
-    {
-        var changesToApply = changes.ToList();
-        var collectionPathsWithChildOperations = changesToApply.GetCollectionPathsWithChildOperations();
-        var wholeCollectionReplacementPaths = changesToApply.GetWholeCollectionReplacementPaths();
-
-        foreach (var change in changesToApply)
-        {
-            switch (change)
-            {
-                case PropertiesChanged<ExpandoObject> propertiesChanged:
-                    state = propertiesChanged.ApplyToStateWithoutChildOperationConflicts(state, collectionPathsWithChildOperations, wholeCollectionReplacementPaths);
-                    break;
-
-                case ChildAdded childAdded:
-                    var collection = state.EnsureCollection<ExpandoObject, object>(childAdded.ChildrenProperty, childAdded.ArrayIndexers);
-                    collection.Add(childAdded.State);
-                    break;
-
-                case ChildRemoved childRemoved:
-                    var childCollection = state.EnsureCollection<ExpandoObject, object>(childRemoved.ChildrenProperty, key.ArrayIndexers);
-                    var childToRemove = childCollection.FindByKey(childRemoved.IdentifiedByProperty, childRemoved.Key);
-                    if (childToRemove is not null)
-                    {
-                        childCollection.Remove(childToRemove);
-                    }
-
-                    break;
-
-                case NestedCleared nestedCleared:
-                    if (state.TryGetExistingPath(nestedCleared.NestedProperty, nestedCleared.ArrayIndexers) is { } existingParent)
-                    {
-                        ((IDictionary<string, object?>)existingParent)[nestedCleared.NestedProperty.LastSegment.Value] = null;
-                    }
-                    break;
-
-                case Joined joined:
-                    state = ApplyActualChanges(key, joined.Changes, state);
-                    break;
-
-                case ResolvedJoin resolvedJoin:
-                    state = ApplyActualChanges(key, resolvedJoin.Changes, state);
-                    break;
-            }
-        }
-
-        return state;
     }
 
     bool TryFindValueInDocument(ExpandoObject document, IPropertyPathSegment[] pathSegments, int segmentIndex, object targetValue)

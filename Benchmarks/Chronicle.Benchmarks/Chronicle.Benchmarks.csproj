@@ -12,7 +12,9 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="Chronicle.Benchmarks.Clustering.Specs" />
     <PackageReference Include="BenchmarkDotNet" />
+    <PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent" />
     <PackageReference Include="MongoDB.Driver" />
     <PackageReference Include="Testcontainers" />
   </ItemGroup>

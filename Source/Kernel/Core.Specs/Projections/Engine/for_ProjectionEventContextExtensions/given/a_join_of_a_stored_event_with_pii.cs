@@ -90,8 +90,7 @@ public class a_join_of_a_stored_event_with_pii : Specification
                 new PropertyPath("advisorId"),
                 Substitute.For<ILogger>(),
                 _eventCompliance,
-                _projectionSchema,
-                _eventTypes)
+                _projectionSchema)
             .Subscribe(_results.Add);
 
         PublishEventThatNeedsTheJoin();

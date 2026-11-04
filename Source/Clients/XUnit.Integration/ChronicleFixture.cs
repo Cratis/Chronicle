@@ -209,7 +209,7 @@ public abstract class ChronicleFixture : IChronicleFixture
             !systemNames.Contains(name) &&
             excludePrefixes?.Any(p => name.StartsWith(p, StringComparison.OrdinalIgnoreCase)) != true))
         {
-            await mongoClient.DropDatabaseAsync(name);
+            await MongoDBDatabaseDropper.DropAndWait(mongoClient, name);
         }
     }
 

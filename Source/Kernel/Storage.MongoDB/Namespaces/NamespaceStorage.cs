@@ -1,10 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Storage.Namespaces;
-using Cratis.Reactive;
 using Microsoft.Extensions.Logging;
 using MongoDB.Driver;
 
@@ -64,9 +64,9 @@ public class NamespaceStorage(
 
     /// <inheritdoc/>
     public ISubject<IEnumerable<NamespaceState>> ObserveAll() =>
-         new TransformingSubject<IEnumerable<MongoDBNamespace>, IEnumerable<NamespaceState>>(
-            GetCollection().Observe(),
-            _ => _.Select(_ => new NamespaceState(_.Name, _.Created)));
+        Subject.Create<IEnumerable<NamespaceState>>(
+            System.Reactive.Observer.Create<IEnumerable<NamespaceState>>(_ => { }),
+            Observable.Defer(() => GetCollection().Observe().Select(namespaces => namespaces.Select(_ => new NamespaceState(_.Name, _.Created)))));
 
     IMongoCollection<MongoDBNamespace> GetCollection() => database.GetCollection<MongoDBNamespace>(WellKnownCollectionNames.Namespaces);
 }

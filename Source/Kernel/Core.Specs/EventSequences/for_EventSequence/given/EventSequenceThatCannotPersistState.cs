@@ -5,10 +5,12 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.EventSequences.Migrations;
+using Cratis.Chronicle.EventTypes;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Patterns;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
+using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Metrics;
 using Cratis.Traces;
 using Microsoft.Extensions.DependencyInjection;
@@ -22,6 +24,7 @@ namespace Cratis.Chronicle.EventSequences.for_EventSequence.given;
 /// unavailable at the moment the warm-start snapshot is taken after a durable append.
 /// </summary>
 /// <param name="storage"><see cref="IStorage"/> for accessing the underlying storage.</param>
+/// <param name="reservedEventSequenceIds">The active provider's reserved sequence names.</param>
 /// <param name="constraintValidatorSetFactory"><see cref="IConstraintValidationFactory"/> for creating a set of constraint validators.</param>
 /// <param name="eventTypeMigrations"><see cref="IEventTypeMigrations"/> for migrating events between generations.</param>
 /// <param name="patternCapture">The pattern capture subscriptions.</param>
@@ -35,9 +38,11 @@ namespace Cratis.Chronicle.EventSequences.for_EventSequence.given;
 /// <param name="options"><see cref="IOptions{T}"/> for <see cref="ChronicleOptions"/>.</param>
 /// <param name="logger"><see cref="ILogger{T}"/> for logging.</param>
 /// <param name="concurrencyValidatorLogger"><see cref="ILogger{T}"/> for the concurrency validator.</param>
+/// <param name="schemaCache">The effective protection schema cache.</param>
 /// <param name="constraintIndexReplayLogger">The constraint replay logger.</param>
 public class EventSequenceThatCannotPersistState(
     IStorage storage,
+    IReservedEventSequenceIds reservedEventSequenceIds,
     IConstraintValidationFactory constraintValidatorSetFactory,
     IEventTypeMigrations eventTypeMigrations,
     IPatternCapture patternCapture,
@@ -51,8 +56,10 @@ public class EventSequenceThatCannotPersistState(
     IOptions<ChronicleOptions> options,
     ILogger<EventSequence> logger,
     ILogger<Concurrency.ConcurrencyValidator> concurrencyValidatorLogger,
+    IEventTypeSchemaCache schemaCache,
     ILogger<ConstraintIndexReplay> constraintIndexReplayLogger) : EventSequence(
         storage,
+        reservedEventSequenceIds,
         constraintValidatorSetFactory,
         eventTypeMigrations,
         patternCapture,
@@ -66,6 +73,7 @@ public class EventSequenceThatCannotPersistState(
         options,
         logger,
         concurrencyValidatorLogger,
+        schemaCache,
         constraintIndexReplayLogger)
 {
     /// <inheritdoc/>

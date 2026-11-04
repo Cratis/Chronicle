@@ -150,7 +150,7 @@ internal sealed class TestingServices : IServices
                 jsonSerializerOptions,
                 services =>
                 {
-                    services.AddSingleton<KernelCore::Cratis.Chronicle.Events.IEventCompliance>(compliance.CreateEventCompliance());
+                    services.AddSingleton<KernelCore::Cratis.Chronicle.Events.IEventCompliance>(compliance.CreateEventCompliance(storage));
                     services.AddSingleton<KernelCore::Cratis.Chronicle.Schemas.IJsonSchemaMetadataManager>(compliance.Manager);
                     services.AddSingleton<KernelCore::Cratis.Chronicle.EventTypes.IEventTypesCacheClient>(new EventSequences.NoOpEventTypesCacheClient());
                     services.AddSingleton(new KernelEventTypeRegistrar(grainFactory));
@@ -244,7 +244,7 @@ internal sealed class TestingServices : IServices
                 new KernelSequencesService(
                     commandPipeline.Value,
                     storage,
-                    compliance.CreateEventCompliance(),
+                    compliance.CreateEventCompliance(storage),
                     jsonSerializerOptions,
                     new EventSequences.InProcessQueryContextManager(),
                     grainFactory,

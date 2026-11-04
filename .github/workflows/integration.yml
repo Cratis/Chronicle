@@ -388,17 +388,6 @@ jobs:
           echo "Previous release: ${release_tag}; image: cratis/chronicle:${image_tag}"
           echo "CRATIS_CHRONICLE_PREVIOUS_IMAGE=cratis/chronicle:${image_tag}" >> "$GITHUB_ENV"
 
-          # The client under test must report a version above the previous release. The compatibility check
-          # orders the two sides by protocol version, and an unstamped build reports 1.0.0, so it would be
-          # treated as the older side and refused for every additive contract element (#5353).
-          if [[ ! "$release_tag" =~ ^v([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
-            echo "::error::Cannot derive a client version from release tag '${release_tag}'."
-            exit 1
-          fi
-          client_version="${BASH_REMATCH[1]}.${BASH_REMATCH[2]}.$((BASH_REMATCH[3] + 1))"
-          echo "Client under test is stamped ${client_version}"
-          echo "CRATIS_CHRONICLE_CLIENT_VERSION=${client_version}" >> "$GITHUB_ENV"
-
       # See client-integration-specs for the single-SDK rationale.
       - name: Setup .Net
         uses: actions/setup-dotnet@v4
@@ -415,6 +404,17 @@ jobs:
           BUILD_OUTPUT_ARTIFACT: ${{ inputs.build-output-artifact }}
         run: tar -I zstd -xf "${BUILD_OUTPUT_ARTIFACT}.tar.zst"
 
+      - name: Read the stamped build version
+        if: matrix.provider == 'RollingUpgrade'
+        run: |
+          set -euo pipefail
+          line=$(python3 .github/scripts/derive-build-version.py)
+          echo "$line" >> "$GITHUB_ENV"
+          if ! grep -a -F -q -- "${line#*=}" Source/Clients/DotNET/bin/Release/net10.0/Cratis.Chronicle.dll; then
+            echo "::error::Downloaded client does not contain the stamped build version ${line#*=}."
+            exit 1
+          fi
+
       - name: Login to GitHub Docker Registry
         uses: docker/login-action@v3
         with:
@@ -425,15 +425,6 @@ jobs:
       - name: Restore SQL clustering project
         run: dotnet restore Integration/SqlClustering/SqlClustering.csproj
 
-      # Only the client side is rebuilt with the stamped version: the new kernel image keeps the shared build, and
-      # the client then compares as newer than both the previous release and this build's kernel.
-      - name: Rebuild the client under test with a version above the previous release
-        if: matrix.provider == 'RollingUpgrade'
-        run: >-
-          dotnet build Integration/SqlClustering/SqlClustering.csproj --no-restore -c Release
-          -p:EnableDevelopmentSymbol=true -p:DisableProxyGenerator=true -p:DisableDockerBuild=true
-          -p:Version="$CRATIS_CHRONICLE_CLIENT_VERSION"
-
       # Only this candidate test shard consumes instrumentation. SDK artifacts layout isolates the
       # entire dependency graph outside the checkout, so shipping bin/obj, packages and images cannot
       # pick up enabled outputs. Keep the ordinary stamped build above for the absence comparison.
@@ -441,17 +432,17 @@ jobs:
         if: matrix.provider == 'RollingUpgrade'
         run: |
           set -euo pipefail
-          printf 'diagnostic-source=%s client-version=%s artifacts=%s\n' "$(git rev-parse HEAD)" "$CRATIS_CHRONICLE_CLIENT_VERSION" "$RUNNER_TEMP/rolling-delivery-diagnostics"
+          printf 'diagnostic-source=%s client-version=%s artifacts=%s\n' "$(git rev-parse HEAD)" "$CRATIS_CHRONICLE_BUILD_VERSION" "$RUNNER_TEMP/rolling-delivery-diagnostics"
           dotnet build .github/scripts/rolling-delivery-il/RollingDeliveryIl.csproj -c Release -warnaserror \
             --artifacts-path "$RUNNER_TEMP/rolling-il-verifier" -o "$RUNNER_TEMP/rolling-il-tool"
           dotnet build Integration/SqlClustering/SqlClustering.csproj -c Release -warnaserror \
             -p:EnableDevelopmentSymbol=true -p:DisableProxyGenerator=true -p:DisableDockerBuild=true \
-            -p:Version="$CRATIS_CHRONICLE_CLIENT_VERSION" -p:EnableRollingDeliveryDiagnostics=true \
+            -p:Version="$CRATIS_CHRONICLE_BUILD_VERSION" -p:EnableRollingDeliveryDiagnostics=true \
             --artifacts-path "$RUNNER_TEMP/rolling-delivery-diagnostics"
           dotnet "$RUNNER_TEMP/rolling-il-tool/RollingDeliveryIl.dll" \
             Source/Clients/DotNET/bin/Release/net10.0/Cratis.Chronicle.dll \
             --enabled "$RUNNER_TEMP/rolling-delivery-diagnostics/bin/DotNET/release/Cratis.Chronicle.dll"
-          grep -a -F -q -- "$CRATIS_CHRONICLE_CLIENT_VERSION" "$RUNNER_TEMP/rolling-delivery-diagnostics/bin/DotNET/release/Cratis.Chronicle.dll"
+          grep -a -F -q -- "$CRATIS_CHRONICLE_BUILD_VERSION" "$RUNNER_TEMP/rolling-delivery-diagnostics/bin/DotNET/release/Cratis.Chronicle.dll"
 
       # Evidence only: an explicit FAIL/INCONCLUSIVE must not suppress the rolling-loss run.
       # Both arms execute existing outputs on this same hosted runner; no rebuild or coverage collector.
