@@ -5,6 +5,10 @@ description: How the Chronicle kernel is organised, how to build and test it loc
 
 The Chronicle kernel stores events, runs observers and processes projections. When contributing, start with the part of `Source/Kernel` that owns the behaviour you want to change, then work with its neighbouring specs.
 
+[From durable append to live delivery and catch-up](./append-to-delivery.md) explains why a successful append does not mean an observer has finished or a read model is current.
+
+[State ownership and recovery](./state-and-recovery.md) explains which stored records drive restart and why a saved read model is not an observer checkpoint.
+
 ## Find the implementation
 
 - `Core` contains the Orleans grains and application behaviour, grouped into areas such as `EventSequences`, `Observation`, `Projections` and `Namespaces`.

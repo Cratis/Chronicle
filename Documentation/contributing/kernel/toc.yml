@@ -1,5 +1,9 @@
 - name: Overview
   href: ./index.md
+- name: From durable append to live delivery and catch-up
+  href: ./append-to-delivery.md
+- name: State ownership and recovery
+  href: ./state-and-recovery.md
 - name: Contracts
   href: ./contracts.mdx
 - name: Services
