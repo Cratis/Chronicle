@@ -6,6 +6,7 @@ using Cratis.Chronicle.Diagnostics.Identifiers;
 using Cratis.OpenTelemetry;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using OpenTelemetry;
 using OpenTelemetry.Instrumentation.AspNetCore;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
@@ -17,6 +18,31 @@ namespace Cratis.Chronicle.Diagnostics.OpenTelemetry;
 /// </summary>
 public static class TelemetryConfiguration
 {
+    /// <summary>
+    /// Adds the shared telemetry setup with Chronicle instrumentation, honoring the configuration.
+    /// </summary>
+    /// <param name="services">The <see cref="IServiceCollection"/>.</param>
+    /// <param name="configuration">The <see cref="IConfiguration"/> holding the Chronicle options and the standard OTEL keys.</param>
+    /// <param name="serviceName">Optional fallback service name; standard OTEL settings still take precedence.</param>
+    /// <returns>The <see cref="OpenTelemetryBuilder"/> for continuation.</returns>
+    /// <remarks>
+    /// The identifier span processor is registered before the shared setup registers its exporters, because processors run
+    /// in registration order and the grain ids must be removed before an exporter reads the span.
+    /// </remarks>
+    public static OpenTelemetryBuilder AddChronicleOpenTelemetry(this IServiceCollection services, IConfiguration configuration, string? serviceName = null)
+    {
+        var builder = services.AddOpenTelemetry();
+        builder.WithTracing(tracing => tracing.AddProcessor(_ => new IdentifierSpanProcessor()));
+        return builder.WithCratis(configuration, options =>
+        {
+            Configure(options, configuration);
+            if (serviceName is not null)
+            {
+                options.ServiceName = serviceName;
+            }
+        });
+    }
+
     /// <summary>
     /// Configures Chronicle instrumentation with default <see cref="ChronicleOptions"/>, without overriding standard OTEL resource or export settings.
     /// </summary>
@@ -50,8 +76,7 @@ public static class TelemetryConfiguration
         tracing
             .ConfigureServices(services => services.Configure<AspNetCoreTraceInstrumentationOptions>(instrumentation =>
                 instrumentation.Filter = context => ServerRequestTraceFilter.ShouldTrace(healthCheckEndpoint, context.Request.Path.Value)))
-            .AddChronicleInstrumentation()
-            .AddProcessor(_ => new IdentifierSpanProcessor());
+            .AddChronicleInstrumentation();
 
         if (chronicle.Telemetry.GrpcClientTracing)
         {

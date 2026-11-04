@@ -3,7 +3,6 @@
 
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
-using Cratis.OpenTelemetry;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using OpenTelemetry.Metrics;
@@ -54,16 +53,12 @@ public static class OpenTelemetryConfigurationExtensions
     /// <param name="serviceName">The name of the service exposed on Open Telemetry.</param>
     /// <returns>The builder for continuation.</returns>
     /// <remarks>
-    /// Deprecated. Use <c language="csharp">AddOpenTelemetry().WithCratis(configuration, TelemetryConfiguration.Configure)</c> instead.
+    /// Deprecated. Use <see cref="TelemetryConfiguration.AddChronicleOpenTelemetry"/> instead.
     /// Retained for source compatibility without compiler warnings.
     /// </remarks>
     public static IServiceCollection AddChronicleTelemetry(this IServiceCollection services, IConfiguration configuration, string serviceName = "Chronicle")
     {
-        services.AddOpenTelemetry().WithCratis(configuration, options =>
-        {
-            TelemetryConfiguration.Configure(options, configuration);
-            options.ServiceName = serviceName;
-        });
+        services.AddChronicleOpenTelemetry(configuration, serviceName);
         return services;
     }
 }

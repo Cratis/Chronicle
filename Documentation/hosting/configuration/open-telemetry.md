@@ -38,7 +38,7 @@ Log export includes both the formatted message and logging scopes, including obs
 
 ### Hosting API
 
-Custom kernel hosts use `AddOpenTelemetry().WithCratis(configuration, options => TelemetryConfiguration.Configure(options, configuration))`. Passing the configuration applies the configured health check endpoint to trace filtering, enables gRPC client tracing when `Cratis:Chronicle:Telemetry:GrpcClientTracing` is `true`, and enables HTTP/2 without TLS for plain `http` OTLP endpoints. `WithCratis` comes from `Cratis.OpenTelemetry`; `TelemetryConfiguration` comes from `Cratis.Chronicle.Diagnostics.OpenTelemetry` and adds Chronicle instrumentation and fallback defaults. The `AddChronicleTelemetry` extension is deprecated and delegates to this shared setup. It is retained for source compatibility without compiler warnings, not removed.
+Custom kernel hosts use `services.AddChronicleOpenTelemetry(configuration)`, which wraps `AddOpenTelemetry().WithCratis(...)` and registers the grain-id sanitizer ahead of the exporters. It applies the configured health check endpoint to trace filtering, enables gRPC client tracing when `Cratis:Chronicle:Telemetry:GrpcClientTracing` is `true`, and enables HTTP/2 without TLS for plain `http` OTLP endpoints. `WithCratis` comes from `Cratis.OpenTelemetry`; `TelemetryConfiguration` comes from `Cratis.Chronicle.Diagnostics.OpenTelemetry` and adds Chronicle instrumentation and fallback defaults. The `AddChronicleTelemetry` extension is deprecated and delegates to this shared setup. It is retained for source compatibility without compiler warnings, not removed.
 
 ## Event source ids and log levels
 
