@@ -21,7 +21,7 @@ public class when_clearing_kernel_storage : Specification
 
     async Task Establish()
     {
-        _registry = new(Substitute.For<IInstancesOf<ISinkFactory>>(), Substitute.For<Orleans.Storage.IJobsStorage>());
+        _registry = new(Substitute.For<IInstancesOf<ISinkFactory>>(), Substitute.For<Choreography.Storage.IJobsStorage>());
         _storage = new(_registry, Substitute.For<ISystemStorage>());
         var ns = _storage.GetEventStore(EventStoreName.System).GetNamespace(EventStoreNamespaceName.Default);
         await ns.AlertIncidents.Apply(new(AlertIncidentTransitionKind.Raised, new IncidentId(Guid.NewGuid()), new("affected", "tenant", "observer", EventSequenceId.Log, "partition"), AlertConditionKind.PartitionFailing, AlertSeverity.Warning, new(3, DateTimeOffset.UnixEpoch, DateTimeOffset.UnixEpoch, FailureKind.Handling, "recorded"), null, DateTimeOffset.UnixEpoch, 1UL));

@@ -21,7 +21,8 @@ public class when_getting_connection_count_with_a_reservation_and_a_connected_cl
             Substitute.For<ILogger<ConnectedClients>>(),
             Substitute.For<IMeter<ConnectedClients>>(),
             Options.Create(new ChronicleOptions()),
-            Substitute.For<IStorage>());
+            Substitute.For<IStorage>(),
+            Substitute.For<IClientDepartureNotifier>());
     }
 
     async Task Because()

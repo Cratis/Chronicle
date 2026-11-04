@@ -84,13 +84,13 @@ jobs:
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
-      # Building Contracts runs the real proto generator. The result must equal what the tag committed, so a
+      # Force the real proto generator even with cached outputs. The result must equal what the tag committed, so a
       # hand-patched or stale generated file cannot reach the wheel.
       - name: Regenerate protos from the tag and require they match what it committed
         working-directory: source
         run: |
           set -euo pipefail
-          dotnet build Source/Kernel/Contracts/Contracts.csproj -c Release
+          dotnet build Source/Kernel/Contracts/Contracts.csproj -c Release -p:ForceCodeGeneration=true
           if ! git diff --quiet -- Source/Kernel/Protobuf; then
             echo "::error::Generated protos at this tag are stale or hand-edited"
             git diff --stat -- Source/Kernel/Protobuf
@@ -128,6 +128,7 @@ jobs:
       - name: Verify contents and write checksums and provenance
         env:
           TAG: ${{ inputs.tag }}
+          ATTACH: ${{ inputs.attach }}
           VERSION: ${{ steps.tag.outputs.version }}
           COMMIT: ${{ steps.release.outputs.commit }}
         run: |
@@ -138,7 +139,7 @@ jobs:
           python3 "$tool" manifest --dist "$dist" --tag "$TAG" --commit "$COMMIT" --proto-root source/Source/Kernel/Protobuf
           python3 "$tool" verify-checksums --dist "$dist" --version "$VERSION"
           {
-            echo "### Python contract assets for \`$TAG\` (attach: ${{ inputs.attach }})"
+            echo "### Python contract assets for \`$TAG\` (attach: $ATTACH)"
             echo
             echo "Source commit \`$COMMIT\`. Temporary release assets, not published to PyPI."
             echo '```'

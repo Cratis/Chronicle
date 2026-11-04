@@ -21,13 +21,15 @@ namespace Cratis.Chronicle.Clients;
 /// <param name="meter"><see cref="IMeter{ConnectedClients}"/> for metrics.</param>
 /// <param name="options"><see cref="IOptions{ChronicleOptions}"/> for configuration.</param>
 /// <param name="storage">The infrastructure storage for disconnected leases.</param>
+/// <param name="departureNotifier">The <see cref="IClientDepartureNotifier"/> telling observers a connection was dropped.</param>
 [KeepAlive]
 [ConnectedClientsPlacement]
 public partial class ConnectedClients(
     ILogger<ConnectedClients> logger,
     [FromKeyedServices(WellKnown.MeterName)] IMeter<ConnectedClients> meter,
     IOptions<ChronicleOptions> options,
-    IStorage storage) : Grain, IConnectedClients
+    IStorage storage,
+    IClientDepartureNotifier departureNotifier) : Grain, IConnectedClients
 {
     readonly TimeSpan _reviseConnectedClientsPeriod = TimeSpan.FromSeconds(options.Value.ConnectedClients.ReviseIntervalSeconds);
     readonly TimeSpan _reservationTtl = TimeSpan.FromSeconds(options.Value.ConnectedClients.ReservationTtlSeconds);
@@ -63,7 +65,14 @@ public partial class ConnectedClients(
     {
         logger.ClientConnected(connectionId);
 
-        _clients[connectionId] = CreateEntry(connectionId, version, isRunningWithDebugger, processId, processPath, machineName, clientType);
+        var entry = CreateEntry(connectionId, version, isRunningWithDebugger, processId, processPath, machineName, clientType);
+        if (_clients.TryGetValue(connectionId, out var existing))
+        {
+            // Observers may still be served by the connection this one replaces; keep them reachable on departure.
+            entry.Observers.UnionWith(existing.Observers);
+        }
+
+        _clients[connectionId] = entry;
 
         // The real connection just registered - if it was preceded by a reservation, that
         // reservation has now been fulfilled. Clear the oldest one rather than leave it to expire
@@ -106,7 +115,7 @@ public partial class ConnectedClients(
     {
         logger.ClientDisconnected(connectionId, reason);
 
-        _clients.Remove(connectionId);
+        var observers = _clients.Remove(connectionId, out var removed) ? removed.Observers.ToArray() : [];
 
         meter.ConnectedClients(_clients.Count);
 
@@ -114,6 +123,13 @@ public partial class ConnectedClients(
         // by kernel time, so a failed scope only delays redelivery until its lease deadline.
         var now = DateTimeOffset.UtcNow;
         _ = Task.Run(() => OccurrenceRecovery.ExpireLeases(storage, connectionId.Value, now, logger));
+
+        // Handing over must not hold up the registry either, and an observer that is not told falls back to the watchdog.
+        if (observers.Length > 0)
+        {
+            _ = Task.Run(() => departureNotifier.Notify(connectionId, observers));
+        }
+
         return Task.CompletedTask;
     }
 
@@ -123,6 +139,7 @@ public partial class ConnectedClients(
         if (_clients.TryGetValue(connectionId, out var entry))
         {
             entry.Client.LastSeen = DateTimeOffset.UtcNow;
+            entry.HasPinged = true;
             return Task.FromResult(true);
         }
 
@@ -182,9 +199,12 @@ public partial class ConnectedClients(
 
         if (Debugger.IsAttached) return;
 
-        foreach (var connectedClient in _clients.Values.Select(entry => entry.Client).ToArray())
+        foreach (var entry in _clients.Values.ToArray())
         {
-            if (connectedClient.IsRunningWithDebugger) continue;
+            var connectedClient = entry.Client;
+
+            // A debugger client that has pinged is paused under a debugger; one that never pinged has no proof of life.
+            if (connectedClient.IsRunningWithDebugger && entry.HasPinged) continue;
 
             if (connectedClient.LastSeen < DateTimeOffset.UtcNow.AddSeconds(-_staleThresholdSeconds))
             {

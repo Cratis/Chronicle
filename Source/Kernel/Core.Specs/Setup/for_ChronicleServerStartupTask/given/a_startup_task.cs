@@ -4,6 +4,7 @@
 using System.Net;
 using System.Reflection;
 using System.Text.Json.Nodes;
+using Cratis.Choreography.Jobs;
 using Cratis.Chronicle.Captures;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
@@ -29,19 +30,21 @@ using Cratis.Chronicle.Projections.Kernel;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Releases;
+using Cratis.Chronicle.Setup;
 using Cratis.Chronicle.Setup.Authentication;
+using Cratis.Chronicle.Setup.Execution;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Chronicle.Storage.Observation.Reactors;
 using Cratis.Chronicle.Storage.Observation.Reducers;
-using Cratis.Orleans.Jobs;
 using ProjectionRegistrationError = Cratis.Chronicle.Projections.Engine.ProjectionRegistrationError;
 
 namespace Orleans.Hosting.for_ChronicleServerStartupTask.given;
 
 public class a_startup_task : Specification
 {
-    ChronicleServerStartupTask _startupTask = null!;
+    private protected ChronicleServerStartupTask _startupTask = null!;
+    protected IKernelProjectionRegistrationRetries _kernelProjectionRetries = null!;
     protected IStorage _storage = null!;
     protected IEventTypes _eventTypes = null!;
     protected IReactors _reactors = null!;
@@ -96,6 +99,7 @@ public class a_startup_task : Specification
             _storageErrorClassifier,
             _localSiloDetails,
             _clusterReleases,
+            _kernelProjectionRetries,
             new StartupLogger(_logMessages),
             _timeProvider);
     }
@@ -110,6 +114,7 @@ public class a_startup_task : Specification
         _patternCapture = Substitute.For<IPatternCapture>();
         _projectionsServiceClient = Substitute.For<IProjectionsServiceClient>();
         _kernelProjections = Substitute.For<IKernelProjections>();
+        _kernelProjectionRetries = Substitute.For<IKernelProjectionRegistrationRetries>();
         _grainFactory = Substitute.For<IGrainFactory>();
         _authenticationService = new TestAuthenticationService(() => _bootstrapClientsEnsured = true);
         _storageErrorClassifier = Substitute.For<IStorageErrorClassifier>();
@@ -186,6 +191,13 @@ public class a_startup_task : Specification
         _grainFactory.GetGrain<IObserver>(_reducerObserverKey).Returns(_reducerObserver);
         _grainFactory.GetGrain<IObserver>(_reactorObserverKey).Returns(_reactorObserver);
         _namespaces.GetAll().Returns(Task.FromResult<IEnumerable<EventStoreNamespaceName>>([_namespace]));
+    }
+
+    protected static async Task FailThroughIncomingCallFilter(Exception exception)
+    {
+        var context = Substitute.For<IIncomingGrainCallContext>();
+        context.Invoke().Returns(Task.FromException(exception));
+        await new SerializableFailureIncomingCallFilter().Invoke(context);
     }
 
     protected Task Execute() => Execute(CancellationToken.None);

@@ -23,7 +23,8 @@ internal static class AppendedEventConverters
         appendedEvent.OriginalContent,
         appendedEvent.Revisions.Select(r => r.ToApi()).ToArray(),
         appendedEvent.GenerationalContent.Select(kvp => new KeyValuePair<int, string>(kvp.Key, kvp.Value)).ToArray(),
-        (appendedEvent.RevisedGeneration ?? appendedEvent.Revisions.LastOrDefault()?.EventTypeGeneration)?.Value);
+        (appendedEvent.RevisedGeneration ?? appendedEvent.Revisions.LastOrDefault()?.EventTypeGeneration)?.Value,
+        appendedEvent.ErasedProperties);
 
     /// <summary>
     /// Converts a collection of storage <see cref="Concepts.Events.AppendedEvent"/> to a collection of <see cref="AppendedEvent"/>.

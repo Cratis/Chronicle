@@ -3,7 +3,7 @@
 
 import sinon, { SinonStubbedInstance } from 'sinon';
 import { ObserversViewModel } from '../../../ObserversViewModel';
-import { ClearObserverQuarantine, FastForward, RemoveObserver, ReplayObserver as Replay } from 'Features/Observation';
+import { ClearObserverQuarantine, FastForward, RemoveObserver, ReplayPartition, ReplayObserver as Replay } from 'Features/Observation';
 import { FastForwardResult, ObserverRemovalOutcome, ObserverRemovalResult } from 'Features/Concepts/Observation';
 import { Dialogs } from '@cratis/arc.react.mvvm/dialogs';
 import { type EventStoreAndNamespaceParams } from 'Shared';
@@ -27,9 +27,11 @@ export class a_view_model {
 
         this.params = { eventStore: 'eventStore', namespace: 'namespace' };
 
-        this.viewModel = new ObserversViewModel(this.replay, this.clearObserverQuarantine, this.removeObserver, this.dialogs, this.fastForward);
+        this.replayPartition = new ReplayPartition();
+        this.viewModel = new ObserversViewModel(this.replay, this.clearObserverQuarantine, this.removeObserver, this.dialogs, this.fastForward, this.replayPartition);
     }
 
+    replayPartition: ReplayPartition;
     replay: Replay;
     replayResult: { onException: sinon.SinonStub; onValidationFailure: sinon.SinonStub };
     clearObserverQuarantine: ClearObserverQuarantine;

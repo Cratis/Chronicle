@@ -74,6 +74,22 @@ public class all_dependencies : Specification
         })]
     };
 
+    protected static ReduceOperationMessage PageWith(params (string Partition, string? InitialState, ulong[] SequenceNumbers)[] partitions) => new()
+    {
+        DeliveryId = 42,
+        Partitions = [.. partitions.Select(partition => new ReducerPartition
+        {
+            Partition = partition.Partition,
+            InitialState = partition.InitialState,
+            Events = [.. partition.SequenceNumbers.Select(number => new Contracts.Events.AppendedEvent
+            {
+                Context = (EventContext.Empty with { EventType = new("something-happened", 1), SequenceNumber = number }).ToContract(),
+                Content = "{\"name\":\"event\"}",
+                GenerationalContent = new Dictionary<int, string>()
+            })]
+        })]
+    };
+
     public record SomethingHappened(string Name);
 
     public record State(string Name);

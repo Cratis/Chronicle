@@ -19,6 +19,16 @@ public class InFlightEventsStorage(IEventStoreNamespaceDatabase database) : IInF
     readonly IMongoCollection<InFlightEvent> _collection = database.GetCollection<InFlightEvent>(WellKnownCollectionNames.InFlightEvents);
     readonly ConcurrentDictionary<string, byte> _ensuredIndexes = new();
 
+    /// <summary>
+    /// Gets the in-flight event indexes.
+    /// </summary>
+    internal static IReadOnlyList<CreateIndexModel<InFlightEvent>> Indexes { get; } =
+    [
+        new(
+            Builders<InFlightEvent>.IndexKeys.Ascending(_ => _.ObserverId).Ascending(_ => _.Partition).Ascending(_ => _.EventSequenceNumber),
+            new CreateIndexOptions { Name = "observerId_partition_eventSequenceNumber", Background = true })
+    ];
+
     /// <inheritdoc/>
     public async Task Add(ObserverId observerId, Key partition, EventSequenceNumber eventSequenceNumber)
     {
@@ -64,13 +74,5 @@ public class InFlightEventsStorage(IEventStoreNamespaceDatabase database) : IInF
         return await cursor.ToListAsync().ConfigureAwait(false);
     }
 
-    Task EnsureIndexes() =>
-        _collection.EnsureIndexesOnceAsync(
-            _ensuredIndexes,
-            new CreateIndexModel<InFlightEvent>(
-                Builders<InFlightEvent>.IndexKeys
-                    .Ascending(_ => _.ObserverId)
-                    .Ascending(_ => _.Partition)
-                    .Ascending(_ => _.EventSequenceNumber),
-                new CreateIndexOptions { Name = "observerId_partition_eventSequenceNumber", Background = true }));
+    Task EnsureIndexes() => _collection.EnsureIndexesOnceAsync(_ensuredIndexes, Indexes.ToArray());
 }

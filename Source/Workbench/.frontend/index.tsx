@@ -29,7 +29,7 @@ configureMobx({
 // need the preset and the per-component `defaults` that used to arrive through `styledMode()`.
 ReactDOM.createRoot(document.getElementById('root')!).render(
     <React.StrictMode>
-        <CratisComponentsProvider value={{ locale: 'en-US' }}>
+        <CratisComponentsProvider value={{ locale: 'en-US' }} toaster>
             <PrimeReactProvider
                 license={primeUiLicense}
                 ripple

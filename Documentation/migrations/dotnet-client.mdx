@@ -1,9 +1,9 @@
 ---
-description: Declare Chronicle event type migrations in a .NET client by marking generations and defining migrators, then register them with the kernel.
+description: The C# syntax for declaring Chronicle event type migrations: marking generations, defining migrators and the C# discovery and validation behavior.
 ---
 # C# client usage
 
-This guide covers how to declare event type migrations in a .NET client, the operations available to you, and what happens when your migrators are registered with the Chronicle Kernel.
+This page covers the C# syntax. For what each operation does, see [Event Type Migrations](../concepts/event-type-migrations.mdx).
 
 ## Prerequisites
 
@@ -60,6 +60,10 @@ Maps a property from its old name in the source generation to its new name in th
 
 Provides a literal default for a property that did not exist in the source generation. Chronicle applies this value to any event stored before the property was introduced.
 
+When the default is an object, its members are named with the client's JSON naming policy (`[JsonPropertyName]` takes precedence), the same way the event's payload and schema are. The same applies to object values in `MapValues`, so a map can match object payloads under those policies. Scalars, enums (rendered as their underlying number), concepts and raw string paths are unchanged, and so is the output under the default naming policy.
+
+This changes persisted migration content for clients that use a camelCase or custom naming policy, and therefore changes the migration hash. Content derived after the upgrade uses the corrected names; generations that were already derived are not corrected. Upgrade all clients of an event store promptly: while old and new clients alternate registrations, each replacement of the current definition flips it, clears its cache and re-subscribes pattern capture. Registering the same definition again is idempotent.
+
 <ChronicleClientTabs snippet="migrations/dotnet-client/default-value" variants="csharp" />
 
 ## Properties inside a nested object
@@ -76,41 +80,34 @@ Separators, default values, and mapped values are literals and are not renamed. 
 
 A path that goes nowhere is rejected at registration with `InvalidMigrationPropertyForEventType`, naming the path so you can see which segment is wrong.
 
+## Properties inside the elements of a collection
+
+A property on every element of a list is addressed with `Select`: `DefaultValue(m => m.Days.Select(day => day.Activity), "work")` gives each element that does not carry an `activity` the default. The path is written `days[].activity`, and a raw string path may use the same form. The kernel applies the operation element by element and keeps the collection. `RenamedFrom` and `MapValues` accept the same form when their sources are written with the same `days[].` prefix. A path that reaches into a collection without `[]` is refused rather than replacing the collection with an object.
+
 ## When you need no operations at all
 
-Adding or removing an **optional** property — at any depth — needs a migration class, but no property operations inside it:
+Adding or removing an **optional** property, at any depth, needs a migration class but no property operations inside it. The [concept page](../concepts/event-type-migrations.mdx#when-no-operations-are-needed) explains why:
 
 <ChronicleClientTabs snippet="migrations/dotnet-client/no-operations" variants="csharp" />
 
-This looks like something is missing, and it isn't. Chronicle converts a payload by walking the *target* generation's schema: upcasting materializes a property the older payload never carried as absent, and downcasting drops one the older generation does not declare. The class only has to exist so the generation chain is complete — see [Validation: missing migrators](./validation).
-
-Reach for `DefaultValue` when absent is the wrong answer and you want a specific value instead.
+The class only has to exist so the generation chain is complete. See [Validation: missing migrators](#validation-missing-migrators). Use `DefaultValue` when absent is the wrong answer.
 
 ## MapValues
 
-The four operations above move values between properties. `MapValues` changes the values themselves — it says which value in one generation is which value in the other, which is what you need when an enum is renumbered or a code set is replaced wholesale.
-
-Unlike the property-builder operations, a value map is declared by overriding `MapValues` on the migration:
+A value map changes the values themselves. See [Value map](../concepts/event-type-migrations.mdx#value-map) for what it does. In C#, you declare it by overriding `MapValues` on the migration, unlike the property-builder operations:
 
 <ChronicleClientTabs snippet="migrations/dotnet-client/map-values" variants="csharp" />
 
-The map is applied forward when upcasting and inverted when downcasting, so you state it once. Values it does not mention are carried across unchanged, and two values collapsing onto one take the first pair declared for that value on the way back.
-
-`MapValues` runs before `Upcast` and `Downcast`, so a direction that declares its own transformation for the same property keeps it. That is also the way to express a translation that is not symmetric — several values collapsing onto one, where the way back has to make a choice the forward map cannot state. Declare that as a `MapValues` on the property builder, per direction:
+For a translation that is not symmetric (see [Value maps in one direction](../concepts/event-type-migrations.mdx#value-maps-in-one-direction)), declare `MapValues` on the property builder, per direction:
 
 <ChronicleClientTabs snippet="migrations/dotnet-client/map-values-one-direction" variants="csharp" />
 
-:::note[Client coverage]
-`MapValues` is currently C#-only.
-:::
-
 ## Multi-generation migrations
 
-If your event type spans more than two generations, define one migrator per generation pair. Chronicle chains them automatically.
+Define one migrator per generation pair. Chronicle chains them; see [Chaining several generations](../concepts/event-type-migrations.mdx#chaining-several-generations).
 
 <ChronicleClientTabs snippet="migrations/dotnet-client/multi-generation" variants="csharp" />
 
-When a generation 1 event arrives, the Kernel chains the upcasts: 1→2, then 2→3, and stores all three generations.
 
 ## How registration works
 
@@ -121,7 +118,7 @@ When your application connects to Chronicle, the client:
 3. Converts the declarations into JmesPath expressions
 4. Sends the complete `EventTypeDefinition` — including all generations and their migration definitions — to the Kernel during event type registration
 
-From that point on, the Kernel applies the migrations autonomously on every event append, without any further involvement from the client.
+From that point on, the Kernel applies the migrations on every event append, without further involvement from the client. The steps are the same for every client; see [Registration](../concepts/event-type-migrations.mdx#registration).
 
 ## Validation: missing migrators
 

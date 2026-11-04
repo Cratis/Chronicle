@@ -21,6 +21,9 @@
         <_RidArgument Condition="'$(KernelPublishRid)' != ''">-r $(KernelPublishRid) --self-contained false</_RidArgument>
     </PropertyGroup>
 
+    <!-- This non-SDK helper needs the same distribution guard as every SDK project. -->
+    <Import Project="../Directory.Build.targets" />
+
     <Target Name="PublishKernel">
         <!-- `dotnet publish` merges into the target directory rather than replacing it, so a previous
              publish with different arguments (e.g. without -r, leaving a RID-specific subfolder) can shadow

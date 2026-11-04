@@ -1,12 +1,12 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Choreography.Jobs;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Observation.Claims;
 using Cratis.Chronicle.Storage.Observation;
-using Cratis.Orleans.Jobs;
 
 #pragma warning disable RCS1075 // Shadow diagnostics are write-only: a failing logger must never affect the observer
 
@@ -21,6 +21,7 @@ public partial class Observer
     void RestoreShadowLedger()
     {
         _shadowClaims = ShadowClaimLedger.Restore(State.PartitionClaims, State.ObserverWideClaim, State.OwnershipRevision, out var legacy);
+        _claimsTrusted = true;
         if (legacy)
         {
             logger.ShadowClaimsSeededFromLegacyState(_observerId);
@@ -37,21 +38,32 @@ public partial class Observer
     void ShadowRestoreFailed(Exception exception)
     {
         // Acceptable while claims are a shadow; the enforcing increment must not start from an empty ledger (DR0018).
+        // A ledger started over issues epochs from the beginning again, which a stale job may carry: stamp none of them.
         _shadowClaims = new();
+        _claimsTrusted = false;
         logger.ShadowClaimsRestoreFailed(_observerId, exception);
     }
 
     (IEnumerable<PartitionClaim>? Claims, ObserverWideClaim? Wide, OwnershipRevision? Revision) ShadowClaimsSnapshot()
     {
         var snapshot = (Claims: State.PartitionClaims, Wide: State.ObserverWideClaim, Revision: State.OwnershipRevision);
-        GuardShadowClaims(() =>
+        try
         {
-            // Reconcile reports stale releases, but silently seeds missing claims. Report those before they are repaired.
-            ReportShadowDivergences(_shadowClaims.Compare(State.ReplayingPartitions, State.CatchingUpPartitions, IsObserverReplaying())
-                .Where(_ => _.Divergence == ShadowClaimDivergence.DerivedSetWithoutClaim));
-            ReportShadowDivergences(_shadowClaims.Reconcile(State.ReplayingPartitions, State.CatchingUpPartitions, IsObserverReplaying(), ShadowResumePosition()));
+            if (!_shadowClaims.IsAligned(State.ReplayingPartitions, State.CatchingUpPartitions, IsObserverReplaying()))
+            {
+                // Reconcile reports stale releases, but silently seeds missing claims. Report those before they are repaired.
+                ReportShadowDivergences(_shadowClaims.Compare(State.ReplayingPartitions, State.CatchingUpPartitions, IsObserverReplaying())
+                    .Where(_ => _.Divergence == ShadowClaimDivergence.DerivedSetWithoutClaim).ToArray());
+                ReportShadowDivergences(_shadowClaims.Reconcile(State.ReplayingPartitions, State.CatchingUpPartitions, IsObserverReplaying(), ShadowResumePosition()));
+            }
+
             snapshot = _shadowClaims.Snapshot();
-        });
+        }
+        catch (Exception exception)
+        {
+            ReportShadowClaimsFailure(exception);
+        }
+
         return snapshot;
     }
 
@@ -61,20 +73,47 @@ public partial class Observer
         ? State.LastHandledEventSequenceNumber.Next()
         : EventSequenceNumber.First;
 
-    void ShadowGrantPartition(Key partition, ClaimHolderKind kind, JobId? job, EventSequenceNumber resume) =>
-        GuardShadowClaims(() => ReportShadowDivergences(_shadowClaims.Grant(partition, kind, job, resume)));
-
-    void ShadowHandOverPartition(Key partition) => GuardShadowClaims(() => _shadowClaims.HandOver(partition));
-
-    void ShadowGrantObserverWide(ClaimHolderKind kind, JobId? job, EventSequenceNumber resume) =>
-        GuardShadowClaims(() => ReportShadowDivergences(_shadowClaims.GrantObserverWide(kind, job, resume)));
-
-    void ShadowHandOverObserverWide() => GuardShadowClaims(_shadowClaims.HandOverObserverWide);
-
-    void ReportShadowDivergences(IEnumerable<(Key? Partition, ShadowClaimDivergence Divergence)> divergences)
+    void ShadowHandOverPartition(Key partition, ClaimHolderKind holder)
     {
-        foreach (var (partition, divergence) in divergences)
+        try
         {
+            _shadowClaims.HandOver(partition, holder);
+        }
+        catch (Exception exception)
+        {
+            ReportShadowClaimsFailure(exception);
+        }
+    }
+
+    void ShadowGrantObserverWide(ClaimHolderKind kind, JobId? job, EventSequenceNumber resume)
+    {
+        try
+        {
+            ReportShadowDivergences(_shadowClaims.GrantObserverWide(kind, job, resume));
+        }
+        catch (Exception exception)
+        {
+            ReportShadowClaimsFailure(exception);
+        }
+    }
+
+    void ReportShadowClaimsFailure(Exception exception)
+    {
+        try
+        {
+            logger.ShadowClaimsFailed(_observerId, exception);
+        }
+        catch (Exception)
+        {
+            // A failing diagnostic logger must not turn write-only shadow data into a delivery failure.
+        }
+    }
+
+    void ReportShadowDivergences(IReadOnlyList<(Key? Partition, ShadowClaimDivergence Divergence)> divergences)
+    {
+        for (var i = 0; i < divergences.Count; i++)
+        {
+            var (partition, divergence) = divergences[i];
             logger.ShadowClaimDivergence(_observerId, divergence, partition?.ToString());
             _metrics?.ClaimDivergence(divergence);
         }

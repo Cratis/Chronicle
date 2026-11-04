@@ -1,14 +1,16 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Choreography.Jobs;
 using Cratis.Chronicle.Concepts.Observation;
-using Cratis.Orleans.Jobs;
 
 namespace Cratis.Chronicle.Storage.Observation;
 
 /// <summary>
 /// Provider-independent row behaviors. Each fact exercises one contract, on fresh provider storage.
 /// </summary>
+// Each fact writes different rows into the same provider storage and needs a fresh database.
+[PerFactSpecificationLifecycle]
 public abstract partial class DefinitionChangeRowsContract : Specification
 {
     readonly ObserverKey _observer = new("observer", "store", "namespace", "event-log");

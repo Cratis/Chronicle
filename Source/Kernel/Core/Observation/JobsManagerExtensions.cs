@@ -2,12 +2,13 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using Cratis.Choreography.Jobs;
+using Cratis.Choreography.Storage.Jobs;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Observation.Jobs;
+using Cratis.Chronicle.Storage.Observation;
 using Cratis.Monads;
-using Cratis.Orleans.Jobs;
-using Cratis.Orleans.Storage.Jobs;
 using Microsoft.Extensions.Logging;
 namespace Cratis.Chronicle.Observation;
 
@@ -73,7 +74,7 @@ public static partial class JobsManagerExtensions
     /// <param name="onStartNew">The optional callback when a new job needs to be started.</param>
     /// <param name="onResumeRefused">The optional callback when a stopped job was found but refused to resume, so nothing owns the work.</param>
     /// <param name="concludedJobs">The optional jobs that have already reported their work as done and therefore can not own it, even while still finalizing. Read after the lookup and never changed; forgetting them is up to their owner.</param>
-    /// <param name="maxJobsToDrop">The most stopped jobs that were never prepared to delete instead of resuming them; 0 drops none. Cratis.Orleans refuses to resume them, so they would block the work for good. When any exist, up to the allowed number is dropped and no job is resumed or started in this call; the next call looks the jobs up again.</param>
+    /// <param name="maxJobsToDrop">The most stopped jobs that were never prepared to delete instead of resuming them; 0 drops none. Cratis.Choreography refuses to resume them, so they would block the work for good. When any exist, up to the allowed number is dropped and no job is resumed or started in this call; the next call looks the jobs up again.</param>
     /// <typeparam name="TJob">The type of the job.</typeparam>
     /// <typeparam name="TRequest">The type of the observer request.</typeparam>
     /// <returns>The <see cref="JobId"/> of the running, resumed, or newly started job; or <see cref="JobId.NotSet"/> if no job could be started.</returns>
@@ -113,7 +114,7 @@ public static partial class JobsManagerExtensions
     /// <param name="onStartNew">The optional callback when a new job needs to be started.</param>
     /// <param name="onResumeRefused">The optional callback when a stopped job was found but refused to resume, so nothing owns the work.</param>
     /// <param name="concludedJobs">The optional jobs that have already reported their work as done and therefore can not own it, even while still finalizing. Read after the lookup and never changed; forgetting them is up to their owner.</param>
-    /// <param name="maxJobsToDrop">The most stopped jobs that were never prepared to delete instead of resuming them; 0 drops none. Cratis.Orleans refuses to resume them, so they would block the work for good. When any exist, up to the allowed number is dropped and no job is resumed or started in this call; the next call looks the jobs up again.</param>
+    /// <param name="maxJobsToDrop">The most stopped jobs that were never prepared to delete instead of resuming them; 0 drops none. Cratis.Choreography refuses to resume them, so they would block the work for good. When any exist, up to the allowed number is dropped and no job is resumed or started in this call; the next call looks the jobs up again.</param>
     /// <typeparam name="TJob">The type of the job.</typeparam>
     /// <typeparam name="TRequest">The type of the observer request.</typeparam>
     /// <returns>The <see cref="JobId"/> of the running, resumed, or newly started job; or <see cref="JobId.NotSet"/> if no job could be started.</returns>
@@ -161,6 +162,8 @@ public static partial class JobsManagerExtensions
     /// <param name="concludedJobs">The optional jobs that have already reported their work as done.</param>
     /// <param name="maxJobsToDrop">The most never-prepared stopped jobs to delete; 0 drops none.</param>
     /// <param name="onJobsDropped">The optional callback with the number of jobs that were deleted, called before anything is resumed or started.</param>
+    /// <param name="stampBeforeStart">The optional callback granting and persisting the claim a new job runs under, returning the request stamped with its epoch. Called after <paramref name="onStartNew"/>, right before the job is started.</param>
+    /// <param name="isObsolete">The optional check for a request carrying an ownership epoch its claim no longer holds. A stopped job running such a request is refused when resumed, so it is passed over rather than resumed.</param>
     /// <typeparam name="TJob">The type of the job.</typeparam>
     /// <typeparam name="TRequest">The type of the observer request.</typeparam>
     /// <returns>The <see cref="JobId"/> of the running, resumed, or newly started job; or <see cref="JobId.NotSet"/> if no job could be started.</returns>
@@ -175,7 +178,9 @@ public static partial class JobsManagerExtensions
         Func<Task>? onResumeRefused,
         ICollection<JobId>? concludedJobs,
         int maxJobsToDrop,
-        Action<int>? onJobsDropped)
+        Action<int>? onJobsDropped,
+        Func<TRequest, Task<TRequest>>? stampBeforeStart = null,
+        Func<IObserverJobRequest, bool>? isObsolete = null)
         where TJob : IJob<TRequest>
         where TRequest : class, IObserverJobRequest
     {
@@ -204,7 +209,7 @@ public static partial class JobsManagerExtensions
             return alreadyRunningJob.Id;
         }
 
-        var pausedJobs = jobs.Where(job => job.Status == JobStatus.Stopped).ToList();
+        var pausedJobs = jobs.Where(job => job.Status == JobStatus.Stopped && !(isObsolete?.Invoke((TRequest)job.Request) ?? false)).ToList();
         if (maxJobsToDrop > 0 && !await jobsManager.TryDropJobsThatCanNeverResume(logger, pausedJobs, maxJobsToDrop, onJobsDropped))
         {
             // A job that can never resume blocks the work, or may still do so after a failed delete, so nothing is started until a later lookup lists none. The caller re-arms its own retry.
@@ -234,6 +239,11 @@ public static partial class JobsManagerExtensions
 
         logger.NeedToStartJob();
         await onStartNew.Invoke();
+        if (stampBeforeStart is not null)
+        {
+            request = await stampBeforeStart(request);
+        }
+
         var startResult = await jobsManager.Start<TJob, TRequest>(request);
         if (startResult is not null && startResult.TryGetResult(out var jobId))
         {
@@ -264,7 +274,7 @@ public static partial class JobsManagerExtensions
         (job.IsPreparingOrRunning || job.Status == JobStatus.Removing) && !JobLiveness.HasConcludedAllStepsLongAgo(job, now);
 
     /// <summary>
-    /// Gets whether a job ever reached its steps. Mirrors Job.JobIsPrepared in Cratis.Orleans: a stopped job that
+    /// Gets whether a job ever reached its steps. Mirrors Job.JobIsPrepared in Cratis.Choreography: a stopped job that
     /// was never prepared is refused when resumed, so it can never run again.
     /// </summary>
     /// <param name="job">The <see cref="JobState"/> to check.</param>
@@ -284,17 +294,22 @@ public static partial class JobsManagerExtensions
     /// <param name="jobs">The jobs to inspect.</param>
     /// <param name="observerKey">The observer that owns the work.</param>
     /// <param name="now">The current time.</param>
+    /// <param name="observerState">The optional observer state holding the persisted ownership claims. When given, a stopped job whose request carries an epoch its claim no longer holds owns nothing: it is refused when resumed.</param>
     /// <typeparam name="TRequest">The partition job request kind.</typeparam>
     /// <returns>The held partition keys.</returns>
-    internal static ISet<Key> PartitionsHeldBy<TRequest>(this IEnumerable<JobState> jobs, ObserverKey observerKey, DateTimeOffset now)
+    internal static ISet<Key> PartitionsHeldBy<TRequest>(this IEnumerable<JobState> jobs, ObserverKey observerKey, DateTimeOffset now, ObserverState? observerState = null)
         where TRequest : ObserverPartitionedJobRequest =>
         jobs.Where(job =>
             job.Request is TRequest request &&
             request.ObserverKey == observerKey &&
             !job.Status.HasFinished() &&
-            !JobLiveness.HasConcludedAllStepsLongAgo(job, now))
+            !JobLiveness.HasConcludedAllStepsLongAgo(job, now) &&
+            !IsStoppedUnderObsoleteClaim(job, request, observerState))
             .Select(job => ((TRequest)job.Request).Key)
             .ToHashSet();
+
+    static bool IsStoppedUnderObsoleteClaim(JobState job, IObserverJobRequest request, ObserverState? observerState) =>
+        observerState is not null && job.Status == JobStatus.Stopped && ObserverJobScope.IsObsolete(request, observerState);
 
     /// <summary>
     /// Removes a stopped job whose resume was refused when it was stopped before it prepared any step.
