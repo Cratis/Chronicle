@@ -1,0 +1,1 @@
+KEEP: owned by L69 (session 01a186b6). It holds the delivered #5409 part 1 (train6) and #4414b (train7) branches plus benchmark outputs. Do not delete bin/obj or the worktree until those trains are gated. Ask L69 first. This file is untracked; do not commit it.
