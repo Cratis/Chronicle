@@ -8,4 +8,4 @@ namespace Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
 /// <param name="NamespaceName">The namespace.</param>
 /// <param name="EventSequenceId">The event sequence.</param>
 /// <param name="EventSourceType">The event source type, when appending one event.</param>
-internal record EventSequenceSpanContext(string EventStoreName, string NamespaceName, string EventSequenceId, string? EventSourceType = null);
+internal readonly record struct EventSequenceSpanContext(string EventStoreName, string NamespaceName, string EventSequenceId, string? EventSourceType = null);

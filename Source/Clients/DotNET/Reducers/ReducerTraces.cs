@@ -8,9 +8,18 @@ using Cratis.Traces;
 
 namespace Cratis.Chronicle.Reducers;
 
-/// <summary>Starts reducer spans with the selected naming convention.</summary>
+/// <summary>
+/// Starts reducer spans with the selected naming convention.
+/// </summary>
 internal static class ReducerTraces
 {
+    static readonly ClientSpanDefinition _handle = new("client.reducer.handle", WellKnownClientSpanNames.ReducerHandle, ActivityKind.Consumer)
+    {
+        LegacyKeys = ["event_store_name", "namespace_name", "event_sequence_id", "reducer_id"],
+        ConventionKeys = [WellKnownTelemetryAttributes.EventStoreName, WellKnownTelemetryAttributes.EventStoreNamespace, WellKnownTelemetryAttributes.EventSequenceId, WellKnownTelemetryAttributes.ObserverId],
+        ObserverType = "reducer"
+    };
+
     /// <summary>Starts a reducer handling span.</summary>
     /// <param name="source">The activity source.</param>
     /// <param name="context">The routing attributes.</param>
@@ -19,10 +28,7 @@ internal static class ReducerTraces
     internal static IActivityScope<Reducers> Handle(this IActivitySource<Reducers> source, ObserverSpanContext context, ClientSpanNames names = ClientSpanNames.Legacy) =>
         ClientSpanCompatibility.Start(
             source,
-            new("client.reducer.handle", WellKnownClientSpanNames.ReducerHandle, ActivityKind.Consumer),
+            _handle,
             names,
-            new("event_store_name", context.EventStoreName),
-            new("namespace_name", context.NamespaceName),
-            new("event_sequence_id", context.EventSequenceId),
-            new("reducer_id", context.ObserverId));
+            new(context.EventStoreName, context.NamespaceName, context.EventSequenceId, context.ObserverId));
 }

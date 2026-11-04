@@ -7,7 +7,7 @@ namespace Cratis.Chronicle.EventSequences.for_EventSequence.when_appending;
 
 public class with_hashed_event_source_id_tracing : given.an_event_sequence_with_identifier_tracing
 {
-    protected override ChronicleTelemetryOptions CreateTelemetry() => new() { EventSourceIdTracing = EventSourceIdTracing.Hashed, EventSourceIdHashKey = Key };
+    protected override ChronicleTelemetryOptions CreateTelemetry() => new() { SpanNames = ClientSpanNames.Convention, EventSourceIdTracing = EventSourceIdTracing.Hashed, EventSourceIdHashKey = Key };
 
     async Task Because() => await Append();
 

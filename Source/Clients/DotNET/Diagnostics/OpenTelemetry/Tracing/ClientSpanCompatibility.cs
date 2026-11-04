@@ -7,56 +7,59 @@ using Cratis.Traces;
 namespace Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
 
 /// <summary>
-/// Starts a single span with the selected name and both the existing and shared attribute keys.
+/// Starts client spans using precomputed operation names and attribute keys.
 /// </summary>
 internal static class ClientSpanCompatibility
 {
-    static readonly Dictionary<string, string> _attributes = new()
-    {
-        ["event_store_name"] = WellKnownTelemetryAttributes.EventStoreName,
-        ["namespace_name"] = WellKnownTelemetryAttributes.EventStoreNamespace,
-        ["event_sequence_id"] = WellKnownTelemetryAttributes.EventSequenceId,
-        ["event_source_type"] = WellKnownTelemetryAttributes.EventSourceType,
-        ["event_source_id"] = WellKnownTelemetryAttributes.EventSourceId,
-        ["correlation_id"] = WellKnownTelemetryAttributes.CorrelationId,
-        ["reactor_id"] = WellKnownTelemetryAttributes.ObserverId,
-        ["reducer_id"] = WellKnownTelemetryAttributes.ObserverId
-    };
-
     /// <summary>
-    /// Attributes that are only set after the span has started, so samplers never see them. The event source id
-    /// can be a raw identifier.
-    /// </summary>
-    static readonly HashSet<string> _afterStart = ["event_source_id"];
-
-    /// <summary>
-    /// Selects the operation name before sampling so legacy mode preserves both the operation and display names.
+    /// Starts an operation only when its source has listeners.
     /// </summary>
     /// <typeparam name="T">The owner of the span.</typeparam>
     /// <param name="source">The activity source.</param>
-    /// <param name="definition">The names and kind of the operation.</param>
+    /// <param name="definition">The precomputed operation metadata.</param>
     /// <param name="names">The selected naming mode.</param>
-    /// <param name="tags">The existing attribute keys and values.</param>
-    /// <returns>The activity scope.</returns>
-    internal static IActivityScope<T> Start<T>(IActivitySource<T> source, ClientSpanDefinition definition, ClientSpanNames names, params KeyValuePair<string, object?>[] tags)
+    /// <param name="values">The operation's attribute values.</param>
+    /// <returns>The activity scope, or a shared empty scope when nobody listens.</returns>
+    internal static IActivityScope<T> Start<T>(IActivitySource<T> source, ClientSpanDefinition definition, ClientSpanNames names, ClientSpanValues values)
     {
-        var attributes = new ActivityTagsCollection();
-        foreach (var (key, value) in tags)
-        {
-            if (value is null || _afterStart.Contains(key)) continue;
-            if (_attributes.TryGetValue(key, out var shared)) attributes[shared] = value;
-            if (key == "reactor_id") attributes[WellKnownTelemetryAttributes.ObserverType] = "reactor";
-            if (key == "reducer_id") attributes[WellKnownTelemetryAttributes.ObserverType] = "reducer";
-        }
+        if (source?.ActualSource is not { } actualSource || !actualSource.HasListeners()) return EmptyScope<T>.Instance;
 
-        var name = names == ClientSpanNames.Convention ? definition.ConventionName : definition.LegacyName;
-        var activity = source?.ActualSource?.StartActivity(name, definition.Kind, parentContext: default, tags: attributes);
-        foreach (var (key, value) in tags)
-        {
-            activity?.SetTag(key, value);
-            if (value is not null && _afterStart.Contains(key)) activity?.SetTag(_attributes[key], value);
-        }
+        return names == ClientSpanNames.Convention
+            ? StartConvention<T>(actualSource, definition, values)
+            : StartLegacy<T>(actualSource, definition, values);
+    }
 
+    static ActivityScope<T> StartLegacy<T>(ActivitySource source, ClientSpanDefinition definition, ClientSpanValues values)
+    {
+        var activity = source.StartActivity(definition.LegacyName, definition.Kind);
+        values.SetTags(activity, definition.LegacyKeys);
+        if (values.EventSourceId is { } id) activity?.SetTag("event_source_id", id);
         return new ActivityScope<T>(activity);
+    }
+
+    static ActivityScope<T> StartConvention<T>(ActivitySource source, ClientSpanDefinition definition, ClientSpanValues values)
+    {
+        var tags = values.SamplingTags(definition.ConventionKeys);
+        if (definition.ObserverType is { } observerType) tags.Add(WellKnownTelemetryAttributes.ObserverType, observerType);
+        var activity = source.StartActivity(definition.ConventionName, definition.Kind, parentContext: default, tags: tags);
+        values.SetTags(activity, definition.LegacyKeys);
+        if (values.EventSourceId is { } id)
+        {
+            activity?.SetTag("event_source_id", id);
+            activity?.SetTag(WellKnownTelemetryAttributes.EventSourceId, id);
+        }
+        return new ActivityScope<T>(activity);
+    }
+
+    /// <summary>
+    /// Holds one reusable empty scope per owner rather than allocating one at each disabled span start.
+    /// </summary>
+    /// <typeparam name="T">The owner of the span.</typeparam>
+    static class EmptyScope<T>
+    {
+        /// <summary>
+        /// The reusable empty scope.
+        /// </summary>
+        internal static readonly IActivityScope<T> Instance = new ActivityScope<T>(null);
     }
 }

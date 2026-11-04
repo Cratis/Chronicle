@@ -8,9 +8,23 @@ using Cratis.Traces;
 
 namespace Cratis.Chronicle.EventSequences;
 
-/// <summary>Starts event sequence spans with the selected naming convention.</summary>
+/// <summary>
+/// Starts event sequence spans with the selected naming convention.
+/// </summary>
 internal static class EventSequenceTraces
 {
+    static readonly ClientSpanDefinition _append = new("client.event_sequence.append", WellKnownClientSpanNames.EventSequenceAppend, ActivityKind.Client)
+    {
+        LegacyKeys = ["event_store_name", "namespace_name", "event_sequence_id", "event_source_type"],
+        ConventionKeys = [WellKnownTelemetryAttributes.EventStoreName, WellKnownTelemetryAttributes.EventStoreNamespace, WellKnownTelemetryAttributes.EventSequenceId, WellKnownTelemetryAttributes.EventSourceType]
+    };
+
+    static readonly ClientSpanDefinition _appendMany = new("client.event_sequence.append_many", WellKnownClientSpanNames.EventSequenceAppendMany, ActivityKind.Client)
+    {
+        LegacyKeys = ["event_store_name", "namespace_name", "event_sequence_id"],
+        ConventionKeys = [WellKnownTelemetryAttributes.EventStoreName, WellKnownTelemetryAttributes.EventStoreNamespace, WellKnownTelemetryAttributes.EventSequenceId]
+    };
+
     /// <summary>Starts a single append span.</summary>
     /// <param name="source">The activity source.</param>
     /// <param name="context">The routing attributes.</param>
@@ -24,13 +38,9 @@ internal static class EventSequenceTraces
         string? tracedEventSourceId = null) =>
         ClientSpanCompatibility.Start(
             source,
-            new("client.event_sequence.append", WellKnownClientSpanNames.EventSequenceAppend, ActivityKind.Client),
+            _append,
             names,
-            new("event_store_name", context.EventStoreName),
-            new("namespace_name", context.NamespaceName),
-            new("event_sequence_id", context.EventSequenceId),
-            new("event_source_type", context.EventSourceType),
-            new("event_source_id", tracedEventSourceId));
+            new(context.EventStoreName, context.NamespaceName, context.EventSequenceId, context.EventSourceType) { EventSourceId = tracedEventSourceId });
 
     /// <summary>Starts a batch append span.</summary>
     /// <param name="source">The activity source.</param>
@@ -40,9 +50,7 @@ internal static class EventSequenceTraces
     internal static IActivityScope<EventSequence> AppendMany(this IActivitySource<EventSequence> source, EventSequenceSpanContext context, ClientSpanNames names = ClientSpanNames.Legacy) =>
         ClientSpanCompatibility.Start(
             source,
-            new("client.event_sequence.append_many", WellKnownClientSpanNames.EventSequenceAppendMany, ActivityKind.Client),
+            _appendMany,
             names,
-            new("event_store_name", context.EventStoreName),
-            new("namespace_name", context.NamespaceName),
-            new("event_sequence_id", context.EventSequenceId));
+            new(context.EventStoreName, context.NamespaceName, context.EventSequenceId));
 }
