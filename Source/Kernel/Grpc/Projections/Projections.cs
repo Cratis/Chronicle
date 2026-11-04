@@ -20,6 +20,7 @@ using Cratis.Chronicle.Services.Events;
 using Cratis.Chronicle.Services.Projections.Definitions;
 using Cratis.Chronicle.Services.ReadModels;
 using Cratis.Chronicle.Storage;
+using Grpc.Core;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using ProtoBuf.Grpc;
@@ -39,6 +40,8 @@ namespace Cratis.Chronicle.Services.Projections;
 /// <param name="readModelsCompliance"><see cref="IReadModelsCompliance"/> for decrypting PII fields in previewed read model instances.</param>
 /// <param name="localSiloDetails">The local silo details for locating client connections.</param>
 /// <param name="logger">The logger.</param>
+/// <param name="ownership">Local connection ownership.</param>
+/// <param name="owners">The caller's principal resolver.</param>
 internal sealed class Projections(
     IGrainFactory grainFactory,
     IExpandoObjectConverter expandoObjectConverter,
@@ -46,7 +49,9 @@ internal sealed class Projections(
     IServiceProvider serviceProvider,
     IReadModelsCompliance readModelsCompliance,
     ILocalSiloDetails localSiloDetails,
-    ILogger<Projections> logger) : IProjections
+    ILogger<Projections> logger,
+    IConnectionOwnership ownership,
+    IConnectionOwnerResolver owners) : IProjections
 {
     /// <summary>
     /// The property a materialized read model carries its key in, which is what the read side looks it up by.
@@ -65,7 +70,10 @@ internal sealed class Projections(
         var projectionsManager = grainFactory.GetGrain<IProjectionsManager>(request.EventStore);
         var owner = (Concepts.Projections.ProjectionOwner)(int)request.Owner;
         var projections = request.Projections.Select(_ => _.ToChronicle(owner)).ToArray();
-        if (!string.IsNullOrEmpty(request.ConnectionId))
+        var connectionDenied = !string.IsNullOrEmpty(request.ConnectionId) &&
+            ownership.Authorize(new(request.ConnectionId), owners.Resolve(context.ServerCallContext?.GetHttpContext().User, context.ServerCallContext is not null)) == ConnectionAccess.Denied;
+        if (connectionDenied) logger.ProjectionDeclarationsSkipped(request.ConnectionId!);
+        if (!string.IsNullOrEmpty(request.ConnectionId) && !connectionDenied)
         {
             try
             {

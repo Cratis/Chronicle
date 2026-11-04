@@ -51,7 +51,9 @@ public class and_read_model_schema_has_no_key_information : Specification
             new JsonSerializerOptions(),
             new ActivitySource<Reducers>(),
             Options.Create(new ChronicleOptions()),
-            NullLogger<Reducers>.Instance);
+            NullLogger<Reducers>.Instance,
+            new Chronicle.Clients.ConnectionOwnership(),
+            new Chronicle.Clients.ConnectionOwnerResolver(Options.Create(new ChronicleOptions())));
 
         _messages = new Subject<ReducerMessage>();
     }

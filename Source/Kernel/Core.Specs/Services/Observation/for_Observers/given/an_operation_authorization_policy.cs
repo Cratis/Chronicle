@@ -37,7 +37,7 @@ public class an_operation_authorization_policy : all_dependencies
             WellKnownAuthorizationPolicies.AdministratorOperations,
             policy => policy.AddRequirements(new SystemStoreOperationRequirement()));
         _provider = services.BuildServiceProvider();
-        _observers = new Observers(_grainFactory, _storage, _observerRemover, _provider.GetRequiredService<IAuthorizationService>(), _httpContextAccessor);
+        _observers = new Observers(_grainFactory, _storage, _observerRemover, _provider.GetRequiredService<IAuthorizationService>(), _httpContextAccessor, new Chronicle.given.UnrestrictedConnectedClientsVisibility());
     }
 
     void Establish()

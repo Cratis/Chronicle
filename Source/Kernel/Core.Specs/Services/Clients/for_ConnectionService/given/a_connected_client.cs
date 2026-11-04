@@ -61,7 +61,10 @@ public class a_connected_client : Specification
             new ConnectedClientsQuery(grainFactory, options),
             _openConnections,
             NullLogger<KernelConnectionService>.Instance,
-            options);
+            options,
+            new ConnectionOwnership(),
+            new ConnectionOwnerResolver(options),
+            new Chronicle.given.UnrestrictedConnectedClientsVisibility());
     }
 
     async Task Destroy()

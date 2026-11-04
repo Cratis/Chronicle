@@ -44,7 +44,10 @@ public class and_the_client_subscribes : Specification
             new ConnectedClientsQuery(grainFactory, Options.Create(options)),
             new OpenConnections(),
             NullLogger<KernelConnectionService>.Instance,
-            Options.Create(options));
+            Options.Create(options),
+            new ConnectionOwnership(),
+            new ConnectionOwnerResolver(Options.Create(options)),
+            new Chronicle.given.UnrestrictedConnectedClientsVisibility());
     }
 
     async Task Because()

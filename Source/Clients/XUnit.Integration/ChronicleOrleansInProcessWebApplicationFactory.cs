@@ -259,7 +259,7 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
                         var loggerFactory = sp.GetRequiredService<ILoggerFactory>();
 
                         var connectionLifecycle = new ConnectionLifecycle(loggerFactory.CreateLogger<ConnectionLifecycle>());
-                        var connection = new ChronicleConnection(connectionLifecycle, grainFactory, sp.GetRequiredService<ILocalSiloDetails>(), loggerFactory);
+                        var connection = new ChronicleConnection(connectionLifecycle, grainFactory, sp.GetRequiredService<ILocalSiloDetails>(), loggerFactory, sp);
                         connection.SetServices(chronicleServices);
 
                         var registry = sp.GetRequiredService<MutableServiceRegistry>();

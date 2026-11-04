@@ -27,6 +27,7 @@ public static class GrpcServiceRegistrations
         {
             options.EnableDetailedErrors = true;
             options.Interceptors.Add<StreamingCallInterceptor>();
+            options.Interceptors.Add<ConnectionOwnerInterceptor>();
         });
         services.AddOptions<GrpcServiceOptions>().Configure<IOptions<ChronicleOptions>>((grpc, chronicle) =>
         {

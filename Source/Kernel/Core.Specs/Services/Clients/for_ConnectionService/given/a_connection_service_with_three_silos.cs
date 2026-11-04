@@ -48,7 +48,10 @@ public class a_connection_service_with_three_silos : Specification
             new ConnectedClientsQuery(_grainFactory, Options.Create(new ChronicleOptions())),
             new OpenConnections(),
             NullLogger<KernelConnectionService>.Instance,
-            Options.Create(new ChronicleOptions()));
+            Options.Create(new ChronicleOptions()),
+            new ConnectionOwnership(),
+            new ConnectionOwnerResolver(Options.Create(new ChronicleOptions())),
+            new Chronicle.given.UnrestrictedConnectedClientsVisibility());
     }
 
     protected static IEnumerable<KernelConnectedClient> ClientOn(SiloAddress silo) =>

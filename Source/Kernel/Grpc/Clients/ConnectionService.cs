@@ -8,6 +8,7 @@ using Cratis.Chronicle.Compatibility;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Contracts.Clients;
 using Cratis.Chronicle.Services.Host;
+using Grpc.Core;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -26,13 +27,19 @@ namespace Cratis.Chronicle.Services.Clients;
 /// <param name="openConnections"><see cref="OpenConnections"/> tracking the connections open on this silo.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
 /// <param name="options"><see cref="IOptions{ChronicleOptions}"/> for configuration.</param>
+/// <param name="ownership">Local connection ownership.</param>
+/// <param name="owners">The caller's principal resolver.</param>
+/// <param name="visibility">The connection metadata visibility filter.</param>
 internal sealed class ConnectionService(
     IGrainFactory grainFactory,
     ILocalSiloDetails localSiloDetails,
     ConnectedClientsQuery connectedClientsQuery,
     OpenConnections openConnections,
     ILogger<ConnectionService> logger,
-    IOptions<ChronicleOptions> options) : IConnectionService
+    IOptions<ChronicleOptions> options,
+    IConnectionOwnership ownership,
+    IConnectionOwnerResolver owners,
+    IConnectedClientsVisibility visibility) : IConnectionService
 {
     static readonly Lazy<string> _schemaDefinition = new(GenerateSchema);
     static readonly Lazy<WireContract> _wireContract = new(() => WireContractReader.Read(Contracts.WireContractDescriptorSet.Bytes));
@@ -55,21 +62,37 @@ internal sealed class ConnectionService(
         ConnectRequest request,
         CallContext context = default)
     {
+        var owner = owners.Resolve(context.ServerCallContext?.GetHttpContext().User, context.ServerCallContext is not null);
+
         // Replaying, so the first keep-alive is not lost. It is sent as soon as the client is registered, which
         // races the transport subscribing to this subject - and a plain Subject drops what it has no subscriber
         // for, which would silently put the client back to waiting a full interval. One is all that needs
         // replaying: a keep-alive carries nothing but the connection it belongs to.
         var subject = new ReplaySubject<ConnectionKeepAlive>(1);
-        var connectedClients = grainFactory.GetConnectedClients(localSiloDetails.SiloAddress);
-
         _ = Task.Run(
             async () =>
             {
-                await Register(connectedClients, request);
-                openConnections.Opened(request, DateTimeOffset.UtcNow);
-
+                ConnectionClaim? claim = null;
+                IConnectedClients? connectedClients = null;
+                Exception? failure = null;
                 try
                 {
+                    using (await ownership.Enter(request.ConnectionId, context.CancellationToken))
+                    {
+                        context.CancellationToken.ThrowIfCancellationRequested();
+                        claim = ownership.Claim(request.ConnectionId, owner);
+                        if (claim is null)
+                        {
+                            logger.ConnectionRejected(request.ConnectionId);
+                            throw new RpcException(new Status(StatusCode.PermissionDenied, "The connection belongs to another caller."));
+                        }
+
+                        connectedClients = grainFactory.GetConnectedClients(localSiloDetails.SiloAddress);
+                        await Register(connectedClients, request);
+                        context.CancellationToken.ThrowIfCancellationRequested();
+                        openConnections.Opened(request, DateTimeOffset.UtcNow);
+                    }
+
                     // The session is established the moment the client is registered, and the first keep-alive is
                     // how the client learns that - it does not treat itself as connected until one arrives. Send it
                     // straight away rather than after a first interval, or every client everywhere pays the whole
@@ -81,44 +104,72 @@ internal sealed class ConnectionService(
 
                     while (!context.CancellationToken.IsCancellationRequested)
                     {
-                        await Task.Delay(_keepAliveInterval).ConfigureAwait(false);
+                        await Task.Delay(_keepAliveInterval, context.CancellationToken).ConfigureAwait(false);
+                        using (await ownership.Enter(request.ConnectionId, context.CancellationToken))
+                        {
+                            context.CancellationToken.ThrowIfCancellationRequested();
+                            if (!ownership.IsCurrent(request.ConnectionId, claim)) break;
 
-                        if (context.CancellationToken.IsCancellationRequested)
-                        {
-                            break;
-                        }
+                            if (request.IsRunningWithDebugger)
+                            {
+                                await KeepRegistered(connectedClients, request);
+                            }
+                            else if (openConnections.HasLapsed(request.ConnectionId))
+                            {
+                                break;
+                            }
 
-                        if (request.IsRunningWithDebugger)
-                        {
-                            await KeepRegistered(connectedClients, request);
+                            subject.OnNext(new ConnectionKeepAlive
+                            {
+                                ConnectionId = request.ConnectionId
+                            });
                         }
-                        else if (openConnections.HasLapsed(request.ConnectionId))
-                        {
-                            subject.OnCompleted();
-                            break;
-                        }
-
-                        subject.OnNext(new ConnectionKeepAlive
-                        {
-                            ConnectionId = request.ConnectionId
-                        });
                     }
+                }
+                catch (OperationCanceledException) when (context.CancellationToken.IsCancellationRequested)
+                {
                 }
                 catch (Exception ex)
                 {
                     logger.FailureDuringKeepAlive(request.ConnectionId, ex);
+                    failure = ex;
                 }
+                finally
+                {
+                    try
+                    {
+                        if (claim is not null)
+                        {
+                            using (await ownership.Enter(request.ConnectionId))
+                            {
+                                if (ownership.IsCurrent(request.ConnectionId, claim))
+                                {
+                                    try
+                                    {
+                                        openConnections.Closed(request.ConnectionId);
+                                        if (connectedClients is not null)
+                                        {
+                                            await connectedClients.OnClientDisconnected(request.ConnectionId, "Client disconnected");
+                                        }
+                                    }
+                                    finally
+                                    {
+                                        ownership.Release(request.ConnectionId, claim);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.FailureDuringKeepAlive(request.ConnectionId, ex);
+                        failure ??= ex;
+                    }
 
-                openConnections.Closed(request.ConnectionId);
-                await connectedClients.OnClientDisconnected(request.ConnectionId, "Client disconnected");
-            },
-            context.CancellationToken);
-
-        context.CancellationToken.Register(() =>
-        {
-            subject.OnCompleted();
-            subject.Dispose();
-        });
+                    if (failure is not null) subject.OnError(failure);
+                    else subject.OnCompleted();
+                }
+            });
 
         return subject;
     }
@@ -126,6 +177,16 @@ internal sealed class ConnectionService(
     /// <inheritdoc/>
     public async Task ConnectionKeepAlive(ConnectionKeepAlive keepAlive)
     {
+        var owner = owners.Current();
+        using var gate = await ownership.Enter(keepAlive.ConnectionId);
+        var access = ownership.Authorize(keepAlive.ConnectionId, owner);
+        if (access == ConnectionAccess.Denied)
+        {
+            logger.ConnectionRejected(keepAlive.ConnectionId);
+            throw new RpcException(new Status(StatusCode.PermissionDenied, "The connection belongs to another caller."));
+        }
+
+        if (access == ConnectionAccess.Unknown) return;
         var respondedAt = DateTimeOffset.UtcNow;
         try
         {
@@ -204,12 +265,19 @@ internal sealed class ConnectionService(
     }
 
     /// <inheritdoc/>
-    public Task<IEnumerable<ConnectedClient>> GetConnectedClients(CallContext context = default) =>
-        connectedClientsQuery.GetAll();
+    public async Task<IEnumerable<ConnectedClient>> GetConnectedClients(CallContext context = default)
+    {
+        var filter = visibility.Capture(context.ServerCallContext?.GetHttpContext().User, context.ServerCallContext is not null);
+        return await filter(await connectedClientsQuery.GetAll());
+    }
 
     /// <inheritdoc/>
-    public IObservable<IEnumerable<ConnectedClient>> ObserveConnectedClients(CallContext context = default) =>
-        connectedClientsQuery.ObserveAll(context.CancellationToken);
+    public IObservable<IEnumerable<ConnectedClient>> ObserveConnectedClients(CallContext context = default)
+    {
+        var filter = visibility.Capture(context.ServerCallContext?.GetHttpContext().User, context.ServerCallContext is not null);
+        return connectedClientsQuery.ObserveAll(context.CancellationToken)
+            .Select(clients => Observable.FromAsync(() => filter(clients))).Concat();
+    }
 
     static string GenerateSchema()
     {

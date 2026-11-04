@@ -15,6 +15,9 @@ namespace Cratis.Chronicle.Services.Observation.Reducers;
 
 internal static partial class ReducersLogMessages
 {
+    [LoggerMessage(LogLevel.Warning, "Observation for connection {ConnectionId} was rejected")]
+    internal static partial void ObservationRejected(this ILogger<Reducers> logger, string connectionId);
+
     [LoggerMessage(LogLevel.Warning, "Ignoring unknown or completed reducer delivery {DeliveryId} for partition {Partition}")]
     internal static partial void UnknownDeliveryResult(this ILogger<Reducers> logger, ulong deliveryId, string partition);
 

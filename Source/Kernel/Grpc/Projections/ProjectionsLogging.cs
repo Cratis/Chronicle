@@ -11,6 +11,14 @@ namespace Cratis.Chronicle.Services.Projections;
 internal static partial class ProjectionsLogging
 {
     /// <summary>
+    /// Logs a declaration tracking request for a connection owned by another caller.
+    /// </summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="connectionId">The declaring connection.</param>
+    [LoggerMessage(LogLevel.Warning, "Skipping declarations for connection {ConnectionId}")]
+    internal static partial void ProjectionDeclarationsSkipped(this ILogger<Projections> logger, string connectionId);
+
+    /// <summary>
     /// Logs a declaration tracking failure without failing registration.
     /// </summary>
     /// <param name="logger">The logger.</param>

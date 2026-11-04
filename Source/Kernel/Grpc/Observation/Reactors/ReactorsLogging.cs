@@ -15,6 +15,9 @@ namespace Cratis.Chronicle.Services.Observation.Reactors;
 
 internal static partial class ReactorsLogMessages
 {
+    [LoggerMessage(LogLevel.Warning, "Observation for connection {ConnectionId} was rejected")]
+    internal static partial void ObservationRejected(this ILogger<Reactors> logger, string connectionId);
+
     [LoggerMessage(LogLevel.Warning, "Ignoring unknown or completed reactor delivery {DeliveryId} for partition {Partition}")]
     internal static partial void UnknownDeliveryResult(this ILogger<Reactors> logger, ulong deliveryId, string partition);
 

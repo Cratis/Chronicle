@@ -151,7 +151,9 @@ public class all_dependencies : Specification
             services.BuildServiceProvider(),
             _readModelsCompliance,
             _localSiloDetails,
-            Microsoft.Extensions.Logging.Abstractions.NullLogger<Projections>.Instance);
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<Projections>.Instance,
+            Substitute.For<Chronicle.Clients.IConnectionOwnership>(),
+            Substitute.For<Chronicle.Clients.IConnectionOwnerResolver>());
     }
 
     /// <summary>

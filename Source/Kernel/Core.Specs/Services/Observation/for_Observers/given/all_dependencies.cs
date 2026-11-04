@@ -45,6 +45,6 @@ public class all_dependencies : Specification
         _namespaceStorage.Observers.Returns(_observerStateStorage);
         _namespaceStorage.FailedPartitions.Returns(_failedPartitionsStorage);
 
-        _observers = new Observers(_grainFactory, _storage, _observerRemover, _authorization, _httpContextAccessor);
+        _observers = new Observers(_grainFactory, _storage, _observerRemover, _authorization, _httpContextAccessor, new Chronicle.given.UnrestrictedConnectedClientsVisibility());
     }
 }

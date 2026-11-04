@@ -27,7 +27,10 @@ public class and_the_descriptor_set_cannot_be_read : Specification
             new ConnectedClientsQuery(Substitute.For<IGrainFactory>(), Options.Create(new ChronicleOptions())),
             new OpenConnections(),
             NullLogger<KernelConnectionService>.Instance,
-            Options.Create(new ChronicleOptions()));
+            Options.Create(new ChronicleOptions()),
+            new ConnectionOwnership(),
+            new ConnectionOwnerResolver(Options.Create(new ChronicleOptions())),
+            new Chronicle.given.UnrestrictedConnectedClientsVisibility());
 
     async Task Because() => _result = await _connectionService.CheckCompatibility(new CompatibilityRequest
     {

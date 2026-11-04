@@ -11,6 +11,9 @@ namespace Cratis.Chronicle.Services.Clients;
 
 internal static partial class ConnectionServiceLogMessages
 {
+    [LoggerMessage(LogLevel.Warning, "Connection {ConnectionId} was rejected")]
+    internal static partial void ConnectionRejected(this ILogger<ConnectionService> logger, string connectionId);
+
     [LoggerMessage(LogLevel.Error, "Failure during keep alive for connection {ConnectionId}")]
     internal static partial void FailureDuringKeepAlive(this ILogger<ConnectionService> logger, string connectionId, Exception exception);
 

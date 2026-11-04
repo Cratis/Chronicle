@@ -27,11 +27,13 @@ namespace Cratis.Chronicle.XUnit.Integration;
 /// <param name="grainFactory"><see cref="IGrainFactory"/> for working with grains.</param>
 /// <param name="localSiloDetails"><see cref="ILocalSiloDetails"/> for the silo the client is co-hosted with.</param>
 /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
+/// <param name="services">The shared server services.</param>
 internal class ChronicleConnection(
     IConnectionLifecycle lifecycle,
     IGrainFactory grainFactory,
     ILocalSiloDetails localSiloDetails,
-    ILoggerFactory loggerFactory) : IChronicleConnection, IChronicleServicesAccessor
+    ILoggerFactory loggerFactory,
+    IServiceProvider services) : IChronicleConnection, IChronicleServicesAccessor
 {
     /// <summary>
     /// In-process test clients share the silo process and cannot network-drop, so they are flagged as
@@ -113,7 +115,10 @@ internal class ChronicleConnection(
             new KernelCore::Cratis.Chronicle.Clients.ConnectedClientsQuery(grainFactory, chronicleOptions),
             new OpenConnections(),
             loggerFactory.CreateLogger<ConnectionService>(),
-            chronicleOptions);
+            chronicleOptions,
+            Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<KernelCore::Cratis.Chronicle.Clients.IConnectionOwnership>(services),
+            Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<KernelCore::Cratis.Chronicle.Clients.IConnectionOwnerResolver>(services),
+            Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<KernelCore::Cratis.Chronicle.Clients.IConnectedClientsVisibility>(services));
         _connectionService.Connect(new()
         {
             ConnectionId = lifecycle.ConnectionId,

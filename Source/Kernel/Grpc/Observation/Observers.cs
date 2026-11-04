@@ -11,6 +11,7 @@ using Cratis.Chronicle.Services.Events;
 using Cratis.Chronicle.Storage;
 using Cratis.Reactive;
 using Grpc.Core;
+using Grpc.Core;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using ProtoBuf.Grpc;
@@ -29,7 +30,8 @@ namespace Cratis.Chronicle.Services.Observation;
 /// <param name="observerRemover">The <see cref="IObserverRemover"/> for removing observers.</param>
 /// <param name="authorization">The resource-aware authorization service.</param>
 /// <param name="httpContextAccessor">The current gRPC request's HTTP context.</param>
-internal sealed class Observers(IGrainFactory grainFactory, IStorage storage, IObserverRemover observerRemover, IAuthorizationService authorization, IHttpContextAccessor httpContextAccessor) : IObservers
+/// <param name="visibility">The connection metadata visibility filter.</param>
+internal sealed class Observers(IGrainFactory grainFactory, IStorage storage, IObserverRemover observerRemover, IAuthorizationService authorization, IHttpContextAccessor httpContextAccessor, IConnectedClientsVisibility visibility) : IObservers
 {
     const int ObserverCompletionPollingDelayMs = 50;
     const ulong MaximumObserverCompletionRange = 10_000;
@@ -305,6 +307,7 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage, IO
     /// <inheritdoc/>
     public async Task<IEnumerable<Contracts.Clients.ConnectedClient>> GetConnectedClientsForObserver(GetConnectedClientsForObserverRequest request, CallContext context = default)
     {
+        var filter = visibility.Capture(context.ServerCallContext?.GetHttpContext().User, context.ServerCallContext is not null);
         var subscription = await (await grainFactory.GetObserver(request, storage)).GetSubscription();
         var clients = new List<Contracts.Clients.ConnectedClient>();
         foreach (var target in subscription.Targets.Where(_ => _.ConnectedClient is not null))
@@ -333,7 +336,7 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage, IO
             });
         }
 
-        return clients;
+        return await filter(clients);
     }
 
     /// <inheritdoc/>

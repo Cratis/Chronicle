@@ -29,7 +29,9 @@ public class and_the_full_set_has_no_registrant : Specification
             Substitute.For<IServiceProvider>(),
             Substitute.For<Chronicle.ReadModels.IReadModelsCompliance>(),
             Substitute.For<ILocalSiloDetails>(),
-            Microsoft.Extensions.Logging.Abstractions.NullLogger<Projections>.Instance);
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<Projections>.Instance,
+            Substitute.For<Chronicle.Clients.IConnectionOwnership>(),
+            Substitute.For<Chronicle.Clients.IConnectionOwnerResolver>());
     }
 
     async Task Because() => await _service.Register(new RegisterRequest
