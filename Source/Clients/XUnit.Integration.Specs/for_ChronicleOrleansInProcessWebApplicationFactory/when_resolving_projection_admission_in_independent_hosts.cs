@@ -3,10 +3,10 @@
 
 extern alias KernelCore;
 
-using IProjectionSubscriptionThrottle = KernelCore::Cratis.Chronicle.Projections.IProjectionSubscriptionThrottle;
-using ProjectionSubscriptionThrottle = KernelCore::Cratis.Chronicle.Projections.ProjectionSubscriptionThrottle;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using IProjectionSubscriptionThrottle = KernelCore::Cratis.Chronicle.Projections.IProjectionSubscriptionThrottle;
+using ProjectionSubscriptionThrottle = KernelCore::Cratis.Chronicle.Projections.ProjectionSubscriptionThrottle;
 
 namespace Cratis.Chronicle.XUnit.Integration.for_ChronicleOrleansInProcessWebApplicationFactory;
 
