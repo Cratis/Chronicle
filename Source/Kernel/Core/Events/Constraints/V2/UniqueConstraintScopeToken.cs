@@ -12,6 +12,9 @@ namespace Cratis.Chronicle.Events.Constraints.V2;
 /// <param name="Value">The first 32 lowercase hex characters of the scope HMAC.</param>
 internal record UniqueConstraintScopeToken(string Value) : ConceptAs<string>(Value)
 {
+    const int StackBufferSize = 512;
+    const int HashSize = 32;
+
     /// <summary>
     /// Encodes a resolved scope, including the all-unnarrowed scope.
     /// </summary>
@@ -20,8 +23,19 @@ internal record UniqueConstraintScopeToken(string Value) : ConceptAs<string>(Val
     /// <returns>The scope token.</returns>
     internal static UniqueConstraintScopeToken Encode(ReadOnlySpan<byte> key, ResolvedConstraintScope? scope)
     {
-        var hash = HMACSHA256.HashData(key, GetPreimage(scope));
-        return new(Convert.ToHexString(hash).ToLowerInvariant()[..32]);
+        Span<byte> initial = stackalloc byte[StackBufferSize];
+        var writer = new UniqueConstraintPreimageWriter(initial);
+        try
+        {
+            WritePreimage(ref writer, scope);
+            Span<byte> hash = stackalloc byte[HashSize];
+            HMACSHA256.HashData(key, writer.Written, hash);
+            return new(Convert.ToHexStringLower(hash[..16]));
+        }
+        finally
+        {
+            writer.Dispose();
+        }
     }
 
     /// <summary>
@@ -31,11 +45,24 @@ internal record UniqueConstraintScopeToken(string Value) : ConceptAs<string>(Val
     /// <returns>The preimage bytes.</returns>
     internal static byte[] GetPreimage(ResolvedConstraintScope? scope)
     {
-        using var target = new MemoryStream();
-        target.Write("chronicle/scope/v2\0"u8);
-        UniqueConstraintFrame.WriteText(target, scope?.EventSourceType?.Value);
-        UniqueConstraintFrame.WriteText(target, scope?.EventStreamType?.Value);
-        UniqueConstraintFrame.WriteText(target, scope?.EventStreamId?.Value);
-        return target.ToArray();
+        Span<byte> initial = stackalloc byte[StackBufferSize];
+        var writer = new UniqueConstraintPreimageWriter(initial);
+        try
+        {
+            WritePreimage(ref writer, scope);
+            return writer.Written.ToArray();
+        }
+        finally
+        {
+            writer.Dispose();
+        }
+    }
+
+    static void WritePreimage(ref UniqueConstraintPreimageWriter writer, ResolvedConstraintScope? scope)
+    {
+        writer.Write("chronicle/scope/v2\0"u8);
+        UniqueConstraintFrame.WriteText(ref writer, scope?.EventSourceType?.Value);
+        UniqueConstraintFrame.WriteText(ref writer, scope?.EventStreamType?.Value);
+        UniqueConstraintFrame.WriteText(ref writer, scope?.EventStreamId?.Value);
     }
 }

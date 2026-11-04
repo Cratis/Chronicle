@@ -13,6 +13,9 @@ namespace Cratis.Chronicle.Events.Constraints.V2;
 /// </summary>
 internal static class UniqueConstraintEncoder
 {
+    const int StackBufferSize = 512;
+    const int HashSize = 32;
+
     /// <summary>
     /// Gets the version of this encoding contract.
     /// </summary>
@@ -29,13 +32,28 @@ internal static class UniqueConstraintEncoder
     /// <exception cref="NonFiniteUniqueConstraintNumber">A number is not finite.</exception>
     internal static Option<UniqueConstraintValue> Encode(ReadOnlySpan<byte> key, IReadOnlyList<UniqueConstraintComponent> components, bool ignoreCasing = false)
     {
-        var preimage = GetPreimage(components, ignoreCasing);
-        if (components.All(_ => _.Value is null))
+        if (AllNull(components))
         {
+            for (var i = 0; i < components.Count; i++)
+            {
+                UniqueConstraintCanonicalText.ValidateFormat(components[i].Format);
+            }
             return Option<UniqueConstraintValue>.None();
         }
-        var hash = HMACSHA256.HashData(key, preimage);
-        return new UniqueConstraintValue(Convert.ToHexString(hash).ToLowerInvariant());
+
+        Span<byte> initial = stackalloc byte[StackBufferSize];
+        var writer = new UniqueConstraintPreimageWriter(initial);
+        try
+        {
+            WritePreimage(ref writer, components, ignoreCasing);
+            Span<byte> hash = stackalloc byte[HashSize];
+            HMACSHA256.HashData(key, writer.Written, hash);
+            return new UniqueConstraintValue(Convert.ToHexStringLower(hash));
+        }
+        finally
+        {
+            writer.Dispose();
+        }
     }
 
     /// <summary>
@@ -48,13 +66,38 @@ internal static class UniqueConstraintEncoder
     /// <exception cref="NonFiniteUniqueConstraintNumber">A number is not finite.</exception>
     internal static byte[] GetPreimage(IReadOnlyList<UniqueConstraintComponent> components, bool ignoreCasing = false)
     {
-        using var target = new MemoryStream();
-        target.Write("chronicle/unique/v2\0"u8);
-        UniqueConstraintFrame.WriteCount(target, components.Count);
-        foreach (var component in components)
+        Span<byte> initial = stackalloc byte[StackBufferSize];
+        var writer = new UniqueConstraintPreimageWriter(initial);
+        try
         {
-            UniqueConstraintFrame.WriteComponent(target, component, ignoreCasing);
+            WritePreimage(ref writer, components, ignoreCasing);
+            return writer.Written.ToArray();
         }
-        return target.ToArray();
+        finally
+        {
+            writer.Dispose();
+        }
+    }
+
+    static bool AllNull(IReadOnlyList<UniqueConstraintComponent> components)
+    {
+        for (var i = 0; i < components.Count; i++)
+        {
+            if (components[i].Value is not null)
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    static void WritePreimage(ref UniqueConstraintPreimageWriter writer, IReadOnlyList<UniqueConstraintComponent> components, bool ignoreCasing)
+    {
+        writer.Write("chronicle/unique/v2\0"u8);
+        writer.WriteCount(components.Count);
+        for (var i = 0; i < components.Count; i++)
+        {
+            UniqueConstraintFrame.WriteComponent(ref writer, components[i], ignoreCasing);
+        }
     }
 }
