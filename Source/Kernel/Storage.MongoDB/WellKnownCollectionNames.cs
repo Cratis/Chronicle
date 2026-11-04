@@ -294,4 +294,69 @@ public static class WellKnownCollectionNames
     /// The collection that holds effect receipts.
     /// </summary>
     public const string EffectReceipts = "effect-receipts";
+
+    /// <summary>
+    /// The collection that holds encryption keys.
+    /// </summary>
+    public const string EncryptionKeys = "encryption-keys";
+
+    /// <summary>
+    /// The collection that holds encryption key erasures.
+    /// </summary>
+    public const string EncryptionKeyErasures = "encryption-key-erasures";
+
+    /// <summary>
+    /// The collection that holds generation initialization receipts.
+    /// </summary>
+    public const string GenerationInitialization = "generation-initialization";
+
+    /// <summary>
+    /// The collection that holds trigger definitions.
+    /// </summary>
+    public const string TriggerDefinitions = "trigger-definitions";
+
+    /// <summary>
+    /// The collection that holds lifecycle fan-out intents.
+    /// </summary>
+    public const string LifecycleFanOutIntents = "lifecycle-fan-out-intents";
+
+    /// <summary>
+    /// The collection that holds the generation floor.
+    /// </summary>
+    public const string GenerationFloor = "generation-floor";
+
+    /// <summary>
+    /// The collection that holds initialization markers.
+    /// </summary>
+    public const string Initialization = "initialization";
+
+    /// <summary>
+    /// The collection that holds applied patches.
+    /// </summary>
+    public const string Patches = "patches";
+
+    /// <summary>
+    /// The collection that holds system information.
+    /// </summary>
+    public const string SystemInformation = "system-information";
+
+    /// <summary>
+    /// The collection that holds generation fence gates.
+    /// </summary>
+    public const string FenceGates = "fence-gates";
+
+    /// <summary>
+    /// The collection that holds generation fence receipts.
+    /// </summary>
+    public const string FenceReceipts = "fence-receipts";
+
+    /// <summary>
+    /// The collection that holds materialization bindings.
+    /// </summary>
+    public const string MaterializationBindings = "materialization-bindings";
+
+    /// <summary>
+    /// The collection that holds materialization publication receipts.
+    /// </summary>
+    public const string MaterializationPublicationReceipts = "materialization-publication-receipts";
 }
