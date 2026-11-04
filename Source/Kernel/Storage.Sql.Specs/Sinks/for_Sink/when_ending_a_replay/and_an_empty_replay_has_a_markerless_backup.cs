@@ -14,7 +14,9 @@ public class and_an_empty_replay_has_a_markerless_backup : for_Sink.given.an_acc
     {
         await _sink.ApplyChanges(_key, ChangesetSettingCountTo(1), 41UL);
         await _sink.BeginReplay(ReplayContext());
-        await _sink.GetInstances(ReplayContext().RevertContainerName);
+
+        // Something other than an occurrence read leaves an empty table under the revert name; occurrence reads never create tables.
+        await _sqlHarness.CreateSink(CreateReadModelDefinition() with { ContainerName = ReplayContext().RevertContainerName }).GetInstances();
     }
 
     async Task Because()

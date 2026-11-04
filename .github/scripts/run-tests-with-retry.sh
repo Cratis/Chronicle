@@ -20,8 +20,19 @@
 # into a green check. CI already uploads $RESULTS_DIR as the coverage artifact, so the
 # ledger travels with the run for free.
 #
+# Retries stop early when a retry fails exactly the same set of tests (sorted, de-duplicated
+# TRX testNames) as the attempt before it. This is a bounded-retry policy, not a diagnosis:
+# an identical set does not prove the failure is deterministic, and its cause is unknown
+# (#4057). Each attempt starts a new runner and its own fixture, although a failed or
+# killed attempt can still leave state behind. Runs with no recorded failures (a
+# crash, build or container-start failure, see #4048) and runs with more than
+# TEST_MAX_RETRY_TESTS failures are never retried; the identical-set guard covers a fixture
+# that started and then became unusable. Recycling the fixture between attempts is not done
+# here.
+#
 # Environment:
-#   TEST_MAX_ATTEMPTS    Total attempts including the first run (default: 3).
+#   TEST_MAX_ATTEMPTS    Total attempts including the first run (default: 3). An upper
+#                        bound: an identical failure set stops the retries earlier.
 #   TEST_MAX_RETRY_TESTS Maximum number of failed tests that will be retried. Above
 #                        this the failure is treated as systemic (a broken image or a
 #                        fixture/container start error fails every test in a class) and
@@ -106,6 +117,16 @@ run() {
         "${EXTRA_ARGS[@]}"
 }
 
+# Stop retrying on an unchanged failure set (bounded retry policy, see the header).
+fail_unchanged_set() {
+    local attempt_number="$1"
+    shift
+    echo "::error::Attempt ${attempt_number} failed with the identical set of $# test(s) as attempt $((attempt_number - 1)); stopping under the bounded retry policy; cause unknown."
+    printf '  - %s\n' "$@"
+    exit 1
+}
+
+previous_failed_set=""
 attempt=1
 echo "::group::Test attempt ${attempt}/${MAX_ATTEMPTS} (full filter)"
 run "${TEST_FILTER}" "attempt-${attempt}"
@@ -139,6 +160,13 @@ while [ $attempt -lt "$MAX_ATTEMPTS" ]; do
         exit 1
     fi
 
+    # extract_failed output is sorted and unique, so string equality is set equality.
+    current_failed_set="$(printf '%s\n' "${failed[@]}")"
+    if [ "$attempt" -ge 2 ] && [ "$current_failed_set" = "$previous_failed_set" ]; then
+        fail_unchanged_set "$attempt" "${failed[@]}"
+    fi
+    previous_failed_set="$current_failed_set"
+
     attempt=$((attempt + 1))
 
     echo "::group::Test attempt ${attempt}/${MAX_ATTEMPTS} (re-running ${#failed[@]} failed test(s))"
@@ -170,5 +198,18 @@ while [ $attempt -lt "$MAX_ATTEMPTS" ]; do
     fi
 done
 
-echo "Tests still failing after ${MAX_ATTEMPTS} attempts."
+last=()
+while IFS= read -r line; do
+    [ -n "$line" ] && last+=("$line")
+done < <(extract_failed "${RESULTS_DIR}/attempt-${attempt}/results.trx")
+
+if [ "$attempt" -ge 2 ] && [ "${#last[@]}" -gt 0 ] && [ "$(printf '%s\n' "${last[@]}")" = "$previous_failed_set" ]; then
+    fail_unchanged_set "$attempt" "${last[@]}"
+fi
+
+message="Tests still failing after ${MAX_ATTEMPTS} attempts."
+if [ "$MAX_ATTEMPTS" -ge 2 ] && [ "${#last[@]}" -gt 0 ]; then
+    message+=" The failure set changed between attempts, so every allowed retry was used; fixtures are not recycled between attempts."
+fi
+echo "$message"
 exit 1

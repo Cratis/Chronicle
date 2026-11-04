@@ -21,6 +21,7 @@ public partial class Observer
     void RestoreShadowLedger()
     {
         _shadowClaims = ShadowClaimLedger.Restore(State.PartitionClaims, State.ObserverWideClaim, State.OwnershipRevision, out var legacy);
+        _claimsTrusted = true;
         if (legacy)
         {
             logger.ShadowClaimsSeededFromLegacyState(_observerId);
@@ -37,7 +38,9 @@ public partial class Observer
     void ShadowRestoreFailed(Exception exception)
     {
         // Acceptable while claims are a shadow; the enforcing increment must not start from an empty ledger (DR0018).
+        // A ledger started over issues epochs from the beginning again, which a stale job may carry: stamp none of them.
         _shadowClaims = new();
+        _claimsTrusted = false;
         logger.ShadowClaimsRestoreFailed(_observerId, exception);
     }
 
@@ -70,23 +73,11 @@ public partial class Observer
         ? State.LastHandledEventSequenceNumber.Next()
         : EventSequenceNumber.First;
 
-    void ShadowGrantPartition(Key partition, ClaimHolderKind kind, JobId? job, EventSequenceNumber resume)
+    void ShadowHandOverPartition(Key partition, ClaimHolderKind holder)
     {
         try
         {
-            ReportShadowDivergences(_shadowClaims.Grant(partition, kind, job, resume));
-        }
-        catch (Exception exception)
-        {
-            ReportShadowClaimsFailure(exception);
-        }
-    }
-
-    void ShadowHandOverPartition(Key partition)
-    {
-        try
-        {
-            _shadowClaims.HandOver(partition);
+            _shadowClaims.HandOver(partition, holder);
         }
         catch (Exception exception)
         {
@@ -99,18 +90,6 @@ public partial class Observer
         try
         {
             ReportShadowDivergences(_shadowClaims.GrantObserverWide(kind, job, resume));
-        }
-        catch (Exception exception)
-        {
-            ReportShadowClaimsFailure(exception);
-        }
-    }
-
-    void ShadowHandOverObserverWide()
-    {
-        try
-        {
-            _shadowClaims.HandOverObserverWide();
         }
         catch (Exception exception)
         {

@@ -49,7 +49,8 @@ internal static class MongoDBIndexCatalogue
     [
         MongoDBIndexDefinition.For(database.GetCollection<BsonDocument>(WellKnownCollectionNames.Jobs), MongoDBJobIndexes.Jobs),
         MongoDBIndexDefinition.For(database.GetCollection<BsonDocument>(WellKnownCollectionNames.JobSteps), MongoDBJobIndexes.Steps),
-        MongoDBIndexDefinition.For(database.GetCollection<BsonDocument>(WellKnownCollectionNames.FailedJobSteps), MongoDBJobIndexes.Steps)
+        MongoDBIndexDefinition.For(database.GetCollection<BsonDocument>(WellKnownCollectionNames.FailedJobSteps), MongoDBJobIndexes.Steps),
+        MongoDBIndexDefinition.For(database.GetCollection<BsonDocument>(WellKnownCollectionNames.JobStepPlans), MongoDBJobIndexes.StepPlans)
     ];
 
     /// <summary>
