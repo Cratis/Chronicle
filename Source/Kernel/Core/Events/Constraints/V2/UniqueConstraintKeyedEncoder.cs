@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Security.Cryptography;
 using Cratis.Chronicle.Concepts.Events.Constraints;
 using Cratis.Monads;
 
@@ -10,11 +11,13 @@ namespace Cratis.Chronicle.Events.Constraints.V2;
 /// Encodes values and scopes with one store key, caching the token of the unscoped constraint.
 /// </summary>
 /// <remarks>
-/// The instance is immutable and thread-safe. It copies the key, so later changes to the caller's buffer have no effect.
+/// The instance is thread-safe. It copies the key, so later changes to the caller's buffer have no effect.
+/// Each thread keeps its own reusable HMAC state, so the key padding is not recomputed on every call.
 /// </remarks>
 internal sealed class UniqueConstraintKeyedEncoder
 {
     readonly byte[] _key;
+    readonly ThreadLocal<IncrementalHash> _hmac;
     readonly UniqueConstraintScopeToken _unscoped;
 
     /// <summary>
@@ -24,6 +27,7 @@ internal sealed class UniqueConstraintKeyedEncoder
     internal UniqueConstraintKeyedEncoder(ReadOnlySpan<byte> key)
     {
         _key = key.ToArray();
+        _hmac = new(() => IncrementalHash.CreateHMAC(HashAlgorithmName.SHA256, _key));
         _unscoped = UniqueConstraintScopeToken.Encode(_key, null);
     }
 
@@ -36,7 +40,7 @@ internal sealed class UniqueConstraintKeyedEncoder
     /// <exception cref="UnsupportedUniqueConstraintFormat">A format or nested array is unsupported.</exception>
     /// <exception cref="NonFiniteUniqueConstraintNumber">A number is not finite.</exception>
     internal Option<UniqueConstraintValue> EncodeValue(IReadOnlyList<UniqueConstraintComponent> components, bool ignoreCasing = false) =>
-        UniqueConstraintEncoder.Encode(_key, components, ignoreCasing);
+        UniqueConstraintEncoder.Encode(_hmac.Value!, components, ignoreCasing);
 
     /// <summary>
     /// Encodes a resolved scope. An absent scope, or one that narrows no dimension, returns the cached unscoped token.
@@ -46,5 +50,5 @@ internal sealed class UniqueConstraintKeyedEncoder
     internal UniqueConstraintScopeToken EncodeScope(ResolvedConstraintScope? scope) =>
         scope is null || (scope.EventSourceType is null && scope.EventStreamType is null && scope.EventStreamId is null)
             ? _unscoped
-            : UniqueConstraintScopeToken.Encode(_key, scope);
+            : UniqueConstraintScopeToken.Encode(_hmac.Value!, scope);
 }

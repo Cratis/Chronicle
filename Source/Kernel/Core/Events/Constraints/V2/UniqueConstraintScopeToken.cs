@@ -21,7 +21,17 @@ internal record UniqueConstraintScopeToken(string Value) : ConceptAs<string>(Val
     /// <param name="key">The store HMAC key.</param>
     /// <param name="scope">The typed scope; null dimensions do not narrow it.</param>
     /// <returns>The scope token.</returns>
-    internal static UniqueConstraintScopeToken Encode(ReadOnlySpan<byte> key, ResolvedConstraintScope? scope)
+    internal static UniqueConstraintScopeToken Encode(ReadOnlySpan<byte> key, ResolvedConstraintScope? scope) => Encode(key, null, scope);
+
+    /// <summary>
+    /// Encodes a resolved scope with reusable HMAC state.
+    /// </summary>
+    /// <param name="hmac">The reusable HMAC state, which must be keyed with the store key and must not be shared between threads.</param>
+    /// <param name="scope">The typed scope; null dimensions do not narrow it.</param>
+    /// <returns>The scope token.</returns>
+    internal static UniqueConstraintScopeToken Encode(IncrementalHash hmac, ResolvedConstraintScope? scope) => Encode(default, hmac, scope);
+
+    static UniqueConstraintScopeToken Encode(ReadOnlySpan<byte> key, IncrementalHash? hmac, ResolvedConstraintScope? scope)
     {
         Span<byte> initial = stackalloc byte[StackBufferSize];
         var writer = new UniqueConstraintPreimageWriter(initial);
@@ -29,7 +39,7 @@ internal record UniqueConstraintScopeToken(string Value) : ConceptAs<string>(Val
         {
             WritePreimage(ref writer, scope);
             Span<byte> hash = stackalloc byte[HashSize];
-            HMACSHA256.HashData(key, writer.Written, hash);
+            UniqueConstraintHmac.Compute(key, hmac, writer.Written, hash);
             return new(Convert.ToHexStringLower(hash[..16]));
         }
         finally
