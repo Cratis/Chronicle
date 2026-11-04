@@ -29,6 +29,7 @@ public class FluentJoinOverridesLocalWriteAnalyzer : DiagnosticAnalyzer
     const string JoinMethodName = "Join";
     const string SetMethodName = "Set";
     const string ProjectionBuilderInterfaceName = "IProjectionBuilder";
+    const string ChildrenBuilderInterfaceName = "IChildrenBuilder";
     const string PropertiesBuilderInterfaceName = "IReadModelPropertiesBuilder";
 
     /// <summary>
@@ -172,9 +173,14 @@ public class FluentJoinOverridesLocalWriteAnalyzer : DiagnosticAnalyzer
         InvocationExpressionSyntax invocation)
     {
         if (context.SemanticModel.GetSymbolInfo(invocation).Symbol is not IMethodSymbol method ||
-            method.ContainingType?.OriginalDefinition.Name != ProjectionBuilderInterfaceName ||
-            method.TypeArguments.FirstOrDefault() is not INamedTypeSymbol eventType ||
-            method.ContainingType.TypeArguments.FirstOrDefault() is not INamedTypeSymbol readModelType)
+            method.ContainingType?.OriginalDefinition.Name is not (ProjectionBuilderInterfaceName or ChildrenBuilderInterfaceName) ||
+            method.TypeArguments.FirstOrDefault() is not INamedTypeSymbol eventType)
+        {
+            return null;
+        }
+
+        var readModelIndex = method.ContainingType.OriginalDefinition.Name == ChildrenBuilderInterfaceName ? 1 : 0;
+        if (method.ContainingType.TypeArguments[readModelIndex] is not INamedTypeSymbol readModelType)
         {
             return null;
         }

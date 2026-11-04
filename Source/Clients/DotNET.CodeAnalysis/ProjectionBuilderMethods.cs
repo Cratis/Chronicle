@@ -44,6 +44,7 @@ internal static class ProjectionBuilderMethods
                name.Contains("IProjectionBuilder") ||
                name.Contains("IFromBuilder") ||
                name.Contains("IJoinBuilder") ||
+               name.Contains("IChildrenJoinBuilder") ||
                name.Contains("IChildrenBuilder");
     }
 
