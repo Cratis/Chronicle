@@ -2,6 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using Cratis.Choreography.Jobs;
+using Cratis.Choreography.Storage.Jobs;
 using Cratis.Chronicle.Alerts;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
@@ -20,8 +22,6 @@ using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Metrics;
 using Cratis.Monads;
-using Cratis.Orleans.Jobs;
-using Cratis.Orleans.Storage.Jobs;
 using Cratis.Traces;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -43,6 +43,12 @@ namespace Cratis.Chronicle.Observation.for_Observer.given;
 public class an_observer : Specification
 {
     protected Observer _observer;
+    protected TimeProvider _timeProvider = TimeProvider.System;
+
+    /// <summary>
+    /// Gets or sets the running-state change time held by the substituted observer state storage.
+    /// </summary>
+    protected DateTimeOffset? _persistedRunningStateChangedAt;
     protected IStreamProvider _streamProvider;
     protected IStreamProvider _sequenceStreamProvider;
     protected IObserverSubscriber _subscriber;
@@ -51,7 +57,7 @@ public class an_observer : Specification
     protected IObserverServiceClient _observerServiceClient;
     protected FailedPartitions _failedPartitionsState;
     protected virtual ObserverId _observerId => "d2a138a2-6ca5-4bff-8a2f-ffd8534cc80e";
-    protected ObserverKey _observerKey => new(_observerId, EventStoreName.NotSet, EventStoreNamespaceName.NotSet, EventSequenceId.Log);
+    protected virtual ObserverKey _observerKey => new(_observerId, EventStoreName.NotSet, EventStoreNamespaceName.NotSet, EventSequenceId.Log);
     protected TestKitSilo _silo = new();
     protected IStorage<ObserverState> _stateStorage;
     protected TestStorageStats _storageStats => _silo.StorageStats<Observer, ObserverState>()!;
@@ -81,6 +87,8 @@ public class an_observer : Specification
 
     protected virtual Observers CreateObserversConfig() => new() { WriteCoalescingInterval = 0 };
 
+    protected virtual IActivitySource<Observer> CreateActivitySource() => new ActivitySource<Observer>();
+
     void AddServices(TestKitSilo silo)
     {
         var options = Substitute.For<IOptionsMonitor<ChronicleOptions>>();
@@ -88,13 +96,13 @@ public class an_observer : Specification
         silo.AddService(options);
         silo.AddService(_configurationProvider);
         silo.AddService(_storage);
-        silo.AddService<TimeProvider>(TimeProvider.System);
+        silo.AddService(_timeProvider);
         silo.AddService(_webhookTargetPolicy);
         silo.AddService(_eventCompliance);
         silo.AddService(_eventGenerationRelease);
         silo.AddService<IObserverSubscriberSelector>(new RoundRobinObserverSubscriberSelector());
         silo.AddService(_observerServiceClient);
-        silo.AddKeyedService<IActivitySource<Observer>>(WellKnown.MeterName, new ActivitySource<Observer>());
+        silo.AddKeyedService(WellKnown.MeterName, CreateActivitySource());
         silo.AddService(_logger);
         silo.AddService(_loggerFactory);
 
@@ -209,6 +217,12 @@ public class an_observer : Specification
         _failedPartitionsStorage.State = _failedPartitionsState;
         _eventStoreNamespaceStorage.Observers.Get(_observerId).Returns(_ => _stateStorage.State with { Identifier = _observerId });
         _eventStoreNamespaceStorage.Observers.Save(Arg.Any<ObserverState>(), Arg.Any<EventSequenceId>()).Returns(true);
+        _eventStoreNamespaceStorage.Observers.GetRunningStateChangedAt(Arg.Any<ObserverId>()).Returns(_ => _persistedRunningStateChangedAt);
+        _eventStoreNamespaceStorage.Observers.SaveRunningStateChangedAt(Arg.Any<ObserverId>(), Arg.Any<DateTimeOffset?>(), Arg.Any<EventSequenceId>()).Returns(call =>
+        {
+            _persistedRunningStateChangedAt = call.ArgAt<DateTimeOffset?>(1);
+            return true;
+        });
         _eventStoreNamespaceStorage.FailedPartitions.GetFor(_observerId).Returns(_ => _failedPartitionsStorage.State);
 
         _eventSequence.GetTailSequenceNumber().Returns(EventSequenceNumber.Unavailable);
@@ -240,7 +254,7 @@ public class an_observer : Specification
 
     void ConfigureDefaultJobStorage()
     {
-        _jobStorage.GetJob(Arg.Any<JobId>()).Returns(call => Task.FromResult<Catch<JobState, Cratis.Orleans.Storage.Jobs.JobError>>(new JobState
+        _jobStorage.GetJob(Arg.Any<JobId>()).Returns(call => Task.FromResult<Catch<JobState, Cratis.Choreography.Storage.Jobs.JobError>>(new JobState
         {
             Id = call.Arg<JobId>(),
             Status = JobStatus.Running

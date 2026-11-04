@@ -14,10 +14,12 @@ namespace Cratis.Chronicle.Reducers;
 /// <summary>
 /// Represents an implementation of <see cref="IReducerInvoker"/>.
 /// </summary>
-public class ReducerInvoker : IReducerInvoker
+public class ReducerInvoker : IReducerInvoker, IBatchReducerInvoker
 {
     static readonly EventTypeRegistryCache<FrozenDictionary<Type, MethodInfo>> _methodsByEventTypeCache = new();
+    static readonly EventTypeSetCache<FrozenDictionary<Type, MethodInfo>> _sharedMethodsByEventTypeCache = new();
     readonly FrozenDictionary<Type, MethodInfo> _methodsByEventType;
+    readonly BatchMethod? _batchMethod;
     readonly IClientArtifactsActivator _artifactActivator;
     readonly Type _targetType;
 
@@ -41,8 +43,9 @@ public class ReducerInvoker : IReducerInvoker
         ReadModelType = readModelType;
         ContainerName = containerName;
         _methodsByEventType = GetMethodsFor(eventTypes, targetType, readModelType);
+        _batchMethod = ReducerBatchMethods.Find(targetType, readModelType, eventTypes.AllClrTypes, _methodsByEventType.Count > 0);
 
-        EventTypes = _methodsByEventType.Keys.Select(eventTypes.GetEventTypeFor).ToImmutableList();
+        EventTypes = _methodsByEventType.Keys.Concat(_batchMethod?.EventTypes ?? []).Select(eventTypes.GetEventTypeFor).ToImmutableList();
     }
 
     /// <inheritdoc/>
@@ -55,7 +58,11 @@ public class ReducerInvoker : IReducerInvoker
     public ReadModelContainerName ContainerName { get; }
 
     /// <inheritdoc/>
-    public async Task<ReduceResult> Invoke(IServiceProvider serviceProvider, IEnumerable<EventAndContext> eventsAndContexts, object? initialReadModelContent)
+    public Task<ReduceResult> Invoke(IServiceProvider serviceProvider, IEnumerable<EventAndContext> eventsAndContexts, object? initialReadModelContent) =>
+        Invoke(serviceProvider, eventsAndContexts, initialReadModelContent, BatchContext.Unknown(ObserverId.Unspecified, EventSequences.EventSequenceId.Log));
+
+    /// <inheritdoc/>
+    public async Task<ReduceResult> Invoke(IServiceProvider serviceProvider, IEnumerable<EventAndContext> eventsAndContexts, object? initialReadModelContent, BatchContext context)
     {
         var activatedReducerResult = _artifactActivator.Activate(serviceProvider, _targetType);
         if (activatedReducerResult.TryGetException(out var exception))
@@ -68,6 +75,11 @@ public class ReducerInvoker : IReducerInvoker
         }
 
         await using var activatedReducer = activatedReducerResult.AsT0;
+        if (_batchMethod is not null)
+        {
+            return await ReducerBatchMethods.Invoke(_batchMethod, activatedReducer.Instance, serviceProvider, eventsAndContexts, initialReadModelContent, context);
+        }
+
         EventAndContext? lastSuccessfulObservedEventAndContext = default;
         var currentModelState = initialReadModelContent;
         var dispatched = 0;
@@ -142,8 +154,12 @@ public class ReducerInvoker : IReducerInvoker
     /// <param name="targetType">The reducer CLR type.</param>
     /// <param name="readModelType">The registered reducer's model type.</param>
     /// <returns>The accepted event identities.</returns>
-    internal static IImmutableList<EventType> GetEventTypesFor(IEventTypes eventTypes, Type targetType, Type readModelType) =>
-        GetMethodsFor(eventTypes, targetType, readModelType).Keys.Select(eventTypes.GetEventTypeFor).ToImmutableList();
+    internal static IImmutableList<EventType> GetEventTypesFor(IEventTypes eventTypes, Type targetType, Type readModelType)
+    {
+        var methods = GetMethodsFor(eventTypes, targetType, readModelType);
+        var batchMethod = ReducerBatchMethods.Find(targetType, readModelType, eventTypes.AllClrTypes, methods.Count > 0);
+        return methods.Keys.Concat(batchMethod?.EventTypes ?? []).Select(eventTypes.GetEventTypeFor).ToImmutableList();
+    }
 
     static ReduceResult FailedReduction(object? currentModelState, EventSequenceNumber lastSuccessfulObservation, Exception exception) =>
         new(currentModelState, lastSuccessfulObservation, exception.GetAllMessages(), exception.StackTrace ?? string.Empty)
@@ -152,7 +168,11 @@ public class ReducerInvoker : IReducerInvoker
         };
 
     static FrozenDictionary<Type, MethodInfo> GetMethodsFor(IEventTypes eventTypes, Type targetType, Type readModelType) =>
-        _methodsByEventTypeCache.Get(eventTypes, targetType, readModelType, types => BuildMethodsByEventType(targetType, readModelType, types));
+        _methodsByEventTypeCache.Get(
+            eventTypes,
+            targetType,
+            readModelType,
+            types => _sharedMethodsByEventTypeCache.Get(types, targetType, readModelType, snapshot => BuildMethodsByEventType(targetType, readModelType, snapshot)));
 
     static FrozenDictionary<Type, MethodInfo> BuildMethodsByEventType(Type targetType, Type readModelType, IEnumerable<Type> eventTypes)
     {

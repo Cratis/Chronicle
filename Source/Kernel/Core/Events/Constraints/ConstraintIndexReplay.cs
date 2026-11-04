@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Events.Constraints;
+using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Storage.Events.Constraints;
 using Cratis.Chronicle.Storage.EventSequences;
 using Microsoft.Extensions.Logging;
@@ -30,7 +31,7 @@ public partial class ConstraintIndexReplay(
     ILogger<ConstraintIndexReplay> logger,
     IEnumerable<ConstraintIndexReplayScope> scopes,
     EventSequenceNumber endPoint,
-    int keyLimit = 100000)
+    int keyLimit = ConstraintIndexRepairOptions.DefaultFoldKeyLimit)
 {
     readonly ConstraintIndexReplayScope[] _scopes = scopes.ToArray();
     readonly Dictionary<UniqueKey, UniqueState> _unique = [];
@@ -71,6 +72,11 @@ public partial class ConstraintIndexReplay(
     /// Gets or sets the clock used for bounded storage attempts.
     /// </summary>
     internal TimeProvider ConstraintIndexTimeProvider { get; set; } = TimeProvider.System;
+
+    /// <summary>
+    /// Gets the longest a single index write may run before it is abandoned.
+    /// </summary>
+    internal TimeSpan AttemptTimeout { get; init; } = ConstraintIndexRepairOptions.Default.AttemptTimeout;
 
     /// <summary>
     /// Gets the highest combined count of staged keys and collected differences.
@@ -122,6 +128,7 @@ public partial class ConstraintIndexReplay(
     {
         RangeReadFailed = false;
         StorageCallSucceeded = false;
+        BlockedByPendingRepair = false;
         _failed.Clear();
         _abandoned.Clear();
         _operationConstraint = null;

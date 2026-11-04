@@ -96,6 +96,9 @@ internal sealed class SequenceReplies(IEventSequences inner, DropReplyIntercepto
     public Task<CommandResult> Redact(RedactRequest request, CallContext callContext = default) => inner.Redact(request, callContext);
 
     /// <inheritdoc/>
+    public Task<CommandResult<Guid>> CopyEventsForEventSource(CopyEventsForEventSourceRequest request, CallContext callContext = default) => inner.CopyEventsForEventSource(request, callContext);
+
+    /// <inheritdoc/>
     public Task<CommandResult> RedactForEventSource(RedactForEventSourceRequest request, CallContext callContext = default) => inner.RedactForEventSource(request, callContext);
 
     /// <inheritdoc/>
@@ -118,6 +121,9 @@ internal sealed class SequenceReplies(IEventSequences inner, DropReplyIntercepto
 
     /// <inheritdoc/>
     public Task<QueryResult<IEnumerable<AppendedEventResponse>>> ForEventSourceIdAndEventTypes(ForEventSourceIdAndEventTypesRequest request, CallContext callContext = default) => inner.ForEventSourceIdAndEventTypes(request, callContext);
+
+    /// <inheritdoc/>
+    public Task<QueryResult<IEnumerable<AppendedEventResponse>>> FromSequenceNumberWithErasedProperties(FromSequenceNumberWithErasedPropertiesRequest request, CallContext callContext = default) => inner.FromSequenceNumberWithErasedProperties(request, callContext);
 
     /// <inheritdoc/>
     public Task<QueryResult<IEnumerable<AppendedEventResponse>>> FromSequenceNumber(FromSequenceNumberRequest request, CallContext callContext = default) => inner.FromSequenceNumber(request, callContext);

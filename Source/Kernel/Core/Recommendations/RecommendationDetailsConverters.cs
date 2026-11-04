@@ -16,7 +16,7 @@ namespace Cratis.Chronicle.Recommendations;
 internal static class RecommendationDetailsConverters
 {
     /// <summary>
-    /// Converts stored recommendations into read models, materializing the result.
+    /// Converts the active, not ignored, stored recommendations into read models, materializing the result.
     /// </summary>
     /// <param name="recommendations">The stored recommendations.</param>
     /// <returns>The recommendations as read models.</returns>
@@ -25,7 +25,15 @@ internal static class RecommendationDetailsConverters
     /// keeps the source type as its first generic argument. See EventStoreNames for what that cost the last time.
     /// </remarks>
     internal static IEnumerable<RecommendationDetails> ToDetails(this IEnumerable<RecommendationState> recommendations) =>
-        [.. recommendations.Select(ToDetails)];
+        [.. recommendations.Where(_ => !_.IsIgnored).Select(ToDetails)];
+
+    /// <summary>
+    /// Converts the ignored stored recommendations into read models, materializing the result.
+    /// </summary>
+    /// <param name="recommendations">The stored recommendations.</param>
+    /// <returns>The ignored recommendations as read models.</returns>
+    internal static IEnumerable<RecommendationDetails> ToIgnoredDetails(this IEnumerable<RecommendationState> recommendations) =>
+        [.. recommendations.Where(_ => _.IsIgnored).Select(ToDetails)];
 
     /// <summary>
     /// Converts a stored recommendation into a read model.

@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <AssemblyName>Chronicle.Benchmarks.Kernel</AssemblyName>
+    <RootNamespace>Cratis.Chronicle.Benchmarks.Kernel</RootNamespace>
+    <IsPackable>false</IsPackable>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BenchmarkDotNet" />
+    <PackageReference Include="Cratis.Choreography" />
+    <PackageReference Include="Cratis.Choreography.Storage" />
+    <PackageReference Include="Cratis.Fundamentals" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../Source/Kernel/Core/Core.csproj" />
+    <ProjectReference Include="../../Source/Kernel/Concepts/Concepts.csproj" />
+    <ProjectReference Include="../../Source/Kernel/Storage.InMemory/Storage.InMemory.csproj" />
+  </ItemGroup>
+</Project>

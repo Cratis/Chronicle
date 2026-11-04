@@ -126,7 +126,7 @@ all events already appended. This does not remove explicitly queued globals.
 
 ## Register corrected seed definitions without reconnecting
 
-When registration fails, Chronicle retains the attempted entries in the event store's default `Seeding` buffer.
+When registration fails with a command or transport error, Chronicle retains the attempted entries in the event store's default `Seeding` buffer.
 That makes retrying an unchanged idempotent batch safe after a transient failure. If the definitions themselves
 were wrong, create an independent empty buffer so the corrected set is not combined with the retained set:
 
@@ -146,10 +146,12 @@ failure from its `Register()` call still propagates normally.
 - An entry that your seeder yields twice is two events, not one. Two events of the same type, on the same
   event source, carrying the same payload are two facts, and both are appended.
 - Events are appended in batches of 100. A batch is validated as a whole before anything is written, so a
-  single entry that violates a constraint means none of its batch is appended. The server reports the
-  rejection at `Error` with the violations, leaves those entries unseeded, and fails registration. The remote
-  client surfaces that failure through its normal transport error. Retry the unchanged buffer for a transient
-  failure; after correcting the definitions, restart the process or use `CreateEventSeeding()` to offer a fresh set.
+  single entry that violates a constraint means none of its batch is appended. The server logs the
+  rejection at `Error` with the violated constraint names and counts and leaves those entries unseeded.
+  A rejected batch does not fail registration and is not reported to the client, so check the server log.
+  The client clears its buffer once registration returns, so after correcting the definitions, restart the
+  process or use `CreateEventSeeding()` to offer the corrected set. Retrying only helps for a real command or
+  transport error.
 
 ## Best practices
 

@@ -3,6 +3,7 @@
 
 using System.Text.Json;
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.EventStores;
 using Cratis.Chronicle.Namespaces;
 using Cratis.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -16,9 +17,10 @@ namespace Cratis.Chronicle.Statistics;
 /// </summary>
 /// <param name="readModels"><see cref="IReadModelsService"/> to read materialized instances through.</param>
 /// <param name="grainFactory">The grain factory for discovering contributing namespaces.</param>
+/// <param name="initialization">The event store initialization service.</param>
 /// <param name="logger">The logger.</param>
 [Singleton]
-public class StatisticsReader(IReadModelsService readModels, IGrainFactory grainFactory, ILogger<StatisticsReader> logger) : IStatisticsReader
+public class StatisticsReader(IReadModelsService readModels, IGrainFactory grainFactory, IEventStoreInitialization initialization, ILogger<StatisticsReader> logger) : IStatisticsReader
 {
     /// <summary>
     /// The upper bound on rows read per namespace in one request. A full page must prove completeness to contribute totals.
@@ -37,8 +39,9 @@ public class StatisticsReader(IReadModelsService readModels, IGrainFactory grain
     /// </summary>
     /// <param name="readModels">The read model service.</param>
     /// <param name="grainFactory">The grain factory.</param>
-    public StatisticsReader(IReadModelsService readModels, IGrainFactory grainFactory)
-        : this(readModels, grainFactory, NullLogger<StatisticsReader>.Instance)
+    /// <param name="initialization">The event store initialization service.</param>
+    public StatisticsReader(IReadModelsService readModels, IGrainFactory grainFactory, IEventStoreInitialization initialization)
+        : this(readModels, grainFactory, initialization, NullLogger<StatisticsReader>.Instance)
     {
     }
 
@@ -50,6 +53,7 @@ public class StatisticsReader(IReadModelsService readModels, IGrainFactory grain
     public async Task<IEnumerable<EventTypeStatistics>> GetEventTypeStatistics(EventStoreName eventStore, EventStoreNamespaceName @namespace, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
+        await initialization.Ensure(eventStore).WaitAsync(cancellationToken);
         var request = new Contracts.ReadModels.GetInstancesRequest()
         {
             EventStore = eventStore,
@@ -83,6 +87,7 @@ public class StatisticsReader(IReadModelsService readModels, IGrainFactory grain
     public async Task<IEnumerable<EventTypeStatistics>> GetEventTypeStatisticsForEventStore(EventStoreName eventStore, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
+        await initialization.Ensure(eventStore).WaitAsync(cancellationToken);
         var namespaces = (await grainFactory.GetGrain<INamespaces>(eventStore).GetAll().WaitAsync(cancellationToken)).ToArray();
         var rows = new IEnumerable<EventTypeStatistics>[namespaces.Length];
         var options = new ParallelOptions

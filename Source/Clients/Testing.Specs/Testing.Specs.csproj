@@ -12,6 +12,14 @@
         <ProjectReference Include="../Connections/Connections.csproj" />
         <ProjectReference Include="../../Kernel/Contracts/Contracts.csproj" />
         <ProjectReference Include="../../Infrastructure/Infrastructure.csproj" />
+
+        <!-- Kernel assemblies with aliases, to host the kernel in an application container the way the in-process
+             integration fixtures do. Aliased so their namespaces do not collide with the client's. -->
+        <ProjectReference Include="../../Kernel/Concepts/Concepts.csproj" Aliases="KernelConcepts" />
+        <ProjectReference Include="../../Kernel/Compatibility/Compatibility.csproj" Aliases="KernelCompatibility" />
+        <ProjectReference Include="../../Kernel/Storage/Storage.csproj" Aliases="KernelStorage" />
+        <ProjectReference Include="../../Kernel/Core/Core.csproj" Aliases="KernelCore" />
+        <ProjectReference Include="../../Kernel/Grpc/Grpc.csproj" Aliases="KernelGrpc" />
     </ItemGroup>
 
     <ItemGroup>

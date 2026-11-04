@@ -3,6 +3,7 @@
 
 using System.Diagnostics.Metrics;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Observation.for_Observer.given;
 using Cratis.Metrics;
 
 namespace Cratis.Chronicle.Observation.for_ObserverMetrics;
@@ -11,12 +12,12 @@ public class when_recording_without_identifier_dimensions : Specification
 {
     readonly string _namespace = $"metric-ids-{Guid.NewGuid():N}";
     readonly List<(string Name, KeyValuePair<string, object?>[] Tags)> _measurements = [];
-    System.Diagnostics.Metrics.Meter _meter;
+    Meter _meter;
     MeterListener _listener;
 
     void Establish()
     {
-        _meter = new("identifier-dimension-specs");
+        _meter = ObserverMetricsRecorder.SharedMeter;
         _listener = new()
         {
             InstrumentPublished = (instrument, listener) => listener.EnableMeasurementEvents(instrument)
@@ -66,6 +67,5 @@ public class when_recording_without_identifier_dimensions : Specification
     void Destroy()
     {
         _listener.Dispose();
-        _meter.Dispose();
     }
 }

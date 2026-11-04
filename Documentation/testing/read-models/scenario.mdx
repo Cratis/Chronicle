@@ -225,6 +225,26 @@ and do not need a projection class or an entry in the provider's projection coll
 The test event store applies registrations in-process; appending through an event scenario does not
 start observer delivery or automatically run those projections and reactors.
 
+## Fold read models through an existing store (.NET)
+
+This is for test infrastructure, not for specs that check one read model. A harness that folds many
+read models against one `EventStoreForTesting` (for example a command scenario that materializes each
+read model its command reads) pays for a whole in-memory store every time it constructs a
+`ReadModelScenario<TReadModel>`. Ask the store for the scenario instead:
+
+<ChronicleClientTabs snippet="testing/read-models/scenario/borrowed-store" variants="csharp" />
+
+The scenario borrows the store's discovered artifacts, event types, serialization and event type
+schemas, and owns everything else: its input, seeds, `Instance`/`Instances`, `WithProjection` and its
+`ReadModels` surface. It folds only the events you give it, never the store's event log, so pass the
+events you selected from the log to `ProcessAppendedEvents`. Two scenarios from the same store never see
+each other's input or seeds, and the store's own `ReadModels` is unaffected.
+
+Pass an `IServiceProvider` to activate reducers and projections from it; otherwise the store's provider
+is used, or one built from the scenario's `Services`. Serialization and compliance always come from the
+store. Disposing the scenario releases only what it created; the store and its service provider stay
+usable.
+
 ## Auto-detection
 
 In .NET, `ReadModelScenario<TReadModel>` looks up a handler in the client artifacts registry. By default, Chronicle's

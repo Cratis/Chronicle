@@ -36,7 +36,7 @@ Say a release needs `Register` to take a version. Keep `Register` exactly as it 
 
 <ChronicleClientTabs snippet="contributing/kernel/grain-interfaces/forward-the-old-method" />
 
-Import `Orleans.CodeGeneration` with a `using` at the top of the file. Do not qualify the attribute in place: inside a `Cratis.*` namespace, `Orleans` resolves to `Cratis.Orleans`, so `[Orleans.CodeGeneration.Version]` does not compile. An interface without the attribute is version 0.
+Import `Orleans.CodeGeneration` with a `using` at the top of the file. Do not qualify the attribute in place: inside a `Cratis.*` namespace, `Orleans` resolves to `Cratis.Choreography`, so `[Orleans.CodeGeneration.Version]` does not compile. An interface without the attribute is version 0.
 
 During the rollout this works in both directions:
 
@@ -55,7 +55,7 @@ A grain that moves to a newer node reloads its state from storage. That state mu
 A grain call carries its arguments and result between silos, so their types are part of the contract too:
 
 - Add properties; never rename, retype or remove one, and never remove an enum member.
-- Do not move or rename a type a custom codec writes the name of. `ConceptSerializer`, `OneOfSerializer` and `CratisJsonSerializer` in `Cratis.Orleans.Serialization` write their own type name into every value. When `ConceptSerializer` moved from the kernel into `Cratis.Orleans`, a 19.13 node could not read a value from a 19.4 node. The spec `for_SiloWireTypeNames` pins those names.
+- Do not move or rename a type a custom codec writes the name of. `ConceptSerializer`, `OneOfSerializer` and `CratisJsonSerializer` in `Cratis.Choreography.Serialization` write their own type name into every value. When `ConceptSerializer` moved from the kernel into `Cratis.Choreography`, a 19.13 node could not read a value from a 19.4 node. The spec `for_SiloWireTypeNames` pins those names.
 
 `Source/Kernel/Core/GrainPayloadContracts.txt` records the serialized shape of every payload reachable from an active grain interface in `OrleansContracts.txt`. The GrainCompatibility specs generate it from Core using the kernel's custom-converter selection. The gate checks that it is current and compares it with the latest release's snapshot, starting with the first release that carries one.
 

@@ -6,6 +6,8 @@
   href: azure.md
 - name: Container Apps, App Service and Cloud Run
   href: azure-container-hosting.md
+- name: The System Event Store
+  href: system-event-store.md
 - name: Rolling Deploy
   href: rolling-deploy.md
 - name: Alerting on Observer Failures

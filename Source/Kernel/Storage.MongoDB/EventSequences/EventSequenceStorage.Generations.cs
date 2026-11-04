@@ -34,7 +34,12 @@ public partial class EventSequenceStorage
             stored.Revisions.Count(),
             string.Empty,
             revisedContent is null ? null : latest!.EventTypeGeneration,
-            revisedContent);
+            revisedContent)
+        {
+            DerivedGenerations = stored.DerivedGenerations?.ToDictionary(
+                _ => new EventTypeGeneration(uint.Parse(_.Key)),
+                _ => new GenerationProvenance(new(_.Value.SourceGeneration), _.Value.SourceIsAppended, new(_.Value.MigrationsVersion))) ?? []
+        };
     }
 
     /// <inheritdoc/>

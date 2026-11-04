@@ -71,7 +71,10 @@ on each call, not cached in the token or inferred from the administrator read-mo
 ### Audit mode for existing operations
 
 Existing user/application management commands, job stop/resume/delete operations, observer recovery
-operations, and development-only kernel reset use `Chronicle.Administrator.Operations`. By default,
+operations, and development-only kernel reset use `Chronicle.Administrator.Operations`.
+System-store reads and operations always require an administrator, regardless of
+`EnforceAdministratorPolicyForOperations`. See [The System event store](../system-event-store.md) for recovery guidance.
+For the remaining administrator-policy operations, by default,
 `EnforceAdministratorPolicyForOperations` is `false`: operations that would fail the administrator check
 log a warning and continue under their existing authentication requirements. Each would-deny warning names
 the caller kind (`user`, `app`, or `anonymous`) and operation, without token, secret, or command-property
@@ -89,8 +92,8 @@ through the authentication configuration:
 }
 ```
 
-With enforcement enabled, these operations require administrator privilege only when targeting `System`
-(case-insensitive). Security management and kernel reset have no event-store property and always count as
+Store-routed operations require administrator privilege when targeting `System` (case-insensitive), even
+with enforcement disabled. With enforcement enabled, security management and kernel reset have no event-store property and always count as
 System operations. Operations on application stores remain available without administrator privilege.
 Self-service password changes and anonymous bootstrap endpoints keep their existing behavior.
 

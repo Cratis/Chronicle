@@ -1,10 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Choreography.Jobs;
 using Cratis.Chronicle.Integration.Specifications.for_JobsManager.given;
 using Cratis.Chronicle.Jobs;
 using Cratis.Monads;
-using Cratis.Orleans.Jobs;
 using context = Cratis.Chronicle.Kernel.Integration.for_JobsManager.when_starting.job_with_single_step.and_then_resumed.context;
 using JobStatus = Cratis.Chronicle.Jobs.JobStatus;
 
@@ -15,9 +15,9 @@ public class and_then_resumed(context context) : Given<context>(context)
 {
     public class context(ChronicleFixture chronicleInProcessFixture) : a_jobs_manager(chronicleInProcessFixture)
     {
-        public Result<Cratis.Orleans.Jobs.JobId, StartJobError> StartJobResult;
+        public Result<Cratis.Choreography.Jobs.JobId, StartJobError> StartJobResult;
         public Job CompletedJobState;
-        public Cratis.Orleans.Jobs.JobId JobId;
+        public Cratis.Choreography.Jobs.JobId JobId;
         public IEnumerable<JobStep> JobSteps;
 
         async Task Because()
@@ -56,5 +56,5 @@ public class and_then_resumed(context context) : Given<context>(context)
     public void should_perform_work_for_job_step_only_once() => Context.JobStepProcessor.ShouldHavePerformedJobStepCalls(Context.JobId, 1);
 
     [Fact]
-    public void should_have_completed_work_successfully_for_one_job_step() => Context.JobStepProcessor.ShouldHaveCompletedJobSteps(Context.JobId, Cratis.Orleans.Jobs.JobStepStatus.CompletedSuccessfully, 1);
+    public void should_have_completed_work_successfully_for_one_job_step() => Context.JobStepProcessor.ShouldHaveCompletedJobSteps(Context.JobId, Cratis.Choreography.Jobs.JobStepStatus.CompletedSuccessfully, 1);
 }

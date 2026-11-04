@@ -72,6 +72,16 @@ internal sealed class ReadModelFold<TReadModel>
     public IReadOnlyCollection<NamedReadModelSeed<TReadModel>> NamedSeededInstances { get; init; } = [];
 
     /// <summary>
+    /// Gets the sequence that holds synthetic input folded without original contexts.
+    /// </summary>
+    /// <remarks>
+    /// Left unset, synthetic input goes to the store's shared input sequence, which is safe only because the store
+    /// belongs to one scenario. A scenario borrowing a store sets its own sequence so that folds in different
+    /// scenarios never read each other's input.
+    /// </remarks>
+    public EventSequenceId? SyntheticInputSequenceId { get; init; }
+
+    /// <summary>
     /// Processes input through the selected handler.
     /// </summary>
     /// <param name="events">The routed events.</param>
@@ -93,7 +103,7 @@ internal sealed class ReadModelFold<TReadModel>
         var context = new ReadModelFoldContext(EventStore, EventTypes, SchemaGenerator, ServiceProvider, ReadModelType)
         {
             EventContexts = eventContexts,
-            InputSequenceId = inputSequenceId
+            InputSequenceId = InputSequenceFor(eventContexts, inputSequenceId)
         };
         if (ReducerType is not null)
         {
@@ -138,4 +148,7 @@ internal sealed class ReadModelFold<TReadModel>
 
         throw new NoReadModelHandlerFound(ReadModelType);
     }
+
+    EventSequenceId? InputSequenceFor(IReadOnlyList<EventContext>? eventContexts, EventSequenceId? inputSequenceId) =>
+        inputSequenceId ?? (eventContexts is null ? SyntheticInputSequenceId : null);
 }

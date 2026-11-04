@@ -70,4 +70,19 @@ public class all_dependencies : Specification
             GenerationalContent = new Dictionary<int, string>()
         })]
     };
+
+    protected static EventsToObserve PageWith(params (string Partition, ulong[] SequenceNumbers)[] partitions) => new()
+    {
+        DeliveryId = 42,
+        Partitions = [.. partitions.Select(partition => new PartitionEvents
+        {
+            Partition = partition.Partition,
+            Events = [.. partition.SequenceNumbers.Select(number => new Contracts.Events.AppendedEvent
+            {
+                Context = (EventContext.Empty with { EventType = new("something-happened", 1), SequenceNumber = number }).ToContract(),
+                Content = "{\"name\":\"event\"}",
+                GenerationalContent = new Dictionary<int, string>()
+            })]
+        })]
+    };
 }

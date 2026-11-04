@@ -247,6 +247,9 @@ public abstract class a_parity_scenario(MongoDBFixture fixture) : Specification
         public Task<JsonObject> ReleaseJson(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, JsonSchema schema, JsonObject instance) =>
             Task.FromResult(instance);
 
+        public Task<JsonObject> ReleaseJson(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, JsonSchema schema, JsonObject instance, string? subject, IReadOnlyDictionary<string, string> subjects) =>
+            Task.FromResult(instance);
+
         public Task<ExpandoObject> Release(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, JsonSchema schema, ExpandoObject instance) =>
             Task.FromResult(instance);
 

@@ -78,7 +78,18 @@ internal static class EventContextConverters
     /// The event store and namespace are not carried on <see cref="Contracts.Sequences.EventContext"/> - the
     /// caller already knows which event sequence it queried, so they are supplied rather than round-tripped.
     /// </remarks>
-    internal static EventContext ToClient(this Contracts.Sequences.EventContext context, EventStoreName eventStore, EventStoreNamespaceName @namespace) => new(
+    internal static EventContext ToClient(this Contracts.Sequences.EventContext context, EventStoreName eventStore, EventStoreNamespaceName @namespace) =>
+        context.ToClient(eventStore, @namespace, []);
+
+    /// <summary>
+    /// Convert to Chronicle version of <see cref="EventContext"/>, carrying the confirmed erased properties.
+    /// </summary>
+    /// <param name="context"><see cref="Contracts.Sequences.EventContext"/> to convert.</param>
+    /// <param name="eventStore">The <see cref="EventStoreName"/> the context is for.</param>
+    /// <param name="namespace">The <see cref="EventStoreNamespaceName"/> the context is for.</param>
+    /// <param name="erasedProperties">The erased paths, already snapshotted; empty when none.</param>
+    /// <returns>Converted <see cref="EventContext"/>.</returns>
+    internal static EventContext ToClient(this Contracts.Sequences.EventContext context, EventStoreName eventStore, EventStoreNamespaceName @namespace, IReadOnlyList<string> erasedProperties) => new(
         context.EventType.ToClient(),
         context.EventSourceType,
         context.EventSourceId,
@@ -97,7 +108,8 @@ internal static class EventContextConverters
         Subject: ResolveSubject(context.Subject, context.EventSourceId))
     {
         NamedTags = (context.NamedTags ?? []).Select(tag => tag.ToClient()).ToArray(),
-        EventSource = ResolveEventSource(context.EventSource)
+        EventSource = ResolveEventSource(context.EventSource),
+        ErasedProperties = erasedProperties
     };
 
     /// <summary>

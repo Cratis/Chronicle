@@ -184,11 +184,11 @@ public partial class Database
                 await SqlServerDatabaseCreation.RunWithLock(
                     connectionString,
                     _resolution.PrepareRawConnection,
-                    () => CreateDatabase(context, target, databaseType));
+                    holdsLock => CreateDatabase(context, target, databaseType, holdsLock));
             }
             else
             {
-                await CreateDatabase(context, target, databaseType);
+                await CreateDatabase(context, target, databaseType, false);
             }
 
             _ensuredDatabaseKeys.TryAdd(connectionString, true);
@@ -199,33 +199,50 @@ public partial class Database
         }
     }
 
-    async Task CreateDatabase(DbContext context, SqlTarget target, DatabaseType databaseType)
+    async Task CreateDatabase(DbContext context, SqlTarget target, DatabaseType databaseType, bool holdsLock)
     {
         var creator = context.Database.GetInfrastructure().GetRequiredService<IRelationalDatabaseCreator>();
-        if (!await creator.ExistsAsync())
+        if (await creator.ExistsAsync())
+        {
+            if (databaseType == DatabaseType.SqlServer && holdsLock)
+            {
+                // Never evict sessions from an existing database, even if a prior start left it apparently empty.
+                await SqlServerReadCommittedSnapshot.WarnIfOff(target.ConnectionString, _resolution.PrepareRawConnection, _readCommittedSnapshotLogger.Value);
+            }
+        }
+        else
         {
             if (!CanCreateSchema)
             {
                 throw new DatabaseDoesNotExist(context.Database.GetDbConnection().Database);
             }
 
-            try
+            if (databaseType == DatabaseType.SqlServer)
             {
-                if (databaseType == DatabaseType.SqlServer && context.Database.GetDbConnection().Database.Length > 124)
+                if (await UsesHandWrittenCreation(target, context.Database.GetDbConnection().Database))
                 {
-                    // SQL Server's default logical log filename appends _log to the database name.
-                    // Explicit file names keep that second sysname within 128 units too.
-                    await SqlServerDatabaseCreation.Create(target.ConnectionString, _resolution.PrepareRawConnection);
+                    // Used for long names, where SQL Server's default logical log filename (name + _log) would exceed the
+                    // sysname limit, and wherever EF would enable read-committed snapshot without bounding the wait for
+                    // sessions holding the new database. Azure SQL Database has the setting on, so EF keeps its readiness retry there.
+                    await SqlServerDatabaseCreation.Create(target.ConnectionString, _readCommittedSnapshotLogger.Value, _resolution.PrepareRawConnection);
                 }
                 else
                 {
+                    // Retain EF's Azure readiness retry and the master-unavailable fallback. Do not catch duplicates
+                    // around EF's combined operation: the fallback may include ALTER, whose failures must escape.
                     await creator.CreateAsync();
                 }
             }
-            catch (Exception ex) when (IsAlreadyExistsException(ex))
+            else
             {
-                // Another kernel created the database at the same time (SQL Server 1801, PostgreSQL 42P04); safe to ignore.
-                // PostgreSQL creation and external provisioners do not share the SQL Server master lock.
+                try
+                {
+                    await creator.CreateAsync();
+                }
+                catch (Exception ex) when (IsAlreadyExistsException(ex))
+                {
+                    // Preserve the existing duplicate handling for other providers.
+                }
             }
 
             if (context.Database.GetDbConnection() is SqlConnection connection)
@@ -235,6 +252,30 @@ public partial class Database
                 // and try CREATE DATABASE again even though the schema-lock connection can already open it.
                 SqlConnection.ClearPool(connection);
             }
+        }
+    }
+
+    async Task<bool> UsesHandWrittenCreation(SqlTarget target, string database)
+    {
+        if (database.Length > 124)
+        {
+            return true;
+        }
+
+        var builder = new SqlConnectionStringBuilder(target.ConnectionString) { Pooling = false, InitialCatalog = "master" };
+        await using var connection = new SqlConnection(builder.ConnectionString);
+        try
+        {
+            await _resolution.PrepareRawConnection(connection);
+            await connection.OpenAsync();
+            await using var command = connection.CreateCommand();
+            command.CommandText = "SELECT CONVERT(int, SERVERPROPERTY('EngineEdition'))";
+            return Convert.ToInt32(await command.ExecuteScalarAsync()) != SqlServerReadCommittedSnapshot.AzureSqlDatabaseEdition;
+        }
+        catch (SqlException)
+        {
+            // An identity that cannot use master keeps EF's creation, which is what it did before.
+            return false;
         }
     }
 
