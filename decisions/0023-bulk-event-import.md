@@ -146,6 +146,21 @@ IObservable<ImportProgress> progress = import.Progress;
 - `BeginImport(ImportId)` reattaches to an existing session, so a process that crashed mid-staging resumes from the last acknowledged chunk.
 - `EventForEventSourceId` gains the per-event fields an import needs that it does not yet have: `Occurred`, `CorrelationId`, `CausedBy`, `Tags`, `NamedTags` and `Generation`.
 
+### 8. Every client takes a non-blocking stream
+
+Each client takes its language's native lazy, asynchronous stream of events. It reads the stream as it uploads, so the caller is never blocked while the whole source is read into memory, and a 300 000-event import never holds 300 000 events at once. Chunking, pipelining and resume behave as in point 6. A language with no asynchronous stream also takes its lazy synchronous sequence.
+
+| Client | Takes | Returns |
+| --- | --- | --- |
+| .NET | `IAsyncEnumerable<EventForEventSourceId>` (or `IEnumerable<…>`) | `Task<ImportResult>` |
+| TypeScript | `AsyncIterable<EventForEventSourceId>` (or `Iterable<…>`) | `Promise<ImportResult>`, cancellable with an `AbortSignal` |
+| Kotlin | `Flow<EventForEventSourceId>` (or `Sequence<…>`) | `suspend` → `ImportResult` |
+| Java | `Flow.Publisher<EventForEventSourceId>` (or `Stream<…>`) | `CompletableFuture<ImportResult>` |
+| Elixir | any `Enumerable`, a lazy `Stream` included | `{:ok, ImportResult}`; `import_async` runs it under a `Task` |
+| Go | `iter.Seq2[EventForEventSourceId, error]` with a `context.Context` | `(ImportResult, error)`; cancelled through the context |
+
+Each client also has the explicit session from point 7 (`BeginImport`, `Add`, `Complete`, reattach by `ImportId`) for producers that are not one stream, and reports progress in its own idiom: `IProgress`/`IObservable` in .NET, a callback or async iterable in TypeScript, a `Flow` in Kotlin, a callback in Java, messages to a process in Elixir and a callback in Go.
+
 ## Options considered
 
 - **Loop `AppendMany` in client-side chunks, as seeding does (not taken).** It needs no kernel change, but a rejected chunk 200 into a 300-chunk import leaves 199 committed and the rest not. There is no validate-first, no resume, no single catch-up, and every chunk goes through live fan-out.
@@ -177,7 +192,7 @@ People import by looping `AppendMany` themselves, as seeding does. Large imports
   - file formats and file reading, in the kernel or the client
   - cross-sequence or cross-store imports in one session (one import targets one event sequence)
   - importing into the outbox
-  - SDKs outside this repository
+  - landing the TypeScript, Kotlin/Java, Elixir and Go client APIs in this repository's release; each lands in its own repository against the published contracts, with the stream types in point 8
 - **Release:** additive, `minor`.
 - **Horizon:** holds for the current major. Revisit if decision 0004 replaces observer cursors, because the catch-up hand-off in point 4 would become a lane re-read.
 
@@ -226,3 +241,4 @@ Rulings given by Einar on 2026-11-03 while the record is still proposed. The res
 - **The C# client takes an `IAsyncEnumerable` of events.** The client-side API in point 7 is endorsed.
 - **Chunked unary calls on the wire, streaming in the client.** Chunking is kept for continuation after a dropped connection; there is no client-streaming RPC.
 - **No file import.** The JSON Lines format and the file-reading client API are dropped. The client chooses how to read its source.
+- **Every client imports from a streaming API where its language has one** (given 2026-11-04). Streaming keeps the import non-blocking: the client reads the source lazily while it uploads. Point 8 lists the type each client takes.
