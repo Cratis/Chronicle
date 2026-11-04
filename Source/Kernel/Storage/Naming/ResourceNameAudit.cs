@@ -74,6 +74,9 @@ public class ResourceNameAudit(
                 uses.AddRange(await Read(inventory, isTransient, exception => lastTransient = exception, linked.Token));
             }
 
+            // A read that finished after the deadline, or after the caller gave up, is not a result: accepting it
+            // would publish names as checked that were not read within the time the audit allows.
+            linked.Token.ThrowIfCancellationRequested();
             return uses;
         }
         catch (OperationCanceledException) when (budget.IsCancellationRequested && !cancellationToken.IsCancellationRequested)

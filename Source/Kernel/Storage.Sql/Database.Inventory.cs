@@ -21,8 +21,9 @@ public partial class Database
     /// <summary>
     /// Reads every permanent database binding, without binding anything.
     /// </summary>
+    /// <param name="cancellationToken">The <see cref="CancellationToken"/> that stops the read.</param>
     /// <returns>The physical database name of each bound identity. Empty for providers that do not bind names.</returns>
-    internal async Task<IReadOnlyDictionary<DatabaseIdentity, string>> Bindings()
+    internal async Task<IReadOnlyDictionary<DatabaseIdentity, string>> Bindings(CancellationToken cancellationToken)
     {
         if (!UsesBindings)
         {
@@ -30,18 +31,19 @@ public partial class Database
         }
 
         await using var context = ReadOnlyCluster();
-        var rows = await context.DatabaseNames.AsNoTracking().ToListAsync();
+        var rows = await context.DatabaseNames.AsNoTracking().ToListAsync(cancellationToken);
         return rows.ToDictionary(_ => _.Identity, _ => _.PhysicalName);
     }
 
     /// <summary>
     /// Reads the names of the registered event stores.
     /// </summary>
+    /// <param name="cancellationToken">The <see cref="CancellationToken"/> that stops the read.</param>
     /// <returns>The names.</returns>
-    internal async Task<IReadOnlyList<string>> RegisteredEventStores()
+    internal async Task<IReadOnlyList<string>> RegisteredEventStores(CancellationToken cancellationToken)
     {
         await using var context = ReadOnlyCluster();
-        return await context.EventStores.AsNoTracking().Select(_ => _.Name).ToListAsync();
+        return await context.EventStores.AsNoTracking().Select(_ => _.Name).ToListAsync(cancellationToken);
     }
 
     /// <summary>
@@ -98,18 +100,19 @@ public partial class Database
     /// </summary>
     /// <param name="target">Where it is.</param>
     /// <param name="placed">Whether a resolution decided where it is, which is then not checked for existence here.</param>
+    /// <param name="cancellationToken">The <see cref="CancellationToken"/> that stops the read.</param>
     /// <returns>The namespace names. Empty when the database or its table does not exist.</returns>
-    internal async Task<IReadOnlyList<string>> NamespacesOf(SqlTarget target, bool placed)
+    internal async Task<IReadOnlyList<string>> NamespacesOf(SqlTarget target, bool placed, CancellationToken cancellationToken)
     {
         if (!await Exists(target, placed))
         {
             return [];
         }
 
-        await using var context = new EventStoreDbContext(BuildOptions<EventStoreDbContext>(target));
+        await using var context = new EventStoreDbContext(ReadOptions<EventStoreDbContext>(target));
         try
         {
-            return await context.Namespaces.AsNoTracking().Select(_ => _.Name).ToListAsync();
+            return await context.Namespaces.AsNoTracking().Select(_ => _.Name).ToListAsync(cancellationToken);
         }
         catch (Exception exception) when (IsMissingTable(exception))
         {
@@ -129,7 +132,7 @@ public partial class Database
     /// Creates a context on the cluster database that only reads: nothing is migrated and no name is reserved.
     /// </summary>
     /// <returns>The <see cref="ClusterDbContext"/>, owned by the caller.</returns>
-    ClusterDbContext ReadOnlyCluster() => new(BuildOptions<ClusterDbContext>(ClusterTarget(ConnectionPurpose.Runtime)));
+    ClusterDbContext ReadOnlyCluster() => new(ReadOptions<ClusterDbContext>(ClusterTarget(ConnectionPurpose.Runtime)));
 
     async Task<bool> Exists(SqlTarget target, bool placed)
     {

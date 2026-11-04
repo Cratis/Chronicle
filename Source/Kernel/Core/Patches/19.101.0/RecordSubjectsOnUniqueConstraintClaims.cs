@@ -1,16 +1,19 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Events.Constraints;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.System;
 using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.EventStores;
 using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Patching;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventTypes;
+using Cratis.Chronicle.Storage.Naming;
 using Cratis.Orleans.Jobs;
 using Microsoft.Extensions.Logging;
 
@@ -28,8 +31,12 @@ namespace Cratis.Chronicle.Patches;
 /// <param name="storage"><see cref="IStorage"/> for accessing storage.</param>
 /// <param name="grainFactory"><see cref="IGrainFactory"/> for getting grains.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
-public class RecordSubjectsOnUniqueConstraintClaims(IStorage storage, IGrainFactory grainFactory, ILogger<RecordSubjectsOnUniqueConstraintClaims> logger) : ICanApplyPatch
+/// <param name="resourceNames">The optional <see cref="IResourceNameSnapshot"/> that tells which event stores are quarantined, and so are left out.</param>
+public class RecordSubjectsOnUniqueConstraintClaims(IStorage storage, IGrainFactory grainFactory, ILogger<RecordSubjectsOnUniqueConstraintClaims> logger, IResourceNameSnapshot? resourceNames = null) : ICanApplyPatch, IReportSkippedEventStores
 {
+    /// <inheritdoc/>
+    public IReadOnlyList<EventStoreName> SkippedEventStores { get; private set; } = [];
+
     /// <inheritdoc/>
     public SemanticVersion Version => new(19, 101, 0);
 
@@ -38,8 +45,9 @@ public class RecordSubjectsOnUniqueConstraintClaims(IStorage storage, IGrainFact
     {
         logger.StartingPatch();
 
-        var eventStores = await storage.GetEventStores();
-        foreach (var eventStore in eventStores)
+        var eventStores = await UsableEventStores.From(storage, resourceNames, logger);
+        SkippedEventStores = eventStores.Skipped;
+        foreach (var eventStore in eventStores.Usable)
         {
             var eventStoreStorage = storage.GetEventStore(eventStore);
             var definitions = await eventStoreStorage.Constraints.GetDefinitions();

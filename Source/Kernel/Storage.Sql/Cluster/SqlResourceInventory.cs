@@ -19,7 +19,7 @@ namespace Cratis.Chronicle.Storage.Sql.Cluster;
 /// <remarks>
 /// The owners are the event stores in the registry, the owners named by the permanent database bindings and always the System event store.
 /// Each database is identified by the server, the database as that provider compares database names, and the schema:
-/// PostgreSQL by ordinal name, SQL Server by the representative the server's collation gives the name, and SQLite by the normalized
+/// PostgreSQL by ordinal name, the schema without regard to case (as provisioning compares it), SQL Server by the representative the server's collation gives the name, and SQLite by the normalized
 /// full path of the file. Nothing is bound, created, migrated or reserved: the cluster is read through a context that only reads.
 /// </remarks>
 /// <param name="database">The <see cref="Database"/>.</param>
@@ -28,8 +28,8 @@ internal sealed class SqlResourceInventory(Database database) : IResourceInvento
     /// <inheritdoc/>
     public async Task<IEnumerable<ResourceUse>> Read(CancellationToken cancellationToken)
     {
-        var bindings = await database.Bindings();
-        var owners = await Owners(bindings);
+        var bindings = await database.Bindings(cancellationToken);
+        var owners = await Owners(bindings, cancellationToken);
         var pending = new List<(ResourceOwner? Owner, ResourceKind Kind, SqlTarget Target, DatabaseIdentity Identity)>
         {
             (null, ResourceKind.Kernel, await database.EffectiveTarget(DatabaseIdentity.Cluster, bindings), DatabaseIdentity.Cluster)
@@ -37,12 +37,13 @@ internal sealed class SqlResourceInventory(Database database) : IResourceInvento
 
         foreach (var (eventStore, namespaces) in owners)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var owner = new ResourceOwner(eventStore);
             var storeIdentity = DatabaseIdentity.Store(eventStore);
             var storeTarget = await database.EffectiveTarget(storeIdentity, bindings);
             pending.Add((owner, ResourceKind.EventStoreDatabase, storeTarget, storeIdentity));
 
-            var recorded = await database.NamespacesOf(storeTarget, await IsPlaced(storeIdentity));
+            var recorded = await database.NamespacesOf(storeTarget, await IsPlaced(storeIdentity), cancellationToken);
             foreach (var @namespace in namespaces.Concat(recorded).Distinct(StringComparer.Ordinal))
             {
                 var namespaceOwner = new ResourceOwner(eventStore, @namespace);
@@ -53,6 +54,7 @@ internal sealed class SqlResourceInventory(Database database) : IResourceInvento
             }
         }
 
+        cancellationToken.ThrowIfCancellationRequested();
         var representatives = await database.Representatives([.. pending.Select(_ => DatabaseOf(_.Target.ConnectionString)).Distinct(StringComparer.Ordinal)]);
         return [.. pending.Select(_ => new ResourceUse(_.Owner, _.Kind, IdentityOf(_.Target, representatives)))];
     }
@@ -70,29 +72,31 @@ internal sealed class SqlResourceInventory(Database database) : IResourceInvento
         {
             case DatabaseType.PostgreSql:
                 var postgres = new NpgsqlConnectionStringBuilder(connectionString);
-                return $"pg:{postgres.Host!.ToLowerInvariant()}:{postgres.Port}|{postgres.Database}|{target.Schema}";
+                return $"pg:{postgres.Host!.ToLowerInvariant()}:{postgres.Port}|{postgres.Database}|{SchemaOf(target)}";
             case DatabaseType.SqlServer:
                 var sql = new SqlConnectionStringBuilder(connectionString);
                 var name = representatives.TryGetValue(sql.InitialCatalog, out var representative) ? representative : sql.InitialCatalog;
-                return $"mssql:{sql.DataSource.ToLowerInvariant()}|{name}|{target.Schema}";
+                return $"mssql:{sql.DataSource.ToLowerInvariant()}|{name}|{SchemaOf(target)}";
             default:
                 var path = Path.GetFullPath(new SqliteConnectionStringBuilder(connectionString).DataSource).Normalize(NormalizationForm.FormC).ToUpperInvariant();
-                return $"sqlite:{path}|{target.Schema}";
+                return $"sqlite:{path}|{SchemaOf(target)}";
         }
     }
+
+    static string SchemaOf(SqlTarget target) => target.Schema.ToUpperInvariant();
 
     static string DatabaseOf(string connectionString) => connectionString.GetDatabaseType() == DatabaseType.SqlServer
         ? new SqlConnectionStringBuilder(connectionString).InitialCatalog
         : string.Empty;
 
-    async Task<IReadOnlyDictionary<string, HashSet<string>>> Owners(IReadOnlyDictionary<DatabaseIdentity, string> bindings)
+    async Task<IReadOnlyDictionary<string, HashSet<string>>> Owners(IReadOnlyDictionary<DatabaseIdentity, string> bindings, CancellationToken cancellationToken)
     {
         var owners = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal)
         {
             [EventStoreName.System.Value] = []
         };
 
-        foreach (var name in await database.RegisteredEventStores())
+        foreach (var name in await database.RegisteredEventStores(cancellationToken))
         {
             owners.TryAdd(name, []);
         }

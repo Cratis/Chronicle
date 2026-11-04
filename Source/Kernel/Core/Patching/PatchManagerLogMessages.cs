@@ -26,6 +26,9 @@ internal static partial class PatchManagerLogMessages
     [LoggerMessage(LogLevel.Information, "Successfully applied patch {PatchName}")]
     internal static partial void PatchAppliedSuccessfully(this ILogger<PatchManager> logger, string patchName);
 
+    [LoggerMessage(LogLevel.Warning, "Patch {PatchName} did not reach the quarantined event stores {EventStores}, so it is not recorded as applied and runs again at the next startup")]
+    internal static partial void PatchDeferred(this ILogger<PatchManager> logger, string patchName, string eventStores);
+
     [LoggerMessage(LogLevel.Error, "Failed to apply patch {PatchName}")]
     internal static partial void PatchApplicationFailed(this ILogger<PatchManager> logger, string patchName, Exception exception);
 

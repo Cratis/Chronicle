@@ -1,12 +1,15 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.System;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.EventStores;
 using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Patching;
 using Cratis.Chronicle.Storage;
+using Cratis.Chronicle.Storage.Naming;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Patches;
@@ -17,15 +20,21 @@ namespace Cratis.Chronicle.Patches;
 /// <param name="storage">The storage to clean.</param>
 /// <param name="grainFactory">The grain factory for namespace and sequence discovery.</param>
 /// <param name="logger">The logger.</param>
-public class RemoveUnhashedUniqueConstraintValues(IStorage storage, IGrainFactory grainFactory, ILogger<RemoveUnhashedUniqueConstraintValues> logger) : ICanApplyPatch
+/// <param name="resourceNames">The optional <see cref="IResourceNameSnapshot"/> that tells which event stores are quarantined, and so are left out.</param>
+public class RemoveUnhashedUniqueConstraintValues(IStorage storage, IGrainFactory grainFactory, ILogger<RemoveUnhashedUniqueConstraintValues> logger, IResourceNameSnapshot? resourceNames = null) : ICanApplyPatch, IReportSkippedEventStores
 {
+    /// <inheritdoc/>
+    public IReadOnlyList<EventStoreName> SkippedEventStores { get; private set; } = [];
+
     /// <inheritdoc/>
     public SemanticVersion Version => new(19, 112, 0);
 
     /// <inheritdoc/>
     public async Task Up()
     {
-        foreach (var eventStore in await storage.GetEventStores())
+        var eventStores = await UsableEventStores.From(storage, resourceNames, logger);
+        SkippedEventStores = eventStores.Skipped;
+        foreach (var eventStore in eventStores.Usable)
         {
             var eventStoreStorage = storage.GetEventStore(eventStore);
             var namespaces = await grainFactory.GetGrain<INamespaces>(eventStore).GetAll();

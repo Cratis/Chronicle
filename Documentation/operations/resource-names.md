@@ -40,6 +40,13 @@ Recovery is offline. Chronicle does not merge or move storage on its own.
 3. Decide which owner keeps the storage. Back up the storage of the other owner, then rename or remove the other event store or namespace outside Chronicle.
 4. Start the kernels. The check runs again and the quarantine is lifted when no overlap remains.
 
+## Upgrade patches and erasure while a name is unavailable
+
+A quarantined event store cannot be opened, so operations that visit every event store leave it out and log a warning for it (`Leaving out the quarantined event store ...`). This is what keeps the kernel starting.
+
+- **Upgrade patches** (the ones that rebuild or clean constraint data in every event store): a patch that left an event store out is not recorded as applied, and the system version is not moved past it. It runs again at the next startup, once the quarantine is lifted, and then reaches the store it missed. These patches are safe to repeat on stores they already reached.
+- **Encryption key erasure for a subject**: the event stores that are not quarantined are erased as usual, and the log names the quarantined ones the erasure did not reach (`did not reach the ... quarantined event stores`). Repeat the erasure after the quarantine is lifted. Until then a key kept in a quarantined event store is not erased.
+
 ## Reserved names
 
 Names are reserved in the cluster storage when an event store or namespace is created: a `ResourceNameReservations` table in SQL, or a collection in MongoDB. A reservation is made after the name has passed the rule, and before any storage is created. If creation fails after the reservation, the reservation is kept and the retry reuses it.

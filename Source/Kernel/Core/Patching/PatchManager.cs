@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Concepts.Patching;
 using Cratis.Chronicle.Concepts.System;
 using Cratis.Chronicle.Storage;
+using Cratis.Chronicle.Storage.Naming;
 using Cratis.Chronicle.Sys;
 using Cratis.Types;
 using Microsoft.Extensions.Logging;
@@ -96,6 +97,17 @@ public class PatchManager(
         return (patchesToApply, skippedCount);
     }
 
+    /// <summary>
+    /// Gets the system version after a patch has been handled. Once a patch has been deferred the version must not move
+    /// past it, whatever applies after it.
+    /// </summary>
+    /// <param name="latest">The version recorded so far.</param>
+    /// <param name="patch">The patch that was just applied.</param>
+    /// <param name="versionBlocked">Whether an earlier patch was deferred.</param>
+    /// <returns>The version to record.</returns>
+    static SemanticVersion? VersionAfter(SemanticVersion? latest, ICanApplyPatch patch, bool versionBlocked) =>
+        versionBlocked ? latest : patch.Version;
+
     PatchOutcome RelocateToCaller()
     {
         if (PatchManagerRelocation.CallerSilo() is { } callerSilo)
@@ -131,14 +143,7 @@ public class PatchManager(
         }
 
         var skippedCount = 0;
-        var alreadyAppliedPatchNames = new HashSet<string>(StringComparer.Ordinal);
-        foreach (var patch in candidatePatches)
-        {
-            if (await storage.System.Patches.Has(patch.Name))
-            {
-                alreadyAppliedPatchNames.Add(patch.Name);
-            }
-        }
+        var alreadyAppliedPatchNames = await AppliedPatchNames(candidatePatches);
         var (patchesToApply, computedSkippedCount) = FilterPatchesToApply(candidatePatches, alreadyAppliedPatchNames);
         skippedCount = computedSkippedCount;
 
@@ -149,6 +154,8 @@ public class PatchManager(
 
         SemanticVersion? latestVersion = null;
         var appliedCount = 0;
+        var deferredCount = 0;
+        var versionBlocked = false;
 
         foreach (var patch in patchesToApply)
         {
@@ -159,17 +166,19 @@ public class PatchManager(
                 logger.ApplyingPatch(patchName, patch.Version, _kernelVersion);
                 await patch.Up();
 
-                var patchRecord = new Patch(patchName, patch.Version, DateTimeOffset.UtcNow);
-                await storage.System.Patches.Save(patchRecord);
-
-                State = State with
+                // A patch that left quarantined event stores out has not reached them. It is not recorded as applied,
+                // and the system version stays below it, so it runs again on a later startup. Patches after it are
+                // recorded by name, so they are not repeated.
+                if (IsDeferred(patch))
                 {
-                    AppliedPatches = State.AppliedPatches.Append(patchRecord)
-                };
+                    versionBlocked = true;
+                    deferredCount++;
+                    continue;
+                }
 
-                await WriteStateAsync();
+                await RecordApplied(patch);
 
-                latestVersion = patch.Version;
+                latestVersion = VersionAfter(latestVersion, patch, versionBlocked);
                 appliedCount++;
                 logger.PatchAppliedSuccessfully(patchName);
             }
@@ -186,6 +195,44 @@ public class PatchManager(
             logger.UpdatedSystemVersion(latestVersion);
         }
 
-        logger.PatchApplicationCompleted(appliedCount, skippedCount);
+        logger.PatchApplicationCompleted(appliedCount, skippedCount + deferredCount);
+    }
+
+    async Task<HashSet<string>> AppliedPatchNames(IEnumerable<ICanApplyPatch> candidatePatches)
+    {
+        var names = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var patch in candidatePatches)
+        {
+            if (await storage.System.Patches.Has(patch.Name))
+            {
+                names.Add(patch.Name);
+            }
+        }
+
+        return names;
+    }
+
+    bool IsDeferred(ICanApplyPatch patch)
+    {
+        if (patch is not IReportSkippedEventStores { SkippedEventStores.Count: > 0 } skipped)
+        {
+            return false;
+        }
+
+        logger.PatchDeferred(patch.Name, string.Join(", ", skipped.SkippedEventStores.Select(_ => ResourceNameText.Escape(_.Value))));
+        return true;
+    }
+
+    async Task RecordApplied(ICanApplyPatch patch)
+    {
+        var patchRecord = new Patch(patch.Name, patch.Version, DateTimeOffset.UtcNow);
+        await storage.System.Patches.Save(patchRecord);
+
+        State = State with
+        {
+            AppliedPatches = State.AppliedPatches.Append(patchRecord)
+        };
+
+        await WriteStateAsync();
     }
 }

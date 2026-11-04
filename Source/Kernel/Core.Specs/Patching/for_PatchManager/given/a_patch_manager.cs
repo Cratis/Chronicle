@@ -12,6 +12,7 @@ namespace Cratis.Chronicle.Patching.for_PatchManager.given;
 public class a_patch_manager : Specification
 {
     protected TestKitSilo _silo = new();
+    protected IStorage _storage;
     protected ISystemStorage _systemStorage;
     protected ISystem _system;
     protected ICanApplyPatch _patch;
@@ -21,12 +22,12 @@ public class a_patch_manager : Specification
 
     void Establish()
     {
-        var storage = Substitute.For<IStorage>();
+        _storage = Substitute.For<IStorage>();
         _systemStorage = Substitute.For<ISystemStorage>();
-        storage.System.Returns(_systemStorage);
+        _storage.System.Returns(_systemStorage);
         _system = Substitute.For<ISystem>();
         _silo.AddProbe<ISystem>(_ => _system);
-        _silo.AddService(storage);
+        _silo.AddService(_storage);
         _silo.AddService(NullLogger<PatchManager>.Instance);
         _patch = Substitute.For<ICanApplyPatch>();
         _patch.Name.Returns("a-patch");
