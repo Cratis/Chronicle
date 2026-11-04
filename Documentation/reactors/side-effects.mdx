@@ -37,7 +37,7 @@ In C#, return a sequence of known events — `IEnumerable<TEvent>`, `TEvent[]`, 
 
 A bare returned event normally targets the *triggering* event's source ID. C# can redirect that target for the whole reactor via [`ICanProvideEventSourceId`](#icanprovideeventsourceid). When the follow-up event belongs to a different entity, return an `EventForEventSourceId` with that entity's ID instead.
 
-In TypeScript, a bare return uses the triggering source ID, stream ID, and subject. The reactor's `@eventSourceType` and `@eventStreamType` decorators supply source and stream types for bare returns; without a declared stream type, the triggering stream type is kept. Each returned `EventForEventSourceId` keeps its own target metadata instead. Explicit append calls do not inherit those decorators: choose their routing through append options. [Filtering](filtering) explains the separate effect these decorators have on which events the reactor receives.
+In TypeScript, a bare return uses the triggering event's source ID and stream ID. Its subject is set to that same triggering source ID, which can differ from the compliance subject the kernel returns on the triggering event's context. The reactor's `@eventSourceType` and `@eventStreamType` decorators supply source and stream types for bare returns; without a declared stream type, the triggering stream type is kept. Each returned `EventForEventSourceId` keeps its own target metadata instead. Explicit append calls do not inherit those decorators: choose their routing through append options. [Filtering](filtering) explains the separate effect these decorators have on which events the reactor receives.
 
 Picture a library. A member reserves a book, and that reservation is a fact about the *book*:
 
