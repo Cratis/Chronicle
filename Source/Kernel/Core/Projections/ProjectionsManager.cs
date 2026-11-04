@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
+using System.Diagnostics.CodeAnalysis;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Observation;
@@ -30,6 +31,7 @@ namespace Cratis.Chronicle.Projections;
 /// <param name="storage"><see cref="IStorage"/> for accessing storage.</param>
 /// <param name="localSiloDetails"><see cref="ILocalSiloDetails"/> for getting the local silo details.</param>
 /// <param name="clusterMembership"><see cref="IClusterMembershipService"/> for noticing silos that leave the cluster.</param>
+/// <param name="subscriptionThrottle">Host-wide projection subscription admission.</param>
 /// <param name="logger">The logger.</param>
 /// <param name="timeProvider">The <see cref="TimeProvider"/> the registration subscribe budget is measured against. Defaults to the system clock.</param>
 [ImplicitChannelSubscription]
@@ -42,6 +44,7 @@ public partial class ProjectionsManager(
     IStorage storage,
     ILocalSiloDetails localSiloDetails,
     IClusterMembershipService clusterMembership,
+    IProjectionSubscriptionThrottle subscriptionThrottle,
     ILogger<ProjectionsManager> logger,
     TimeProvider? timeProvider = null) : Grain<ProjectionsManagerState>, IProjectionsManager, IOnBroadcastChannelSubscribed, IDisposable
 {
@@ -61,25 +64,14 @@ public partial class ProjectionsManager(
     internal static readonly TimeSpan RegistrationSubscribeBudget = TimeSpan.FromSeconds(15);
 
     /// <summary>
-    /// Maximum number of observer subscribe operations this grain lets run concurrently.
+    /// Cancels only activation-local queue waits, not already-admitted remote work.
     /// </summary>
     /// <remarks>
-    /// On boot every ProjectionsManager (one per event store) activates independently and immediately schedules
-    /// subscribing every projection to every namespace in full parallel - see
-    /// <see cref="SetDefinitionAndSubscribeForProjections"/> fanning out over definitions and
-    /// <see cref="SetDefinitionAndSubscribeForProjection"/> fanning out over namespaces. Subscribing an observer also
-    /// drives it to recover every failed partition it remembers
-    /// (<see cref="IObserver.Subscribe{TObserverSubscriber}"/> and <see cref="IObserver.SubscribeToAllEvents{TObserverSubscriber}"/>
-    /// both call <see cref="IObserver.TryRecoverAllFailedPartitions"/>), so with enough projections, namespaces and
-    /// accumulated failures across a cluster the unrestrained fan-out from a kernel restart can saturate the silo's
-    /// CPU - the recovery storm this bound exists to prevent. The gate sits at the actual subscribe call site
-    /// (<see cref="SubscribeIfNotSubscribed"/>) rather than reshaping the fan-out itself, so the bound holds no
-    /// matter which caller reaches it: registration, a newly added namespace, or the activation-time resubscribe
-    /// timer.
+    /// Managed lifetime avoids disposing the source while queued continuations still use its token.
+    /// No wait handle is used.
     /// </remarks>
-    const int MaxConcurrentSubscriptions = 8;
-
-    readonly SemaphoreSlim _subscriptionThrottle = new(MaxConcurrentSubscriptions, MaxConcurrentSubscriptions);
+    [SuppressMessage("Usage", "CA2213:Disposable fields should be disposed", Justification = "No wait handle is used; queued continuations may still read the activation token after disposal.")]
+    readonly CancellationTokenSource _subscriptionCancellation = new();
 
     readonly TimeProvider _clock = timeProvider ?? TimeProvider.System;
 
@@ -123,19 +115,23 @@ public partial class ProjectionsManager(
     }
 
     /// <inheritdoc/>
-    public override Task OnDeactivateAsync(DeactivationReason reason, CancellationToken cancellationToken)
+    public override async Task OnDeactivateAsync(DeactivationReason reason, CancellationToken cancellationToken)
     {
+        await _subscriptionCancellation.CancelAsync();
         Dispose();
-        return base.OnDeactivateAsync(reason, cancellationToken);
+        await base.OnDeactivateAsync(reason, cancellationToken);
     }
 
     /// <inheritdoc/>
     public void Dispose()
     {
+        _subscriptionCancellation.Cancel();
         _subscribeTimer?.Dispose();
+        _subscribeTimer = null;
         _resubscribeTimer?.Dispose();
+        _resubscribeTimer = null;
         _siloDepartureTimer?.Dispose();
-        _subscriptionThrottle.Dispose();
+        _siloDepartureTimer = null;
         GC.SuppressFinalize(this);
     }
 
@@ -528,17 +524,15 @@ public partial class ProjectionsManager(
 
         // The throttle is taken before the projection is built: building one per definition x namespace pair ahead of
         // the gate ran thousands of them at once on a large registration, CPU the subscribes then had to compete for.
-        await _subscriptionThrottle.WaitAsync();
+        if (reactivateRetired) _pendingRevival.TryAdd(pair, default);
+        _subscribed.TryRemove(pair, out _);
+        var deadline = GetSubscriptionAdmissionDeadline(boundedByRegistration);
+        var acquired = false;
         try
         {
-            if (!reactivateRetired && !IsCurrentActiveDefinition(definition)) return;
-
-            // Out of budget: leave the pair for the background repair, which revives it if the observer was retired.
-            if (boundedByRegistration && RegistrationSubscribeBudgetSpent())
-            {
-                _pendingRevival.TryAdd(pair, default);
-                return;
-            }
+            acquired = await WaitForSubscriptionAdmission(deadline);
+            if (!acquired) return;
+            if (MustDeferSubscription(definition, deadline, reactivateRetired)) return;
 
             logger.Subscribing(definition.Identifier, namespaceName);
             var projection = await projectionFactory.Create(_eventStoreName, namespaceName, definition, readModelDefinition, eventTypeSchemas);
@@ -578,12 +572,35 @@ public partial class ProjectionsManager(
         }
         finally
         {
-            _subscriptionThrottle.Release();
+            if (acquired) subscriptionThrottle.Release();
         }
     }
 
-    bool RegistrationSubscribeBudgetSpent() =>
-        _registrationSubscribeDeadline is { } deadline && _clock.GetUtcNow() >= deadline;
+    bool MustDeferSubscription(ProjectionDefinition definition, DateTimeOffset? deadline, bool reactivateRetired) =>
+        SubscriptionAdmissionExpired(deadline) || (!reactivateRetired && !IsCurrentActiveDefinition(definition));
+
+    DateTimeOffset? GetSubscriptionAdmissionDeadline(bool boundedByRegistration) => boundedByRegistration
+        ? _registrationSubscribeDeadline ?? throw new InvalidOperationException("Registration subscription admission requires a deadline.")
+        : null;
+
+    bool SubscriptionAdmissionExpired(DateTimeOffset? deadline) =>
+        _subscriptionCancellation.IsCancellationRequested || (deadline.HasValue && _clock.GetUtcNow() >= deadline.Value);
+
+    async Task<bool> WaitForSubscriptionAdmission(DateTimeOffset? deadline)
+    {
+        var remaining = deadline is { } expires ? expires - _clock.GetUtcNow() : Timeout.InfiniteTimeSpan;
+        if (_subscriptionCancellation.IsCancellationRequested) return false;
+        if (deadline.HasValue && remaining <= TimeSpan.Zero) return false;
+
+        try
+        {
+            return await subscriptionThrottle.WaitAsync(remaining, _subscriptionCancellation.Token);
+        }
+        catch (OperationCanceledException) when (_subscriptionCancellation.IsCancellationRequested)
+        {
+            return false;
+        }
+    }
 
     Task OnError(Exception exception) => Task.CompletedTask;
 
