@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+import { randomUuid } from '../../../../../Utils/randomUuid';
 import { useCallback, useState } from 'react';
 import { DialogButtons, DialogResult, useConfirmationDialog } from '@cratis/arc.react/dialogs';
 import strings from 'Strings';
@@ -79,7 +80,7 @@ export const useQueryHierarchyActions = (
 
         // Named straight after it appears, so the folder is stored before the rename rather than
         // only once the user settles on a name - closing the page mid-rename still leaves it there.
-        if (!await saveFolder(eventStore, { id: crypto.randomUUID(), scope, namespace, path })) return;
+        if (!await saveFolder(eventStore, { id: randomUuid(), scope, namespace, path })) return;
 
         setRenamingId(folderNodeId(scope, path));
         onChanged();
