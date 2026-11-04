@@ -2,6 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
+using System.Security.Cryptography;
+using System.Text;
 using Cratis.Chronicle.Concepts;
 using Microsoft.Extensions.Logging;
 
@@ -22,6 +24,11 @@ public class ResourceNameGate(
     ILogger<ResourceNameGate> logger,
     IResourcePhysicalNames? physicalNames = null) : IResourceNameGate
 {
+    /// <summary>
+    /// The longest reservation key or owner, in UTF-16 units, that is stored as it is. Longer values are stored as a hash.
+    /// </summary>
+    public const int MaximumStoredLength = 450;
+
     readonly ConcurrentDictionary<(string EventStore, string? Namespace), byte> _registered = new();
 
     /// <inheritdoc/>
@@ -134,7 +141,7 @@ public class ResourceNameGate(
             throw Conflict(ResourceNameConflictKind.Overlap, name);
         }
 
-        if (!await reservations.Reserve(Owner(eventStore, @namespace), Keys(creation, physical)))
+        if (!await reservations.Reserve(BoundOwner(Owner(eventStore, @namespace)), Keys(creation, physical).Select(BoundKey).Distinct().ToArray()))
         {
             throw Conflict(ResourceNameConflictKind.Overlap, name);
         }
@@ -167,6 +174,21 @@ public class ResourceNameGate(
     static string Owner(string eventStore, string? @namespace) => @namespace is null ? eventStore : $"{eventStore}#{@namespace}";
 
     static string Fold(string value) => value.ToUpperInvariant();
+
+    static string BoundOwner(string owner) => owner.Length <= MaximumStoredLength ? owner : $"h:{Hash(owner)}";
+
+    static string BoundKey(string key)
+    {
+        if (key.Length <= MaximumStoredLength)
+        {
+            return key;
+        }
+
+        var kind = key[..key.IndexOf(':')];
+        return $"{kind}:h:{Hash(key)}";
+    }
+
+    static string Hash(string value) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value)));
 
     static string[] Keys(ResourceCreation creation, IReadOnlyCollection<string> physical) =>
     [

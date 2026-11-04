@@ -10,6 +10,12 @@ using Microsoft.EntityFrameworkCore.Migrations.Operations.Builders;
 namespace Cratis.Chronicle.Storage.Sql.Cluster.Migrations;
 
 #pragma warning disable SA1600
+/// <summary>
+/// Creates the table holding the resource name reservations.
+/// </summary>
+/// <remarks>
+/// The migration identifier is recorded in every database that has applied it and must never change.
+/// </remarks>
 [DbContext(typeof(ClusterDbContext))]
 [Migration("Cluster-ResourceNameReservations-v19_116_1")]
 public class v19_116_1 : Migration
