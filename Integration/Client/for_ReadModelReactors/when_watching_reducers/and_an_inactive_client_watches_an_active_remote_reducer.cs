@@ -15,7 +15,7 @@ public class and_an_inactive_client_watches_an_active_remote_reducer(context con
 
         async Task Because()
         {
-            using var client = new BorrowedReducerClient(EventStore);
+            using var client = new BorrowedReducerClient(EventStore, GetDefaultSinkTypeId());
             var store = await client.Open(EventStore);
             BorrowedHandlerActive = store.Reducers.GetHandlerFor<InactiveWatchedReducer>().IsActive;
             using var local = new Collector(store.ReadModels.Watch<ReducerWatchedReadModel>());

@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts;
+using Cratis.Chronicle.Sinks;
 using NSubstitute;
 
 namespace Cratis.Chronicle.Integration.for_ReadModelReactors;
@@ -11,12 +12,20 @@ public sealed class BorrowedReducerClient : IDisposable
 {
     readonly ChronicleClient _client;
 
-    public BorrowedReducerClient(IEventStore owner)
+    public BorrowedReducerClient(IEventStore owner, SinkTypeId? defaultSinkTypeId)
     {
         var artifacts = Substitute.For<IClientArtifactsProvider>();
         artifacts.EventTypes.Returns([typeof(ReducerWatchedEvent)]);
         artifacts.Reducers.Returns([typeof(InactiveWatchedReducer)]);
-        _client = new(new Connection(owner.Connection), new ChronicleOptions(), artifactsProvider: artifacts);
+
+        // The borrowed client registers the same read model as the owner. With a different default sink it
+        // would move the read model to a sink the kernel's storage cannot serve, stalling the owner's reducer.
+        var options = new ChronicleOptions();
+        if (defaultSinkTypeId is not null)
+        {
+            options.DefaultSinkTypeId = defaultSinkTypeId;
+        }
+        _client = new(new Connection(owner.Connection), options, artifactsProvider: artifacts);
     }
 
     public async Task<IEventStore> Open(IEventStore owner)
