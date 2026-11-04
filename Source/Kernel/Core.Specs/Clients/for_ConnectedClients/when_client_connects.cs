@@ -22,7 +22,8 @@ public class when_client_connects : Specification
             Substitute.For<ILogger<ConnectedClients>>(),
             Substitute.For<IMeter<ConnectedClients>>(),
             Options.Create(new ChronicleOptions()),
-            Substitute.For<IStorage>());
+            Substitute.For<IStorage>(),
+            Substitute.For<IClientDepartureNotifier>());
         _connectionId = ConnectionId.New();
     }
 

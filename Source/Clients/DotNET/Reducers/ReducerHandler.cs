@@ -61,25 +61,8 @@ public class ReducerHandler(
     public CancellationToken CancellationToken => _cancellationTokenSource.Token;
 
     /// <inheritdoc/>
-    public async Task<ReduceResult> OnNext(IEnumerable<AppendedEvent> events, object? initial, IServiceProvider serviceProvider)
-    {
-        var eventAndContexts = events.Select(@event => new EventAndContext(@event.Content, @event.Context));
-        var result = await invoker.Invoke(serviceProvider, eventAndContexts, initial);
-        if (!result.IsSuccess)
-        {
-            return result;
-        }
-
-        var modelKey = new ReadModelKey(events.First().Context.EventSourceId.Value);
-        var @namespace = eventStore.Namespace;
-        var removed = result.ReadModelState == null;
-
-        var notifyMethod = typeof(IReducerObservers).GetMethod(nameof(IReducerObservers.NotifyChange))!
-            .MakeGenericMethod(ReadModelType);
-        notifyMethod.Invoke(reducerObservers, [@namespace, modelKey, result.ReadModelState, removed]);
-
-        return result;
-    }
+    public Task<ReduceResult> OnNext(IEnumerable<AppendedEvent> events, object? initial, IServiceProvider serviceProvider) =>
+        OnNext(events, initial, serviceProvider, null);
 
     /// <inheritdoc/>
     public void Disconnect() => _cancellationTokenSource.Cancel();
@@ -110,4 +93,34 @@ public class ReducerHandler(
 
     /// <inheritdoc/>
     public void Dispose() => _cancellationTokenSource.Dispose();
+
+    /// <summary>
+    /// Reduces the events of one partition, telling a batch method about the page they came in.
+    /// </summary>
+    /// <param name="events">The events of the partition.</param>
+    /// <param name="initial">The current read model state.</param>
+    /// <param name="serviceProvider">The <see cref="IServiceProvider"/> for the reduction.</param>
+    /// <param name="context">The <see cref="BatchContext"/> of the page, or null when there is none.</param>
+    /// <returns>The <see cref="ReduceResult"/>.</returns>
+    internal async Task<ReduceResult> OnNext(IEnumerable<AppendedEvent> events, object? initial, IServiceProvider serviceProvider, BatchContext? context)
+    {
+        var eventAndContexts = events.Select(@event => new EventAndContext(@event.Content, @event.Context));
+        var result = context is not null && invoker is IBatchReducerInvoker batchInvoker
+            ? await batchInvoker.Invoke(serviceProvider, eventAndContexts, initial, context)
+            : await invoker.Invoke(serviceProvider, eventAndContexts, initial);
+        if (!result.IsSuccess)
+        {
+            return result;
+        }
+
+        var modelKey = new ReadModelKey(events.First().Context.EventSourceId.Value);
+        var @namespace = eventStore.Namespace;
+        var removed = result.ReadModelState == null;
+
+        var notifyMethod = typeof(IReducerObservers).GetMethod(nameof(IReducerObservers.NotifyChange))!
+            .MakeGenericMethod(ReadModelType);
+        notifyMethod.Invoke(reducerObservers, [@namespace, modelKey, result.ReadModelState, removed]);
+
+        return result;
+    }
 }

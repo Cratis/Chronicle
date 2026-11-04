@@ -77,22 +77,12 @@ internal sealed class Reactors(
                     break;
 
                 case ReactorResult result:
-                    var state = result.State switch
+                    foreach (var (partition, subscriberResult) in ToSubscriberResults(result))
                     {
-                        ObservationState.None => ObserverSubscriberState.None,
-                        ObservationState.Success => ObserverSubscriberState.Ok,
-                        ObservationState.Failed => ObserverSubscriberState.Failed,
-                        _ => ObserverSubscriberState.None
-                    };
-                    var subscriberResult = new ObserverSubscriberResult(
-                        state,
-                        result.LastSuccessfulObservation,
-                        result.ExceptionMessages,
-                        result.ExceptionStackTrace);
-
-                    if (!pendingDeliveries.TryComplete(result.DeliveryId, result.Partition, subscriberResult))
-                    {
-                        logger.UnknownDeliveryResult(result.DeliveryId, result.Partition);
+                        if (!pendingDeliveries.TryComplete(result.DeliveryId, partition, subscriberResult))
+                        {
+                            logger.UnknownDeliveryResult(result.DeliveryId, partition);
+                        }
                     }
 
                     break;
@@ -131,17 +121,29 @@ internal sealed class Reactors(
                     registration.Reactor.EventSequenceId,
                     registration.ConnectionId);
 
-                deliver = (partition, events, tcs, deliverWithin) =>
+                var deliversPages = registration.PageDelivery?.Enabled == true;
+                deliver = (partition, events, tcs, deliverWithin, origin) =>
                 {
                     var deliveryId = pendingDeliveries.Add(partition, tcs);
                     var eventsToObserve = events.Select(_ => _.ToContract(jsonSerializerOptions)).ToArray();
-                    observer.OnNext(new EventsToObserve
+                    var message = new EventsToObserve
                     {
-                        Partition = partition.Value.ToString()!,
-                        Events = eventsToObserve,
                         DeliveryId = deliveryId,
-                        DeliverWithinMilliseconds = DeliveryDeadlines.ToMilliseconds(deliverWithin)
-                    });
+                        DeliverWithinMilliseconds = DeliveryDeadlines.ToMilliseconds(deliverWithin),
+                        Origin = origin.ToContract()
+                    };
+
+                    if (deliversPages)
+                    {
+                        message.Partitions = [new PartitionEvents { Partition = partition.Value.ToString()!, Events = eventsToObserve }];
+                    }
+                    else
+                    {
+                        message.Partition = partition.Value.ToString()!;
+                        message.Events = eventsToObserve;
+                    }
+
+                    observer.OnNext(message);
                 };
                 replay = (replayState, partition) => observer.OnNext(new EventsToObserve { Partition = partition, ReplayState = (Contracts.Observation.ReplayState)replayState });
 
@@ -241,6 +243,11 @@ internal sealed class Reactors(
         var definition = await eventStore.Reactors.Get(new(request.ReactorId));
         return new HasReactorResponse { Exists = true, EventSequenceId = definition.EventSequenceId.Value };
     }
+
+    IEnumerable<(string Partition, ObserverSubscriberResult Result)> ToSubscriberResults(ReactorResult result) =>
+        result.Partitions.Count > 0
+            ? result.Partitions.Select(_ => (_.Partition, _.ToObserverSubscriberResult(TimeProvider.System)))
+            : [(result.Partition, ObservationResultConverters.ToObserverSubscriberResult(result.State, result.LastSuccessfulObservation, result.ExceptionMessages, result.ExceptionStackTrace, result.RetryAfterMilliseconds, TimeProvider.System))];
 
     bool DisconnectStream(
         (ObserverId ObserverId, ConnectionId ConnectionId, EventStoreName EventStore, EventStoreNamespaceName Namespace) key,

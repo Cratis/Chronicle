@@ -42,6 +42,9 @@ internal static partial class ReactorsLogMessages
     [LoggerMessage(LogLevel.Information, "Reconnecting Reactor '{Id}' after stream failure")]
     internal static partial void ReconnectingReactor(this ILogger<Reactors> logger, ReactorId id);
 
+    [LoggerMessage(LogLevel.Debug, "Skipping reconnect of Reactor {Id} because its handler is no longer current or was cancelled")]
+    internal static partial void SkippingStaleReactorReconnect(this ILogger<Reactors> logger, ReactorId id);
+
     [LoggerMessage(LogLevel.Warning, "Reactor observation stream for '{Id}' completed without error — re-subscribing so the reactor keeps observing (a cross-store/inbox observer whose stream the kernel closes rather than tails would otherwise silently stop)")]
     internal static partial void RegisteringReactorStreamCompleted(this ILogger<Reactors> logger, ReactorId id);
 

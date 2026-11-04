@@ -21,8 +21,8 @@ public class a_reactor_mediator_with_helpers : a_reactor_mediator
 
     void Establish()
     {
-        _first = (_, _, _, _) => _firstCalls++;
-        _second = (_, _, _, _) => _secondCalls++;
+        _first = (_, _, _, _, _) => _firstCalls++;
+        _second = (_, _, _, _, _) => _secondCalls++;
         _firstReplay = (_, _) => { };
         _secondReplay = (_, _) => { };
     }
