@@ -39,4 +39,7 @@ internal static partial class ChronicleServerStartupTaskLogging
 
     [LoggerMessage(LogLevel.Warning, "Skipping an event store registered without a name. Nothing can address it, so it is not started; remove the entry with an empty name from the cluster's event store registry")]
     internal static partial void SkippingEventStoreWithoutAName(this ILogger<ChronicleServerStartupTask> logger);
+
+    [LoggerMessage(LogLevel.Warning, "Skipping event store {EventStore}: its name is also used by another resource, so it is not started until the names are resolved")]
+    internal static partial void SkippingQuarantinedEventStore(this ILogger<ChronicleServerStartupTask> logger, string eventStore);
 }

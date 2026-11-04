@@ -9,7 +9,7 @@ namespace Cratis.Chronicle.Storage.Naming;
 /// <summary>
 /// Makes names safe to write to a log.
 /// </summary>
-static class ResourceNameText
+public static class ResourceNameText
 {
     const int MaximumLoggedLength = 128;
 

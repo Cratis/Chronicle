@@ -23,6 +23,7 @@ using Cratis.Chronicle.Releases;
 using Cratis.Chronicle.Setup;
 using Cratis.Chronicle.Setup.Authentication;
 using Cratis.Chronicle.Storage;
+using Cratis.Chronicle.Storage.Naming;
 using Cratis.Orleans.Jobs;
 using Microsoft.Extensions.Logging;
 
@@ -45,6 +46,7 @@ namespace Orleans.Hosting;
 /// <param name="logger">The logger.</param>
 /// <param name="timeProvider">Optional <see cref="TimeProvider"/> the retry backoff waits on; defaults to <see cref="TimeProvider.System"/>.</param>
 /// <param name="generationFloorAdmission">Optional read-only generation admission; defaults to the real storage-backed admission.</param>
+/// <param name="resourceNames">Optional snapshot of the names found in use; event stores it has quarantined are not started.</param>
 /// <remarks>
 /// Every step in <see cref="Execute"/> is a grain call that can land on a sibling silo, and every
 /// silo runs this task as it starts. A sibling that has not stabilized yet answers none of them, and
@@ -77,7 +79,8 @@ internal sealed class ChronicleServerStartupTask(
     IClusterReleases clusterReleases,
     ILogger<ChronicleServerStartupTask> logger,
     TimeProvider? timeProvider = null,
-    IGenerationFloorAdmission? generationFloorAdmission = null) : ILifecycleParticipant<ISiloLifecycle>
+    IGenerationFloorAdmission? generationFloorAdmission = null,
+    IResourceNameSnapshot? resourceNames = null) : ILifecycleParticipant<ISiloLifecycle>
 {
     /// <summary>
     /// The exact Orleans placement-failure prefix for this grain and interface.
@@ -155,6 +158,12 @@ internal sealed class ChronicleServerStartupTask(
             if (eventStore is null || string.IsNullOrWhiteSpace(eventStore.Value))
             {
                 logger.SkippingEventStoreWithoutAName();
+                continue;
+            }
+
+            if (resourceNames?.IsQuarantined(eventStore) == true)
+            {
+                logger.SkippingQuarantinedEventStore(ResourceNameText.Escape(eventStore.Value));
                 continue;
             }
 

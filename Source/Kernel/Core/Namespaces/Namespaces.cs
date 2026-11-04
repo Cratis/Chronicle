@@ -63,8 +63,18 @@ public class Namespaces(
     }
 
     /// <inheritdoc/>
-    public Task<IEnumerable<EventStoreNamespaceName>> GetAll() =>
-        Task.FromResult(State.Namespaces.Select(_ => _.Name).ToArray().AsEnumerable());
+    public Task<IEnumerable<EventStoreNamespaceName>> GetAll()
+    {
+        var names = State.Namespaces.Select(_ => _.Name);
+        var snapshot = ServiceProvider.GetService<IResourceNameSnapshot>();
+        if (snapshot?.HasQuarantine == true)
+        {
+            var eventStore = (EventStoreName)this.GetPrimaryKeyString();
+            names = snapshot.IsQuarantined(eventStore) ? [] : names.Where(_ => !snapshot.IsQuarantined(eventStore, _));
+        }
+
+        return Task.FromResult(names.ToArray().AsEnumerable());
+    }
 
     /// <inheritdoc/>
     public async Task Forget(EventStoreNamespaceName @namespace)
