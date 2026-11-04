@@ -17,6 +17,7 @@ internal sealed class OccurrenceAttemptLifetime : IAsyncDisposable
     readonly Task _watchdog;
     long _anchor;
     bool _abandoned;
+    bool _expired;
     bool _settled;
 
     /// <summary>
@@ -38,6 +39,17 @@ internal sealed class OccurrenceAttemptLifetime : IAsyncDisposable
     /// Gets the cancellation token for this run's admitted work.
     /// </summary>
     internal CancellationToken Token => _lifetime.Token;
+
+    /// <summary>
+    /// Gets a value indicating whether the budget ran out without a confirmed renewal.
+    /// </summary>
+    internal bool Expired
+    {
+        get
+        {
+            lock (_gate) return _expired;
+        }
+    }
 
     /// <summary>
     /// Cancels admitted work and releases this run's resources.
@@ -159,6 +171,7 @@ internal sealed class OccurrenceAttemptLifetime : IAsyncDisposable
                 {
                     var now = _clock.GetTimestamp();
                     remaining = Active(now) ? Remaining(now) : TimeSpan.Zero;
+                    _expired = remaining <= TimeSpan.Zero && !_abandoned && !_session.IsCancellationRequested;
                 }
                 if (remaining <= TimeSpan.Zero)
                 {

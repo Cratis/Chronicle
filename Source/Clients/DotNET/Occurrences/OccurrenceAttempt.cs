@@ -90,6 +90,7 @@ internal sealed class OccurrenceAttempt(
         finally
         {
             lifetime.Abandon();
+            if (lifetime.Expired) logger.OccurrenceLeaseBudgetExpired(claim.Id);
             await renewal;
             identity.ClearCurrentIdentity();
         }
@@ -222,6 +223,7 @@ internal sealed class OccurrenceAttempt(
             }
             catch (RpcException exception) when (exception.StatusCode == StatusCode.Unavailable && attempt < 2)
             {
+                logger.OccurrenceLeaseRenewalRetrying(exception, claim.Id, attempt + 2);
                 if (!lifetime.CanRetry()) return false;
                 await Task.Delay(TimeSpan.FromSeconds(1), timeProvider, lifetime.Token);
             }
