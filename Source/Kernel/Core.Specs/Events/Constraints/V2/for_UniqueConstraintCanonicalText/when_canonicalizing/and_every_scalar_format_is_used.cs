@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-
 namespace Cratis.Chronicle.Events.Constraints.V2.for_UniqueConstraintCanonicalText.when_canonicalizing;
 
 public class and_every_scalar_format_is_used : Specification
