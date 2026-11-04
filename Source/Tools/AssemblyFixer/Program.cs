@@ -122,4 +122,4 @@ var assemblyPdbPath = Path.ChangeExtension(assemblyPath, ".pdb");
 File.Copy(tempAssemblyPath, assemblyPath, true);
 File.Copy(tempPdbPath, assemblyPdbPath, true);
 
-// Orleans.Serialization.Configuration.TypeManifestProviderAttribute
+// Choreography.Serialization.Configuration.TypeManifestProviderAttribute

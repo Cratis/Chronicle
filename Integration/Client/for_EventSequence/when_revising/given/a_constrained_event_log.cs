@@ -6,7 +6,7 @@ using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Storage;
-using Cratis.Orleans.Jobs;
+using Cratis.Choreography.Jobs;
 
 using KernelEventSequenceId = Cratis.Chronicle.Concepts.EventSequences.EventSequenceId;
 

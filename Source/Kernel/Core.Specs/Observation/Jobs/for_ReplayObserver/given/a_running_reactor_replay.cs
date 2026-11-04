@@ -2,14 +2,14 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using Cratis.Choreography.Jobs;
+using Cratis.Choreography.Jobs.Stages;
+using Cratis.Choreography.Storage.Jobs;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Monads;
-using Cratis.Orleans.Jobs;
-using Cratis.Orleans.Jobs.Stages;
-using Cratis.Orleans.Storage.Jobs;
 using Microsoft.Extensions.Options;
 using Orleans.TestKit;
 
@@ -62,8 +62,8 @@ public class a_running_reactor_replay : a_replay_observer_job
     protected override void ConfigureSilo()
     {
         _silo.AddService(Options.Create(new JobsOptions { MaxStepAttempts = 3, StepRetryBackoff = TimeSpan.Zero }));
-        var jobsStorage = Substitute.For<Cratis.Orleans.Storage.IJobsStorage>();
-        jobsStorage.GetFor(Arg.Any<string>(), Arg.Any<string>()).Returns(new Cratis.Orleans.Storage.JobsStorage(_jobStorage, _jobStepStorage));
+        var jobsStorage = Substitute.For<Cratis.Choreography.Storage.IJobsStorage>();
+        jobsStorage.GetFor(Arg.Any<string>(), Arg.Any<string>()).Returns(new Cratis.Choreography.Storage.JobsStorage(_jobStorage, _jobStepStorage));
         _silo.AddService(jobsStorage);
     }
 

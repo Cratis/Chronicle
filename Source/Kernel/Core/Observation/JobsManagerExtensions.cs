@@ -2,13 +2,13 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using Cratis.Choreography.Jobs;
+using Cratis.Choreography.Storage.Jobs;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Monads;
-using Cratis.Orleans.Jobs;
-using Cratis.Orleans.Storage.Jobs;
 using Microsoft.Extensions.Logging;
 namespace Cratis.Chronicle.Observation;
 
@@ -74,7 +74,7 @@ public static partial class JobsManagerExtensions
     /// <param name="onStartNew">The optional callback when a new job needs to be started.</param>
     /// <param name="onResumeRefused">The optional callback when a stopped job was found but refused to resume, so nothing owns the work.</param>
     /// <param name="concludedJobs">The optional jobs that have already reported their work as done and therefore can not own it, even while still finalizing. Read after the lookup and never changed; forgetting them is up to their owner.</param>
-    /// <param name="maxJobsToDrop">The most stopped jobs that were never prepared to delete instead of resuming them; 0 drops none. Cratis.Orleans refuses to resume them, so they would block the work for good. When any exist, up to the allowed number is dropped and no job is resumed or started in this call; the next call looks the jobs up again.</param>
+    /// <param name="maxJobsToDrop">The most stopped jobs that were never prepared to delete instead of resuming them; 0 drops none. Cratis.Choreography refuses to resume them, so they would block the work for good. When any exist, up to the allowed number is dropped and no job is resumed or started in this call; the next call looks the jobs up again.</param>
     /// <typeparam name="TJob">The type of the job.</typeparam>
     /// <typeparam name="TRequest">The type of the observer request.</typeparam>
     /// <returns>The <see cref="JobId"/> of the running, resumed, or newly started job; or <see cref="JobId.NotSet"/> if no job could be started.</returns>
@@ -114,7 +114,7 @@ public static partial class JobsManagerExtensions
     /// <param name="onStartNew">The optional callback when a new job needs to be started.</param>
     /// <param name="onResumeRefused">The optional callback when a stopped job was found but refused to resume, so nothing owns the work.</param>
     /// <param name="concludedJobs">The optional jobs that have already reported their work as done and therefore can not own it, even while still finalizing. Read after the lookup and never changed; forgetting them is up to their owner.</param>
-    /// <param name="maxJobsToDrop">The most stopped jobs that were never prepared to delete instead of resuming them; 0 drops none. Cratis.Orleans refuses to resume them, so they would block the work for good. When any exist, up to the allowed number is dropped and no job is resumed or started in this call; the next call looks the jobs up again.</param>
+    /// <param name="maxJobsToDrop">The most stopped jobs that were never prepared to delete instead of resuming them; 0 drops none. Cratis.Choreography refuses to resume them, so they would block the work for good. When any exist, up to the allowed number is dropped and no job is resumed or started in this call; the next call looks the jobs up again.</param>
     /// <typeparam name="TJob">The type of the job.</typeparam>
     /// <typeparam name="TRequest">The type of the observer request.</typeparam>
     /// <returns>The <see cref="JobId"/> of the running, resumed, or newly started job; or <see cref="JobId.NotSet"/> if no job could be started.</returns>
@@ -274,7 +274,7 @@ public static partial class JobsManagerExtensions
         (job.IsPreparingOrRunning || job.Status == JobStatus.Removing) && !JobLiveness.HasConcludedAllStepsLongAgo(job, now);
 
     /// <summary>
-    /// Gets whether a job ever reached its steps. Mirrors Job.JobIsPrepared in Cratis.Orleans: a stopped job that
+    /// Gets whether a job ever reached its steps. Mirrors Job.JobIsPrepared in Cratis.Choreography: a stopped job that
     /// was never prepared is refused when resumed, so it can never run again.
     /// </summary>
     /// <param name="job">The <see cref="JobState"/> to check.</param>

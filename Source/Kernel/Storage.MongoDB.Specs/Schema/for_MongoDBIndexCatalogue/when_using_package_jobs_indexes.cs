@@ -2,10 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reflection;
+using Cratis.Choreography.Jobs;
+using Cratis.Choreography.Storage.MongoDB;
+using Cratis.Choreography.Storage.MongoDB.Jobs;
 using Cratis.Chronicle.Storage.MongoDB.Sinks;
-using Cratis.Orleans.Jobs;
-using Cratis.Orleans.Storage.MongoDB;
-using Cratis.Orleans.Storage.MongoDB.Jobs;
 using MongoDB.Bson;
 using MongoDB.Driver;
 
@@ -41,7 +41,7 @@ public class when_using_package_jobs_indexes(MongoDBFixture fixture) : given.a_s
     [Fact] async Task should_match_active_step_names_keys_and_options() => await ShouldMatch(WellKnownCollectionNames.JobSteps);
     [Fact] async Task should_match_failed_step_names_keys_and_options() => await ShouldMatch(WellKnownCollectionNames.FailedJobSteps);
     [Fact] async Task should_match_step_plan_names_keys_and_options() => await ShouldMatch(WellKnownCollectionNames.JobStepPlans);
-    [Fact] void should_pin_the_package_version() => typeof(JobStorage).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>().InformationalVersion.Split('+')[0].ShouldEqual("1.34.0");
+    [Fact] void should_pin_the_package_version() => typeof(JobStorage).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>().InformationalVersion.Split('+')[0].ShouldEqual("2.1.1");
 
     async Task ShouldMatch(string collection)
     {

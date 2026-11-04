@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Choreography.Jobs;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
@@ -9,7 +10,6 @@ using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Chronicle.Observation.States;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Monads;
-using Cratis.Orleans.Jobs;
 
 namespace Cratis.Chronicle.Observation;
 
@@ -510,7 +510,7 @@ public partial class Observer
         {
             var job = await jobStorage.GetJob(jobId);
             var hasFinished =
-                (job.TryGetError(out var error) && error == Cratis.Orleans.Storage.Jobs.JobError.NotFound) ||
+                (job.TryGetError(out var error) && error == Cratis.Choreography.Storage.Jobs.JobError.NotFound) ||
                 (job.TryGetResult(out var state) && state.Status.HasFinished());
             if (hasFinished)
             {

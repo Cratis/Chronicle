@@ -1,14 +1,14 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Choreography.Jobs;
+using Cratis.Choreography.Storage.Jobs;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Monads;
-using Cratis.Orleans.Jobs;
-using Cratis.Orleans.Storage.Jobs;
 
 namespace Cratis.Chronicle.Observation.for_Observer.when_catch_up_round_completes;
 
@@ -33,7 +33,7 @@ public class and_a_stale_job_reports_before_the_newer_claim_is_attached : given.
         _eventSequence.GetTailSequenceNumber().Returns((EventSequenceNumber)12UL);
         _eventSequence.GetNextSequenceNumberGreaterOrEqualTo(Arg.Any<EventSequenceNumber>(), Arg.Any<IEnumerable<EventType>>())
             .Returns(GetSequenceNumberError.NotFound);
-        _jobStorage.GetJob(_staleJob).Returns(Task.FromResult<Catch<JobState, Cratis.Orleans.Storage.Jobs.JobError>>(new JobState
+        _jobStorage.GetJob(_staleJob).Returns(Task.FromResult<Catch<JobState, Cratis.Choreography.Storage.Jobs.JobError>>(new JobState
         {
             Id = _staleJob,
             Status = JobStatus.Running,

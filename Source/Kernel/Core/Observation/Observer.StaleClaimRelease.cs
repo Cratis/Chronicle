@@ -1,10 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Choreography.Jobs;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Chronicle.Storage.Observation;
-using Cratis.Orleans.Jobs;
 
 #pragma warning disable RCS1075 // Shadow diagnostics are write-only: a failing lookup must never affect the observer
 

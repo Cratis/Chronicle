@@ -7,7 +7,7 @@ using MongoDB.Driver;
 namespace Cratis.Chronicle.Storage.MongoDB.Schema;
 
 /// <summary>
-/// Mirrors the internal job indexes in Cratis.Orleans.Storage.MongoDB 1.34.0, pinned by a drift spec.
+/// Mirrors the internal job indexes in Cratis.Choreography.Storage.MongoDB 2.1.1, pinned by a drift spec.
 /// </summary>
 internal static class MongoDBJobIndexes
 {

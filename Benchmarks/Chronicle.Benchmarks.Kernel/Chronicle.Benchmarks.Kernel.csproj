@@ -10,8 +10,8 @@
 
   <ItemGroup>
     <PackageReference Include="BenchmarkDotNet" />
-    <PackageReference Include="Cratis.Orleans" />
-    <PackageReference Include="Cratis.Orleans.Storage" />
+    <PackageReference Include="Cratis.Choreography" />
+    <PackageReference Include="Cratis.Choreography.Storage" />
     <PackageReference Include="Cratis.Fundamentals" />
   </ItemGroup>
 

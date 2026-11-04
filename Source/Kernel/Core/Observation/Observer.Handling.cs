@@ -3,6 +3,7 @@
 
 using System.Collections.Immutable;
 using System.Diagnostics;
+using Cratis.Choreography.Jobs;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
@@ -10,7 +11,6 @@ using Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Observation.Webhooks;
 using Cratis.Chronicle.Storage.Observation;
-using Cratis.Orleans.Jobs;
 
 namespace Cratis.Chronicle.Observation;
 

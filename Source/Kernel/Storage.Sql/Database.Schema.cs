@@ -3,12 +3,12 @@
 
 using Cratis.Arc.Connections;
 using Cratis.Arc.EntityFrameworkCore;
+using Cratis.Choreography.Storage.Sql.Jobs;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Storage.Sql.Cluster;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences;
 using Cratis.Chronicle.Storage.Sql.Schema;
-using Cratis.Orleans.Storage.Sql.Jobs;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage;

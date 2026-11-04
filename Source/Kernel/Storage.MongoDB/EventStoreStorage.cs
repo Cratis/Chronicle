@@ -53,7 +53,7 @@ namespace Cratis.Chronicle.Storage.MongoDB;
 /// <param name="expandoObjectConverter"><see cref="Json.IExpandoObjectConverter"/> for conversions.</param>
 /// <param name="jsonSerializerOptions">The global <see cref="JsonSerializerOptions"/>.</param>
 /// <param name="sinksFactory"><see cref="ISinks"/> for getting all <see cref="ISinkFactory"/> instances.</param>
-/// <param name="jobsStorage">The <see cref="Cratis.Orleans.Storage.IJobsStorage"/> resolving jobs storage for an event store namespace.</param>
+/// <param name="jobsStorage">The <see cref="Cratis.Choreography.Storage.IJobsStorage"/> resolving jobs storage for an event store namespace.</param>
 /// <param name="options"><see cref="ChronicleOptions"/>.</param>
 /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
 public class EventStoreStorage(
@@ -62,7 +62,7 @@ public class EventStoreStorage(
     Json.IExpandoObjectConverter expandoObjectConverter,
     JsonSerializerOptions jsonSerializerOptions,
     SinksFactory sinksFactory,
-    Cratis.Orleans.Storage.IJobsStorage jobsStorage,
+    Cratis.Choreography.Storage.IJobsStorage jobsStorage,
     IOptions<ChronicleOptions> options,
     ILoggerFactory loggerFactory) : IEventStoreStorage
 {
