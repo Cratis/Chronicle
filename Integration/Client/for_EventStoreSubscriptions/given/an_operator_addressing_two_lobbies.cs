@@ -2,8 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.EventSequences;
-using Cratis.Chronicle.Reactors;
 using Cratis.Chronicle.Observation;
+using Cratis.Chronicle.Reactors;
 
 namespace Cratis.Chronicle.Integration.for_EventStoreSubscriptions.given;
 
