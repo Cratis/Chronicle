@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Security.Cryptography;
 using Cratis.Chronicle.Concepts.Events.Constraints;
 using Cratis.Monads;
 
@@ -11,11 +10,11 @@ namespace Cratis.Chronicle.Events.Constraints.V2;
 /// Encodes values and scopes with one store key, caching the token of the unscoped constraint.
 /// </summary>
 /// <remarks>
-/// The instance is thread-safe. Dispose it to release the per-thread HMAC state; it must not be used afterwards. It copies the key, so later changes to the caller's buffer have no effect.
-/// Each thread keeps its own reusable HMAC state, so the key padding is not recomputed on every call.
+/// The instance is thread-safe. It copies the key, so later changes to the caller's buffer have no effect.
+/// It holds no per-thread or native state, so there is nothing to dispose: every hash is a stateless one-shot HMAC over the copied key.
 /// Scope tokens are cached per instance, because a scope repeats across appends; the cache is a fixed-size, direct-mapped array whose entries are overwritten in place, so it is bounded and never allocates after construction.
 /// </remarks>
-internal sealed class UniqueConstraintKeyedEncoder : IDisposable
+internal sealed class UniqueConstraintKeyedEncoder
 {
     /// <summary>
     /// The number of scope token slots in the cache. Must be a power of two.
@@ -27,10 +26,8 @@ internal sealed class UniqueConstraintKeyedEncoder : IDisposable
     readonly ScopeSlot[] _slots = new ScopeSlot[ScopeCacheLimit];
     readonly Lock[] _locks = Enumerable.Range(0, Stripes).Select(_ => new Lock()).ToArray();
     readonly byte[] _key;
-    readonly ThreadLocal<IncrementalHash> _hmac;
     readonly UniqueConstraintScopeToken _unscoped;
     int _occupied;
-    int _disposed;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="UniqueConstraintKeyedEncoder"/> class.
@@ -39,7 +36,6 @@ internal sealed class UniqueConstraintKeyedEncoder : IDisposable
     internal UniqueConstraintKeyedEncoder(ReadOnlySpan<byte> key)
     {
         _key = key.ToArray();
-        _hmac = new(() => IncrementalHash.CreateHMAC(HashAlgorithmName.SHA256, _key), trackAllValues: true);
         _unscoped = UniqueConstraintScopeToken.Encode(_key, null);
     }
 
@@ -47,20 +43,6 @@ internal sealed class UniqueConstraintKeyedEncoder : IDisposable
     /// Gets the number of occupied scope cache slots, which never exceeds <see cref="ScopeCacheLimit"/>.
     /// </summary>
     internal int CachedScopeCount => Volatile.Read(ref _occupied);
-
-    /// <inheritdoc/>
-    public void Dispose()
-    {
-        if (Interlocked.Exchange(ref _disposed, 1) == 1)
-        {
-            return;
-        }
-        foreach (var hmac in _hmac.Values)
-        {
-            hmac.Dispose();
-        }
-        _hmac.Dispose();
-    }
 
     /// <summary>
     /// Produces a keyed value, or no claim when every component is null.
@@ -71,7 +53,7 @@ internal sealed class UniqueConstraintKeyedEncoder : IDisposable
     /// <exception cref="UnsupportedUniqueConstraintFormat">A format or nested array is unsupported.</exception>
     /// <exception cref="NonFiniteUniqueConstraintNumber">A number is not finite.</exception>
     internal Option<UniqueConstraintValue> EncodeValue(IReadOnlyList<UniqueConstraintComponent> components, bool ignoreCasing = false) =>
-        UniqueConstraintEncoder.Encode(_hmac.Value!, components, ignoreCasing);
+        UniqueConstraintEncoder.Encode(_key, components, ignoreCasing);
 
     /// <summary>
     /// Encodes a resolved scope. An absent scope, or one that narrows no dimension, returns the cached unscoped token.
@@ -97,7 +79,7 @@ internal sealed class UniqueConstraintKeyedEncoder : IDisposable
                 return slot.Token;
             }
         }
-        var token = UniqueConstraintScopeToken.Encode(_hmac.Value!, scope);
+        var token = UniqueConstraintScopeToken.Encode(_key, scope);
         lock (gate)
         {
             ref var slot = ref _slots[index];

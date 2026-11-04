@@ -23,7 +23,7 @@ namespace Cratis.Chronicle.Benchmarks.Kernel;
 [GroupBenchmarksBy(BenchmarkLogicalGroupRule.ByCategory)]
 [CategoriesColumn]
 [Config(typeof(UniqueConstraintEncodingScopeConfiguration))]
-public class UniqueConstraintEncodingBenchmarkScope : IDisposable
+public class UniqueConstraintEncodingBenchmarkScope
 {
     /// <summary>
     /// The number of distinct scopes, which is more than the keyed encoder caches, so the cycling miss cases never hit its cache.
@@ -110,9 +110,6 @@ public class UniqueConstraintEncodingBenchmarkScope : IDisposable
     [Benchmark]
     [BenchmarkCategory("ScopeStreamIdMiss")]
     public string V2ScopeStreamIdMiss() => _encoder.EncodeScope(_missScopes[NextMiss()]).Value;
-
-    /// <inheritdoc/>
-    public void Dispose() => _encoder.Dispose();
 
     int NextMiss() => _miss = (_miss + 1) & (MissCount - 1);
 

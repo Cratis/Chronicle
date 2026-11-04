@@ -30,20 +30,31 @@ internal static class UniqueConstraintEncoder
     /// <returns>A 64-character lowercase hex value, or no claim.</returns>
     /// <exception cref="UnsupportedUniqueConstraintFormat">A format or nested array is unsupported.</exception>
     /// <exception cref="NonFiniteUniqueConstraintNumber">A number is not finite.</exception>
-    internal static Option<UniqueConstraintValue> Encode(ReadOnlySpan<byte> key, IReadOnlyList<UniqueConstraintComponent> components, bool ignoreCasing = false) =>
-        Encode(key, null, components, ignoreCasing);
+    internal static Option<UniqueConstraintValue> Encode(ReadOnlySpan<byte> key, IReadOnlyList<UniqueConstraintComponent> components, bool ignoreCasing = false)
+    {
+        if (AllNull(components))
+        {
+            for (var i = 0; i < components.Count; i++)
+            {
+                UniqueConstraintCanonicalText.ValidateFormat(components[i].Format);
+            }
+            return Option<UniqueConstraintValue>.None();
+        }
 
-    /// <summary>
-    /// Produces a keyed value with reusable HMAC state, or no claim when every component is null.
-    /// </summary>
-    /// <param name="hmac">The reusable HMAC state, which must be keyed with the store key and must not be shared between threads.</param>
-    /// <param name="components">The schema-converted properties, in declaration order.</param>
-    /// <param name="ignoreCasing">Whether to lowercase string leaves.</param>
-    /// <returns>A 64-character lowercase hex value, or no claim.</returns>
-    /// <exception cref="UnsupportedUniqueConstraintFormat">A format or nested array is unsupported.</exception>
-    /// <exception cref="NonFiniteUniqueConstraintNumber">A number is not finite.</exception>
-    internal static Option<UniqueConstraintValue> Encode(IncrementalHash hmac, IReadOnlyList<UniqueConstraintComponent> components, bool ignoreCasing = false) =>
-        Encode(default, hmac, components, ignoreCasing);
+        Span<byte> initial = stackalloc byte[StackBufferSize];
+        var writer = new UniqueConstraintPreimageWriter(initial);
+        try
+        {
+            WritePreimage(ref writer, components, ignoreCasing);
+            Span<byte> hash = stackalloc byte[HashSize];
+            HMACSHA256.HashData(key, writer.Written, hash);
+            return new UniqueConstraintValue(Convert.ToHexStringLower(hash));
+        }
+        finally
+        {
+            writer.Dispose();
+        }
+    }
 
     /// <summary>
     /// Builds the unhashed v2 preimage: a version prefix, the component count, then each framed component.
@@ -61,32 +72,6 @@ internal static class UniqueConstraintEncoder
         {
             WritePreimage(ref writer, components, ignoreCasing);
             return writer.Written.ToArray();
-        }
-        finally
-        {
-            writer.Dispose();
-        }
-    }
-
-    static Option<UniqueConstraintValue> Encode(ReadOnlySpan<byte> key, IncrementalHash? hmac, IReadOnlyList<UniqueConstraintComponent> components, bool ignoreCasing)
-    {
-        if (AllNull(components))
-        {
-            for (var i = 0; i < components.Count; i++)
-            {
-                UniqueConstraintCanonicalText.ValidateFormat(components[i].Format);
-            }
-            return Option<UniqueConstraintValue>.None();
-        }
-
-        Span<byte> initial = stackalloc byte[StackBufferSize];
-        var writer = new UniqueConstraintPreimageWriter(initial);
-        try
-        {
-            WritePreimage(ref writer, components, ignoreCasing);
-            Span<byte> hash = stackalloc byte[HashSize];
-            UniqueConstraintHmac.Compute(key, hmac, writer.Written, hash);
-            return new UniqueConstraintValue(Convert.ToHexStringLower(hash));
         }
         finally
         {

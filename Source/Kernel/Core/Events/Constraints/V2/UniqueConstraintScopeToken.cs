@@ -21,15 +21,22 @@ internal record UniqueConstraintScopeToken(string Value) : ConceptAs<string>(Val
     /// <param name="key">The store HMAC key.</param>
     /// <param name="scope">The typed scope; null dimensions do not narrow it.</param>
     /// <returns>The scope token.</returns>
-    internal static UniqueConstraintScopeToken Encode(ReadOnlySpan<byte> key, ResolvedConstraintScope? scope) => Encode(key, null, scope);
-
-    /// <summary>
-    /// Encodes a resolved scope with reusable HMAC state.
-    /// </summary>
-    /// <param name="hmac">The reusable HMAC state, which must be keyed with the store key and must not be shared between threads.</param>
-    /// <param name="scope">The typed scope; null dimensions do not narrow it.</param>
-    /// <returns>The scope token.</returns>
-    internal static UniqueConstraintScopeToken Encode(IncrementalHash hmac, ResolvedConstraintScope? scope) => Encode(default, hmac, scope);
+    internal static UniqueConstraintScopeToken Encode(ReadOnlySpan<byte> key, ResolvedConstraintScope? scope)
+    {
+        Span<byte> initial = stackalloc byte[StackBufferSize];
+        var writer = new UniqueConstraintPreimageWriter(initial);
+        try
+        {
+            WritePreimage(ref writer, scope);
+            Span<byte> hash = stackalloc byte[HashSize];
+            HMACSHA256.HashData(key, writer.Written, hash);
+            return new(Convert.ToHexStringLower(hash[..16]));
+        }
+        finally
+        {
+            writer.Dispose();
+        }
+    }
 
     /// <summary>
     /// Builds the unhashed scope preimage from the event source type, event stream type and event stream identifier.
@@ -44,23 +51,6 @@ internal record UniqueConstraintScopeToken(string Value) : ConceptAs<string>(Val
         {
             WritePreimage(ref writer, scope);
             return writer.Written.ToArray();
-        }
-        finally
-        {
-            writer.Dispose();
-        }
-    }
-
-    static UniqueConstraintScopeToken Encode(ReadOnlySpan<byte> key, IncrementalHash? hmac, ResolvedConstraintScope? scope)
-    {
-        Span<byte> initial = stackalloc byte[StackBufferSize];
-        var writer = new UniqueConstraintPreimageWriter(initial);
-        try
-        {
-            WritePreimage(ref writer, scope);
-            Span<byte> hash = stackalloc byte[HashSize];
-            UniqueConstraintHmac.Compute(key, hmac, writer.Written, hash);
-            return new(Convert.ToHexStringLower(hash[..16]));
         }
         finally
         {

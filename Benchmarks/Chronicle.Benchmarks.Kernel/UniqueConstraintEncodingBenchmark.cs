@@ -24,7 +24,7 @@ namespace Cratis.Chronicle.Benchmarks.Kernel;
 [GroupBenchmarksBy(BenchmarkLogicalGroupRule.ByCategory, BenchmarkLogicalGroupRule.ByParams)]
 [CategoriesColumn]
 [Config(typeof(UniqueConstraintEncodingConfiguration))]
-public class UniqueConstraintEncodingBenchmark : IDisposable
+public class UniqueConstraintEncodingBenchmark
 {
     static readonly byte[] _key = Encoding.ASCII.GetBytes("benchmark-key-0123456789abcdef!!");
     readonly UniqueConstraintKeyedEncoder _encoder = new(_key);
@@ -90,9 +90,6 @@ public class UniqueConstraintEncodingBenchmark : IDisposable
     [Benchmark]
     [BenchmarkCategory("Value")]
     public Option<UniqueConstraintValue> V2Value() => _encoder.EncodeValue(_v2Components, _ignoreCasing);
-
-    /// <inheritdoc/>
-    public void Dispose() => _encoder.Dispose();
 
     sealed class UniqueConstraintEncodingConfiguration : ManualConfig
     {
