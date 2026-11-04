@@ -376,6 +376,12 @@ public partial class Observer(
                 await namespaceStorage.InFlightEvents.Remove(_observerId, inFlight.Partition, inFlight.EventSequenceNumber);
             }
 
+            var pruned = await Recommendations.IgnoredRecommendations.Remove(namespaceStorage.Recommendations, Recommendations.IgnoredRecommendations.ForRemovedObserver(await namespaceStorage.Recommendations.GetAll(), _observerId, _observerKey.EventSequenceId));
+            if (pruned > 0)
+            {
+                logger.PrunedIgnoredRecommendations(pruned);
+            }
+
             // The deletion can commit and then throw. Seal this activation before attempting it so neither
             // callbacks nor deactivation can recreate the record. Reactivation consults authoritative storage.
             _removed = true;
