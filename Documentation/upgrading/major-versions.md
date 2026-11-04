@@ -197,6 +197,21 @@ See [Upgrading from 18 to 19](18-to-19.mdx).
 
 **You do:** rebuild.
 
+### 19 to 20
+
+**Kernel clusters cannot be mixed** — released 2026-11-04.
+
+The kernel builds on `Cratis.Choreography` 2.0.0, the renamed `Cratis.Orleans`. Its grain
+interfaces that take a job or job step identifier now carry `Cratis.Choreography` types, so their
+wire identities change, and kernel silos running 20.0 and an earlier release cannot share a
+cluster. Stored job and job step state keeps its existing storage identifiers, so existing data
+still resolves. Minimum versions rise to `Cratis.Fundamentals` 7.32.0, Cratis Arc 22.156.4 and
+the Microsoft Orleans packages 10.4.2.
+
+**You do:** upgrade every silo of a kernel cluster together, not as a rolling upgrade. If you
+build against the kernel packages, rename `Cratis.Orleans.*` namespaces, `AddCratisOrleans*` and
+`CratisOrleansOptions` to their `Choreography` equivalents.
+
 ## Skipping several majors at once
 
 Nothing prevents jumping from, say, 14 to 19 directly. What that costs is the union of every
