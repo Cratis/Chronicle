@@ -23,6 +23,7 @@ public class a_future_changeset : Specification
     protected const string Email = "someone@example.com";
     protected readonly Guid _childId = Guid.Parse("d53be75c-2ac3-4e33-8f16-1a4e2f1066a0");
     protected EncryptChangeset _step;
+    protected PIICompliancePropertyValueHandler _piiHandler;
     protected IProjection _projection;
     protected ProjectionEventContext _context;
     protected Changeset<AppendedEvent, ExpandoObject> _changeset;
@@ -45,8 +46,9 @@ public class a_future_changeset : Specification
         var keyStorage = new InMemoryEncryptionKeyStorage();
         var encryption = new Encryption();
         var provisioner = new ManagedEncryptionKeyProvisioner(keyStorage, encryption);
+        _piiHandler = new PIICompliancePropertyValueHandler(provisioner, keyStorage, encryption);
         var metadataManager = new JsonSchemaMetadataManager(
-            new KnownInstancesOf<IJsonSchemaMetadataValueHandler>(new PIICompliancePropertyValueHandler(provisioner, keyStorage, encryption)),
+            new KnownInstancesOf<IJsonSchemaMetadataValueHandler>(_piiHandler),
             NullLogger<JsonSchemaMetadataManager>.Instance);
         var compliance = new ReadModelsCompliance(metadataManager, new ExpandoObjectConverter(new TypeFormats()));
         _step = new EncryptChangeset(compliance, new ObjectComparer(), "test-store", "test-namespace");
