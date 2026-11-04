@@ -58,6 +58,7 @@ public static class system_store_command_policy
         "Cratis.Chronicle.Sequences.AppendWithNamedTags",
         "Cratis.Chronicle.Sequences.CompleteStream",
         "Cratis.Chronicle.Sequences.CompleteStreamScope",
+        "Cratis.Chronicle.Sequences.CopyEventsForEventSource",
         "Cratis.Chronicle.Sequences.Redact",
         "Cratis.Chronicle.Sequences.RedactForEventSource",
         "Cratis.Chronicle.Sequences.ReopenStreamScope",
