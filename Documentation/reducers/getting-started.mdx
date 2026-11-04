@@ -4,10 +4,12 @@ description: Put a read-model fold in an IReducerFor<T> class when it needs inje
 ---
 
 Use a separate `IReducerFor<T>` when the fold needs injected services, instance behavior during replay,
-or must live apart from its model. For application code, start with model-bound attributes, then fluent
-mappings, then reducer code; a [self-reducing model](self-reducing-read-models.mdx) is the default for new
-reducers. [Choose how to build a read model](../projections/choosing-a-read-model-style.mdx) explains the
-choice; this guide shows the separate-class form.
+or must live apart from its model. Keeping the fold in its own class lets you inject dependencies
+through its constructor while leaving the read model as a data contract that other code can share.
+For application code, start with model-bound attributes, then fluent mappings, then reducer code;
+a [self-reducing model](self-reducing-read-models.mdx) is the default for new reducers.
+[Choose how to build a read model](../projections/choosing-a-read-model-style.mdx) explains the choice;
+this guide shows the separate-class form.
 
 ## Prerequisites
 
@@ -31,8 +33,26 @@ Create a reducer by implementing `IReducerFor<TReadModel>` with methods for each
 
 <ChronicleClientTabs snippet="reducers/getting-started/reducer-implementation" />
 
-The event context supplies metadata such as occurrence time and event source ID. TypeScript handlers
+In the C# order example, `Created` returns a summary with the order ID, a zero total and no items.
+`ItemAdded` receives that summary as `current` and returns a copy with the added quantity and cost.
+For example, adding two items priced at 10 each produces a total of 20 and an item count of 2.
+If the next event removes one of those items, `ItemRemoved` receives those updated values and returns
+a summary with a total of 10 and one item. Each return value becomes the next event's `current`,
+including when all these events arrive in the same delivered batch.
+
+The item handlers return `null` if the order has not been created, leaving it absent. Once a summary
+exists, returning `null` would remove it; return `current` unchanged to ignore an event while retaining
+the summary.
+
+The event context supplies metadata such as occurrence time and event source ID. The C# example uses
+`context.Occurred` for `LastUpdated`, so replay uses the recorded event time. TypeScript handlers
 can take it as a third argument after the event and current state.
+
+In .NET, each delivered batch runs in a dependency-injection scope, which lets the reducer use scoped
+services. The client resolves or creates the reducer once for that batch; whether an instance is
+reused across batches depends on its registration. Keep the order's accumulated state in the read
+model passed as `current`, not in reducer or service fields, so it remains available to later batches
+and can be rebuilt during replay.
 
 ## Method Signatures
 
@@ -100,8 +120,12 @@ Reducer methods are called for each event matching the event type:
 
 The `current` parameter in each method:
 
-- Is `null` when no previous state exists for this event source
-- Contains the current persisted state for this event source
+- Is `null` when no state exists for this event source, including after a handler returns `null`
+- Contains the state accumulated so far for this event source, including results from earlier events
+  in the same delivered batch
+
+The .NET client starts the batch with the supplied initial state and passes each handler's result to
+the next handler in memory. It does not reload persisted state between those events.
 
 ## Best Practices
 

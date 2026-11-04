@@ -3,14 +3,20 @@ description: Guidance for designing Chronicle events as past-tense, single-purpo
 ---
 # Event
 
-Chronicle is optimized for the scenario of [domain events](https://www.martinfowler.com/eaaDev/DomainEvent.html).
-Figuring out the correct name of an [event type](./event-type.md) and what properties it should have can be hard.
-This page walks through some general guidance on how to do so. Recommend also reading the [Microsoft guide](https://docs.microsoft.com/en-us/dotnet/architecture/microservices/microservice-ddd-cqrs-patterns/domain-events-design-implementation) on this.
+Use [domain events](https://www.martinfowler.com/eaaDev/DomainEvent.html) to record what has happened in
+your domain. Registering a person and changing that person's name are different facts, even though
+both involve a name. The name of an [event type](./event-type.md) and the properties it carries should
+make that distinction clear to the code that consumes it.
+
+This page explains how to choose those names and properties. The [Microsoft guide](https://docs.microsoft.com/en-us/dotnet/architecture/microservices/microservice-ddd-cqrs-patterns/domain-events-design-implementation)
+also covers designing domain events.
 
 > Note: Read more about the relationship to [event source](./event-source.md)
 
-A well-designed event is a single, immutable, past-tense fact. Captured well, the lifecycle
-of one thing in your domain reads as a sequence of these facts in the order they happened:
+A well-designed event is a single, immutable, past-tense fact. For normal domain changes, append a new
+fact rather than rewriting an earlier one: a name change follows registration, and an address change
+adds another fact about the same person. The diagram illustrates this modeling principle, with the
+person's story growing as new facts are recorded:
 
 ```mermaid
 flowchart LR
@@ -37,10 +43,17 @@ of the event.
 
 ## Immutable
 
-In an event sourced system, events are considered immutable because they represent facts that have occurred in the past.
-Once an event is recorded, it should not be altered, as doing so would compromise the integrity and reliability of the event log.
-Immutability ensures that the history of changes is preserved accurately, allowing the system to reconstruct past states and understand the sequence of events that led to the current state.
-This immutability is crucial for debugging, auditing, and maintaining a consistent and trustworthy system.
+`PersonRegistered` records the details accepted at registration. If the person later changes their
+name, append `NameChangedForPerson` instead of replacing the name in the registration event. A consumer
+can then distinguish the initial registration from the later change and react to each for a different
+reason, such as starting onboarding or updating a displayed name. Rewriting registration would hide
+that distinction.
+
+Immutability here is a rule for modeling normal domain changes, not a promise that stored content can
+never change. Chronicle provides deliberate historical revision and redaction operations, separate
+from recording a new domain fact. Retention of original content and revision history depends on the
+storage provider. A person's new name normally calls for a new event, not one of those maintenance
+operations.
 
 ## Avoid nullables / empty values
 
@@ -57,16 +70,16 @@ The .NET analyzer rule [CHR0012](../code-analysis/CHR0012) warns when nullable e
 
 ## Cohesion
 
-Figuring out how "big" an event should be can be even harder.
-The things that needs to go together to represent a meaningful change in the system should constitute the boundaries.
-If we take a system that holds personal details, the name and social security numbers would be separate from
-the address.
+Choose properties that belong together to describe one meaningful change. In a system that holds
+personal details, a person's name and social security number can be treated separately from their
+address. Registration may bring those details together, while a later name change does not also mean
+that the address changed.
 
-Below are some samples of events.
+The examples below show how the properties follow the purpose of each event.
 
 ### PersonRegistered
 
-During registration, it might be necessary to capture all the details about a person as below:
+Registration may need to capture all the person's details as one fact:
 
 ```json
 {
@@ -83,7 +96,8 @@ During registration, it might be necessary to capture all the details about a pe
 
 ### NameChangedForPerson
 
-Once registered, changing the name could then only be:
+After registration, a name change needs only the name properties. Consumers do not have to inspect
+unrelated address fields to work out what changed:
 
 ```json
 {
@@ -95,7 +109,7 @@ Once registered, changing the name could then only be:
 
 ### AddressChangedForPerson
 
-Similar for address:
+An address change similarly carries the address details together, without repeating the person's name:
 
 ```json
 {

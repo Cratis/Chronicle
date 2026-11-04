@@ -3,7 +3,7 @@ title: "ASP.NET Core namespace resolution"
 description: "Resolve the Chronicle namespace per request in ASP.NET Core, and the trust each built-in resolver assumes."
 ---
 
-The ASP.NET Core client provides namespace resolution designed for multi-tenant web applications. It integrates with HTTP context and offers built-in resolvers for common request patterns.
+In an ASP.NET Core application, Cratis Chronicle can select a namespace from the current HTTP context. When DI first resolves `IEventStore` in the request scope, it calls the namespace resolver and obtains the matching event-store handle. The handle and its event log retain that namespace; keeping them beyond the request does not make them follow the next request's tenant.
 
 If your multi-tenant setup is based on Arc Tenancy, you can map the current tenant to a namespace. See [Arc tenancy](/arc/backend/csharp/tenancy/).
 
@@ -15,10 +15,10 @@ The default resolver reads the namespace from an HTTP header. Configure it throu
 
 <ChronicleClientTabs snippet="namespaces/aspnetcore/http-header-resolver" />
 
-When the header is present, its value becomes the namespace for the request. If the header is missing, the default namespace is used.
+The example selects `my-event-store` and uses `x-cratis-tenant-id` for namespace selection. When the resolver runs, it returns the header's value if present, or the default namespace if the header is missing. Check that this fallback fits your tenant rules before using it for requests without tenant context.
 
 :::caution[The caller chooses the namespace]
-The header resolver takes the header's value as it arrives and performs no authorization. Any caller that can reach the endpoint can read from and append to any tenant's namespace by setting the header, and a request without it lands in the default namespace. Use it only behind something you trust to set the header from an authenticated tenant, such as a gateway, or write a resolver that derives the namespace from the authenticated user.
+The header resolver reads the supplied value without authorizing it. If callers control the header, they control the namespace it selects. Use a trusted source for the tenant value, and enforce which tenants the authenticated caller may use before resolving the store. Selecting a namespace does not grant or verify access to it.
 :::
 
 ### Subdomain resolution
@@ -27,11 +27,15 @@ The subdomain resolver extracts the namespace from the request host (for example
 
 <ChronicleClientTabs snippet="namespaces/aspnetcore/subdomain-resolver" />
 
+This resolver uses the first part of a host with more than two dot-separated parts, so `tenant1.example.com` selects `tenant1`. Without such a host, it returns the default namespace. The host-derived name still needs the same tenant-authorization checks as a header-derived value.
+
 ## Custom resolvers
 
-You can configure a custom resolver either by type (DI) or using the `IChronicleBuilder` fluent API. Implement `IEventStoreNamespaceResolver` first:
+Use a custom resolver when the built-in request mappings do not match where your application keeps its namespace. Implement `IEventStoreNamespaceResolver`, then supply an instance through `IChronicleBuilder` or configure its type for DI:
 
 <ChronicleClientTabs snippet="namespaces/aspnetcore/custom-resolver" />
+
+This resolver reads `Tenant:Namespace` from `IConfiguration`, falling back to the default namespace when the setting is absent. It selects from configuration, not from the caller's identity. For request-dependent selection, use a singleton-safe accessor such as `IHttpContextAccessor` to read the current context inside `Resolve()`. The web integration registers the resolver as a singleton; do not inject a request-scoped service directly into it.
 
 ### Using the builder (recommended)
 
@@ -39,9 +43,11 @@ Pass a resolver instance using the `IChronicleBuilder` configure callback:
 
 <ChronicleClientTabs snippet="namespaces/aspnetcore/builder-custom-resolver" />
 
+`WithNamespaceResolver` uses this instance directly, so any dependencies it retains must also be safe for the application's lifetime.
+
 ### Using type-based DI resolution
 
-Configure the resolver type through `ChronicleAspNetCoreOptions` to let the DI container resolve it:
+Keep your existing `builder.AddCratisChronicle(...)` registration when using the following excerpt: it configures options only and does not register the Chronicle client. Setting `EventStoreNamespaceResolverType` lets DI construct the resolver as a singleton and supply its dependencies:
 
 <ChronicleClientTabs snippet="namespaces/aspnetcore/type-based-custom-resolver" />
 
@@ -53,7 +59,11 @@ Configure the resolver type through `ChronicleAspNetCoreOptions` to let the DI c
 
 ## Example: Web app setup
 
+This example uses `production-store` and reads the namespace from `x-tenant-id`. Apply the header trust and tenant-authorization requirements above before exposing the endpoint to callers.
+
 <ChronicleClientTabs snippet="namespaces/aspnetcore/web-app-example" />
+
+The endpoint's `IEventLog` comes from the request's scoped event store. Its `Append` uses the namespace selected when that store was resolved; it does not read `x-tenant-id` again. Let each request resolve its own store services rather than retaining the event log for later requests.
 
 For non-web contexts, see [DotNET client usage](dotnet-client).
 

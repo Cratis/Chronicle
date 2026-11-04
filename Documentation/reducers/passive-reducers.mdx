@@ -41,6 +41,11 @@ A bounded `GetInstances(eventCount)` reconstructs from a prefix of event-type-se
 
 <ChronicleClientTabs snippet="reducers/passive-reducers/historical-snapshots" />
 
+In .NET, the count limits one prefix shared across event sources, not a separate prefix for each model
+instance. With a limit of three, two events for one account and one for another use up the whole
+prefix. The example reconstructs balances from those two groups, rather than taking three events for
+each account.
+
 This is not a date-based snapshot query. `GetSnapshotsById` currently returns no reducer history; current materialized snapshots and historical projection snapshots are different read surfaces.
 
 ## Reports and exploratory analysis
@@ -48,6 +53,12 @@ This is not a date-based snapshot query. `GetSnapshotsById` currently returns no
 Passive models fit infrequent queries whose reconstruction cost is acceptable:
 
 <ChronicleClientTabs snippet="reducers/passive-reducers/on-demand-reports" />
+
+The report above adds every matching payment to `TotalRevenue` and `RevenueByCategory`, while replacing
+`Month` and `Year` with values from each payment's `context.Occurred`. If a January payment is followed
+by a February payment, both contribute to the totals, but the report is labeled February. Those fields
+label the latest processed payment; they do not select a month, so this example does not calculate
+isolated monthly totals.
 
 An exploratory model can declare a passive state shape such as this; supply its reducer before reading it:
 
@@ -61,7 +72,9 @@ For development, disable observation without promising on-demand reads:
 
 <ChronicleClientTabs snippet="reducers/passive-reducers/development-testing" />
 
-The following declarations illustrate alternative activity settings; choose the one your deployment needs:
+The comment “Was active, now passive” below refers only to disabling observation with
+`[Reducer(isActive: false)]`. The model has no `[Passive]` attribute, so it remains materialized rather
+than being reconstructed on demand; a by-id read may return absent or stale state.
 
 <ChronicleClientTabs snippet="reducers/passive-reducers/switching-active-passive" />
 

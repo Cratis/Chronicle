@@ -3,11 +3,16 @@ title: Event source
 description: What a Chronicle event source is, how event source id, type, streams and definitions relate, and which of them take part in concurrency.
 ---
 
-An event source is one entity or process in your domain: a person, an account, an order, a transfer. All the state changes of that entity are events, and the **event source id** (`EventSourceId`) is what binds them together. It is comparable to the primary key of a row in a database.
+An event source is one entity or process in your domain: a person, an account, an order, a transfer.
+Its state changes are recorded as events, and the **event source id** (`EventSourceId`) binds them
+together. It is comparable to the primary key of a row in a database: the person's name or address
+can change while the identifier continues to identify the same person.
 
-For instance, take the notion of a person. What identifies the person uniquely is in many systems the social security number assigned by the government. All state changes relevant for an instance of a person are identified by that one value, which is the event source id.
+For instance, many systems identify a person by the social security number assigned by the government.
+That one value identifies the person across their state changes and serves as the event source id.
 
-The diagram shows two event sources, two people, each with its own ordered story of events, all sharing the same event source id throughout:
+The diagram shows two people, each with its own story. The events for `person-123` keep that identifier
+throughout, while those for `person-456` belong to the other person:
 
 ```mermaid
 flowchart LR
@@ -37,6 +42,17 @@ Every stored event carries four routing values. Two identify the entity and two 
 The last three are optional. An event appended with only an event source id has the default event source type and the default stream, and that is how Chronicle has always worked. All four are indexed, filterable, and the dimensions a [concurrency scope](../events/concurrency.mdx) can narrow to.
 
 A **stream** is a named part of an event source, such as the transactions of one month, or the onboarding of an account. It is not a separate entity: its events belong to the same event source and share its event source id. The stream type names the part, and the stream id picks one instance of it.
+
+The primary-key analogy also needs a lookup scope. In .NET, an event sequence read is already scoped
+to the selected event store, namespace and sequence. The identifier `account-42` can be used in another
+store or namespace without referring to the same account; the string alone is not a globally unique
+identity across them.
+
+Within the selected sequence, filtering by `account-42` does not implicitly select the `Account`
+source type or the `Transactions` stream. The .NET read applies source type and stream filters
+separately when supplied. Without those filters, matching identifiers can span source types and
+streams, subject to any other filters on the read. Choose the identifier to keep the account's story
+together, then use the other values to narrow which part of that story you want to read.
 
 ## Event source definitions
 

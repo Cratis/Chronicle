@@ -50,7 +50,15 @@ Kotlin, Java, and TypeScript don't currently expose a way to read raw events bac
 
 ### Read from a checkpoint
 
+In .NET, `GetFromSequenceNumber` includes the supplied position. Calling the example below with 42
+returns the event at position 42, if it exists, followed by later events in the sequence.
+
 <ChronicleClientTabs snippet="events/getting-events/from-checkpoint" />
+
+`ReadFrom` passes the position through unchanged. A checkpoint that records the next event to read can
+be supplied directly. If your checkpoint instead records the last event processed, passing it returns
+that event again. To resume after it, choose the next starting position before calling; the method
+does not advance a last-processed checkpoint for you.
 
 This is currently a C#-only capability — no other client exposes a way to resume reading from an arbitrary sequence number.
 

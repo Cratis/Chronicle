@@ -4,7 +4,7 @@ uid: Chronicle.Namespaces
 description: Chronicle namespaces provide logical segregation inside one event store, isolating events, projections, reducers and read models per tenant.
 ---
 
-Namespaces provide logical segregation within a single event store. They allow Chronicle to keep events, projections, reducers, and read models isolated per namespace while still sharing the same physical infrastructure.
+Namespaces provide logical segregation within a single event store. They allow Cratis Chronicle to keep events, projections, reducers, and read models isolated per namespace while still sharing the same physical infrastructure.
 
 Use namespaces to:
 
@@ -12,7 +12,7 @@ Use namespaces to:
 - Partition environments like development, staging, and production
 - Split business domains that share an event store
 
-Namespaces are resolved for every operation. If no namespace is explicitly provided, the default namespace is used.
+In the .NET client, you select a namespace when obtaining an event-store handle: pass the namespace explicitly, or let a configured resolver choose it. The handle keeps that namespace for its operations; changing the current tenant does not retarget a handle you already hold.
 
 For data isolation and database naming, see [Namespaces and data isolation](../concepts/namespaces.md).
 

@@ -1,26 +1,27 @@
 ---
-description: Configure how the Chronicle .NET client resolves a namespace for every event store operation with an IEventStoreNamespaceResolver implementation.
+description: Configure namespace selection when obtaining an event-store handle in the Chronicle .NET client with IEventStoreNamespaceResolver.
 ---
 # DotNET client usage
 
-The .NET client resolves a namespace for every event store operation. You can configure namespace resolution by passing an `IEventStoreNamespaceResolver` implementation to the `ChronicleClient` constructor.
+When you call `ChronicleClient.GetEventStore` without a namespace, the Cratis Chronicle .NET client calls its `IEventStoreNamespaceResolver` to choose one. Passing a namespace explicitly bypasses the resolver. The client caches event-store handles by both store name and namespace, so obtaining the same selection again can return an existing handle.
+
+The handle and its event log keep the selected namespace. Appends and reads do not resolve it again, even if the current tenant or principal changes. To work with another namespace, obtain the appropriate handle rather than reuse one selected for the previous tenant.
 
 :::note[Client coverage]
-This page and [ASP.NET Core namespace resolution](./aspnetcore) are intentionally .NET-specific — namespace resolution here is driven by .NET's DI/hosting model (`IEventStoreNamespaceResolver`, ASP.NET Core HTTP-header/subdomain/claims-based resolvers), which has no equivalent hosting model documented for Kotlin, Elixir, or TypeScript in this corpus. Passing a namespace explicitly per call (rather than resolving it from the host) works the same in every client — see each client's `IEventStore`/connection options.
+This page covers direct and hosted .NET applications. [ASP.NET Core namespace resolution](./aspnetcore) covers selecting a namespace from HTTP context. These resolver and dependency-injection APIs belong to the .NET client.
 :::
 
 ## IEventStoreNamespaceResolver
 
 <ChronicleClientTabs snippet="namespaces/dotnet-client/resolver-shape" />
 
-The resolver returns the namespace name to use for the current context.
+`Resolve()` returns the namespace name to use when an event-store handle is obtained. This example always returns the default namespace; a context-dependent resolver reads the current tenant or principal at that point.
 
 ## Built-in resolvers
 
 ### DefaultEventStoreNamespaceResolver
 
-Always returns the default namespace. Use this when you do not need tenant isolation.
-This is the default when no resolver is supplied.
+Always returns the default namespace. Use this when your application does not need to select separate namespaces. A directly constructed `ChronicleClient` uses this resolver when none is supplied, as does the non-web host integration unless you configure another resolver.
 
 ### ClaimsBasedNamespaceResolver
 
@@ -28,7 +29,7 @@ Resolves the namespace from the current principal's claims. This is useful when 
 
 <ChronicleClientTabs snippet="namespaces/dotnet-client/claims-based" />
 
-If the claim is not found or the user is not authenticated, the default namespace is used.
+The examples read `ClaimsPrincipal.Current` and use either `tenant_id` or `custom_tenant_claim`. You can supply a principal-accessor callback when the principal comes from another context. If the principal is unauthenticated or the claim is missing or empty, the resolver returns the default namespace. Use that fallback only if it is appropriate for your application's tenant rules.
 
 ## Passing a resolver to ChronicleClient
 
@@ -36,27 +37,37 @@ For console or direct-client scenarios, pass the resolver as a constructor param
 
 <ChronicleClientTabs snippet="namespaces/dotnet-client/default-resolver" />
 
+Supplying `DefaultEventStoreNamespaceResolver` explicitly makes the choice visible, but omitting it gives the same default behavior. You construct this client yourself rather than obtaining it from DI.
+
 ## Configuring in a hosted application
 
-When using `IHostApplicationBuilder` (worker service or web app), configure the resolver through `ChronicleClientOptions` or directly via `IChronicleBuilder`:
+For an application using `IHostApplicationBuilder`, such as a worker service, configure the resolver through `ChronicleClientOptions` or supply an instance through `IChronicleBuilder`:
 
 <ChronicleClientTabs snippet="namespaces/dotnet-client/hosted-app-configuration" />
 
+The options form lets DI construct `TenantNamespaceResolver`; the builder form uses the instance you supply. In both cases, the host integration registers the resolver and client as singletons, so the resolver's dependencies must be safe to retain for the application's lifetime.
+
+`IEventStore` is registered as scoped. When it is first resolved in a scope, its factory calls the resolver and obtains the handle for the configured store and selected namespace. This scoped registration does not make the resolver scoped or cause the handle to follow later tenant changes. Establish the tenant before resolving the store or its event log.
+
 ## Custom resolvers
 
-Implement a resolver when your namespace comes from a custom context, such as a tenant provider or a request-scoped service.
+Implement a resolver when your application already has a tenant context that should determine the namespace. The resolver below reads `CurrentTenantId` from `ITenantContext` when `Resolve()` is called.
 
 If your application uses Arc Tenancy, you can resolve the namespace from its tenant context. See [Arc tenancy](/arc/backend/csharp/tenancy/).
 
 <ChronicleClientTabs snippet="namespaces/dotnet-client/tenant-resolver" />
 
+To construct the client directly, supply your own `ITenantContext` instance:
+
 <ChronicleClientTabs snippet="namespaces/dotnet-client/tenant-resolver-usage" />
+
+This direct-construction example leaves dependency lifetimes under your control. For the hosted configuration above, `ITenantContext` must instead be safe for the singleton resolver to retain. Use an accessor that reads the current context when asked, rather than injecting a request-scoped tenant service into the resolver.
 
 ## Best practices
 
-- Keep resolvers deterministic within a request or operation
-- Provide a safe fallback to the default namespace
-- Avoid expensive resolution logic, as it is called frequently
+- Keep tenant selection stable while obtaining and using a handle
+- Use the default namespace as a fallback only when your application permits it; otherwise reject missing tenant context before obtaining the handle
+- Keep resolution lightweight; it runs when selecting a handle, not on every append or read
 
 For web applications, see [ASP.NET Core namespace resolution](aspnetcore).
 

@@ -3,14 +3,16 @@ title: "Event Sequence"
 description: "What an event sequence is, how the event log relates to other sequences, and how events are revised."
 ---
 
-Chronicle has the concept of event sequences. These can be looked upon as collections of events.
-Every event gets assigned an incremental unique sequence number, this if the sequence
-number that [observers](./observers.mdx) uses to maintain their offset.
+An event sequence is an ordered collection of events. Each event receives a unique, increasing
+sequence number within that sequence. This is the position that [observers](./observers.mdx) use to
+maintain their offset as they process events.
 
-With every event, Chronicle collects additional metadata that is stored together with the event.
+Chronicle stores metadata alongside each event, including its occurrence time. The sequence number
+records append order, not occurrence-time order: an event imported with a supplied timestamp can have
+an earlier occurrence time than the event appended before it.
 
-A sequence is the timeline of your system — events laid out in the order they happened, each at a
-fixed sequence number that never changes:
+The sequence below shows the order in which Chronicle appended the book events, each at a fixed
+sequence number:
 
 ```mermaid
 flowchart LR
@@ -18,8 +20,12 @@ flowchart LR
     O["Observer (offset: #2)"] -.->|reads next| E3
 ```
 
-The observer's offset is just a sequence number — it remembers how far it has read, and picks up from
-there when new events arrive.
+Here, `BookBorrowed` at #3 was appended after `BookReturned` at #2. If that borrowing was imported
+later, its occurrence time could still be earlier than the return's. The sequence positions tell you
+where the events sit in this sequence, rather than putting their timestamps in chronological order.
+
+The observer has reached #2 and reads #3 next. Its offset records progress through the sequence, not
+a point in occurrence time.
 
 Chronicle has formalized the following event sequences:
 
@@ -29,21 +35,21 @@ Chronicle has formalized the following event sequences:
 
 ## Event Type generations
 
-Every [event type](./event-type.md) can evolve over time. Evolutions are represented as generations.
-The `content` property stores event content per generation, allowing for a perfect audit trail of
-the events and its evolution and at the same time also supporting scenarios of delivering different
-versions of the events, depending on the observer.
+Every [event type](./event-type.md) can evolve over time. Changes to its shape are represented as
+generations. The `content` property stores event content per generation, allowing observers to receive
+different versions of the event. Generations describe how an event type evolves; revising an event
+instead corrects the content of a particular event already in the sequence.
 
 ## Revisions
 
-An event sequence is append only, meaning that we do not delete anything within a sequence.
-Changing the content of an event is also not supported by Chronicle, instead one should perform
-revisions.
+Appending adds a new event at the next position; it does not overwrite an event already in the
+sequence. To correct an existing event, Chronicle supports a separate revision operation. A revision
+targets the existing sequence number and uses the same event type.
 
-Revisions are replacements of the original event instance and are in fact the same event type and
-are stored together with the original event it replaces. Every revision is stored with the same
-type of metadata as for the root event.
-
-This approach help us guarantee a perfect audit trail of the system.
+Retention of original content and revision history depends on the storage provider. MongoDB stores
+revisions alongside the original event content. SQL currently replaces the revised generation's
+content in place, rather than retaining earlier content for that generation as a revision history.
+A sequence position therefore identifies the event, but does not by itself guarantee access to every
+earlier version of its content.
 
 To revise an event, see [Event revision](../events/revision.md).
