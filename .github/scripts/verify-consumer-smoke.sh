@@ -152,6 +152,15 @@ run_consumer() {
     dotnet run --project "$project" -p:RestoreNoCache=true > "$log" 2>&1
 }
 
+# True when no Chronicle version of this release's major is on nuget.org yet. A failure to read nuget.org is
+# not "first publish": the check stays strict unless nuget.org answers and shows the major absent.
+first_publish_of_major() {
+    local major="${CHRONICLE_VERSION%%.*}" index
+    index=$(curl -fsS "https://api.nuget.org/v3-flatcontainer/cratis.chronicle/index.json") || return 1
+    echo "$index" | grep -q '"versions"' || return 1
+    ! echo "$index" | grep -qE "\"${major}\\.[0-9]+\\.[0-9]+[^\"]*\""
+}
+
 # Exercise the actual packaged scenario entry points without any direct Arc reference. Merely restoring
 # the package or resolving the testing assembly does not catch missing kernel runtime dependencies.
 echo "Starting Chronicle $CHRONICLE_VERSION testing scenarios with only the Testing package referenced..."
@@ -170,6 +179,16 @@ for consumer in Testing XUnitIntegration; do
         tail -1 "$WORK_DIR/$consumer/run.log"
         echo "Chronicle $CHRONICLE_VERSION ($consumer) and the current Arc packages start together."
     else
+        # The first publish of a new major is the one place the published Arc packages are allowed not to start:
+        # they were compiled against the previous major and cannot be rebuilt against this one until it is on
+        # nuget.org. The release's notify-arc job then has Arc rebuild against it. Only this check is waived -
+        # the standalone Testing scenario above still has to pass - and the waiver is loud.
+        if first_publish_of_major; then
+            echo "::warning::Chronicle $CHRONICLE_VERSION ($consumer) does not start beside the current Arc packages. It is the first publish of major ${CHRONICLE_VERSION%%.*}, so Arc has to be rebuilt against it (notify-arc triggers that after publishing). Output follows."
+            echo "--- output ---"
+            tail -30 "$WORK_DIR/$consumer/run.log"
+            continue
+        fi
         echo "::error::Chronicle $CHRONICLE_VERSION ($consumer) and the current Arc packages failed consumer startup. Inspect the exception below before assigning the failure to either package family."
         echo "--- output ---"
         tail -30 "$WORK_DIR/$consumer/run.log"
