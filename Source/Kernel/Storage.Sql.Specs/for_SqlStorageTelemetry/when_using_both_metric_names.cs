@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Concurrent;
 using System.Diagnostics.Metrics;
 using Cratis.Chronicle.Diagnostics;
 using Cratis.Chronicle.Storage.Sql.Sinks;
@@ -10,7 +11,7 @@ namespace Cratis.Chronicle.Storage.Sql.for_SqlStorageTelemetry;
 public class when_using_both_metric_names : Specification
 {
     readonly MeterListener _listener = new();
-    readonly List<Instrument> _instruments = [];
+    readonly ConcurrentQueue<Instrument> _instruments = [];
     readonly List<Instrument> _publishedWhileRecording = [];
     readonly ThreadLocal<bool> _recording = new();
     readonly List<(string Name, int Value, KeyValuePair<string, object?>[] Tags)> _measurements = [];
@@ -21,7 +22,7 @@ public class when_using_both_metric_names : Specification
         _listener.InstrumentPublished = (instrument, listener) =>
         {
             if (!instrument.Name.Contains(".sql.", StringComparison.Ordinal) && !instrument.Name.StartsWith("chronicle-sql-", StringComparison.Ordinal)) return;
-            _instruments.Add(instrument);
+            _instruments.Enqueue(instrument);
 
             // The SQL meters are static and shared with every spec running in parallel, and the runtime reuses an
             // instrument created with the same shape, so the listener sees instruments other specs created too.
@@ -70,8 +71,8 @@ public class when_using_both_metric_names : Specification
     [Fact] void should_publish_the_convention_unit() => UnitsOf("cratis.chronicle.sql.upsert.recovered_collisions").ShouldEqual(["{collision}"]);
     [Fact] void should_preserve_the_legacy_key() => _measurements.Single(_ => _.Name == "chronicle-sql-upsert-collisions-recovered").Tags.ShouldEqual([new("operation", "both-metric-names-spec")]);
     [Fact] void should_publish_the_convention_key() => _measurements.Single(_ => _.Name == "cratis.chronicle.sql.upsert.recovered_collisions").Tags.ShouldEqual([new("cratis.chronicle.sql.upsert.operation", "both-metric-names-spec")]);
-    [Fact] void should_preserve_the_shadow_failure_name() => _instruments.Exists(_ => _.Name == "chronicle.sql.composite_key.stamp_failures").ShouldBeTrue();
-    [Fact] void should_publish_the_shadow_failure_convention_name() => _instruments.Exists(_ => _.Name == "cratis.chronicle.sql.composite_key.stamp_failures").ShouldBeTrue();
+    [Fact] void should_preserve_the_shadow_failure_name() => _instruments.Any(_ => _.Name == "chronicle.sql.composite_key.stamp_failures").ShouldBeTrue();
+    [Fact] void should_publish_the_shadow_failure_convention_name() => _instruments.Any(_ => _.Name == "cratis.chronicle.sql.composite_key.stamp_failures").ShouldBeTrue();
 
     string?[] UnitsOf(string name) => [.. _instruments.Where(_ => _.Name == name).Select(_ => _.Unit).Distinct()];
 
