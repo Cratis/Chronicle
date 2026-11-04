@@ -7,6 +7,7 @@ using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.ReadModels;
+using Cratis.Chronicle.Setup;
 using Cratis.DependencyInjection;
 using Cratis.Types;
 using Microsoft.Extensions.Options;
@@ -51,6 +52,45 @@ public class KernelProjections(
 
         // Registered as the full set for the kernel owner, so a declaration deleted from the kernel has its
         // definition retired rather than left behind observing events nothing reads any more.
-        await grainFactory.GetGrain<IProjectionsManager>(eventStore).Register(projections, ProjectionOwner.Kernel);
+        await RegisterProjections(eventStore, projections);
+    }
+
+    /// <summary>
+    /// Registers kernel definitions through the shared path when the receiving silo supports it.
+    /// </summary>
+    /// <param name="eventStore">The event store to register with.</param>
+    /// <param name="projections">The lowered kernel definitions.</param>
+    /// <returns>A task representing the registration.</returns>
+    internal async Task RegisterProjections(EventStoreName eventStore, IEnumerable<ProjectionDefinition> projections)
+    {
+        var manager = grainFactory.GetGrain<IProjectionsManager>(eventStore);
+        var signature = TryComputeSignature(projections);
+        if (signature is not null)
+        {
+            try
+            {
+                await manager.RegisterShared(signature, projections, ProjectionOwner.Kernel);
+                return;
+            }
+            catch (Exception exception) when (IncompatibleSiloRelease.IsLikely(exception))
+            {
+                // A silo running the previous interface can still accept the ordinary registration.
+            }
+        }
+
+        await manager.Register(projections, ProjectionOwner.Kernel);
+    }
+
+    static string? TryComputeSignature(IEnumerable<ProjectionDefinition> projections)
+    {
+        try
+        {
+            return ProjectionRegistrationSignature.For(projections, ProjectionOwner.Kernel, null, null);
+        }
+        catch (Exception)
+        {
+            // Sharing is only an optimization; a definition that cannot be hashed still gets registered.
+            return null;
+        }
     }
 }
