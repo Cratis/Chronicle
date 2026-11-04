@@ -1,9 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Storage.Observation;
 using Orleans.TestKit;
+using Orleans.TestKit.Timers;
 
 namespace Cratis.Chronicle.Projections.for_ProjectionsManager;
 
@@ -23,6 +25,12 @@ public class when_two_event_stores_reconcile_after_a_silo_departure : given.two_
         await _secondSilo.TimerRegistry.FireAllAsync();
         _secondObserver.IsSubscriptionEstablished().Returns(false);
         _secondObserver.GetState().Returns(new ObserverState { AlertDisposition = AlertDisposition.Retired });
+
+        // Registration finds retired observers through storage, not the observer's state, before reviving them.
+        var secondStorage = (Storage.IStorage)_secondSilo.ServiceProvider.GetService(typeof(Storage.IStorage))!;
+        secondStorage.GetEventStore(EventStore).GetNamespace(EventStoreNamespaceName.Default).Observers
+            .GetRetired(default!)
+            .ReturnsForAnyArgs([.. _secondDefinitions.Select(definition => (ObserverId)definition.Identifier)]);
         await _secondGrain.Register(_secondDefinitions);
         _observerGrain.ClearReceivedCalls();
         _secondObserver.ClearReceivedCalls();
@@ -49,14 +57,32 @@ public class when_two_event_stores_reconcile_after_a_silo_departure : given.two_
         var secondRepair = FireRepair(_secondSilo);
         _release.TrySetResult();
         await Task.WhenAll(firstRepair, secondRepair);
-        await _silo.TimerRegistry.FireAllAsync();
-        await _secondSilo.TimerRegistry.FireAllAsync();
+        await FireLiveTimers(_silo);
+        await FireLiveTimers(_secondSilo);
     }
 
     static async Task FireRepair(TestKitSilo silo)
     {
-        await silo.TimerRegistry.FireAllAsync();
-        await silo.TimerRegistry.FireAllAsync();
+        await FireLiveTimers(silo);
+        await FireLiveTimers(silo);
+    }
+
+    static async Task FireLiveTimers(TestKitSilo silo)
+    {
+        // TestKit's FireAllAsync fires a snapshot of the live timers, so a timer disposed by an earlier callback in
+        // the same snapshot - a repair the departure check replaces - throws instead of being skipped. An Orleans
+        // timer that is disposed never fires, so skip exactly those. Every registration is one call on the mock.
+        var registered = silo.TimerRegistry.Mock.Invocations.Count;
+        for (var index = 0; index < registered; index++)
+        {
+            try
+            {
+                await silo.TimerRegistry.FireAsync(index);
+            }
+            catch (ObjectDisposedException exception) when (exception.ObjectName == typeof(TestGrainTimer).FullName)
+            {
+            }
+        }
     }
 
     [Fact] void should_bound_combined_repair_builds() => _peak.ShouldEqual(8);
