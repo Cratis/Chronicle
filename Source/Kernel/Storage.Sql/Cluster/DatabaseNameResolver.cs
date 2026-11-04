@@ -4,6 +4,7 @@
 using System.Collections.Concurrent;
 using System.Data.Common;
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Diagnostics;
 using Cratis.Chronicle.Storage.Sql.EventStores;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces;
 using Microsoft.Data.SqlClient;
@@ -18,8 +19,10 @@ namespace Cratis.Chronicle.Storage.Sql.Cluster;
 /// </summary>
 /// <param name="connectionString">The configured cluster connection.</param>
 /// <param name="prepareConnection">Optional callback preparing the connections the catalog opens itself, for instance with a resolved identity.</param>
-internal sealed class DatabaseNameResolver(string connectionString, Func<DbConnection, Task>? prepareConnection = null)
+/// <param name="metricNames">The selected metric naming mode.</param>
+internal sealed class DatabaseNameResolver(string connectionString, Func<DbConnection, Task>? prepareConnection = null, MetricNames metricNames = MetricNames.Legacy)
 {
+    readonly SqlStorageTelemetry _telemetry = new(metricNames);
     readonly SqlDatabaseCatalog _catalog = new(connectionString, prepareConnection);
     readonly ConcurrentDictionary<DatabaseIdentity, string> _bindings = new();
 
@@ -195,7 +198,7 @@ internal sealed class DatabaseNameResolver(string connectionString, Func<DbConne
             if (winner is not null)
             {
                 name = winner.PhysicalName;
-                SqlStorageTelemetry.RecoveredCollision("database-name");
+                _telemetry.RecoveredCollision("database-name");
             }
             else if (hashed)
             {

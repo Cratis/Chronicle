@@ -39,7 +39,7 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces;
 /// <param name="converter">The schema-aware content converter.</param>
 public class EventStoreNamespaceStorage(EventStoreName eventStore, EventStoreNamespaceName @namespace, IDatabase database, IInstancesOf<ISinkFactory> sinkFactories, Choreography.Storage.IJobsStorage jobsStorage, JsonSerializerOptions jsonSerializerOptions, Chronicle.Storage.EventTypes.IEventTypesStorage eventTypesStorage, Json.IExpandoObjectConverter converter) : IEventStoreNamespaceStorage
 {
-    readonly Sql.EventStores.Occurrences.OccurrencesStorage<NamespaceDbContext> _occurrences = new(() => database.Namespace(eventStore, @namespace));
+    readonly Sql.EventStores.Occurrences.OccurrencesStorage<NamespaceDbContext> _occurrences = new(() => database.Namespace(eventStore, @namespace), database);
 
     /// <inheritdoc/>
     public Chronicle.Storage.Occurrences.IOccurrencesStorage Occurrences => _occurrences;
@@ -64,10 +64,10 @@ public class EventStoreNamespaceStorage(EventStoreName eventStore, EventStoreNam
 
     /// <inheritdoc/>
     public ObserverDefinitionChangeStorage ObserverDefinitionChanges { get; } = new(
-        new Observers.ObserverDefinitionChangeRows<ObserverProgressRecord>(() => database.Namespace(eventStore, @namespace)),
-        new Observers.ObserverDefinitionChangeRows<ObserverContinuation>(() => database.Namespace(eventStore, @namespace)),
-        new Observers.ObserverDefinitionChangeRows<ObserverRestartPlan>(() => database.Namespace(eventStore, @namespace)),
-        new Observers.ObserverDefinitionChangeRows<ObserverJobInventory>(() => database.Namespace(eventStore, @namespace)));
+        new Observers.ObserverDefinitionChangeRows<ObserverProgressRecord>(() => database.Namespace(eventStore, @namespace), database),
+        new Observers.ObserverDefinitionChangeRows<ObserverContinuation>(() => database.Namespace(eventStore, @namespace), database),
+        new Observers.ObserverDefinitionChangeRows<ObserverRestartPlan>(() => database.Namespace(eventStore, @namespace), database),
+        new Observers.ObserverDefinitionChangeRows<ObserverJobInventory>(() => database.Namespace(eventStore, @namespace), database));
 
     /// <inheritdoc/>
     public IAlertIncidentsStorage AlertIncidents { get; } = new Alerts.AlertIncidentsStorage(eventStore, @namespace, database);

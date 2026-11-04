@@ -33,6 +33,8 @@ Current recorded incidents are available through [scoped incident queries](/chro
 
 ## Alert from metrics
 
+The examples below use the default `Legacy` series. To move to convention names, set `Telemetry:MetricNames` to `Convention` (or `Both` while migrating) and migrate names and dimensions together using the [telemetry name reference](/chronicle/hosting/configuration/telemetry-names/). Convention series use keys such as `cratis.event_store.name` and `cratis.observer.id`; with `Both`, do not add the values of the two sets together, because each measurement is recorded twice. The default is planned to switch in the next major version.
+
 Chronicle exports its metrics over [OpenTelemetry](/chronicle/hosting/configuration/open-telemetry/) from the `Cratis.Chronicle` meter. Three counters describe failing observers. Each has one series per observer, tagged `EventStore`, `Namespace`, `ObserverId` and `EventSequenceId`. An observer has a series on them from its first failure, not before:
 
 | Instrument | Counts |
@@ -43,7 +45,7 @@ Chronicle exports its metrics over [OpenTelemetry](/chronicle/hosting/configurat
 
 With the default translation of the OpenTelemetry Collector's Prometheus exporter, or Prometheus's own OTLP receiver, the counters appear as `chronicle_observer_partitions_failed_total`, `chronicle_observer_partitions_quarantined_total` and `chronicle_observer_quarantined_total`, and the tags keep their names. Look the series up in your backend before relying on the names below.
 
-The consumed generator version, `Cratis.Metrics.Roslyn` 7.27.0, also produces clean names and description metadata for generated instruments. The failure counters remain hand-written to avoid changing their initialization and tagging here, not because the generator still corrupts names. The [convention-name migration](https://github.com/Cratis/Chronicle/issues/4459) is still pending; this generator fix leaves the instrument names used by these rules unchanged. Plan convention-name dashboard and alert updates together with that migration.
+The consumed generator version, `Cratis.Metrics.Roslyn` 7.27.0, also produces clean names and description metadata for generated instruments. The failure counters remain hand-written to avoid changing their initialization and tagging here, not because the generator still corrupts names. This generator fix leaves the instrument names used by these rules unchanged. Convention names are opt-in through `Telemetry:MetricNames`; plan dashboard and alert updates together with that switch.
 
 A series is created by the first failure and starts at `1`; Chronicle does not record a `0` beforehand, so healthy observers cost no series. The first value your backend receives for an observer is therefore already `1`. A rule built only on `increase()` needs two samples in its window and reports nothing for that series. Each rule below therefore has two halves, joined with `or`: the first catches series that went up inside the window, the second catches series that did not exist at the start of the window and are already above the threshold. Both aggregate to the same labels, so an observer produces one series, and so one alert, whichever half caught it.
 

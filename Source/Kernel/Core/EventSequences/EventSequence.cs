@@ -102,7 +102,7 @@ public partial class EventSequence(
     IClosedStreamsConstraintStorage? _closedStreamsStorage;
     EventSequenceId _eventSequenceId = EventSequenceId.Unspecified;
     EventSequenceKey _eventSequenceKey = EventSequenceKey.NotSet;
-    IMeterScope<EventSequence>? _metrics;
+    EventSequenceMetrics? _metrics;
     IAppendedEventsQueues? _appendedEventsQueues;
     IConstraintValidation? _constraints;
     ConstraintsVersion _constraintsVersion = ConstraintsVersion.NotSet;
@@ -132,7 +132,7 @@ public partial class EventSequence(
         {
             _mayWriteSequence = await ReservedEventSequenceRules.Exists(storage, _eventSequenceKey.EventStore, _eventSequenceKey.Namespace, _eventSequenceId);
         }
-        _metrics = meter.BeginEventSequenceScope(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace);
+        _metrics = meter.BeginEventSequenceScope(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, options.Value.Telemetry.MetricNames);
         if (!_mayWriteSequence)
         {
             await base.OnActivateAsync(cancellationToken);
