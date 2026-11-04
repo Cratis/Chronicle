@@ -66,8 +66,12 @@ public class Reducer(
         var previousDefinition = State;
         var compareResult = await reducerDefinitionComparer.Compare(key, previousDefinition, definition);
 
+        var isUnchanged = previousDefinition.EventTypes is not null && ReducerDefinitionIdentity.IsIdentical(previousDefinition, definition);
         State = definition;
-        await WriteStateAsync();
+        if (!isUnchanged)
+        {
+            await WriteStateAsync();
+        }
 
         if (compareResult == ReducerDefinitionCompareResult.Different)
         {

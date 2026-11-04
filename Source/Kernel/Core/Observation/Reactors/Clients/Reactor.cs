@@ -60,8 +60,12 @@ public class Reactor(
         }
         var compareResult = await reactorDefinitionComparer.Compare(key, State, definition);
 
+        var isUnchanged = State.EventTypes is not null && ReactorDefinitionIdentity.IsIdentical(State, definition);
         State = definition;
-        await WriteStateAsync();
+        if (!isUnchanged)
+        {
+            await WriteStateAsync();
+        }
 
         if (compareResult == ReactorDefinitionCompareResult.Different)
         {
