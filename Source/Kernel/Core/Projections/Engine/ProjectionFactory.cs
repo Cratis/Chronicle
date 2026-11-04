@@ -66,16 +66,10 @@ public class ProjectionFactory(
     /// </summary>
     internal const string DefinitionDigestAlgorithm = "definition-content-sha256/v1";
 
-    static readonly string[] _aggregateExpressions =
-    [
-        WellKnownExpressions.Count,
-        WellKnownExpressions.Increment,
-        WellKnownExpressions.Decrement,
-        WellKnownExpressions.Add,
-        WellKnownExpressions.Subtract
-    ];
-
-    static readonly JsonSerializerOptions _fingerprintOptions = new()
+    /// <summary>
+    /// Gets the serializer options that write a definition in full, with dictionaries in a form that does not depend on enumeration order.
+    /// </summary>
+    internal static readonly JsonSerializerOptions FingerprintOptions = new()
     {
         Converters =
         {
@@ -89,6 +83,15 @@ public class ProjectionFactory(
             new FingerprintEventDefinitionsConverter<RemovedWithJoinDefinition>()
         }
     };
+
+    static readonly string[] _aggregateExpressions =
+    [
+        WellKnownExpressions.Count,
+        WellKnownExpressions.Increment,
+        WellKnownExpressions.Decrement,
+        WellKnownExpressions.Add,
+        WellKnownExpressions.Subtract
+    ];
 
     /// <inheritdoc/>
     public async Task<IProjection> Create(EventStoreName eventStore, EventStoreNamespaceName @namespace, ProjectionDefinition definition, ReadModelDefinition readModelDefinition, IEnumerable<EventTypeSchema> eventTypeSchemas)
@@ -152,7 +155,7 @@ public class ProjectionFactory(
             ReadModel = definition.ReadModel,
             InitialModelState = definition.InitialModelState
         };
-        var canonical = Canonicalize(JsonSerializer.SerializeToNode(normalized, _fingerprintOptions));
+        var canonical = Canonicalize(JsonSerializer.SerializeToNode(normalized, FingerprintOptions));
         return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(canonical!.ToJsonString())));
     }
 
@@ -165,7 +168,7 @@ public class ProjectionFactory(
     internal static ProjectionDefinitionDigest DefinitionDigestFor(ProjectionDefinition definition)
     {
         var normalized = definition with { LastUpdated = default, Version = default, HasLegacyStorageFields = false };
-        var canonical = Canonicalize(JsonSerializer.SerializeToNode(normalized, _fingerprintOptions));
+        var canonical = Canonicalize(JsonSerializer.SerializeToNode(normalized, FingerprintOptions));
         return new(Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(canonical!.ToJsonString()))));
     }
 
