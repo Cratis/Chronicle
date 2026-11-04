@@ -27,7 +27,7 @@ internal static class MongoDBIndexCatalogue
     /// <returns>The index definitions.</returns>
     internal static IReadOnlyList<MongoDBIndexDefinition> ForEventStore(IMongoDatabase database) =>
     [
-        MongoDBIndexDefinition.For(database.GetCollection<BsonDocument>("occurrences"), OccurrencesStorage.Indexes)
+        MongoDBIndexDefinition.For(database.GetCollection<BsonDocument>(WellKnownCollectionNames.Occurrences), OccurrencesStorage.Indexes)
     ];
 
     /// <summary>
@@ -68,10 +68,10 @@ internal static class MongoDBIndexCatalogue
             MongoDBIndexDefinition.For(database.GetCollection<AlertIncidentDocument>(WellKnownCollectionNames.AlertIncidents), AlertIncidentsStorage.Indexes),
             MongoDBIndexDefinition.For(database.GetCollection<FailedPartition>(WellKnownCollectionNames.FailedPartitions), FailedPartitionStorage.Indexes),
             MongoDBIndexDefinition.For(database.GetCollection<InFlightEvent>(WellKnownCollectionNames.InFlightEvents), InFlightEventsStorage.Indexes),
-            MongoDBIndexDefinition.For(database.GetCollection<BsonDocument>("occurrences"), OccurrencesStorage.Indexes)
+            MongoDBIndexDefinition.For(database.GetCollection<BsonDocument>(WellKnownCollectionNames.Occurrences), OccurrencesStorage.Indexes)
         };
         definitions.AddRange(ForEncryption(database));
-        definitions.Add(MongoDBIndexDefinition.For(database.GetCollection<BsonDocument>("effect-receipts"), EventSequenceStorage.EffectReceiptIndexes));
+        definitions.Add(MongoDBIndexDefinition.For(database.GetCollection<BsonDocument>(WellKnownCollectionNames.EffectReceipts), EventSequenceStorage.EffectReceiptIndexes));
         foreach (var collection in new[] { WellKnownCollectionNames.ObserverDefinitionChangeProgress, WellKnownCollectionNames.ObserverDefinitionChangeContinuations, WellKnownCollectionNames.ObserverDefinitionChangeRestartPlans, WellKnownCollectionNames.ObserverDefinitionChangeInventory })
         {
             definitions.Add(MongoDBIndexDefinition.For(database.GetCollection<BsonDocument>(collection), ObserverDefinitionChangeRows<BsonDocument>.Indexes));

@@ -22,7 +22,7 @@ public class EncryptionKeyStorage(IDatabase database) : IEncryptionKeyStorage
     /// <summary>
     /// The encryption key collection name.
     /// </summary>
-    internal const string CollectionName = "encryption-keys";
+    internal const string CollectionName = WellKnownCollectionNames.EncryptionKeys;
 
     readonly ConcurrentDictionary<string, byte> _ensuredIndexes = new();
 
@@ -243,7 +243,7 @@ public class EncryptionKeyStorage(IDatabase database) : IEncryptionKeyStorage
         database
             .GetEventStoreDatabase(eventStore)
             .GetNamespaceDatabase(eventStoreNamespace)
-            .GetCollection<EncryptionKeyErasureForIdentifier>("encryption-key-erasures");
+            .GetCollection<EncryptionKeyErasureForIdentifier>(WellKnownCollectionNames.EncryptionKeyErasures);
 
     async Task<IMongoCollection<EncryptionKeyForIdentifier>> GetCollection(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace)
     {
