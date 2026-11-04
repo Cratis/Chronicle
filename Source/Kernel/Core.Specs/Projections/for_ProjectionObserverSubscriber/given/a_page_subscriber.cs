@@ -23,7 +23,8 @@ public class a_page_subscriber : a_subscriber_with_a_cached_pipeline
             {
                 Context = EventContext.Empty with { SequenceNumber = (ulong)index + 1, EventSourceId = partition }
             }).ToArray();
-        _expandoObjectConverter.ToJsonObject(Arg.Any<ExpandoObject>(), Arg.Any<JsonSchema>()).Returns(_ => new JsonObject());
+        _expandoObjectConverter.ToJsonObject(Arg.Any<ExpandoObject>(), Arg.Any<JsonSchema>()).Returns(call =>
+            new JsonObject { ["position"] = JsonValue.Create(((IDictionary<string, object?>)call.Arg<ExpandoObject>())["position"]) });
         _cachedPipeline.Handle(Arg.Any<AppendedEvent>()).Returns(call =>
         {
             var @event = call.Arg<AppendedEvent>();
@@ -31,7 +32,9 @@ public class a_page_subscriber : a_subscriber_with_a_cached_pipeline
             var changeset = Substitute.For<IChangeset<AppendedEvent, ExpandoObject>>();
             changeset.HasChanges.Returns(_hasChanges);
             changeset.HasBeenRemoved().Returns(@event.Context.SequenceNumber == (EventSequenceNumber)3UL);
-            changeset.CurrentState.Returns(new ExpandoObject());
+            var state = new ExpandoObject();
+            ((IDictionary<string, object?>)state)["position"] = @event.Context.SequenceNumber.Value;
+            changeset.CurrentState.Returns(state);
             return new ProjectionEventContext(@event.Context.EventSourceId, @event, changeset, ProjectionOperationType.From, false)
             {
                 IsNewInstance = @event.Context.SequenceNumber == (EventSequenceNumber)1UL

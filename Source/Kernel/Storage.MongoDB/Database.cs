@@ -94,7 +94,7 @@ public class Database : IDatabase
             return database;
         }
 
-        var databaseName = DatabaseNames.ForReadModels(eventStore, @namespace, _storageOptions.Value.DatabaseNamePrefix);
+        var databaseName = DatabaseNames.ForReadModels(eventStore, @namespace, _storageOptions.Value.DatabaseNamePrefix, _storageOptions.Value.SystemDatabaseName);
         if (_connections is not null)
         {
             database = _connections.GetDatabase(StorageConnectionKind.ReadModels, databaseName, eventStore.Value, @namespace.Value);

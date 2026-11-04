@@ -23,7 +23,8 @@ public class and_a_connection_is_reserved : Specification
         Substitute.For<ILogger<ConnectedClients>>(),
         Substitute.For<IMeter<ConnectedClients>>(),
         Options.Create(new ChronicleOptions()),
-        Substitute.For<IStorage>());
+        Substitute.For<IStorage>(),
+        Substitute.For<IClientDepartureNotifier>());
 
     async Task Because()
     {

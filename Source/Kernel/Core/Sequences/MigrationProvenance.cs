@@ -84,6 +84,13 @@ static class MigrationProvenance
 
     static bool DescendsIntoProtectedValue(JsonObject input, string path)
     {
+        // A path through the elements of a collection cannot be followed one value at a time, so any protected
+        // value in the document may be one it descends into.
+        if (JsonPropertyPaths.AddressesElements(path))
+        {
+            return VerificationMarkers.AppearIn(input);
+        }
+
         JsonNode? current = input;
         foreach (var segment in JsonPropertyPaths.Split(path))
         {
