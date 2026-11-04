@@ -45,7 +45,7 @@ public partial class UnitOfWork
                     EventStreamId = eventStreamId ?? EventStreamId.Default,
                     EventSourceType = eventSourceType ?? EventSourceType.Default,
                     Tags = tags ?? [],
-                    NamedTags = NamedTagConverters.Merge([], namedTags),
+                    NamedTags = ResolveTags(eventSequenceId, eventSourceId, @event, namedTags),
                     Occurred = occurred,
                     Subject = subject,
                     DeclaredConcurrency = declaredConcurrency
@@ -63,7 +63,7 @@ public partial class UnitOfWork
                 EventStreamId = eventStreamId ?? EventStreamId.Default,
                 EventSourceType = eventSourceType ?? EventSourceType.Default,
                 Tags = tags ?? [],
-                NamedTags = NamedTagConverters.Merge([], namedTags),
+                NamedTags = ResolveTags(eventSequenceId, eventSourceId, @event, namedTags),
                 Occurred = occurred,
                 Subject = subject
             };
@@ -106,5 +106,17 @@ public partial class UnitOfWork
             }
             CompleteEnrollment(resolution);
         }
+    }
+
+    IReadOnlyList<NamedTag> ResolveTags(EventSequenceId eventSequenceId, EventSourceId eventSourceId, object @event, IEnumerable<NamedTag> existing)
+    {
+        var eventStore = _eventStore.Value;
+        return (TagResolver ?? EventTagResolver.Default).ResolveTags(new EventTagContext(
+            eventStore.Name,
+            eventSequenceId,
+            eventSourceId,
+            EventTagResolver.EventTypeFor(eventStore.EventTypes, @event.GetType()),
+            @event,
+            NamedTagConverters.Merge([], existing)));
     }
 }

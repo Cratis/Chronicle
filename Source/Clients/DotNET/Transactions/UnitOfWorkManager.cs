@@ -71,6 +71,11 @@ public class UnitOfWorkManager : IUnitOfWorkManager
     /// <inheritdoc/>
     public bool HasCurrent => OpenFrame() is not null;
 
+    /// <summary>
+    /// Gets or sets the <see cref="EventTagResolver"/> units of work use to resolve the named tags of staged events.
+    /// </summary>
+    internal EventTagResolver? TagResolver { get; set; }
+
     /// <inheritdoc/>
     public bool TryGetFor(CorrelationId correlationId, [MaybeNullWhen(false)] out IUnitOfWork unitOfWork) =>
         _unitsOfWork.TryGetValue(correlationId, out unitOfWork);
@@ -84,7 +89,10 @@ public class UnitOfWorkManager : IUnitOfWorkManager
             _eventStore,
             _activitySource,
             _lifecyclePolicy,
-            _logger);
+            _logger)
+        {
+            TagResolver = TagResolver
+        };
         ImmediateAppendGuard.RequireUnit(unitOfWork);
         ReadProtectionGuard.RequireUnit(unitOfWork);
         _current.Value = new CurrentFrame(unitOfWork, OpenFrame());

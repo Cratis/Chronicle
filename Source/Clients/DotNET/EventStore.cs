@@ -66,6 +66,7 @@ public partial class EventStore : IEventStore
     readonly ILogger<EventStore> _logger;
     readonly IActivitySource<EventSequence> _activitySource;
     readonly ChronicleTelemetryOptions _telemetry;
+    readonly EventTagResolver _tagResolver;
     readonly ConcurrentDictionary<EventSequenceId, IEventSequence> _sequences = new();
     readonly Projections.Projections _projections;
     readonly RegistrationRetryOptions _registrationRetry;
@@ -176,11 +177,15 @@ public partial class EventStore : IEventStore
         eventTypes.UseMigrationServices(serviceProvider);
         EventTypes = eventTypes;
         EventSources = new EventSources.EventSources(this, clientArtifactsProvider);
+        _tagResolver = new EventTagResolver(new InstancesOf<IEventTagEnricher>(types, serviceProvider));
         UnitOfWorkManager = new UnitOfWorkManager(
             this,
             serviceProvider.GetKeyedService<IActivitySource<UnitOfWork>>(ClientActivity.SourceName),
             options.Value.UnitOfWorkLifecyclePolicy,
-            loggerFactory.CreateLogger<UnitOfWork>());
+            loggerFactory.CreateLogger<UnitOfWork>())
+        {
+            TagResolver = _tagResolver
+        };
         _correlationIdAccessor = correlationIdAccessor;
 
         EventSerializer = new EventSerializer(
@@ -213,7 +218,8 @@ public partial class EventStore : IEventStore
             jsonSerializerOptions,
             reactorSideEffectHandlers,
             EventSources,
-            _telemetry);
+            _telemetry,
+            _tagResolver);
         _sequences[EventLog.Id] = EventLog;
 
         Jobs = new Jobs.Jobs(this);
@@ -504,7 +510,8 @@ public partial class EventStore : IEventStore
                 state._activitySource,
                 state._reactorSideEffectHandlers,
                 state.EventSources,
-                state._telemetry),
+                state._telemetry,
+                state._tagResolver),
             this);
 
     /// <inheritdoc/>
