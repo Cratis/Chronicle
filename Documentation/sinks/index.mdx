@@ -128,7 +128,9 @@ and float properties keep their floating-point storage types.
 SQLite sink paging sorts decimal keys numerically before applying page limits, with the original
 key text as a stable tie-breaker. Scalar decimal joins narrow candidates by exact canonical equality,
 including equal values with different scales. Declared decimal indexes target the registered ordering
-column, replacing only the old Chronicle non-unique TEXT index; custom and unique indexes are preserved.
+column, ascending or descending, and a top-level decimal inside a composite `[CompositeIndex]` is keyed by that column
+too, so both order and range-scan numerically. The previous Chronicle non-unique TEXT index is replaced on upgrade; custom and
+unique indexes are preserved. Decimals nested inside JSON objects are not covered yet.
 These operations use the [SQL shadow-column contract](../events/schema-representation#kernel-shadow-columns).
 Original decimal digits and scale remain unchanged and internal columns never appear in documents.
 

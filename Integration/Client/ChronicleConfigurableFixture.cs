@@ -3,9 +3,7 @@
 
 using System.Runtime.ExceptionServices;
 using System.Runtime.InteropServices;
-using System.Text;
 using Cratis.Chronicle.Diagnostics;
-using Docker.DotNet.Models;
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Configurations;
 using DotNet.Testcontainers.Containers;
@@ -79,7 +77,7 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
         Options.StorageProvider == ChronicleStorageProvider.MsSql
         && RuntimeInformation.OSArchitecture == Architecture.Arm64;
 
-    readonly string _imageName = Environment.GetEnvironmentVariable("CRATIS_CHRONICLE_LOCAL_IMAGE") ?? "cratis/chronicle:latest-development";
+    readonly string _imageName = Environment.GetEnvironmentVariable("CRATIS_CHRONICLE_LOCAL_IMAGE") ?? "cratis/chronicle:local-development-slim";
     readonly string _outOfProcessSqlDatabaseName = $"chronicle_{Guid.NewGuid():N}";
 
     readonly Lazy<string> _inProcessSqliteDirectory = new(CreateInProcessSqliteDirectory);
@@ -484,7 +482,7 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
         // discovery from any container other than the one that owns the mongod process.
         const string mongodStart = "mongod --replSet rs0 --bind_ip_all > /proc/1/fd/1 2>/proc/1/fd/2 & ";
         const string waitForPing = "until mongosh --quiet --eval 'db.adminCommand(\"ping\")' >/dev/null 2>&1; do sleep 0.1; done; ";
-        var initiateReplicaSet = $"mongosh --eval 'rs.initiate({{_id:\"rs0\",members:[{{_id:0,host:\"{MongoDbHostName}:27017\"}}]}})' || true; ";
+        var initiateReplicaSet = $"mongosh --eval 'rs.initiate({{_id:\"rs0\",members:[{{_id:0,host:\"{MongoDbHostName}:27017\"}}]}})' || echo \"chronicle-fixture: rs.initiate failed with exit $?\"; ";
         const string tailLoop = "tail -f /dev/null";
         var replicaSetCommand = mongodStart + waitForPing + initiateReplicaSet + tailLoop;
 
@@ -505,7 +503,16 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
             .Build();
 
         LifecycleHooks?.ContainerBuilt?.Invoke(_outOfProcessMongoContainer);
-        _outOfProcessMongoContainer.StartAsync().GetAwaiter().GetResult();
+        try
+        {
+            _outOfProcessMongoContainer.StartAsync().GetAwaiter().GetResult();
+        }
+        catch (Exception ex)
+        {
+            var diagnostics = MongoContainerStartupDiagnostics.Collect(_outOfProcessMongoContainer);
+            var disposal = MongoContainerStartupDiagnostics.Dispose(_outOfProcessMongoContainer);
+            throw new MongoContainerFailedToStart($"The out-of-process MongoDB container failed to start.\n{diagnostics}{disposal}", ex);
+        }
 
         timing?.Success();
         return $"mongodb://{MongoDbHostName}:27017/?replicaSet=rs0";
@@ -579,23 +586,16 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
             builder = builder.WithCreateParameterModifier(parameters => parameters.Platform = "linux/amd64");
         }
 
-        _databaseContainer = builder.Build();
-        LifecycleHooks?.ContainerBuilt?.Invoke(_databaseContainer);
-        try
-        {
-            _databaseContainer.StartAsync().GetAwaiter().GetResult();
-        }
-        catch (ContainerNotRunningException) when (_databaseContainer.State == TestcontainersStates.Exited)
-        {
-            timing?.Retry();
-
-            // Only a process that exited during startup warrants another attempt. Build a new
-            // container so Testcontainers does not reuse the failed instance or its host port.
-            _databaseContainer.DisposeAsync().AsTask().GetAwaiter().GetResult();
-            _databaseContainer = builder.Build();
-            LifecycleHooks?.ContainerBuilt?.Invoke(_databaseContainer);
-            _databaseContainer.StartAsync().GetAwaiter().GetResult();
-        }
+        _databaseContainer = ContainerStartup.ForDocker(builder.Build)
+            .Start(
+                c =>
+                {
+                    _databaseContainer = c;
+                    LifecycleHooks?.ContainerBuilt?.Invoke(c);
+                },
+                _ => timing?.Retry(),
+                CancellationToken.None)
+            .GetAwaiter().GetResult();
 
         timing?.Success();
         return $"Server={MsSqlHostName},1433;Database={_outOfProcessSqlDatabaseName};User Id=sa;Password={MsSqlPassword};TrustServerCertificate=True";
@@ -683,34 +683,11 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
     {
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeout.CancelAfter(TimeSpan.FromSeconds(2));
-        using var client = TestcontainersSettings.OS.DockerEndpointAuthConfig.GetDockerClientBuilder(Guid.NewGuid()).Build();
-        var response = await client.Containers.InspectContainerAsync(container.Id, timeout.Token);
-        return response.State is { Running: false } state &&
-            (string.Equals(state.Status, "exited", StringComparison.Ordinal) || string.Equals(state.Status, "dead", StringComparison.Ordinal))
-            ? state.ExitCode
-            : null;
+        return (await DockerContainerEvidence.Inspect(container, timeout.Token))?.ExitCode;
     }
 
-    static async Task<string> ReadKernelTail(IContainer container, CancellationToken cancellationToken)
-    {
-        using var client = TestcontainersSettings.OS.DockerEndpointAuthConfig.GetDockerClientBuilder(Guid.NewGuid()).Build();
-        using var stream = await client.Containers.GetContainerLogsAsync(
-            container.Id,
-            new ContainerLogsParameters { ShowStdout = true, ShowStderr = true, Tail = "64", Follow = false },
-            cancellationToken);
-        var bytes = new byte[16384];
-        var count = 0;
-        while (count < bytes.Length)
-        {
-            var result = await stream.ReadOutputAsync(bytes, count, bytes.Length - count, cancellationToken);
-            if (result.EOF)
-            {
-                break;
-            }
-            count += result.Count;
-        }
-        return Encoding.UTF8.GetString(bytes, 0, count);
-    }
+    static Task<string> ReadKernelTail(IContainer container, CancellationToken cancellationToken) =>
+        DockerContainerEvidence.ReadTail(container, 64, cancellationToken);
 
     static async Task WaitForOutOfProcessMongoDbPrimary(IContainer container)
     {

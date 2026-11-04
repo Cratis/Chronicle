@@ -1,0 +1,62 @@
+---
+description: Handle a page of Chronicle events in one reactor method, declare its event types with Observes, and report failures or deferrals per partition.
+---
+# Handling events in batches
+
+Chronicle delivers events to a reactor in **pages**. A page holds events for one or more partitions, in sequence order.
+Per-event handler methods keep working as they always have: the client calls them once per event, partition by
+partition. A **batch method** is called once per page instead, with every event of the types it observes. Use it when
+the work is cheaper in bulk, for example one bulk request to a search index instead of one request per event.
+
+<ChronicleClientTabs snippet="reactors/batches/index-users" />
+
+## Declaring a batch method
+
+A batch method takes an `EventBatch` as its first parameter and declares each event type it observes with
+`[Observes<TEvent>]`, once per type. It may also take a `BatchContext`, a `CancellationToken`, and services from the
+service provider. Inside, pattern-match on the events.
+
+A reactor can have batch methods and per-event methods side by side. Each event type reaches exactly one method, and
+Chronicle refuses to register a reactor that breaks this:
+
+- an event type observed by a batch method and also handled by a per-event method, or observed by two batch methods
+- a batch method without `[Observes<TEvent>]`, or `[Observes<TEvent>]` on a method that does not take an `EventBatch`
+- a per-event method taking a `BatchContext`
+- a batch method returning anything but `Task` or `void`
+
+Returning events from a batch method is not supported. Append through the event log the reactor takes as a dependency.
+
+## Order
+
+Each method sees its events in sequence order, and so in order within each partition. Two methods of the same reactor
+are not ordered relative to each other, even for the same partition. When two side effects must happen in a particular
+order, handle them in the same method.
+
+## The batch context
+
+`BatchContext` describes the page: the observer, event store, namespace and event sequence, the partitions in the page,
+how many events it holds, its first and last sequence numbers, the deadline the kernel waits until, and the
+cancellation token. `Origin` says where the page came from:
+
+| Origin | Meaning |
+| --- | --- |
+| `Live` | The events were appended now and delivered to an observer that is up to date |
+| `CatchUp` | The events were read from storage for an observer that is behind |
+| `Replay` | The events were read from storage for an observer that was rewound |
+| `Retry` | The events were read from storage to recover a failed or deferred partition |
+
+## Reporting outcomes
+
+- **Return normally** and every partition in the batch succeeded.
+- **Throw** and every partition in the batch fails at its first event in the batch. The partitions go through the normal
+  [failed partition](../concepts/observers.mdx#failed-partitions) recovery.
+- **`Fail`** a partition, or the partition of one event, and only that partition fails, from its first event in the
+  batch or from that event. Its earlier events count as handled, and the rest of the batch succeeds.
+- **`Defer`** a partition, or the partition of one event, and it is delivered again after the delay you give. A deferral
+  is not a failure and does not count towards quarantine, so use it when a downstream system asks you to back off.
+
+When several methods of one reactor report on the same partition, the partition settles at the earliest event any of
+them reported. Everything from that event is delivered again, including events another method already handled, so keep
+side effects idempotent and use the [delivery identity](delivery-identity) to recognize a redelivery.
+
+A kernel that does not deliver pages cannot defer a partition. The client then fails the partition instead and says why.

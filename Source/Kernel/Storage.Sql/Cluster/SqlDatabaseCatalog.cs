@@ -151,5 +151,13 @@ internal sealed class SqlDatabaseCatalog(string connectionString, Func<DbConnect
         }
     }
 
-    DbConnection CreateConnection(string name) => Provider == DatabaseType.PostgreSql ? new NpgsqlConnection(ConnectionString(name)) : new SqlConnection(ConnectionString(name));
+    /// <summary>
+    /// Probes of a candidate SQL Server database are not pooled: a pooled session would stay in the candidate, idle, and block
+    /// the exclusive access that enabling read-committed snapshot on a new database needs.
+    /// </summary>
+    /// <param name="name">The physical database name.</param>
+    /// <returns>The connection.</returns>
+    DbConnection CreateConnection(string name) => Provider == DatabaseType.PostgreSql
+        ? new NpgsqlConnection(ConnectionString(name))
+        : new SqlConnection(name == "master" ? ConnectionString(name) : new SqlConnectionStringBuilder(ConnectionString(name)) { Pooling = false }.ConnectionString);
 }

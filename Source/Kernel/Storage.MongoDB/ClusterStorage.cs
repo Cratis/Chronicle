@@ -92,7 +92,7 @@ public class ClusterStorage(
             .Where(_ => _.StartsWith(prefix, StringComparison.Ordinal) && _.EndsWith("+es", StringComparison.Ordinal))
             .Select(_ => _[prefix.Length..^3])
             .Where(_ => !string.IsNullOrWhiteSpace(_) && !_.Contains('+'))
-            .Select(_ => new EventStoreName(_));
+            .Select(_ => DatabaseNames.EventStoreFor(_, options.Value.Storage.SystemDatabaseName));
     }
 
     IMongoCollection<EventStore> GetCollection() => database.GetCollection<EventStore>(WellKnownCollectionNames.EventStores);

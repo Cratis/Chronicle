@@ -62,6 +62,11 @@ internal sealed class Projections(
     /// <inheritdoc/>
     public async Task Register(RegisterRequest request, CallContext context = default)
     {
+        SystemStoreGuard.EnsureNotSystem(new(request.EventStore));
+        foreach (var definition in request.Projections)
+        {
+            SystemStoreGuard.EnsureNotSystem(new(request.EventStore, definition.Identifier, definition.ReadModel, definition.EventSequenceId));
+        }
         var projectionsManager = grainFactory.GetGrain<IProjectionsManager>(request.EventStore);
         var owner = (Concepts.Projections.ProjectionOwner)(int)request.Owner;
         var projections = request.Projections.Select(_ => _.ToChronicle(owner)).ToArray();
@@ -95,6 +100,7 @@ internal sealed class Projections(
     /// <inheritdoc/>
     public async Task<IEnumerable<ProjectionDefinition>> GetAllDefinitions(GetAllDefinitionsRequest request, CallContext context = default)
     {
+        await SystemStoreGuard.Ensure(context, new(request.EventStore));
         var projectionsManager = grainFactory.GetGrain<IProjectionsManager>(request.EventStore);
         var definitions = await projectionsManager.GetProjectionDefinitions();
         return definitions.Select(p => p.ToContract()).ToArray();
@@ -103,6 +109,7 @@ internal sealed class Projections(
     /// <inheritdoc/>
     public async Task<IEnumerable<Contracts.Projections.ProjectionWithDeclaration>> GetAllDeclarations(GetAllDeclarationsRequest request, CallContext context = default)
     {
+        await SystemStoreGuard.Ensure(context, new(request.EventStore));
         var projectionsManager = grainFactory.GetGrain<IProjectionsManager>(request.EventStore);
         var definitions = await projectionsManager.GetProjectionDeclarations();
         return definitions.Select(p => new Contracts.Projections.ProjectionWithDeclaration
@@ -116,6 +123,7 @@ internal sealed class Projections(
     /// <inheritdoc/>
     public async Task<OneOf<ContractProjectionPreview, ContractProjectionDefinitionParsingErrors>> Preview(PreviewProjectionRequest request, CallContext context = default)
     {
+        await SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace, request.EventSequenceId, request.DraftReadModel?.Identifier));
         var storage = serviceProvider.GetRequiredService<IStorage>();
         var eventSequenceStorage = storage
             .GetEventStore(request.EventStore)
@@ -146,6 +154,7 @@ internal sealed class Projections(
         return await compileResult.Match(
             async definition =>
             {
+                await SystemStoreGuard.Ensure(context, new(request.EventStore, definition.Identifier, definition.ReadModel, definition.EventSequenceId));
                 ReadModelDefinition? readModelDefinition;
                 var isInferredReadModel = definition.ReadModel == ReadModelIdentifier.Inferred;
 
@@ -234,6 +243,7 @@ internal sealed class Projections(
     /// <inheritdoc/>
     public async Task<SaveProjectionResult> Save(SaveProjectionRequest request, CallContext context = default)
     {
+        SystemStoreGuard.EnsureNotSystem(new(request.EventStore, request.Namespace, request.EventSequenceId, request.DraftReadModel?.Identifier));
         var storage = serviceProvider.GetRequiredService<IStorage>();
         var allReadModels = await storage.GetEventStore(request.EventStore).ReadModels.GetAll();
 
@@ -260,6 +270,7 @@ internal sealed class Projections(
         return await compileResult.Match(
             async definition =>
             {
+                SystemStoreGuard.EnsureNotSystem(new(request.EventStore, definition.Identifier, definition.ReadModel, definition.EventSequenceId));
                 var readModelDefinition = allReadModels.FirstOrDefault(r => r.Identifier == definition.ReadModel);
 
                 // When the declaration has no explicit => ReadModel, the compiler returns ReadModelIdentifier.Inferred.
@@ -281,6 +292,11 @@ internal sealed class Projections(
                     }
 
                     var inferredSchema = InferSchema(definition.From.Keys, eventTypeSchemas, draftDefinition.DisplayName);
+                    if (RefuseUncoveredInferredTargets(definition, inferredSchema, draftDefinition.DisplayName) is { } refused)
+                    {
+                        return refused;
+                    }
+
                     var inferredSchemas = new Dictionary<ReadModelGeneration, JsonSchema>
                     {
                         { ReadModelGeneration.First, inferredSchema }
@@ -434,6 +450,32 @@ internal sealed class Projections(
             new Concepts.Sinks.SinkDefinition(Concepts.Sinks.SinkConfigurationId.None, WellKnownSinkTypes.MongoDB),
             schemas,
             []);
+    }
+
+    /// <summary>
+    /// Refuses saving with an inferred read model when the inferred schema cannot hold every target the projection writes.
+    /// </summary>
+    /// <param name="definition">The compiled projection definition.</param>
+    /// <param name="inferredSchema">The read model schema inferred from the event properties.</param>
+    /// <param name="displayName">The display name of the inferred read model.</param>
+    /// <returns>A <see cref="SaveProjectionResult"/> with the refusal, or null when every target is covered.</returns>
+    static SaveProjectionResult? RefuseUncoveredInferredTargets(Concepts.Projections.Definitions.ProjectionDefinition definition, JsonSchema inferredSchema, string displayName)
+    {
+        var uncovered = InferredReadModelCoverage.FindUncoveredTargets(definition, inferredSchema);
+        if (uncovered.Count == 0)
+        {
+            return null;
+        }
+
+        return new SaveProjectionResult
+        {
+            Errors = [new ProjectionDeclarationSyntaxError
+            {
+                Line = 1,
+                Column = 1,
+                Message = $"Cannot infer read model '{displayName}' from the event properties: the projection writes {string.Join(", ", uncovered)}, which no event property provides. Create the read model type with these properties and target it with '=> <ReadModel>'."
+            }]
+        };
     }
 
     /// <summary>

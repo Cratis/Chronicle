@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Diagnostics;
+using Cratis.DependencyInjection;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -18,6 +19,9 @@ public class when_configuring_hashed_identifier_tracing : Specification
     void Establish()
     {
         var services = new ServiceCollection();
+        services.AddTypeDiscovery();
+        services.AddSelfBindings();
+        services.AddBindingsByConvention();
         var builder = new ChronicleBuilder(services, new ConfigurationBuilder().Build(), DefaultClientArtifactsProvider.Default);
         builder.WithTelemetry(options =>
         {
@@ -32,6 +36,7 @@ public class when_configuring_hashed_identifier_tracing : Specification
 
     void Destroy() => _provider.Dispose();
 
+    [Fact] void should_keep_the_explicit_telemetry_callback() => _provider.GetServices<ChronicleTelemetryConfiguration>().Count().ShouldEqual(1);
     [Fact] void should_apply_the_tracing_mode_to_host_options() => _options.Telemetry.EventSourceIdTracing.ShouldEqual(EventSourceIdTracing.Hashed);
     [Fact] void should_apply_the_hash_key_to_host_options() => _options.Telemetry.EventSourceIdHashKey.ShouldEqual(HashKey);
 }

@@ -68,6 +68,11 @@ public class EventStoreDbContext(DbContextOptions<EventStoreDbContext> options) 
     public DbSet<Projection> Projections { get; set; }
 
     /// <summary>
+    /// Gets or sets the inert projection definition history.
+    /// </summary>
+    public DbSet<ProjectionDefinitionHistoryRow> ProjectionDefinitionHistory { get; set; }
+
+    /// <summary>
     /// Gets or sets the reactors DbSet.
     /// </summary>
     public DbSet<ReactorDefinition> Reactors { get; set; }
@@ -155,6 +160,10 @@ public class EventStoreDbContext(DbContextOptions<EventStoreDbContext> options) 
         // which would default to table "ReadModels" and collide with user projection sink tables
         // whose read model type is named "ReadModel" (pluralized to "ReadModels" by DefaultNamingPolicy).
         modelBuilder.Entity<ReadModelDefinition>().ToTable(WellKnownTableNames.ReadModelDefinitions);
+
+        modelBuilder.Entity<ProjectionDefinitionHistoryRow>()
+            .ToTable(WellKnownTableNames.ProjectionDefinitionHistory)
+            .HasKey(row => new { row.ProjectionId, row.Digest });
 
         modelBuilder.Entity<Generations.GenerationInitializationReceiptRow>().ToTable("GenerationInitializationReceipts").HasKey(row => new { row.Step, row.Subject });
         modelBuilder.Entity<Generations.GenerationInitializationBlockerRow>().ToTable("GenerationInitializationBlockers").HasKey(row => new { row.Kind, row.Subject });

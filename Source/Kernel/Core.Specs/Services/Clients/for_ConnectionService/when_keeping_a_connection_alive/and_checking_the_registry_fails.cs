@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.Services.Clients.for_ConnectionService.when_keeping_a
 /// </summary>
 public class and_checking_the_registry_fails : given.a_connected_client
 {
-    void Establish() => _connectedClients.IsConnected(new ConnectionId(TheConnection))
+    void Establish() => _connectedClients.OnClientPing(new ConnectionId(TheConnection))
         .Returns(
             _ => Task.FromException<bool>(new InvalidOperationException("The silo is leaving")),
             _ => Task.FromResult(false),

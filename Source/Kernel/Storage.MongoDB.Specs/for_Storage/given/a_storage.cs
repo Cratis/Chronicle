@@ -28,7 +28,8 @@ public class a_storage : Specification
             new KnownInstancesOf<ISinkFactory>([]),
             JobsStorageForSpecs.Create(new MongoClient("mongodb://localhost:27017")),
             Options.Create(new ChronicleOptions()),
-            NullLoggerFactory.Instance);
+            NullLoggerFactory.Instance,
+            Substitute.For<ISystemEventStoreRelocation>());
     }
 
     void Destroy() => _database.Dispose();

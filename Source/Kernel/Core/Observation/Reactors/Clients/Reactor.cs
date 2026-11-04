@@ -146,6 +146,7 @@ public class Reactor(
                     definition.IsReplayable,
                     definition.Filters,
                     definition.GenerationDelivery);
+                await RecordObserver();
             }
             catch (ObserverServedByAnotherTransport)
             {
@@ -192,6 +193,22 @@ public class Reactor(
         logger.WaitingForWebhook(_observerKey!.ObserverId);
     }
 
+    /// <summary>Lets the connection registry tell this observer when the connection is dropped, instead of leaving it to the watchdog.</summary>
+    /// <remarks>Best effort: a failure (for example during a rolling upgrade) leaves takeover to the watchdog and never fails the subscription.</remarks>
+    async Task RecordObserver()
+    {
+        try
+        {
+            await _connectedClients!.RecordObserver(
+                _observerKey!.ConnectionId,
+                new ObserverKey(_observerKey.ObserverId, _observerKey.EventStore, _observerKey.Namespace, _observerKey.EventSequenceId));
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            logger.FailedToRecordObserver(_observerKey!.ObserverId, _observerKey.ConnectionId, ex);
+        }
+    }
+
     async Task SubscribeToObserver(ReactorKey key, ReactorDefinition definition)
     {
         _observer = GrainFactory.GetGrain<IObserver>(key);
@@ -225,6 +242,8 @@ public class Reactor(
                     definition.IsReplayable,
                     definition.Filters);
             }
+
+            await RecordObserver();
             _subscribed = true;
         }
         catch (ObserverServedByAnotherTransport)
