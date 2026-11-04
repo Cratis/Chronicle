@@ -322,6 +322,7 @@ hostBuilder
            services.Remove(descriptor);
 
        services.UseDeferredSiloStart();
+       services.AddStorageAuthorizationHealthCheck();
    });
 
 var app = builder.Build();
