@@ -13,9 +13,9 @@ public class a_marked_update : Specification
     protected const string OwnSlot = "__applied.f.0";
     protected const string JoinSlot = "__applied.j.def";
 
-    internal static AppliedEventMarkerGroup Own(UpdateDefinition<BsonDocument>? update, long sequenceNumber = 5) => new(update, OwnSlot, "own-stream", sequenceNumber);
+    internal static AppliedEventMarkerGroup Own(UpdateDefinition<BsonDocument>? update, long sequenceNumber = 5) => new(update, new(OwnSlot, "own-stream", sequenceNumber));
 
-    internal static AppliedEventMarkerGroup Join(UpdateDefinition<BsonDocument>? update, BsonValue key, long sequenceNumber = 5) => new(update, JoinSlot, "join-stream", sequenceNumber, "customerId", key);
+    internal static AppliedEventMarkerGroup Join(UpdateDefinition<BsonDocument>? update, BsonValue key, long sequenceNumber = 5) => new(update, new(JoinSlot, "join-stream", sequenceNumber), new("customerId", key));
 
     protected static UpdateDefinitionBuilder<BsonDocument> Updates => Builders<BsonDocument>.Update;
 

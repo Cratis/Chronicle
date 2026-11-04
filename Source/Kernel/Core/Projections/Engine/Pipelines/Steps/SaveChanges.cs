@@ -181,7 +181,7 @@ public class SaveChanges(ISink sink, IChangesetStorage changesetStorage, bool gu
     /// </remarks>
     SinkWriteMode WriteModeFor(IProjection projection, ProjectionEventContext context)
     {
-        if (guardWritesOnWatermark && recordAppliedEventMarkers && projection.MarkedJoins.Count > 0)
+        if (IsWrittenOncePerSourceEvent(projection))
         {
             return SinkWriteMode.OncePerSourceEvent;
         }
@@ -190,4 +190,7 @@ public class SaveChanges(ISink sink, IChangesetStorage changesetStorage, bool gu
             ? SinkWriteMode.OnlyWhenAdvancingWatermark
             : SinkWriteMode.Always;
     }
+
+    bool IsWrittenOncePerSourceEvent(IProjection projection) =>
+        guardWritesOnWatermark && recordAppliedEventMarkers && projection.MarkedJoins.Count > 0;
 }

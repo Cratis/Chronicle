@@ -18,7 +18,7 @@ public class and_it_is_an_applied_event_marker_pipeline : Specification
         collection.DocumentSerializer.Returns(BsonDocumentSerializer.Instance);
         collection.Settings.Returns(new MongoCollectionSettings());
         collection.CollectionNamespace.Returns(new CollectionNamespace("specs", "orders"));
-        _error = Catch.Exception(() => SinkBatchDocuments.RequireRetrySafe(collection, AppliedEventMarkerUpdate.Build([new AppliedEventMarkerGroup(Builders<BsonDocument>.Update.Set("name", "x"), "__applied.f.0", "s", 1)]), 2));
+        _error = Catch.Exception(() => SinkBatchDocuments.RequireRetrySafe(collection, AppliedEventMarkerUpdate.Build([new AppliedEventMarkerGroup(Builders<BsonDocument>.Update.Set("name", "x"), new("__applied.f.0", "s", 1))]), 2));
     }
 
     [Fact] void should_not_refuse() => _error.ShouldBeNull();

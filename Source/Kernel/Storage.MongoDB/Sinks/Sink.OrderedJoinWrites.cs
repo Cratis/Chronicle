@@ -33,7 +33,7 @@ public partial class Sink
         WritePlan plan,
         SinkWriteOptions options)
     {
-        if (IsGuardedWrite(options.Mode, plan, eventSequenceNumber) || changesetConverter is not IChangesetConverterWithDirectWrites || IsWrittenThroughJoinTargets(plan))
+        if (IsGuardedWrite(options.Mode, plan, eventSequenceNumber) || !IsOrderedByConverter(plan))
         {
             return null;
         }
@@ -43,6 +43,9 @@ public partial class Sink
             ? null
             : ChangesetWriteOrder.SegmentsFor(changeset.Changes);
     }
+
+    bool IsOrderedByConverter(WritePlan plan) =>
+        changesetConverter is IChangesetConverterWithDirectWrites && !IsWrittenThroughJoinTargets(plan);
 
     async Task<IEnumerable<FailedPartition>> WriteSegments(
         Key key,

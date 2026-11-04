@@ -17,6 +17,7 @@ namespace Cratis.Chronicle.Storage.MongoDB.Sinks;
 internal sealed class AppliedEventMarkerGroups(AppliedEventMarkerContext context, string ownSlot)
 {
     readonly List<AppliedEventMarkerGroup> _groups = [];
+    AppliedEventMarkerSlot OwnMarker => new(ownSlot, context.OwnStream, (long)context.SequenceNumber.Value);
 
     /// <summary>
     /// Closes the write of the key document that has been built so far as a group.
@@ -29,7 +30,7 @@ internal sealed class AppliedEventMarkerGroups(AppliedEventMarkerContext context
             return;
         }
 
-        _groups.Add(new(update, ownSlot, context.OwnStream, (long)context.SequenceNumber.Value));
+        _groups.Add(new(update, OwnMarker));
         update = null;
     }
 
@@ -44,7 +45,7 @@ internal sealed class AppliedEventMarkerGroups(AppliedEventMarkerContext context
     {
         var definitionId = AppliedEventMarkers.DefinitionId(source.Context.EventType.Id.Value, resolved.OnProperty.Path);
         var stream = AppliedEventMarkers.StreamHash(source.Context.Namespace.Value, source.Context.EventSourceId.Value);
-        _groups.Add(new(update, AppliedEventMarkerSlots.Join(definitionId), stream, (long)source.Context.SequenceNumber.Value, target.Property, target.Value));
+        _groups.Add(new(update, new(AppliedEventMarkerSlots.Join(definitionId), stream, (long)source.Context.SequenceNumber.Value), target));
     }
 
     /// <summary>
@@ -55,7 +56,7 @@ internal sealed class AppliedEventMarkerGroups(AppliedEventMarkerContext context
     {
         var groups = _groups.Exists(_ => !_.IsResolvedJoin)
             ? _groups
-            : [new AppliedEventMarkerGroup(null, ownSlot, context.OwnStream, (long)context.SequenceNumber.Value), .. _groups];
+            : [new AppliedEventMarkerGroup(null, OwnMarker), .. _groups];
         return AppliedEventMarkerUpdate.Build(groups);
     }
 }

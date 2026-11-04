@@ -134,6 +134,9 @@ public class ChangesetConverter(
         return new(property, ToFilterValue(key, onProperty));
     }
 
+    static AppendedEvent? MarkedSourceOf(ResolvedJoin resolvedJoined) =>
+        resolvedJoined.ArrayIndexers.IsEmpty ? resolvedJoined.Source as AppendedEvent : null;
+
     static bool TryMergeJoinedChangeIntoChildAdded(IList<Change> changes, Joined joined)
     {
         if (joined.ArrayIndexers.IsEmpty)
@@ -352,7 +355,7 @@ public class ChangesetConverter(
                     break;
 
                 case ResolvedJoin resolvedJoined:
-                    if (groups is not null && resolvedJoined.Source is AppendedEvent source && resolvedJoined.ArrayIndexers.IsEmpty)
+                    if (groups is not null && MarkedSourceOf(resolvedJoined) is { } source)
                     {
                         groups.CloseOwn(ref updateBuilder);
                         UpdateDefinition<BsonDocument>? joinBuilder = default;
