@@ -14,19 +14,22 @@ namespace Cratis.Chronicle.Benchmarks.ClientStartup;
 public static class StartupCatalog
 {
     /// <summary>
-    /// Creates 128 event types, 64 classic reducers and 64 self-reducing models.
+    /// Creates an application-sized event catalog split between classic reducers and self-reducing models.
     /// </summary>
+    /// <param name="eventCount">The even number of event types to create.</param>
     /// <returns>The application artifacts.</returns>
-    public static InMemoryClientArtifactsProvider Create()
+    /// <exception cref="ArgumentOutOfRangeException">The count is less than two or is odd.</exception>
+    public static InMemoryClientArtifactsProvider Create(int eventCount = 128)
     {
-        var assembly = AssemblyBuilder.DefineDynamicAssembly(new AssemblyName("ClientStartupCatalog"), AssemblyBuilderAccess.Run);
+        if (eventCount < 2 || eventCount % 2 != 0) throw new ArgumentOutOfRangeException(nameof(eventCount));
+        var assembly = AssemblyBuilder.DefineDynamicAssembly(new AssemblyName($"ClientStartupCatalog{eventCount}"), AssemblyBuilderAccess.Run);
         var module = assembly.DefineDynamicModule("Events");
-        var events = Enumerable.Range(1, 127).Select(index => CreateEvent(module, index)).Prepend(typeof(CatalogRecorded)).ToArray();
+        var events = Enumerable.Range(1, eventCount - 1).Select(index => CreateEvent(module, index)).Prepend(typeof(CatalogRecorded)).ToArray();
         return new InMemoryClientArtifactsProvider
         {
             EventTypes = events,
-            Reducers = events.Take(64).Select(type => typeof(CatalogReducer<>).MakeGenericType(type))
-                .Concat(events.Skip(64).Select((type, index) => CatalogSelfModel.Create(module, type, index))).ToArray()
+            Reducers = events.Take(eventCount / 2).Select(type => typeof(CatalogReducer<>).MakeGenericType(type))
+                .Concat(events.Skip(eventCount / 2).Select((type, index) => CatalogSelfModel.Create(module, type, index))).ToArray()
         };
     }
 
