@@ -431,7 +431,7 @@ jobs:
         if: matrix.provider == 'RollingUpgrade'
         run: |
           set -euo pipefail
-          printf 'diagnostic-source=%s build-version=%s artifacts=%s\n' "$(git rev-parse HEAD)" "$CRATIS_CHRONICLE_BUILD_VERSION" "$RUNNER_TEMP/rolling-delivery-diagnostics"
+          printf 'diagnostic-source=%s client-version=%s artifacts=%s\n' "$(git rev-parse HEAD)" "$CRATIS_CHRONICLE_BUILD_VERSION" "$RUNNER_TEMP/rolling-delivery-diagnostics"
           dotnet build .github/scripts/rolling-delivery-il/RollingDeliveryIl.csproj -c Release -warnaserror \
             --artifacts-path "$RUNNER_TEMP/rolling-il-verifier" -o "$RUNNER_TEMP/rolling-il-tool"
           dotnet build Integration/SqlClustering/SqlClustering.csproj -c Release -warnaserror \

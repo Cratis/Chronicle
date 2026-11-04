@@ -553,7 +553,7 @@ class IntegrationSingleBuildContracts(unittest.TestCase):
                         self.assertEqual("matrix.provider == 'RollingUpgrade'", step.get("if"))
                         self.assertEqual(
                             'set -euo pipefail\n'
-                            'printf \'diagnostic-source=%s build-version=%s artifacts=%s\\n\' '
+                            'printf \'diagnostic-source=%s client-version=%s artifacts=%s\\n\' '
                             '"$(git rev-parse HEAD)" "$CRATIS_CHRONICLE_BUILD_VERSION" '
                             '"$RUNNER_TEMP/rolling-delivery-diagnostics"\n'
                             'dotnet build .github/scripts/rolling-delivery-il/RollingDeliveryIl.csproj '
