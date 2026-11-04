@@ -38,7 +38,7 @@ public class an_audit : Specification
         for (var step = 0; !run.IsCompleted && step < 10_000; step++)
         {
             _time.Advance(TimeSpan.FromSeconds(1));
-            await Task.Yield();
+            await Task.Run(static () => { });
         }
 
         await run;
