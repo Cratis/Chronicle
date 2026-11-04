@@ -536,6 +536,20 @@ public interface IObserver : IGrainWithStringKey
     Task PartitionFailed(Key partition, EventSequenceNumber sequenceNumber, IEnumerable<string> exceptionMessages, string exceptionStackTrace, FailureKind kind = FailureKind.Unknown, FailedPartitionId? episodeId = null, Guid? deferralId = null, WebhookDeliveryFailurePolicy failurePolicy = WebhookDeliveryFailurePolicy.Retry);
 
     /// <summary>
+    /// Report a partition failure that carries the internal recovery context, including the replay operation that made the delivery.
+    /// </summary>
+    /// <param name="partition">The partition that failed.</param>
+    /// <param name="sequenceNumber">The sequence number of the failure.</param>
+    /// <param name="exceptionMessages">All exception messages.</param>
+    /// <param name="exceptionStackTrace">The exception stacktrace.</param>
+    /// <param name="kind">What kind of thing went wrong.</param>
+    /// <param name="episodeId">The recovery episode, or null for live delivery.</param>
+    /// <param name="deferralId">The deferral that owned the recovery.</param>
+    /// <param name="context">The internal recovery policy, optional delivery identity and the replay operation.</param>
+    /// <returns>Awaitable task.</returns>
+    Task PartitionFailed(Key partition, EventSequenceNumber sequenceNumber, IEnumerable<string> exceptionMessages, string exceptionStackTrace, FailureKind kind, FailedPartitionId? episodeId, Guid? deferralId, PartitionFailureContext context);
+
+    /// <summary>
     /// Notify that the partition has failed with the original delivery fence.
     /// </summary>
     /// <param name="partition">The partition that failed.</param>
@@ -557,6 +571,18 @@ public interface IObserver : IGrainWithStringKey
     /// <returns>Awaitable task.</returns>
     [AlwaysInterleave]
     Task PartitionDeferred(Key partition, PartitionDeferral deferral, FailedPartitionId? episodeId = null, Guid? expectedDeferralId = null);
+
+    /// <summary>
+    /// Persist a delivery deadline made by a replay, recording the replay operation on the failed partition.
+    /// </summary>
+    /// <param name="partition">The partition to defer.</param>
+    /// <param name="deferral">The deadline and first unhandled event.</param>
+    /// <param name="episodeId">The recovery episode, or null for live delivery.</param>
+    /// <param name="expectedDeferralId">The deferral that owned the delivery.</param>
+    /// <param name="replayEpoch">The replay operation that made the delivery.</param>
+    /// <returns>Awaitable task.</returns>
+    [AlwaysInterleave]
+    Task PartitionDeferred(Key partition, PartitionDeferral deferral, FailedPartitionId? episodeId, Guid? expectedDeferralId, ReplayEpoch? replayEpoch);
 
     /// <summary>
     /// Check recovery ownership and the persisted deadline before delivering.

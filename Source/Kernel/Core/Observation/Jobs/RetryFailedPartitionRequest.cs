@@ -31,4 +31,9 @@ public record RetryFailedPartitionRequest(
     /// Gets the deferral that owns the recovery, or null when not deferred.
     /// </summary>
     public Guid? DeferralId { get; init; }
+
+    /// <summary>
+    /// Gets the replay operation that produced the failure being recovered, or null.
+    /// </summary>
+    public ReplayEpoch? ReplayEpoch { get; init; }
 }

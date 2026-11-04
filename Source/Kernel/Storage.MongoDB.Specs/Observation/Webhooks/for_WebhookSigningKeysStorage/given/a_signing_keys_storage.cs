@@ -13,6 +13,7 @@ public class a_signing_keys_storage(ReplicaSetMongoDBFixture fixture) : Specific
     protected WebhookSigningKeysStorage _otherStorage;
     protected IEnumerable<Concepts.Observation.Webhooks.WebhookSigningKey> _keys;
     protected IEnumerable<Concepts.Observation.Webhooks.WebhookSigningKey> _otherKeys;
+    protected IMongoDatabase _rawDatabase;
     MongoClient _client;
     string _databaseName;
     string _otherDatabaseName;
@@ -34,6 +35,7 @@ public class a_signing_keys_storage(ReplicaSetMongoDBFixture fixture) : Specific
         _client = new MongoClient(fixture.ConnectionString);
         _databaseName = MongoDBSpecDatabaseNames.New();
         _otherDatabaseName = MongoDBSpecDatabaseNames.New();
+        _rawDatabase = _client.GetDatabase(_databaseName);
         _storage = new(DatabaseFor(_databaseName));
         _otherStorage = new(DatabaseFor(_otherDatabaseName));
     }

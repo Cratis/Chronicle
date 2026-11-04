@@ -41,6 +41,14 @@ public class TestableReplayObserverPartition(
     public Task<IImmutableList<JobStepDetails>> PrepareStepsForTesting(ReplayObserverPartitionRequest request) => PrepareSteps(request);
 
     /// <summary>
+    /// Records a step's result as the job does when the step completes or stops.
+    /// </summary>
+    /// <param name="stepId">The step that completed.</param>
+    /// <param name="result">Its result.</param>
+    /// <returns>Awaitable task.</returns>
+    public Task RecordStepForTesting(JobStepId stepId, JobStepResult result) => OnStepCompletedOrStopped(stepId, result);
+
+    /// <summary>
     /// Revalidates persisted replay admission before resuming job steps.
     /// </summary>
     /// <returns>Awaitable task.</returns>
