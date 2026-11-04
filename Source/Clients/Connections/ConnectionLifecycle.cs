@@ -153,6 +153,26 @@ public class ConnectionLifecycle(ILogger<ConnectionLifecycle> logger) : IConnect
         }
     }
 
+    /// <inheritdoc/>
+    public async Task DisconnectCompleted()
+    {
+        while (true)
+        {
+            Task disconnecting;
+            lock (_generationGate)
+            {
+                if (_disconnecting.IsCompleted)
+                {
+                    return;
+                }
+
+                disconnecting = _disconnecting;
+            }
+
+            await disconnecting;
+        }
+    }
+
     static Task Nothing() => Task.CompletedTask;
 
     async Task WaitForPreviousDisconnect()

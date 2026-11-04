@@ -339,38 +339,52 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
 
     async Task Connect(bool respectFailureBackoff, CancellationToken waiterToken)
     {
-        if (Lifecycle.IsConnected)
+        // Once the attempt in flight has passed the transport phase it may be about to be overtaken by a disconnect, so
+        // a late caller waits for it to finish and starts a fresh one. It does that once: after that it joins whatever is
+        // in flight, so continuous churn from other callers cannot keep it looping.
+        var mayJoinEstablished = false;
+        while (true)
         {
-            return;
-        }
-
-        if (respectFailureBackoff)
-        {
-            ThrowIfWithinConnectFailureBackoff();
-        }
-
-        ConnectAttempt attempt;
-        bool isStarter;
-        lock (_attemptGate)
-        {
-            isStarter = _inFlight is null;
-            if (isStarter)
+            if (Lifecycle.IsConnected)
             {
-                _inFlight = new ConnectAttempt();
+                return;
             }
 
-            attempt = _inFlight!;
-        }
+            if (respectFailureBackoff)
+            {
+                ThrowIfWithinConnectFailureBackoff();
+            }
 
-        if (isStarter)
-        {
-            // Detached, so no waiter's ambient state or token flows into an attempt that every other waiter shares.
-            attempt.Completion = ExecutionContextDetached.Start(() => Task.Run(() => RunAttempt(respectFailureBackoff, attempt)));
-            await attempt.Completion.WaitAsync(waiterToken);
-            return;
-        }
+            ConnectAttempt attempt;
+            bool isStarter;
+            lock (_attemptGate)
+            {
+                isStarter = _inFlight is null;
+                if (isStarter)
+                {
+                    _inFlight = new ConnectAttempt();
+                }
 
-        await JoinAttempt(attempt, waiterToken);
+                attempt = _inFlight!;
+            }
+
+            if (isStarter)
+            {
+                // Detached, so no waiter's ambient state or token flows into an attempt that every other waiter shares.
+                _ = ExecutionContextDetached.Start(() => Task.Run(() => RunAttempt(respectFailureBackoff, attempt)));
+                await attempt.Completion.Task.WaitAsync(waiterToken);
+                return;
+            }
+
+            if (mayJoinEstablished || !attempt.TransportEstablished.Task.IsCompleted)
+            {
+                await JoinAttempt(attempt, waiterToken);
+                return;
+            }
+
+            await WaitForAttemptToFinish(attempt, waiterToken);
+            mayJoinEstablished = true;
+        }
     }
 
     async Task JoinAttempt(ConnectAttempt attempt, CancellationToken waiterToken)
@@ -381,7 +395,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         {
             // A fresh deadline per phase: the time the connected handlers take is not charged to the transport.
             await attempt.TransportEstablished.Task.WaitAsync(deadline, _timeProvider, linked.Token);
-            await attempt.Completion.WaitAsync(deadline, _timeProvider, linked.Token);
+            await attempt.Completion.Task.WaitAsync(deadline, _timeProvider, linked.Token);
         }
         catch (TimeoutException)
         {
@@ -390,40 +404,64 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         }
     }
 
-    async Task RunAttempt(bool respectFailureBackoff, ConnectAttempt attempt)
+    async Task WaitForAttemptToFinish(ConnectAttempt attempt, CancellationToken waiterToken)
     {
+        using var linked = CancellationTokenSource.CreateLinkedTokenSource(waiterToken, _cancellationToken);
         try
         {
-            if (Lifecycle.IsConnected)
-            {
-                return;
-            }
-
-            // The attempt we queued behind may have just failed. Paying for our own full attempt on top of the
-            // wait we already served is what turned one unreachable kernel into a thread per caller.
-            if (respectFailureBackoff)
-            {
-                ThrowIfWithinConnectFailureBackoff();
-            }
-
-            await ConnectInternal();
-            _lastConnectFailure = null;
+            await attempt.Completion.Task.WaitAsync(TimeSpan.FromSeconds(_connectTimeout), _timeProvider, linked.Token);
         }
-        catch
+        catch (TimeoutException)
+        {
+            throw new ConnectionTimedOut();
+        }
+        catch (Exception) when (attempt.Completion.Task.IsFaulted && !linked.IsCancellationRequested)
+        {
+            // The attempt's own failure belongs to its waiters; this caller decides again from the connection's state.
+        }
+    }
+
+    async Task RunAttempt(bool respectFailureBackoff, ConnectAttempt attempt)
+    {
+        Exception? failure = null;
+        try
+        {
+            if (!Lifecycle.IsConnected)
+            {
+                // The attempt we queued behind may have just failed. Paying for our own full attempt on top of the
+                // wait we already served is what turned one unreachable kernel into a thread per caller.
+                if (respectFailureBackoff)
+                {
+                    ThrowIfWithinConnectFailureBackoff();
+                }
+
+                await ConnectInternal();
+                _lastConnectFailure = null;
+            }
+        }
+        catch (Exception ex)
         {
             RecordConnectFailure();
-            throw;
+            failure = ex;
         }
-        finally
+
+        attempt.TransportEstablished.TrySetResult();
+        lock (_attemptGate)
         {
-            attempt.TransportEstablished.TrySetResult();
-            lock (_attemptGate)
+            if (ReferenceEquals(_inFlight, attempt))
             {
-                if (ReferenceEquals(_inFlight, attempt))
-                {
-                    _inFlight = null;
-                }
+                _inFlight = null;
             }
+        }
+
+        // Last, and only after the attempt is no longer in flight, so a waiter that wakes up and asks again starts a new one.
+        if (failure is null)
+        {
+            attempt.Completion.TrySetResult();
+        }
+        else
+        {
+            attempt.Completion.TrySetException(failure);
         }
     }
 
@@ -476,6 +514,10 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
 
     async Task ConnectInternal()
     {
+        // The handshake carries the connection id, and a disconnect still running rotates it when it completes. Reading it
+        // before then would give the kernel an id the connected handlers never use.
+        await Lifecycle.DisconnectCompleted();
+
         _logger.Connecting(_connectionString.Redacted);
         DisposeCurrentAttempt();
 

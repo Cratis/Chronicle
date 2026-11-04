@@ -15,7 +15,8 @@ internal sealed class ConnectAttempt
     public TaskCompletionSource TransportEstablished { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
     /// <summary>
-    /// Gets or sets the task that completes when the attempt has finished, successfully or not.
+    /// Gets the completion of the attempt, created before the attempt is published so a joiner can never observe it unset.
+    /// It is completed, faulted or cancelled only after the attempt has stopped being the one in flight.
     /// </summary>
-    public Task Completion { get; set; } = Task.CompletedTask;
+    public TaskCompletionSource Completion { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 }

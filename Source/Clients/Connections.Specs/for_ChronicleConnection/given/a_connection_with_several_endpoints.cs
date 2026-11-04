@@ -35,6 +35,7 @@ public class a_connection_with_several_endpoints : Specification
     protected Dictionary<ChronicleServerAddress, int> _connectsPerServer;
     protected Dictionary<ChronicleServerAddress, Func<Task<CompatibilityResponse>>> _compatibility;
     protected int _disconnectedCalls;
+    protected List<string> _handshakeConnectionIds;
     readonly Channel<TaskCompletionSource> _watchdogDelays = Channel.CreateUnbounded<TaskCompletionSource>();
     readonly object _changeGate = new();
     TaskCompletionSource _changed = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -52,6 +53,7 @@ public class a_connection_with_several_endpoints : Specification
         _servedBy = [];
         _connectsPerServer = [];
         _streams = [];
+        _handshakeConnectionIds = [];
         _compatibility = [];
         foreach (var server in new[] { _a, _b, _c })
         {
@@ -82,8 +84,21 @@ public class a_connection_with_several_endpoints : Specification
     /// <returns>The servers to connect to.</returns>
     protected virtual Task<IReadOnlyList<ChronicleServerAddress>> Resolve() => Task.FromResult(Servers);
 
+    /// <summary>
+    /// Gets a real lifecycle to connect with instead of the substitute. Specs about the ordering of generations override this.
+    /// </summary>
+    /// <returns>The lifecycle, or null to use the substitute.</returns>
+    protected virtual IConnectionLifecycle? CreateRealLifecycle() => null;
+
     void CreateLifecycle()
     {
+        var real = CreateRealLifecycle();
+        if (real is not null)
+        {
+            _lifecycle = real;
+            return;
+        }
+
         _lifecycle = Substitute.For<IConnectionLifecycle>();
         _lifecycle.IsConnected.Returns(_ => _isConnected);
         _lifecycle.ConnectionId.Returns(ConnectionId.New());
@@ -168,8 +183,9 @@ public class a_connection_with_several_endpoints : Specification
                         ? check()
                         : Task.FromResult(new CompatibilityResponse { IsCompatible = true }));
                 service.Connect(Arg.Any<ConnectRequest>(), Arg.Any<ProtoBuf.Grpc.CallContext>())
-                    .Returns(_ =>
+                    .Returns(call =>
                     {
+                        _handshakeConnectionIds.Add(call.Arg<ConnectRequest>().ConnectionId);
                         _connectsPerServer[address] = _connectsPerServer.GetValueOrDefault(address) + 1;
                         _servedBy.Add(address);
                         SignalChange();

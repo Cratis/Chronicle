@@ -35,6 +35,12 @@ public interface IConnectionLifecycle
     Task Connected();
 
     /// <summary>
+    /// Completes when every disconnect in flight has finished running its handlers and the connection id has rotated.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    Task DisconnectCompleted() => Task.CompletedTask;
+
+    /// <summary>
     /// Called when the client is disconnected to the kernel.
     /// </summary>
     /// <returns>Awaitable task.</returns>
