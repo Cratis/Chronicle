@@ -24,6 +24,17 @@ public class AppendManyBenchmark : IDisposable, IAsyncDisposable
     public int EventCount { get; set; }
 
     /// <summary>
+    /// Gets the observer set discovered before the container profile existed, so append numbers stay comparable.
+    /// </summary>
+    internal static IClientArtifactsProvider ArtifactsProvider => new ObserverScopedClientArtifactsProvider(
+        typeof(BenchmarkReactor),
+        typeof(BenchmarkProjection),
+        typeof(BenchmarkMaterializedReadModel),
+        typeof(BenchmarkPassiveReadModel),
+        typeof(BenchmarkReducer),
+        typeof(BenchmarkPassiveReducer));
+
+    /// <summary>
     /// Initializes the benchmark fixture and Chronicle client.
     /// </summary>
     /// <returns>A task that completes when setup is finished.</returns>
@@ -31,7 +42,7 @@ public class AppendManyBenchmark : IDisposable, IAsyncDisposable
     public async Task Setup()
     {
         _fixture = new ChronicleBenchmarkFixture();
-        _helper = new ChronicleClientHelper(_fixture);
+        _helper = new ChronicleClientHelper(_fixture, ChronicleClientHelper.DefaultEventStoreName, ArtifactsProvider);
         await _helper.WaitForConnection();
         _eventSourceId = EventSourceId.New();
     }

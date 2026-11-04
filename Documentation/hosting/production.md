@@ -156,6 +156,7 @@ The remaining settings stay in the mounted `chronicle.json`; the environment var
 6. **Set up monitoring** for all exposed ports
 7. **Use secrets management** for sensitive configuration values
 8. **Enable TLS** with proper certificates (see [TLS Configuration](configuration/tls.md))
+9. **Size memory and GC for your container** (see [Container resources](container-resources.md))
 
 ## Health Checks
 
@@ -164,7 +165,7 @@ Chronicle binds its listeners before starting the Orleans silo. `/health/live` r
 While unready, non-health requests receive HTTP 503 with `Retry-After`, or gRPC `Unavailable`. This includes the Workbench and static files. Background catch-up does not delay readiness after startup completes.
 
 > [!IMPORTANT]
-> **Probe Chronicle from outside the container.** The production image is built on `mcr.microsoft.com/dotnet/aspnet:10.0-noble-chiseled`, which ships no shell and no `curl` or `wget`. A Docker `HEALTHCHECK` — or a Compose `healthcheck:` — runs *inside* the container, so any command you give it fails immediately and the container is reported unhealthy no matter how healthy Chronicle is.
+> **Probe Chronicle from outside the container.** The production image is built on `mcr.microsoft.com/dotnet/aspnet:10.0-noble-chiseled-extra`, which ships no shell and no `curl` or `wget`. A Docker `HEALTHCHECK` — or a Compose `healthcheck:` — runs *inside* the container, so any command you give it fails immediately and the container is reported unhealthy no matter how healthy Chronicle is.
 
 Use your orchestrator's own HTTP probe instead. The default TLS main port may use a self-signed certificate that some probers reject; a private h2c main port requires an HTTP/2-capable prober. Publish a dedicated plaintext HTTP/1.1 health port when either presents a problem:
 
