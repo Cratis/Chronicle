@@ -38,14 +38,7 @@ public class and_the_child_arrives_before_the_root(context context) : Given<cont
             var root = await EventStore.EventLog.Append(RootId, new RootCreated("Root"));
             await projection.WaitTillReachesEventSequenceNumber(root.SequenceNumber);
 
-            using var cts = new CancellationTokenSource(TimeSpanFactory.DefaultTimeout());
-            do
-            {
-                Result = await EventStore.ReadModels.GetInstanceById<AddedRoot>(RootId.Value);
-                if (Result?.Children.Count == 1) break;
-                await Task.Delay(200, cts.Token);
-            }
-            while (!cts.IsCancellationRequested);
+            Result = await EventStore.ReadModels.GetInstanceById<AddedRoot>(RootId.Value);
 
             var namingPolicy = Services.GetService<INamingPolicy>() ?? new DefaultNamingPolicy();
             StoredDocument = await StoredReadModelDocument.Read(ChronicleFixture, namingPolicy.GetReadModelName(typeof(AddedRoot)));
