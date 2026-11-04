@@ -40,6 +40,13 @@ internal static class TokenDiagnostics
     };
 
     /// <summary>
+    /// Gets the fixed sentence used when a token request fails for a <see cref="TokenFailureCategory"/>.
+    /// </summary>
+    /// <param name="category">The <see cref="TokenFailureCategory"/>.</param>
+    /// <returns>The sentence.</returns>
+    internal static string Describe(TokenFailureCategory category) => "The token request failed (" + Label(category) + ").";
+
+    /// <summary>
     /// Classifies a failure by its type and status only, never by its message.
     /// </summary>
     /// <param name="error">The failure to classify.</param>
