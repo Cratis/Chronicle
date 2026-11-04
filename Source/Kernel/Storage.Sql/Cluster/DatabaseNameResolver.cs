@@ -69,6 +69,46 @@ internal sealed class DatabaseNameResolver(string connectionString, Func<DbConne
     }
 
     /// <summary>
+    /// Builds the connection string of a physical database on the configured server.
+    /// </summary>
+    /// <param name="name">The physical name.</param>
+    /// <returns>The connection string.</returns>
+    internal string ConnectionStringFor(string name) => _catalog.ConnectionString(name);
+
+    /// <summary>
+    /// Tests whether a database exists on the configured server.
+    /// </summary>
+    /// <param name="name">The physical name.</param>
+    /// <returns>Whether it exists.</returns>
+    internal Task<bool> Exists(string name) => _catalog.Exists(name);
+
+    /// <summary>
+    /// Groups names the server treats as one database name.
+    /// </summary>
+    /// <param name="names">The names.</param>
+    /// <returns>Each name with its representative.</returns>
+    internal Task<IReadOnlyDictionary<string, string>> Groups(IReadOnlyCollection<string> names) => _catalog.Groups(names);
+
+    /// <summary>
+    /// Gets the name a database would be bound to when it has no binding yet. Nothing is bound, created or written.
+    /// </summary>
+    /// <param name="identity">The identity.</param>
+    /// <returns>The logical name when it fits; else, on PostgreSQL, the legacy clipped name if that database exists; else the hashed name.</returns>
+    internal async Task<string> Candidate(DatabaseIdentity identity)
+    {
+        var logicalName = identity.LogicalName(_catalog.ClusterName);
+        if (DatabaseName.Fits(logicalName, _catalog.Provider))
+        {
+            return logicalName;
+        }
+
+        var legacy = DatabaseName.Clip(logicalName, _catalog.Provider, DatabaseName.Limit(_catalog.Provider));
+        return _catalog.Provider == Cratis.Arc.EntityFrameworkCore.DatabaseType.PostgreSql && await _catalog.Exists(legacy)
+            ? legacy
+            : DatabaseName.Hashed(logicalName, _catalog.Provider);
+    }
+
+    /// <summary>
     /// Reloads one binding synchronously for the Orleans jobs options callback.
     /// </summary>
     /// <param name="identity">The namespace identity.</param>
@@ -132,13 +172,7 @@ internal sealed class DatabaseNameResolver(string connectionString, Func<DbConne
         var logicalName = identity.LogicalName(_catalog.ClusterName);
         var fits = DatabaseName.Fits(logicalName, _catalog.Provider);
         var legacy = DatabaseName.Clip(logicalName, _catalog.Provider, DatabaseName.Limit(_catalog.Provider));
-        var candidate = logicalName;
-        if (!fits)
-        {
-            candidate = _catalog.Provider == Cratis.Arc.EntityFrameworkCore.DatabaseType.PostgreSql && await _catalog.Exists(legacy)
-                ? legacy
-                : DatabaseName.Hashed(logicalName, _catalog.Provider);
-        }
+        var candidate = await Candidate(identity);
         var hashed = !fits && candidate != legacy;
         var ownership = new DatabaseOwnership(_catalog, eventStore, @namespace);
         if (!hashed)

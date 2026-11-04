@@ -73,6 +73,42 @@ internal sealed class SqlDatabaseCatalog(string connectionString, Func<DbConnect
     }
 
     /// <summary>
+    /// Groups names the server treats as one database name, under its collation.
+    /// </summary>
+    /// <param name="names">The names.</param>
+    /// <returns>Each name with the representative of the names the server considers equal to it.</returns>
+    /// <remarks>
+    /// Only SQL Server compares database names under a collation, so on other providers every name is its own representative.
+    /// The catalog is only read.
+    /// </remarks>
+    internal async Task<IReadOnlyDictionary<string, string>> Groups(IReadOnlyCollection<string> names)
+    {
+        var groups = new Dictionary<string, string>(StringComparer.Ordinal);
+        if (Provider != DatabaseType.SqlServer || names.Count == 0)
+        {
+            foreach (var name in names)
+            {
+                groups[name] = name;
+            }
+
+            return groups;
+        }
+
+        await using var connection = await Open("master");
+        await using var command = Command(
+            connection,
+            "SELECT n.value AS name, MIN(n.value) OVER (PARTITION BY n.value COLLATE DATABASE_DEFAULT) AS representative FROM OPENJSON(@names) WITH (value nvarchar(450) '$') n",
+            ("names", System.Text.Json.JsonSerializer.Serialize(names.Distinct(StringComparer.Ordinal))));
+        await using var reader = await command.ExecuteReaderAsync();
+        while (await reader.ReadAsync())
+        {
+            groups[reader.GetString(0)] = reader.GetString(1);
+        }
+
+        return groups;
+    }
+
+    /// <summary>
     /// Reads user table names and their columns for ownership classification.
     /// </summary>
     /// <param name="name">The existing physical database.</param>

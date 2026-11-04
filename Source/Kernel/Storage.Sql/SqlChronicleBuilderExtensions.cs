@@ -39,6 +39,7 @@ public static class SqlChronicleBuilderExtensions
         builder.Services.AddSingleton<IClusterStorage, ClusterStorage>();
         builder.Services.AddSingleton<Cratis.Chronicle.Storage.Naming.IResourceNameReservations, SqlResourceNameReservations>();
         builder.Services.AddSingleton<IResourcePhysicalNames, SqlResourcePhysicalNames>();
+        builder.Services.AddSingleton<Cratis.Chronicle.Storage.Naming.IResourceInventory>(sp => new SqlResourceInventory(sp.GetRequiredService<Database>()));
         builder.Services.AddResourceNameGate();
         builder.Services.AddSingleton<ISingleWriterLeaseStorage, SqlSingleWriterLeaseStorage>();
         builder.Services.AddSingleton<EncryptionKeyStorage>();
