@@ -3,51 +3,58 @@ description: Use built-in Chronicle projection functions such as Count, Incremen
 ---
 # Projection functions
 
-Projections support several built-in functions for mathematical operations and counting. These functions allow you to perform calculations directly within projections without needing custom logic.
+An activity view needs a login count; an inventory view needs a quantity; an account view needs amounts added to and subtracted from its balance. Copying the latest event value would lose the running total, but these updates do not need a custom fold.
+
+Cratis Chronicle projection functions describe arithmetic over the current value of a read-model property. Add them to the relevant event declaration in a registered [fluent projection](index.mdx). The examples use each client's builder form; method names in the explanation follow the C# tab.
+
+**Choose the key before choosing the operation.** These examples use the event source ID by default, so each source gets its own instance and totals. For one total across sources, define a [constant key](constant-key.mdx); for grouped totals, choose the appropriate [event-content key](constant-key.mdx#comparison-to-other-key-strategies).
 
 ## Counting events
 
-Use `Count()` to increment a counter each time an event is processed:
+Use `Count()` when the event's occurrence is the fact you want to count. It adds one to the selected counter when that event is processed for the instance:
 
 <ChronicleClientTabs snippet="projections/declarative/functions/count" />
 
+For the same source, two login events and one action event produce a login count of two and an action count of one. A login on another source belongs to another instance.
+
+The subscriptions shown are aggregate-only. They do not also copy the event's `Username` field into the model through AutoMap. If the view needs that field, map it explicitly or supply it from another event; see [aggregate-only AutoMap behavior](auto-map.mdx#aggregate-only-events).
+
 ## Increment and decrement
 
-Use `Increment()` and `Decrement()` to add or subtract 1 from a property:
+Use `Increment()` and `Decrement()` when different events move a quantity up and down by one:
 
 <ChronicleClientTabs snippet="projections/declarative/functions/increment-decrement" />
 
-These functions always change the value by exactly 1.
+Three additions and one removal for the same key leave a quantity of two, assuming a starting value of zero. The step is always one; an amount carried by an event does not change it. These operations derive the view, rather than enforce a stock rule at append time. A decrement can take the view below zero.
 
 ## Add and subtract with values
 
-Use `Add()` and `Subtract()` to add or subtract specific values from event properties:
+Use `Add().With()` and `Subtract().With()` when the event carries the amount. Unlike [Set](set-properties.mdx), they change the previous value rather than replace it:
 
 <ChronicleClientTabs snippet="projections/declarative/functions/add-subtract" />
 
+For one account key, opening, depositing `10`, then withdrawing `3` leaves a balance of `7`. The opening mapping explicitly sets zero. Another opening event would reset the balance again, so include repeated initialization in your tests if that history is possible.
+
 ## Supported types
 
-All projection functions work with these numeric types:
+The examples use integer counters and a decimal balance. The kernel supports numeric targets including `int`, `long`, `float`, `double`, and `decimal`, with the target type resolved from the read-model schema. Client declarations and serialized schemas must agree on that type.
 
-- `int`
-- `long`
-- `float`
-- `double`
-- `decimal`
-
-The functions automatically handle type conversion and maintain the target property's type.
+Conversion to the target type is not arbitrary expression evaluation or validation of a business rule. Choose a type whose range and precision fit the domain; do not rely on a counter operation to parse an unrelated event field.
 
 ## How functions work
 
-1. **Initialization**: Properties start at 0 (or their default value) when first accessed
-2. **Accumulation**: Functions apply their operations incrementally as events are processed
-3. **Type safety**: Values are converted to match the target property type
-4. **State preservation**: Current values are maintained between events
+An operation reads the property's current value and writes its result back to that instance. If the target numeric property is absent, the arithmetic mapper starts it at zero. An existing value, including a configured [initial value](initial-values.mdx), is the starting point instead.
+
+Other fields are not cleared by the operation. In particular, an event subscribed **only** for `Count`, `Increment`, `Decrement`, `Add`, or `Subtract` does not AutoMap its unrelated fields. Adding a non-aggregate mapping changes that condition; review same-name fields when extending the subscription.
 
 ## Combining functions
 
-You can use multiple functions in a single projection:
+One event can update several totals. Here a transaction counts the event, adds its amount, and increments another counter:
 
 <ChronicleClientTabs snippet="projections/declarative/functions/combined" />
 
-These functions provide powerful aggregation capabilities while keeping projection logic simple and declarative.
+Two transactions of `12.5` and `7.5` for the same key, starting from zero, would produce a transaction count of `2`, a total amount of `20`, and a processed-event count of `2`. This is an expected result to assert, not output from running the snippet.
+
+Use a [read-model scenario](../../testing/read-models/scenario.mdx) to check a small history, including subtraction and initialization. If a total is split unexpectedly, check the key; if it is replaced, check for a Set mapping; if another field is absent, check the aggregate-only rule.
+
+Choose a [reducer](../../reducers/index.mdx) when an update needs branching over previous state rather than one of these operations. Neither a projection nor a reducer rejects an event that is already in the log. Rules that must hold while commands race belong to [constraints](../../constraints/index.md) or an admitted [decision-read workflow](../../read-models/decision-reads.mdx).

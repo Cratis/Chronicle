@@ -3,11 +3,11 @@ title: "Event Processing"
 description: "How Chronicle dispatches events to reactor handlers and resolves the dependencies a handler asks for."
 ---
 
-This guide explains how reactors discover methods, which signatures are supported, and how event context and errors are handled.
+Start by choosing the event your reactor handles, then decide what it needs to do: perform work directly, return a follow-up event, or read state before acting. The client determines how that handler is selected and which arguments it receives. The method-discovery and overload rules below describe C#; TypeScript's fixed arguments and returned-event dispatch are explained alongside them.
 
 ## Event Method Discovery
 
-Reactors use convention-based method discovery. Chronicle finds and invokes public methods that:
+In C#, reactors use convention-based method discovery. Chronicle finds and invokes public methods that:
 
 - Accept the event type as the first parameter
 - Optionally accept further dependency parameters (the `EventContext`, read models, or services)
@@ -17,7 +17,7 @@ Event parameter types must be marked with `[EventType]`.
 
 ## When more than one method matches
 
-Discovery matches on the first parameter type, so a helper you extract out of a handler for readability — say a `Task<string> Enrich(OrderPlaced @event)` that the handler awaits — matches the same event type the handler does. When that happens, Chronicle picks one method per event type, in this order:
+C# discovery matches on the first parameter type, so a helper you extract out of a handler for readability — say a `Task<string> Enrich(OrderPlaced @event)` that the handler awaits — matches the same event type the handler does. When that happens, Chronicle picks one method per event type, in this order:
 
 1. **A public method beats a non-public one.** Handlers are public by convention; anything else is an implementation detail, so a private helper never displaces the handler that calls it.
 2. **The richest signature wins.** Between two methods of the same accessibility, the one taking the most parameters asked for the most context, so it is the more specific handler.
@@ -27,11 +27,13 @@ A private method is still a valid handler when nothing else handles that event t
 
 ## Supported Signatures
 
+The C# signature examples use method overloads and C# return types. Other clients keep their own handler shapes; a shared event-return concept does not make these signatures interchangeable.
+
 <ChronicleClientTabs snippet="reactors/event-processing/supported-signatures" />
 
-`TResult` can be an event type or a sequence of known events: `IEnumerable<TEvent>`, `TEvent[]`, `List<TEvent>`, or `IReadOnlyList<TEvent>`. See [Returning Side Effects](side-effects) for the full list of supported return types and metadata resolution.
+In C#, `TResult` can be an event type or a sequence of known events: `IEnumerable<TEvent>`, `TEvent[]`, `List<TEvent>`, or `IReadOnlyList<TEvent>`. See [Returning Side Effects](side-effects) for the C# return-type reference and metadata resolution, and its separate TypeScript return/explicit-append choices.
 
-This overload table is specific to C#'s method-overload-based dispatch. Kotlin, Elixir, and TypeScript each use one canonical handler shape instead of a family of overloads — see [Getting started with reactors](getting-started) for what that shape looks like in each client. None of them auto-append a handler's return value the way C# does (see [Returning side effects](side-effects)).
+This overload table is specific to C#'s method-overload-based dispatch. Kotlin, Elixir, and TypeScript use their own handler shapes — see [Getting started with reactors](getting-started) for each client's example. In TypeScript, Chronicle awaits the handler's result and offers it to the configured `reactorResultHandler` first. If that hook returns `true`, it has handled the result. Otherwise, Chronicle appends recognized returned events through `appendMany`: a single event, an array of events, an `EventForEventSourceId` entry, or an array mixing those shapes. Other return values are ignored by the built-in event dispatch. See [Returning side effects](side-effects) for the event-return workflow.
 
 ## Event Context
 
@@ -41,21 +43,21 @@ The optional `EventContext` parameter provides metadata about the event, includi
 
 ## Taking Dependencies
 
-Beyond the event and `EventContext`, a handler method can take additional parameters that Chronicle resolves when the method runs. Only the first parameter is fixed; it is the event that drives dispatch.
+In C#, a handler method can take additional parameters that Chronicle resolves when the method runs. Only the first parameter is fixed; it is the event that drives dispatch.
 
 <ChronicleClientTabs snippet="reactors/event-processing/dependencies" />
 
-This is currently a C#-only capability. Kotlin, Elixir, and TypeScript reactor handlers accept only the event and, optionally, the event context — there's no mechanism to have Chronicle resolve and inject further parameters (services or read models) into the handler call.
+TypeScript passes fixed arguments instead: the event, its context, `ReactorServices`, and `ReactorDelivery`. A handler can accept those optional later arguments, but Chronicle does not resolve arbitrary parameter types into those positions. `ReactorServices` supplies the observation's owning `eventStore`, its `readModels`, and a disconnect/shutdown `signal`; the fourth argument's `id` can key an application-owned receipt, as described in [Delivery identity](delivery-identity). Kotlin and Elixir's handler shapes are shown in [Getting started with reactors](getting-started).
 
-Each parameter after the event resolves as follows. A type counts as a read model only when a projection or reducer builds it; any other type, including a plain record, is requested from the service provider:
+In C#, each parameter after the event resolves as follows. A type counts as a read model only when a projection or reducer builds it; any other type, including a plain record, is requested from the service provider:
 
 - An `EventContext` parameter receives the event context; its position does not matter.
-- A read model — a type with a reducer or projection — is resolved directly by Chronicle, never through the service provider. A materialized read model (the default) is read from its sink, so it is **eventually consistent** and may not yet include the event being handled. Mark it `[Passive]` when the handler needs it **strongly consistent**: Chronicle then computes it from the events when the reactor runs. That suits a read model keyed by its event source id; a passive read of a projection that joins other event sources or uses a custom key misses their events.
+- A read model — a type with a reducer or projection — is resolved directly by Chronicle, never through the service provider. A materialized read model (the default) is read from its sink, so it is **eventually consistent** and may not yet include the event being handled. Mark it `[Passive]` to compute it on demand by folding the requested event source's history when the reactor reads it. That avoids waiting for a materialized view, but does not establish a global freshness boundary or guard a later append. It suits a read model keyed by its event source id; a passive read of a projection that joins other event sources or uses a custom key misses their events.
 - Any other type is resolved from the service provider.
 
 ### Resolving the read model key
 
-By default the read model is materialized using the `EventSourceId` from the event context. When the key differs, implement `ICanResolveReadModelKey` on the reactor to return the `ReadModelKey` to use:
+In C#, the read model is materialized by default using the `EventSourceId` from the event context. When the key differs, implement `ICanResolveReadModelKey` on the reactor to return the `ReadModelKey` to use:
 
 <ChronicleClientTabs snippet="reactors/event-processing/read-model-key" />
 
@@ -76,6 +78,8 @@ The bound is `Reactors.MaxConcurrentPartitions` in [`ChronicleOptions`](../confi
 If a reactor method throws an exception, the failing event source partition is marked as failed and processing for that partition is paused. Once the underlying issue is resolved, processing resumes from the last successful event.
 
 ## Related Rules
+
+These analyzer rules apply to C# handlers:
 
 - [CHR0004](../code-analysis/CHR0004) - Reactor method signatures
 - [CHR0005](../code-analysis/CHR0005) - Event parameters require `[EventType]`

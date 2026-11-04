@@ -3,106 +3,83 @@ title: "Declarative Projections"
 description: "Define projections in code with the fluent IProjectionFor<T> builder."
 ---
 
-Declarative projections let you define read models with a fluent, code-first projection builder. They are ideal when you need explicit mapping, joins, or hierarchical projections that go beyond simple attribute mapping.
+Your profile projection started as a few attributes, but its keys, related data, or child collections now make the model hard to scan. A separate fluent definition lets the model remain the shape you query while the mapping has room of its own.
+
+A declarative projection in Cratis Chronicle is a code-authored mapping definition executed by the kernel. It is still a projection, not an arbitrary event handler. Start with [model-bound attributes](../model-bound/index.mdx) when they are clear; use this chapter when a separate mapping is easier to read. [Choose how to build a read model](../choosing-a-read-model-style.mdx) compares that choice with reducer code.
 
 ## Overview
 
-Declarative projections implement `IProjectionFor<TReadModel>` and use an `IProjectionBuilderFor<TReadModel>` to define how events map to read model properties. The builder gives you control over mapping, relationships, and event context while keeping the projection definition separate from the read model type.
+In the C# client, a projection class implements `IProjectionFor<TReadModel>` and describes its mappings in `Define(IProjectionBuilderFor<TReadModel>)`. The tabs show each client's declaration form.
+
+Place the definition in the application's registered artifacts, with its read model and registered event types. This chapter assumes the application already connects to the intended Chronicle store and namespace. `Define` constructs the definition during registration; the kernel later applies it to events. Constructor dependencies may help build that definition, but the callbacks are not dependency-injected, per-event business logic.
 
 ## Basic Example
 
 <ChronicleClientTabs snippet="projections/declarative/index/basic" />
 
-Auto-mapping is enabled by default at the top level, so matching properties are mapped automatically. When you need explicit mappings, you can use `.Set()`, `.Add()`, `.Subtract()`, and other builder operations.
+The profile has fields matching the registration event, so declaring that event is enough for AutoMap to supply them. The default key is its event source ID: two users' events address two profiles, not one global profile.
+
+Start with the [simple projection walkthrough](simple-projection.mdx) to separate the event, model, and projection types and check the expected result. Add explicit mappings only where the view needs something different.
 
 ## Discovery
 
-Projection types are discovered by implementing `IProjectionFor<TReadModel>`. The events must be
-registered in the owning client's event-type registry, normally through `[EventType]`; .NET also
-supports [explicit event nominations](../../clients/dotnet/explicit-artifacts.md).
+A declaration can be correct without being registered in the running application. In .NET, default artifact discovery finds `IProjectionFor<TReadModel>` implementations and event types marked with `[EventType]`. With explicit artifact registration, nominate the required types; see [explicit artifacts](../../clients/dotnet/explicit-artifacts.md).
 
-In .NET, a projection class must target only one read model. Implementing two closed `IProjectionFor<TReadModel>` interfaces, including through inheritance, throws `TypeImplementsMultipleProjectionInterfaces` during default artifact discovery. Split the class into one projection per read model. [CHR0057](../../code-analysis/CHR0057) reports this before runtime.
+Each .NET projection class must target exactly one read model. Implementing two closed `IProjectionFor<TReadModel>` interfaces, including through inheritance, throws `TypeImplementsMultipleProjectionInterfaces` during default discovery. Split the class into one projection per model. [CHR0057](../../code-analysis/CHR0057) reports that shape before runtime.
 
-## Key Features
-
-- **Auto mapping by default** with the option to turn it off or override per event
-- **Explicit property mappings** for custom transformations
-- **Hierarchies** with child collections and nested projections
-- **Joins** across streams for richer read models
-- **FromEvery** for applying mappings to all events
-- **Event context** access for timestamps, sequence numbers, and IDs
-- **Event sequence selection** for sourcing from non-default sequences
-- **Passive and not rewindable projections** for specialized observation behavior
-- **Variants** for mutually exclusive read model shapes of the same logical entity
+After startup, inspect [registration outcomes](../../clients/dotnet/registration-outcome.md) if the expected definition is absent. A running client does not prove that every artifact registered.
 
 ## When to Use
 
-Start with model-bound attributes; use fluent mappings when keys, joins, hierarchy, or keeping the
-model attribute-free makes a separate definition clearer. Use reducer code when the logic reads better
-as state transitions, with a self-reducing model as the default for new reducers. Follow
-[Choose how to build a read model](../choosing-a-read-model-style.mdx) for scenarios and limits.
+Use the fluent builder for mapping structure: explicit keys, constants and context fields, joins, child collections, nested objects, or a model that should remain attribute-free. Counting and summing are built-in operations; they do not by themselves require a reducer.
 
-`Define` emits a kernel-executed definition. Dependencies can help build it, but the builder lambdas
-are not arbitrary per-event handlers with dependency injection.
+Use a reducer when the update reads better as a state transition that branches on the previous state. Moving a projection to a fluent class does not make its mapping expressions arbitrary code. The [architecture](../architecture.mdx) explains where declaration ends and execution begins.
 
 ## Projection recipes
 
-| Recipe | Description |
-| ------ | ----------- |
-| [Simple projection](simple-projection) | Declare events and use the default AutoMap behavior |
-| [AutoMap](auto-map) | Automatic property mapping at different levels |
-| [Passive](passive) | In-memory projections for on-demand lookups |
-| [Set properties](set-properties) | Explicit property mapping and transformations |
-| [Children](children) | Hierarchical data models with child collections |
-| [Joins](joins) | Cross-stream projections using joins |
-| [Functions](functions) | Arithmetic and other functions |
-| [Composite keys](composite-keys) | Multi-property key identification |
-| [Event context](event-context) | Using event metadata in projections |
-| [FromEvery](from-every) | Setting properties for all events in a projection |
-| [FromAll](from-all) | Subscribe to all event types without filtering |
-| [Initial values](initial-values) | Default values for read model properties |
-| [RemoveWithJoin](remove-with-join) | Cross-stream child removal |
-| [FromEventSequence](from-event-sequence) | Sourcing events from specific event sequences |
-| [NotRewindable](not-rewindable) | Forward-only projections that cannot be replayed |
-| [Variants](variants) | Mutually exclusive read model shapes for the same logical entity |
+Choose the next page by the mapping you need, rather than adding builder operations speculatively.
+
+| You need to… | Start with |
+| --- | --- |
+| Copy matching event fields into one model | [Simple projection](simple-projection.mdx), then [AutoMap](auto-map.mdx) for scope and exceptions |
+| Rename a field or copy a constant | [Set properties](set-properties.mdx) |
+| Count events or maintain a running total | [Functions](functions.mdx) |
+| Read a timestamp, sequence number, or ID from metadata | [Event context](event-context.mdx) |
+| Identify a model with several key parts | [Composite keys](composite-keys.mdx) |
+| Maintain a collection with child identity and parent routing | [Children](children.mdx) |
+| Populate an object inside the model | [Nested objects](nested.mdx) |
+| Bring related data from another event source into the view | [Joins](joins.mdx) |
+| Remove a child through a related event | [RemoveWithJoin](remove-with-join.mdx) |
+| Supply defaults before updates | [Initial values](initial-values.mdx) |
+| Apply a mapping to every subscribed event | [FromEvery](from-every.mdx) |
+| Subscribe to all event types | [FromAll](from-all.mdx) |
+| Read from a non-default event sequence | [FromEventSequence](from-event-sequence.mdx) |
+| Compute an admitted shape on demand instead of materializing it | [Passive](passive.mdx) and its key limitations |
+| Opt out of rewinding | [NotRewindable](not-rewindable.mdx) |
+| Keep mutually exclusive model shapes for one logical entity | [Variants](variants.mdx) |
 
 ## Reading Your Declarative Projections
 
-Once you've defined a declarative projection, you can retrieve and observe the resulting read models using the `IReadModels` API:
+Materialized projections update asynchronously. Append success alone does not establish that the stored view includes the event; design the caller around [eventual consistency](../eventual-consistency.mdx).
 
-- [Getting a Single Instance](../../read-models/getting-single-instance) - Retrieve a specific instance by key
-- [Getting a Collection of Instances](../../read-models/getting-collection-instances) - Retrieve all instances for reporting and analysis
-- [Getting Snapshots](../../read-models/getting-snapshots) - Retrieve historical state snapshots grouped by correlation ID
-- [Watching Read Models](../../read-models/watching-read-models) - Observe real-time changes as events are applied
-
+- [Getting a single instance](../../read-models/getting-single-instance.mdx) reads by the model's key.
+- [Getting a collection of instances](../../read-models/getting-collection-instances.mdx) reads the current collection.
+- [Getting snapshots](../../read-models/getting-snapshots.mdx) explains historical state grouped by correlation ID.
+- [Watching read models](../../read-models/watching-read-models.mdx) explains changesets and subscription lifetime.
 
 ## Key concepts
 
 ### Auto-mapping vs explicit mapping
 
-- **Auto-mapping**: Automatically maps properties with matching names between events and read models
-  - Enabled by default in fluent projections; call `.AutoMap()` only to re-enable it in a scope that disabled it
-  - Use `[FromEvent<TEvent>]` in model-bound projections for the same functionality
-- **Explicit mapping**: Gives you full control over property transformations and mappings
-  - Use `.Set()`, `.Add()`, etc. in fluent projections
-  - Use `[SetFrom<TEvent>]`, `[AddFrom<TEvent>]`, etc. in model-bound projections
+AutoMap copies compatible, same-name fields. Explicit mappings supply an event property path, constant, context value, or supported operation. In the C# builder, `NoAutoMap()` changes the scope's convention; it is not a per-event toggle. An explicit property mapping can coexist with AutoMap, and aggregate-only events have their own [AutoMap exception](auto-map.mdx#aggregate-only-events).
 
 ### Event handling
 
-- Projections can handle multiple event types
-- Each event type can have its own property mappings
-- Properties are updated incrementally as events are processed
+Declare each event type that should contribute. An event updates its mapped properties and leaves the others alone; Set replaces a property's value, while Add and Subtract accumulate. These declarations describe the kernel's work, not application callbacks to invoke after an append.
 
 ### Keys and identification
 
-- **EventSourceId** is used as the default key for both read models and parent identification in child collections
-- **Child identifiers**: Use `.IdentifiedBy()` to specify how child items are uniquely identified within collections
-- **Parent key resolution**:
-  - By default, the EventSourceId is used to identify the parent when adding children
-  - Use `.UsingParentKey(e => e.Property)` when the parent identifier is in the event content
-  - Use `.UsingParentKeyFromContext(ctx => ctx.EventSourceId)` to explicitly document default behavior
-- **Child key specification**: Use `.UsingKey(e => e.Property)` to extract the child identifier from event content
-- **Joins**: Use keys to link data from different event streams using `.On(m => m.Property)`
+The event source ID is the default root key and parent identifier. Choose another key deliberately when grouping events. For children, define both the item's identity and how the event finds its parent; a child key is not a parent key. A join likewise needs a correlation property. Routing identifies the destination instance; it does not automatically populate a visible ID field.
 
 ### Container name
 
@@ -112,8 +89,6 @@ By default the read model is stored in a container (collection, table) named by 
 Cratis Arc's MongoDB integration resolves `IMongoCollection<T>` and `IMongoDatabase.GetCollection<T>()` through the naming policy, so with an overridden container name they point at the default collection. Get the collection by the name you passed to `ContainerName`, for example `database.GetCollection<T>("name")`, or read the instance through Chronicle with `IReadModels.GetInstanceById<T>()`.
 :::
 
-### Performance
+### Checking the definition and the running system
 
-- Projections are automatically maintained as events are appended
-- The system handles indexing and query optimization
-- Consider join complexity and update frequency when designing projections
+Use a [read-model scenario](../../testing/read-models/scenario.mdx) to assert field values over a small event history, including the fields that should remain unchanged. Then check registration, catch-up, and queries against the intended kernel and sink. An in-process mapping test does not establish storage behavior, compliance, or asynchronous delivery. Changes to a deployed definition also need the [registration and evolution lifecycle](../registration-lifecycle.md), not just a passing mapping test.

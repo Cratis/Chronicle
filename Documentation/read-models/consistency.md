@@ -4,18 +4,18 @@ title: "Consistency Models"
 description: "Eventual, on-demand, and read-after-write consistency for read models, and how to choose between them."
 ---
 
-Read models in Chronicle can be retrieved with different consistency guarantees, depending on how they are computed and when they reflect the latest events. Understanding these models helps you make the right trade-off between data freshness, query latency, and throughput.
+A book list can update after a borrowing command finishes. The command that borrows the last copy cannot rely on that list: another reader may be borrowing it too. Use a materialized view for browsing, a guarded read for the borrowing decision, and an explicit observer wait only when a caller needs to read back its own write.
 
 > [!TIP]
 > For information on how to define and configure read models in Arc, see [Chronicle read models in Arc](/arc/backend/csharp/chronicle/read-models/).
 
 ## The Consistency Spectrum
 
-Chronicle offers a spectrum of consistency choices, ranging from strong consistency — where data is guaranteed to reflect all events at query time — to eventual consistency — where data is materialized asynchronously in the background.
+Start with a materialized projection for a frequently read screen. For a single instance with a suitable event history, a passive read model can compute the view on demand instead. Waiting for an append's observers lets one caller read its own write from a materialized model.
 
 ```mermaid
 graph LR
-    A["Strong Consistency\n(On-Demand, passive)"]
+    A["On-Demand Read\n(Passive)"]
     B["Read-after-write\n(Materialized + wait)"]
     C["Eventual Consistency\n(Materialized)"]
 
@@ -26,21 +26,24 @@ graph LR
     style C fill:#e1f5ff
 ```
 
-Each model has distinct performance and consistency characteristics. The right choice depends on how frequently the data is read, how long the event history is, and how critical it is that queries always return up-to-date state.
+This diagram compares ways to obtain a view, not ways to protect a command. On-demand computation covers the requested model's supported event history; it is not a snapshot of every event in the system.
 
-## Strong Consistency — On-Demand Computation
+<a id="strong-consistency--on-demand-computation"></a>
 
-The strongest guarantee comes from computing a read model on-demand by replaying events from the event log every time you request it. This is sometimes called an *ad-hoc projection query* because no pre-materialized state is consulted — the result is built fresh from source events on each call.
+## On-Demand Computation
+
+Use a passive read model when you want to display one instance by folding its source history at query time. Chronicle computes the result from events rather than waiting for a stored view to catch up.
 
 You opt into this by marking the read model **passive**, which keeps any observer from materializing it and therefore leaves the event log as its only source. `GetInstanceById` then:
 
 1. Locates the projection or reducer registered for the read model type
 2. Retrieves all relevant events for the requested key from the event log
 3. Executes the projection or reducer logic in memory, event by event
-4. Returns the resulting instance that reflects the exact current state
+4. Returns the instance computed from that history
 
-> [!IMPORTANT]
-> `GetInstanceById` only computes on-demand for a passive read model. When the read model *is* materialized — the default for both projections and reducers — Chronicle serves the stored instance from the sink instead, releasing any PII before it leaves the kernel. That read is O(1) and eventually consistent. See [Getting a Single Instance](getting-single-instance).
+:::note
+`IReadModels.GetInstanceById<T>(key)` computes on demand only for a passive read model. For a materialized projection or reducer, it reads the stored instance from the sink and releases protected values before returning it. See [getting a single instance](getting-single-instance.mdx).
+:::
 
 ```mermaid
 sequenceDiagram
@@ -56,10 +59,10 @@ sequenceDiagram
     Projector-->>Caller: Return current state
 ```
 
-Because the projection runs inline at query time, you always get a result that is consistent with every event appended so far — including one you may have just appended a millisecond ago.
+The sequence sketches a fold for one key. It does not establish a global freshness boundary or prevent another writer from appending after the read.
 
 :::caution[A fresh read is not a guard]
-An on-demand read is current when you read it, but it does not note where in the log it stopped and it does not protect the append that follows. Another writer can append between your read and your write, and both appends succeed. To make a rule hold while writers race, use a [constraint](../constraints/index.md) or a [decision-consistent read](./decision-reads.mdx). See [Choosing how a rule holds](../dynamic-consistency-boundary/choosing.mdx).
+An ordinary passive read does not carry a guard into the append that follows. Another writer can append between your read and your write, and both appends can succeed. To make a rule hold while writers race, use a [constraint](../constraints/index.md) or a [decision-consistent read](./decision-reads.mdx). See [Choosing how a rule holds](../dynamic-consistency-boundary/choosing.mdx).
 :::
 
 The replay reads only the events of the event source whose id is the key you asked for. That fits a read model keyed by its event source id. A projection that joins events from other event sources, or sets its key from event content with `UsingKey`, misses those events when read this way — keep it materialized, and wait for the append's observers when you need your own write back.
@@ -70,28 +73,30 @@ A [per-stream read model](per-stream.mdx) declares `[EventStream<TSource>(stream
 
 On-demand computation is the right choice when:
 
-- Strong read-after-write consistency is required
-- The event history for each instance is short (tens to low hundreds of events)
+- You want to display a source-keyed instance without waiting for materialization
+- The event history for each instance is short enough to fold on each request
 - The read model is accessed infrequently relative to how often events are appended
 - You are reading current state to show it, or to check something you can repair afterwards. A check that must hold when two writers race needs a [decision-consistent read](./decision-reads.mdx)
 
-When those apply, mark the read model passive — see [Passive projections](../projections/declarative/passive). For a practical guide to working with read model instances, see [Getting a Single Instance](getting-single-instance) and [Getting a Collection of Instances](getting-collection-instances).
+When those apply, [mark the projection passive](../projections/declarative/passive.mdx), then [read the instance by key](getting-single-instance.mdx). Use a materialized projection when you need a collection.
 
 ### Performance Considerations
 
-The cost of on-demand computation grows linearly with the number of events in the history. Short histories are fast; histories that run into thousands of events per instance can become too slow for interactive use cases. For high-volume, frequently accessed data, materialized projections are a better fit.
+Each on-demand read pays the cost of folding the relevant history. As that history grows, a materialized view can be a better fit for frequent reads.
 
 ## Read-after-write — waiting for a materialized read model
 
-Chronicle has no mode that updates a materialized read model inside the append itself: an append returns once the event is in the log, without waiting for any projection. When one caller needs to read back what it just appended, and the read model should stay materialized for everyone else, wait for the observers affected by that append before reading. In the .NET client, `WaitForCompletion()` on the append result does this and reports any partition that failed while catching up — see [Waiting for observer completion after append](../events/observing-appends.mdx#waiting-for-observer-completion-after-append). Check that the append succeeded before you wait. With the .NET client and an updated server, the wait includes observers that handle the appended event types, plus observers subscribed to all events. Other clients and older servers still wait for every observer on the sequence.
+When a request must return a materialized view containing its own write, first check that its append succeeded. In the .NET client, call `appendResult.WaitForCompletion(explicitTimeout)`, then inspect `IsSuccess`, `TimedOut`, `FailedPartitions`, and `OutstandingObservers`. Read the model after successful completion. Follow [waiting for observer completion after append](../events/observing-appends.mdx#waiting-for-observer-completion-after-append) for the full procedure and server requirements.
 
-Waiting adds the projection's latency to that one caller, and only that caller. Use it for the occasional read-after-write, not as a default on every append. When nearly every read needs to include the latest event, a passive read model is usually the simpler choice.
+The current server selects observers affected by the appended event types, including observers of all events; older-server behavior differs. Use an explicit timeout and handle incomplete processing. A timeout does not undo a successful append, so do not repeat the write just to make the view appear.
+
+This wait adds processing latency to that caller. It neither protects the borrowing decision nor stops later writers from changing the model before the read.
 
 There is no *immediate projection* mode that updates a read model during the append. [Immediate projections](../projections/immediate-projections.md) explains what the term does refer to.
 
 ## Eventual Consistency — Materialized Projections
 
-Most projections in Chronicle operate with eventual consistency. Events are appended to the event log and the append operation returns immediately. The projection engine then processes those events asynchronously in the background, updating the stored read model.
+Materialized projections keep stored views ready for queries. Appending an event and updating those views are separate work: append success does not require the relevant projection to have finished.
 
 ### How Materialization Works
 
@@ -109,23 +114,15 @@ sequenceDiagram
     Engine->>Storage: Update read model
 ```
 
-The append operation completes before any projection has run. There is a brief window during which the event is safely stored but the read model has not yet been updated. Under normal conditions this lag is milliseconds, but it grows under heavy load or during recovery.
+The sequence is a sketch of the separate append and projection paths, not a required ordering of their completion. Processing may finish before the caller receives the append response or afterward. There is no fixed catch-up time.
 
 For a detailed look at how projections are compiled and materialized from definition through to storage — covering the three projection styles and the runtime execution pipeline — see [Projection Architecture](../projections/architecture).
 
 ### Consistency Guarantees
 
-Materialized projections guarantee:
+A materialized query returns the stored view, which can lag behind the event log. Processing for one model does not prove that every other model has caught up, and different source keys need not become visible together.
 
-- **Event ordering**: Events for the same event source key are processed in sequence
-- **At-least-once delivery**: Every event will be processed, with automatic retries on failure
-- **Partition consistency**: All projections for a given event source key will eventually converge to the correct state
-
-They do **not** guarantee:
-
-- **Immediate consistency**: The stored read model may lag behind the event log
-- **Cross-partition ordering**: Events from different event source keys may be projected out of relative order
-- **Synchronous updates**: Projection updates always happen after the append returns
+Eventual consistency depends on observers being able to process their work. A paused observer or failed partition needs attention; waiting longer is not a fix for a broken mapping.
 
 For patterns that help you design applications around eventual consistency, see [Eventual Consistency in Projections](../projections/eventual-consistency).
 
@@ -140,22 +137,25 @@ Materialized projections are the right choice when:
 
 ## Choosing the Right Model
 
-| Scenario | Recommended Model |
-|---|---|
-| Showing exact current state, such as a balance or stock level | On-demand computation |
-| Read-after-write in the same request | On-demand computation, or waiting for the append's observers |
-| A command check you can repair afterwards | On-demand computation |
-| Rules that must hold when two writers race | A [constraint](../constraints/index.md), or a [decision-consistent read](./decision-reads.mdx) when the decision depends on an admitted event-source-keyed projection |
-| Dashboards and list views over large datasets | Materialized projections |
-| Real-time UIs observing changes as they happen | Materialized projections with watchers |
-| Infrequently accessed instances with short event histories | On-demand computation |
+| Your task | Start with |
+| --- | --- |
+| Keep a book list current | A materialized projection and [Observe](observing-read-models.mdx) for replacement collections |
+| Display one instance from a short, source-keyed history | A passive model and `GetInstanceById<T>(key)` |
+| Return a view containing this request's append | Check append success, wait for its observers, then read |
+| Borrow only when a copy remains, even with competing writers | A guarded command decision, as described below |
+
+In an Arc application with [Chronicle integration](/arc/backend/csharp/chronicle/add-event-sourcing/), explicitly turn read protection **On** for the command or its assembly; the current unspecified default is **Off**. Take the keyed read model as a plain parameter in the command's `Handle()` method or `CommandValidator<T>` constructor. Check that a copy is available and let Arc stage and complete the command's returned events. Arc acquires the protected read and checks its guard when completing the write. Follow [your first protected command](/arc/backend/csharp/chronicle/consistency/getting-started/) and [command read rules](/arc/backend/csharp/chronicle/consistency/reads/) for supported model shapes and key lookup.
+
+Outside Arc, obtain `eventStore.GetDecisionReads()`, call `GetDetached<T>(key)`, and decide from the returned state. Pass that same decision read in the event log's `AppendMany(..., guardedBy: ...)` call, then check append success and decision conflicts. [Decision reads](decision-reads.mdx) shows this guarded append and the alternative unit-of-work workflow, whose owner must complete the unit.
+
+Both routes need a supported model shape, the correct source or stream key, and compatible client/kernel support. Keep the guard attached to the write. If the read cannot be protected, do not replace it with an ordinary query. A conflict rejects the stale decision; neither route locks the book or automatically reruns the command. For rules expressed directly over events, consider a [constraint](../constraints/index.md).
 
 ## Summary
 
-| Model | Updated | Consistency | Read Cost |
-|---|---|---|---|
-| On-demand computation (passive) | At query time | Strong | Proportional to event history length |
-| Materialized, read after waiting | Asynchronously; the caller waits | Includes the caller's own append | O(1) read, plus the wait |
-| Materialized projections | Asynchronously | Eventual | O(1) — stored result |
+| Read | What you get | Cost to consider |
+| --- | --- | --- |
+| Passive instance | A fold of the supported history for the requested key | Folding that history on each read |
+| Materialized instance after a successful observer wait | A view whose processing includes this append | Observer processing time, then the stored read |
+| Materialized query or observation | The stored view, updated asynchronously | Query or subscription work |
 
-None of these guards an append: passive read models are fresh, but they are still unguarded, because nothing checks at append time that the state you read is unchanged. Only constraints, concurrency scopes and decision reads do. These are not mutually exclusive. A real application often uses materialized projections for high-volume list views, passive read models where a check must see current state (still unguarded, so pair them with a decision read or a constraint when the rule must hold), and an explicit wait in the few places where one caller must read its own write.
+Use the live list to show available books, not to authorize borrowing the last copy. Protect that decision in the command, and add an observer wait separately if its response must include the resulting view.

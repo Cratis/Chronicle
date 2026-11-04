@@ -3,60 +3,63 @@ title: "Projection with custom properties"
 description: "Map event properties explicitly with Set() when AutoMap's naming convention does not fit."
 ---
 
-When auto-mapping isn't sufficient, you can explicitly map properties from events to your read model. This gives you full control over how data is transformed and mapped.
+An account-opening event calls its identifier `Number`, but the screen calls it `AccountNumber`. It also puts the customer's name inside `Owner`. Those values are already on the event; the projection needs to name their destination rather than calculate them.
+
+In Cratis Chronicle, a Set mapping assigns a value to a read-model property. Use it inside a registered [fluent projection](index.mdx) when [AutoMap](auto-map.mdx) cannot match the names or the source is a constant or event-context field. The method names below follow the C# tab; the other tabs show their client's equivalent form.
 
 ## Explicit property mapping
 
-Use `Set()` to map a property explicitly — typically because the event and the read model name it differently:
+Inside the event declaration, select the target property with `Set()` and the event property with `To()`. A nested property path such as `Owner.Name` is supported.
+
+Read the following as an **assignment example, not a running-balance calculation**. Opening assigns the constant balance `42`; the deposit mapping replaces that balance with the deposit's amount:
 
 <ChronicleClientTabs snippet="projections/declarative/set-properties/explicit" />
 
+For example, opening followed by a deposit of `5` leaves the balance at `5`, not `47`. A second deposit of `5` still leaves it at `5`. Use [Add and Subtract](functions.mdx#add-and-subtract-with-values) when each event should change the previous balance instead.
+
 ## Combining AutoMap with explicit mapping
 
-AutoMap is on by default, so you never call `.AutoMap()` yourself: every property whose name matches is already mapped. Add explicit mappings only for the properties that need a transformation or a different source:
+You can leave AutoMap enabled and name only the exceptions. The next snippet illustrates that combination; it is not a complete substitute for the account mapping above:
 
 <ChronicleClientTabs snippet="projections/declarative/set-properties/combined-automap" />
 
-AutoMap works recursively, automatically mapping:
+The explicit customer-name and active-status mappings coexist with convention-based mappings. But convention only helps where names match. In these event definitions, `Number` and `Timestamp` do not match `AccountNumber`, `OpenedAt`, or `LastTransaction`. The combined example does not supply those fields. Its bare deposit subscription does not update `Balance` either: `Amount` has a different name.
 
-- Properties with matching names and compatible types
-- Nested objects and their properties
-- Collections and arrays
+Keep the explicit mappings those fields require. Leaving AutoMap on does not turn a partial definition into a complete one.
 
-`NoAutoMap()` turns it off for the projection (and `.AutoMap()` turns it back on inside a child scope) — there is no per-event-type toggle. Add explicit `.Set()` calls inside a specific `.From<TEvent>()` block for the properties that need custom mapping; AutoMap still fills in every other matching property for that event.
+In the C# builder, `NoAutoMap()` disables the convention for the projection scope, not for one event type; `.AutoMap()` can re-enable an inherited disabled convention in a child scope. See [AutoMap scopes and exceptions](auto-map.mdx). Use [child](children.mdx) or [nested](nested.mdx) definitions when the projection needs structural routing, rather than assuming a property copy defines that structure.
 
 ## Read model definition
 
-The read model can have different property names and types than the events:
+The account model is the destination contract. Its property names may differ from the event names, but mapped values must still fit the target types:
 
 <ChronicleClientTabs snippet="projections/declarative/set-properties/read-model" />
 
 ## Event definitions
 
-Events can have different structures than the read model:
+The opening event supplies a number, an owner object, and a timestamp. The deposit supplies an amount and timestamp. Neither event has the same shape as the whole account model:
 
 <ChronicleClientTabs snippet="projections/declarative/set-properties/events" />
 
 ## Property mapping options
 
-You can map properties in several ways:
+Choose the source according to what the field means:
 
-- **From event property**: `.Set(m => m.CustomerName).To(e => e.Owner.Name)`
-- **From constant value**: `.Set(m => m.IsActive).ToValue(true)`
-- **From event context**: `.Set(m => m.OpenedAt).ToEventContextProperty(c => c.Occurred)`
-- **From event source ID**: `.Set(m => m.Id).ToEventSourceId()`
+| Source | C# mapping shape | Meaning |
+| --- | --- | --- |
+| Event content | `.Set(m => m.CustomerName).To(e => e.Owner.Name)` | Copy one property path from the event. |
+| Constant | `.Set(m => m.IsActive).ToValue(true)` | Assign the same value whenever this event is processed. |
+| Event context | `.Set(m => m.OpenedAt).ToEventContextProperty(c => c.Occurred)` | Use the event's recorded occurrence time, not the current clock. |
+| Event source ID | `.Set(m => m.Id).ToEventSourceId()` | Populate an ID field; choosing a routing key alone does not populate it. |
 
-> [!NOTE]
-> `.To(...)` maps a single **event property** — it reads the value straight off the event, it does not run code. It cannot produce a *computed* value: `.To(e => $"{e.FirstName} {e.LastName}")`, `.To(_ => DateTimeOffset.UtcNow)` and similar expressions are not supported, because the builder extracts a property path from the expression rather than executing it. To derive a value, either record it on the event as a fact (compute it in the command's `Handle()` before appending) or use a [reducer](/chronicle/reducers/), which can run arbitrary logic over the current state and the event.
+The timestamp in the account event's content and the occurrence time in its context are different sources. Pick deliberately; see [event-context mappings](event-context.mdx).
+
+`To()` extracts a property path from the expression; it does not execute an arbitrary calculation. String interpolation, reading the current clock, or branching on the previous balance is not a property path. Record a derived fact in the event before appending, use a supported [projection function](functions.mdx), or choose a [reducer](../../reducers/index.mdx) for state-transition code.
 
 ## Multiple events
 
-A single projection can handle multiple event types, each with its own property mappings. Properties are updated incrementally as events are processed.
+Each event updates the properties covered by its explicit and convention-based mappings. Other properties retain their previous values; Set does not replace the whole model.
 
-In the example above:
+In the first account definition, opening assigns the account number, customer name, balance, active status, and opening timestamp. It does not set `LastTransaction`. A deposit replaces `Balance` and `LastTransaction`, leaving the other fields alone. Processing another opening event applies its assignments again; it is not an initialize-once operation.
 
-- `AccountOpened` sets initial values for all properties
-- `MoneyDeposited` only updates `Balance` and `LastTransaction`
-- Other properties retain their previous values
-
-This approach gives you precise control over how your read models are built from events.
+Check the history you intend to support with a [read-model scenario](../../testing/read-models/scenario.mdx): opening, one deposit, two deposits, and any repeated initialization event. Assert both the changed fields and the fields that should remain unchanged. If a value is missing, first check the source path and the declared event; if a total is wrong, check whether the definition assigns or accumulates it.

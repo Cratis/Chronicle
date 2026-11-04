@@ -18,7 +18,9 @@ public class EcWatchBookService(IEventLog eventLog, IReadModels readModels)
     {
         var bookId = EventSourceId.New();
 
-        // Subscribe before appending so the update is observed once the projection catches up
+        // Subscribe before appending; this example does not await subscription readiness.
+        // Awaiting Append does not wait for a matching changeset.
+        // The subscription is disposed on method exit, possibly before the update arrives.
         using var subscription = readModels.Watch<EcWatchBookInventory>()
             .Where(changeset => changeset.ModelKey.Value == bookId.Value)
             .Subscribe(changeset => Console.WriteLine($"Book projection updated: {changeset.ReadModel?.Title}"));

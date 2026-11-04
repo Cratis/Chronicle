@@ -3,79 +3,85 @@ description: AutoMap maps event properties to read model properties with compati
 ---
 # Projection AutoMap
 
-AutoMap maps event properties to read model properties when their names and types are compatible. It is the default behavior for declarative projections, so the usual projection only needs to say which events it consumes.
+A user profile needs a name and email from a creation event, then only a new name from a rename event. Writing every copy by hand adds little when the event and model already agree on those fields.
 
-Use explicit mapping when the event shape and read model shape intentionally differ. Use the AutoMap controls when a projection should opt out of convention-based mapping for part of its definition and then opt back in later.
+AutoMap is Cratis Chronicle's convention-based property mapping. It is enabled by default for fluent projections: declare the events the projection consumes, and matching properties can supply the view. Start from a [simple projection](simple-projection.mdx) in a registered Chronicle application; this page explains where that convention applies and when to take over explicitly.
 
 ## Basic Usage
 
-When event and read model property names match, declare the events and let AutoMap fill the matching properties.
+Declare both the creation and rename events. The client tabs show the definition and its model together:
 
 <ChronicleClientTabs snippet="projections/declarative/auto-map/basic" />
 
 ## How AutoMap Works
 
-AutoMap applies the same convention to every event handled by the projection:
+For one event source, creation supplies both fields. A later rename supplies the name but has no email to map, so the existing email remains. These are incremental updates, not replacement of the whole model with each event's shape.
 
-| Rule | Behavior |
+| Part of the contract | What to check |
 | --- | --- |
-| Property names | Event and read model property names must match after the client's serialization naming policy is applied. |
-| Property types | Values must be assignable to the read model property type. |
-| Explicit mappings | Explicit mappings handle properties that do not match by convention. |
-| Scope | A projection can disable or re-enable AutoMap for the builder scope that the client supports. |
+| Subscription | Only declared event types contribute. AutoMap does not subscribe to unrelated events. |
+| Names | Compare event and model names after the client's serialization naming policy is applied. |
+| Types | Use compatible property types; a name match is not a request to parse or calculate a value. |
+| Explicit mappings | A mapping for a target property takes precedence over its convention-based mapping. |
+| Keys | Routing an event to a key and copying a property into the model are separate operations. |
 
-AutoMap is evaluated when the projection definition is built. It does not add a per-event reflection step while projections process events.
+The kernel resolves these mappings from the registered event and read-model schemas when it constructs the projection. The fluent callback is not an event handler. Aggregate-only subscriptions have a narrower rule, described below.
 
 ## Disable AutoMap
 
-Disable AutoMap when a projection should map only the properties you name explicitly.
+Turn AutoMap off when every copied field should be named in the definition. In the C# tab, `.NoAutoMap()` applies to the projection scope, not to a single `.From<TEvent>()` call. The account example maps its renamed fields and creation timestamp explicitly:
 
 <ChronicleClientTabs snippet="projections/declarative/auto-map/disable" />
 
+After disabling the convention, leaving a property out means this definition does not populate it automatically. Add [explicit mappings](set-properties.mdx) for every value the view needs.
+
 ## Re-enable AutoMap In A Child Scope
 
-Calling the AutoMap enable method is redundant at the top level. It is useful in a child builder scope when the parent projection has disabled AutoMap and the child scope should opt back in.
+A team may need explicit root mappings while its member records already match their events. In a client with the corresponding child builder, re-enable AutoMap inside that scope. The C# example uses `.AutoMap()` on the child after `.NoAutoMap()` on the root:
 
 <ChronicleClientTabs snippet="projections/declarative/auto-map/re-enable-child-scope" />
 
+This changes the child's mapping convention, not its identity rules. The example still names the member identifier and routes member events with a child key. Follow [child collection mappings](children.mdx) for parent routing and removal. Calling `.AutoMap()` at an already-enabled root adds nothing.
+
 ## Combine With Explicit Mappings
 
-AutoMap and explicit mappings can be used together. Let convention handle the properties that match, and map the exceptional properties directly.
+Keep AutoMap on when most fields match. In this account example it copies the name and email, while explicit mappings supply a constant status and the event's occurrence time:
 
 <ChronicleClientTabs snippet="projections/declarative/auto-map/explicit-mappings" />
 
+An email-change event updates the email without resetting the name, status, or creation time. Explicit mappings handle exceptions; they do not disable all remaining convention-based mappings.
+
 ## AutoMap With Joins
 
-Joined events can also contribute matching properties through AutoMap. Use the join condition to connect the joined event to the read model; matching joined-event properties can then flow into the model.
+An employee view can take its department name from a department event. First define the [join](joins.mdx) that correlates that event with the employee's department ID. AutoMap can then supply matching fields from the joined event:
 
 <ChronicleClientTabs snippet="projections/declarative/auto-map/join" />
 
+A name match alone cannot discover that relationship: the join condition supplies the correlation.
+
 ## Aggregate-Only Events
 
-An event a projection subscribes to **only to aggregate** — `Count`, `Increment`, `Decrement`, `Add`, or `Subtract` — does not contribute its other properties to AutoMap. Aggregating an event does not copy its unrelated fields onto the read model, so a property on it that happens to share a name with one you set from another event cannot overwrite that value. You do not need to disable AutoMap for this — it is the default behavior.
+Suppose an assignment's location comes from an arrangement event, while candidate events only increase a count. Both events happen to contain a location. Counting a candidate should not replace the assignment's location with the candidate's.
+
+When every property operation for an event is an aggregate — `Count`, `Increment`, `Decrement`, `Add`, or `Subtract` in the C# API — Chronicle does **not** AutoMap that event's other properties. You do not need to disable AutoMap for this case:
 
 <ChronicleClientTabs snippet="projections/declarative/auto-map/aggregate-only" />
 
+After an arrangement event and two candidate events for the same key, the intended fields are the arrangement's location and a candidate count of two. The candidate locations do not replace the stored location. If you add a non-aggregate mapping to that subscription, it is no longer aggregate-only; review the other same-name fields again.
+
 ## When To Use AutoMap
 
-Use AutoMap when:
+Use convention when matching event fields are exactly what the view should expose. Use [Set mappings](set-properties.mdx) for different names, constants, context values, or an explicit list of copied fields; use [projection functions](functions.mdx) to accumulate rather than replace a value.
 
-- Event property names match read model property names.
-- The property types are directly compatible.
-- The projection follows stable naming conventions.
-- The read model should reflect the event shape without transformation.
+When a field is missing or unexpectedly changes, check these before turning AutoMap off everywhere:
 
-Use explicit mappings when:
+- Is the event actually declared, and is AutoMap enabled in the affected scope?
+- Do the serialized names and compatible types match?
+- Does an explicit mapping already own that target property?
+- Is the event subscribed only for aggregation, so its other fields are intentionally excluded?
 
-- Property names differ.
-- A constant, event context field, or event source id should be mapped.
-- The projection increments, decrements, counts, or combines values.
-- You want a projection definition that documents every mapped property.
+Adding a same-name field to an event or model can change what convention maps. Review such schema changes against the projection, especially where several events can supply the same field. A [read-model scenario](../../testing/read-models/scenario.mdx) can check the event history and retained values without treating append success as proof of materialization.
 
 ## Related Projection Shapes
 
-Child and nested projections can have their own AutoMap behavior in clients that support those builder scopes. Use the dedicated pages for those shapes:
-
-- [Children](./children)
-- [Nested objects](./nested)
-- [Set properties](./set-properties)
+Use [children](children.mdx) when items need identity and parent routing, and [nested objects](nested.mdx) for a nested projection scope. AutoMap does not replace those structural definitions.

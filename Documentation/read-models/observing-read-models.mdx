@@ -3,17 +3,17 @@ title: Observing Read Models
 description: Keep a complete read model list current with collection snapshots.
 ---
 
-Use `IReadModels.Observe<T>()` when a list needs its current contents on subscription and a replacement collection whenever the stored data changes. Unlike [Watch](watching-read-models.mdx), it emits whole collections rather than individual changesets.
+Keep a book list current with `IReadModels.Observe<T>()` in the .NET client. Subscribe once, show the current collection, and replace the list with each later snapshot. Chronicle supplies the stored view; [Watch](watching-read-models.mdx) is the alternative when you need individual changesets instead.
 
 ## Subscribe to a collection
 
-The read model must already be registered and maintained by an active projection or reducer. Subscribe to the returned subject and keep the subscription for as long as you need updates:
+Start with a registered read model maintained by an active projection or reducer, using a client, kernel, and sink that support collection observation. Subscribe to the returned subject and keep the subscription for as long as the screen or service needs updates:
 
 <ChronicleClientTabs snippet="read-models/observing-read-models/basic" />
 
-The first emission is the complete current set, including an empty set when there are no instances. Later emissions replace that set. There is no default 50-instance window: every stored instance is included. For a large dataset, prefer a [paginated materialized observation](materialized-pagination.mdx).
+The first emission is the complete current set, including an empty set when there are no instances. Later emissions replace that set as processing changes the view; they are not a record of every appended event. Every stored instance is included, so use a [paginated materialized observation](materialized-pagination.mdx) for a large dataset.
 
-Chronicle resolves its registered container name and converts stored keys to your read model's key property. You do not need a property named `Id`, or a direct MongoDB collection. The same API works with MongoDB, SQL, and the in-memory sink. The kernel releases PII and encrypted values before sending the collection.
+Chronicle resolves the registered sink container and converts stored keys to your read model's key property. You do not need a property named `Id` or a direct MongoDB collection. The kernel releases PII and encrypted values before sending the collection.
 
 The namespace is the event store's namespace at the time you call `Observe`. Keep observations within the lifetime of the tenant scope that created them.
 
@@ -25,13 +25,19 @@ Pass an expression to select instances from each full snapshot:
 
 The expression is compiled once and evaluated client-side after release. It does not reduce what the server reads or sends, and it does not add server-side sorting or paging.
 
+Filtering and protected-value release do not authorize access. Authorize the query endpoint and tenant selection separately.
+
 ## Return an observable query
 
-A query can return the subject directly:
+To send the list to a screen through Arc, first [add Chronicle integration to your Arc host](/arc/backend/csharp/chronicle/add-event-sourcing/). Put the query method on an Arc `[ReadModel]` so Arc can discover it, and return the Chronicle subject:
 
 <ChronicleClientTabs snippet="read-models/observing-read-models/query" />
 
-The query's consumer owns the subscription lifetime. Use [read-model watching](watching-read-models.mdx) instead when it needs the key, removal flag, or event context of an individual change.
+This snippet supplies the Chronicle producer method, not a complete Arc host. Follow [Arc's model-bound observable query guide](/arc/backend/csharp/queries/model-bound/observable-queries/) for query declaration and discovery, but keep `IReadModels.Observe<T>()` as your producer. That guide's standalone MongoDB producer is a different path, not extra setup for Chronicle.
+
+Next, connect a consumer; returning a subject alone opens no subscription. For React, follow [basic query hook usage](/arc/frontend/react/queries/usage/#basic-query-hook) to call the generated proxy's `.use()` hook, then use the [observable return tuple and arguments](/arc/frontend/react/queries/usage/#return-tuple). See [observable query transport](/arc/frontend/react/queries/observable-queries/) for connection settings; the consumer subscribes through Arc and owns the screen's subscription lifetime. For a direct SSE consumer, follow [streaming an observable query with cURL](/arc/backend/csharp/queries/using-observable-queries-with-curl/#stream-updates-over-sse), using your running host's actual query URL and credentials. Request `text/event-stream` and keep the connection open. Arc carries each allowed collection from Chronicle to the consumer.
+
+You should first see the current book list, possibly empty, then a replacement list after relevant processing changes it. This is still an eventually consistent view, not confirmation that a particular command completed. Protect a last-copy borrowing decision in the [command's guarded read](consistency.md#choosing-the-right-model); if its response needs its own write back, [wait for that append's observers](consistency.md#read-after-write--waiting-for-a-materialized-read-model) separately.
 
 ## Lifetime and errors
 

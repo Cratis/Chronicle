@@ -3,7 +3,9 @@ description: Restrict which events a Chronicle reactor receives by placing tag, 
 ---
 # Filter reactors by appended event metadata
 
-A reactor observes all events that match its handler method signatures by default. You can restrict which events a reactor receives by placing filter attributes on the reactor class. Chronicle evaluates these filters before dispatching an event — events that do not match are dropped before they ever reach the reactor.
+Use filters when a reactor should handle only part of the events it subscribes to, such as shipments in a particular stream type. Chronicle evaluates the configured filters before dispatching an event; a matching handler alone is not enough when the filters do not match. Filters select deliveries, not who is authorized to read or write data.
+
+C# uses the class attributes below. TypeScript uses class decorators, described in the client-coverage note. These subscription choices are separate from where a handler's follow-up events are appended.
 
 ## Filter attributes
 
@@ -18,8 +20,12 @@ These attributes correlate directly to the metadata you provide when appending a
 <ChronicleClientTabs snippet="reactors/filtering/metadata-example" />
 
 :::note[Client coverage]
-Kotlin and Java attach the same filters with `@FilterEventsByTag`, `@EventSourceType`, and `@EventStreamType` on the reactor class. Elixir's `use Chronicle.Reactors.Reactor` and TypeScript's `reactor()` register a reactor without a way to attach these filters.
+Kotlin and Java attach the same filters with `@FilterEventsByTag`, `@EventSourceType`, and `@EventStreamType` on the reactor class. Elixir's `use Chronicle.Reactors.Reactor` registers a reactor without a way to attach these filters.
+
+TypeScript supports `@filterEventsByTag`, `@eventSourceType`, and `@eventStreamType` on the reactor class. Its client sends those filters in the reactor subscription. The in-process `ReactorScenario` rejects non-default source or stream filters with `UnsupportedReactorOperation`; use a kernel-backed specification for those delivery filters rather than assuming in-process parity.
 :::
+
+For TypeScript, source and stream decorators also supply metadata for **bare returned events**: a declared source type is used, and a declared stream type overrides the triggering stream type. Each returned `EventForEventSourceId` keeps its own metadata instead. An explicit append does not inherit these decorators; choose its routing through append options. [Returning side effects](side-effects) explains those return/append choices. Tag filters still select incoming events; they do not add tags to follow-up writes.
 
 ## Filter by tag
 

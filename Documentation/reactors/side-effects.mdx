@@ -3,23 +3,29 @@ title: "Returning Side Effects from Reactor Handler Methods"
 description: "Return events from a reactor handler and let Chronicle append them, and why such handlers are marked [OnceOnly]."
 ---
 
-Reactor handler methods can return side-effect events directly instead of taking a dependency on `IEventLog`. The framework automatically appends the returned events to the correct sequence after the handler completes.
+Return a follow-up event when the outcome of handling one event should be recorded in the event log. Chronicle awaits the handler and appends the supported events it returns. You can instead call an append API inside the handler when you need to choose append options or inspect the result yourself. Neither choice makes a payment, email, or other external effect safe to repeat automatically.
+
+The client determines which return shapes and extension mechanisms are supported. The C# examples and reference sections below use C# return types, metadata providers, and side-effect handlers; TypeScript has a separate result hook and event-return path.
 
 :::note[Client coverage]
-C#, Kotlin, Java and Elixir append a reactor handler's return value. Kotlin and Java accept a single event, an `EventForEventSourceId`, or a `List` of either; from `io.cratis:chronicle` 6.5.0 a returned list is appended as one transaction, as in C#, and earlier versions appended its events one at a time. Elixir's `handle/2` returns `:ok`, `{:error, reason}`, or `{:ok, event_or_events}`; the events (a single event, a list appended atomically, or `EventForEventSourceId` entries for other event sources) are appended for you. TypeScript's dispatch doesn't inspect what the handler returns. In TypeScript, appending a follow-up event from a reactor means calling the append API explicitly inside the handler — see [Getting started with reactors](getting-started) and [Event Processing](event-processing) for what each client's handler can and can't do.
+C#, Kotlin, Java, Elixir, and TypeScript support returned events through their client-specific handler shapes. Kotlin and Java accept a single event, an `EventForEventSourceId`, or a `List` of either; from `io.cratis:chronicle` 6.5.0 a returned list is appended as one transaction, as in C#, and earlier versions appended its events one at a time. Elixir's `handle/2` returns `:ok`, `{:error, reason}`, or `{:ok, event_or_events}`; the events (a single event, a list appended atomically, or `EventForEventSourceId` entries for other event sources) are appended for you. See [Getting started with reactors](getting-started) for each client's declaration and registration.
 :::
 
-> **Important**: Side-effect appends are not fire-and-forget. If a returned event fails to append — a constraint violation, a concurrency conflict, or an error — the reactor's partition fails with the failure details and is retried per the observer's retry policy. Failures never pass silently. See [Error handling](#error-handling).
+In TypeScript, return a known event, an `EventForEventSourceId`, or an array mixing those shapes. Chronicle awaits the result and offers it to the configured `reactorResultHandler` first. Returning `true` from the hook means it handled the entire result; returning `false` lets Chronicle append recognized events through one `appendMany` call. Unrecognized values are ignored by the built-in dispatch. Throw from the hook when handling fails. This hook is not the C# `IReactorSideEffectHandler` extension mechanism described below.
+
+For an explicit TypeScript append, use the owning store from `ReactorServices`, await the append, and check its `isSuccess`. Throw on an unsuccessful result so the observation is not acknowledged as successful; prevalidation or transport failures can also reject the call. [Event Processing](event-processing) explains the fixed event, context, services, and delivery arguments. Returned events and explicit appends are not automatically one transaction with the triggering delivery. Make retries and replay safe; the [delivery identity](delivery-identity) can key a receipt your application owns.
+
+> **Important**: Side-effect appends are not fire-and-forget. If a recognized returned event fails to append — a constraint violation, a concurrency conflict, or an error — the reactor's partition fails with the failure details and is retried per the observer's retry policy. See [Error handling](#error-handling) for the different treatment of unsupported return values.
 
 ## Basic Usage
 
-Return a single event directly from a handler method — synchronously or as a `Task<T>`:
+In the C# example, return a single event directly from a handler method — synchronously or as a `Task<T>`:
 
 <ChronicleClientTabs snippet="reactors/side-effects/basic" />
 
-The returned event is appended to the event log using the `EventSourceId` from the incoming `EventContext`. No `IEventLog` injection required.
+The returned event is appended to the event log using the `EventSourceId` from the incoming `EventContext`. The C# handler does not need an injected `IEventLog` just to return that event.
 
-The handlers are marked [`[OnceOnly]`](once-only) because a returned event is a new fact: without it, replaying the reactor appends the same follow-up event again. Analyzer [CHR0022](../code-analysis/CHR0022) reports an event-returning handler that is not marked. `[OnceOnly]` does not cover a retry after the handler failed; see [Delivery identity](delivery-identity).
+The C# handlers are marked [`[OnceOnly]`](once-only) because replay can run the handler and its effects again. Analyzer [CHR0022](../code-analysis/CHR0022) reports an event-returning handler that is not marked. `[OnceOnly]` excludes replay, not retries after failure. C# returned-event keys provide a separate append safeguard; TypeScript must not infer that safeguard from receiving a delivery identity. See [Delivery identity](delivery-identity).
 
 ## Multiple Side Effects
 
@@ -29,7 +35,9 @@ In C#, return a sequence of known events — `IEnumerable<TEvent>`, `TEvent[]`, 
 
 ## Targeting a Specific Event Source Id
 
-Everything above lands the returned event on the *triggering* event's `EventSourceId` — optionally redirected once for the whole reactor via [`ICanProvideEventSourceId`](#icanprovideeventsourceid). That covers most reactors. But automation and translation reactors often need to write to a *different* entity than the one that triggered them — or to several at once.
+A bare returned event normally targets the *triggering* event's source ID. C# can redirect that target for the whole reactor via [`ICanProvideEventSourceId`](#icanprovideeventsourceid). When the follow-up event belongs to a different entity, return an `EventForEventSourceId` with that entity's ID instead.
+
+In TypeScript, a bare return uses the triggering source ID, stream ID, and subject. The reactor's `@eventSourceType` and `@eventStreamType` decorators supply source and stream types for bare returns; without a declared stream type, the triggering stream type is kept. Each returned `EventForEventSourceId` keeps its own target metadata instead. Explicit append calls do not inherit those decorators: choose their routing through append options. [Filtering](filtering) explains the separate effect these decorators have on which events the reactor receives.
 
 Picture a library. A member reserves a book, and that reservation is a fact about the *book*:
 
@@ -45,11 +53,11 @@ A single reservation usually ripples to more than one entity: the member gains a
 
 <ChronicleClientTabs snippet="reactors/side-effects/fan-out" />
 
-Each `EventForEventSourceId` is self-describing: alongside the source id it carries the event stream type and id, source type, subject, occurred time, tags and causation. Set only the ones you need — the rest fall back to sensible defaults:
+In C#, each `EventForEventSourceId` is self-describing: alongside the source id it carries the event stream type and id, source type, subject, occurred time, tags and causation. Set only the ones you need — the rest fall back to sensible defaults:
 
 <ChronicleClientTabs snippet="reactors/side-effects/explicit-metadata" />
 
-> **Two modes**: a **bare event** uses the reactor's resolved metadata — its `[EventStreamType]`/`[EventSourceType]` attributes and `ICanProvide*` interfaces. An **`EventForEventSourceId`** is the *explicit* mode: it is self-describing and uses only the values on it, so the reactor's metadata does **not** apply (an unset field takes the append default such as `EventStreamType.All`, and an omitted `Subject` is resolved from the event). Reach for a bare event when you want "use my reactor's config", and an `EventForEventSourceId` when you want "I'll specify exactly where and how".
+> **Two modes in C#**: a **bare event** uses the reactor's resolved metadata — its `[EventStreamType]`/`[EventSourceType]` attributes and `ICanProvide*` interfaces. An **`EventForEventSourceId`** is the *explicit* mode: it is self-describing and uses only the values on it, so the reactor's metadata does **not** apply (an unset field takes the append default such as `EventStreamType.All`, and an omitted `Subject` is resolved from the event). Reach for a bare event when you want "use my reactor's config", and an `EventForEventSourceId` when you want "I'll specify exactly where and how".
 
 In C#, you can also **mix** the two in a single `IEnumerable<object>`, `object[]`, `List<object>`, or `IReadOnlyList<object>` return — each bare event uses the reactor's resolved metadata and the triggering event source id, while each `EventForEventSourceId` keeps its own. They are appended together as one transaction:
 
@@ -57,7 +65,7 @@ In C#, you can also **mix** the two in a single `IEnumerable<object>`, `object[]
 
 ## Add concurrency scopes to returned events
 
-Returning events is convenient, but sometimes the decision is only valid against the exact event-log state the reactor read. Return `EventsWithConcurrencyScopes` to submit an ordered list of `EventForEventSourceId` values and its concurrency scopes through one `AppendMany` call:
+In C#, return `EventsWithConcurrencyScopes` when the decision is only valid against the exact event-log state the reactor read. It submits an ordered list of `EventForEventSourceId` values and its concurrency scopes through one `AppendMany` call. This is a C# return type, not a TypeScript return shape:
 
 <ChronicleClientTabs snippet="reactors/side-effects/with-concurrency-scopes" />
 
@@ -81,7 +89,7 @@ What this does not cover is anything outside the event log. A payment call, an e
 
 ## Reactor-Level Metadata Resolution
 
-Set metadata once on the reactor type so every returned event inherits it automatically.
+In C#, the following interfaces and attributes set metadata once on the reactor type for bare returned events. Explicit `EventForEventSourceId` entries keep their own metadata. These providers are not TypeScript's decorator or explicit-append API.
 
 ### `ICanProvideEventSourceId`
 
@@ -119,7 +127,7 @@ Apply these attributes to the reactor class for a compile-time stream or source 
 
 ## Custom Return Type Handlers
 
-Extend the pipeline by registering a custom `IReactorSideEffectHandler`:
+In C#, extend the pipeline by registering a custom `IReactorSideEffectHandler`. TypeScript uses the configured `reactorResultHandler` described above instead of this interface:
 
 <ChronicleClientTabs snippet="reactors/side-effects/custom-handler" />
 
@@ -151,4 +159,8 @@ In C#, the `IEnumerable<T>` entries below also accept `T[]`, `List<T>`, and othe
 
 ## Error handling
 
-If a side-effect append fails, Chronicle marks the reactor partition as failed. A non-null return value that no side-effect handler claims also fails the partition instead of being discarded and acknowledged. Register a handler for the returned type (or return a supported event), then retry or rewind the observer to continue processing.
+If a recognized side-effect append fails, Chronicle marks the reactor partition as failed. The append failure does not roll back external work the handler already performed. Keep that work safe to repeat before recovering the partition.
+
+In C#, a non-null return value that no side-effect handler claims also fails the partition instead of being discarded and acknowledged. Register a handler for the returned type (or return a supported event), then retry or rewind the observer to continue processing.
+
+TypeScript's built-in dispatch instead ignores values that are not recognized event returns. Use `reactorResultHandler` for an application-owned return type, return `true` only after handling it fully, and throw on failure. A recognized-return append failure or a thrown hook error fails processing; merely returning an unrecognized object does not.

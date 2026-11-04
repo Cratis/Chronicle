@@ -5,11 +5,13 @@ description: Implement ICanBeNotifiedWhenReplay so a Chronicle reactor or reduce
 
 A [replay](replay) re-delivers history to an observer, and some reactors and reducers need to know when that starts and when it is over. A reactor that feeds a cache or an external index might pause its writes for the duration; a reducer that keeps in-memory state might reset it.
 
-Implement `ICanBeNotifiedWhenReplay` on the reactor or reducer class and Chronicle calls `BeginReplay()` when a replay of the observer begins and `EndReplay()` when it ends. The interface lives in the `Cratis.Chronicle.Observation` namespace.
+In C#, implement `ICanBeNotifiedWhenReplay` on the reactor or reducer class. Chronicle calls `BeginReplay()` when a replay of the observer begins and `EndReplay()` when it ends. The interface lives in the `Cratis.Chronicle.Observation` namespace.
+
+TypeScript also supports replay lifecycle notifications through its `ICanBeNotifiedWhenReplay` contract, with lower-camel `beginReplay()` and `endReplay()` methods. Chronicle awaits the callbacks. These are lifecycle methods on the activated instance, not extra event-handler arguments or arbitrary dependency injection.
 
 <ChronicleClientTabs snippet="reactors/replay-notifications/reactor" variants="csharp,elixir" />
 
-Reducers use the same interface:
+The C# reducer example uses the same interface:
 
 <ChronicleClientTabs snippet="reactors/replay-notifications/reducer" variants="csharp,elixir" />
 
@@ -19,17 +21,21 @@ The notifications are calls of their own. They are not events and they do not go
 
 ## Each notification gets a new instance
 
-Chronicle creates the reactor or reducer for each notification, from a new dependency injection scope, and disposes it afterwards. `BeginReplay()` and `EndReplay()` therefore run on different instances, and neither is the instance that handles the events. Anything they need to share must live outside the class, in a service registered as a singleton, such as the one injected in the reactor example above. A scoped or transient service is created anew for each notification, so it could not carry state from `BeginReplay()` to `EndReplay()`.
+In C#'s scoped activation, each notification gets a new dependency injection scope, which is disposed afterwards. Scoped or transient services are resolved afresh for the notification, so they cannot carry state from `BeginReplay()` to `EndReplay()`. Keep shared state outside that notification scope, for example in the singleton service used by the reactor example. A separate scope is not a guarantee of a different object when a registration or custom activation strategy reuses an instance.
+
+TypeScript's default activation instead constructs one instance per observation stream and reuses it for deliveries and replay notifications. With `artifactActivator`, each notification gets a separate activation lease from event-batch processing. Separate leases still do not guarantee separate instances: an application activator can return a reused instance. Choose where shared replay state lives according to that lifetime, rather than relying on instance uniqueness. A failed notification fails processing; the notification and external work do not become one transaction.
 
 ## Replaying a single partition
 
-Replaying one partition, for example with the [`observers replay-partition`](/cli/chronicle/observers/#replay-partition) command of the Cratis CLI, has its own interface, `ICanBeNotifiedWhenPartitionReplayed`. It receives the partition being replayed:
+Replaying one partition, for example with the [`observers replay-partition`](/cli/chronicle/observers/#replay-partition) command of the Cratis CLI, has its own interface, `ICanBeNotifiedWhenPartitionReplayed`. The C# callbacks receive the partition being replayed:
 
 <ChronicleClientTabs snippet="reactors/replay-notifications/partition" variants="csharp,elixir" />
 
-The two interfaces are independent. Implement either or both, depending on which replays you need to know about.
+TypeScript's `ICanBeNotifiedWhenPartitionReplayed` provides `beginReplayPartition(partition)` and `endReplayPartition(partition)` for the same lifecycle choice. Full-observer and partition replay contracts are independent: implement either or both, depending on which replays you need to know about. Keep this separate from choosing a per-event replay handler; [Event Processing](event-processing) describes the event handler's fixed TypeScript arguments.
 
 ## What is not notified
 
-- A reactor that has no class to implement the interface on: one defined fluently with the reactor builder, or registered at runtime with a handler delegate. Those are never notified.
-- Other clients. These interfaces are part of the .NET and Elixir clients.
+- In C#, a reactor defined fluently with the reactor builder or registered at runtime with a handler delegate has no class implementing the notification interface. Those registrations are not notified through it.
+- TypeScript only invokes lifecycle callbacks when the instance supplies both begin/end methods for that replay scope. Leaving them out does not stop ordinary replayed events from reaching the event handlers.
+
+Use lifecycle notifications to coordinate work around a replay, and replay-specific event handlers to change how each event is processed. Neither replaces idempotency for work that can run again after failure.
