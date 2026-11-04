@@ -1,10 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Choreography.Storage.Jobs;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Observation.States;
-using Cratis.Orleans.Storage.Jobs;
 
 namespace Cratis.Chronicle.Observation.for_Observer.when_retrying_quarantine_clearance;
 

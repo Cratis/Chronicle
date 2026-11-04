@@ -7,4 +7,5 @@ namespace Cratis.Chronicle;
 /// Carries a telemetry callback for host-specific client options registrations.
 /// </summary>
 /// <param name="Configure">The telemetry options callback.</param>
+[IgnoreConvention]
 public sealed record ChronicleTelemetryConfiguration(Action<ChronicleTelemetryOptions> Configure);

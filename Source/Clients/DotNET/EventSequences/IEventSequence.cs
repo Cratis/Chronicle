@@ -195,6 +195,18 @@ public interface IEventSequence
         GetPage(EventSequencePageRequest.Backward(null, count, filter), cancellationToken);
 
     /// <summary>
+    /// Gets events with confirmed erased paths in current released content, using dotted members and bracketed indices.
+    /// Empty metadata is not proof of no erasure. Original, revision and generational content are not covered.
+    /// </summary>
+    /// <param name="sequenceNumber">The inclusive first sequence number.</param>
+    /// <param name="eventSourceId">Optional event source filter.</param>
+    /// <param name="filterEventTypes">Optional event type filters.</param>
+    /// <returns>The events with erased-path metadata, not an erasure audit.</returns>
+    /// <exception cref="ErasedPropertiesReadsNotSupported">The implementation does not support erased-path reads.</exception>
+    Task<IImmutableList<AppendedEvent>> GetFromSequenceNumberWithErasedProperties(EventSequenceNumber sequenceNumber, EventSourceId? eventSourceId = default, IEnumerable<EventType>? filterEventTypes = default)
+        => throw new ErasedPropertiesReadsNotSupported();
+
+    /// <summary>
     /// Get the next sequence number.
     /// </summary>
     /// <returns>Next sequence number.</returns>
@@ -215,6 +227,27 @@ public interface IEventSequence
         EventStreamType? eventStreamType = default,
         EventStreamId? eventStreamId = default,
         IEnumerable<EventType>? filterEventTypes = default);
+
+    /// <summary>
+    /// Get the tail sequence number with cancellation support.
+    /// </summary>
+    /// <param name="cancellationToken">The token that stops waiting for the connection and is forwarded to the RPC. RPC cancellation requires transport acknowledgement.</param>
+    /// <param name="eventSourceId">Optional event source identifier to filter by.</param>
+    /// <param name="eventSourceType">Optional event source type to filter by.</param>
+    /// <param name="eventStreamType">Optional event stream type to filter by.</param>
+    /// <param name="eventStreamId">Optional event stream identifier to filter by.</param>
+    /// <param name="filterEventTypes">Optional event types to filter by.</param>
+    /// <returns>The tail <see cref="EventSequenceNumber"/>.</returns>
+    /// <exception cref="NotSupportedException">The implementation does not support cancellable tail reads. Legacy implementations do not fall back to the non-cancellable method.</exception>
+    /// <exception cref="OperationCanceledException">The token is cancelled before dispatch, while waiting for the connection, or acknowledged as cancelled by the RPC.</exception>
+    Task<EventSequenceNumber> GetTailSequenceNumberWithCancellation(
+        CancellationToken cancellationToken,
+        EventSourceId? eventSourceId = default,
+        EventSourceType? eventSourceType = default,
+        EventStreamType? eventStreamType = default,
+        EventStreamId? eventStreamId = default,
+        IEnumerable<EventType>? filterEventTypes = default) =>
+        throw new NotSupportedException("This event sequence does not support cancellable tail reads.");
 
     /// <summary>
     /// Get the sequence number of the last (tail) event in the sequence for a specific observer.
@@ -646,6 +679,21 @@ public interface IEventSequence
     /// <param name="clrEventTypes">Optionally any specific event types.</param>
     /// <returns>Awaitable <see cref="Task"/>.</returns>
     Task Redact(EventSourceId eventSourceId, RedactionReason reason, params Type[] clrEventTypes);
+
+    /// <summary>
+    /// Copy events from one <see cref="EventSourceId"/> to another within this event sequence, as a durable background job.
+    /// </summary>
+    /// <param name="sourceId">The <see cref="EventSourceId"/> to copy events from.</param>
+    /// <param name="targetId">The <see cref="EventSourceId"/> to append the copies to.</param>
+    /// <param name="clrEventTypes">Optionally the specific event types to copy. When none are given, events of every type are copied.</param>
+    /// <returns>The identifier of the job performing the copy, which can be followed through the jobs service.</returns>
+    /// <remarks>
+    /// The copies are new events appended after the existing ones, so they get new sequence numbers and are observed like any other append.
+    /// The source events are left untouched. The job is durable and resumes after a restart without appending any copy twice.
+    /// </remarks>
+    /// <exception cref="EventCopyNotSupported">The implementation does not support copying events.</exception>
+    Task<Guid> Copy(EventSourceId sourceId, EventSourceId targetId, params Type[] clrEventTypes)
+        => throw new EventCopyNotSupported();
 
     /// <summary>
     /// Complete a stream so that no further events can be appended to it.

@@ -4,6 +4,8 @@
   href: implicit-subscriptions.mdx
 - name: Explicit Event Store Subscriptions
   href: explicit-subscriptions.mdx
+- name: Subscription Recovery
+  href: recovery.mdx
 - name: Outbox and Inbox
   href: outbox-inbox.mdx
 - name: Compliance and PII

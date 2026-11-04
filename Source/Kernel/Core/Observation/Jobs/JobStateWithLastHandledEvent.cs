@@ -2,11 +2,11 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json;
+using Cratis.Choreography.Jobs;
+using Cratis.Choreography.Storage.Jobs;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
-using Cratis.Orleans.Jobs;
-using Cratis.Orleans.Storage.Jobs;
 
 namespace Cratis.Chronicle.Observation.Jobs;
 
@@ -81,15 +81,16 @@ public class JobStateWithLastHandledEvent : JobState
     /// <param name="jsonSerializerOptions">The serializer options used to deserialize the result.</param>
     public void HandleResult(JobStepResult result, JsonSerializerOptions jsonSerializerOptions)
     {
-        var isFullResult = result.TryGetFullResult<HandleEventsForPartitionResult>(out var handleEventsResult, out _, jsonSerializerOptions);
+        var isFullResult = !result.TryGetError(out _);
+        var handleEventsResult = HandleEventsStepResults.ReadProgress(result, jsonSerializerOptions);
 
         if (isFullResult && handleEventsResult is not null)
         {
             RecordScanned(handleEventsResult.LastScannedEventSequenceNumber);
         }
 
-        // A step can report success without carrying a result at all, so the annotation on TryGetFullResult is
-        // not enough on its own — there is nothing to record when the step did not come back with one.
+        // A step can report success without a readable result — there is nothing to record when the step
+        // did not come back with one.
         if (handleEventsResult is null)
         {
             return;

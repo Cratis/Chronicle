@@ -36,7 +36,7 @@ All rules follow the identifier format `CHR####`. Numbers are assigned sequentia
 | [CHR0023](CHR0023) | Ambiguous parent key for [ChildrenFrom] collection | Warning | Parent-key inference is ambiguous when the child event has more than one property of the parent identifier type; specify parentKey |
 | [CHR0024](CHR0024) | Read model property has no mapping source | Warning | A model-bound read model property has no mapping attribute and no subscribed event carries a same-named property, so AutoMap can never populate it |
 | [CHR0025](CHR0025) | Explicitly sourced read model property may be overwritten by AutoMap | Info | A property set with [SetFrom]/[SetValue]/… collides by name with another referenced event that AutoMap writes on top; add [NoAutoMap] or accept the update |
-| [CHR0026](CHR0026) | [Key] or [Subject] on an `EventSourceId<T>` is redundant | Warning | An `EventSourceId<T>`-derived property already is the key and compliance subject, so [Key]/[Subject] on it is redundant — remove the attribute |
+| [CHR0026](CHR0026) | [Key] on an `EventSourceId<T>` is redundant | Warning | An `EventSourceId<T>`-derived property already carries the key role; remove [Key] while preserving any explicit [Subject] |
 | [CHR0027](CHR0027) | Ambiguous event stream id | Error | A type both implements ICanProvideEventStreamId and declares a non-null [EventStreamId]; this throws at startup |
 | [CHR0028](CHR0028) | Redundant .AutoMap() call | Warning | .AutoMap() has no effect because AutoMap is enabled by default on projection builders; remove the call |
 | [CHR0029](CHR0029) | Redundant .Set().To() with matching property names | Warning | A `.Set(x => x.P).To(e => e.P)` mapping with identical names duplicates what AutoMap already does; remove it |
@@ -86,7 +86,7 @@ Validate the actual store configuration at runtime. If registration is correct b
 ## Quick Fixes
 
 - CHR0001, CHR0002, CHR0003, CHR0005, and CHR0007 provide a code fix that adds the missing `[EventType]` attribute to the referenced type.
-- CHR0026 provides a code fix that removes the redundant `[Key]`/`[Subject]` attribute.
+- CHR0026 provides a code fix that removes the redundant `[Key]` attribute and preserves `[Subject]`.
 - CHR0028 provides a code fix that removes the redundant `.AutoMap()` call.
 - CHR0029 provides a code fix that removes the redundant `.Set(...).To(...)` mapping.
 

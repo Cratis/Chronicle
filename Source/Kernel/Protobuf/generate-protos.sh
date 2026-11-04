@@ -4,10 +4,9 @@
 
 # Regenerates the .proto files and chronicle.desc in this directory from the Contracts assembly.
 #
-# Building Contracts already does this - the GenerateProtoFiles target in Contracts.csproj runs after every build -
-# so this script exists only to do it on demand without thinking about which project to build. Either way the
-# generator deletes what was here before writing: these files are generated, and a hand-applied edit to one of them
-# does not survive the next build. See .agents/PROJECT.md.
+# Building Contracts does this when its inputs change. This script forces generation on demand even with cached
+# outputs: stale files are removed and hand-applied edits overwritten, while unchanged files keep their timestamps.
+# These files are generated, and a hand-applied edit does not survive the next build. See .agents/PROJECT.md.
 #
 # Usage: ./generate-protos.sh
 
@@ -16,6 +15,6 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 
-dotnet build "$REPO_ROOT/Source/Kernel/Contracts/Contracts.csproj" -c Release
+dotnet build "$REPO_ROOT/Source/Kernel/Contracts/Contracts.csproj" -c Release -p:ForceCodeGeneration=true
 
 echo "Proto files and descriptor set regenerated in $SCRIPT_DIR"

@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
+using Cratis.Choreography.Jobs;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Events.Constraints;
 using Cratis.Chronicle.EventSequences;
@@ -11,7 +12,6 @@ using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Events.Constraints;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Monads;
-using Cratis.Orleans.Jobs;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Events.Constraints;
@@ -33,7 +33,7 @@ namespace Cratis.Chronicle.Events.Constraints;
 /// constraint and event position. Other constraints still rebuild; no reopening tombstones are retained.
 /// </remarks>
 public partial class ReindexConstraintsStep(
-    [PersistentState(nameof(ReindexConstraintsStepState), Cratis.Orleans.WellKnownGrainStorageProviders.JobSteps)]
+    [PersistentState(nameof(ReindexConstraintsStepState), Cratis.Choreography.WellKnownGrainStorageProviders.JobSteps)]
     IPersistentState<ReindexConstraintsStepState> state,
     IJobStepThrottle throttle,
     IStorage storage,
@@ -121,8 +121,9 @@ public partial class ReindexConstraintsStep(
     {
         try
         {
-            var runId = new ConstraintIndexRebuildRunId(this.GetPrimaryKey(out var key));
+            var stepId = this.GetPrimaryKey(out var key);
             var jobStepKey = (JobStepKey)key!;
+            var runId = new ConstraintIndexRebuildRunId(stepId, JobId: jobStepKey.JobId);
             var definitions = await storage.GetEventStore(jobStepKey.Scope).Constraints.GetDefinitions();
             var names = definitions.Where(definition => definition.AppliesTo(currentState.EventSequenceId) && currentState.Changes.Any(change => change.Name == definition.Name && (definition is ClosesStreamConstraintDefinition || (definition is UniqueConstraintDefinition && change.RequiresReindex)))).Select(definition => definition.Name).Distinct().ToArray();
             if (names.Length > 0)
@@ -143,8 +144,9 @@ public partial class ReindexConstraintsStep(
     {
         try
         {
-            var runId = new ConstraintIndexRebuildRunId(this.GetPrimaryKey(out var key), Guid.NewGuid(), DateTimeOffset.UtcNow);
+            var stepId = this.GetPrimaryKey(out var key);
             var jobStepKey = (JobStepKey)key!;
+            var runId = new ConstraintIndexRebuildRunId(stepId, Guid.NewGuid(), DateTimeOffset.UtcNow, jobStepKey.JobId);
 
             var eventStoreStorage = storage.GetEventStore(jobStepKey.Scope);
             var namespaceStorage = eventStoreStorage.GetNamespace(jobStepKey.Namespace);

@@ -72,6 +72,16 @@ public record EventContext(
     } = EventSourceName.NotSet;
 
     /// <summary>
+    /// Gets confirmed erased paths in current released content, using dotted members and bracketed indices.
+    /// Empty is not proof of no erasure. Original, revision and generational content are not covered.
+    /// </summary>
+    public IReadOnlyList<string> ErasedProperties
+    {
+        get;
+        init => field = value is null || value.Count == 0 ? Array.Empty<string>() : Array.AsReadOnly(value.ToArray());
+    } = [];
+
+    /// <summary>
     /// Gets the generation the event was appended in, or null when unknown.
     /// </summary>
     public EventTypeGeneration? AppendedGeneration { get; init; }

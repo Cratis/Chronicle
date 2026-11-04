@@ -13,12 +13,14 @@ namespace Cratis.Chronicle.Projections;
 /// watching clients.
 /// </summary>
 /// <remarks>
-/// The grain is keyed by the projection or reducer identifier and has a single activation cluster-wide, so it is the
+/// The grain is keyed by the projection or reducer identifier, event store and namespace (see
+/// <see cref="ProjectionChangesetNotifierKey"/>) and has a single activation cluster-wide per key, so it is the
 /// topology-correct rendezvous between the shared projection or reducer observer (which may run on any silo) and the
 /// per-connection watch subscribers (each pinned to the silo terminating its client connection). Fan-out
 /// is to <see cref="IReadModelChangesetSubscriber"/> grain references — reliably routed by Orleans — which
 /// replaces the previous <c language="csharp">CreateObjectReference</c> grain-observer callback whose one-way dispatch was
-/// silently dropped on slower backends.
+/// silently dropped on slower backends. Registrations are in memory; each live watch re-registers periodically,
+/// which restores them after an activation is lost.
 /// </remarks>
 [Version(1)]
 public interface IProjectionChangesetNotifier : IGrainWithStringKey

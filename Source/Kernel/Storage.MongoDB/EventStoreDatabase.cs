@@ -44,7 +44,7 @@ public class EventStoreDatabase : IEventStoreDatabase
         _mongoDBOptions = mongoDBOptions;
         _connections = connections;
 
-        var databaseName = DatabaseNames.ForEventStore(eventStore, _storageOptions.Value.DatabaseNamePrefix);
+        var databaseName = DatabaseNames.ForEventStore(eventStore, _storageOptions.Value.DatabaseNamePrefix, _storageOptions.Value.SystemDatabaseName);
         if (connections is not null)
         {
             _database = connections.GetDatabase(StorageConnectionKind.EventStore, databaseName, eventStore.Value);

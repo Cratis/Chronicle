@@ -3,12 +3,12 @@
 
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Cratis.Choreography.Jobs;
+using Cratis.Choreography.Storage.Jobs;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Monads;
-using Cratis.Orleans.Jobs;
-using Cratis.Orleans.Storage.Jobs;
 using Microsoft.Extensions.DependencyInjection;
 using Orleans.Serialization;
 

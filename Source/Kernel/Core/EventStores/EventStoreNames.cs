@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Reactive.Concurrency;
 using System.Reactive.Subjects;
 using Cratis.Arc.Queries.ModelBound;
 using Cratis.Chronicle.Grpc;
@@ -26,15 +27,16 @@ public record EventStoreNames(string Id, string Name)
     /// Gets all event store names.
     /// </summary>
     /// <param name="storage">The <see cref="IStorage"/> to read event stores from.</param>
+    /// <param name="initialization">The event store initialization service.</param>
     /// <returns>A collection of event store names.</returns>
     /// <remarks>
     /// A caller asking for the current list needs a snapshot, not the first value of a subscription.
     /// Observing implicitly registers the event store, so answering a snapshot through the observable
     /// changes what it is reporting on.
     /// </remarks>
-    public static async Task<IEnumerable<EventStoreNames>> AllEventStores(IStorage storage)
+    public static async Task<IEnumerable<EventStoreNames>> AllEventStores(IStorage storage, IEventStoreInitialization initialization)
     {
-        var eventStores = await storage.GetEventStores();
+        var eventStores = await initialization.EnsureAll(await storage.GetEventStores());
         return [.. eventStores.Select(eventStore => new EventStoreNames(eventStore.Value, eventStore.Value))];
     }
 
@@ -42,9 +44,8 @@ public record EventStoreNames(string Id, string Name)
     /// Observes all event store names.
     /// </summary>
     /// <param name="storage">The <see cref="IStorage"/> to observe event stores from.</param>
+    /// <param name="initialization">The event store initialization service.</param>
     /// <returns>An observable subject emitting collections of event store names.</returns>
-    public static ISubject<IEnumerable<EventStoreNames>> ObserveEventStores(IStorage storage) =>
-        storage.ObserveEventStores()
-            .TransformSubject<IEnumerable<Concepts.EventStoreName>, IEnumerable<EventStoreNames>>(
-                stores => [.. stores.Select(eventStore => new EventStoreNames(eventStore.Value, eventStore.Value))]);
+    public static ISubject<IEnumerable<EventStoreNames>> ObserveEventStores(IStorage storage, IEventStoreInitialization initialization) =>
+        LiveEventStoreNames.Observe(storage, initialization, Scheduler.Default);
 }

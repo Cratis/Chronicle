@@ -36,6 +36,9 @@ internal static partial class ReducersLogMessages
     [LoggerMessage(LogLevel.Warning, "Reducer {ReducerId} disconnected ungracefully from connection {ConnectionId}")]
     internal static partial void DisconnectedUngracefully(this ILogger<Reducers> logger, ObserverId reducerId, ConnectionId connectionId);
 
+    [LoggerMessage(LogLevel.Information, "Reducer {ReducerId} stream from connection {ConnectionId} ended after a later stream replaced it - keeping the subscription")]
+    internal static partial void StreamReplacedKeepingSubscription(this ILogger<Reducers> logger, ObserverId reducerId, ConnectionId connectionId);
+
     [LoggerMessage(LogLevel.Error, "Error occurred for reducer {ReducerId} from connection {ConnectionId} - disengaging")]
     internal static partial void Disengage(this ILogger<Reducers> logger, ObserverId reducerId, ConnectionId connectionId, Exception exception);
 }

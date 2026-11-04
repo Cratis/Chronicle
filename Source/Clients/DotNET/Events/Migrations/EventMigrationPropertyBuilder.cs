@@ -22,8 +22,9 @@ public class EventMigrationPropertyBuilder(INamingPolicy? namingPolicy) : IEvent
     const string DefaultValueExpression = "$defaultValue";
     const string MapValuesExpression = "$mapValues";
 
-    static readonly JsonSerializerOptions _jsonSerializerOptions = new()
+    readonly JsonSerializerOptions _jsonSerializerOptions = new()
     {
+        PropertyNamingPolicy = namingPolicy?.JsonPropertyNamingPolicy,
         Converters =
         {
             new EnumerableConceptAsJsonConverterFactory(),
@@ -86,7 +87,7 @@ public class EventMigrationPropertyBuilder(INamingPolicy? namingPolicy) : IEvent
     {
         _properties[(PropertyExpression)targetProperty.Value] = new JsonObject
         {
-            [DefaultValueExpression] = JsonSerializer.SerializeToNode(value, _jsonSerializerOptions)
+            [DefaultValueExpression] = JsonSerializer.SerializeToNode(value, value.GetType(), _jsonSerializerOptions)
         };
     }
 
@@ -107,7 +108,7 @@ public class EventMigrationPropertyBuilder(INamingPolicy? namingPolicy) : IEvent
     PropertyName IResolveMigrationPropertyNames.ResolvePropertyName(LambdaExpression expression) =>
         MigrationPropertyNames.Resolve(expression, namingPolicy?.JsonPropertyNamingPolicy);
 
-    static JsonNode ToMappingNode(ValueMapping mapping) => new JsonObject
+    JsonNode ToMappingNode(ValueMapping mapping) => new JsonObject
     {
         ["from"] = ToJsonNode(mapping.From),
         ["to"] = ToJsonNode(mapping.To)
@@ -122,7 +123,7 @@ public class EventMigrationPropertyBuilder(INamingPolicy? namingPolicy) : IEvent
     /// An enum is rendered as its underlying numeric value, which is what a payload carries - rendering it by name
     /// would produce a map that never matches anything.
     /// </remarks>
-    static JsonNode? ToJsonNode(object? value) => value switch
+    JsonNode? ToJsonNode(object? value) => value switch
     {
         null => null,
         Enum enumValue => JsonSerializer.SerializeToNode(

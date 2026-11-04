@@ -53,6 +53,30 @@ public partial class ExplicitArtifacts
     public ExplicitArtifacts RegisterReactor(Type reactorType, ReactorId? id = null) => Add(reactorType, ExplicitArtifactKind.Reactor, id?.Value);
 
     /// <summary>
+    /// Registers an instance-method reactor with source event store options.
+    /// </summary>
+    /// <typeparam name="TReactor">The reactor type.</typeparam>
+    /// <param name="options">The reactor registration options.</param>
+    /// <param name="id">Optional supplied identifier.</param>
+    /// <returns>The same options object for continuation.</returns>
+    /// <exception cref="ArgumentNullException">The options are null.</exception>
+    public ExplicitArtifacts RegisterReactor<TReactor>(ReactorRegistrationOptions options, ReactorId? id = null) => RegisterReactor(typeof(TReactor), options, id);
+
+    /// <summary>
+    /// Registers an instance-method reactor by CLR type with source event store options.
+    /// </summary>
+    /// <param name="reactorType">The reactor type.</param>
+    /// <param name="options">The reactor registration options.</param>
+    /// <param name="id">Optional supplied identifier.</param>
+    /// <returns>The same options object for continuation.</returns>
+    /// <exception cref="ArgumentNullException">The options or reactor type are null.</exception>
+    public ExplicitArtifacts RegisterReactor(Type reactorType, ReactorRegistrationOptions options, ReactorId? id = null)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+        return Add(reactorType, ExplicitArtifactKind.Reactor, id?.Value, options.EventStore?.Value);
+    }
+
+    /// <summary>
     /// Registers a reducer whose single read model is inferred from instance methods.
     /// </summary>
     /// <typeparam name="TReducer">The reducer type.</typeparam>
@@ -124,13 +148,17 @@ public partial class ExplicitArtifacts
         }
     }
 
-    ExplicitArtifacts Add(Type type, ExplicitArtifactKind kind, string? identity = null)
+    ExplicitArtifacts Add(Type type, ExplicitArtifactKind kind, string? identity = null, string? sourceEventStore = null)
     {
         ArgumentNullException.ThrowIfNull(type);
         lock (_lock)
         {
             var ordinal = ++_ordinal;
-            _types.Add(new(type, kind, identity is null ? null : new(identity, $"explicit registration #{ordinal}")));
+            _types.Add(new(
+                type,
+                kind,
+                identity is null ? null : new(identity, $"explicit registration #{ordinal}"),
+                sourceEventStore is null ? null : new(sourceEventStore, $"explicit registration #{ordinal}")));
         }
 
         return this;

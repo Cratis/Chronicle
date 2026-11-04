@@ -3,8 +3,8 @@
 
 using System.Collections.Immutable;
 using System.Text.Json;
+using Cratis.Choreography.Jobs;
 using Cratis.Chronicle.Storage;
-using Cratis.Orleans.Jobs;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Observation.Jobs.for_CatchUpObserver;
@@ -37,6 +37,14 @@ public class TestableCatchUpObserver(
     /// </summary>
     /// <returns>Awaitable task.</returns>
     public Task CompleteForTesting() => OnAllStepsCompleted();
+
+    /// <summary>
+    /// Records a step result for testing catch-up progress.
+    /// </summary>
+    /// <param name="stepId">The step that completed.</param>
+    /// <param name="result">Its result.</param>
+    /// <returns>Awaitable task.</returns>
+    public Task RecordStepForTesting(JobStepId stepId, JobStepResult result) => OnStepCompletedOrStopped(stepId, result);
 
     /// <summary>
     /// Invokes the check for whether the job can be resumed.
