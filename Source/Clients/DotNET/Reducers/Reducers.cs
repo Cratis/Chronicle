@@ -45,6 +45,7 @@ public partial class Reducers : IReducers
     IReadOnlyDictionary<Type, IReducerHandler> _handlersByModelType = FrozenDictionary<Type, IReducerHandler>.Empty;
 
     bool _registered;
+    bool _released;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Reducers"/> class.
@@ -109,16 +110,6 @@ public partial class Reducers : IReducers
         ILogger<Reducers> logger,
         ClientSpanNames spanNames)
     {
-        eventStore.Connection.Lifecycle.OnDisconnected += () =>
-        {
-            lock (ReadModelBuilderOwnership.SyncFor(eventStore, ReadModelOwnershipSync))
-            {
-                _registered = false;
-                RecreateHandlersForReconnect();
-            }
-
-            return Task.CompletedTask;
-        };
         _eventStore = eventStore;
         _servicesAccessor = (eventStore.Connection as IChronicleServicesAccessor)!;
         _clientArtifacts = clientArtifacts;
@@ -142,6 +133,7 @@ public partial class Reducers : IReducers
         {
             SpanNames = spanNames
         };
+        _eventStore.Connection.Lifecycle.OnDisconnected += ConnectionDisconnected;
     }
 
     /// <summary>
@@ -160,6 +152,16 @@ public partial class Reducers : IReducers
     /// </summary>
     internal int MaxConcurrentPartitions { get; init; } = PartitionedDeliveryScheduler.DefaultMaxConcurrentPartitions;
 
+    /// <summary>
+    /// Gets the delay before a reducer re-registers after its observation stream ended.
+    /// </summary>
+    internal TimeSpan ReconnectDelay { get; init; } = TimeSpan.FromSeconds(2);
+
+    /// <summary>
+    /// Gets how the re-registration work is started. Specs replace this to run the work deterministically.
+    /// </summary>
+    internal Func<Func<Task>, Task> ScheduleReconnectWork { get; init; } = work => Task.Run(work);
+
     /// <inheritdoc/>
     public Task Discover()
     {
@@ -174,7 +176,7 @@ public partial class Reducers : IReducers
     {
         lock (ReadModelBuilderOwnership.SyncFor(_eventStore, ReadModelOwnershipSync))
         {
-            if (_registered)
+            if (_registered || _released)
             {
                 return;
             }
@@ -375,6 +377,20 @@ public partial class Reducers : IReducers
     }
 
     /// <summary>
+    /// Releases the reducers of an event store whose creation failed and that no caller holds: stops reacting to the
+    /// connection lifecycle, closes the observe streams and makes a registration that is still in flight a no-op.
+    /// </summary>
+    internal void Release()
+    {
+        lock (ReadModelBuilderOwnership.SyncFor(_eventStore, ReadModelOwnershipSync))
+        {
+            _released = true;
+            _eventStore.Connection.Lifecycle.OnDisconnected -= ConnectionDisconnected;
+            DisconnectHandlers();
+        }
+    }
+
+    /// <summary>
     /// Get snapshots for a reduced read model by its key.
     /// </summary>
     /// <typeparam name="TReadModel">Type of the read model.</typeparam>
@@ -456,6 +472,22 @@ public partial class Reducers : IReducers
         return handler;
     }
 
+    Task ConnectionDisconnected()
+    {
+        lock (ReadModelBuilderOwnership.SyncFor(_eventStore, ReadModelOwnershipSync))
+        {
+            if (_released)
+            {
+                return Task.CompletedTask;
+            }
+
+            _registered = false;
+            RecreateHandlersForReconnect();
+        }
+
+        return Task.CompletedTask;
+    }
+
     void DisconnectHandlers()
     {
         foreach (var handler in _handlersByType.Values.ToList())
@@ -528,6 +560,7 @@ public partial class Reducers : IReducers
             ConnectionId = _eventStore.Connection.Lifecycle.ConnectionId,
             EventStore = _eventStore.Name,
             Namespace = _eventStore.Namespace,
+            PageDelivery = new() { Enabled = true },
             Reducer = new ReducerDefinition
             {
                 GenerationDelivery = (Contracts.Observation.EventGenerationDelivery)GenerationDelivery,
@@ -556,6 +589,34 @@ public partial class Reducers : IReducers
 #pragma warning restore CA2000 // Dispose objects before losing scope
         var operationsToObserve = _servicesAccessor.Services.Reducers.Observe(messages.Messages, handler.CancellationToken);
 
+        // Re-establish the observation after the stream ends or fails. The kernel can end a reducer's stream without
+        // an error; without re-subscribing then, the reducer silently stops observing until the whole client
+        // reconnects. Only the reducer's own cancellation stops it, and the 2s delay avoids a hot loop.
+        void ScheduleReconnect()
+        {
+            if (handler.CancellationToken.IsCancellationRequested)
+            {
+                _ = scheduler.DrainAndDispose();
+                return;
+            }
+
+            _ = ScheduleReconnectWork(async () =>
+            {
+                try
+                {
+                    await scheduler.DrainAndDispose();
+                    await Task.Delay(ReconnectDelay, handler.CancellationToken);
+                    _logger.ReconnectingReducer(handler.Id);
+                    RegisterReducerWhenHostable(handler);
+                }
+                catch (OperationCanceledException) { }
+                catch (Exception ex)
+                {
+                    _logger.ReducerReconnectFailed(handler.Id, ex);
+                }
+            });
+        }
+
         // https://github.com/dotnet/reactive/issues/459
         operationsToObserve
             .Select(events =>
@@ -567,7 +628,8 @@ public partial class Reducers : IReducers
                 }
 
                 var isBarrier = events.ReplayState is ReplayState.BeginReplay or ReplayState.EndReplay;
-                return (isBarrier ? scheduler.ScheduleBarrier(Deliver) : scheduler.Schedule(events.Partition ?? string.Empty, Deliver)).ToObservable();
+                var partition = events.SchedulingPartition();
+                return (isBarrier || partition is null ? scheduler.ScheduleBarrier(Deliver) : scheduler.Schedule(partition, Deliver)).ToObservable();
             })
             .Merge()
             .Subscribe(
@@ -607,17 +669,14 @@ public partial class Reducers : IReducers
                             break;
                     }
 
-                    _ = Task.Run(async () =>
-                    {
-                        try
-                        {
-                            await scheduler.DrainAndDispose();
-                            await Task.Delay(TimeSpan.FromSeconds(2), handler.CancellationToken);
-                            _logger.ReconnectingReducer(handler.Id);
-                            RegisterReducerWhenHostable(handler);
-                        }
-                        catch (OperationCanceledException) { }
-                    });
+                    ScheduleReconnect();
+                },
+                () =>
+                {
+                    scheduler.Stop();
+                    messages.Dispose();
+                    _logger.ReducerStreamCompleted(handler.Id);
+                    ScheduleReconnect();
                 });
     }
 

@@ -10,6 +10,7 @@ using System.Text.Json.Serialization.Metadata;
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Confidentiality;
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.ProtectedValues;
 using Cratis.Geospatial;
 using Cratis.Json;
 using Cratis.Reflection;
@@ -198,8 +199,8 @@ public partial class JsonSchemaGenerator : IJsonSchemaGenerator
         }
     }
 
-    static void AddComplianceMetadata(JsonObject schema, IEnumerable<ComplianceMetadata> metadata) =>
-        AddSchemaMetadata(schema, SchemaMetadataCategory.Compliance, metadata.Select(item => (item.MetadataType.Value, item.Details)));
+    static void AddComplianceMetadata(JsonObject schema, IEnumerable<ComplianceMetadata> metadata, string property = "") =>
+        AddSchemaMetadata(schema, SchemaMetadataCategory.Compliance, metadata.Select(item => (item.MetadataType.Value, item.Details)), property);
 
     /// <summary>
     /// Adds security metadata to a schema node, descending into an object's properties for the same reason
@@ -207,8 +208,9 @@ public partial class JsonSchemaGenerator : IJsonSchemaGenerator
     /// </summary>
     /// <param name="schema">The schema node to add to.</param>
     /// <param name="metadata">The <see cref="SecurityMetadata"/> to add.</param>
-    static void AddSecurityMetadata(JsonObject schema, IEnumerable<SecurityMetadata> metadata) =>
-        AddSchemaMetadata(schema, SchemaMetadataCategory.Security, metadata.Select(item => (item.MetadataType.Value, item.Details.Value)));
+    /// <param name="property">The property carrying the metadata, when available.</param>
+    static void AddSecurityMetadata(JsonObject schema, IEnumerable<SecurityMetadata> metadata, string property = "") =>
+        AddSchemaMetadata(schema, SchemaMetadataCategory.Security, metadata.Select(item => (item.MetadataType.Value, item.Details.Value)), property);
 
     /// <summary>
     /// Adds schema metadata for a given <see cref="SchemaMetadataCategory"/> to a schema node, descending into an
@@ -217,6 +219,7 @@ public partial class JsonSchemaGenerator : IJsonSchemaGenerator
     /// <param name="schema">The schema node to add to.</param>
     /// <param name="category">The <see cref="SchemaMetadataCategory"/> the metadata belongs to.</param>
     /// <param name="metadata">The metadata type/details pairs to add.</param>
+    /// <param name="property">The property carrying the metadata, when available.</param>
     /// <remarks>
     /// A schema metadata marker can be declared on something that is not a single value: a <c language="csharp">[PII]</c>
     /// or <c language="csharp">[Encrypted]</c> attribute on a composite value-object type, or on a property whose type
@@ -231,36 +234,106 @@ public partial class JsonSchemaGenerator : IJsonSchemaGenerator
     /// release). Object members reached *through* an array's item schema are still descended into.
     /// </para>
     /// </remarks>
-    static void AddSchemaMetadata(JsonObject schema, SchemaMetadataCategory category, IEnumerable<(string MetadataType, string Details)> metadata)
+    static void AddSchemaMetadata(JsonObject schema, SchemaMetadataCategory category, IEnumerable<(string MetadataType, string Details)> metadata, string property = "")
     {
         var metadataAsArray = metadata as IReadOnlyCollection<(string MetadataType, string Details)> ?? [.. metadata];
 
         if (schema["properties"] is JsonObject properties && properties.Count > 0)
         {
-            foreach (var (_, propertySchema) in properties.ToArray())
+            foreach (var (propertyName, propertySchema) in properties.ToArray())
             {
                 if (propertySchema is JsonObject propertySchemaObject)
                 {
-                    AddSchemaMetadata(propertySchemaObject, category, metadataAsArray);
+                    AddSchemaMetadata(propertySchemaObject, category, metadataAsArray, propertyName);
                 }
             }
 
             return;
         }
 
-        var key = category == SchemaMetadataCategory.Compliance ? ComplianceJsonSchemaExtensions.ComplianceKey : SecurityJsonSchemaExtensions.SecurityKey;
+        AddLeafMetadata(schema, category, metadataAsArray, property);
+    }
+
+    static void AddLeafMetadata(JsonObject schema, SchemaMetadataCategory category, IEnumerable<(string MetadataType, string Details)> metadata, string property)
+    {
+        var key = MetadataKeyFor(category);
         if (!schema.ContainsKey(key))
         {
             schema[key] = new JsonArray();
         }
 
         var metadataArr = schema[key]!.AsArray();
-        foreach (var item in metadataAsArray.Where(item => !HasMetadataOfType(metadataArr, item.MetadataType)))
+        foreach (var item in metadata)
         {
+            // A container handler stops the kernel's walk, so it must agree with item protection too.
+            foreach (var (node, name) in ProtectionNodes(schema, property))
+            {
+                ValidateProtection(node, category, item.MetadataType, name);
+            }
+
+            // Keep matching concept protection on the items, including its original details.
+            if (HasMetadata(schema, key, item.MetadataType) || HasMetadata(schema["items"] as JsonObject, key, item.MetadataType)) continue;
+
             metadataArr.Add(JsonSerializer.SerializeToNode(
                 new ComplianceSchemaMetadata(item.MetadataType, item.Details)));
         }
+
+        if (metadataArr.Count == 0) schema.Remove(key);
     }
+
+    static string MetadataKeyFor(SchemaMetadataCategory category) =>
+        category == SchemaMetadataCategory.Compliance ? ComplianceJsonSchemaExtensions.ComplianceKey : SecurityJsonSchemaExtensions.SecurityKey;
+
+    static EncryptionScope? EncryptionScopeFor(string? metadataType) => metadataType switch
+    {
+        "EncryptedSubject" => EncryptionScope.Subject,
+        "EncryptedNamespace" => EncryptionScope.Namespace,
+        "EncryptedGlobal" => EncryptionScope.Global,
+        _ => null
+    };
+
+    static IEnumerable<(JsonObject Schema, string Property)> ProtectionNodes(JsonObject schema, string property)
+    {
+        yield return (schema, property);
+        foreach (var (child, name) in ProtectionChildren(schema, property))
+        {
+            foreach (var node in ProtectionNodes(child, name)) yield return node;
+        }
+    }
+
+    static IEnumerable<(JsonObject Schema, string Property)> ProtectionChildren(JsonObject schema, string property)
+    {
+        if (schema["items"] is JsonObject items) yield return (items, property);
+        if (schema["properties"] is not JsonObject properties) yield break;
+        foreach (var (name, child) in properties)
+        {
+            if (child is JsonObject childSchema) yield return (childSchema, name);
+        }
+    }
+
+    static void ValidateProtection(JsonObject schema, SchemaMetadataCategory category, string metadataType, string property)
+    {
+        var security = schema[SecurityJsonSchemaExtensions.SecurityKey] as JsonArray ?? [];
+        var scopes = security.OfType<JsonObject>()
+            .Select(entry => EncryptionScopeFor(entry[nameof(ComplianceSchemaMetadata.metadataType)]?.GetValue<string>()))
+            .Append(category == SchemaMetadataCategory.Security ? EncryptionScopeFor(metadataType) : null)
+            .OfType<EncryptionScope>().Distinct().ToArray();
+        if (scopes.Length == 0) return;
+
+        var addingPII = category == SchemaMetadataCategory.Compliance && metadataType == ComplianceMetadataType.PII.Value;
+        if (addingPII || HasMetadata(schema, ComplianceJsonSchemaExtensions.ComplianceKey, ComplianceMetadataType.PII.Value))
+        {
+            throw new PIIAndEncryptedCombinedNotSupported(property);
+        }
+
+        if (scopes.Length > 1)
+        {
+            throw new ConflictingEncryptionScopes(property, scopes[0], scopes[1]);
+        }
+    }
+
+    static bool HasMetadata(JsonObject? schema, string key, string metadataType) =>
+        schema?[key] is JsonArray metadata && HasMetadataOfType(metadata, metadataType);
 
     /// <summary>
     /// Checks whether a schema metadata array already carries metadata of a given type.
@@ -308,6 +381,27 @@ public partial class JsonSchemaGenerator : IJsonSchemaGenerator
         {
             throw new SelfReferencingJsonSchemaType(type);
         }
+    }
+
+    static void ThrowIfConflictingEncryptionScopes(PropertyInfo property)
+    {
+        if (property.PropertyType.GetCustomAttribute<EncryptedAttribute>() is not { } typeEncryption) return;
+
+        var parameter = property.DeclaringType?.GetConstructors().MaxBy(_ => _.GetParameters().Length)?
+            .GetParameters().FirstOrDefault(_ => string.Equals(_.Name, property.Name, StringComparison.OrdinalIgnoreCase));
+        var propertyEncryption = property.GetCustomAttribute<EncryptedAttribute>() ??
+            property.DeclaringType?.GetCustomAttribute<EncryptedAttribute>() ??
+            parameter?.GetCustomAttribute<EncryptedAttribute>();
+        if (propertyEncryption is not null && propertyEncryption.Scope != typeEncryption.Scope)
+        {
+            throw new ConflictingEncryptionScopes(property.Name, typeEncryption.Scope, propertyEncryption.Scope);
+        }
+    }
+
+    static Type? GetUnwrappedEnumerableElementType(Type type)
+    {
+        var elementType = type.GetEnumerableElementType();
+        return elementType is null ? null : Nullable.GetUnderlyingType(elementType) ?? elementType;
     }
 
     JsonNode TransformReadModelNode(JsonSchemaExporterContext context, JsonNode schema)
@@ -411,38 +505,7 @@ public partial class JsonSchemaGenerator : IJsonSchemaGenerator
             AddSecurityMetadata(schemaObj, _securityMetadataResolver.GetMetadataFor(type));
         }
 
-        // Add compliance and security metadata for the property
-        if (context.PropertyInfo?.AttributeProvider is PropertyInfo propInfo)
-        {
-            if (_metadataResolver.HasMetadataFor(propInfo))
-            {
-                AddComplianceMetadata(schemaObj, _metadataResolver.GetMetadataFor(propInfo));
-            }
-
-            if (_securityMetadataResolver.HasMetadataFor(propInfo))
-            {
-                AddSecurityMetadata(schemaObj, _securityMetadataResolver.GetMetadataFor(propInfo));
-            }
-        }
-        else if (context.PropertyInfo?.AttributeProvider is ParameterInfo paramInfo &&
-            paramInfo.Member.DeclaringType is { } recordType)
-        {
-            var recordProp = recordType.GetProperty(
-                paramInfo.Name ?? string.Empty,
-                BindingFlags.Public | BindingFlags.Instance);
-            if (recordProp is not null)
-            {
-                if (_metadataResolver.HasMetadataFor(recordProp))
-                {
-                    AddComplianceMetadata(schemaObj, _metadataResolver.GetMetadataFor(recordProp));
-                }
-
-                if (_securityMetadataResolver.HasMetadataFor(recordProp))
-                {
-                    AddSecurityMetadata(schemaObj, _securityMetadataResolver.GetMetadataFor(recordProp));
-                }
-            }
-        }
+        AddPropertyMetadata(schemaObj, context.PropertyInfo?.AttributeProvider);
 
         // Preserve the CLR name on nested object schemas too. Composite Ids are emitted inline by the
         // serializer, so declaration generation needs the title to recover the key type from the Id schema.
@@ -485,6 +548,32 @@ public partial class JsonSchemaGenerator : IJsonSchemaGenerator
         }
 
         return schema;
+    }
+
+    void AddPropertyMetadata(JsonObject schema, ICustomAttributeProvider? attributeProvider)
+    {
+        var property = attributeProvider as PropertyInfo;
+        if (attributeProvider is ParameterInfo parameter)
+        {
+            property = parameter.Member.DeclaringType?.GetProperty(
+                parameter.Name ?? string.Empty,
+                BindingFlags.Public | BindingFlags.Instance);
+        }
+
+        if (property is null) return;
+
+        // The resolver prefers type attributes over constructor parameters, so both scopes may not reach the merge.
+        ThrowIfConflictingEncryptionScopes(property);
+
+        if (_metadataResolver.HasMetadataFor(property))
+        {
+            AddComplianceMetadata(schema, _metadataResolver.GetMetadataFor(property), property.Name);
+        }
+
+        if (_securityMetadataResolver.HasMetadataFor(property))
+        {
+            AddSecurityMetadata(schema, _securityMetadataResolver.GetMetadataFor(property), property.Name);
+        }
     }
 
     /// <summary>
@@ -556,7 +645,7 @@ public partial class JsonSchemaGenerator : IJsonSchemaGenerator
         // same primitive mapping a scalar concept gets, so the value round-trips through the sink.
         if (type != typeof(string) && type.IsEnumerable() && !type.IsDictionary())
         {
-            var elementType = type.GetEnumerableElementType();
+            var elementType = GetUnwrappedEnumerableElementType(type);
             if (elementType?.IsConcept() == true)
             {
                 var underlyingItemType = elementType.GetConceptValueType();
@@ -579,11 +668,14 @@ public partial class JsonSchemaGenerator : IJsonSchemaGenerator
                     }
                 }
 
-                return new JsonObject
+                var arraySchema = new JsonObject
                 {
                     ["type"] = "array",
                     ["items"] = itemSchema
                 };
+                AddPropertyMetadata(arraySchema, attributeProvider);
+
+                return arraySchema;
             }
         }
 
@@ -627,6 +719,8 @@ public partial class JsonSchemaGenerator : IJsonSchemaGenerator
         {
             AddSecurityMetadata(representedSchemaObject, _securityMetadataResolver.GetMetadataFor(declaredType));
         }
+
+        AddPropertyMetadata(representedSchemaObject, attributeProvider);
 
         if (PropertyIsNullable(declaredType, attributeProvider))
         {

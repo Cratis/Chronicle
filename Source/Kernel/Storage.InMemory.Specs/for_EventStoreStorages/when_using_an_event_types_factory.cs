@@ -19,7 +19,7 @@ public class when_using_an_event_types_factory : Specification
     void Establish()
     {
         _types = Substitute.For<IEventTypesStorage>();
-        _storages = new(new KnownInstancesOf<ISinkFactory>([]), Substitute.For<Cratis.Orleans.Storage.IJobsStorage>(), name =>
+        _storages = new(new KnownInstancesOf<ISinkFactory>([]), Substitute.For<Cratis.Choreography.Storage.IJobsStorage>(), name =>
         {
             _requested = name;
             _calls++;

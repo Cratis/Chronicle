@@ -12,5 +12,6 @@ namespace Cratis.Chronicle.Security;
 /// <param name="UserId">The user receiving the privilege.</param>
 /// <param name="Reason">The authority for the grant.</param>
 /// <param name="Evidence">The evidence supporting the grant.</param>
+/// <param name="Proof">The kernel proof.</param>
 [EventType]
-public record UserGrantedAdministrator(UserId UserId, GrantReason Reason, string Evidence);
+public record UserGrantedAdministrator(UserId UserId, GrantReason Reason, string Evidence, string Proof = "");

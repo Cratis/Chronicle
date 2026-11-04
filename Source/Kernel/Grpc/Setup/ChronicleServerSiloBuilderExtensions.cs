@@ -3,11 +3,13 @@
 
 using System.Text.Json;
 using Cratis.Arc;
+using Cratis.Choreography.Jobs;
 using Cratis.Chronicle;
 using Cratis.Chronicle.Alerts;
 using Cratis.Chronicle.Clients;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Contracts;
+using Cratis.Chronicle.Diagnostics;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences.Migrations;
 using Cratis.Chronicle.EventSequences.Placement;
@@ -18,7 +20,9 @@ using Cratis.Chronicle.Observation.Placement;
 using Cratis.Chronicle.Observation.Reactors.Clients;
 using Cratis.Chronicle.Observation.Reducers.Clients;
 using Cratis.Chronicle.ReadModels;
+using Cratis.Chronicle.Releases;
 using Cratis.Chronicle.Schemas;
+using Cratis.Chronicle.Security;
 using Cratis.Chronicle.Servers;
 using Cratis.Chronicle.Services.Events.Constraints;
 using Cratis.Chronicle.Services.Observation;
@@ -26,14 +30,15 @@ using Cratis.Chronicle.Setup;
 using Cratis.Chronicle.Setup.Execution;
 using Cratis.Chronicle.Setup.Serialization;
 using Cratis.Chronicle.Storage;
-using Cratis.Orleans.Jobs;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Orleans.Configuration;
+using Orleans.Metadata;
 using Orleans.Versions.Compatibility;
 using Orleans.Versions.Selector;
+using OrleansJobsOptions = Cratis.Choreography.Jobs.JobsOptions;
 
 namespace Orleans.Hosting;
 
@@ -65,9 +70,11 @@ public static class ChronicleServerSiloBuilderExtensions
         });
 
         builder.AddIncomingGrainCallFilter<CorrelationIdIncomingCallFilter>();
+        builder.AddIncomingGrainCallFilter<SerializableFailureIncomingCallFilter>();
         builder.AddOutgoingGrainCallFilter<CorrelationIdOutgoingCallFilter>();
         builder.AddIncomingGrainCallFilter<UserIdentityIncomingCallFilter>();
         builder.AddOutgoingGrainCallFilter<UserIdentityOutgoingCallFilter>();
+        builder.AddOutgoingGrainCallFilter<MixedReleaseCallDiagnostics>();
         builder.Services.TryAddSingleton<Cratis.Execution.CorrelationIdAccessor>();
         builder.Services.TryAddSingleton<ICorrelationIdAccessor, Cratis.Chronicle.Setup.Execution.CorrelationIdAccessor>();
 
@@ -75,16 +82,16 @@ public static class ChronicleServerSiloBuilderExtensions
         builder.Services.TryAddSingleton<IJobTypes, JobTypes>();
         builder.Services.TryAddSingleton<IJobStepThrottle, JobStepThrottle>();
 
-        // The package's JobsManager/Job/JobStep grains and JobStepThrottle resolve Cratis.Orleans.Jobs.JobsOptions,
-        // not ChronicleOptions - this host never calls AddCratisOrleans (it wires the pieces individually), so
+        // The package's JobsManager/Job/JobStep grains and JobStepThrottle resolve Cratis.Choreography.Jobs.JobsOptions,
+        // not ChronicleOptions - this host never calls AddCratisChoreography (it wires the pieces individually), so
         // nothing maps one to the other unless it happens here. MaxParallelSteps preserves the pre-rip-out cap:
         // the old JobStepThrottle capped at min(Jobs.GetEffectiveMaxParallelSteps(), Observers.MaxConcurrentPartitions);
         // the package's throttle only applies GetEffectiveMaxParallelSteps() to whatever MaxParallelSteps carries,
         // so the cap has to be folded in here to keep the effective limit unchanged.
-        builder.Services.TryAddSingleton<IOptions<Cratis.Orleans.Jobs.JobsOptions>>(sp =>
+        builder.Services.TryAddSingleton(sp =>
         {
             var chronicleOptions = sp.GetRequiredService<IOptions<ChronicleOptions>>().Value;
-            return Options.Create(new Cratis.Orleans.Jobs.JobsOptions
+            return Options.Create(new OrleansJobsOptions
             {
                 MaxParallelSteps = Math.Min(chronicleOptions.Jobs.GetEffectiveMaxParallelSteps(), chronicleOptions.Observers.MaxConcurrentPartitions),
                 DeadJobThreshold = chronicleOptions.Jobs.DeadJobThreshold,
@@ -93,6 +100,7 @@ public static class ChronicleServerSiloBuilderExtensions
                 StepCheckpointFlushInterval = chronicleOptions.Jobs.StepCheckpointFlushInterval
             });
         });
+        AddClusterReleaseSupport(builder.Services);
         builder.Services.TryAddSingleton<ITypeFormats, TypeFormats>();
         builder.Services.TryAddSingleton<Cratis.Chronicle.Services.Clients.OpenConnections>();
         builder.Services.TryAddSingleton<IExpandoObjectConverter, ExpandoObjectConverter>();
@@ -127,6 +135,8 @@ public static class ChronicleServerSiloBuilderExtensions
         builder.Services.AddSingleton<ILifecycleParticipant<ISiloLifecycle>, ChronicleServerStartupTask>();
         builder.Services.AddSingleton<ILifecycleParticipant<ISiloLifecycle>, AlertIncidentsMetricsOwnerKeeper>();
 
+        builder.Services.AddChronicleAdministratorAuthorization();
+        builder.Services.AddChronicleDataProtection();
         builder.Services.AddChronicleMeters();
         var chronicleBuilder = new ChronicleBuilder(builder, builder.Services, builder.Configuration);
         configure?.Invoke(chronicleBuilder);
@@ -153,6 +163,7 @@ public static class ChronicleServerSiloBuilderExtensions
 
         builder.Services.AddSingleton<IServices>(sp =>
         {
+            Cratis.Chronicle.Services.SystemStoreGuard.InProcessServices = sp;
             var grainFactory = sp.GetRequiredService<IGrainFactory>();
             var storage = sp.GetRequiredService<IStorage>();
             var expandoObjectConverter = sp.GetRequiredService<IExpandoObjectConverter>();
@@ -195,7 +206,7 @@ public static class ChronicleServerSiloBuilderExtensions
                 ActivatorUtilities.CreateInstance<Cratis.Chronicle.Services.ExternalServices.ExternalServices>(sp),
                 ActivatorUtilities.CreateInstance<Cratis.Chronicle.Services.Captures.Captures>(sp),
                 new Cratis.Chronicle.Services.Observation.EventStoreSubscriptions.EventStoreSubscriptions(grainFactory, storage, sp.GetRequiredService<IOptions<ChronicleOptions>>()),
-                new Cratis.Chronicle.Services.ReadModels.ReadModels(grainFactory, storage, sp.GetRequiredService<IReadModelReadBindings>(), expandoObjectConverter, sp.GetRequiredService<IReducerMediator>(), sp.GetRequiredService<Cratis.Chronicle.Projections.IProjectionChangesetMediator>(), sp.GetRequiredService<Orleans.Runtime.ILocalSiloDetails>(), sp.GetRequiredService<IReadModelsCompliance>(), sp.GetRequiredService<IMaterializedReadModelStore>(), jsonSerializerOptions),
+                new Cratis.Chronicle.Services.ReadModels.ReadModels(grainFactory, storage, sp.GetRequiredService<IReadModelReadBindings>(), expandoObjectConverter, sp.GetRequiredService<IReducerMediator>(), sp.GetRequiredService<Cratis.Chronicle.Projections.IProjectionChangesetMediator>(), sp.GetRequiredService<ILocalSiloDetails>(), sp.GetRequiredService<IReadModelsCompliance>(), sp.GetRequiredService<IMaterializedReadModelStore>(), jsonSerializerOptions),
                 new Cratis.Chronicle.Services.ReadModels.MaterializedReadModels(grainFactory, sp.GetRequiredService<IReadModelReadBindings>(), sp.GetRequiredService<IReadModelsCompliance>(), sp.GetRequiredService<ILogger<Cratis.Chronicle.Services.ReadModels.MaterializedReadModels>>()),
                 ActivatorUtilities.CreateInstance<Cratis.Chronicle.Services.ReadModelExplorer.ReadModelExplorer>(sp),
                 ActivatorUtilities.CreateInstance<Cratis.Chronicle.Services.Jobs.Jobs>(sp),
@@ -207,7 +218,7 @@ public static class ChronicleServerSiloBuilderExtensions
                 new Cratis.Chronicle.Services.Clients.ConnectionService(
                     grainFactory,
                     sp.GetRequiredService<ILocalSiloDetails>(),
-                    sp.GetRequiredService<Cratis.Chronicle.Clients.ConnectedClientsQuery>(),
+                    sp.GetRequiredService<ConnectedClientsQuery>(),
                     sp.GetRequiredService<Cratis.Chronicle.Services.Clients.OpenConnections>(),
                     sp.GetRequiredService<ILogger<Cratis.Chronicle.Services.Clients.ConnectionService>>(),
                     sp.GetRequiredService<IOptions<ChronicleOptions>>()),
@@ -215,5 +226,11 @@ public static class ChronicleServerSiloBuilderExtensions
         });
 
         return builder;
+    }
+
+    static void AddClusterReleaseSupport(IServiceCollection services)
+    {
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IGrainInterfacePropertiesProvider, KernelReleaseInterfaceProperties>());
+        services.TryAddSingleton<IClusterReleases, ClusterReleases>();
     }
 }

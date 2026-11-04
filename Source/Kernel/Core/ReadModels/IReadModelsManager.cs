@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.ReadModels;
+using Orleans.Concurrency;
 
 namespace Cratis.Chronicle.ReadModels;
 
@@ -14,6 +15,11 @@ public interface IReadModelsManager : IGrainWithStringKey
     /// Ensure the existence of the read models manager.
     /// </summary>
     /// <returns>Awaitable task.</returns>
+    /// <remarks>
+    /// Activation only: does not inspect registration state or promise registration completion.
+    /// May run while registration awaits storage without exposing partially registered definitions.
+    /// </remarks>
+    [AlwaysInterleave]
     Task Ensure();
 
     /// <summary>

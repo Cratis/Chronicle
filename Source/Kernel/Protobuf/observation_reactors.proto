@@ -65,6 +65,9 @@ message EventsToObserve {
    repeated AppendedEvent Events = 2;
    ReplayState ReplayState = 3;
    uint64 DeliveryId = 4;
+   uint64 DeliverWithinMilliseconds = 5;
+   repeated PartitionEvents Partitions = 6;
+   ObservationOrigin Origin = 7;
 }
 message HasReactorRequest {
    string EventStore = 1;
@@ -85,10 +88,18 @@ message NamedTag {
    string Name = 1;
    string Value = 2;
 }
+enum ObservationOrigin {
+   Unknown = 0;
+   Live = 1;
+   CatchingUp = 2;
+   Replaying = 3;
+   Retrying = 4;
+}
 enum ObservationState {
    OBSERVATION_STATE_None = 0;
    Success = 1;
    Failed = 2;
+   Deferred = 3;
 }
 message ObserverFilters {
    repeated string FilterTags = 1;
@@ -98,6 +109,25 @@ message ObserverFilters {
 message OneOf_RegisterReactor_ReactorResult {
    RegisterReactor Value0 = 1;
    ReactorResult Value1 = 2;
+}
+message PageDelivery {
+   bool Enabled = 1;
+   uint32 MaxEventsPerPage = 2;
+   uint32 MaxBytesPerPage = 3;
+   uint32 MaxDelayMilliseconds = 4;
+}
+message PartitionEvents {
+   string Partition = 1;
+   repeated AppendedEvent Events = 2;
+}
+message PartitionResult {
+   string Partition = 1;
+   ObservationState State = 2;
+   uint64 LastSuccessfulObservation = 3;
+   repeated string ExceptionMessages = 4;
+   string ExceptionStackTrace = 5;
+   uint64 RetryAfterMilliseconds = 6;
+   string ReadModelState = 7;
 }
 message ReactorDefinition {
    string ReactorId = 1;
@@ -120,12 +150,15 @@ message ReactorResult {
    repeated string ExceptionMessages = 4;
    string ExceptionStackTrace = 5;
    uint64 DeliveryId = 6;
+   uint64 RetryAfterMilliseconds = 7;
+   repeated PartitionResult Partitions = 8;
 }
 message RegisterReactor {
    string ConnectionId = 1;
    string EventStore = 2;
    string Namespace = 3;
    ReactorDefinition Reactor = 4;
+   PageDelivery PageDelivery = 5;
 }
 enum ReplayState {
    REPLAY_STATE_None = 0;

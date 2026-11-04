@@ -6,13 +6,14 @@ import { withViewModel } from '@cratis/arc.react.mvvm';
 import { ObserversViewModel } from './ObserversViewModel';
 import { Column } from '@cratis/components/DataTables';
 import { DataTableCore } from '@cratis/components/DataTables';
-import { ActionMenubar, type ActionMenuItem } from '@cratis/components/Common';
+import { Message } from '@cratis/components/Display';
+import { ActionMenubar, Button, type ActionMenuItem } from '@cratis/components/Common';
 import { IconField } from 'primereact/iconfield';
 import { InputText } from 'primereact/inputtext';
 import { ObserverInformation } from 'Features/Observation';
 import strings from 'Strings';
-import { AllObservers, AllObserversParameters } from 'Features/Observation';
-import { useParams } from 'react-router-dom';
+import { AllFailedPartitions, AllObservers, AllObserversParameters } from 'Features/Observation';
+import { Link, useParams } from 'react-router-dom';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import { Page } from 'Components/Common/Page';
 import * as faIcons from 'react-icons/fa6';
@@ -22,6 +23,17 @@ import { getObserverTypeAsText } from './getObserverTypeAsText';
 import { getObserverOwnerAsText } from './getObserverOwnerAsText';
 import { ObserverDetails } from './ObserverDetails';
 import { ObserverSequenceType } from './ObserverSequenceType';
+import { useRelativePath } from '../../../../Utils/useRelativePath';
+import {
+    type ObserverRow,
+    countFailedPartitionsByObserver,
+    getFailedPartitionsPathForObserver,
+    observerOwnerFilterOptions,
+    observerTypeFilterOptions,
+    runningStateFilterOptions,
+    sequenceTypeFilterOptions,
+    toObserverRow
+} from './observerRows';
 
 const legacyEventLogSequenceId = '00000000-0000-0000-0000-000000000000';
 
@@ -54,9 +66,21 @@ const runningState = (observer: ObserverInformation) => {
     return getObserverRunningStateAsText(observer.runningState);
 };
 
+// Nothing at all in the cell when there is nothing to report - a column of blanks and ticks is scannable
+// in a way that a column of 'no' is not.
+const quarantined = (observer: ObserverRow) => observer.isQuarantined
+    ? <faIcons.FaCheck aria-label={strings.eventStore.namespaces.observers.columns.quarantinedTooltip} />
+    : null;
+
+// A real link, so middle-click, modifier-click and copy-link-address all behave.
+const failedPartitionsLink = (observer: ObserverRow, namespacePath: string) => observer.failedPartitionCount === 0
+    ? null
+    : <Link className='underline' to={getFailedPartitionsPathForObserver(namespacePath, observer.id)}>{observer.failedPartitionCount}</Link>;
+
 export const Observers = withViewModel(ObserversViewModel, ({ viewModel }) => {
     const params = useParams<EventStoreAndNamespaceParams>();
     const [searchText, setSearchText] = useState('');
+    const namespacePath = `${useRelativePath('event-store')}/${params.eventStore}/${params.namespace}`;
 
     const queryArgs: AllObserversParameters = {
         eventStore: params.eventStore!,
@@ -64,14 +88,13 @@ export const Observers = withViewModel(ObserversViewModel, ({ viewModel }) => {
     };
 
     const [observers] = AllObservers.when(!!params.namespace).use(queryArgs);
+    const [failedPartitions] = AllFailedPartitions.when(!!params.namespace).use(queryArgs);
+    const failedPartitionCounts = countFailedPartitionsByObserver(failedPartitions.data);
 
     const searchTerm = searchText.trim().toLowerCase();
 
     const observerRows = (observers.data ?? [])
-        .map(observer => ({
-            ...observer,
-            sequenceType: getObserverSequenceType(observer.eventSequenceId),
-        }))
+        .map(observer => toObserverRow(observer, getObserverSequenceType(observer.eventSequenceId), failedPartitionCounts))
         .filter(observer => searchTerm === ''
             || observer.id.toLowerCase().includes(searchTerm)
             || observer.eventSequenceId.toLowerCase().includes(searchTerm));
@@ -122,6 +145,37 @@ export const Observers = withViewModel(ObserversViewModel, ({ viewModel }) => {
                 <ActionMenubar model={menuItems} />
                 {searchInput}
             </div>
+            <form className='px-4 py-2 flex flex-wrap items-end gap-2'
+                onSubmit={event => {
+                    event.preventDefault();
+                    void viewModel.replayPartition(params.eventStore!, params.namespace!);
+                }}>
+                <div className='flex flex-col gap-1'>
+                    <label htmlFor='partition-event-source-id'>{strings.eventStore.namespaces.observers.partitionReplay.label}</label>
+                    <InputText
+                        id='partition-event-source-id'
+                        value={viewModel.partitionEventSourceId}
+                        onChange={(event: ChangeEvent<HTMLInputElement>) => { viewModel.partitionEventSourceId = event.target.value; }}
+                        disabled={viewModel.isReplayingPartition}
+                        aria-describedby='partition-replay-helper partition-replay-feedback'
+                        aria-invalid={!!viewModel.partitionReplayFeedback && !viewModel.partitionReplayAccepted}
+                    />
+                </div>
+                <Button type='submit'
+                    label={strings.eventStore.namespaces.observers.partitionReplay.action}
+                    disabled={!viewModel.canReplayPartition}
+                    loading={viewModel.isReplayingPartition}
+                />
+                <small id='partition-replay-helper' className='basis-full'>
+                    {strings.eventStore.namespaces.observers.partitionReplay.helper}
+                </small>
+                <div id='partition-replay-feedback' role='status' aria-live='polite' className='basis-full'>
+                    {viewModel.partitionReplayFeedback && <Message
+                        severity={viewModel.partitionReplayAccepted ? 'success' : 'error'}
+                        text={viewModel.partitionReplayFeedback}
+                    />}
+                </div>
+            </form>
             <div className='flex-1 overflow-hidden px-4 pb-4'>
                 <Allotment className='h-full' proportionalLayout={false}>
                     <Allotment.Pane className='flex-grow'>
@@ -142,7 +196,8 @@ export const Observers = withViewModel(ObserversViewModel, ({ viewModel }) => {
                                 sortable
                                 showFilterMatchModes={false}
                                 filter
-                                filterField='sequenceType' />
+                                filterField='sequenceType'
+                                filterOptions={sequenceTypeFilterOptions} />
                             <Column
                                 field='type'
                                 header={strings.eventStore.namespaces.observers.columns.observerType}
@@ -151,6 +206,7 @@ export const Observers = withViewModel(ObserversViewModel, ({ viewModel }) => {
                                 showFilterMatchModes={false}
                                 filter
                                 filterField='type'
+                                filterOptions={observerTypeFilterOptions}
                                 body={observerType} />
                             <Column
                                 field='owner'
@@ -160,6 +216,7 @@ export const Observers = withViewModel(ObserversViewModel, ({ viewModel }) => {
                                 showFilterMatchModes={false}
                                 filter
                                 filterField='owner'
+                                filterOptions={observerOwnerFilterOptions}
                                 body={observerOwner} />
                             <Column
                                 field='nextEventSequenceNumber'
@@ -179,7 +236,19 @@ export const Observers = withViewModel(ObserversViewModel, ({ viewModel }) => {
                                 showFilterMatchModes={false}
                                 filter
                                 filterField='runningState'
+                                filterOptions={runningStateFilterOptions}
                                 body={runningState} />
+                            <Column
+                                field='isQuarantined'
+                                header={strings.eventStore.namespaces.observers.columns.quarantined}
+                                sortable
+                                body={quarantined} />
+                            <Column
+                                field='failedPartitionCount'
+                                dataType='numeric'
+                                header={strings.eventStore.namespaces.observers.columns.failedPartitions}
+                                sortable
+                                body={(observer: ObserverRow) => failedPartitionsLink(observer, namespacePath)} />
                         </DataTableCore>
                     </Allotment.Pane>
                     {viewModel.selectedObserver &&

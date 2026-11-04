@@ -21,6 +21,9 @@ VALIDATION_EXCLUDED_PREFIXES = ("legacy/",)
 
 BODY_SNIPPETS = {
     "get-started/client-flow": "",
+    "hosting/client-tracing/identifier-tracing": """
+        string[] args = [];
+    """,
     "projections/projection-declaration-language/adhoc-querying/inferred-vs-explicit": """
         IProjections projections = default!;
     """,
@@ -88,6 +91,10 @@ BODY_SNIPPETS = {
     "testing/read-models/scenario/strict-event-subscription": "",
     "testing/read-models/scenario/substitutions": "",
     "testing/read-models/scenario/strict-fidelity": "",
+    "testing/read-models/scenario/borrowed-store": """
+        Cratis.Chronicle.Testing.Events.EventStoreForTesting store = default!;
+        IEnumerable<AppendedEvent> selectedEvents = default!;
+    """,
     "read-models/decision-reads/detached-read": """
         IEventStore eventStore = default!;
         ReadModelKey orderId = new("order-123");

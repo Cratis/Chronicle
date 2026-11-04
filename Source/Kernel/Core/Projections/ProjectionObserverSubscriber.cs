@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
-using System.Text.Json;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
@@ -73,7 +72,7 @@ public class ProjectionObserverSubscriber(
         // Direct grain-to-observer notification — the previous Orleans MemoryStreams pub-sub
         // propagated subscribers to the producer's PullingAgent on a periodic refresh that
         // could lag the first publish and silently drop it under load.
-        _changesetNotifier = GrainFactory.GetGrain<IProjectionChangesetNotifier>(_key.ObserverId);
+        _changesetNotifier = GrainFactory.GetGrain<IProjectionChangesetNotifier>(new ProjectionChangesetNotifierKey(_key.ObserverId, _key.EventStore, _key.Namespace));
 
         var projection = GrainFactory.GetGrain<IProjection>(new ProjectionKey(_key.ObserverId, _key.EventStore));
         await projection.SubscribeDefinitionsChanged(this.AsReference<INotifyProjectionDefinitionsChanged>());
@@ -232,7 +231,33 @@ public class ProjectionObserverSubscriber(
         }
     }
 
-    bool CanNotify(ExpandoObject state) => _definition.IsActive && !ReadModelInitialization.IsUninitialized(state);
+    ReadModelChangeNotification CreateNotification(string partition, IChangeset<AppendedEvent, ExpandoObject> changeset, bool isNewInstance, AppendedEvent lastEvent)
+    {
+        var model = expandoObjectConverter.ToJsonObject(changeset.CurrentState, _schema!);
+        if (ReadModelChangeBookkeeping.DeclaresProperty(_schema!, WellKnownProperties.LastHandledEventSequenceNumber))
+        {
+            model[WellKnownProperties.LastHandledEventSequenceNumber] = JsonValue.Create(lastEvent.Context.SequenceNumber.Value);
+        }
+
+        ReadModelChangeBookkeeping.CopyLegacySubjectLineage(changeset.CurrentState, model);
+        var (subject, subjects) = ReadModelChangeBookkeeping.LineageOf(changeset.CurrentState);
+        var changeType = (changeset.HasBeenRemoved(), isNewInstance) switch
+        {
+            (true, _) => ReadModelChangeType.Removed,
+            (false, true) => ReadModelChangeType.Added,
+            _ => ReadModelChangeType.Modified
+        };
+        var change = new ReadModelChangeContext(changeType, lastEvent.Context.SequenceNumber, lastEvent.Context.Occurred, lastEvent.Context.CorrelationId)
+        {
+            Subject = subject,
+            Subjects = subjects
+        };
+        return new(partition, model, change);
+    }
+
+    bool CanNotify(ExpandoObject state) =>
+        _definition.IsActive &&
+        ((_projection is not null && ProjectionInitialization.IsChildOnly(_projection)) || !ReadModelInitialization.IsUninitialized(state));
 
     async Task<(ObserverSubscriberResult Result, ReadModelChangeNotification? Notification)> HandleRun(Key partition, IEnumerable<AppendedEvent> events)
     {
@@ -330,38 +355,7 @@ public class ProjectionObserverSubscriber(
             // Note: We don't want to send changesets if the projection is not active
             if (changeset?.HasChanges == true && CanNotify(changeset.CurrentState))
             {
-                var model = expandoObjectConverter.ToJsonObject(changeset.CurrentState, _schema!);
-
-                // Mirror the metadata fields that the storage sink writes so that watched models
-                // match what a direct read from the underlying store returns.
-                model[WellKnownProperties.LastHandledEventSequenceNumber] =
-                    JsonValue.Create((ulong)lastSuccessfullyObservedEvent!.Context.SequenceNumber);
-
-                var stateDict = (IDictionary<string, object?>)changeset.CurrentState;
-                if (stateDict.TryGetValue(WellKnownProperties.Subject, out var subjectValue) && subjectValue is string subject)
-                {
-                    model[WellKnownProperties.Subject] = JsonValue.Create(subject);
-                }
-
-                if (stateDict.TryGetValue(WellKnownProperties.Subjects, out var subjectsValue))
-                {
-                    model[WellKnownProperties.Subjects] = JsonSerializer.SerializeToNode(subjectsValue);
-                }
-
-                var changeType = (changeset.HasBeenRemoved(), isNewInstance) switch
-                {
-                    (true, _) => ReadModelChangeType.Removed,
-                    (false, true) => ReadModelChangeType.Added,
-                    _ => ReadModelChangeType.Modified
-                };
-
-                var change = new ReadModelChangeContext(
-                    changeType,
-                    lastSuccessfullyObservedEvent!.Context.SequenceNumber,
-                    lastSuccessfullyObservedEvent.Context.Occurred,
-                    lastSuccessfullyObservedEvent.Context.CorrelationId);
-
-                notification = new(partition.ToString(), model, change);
+                notification = CreateNotification(partition.ToString(), changeset, isNewInstance, lastSuccessfullyObservedEvent!);
             }
 
             return (ObserverSubscriberResult.Ok(lastSuccessfullyObservedEvent!.Context.SequenceNumber), notification);

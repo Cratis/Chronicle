@@ -146,6 +146,18 @@ public static class WellKnownMetricNames
     /// <summary>Unit of <see cref="EventSequenceUnknownAppendOutcomes"/>.</summary>
     public const string EventSequenceUnknownAppendOutcomesUnit = "{append}";
 
+    /// <summary>Number of constraint indexes currently rebuilding.</summary>
+    public const string ConstraintIndexesRebuilding = "cratis.chronicle.constraint_index.rebuilding";
+
+    /// <summary>Unit of <see cref="ConstraintIndexesRebuilding"/>.</summary>
+    public const string ConstraintIndexesRebuildingUnit = "{index}";
+
+    /// <summary>Number of ended constraint index rebuilds.</summary>
+    public const string ConstraintIndexRebuildEnds = "cratis.chronicle.constraint_index.rebuild_ends";
+
+    /// <summary>Unit of <see cref="ConstraintIndexRebuildEnds"/>.</summary>
+    public const string ConstraintIndexRebuildEndsUnit = "{rebuild}";
+
     /// <summary>Number of failed constraint index updates.</summary>
     public const string ConstraintIndexUpdateFailures = "cratis.chronicle.constraint_index.update_failures";
 

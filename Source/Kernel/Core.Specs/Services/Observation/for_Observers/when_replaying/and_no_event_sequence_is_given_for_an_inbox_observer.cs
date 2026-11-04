@@ -1,11 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Choreography.Jobs;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Storage.Observation;
-using Cratis.Orleans.Jobs;
 
 namespace Cratis.Chronicle.Services.Observation.for_Observers.when_replaying;
 

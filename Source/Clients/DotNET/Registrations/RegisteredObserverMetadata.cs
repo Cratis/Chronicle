@@ -24,6 +24,15 @@ internal static class RegisteredObserverMetadata
         ExplicitArtifactCatalog.From(provider)?.GetReactorIdFor(type) ?? new ReactorId(ArtifactIdentity.ObserverIdFor(type, type.GetCustomAttribute<ReactorAttribute>()?.Id.Value));
 
     /// <summary>
+    /// Resolves a configured reactor source event store from the owning catalog.
+    /// </summary>
+    /// <param name="provider">The optional store's artifact provider.</param>
+    /// <param name="type">The registered CLR type.</param>
+    /// <returns>The configured store, or null when no catalog supplies one.</returns>
+    internal static EventStoreName? ReactorSourceStoreFor(IClientArtifactsProvider? provider, Type type) =>
+        provider is null ? null : ExplicitArtifactCatalog.From(provider)?.GetReactorSourceStoreFor(type);
+
+    /// <summary>
     /// Resolves an effective reducer identity, including an explicit alias.
     /// </summary>
     /// <param name="provider">The store's artifact provider.</param>
@@ -49,20 +58,21 @@ internal static class RegisteredObserverMetadata
     /// <param name="eventTypes">The owning registry.</param>
     /// <param name="currentStore">The current store.</param>
     /// <param name="getHandledEventTypes">The owning invoker's accepted event identities, resolved only when inference is needed.</param>
+    /// <param name="configuredStore">The optional configured source event store.</param>
     /// <returns>The resolved event sequence.</returns>
     /// <exception cref="EventStoreCannotBeCombinedWithExplicitEventSequence">A store and explicit sequence are both supplied.</exception>
-    internal static EventSequenceId SequenceFor(Type type, EventSequenceId? observerSequence, IEventTypes eventTypes, EventStoreName currentStore, Func<IEnumerable<EventType>> getHandledEventTypes)
+    internal static EventSequenceId SequenceFor(Type type, EventSequenceId? observerSequence, IEventTypes eventTypes, EventStoreName currentStore, Func<IEnumerable<EventType>> getHandledEventTypes, EventStoreName? configuredStore = null)
     {
-        var store = type.GetCustomAttribute<EventStoreAttribute>();
+        var store = configuredStore?.Value ?? type.GetCustomAttribute<EventStoreAttribute>()?.EventStore;
         var sequence = type.GetCustomAttribute<EventSequenceAttribute>()?.Sequence;
         if (store is not null)
         {
             if ((sequence ?? observerSequence) is { } explicitSequence)
             {
-                throw new EventStoreCannotBeCombinedWithExplicitEventSequence(type, store.EventStore, explicitSequence);
+                throw new EventStoreCannotBeCombinedWithExplicitEventSequence(type, store, explicitSequence);
             }
 
-            return new($"{EventSequenceId.InboxPrefix}{store.EventStore}");
+            return new($"{EventSequenceId.InboxPrefix}{store}");
         }
 
         return sequence ?? observerSequence ?? ObserverEventTypes.InferSequence(type, eventTypes, currentStore, getHandledEventTypes());

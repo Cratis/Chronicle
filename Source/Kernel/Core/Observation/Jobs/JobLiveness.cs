@@ -1,8 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Orleans.Jobs;
-using Cratis.Orleans.Storage.Jobs;
+using Cratis.Choreography.Jobs;
+using Cratis.Choreography.Storage.Jobs;
 
 namespace Cratis.Chronicle.Observation.Jobs;
 
@@ -19,6 +19,16 @@ internal static class JobLiveness
     /// well beyond the window in which a healthy job is legitimately finalizing.
     /// </remarks>
     internal static readonly TimeSpan StaleAfter = TimeSpan.FromMinutes(2);
+
+    /// <summary>
+    /// How long unchanged step progress is observed before resuming a running job.
+    /// </summary>
+    /// <remarks>
+    /// A step taking longer receives a harmless Resume each period. Keep this well above
+    /// <see cref="StaleAfter"/>, the observer watchdog interval and the job engine's step-checkpoint flush interval,
+    /// since progress that is persisted late only looks stalled.
+    /// </remarks>
+    internal static readonly TimeSpan ResumeStalledAfter = TimeSpan.FromMinutes(5);
 
     /// <summary>
     /// Gets whether every step of the job has concluded and the job has not moved on since <see cref="StaleAfter"/>.
@@ -43,4 +53,12 @@ internal static class JobLiveness
         var lastChange = job.StatusChanges.Select(_ => _.Occurred).DefaultIfEmpty(job.Created).Max();
         return now - lastChange > StaleAfter;
     }
+
+    /// <summary>
+    /// Gets whether a job was stopped before it prepared a single step.
+    /// </summary>
+    /// <param name="job">The <see cref="JobState"/> to check.</param>
+    /// <returns>True if the job is stopped and has no steps - it carries no work and resuming it can never drive anything.</returns>
+    internal static bool NeverPrepared(JobState job) =>
+        job.Status == JobStatus.Stopped && job.Progress.TotalSteps <= 0;
 }

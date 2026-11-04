@@ -18,8 +18,11 @@ internal class ReviseValidator : CommandValidator<Revise>
     {
         RuleFor(_ => _.EventStore).NotEmpty().WithMessage("Event store name is required.");
         RuleFor(_ => _.EventStore).NotSystemEventStore();
+        RuleFor(_ => _.EventStore).NoKeySeparator();
         RuleFor(_ => _.Namespace).NotEmpty().WithMessage("Namespace name is required.");
+        RuleFor(_ => _.Namespace).NoKeySeparator();
         RuleFor(_ => _.EventSequenceId).NotEmpty().WithMessage("Event sequence identifier is required.");
+        RuleFor(_ => _.EventSequenceId).NoKeySeparator();
         RuleFor(_ => _.EventType).NotNull().WithMessage("Event type is required.");
 
         // The rule below guards the identifier through the parent rather than as a nested

@@ -15,7 +15,11 @@ namespace Cratis.Chronicle.Storage.InMemory.Observation;
 public sealed class ObserverStateStorage : IObserverStateStorage, IDisposable
 {
     readonly ConcurrentDictionary<ObserverId, ObserverState> _states = new();
+    readonly ConcurrentDictionary<ObserverId, DateTimeOffset> _runningStatesChangedAt = new();
     readonly ReplaySubject<IEnumerable<ObserverState>> _allSubject = new(1);
+
+    /// <summary>Serializes every mutation, so a timestamp write cannot interleave with a delete, rename or ownership change.</summary>
+    readonly Lock _mutationLock = new();
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ObserverStateStorage"/> class.
@@ -41,16 +45,16 @@ public sealed class ObserverStateStorage : IObserverStateStorage, IDisposable
     /// <inheritdoc/>
     public Task<bool> Save(ObserverState state, EventSequenceId owner)
     {
-        while (true)
+        lock (_mutationLock)
         {
             if (!_states.TryGetValue(state.Identifier, out var existing))
             {
-                if (!_states.TryAdd(state.Identifier, state with { Owner = owner })) continue;
+                _states[state.Identifier] = state with { Owner = owner };
             }
             else
             {
                 if (existing.Owner is not null && existing.Owner != owner) return Task.FromResult(false);
-                var incoming = state with
+                _states[state.Identifier] = state with
                 {
                     Owner = owner,
                     TypeSetControl = state.TypeSetControl is not null &&
@@ -59,47 +63,85 @@ public sealed class ObserverStateStorage : IObserverStateStorage, IDisposable
                             : existing.TypeSetControl,
                     Initialization = state.Initialization ?? existing.Initialization
                 };
-                if (!_states.TryUpdate(state.Identifier, incoming, existing)) continue;
             }
-
-            _allSubject.OnNext(Snapshot());
-            return Task.FromResult(true);
         }
+
+        _allSubject.OnNext(Snapshot());
+        return Task.FromResult(true);
     }
 
     /// <inheritdoc/>
     public Task ClaimOwnership(ObserverId observerId, EventSequenceId owner)
     {
-        while (_states.TryGetValue(observerId, out var existing))
+        lock (_mutationLock)
         {
-            if (!_states.TryUpdate(observerId, existing with { Owner = owner }, existing)) continue;
-            _allSubject.OnNext(Snapshot());
-            break;
+            if (!_states.TryGetValue(observerId, out var existing)) return Task.CompletedTask;
+            _states[observerId] = existing with { Owner = owner };
         }
 
+        _allSubject.OnNext(Snapshot());
         return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
+    public Task<DateTimeOffset?> GetRunningStateChangedAt(ObserverId observerId) =>
+        Task.FromResult<DateTimeOffset?>(_runningStatesChangedAt.TryGetValue(observerId, out var changedAt) ? changedAt : null);
+
+    /// <inheritdoc/>
+    public Task<IReadOnlyDictionary<ObserverId, DateTimeOffset>> GetRunningStatesChangedAt() =>
+        Task.FromResult<IReadOnlyDictionary<ObserverId, DateTimeOffset>>(new Dictionary<ObserverId, DateTimeOffset>(_runningStatesChangedAt));
+
+    /// <inheritdoc/>
+    public Task<bool> SaveRunningStateChangedAt(ObserverId observerId, DateTimeOffset? runningStateChangedAt, EventSequenceId owner)
+    {
+        lock (_mutationLock)
+        {
+            if (!_states.TryGetValue(observerId, out var existing) || (existing.Owner is not null && existing.Owner != owner))
+            {
+                return Task.FromResult(false);
+            }
+
+            if (runningStateChangedAt is null)
+            {
+                _runningStatesChangedAt.TryRemove(observerId, out _);
+            }
+            else
+            {
+                _runningStatesChangedAt[observerId] = runningStateChangedAt.Value;
+            }
+        }
+
+        _allSubject.OnNext(Snapshot());
+        return Task.FromResult(true);
     }
 
     /// <inheritdoc/>
     public Task Delete(ObserverId observerId)
     {
-        if (_states.TryRemove(observerId, out _))
+        lock (_mutationLock)
         {
-            _allSubject.OnNext(Snapshot());
+            if (!_states.TryRemove(observerId, out _)) return Task.CompletedTask;
+            _runningStatesChangedAt.TryRemove(observerId, out _);
         }
 
+        _allSubject.OnNext(Snapshot());
         return Task.CompletedTask;
     }
 
     /// <inheritdoc/>
     public Task Rename(ObserverId currentId, ObserverId newId)
     {
-        if (_states.TryRemove(currentId, out var state))
+        lock (_mutationLock)
         {
+            if (!_states.TryRemove(currentId, out var state)) return Task.CompletedTask;
             _states[newId] = state with { Identifier = newId };
-            _allSubject.OnNext(Snapshot());
+            if (_runningStatesChangedAt.TryRemove(currentId, out var changedAt))
+            {
+                _runningStatesChangedAt[newId] = changedAt;
+            }
         }
 
+        _allSubject.OnNext(Snapshot());
         return Task.CompletedTask;
     }
 

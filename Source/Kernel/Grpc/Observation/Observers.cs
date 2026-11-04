@@ -1,19 +1,13 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Diagnostics;
 using System.Reactive.Linq;
-using System.Security.Claims;
 using Cratis.Chronicle.Clients;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Contracts.Observation;
-using Cratis.Chronicle.Security;
 using Cratis.Chronicle.Services.Events;
 using Cratis.Chronicle.Storage;
 using Cratis.Reactive;
-using Grpc.Core;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
 using ProtoBuf.Grpc;
 
 // Cratis.Chronicle.Observation cannot be imported wholesale here: it declares the kernel-side command records that
@@ -28,17 +22,20 @@ namespace Cratis.Chronicle.Services.Observation;
 /// <param name="grainFactory">The <see cref="IGrainFactory"/>.</param>
 /// <param name="storage">The <see cref="IStorage"/>.</param>
 /// <param name="observerRemover">The <see cref="IObserverRemover"/> for removing observers.</param>
-/// <param name="authorization">The resource-aware authorization service.</param>
-/// <param name="httpContextAccessor">The current gRPC request's HTTP context.</param>
-internal sealed class Observers(IGrainFactory grainFactory, IStorage storage, IObserverRemover observerRemover, IAuthorizationService authorization, IHttpContextAccessor httpContextAccessor) : IObservers
+internal sealed class Observers(IGrainFactory grainFactory, IStorage storage, IObserverRemover observerRemover) : IObservers
 {
     const int ObserverCompletionPollingDelayMs = 50;
     const ulong MaximumObserverCompletionRange = 10_000;
 
+    /// <summary>
+    /// Gets or sets the clock used for observer completion deadlines and polling.
+    /// </summary>
+    internal TimeProvider CompletionTimeProvider { get; set; } = TimeProvider.System;
+
     /// <inheritdoc/>
     public async Task<RetryPartitionResponse> RetryPartition(RetryPartition command, CallContext context = default)
     {
-        await EnsureSystemStoreOperation(command);
+        await SystemStoreGuard.Ensure(context, new(command.EventStore, command.Namespace, command.ObserverId, command.EventSequenceId));
         var outcome = await (await grainFactory.GetObserver(command, storage)).TryStartRecoverJobForFailedPartition(command.Partition);
         return new RetryPartitionResponse { Outcome = (PartitionRecoveryOutcome)(int)outcome };
     }
@@ -46,7 +43,7 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage, IO
     /// <inheritdoc/>
     public async Task<ClearPartitionQuarantineResponse> ClearPartitionQuarantine(ClearPartitionQuarantine command, CallContext context = default)
     {
-        await EnsureSystemStoreOperation(command);
+        await SystemStoreGuard.Ensure(context, new(command.EventStore, command.Namespace, command.ObserverId, command.EventSequenceId));
         var result = await (await grainFactory.GetObserver(command, storage)).ClearPartitionQuarantine(command.Partition, command.RetryImmediately);
         return new ClearPartitionQuarantineResponse
         {
@@ -58,7 +55,7 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage, IO
     /// <inheritdoc/>
     public async Task<FastForwardResponse> FastForward(FastForward command, CallContext context = default)
     {
-        await EnsureSystemStoreOperation(command);
+        await SystemStoreGuard.Ensure(context, new(command.EventStore, command.Namespace, command.ObserverId, command.EventSequenceId));
         var result = await (await grainFactory.GetObserver(command, storage)).FastForward();
         return new FastForwardResponse
         {
@@ -71,7 +68,7 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage, IO
     /// <inheritdoc/>
     public async Task<ReplayResponse> Replay(Replay command, CallContext context = default)
     {
-        await EnsureSystemStoreOperation(command);
+        await SystemStoreGuard.Ensure(context, new(command.EventStore, command.Namespace, command.ObserverId, command.EventSequenceId));
 
         // Clients read an empty job id as JobId.NotSet (not replayable, disconnected or quarantined), so keep reporting it rather than throwing.
         var jobId = await (await grainFactory.GetObserver(command, storage)).Replay();
@@ -81,18 +78,19 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage, IO
     /// <inheritdoc/>
     public async Task ReplayPartition(ReplayPartition command, CallContext context = default)
     {
-        await EnsureSystemStoreOperation(command);
+        await SystemStoreGuard.Ensure(context, new(command.EventStore, command.Namespace, command.ObserverId, command.EventSequenceId));
         await (await grainFactory.GetObserver(command, storage)).ReplayPartition(command.Partition);
     }
 
     /// <inheritdoc/>
     public async Task<WaitForObserverCompletionResponse> WaitForCompletion(WaitForObserverCompletionRequest request, CallContext context = default)
     {
+        await SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace, request.EventSequenceId));
         var eventTypeTails = request.EventTypeTails
             .GroupBy(_ => _.EventType.Id, StringComparer.Ordinal)
             .ToDictionary(_ => _.Key, _ => _.Max(tail => tail.SequenceNumber), StringComparer.Ordinal);
 
-        var stopwatch = Stopwatch.StartNew();
+        var started = CompletionTimeProvider.GetTimestamp();
 
         // Recheck the subscription on every poll, but retain a matching event for unchanged filters
         // and event types. An unsubscribed observer or an unknown match cannot be cached.
@@ -216,7 +214,7 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage, IO
                 };
             }
 
-            if (request.TimeoutMilliseconds > 0 && stopwatch.ElapsedMilliseconds >= request.TimeoutMilliseconds)
+            if (request.TimeoutMilliseconds > 0 && CompletionTimeProvider.GetElapsedTime(started).TotalMilliseconds >= request.TimeoutMilliseconds)
             {
                 return new WaitForObserverCompletionResponse
                 {
@@ -226,28 +224,28 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage, IO
                 };
             }
 
-            await Task.Delay(ObserverCompletionPollingDelayMs, context.CancellationToken);
+            await Task.Delay(TimeSpan.FromMilliseconds(ObserverCompletionPollingDelayMs), CompletionTimeProvider, context.CancellationToken);
         }
     }
 
     /// <inheritdoc/>
     public async Task ClearObserverQuarantine(ClearObserverQuarantine command, CallContext context = default)
     {
-        await EnsureSystemStoreOperation(command);
+        await SystemStoreGuard.Ensure(context, new(command.EventStore, command.Namespace, command.ObserverId, command.EventSequenceId));
         await (await grainFactory.GetObserver(command, storage)).ClearObserverQuarantine();
     }
 
     /// <inheritdoc/>
     public async Task ClearFailedPartitions(ClearFailedPartitions command, CallContext context = default)
     {
-        await EnsureSystemStoreOperation(command);
+        await SystemStoreGuard.Ensure(context, new(command.EventStore, command.Namespace, command.ObserverId, command.EventSequenceId));
         await (await grainFactory.GetObserver(command, storage)).ClearFailedPartitions();
     }
 
     /// <inheritdoc/>
     public async Task<RetryFailedPartitionsResponse> RetryFailedPartitions(RetryFailedPartitions command, CallContext context = default)
     {
-        await EnsureSystemStoreOperation(command);
+        await SystemStoreGuard.Ensure(context, new(command.EventStore, command.Namespace, command.ObserverId, command.EventSequenceId));
         var observer = await grainFactory.GetObserver(command, storage);
         var failedPartitions = (await observer.GetFailedPartitionKeys()).Count();
         await observer.TryRecoverAllFailedPartitions();
@@ -257,6 +255,7 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage, IO
     /// <inheritdoc/>
     public async Task<RemoveObserverResponse> RemoveObserver(RemoveObserver command, CallContext context = default)
     {
+        SystemStoreGuard.EnsureNotSystem(new(command.EventStore, command.Namespace, command.ObserverId, command.EventSequenceId));
         var eventSequenceId = await Chronicle.Observation.ObserverEventSequenceResolver.Resolve(
             storage, command.EventStore, command.ObserverId, command.EventSequenceId);
 
@@ -277,9 +276,11 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage, IO
     /// <inheritdoc/>
     public async Task<ObserverInformation> GetObserverInformation(GetObserverInformationRequest request, CallContext context = default)
     {
+        await SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace, request.ObserverId, request.EventSequenceId));
         var observer = await grainFactory.GetObserver(request, storage);
         var definition = await observer.GetDefinition();
         var state = await observer.GetState();
+        var runningStateChangedAt = await storage.GetEventStore(request.EventStore).GetNamespace(request.Namespace).Observers.GetRunningStateChangedAt(request.ObserverId);
         var subscribed = await observer.IsSubscribed();
         return new ObserverInformation
         {
@@ -293,6 +294,7 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage, IO
             TailEventSequenceNumber = state.TailEventSequenceNumber,
             HandledEventCount = state.HandledEventCount,
             RunningState = state.RunningState.ToContract(),
+            RunningStateChangedAt = runningStateChangedAt,
             IsSubscribed = subscribed,
             IsReplayable = definition.IsReplayable
         };
@@ -301,6 +303,7 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage, IO
     /// <inheritdoc/>
     public async Task<IEnumerable<Contracts.Clients.ConnectedClient>> GetConnectedClientsForObserver(GetConnectedClientsForObserverRequest request, CallContext context = default)
     {
+        await SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace, request.ObserverId, request.EventSequenceId));
         var subscription = await (await grainFactory.GetObserver(request, storage)).GetSubscription();
         var clients = new List<Contracts.Clients.ConnectedClient>();
         foreach (var target in subscription.Targets.Where(_ => _.ConnectedClient is not null))
@@ -335,45 +338,33 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage, IO
     /// <inheritdoc/>
     public async Task<IEnumerable<ObserverInformation>> GetObservers(AllObserversRequest request, CallContext context = default)
     {
+        await SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace));
         var observerDefinitions = await storage.GetEventStore(request.EventStore).Observers.GetAll();
-        var observerStates = await storage.GetEventStore(request.EventStore).GetNamespace(request.Namespace).Observers.GetAll();
+        var observerStateStorage = storage.GetEventStore(request.EventStore).GetNamespace(request.Namespace).Observers;
+        var observerStates = await observerStateStorage.GetAll();
+        var runningStatesChangedAt = await observerStateStorage.GetRunningStatesChangedAt();
         var observers =
             from definition in observerDefinitions
             join state in observerStates on definition.Identifier equals state.Identifier into stateGroup
             from state in stateGroup.DefaultIfEmpty(Storage.Observation.ObserverState.Empty)
             select (definition, state);
 
-        return observers.ToContract();
+        return observers.ToContract(runningStatesChangedAt);
     }
 
     /// <inheritdoc/>
-    public IObservable<IEnumerable<ObserverInformation>> ObserveObservers(AllObserversRequest request, CallContext context = default)
-    {
-        return storage
-            .GetEventStore(request.EventStore)
-            .GetNamespace(request.Namespace).Observers
-            .ObserveAll()
-            .CompletedBy(context.CancellationToken)
-            .SelectMany(async observerStates =>
-            {
-                // TODO: We will be formalizing these things in Grains, until then this is less than optimal.
-                var observerDefinitions = await storage.GetEventStore(request.EventStore).Observers.GetAll();
-                var observers =
-                    from definition in observerDefinitions
-                    join state in observerStates on definition.Identifier equals state.Identifier into stateGroup
-                    from state in stateGroup.DefaultIfEmpty(Storage.Observation.ObserverState.Empty)
-                    select (definition, state);
-
-                return observers.ToContract();
-            });
-    }
+    public IObservable<IEnumerable<ObserverInformation>> ObserveObservers(AllObserversRequest request, CallContext context = default) =>
+        SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace), () => ObserveGuardedObservers(request, context));
 
     /// <inheritdoc/>
     public async Task<IEnumerable<ObserverInformation>> GetReplayableObserversForEventTypes(GetReplayableObserversForEventTypesRequest request, CallContext context = default)
     {
+        await SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace));
         var eventTypes = request.EventTypes.ToChronicle();
         var observerDefinitions = await storage.GetEventStore(request.EventStore).Observers.GetReplayableObserversForEventTypes(eventTypes);
-        var observerStates = await storage.GetEventStore(request.EventStore).GetNamespace(request.Namespace).Observers.GetAll();
+        var observerStateStorage = storage.GetEventStore(request.EventStore).GetNamespace(request.Namespace).Observers;
+        var observerStates = await observerStateStorage.GetAll();
+        var runningStatesChangedAt = await observerStateStorage.GetRunningStatesChangedAt();
 
         // Inner join on purpose: only replayable observers that already have state are candidates for
         // replay. Unlike the all-observers listing — where an observer should appear even before it has
@@ -383,7 +374,7 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage, IO
             join state in observerStates on definition.Identifier equals state.Identifier
             select (definition, state);
 
-        return observers.ToContract();
+        return observers.ToContract(runningStatesChangedAt);
     }
 
     static bool NeedsSubscription(
@@ -427,13 +418,33 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage, IO
         request.FirstEventSequenceNumber <= target.Value &&
         request.TailEventSequenceNumber - request.FirstEventSequenceNumber < MaximumObserverCompletionRange;
 
-    async Task EnsureSystemStoreOperation(object operation)
+    IObservable<IEnumerable<ObserverInformation>> ObserveGuardedObservers(AllObserversRequest request, CallContext context)
     {
-        var principal = httpContextAccessor.HttpContext?.User ?? new ClaimsPrincipal();
-        if (!(await authorization.AuthorizeAsync(principal, operation, WellKnownAuthorizationPolicies.AdministratorOperations)).Succeeded)
+        var observerStateStorage = storage.GetEventStore(request.EventStore).GetNamespace(request.Namespace).Observers;
+        return Observable.Defer(() =>
         {
-            throw new RpcException(new Status(StatusCode.PermissionDenied, "Administrator privilege is required for this System-store operation."));
-        }
+            var changedAt = new RunningStatesChangedAtCache(observerStateStorage);
+            return observerStateStorage
+                .ObserveAll()
+                .CompletedBy(context.CancellationToken)
+                .Select(observerStates => Observable.FromAsync(async () =>
+                {
+                    var snapshot = observerStates as IReadOnlyCollection<Storage.Observation.ObserverState> ?? observerStates.ToArray();
+
+                    // TODO: We will be formalizing these things in Grains, until then this is less than optimal.
+                    // Definitions are still read per emission because IObserverDefinitionsStorage has no change source.
+                    var observerDefinitions = await storage.GetEventStore(request.EventStore).Observers.GetAll();
+                    var runningStatesChangedAt = await changedAt.GetFor(snapshot);
+                    var observers =
+                        from definition in observerDefinitions
+                        join state in snapshot on definition.Identifier equals state.Identifier into stateGroup
+                        from state in stateGroup.DefaultIfEmpty(Storage.Observation.ObserverState.Empty)
+                        select (definition, state);
+
+                    return observers.ToContract(runningStatesChangedAt);
+                }))
+                .Concat();
+        });
     }
 
     async Task<EventSequenceNumber?> GetLastMatchingEvent(

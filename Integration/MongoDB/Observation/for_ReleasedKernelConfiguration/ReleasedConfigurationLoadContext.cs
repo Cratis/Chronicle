@@ -15,6 +15,7 @@ sealed class ReleasedConfigurationLoadContext(string runtimeDirectory) : Assembl
     {
         "Microsoft.Extensions.Configuration",
         "Microsoft.Extensions.Configuration.Abstractions",
+        "Microsoft.Extensions.Configuration.Binder",
         "Microsoft.Extensions.Configuration.EnvironmentVariables",
         "Microsoft.Extensions.Configuration.FileExtensions",
         "Microsoft.Extensions.Configuration.Json",

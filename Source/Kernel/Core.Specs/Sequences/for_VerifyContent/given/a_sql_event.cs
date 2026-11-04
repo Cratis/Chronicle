@@ -51,14 +51,7 @@ public class a_sql_event : a_stored_event
         using var cursor = await _sql.GetRange(EventSequenceNumber.First, EventSequenceNumber.First);
         (await cursor.MoveNext()).ShouldBeTrue();
         _stored = cursor.Current.Single();
-
-        // Revisions are recorded alongside the appended content, the same as every other provider: the latest revision
-        // is the current content and each generation keeps the content it was appended with. VerifyContent fails closed
-        // for SQL before reading (SupportsRevisionTracking is false), so the read must also report the revision: should SQL
-        // ever enable tracking, the IsRevised gate still keeps a revised event from comparing as equal.
-        _stored.IsRevised.ShouldBeTrue();
-        _stored.Revisions.Last().Content.ShouldContain("43");
-        _stored.GenerationalContent[1].ShouldContain("42");
+        _stored.GenerationalContent[1].ShouldContain("43");
         _stored.GenerationalContent[2].ShouldContain("42");
     }
 

@@ -6,6 +6,7 @@ extern alias KernelGrpc;
 
 using System.Net;
 using System.Net.Sockets;
+using System.Reflection;
 using Cratis.Arc;
 using Cratis.Arc.MongoDB;
 using Cratis.Chronicle.AspNetCore.Identities;
@@ -70,6 +71,8 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
     /// <inheritdoc/>
     protected override bool RegistersOwnChronicleClient => true;
 
+    Assembly? SharedHostTestAssembly => _fixture.DatabaseNamePrefix.Length == 0 ? typeof(TStartup).Assembly : null;
+
     /// <inheritdoc/>
     protected override IHostBuilder CreateHostBuilder()
     {
@@ -98,9 +101,13 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
             _.ClearProviders();
             _.AddFile($"{DateTimeOffset.UtcNow:yyyyMMdd-HHmmss}.log");
         });
+
+        // Register the ASP.NET Core Arc runtime before the silo's fallback checks for ICommandPipeline.
+        // Arc configures a default service provider, so the fixture's provider factory must follow it.
+        builder.AddCratisArc();
         builder
             .UseDefaultServiceProvider(_ => _.ValidateOnBuild = false)
-            .UseServiceProviderFactory(new FallbackServiceProviderFactory())
+            .UseServiceProviderFactory(new FallbackServiceProviderFactory(SharedHostTestAssembly))
             .ConfigureServices((ctx, services) =>
             {
                 services.AddCratisArcMeter();
@@ -161,9 +168,9 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
                 // Storage.Sql assemblies and registers their classes by convention; if those
                 // registrations come last, they shadow the explicit ones and grain activations
                 // fail with "Unable to resolve ITableMigrator<>" because the inactive backend's
-                // services have no infrastructure wired up. Use silo.Services directly because
-                // silo.ConfigureServices QUEUES the action — it would run later than the
-                // IMMEDIATE registrations performed inside AddChronicleToSilo's WithMongoDB call.
+                // services have no infrastructure wired up. Both silo.Services and
+                // silo.ConfigureServices apply immediately within this queued UseOrleans callback,
+                // before AddChronicleToSilo's WithMongoDB registrations.
                 silo.Services.AddTypeDiscovery();
                 silo.Services.AddBindingsByConvention();
                 silo.Services.AddSelfBindings();
@@ -204,6 +211,7 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
                     // transactional scope deadlocks start-up by resolving the event store that is waiting on the very
                     // kernel command it wraps. The application's own commands keep every extension point.
                     services.AddKernelSideCommandExtensionPointsForKernelCommands();
+                    KernelAuthorizationPolicies.Apply(services);
 
                     services.AddSingleton<IReactorMediator, ReactorMediator>();
                     services.AddSingleton<IReducerMediator, ReducerMediator>();

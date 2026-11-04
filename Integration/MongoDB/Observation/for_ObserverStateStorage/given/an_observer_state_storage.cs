@@ -35,7 +35,7 @@ public class an_observer_state_storage(ChronicleInProcessFixture fixture) : Inte
         await Task.CompletedTask;
     }
 
-    async Task Cleanup() => await _mongoDatabase.Client.DropDatabaseAsync(_databaseName);
+    async Task Destroy() => await _mongoDatabase.Client.DropDatabaseAsync(_databaseName);
 
     protected static KernelObserverState CreateState(ObserverId observerId) =>
         KernelObserverState.Empty with

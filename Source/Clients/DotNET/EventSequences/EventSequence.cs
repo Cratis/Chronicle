@@ -584,6 +584,26 @@ public class EventSequence(
     }
 
     /// <inheritdoc/>
+    public async Task<IImmutableList<AppendedEvent>> GetFromSequenceNumberWithErasedProperties(
+        EventSequenceNumber sequenceNumber,
+        EventSourceId? eventSourceId = default,
+        IEnumerable<EventType>? filterEventTypes = default)
+    {
+        ReadProtectionGuard.Read(nameof(GetFromSequenceNumberWithErasedProperties));
+        var result = await _servicesAccessor.Services.Sequences.FromSequenceNumberWithErasedProperties(new()
+        {
+            EventStore = eventStoreName,
+            Namespace = @namespace,
+            EventSequenceId = eventSequenceId,
+            FromEventSequenceNumber = sequenceNumber,
+            EventSourceId = eventSourceId?.Value,
+            EventTypeIds = JoinEventTypeIds(filterEventTypes)
+        }).EnsureSuccess();
+
+        return result.ToClient(eventStoreName, @namespace, eventTypes, jsonSerializerOptions);
+    }
+
+    /// <inheritdoc/>
     public async Task<IImmutableList<AppendedEvent>> GetForEventSourceIdAndEventTypes(
         EventSourceId eventSourceId,
         IEnumerable<EventType> filterEventTypes,
@@ -635,6 +655,32 @@ public class EventSequence(
             EventStreamId = eventStreamId?.Value,
             EventTypeIds = JoinEventTypeIds(filterEventTypes)
         }).EnsureSuccess()).SequenceNumber;
+    }
+
+    /// <inheritdoc/>
+    public async Task<EventSequenceNumber> GetTailSequenceNumberWithCancellation(
+        CancellationToken cancellationToken,
+        EventSourceId? eventSourceId = default,
+        EventSourceType? eventSourceType = default,
+        EventStreamType? eventStreamType = default,
+        EventStreamId? eventStreamId = default,
+        IEnumerable<EventType>? filterEventTypes = default)
+    {
+        ReadProtectionGuard.Read(nameof(GetTailSequenceNumberWithCancellation));
+        cancellationToken.ThrowIfCancellationRequested();
+        var request = new Contracts.Sequences.TailSequenceNumberRequest
+        {
+            EventStore = eventStoreName,
+            Namespace = @namespace,
+            EventSequenceId = eventSequenceId,
+            EventSourceId = eventSourceId?.Value,
+            EventSourceType = eventSourceType?.Value,
+            EventStreamType = eventStreamType?.Value,
+            EventStreamId = eventStreamId?.Value,
+            EventTypeIds = JoinEventTypeIds(filterEventTypes)
+        };
+        var services = await _servicesAccessor.GetServices(cancellationToken);
+        return (await services.Sequences.TailSequenceNumber(request, new CallContext(new CallOptions(cancellationToken: cancellationToken))).EnsureSuccess()).SequenceNumber;
     }
 
     /// <inheritdoc/>
@@ -705,6 +751,22 @@ public class EventSequence(
             EventTypes = eventTypeIds,
             Causation = causation.ToSequencesContract(),
             CausedBy = identity.ToSequencesContract()
+        }).EnsureSuccess();
+    }
+
+    /// <inheritdoc/>
+    public async Task<Guid> Copy(EventSourceId sourceId, EventSourceId targetId, params Type[] clrEventTypes)
+    {
+        ReadProtectionGuard.Append(nameof(Copy), "event copy");
+        var eventTypeIds = clrEventTypes.Select(t => eventTypes.GetEventTypeFor(t).Id.Value).ToList();
+        return await _servicesAccessor.Services.Sequences.CopyEventsForEventSource(new()
+        {
+            EventStore = eventStoreName,
+            Namespace = @namespace,
+            EventSequenceId = eventSequenceId,
+            SourceId = sourceId,
+            TargetId = targetId,
+            EventTypes = eventTypeIds
         }).EnsureSuccess();
     }
 
@@ -810,7 +872,7 @@ public class EventSequence(
                 row.EventStreamType is null ? null : new EventStreamType(row.EventStreamType),
                 row.EventStreamId is null ? null : new EventStreamId(row.EventStreamId)),
             row.Origin == Contracts.Sequences.ClosedStreamOrigin.CompleteStream ? ClosedStreamOrigin.CompleteStream : ClosedStreamOrigin.ClosingEvent,
-            row.ClosedBy is null ? null : new Events.Constraints.ConstraintName(row.ClosedBy),
+            row.ClosedBy is null ? null : new ConstraintName(row.ClosedBy),
             row.SequenceNumber,
             row.ClosedAt)).ToImmutableList();
     }
@@ -1487,7 +1549,8 @@ public class EventSequence(
         };
 
         // A duplicate did not append this attempt's events. Never notify local observers as if it did.
-        if (response?.EffectAlreadyRecorded == true) return result;
+        // Its result therefore reports no event types appended in this turn.
+        if (response?.EffectAlreadyRecorded == true) return result with { EventTypes = [], AppendedEventTypes = [] };
 
         var handler = result.AllAlreadyAppended ? null : _appendedEventsRaised;
         if (eventsList.Count > 0 && handler is not null)

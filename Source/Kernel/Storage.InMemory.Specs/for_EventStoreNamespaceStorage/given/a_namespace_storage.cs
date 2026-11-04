@@ -13,6 +13,6 @@ public class a_namespace_storage : Specification
     void Establish() => _storage = new(
         new EventStoreName("some-store"),
         new EventStoreNamespaceName("some-namespace"),
-        Substitute.For<Cratis.Orleans.Storage.IJobsStorage>(),
+        Substitute.For<Cratis.Choreography.Storage.IJobsStorage>(),
         Substitute.For<ISinks>());
 }

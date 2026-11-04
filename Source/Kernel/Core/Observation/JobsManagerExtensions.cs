@@ -2,12 +2,12 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using Cratis.Choreography.Jobs;
+using Cratis.Choreography.Storage.Jobs;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Monads;
-using Cratis.Orleans.Jobs;
-using Cratis.Orleans.Storage.Jobs;
 using Microsoft.Extensions.Logging;
 namespace Cratis.Chronicle.Observation;
 
@@ -73,7 +73,7 @@ public static partial class JobsManagerExtensions
     /// <param name="onStartNew">The optional callback when a new job needs to be started.</param>
     /// <param name="onResumeRefused">The optional callback when a stopped job was found but refused to resume, so nothing owns the work.</param>
     /// <param name="concludedJobs">The optional jobs that have already reported their work as done and therefore can not own it, even while still finalizing. Read after the lookup and never changed; forgetting them is up to their owner.</param>
-    /// <param name="maxJobsToDrop">The most stopped jobs that were never prepared to delete instead of resuming them; 0 drops none. Cratis.Orleans refuses to resume them, so they would block the work for good. When any exist, up to the allowed number is dropped and no job is resumed or started in this call; the next call looks the jobs up again.</param>
+    /// <param name="maxJobsToDrop">The most stopped jobs that were never prepared to delete instead of resuming them; 0 drops none. Cratis.Choreography refuses to resume them, so they would block the work for good. When any exist, up to the allowed number is dropped and no job is resumed or started in this call; the next call looks the jobs up again.</param>
     /// <typeparam name="TJob">The type of the job.</typeparam>
     /// <typeparam name="TRequest">The type of the observer request.</typeparam>
     /// <returns>The <see cref="JobId"/> of the running, resumed, or newly started job; or <see cref="JobId.NotSet"/> if no job could be started.</returns>
@@ -113,7 +113,7 @@ public static partial class JobsManagerExtensions
     /// <param name="onStartNew">The optional callback when a new job needs to be started.</param>
     /// <param name="onResumeRefused">The optional callback when a stopped job was found but refused to resume, so nothing owns the work.</param>
     /// <param name="concludedJobs">The optional jobs that have already reported their work as done and therefore can not own it, even while still finalizing. Read after the lookup and never changed; forgetting them is up to their owner.</param>
-    /// <param name="maxJobsToDrop">The most stopped jobs that were never prepared to delete instead of resuming them; 0 drops none. Cratis.Orleans refuses to resume them, so they would block the work for good. When any exist, up to the allowed number is dropped and no job is resumed or started in this call; the next call looks the jobs up again.</param>
+    /// <param name="maxJobsToDrop">The most stopped jobs that were never prepared to delete instead of resuming them; 0 drops none. Cratis.Choreography refuses to resume them, so they would block the work for good. When any exist, up to the allowed number is dropped and no job is resumed or started in this call; the next call looks the jobs up again.</param>
     /// <typeparam name="TJob">The type of the job.</typeparam>
     /// <typeparam name="TRequest">The type of the observer request.</typeparam>
     /// <returns>The <see cref="JobId"/> of the running, resumed, or newly started job; or <see cref="JobId.NotSet"/> if no job could be started.</returns>
@@ -225,6 +225,7 @@ public static partial class JobsManagerExtensions
             {
                 logger.CouldNotResumeJob(pausedJob.Id);
                 await onResumeRefused.Invoke();
+                await jobsManager.RemoveRefusedJobThatNeverPrepared(logger, pausedJob, maxJobsToDrop, onJobsDropped);
                 return JobId.NotSet;
             }
 
@@ -263,7 +264,7 @@ public static partial class JobsManagerExtensions
         (job.IsPreparingOrRunning || job.Status == JobStatus.Removing) && !JobLiveness.HasConcludedAllStepsLongAgo(job, now);
 
     /// <summary>
-    /// Gets whether a job ever reached its steps. Mirrors Job.JobIsPrepared in Cratis.Orleans: a stopped job that
+    /// Gets whether a job ever reached its steps. Mirrors Job.JobIsPrepared in Cratis.Choreography: a stopped job that
     /// was never prepared is refused when resumed, so it can never run again.
     /// </summary>
     /// <param name="job">The <see cref="JobState"/> to check.</param>
@@ -294,6 +295,34 @@ public static partial class JobsManagerExtensions
             !JobLiveness.HasConcludedAllStepsLongAgo(job, now))
             .Select(job => ((TRequest)job.Request).Key)
             .ToHashSet();
+
+    /// <summary>
+    /// Removes a stopped job whose resume was refused when it was stopped before it prepared any step.
+    /// </summary>
+    /// <param name="jobsManager">The jobs manager.</param>
+    /// <param name="logger">The logger.</param>
+    /// <param name="refusedJob">The job that refused to resume.</param>
+    /// <param name="maxJobsToDrop">The drops left in the caller's budget.</param>
+    /// <param name="onJobsDropped">The optional callback with the number of jobs deleted; set when the caller owns a drop budget.</param>
+    /// <returns>An awaitable task.</returns>
+    /// <remarks>
+    /// Such a job has nothing to resume and never will, so every later lookup would find it, refuse it again and leave the
+    /// observer retrying catch-up in a tight loop. It carries no work: removing it lets the next catch-up start a job of its
+    /// own. A caller that reports drops owns a per-turn budget of them, and this removal takes from that budget like any
+    /// other drop, so a turn never deletes more than it allows; the job is then removed by a later turn instead.
+    /// </remarks>
+    static async Task RemoveRefusedJobThatNeverPrepared(this IJobsManager jobsManager, ILogger logger, JobState refusedJob, int maxJobsToDrop, Action<int>? onJobsDropped)
+    {
+        var budgetAllowsRemoval = onJobsDropped is null || maxJobsToDrop > 0;
+        if (!JobLiveness.NeverPrepared(refusedJob) || !budgetAllowsRemoval)
+        {
+            return;
+        }
+
+        logger.RemovingUnresumableJob(refusedJob.Id);
+        await jobsManager.Delete(refusedJob.Id);
+        onJobsDropped?.Invoke(1);
+    }
 
     /// <summary>
     /// Deletes up to the given number of stopped jobs that were never prepared.
@@ -357,4 +386,7 @@ public static partial class JobsManagerExtensions
 
     [LoggerMessage(LogLevel.Warning, "Could not drop stopped job {JobId} that can never resume")]
     static partial void CouldNotDropJob(this ILogger logger, JobId jobId, Exception exception);
+
+    [LoggerMessage(LogLevel.Warning, "Stopped job {JobId} never prepared a step and can not be resumed - removing it so catch-up can start a new job")]
+    static partial void RemovingUnresumableJob(this ILogger logger, JobId jobId);
 }

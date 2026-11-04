@@ -62,6 +62,12 @@ You can also supply the connection string via environment variables. .NET maps t
 export Cratis__Chronicle__ConnectionString="chronicle://clientId:clientSecret@server.example.com:35000"
 ```
 
+## Server certificate validation
+
+The .NET client currently skips server certificate validation by default. For remote servers, trust the server's CA (including inside application containers), or configure a matching `certificatePath` pin, then add `skipTlsValidation=false` to the connection string. Setting `Cratis:Chronicle:Tls:SkipCertificateValidation=false` also enables validation.
+
+A connection constructed with validation disabled logs one warning for non-loopback targets and DNS SRV lookups. Localhost, 127.0.0.0/8, and ::1 are exempt. Non-localhost development hosts, including Aspire deployments, can explicitly use `skipTlsValidation=true` while setting up trust. A future major version validates by default. See [TLS configuration](../configuration/tls) for the trust and pinning requirements.
+
 ## Related topics
 
 - [DotNET client usage](dotnet-client)

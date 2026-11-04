@@ -37,6 +37,16 @@ internal static class AppendRules
             .WithMessage("The System event store is reserved for the kernel and cannot be written through the public API.");
 
     /// <summary>
+    /// Refuses the grain key separator, which would let a routing component address another key.
+    /// </summary>
+    /// <typeparam name="T">Type being validated.</typeparam>
+    /// <param name="rule">The rule builder.</param>
+    /// <returns>The rule builder options for continuation.</returns>
+    public static IRuleBuilderOptions<T, string> NoKeySeparator<T>(this IRuleBuilder<T, string> rule) =>
+        rule.Must(static value => value is null || value.AsSpan().IndexOf(KeyHelper.Separator) < 0)
+            .WithMessage("The value must not contain '#'.");
+
+    /// <summary>
     /// Requires a namespace name.
     /// </summary>
     /// <typeparam name="T">Type being validated.</typeparam>

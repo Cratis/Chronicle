@@ -6,7 +6,7 @@ using Cratis.Chronicle.Concepts;
 namespace Cratis.Chronicle.Diagnostics.OpenTelemetry;
 
 /// <summary>
-/// The legacy telemetry names that are still published for one minor release next to the names in <see cref="WellKnownMetricNames"/>.
+/// The opt-in legacy telemetry names available for one minor release next to the names in <see cref="WellKnownMetricNames"/>.
 /// All of this is removed in the next major version.
 /// </summary>
 internal static class LegacyTelemetryNames
@@ -64,6 +64,8 @@ internal static class LegacyTelemetryNames
         [WellKnownMetricNames.EventSequenceAppendFailures] = [new("chronicle-event-sequences-failed-appended-events", null, "Number of events that failed to be appended to the event sequence")],
         [WellKnownMetricNames.EventSequenceConstraintViolations] = [new("chronicle-event-sequences-constraint-violations", null, "Number of constraint violations")],
         [WellKnownMetricNames.EventSequenceUnknownAppendOutcomes] = [new("chronicle-event-sequences-append-outcomes-unknown", null, "Number of appends whose storage outcome could not be settled")],
+        [WellKnownMetricNames.ConstraintIndexesRebuilding] = [new("chronicle-event-sequences-constraint-indexes-rebuilding", null, "Constraints whose index is held as rebuilding and refuses governed appends")],
+        [WellKnownMetricNames.ConstraintIndexRebuildEnds] = [new("chronicle-event-sequences-constraint-index-rebuild-ends", null, "Ended constraint index rebuilds by handoff reason")],
         [WellKnownMetricNames.ConstraintIndexUpdateFailures] = [new("chronicle-event-sequences-constraint-index-update-failures", null, "Number of failed constraint index attempts")],
         [WellKnownMetricNames.ConstraintIndexSettledErrors] = [new("chronicle-event-sequences-constraint-index-settled-errors", null, "Number of constraint index events settled with a deterministic error")],
         [WellKnownMetricNames.ConstraintIndexPoisonEvents] = [new("chronicle-event-sequences-constraint-index-poison-events", null, "Number of constraint event effects settled after five identical non-transient failures")],

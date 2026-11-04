@@ -80,7 +80,7 @@ OTEL_EXPORTER_OTLP_HEADERS=x-api-key=your-api-key
 
 ## Instrument names and migration
 
-Kernel metrics use `cratis.chronicle.*` names, explicit UCUM units, and shared attribute keys. For example, `cratis.chronicle.observer.successful_observations` has unit `{observation}`. A Prometheus exporter normally exposes it as `cratis_chronicle_observer_successful_observations_total`; descriptions remain HELP metadata, not part of the name.
+Kernel metrics default to `cratis.chronicle.*` names, explicit UCUM units, and shared attribute keys. For example, `cratis.chronicle.observer.successful_observations` has unit `{observation}`. A Prometheus exporter using default translation is expected to expose it as `cratis_chronicle_observer_successful_observations_total`; descriptions remain HELP metadata, not part of the name. Chronicle consumes `Cratis.Metrics.Roslyn` 7.27.0, which includes the instrument-name fix released in 7.20.0. Translation depends on the backend; OTLP serialization coverage alone does not verify Prometheus exposition or HELP text.
 
 Legacy instruments remain published for one minor release with their original metadata and dimensions. The tables below describe those compatibility series. Use the [telemetry name reference](telemetry-names.md) to migrate instrument names and dimensions together; never sum legacy and convention series. Legacy names and keys are deprecated for removal in the next major version. Failure counters remain lazy and retain their existing recording points.
 
@@ -217,5 +217,37 @@ Chronicle traces the following activity sources:
 | `Microsoft.Orleans.Runtime` | Orleans runtime activities |
 | `Microsoft.Orleans.Application` | Orleans application activities |
 | HTTP client | Outgoing HTTP requests |
-| ASP.NET Core | Incoming HTTP and gRPC requests |
-| gRPC client | Outgoing gRPC calls |
+| ASP.NET Core | Incoming HTTP and unary gRPC requests, excluding health checks and connection keep-alive |
+| gRPC client | Outgoing gRPC calls (opt-in) |
+
+### Trace volume defaults
+
+Chronicle excludes connection keep-alive requests, the configured health endpoint (including its `/live`
+and `/ready` routes), and all client-streaming, server-streaming, or duplex gRPC requests from server
+traces. Streaming calls can remain open for the lifetime of a client; tracing them would produce
+long-running spans rather than useful delivery traces. Reactor and reducer registration is traced
+as a separate root operation, without the untraced stream request as its parent.
+
+Queue enqueue and dispatch operations do not create spans. Accepted, non-empty observer deliveries
+produce `cratis.chronicle.observer.handle` spans with `cratis.observer.id`, `cratis.eventstore.name`,
+`cratis.eventstore.namespace`, `cratis.eventsequence.id`, `cratis.observer.type`, and the numeric
+`cratis.event.count` tags.
+
+Kernel gRPC client instrumentation is disabled by default to reduce trace volume. To opt in, set
+`Cratis:Chronicle:Telemetry:GrpcClientTracing` to `true`:
+
+```json
+{
+    "cratis": {
+        "chronicle": {
+            "telemetry": {
+                "grpcClientTracing": true
+            }
+        }
+    }
+}
+```
+
+The equivalent environment variable is `Cratis__Chronicle__Telemetry__GrpcClientTracing=true`.
+HTTP client tracing remains enabled. These exclusions do not disable metrics or change OTLP
+exporter, endpoint, or resource configuration.

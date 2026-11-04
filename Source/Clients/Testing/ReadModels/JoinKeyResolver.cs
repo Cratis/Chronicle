@@ -5,6 +5,7 @@ extern alias KernelConcepts;
 extern alias KernelCore;
 
 using Cratis.Chronicle.Properties;
+using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.InMemory.Sinks;
 using KernelAppendedEvent = KernelConcepts::Cratis.Chronicle.Concepts.Events.AppendedEvent;
 using KernelConceptsNs = KernelConcepts::Cratis.Chronicle.Concepts;
@@ -18,47 +19,45 @@ namespace Cratis.Chronicle.Testing.ReadModels;
 /// through the in-memory test harness.
 /// </summary>
 /// <remarks>
-/// The production engine's <c language="csharp">ForJoin</c> key resolver targets a real sink (MongoDB), so a join source resolves
-/// to the root document that actually holds the joined value. Run against the in-memory sink the same resolver
-/// instead yields a key whose value is the join source's OWN event source id — materializing a phantom document
-/// (root joins) or duplicating a child (child joins). This collaborator recovers the true root by matching the
-/// join value in the sink (<see cref="InMemorySink.TryFindRootKeyByChildValue"/>), mirroring what the real
-/// engine/Mongo does, without changing any engine behavior. It owns only the harness's join-key-resolution
-/// concern; <c language="csharp">ProcessSingleEvent</c> stays orchestration.
+/// Root joins delegate to the kernel resolver and skip unmatched roots rather than materializing phantom
+/// documents. Child joins recover the true root by matching the child value in the sink
+/// (<see cref="InMemorySink.TryFindRootKeyByChildValue"/>). This collaborator owns only the harness's
+/// join-key-resolution concern; <c language="csharp">ProcessSingleEvent</c> stays orchestration.
 /// </remarks>
 internal static class JoinKeyResolver
 {
     /// <summary>
     /// Resolves the root read-model key for a root-level <c language="csharp">[Join]</c> source event by matching the join's
-    /// <c language="csharp">On</c> property against the join event's own event source id — the same lookup the production engine
-    /// performs against its sink, applied here uniformly for any key type (Guid, string concept, and so on).
+    /// <c language="csharp">On</c> property against the value resolved from the join's key expression, with the kernel's
+    /// fallback to the event source id for missing/null properties or unsupported expressions.
     /// </summary>
     /// <param name="projection">The <see cref="KernelProjectionEngine::IProjection"/> being processed.</param>
     /// <param name="kernelProjectionDefinition">The kernel projection definition carrying the join metadata.</param>
+    /// <param name="eventSequenceStorage">Event sequence storage passed to the kernel's key resolver.</param>
     /// <param name="sink">The in-memory sink holding the materialized root documents.</param>
     /// <param name="event">The event being processed.</param>
     /// <returns>
     /// A tuple whose <c language="csharp">IsRootJoinSource</c> is <see langword="true"/> only when <paramref name="event"/> is a
     /// root-level join source (so the caller must resolve here rather than defer to the engine's key resolver).
     /// <c language="csharp">RootKey</c> is the matched root document key to enrich, or <see langword="null"/> when no root row
-    /// exists yet (skip without writing a phantom).
+    /// exists yet (skip without writing a phantom). <c language="csharp">JoinKey</c> carries the resolved join value.
     /// </returns>
     /// <remarks>
-    /// The engine's own <c language="csharp">ForJoin</c> key resolver targets its real sink; run against the in-memory sink it
-    /// yields a phantom document keyed by the join source's id rather than enriching the existing root. This
-    /// replicates only the intended root lookup (<c language="csharp">sink.TryFindRootKeyByChildValue</c> on the join <c language="csharp">On</c>
-    /// column), so no engine behavior changes — a nested join or a non-join event returns
+    /// Delegates to <c language="csharp">ProjectionFactory.GetRootJoinKeyResolver</c> and
+    /// <c language="csharp">KeyResolvers.ForJoin</c>. The latter sets <c language="csharp">ResolvedKey.JoinKey</c> only when a root
+    /// matches, so an unmatched root is skipped. A nested join or a non-join event returns
     /// <c language="csharp">IsRootJoinSource = false</c> and falls through to the engine's normal resolution.
     /// </remarks>
-    public static async Task<(bool IsRootJoinSource, KernelKey? RootKey)> TryResolveRootJoinKey(
+    public static async Task<(bool IsRootJoinSource, KernelKey? RootKey, object? JoinKey)> TryResolveRootJoinKey(
         KernelProjectionEngine::IProjection projection,
         KernelConceptsNs::Projections.Definitions.ProjectionDefinition kernelProjectionDefinition,
+        IEventSequenceStorage eventSequenceStorage,
         InMemorySink sink,
         KernelAppendedEvent @event)
     {
         if (projection.HasParent)
         {
-            return (false, null);
+            return (false, null, null);
         }
 
         // Only a pure, root-level join source routes here. An event that also carries a From mapping
@@ -70,18 +69,20 @@ internal static class JoinKeyResolver
             operationType.HasFlag(KernelProjectionEngine::ProjectionOperationType.From) ||
             operationType.HasFlag(KernelProjectionEngine::ProjectionOperationType.ChildrenAffected))
         {
-            return (false, null);
+            return (false, null, null);
         }
 
         var joinDefinition = kernelProjectionDefinition.Join
             .FirstOrDefault(join => join.Key.Id == @event.Context.EventType.Id).Value;
         if (joinDefinition is null)
         {
-            return (false, null);
+            return (false, null, null);
         }
 
-        var rootKeyResult = await sink.TryFindRootKeyByChildValue(joinDefinition.On, @event.Context.EventSourceId.Value);
-        return rootKeyResult.TryGetValue(out var rootKey) ? (true, rootKey) : (true, null);
+        var result = await projection.GetKeyResolverFor(@event.Context.EventType)(eventSequenceStorage, sink, @event);
+        return result is KernelProjectionEngine::ResolvedKey { JoinKey: not null } resolved
+            ? (true, resolved.Key, resolved.JoinKey)
+            : (true, null, null);
     }
 
     /// <summary>

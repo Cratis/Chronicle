@@ -4,6 +4,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using Cratis.Choreography.Storage.Jobs;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
@@ -11,7 +12,6 @@ using Cratis.Chronicle.Concepts.Observation.Webhooks;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Observation.Webhooks;
 using Cratis.Chronicle.Storage.Observation;
-using Cratis.Orleans.Storage.Jobs;
 
 namespace Cratis.Chronicle.Observation;
 
@@ -299,6 +299,9 @@ public partial class Observer
     async Task DeliverReleasedWebhookProbe(WebhookProbeDelivery delivery)
     {
         var (control, failure, _, _, _) = delivery;
+
+        // The recovery writes absolute counts derived from this read, so it must include held-back live counts.
+        await FlushPendingLivePartitionCounts();
         var partitionCounts = (await storage.GetEventStore(_observerKey.EventStore).GetNamespace(_observerKey.Namespace).ObserverHandledCounts.GetFor(_observerId, failure.Partition)).ToDictionary(_ => _.Key, _ => _.Value);
         if (!CurrentWebhookProbe(control, failure)) return;
         var options = await GetWebhookProbeConfiguration();

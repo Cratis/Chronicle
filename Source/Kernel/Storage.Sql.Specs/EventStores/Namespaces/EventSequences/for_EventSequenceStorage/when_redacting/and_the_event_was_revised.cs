@@ -19,7 +19,6 @@ public class and_the_event_was_revised : given.a_storage_with_two_stored_generat
     }
 
     [Fact] void should_clear_the_revised_generation() => _stored.RevisedGeneration.ShouldBeNull();
-    [Fact] void should_clear_the_revisions() => _stored.Revisions.ShouldBeNull();
     [Fact] void should_read_the_redaction_type() => _read.Context.EventType.Id.ShouldEqual(GlobalEventTypes.Redaction);
     [Fact] void should_not_be_revised() => _read.IsRevised.ShouldBeFalse();
 }

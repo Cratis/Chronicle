@@ -62,7 +62,7 @@ public class ConnectionWatchdog(
             return;
         }
 
-        _ = tasks.Run(RunAsync, cancellationToken);
+        _ = ExecutionContextDetached.Start(() => tasks.Run(RunAsync, cancellationToken));
     }
 
     static TimeSpan BackoffFor(int attempt) =>

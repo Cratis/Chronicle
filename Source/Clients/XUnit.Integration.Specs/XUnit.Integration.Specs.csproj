@@ -10,5 +10,13 @@
         <!-- The v3 harness compiles the shared harness sources, so the specs cover that logic once, on xUnit v3. -->
         <ProjectReference Include="../XUnit.Integration.v3/XUnit.Integration.v3.csproj" />
         <ProjectReference Include="../../Infrastructure/Infrastructure.csproj" />
+        <ProjectReference Include="../../Kernel/Core/Core.csproj">
+            <Aliases>KernelCore</Aliases>
+            <PrivateAssets>all</PrivateAssets>
+        </ProjectReference>
+        <ProjectReference Include="../../Kernel/Grpc/Grpc.csproj">
+            <Aliases>KernelGrpc</Aliases>
+            <PrivateAssets>all</PrivateAssets>
+        </ProjectReference>
     </ItemGroup>
 </Project>

@@ -70,10 +70,18 @@ message NamedTag {
    string Name = 1;
    string Value = 2;
 }
+enum ObservationOrigin {
+   Unknown = 0;
+   Live = 1;
+   CatchingUp = 2;
+   Replaying = 3;
+   Retrying = 4;
+}
 enum ObservationState {
    OBSERVATION_STATE_None = 0;
    Success = 1;
    Failed = 2;
+   Deferred = 3;
 }
 message ObserverFilters {
    repeated string FilterTags = 1;
@@ -84,12 +92,30 @@ message OneOf_RegisterReducer_ReducerResult {
    RegisterReducer Value0 = 1;
    ReducerResult Value1 = 2;
 }
+message PageDelivery {
+   bool Enabled = 1;
+   uint32 MaxEventsPerPage = 2;
+   uint32 MaxBytesPerPage = 3;
+   uint32 MaxDelayMilliseconds = 4;
+}
+message PartitionResult {
+   string Partition = 1;
+   ObservationState State = 2;
+   uint64 LastSuccessfulObservation = 3;
+   repeated string ExceptionMessages = 4;
+   string ExceptionStackTrace = 5;
+   uint64 RetryAfterMilliseconds = 6;
+   string ReadModelState = 7;
+}
 message ReduceOperationMessage {
    string Partition = 1;
    string InitialState = 2;
    repeated AppendedEvent Events = 3;
    ReplayState ReplayState = 4;
    uint64 DeliveryId = 5;
+   uint64 DeliverWithinMilliseconds = 6;
+   repeated ReducerPartition Partitions = 7;
+   ObservationOrigin Origin = 8;
 }
 message ReducerDefinition {
    string ReducerId = 1;
@@ -105,6 +131,11 @@ message ReducerDefinition {
 message ReducerMessage {
    OneOf_RegisterReducer_ReducerResult Content = 1;
 }
+message ReducerPartition {
+   string Partition = 1;
+   string InitialState = 2;
+   repeated AppendedEvent Events = 3;
+}
 message ReducerResult {
    string Partition = 1;
    ObservationState State = 2;
@@ -113,12 +144,15 @@ message ReducerResult {
    string ExceptionStackTrace = 5;
    string ReadModelState = 6;
    uint64 DeliveryId = 7;
+   uint64 RetryAfterMilliseconds = 8;
+   repeated PartitionResult Partitions = 9;
 }
 message RegisterReducer {
    string ConnectionId = 1;
    string EventStore = 2;
    string Namespace = 3;
    ReducerDefinition Reducer = 4;
+   PageDelivery PageDelivery = 5;
 }
 enum ReplayState {
    REPLAY_STATE_None = 0;

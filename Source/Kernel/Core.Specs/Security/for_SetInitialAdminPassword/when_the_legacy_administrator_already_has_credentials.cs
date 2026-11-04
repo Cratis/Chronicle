@@ -12,19 +12,22 @@ public class when_the_legacy_administrator_already_has_credentials : Specificati
 {
     IStorage _storage;
     UserId _userId;
+    IInitialAdminSetupTokens _tokens;
     Exception _exception;
 
     void Establish()
     {
         _userId = Guid.NewGuid();
+        _tokens = Substitute.For<IInitialAdminSetupTokens>();
+        _tokens.IsValid(_userId, "setup-token").Returns(true);
         _storage = Substitute.For<IStorage>();
         var user = new Storage.Security.User { Id = _userId, Username = "admin", HasLoggedIn = false, PasswordHash = "legacy-hash" };
         _storage.System.Users.GetById(_userId).Returns(user);
         _storage.System.Users.GetByUsername("admin").Returns(user);
     }
 
-    async Task Because() => _exception = await Catch.Exception(() => new SetInitialAdminPassword(_userId, "new-password", "new-password")
-        .Handle(Substitute.For<IGrainFactory>(), _storage, Options.Create(new Configuration.ChronicleOptions()), Substitute.For<IEventSerializer>(), CorrelationId.New()));
+    async Task Because() => _exception = await Catch.Exception(() => new SetInitialAdminPassword(_userId, "new-password", "new-password", "setup-token")
+        .Handle(Substitute.For<IGrainFactory>(), _storage, Options.Create(new Configuration.ChronicleOptions()), Substitute.For<IEventSerializer>(), _tokens, CorrelationId.New()));
 
     [Fact] void should_not_allow_anonymous_credential_replacement() => _exception.ShouldBeOfExactType<InitialAdminPasswordAlreadyUsed>();
 }

@@ -40,4 +40,28 @@ public class ReduceOperationMessage
     /// </summary>
     [ProtoMember(5)]
     public ulong DeliveryId { get; set; }
+
+    /// <summary>
+    /// Gets or sets how many milliseconds, counted from when the client receives the message, the kernel waits for its
+    /// result. Zero means the kernel waits without a deadline.
+    /// </summary>
+    /// <remarks>
+    /// A client that only gets to the message after this has passed can answer it as failed straight away: the kernel
+    /// has already given up on it and redelivers the events on the partition's next attempt.
+    /// </remarks>
+    [ProtoMember(6)]
+    public ulong DeliverWithinMilliseconds { get; set; }
+
+    /// <summary>
+    /// Gets or sets the events and initial states as a page of partitions. Set instead of <see cref="Partition"/>,
+    /// <see cref="InitialState"/> and <see cref="Events"/> for a client that enabled <see cref="PageDelivery"/> at registration.
+    /// </summary>
+    [ProtoMember(7)]
+    public IList<ReducerPartition> Partitions { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the path the events came from.
+    /// </summary>
+    [ProtoMember(8)]
+    public ObservationOrigin Origin { get; set; }
 }

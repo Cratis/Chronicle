@@ -3,8 +3,9 @@
 
 import { injectable } from 'tsyringe';
 import { ObserverInformation } from 'Features/Observation';
-import { ClearObserverQuarantine, FastForward, RemoveObserver, ReplayObserver as Replay } from 'Features/Observation';
+import { ClearObserverQuarantine, FastForward, RemoveObserver, ReplayPartition, ReplayObserver as Replay } from 'Features/Observation';
 import { IDialogs } from '@cratis/arc.react.mvvm/dialogs';
+import { CommandResult } from '@cratis/arc/commands';
 import { DialogButtons, DialogResult } from '@cratis/arc.react/dialogs';
 import { ObserverOwner, ObserverRunningState } from 'Features/Contracts/Observation';
 import { FastForwardOutcome, FastForwardResult, ObserverRemovalOutcome, ObserverRemovalResult } from 'Features/Concepts/Observation';
@@ -21,7 +22,71 @@ export class ObserversViewModel {
         private readonly _clearObserverQuarantine: ClearObserverQuarantine,
         private readonly _removeObserver: RemoveObserver,
         private readonly _dialogs: IDialogs,
-        private readonly _fastForward: FastForward) {
+        private readonly _fastForward: FastForward,
+        private readonly _replayPartition: ReplayPartition) {
+    }
+
+    partitionEventSourceId = '';
+    partitionReplayFeedback = '';
+    isReplayingPartition = false;
+    partitionReplayAccepted = false;
+
+    get canReplayPartition() {
+        return this.canReplay && !!this.partitionEventSourceId.trim() && !this.isReplayingPartition;
+    }
+
+    async replayPartition(eventStore: string, namespace: string) {
+        if (this.isReplayingPartition || !this.canReplay) return;
+
+        this.partitionReplayFeedback = '';
+        this.partitionReplayAccepted = false;
+        const partition = this.partitionEventSourceId;
+        if (!partition.trim()) {
+            this.partitionReplayFeedback = strings.eventStore.namespaces.observers.partitionReplay.required;
+            return;
+        }
+
+        const observerId = this.selectedObserver!.id;
+        const eventSequenceId = this.selectedObserver!.eventSequenceId;
+        const messages = strings.eventStore.namespaces.observers.partitionReplay;
+        const target: Record<string, string> = { observerId, eventSourceId: partition, eventStore, namespace };
+        const confirmation = messages.confirm.replace(/\{([^}]+)\}/g, (placeholder, key: string) => target[key] ?? placeholder);
+        this.isReplayingPartition = true;
+        try {
+            const result = await this._dialogs.showConfirmation(
+                messages.title,
+                confirmation,
+                DialogButtons.YesNo
+            );
+            if (result !== DialogResult.Yes) return;
+
+            this._replayPartition.eventStore = eventStore;
+            this._replayPartition.namespace = namespace;
+            this._replayPartition.observerId = observerId;
+            this._replayPartition.eventSequenceId = eventSequenceId;
+            this._replayPartition.partition = partition;
+            this.reportPartitionReplayResult(await this._replayPartition.execute());
+        } catch (error) {
+            this.partitionReplayFeedback = messages.failed.replace('{error}', () => error instanceof Error ? error.message : String(error));
+        } finally {
+            this.isReplayingPartition = false;
+        }
+    }
+
+    private reportPartitionReplayResult(result: CommandResult) {
+        const messages = strings.eventStore.namespaces.observers.partitionReplay;
+        if (!result.isAuthorized) {
+            this.partitionReplayFeedback = messages.unauthorized;
+        } else if (!result.isValid) {
+            this.partitionReplayFeedback = messages.invalid.replace('{errors}', () => result.validationResults.map(_ => _.message).join('\n'));
+        } else if (result.hasExceptions) {
+            this.partitionReplayFeedback = messages.failed.replace('{error}', () => result.exceptionMessages.join('\n'));
+        } else if (!result.isSuccess) {
+            this.partitionReplayFeedback = messages.notAccepted;
+        } else {
+            this.partitionReplayAccepted = true;
+            this.partitionReplayFeedback = messages.accepted;
+        }
     }
 
     selectedObserver: ObserverInformation | undefined;

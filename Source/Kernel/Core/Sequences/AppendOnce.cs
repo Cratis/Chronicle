@@ -29,7 +29,7 @@ namespace Cratis.Chronicle.Sequences;
 /// <param name="Occurred">Optional occurred time. If null, the server sets it to approximately the time of append.</param>
 /// <param name="Subject">Optional subject identifying the compliance target for the event. Defaults to the event source.</param>
 /// <param name="Causation">Optional caller-supplied causation chain. Defaults to the request causation when not provided.</param>
-/// <param name="CausedBy">Optional caller-supplied identity. Defaults to the current principal when not provided.</param>
+/// <param name="CausedBy">Optional identity for application callers. Chronicle users are always recorded as the current principal.</param>
 /// <param name="ConcurrencyScope">Optional concurrency scope, checked only for a new append.</param>
 /// <param name="EventSource">Optional name of the registered event source definition the event is appended through.</param>
 /// <remarks>
@@ -105,7 +105,7 @@ public record AppendOnce(
             new Concepts.EventSequences.IdempotencyKey(IdempotencyKey),
             CorrelationId ?? Guid.NewGuid(),
             Causation?.ToChronicle() ?? causation.GetCurrentChain(),
-            CausedBy?.ToChronicle() ?? principalAccessor.Current.ToIdentity(),
+            principalAccessor.Current.ResolveCausedBy(CausedBy),
             ConcurrencyScope?.ToChronicle() ?? Concepts.EventSequences.Concurrency.ConcurrencyScope.None);
 
         return AppendOnceResult.From(settlement);

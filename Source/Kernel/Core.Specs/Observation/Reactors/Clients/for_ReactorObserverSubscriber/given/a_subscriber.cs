@@ -5,6 +5,7 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
+using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.Reactors;
 using Cratis.Chronicle.Observation.given;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -18,12 +19,17 @@ public class a_subscriber : Specification
     protected ReactorObserverSubscriber _subscriber;
     protected ObserverSubscriberContext _context;
     protected TaskCompletionSource<ObserverSubscriberResult> _completion;
+    protected ObservationOrigin _origin;
 
     void Establish()
     {
         _mediator = Substitute.For<IReactorMediator>();
-        _mediator.When(mediator => mediator.OnNext(Arg.Any<ReactorId>(), Arg.Any<ConnectionId>(), Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<Key>(), Arg.Any<IEnumerable<AppendedEvent>>(), Arg.Any<TaskCompletionSource<ObserverSubscriberResult>>()))
-            .Do(call => _completion = call.Arg<TaskCompletionSource<ObserverSubscriberResult>>());
+        _mediator.When(mediator => mediator.OnNext(Arg.Any<ReactorId>(), Arg.Any<ConnectionId>(), Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<Key>(), Arg.Any<IEnumerable<AppendedEvent>>(), Arg.Any<TaskCompletionSource<ObserverSubscriberResult>>(), Arg.Any<TimeSpan?>(), Arg.Any<ObservationOrigin>()))
+            .Do(call =>
+            {
+                _completion = call.Arg<TaskCompletionSource<ObserverSubscriberResult>>();
+                _origin = call.Arg<ObservationOrigin>();
+            });
         _subscriber = new(_mediator, NullLogger<ReactorObserverSubscriber>.Instance, _clock);
         _context = new ObserverSubscriberContext(new ConnectedClient { ConnectionId = "A" }).WithDeadlines(TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(300), _clock);
     }

@@ -157,13 +157,7 @@ public class AuthorizationController(
                 var invalidCredsEvent = new InvalidUserCredentialsProvided(request.Username ?? string.Empty);
                 await eventLog.Append(user.Id, invalidCredsEvent);
 
-                return Forbid(
-                    properties: new AuthenticationProperties(new Dictionary<string, string?>
-                    {
-                        [OpenIddictServerAspNetCoreConstants.Properties.Error] = OpenIddictConstants.Errors.InvalidGrant,
-                        [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = "The username/password couple is invalid."
-                    }),
-                    authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
+                return PasswordSignInFailure(result);
             }
 
             // Create the claims-based identity
@@ -172,8 +166,7 @@ public class AuthorizationController(
                 nameType: OpenIddictConstants.Claims.Name,
                 roleType: OpenIddictConstants.Claims.Role);
 
-            identity.AddClaim(OpenIddictConstants.Claims.Subject, user.Id.ToString());
-            identity.AddClaim(OpenIddictConstants.Claims.Name, user.Username);
+            identity.SetChronicleUser(user);
             identity.SetClaim(ChronicleClaimTypes.Principal, ChronicleClaimTypes.User);
 
             identity.SetScopes(request.GetScopes());
@@ -236,6 +229,7 @@ public class AuthorizationController(
                 roleType: OpenIddictConstants.Claims.Role);
 
             identity.SetClaim(ChronicleClaimTypes.Principal, ChronicleClaimTypes.User);
+            identity.SetClaim(ChronicleClaims.PrincipalKind, ChronicleClaims.User);
             identity.SetScopes(request.GetScopes());
             identity.SetChronicleAudience();
             identity.SetDestinations(GetDestinations);
@@ -245,6 +239,16 @@ public class AuthorizationController(
 
         throw new InvalidOperationException("The specified grant type is not supported.");
     }
+
+    static ForbidResult PasswordSignInFailure(Microsoft.AspNetCore.Identity.SignInResult result) => new(
+        authenticationSchemes: [OpenIddictServerAspNetCoreDefaults.AuthenticationScheme],
+        properties: new AuthenticationProperties(new Dictionary<string, string?>
+        {
+            [OpenIddictServerAspNetCoreConstants.Properties.Error] = OpenIddictConstants.Errors.InvalidGrant,
+            [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = result.IsLockedOut
+                ? "Too many failed sign-in attempts. Try again later."
+                : "The username/password couple is invalid."
+        }));
 
     static IEnumerable<string> GetDestinations(Claim claim) => claim.Type switch
     {
