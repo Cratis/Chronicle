@@ -2,6 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using Cratis.Choreography.Jobs;
+using Cratis.Choreography.Storage.Jobs;
 using Cratis.Chronicle.Alerts;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
@@ -20,8 +22,6 @@ using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Metrics;
 using Cratis.Monads;
-using Cratis.Orleans.Jobs;
-using Cratis.Orleans.Storage.Jobs;
 using Cratis.Traces;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -57,7 +57,7 @@ public class an_observer : Specification
     protected IObserverServiceClient _observerServiceClient;
     protected FailedPartitions _failedPartitionsState;
     protected virtual ObserverId _observerId => "d2a138a2-6ca5-4bff-8a2f-ffd8534cc80e";
-    protected ObserverKey _observerKey => new(_observerId, EventStoreName.NotSet, EventStoreNamespaceName.NotSet, EventSequenceId.Log);
+    protected virtual ObserverKey _observerKey => new(_observerId, EventStoreName.NotSet, EventStoreNamespaceName.NotSet, EventSequenceId.Log);
     protected TestKitSilo _silo = new();
     protected IStorage<ObserverState> _stateStorage;
     protected TestStorageStats _storageStats => _silo.StorageStats<Observer, ObserverState>()!;
@@ -87,6 +87,8 @@ public class an_observer : Specification
 
     protected virtual Observers CreateObserversConfig() => new() { WriteCoalescingInterval = 0 };
 
+    protected virtual IActivitySource<Observer> CreateActivitySource() => new ActivitySource<Observer>();
+
     void AddServices(TestKitSilo silo)
     {
         var options = Substitute.For<IOptionsMonitor<ChronicleOptions>>();
@@ -100,7 +102,7 @@ public class an_observer : Specification
         silo.AddService(_eventGenerationRelease);
         silo.AddService<IObserverSubscriberSelector>(new RoundRobinObserverSubscriberSelector());
         silo.AddService(_observerServiceClient);
-        silo.AddKeyedService<IActivitySource<Observer>>(WellKnown.MeterName, new ActivitySource<Observer>());
+        silo.AddKeyedService(WellKnown.MeterName, CreateActivitySource());
         silo.AddService(_logger);
         silo.AddService(_loggerFactory);
 
@@ -252,7 +254,7 @@ public class an_observer : Specification
 
     void ConfigureDefaultJobStorage()
     {
-        _jobStorage.GetJob(Arg.Any<JobId>()).Returns(call => Task.FromResult<Catch<JobState, Cratis.Orleans.Storage.Jobs.JobError>>(new JobState
+        _jobStorage.GetJob(Arg.Any<JobId>()).Returns(call => Task.FromResult<Catch<JobState, Cratis.Choreography.Storage.Jobs.JobError>>(new JobState
         {
             Id = call.Arg<JobId>(),
             Status = JobStatus.Running

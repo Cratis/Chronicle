@@ -4,12 +4,14 @@
 import sinon from 'sinon';
 import { CommandResult } from '@cratis/arc/commands';
 import { Guid } from '@cratis/fundamentals';
-import { IgnoreRecommendation, PerformRecommendation } from 'Features/Recommendations';
+import { IgnoreRecommendation, PerformRecommendation, UnignoreRecommendation } from 'Features/Recommendations';
 import { a_view_model } from './when_managing_selection/given/a_view_model';
 
-for (const ignore of [false, true]) {
-    const Command = ignore ? IgnoreRecommendation : PerformRecommendation;
-    const action = ignore ? 'ignoreRecommendations' : 'performRecommendations';
+for (const [Command, action] of [
+    [PerformRecommendation, 'performRecommendations'],
+    [IgnoreRecommendation, 'ignoreRecommendations'],
+    [UnignoreRecommendation, 'unignoreRecommendations']
+] as const) {
     describe(`when applying a ${action} batch`, () => {
         let context: a_view_model;
         let execute: sinon.SinonStub;

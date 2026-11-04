@@ -8,10 +8,15 @@ namespace Cratis.Chronicle.Storage.MongoDB.Schema;
 /// </summary>
 /// <param name="Scope">The logical scope.</param>
 /// <param name="Database">The physical database name.</param>
-/// <param name="Missing">Missing or incompatible collection/index names.</param>
+/// <param name="Missing">Missing collection/index names.</param>
 /// <param name="Obsolete">Obsolete collection/index names.</param>
 public record MongoDBIndexScopeResult(string Scope, string Database, IReadOnlyList<string> Missing, IReadOnlyList<string> Obsolete)
 {
+    /// <summary>
+    /// Gets indexes present under a Chronicle-owned name whose keys or options differ; never rebuilt automatically.
+    /// </summary>
+    public IReadOnlyList<string> Incompatible { get; init; } = [];
+
     /// <summary>
     /// Gets existing constraint collections whose stored definitions do not select a single mode.
     /// These are advisory and do not make the report non-current.

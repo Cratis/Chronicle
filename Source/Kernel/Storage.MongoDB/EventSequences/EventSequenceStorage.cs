@@ -449,10 +449,15 @@ public partial class EventSequenceStorage(
                 { eventType.Generation.ToString(), hash.Value }
             });
 
-        var filter = Builders<Event>.Filter.Eq(e => e.SequenceNumber, sequenceNumber);
+        var filter = Builders<Event>.Filter.Eq(e => e.SequenceNumber, sequenceNumber) &
+                     Builders<Event>.Filter.Eq(e => e.Type, eventType.Id);
         var update = Builders<Event>.Update.Push(e => e.Revisions, revision);
 
-        await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
+        var result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
+        if (result.MatchedCount == 0)
+        {
+            logger.RevisionSkippedForChangedEvent(eventSequenceId, sequenceNumber);
+        }
     }
 
     /// <inheritdoc/>
@@ -496,7 +501,7 @@ public partial class EventSequenceStorage(
 
         var updateModel = CreateRedactionUpdateModelFor(existingRaw, reason, correlationId, causation, causedByChain, occurred, jsonSerializerOptions);
         var updateResult = await collection.UpdateOneAsync(
-            Builders<Event>.Filter.And(updateModel.Filter, Builders<Event>.Filter.Ne(_ => _.Type, GlobalEventTypes.Redaction)),
+            updateModel.Filter,
             updateModel.Update).ConfigureAwait(false);
 
         if (updateResult.ModifiedCount == 0)
@@ -1088,7 +1093,8 @@ public partial class EventSequenceStorage(
         };
 
         return new UpdateOneModel<Event>(
-            Builders<Event>.Filter.Eq(e => e.SequenceNumber, originalRawEvent.SequenceNumber),
+            Builders<Event>.Filter.Eq(e => e.SequenceNumber, originalRawEvent.SequenceNumber) &
+            Builders<Event>.Filter.Ne(e => e.Type, GlobalEventTypes.Redaction),
             Builders<Event>.Update
                 .Set(e => e.Type, GlobalEventTypes.Redaction)
                 .Set(e => e.Content, generationalContent)

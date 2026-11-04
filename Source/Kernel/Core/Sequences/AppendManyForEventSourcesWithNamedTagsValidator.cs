@@ -23,8 +23,11 @@ internal class AppendManyForEventSourcesWithNamedTagsValidator : CommandValidato
     {
         RuleFor(_ => _.EventStore).RequiredEventStore();
         RuleFor(_ => _.EventStore).NotSystemEventStore();
+        RuleFor(_ => _.EventStore).NoKeySeparator();
         RuleFor(_ => _.Namespace).RequiredNamespace();
+        RuleFor(_ => _.Namespace).NoKeySeparator();
         RuleFor(_ => _.EventSequenceId).RequiredEventSequence();
+        RuleFor(_ => _.EventSequenceId).NoKeySeparator();
 
         RuleFor(_ => _.Events).RequiredEvents();
 

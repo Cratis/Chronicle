@@ -65,12 +65,15 @@ public class when_two_silos_bootstrap_the_administrator : Specification
         serializer.Serialize(Arg.Any<object>()).Returns(new JsonObject());
         var options = Options.Create(new Configuration.ChronicleOptions());
         var applications = Substitute.For<IApplicationStorage>();
+        var tokens = Substitute.For<Security.IInitialAdminSetupTokens>();
+        tokens.Issue(Arg.Any<UserId>()).Returns((InitialAdminSetupToken)"setup-token");
         _first = new AuthenticationService(
             _users,
             applications,
             grainFactory,
             options,
             serializer,
+            tokens,
             NullLogger<AuthenticationService>.Instance);
         _second = new AuthenticationService(
             _users,
@@ -78,6 +81,7 @@ public class when_two_silos_bootstrap_the_administrator : Specification
             grainFactory,
             options,
             serializer,
+            tokens,
             NullLogger<AuthenticationService>.Instance);
     }
 

@@ -15,6 +15,9 @@ namespace Cratis.Chronicle.XUnit.Integration;
 /// collections include every contributor. Unsafe open-generic collection contributors are rejected
 /// conservatively, even when their constraints would make DI skip them for a particular closed type.
 /// Explicit collection registrations are direct selections, not synthesized collections.
+/// Test-assembly factory and instance singletons require a current-context registration, like other
+/// protected registrations. Host-scoped configuration is resolved through framework service types.
+/// Dependency-taking type bindings and explicit collections also require a current-context registration.
 /// </remarks>
 internal sealed class ContainerFallbackPolicy
 {

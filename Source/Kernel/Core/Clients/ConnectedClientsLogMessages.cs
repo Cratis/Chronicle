@@ -18,4 +18,7 @@ internal static partial class ConnectedClientsLogMessages
 
     [LoggerMessage(LogLevel.Debug, "Disconnected client with connection identifier '{ConnectionId}'. Reason: {Reason}")]
     internal static partial void ClientDisconnected(this ILogger<ConnectedClients> logger, string connectionId, string reason);
+
+    [LoggerMessage(LogLevel.Warning, "Could not tell observer '{ObserverId}' that client '{ConnectionId}' was dropped. The observer watchdog hands it over instead.")]
+    internal static partial void FailedToNotifyObserver(this ILogger<ClientDepartureNotifier> logger, string connectionId, string observerId, Exception exception);
 }

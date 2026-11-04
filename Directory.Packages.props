@@ -20,19 +20,19 @@
     <PackageVersion Include="Aspire.Hosting.AppHost" Version="13.4.6" />
     <PackageVersion Include="Aspire.Hosting.Yarp" Version="13.4.6" />
     <!-- Cratis -->
-    <!-- Cratis.Orleans 1.27.4 requires at least 7.26.1; a lower pin fails restore with NU1605. -->
-    <PackageVersion Include="Cratis.Fundamentals" Version="7.27.0" />
+    <!-- Cratis.Choreography requires at least Cratis.Fundamentals 7.32.0; a lower pin fails restore with NU1605. -->
+    <PackageVersion Include="Cratis.Fundamentals" Version="7.32.0" />
     <PackageVersion Include="Cratis.Metrics.Roslyn" Version="7.27.0" />
     <!-- Keep the Arc runtime packages aligned; Chronicle.Testing declares Arc dependencies for its embedded kernel. -->
-    <PackageVersion Include="Cratis.Arc" Version="22.143.0" />
-    <PackageVersion Include="Cratis.Arc.Core" Version="22.143.0" />
-    <PackageVersion Include="Cratis.Arc.Connections.Azure" Version="22.143.0" />
-    <PackageVersion Include="Cratis.Arc.EntityFrameworkCore" Version="22.143.0" />
-    <PackageVersion Include="Cratis.Arc.MongoDB" Version="22.143.0" />
+    <PackageVersion Include="Cratis.Arc" Version="22.156.4" />
+    <PackageVersion Include="Cratis.Arc.Core" Version="22.156.4" />
+    <PackageVersion Include="Cratis.Arc.Connections.Azure" Version="22.156.4" />
+    <PackageVersion Include="Cratis.Arc.EntityFrameworkCore" Version="22.156.4" />
+    <PackageVersion Include="Cratis.Arc.MongoDB" Version="22.156.4" />
     <!-- Build-time tool only, kept at 22.23.0: the 22.30.0 generator aborts on Core with "Microsoft.Extensions.Options has already been loaded into this MetadataLoadContext". -->
-    <PackageVersion Include="Cratis.Arc.ProxyGenerator.Build" Version="22.143.0" />
-    <PackageVersion Include="Cratis.Arc.Swagger" Version="22.143.0" />
-    <PackageVersion Include="Cratis.Arc.Testing" Version="22.143.0" />
+    <PackageVersion Include="Cratis.Arc.ProxyGenerator.Build" Version="22.156.4" />
+    <PackageVersion Include="Cratis.Arc.Swagger" Version="22.156.4" />
+    <PackageVersion Include="Cratis.Arc.Testing" Version="22.156.4" />
     <PackageVersion Include="Cratis.Screenplay" Version="4.249.2" />
     <!-- Microsoft -->
     <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.403" />
@@ -69,25 +69,25 @@
     <PackageVersion Include="System.Security.Cryptography.Pkcs" Version="10.0.14" />
     <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
     <!-- Orleans -->
-    <PackageVersion Include="Microsoft.Orleans.Core.Abstractions" Version="10.4.0" />
-    <PackageVersion Include="Microsoft.Orleans.Clustering.AzureStorage" Version="10.2.2" />
-    <PackageVersion Include="Microsoft.Orleans.Clustering.AdoNet" Version="10.2.2" />
-    <PackageVersion Include="Microsoft.Orleans.Client" Version="10.2.2" />
-    <PackageVersion Include="Microsoft.Orleans.Server" Version="10.4.0" />
-    <PackageVersion Include="Microsoft.Orleans.Serialization" Version="10.4.0" />
-    <PackageVersion Include="Microsoft.Orleans.Serialization.Abstractions" Version="10.2.2" />
-    <PackageVersion Include="Microsoft.Orleans.Serialization.SystemTextJson" Version="10.4.0" />
-    <PackageVersion Include="Microsoft.Orleans.Streaming" Version="10.4.0" />
-    <PackageVersion Include="Microsoft.Orleans.Reminders" Version="10.4.0" />
-    <PackageVersion Include="Microsoft.Orleans.Sdk" Version="10.4.0" />
-    <PackageVersion Include="Microsoft.Orleans.BroadcastChannel" Version="10.4.0" />
-    <PackageVersion Include="Microsoft.Orleans.TestingHost" Version="10.4.0" />
+    <PackageVersion Include="Microsoft.Orleans.Core.Abstractions" Version="10.4.2" />
+    <PackageVersion Include="Microsoft.Orleans.Clustering.AzureStorage" Version="10.4.2" />
+    <PackageVersion Include="Microsoft.Orleans.Clustering.AdoNet" Version="10.4.2" />
+    <PackageVersion Include="Microsoft.Orleans.Client" Version="10.4.2" />
+    <PackageVersion Include="Microsoft.Orleans.Server" Version="10.4.2" />
+    <PackageVersion Include="Microsoft.Orleans.Serialization" Version="10.4.2" />
+    <PackageVersion Include="Microsoft.Orleans.Serialization.Abstractions" Version="10.4.2" />
+    <PackageVersion Include="Microsoft.Orleans.Serialization.SystemTextJson" Version="10.4.2" />
+    <PackageVersion Include="Microsoft.Orleans.Streaming" Version="10.4.2" />
+    <PackageVersion Include="Microsoft.Orleans.Reminders" Version="10.4.2" />
+    <PackageVersion Include="Microsoft.Orleans.Sdk" Version="10.4.2" />
+    <PackageVersion Include="Microsoft.Orleans.BroadcastChannel" Version="10.4.2" />
+    <PackageVersion Include="Microsoft.Orleans.TestingHost" Version="10.4.2" />
     <PackageVersion Include="OrleansTestKit10" Version="10.0.0" />
     <PackageVersion Include="Orleans.Providers.MongoDB" Version="9.5.0" />
-    <PackageVersion Include="Cratis.Orleans" Version="1.32.3" />
-    <PackageVersion Include="Cratis.Orleans.Storage" Version="1.32.3" />
-    <PackageVersion Include="Cratis.Orleans.Storage.MongoDB" Version="1.32.3" />
-    <PackageVersion Include="Cratis.Orleans.Storage.Sql" Version="1.32.3" />
+    <PackageVersion Include="Cratis.Choreography" Version="2.1.1" />
+    <PackageVersion Include="Cratis.Choreography.Storage" Version="2.1.1" />
+    <PackageVersion Include="Cratis.Choreography.Storage.MongoDB" Version="2.1.1" />
+    <PackageVersion Include="Cratis.Choreography.Storage.Sql" Version="2.1.1" />
     <!-- Open Telemetry -->
     <PackageVersion Include="OpenTelemetry" Version="1.20.1" />
     <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.20.1" />
@@ -106,7 +106,7 @@
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp.Analyzer.Testing.XUnit" Version="1.1.2" />
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp.CodeFix.Testing.XUnit" Version="1.1.2" />
     <!-- Analysis -->
-    <PackageVersion Include="Microsoft.Orleans.Analyzers" Version="10.2.2" />
+    <PackageVersion Include="Microsoft.Orleans.Analyzers" Version="10.4.2" />
     <PackageVersion Include="StyleCop.Analyzers" Version="1.2.0-beta.556" NoWarn="NU5104" />
     <PackageVersion Include="Roslynator.Analyzers" Version="5.0.1" />
     <PackageVersion Include="Meziantou.Analyzer" Version="3.0.317" />
@@ -129,7 +129,7 @@
     <PackageVersion Include="xunit.v3.mtp-off" Version="4.0.2" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="4.0.1" />
     <PackageVersion Include="NSubstitute" Version="6.2.0" />
-    <!-- Transitive pin: Cratis.Orleans floats Castle.Core to 5.2.1, whose proxy mapping regression breaks NSubstitute class proxies.
+    <!-- Transitive pin: Cratis.Choreography floats Castle.Core to 5.2.1, whose proxy mapping regression breaks NSubstitute class proxies.
          Keep this at 5.1.1; automated package updates must not raise it (https://github.com/Cratis/Chronicle/issues/5414). -->
     <PackageVersion Include="Castle.Core" Version="5.1.1" />
     <!-- Not categorized -->

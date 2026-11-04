@@ -26,7 +26,7 @@ public record JobSummary(
     Guid Id,
     string Details,
     string Type,
-    Cratis.Orleans.Jobs.JobStatus Status,
+    Cratis.Choreography.Jobs.JobStatus Status,
     DateTimeOffset Created,
     IEnumerable<JobStatusChanged> StatusChanges,
     JobProgress Progress)

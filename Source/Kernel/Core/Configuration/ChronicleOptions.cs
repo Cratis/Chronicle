@@ -50,7 +50,7 @@ public class ChronicleOptions : IValidatableObject
     /// Gets the dedicated port to expose the health endpoint on, or <see langword="null"/> when it is served on the main <see cref="Port"/>.
     /// </summary>
     /// <remarks>
-    /// Resolves to <see cref="Configuration.Health.Port"/> only when it is set and differs from the main
+    /// Resolves to <see cref="Health.Port"/> only when it is set and differs from the main
     /// <see cref="Port"/>. A value equal to the main port would collide with the main listener, so it falls
     /// back to serving the health endpoint on the main port.
     /// </remarks>
@@ -126,6 +126,11 @@ public class ChronicleOptions : IValidatableObject
     public IDictionary<string, ObserverRetryOverride> ObserverRetryOverrides { get; init; } = new Dictionary<string, ObserverRetryOverride>(StringComparer.Ordinal);
 
     /// <summary>
+    /// Gets the constraint-index repair configuration: retries, time budgets, cadence and memory caps.
+    /// </summary>
+    public ConstraintIndexRepairOptions ConstraintIndexRepair { get; init; } = new();
+
+    /// <summary>
     /// Gets the durable occurrence delivery configuration.
     /// </summary>
     public Occurrences Occurrences { get; init; } = new();
@@ -149,6 +154,11 @@ public class ChronicleOptions : IValidatableObject
     /// Gets the webhooks configuration.
     /// </summary>
     public Webhooks Webhooks { get; init; } = new Webhooks();
+
+    /// <summary>
+    /// Gets the HTTP capture source destination validation configuration.
+    /// </summary>
+    public ExternalServices ExternalServices { get; init; } = new();
 
     /// <summary>
     /// Gets the clustering configuration.
@@ -258,6 +268,7 @@ public class ChronicleOptions : IValidatableObject
                 [$"{nameof(Alerts)}.{nameof(Alerts.Conditions)}[{_.Key}].{nameof(AlertConditionOptions.RaiseAfter)}"]));
         foreach (var error in ValidateSingleWriterLease().Concat(alertErrors)) yield return error;
         foreach (var error in ObserverRetryOverrides.SelectMany(_ => _.Value.Validate(_.Key))) yield return error;
+        foreach (var error in ConstraintIndexRepair.Validate()) yield return error;
         if (!Webhooks.Probe.HasValidTiming)
         {
             yield return new ValidationResult("Invalid webhook probe timing settings.", [$"{nameof(Webhooks)}.{nameof(Configuration.Webhooks.Probe)}"]);

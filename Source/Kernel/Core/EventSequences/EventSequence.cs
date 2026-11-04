@@ -149,6 +149,7 @@ public partial class EventSequence(
         _constraintsVersionCheckInterval = options.Value.Events.ConstraintsVersionCheckInterval;
         _lastConstraintsVersionCheck = 0;
         _statePersistenceInterval = Math.Max(1, options.Value.Events.StatePersistenceInterval);
+        ConstraintIndexRepair = options.Value.ConstraintIndexRepair;
 
         await EventSequenceStorage.EnsureIndexes();
         await base.OnActivateAsync(cancellationToken);
@@ -180,7 +181,7 @@ public partial class EventSequence(
         _constraintIndexRepairTimer?.Dispose();
         _constraintIndexRepairTimer = null;
         DisposeSpillRetry();
-        ConstraintIndexCatchUpSlots.For(storage).Complete(this);
+        CatchUpSlots.Complete(this);
         _catchUpTracking = false;
         _catchUpReplay = null;
         _catchUpExcluded.Clear();
@@ -374,6 +375,10 @@ public partial class EventSequence(
         IEnumerable<Causation> causation,
         Identity causedBy)
     {
+        if (string.Equals(_eventSequenceKey.EventStore.Value, EventStoreName.System.Value, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new SystemEventStoreEventsAreImmutable();
+        }
         logger.Revising(
             _eventSequenceKey.EventStore,
             _eventSequenceKey.Namespace,
@@ -414,6 +419,10 @@ public partial class EventSequence(
         IEnumerable<Causation> causation,
         Identity causedBy)
     {
+        if (string.Equals(_eventSequenceKey.EventStore.Value, EventStoreName.System.Value, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new SystemEventStoreEventsAreImmutable();
+        }
         logger.Redacting(
             _eventSequenceKey.EventStore,
             _eventSequenceKey.Namespace,
@@ -453,6 +462,10 @@ public partial class EventSequence(
         IEnumerable<Causation> causation,
         Identity causedBy)
     {
+        if (string.Equals(_eventSequenceKey.EventStore.Value, EventStoreName.System.Value, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new SystemEventStoreEventsAreImmutable();
+        }
         logger.RedactingMultiple(
             _eventSequenceKey.EventStore,
             _eventSequenceKey.Namespace,

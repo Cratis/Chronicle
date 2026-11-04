@@ -13,6 +13,11 @@ public partial class ConstraintIndexReplay
     int _catchUpGroupIndex;
 
     /// <summary>
+    /// Gets a value indicating whether the last turn could not write because a difference belongs to a constraint pending repair.
+    /// </summary>
+    internal bool BlockedByPendingRepair { get; private set; }
+
+    /// <summary>
     /// Extends the current reading segment, and invalidates differences collected at the old boundary.
     /// </summary>
     /// <param name="boundary">The new exclusive end point.</param>
@@ -72,7 +77,8 @@ public partial class ConstraintIndexReplay
     async Task<bool> WriteCatchUp(CancellationToken budget)
     {
         var barrier = CatchUp!;
-        if (_differences.Exists(difference => !barrier.IsExcluded(difference) && barrier.IsPending(difference.Name))) return false;
+        BlockedByPendingRepair = _differences.Exists(difference => !barrier.IsExcluded(difference) && barrier.IsPending(difference.Name));
+        if (BlockedByPendingRepair) return false;
         PlanRefusal(barrier, budget);
         var written = barrier.UnderRefusal ? await WriteUnderRefusal(barrier, budget) : await WriteCatchUpGroups(budget);
         if (!written) return false;

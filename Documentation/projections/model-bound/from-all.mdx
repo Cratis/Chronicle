@@ -36,12 +36,17 @@ Older .NET clients, and the TypeScript client until it emits child-level mapping
 | `.FromAll(...)` | You want a fluent mapping that subscribes to every event type in the sequence. |
 | `[FromAll]` | You want sequence-wide subscription with convention-based payload mapping in a .NET model-bound projection. |
 | `[FromEvery(...)]` | You want to map only handled event types, with an explicit event payload or event context source. |
-| Other clients' every-event API | You are writing Kotlin, Elixir, TypeScript, or another client and the client exposes the concept under a different name. |
+| TypeScript fluent `fromAll(...)` | You want the fluent mapping in the TypeScript client. It has the same sequence-wide subscription as .NET `.FromAll(...)`. |
+| TypeScript `@fromAllEvents` | You want a model-bound TypeScript projection to subscribe to every event type. Put it on a root property: like .NET `[FromAll]`, only a root declaration widens the subscription. On a child member it adds the mapping to the root's all-events block without widening it. |
+| TypeScript `@fromEvery` | You want to map only the projection's handled event types in a TypeScript model-bound projection. |
+| Other clients' every-event API | You are writing Kotlin, Elixir, or another client and the client exposes the concept under a different name. |
+
+The TypeScript `@fromAll` decorator is a deprecated alias of `@fromEvery`: it maps only handled event types and does **not** subscribe to every event. Its behavior will not change; use `@fromAllEvents` for a sequence-wide subscription. Fluent `fromAll(...)` is available from Chronicle TypeScript client 6.42.0, and `@fromAllEvents` from 6.44.0.
 
 ## Limitations
 
 - A join-only event type is excluded from the separate all-events subscription to avoid double counting. Its `FromAll` mapping follows the join, so an event with no matching read-model instance does not create a fallback instance under its own event source id. To construct an instance for that type, declare it in `From` as well; it then receives the every-event mapping once through `From`.
-- `FromAll` is a .NET API name; the declaration language calls its sequence-wide subscription `all`.
+- The sequence-wide subscription is spelled `FromAll` in .NET, `fromAll(...)` (fluent) and `@fromAllEvents` (model-bound) in TypeScript, and `all` in the declaration language.
 - The model-bound `[FromAll]` attribute is best kept to the convention-based form.
 - Use an event-specific mapping when a property should update only for selected event types.
 - Counting or incrementing into a dictionary-typed property with a dynamic, per-event key is available only through the fluent `.FromAll(...)` API today, not through `[FromAll]`. See [Projection With FromAll](../declarative/from-all#counting-into-a-dictionary-with-a-dynamic-key).

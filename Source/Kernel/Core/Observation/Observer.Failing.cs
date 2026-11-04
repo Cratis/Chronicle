@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Choreography.Jobs;
 using Cratis.Chronicle.Concepts.Alerts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
@@ -9,7 +10,6 @@ using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Chronicle.Observation.States;
 using Cratis.Chronicle.Observation.Webhooks;
-using Cratis.Orleans.Jobs;
 
 namespace Cratis.Chronicle.Observation;
 
@@ -259,7 +259,7 @@ public partial class Observer
         ForgetRecoveryStart(partition);
         var startAttempted = false;
         var jobId = await StartRecoverJobForFailedPartition(failure, () => startAttempted = true);
-        if (jobId == Cratis.Orleans.Jobs.JobId.NotSet)
+        if (jobId == Cratis.Choreography.Jobs.JobId.NotSet)
         {
             return (PartitionRecoveryOutcome.Started, ReportJobNotStarted());
         }
@@ -578,13 +578,13 @@ public partial class Observer
         }
     }
 
-    async Task<Cratis.Orleans.Jobs.JobId> StartRecoverJobForFailedPartition(FailedPartition failedPartition, Action? onStartAttempted = null)
+    async Task<Cratis.Choreography.Jobs.JobId> StartRecoverJobForFailedPartition(FailedPartition failedPartition, Action? onStartAttempted = null)
     {
-        if (IsRetired || _removed) return Cratis.Orleans.Jobs.JobId.NotSet;
+        if (IsRetired || _removed) return Cratis.Choreography.Jobs.JobId.NotSet;
         if (IsQuarantined)
         {
             logger.SkippingFailedPartitionRecoveryBecauseObserverIsQuarantined();
-            return Cratis.Orleans.Jobs.JobId.NotSet;
+            return Cratis.Choreography.Jobs.JobId.NotSet;
         }
 
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
@@ -592,7 +592,7 @@ public partial class Observer
             await ParkExpiredWebhookRetry(failedPartition, await GetRetryConfiguration()) ||
             !await IsDeferralDue(failedPartition))
         {
-            return Cratis.Orleans.Jobs.JobId.NotSet;
+            return Cratis.Choreography.Jobs.JobId.NotSet;
         }
 
         var usesDeferrals = typeof(IWebhookObserverSubscriber).IsAssignableFrom(_subscription.SubscriberType);

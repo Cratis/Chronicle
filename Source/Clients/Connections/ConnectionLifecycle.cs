@@ -109,7 +109,7 @@ public class ConnectionLifecycle(ILogger<ConnectionLifecycle> logger) : IConnect
 
         var exceptions = new ConcurrentBag<Exception>();
 
-        var tasks = _onConnected.GetInvocationList().Select(_ => Task.Run(async () =>
+        var tasks = _onConnected.GetInvocationList().Select(_ => ExecutionContextDetached.Start(() => Task.Run(async () =>
         {
             try
             {
@@ -120,7 +120,7 @@ public class ConnectionLifecycle(ILogger<ConnectionLifecycle> logger) : IConnect
                 logger.FailureDuringConnected(ex);
                 exceptions.Add(ex);
             }
-        })).ToArray();
+        }))).ToArray();
 
         await Task.WhenAll(tasks);
 
@@ -138,7 +138,7 @@ public class ConnectionLifecycle(ILogger<ConnectionLifecycle> logger) : IConnect
     {
         IsConnected = false;
         logger.Disconnected();
-        var tasks = _onDisconnected.GetInvocationList().Select(_ => Task.Run(async () =>
+        var tasks = _onDisconnected.GetInvocationList().Select(_ => ExecutionContextDetached.Start(() => Task.Run(async () =>
         {
             try
             {
@@ -148,7 +148,7 @@ public class ConnectionLifecycle(ILogger<ConnectionLifecycle> logger) : IConnect
             {
                 logger.FailureDuringDisconnected(ex);
             }
-        })).ToArray();
+        }))).ToArray();
 
         await Task.WhenAll(tasks);
 

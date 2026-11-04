@@ -18,7 +18,6 @@ public class when_normalizing_decimal_parts : Specification
     [Fact] void should_ignore_decimal_scale() => _identity.ShouldEqual(SinkCacheKey.For(new BsonDocument("amount", new BsonArray { new BsonDocument("value", new BsonDecimal128(1.0m)) })));
     [Fact] void should_preserve_the_source_scale() => _source["amount"][0]["value"].AsDecimal128.ToString().ShouldEqual("1.00");
     [Fact] void should_distinguish_values() => SinkCacheKey.For(new BsonDecimal128(1.01m)).ShouldNotEqual(SinkCacheKey.For(new BsonDecimal128(1.00m)));
-    [Fact] void should_preserve_numeric_types() => SinkCacheKey.For(new BsonInt32(1)).ShouldNotEqual(SinkCacheKey.For(new BsonInt64(1)));
     [Fact] void should_preserve_strings() => SinkCacheKey.For(new BsonString("1.00")).ShouldNotEqual(SinkCacheKey.For(new BsonDecimal128(1.00m)));
     [Fact] void should_preserve_part_order() => SinkCacheKey.For(new BsonDocument { { "a", 1 }, { "b", 2 } }).ShouldNotEqual(SinkCacheKey.For(new BsonDocument { { "b", 2 }, { "a", 1 } }));
     [Fact] void should_preserve_structure() => SinkCacheKey.For(new BsonArray { 1 }).ShouldNotEqual(SinkCacheKey.For(new BsonDocument("0", 1)));

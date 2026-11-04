@@ -20,7 +20,7 @@ namespace Cratis.Chronicle.Sequences;
 /// <param name="SequenceNumber">The sequence number of the event to redact.</param>
 /// <param name="Reason">Why the event is being redacted.</param>
 /// <param name="Causation">Optional caller-supplied causation chain. Defaults to the request causation when not provided.</param>
-/// <param name="CausedBy">Optional caller-supplied identity. Defaults to the current principal when not provided.</param>
+/// <param name="CausedBy">Optional identity for application callers. Chronicle users are always recorded as the current principal.</param>
 /// <remarks>
 /// Redaction removes the payload, not the event - the sequence slot and its context stay, so nothing downstream
 /// has to cope with a hole where an event used to be.
@@ -60,6 +60,6 @@ public record Redact(
             new EventRedactionRequested(EventSequenceId, SequenceNumber, Reason),
             correlationId: correlationId,
             causation: Causation?.ToChronicle() ?? causation.GetCurrentChain(),
-            causedBy: CausedBy?.ToChronicle() ?? principalAccessor.Current.ToIdentity());
+            causedBy: principalAccessor.Current.ResolveCausedBy(CausedBy));
     }
 }

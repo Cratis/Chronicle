@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.ReadModels;
 using Microsoft.Extensions.Logging;
@@ -29,6 +30,23 @@ public class TestableImmediateProjection(
     /// Gets whether session deactivation was requested.
     /// </summary>
     public bool SessionDeactivated { get; private set; }
+
+    /// <summary>
+    /// Gets the definition currently held by the grain.
+    /// </summary>
+    public ProjectionDefinition Definition => State;
+
+    /// <summary>
+    /// Gets the definitions applied through notifications.
+    /// </summary>
+    public List<ProjectionDefinition> AppliedDefinitions { get; } = [];
+
+    /// <inheritdoc/>
+    protected override void ApplyDefinition(ProjectionDefinition definition)
+    {
+        AppliedDefinitions.Add(definition);
+        base.ApplyDefinition(definition);
+    }
 
     /// <inheritdoc/>
     protected override void DeactivateSession() => SessionDeactivated = true;

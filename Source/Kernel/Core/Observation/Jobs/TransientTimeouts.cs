@@ -3,9 +3,9 @@
 
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
+using Cratis.Choreography.Jobs;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Monads;
-using Cratis.Orleans.Jobs;
 using Microsoft.Extensions.Logging;
 using OneOf.Types;
 
@@ -86,8 +86,7 @@ internal static class TransientTimeouts
             return false;
         }
 
-        result.TryGetFullResult<HandleEventsForPartitionResult>(out var handled, out _, jsonSerializerOptions);
-        failure = handled?.TransientFailure;
+        failure = HandleEventsStepResults.ReadProgress(result, jsonSerializerOptions)?.TransientFailure;
         return failure is not null;
     }
 

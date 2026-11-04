@@ -2,12 +2,12 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reflection;
+using Cratis.Choreography.Jobs;
+using Cratis.Choreography.Storage.Jobs;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Storage;
 using Cratis.Monads;
-using Cratis.Orleans.Jobs;
-using Cratis.Orleans.Storage.Jobs;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -30,7 +30,7 @@ namespace Cratis.Chronicle.Observation.Jobs.for_HandleEventsForObserver;
 /// <param name="eventGenerationRelease">The pinned generation release boundary.</param>
 /// <param name="timeProvider">The delivery fence clock.</param>
 public class TestableHandleEventsForObserver(
-    [PersistentState(nameof(JobStepState), Cratis.Orleans.WellKnownGrainStorageProviders.JobSteps)]
+    [PersistentState(nameof(JobStepState), Cratis.Choreography.WellKnownGrainStorageProviders.JobSteps)]
     IPersistentState<HandleEventsForObserverState> state,
     IJobStepThrottle throttle,
     IStorage storage,

@@ -21,7 +21,7 @@ public class a_postgresql_database(PostgreSqlFixture fixture) : Specification
     internal string ConnectionString;
     internal Database Database;
     internal ServiceProvider Services;
-    internal readonly Cratis.Orleans.Storage.IJobsStorage JobsStorage = Substitute.For<Cratis.Orleans.Storage.IJobsStorage>();
+    internal readonly Cratis.Choreography.Storage.IJobsStorage JobsStorage = Substitute.For<Cratis.Choreography.Storage.IJobsStorage>();
     internal readonly List<string> AdditionalDatabases = [];
     internal string Store = "a-store";
     internal string Namespace = "a-namespace";

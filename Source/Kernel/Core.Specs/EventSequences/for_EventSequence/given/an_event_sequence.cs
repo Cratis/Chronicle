@@ -4,6 +4,7 @@
 using System.Collections.Immutable;
 using System.Dynamic;
 using System.Text.Json.Nodes;
+using Cratis.Choreography.Jobs;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Auditing;
 using Cratis.Chronicle.Concepts.Events;
@@ -24,7 +25,6 @@ using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Chronicle.Storage.Identities;
 using Cratis.Metrics;
 using Cratis.Monads;
-using Cratis.Orleans.Jobs;
 using Cratis.Traces;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -81,6 +81,7 @@ public class an_event_sequence : Specification
     /// every append, so specs about picking up constraint changes do not have to wait out a production interval.
     /// </summary>
     protected virtual TimeSpan ConstraintsVersionCheckInterval => TimeSpan.Zero;
+    protected virtual Configuration.ConstraintIndexRepairOptions ConstraintIndexRepairConfiguration => new();
 
     async Task Establish()
     {
@@ -216,7 +217,8 @@ public class an_event_sequence : Specification
                 StatePersistenceInterval = StatePersistenceInterval,
                 ConstraintsVersionCheckInterval = ConstraintsVersionCheckInterval,
                 CausationPropertyRetention = CausationPropertyRetention
-            }
+            },
+            ConstraintIndexRepair = ConstraintIndexRepairConfiguration
         }));
         _silo.AddService(_eventSequenceLogger);
         _silo.AddService(NullLogger<ConstraintIndexReplay>.Instance);

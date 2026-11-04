@@ -10,8 +10,8 @@ namespace Cratis.Chronicle.Storage.MongoDB.Schema;
 public record MongoDBIndexReport(IReadOnlyList<MongoDBIndexScopeResult> Scopes)
 {
     /// <summary>
-    /// Gets whether every classified required index exists and obsolete indexes have been removed.
+    /// Gets whether every classified required index has compatible keys and options and obsolete indexes have been removed.
     /// Unclassified constraint collections are advisory and do not affect this value.
     /// </summary>
-    public bool IsCurrent => Scopes.All(scope => scope.Missing.Count == 0 && scope.Obsolete.Count == 0);
+    public bool IsCurrent => Scopes.All(scope => scope.Missing.Count == 0 && scope.Obsolete.Count == 0 && scope.Incompatible.Count == 0);
 }

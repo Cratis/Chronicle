@@ -126,13 +126,28 @@ jobs:
       - name: Spec executable runner contracts and forbid test-host dispatch
         run: node --test .github/scripts/test-mixed-spec-runners.mjs
 
+      # Runs the real entrypoint against a fake server: no image is needed to prove that a container stop
+      # reaches the server and that the container reports the server's own exit status (#5361).
+      - name: Spec container entrypoint signal forwarding
+        run: node --test .github/scripts/test-entrypoint-signals.mjs
+
       # The publish workflow's Docker verification logic is release-only, so this checkout-only spec run is
       # where a pull request proves the tag expansion, retry and failure behavior before any publication occurs.
       - name: Spec the published Docker tag verifier
         run: python3 .github/scripts/test-verify-published-docker-tags.py
 
+      - name: Spec the pinned SQL Server image
+        run: python3 .github/scripts/test-sql-server-image-pin.py
+
       - name: Spec the build version derivation
         run: python3 .github/scripts/test-derive-build-version.py
+
+      # Docker resolves a local image before the registry, so a local build that tags a published name
+      # silently replaces it for everything on the machine (#3795). Checkout-only, so it runs before compiling.
+      - name: Assert local builds never tag a published image name
+        run: |
+          python3 .github/scripts/assert-local-image-tags.py
+          python3 -B .github/scripts/test-assert-local-image-tags.py
 
       - name: Spec prerelease artifact handoff without caches
         run: |
@@ -143,6 +158,9 @@ jobs:
       - name: Spec Workbench proxy freshness guard
         run: node .github/scripts/test-check-workbench-proxies.mjs
 
+      - name: Spec the analyzer ownership map
+        run: python3 .github/scripts/test-analyzer-ownership.py
+
       - name: Setup .Net
         uses: actions/setup-dotnet@v4
         with:
@@ -150,6 +168,12 @@ jobs:
             ${{ env.DOTNET8_VERSION }}
             ${{ env.DOTNET9_VERSION }}
             ${{ env.DOTNET_VERSION }}
+
+      - name: Spec the gRPC generator targeting
+        run: node --test .github/scripts/test-grpc-generator-targeting.mjs
+
+      - name: Spec the generator stamp paths
+        run: node --test .github/scripts/test-generator-stamp-paths.mjs
 
       # Shared org cache: pull requests restore only; the nightly build and default-branch runs save (Cratis/Workflows#164).
       - name: Cache NuGet packages
@@ -200,7 +224,18 @@ jobs:
         run: node .github/scripts/check-workbench-proxies.mjs check --generated "$WORKBENCH_PROXIES"
 
       - name: Build
-        run: dotnet build --configuration Release -p:DisableProxyGenerator=true -p:DisableDockerBuild=true
+        run: dotnet build --configuration Release -p:DisableProxyGenerator=true -p:DisableDockerBuild=true -p:ForceCodeGeneration=true
+
+      - name: Verify generated contracts and services are up to date
+        run: |
+          set -euo pipefail
+          status="$(git status --porcelain -- Source/Kernel/Protobuf Source/Kernel/Contracts Source/Kernel/Grpc Source/Kernel/Server/GeneratedGrpcServices.cs)"
+          if [ -n "$status" ]; then
+            printf '%s\n' "$status"
+            git diff --stat -- Source/Kernel/Protobuf Source/Kernel/Contracts Source/Kernel/Grpc Source/Kernel/Server/GeneratedGrpcServices.cs
+            echo "::error::Generated contracts or services are stale. Regenerate them and commit the result."
+            exit 1
+          fi
 
       - name: Assert the build carries the stamped version
         run: |
@@ -213,14 +248,28 @@ jobs:
       # happens only under IsPackaging - which until now nothing ran before publish. So an API newer than net8.0
       # passed every check on a pull request and failed while the release was being cut, with the merge already
       # done. This builds what publish packs, on the frameworks it packs them for. The SDKs are already installed
-      # above for exactly this reason.
+      # above for exactly this reason. The Build step above already analyzes net10.0 with warnings as errors, so
+      # analyzers are skipped for that framework here (generators still run) and own net8.0 and net9.0 only.
       - name: Build client packages for every shipped framework
         run: |
           set -e
           find ./Source/Clients -name "*.csproj" ! -name "*.Specs.csproj" -print0 | while IFS= read -r -d '' project; do
-            dotnet build "$project" --configuration Release -p:IsPackaging=true -p:DisableProxyGenerator=true -p:DisableDockerBuild=true
+            dotnet build "$project" --configuration Release -p:IsPackaging=true -p:SkipAnalyzersForTargetFramework=net10.0 -p:DisableProxyGenerator=true -p:DisableDockerBuild=true
           done
-          dotnet build ./Source/Kernel/Contracts/Contracts.csproj --configuration Release -p:IsPackaging=true -p:DisableProxyGenerator=true -p:DisableDockerBuild=true
+          dotnet build ./Source/Kernel/Contracts/Contracts.csproj --configuration Release -p:IsPackaging=true -p:SkipAnalyzersForTargetFramework=net10.0 -p:DisableProxyGenerator=true -p:DisableDockerBuild=true
+
+      # Fail closed before any pack/image/artifact collection. The verifier is stdlib-only, outside
+      # the solution and package filters, and all of its own outputs stay outside the checkout.
+      - name: Validate rolling diagnostic guards and shipped-client absence
+        run: |
+          set -euo pipefail
+          node .github/scripts/verify-rolling-delivery-build.mjs
+          dotnet build .github/scripts/rolling-delivery-il/RollingDeliveryIl.csproj -c Release -warnaserror \
+            --artifacts-path "$RUNNER_TEMP/rolling-il-verifier" -o "$RUNNER_TEMP/rolling-il-tool"
+          for framework in net8.0 net9.0 net10.0; do
+            dotnet "$RUNNER_TEMP/rolling-il-tool/RollingDeliveryIl.dll" \
+              "Source/Clients/DotNET/bin/Release/$framework/Cratis.Chronicle.dll"
+          done
 
       # A package can build and still fail to restore for a consumer: a transitive dependency resolves below what
       # another package declares (NU1605) or outside an exact constraint (NU1608), which only shows up once the
@@ -251,9 +300,11 @@ jobs:
       - name: Build development Docker image
         if: github.event_name != 'pull_request' || inputs.integration_requested
         run: |
+          # Debug analyzers never gate (warnings are not errors). The Release Build step owns them; generators still run.
           dotnet publish Source/Kernel/Server/Server.csproj \
             --configuration Debug \
             --no-restore \
+            -p:RunAnalyzers=false \
             -o Source/Kernel/Server/out
           docker build -t "${{ env.CRATIS_CHRONICLE_LOCAL_IMAGE }}" -f Docker/Local/Dockerfile .
 
@@ -477,6 +528,15 @@ jobs:
       # remains unproven until Linux CI runs this mandatory acceptance.
       - name: Verify real collector exit and deadline cleanup
         run: node .github/scripts/verify-mixed-specs-collector.mjs
+
+      - name: Run container startup unit specs without Docker
+        run: node .github/scripts/run-spec-project.mjs --project Integration/Client/Client.csproj --filter 'FullyQualifiedName~Cratis.Chronicle.Integration.for_ContainerStartup' --results-directory ./container-startup-results
+
+      - name: Assert container startup unit specs ran
+        uses: ./.github/actions/assert-tests-ran
+        with:
+          path: ./container-startup-results
+          name: The container startup unit specs
 
       - name: Run tests with coverage
         # Integration and SQL retain their shard/retry selection. Ordinary dispatch excludes
@@ -776,7 +836,7 @@ jobs:
           path: ./Integration/MongoDB/coverage-results
           name: The MongoDB integration job
 
-      - name: Require actual old MongoDB writer and payload preservation facts
+      - name: Require old MongoDB writer payload preservation facts
         run: |
           node --input-type=module <<'NODE'
           import assert from 'node:assert/strict';
@@ -788,6 +848,7 @@ jobs:
             .map(test => nodes(test, 'TestMethod')[0].attrs);
           for (const name of [
             'should_require_an_actual_old_writer_update',
+            'should_persist_the_old_writers_alert_lifecycle',
             'should_preserve_the_legacy_identity',
             'should_preserve_legacy_subscription_mode',
             'should_preserve_the_last_handled_event',
@@ -937,11 +998,14 @@ jobs:
           # temp directory, and the generator's own path-combine logic assumes a
           # project-relative OutputPath - fed an absolute one it double-roots the assembly
           # path and crashes before benchmarks ever need a proxy.
+          # The benchmark projects are not in Chronicle.slnx, so this is the only PR build that analyzes them.
+          # AnalyzeOnlyProject keeps analyzers on for the benchmark project itself and skips them for its
+          # project references, which the Release Build step already analyzes. Generators still run.
           dotnet build Benchmarks/Chronicle.Benchmarks/Chronicle.Benchmarks.csproj \
-            -c Release /p:TreatWarningsAsErrors=false /p:DisableDockerBuild=true \
+            -c Release /p:TreatWarningsAsErrors=false /p:AnalyzeOnlyProject=Chronicle.Benchmarks /p:DisableDockerBuild=true \
             /p:CratisProxiesOutputPath= \
             /p:ArtifactsPath="${RUNNER_TEMP}/benchmark-artifacts"
           dotnet build Benchmarks/Chronicle.Benchmarks.Clustering/Chronicle.Benchmarks.Clustering.csproj \
-            -c Release /p:TreatWarningsAsErrors=false /p:DisableDockerBuild=true \
+            -c Release /p:TreatWarningsAsErrors=false /p:AnalyzeOnlyProject=Chronicle.Benchmarks.Clustering /p:DisableDockerBuild=true \
             /p:CratisProxiesOutputPath= \
             /p:ArtifactsPath="${RUNNER_TEMP}/benchmark-artifacts-clustering"

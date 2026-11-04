@@ -4,11 +4,12 @@
 extern alias KernelConcepts;
 extern alias KernelCore;
 extern alias KernelGrpc;
-
 using System.Collections.Concurrent;
 using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
+using Cratis.Choreography.Jobs;
+using Cratis.Choreography.Storage;
 using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Constraints;
@@ -30,8 +31,6 @@ using Cratis.Chronicle.Transactions;
 using Cratis.Execution;
 using Cratis.Json;
 using Cratis.Monads;
-using Cratis.Orleans.Jobs;
-using Cratis.Orleans.Storage;
 using Cratis.Serialization;
 using Cratis.Types;
 using KernelConceptsNs = KernelConcepts::Cratis.Chronicle.Concepts;
@@ -194,6 +193,16 @@ internal sealed class TestingEventStore : IDisposable
             return new EventLog(Name, Namespace, Connection, _eventTypes(), constraints, serializer, new CorrelationIdAccessor(), new NoConcurrencyScopeStrategies(), new CausationManager(), new NoUnitOfWorkManager(), new BaseIdentityProvider(), _json, eventSources: eventSources);
         }
         return new EventSequence(Name, Namespace, id, Connection, _eventTypes(), constraints, serializer, new CorrelationIdAccessor(), new NoConcurrencyScopeStrategies(), new CausationManager(), new NoUnitOfWorkManager(), new BaseIdentityProvider(), _json, eventSources: eventSources);
+    }
+
+    /// <summary>
+    /// Frees a scratch sequence, its storage and any grain created for it, once nothing reads it again.
+    /// </summary>
+    /// <param name="id">The sequence identifier.</param>
+    internal void RemoveSequence(EventSequenceId id)
+    {
+        if (_grains.TryRemove(id, out var grain) && grain.IsValueCreated) ((IDisposable)grain.Value).Dispose();
+        ((EventStoreNamespaceStorage)Store.GetNamespace(new(Namespace.Value))).RemoveEventSequence(new(id.Value));
     }
 
     Occurrences.InProcessOccurrenceQueue ResolveOccurrenceQueue(string key) =>

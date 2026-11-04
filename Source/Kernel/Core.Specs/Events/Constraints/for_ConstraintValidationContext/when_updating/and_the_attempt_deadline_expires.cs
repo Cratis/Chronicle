@@ -14,7 +14,7 @@ public class and_the_attempt_deadline_expires : given.a_constraint_validation_co
         _firstValidatorIndexUpdater.Update(1, Arg.Any<CancellationToken>()).Returns(_hung.Task);
     }
 
-    async Task Because() => _results = await _context.Update(1, CancellationToken.None);
+    async Task Because() => _results = await _context.Update(1, TimeSpan.FromSeconds(1), CancellationToken.None);
 
     void Destroy() => _hung.TrySetResult();
 

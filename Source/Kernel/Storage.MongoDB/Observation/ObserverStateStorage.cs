@@ -169,10 +169,17 @@ public class ObserverStateStorage(IEventStoreNamespaceDatabase namespaceDatabase
     /// <inheritdoc/>
     public async Task Rename(ObserverId currentId, ObserverId newId)
     {
-        var update = Builders<ObserverState>.Update.Set(os => os.Id, newId);
-        await _collection.UpdateOneAsync(
-            os => os.Id == currentId,
-            update);
+        if (currentId == newId) return;
+        var state = await _collection.Find(os => os.Id == currentId).FirstOrDefaultAsync();
+        if (state is null) return;
+
+        state.Id = newId;
+        WriteModel<ObserverState>[] writes =
+        [
+            new InsertOneModel<ObserverState>(state),
+            new DeleteOneModel<ObserverState>(Builders<ObserverState>.Filter.Eq(os => os.Id, currentId))
+        ];
+        await _collection.BulkWriteAsync(writes, new BulkWriteOptions { IsOrdered = true });
     }
 
     async Task SplitLegacyPerPartitionCounts(ObserverId observerId, IDictionary<string, IDictionary<string, ulong>> legacyCounts)

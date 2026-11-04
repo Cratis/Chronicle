@@ -48,6 +48,9 @@ internal static partial class EventSequenceStorageLogMessages
     [LoggerMessage(LogLevel.Warning, "Redaction of event with sequence number {EventSequenceNumber} on sequence {EventSequenceId} has already been performed. Ignoring.")]
     internal static partial void RedactionAlreadyApplied(this ILogger<EventSequenceStorage> logger, EventSequenceId eventSequenceId, EventSequenceNumber eventSequenceNumber);
 
+    [LoggerMessage(LogLevel.Warning, "Revision of event with sequence number {EventSequenceNumber} on sequence {EventSequenceId} skipped because the event type has changed or the event no longer exists.")]
+    internal static partial void RevisionSkippedForChangedEvent(this ILogger<EventSequenceStorage> logger, EventSequenceId eventSequenceId, EventSequenceNumber eventSequenceNumber);
+
     [LoggerMessage(LogLevel.Debug, "Getting tail sequence number for event sequence {EventSequenceId} for event types {EventTypes}")]
     internal static partial void GettingTailSequenceNumbersForEventTypes(this ILogger<EventSequenceStorage> logger, EventSequenceId eventSequenceId, IEnumerable<string> eventTypes);
 }

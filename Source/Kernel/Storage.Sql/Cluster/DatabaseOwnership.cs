@@ -103,7 +103,7 @@ internal sealed class DatabaseOwnership(SqlDatabaseCatalog catalog, Func<string,
     }
 
     /// <summary>
-    /// Tests whether a migration belongs to a namespace database: the namespace schema (NS-*) or the Cratis.Orleans jobs schema (Cratis-Orleans-Jobs-*).
+    /// Tests whether a migration belongs to a namespace database: the namespace schema (NS-*) or the Cratis.Choreography jobs schema (Cratis-Orleans-Jobs-*).
     /// </summary>
     /// <param name="migration">The migration identifier.</param>
     /// <returns>Whether the migration belongs to a namespace database.</returns>

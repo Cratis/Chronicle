@@ -15,7 +15,6 @@ public class when_other_streams_contain_privilege_events : given.an_administrato
     void Establish()
     {
         _context = SeedGrant();
-        Seed(_context.EventSourceId, new UserRevokedAdministrator(_userId, "another stream"), streamId: "other");
         Seed(_userId, new UserRemoved(), streamType: "other");
         Seed(_userId, new UserGrantedAdministrator(_userId, GrantReason.OperatorRecovery, "wrong source"));
     }

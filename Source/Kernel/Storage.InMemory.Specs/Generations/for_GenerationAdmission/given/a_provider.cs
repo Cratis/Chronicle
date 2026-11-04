@@ -20,7 +20,7 @@ public class a_provider : Specification
     {
         var factories = Substitute.For<IInstancesOf<ISinkFactory>>();
         factories.GetEnumerator().Returns(_ => Enumerable.Empty<ISinkFactory>().GetEnumerator());
-        _registry = new(factories, Substitute.For<Cratis.Orleans.Storage.IJobsStorage>());
+        _registry = new(factories, Substitute.For<Cratis.Choreography.Storage.IJobsStorage>());
         _storage = new(_registry, Substitute.For<ISystemStorage>());
         _admission = new(_storage);
     }
