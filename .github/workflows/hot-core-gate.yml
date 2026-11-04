@@ -138,6 +138,11 @@ jobs:
           docker build -t "${{ env.HOT_CORE_IMAGE }}" -f Docker/Local/Dockerfile .
           docker push ${{ env.HOT_CORE_IMAGE }}
 
+      - name: Pack and upload integration bundles
+        uses: ./.github/actions/upload-integration-bundles
+        with:
+          prefix: hot-core-build-output
+
       - name: Pack hot-core build output
         run: |
           set -euo pipefail

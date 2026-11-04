@@ -447,7 +447,12 @@ class SparseIntegrationWorkflows(unittest.TestCase):
         for key in ("steps", "permissions", "runs-on", "timeout-minutes"):
             self.assertEqual(parallel[key], requested[key], key)
         steps = requested["steps"]
-        self.assertEqual(9, len(steps))
+        self.assertEqual(10, len(steps))
+        bundles = next(step for step in steps if step.get("name") == "Pack and upload integration bundles")
+        self.assertEqual("./.github/actions/upload-integration-bundles", bundles["uses"])
+        self.assertEqual({"prefix": "build-output-development"}, bundles["with"])
+        names = [step.get("name") for step in steps]
+        self.assertEqual(names.index("Pack and upload integration bundles") + 1, names.index("Pack DEVELOPMENT build output"))
         build = next(step for step in steps if step.get("name") == "Build with DEVELOPMENT symbol")
         self.assertEqual("dotnet build --configuration Release -p:EnableDevelopmentSymbol=true "
                          "-p:DisableProxyGenerator=true -p:DisableDockerBuild=true", build["run"])
@@ -573,9 +578,18 @@ class IntegrationSingleBuildContracts(unittest.TestCase):
             with self.subTest(lane=lane):
                 steps = jobs[f"{lane}-integration-specs"]["steps"]
                 download = next(step for step in steps if step.get("uses") == "actions/download-artifact@v4")
-                self.assertEqual({"name": "${{ inputs.build-output-artifact }}"}, download["with"])
-                extract = next(step for step in steps if step["name"] == "Extract build output")
-                self.assertEqual('tar -I zstd -xf "${BUILD_OUTPUT_ARTIFACT}.tar.zst"', extract["run"])
+                if lane == "sql-clustering":
+                    # The SQL clustering lanes keep the full archive: the rolling-upgrade leg rebuilds the client.
+                    self.assertEqual({"name": "${{ inputs.build-output-artifact }}"}, download["with"])
+                    extract = next(step for step in steps if step["name"] == "Extract build output")
+                    self.assertEqual('tar -I zstd -xf "${BUILD_OUTPUT_ARTIFACT}.tar.zst"', extract["run"])
+                else:
+                    # Every other lane downloads only its own project's bundle and runs without a restore.
+                    self.assertEqual({"name": f"${{{{ inputs.build-output-artifact }}}}-{lane}"}, download["with"])
+                    extract = next(step for step in steps if step["name"] == f"Extract {lane.title()} integration bundle")
+                    self.assertEqual(f"tar -I zstd -xf integration-bundle-{lane}.tar.zst", extract["run"])
+                    for step in steps:
+                        self.assertNotRegex(step.get("run", ""), r"dotnet\s+restore\b")
                 self.assertLess(steps.index(download), steps.index(extract))
                 self.assertFalse(any("cache" in step.get("uses", "") for step in steps))
                 for step in steps:
@@ -621,8 +635,35 @@ class IntegrationSingleBuildContracts(unittest.TestCase):
             self.assertIn("exit 1", pack)
             self.assertEqual("error", steps[-1]["with"]["if-no-files-found"])
 
+        action = yaml.safe_load((WORKFLOWS.parent / "actions" / "upload-integration-bundles" / "action.yml").read_text(encoding="utf-8"))
+        uploads = [step for step in action["runs"]["steps"] if step.get("uses") == "actions/upload-artifact@v4"]
+        self.assertEqual([f"${{{{ inputs.prefix }}}}-{lane}" for lane in ("client", "kernel", "clustering")],
+                         [step["with"]["name"] for step in uploads])
+        for lane, step in zip(("client", "kernel", "clustering"), uploads):
+            self.assertEqual(f".integration-bundles/integration-bundle-{lane}.tar.zst", step["with"]["path"])
+            self.assertEqual({"retention-days": 1, "compression-level": 0, "if-no-files-found": "error"},
+                             {key: step["with"][key] for key in ("retention-days", "compression-level", "if-no-files-found")})
+
+    def test_every_batched_lane_keeps_a_per_member_zero_test_guard(self):
+        jobs = workflow("integration.yml")["jobs"]
+        for lane in ("client", "kernel", "clustering"):
+            with self.subTest(lane=lane):
+                steps = jobs[f"{lane}-integration-specs"]["steps"]
+                guard = next(step for step in steps if step.get("uses") == "./.github/actions/assert-tests-ran")
+                self.assertEqual("${{ matrix.members }}", guard["with"]["prefixes"])
+
+    def test_hot_core_producer_prefix_matches_the_artifact_the_integration_call_consumes(self):
+        hot_core = workflow("hot-core-gate.yml")["jobs"]
+        steps = hot_core["build"]["steps"]
+        bundles = next(step for step in steps if step.get("name") == "Pack and upload integration bundles")
+        self.assertEqual("./.github/actions/upload-integration-bundles", bundles["uses"])
+        consumer = next(job for job in hot_core.values() if job.get("uses", "").endswith("integration.yml"))
+        self.assertEqual(consumer["with"]["build-output-artifact"], bundles["with"]["prefix"])
+
     def test_rolling_upgrade_reads_and_checks_the_stamped_build_version(self):
-        steps = workflow("integration.yml")["jobs"]["sql-clustering-integration-specs"]["steps"]
+        jobs = workflow("integration.yml")["jobs"]
+        steps = jobs["sql-clustering-integration-specs"]["steps"]
+        self.assertEqual(steps, jobs["sql-clustering-rolling-upgrade"]["steps"])
         extract = next(step for step in steps if step["name"] == "Extract build output")
         stamp = next(step for step in steps if step["name"] == "Read the stamped build version")
         self.assertEqual(steps.index(extract) + 1, steps.index(stamp))
@@ -649,9 +690,8 @@ class IntegrationSingleBuildContracts(unittest.TestCase):
             command = next(step["run"] for step in steps
                            if step["name"].startswith(("Run Client", "Run Kernel", "Run Clustering", "Run SQL clustering")))
             command = re.sub(r"\$\{\{ (.*?) \}\}", lambda match: bindings[match[1]], command)
-            expected_filter = (union if lane == "client" else
-                               "FullyQualifiedName~Cratis.Chronicle.Integration.SqlClustering.PostgreSql"
-                               if lane == "sql-clustering" else "FullyQualifiedName~Example.Namespace")
+            expected_filter = ("FullyQualifiedName~Cratis.Chronicle.Integration.SqlClustering.PostgreSql"
+                               if lane == "sql-clustering" else union)
             for missing in (False, True):
                 with self.subTest(lane=lane, missing=missing), tempfile.TemporaryDirectory() as directory:
                     path = Path(directory)
@@ -698,6 +738,10 @@ sys.exit(1 if 'Failed' in outcomes.values() else 0)
         for index, args in enumerate(calls):
             self.assertEqual([".github/scripts/run-spec-project.mjs", "--project", f"Integration/{project}/{project}.csproj"], args[:3])
             self.assertEqual(lane != "sql-clustering", "--coverage" in args)
+            if lane == "sql-clustering":
+                self.assertNotIn("--selection", args)
+            else:
+                self.assertEqual(f".integration-bundles/{lane}.selection.json", args[args.index("--selection") + 1])
             self.assertIn("--results-directory", args)
             retry_filters = ["FullyQualifiedName=Example.A.should_work|FullyQualifiedName=Example.B.should_work",
                              "FullyQualifiedName=Example.A.should_work"]
