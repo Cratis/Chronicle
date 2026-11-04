@@ -48,7 +48,9 @@ Decisions are not exposed to clients in this slice.
 
 ## Invariants
 
-1. Fail closed: an error, an unknown capability, a missing or unauthenticated principal, or a default value is a denial.
+1. Fail closed: an error, an unknown capability or a default value is a denial. For an enrolled operation while
+   authentication is enabled, a missing or unauthenticated principal is a denial too. Operations that are not
+   enrolled, and every operation while authentication is disabled, are allowed before the principal is checked.
    A decision that failed is never turned into an allow by audit mode.
 2. No new anonymous paths: no new policy names and no attribute changes.
 3. Parity across hosts: gRPC, HTTP and in-process callers all reach the same decision point.
