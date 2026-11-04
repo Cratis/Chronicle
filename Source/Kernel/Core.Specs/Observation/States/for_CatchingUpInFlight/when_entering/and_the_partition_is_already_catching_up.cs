@@ -10,11 +10,15 @@ public class and_the_partition_is_already_catching_up : given.a_catching_up_in_f
 {
     readonly Key _partition = "partition";
 
-    void Establish() => _storedState = _storedState with
+    void Establish()
     {
-        InFlightPartitions = new HashSet<Key> { _partition },
-        CatchingUpPartitions = new HashSet<Key> { _partition }
-    };
+        _storedState = _storedState with
+        {
+            InFlightPartitions = new HashSet<Key> { _partition },
+            CatchingUpPartitions = new HashSet<Key> { _partition }
+        };
+        HasOutstandingJobs(PartitionCatchUpJob(_partition));
+    }
 
     async Task Because() => _resultingStoredState = await _state.OnEnter(_storedState);
 

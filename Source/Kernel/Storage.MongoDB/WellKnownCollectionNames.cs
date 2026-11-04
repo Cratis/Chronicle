@@ -131,6 +131,11 @@ public static class WellKnownCollectionNames
     public const string FailedJobSteps = "failed-job-steps";
 
     /// <summary>
+    /// The collection that holds job step plans.
+    /// </summary>
+    public const string JobStepPlans = "job-step-plans";
+
+    /// <summary>
     /// The collection that holds recommendations.
     /// </summary>
     public const string Recommendations = "recommendations";

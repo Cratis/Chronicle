@@ -42,7 +42,7 @@ public partial class Sink
             if (_indexedTables.Contains(table)) return;
             if (_indexBuilds.TryGetValue(table, out var running) && !running.IsCompleted) return;
         }
-        await using var scope = await _database.ReadModelTable(_eventStoreName, _namespace, table, _columns, ConnectionPurpose.Schema);
+        await using var scope = await OpenScope(table, ConnectionPurpose.Schema);
         var context = scope.DbContext;
         await context.EnsureTableExists();
         var online = context.Database.GetDatabaseType() != DatabaseType.Sqlite &&
@@ -77,7 +77,7 @@ public partial class Sink
 
     async Task BuildIndexes(string table, bool reconcile, bool online)
     {
-        await using var scope = await _database.ReadModelTable(_eventStoreName, _namespace, table, _columns, ConnectionPurpose.Schema);
+        await using var scope = await OpenScope(table, ConnectionPurpose.Schema);
         var context = scope.DbContext;
         var database = context.Database;
         var connection = database.GetDbConnection();

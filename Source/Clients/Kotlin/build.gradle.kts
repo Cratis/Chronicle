@@ -26,10 +26,15 @@ dependencies {
     api("com.google.protobuf:protobuf-kotlin:$protobufVersion")
     api("org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutinesVersion")
     compileOnly("javax.annotation:javax.annotation-api:1.3.2")
+    testImplementation(kotlin("test"))
 }
 
 kotlin {
     jvmToolchain(17)
+}
+
+tasks.test {
+    useJUnitPlatform()
 }
 
 // The canonical descriptor set travels with the package so a client can hand the kernel exactly the contracts it

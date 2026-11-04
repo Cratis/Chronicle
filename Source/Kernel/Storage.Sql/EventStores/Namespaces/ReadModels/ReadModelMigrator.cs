@@ -6,6 +6,7 @@ using Cratis.Arc.EntityFrameworkCore;
 using Cratis.Arc.EntityFrameworkCore.Json;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Diagnostics;
+using Cratis.Chronicle.Storage.Sql.Schema;
 using Microsoft.Data.SqlClient;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
@@ -47,6 +48,32 @@ public class ReadModelMigrator(
     }
 
     /// <inheritdoc/>
+    public async Task<bool> ProbeExistingTable(string tableName, ReadModelDbContext context)
+    {
+        if (!await TableMigrator<ReadModelDbContext>.TableExists(context, tableName))
+        {
+            return false;
+        }
+
+        var connectionString = context.Database.GetConnectionString() ?? string.Empty;
+        var columnsKey = string.Join('|', context.Columns.Select(c => c.Name)) + string.Join('|', ShadowColumns.For(context).Select(c => c.Name));
+        var cacheKey = $"{connectionString}:{tableName}:probe:{columnsKey}";
+        if (_columnMigrations.ContainsKey(cacheKey))
+        {
+            return true;
+        }
+
+        // Only a complete shape is remembered; a table that may still be migrated is looked at again.
+        if (!ExistingTableShape.IsComplete(context, await GetExistingColumnNames(context, tableName)))
+        {
+            return false;
+        }
+
+        _columnMigrations.TryAdd(cacheKey, true);
+        return true;
+    }
+
+    /// <inheritdoc/>
     public async Task EnsureReplayPromotions(ReadModelDbContext context)
     {
         try
@@ -58,6 +85,27 @@ public class ReadModelMigrator(
             // Another silo may have created the shared marker table. Recheck through the migrator;
             // do not cache success merely because a CREATE failed.
             await tableMigrator.EnsureTableMigrated(WellKnownTableNames.ReplayPromotions, context, CreateReplayPromotions);
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task EnsureSinkCycleReceipts(ReadModelDbContext context)
+    {
+        if (SinkCycleReceiptSchema.IsVerify(context))
+        {
+            // Verify never creates the table: it only checks, read-only, that it was provisioned explicitly.
+            await SinkCycleReceiptSchema.Validate(context);
+            return;
+        }
+
+        try
+        {
+            await tableMigrator.EnsureTableMigrated(WellKnownTableNames.SinkCycleReceipts, context, CreateSinkCycleReceipts);
+        }
+        catch (Exception exception) when (IsDuplicateTable(exception))
+        {
+            // Another silo may have created the shared table. Recheck through the migrator.
+            await tableMigrator.EnsureTableMigrated(WellKnownTableNames.SinkCycleReceipts, context, CreateSinkCycleReceipts);
         }
     }
 
@@ -84,6 +132,12 @@ public class ReadModelMigrator(
                 BackupTableName = table.StringColumn(migrationBuilder, nullable: true)
             },
             constraints: table => table.PrimaryKey($"PK_{tableName}", promotion => promotion.Id));
+        await tableMigrator.ExecuteMigrationOperations(context, migrationBuilder);
+    }
+
+    async Task CreateSinkCycleReceipts(ReadModelDbContext context, string tableName)
+    {
+        var migrationBuilder = SinkCycleReceiptSchema.CreateOperations(context.Database.ProviderName, tableName, context.Database.GetDatabaseType());
         await tableMigrator.ExecuteMigrationOperations(context, migrationBuilder);
     }
 
@@ -184,21 +238,22 @@ public class ReadModelMigrator(
 
             if (context.Database.IsNpgsql())
             {
-                command.CommandText = $"SELECT column_name FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = '{tableName}'";
+                command.CommandText = "SELECT column_name FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = @table";
                 nameOrdinal = 0;
             }
             else if (context.Database.IsSqlServer())
             {
-                command.CommandText = $"SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = SCHEMA_NAME() AND TABLE_NAME = '{tableName}'";
+                command.CommandText = "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = SCHEMA_NAME() AND TABLE_NAME = @table";
                 nameOrdinal = 0;
             }
             else
             {
                 // table_xinfo includes VIRTUAL generated columns (hidden=2).
-                command.CommandText = $"PRAGMA table_xinfo(\"{tableName}\")";
-                nameOrdinal = 1;
+                command.CommandText = "SELECT name FROM pragma_table_xinfo(@table)";
+                nameOrdinal = 0;
             }
 
+            command.AddName("table", tableName);
             var columns = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             await using var reader = await command.ExecuteReaderAsync();
             while (await reader.ReadAsync())

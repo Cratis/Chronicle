@@ -88,7 +88,7 @@ internal static partial class ShadowColumns
         {
             return await operation();
         }
-        catch (Exception exception) when (IsMissingColumn(exception))
+        catch (Exception exception) when (IsMissingColumn(exception) && context.Database.CurrentTransaction is null)
         {
             await context.RepairShadowColumns();
             return await operation();

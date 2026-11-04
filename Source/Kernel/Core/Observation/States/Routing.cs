@@ -152,8 +152,8 @@ public class Routing(
     {
         var heldCount = catchingUp.Length + replaying.Length;
         var now = DateTimeOffset.UtcNow;
-        var ownedCatchUp = jobs.PartitionsHeldBy<CatchUpObserverPartitionRequest>(observerKey, now);
-        var ownedReplay = jobs.PartitionsHeldBy<ReplayObserverPartitionRequest>(observerKey, now);
+        var ownedCatchUp = jobs.PartitionsHeldBy<CatchUpObserverPartitionRequest>(observerKey, now, state);
+        var ownedReplay = jobs.PartitionsHeldBy<ReplayObserverPartitionRequest>(observerKey, now, state);
         var ownerlessCatchUp = catchingUp.Where(partition => !ownedCatchUp.Contains(partition)).ToArray();
         var ownerlessReplay = replaying.Where(partition => !ownedReplay.Contains(partition)).ToArray();
         var released = ownerlessCatchUp.Count(state.CatchingUpPartitions.Remove) +

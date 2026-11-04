@@ -46,7 +46,8 @@ public class an_observation_stream : Specification
             new JsonSerializerOptions(),
             CreateActivitySource(),
             Options.Create(new ChronicleOptions()),
-            NullLogger<Reactors>.Instance);
+            NullLogger<Reactors>.Instance,
+            Substitute.For<IObserverRegistrationGate>());
         _subscription = reactors.Observe(_messages).Subscribe(_deliveries.Add);
         _messages.OnNext(new(new(new RegisterReactor
         {

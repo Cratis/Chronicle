@@ -46,6 +46,7 @@ public class ObserverRetryOverride
     public Observers ApplyTo(Observers observers) => new()
     {
         MaxConcurrentPartitions = observers.MaxConcurrentPartitions,
+        MaxConcurrentRegistrations = observers.MaxConcurrentRegistrations,
         SubscriberTimeout = observers.SubscriberTimeout,
         LiveDeliveryBudget = observers.LiveDeliveryBudget,
         AbandonedDeliveryHold = observers.AbandonedDeliveryHold,
