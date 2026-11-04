@@ -424,7 +424,10 @@ interface [GrainInterfaceType("Cratis.Chronicle.Observation.Webhooks.IWebhooks")
 
 interface [GrainInterfaceType("Cratis.Chronicle.Observation.Webhooks.Signing.IWebhookSigningKeyRing")] Cratis.Chronicle.Observation.Webhooks.Signing.IWebhookSigningKeyRing [Version(0)]
   E5E4DCAC: GetSigningKeys() -> Task<System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Observation.Webhooks.WebhookSigningKey>>
+  56C200D0: GetWebhookSecrets(Cratis.Chronicle.Concepts.Observation.Webhooks.WebhookId) -> Task<System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Observation.Webhooks.WebhookSigningKey>>
+  28FA256C: RetireWebhookSecrets(Cratis.Chronicle.Concepts.Observation.Webhooks.WebhookId) -> Task
   8106DA1D: Rotate(Cratis.Chronicle.Concepts.Observation.Webhooks.WebhookSigningKeyOverlap) -> Task<Cratis.Chronicle.Concepts.Observation.Webhooks.WebhookSigningKey>
+  1DA7B7E1: RotateWebhookSecret(Cratis.Chronicle.Concepts.Observation.Webhooks.WebhookId, Cratis.Chronicle.Concepts.Observation.Webhooks.WebhookSigningKeyOverlap) -> Task<Cratis.Chronicle.Concepts.Observation.Webhooks.WebhookSigningKey>
 
 class [GrainType("webhooksigningkeyring")] Cratis.Chronicle.Observation.Webhooks.Signing.WebhookSigningKeyRing
 
