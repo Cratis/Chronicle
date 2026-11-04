@@ -24,18 +24,28 @@ public sealed class ChildProcess : IAsyncDisposable
 
     public static ChildProcess Start(string connection, string store, string verb = PerProcessApplication.Verb)
     {
-        var process = new Process
+        var host = Environment.ProcessPath;
+        var startInfo = new ProcessStartInfo
         {
-            StartInfo = new ProcessStartInfo
-            {
-                FileName = Environment.ProcessPath,
-                ArgumentList = { typeof(ChildProcess).Assembly.Location, verb, "--connection", connection, "--event-store", store },
-                RedirectStandardInput = true,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                UseShellExecute = false
-            }
+            FileName = host,
+            RedirectStandardInput = true,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false
         };
+
+        // Under the dotnet muxer the assembly must be named first; under the test apphost the verb is the first argument.
+        if (string.Equals(Path.GetFileNameWithoutExtension(host), "dotnet", StringComparison.OrdinalIgnoreCase))
+        {
+            startInfo.ArgumentList.Add(typeof(ChildProcess).Assembly.Location);
+        }
+
+        foreach (var argument in new[] { verb, "--connection", connection, "--event-store", store })
+        {
+            startInfo.ArgumentList.Add(argument);
+        }
+
+        var process = new Process { StartInfo = startInfo };
         try
         {
             if (!process.Start()) throw new InvalidOperationException("Could not start the per-process application.");
