@@ -14,6 +14,7 @@ public class WebhookSourceBuilder(string path) : IWebhookSourceBuilder
     SourceAuthorization? _authorization;
 
     /// <inheritdoc/>
+    [Obsolete("Webhook capture sources do not support authentication: the kernel does not receive, store or enforce it. Remove this call - it has no effect and will be removed in the next major version. To authenticate an API capture, configure authentication on the External Service it references.")]
     public IWebhookSourceBuilder WithBasicAuth(string username, string password)
     {
         _authorization = new SourceBasicAuthorization(username, password);
@@ -22,6 +23,7 @@ public class WebhookSourceBuilder(string path) : IWebhookSourceBuilder
     }
 
     /// <inheritdoc/>
+    [Obsolete("Webhook capture sources do not support authentication: the kernel does not receive, store or enforce it. Remove this call - it has no effect and will be removed in the next major version. To authenticate an API capture, configure authentication on the External Service it references.")]
     public IWebhookSourceBuilder WithBearerToken(string token)
     {
         _authorization = new SourceBearerTokenAuthorization(token);
@@ -30,6 +32,7 @@ public class WebhookSourceBuilder(string path) : IWebhookSourceBuilder
     }
 
     /// <inheritdoc/>
+    [Obsolete("Webhook capture sources do not support authentication: the kernel does not receive, store or enforce it. Remove this call - it has no effect and will be removed in the next major version. To authenticate an API capture, configure authentication on the External Service it references.")]
     public IWebhookSourceBuilder WithOAuth(string authority, string clientId, string clientSecret)
     {
         _authorization = new SourceOAuthAuthorization(authority, clientId, clientSecret);

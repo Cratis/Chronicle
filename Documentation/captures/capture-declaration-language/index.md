@@ -134,7 +134,7 @@ capture ShipmentTracking
 
 **API sources** connect through a configured [External Service](/chronicle/external-services/). Configure the base URL and authentication once on the External Service; the capture simply references it by name — see the [Declarative Captures](/chronicle/clients/dotnet/captures/declarative/) example for what that reference looks like in the .NET client's builder API.
 
-**Webhook sources** do not support authentication yet. Webhook sources are not read (see the limitations above), and the capture contract carries only the declaration text. Authentication set with the .NET source builder's `WithBasicAuth`, `WithBearerToken` or `WithOAuth` is therefore not sent to the kernel, stored or enforced. Do not rely on it to protect an endpoint.
+**Webhook sources** do not support authentication yet. Webhook sources are not read (see the limitations above), and the capture contract carries only the declaration text. The .NET source builder's `WithBasicAuth`, `WithBearerToken` and `WithOAuth` methods are obsolete (they still compile with a warning). Their authentication settings are not sent to the kernel, stored or enforced, so remove those calls. Do not rely on it to protect an endpoint.
 
 ### Key directive
 
