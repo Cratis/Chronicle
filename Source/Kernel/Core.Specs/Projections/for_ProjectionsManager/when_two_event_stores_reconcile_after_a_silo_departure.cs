@@ -31,6 +31,9 @@ public class when_two_event_stores_reconcile_after_a_silo_departure : given.two_
         secondStorage.GetEventStore(EventStore).GetNamespace(EventStoreNamespaceName.Default).Observers
             .GetRetired(default!)
             .ReturnsForAnyArgs([.. _secondDefinitions.Select(definition => (ObserverId)definition.Identifier)]);
+
+        // Retirement occurs after the recent-registration cache expires, so registration discovers it in storage.
+        _clock.Advance(ProjectionsManager.IdenticalRegistrationWindow + TimeSpan.FromTicks(1));
         await _secondGrain.Register(_secondDefinitions);
         _observerGrain.ClearReceivedCalls();
         _secondObserver.ClearReceivedCalls();
