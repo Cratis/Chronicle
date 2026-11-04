@@ -19,6 +19,7 @@ public sealed class SqlServerFixture : IAsyncLifetime
 {
     const int Port = 1433;
     const int DatabaseInUse = 3702;
+    const int SessionNotActive = 6106;
     static readonly TimeSpan _prefetchTimeout = TimeSpan.FromSeconds(60);
     const string Password = "Chronicle4476!Test";
     readonly Channel<(string? Name, TaskCompletionSource? Flush)> _drops = Channel.CreateUnbounded<(string? Name, TaskCompletionSource? Flush)>(new() { SingleReader = true });
@@ -233,7 +234,8 @@ public sealed class SqlServerFixture : IAsyncLifetime
         var escaped = name.Replace("]", "]]", StringComparison.Ordinal);
 
         // Evicts only this database's sessions on the server, so unrelated pools stay warm. The name is unique per specification.
-        var sql = $"DECLARE @k nvarchar(max) = N''; SELECT @k += N'KILL ' + CAST(session_id AS nvarchar(10)) + N';' FROM (SELECT session_id FROM sys.dm_exec_sessions WHERE database_id = DB_ID(@name) UNION SELECT request_session_id FROM sys.dm_tran_locks WHERE resource_type = 'DATABASE' AND resource_database_id = DB_ID(@name)) s WHERE session_id <> @@SPID; EXEC (@k); DROP DATABASE [{escaped}]";
+        // A session can end between the lookup and its KILL, so each KILL ignores its own failure and DROP still runs.
+        var sql = $"DECLARE @k nvarchar(max) = N''; SELECT @k += N'BEGIN TRY KILL ' + CAST(session_id AS nvarchar(10)) + N'; END TRY BEGIN CATCH END CATCH;' FROM (SELECT session_id FROM sys.dm_exec_sessions WHERE database_id = DB_ID(@name) UNION SELECT request_session_id FROM sys.dm_tran_locks WHERE resource_type = 'DATABASE' AND resource_database_id = DB_ID(@name)) s WHERE session_id <> @@SPID; EXEC (@k); DROP DATABASE [{escaped}]";
         if (await TryDrop(sql, name) || await TryDrop(sql, name))
         {
             return;
@@ -251,9 +253,9 @@ public sealed class SqlServerFixture : IAsyncLifetime
             await Execute(sql, name, _stop.Token);
             return true;
         }
-        catch (SqlException ex) when (ex.Number == DatabaseInUse)
+        catch (SqlException ex) when (ex.Number is DatabaseInUse or SessionNotActive)
         {
-            // Killed sessions may still be rolling back.
+            // Killed sessions may still be rolling back, or a session ended before it was killed.
             await Task.Delay(100, _stop.Token);
             return false;
         }
