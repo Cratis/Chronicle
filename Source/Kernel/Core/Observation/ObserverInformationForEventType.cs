@@ -58,14 +58,14 @@ public record ObserverInformationForEventType(string Id, string Namespace, Obser
         string eventTypeId,
         IStorage storage)
     {
-        var subject = new ReplaySubject<IEnumerable<ObserverInformationForEventType>>(1);
-        storage
+        var observable = Observable.Defer(() => storage
             .GetEventStore(eventStore)
             .Namespaces
             .ObserveAll()
             .Select(namespaces => ObserverInformationForEventTypeFilter.ObserveForAllNamespaces(eventStore, eventTypeId, namespaces.Select(_ => _.Name.Value), storage))
-            .Switch()
-            .Subscribe(subject.OnNext);
-        return subject;
+            .Switch());
+        return Subject.Create<IEnumerable<ObserverInformationForEventType>>(
+            System.Reactive.Observer.Create<IEnumerable<ObserverInformationForEventType>>(_ => { }),
+            observable);
     }
 }
