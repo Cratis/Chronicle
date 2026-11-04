@@ -53,6 +53,7 @@ public class and_automatic_registration_is_off(context context) : Given<context>
             _store = await _client.GetEventStore(EventStore.Name, EventStore.Namespace);
             await _store.DiscoverAll();
             await _store.RegisterAll();
+            await _store.ReadModels.Register<SomeReadModel>();
             Original = await _store.Reducers.Register<ReducerWithoutDelay, SomeReadModel>();
             await Original.WaitTillActive();
         }
