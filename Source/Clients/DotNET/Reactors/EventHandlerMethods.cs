@@ -55,13 +55,18 @@ public static class EventHandlerMethods
     }
 
     /// <summary>
-    /// Check whether a <see cref="MethodInfo"/> has the shape of an event handler method — a first parameter
-    /// that is a known event type, with an optional <see cref="EventContext"/> or <see cref="ReactorDelivery"/>
-    /// as the second parameter — regardless of whether its return type is a supported side-effect return type.
+    /// Check whether a <see cref="MethodInfo"/> has the shape of an event handler method, regardless of whether
+    /// its return type is a supported side-effect return type.
     /// </summary>
     /// <param name="methodInfo"><see cref="MethodInfo"/> to check.</param>
     /// <param name="eventTypes">Known event types in the process.</param>
     /// <returns>True if the method is shaped like an event handler, false if not.</returns>
+    /// <remarks>
+    /// The shape follows the same convention as <see cref="IsEventHandlerMethod(MethodInfo, IEnumerable{Type})"/>:
+    /// the method is not a special-name method and its first parameter is a known event type. Any further
+    /// parameters are dependencies, as for <see cref="IsEventHandlerMethod(MethodInfo, IEnumerable{Type})"/>, and
+    /// do not affect the shape.
+    /// </remarks>
     public static bool HasEventHandlerShape(this MethodInfo methodInfo, IEnumerable<Type> eventTypes)
     {
         if (methodInfo.IsSpecialName)
@@ -70,20 +75,13 @@ public static class EventHandlerMethods
         }
 
         var parameters = methodInfo.GetParameters();
-        if (parameters.Length is < 1 or > 2)
+        if (parameters.Length == 0)
         {
             return false;
         }
 
         var eventTypesList = eventTypes as IList<Type> ?? [.. eventTypes];
-        if (!parameters[0].ParameterType.IsEventType(eventTypesList))
-        {
-            return false;
-        }
-
-        return parameters.Length == 1 ||
-               parameters[1].ParameterType == typeof(EventContext) ||
-               parameters[1].ParameterType == typeof(ReactorDelivery);
+        return parameters[0].ParameterType.IsEventType(eventTypesList);
     }
 
     /// <summary>
