@@ -20,9 +20,9 @@
     <PackageVersion Include="Aspire.Hosting.AppHost" Version="13.4.6" />
     <PackageVersion Include="Aspire.Hosting.Yarp" Version="13.4.6" />
     <!-- Cratis -->
-    <!-- Cratis.Choreography 1.27.4 (now Cratis.Choreography) required at least 7.26.1; a lower pin fails restore with NU1605. -->
+    <!-- Cratis.Choreography requires at least Cratis.Fundamentals 7.32.0; a lower pin fails restore with NU1605. -->
     <PackageVersion Include="Cratis.Fundamentals" Version="7.32.0" />
-    <PackageVersion Include="Cratis.Metrics.Roslyn" Version="7.27.0" />
+    <PackageVersion Include="Cratis.Metrics.Roslyn" Version="7.32.0" />
     <!-- Keep the Arc runtime packages aligned; Chronicle.Testing declares Arc dependencies for its embedded kernel. -->
     <PackageVersion Include="Cratis.Arc" Version="22.156.4" />
     <PackageVersion Include="Cratis.Arc.Core" Version="22.156.4" />
@@ -84,10 +84,10 @@
     <PackageVersion Include="Microsoft.Orleans.TestingHost" Version="10.4.2" />
     <PackageVersion Include="OrleansTestKit10" Version="10.0.0" />
     <PackageVersion Include="Orleans.Providers.MongoDB" Version="9.5.0" />
-    <PackageVersion Include="Cratis.Choreography" Version="2.1.1" />
-    <PackageVersion Include="Cratis.Choreography.Storage" Version="2.1.1" />
-    <PackageVersion Include="Cratis.Choreography.Storage.MongoDB" Version="2.1.1" />
-    <PackageVersion Include="Cratis.Choreography.Storage.Sql" Version="2.1.1" />
+    <PackageVersion Include="Cratis.Choreography" Version="2.1.2" />
+    <PackageVersion Include="Cratis.Choreography.Storage" Version="2.1.2" />
+    <PackageVersion Include="Cratis.Choreography.Storage.MongoDB" Version="2.1.2" />
+    <PackageVersion Include="Cratis.Choreography.Storage.Sql" Version="2.1.2" />
     <!-- Open Telemetry -->
     <PackageVersion Include="OpenTelemetry" Version="1.20.1" />
     <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.20.1" />

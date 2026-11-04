@@ -16,6 +16,7 @@ public class and_the_observer_is_quarantined : given.a_quarantined_observer
         _stateStorage.State.CatchingUpPartitions.Add("partition");
         await _observer.CatchUp();
         _jobsManager.ClearReceivedCalls();
+        _storageStats.ResetCounts();
     }
 
     async Task Because()

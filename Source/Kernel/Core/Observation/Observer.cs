@@ -508,6 +508,7 @@ public partial class Observer(
             observerDefinition,
             failures,
             _jobsManager,
+            storage,
             loggerFactory.CreateLogger<CatchingUpInFlight>()),
 
         new Observing(
@@ -821,6 +822,7 @@ public partial class Observer(
                 }
             }
 
+            _persistedStateWrites++;
             if (revision == _alertRevision)
             {
                 _alertStateNeedsPersistence = false;

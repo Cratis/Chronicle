@@ -12,9 +12,11 @@ namespace Cratis.Chronicle.Security;
 /// contain the grain key separator.
 /// </summary>
 /// <remarks>
-/// Queries from other namespaces are ignored. This filter never grants anything: it only refuses.
+/// This is part of the authorization stage, which the pipeline evaluates before the other filters and the validation,
+/// so the refusal does not depend on the order filters are discovered in. Queries from other namespaces are ignored.
+/// This filter never grants anything: it only refuses.
 /// </remarks>
-public class SystemStoreQueryFilter : IQueryFilter
+public class SystemStoreQueryFilter : IAuthorizationQueryFilter
 {
     const string KernelQueryPrefix = "Cratis.Chronicle.";
 

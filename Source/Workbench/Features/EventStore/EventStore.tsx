@@ -12,6 +12,7 @@ import { EventSources } from './General/EventSources/EventSources';
 import { Observers } from "./Namespaces/Observers/Observers";
 import { Projections } from "./General/Projections/Projections";
 import { FailedPartitions } from "./Namespaces/FailedPartitions/FailedPartitions";
+import { FailedPartitionGroups } from "./Namespaces/FailedPartitionGroups/FailedPartitionGroups";
 import { Recommendations } from "./Namespaces/Recommendations/Recommendations";
 import { Jobs } from './Namespaces/Jobs/Jobs';
 import { Identities } from './Namespaces/Identities/Identities';
@@ -62,6 +63,7 @@ export const EventStore = () => {
                 { label: strings.mainMenu.patternHeatmap, url: ':namespace/pattern-heatmap', icon: mdIcons.MdGridOn },
                 { label: strings.mainMenu.observers, url: ':namespace/observers', icon: mdIcons.MdAirlineStops },
                 { label: strings.mainMenu.failedPartitions, url: ':namespace/failed-partitions', icon: mdIcons.MdErrorOutline },
+                { label: strings.mainMenu.failedPartitionGroups, url: ':namespace/failed-partition-groups', icon: mdIcons.MdCategory },
                 { label: strings.mainMenu.readModels, url: ':namespace/read-models', icon: mdIcons.MdTableView },
                 { label: strings.mainMenu.identities, url: ':namespace/identities', icon: mdIcons.MdPeople },
                 { label: strings.mainMenu.closedStreams, url: ':namespace/closed-streams', icon: mdIcons.MdLock },
@@ -143,6 +145,7 @@ export const EventStore = () => {
                     <Route path={'pattern-heatmap'} element={<PatternHeatmap />} />
                     <Route path={'observers'} element={<Observers />} />
                     <Route path={'failed-partitions'} element={<FailedPartitions />} />
+                    <Route path={'failed-partition-groups'} element={<FailedPartitionGroups />} />
                     <Route path={'read-models/*'} element={<ReadModels />} />
                     <Route path={'projections'} element={<Projections />} />
                     <Route path={'identities'} element={<Identities />} />

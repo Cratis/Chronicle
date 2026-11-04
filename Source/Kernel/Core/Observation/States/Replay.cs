@@ -95,12 +95,19 @@ public class Replay(
     {
         await Observer.GetSubscription();
 
-        return await jobsManager.StartOrResumeObserverJobFor<IReplayObserver, ReplayObserverRequest>(
+        var request = new ReplayObserverRequest(observerKey, definitionState.State.Type, definitionState.State.EventTypes)
+        {
+            ReaderScope = ObserverReaderScope.For(state.SubscribesToAllEvents, definitionState.State.EventTypes)
+        };
+        var claims = StateMachine as IObserverOwnershipClaims;
+
+        // Granted and persisted before the job starts, so admission finds the claim the job is stamped with.
+        Func<ReplayObserverRequest, Task<ReplayObserverRequest>>? stampBeforeStart = claims is null
+            ? null
+            : async toStart => toStart with { OwnershipEpoch = await claims.GrantObserverWideBeforeStart(ClaimHolderKind.ObserverReplay, EventSequenceNumber.First) };
+        return await jobsManager.StartOrResumeObserverJobReportingDrops<IReplayObserver, ReplayObserverRequest>(
             logger,
-            new ReplayObserverRequest(observerKey, definitionState.State.Type, definitionState.State.EventTypes)
-            {
-                ReaderScope = ObserverReaderScope.For(state.SubscribesToAllEvents, definitionState.State.EventTypes)
-            },
+            () => request,
             requestPredicate: null,
             () =>
             {
@@ -115,9 +122,16 @@ public class Replay(
             async () =>
             {
                 // The only place a replay job is created, reached after live and resumable jobs were selected: while
-                // generation initialization has begun a replay may be resumed, never started.
+                // generation initialization has begun a replay may be resumed, never started. It runs before the
+                // ownership claim is granted, so a refused start leaves no claim behind.
                 await GenerationInitializationReplay.EnsureStartAllowed(storage, observerKey, definitionState.State.Type);
                 logger.StartReplayJob();
-            });
+            },
+            null,
+            null,
+            0,
+            null,
+            stampBeforeStart,
+            claims is null ? null : claims.IsObsolete);
     }
 }
