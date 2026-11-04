@@ -116,9 +116,19 @@ public class ReducerPipeline(
                 {
                     ((IDictionary<string, object?>)initialForComparison)[name] = value;
                 }
-                if (storedSubject is not null)
+
+                // Compliance stamps the resolved subject onto every reduced state, but a sink without a subject
+                // column (SQL, for a read model with no compliance metadata) never returns one. A subject the sink
+                // does not hold is not a change the reduction made, so it must not turn a no-op into a write.
+                var comparedSubject = storedSubject;
+                if (comparedSubject is null)
                 {
-                    ((IDictionary<string, object?>)initialForComparison)[WellKnownProperties.Subject] = storedSubject;
+                    ((IDictionary<string, object?>)encryptedState).TryGetValue(WellKnownProperties.Subject, out comparedSubject);
+                }
+
+                if (comparedSubject is not null)
+                {
+                    ((IDictionary<string, object?>)initialForComparison)[WellKnownProperties.Subject] = comparedSubject;
                 }
             }
 
