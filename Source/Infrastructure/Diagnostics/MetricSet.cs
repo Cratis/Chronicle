@@ -95,16 +95,18 @@ internal sealed class MetricSet
         var legacy = LegacyTelemetryNames.Metrics[name][0];
         return _names switch
         {
-            MetricNames.Legacy => CreateSingle(legacy, legacy: true),
-            MetricNames.Convention => CreateSingle(convention, legacy: false),
-            MetricNames.Both => new DualMetricInstrument<T>(CreateSingle(legacy, legacy: true), CreateSingle(convention, legacy: false)),
+            MetricNames.Legacy => CreateLegacy(legacy),
+            MetricNames.Convention => CreateConvention(convention),
+            MetricNames.Both => new DualMetricInstrument<T>(CreateLegacy(legacy), CreateConvention(convention)),
             _ => throw new InvalidOperationException($"Unsupported metric naming mode: {_names}")
         };
 
-        IMetricInstrument<T> CreateSingle(LegacyMetric metadata, bool legacy) => new SingleMetricInstrument<T>(
+        IMetricInstrument<T> CreateLegacy(LegacyMetric metadata) => new SingleMetricInstrument<T>(
             create(metadata),
-            legacy ? _legacyTags : _conventionTags,
-            legacy ? LegacyTelemetryNames.ToLegacyMetricKey(firstKey) : firstKey,
-            legacy ? LegacyTelemetryNames.ToLegacyMetricKey(secondKey) : secondKey);
+            _legacyTags,
+            LegacyTelemetryNames.ToLegacyMetricKey(firstKey),
+            LegacyTelemetryNames.ToLegacyMetricKey(secondKey));
+
+        IMetricInstrument<T> CreateConvention(LegacyMetric metadata) => new SingleMetricInstrument<T>(create(metadata), _conventionTags, firstKey, secondKey);
     }
 }

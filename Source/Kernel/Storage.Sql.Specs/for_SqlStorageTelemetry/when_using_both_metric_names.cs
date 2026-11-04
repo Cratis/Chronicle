@@ -23,14 +23,20 @@ public class when_using_both_metric_names : Specification
             _instruments.Add(instrument);
             listener.EnableMeasurementEvents(instrument);
         };
-        _listener.SetMeasurementEventCallback<int>((instrument, value, tags, _) => _measurements.Add((instrument.Name, value, tags.ToArray())));
+        _listener.SetMeasurementEventCallback<int>((instrument, value, tags, _) =>
+        {
+            if (tags.Length == 1 && Equals(tags[0].Value, "both-metric-names-spec"))
+            {
+                _measurements.Add((instrument.Name, value, tags.ToArray()));
+            }
+        });
         _listener.Start();
         _telemetry = new(MetricNames.Both);
         _ = new SqlCompositeKeyShadow(MetricNames.Both);
         _instrumentsBeforeRecording = _instruments.Count;
     }
 
-    void Because() => _telemetry.RecoveredCollision("read-model", 3);
+    void Because() => _telemetry.RecoveredCollision("both-metric-names-spec", 3);
 
     [Fact]
     void should_precreate_both_sets() => _instruments.Select(_ => _.Name).Distinct().Order().ShouldEqual(new[]
@@ -51,8 +57,8 @@ public class when_using_both_metric_names : Specification
     [Fact] void should_record_the_original_value_to_both() => _measurements.Select(_ => _.Value).ShouldEqual([3, 3]);
     [Fact] void should_preserve_the_legacy_unit() => _instruments.Single(_ => _.Name == "chronicle-sql-upsert-collisions-recovered").Unit.ShouldBeNull();
     [Fact] void should_publish_the_convention_unit() => _instruments.Single(_ => _.Name == "cratis.chronicle.sql.upsert.recovered_collisions").Unit.ShouldEqual("{collision}");
-    [Fact] void should_preserve_the_legacy_key() => _measurements.Single(_ => _.Name == "chronicle-sql-upsert-collisions-recovered").Tags.ShouldEqual([new("operation", "read-model")]);
-    [Fact] void should_publish_the_convention_key() => _measurements.Single(_ => _.Name == "cratis.chronicle.sql.upsert.recovered_collisions").Tags.ShouldEqual([new("cratis.chronicle.sql.upsert.operation", "read-model")]);
+    [Fact] void should_preserve_the_legacy_key() => _measurements.Single(_ => _.Name == "chronicle-sql-upsert-collisions-recovered").Tags.ShouldEqual([new("operation", "both-metric-names-spec")]);
+    [Fact] void should_publish_the_convention_key() => _measurements.Single(_ => _.Name == "cratis.chronicle.sql.upsert.recovered_collisions").Tags.ShouldEqual([new("cratis.chronicle.sql.upsert.operation", "both-metric-names-spec")]);
     [Fact] void should_preserve_the_shadow_failure_name() => _instruments.Count(_ => _.Name == "chronicle.sql.composite_key.stamp_failures").ShouldEqual(1);
     [Fact] void should_publish_the_shadow_failure_convention_name() => _instruments.Count(_ => _.Name == "cratis.chronicle.sql.composite_key.stamp_failures").ShouldEqual(1);
 

@@ -217,7 +217,8 @@ public partial class EventSequenceStorage(
                 await identityStorage.GetFor(causedByChain),
                 tags,
                 eventHash,
-                Subject: resolvedSubject) { NamedTags = namedTags, AppendedGeneration = eventType.Generation };
+                Subject: resolvedSubject)
+            { NamedTags = namedTags, AppendedGeneration = eventType.Generation };
 
             var generationalContent = EventEntryConverter.BuildGenerationalContent(content);
             return new AppendedEvent(eventContext, returnContent)
