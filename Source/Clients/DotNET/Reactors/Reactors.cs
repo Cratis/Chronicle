@@ -188,7 +188,7 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
 
             foreach (var registration in _handlers.Values.Where(_ => !_.IsRegistered))
             {
-                RegisterReactor(registration);
+                RegisterReactor(registration, _servicesAccessor.Services);
                 registration.IsRegistered = true;
             }
             _registered = true;
@@ -528,7 +528,7 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
 
         try
         {
-            RegisterReactor(registration);
+            RegisterReactor(registration, _servicesAccessor.Services);
             registration.IsRegistered = true;
             _handlers = _handlers.Append(new KeyValuePair<ReactorId, ReactorRegistration>(registration.Handler.Id, registration))
                 .ToFrozenDictionary();
@@ -583,7 +583,30 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
         };
     }
 
-    void RegisterReactor(ReactorRegistration registration)
+    bool IsCurrentHandler(ReactorHandler handler) =>
+        _handlers.TryGetValue(handler.Id, out var current) && ReferenceEquals(current.Handler, handler);
+
+    void ReconnectIfCurrent(ReactorRegistration registration, CancellationToken cancellationToken)
+    {
+        var handler = registration.Handler;
+
+        // Resolving the services connects synchronously when disconnected, so do it
+        // outside the static lock that other event stores' connection callbacks need.
+        var services = _servicesAccessor.Services;
+        lock (_registerLock)
+        {
+            if (cancellationToken.IsCancellationRequested || _released || !IsCurrentHandler(handler))
+            {
+                _logger.SkippingStaleReactorReconnect(handler.Id);
+                return;
+            }
+
+            _logger.ReconnectingReactor(handler.Id);
+            RegisterReactor(registration, services);
+        }
+    }
+
+    void RegisterReactor(ReactorRegistration registration, IServices services)
     {
         var handler = registration.Handler;
         ClientObserverHosting.ThrowIfUnavailable(_eventStore.Connection, "Reactor", () => handler.Id.Value);
@@ -598,6 +621,7 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
             ConnectionId = _eventStore.Connection.Lifecycle.ConnectionId,
             EventStore = _eventStore.Name,
             Namespace = _eventStore.Namespace,
+            PageDelivery = new() { Enabled = true },
             Reactor = new ReactorDefinition
             {
                 GenerationDelivery = (Contracts.Observation.EventGenerationDelivery)GenerationDelivery,
@@ -627,7 +651,7 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
 #if CHRONICLE_ROLLING_DIAGNOSTICS
         var diagnostic = ReactorsDeliveryDiagnosticsLogging.Open(_logger);
 #endif
-        var eventsToObserve = _servicesAccessor.Services.Reactors.Observe(messages.Messages, cancellationToken);
+        var eventsToObserve = services.Reactors.Observe(messages.Messages, cancellationToken);
 
         // Re-establish the observation after the stream ends. A cross-store
         // (inbox) reactor's stream can be CLOSED by the kernel rather than tailed
@@ -648,8 +672,7 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
                 {
                     await scheduler.DrainAndDispose();
                     await Task.Delay(ReconnectDelay, cancellationToken);
-                    _logger.ReconnectingReactor(handler.Id);
-                    RegisterReactor(registration);
+                    ReconnectIfCurrent(registration, cancellationToken);
                 }
                 catch (OperationCanceledException ex)
                 {
@@ -680,7 +703,8 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
                 }
 
                 var isBarrier = events.ReplayState is ReplayState.BeginReplay or ReplayState.EndReplay;
-                return (isBarrier ? scheduler.ScheduleBarrier(Deliver) : scheduler.Schedule(events.Partition ?? string.Empty, Deliver)).ToObservable();
+                var partition = events.SchedulingPartition();
+                return (isBarrier || partition is null ? scheduler.ScheduleBarrier(Deliver) : scheduler.Schedule(partition, Deliver)).ToObservable();
             })
             .Merge()
             .Subscribe(

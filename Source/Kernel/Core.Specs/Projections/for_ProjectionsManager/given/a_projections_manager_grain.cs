@@ -42,7 +42,7 @@ public class a_projections_manager_grain : Specification
     protected Observation.IObserver _observerGrain;
     protected readonly Dictionary<string, Observation.IObserver> _observersByKey = [];
     protected INamespaces _namespaces;
-    protected Orleans.Jobs.IJobsManager _jobsManager;
+    protected Choreography.Jobs.IJobsManager _jobsManager;
     protected Recommendations.IRecommendationsManager _recommendationsManager;
     protected IFailedPartitionsStorage _failedPartitionsStorage;
     protected Storage.IEventStoreStorage _eventStoreStorage;
@@ -123,8 +123,8 @@ public class a_projections_manager_grain : Specification
         _observerGrain.GetState().Returns(new ObserverState());
         _silo.AddProbe(key => _observersByKey.TryGetValue(key.ToString(), out var observer) ? observer : _observerGrain);
 
-        _jobsManager = Substitute.For<Orleans.Jobs.IJobsManager>();
-        _jobsManager.GetAllJobs().Returns(ImmutableList<Orleans.Storage.Jobs.JobState>.Empty);
+        _jobsManager = Substitute.For<Choreography.Jobs.IJobsManager>();
+        _jobsManager.GetAllJobs().Returns(ImmutableList<Choreography.Storage.Jobs.JobState>.Empty);
         _silo.AddProbe(_ => _jobsManager);
 
         _recommendationsManager = Substitute.For<Recommendations.IRecommendationsManager>();

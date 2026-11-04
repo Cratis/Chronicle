@@ -1,9 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Choreography.Storage.MongoDB.Serialization;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Storage.MongoDB.Sinks;
-using Cratis.Orleans.Storage.MongoDB.Serialization;
 using Microsoft.Extensions.Logging.Abstractions;
 using MongoDB.Driver;
 

@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Choreography.Jobs;
+using Cratis.Choreography.Storage.Jobs;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
@@ -14,8 +16,6 @@ using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Monads;
-using Cratis.Orleans.Jobs;
-using Cratis.Orleans.Storage.Jobs;
 using Microsoft.Extensions.Logging;
 using OneOf.Types;
 
@@ -38,7 +38,7 @@ namespace Cratis.Chronicle.Observation.Jobs;
 /// <param name="eventGenerationRelease">The pinned generation release boundary.</param>
 /// <param name="timeProvider">The delivery fence clock.</param>
 public partial class HandleEventsForPartition(
-    [PersistentState(nameof(JobStepState), Cratis.Orleans.WellKnownGrainStorageProviders.JobSteps)]
+    [PersistentState(nameof(JobStepState), Cratis.Choreography.WellKnownGrainStorageProviders.JobSteps)]
     IPersistentState<HandleEventsForPartitionState> state,
     IJobStepThrottle throttle,
     IStorage storage,
@@ -220,7 +220,7 @@ public partial class HandleEventsForPartition(
                 : MaxEventsPerBatch;
             using var events = new BoundedEventCursor(storageEvents, maximumEventsPerCall);
 
-            var subscriberContext = CreateSubscriberContext(subscription, currentState.Partition);
+            var subscriberContext = CreateSubscriberContext(subscription, currentState);
             var subscriberTimeout = await configurationProvider.GetSubscriberTimeoutForObserver(currentState.ObserverKey);
             await DrainAbandonedDeliveryBeforeHandling(subscription, currentState, cancellationToken);
 
@@ -503,12 +503,17 @@ public partial class HandleEventsForPartition(
     JobStepResult ClosedResult(EventSequenceNumber lastSuccessfullyHandled) =>
         JobStepResult.Failed(PerformJobStepError.CancelledWithPartialResult(CreateResult(lastSuccessfullyHandled)));
 
-    ObserverSubscriberContext CreateSubscriberContext(ObserverSubscription subscription, Key partition)
+    ObserverSubscriberContext CreateSubscriberContext(ObserverSubscription subscription, HandleEventsForPartitionState state)
     {
         var deliveryTarget = subscription.SubscriberType.IsAssignableTo(typeof(IAmOwnedByClient))
             ? _deliveryTarget
-            : subscriberSelector.Select(subscription, partition);
-        return new(deliveryTarget.ConnectedClient ?? subscription.Arguments);
+            : subscriberSelector.Select(subscription, state.Partition);
+        return new(deliveryTarget.ConnectedClient ?? subscription.Arguments)
+        {
+            Origin = state.EpisodeId is not null || state.DeferralId is not null
+                ? ObservationOrigin.Retry
+                : state.EventObservationState.ToObservationOrigin()
+        };
     }
 
     async Task DrainAbandonedDeliveryBeforeHandling(ObserverSubscription subscription, HandleEventsForPartitionState state, CancellationToken cancellationToken)

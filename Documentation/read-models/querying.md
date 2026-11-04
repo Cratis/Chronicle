@@ -1,11 +1,11 @@
 ---
 uid: Chronicle.ReadModels.Querying
-description: Chronicle's read model API is keyed, with no filter or search surface; this explains why and what to do instead for querying.
+description: Chronicle's read model API is keyed, with no server-side query surface; this explains why and what to do instead for querying.
 ---
 
 # Querying Read Models
 
-Chronicle's read model API is keyed. You can get an instance by its id, get snapshots of it, watch it, and replay the whole collection. What you cannot do through `IReadModels` is filter or search by a field that is not the key — there is no predicate-taking read and no `IQueryable`. Paging is the one exception: `IReadModels.Materialized` reads the stored instances a page at a time, without filtering or sorting — see [Materialized read models](materialized-pagination.mdx).
+Chronicle's read model API is keyed. You can get an instance by its id, get snapshots of it, watch it, and replay the whole collection. What you cannot do through `IReadModels` is run a server-side filter or search by a field that is not the key — there is no server query engine and no `IQueryable`. The one predicate is `Observe<TReadModel>(filter)`, which filters the whole observed materialized collection in the client; it does not reduce what the server reads or sends, and passive and event-target read models cannot be observed this way. See [Observing read models](observing-read-models.mdx). Paging is the one exception: `IReadModels.Materialized` reads the stored instances a page at a time, without filtering or sorting — see [Materialized read models](materialized-pagination.mdx).
 
 That is deliberate, and this page says so plainly, because from the outside a missing method looks the same whether it was left out or never intended.
 
