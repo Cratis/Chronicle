@@ -10,5 +10,5 @@ public class and_the_write_does_not_record_an_own_slot : given.a_changeset_conve
     async Task Because() => _result = await Convert([Direct()], Context(recordOwnSlot: false));
 
     [Fact] void should_not_record_a_slot() => RenderUpdate(_result.UpdateDefinition)["$set"].AsBsonDocument.Contains("__applied").ShouldBeFalse();
-    [Fact] void should_not_condition_the_write() => _result.AppliedCondition.ShouldBeNull();
+    [Fact] void should_write_a_classic_update() => _result.IsConditional.ShouldBeFalse();
 }

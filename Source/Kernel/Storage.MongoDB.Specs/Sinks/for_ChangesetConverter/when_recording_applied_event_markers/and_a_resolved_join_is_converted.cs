@@ -5,6 +5,10 @@ using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Storage.Sinks;
+using MongoDB.Bson;
+using MongoDB.Bson.Serialization;
+using MongoDB.Bson.Serialization.Serializers;
+using MongoDB.Driver;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Sinks.for_ChangesetConverter.when_recording_applied_event_markers;
 
@@ -29,9 +33,11 @@ public class and_a_resolved_join_is_converted : given.a_changeset_converter_reco
         _withoutEvent = await Convert([new ResolvedJoin(new System.Dynamic.ExpandoObject(), "k", new PropertyPath("joinId"), ArrayIndexers.NoIndexers, [Direct()])], Context());
     }
 
-    [Fact] void should_collect_one_slot() => _result.ResolvedJoinSlots.Count.ShouldEqual(1);
-    [Fact] void should_identify_the_definition_by_the_event_type_and_the_property() => _result.ResolvedJoinSlots[0].DefinitionId.ShouldEqual(AppliedEventMarkers.DefinitionId("join-type", "joinId"));
-    [Fact] void should_identify_the_stream_of_the_join_event() => _result.ResolvedJoinSlots[0].Stream.ShouldEqual(AppliedEventMarkers.StreamHash("other-ns", "join-source"));
-    [Fact] void should_carry_the_sequence_number_of_the_join_event() => _result.ResolvedJoinSlots[0].SequenceNumber.ShouldEqual((EventSequenceNumber)7UL);
-    [Fact] void should_collect_nothing_when_the_source_is_not_an_event() => _withoutEvent.ResolvedJoinSlots.ShouldBeEmpty();
+    [Fact] void should_write_one_guarded_pipeline() => _result.IsConditional.ShouldBeTrue();
+    [Fact] void should_record_the_slot_of_the_join_definition() => Json(_result).ShouldContain($"\"__applied.j.{AppliedEventMarkers.DefinitionId("join-type", "joinId")}\"");
+    [Fact] void should_identify_the_stream_of_the_join_event() => Json(_result).ShouldContain(AppliedEventMarkers.StreamHash("other-ns", "join-source"));
+    [Fact] void should_carry_the_sequence_number_of_the_join_event() => Json(_result).ShouldContain("\"n\" : 7");
+    [Fact] void should_write_the_join_unguarded_by_a_slot_when_the_source_is_not_an_event() => Json(_withoutEvent).ShouldNotContain("__applied.j.");
+
+    static string Json(UpdateDefinitionAndArrayFilters result) => result.UpdateDefinition.Render(new RenderArgs<BsonDocument>(BsonDocumentSerializer.Instance, BsonSerializer.SerializerRegistry)).ToJson();
 }

@@ -1,8 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using MongoDB.Bson;
 using Cratis.Chronicle.Storage.MongoDB.Sinks;
+using MongoDB.Bson;
 using MongoDB.Driver;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing;
@@ -65,11 +65,6 @@ internal sealed class SinkBatchDocuments(int cap)
             throw new NonIdempotentWriteCannotBeSplit(collection.CollectionNamespace.CollectionName, document.Names.Where(IsBlocking).ToArray(), maxBatchSize);
         }
     }
-
-    static bool IsAppliedEventMarkerPipeline(UpdateDefinition<BsonDocument> update, BsonArray pipeline) =>
-        AppliedEventMarkerUpdates.IsMarked(update) &&
-        pipeline.Count > 0 &&
-        pipeline.All(stage => stage is BsonDocument { ElementCount: 1 } document && document.GetElement(0).Name is "$set" or "$unset");
 
     /// <summary>
     /// Refuses bulk operations that cannot be replayed after partial progress.
@@ -184,6 +179,13 @@ internal sealed class SinkBatchDocuments(int cap)
 
     static bool IsBlocking(string operation) =>
         operation is not ("$set" or "$unset" or "$max" or "$min" or "$setOnInsert" or "$pull");
+
+    static bool IsAppliedEventMarkerPipeline(UpdateDefinition<BsonDocument> update, BsonArray pipeline) =>
+        AppliedEventMarkerUpdates.IsMarked(update) &&
+        pipeline.Count > 0 &&
+        pipeline.All(stage => stage is BsonDocument { ElementCount: 1 } document && IsSetOrUnset(document.GetElement(0).Name));
+
+    static bool IsSetOrUnset(string name) => string.Equals(name, "$set", StringComparison.Ordinal) || string.Equals(name, "$unset", StringComparison.Ordinal);
 
     void Add(IMongoCollection<BsonDocument> collection, BsonValue id)
     {
