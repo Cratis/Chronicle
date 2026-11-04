@@ -128,7 +128,7 @@ public class ReplayObserverPartition(
     /// <inheritdoc/>
     protected override async Task OnStepCompletedOrStopped(JobStepId jobStepId, JobStepResult result)
     {
-        await TransientTimeouts.ReportPartitionFailedWhenAttemptsAreExhausted(GrainFactory.GetGrain<IObserver>(Request.ObserverKey), result, jsonSerializerOptions);
+        await TransientTimeouts.ReportPartitionFailedWhenAttemptsAreExhausted(GrainFactory.GetGrain<IObserver>(Request.ObserverKey), result, jsonSerializerOptions, new ReplayEpoch(JobId.Value));
         State.HandleResult(result, jsonSerializerOptions);
     }
 

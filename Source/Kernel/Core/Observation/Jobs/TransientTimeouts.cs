@@ -106,12 +106,13 @@ internal static class TransientTimeouts
     /// <param name="observer">The <see cref="IObserver"/> that owns the partition.</param>
     /// <param name="result">The final <see cref="JobStepResult"/> of the step.</param>
     /// <param name="jsonSerializerOptions">The serializer options to read the partial result with.</param>
+    /// <param name="replayEpoch">The replay operation the step belongs to, or null, so the failed partition keeps it.</param>
     /// <returns>Awaitable task.</returns>
-    internal static async Task ReportPartitionFailedWhenAttemptsAreExhausted(IObserver observer, JobStepResult result, JsonSerializerOptions jsonSerializerOptions)
+    internal static async Task ReportPartitionFailedWhenAttemptsAreExhausted(IObserver observer, JobStepResult result, JsonSerializerOptions jsonSerializerOptions, ReplayEpoch? replayEpoch = null)
     {
         if (TryGetTransientFailure(result, jsonSerializerOptions, out var failure))
         {
-            await observer.PartitionFailedWithDeliveryFence(failure.Partition, failure.FailedAt, failure.Messages, string.Empty, FailureKind.Timeout, context: new(DeliveryFence: failure.DeliveryFence));
+            await observer.PartitionFailedWithDeliveryFence(failure.Partition, failure.FailedAt, failure.Messages, string.Empty, FailureKind.Timeout, context: new(DeliveryFence: failure.DeliveryFence, ReplayEpoch: replayEpoch));
         }
     }
 

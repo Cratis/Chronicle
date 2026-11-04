@@ -303,14 +303,7 @@ public partial class HandleEventsForPartition(
                                 await ReportHandledEvents(currentState.Partition, handledEvents, eventObserverResult.LastSuccessfulObservation, cancellationToken);
                             }
 
-                            if (currentState.ReplayEpoch is { } replayEpoch)
-                            {
-                                await _observer.PartitionDeferred(currentState.Partition, eventObserverResult.Deferral!, currentState.EpisodeId, currentState.DeferralId, replayEpoch);
-                            }
-                            else
-                            {
-                                await _observer.PartitionDeferred(currentState.Partition, eventObserverResult.Deferral!, currentState.EpisodeId, currentState.DeferralId);
-                            }
+                            await ReportPartitionDeferred(currentState, eventObserverResult.Deferral!);
                             return JobStepResult.Failed(PerformJobStepError.CancelledWithPartialResult(CreateResult(lastSuccessfullyHandledEventSequenceNumber) with { Deferral = eventObserverResult.Deferral }));
                         case ObserverSubscriberState.Failed:
                             failed = true;
@@ -368,14 +361,7 @@ public partial class HandleEventsForPartition(
                             string.Empty));
                     }
 
-                    if (currentState.ReplayEpoch is { } replayEpoch)
-                    {
-                        await _observer.PartitionFailed(_eventSourceId, failedAt, exceptionMessages, exceptionStackTrace, failureKind, currentState.EpisodeId, currentState.DeferralId, new PartitionFailureContext(failurePolicy, null, replayEpoch));
-                    }
-                    else
-                    {
-                        await _observer.PartitionFailed(_eventSourceId, failedAt, exceptionMessages, exceptionStackTrace, failureKind, currentState.EpisodeId, currentState.DeferralId, failurePolicy);
-                    }
+                    await ReportPartitionFailed(currentState, failedAt, exceptionMessages, exceptionStackTrace, failureKind, failurePolicy);
                     return JobStepResult.Failed(PerformJobStepError.FailedWithPartialResult(
                         CreateResult(lastSuccessfullyHandledEventSequenceNumber),
                         TransientTimeouts.ShortenForStep(exceptionMessages),
@@ -482,18 +468,21 @@ public partial class HandleEventsForPartition(
         return lastScanned;
     }
 
+    Task ReportPartitionDeferred(HandleEventsForPartitionState state, PartitionDeferral deferral) =>
+        state.ReplayEpoch is { } replayEpoch
+            ? _observer.PartitionDeferred(state.Partition, deferral, state.EpisodeId, state.DeferralId, replayEpoch)
+            : _observer.PartitionDeferred(state.Partition, deferral, state.EpisodeId, state.DeferralId);
+
+    Task ReportPartitionFailed(HandleEventsForPartitionState state, EventSequenceNumber failedAt, IEnumerable<string> messages, string stackTrace, FailureKind kind, WebhookDeliveryFailurePolicy policy) =>
+        state.ReplayEpoch is { } replayEpoch
+            ? _observer.PartitionFailed(_eventSourceId, failedAt, messages, stackTrace, kind, state.EpisodeId, state.DeferralId, new PartitionFailureContext(policy, null, replayEpoch))
+            : _observer.PartitionFailed(_eventSourceId, failedAt, messages, stackTrace, kind, state.EpisodeId, state.DeferralId, policy);
+
     async Task<bool> TryReportPartitionFailed(EventSequenceNumber failedAt, Exception error)
     {
         try
         {
-            if (State.ReplayEpoch is { } replayEpoch)
-            {
-                await _observer.PartitionFailed(_eventSourceId, failedAt, error.GetAllMessages(), error.StackTrace ?? string.Empty, error.ToFailureKind(), State.EpisodeId, State.DeferralId, new PartitionFailureContext(WebhookDeliveryFailurePolicy.Retry, null, replayEpoch));
-            }
-            else
-            {
-                await _observer.PartitionFailed(_eventSourceId, failedAt, error.GetAllMessages(), error.StackTrace ?? string.Empty, error.ToFailureKind(), State.EpisodeId, State.DeferralId);
-            }
+            await ReportPartitionFailed(State, failedAt, error.GetAllMessages(), error.StackTrace ?? string.Empty, error.ToFailureKind(), WebhookDeliveryFailurePolicy.Retry);
             return true;
         }
         catch (Exception reportError)

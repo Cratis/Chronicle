@@ -117,7 +117,7 @@ public class RetryFailedPartition(
     /// <inheritdoc/>
     protected override async Task OnStepCompletedOrStopped(JobStepId jobStepId, JobStepResult result)
     {
-        await TransientTimeouts.ReportPartitionFailedWhenAttemptsAreExhausted(GrainFactory.GetGrain<IObserver>(Request.ObserverKey), result, jsonSerializerOptions);
+        await TransientTimeouts.ReportPartitionFailedWhenAttemptsAreExhausted(GrainFactory.GetGrain<IObserver>(Request.ObserverKey), result, jsonSerializerOptions, Request.ReplayEpoch);
         State.HandleResult(result, jsonSerializerOptions);
     }
 
