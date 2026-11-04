@@ -12,6 +12,7 @@ using Cratis.Chronicle.Schemas;
 
 namespace Cratis.Chronicle.EventSequences.for_EventSequence.when_appending_an_event;
 
+[PerFactSpecificationLifecycle]
 public class and_the_appended_copy_is_released_with_inherited_protection : given.an_event_sequence_with_inherited_protection
 {
     const string Marker = "central-inherited-pii-marker";
