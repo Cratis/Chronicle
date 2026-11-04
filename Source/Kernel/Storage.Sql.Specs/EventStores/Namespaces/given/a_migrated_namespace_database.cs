@@ -51,6 +51,8 @@ public class a_migrated_namespace_database : Specification, IDisposable
         _database = Substitute.For<IDatabase>();
         _database.Namespace(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>())
             .Returns(_ => new DbContextScope<NamespaceDbContext>(CreateContext(), () => { }));
+        _database.ExistingNamespace(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>())
+            .Returns(_ => new DbContextScope<NamespaceDbContext>(CreateContext(), () => { }));
     }
 
     protected NamespaceDbContext CreateContext()

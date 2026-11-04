@@ -98,6 +98,8 @@
 1 Integration/Clustering/for_ScaledOutClients/when_the_kernel_drops_a_client_instance.cs
 1 Integration/Kernel/for_JobsManager/given/TheJobStep.cs  # knob
 1 Integration/Kernel/for_JobsManager/when_starting/job_with_single_step/and_job_step_fails.cs
+2 Integration/MongoDB/Generations/for_ReleasedKernelGenerationFloor/ReleasedFloorKernel.cs  # readiness: bounded poll of a released kernel container (populated store, container exit); a released binary exposes no completion signal
+1 Integration/MongoDB/Generations/for_ReleasedKernelGenerationFloor/given/a_populated_store.cs  # readiness: bounded poll for the first event-store write by a released kernel container; no completion signal available
 2 Integration/SqlClustering/for_ClusterLoadDeliveryDiagnostics/when_capturing_the_enabled_transport.cs  # knob: 20 events/s pacing cadence for the diagnostics overhead measurement, not a wait
 1 Source/Clients/Connections.Specs/for_ChronicleConnection/given/a_connection_with_ambient_state.cs  # knob: monitor double parked until cancellation (infinite delay)
 1 Source/Clients/Connections.Specs/for_ConnectionLifecycle/given/a_lifecycle_with_ambient_state.cs  # interleave: Task.Yield forces a continuation to observe flowed ambient state
@@ -110,6 +112,9 @@
 1 Source/Clients/DotNET.Specs/Observation/for_AppendResultWaitForCompletionExtensions/when_waiting_for_completion/and_the_timeout_is_infinite.cs  # knob
 1 Source/Clients/XUnit.Integration/ChronicleFixture.cs  # readiness
 1 Source/Clients/XUnit.Integration/ChronicleOrleansFixture.cs
+# MongoDB pending-drop readiness has no awaitable driver event; retry the server command,
+# not a fixed settle duration. Helper specs inject a virtual clock and immediate delay (#5521).
+1 Source/Clients/XUnit.Integration/MongoDBDatabaseDropper.cs  # readiness: server-command drop-settle backoff
 1 Source/Kernel/Core.Specs/Clients/for_ClientDepartureNotifier/when_notifying_observers.cs  # interleave
 1 Source/Kernel/Core.Specs/ConcurrentCallGate.cs  # deadline
 1 Source/Kernel/Core.Specs/EventSequences/for_AppendedEventsQueue/when_enqueuing/with_backpressure/and_channel_capacity_is_exceeded.cs
@@ -121,6 +126,7 @@
 1 Source/Kernel/Core.Specs/Projections/for_ProjectionsManager/when_registering/and_more_definitions_than_the_concurrency_limit_are_new.cs  # knob
 1 Source/Kernel/Storage.MongoDB.Specs/EventSequences/ReplicaSetMongoDBFixture.cs  # readiness
 1 Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/EventSequences/for_EventCursor/given/a_cursor_over_a_context_whose_async_disposal_suspends.cs  # interleave
+1 Source/Kernel/Storage.Sql.Specs/Sinks/SqlServerFixture.cs  # readiness: backoff before retrying a drop while killed sessions roll back
 1 Source/Kernel/Storage.Sql.Specs/for_DatabaseSchemaLock/given/two_concurrent_changes.cs  # interleave
 1 Source/Kernel/Storage.Sql.Specs/for_ReadCommittedSnapshotNotEnabled/when_diagnostic_work_is_canceled.cs  # knob: diagnostic double parked until cancellation (infinite delay)
 1 Source/Kernel/Storage.Sql.Specs/for_TableMigrator/when_ensuring_a_table/and_two_kernels_create_it_together.cs  # interleave

@@ -15,8 +15,11 @@ public partial class EventSequence
         CorrelationId correlationId,
         IEnumerable<Causation> causation,
         Identity causedBy,
-        ConcurrencyScopeConjunctions concurrencyScopes) =>
-        AppendManyValidated(events, correlationId, causation, causedBy, concurrencyScopes);
+        ConcurrencyScopeConjunctions concurrencyScopes)
+    {
+        if (!_mayWriteSequence) throw new ReservedEventSequenceName(_eventSequenceId);
+        return AppendManyValidated(events, correlationId, causation, causedBy, concurrencyScopes);
+    }
 
     /// <inheritdoc/>
     public Task<AppendManyResult> AppendManyWithConjunctionsAndEffectReceipt(
@@ -25,6 +28,9 @@ public partial class EventSequence
         IEnumerable<Causation> causation,
         Identity causedBy,
         ConcurrencyScopeConjunctions concurrencyScopes,
-        Occurrences.EffectReceipt effectReceipt) =>
-        AppendManyValidated(events, correlationId, causation, causedBy, concurrencyScopes, effectReceipt);
+        Occurrences.EffectReceipt effectReceipt)
+    {
+        if (!_mayWriteSequence) throw new ReservedEventSequenceName(_eventSequenceId);
+        return AppendManyValidated(events, correlationId, causation, causedBy, concurrencyScopes, effectReceipt);
+    }
 }

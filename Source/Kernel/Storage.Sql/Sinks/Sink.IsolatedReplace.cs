@@ -47,7 +47,7 @@ public partial class Sink
     async Task<IsolatedReplaceResult> ReplaceIsolatedAttempt(Key key, ExpandoObject? state, EventSequenceNumber watermark)
     {
         var bound = checked((long)watermark.Value);
-        await using var scope = await _database.ReadModelTable(_eventStoreName, _namespace, _tableName, _columns);
+        await using var scope = await OpenScope(_tableName);
         return await scope.DbContext.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
         {
             scope.DbContext.ChangeTracker.Clear();
@@ -119,7 +119,7 @@ public partial class Sink
             await context.SaveChangesAsync();
             return true;
         }
-        catch (DbUpdateException exception) when (IsUniqueViolation(exception))
+        catch (DbUpdateException exception) when (IsUniqueViolation(exception) && context.Database.CurrentTransaction is null)
         {
             context.ChangeTracker.Clear();
             if (!await context.Entries.AnyAsync(BuildIdPredicate(id)))

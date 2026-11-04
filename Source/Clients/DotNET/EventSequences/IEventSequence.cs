@@ -664,6 +664,27 @@ public interface IEventSequence
     Task Revise(EventSequenceNumber sequenceNumber, object @event);
 
     /// <summary>
+    /// Appends a compensating event for an event that is already in the event sequence.
+    /// </summary>
+    /// <param name="compensationFor"><see cref="EventSequenceNumber"/> of the event to compensate for.</param>
+    /// <param name="event">The compensating event. Its type must be declared with <see cref="Events.CompensationForAttribute{TEventType}"/> for the type of the event being compensated.</param>
+    /// <param name="correlationId">Optional <see cref="CorrelationId"/> of the event. Defaults to <see cref="ICorrelationIdAccessor.Current"/>.</param>
+    /// <param name="tags">Optional collection of tags to associate with the event. Will be combined with any static tags from the event type.</param>
+    /// <param name="occurred">Optional <see cref="DateTimeOffset"/> specifying when the event occurred. If not set, the server will set it to approximately the time of append.</param>
+    /// <returns><see cref="AppendResult"/> with details about whether or not it succeeded and more.</returns>
+    /// <remarks>
+    /// Works like an append, except the event source, event stream and subject are taken from the event being compensated for.
+    /// The original event is never changed; the new event records the original's sequence number as <see cref="Events.EventContext.CompensationFor"/>.
+    /// </remarks>
+    /// <exception cref="CompensationsNotSupported">This implementation does not support compensations.</exception>
+    Task<AppendResult> Compensate(
+        EventSequenceNumber compensationFor,
+        object @event,
+        CorrelationId? correlationId = default,
+        IEnumerable<string>? tags = default,
+        DateTimeOffset? occurred = default) => throw new CompensationsNotSupported(GetType());
+
+    /// <summary>
     /// Redact an event at a specific sequence number.
     /// </summary>
     /// <param name="sequenceNumber"><see cref="EventSequenceNumber"/> to redact.</param>

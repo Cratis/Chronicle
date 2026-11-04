@@ -11,7 +11,7 @@ The scenarios cover:
 
 The test-only service composition also supplies the actual generated Occurrences service missing from the legacy in-process `IServices` composite. It is activated by the real silo's dependency-injection container, not a fake. The test-only storage decorator forwards every operation to the real provider. Its barrier observes a durable prefix; it neither creates a fake successful write nor replaces the kernel's clock. The backing database is retained when TestingHost kills and rebuilds the silos. The SQL fixture verifies its actual system-storage implementation and retains its PostgreSQL container while replacing the silo. The container is tagged `cratis.task=4911-p3c-postgres` for scoped cleanup.
 
-The MongoDB instance-loss case kills the silo hosting the first client, then cancels that test client's remaining in-process worker tasks. The SQL variant tears down the first application connection without stopping the only silo. The latter is **not** an operating-system process-kill test.
+The MongoDB instance-loss case kills the silo hosting the first client, then cancels that test client's remaining in-process worker tasks. The SQL instance-loss variant tears down the first application connection without stopping the only silo. The SQL suite also abruptly kills its only silo while a live holder is mid-handler after its effect commit. This is TestingHost termination, **not** an operating-system SIGKILL.
 
 ## Remaining process boundary
 

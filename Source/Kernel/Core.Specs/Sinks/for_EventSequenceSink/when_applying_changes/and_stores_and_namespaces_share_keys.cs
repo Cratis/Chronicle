@@ -13,8 +13,8 @@ public class and_stores_and_namespaces_share_keys : given.a_sink
 
     async Task Because()
     {
-        _otherStore = new("other-store", Tenant, _definition, _configuration, _destinations.Grains, _destinations.Storage, _destinations.Converter);
-        _otherNamespace = new(Store, "other-tenant", _definition, _configuration, _destinations.Grains, _destinations.Storage, _destinations.Converter);
+        _otherStore = new("other-store", Tenant, _definition, _configuration, _destinations.Grains, _destinations.Storage, _destinations.Converter, _destinations.ReservedIds);
+        _otherNamespace = new(Store, "other-tenant", _definition, _configuration, _destinations.Grains, _destinations.Storage, _destinations.Converter, _destinations.ReservedIds);
         await _sink.ApplyChanges("customer-1", Fold(new(), 10, 1, 5), 5);
         await _otherStore.ApplyChanges("customer-1", Fold(new(), 20, 1, 5), 5);
         await _otherNamespace.ApplyChanges("customer-1", Fold(new(), 30, 1, 5), 5);

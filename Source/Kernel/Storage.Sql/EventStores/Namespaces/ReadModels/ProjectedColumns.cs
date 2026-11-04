@@ -17,26 +17,41 @@ public static class ProjectedColumns
 
     /// <summary>
     /// Derive the table columns for a read model from its latest-generation <see cref="JsonSchema"/>.
-    /// The returned list always includes <c language="csharp">Id</c> as the primary key column (using the schema's likely
-    /// key name when it does not declare an explicit <c language="csharp">Id</c> / <c language="csharp">id</c>) and the sink-owned
+    /// The returned list always includes one primary key column named as <see cref="ReadModelKeyNames"/> decides (the schema's own
+    /// spelling of its identifier, or a synthesized one with the likely key name when it declares none) and the sink-owned
     /// <see cref="WellKnownProperties.LastHandledEventSequenceNumber"/> and
     /// <see cref="WellKnownProperties.ReadModelInstanceInitialized"/> bookkeeping columns.
     /// </summary>
     /// <param name="schema">The read model's schema.</param>
     /// <returns>The ordered list of columns.</returns>
-    public static IReadOnlyList<ProjectedColumn> ForSchema(JsonSchema schema)
+    public static IReadOnlyList<ProjectedColumn> ForSchema(JsonSchema schema) => Build(schema, ReadModelKeyNames.For(schema));
+
+    /// <summary>
+    /// Derive the table columns for a read model whose existing table keeps the key an earlier release synthesized.
+    /// The schema's own identifier spelling stays a regular nullable column and the key is a synthesized string column
+    /// with the given name, inserted first.
+    /// </summary>
+    /// <param name="schema">The read model's schema.</param>
+    /// <param name="indexes">The declared indexes.</param>
+    /// <param name="physicalKeyName">The name of the key column the existing table has.</param>
+    /// <returns>The ordered list of columns.</returns>
+    public static IReadOnlyList<ProjectedColumn> ForLegacyKey(JsonSchema schema, IEnumerable<IndexDefinition> indexes, string physicalKeyName) =>
+        MarkIndexed(Build(schema, physicalKeyName), indexes);
+
+    /// <summary>
+    /// Derives table columns including the declared scalar indexes.
+    /// </summary>
+    /// <param name="schema">The read-model schema.</param>
+    /// <param name="indexes">The declared indexes.</param>
+    /// <returns>The ordered columns.</returns>
+    public static IReadOnlyList<ProjectedColumn> ForSchema(JsonSchema schema, IEnumerable<IndexDefinition> indexes)
+    {
+        return MarkIndexed(ForSchema(schema), indexes);
+    }
+
+    static List<ProjectedColumn> Build(JsonSchema schema, string keyName)
     {
         var columns = new List<ProjectedColumn>();
-
-        string keyName;
-        if (schema.HasKeyProperty())
-        {
-            keyName = schema.Properties.ContainsKey("Id") ? "Id" : "id";
-        }
-        else
-        {
-            keyName = schema.GetLikelyKeyPropertyName() ?? "Id";
-        }
 
         var schemaHasKey = schema.Properties.ContainsKey(keyName);
 
@@ -112,16 +127,10 @@ public static class ProjectedColumns
         return columns;
     }
 
-    /// <summary>
-    /// Derives table columns including the declared scalar indexes.
-    /// </summary>
-    /// <param name="schema">The read-model schema.</param>
-    /// <param name="indexes">The declared indexes.</param>
-    /// <returns>The ordered columns.</returns>
-    public static IReadOnlyList<ProjectedColumn> ForSchema(JsonSchema schema, IEnumerable<IndexDefinition> indexes)
+    static ProjectedColumn[] MarkIndexed(IEnumerable<ProjectedColumn> columns, IEnumerable<IndexDefinition> indexes)
     {
         var indexed = indexes.SelectMany(index => index.Properties).Select(property => property.Path.Path).ToHashSet(StringComparer.Ordinal);
-        return ForSchema(schema).Select(column => column with { IsIndexed = indexed.Contains(column.Name) }).ToArray();
+        return columns.Select(column => column with { IsIndexed = indexed.Contains(column.Name) }).ToArray();
     }
 
     static ProjectedColumn BuildColumn(string name, JsonSchemaProperty property, bool isKey)

@@ -93,6 +93,8 @@ The SQL sink gives each read model type its own table, with columns derived from
 
 A composite key is stored as one value, its parts joined with `_`, and reads return the key object. When a key part contains `_`, is empty, or cannot be read back as its declared type, the instance is returned without its key and the kernel logs a warning. Such keys can also collide; that is tracked in [#5335](https://github.com/Cratis/Chronicle/issues/5335).
 
+A read model whose identifier is spelled `ID` (or any casing other than `Id` or `id`) gets a key column spelled exactly like the property. Tables created by earlier releases keep the synthesized `Id` key they were created with, and the sink reads their layout once, when it first uses the table.
+
 Updates from the projection engine touch only the columns that changed. Tables are created automatically on first use via `IReadModelMigrator`. You do not need to write migrations by hand.
 
 Declared top-level scalar indexes are ensured idempotently. Populated primary tables use background

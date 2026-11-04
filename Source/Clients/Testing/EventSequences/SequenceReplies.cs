@@ -24,6 +24,9 @@ internal sealed class SequenceReplies(IEventSequences inner, DropReplyIntercepto
     }
 
     /// <inheritdoc/>
+    public Task<CommandResult<AppendResponse>> Compensate(CompensateRequest request, CallContext callContext = default) => inner.Compensate(request, callContext);
+
+    /// <inheritdoc/>
     public async Task<CommandResult<AppendResponse>> AppendWithNamedTags(AppendWithNamedTagsRequest request, CallContext callContext = default)
     {
         var result = await inner.AppendWithNamedTags(request, callContext);

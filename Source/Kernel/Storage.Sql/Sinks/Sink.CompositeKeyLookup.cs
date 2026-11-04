@@ -19,7 +19,7 @@ public partial class Sink
         var parts = (ExpandoObject)key.Value;
         var legacyId = GetIdString(key);
         var encoding = CompositeKeyEncoding.Encode(parts);
-        await using var scope = await _database.ReadModelTable(_eventStoreName, _namespace, _tableName, _columns);
+        await using var scope = await OpenScope(_tableName);
         var context = scope.DbContext;
         var sql = context.GetService<ISqlGenerationHelper>();
         var table = sql.DelimitIdentifier(context.TableName);

@@ -4,13 +4,14 @@
 using Cratis.Chronicle.Contracts.Commands;
 using Cratis.Chronicle.Contracts.Occurrences;
 using Cratis.Chronicle.Contracts.Storage.Occurrences;
+using Cratis.Chronicle.Occurrences.given;
 using ProtoBuf.Grpc;
 
 namespace Cratis.Chronicle.Occurrences.for_OccurrenceAttempt;
 
-public class when_renewal_loses_the_lease : given.an_occurrence_client
+public class when_renewal_loses_the_lease : an_occurrence_client
 {
-    readonly given.ManualOccurrenceClock _clock = new();
+    readonly ManualOccurrenceClock _clock = new();
 
     void Establish()
     {
@@ -20,8 +21,8 @@ public class when_renewal_loses_the_lease : given.an_occurrence_client
 
     async Task Because()
     {
-        var running = CreateAttempt(_clock).Run(_claim, CancellationToken.None);
-        var timer = await _clock.Created.Task.WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
+        var running = CreateAttempt(_clock).Run(_claim, _clock.GetTimestamp(), CancellationToken.None);
+        var timer = await _clock.WaitForTimer(TimeSpan.FromSeconds(20));
         timer.Tick();
         await running.WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
     }

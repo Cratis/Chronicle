@@ -69,6 +69,11 @@ public record EventContext(
     } = EventSourceName.NotSet;
 
     /// <summary>
+    /// Gets the <see cref="EventSequenceNumber"/> of the event this event compensates for, or null when it is not a compensation.
+    /// </summary>
+    public EventSequenceNumber? CompensationFor { get; init; }
+
+    /// <summary>
     /// Gets the generation the event was appended in, or null for legacy events.
     /// </summary>
     public EventTypeGeneration? AppendedGeneration { get; init; }

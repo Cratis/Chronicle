@@ -15,21 +15,55 @@ namespace Cratis.Chronicle.Projections.Engine.Pipelines.Steps;
 /// <summary>
 /// Represents an implementation of <see cref="ICanPerformProjectionPipelineStep"/> that saves changes.
 /// </summary>
-/// <param name="sink"><see cref="ISink"/> to use.</param>
-/// <param name="changesetStorage"><see cref="IChangesetStorage"/> for storing changesets as they occur.</param>
-/// <param name="guardWritesOnWatermark">Whether a write may be made conditional on advancing the read model's watermark.</param>
-/// <param name="logger"><see cref="ILogger{T}"/> for logging.</param>
-/// <param name="projectionFutures">The persisted futures to acknowledge after successful writes.</param>
-/// <param name="changesetContainer">The container changesets are recorded under, when it is not the read model's own container - as for a materialization generation's destination.</param>
-public class SaveChanges(ISink sink, IChangesetStorage changesetStorage, bool guardWritesOnWatermark, ILogger<SaveChanges> logger, IProjectionFutures? projectionFutures = null, ReadModelContainerName? changesetContainer = null) : ICanPerformProjectionPipelineStep
+public class SaveChanges : ICanPerformProjectionPipelineStep
 {
+    readonly ISink _sink;
+    readonly IChangesetStorage _changesetStorage;
+    readonly bool _guardWritesOnWatermark;
+    readonly ILogger<SaveChanges> _logger;
+    readonly IProjectionFuturesStore? _projectionFutures;
+    readonly ReadModelContainerName? _changesetContainer;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SaveChanges"/> class.
+    /// </summary>
+    /// <param name="sink"><see cref="ISink"/> to use.</param>
+    /// <param name="changesetStorage"><see cref="IChangesetStorage"/> for storing changesets as they occur.</param>
+    /// <param name="guardWritesOnWatermark">Whether a write may be made conditional on advancing the read model's watermark.</param>
+    /// <param name="logger"><see cref="ILogger{T}"/> for logging.</param>
+    /// <param name="projectionFutures">The persisted futures to acknowledge after successful writes.</param>
+    /// <param name="changesetContainer">The container changesets are recorded under, when it is not the read model's own container - as for a materialization generation's destination.</param>
+    public SaveChanges(ISink sink, IChangesetStorage changesetStorage, bool guardWritesOnWatermark, ILogger<SaveChanges> logger, IProjectionFutures? projectionFutures = null, ReadModelContainerName? changesetContainer = null)
+        : this(projectionFutures is null ? null : new ProjectionFuturesStore(projectionFutures), sink, changesetStorage, guardWritesOnWatermark, logger, changesetContainer)
+    {
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SaveChanges"/> class.
+    /// </summary>
+    /// <param name="futuresStore">The persisted futures to acknowledge after successful writes.</param>
+    /// <param name="sink"><see cref="ISink"/> to use.</param>
+    /// <param name="changesetStorage"><see cref="IChangesetStorage"/> for storing changesets as they occur.</param>
+    /// <param name="guardWritesOnWatermark">Whether a write may be made conditional on advancing the read model's watermark.</param>
+    /// <param name="logger"><see cref="ILogger{T}"/> for logging.</param>
+    /// <param name="changesetContainer">The container changesets are recorded under, when it is not the read model's own container - as for a materialization generation's destination.</param>
+    internal SaveChanges(IProjectionFuturesStore? futuresStore, ISink sink, IChangesetStorage changesetStorage, bool guardWritesOnWatermark, ILogger<SaveChanges> logger, ReadModelContainerName? changesetContainer = null)
+    {
+        _sink = sink;
+        _changesetStorage = changesetStorage;
+        _guardWritesOnWatermark = guardWritesOnWatermark;
+        _logger = logger;
+        _projectionFutures = futuresStore;
+        _changesetContainer = changesetContainer;
+    }
+
     /// <inheritdoc/>
     public async ValueTask<ProjectionEventContext> Perform(IProjection projection, ProjectionEventContext context)
     {
         // Don't save if the event was deferred or the key is permanently unresolvable
         if (context.IsDeferred || context.IsUnresolvable)
         {
-            logger.NotSavingDueToDeferred(context.Event.Context.SequenceNumber);
+            _logger.NotSavingDueToDeferred(context.Event.Context.SequenceNumber);
             return context;
         }
 
@@ -37,13 +71,13 @@ public class SaveChanges(ISink sink, IChangesetStorage changesetStorage, bool gu
 
         if (!context.Changeset.HasChanges && !hasPendingFutureSaves)
         {
-            logger.NotSaving(context.Event.Context.SequenceNumber);
+            _logger.NotSaving(context.Event.Context.SequenceNumber);
             return context;
         }
 
         if (context.Changeset.HasChanges)
         {
-            logger.SavingResult(context.Event.Context.SequenceNumber);
+            _logger.SavingResult(context.Event.Context.SequenceNumber);
 
             // Sinks that serialize a whole document per ApplyChanges call (the SQL sink does;
             // MongoDB instead uses field-level $set operators that compose naturally) cannot
@@ -88,8 +122,8 @@ public class SaveChanges(ISink sink, IChangesetStorage changesetStorage, bool gu
 
             await ResolveSavedFutures(pendingSavesToFold);
 
-            await changesetStorage.Save(
-                changesetContainer ?? projection.ReadModel.ContainerName,
+            await _changesetStorage.Save(
+                _changesetContainer ?? projection.ReadModel.ContainerName,
                 context.Key,
                 context.Event.Context.EventType,
                 context.Event.Context.SequenceNumber,
@@ -112,8 +146,8 @@ public class SaveChanges(ISink sink, IChangesetStorage changesetStorage, bool gu
     {
         var mode = WriteModeFor(projection, context);
         return foldedFutureSaves.Length > 0
-            ? sink.ApplyChangesImmediately(context.Key, context.Changeset, context.Event.Context.SequenceNumber, mode)
-            : sink.ApplyChanges(context.Key, context.Changeset, context.Event.Context.SequenceNumber, mode);
+            ? _sink.ApplyChangesImmediately(context.Key, context.Changeset, context.Event.Context.SequenceNumber, mode)
+            : _sink.ApplyChanges(context.Key, context.Changeset, context.Event.Context.SequenceNumber, mode);
     }
 
     async Task ApplyPendingFutureSaves(ProjectionEventContext context)
@@ -131,7 +165,7 @@ public class SaveChanges(ISink sink, IChangesetStorage changesetStorage, bool gu
 
     async Task ApplyPendingFutureSave(ProjectionEventContext context, PendingFutureSave pendingSave)
     {
-        var failedPartitions = (await sink.ApplyChangesImmediately(pendingSave.Key, pendingSave.Changeset, context.Event.Context.SequenceNumber, SinkWriteMode.Always)).ToArray();
+        var failedPartitions = (await _sink.ApplyChangesImmediately(pendingSave.Key, pendingSave.Changeset, context.Event.Context.SequenceNumber, SinkWriteMode.Always)).ToArray();
         foreach (var failedPartition in failedPartitions)
         {
             context.AddFailedPartition(failedPartition);
@@ -155,7 +189,7 @@ public class SaveChanges(ISink sink, IChangesetStorage changesetStorage, bool gu
     {
         if (pendingSave.FutureId is { } futureId)
         {
-            await projectionFutures!.ResolveFuture(futureId);
+            await _projectionFutures!.ResolveFuture(futureId);
         }
     }
 
@@ -175,7 +209,7 @@ public class SaveChanges(ISink sink, IChangesetStorage changesetStorage, bool gu
     /// already there, so the write is guarded and correctly does nothing.
     /// </remarks>
     SinkWriteMode WriteModeFor(IProjection projection, ProjectionEventContext context) =>
-        guardWritesOnWatermark && projection.IsEventSourceKeyed && !context.IsNewInstance
+        _guardWritesOnWatermark && projection.IsEventSourceKeyed && !context.IsNewInstance
             ? SinkWriteMode.OnlyWhenAdvancingWatermark
             : SinkWriteMode.Always;
 }

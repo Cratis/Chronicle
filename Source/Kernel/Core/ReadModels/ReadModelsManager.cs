@@ -32,6 +32,7 @@ public class ReadModelsManager(IProjectionPipelineManager projectionPipelines) :
         foreach (var definition in definitions)
         {
             definition.Sink.EnsureReadModelSupported();
+            definition.ContainerName.EnsureValid(definition.Identifier);
         }
 
         EnsureSinglePublisher(definitions);

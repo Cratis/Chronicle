@@ -67,7 +67,7 @@ public class and_event_has_multiple_pii_properties : Specification
             Identifier,
             _converter.ToJsonObject(CreateEventContent(), _schema));
 
-        var compliance = new EventCompliance(_complianceManager, _converter);
+        var compliance = new EventCompliance(_complianceManager, _converter, new OwnGenerationSchemaCache());
         _released = await compliance.Release(
             CreateEvent(_converter.ToExpandoObject(encryptedContent, _schema)),
             _schema);

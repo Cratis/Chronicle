@@ -78,6 +78,7 @@ public static class ChronicleCommandScenario
             Authentication = new Authentication { Enabled = true, EnforceAdministratorPolicyForOperations = true }
         }));
         services.AddScoped<IAdministratorAuthorization, AdministratorAuthorization>();
+        services.AddScoped<IAuthorizationDecisions, AuthorizationDecisions>();
         services.AddScoped<ISystemStoreAccess, SystemStoreAccessVerdict>();
         services.AddScoped<IAuthorizationHandler, SystemStoreOperationAuthorizationHandler>();
 

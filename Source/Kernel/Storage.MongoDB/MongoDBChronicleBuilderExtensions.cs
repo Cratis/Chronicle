@@ -9,7 +9,9 @@ using Cratis.Choreography.Storage.MongoDB.Serialization;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Compliance;
+using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.MongoDB;
+using Cratis.Chronicle.Storage.MongoDB.EventSequences;
 using Cratis.Chronicle.Storage.MongoDB.Schema;
 using Cratis.Chronicle.Storage.MongoDB.Sinks;
 using Cratis.Chronicle.Storage.SingleWriter;
@@ -146,12 +148,13 @@ public static class MongoDBChronicleBuilderExtensions
             services.AddSingleton<JobStateSerializer>();
             services.AddSingleton<IStorage, Storage.Storage>();
             services.AddSingleton<IStorageErrorClassifier, MongoDBStorageErrorClassifier>();
+            services.AddSingleton<IReservedEventSequenceIds, MongoDBReservedEventSequenceIds>();
             services.AddSingleton<Storage.Generations.Bindings.IMaterializationBindingStorage, Storage.MongoDB.Generations.Bindings.MongoDBMaterializationBindingStorage>();
             services.AddGenerationCatalog();
             services.AddSingleton<Storage.MongoDB.Generations.Gates.IGenerationGateWrites, Storage.MongoDB.Generations.Gates.MongoDBGenerationGateWrites>();
 
-            services.AddHealthChecks().AddMongoDb(
-                _ => new MongoClient(settings),
+            services.AddSingleton(provider => new MongoDBClusterHealthCheck(provider.GetRequiredService<IMongoDBClientManager>(), settings));
+            services.AddHealthChecks().AddCheck<MongoDBClusterHealthCheck>(
                 name: "mongodb",
                 timeout: TimeSpan.FromSeconds(3));
         });

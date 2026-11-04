@@ -6,6 +6,7 @@ using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Schemas;
+using Cratis.Chronicle.Storage.Diagnostics;
 using Cratis.Chronicle.Storage.MongoDB.Generations.Bindings;
 using Cratis.Chronicle.Storage.MongoDB.Generations.Fencing;
 using Cratis.Chronicle.Storage.Sinks;
@@ -75,7 +76,8 @@ public class SinkFactory(
             expandoObjectConverter,
             serviceProvider.GetRequiredService<IReadModelChangeStreams>(),
             serviceProvider.GetRequiredService<ILogger<Sink>>(),
-            writes);
+            writes,
+            serviceProvider.GetRequiredService<IStorageAuthorizationDiagnostics>());
     }
 
     ISinkWrites CreateWrites(EventStoreName eventStore, EventStoreNamespaceName @namespace, ReadModelDefinition readModel, IMongoDatabase readModelDatabase)
