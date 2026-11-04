@@ -20,4 +20,14 @@ public interface IMongoDBStorageConnections
     /// <param name="namespace">The namespace, empty for the cluster and an event store.</param>
     /// <returns>The <see cref="IMongoDatabase"/>.</returns>
     IMongoDatabase GetDatabase(StorageConnectionKind kind, string derivedName, string eventStore = "", string @namespace = "");
+
+    /// <summary>
+    /// Get where a database is, without connecting to it or creating anything.
+    /// </summary>
+    /// <param name="kind">The <see cref="StorageConnectionKind"/>.</param>
+    /// <param name="derivedName">The name Chronicle derives for the database, used unless a database is resolved.</param>
+    /// <param name="eventStore">The event store, empty for the cluster.</param>
+    /// <param name="namespace">The namespace, empty for the cluster and an event store.</param>
+    /// <returns>The scope, which identifies the server or servers the database is on, and the database name.</returns>
+    Task<(string Scope, string Database)> Placement(StorageConnectionKind kind, string derivedName, string eventStore = "", string @namespace = "");
 }

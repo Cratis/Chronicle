@@ -121,6 +121,7 @@ public static class MongoDBChronicleBuilderExtensions
             services.AddSingleton<IClusterStorage, ClusterStorage>();
             services.AddSingleton<IResourceNameReservations, MongoDBResourceNameReservations>();
             services.AddSingleton<IResourcePhysicalNames, MongoDBResourcePhysicalNames>();
+            services.AddSingleton<IResourceInventory, MongoDBResourceInventory>();
             services.AddResourceNameGate();
             services.AddSingleton<ISingleWriterLeaseStorage, MongoDBSingleWriterLeaseStorage>();
             services.AddSingleton<ISystemStorage, SystemStorage>();
