@@ -14,7 +14,7 @@ public class and_an_unchanged_set_is_registered_repeatedly : given.a_projections
 
     void Establish()
     {
-        _definitions = [.. Enumerable.Range(0, 50).Select(index => CreateDefinition($"the-projection-{index}", "the-read-model"))];
+        _definitions = [.. Enumerable.Range(0, 50).Select(index => CreateDefinition($"the-projection-{index}", "the-read-model") with { Version = "1.0" })];
         _readModelDefinitions = [CreateReadModelDefinition("the-read-model")];
         _state.Projections = [.. _definitions];
         _definitionComparer.Compare(Arg.Any<ProjectionKey>(), Arg.Any<ProjectionDefinition>(), Arg.Any<ProjectionDefinition>()).Returns(ProjectionDefinitionCompareResult.Same);
