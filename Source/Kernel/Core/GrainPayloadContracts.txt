@@ -485,6 +485,7 @@ json Cratis.Chronicle.Concepts.Observation.PartitionDeferral
 enum Cratis.Chronicle.Concepts.Observation.PartitionDeferralReason : int
   CircuitOpen = 1
   None = 0
+  RequestedByObserver = 4
   RetryAfter = 2
   RetryBackoff = 3
 enum Cratis.Chronicle.Concepts.Observation.PartitionRecoveryOutcome : int
@@ -856,6 +857,26 @@ orleans Cratis.Chronicle.EventSequences.ConstraintIndexRebuildRunId
   [Id(1)] Attempt: System.Guid
   [Id(2)] Started: System.DateTimeOffset
   [Id(3)] JobId: Cratis.Choreography.Jobs.JobId
+json Cratis.Chronicle.EventSequences.Copy.CopyEventSourceEventsRequest
+  eventSequenceId: Cratis.Chronicle.Concepts.EventSequences.EventSequenceId
+  eventTypes: System.Collections.Generic.IReadOnlyCollection<Cratis.Chronicle.Concepts.Events.EventTypeId>
+  sourceId: Cratis.Chronicle.Concepts.Events.EventSourceId
+  targetId: Cratis.Chronicle.Concepts.Events.EventSourceId
+json Cratis.Chronicle.EventSequences.Copy.CopyEventSourceEventsStepState
+  attempt: int
+  eventSequenceId: Cratis.Chronicle.Concepts.EventSequences.EventSequenceId
+  eventTypes: System.Collections.Generic.IList<Cratis.Chronicle.Concepts.Events.EventTypeId>
+  id: Cratis.Choreography.Jobs.JobStepIdentifier
+  isPrepared: bool
+  lease: Cratis.Choreography.Storage.Jobs.JobStepLease
+  name: Cratis.Choreography.Jobs.JobStepName
+  progress: Cratis.Choreography.Jobs.JobStepProgress
+  sourceId: Cratis.Chronicle.Concepts.Events.EventSourceId
+  stage: Cratis.Choreography.Jobs.Stages.JobStepStage
+  status: Cratis.Choreography.Jobs.JobStepStatus
+  statusChanges: System.Collections.Generic.IList<Cratis.Choreography.Jobs.JobStepStatusChanged>
+  targetId: Cratis.Chronicle.Concepts.Events.EventSourceId
+  type: Cratis.Choreography.Jobs.JobStepType
 json Cratis.Chronicle.EventSequences.EventToAppend
   causation: System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Auditing.Causation>
   content: System.Text.Json.Nodes.JsonObject

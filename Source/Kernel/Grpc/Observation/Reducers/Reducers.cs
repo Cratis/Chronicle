@@ -12,7 +12,6 @@ using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.Configuration;
-using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Contracts.Observation.Reducers;
 using Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
 using Cratis.Chronicle.Json;
@@ -118,28 +117,12 @@ internal sealed class Reducers(
                     break;
 
                 case ReducerResult result:
-                    var state = result.State switch
+                    foreach (var (partition, subscriberResult) in ToSubscriberResults(result, model))
                     {
-                        ObservationState.None => ObserverSubscriberState.None,
-                        ObservationState.Success => ObserverSubscriberState.Ok,
-                        ObservationState.Failed => ObserverSubscriberState.Failed,
-                        _ => ObserverSubscriberState.None
-                    };
-
-                    var modelResult = (result.ReadModelState is null) ? null :
-                        expandoObjectConverter.ToExpandoObject(JsonNode.Parse(result.ReadModelState)!.AsObject(), model.GetSchemaForLatestGeneration());
-
-                    var subscriberResult = new ReducerSubscriberResult(
-                        new ObserverSubscriberResult(
-                            state,
-                            result.LastSuccessfulObservation,
-                            result.ExceptionMessages,
-                            result.ExceptionStackTrace),
-                        modelResult);
-
-                    if (!pendingDeliveries.TryComplete(result.DeliveryId, result.Partition, subscriberResult))
-                    {
-                        logger.UnknownDeliveryResult(result.DeliveryId, result.Partition);
+                        if (!pendingDeliveries.TryComplete(result.DeliveryId, partition, subscriberResult))
+                        {
+                            logger.UnknownDeliveryResult(result.DeliveryId, partition);
+                        }
                     }
 
                     break;
@@ -179,18 +162,30 @@ internal sealed class Reducers(
                         registration.Reducer.EventSequenceId,
                         registration.ConnectionId);
 
+                    var deliversPages = registration.PageDelivery?.Enabled == true;
                     deliver = (reduceOperation, tcs) =>
                     {
                         var deliveryId = pendingDeliveries.Add(reduceOperation.Partition, tcs);
                         var initialState = reduceOperation.InitialState is null ? null : expandoObjectConverter.ToJsonObject(reduceOperation.InitialState, model.GetSchemaForLatestGeneration()).ToString();
+                        var partition = reduceOperation.Partition.Value.ToString()!;
+                        var events = reduceOperation.Events.Select(_ => _.ToContract(jsonSerializerOptions)).ToArray();
                         var message = new ReduceOperationMessage()
                         {
-                            Partition = reduceOperation.Partition.Value.ToString()!,
                             DeliveryId = deliveryId,
                             DeliverWithinMilliseconds = DeliveryDeadlines.ToMilliseconds(reduceOperation.DeliverWithin),
-                            InitialState = initialState,
-                            Events = reduceOperation.Events.Select(_ => _.ToContract(jsonSerializerOptions)).ToArray()
+                            Origin = reduceOperation.Origin.ToContract()
                         };
+
+                        if (deliversPages)
+                        {
+                            message.Partitions = [new ReducerPartition { Partition = partition, InitialState = initialState, Events = events }];
+                        }
+                        else
+                        {
+                            message.Partition = partition;
+                            message.InitialState = initialState;
+                            message.Events = events;
+                        }
 
                         observer.OnNext(message);
                     };
@@ -350,4 +345,14 @@ internal sealed class Reducers(
 
         logger.StreamReplacedKeepingSubscription(observerId, connectionId);
     }
+
+    IEnumerable<(string Partition, ReducerSubscriberResult Result)> ToSubscriberResults(ReducerResult result, ReadModelDefinition model) =>
+        result.Partitions.Count > 0
+            ? result.Partitions.Select(_ => (_.Partition, new ReducerSubscriberResult(_.ToObserverSubscriberResult(TimeProvider.System), ToReadModelState(_.ReadModelState, model))))
+            : [(result.Partition, new ReducerSubscriberResult(
+                ObservationResultConverters.ToObserverSubscriberResult(result.State, result.LastSuccessfulObservation, result.ExceptionMessages, result.ExceptionStackTrace, result.RetryAfterMilliseconds, TimeProvider.System),
+                ToReadModelState(result.ReadModelState, model)))];
+
+    ExpandoObject? ToReadModelState(string? readModelState, ReadModelDefinition model) =>
+        readModelState is null ? null : expandoObjectConverter.ToExpandoObject(JsonNode.Parse(readModelState)!.AsObject(), model.GetSchemaForLatestGeneration());
 }
