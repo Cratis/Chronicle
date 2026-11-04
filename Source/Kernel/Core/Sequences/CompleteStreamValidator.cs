@@ -18,8 +18,11 @@ internal class CompleteStreamValidator : CommandValidator<CompleteStream>
     {
         RuleFor(_ => _.EventStore).NotEmpty().WithMessage("Event store name is required.");
         RuleFor(_ => _.EventStore).NotSystemEventStore();
+        RuleFor(_ => _.EventStore).NoKeySeparator();
         RuleFor(_ => _.Namespace).NotEmpty().WithMessage("Namespace name is required.");
+        RuleFor(_ => _.Namespace).NoKeySeparator();
         RuleFor(_ => _.EventSequenceId).NotEmpty().WithMessage("Event sequence identifier is required.");
+        RuleFor(_ => _.EventSequenceId).NoKeySeparator();
 
         // The stream identifiers are not required here: the empty value is the default stream, and
         // completing the default stream is a business outcome the handler reports as

@@ -42,7 +42,7 @@ docker run -p 35000:35000 \
   cratis/chronicle:latest
 ```
 
-Set the initial administrator's password with `Cratis__Chronicle__Authentication__AdminUser__Password` from your secret store; otherwise the first visitor to the Workbench chooses it. The [production hosting guide](https://www.cratis.io/chronicle/hosting/production/) covers certificates, backups, and clustering.
+Set the initial administrator's password with `Cratis__Chronicle__Authentication__AdminUser__Password` from your secret store; otherwise initial Workbench setup requires the token from server logs or `Cratis__Chronicle__Authentication__InitialAdminSetupToken`. Protect access to the logs and token, and remove configured setup tokens after setup. The [production hosting guide](https://www.cratis.io/chronicle/hosting/production/) covers certificates, backups, and clustering.
 
 > MongoDB storage requires a replica set — Chronicle uses transactions and change streams, neither of which a standalone `mongod` supports.
 

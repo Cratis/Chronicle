@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.EventStores;
 using Cratis.Chronicle.Projections.Engine.Pipelines;
 using Cratis.Chronicle.Setup;
 using Cratis.Chronicle.Storage;
@@ -17,6 +18,7 @@ namespace Cratis.Chronicle.DevelopmentTools;
 /// <param name="grainFactory"><see cref="IGrainFactory"/> instance.</param>
 /// <param name="projectionPipelineManager"><see cref="IProjectionPipelineManager"/> instance.</param>
 /// <param name="resetHandlers">Storage components that wipe their backing store during a development reset.</param>
+/// <param name="eventStoreInitialization">The event store initialization cache to clear.</param>
 /// <param name="bootstrapResetHandler">Re-runs kernel bootstrap (identity, system event store) after storage is wiped.</param>
 /// <remarks>
 /// This exists for integration tests, which need a known-empty server between test classes. It is compiled in only
@@ -26,6 +28,7 @@ internal sealed class KernelStateResetter(
     IGrainFactory grainFactory,
     IProjectionPipelineManager projectionPipelineManager,
     IInstancesOf<ICanPerformKernelStateReset> resetHandlers,
+    IEventStoreInitialization eventStoreInitialization,
     KernelBootstrapResetHandler bootstrapResetHandler) : IKernelStateResetter
 {
     /// <summary>
@@ -62,6 +65,7 @@ internal sealed class KernelStateResetter(
         // Deactivating grains write their dirty state in OnDeactivateAsync, so wipe again to remove
         // anything written back between the first wipe and the end of the deactivation cycle.
         await WipeStorage();
+        eventStoreInitialization.Clear();
         projectionPipelineManager.Clear();
 
         // Re-run kernel bootstrap once storage is empty. The startup task only runs once per

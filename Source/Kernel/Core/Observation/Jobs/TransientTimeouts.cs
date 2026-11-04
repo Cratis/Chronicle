@@ -86,8 +86,7 @@ internal static class TransientTimeouts
             return false;
         }
 
-        result.TryGetFullResult<HandleEventsForPartitionResult>(out var handled, out _, jsonSerializerOptions);
-        failure = handled?.TransientFailure;
+        failure = HandleEventsStepResults.ReadProgress(result, jsonSerializerOptions)?.TransientFailure;
         return failure is not null;
     }
 

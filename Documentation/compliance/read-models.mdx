@@ -67,9 +67,15 @@ Deleting an encryption key is the Chronicle mechanism for GDPR erasure:
 
 Read model documents written before the erasure still hold the ciphertext. Nothing can decrypt it once the key is gone, which is what crypto-shredding relies on.
 
-:::caution[A rebuild does not clear the ciphertext]
-Do not plan on a replay to rewrite those documents. Rebuilding a stored read model re-applies protection to the values it writes, so a rebuild that touches an erased subject asks for that subject's key and is refused for its partition — see [The encryption key lifecycle](key-lifecycle.mdx). If your policy requires the ciphertext itself removed from the read model store, that is a deliberate operation on the store, planned with those limits in mind.
+## Rebuilding after erasure
+
+Projection and reducer replay can rebuild stored read models after erasure without authorizing a new key. Materialization writes an empty marker for an erased subject's PII boundary; it does not recreate the key or clear the fence. On release, an erased string leaf is empty and an erased protected array has no elements. Do not depend on a single null representation for erased protected objects. Public siblings and live subjects' protected values remain available. Per-property ownership keeps contributed PII under its originating subject, even when another subject owns the document.
+
+:::caution[Replay over existing storage is not a scrub]
+Replay applies emitted changes. It does not prove that stale fields, orphan documents, legacy wrong-subject ciphertext, or copies outside Chronicle have disappeared. For cleanup, drop and rebuild the affected read-model storage into a clean container, rebuild into a new container and switch readers after validation, or perform an audited migration that proves ownership and rewrites or removes every affected copy. Retire the old container deliberately; a clean destination does not remove it for you.
 :::
+
+Do not authorize a new lifecycle merely to replay historical data. Authorization is for a deliberate new lawful basis to protect future data, not a repair step for erased history — see [The encryption key lifecycle](key-lifecycle.mdx).
 
 For full erasure of event content, combine key deletion with [event redaction](../events/redaction).
 
@@ -101,7 +107,7 @@ The third row matters when a `[PII]`-typed property is resolved in memory at the
 The fourth row can occur for legacy data that was written before per-property ownership was tracked, or for data written outside Chronicle's managed projection sinks. New projection writes keep the ownership map with the ciphertext, so joined PII releases under the subject of the event it came from.
 
 > [!NOTE]
-> Applying PII behaves the opposite way, and deliberately so: if encryption fails on the way *in*, the operation fails. Storing a value that was meant to be protected, unprotected, is never an acceptable degradation.
+> Applying protection normally fails the write if encryption fails; plaintext fallback is never acceptable. Stored read-model materialization handles only the specific `EncryptionKeyErased` failure from a PII handler as an empty marker. Key-store outages, other protection failures, and failures from non-PII handlers still fail the write.
 
 ## Composing read models outside Chronicle
 

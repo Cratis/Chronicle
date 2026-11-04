@@ -426,9 +426,24 @@
             "recommendations": {
                 "title": "Recommendations",
                 "empty": "No recommendations found",
+                "emptyIgnored": "No ignored recommendations found",
+                "notifications": {
+                    "working": "Applying recommendation action…",
+                    "performed": "Recommendations performed",
+                    "ignored": "Recommendations ignored",
+                    "unignored": "Recommendations restored",
+                    "unignoreFailed": "Some recommendations could not be restored",
+                    "performFailed": "Some recommendations could not be performed",
+                    "ignoreFailed": "Some recommendations could not be ignored",
+                    "outcome": "{succeeded} succeeded, {failed} failed of {total} attempted.",
+                    "unknownError": "An unexpected error occurred."
+                },
                 "actions": {
                     "perform": "Perform",
                     "ignore": "Ignore",
+                    "unignore": "Unignore",
+                    "showIgnored": "Show Ignored",
+                    "showActive": "Show Active",
                     "selectAll": "Select All"
                 },
                 "columns": {
@@ -440,11 +455,19 @@
                 "dialogs": {
                     "ignoreRecommendation": {
                         "title": "Ignore Recommendation",
-                        "message": "Are you sure you want to ignore the recommendation '{name}'? This action cannot be undone."
+                        "message": "Are you sure you want to ignore the recommendation '{name}'? You can restore it from the ignored view."
                     },
                     "ignoreRecommendations": {
                         "title": "Ignore Recommendations",
-                        "message": "Are you sure you want to ignore {count} recommendations? This action cannot be undone."
+                        "message": "Are you sure you want to ignore {count} recommendations? You can restore them from the ignored view."
+                    },
+                    "unignoreRecommendation": {
+                        "title": "Unignore Recommendation",
+                        "message": "Are you sure you want to unignore the recommendation '{name}'? It will be offered as an active recommendation again."
+                    },
+                    "unignoreRecommendations": {
+                        "title": "Unignore Recommendations",
+                        "message": "Are you sure you want to unignore {count} recommendations? They will be offered as active recommendations again."
                     }
                 }
             },
@@ -484,6 +507,21 @@
                 }
             },
             "sequences": {
+                "inspection": {
+                    "title": "Inspect event",
+                    "return": "Return to failed partitions",
+                    "returnToSequences": "Return to sequences",
+                    "eventStore": "Event store",
+                    "namespace": "Namespace",
+                    "sequence": "Event sequence",
+                    "number": "Sequence number",
+                    "loading": "Loading event…",
+                    "unavailable": "This event identity or sequence number cannot be inspected.",
+                    "missing": "The exact event was not found.",
+                    "denied": "You are not authorized to inspect this event.",
+                    "failed": "The event could not be loaded.",
+                    "retry": "Try lookup again"
+                },
                 "title": "Sequences",
                 "empty": "No events found",
                 "actions": {
@@ -645,7 +683,10 @@
                     "owner": "Owner",
                     "state": "State",
                     "nextEventSequenceNumber": "Next event sequence number",
-                    "handledEventCount": "Handled events"
+                    "handledEventCount": "Handled events",
+                    "quarantined": "Quarantined",
+                    "quarantinedTooltip": "Quarantined",
+                    "failedPartitions": "Failed partitions"
                 },
                 "types": {
                     "unknown": "Unknown",
@@ -710,6 +751,13 @@
             },
             "failedPartitions": {
                 "title": "Failed partitions",
+                "restoration": {
+                    "loading": "Finding the originating failed partition…",
+                    "missing": "The originating failed partition is no longer available.",
+                    "denied": "You are not authorized to look up the originating failed partition.",
+                    "failed": "The originating failed partition could not be loaded.",
+                    "retry": "Try lookup again"
+                },
                 "empty": "No failed partitions found",
                 "actions": {
                     "retry": "Retry"
@@ -734,8 +782,19 @@
                     "sequenceNumber": "Sequence number",
                     "messages": "Messages",
                     "stackTrace": "Stack trace",
-                    "noStackTrace": "No stack trace available"
-                }
+                    "noStackTrace": "No stack trace available",
+                    "inspection": {
+                        "inspect": "Inspect event",
+                        "loading": "Finding the observer's event sequence…",
+                        "missing": "The observer's event sequence is no longer available.",
+                        "denied": "You are not authorized to look up the observer's event sequence.",
+                        "failed": "The observer's event sequence could not be loaded.",
+                        "unavailable": "Event inspection unavailable",
+                        "retry": "Try lookup again"
+                    }
+                },
+                "filteredByObserver": "Showing failed partitions for observer {observerId}.",
+                "clearObserverFilter": "Show all"
             },
             "closedStreams": {
                 "title": "Closed Streams",

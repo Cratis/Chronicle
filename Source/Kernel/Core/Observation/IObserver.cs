@@ -20,7 +20,7 @@ namespace Cratis.Chronicle.Observation;
 /// deliberately not part of this grain contract - state transitions are driven from within the observer
 /// implementation, never across a grain reference.
 /// </remarks>
-[Version(4)]
+[Version(5)]
 public interface IObserver : IGrainWithStringKey
 {
     /// <summary>
@@ -401,6 +401,12 @@ public interface IObserver : IGrainWithStringKey
     /// <remarks>Leaves retired, removed and non-replaying observers unchanged; quarantined observers remain quarantined.</remarks>
     /// <returns>Awaitable task.</returns>
     Task ReleaseRefusedReplay();
+
+    /// <summary>
+    /// Quarantines a replaying observer whose replay job could not prepare its steps, keeping the replay pending.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    Task ReplayStepsCouldNotBePrepared();
 
     /// <summary>
     /// Releases a refused partition replay and probes catch-up from its persisted live-delivery lower bound.

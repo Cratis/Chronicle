@@ -275,6 +275,9 @@ internal static partial class ObserverLogMessages
     [LoggerMessage(LogLevel.Information, "Retiring observer - unsubscribing, discarding its failed partitions and clearing its alerts as removed while retaining quarantine")]
     internal static partial void RetiringObserver(this ILogger<Observer> logger);
 
+    [LoggerMessage(LogLevel.Warning, "Replay could not prepare its job steps; quarantining the observer with the replay pending until the quarantine is cleared")]
+    internal static partial void ReplayStepsCouldNotBePrepared(this ILogger<Observer> logger);
+
     [LoggerMessage(LogLevel.Warning, "A catch-up job concluded without moving the observer forward ({ConsecutiveLaps} in a row)")]
     internal static partial void CatchUpProducedNoWork(this ILogger<Observer> logger, int consecutiveLaps);
 

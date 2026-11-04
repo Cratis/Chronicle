@@ -21,7 +21,7 @@ namespace Cratis.Chronicle.MongoDB.Integration.Observation.for_ObserverPayloadRo
 /// <summary>
 /// Requires an observed old-writer update of an existing kernel-owned row, not merely a successful restart.
 /// </summary>
-public class when_old_kernel_reads_and_writes_new_claims : Cratis.Specifications.Specification
+public class when_old_kernel_reads_and_writes_new_claims : Specifications.Specification
 {
     ReleasedKernelFixture _fixture;
     IMongoDatabase _database;
@@ -61,7 +61,7 @@ public class when_old_kernel_reads_and_writes_new_claims : Cratis.Specifications
         _documentBefore = await Document();
 
         // Database profiling witnesses the old process's actual update of this exact row after restart.
-        await _database.RunCommandAsync<BsonDocument>(new BsonDocument { { "profile", 2 }, { "slowms", 0 } });
+        await ReleasedObserverProfiler.Enable(_database);
     }
 
     async Task Because()
@@ -70,7 +70,7 @@ public class when_old_kernel_reads_and_writes_new_claims : Cratis.Specifications
         using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(45));
         var filter = Builders<BsonDocument>.Filter.Eq("op", "update") &
             Builders<BsonDocument>.Filter.Eq("ns", $"{_database.DatabaseNamespace.DatabaseName}.{WellKnownCollectionNames.Observers}") &
-            Builders<BsonDocument>.Filter.Eq("o2._id", _documentBefore["_id"]);
+            Builders<BsonDocument>.Filter.Eq("command.q._id", _documentBefore["_id"]);
         try
         {
             using var updates = await _database.GetCollection<BsonDocument>("system.profile").FindAsync(
@@ -96,6 +96,7 @@ public class when_old_kernel_reads_and_writes_new_claims : Cratis.Specifications
     }
 
     [Fact] void should_require_an_actual_old_writer_update() => _oldWriterUpdated.ShouldBeTrue();
+    [Fact] void should_persist_the_old_writers_alert_lifecycle() => AlertLifecycle(_documentAfter).ShouldNotEqual(AlertLifecycle(_documentBefore));
     [Fact] void should_preserve_the_legacy_identity() => _after.Identifier.ShouldEqual(_before.Identifier);
     [Fact] void should_preserve_legacy_subscription_mode() => _after.SubscribesToAllEvents.ShouldEqual(_before.SubscribesToAllEvents);
     [Fact] void should_preserve_the_last_handled_event() => _after.LastHandledEventSequenceNumber.ShouldEqual(_before.LastHandledEventSequenceNumber);
@@ -108,13 +109,19 @@ public class when_old_kernel_reads_and_writes_new_claims : Cratis.Specifications
     [Fact] void should_preserve_the_revision() => _after.OwnershipRevision.ShouldEqual(new OwnershipRevision(7));
     [Fact] void should_remain_readable_by_the_new_provider() => _after.PartitionClaims.Single().Epoch.ShouldEqual(new ClaimEpoch(3));
 
-    async Task Cleanup()
+    async Task Destroy()
     {
         if (_fixture is not null) await _fixture.DisposeAsync();
     }
 
     Task<BsonDocument> Document() => _database.GetCollection<BsonDocument>(WellKnownCollectionNames.Observers)
         .Find(Builders<BsonDocument>.Filter.Eq("_id", _identifier)).SingleAsync();
+
+    /// <summary>
+    /// Gets the lifecycle GUID replaced by released 19.106.2 Subscribe (Observer.Alerting.cs:234-262).
+    /// </summary>
+    /// <param name="document">The observer state document.</param>
+    static BsonValue AlertLifecycle(BsonDocument document) => document[BsonClassMap.LookupClassMap(typeof(MongoObserverState)).GetMemberMap(nameof(MongoObserverState.AlertLifecycleId)).ElementName];
 
     static byte[] ShadowBytes(BsonDocument document, string property) => new BsonDocument("value", document[BsonClassMap.LookupClassMap(typeof(MongoObserverState)).GetMemberMap(property).ElementName]).ToBson();
 }

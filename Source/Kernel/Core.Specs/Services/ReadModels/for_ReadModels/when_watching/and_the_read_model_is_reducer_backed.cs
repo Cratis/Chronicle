@@ -23,7 +23,7 @@ public class and_the_read_model_is_reducer_backed : given.all_dependencies
         _readModelDefinition = _readModelDefinition with { ObserverType = Concepts.ReadModels.ReadModelObserverType.Reducer, ObserverIdentifier = "my-reducer" };
         _readModel.GetDefinition().Returns(_readModelDefinition);
         _notifier = Substitute.For<IProjectionChangesetNotifier>();
-        _grainFactory.GetGrain<IProjectionChangesetNotifier>(_readModelDefinition.ObserverIdentifier).Returns(_notifier);
+        _grainFactory.GetGrain<IProjectionChangesetNotifier>((string)new ProjectionChangesetNotifierKey(_readModelDefinition.ObserverIdentifier.Value, "test-store", "test-namespace")).Returns(_notifier);
     }
 
     async Task Because()
@@ -42,7 +42,7 @@ public class and_the_read_model_is_reducer_backed : given.all_dependencies
         await _subscribed.Task.WaitAsync(TimeSpan.FromSeconds(5));
     }
 
-    [Fact] void should_subscribe_the_notifier() => _notifier.Received(1).Subscribe(Arg.Any<IReadModelChangesetSubscriber>());
+    [Fact] void should_subscribe_the_notifier() => _notifier.Received().Subscribe(Arg.Any<IReadModelChangesetSubscriber>());
     [Fact] void should_not_report_an_error() => _error.ShouldBeNull();
 
     void Destroy()

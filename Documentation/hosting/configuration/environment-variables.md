@@ -33,6 +33,7 @@ the same way (`compliance.encryption.migrateFromDefaultStorage` becomes
 | --- | --- |
 | Cratis__Chronicle__Port | The Chronicle port — HTTPS with HTTP/2 and HTTP/1.1 by default; HTTP/2-only h2c when TLS is disabled |
 | Cratis__Chronicle__HealthCheckEndpoint | Health check endpoint path |
+| Cratis__Chronicle__Telemetry__GrpcClientTracing | Enable kernel gRPC client tracing (default `false`); see [OpenTelemetry trace volume defaults](open-telemetry.md#trace-volume-defaults) |
 | Cratis__Chronicle__Health__Port | Dedicated HTTP/1.1 port for the health endpoint |
 | Cratis__Chronicle__Health__Tls | Whether the dedicated health port uses TLS (default `true`) |
 | Cratis__Chronicle__Features__Api | Enable REST API endpoint |
@@ -54,12 +55,21 @@ the same way (`compliance.encryption.migrateFromDefaultStorage` becomes
 | Cratis__Chronicle__Observers__ExponentialBackoffDelayFactor | Exponential backoff multiplier |
 | Cratis__Chronicle__Observers__MaximumBackoffDelay | Maximum observer backoff delay in seconds |
 | Cratis__Chronicle__Observers__DefinitionEvolution | Read-model evolution policy: `Automatic`, `PartialOnly`, or `Manual` |
-| Cratis__Chronicle__ReadModels__MaxBatchSize | Maximum items per read-model batch (default 500; must be greater than zero): events per subscriber call when replaying a projection, and documents per fenced sink write. Projection replay splits event pages at this limit. |
+| Cratis__Chronicle__ReadModels__MaxBatchSize | Maximum items per read-model batch (default 500; must be greater than zero): events per subscriber call when replaying a projection, and documents per fenced sink write. Projection replay splits event pages at this limit; see Read Models for fenced writes. |
 | Cratis__Chronicle__ReadModels__ReplayedVersionsToKeep | Number of replay-generated read model versions to keep |
 | Cratis__Chronicle__Events__Queues | Number of event queues |
+| Cratis__Chronicle__Webhooks__Validation | Webhook destination mode: `Warn`, `BlockLocalAddresses`, `BlockPrivateAddresses`, or `Enforce`; default `Warn` in Development builds, `BlockLocalAddresses` otherwise |
+| Cratis__Chronicle__Webhooks__AllowInsecureHttp | Allow webhook HTTP in the Development runtime environment only (default `false`) |
+| Cratis__Chronicle__Webhooks__AllowedHosts__0 | First globally approved webhook host; use successive indices for more |
+| Cratis__Chronicle__Webhooks__EventStoreAllowedHosts__orders__0 | First approved webhook host for `orders`; replaces the global list |
+| Cratis__Chronicle__ExternalServices__Validation | Independent HTTP capture destination mode, with the same modes and build-dependent defaults as Webhooks |
+| Cratis__Chronicle__ExternalServices__AllowInsecureHttp | Allow capture HTTP in the Development runtime environment only (default `false`) |
+| Cratis__Chronicle__ExternalServices__AllowedHosts__0 | First globally approved capture host |
+| Cratis__Chronicle__ExternalServices__EventStoreAllowedHosts__orders__0 | First approved capture host for `orders`; replaces the global list |
 | Cratis__Chronicle__Authentication__Enabled | Whether authentication is enforced (default `true`) - see [Authentication](authentication.md#turning-authentication-off) before turning it off |
 | Cratis__Chronicle__Authentication__Authority | External OAuth authority URL |
 | Cratis__Chronicle__Authentication__DefaultAdminUsername | Default admin username |
+| Cratis__Chronicle__Authentication__InitialAdminSetupToken | Optional initial administrator setup token; supply through secret management and remove after setup |
 | Cratis__Chronicle__Authentication__AdminUser__Username | Bootstrap admin username (falls back to the default admin username when empty) |
 | Cratis__Chronicle__Authentication__AdminUser__Password | Bootstrap admin password, hashed on first startup |
 | Cratis__Chronicle__Authentication__AdminUser__Email | Bootstrap admin email address |
@@ -68,6 +78,8 @@ the same way (`compliance.encryption.migrateFromDefaultStorage` becomes
 | Cratis__Chronicle__Clustering__Type | Clustering provider — `Localhost` (default), `MongoDB` (MongoDB storage), or `Sql` (SQL Server/PostgreSQL storage) |
 | Cratis__Chronicle__Clustering__ClusterId | Orleans cluster id, identical on every node |
 | Cratis__Chronicle__Clustering__ServiceId | Orleans service id, identical on every node |
+| Cratis__Chronicle__Clustering__GatewayEnabled | Enable the Orleans client gateway (default `true`); set `false` when applications use only HTTP/gRPC |
+| Cratis__Chronicle__Clustering__AdvertisedIP | In MongoDB/SQL clustering, advertise and bind the silo and enabled gateway to this local interface address |
 | Cratis__Chronicle__Clustering__SiloPort | Orleans silo port (default 11111) |
 | Cratis__Chronicle__Clustering__GatewayPort | Orleans gateway port (default 30000) |
 | Cratis__Chronicle__Clustering__AdvertisedIP | IP address this node advertises to the cluster |
@@ -201,6 +213,21 @@ Cratis__Chronicle__Observers__MaximumBackoffDelay=600
 # Number of appended event queues to use (default: 2)
 Cratis__Chronicle__Events__Queues=2
 ```
+
+## Constraint index repair
+
+```bash
+# Total in-turn attempts to write a constraint index update (1 to 10, default: 3)
+Cratis__Chronicle__ConstraintIndexRepair__UpdateAttempts=3
+
+# Time budget for a repair performed in the turn of an append (default: 00:00:05)
+Cratis__Chronicle__ConstraintIndexRepair__AppendRepairBudget=00:00:05
+
+# Consecutive identical failures before a failure is settled as poison (default: 5)
+Cratis__Chronicle__ConstraintIndexRepair__PoisonThreshold=5
+```
+
+See [Constraint index repair](constraint-index-repair.md) for every setting.
 
 ## Read models
 

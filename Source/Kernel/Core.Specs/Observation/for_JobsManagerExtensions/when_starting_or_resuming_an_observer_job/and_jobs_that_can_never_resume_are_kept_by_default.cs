@@ -8,7 +8,8 @@ namespace Cratis.Chronicle.Observation.for_JobsManagerExtensions.when_starting_o
 
 /// <summary>
 /// Catch-up and replay do not ask for stopped jobs that can never resume to be dropped, so they keep today's behaviour:
-/// the refused resume is reported and nothing is deleted or started.
+/// the refused resume is reported and nothing is deleted or started. The job holds a step, so it is not one that was
+/// stopped before preparing anything, which a refused resume removes on its own.
 /// </summary>
 public class and_jobs_that_can_never_resume_are_kept_by_default : given.a_jobs_manager
 {
@@ -17,6 +18,7 @@ public class and_jobs_that_can_never_resume_are_kept_by_default : given.a_jobs_m
     void Establish()
     {
         var stopped = AJob(JobStatus.Stopped);
+        stopped.Progress = new() { TotalSteps = 1 };
         _stoppedId = stopped.Id;
         HasJobs(stopped);
         _jobsManager.Resume(stopped.Id).Returns(false);

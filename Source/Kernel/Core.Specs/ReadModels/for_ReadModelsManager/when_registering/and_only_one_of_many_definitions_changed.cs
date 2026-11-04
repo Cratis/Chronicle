@@ -20,6 +20,8 @@ public class and_only_one_of_many_definitions_changed : given.a_read_models_mana
 
     async Task Because() => await _manager.Register([_changedAfter, _unchanged with { }, _new]);
 
+    [Fact] void should_persist_only_the_changed_and_new_definitions() =>
+        _silo.StorageManager.GetStorage<ReadModelsManagerState>(typeof(ReadModelsManager).FullName).State.Modified.ShouldContainOnly(_changedAfter, _new);
     [Fact] async Task should_set_the_changed_definition() => await _readModelGrain.Received(1).SetDefinition(_changedAfter);
     [Fact] async Task should_set_the_new_definition() => await _readModelGrain.Received(1).SetDefinition(_new);
     [Fact] async Task should_not_set_the_unchanged_definition() => await _readModelGrain.DidNotReceive().SetDefinition(_unchanged);

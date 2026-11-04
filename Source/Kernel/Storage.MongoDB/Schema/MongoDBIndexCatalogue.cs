@@ -113,7 +113,8 @@ internal static class MongoDBIndexCatalogue
                 definitions.Add(MongoDBIndexDefinition.For(
                     collection,
                     [UniqueConstraintsStorage.ValueIndex(true), UniqueConstraintsStorage.SubjectIndex<UniqueConstraintIndex>(row => row.Subject)],
-                    ensure: () => UniqueConstraintsStorage.EnsureValueIndexes(collection, logger, cancellationToken)));
+                    ensure: () => UniqueConstraintsStorage.EnsureValueIndexes(collection, logger, cancellationToken),
+                    alternatives: [UniqueConstraintsStorage.ValueIndex(false)]));
             }
         }
         return unclassified;
