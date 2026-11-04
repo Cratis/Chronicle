@@ -33,15 +33,14 @@ public class a_patching_run_with_a_quarantined_event_store : a_patching_run
         _storage.GetEventStore(Healthy).Returns(_healthyStorage);
         _storage.GetEventStore(Held).Returns(_ => _quarantineLifted ? Substitute.For<IEventStoreStorage>() : throw new ResourceQuarantined());
 
-        var grains = Substitute.For<IGrainFactory>();
         foreach (var store in new[] { Healthy, Held })
         {
             var namespaces = Substitute.For<INamespaces>();
             namespaces.GetAll().Returns(Task.FromResult<IEnumerable<EventStoreNamespaceName>>([]));
-            grains.GetGrain<INamespaces>(store).Returns(namespaces);
+            _grainFactory.GetGrain<INamespaces>(store).Returns(namespaces);
         }
 
         _patches.Clear();
-        _patches.Add(new RemoveUnhashedUniqueConstraintValues(_storage, grains, NullLogger<RemoveUnhashedUniqueConstraintValues>.Instance, _resourceNames));
+        _patches.Add(new RemoveUnhashedUniqueConstraintValues(_storage, _grainFactory, NullLogger<RemoveUnhashedUniqueConstraintValues>.Instance, _resourceNames));
     }
 }
