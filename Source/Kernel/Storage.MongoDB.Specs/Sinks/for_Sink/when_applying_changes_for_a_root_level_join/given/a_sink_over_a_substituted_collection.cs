@@ -19,11 +19,13 @@ namespace Cratis.Chronicle.Storage.MongoDB.Sinks.for_Sink.when_applying_changes_
 
 public class a_sink_over_a_substituted_collection : Specification
 {
-    protected record Write(string Kind, BsonDocument Update);
+    protected record Write(string Kind, BsonValue Update, BsonDocument? Filter = null);
 
     protected List<Write> _writes;
     protected SinkWriteMode _mode;
     protected Change[] _changes;
+    protected AppendedEvent? _incoming;
+    BsonDocument? _lastFilter;
     Sink _sink;
     IChangeset<AppendedEvent, ExpandoObject> _changeset;
 
@@ -60,8 +62,8 @@ public class a_sink_over_a_substituted_collection : Specification
         _sink = new Sink(readModel, mongoConverter, collections, converter, expandoConverter, Substitute.For<IReadModelChangeStreams>());
 
         collection.UpdateOneAsync(
-            Arg.Any<FilterDefinition<BsonDocument>>(),
-            Arg.Do<UpdateDefinition<BsonDocument>>(update => _writes.Add(new("one", Render(update)))),
+            Arg.Do<FilterDefinition<BsonDocument>>(filter => _lastFilter = RenderFilter(filter)),
+            Arg.Do<UpdateDefinition<BsonDocument>>(update => _writes.Add(new("one", Render(update), _lastFilter))),
             Arg.Any<UpdateOptions>(),
             Arg.Any<CancellationToken>()).Returns(Task.FromResult<UpdateResult>(new UpdateResult.Acknowledged(1, 1, null)));
         collection.UpdateManyAsync(
@@ -85,11 +87,15 @@ public class a_sink_over_a_substituted_collection : Specification
         _changeset = Substitute.For<IChangeset<AppendedEvent, ExpandoObject>>();
         _changeset.Changes.Returns(_changes);
         _changeset.HasJoined().Returns(true);
+        _changeset.Incoming.Returns(_incoming);
         await _sink.ApplyChanges(new Key("root", ArrayIndexers.NoIndexers), _changeset, 20UL, _mode);
     }
 
-    static BsonDocument Render(UpdateDefinition<BsonDocument> update) =>
-        update.Render(new RenderArgs<BsonDocument>(BsonDocumentSerializer.Instance, BsonSerializer.SerializerRegistry)).AsBsonDocument;
+    static BsonValue Render(UpdateDefinition<BsonDocument> update) =>
+        update.Render(new RenderArgs<BsonDocument>(BsonDocumentSerializer.Instance, BsonSerializer.SerializerRegistry));
+
+    static BsonDocument RenderFilter(FilterDefinition<BsonDocument> filter) =>
+        filter.Render(new RenderArgs<BsonDocument>(BsonDocumentSerializer.Instance, BsonSerializer.SerializerRegistry));
 
     record TestReadModel(string Id, long Count, long X, string JoinId);
 }
