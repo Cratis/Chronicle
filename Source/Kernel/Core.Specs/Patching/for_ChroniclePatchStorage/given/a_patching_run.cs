@@ -21,6 +21,7 @@ public class a_patching_run : Specification
     protected IStorage _storage;
     protected ISystemStorage _systemStorage;
     protected ISystem _system;
+    protected IGrainFactory _grainFactory;
     protected List<ICanApplyPatch> _patches = [];
     protected ChronicleVersion? _patchedVersion;
     protected ChoreographyPatchManager _manager;
@@ -48,15 +49,15 @@ public class a_patching_run : Specification
             _patchedVersion = _.Arg<ChronicleVersion>();
             return Task.CompletedTask;
         });
-        var grainFactory = Substitute.For<IGrainFactory>();
-        grainFactory.GetGrain<ISystem>(0).Returns(_system);
+        _grainFactory = Substitute.For<IGrainFactory>();
+        _grainFactory.GetGrain<ISystem>(0).Returns(_system);
 
         var patches = Substitute.For<IInstancesOf<ICanApplyPatch>>();
         patches.GetEnumerator().Returns(_ => _patches.GetEnumerator());
 
         var hostVersion = new SemanticVersion(19, 118, 0);
         _manager = new ChoreographyPatchManager(
-            new ChroniclePatchStorage(_storage, grainFactory, patches),
+            new ChroniclePatchStorage(_storage, _grainFactory, patches),
             patches,
             Options.Create(new PatchingOptions { HostVersion = hostVersion }),
             NullLogger<ChoreographyPatchManager>.Instance);
