@@ -13,6 +13,7 @@ public class and_automatic_registration_is_off_and_the_disconnect_is_still_runni
     readonly FenceLogger _logger = new();
     readonly TaskCompletionSource _disconnectEntered = new(TaskCreationOptions.RunContinuationsAsynchronously);
     readonly TaskCompletionSource _releaseDisconnect = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    readonly TaskCompletionSource _reregistered = new(TaskCreationOptions.RunContinuationsAsynchronously);
     ConnectionId _before;
     ConnectionId _whenReregistered;
     bool _disconnectCompletedWhenReregistered;
@@ -33,6 +34,7 @@ public class and_automatic_registration_is_off_and_the_disconnect_is_still_runni
         {
             _disconnectCompletedWhenReregistered = _releaseDisconnect.Task.IsCompleted;
             _whenReregistered = _connection.Lifecycle.ConnectionId;
+            _reregistered.TrySetResult();
             return System.Reactive.Linq.Observable.Never<Cratis.Chronicle.Contracts.Observation.EventsToObserve>();
         });
     }
@@ -44,7 +46,7 @@ public class and_automatic_registration_is_off_and_the_disconnect_is_still_runni
         var connecting = _connection.Lifecycle.Connected();
 
         // The fence log or the re-registration, whichever comes first, releases the latch so broken code still finishes.
-        await Task.WhenAny(_logger.Fenced, Task.Delay(TimeSpan.FromSeconds(5)));
+        await Task.WhenAny(_logger.Fenced, _reregistered.Task);
         _observesWhileFenced = _services.Reactors.ReceivedCalls().Count();
         _releaseDisconnect.TrySetResult();
         await Task.WhenAll(disconnecting, connecting);
