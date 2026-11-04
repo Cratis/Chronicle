@@ -119,8 +119,19 @@ public class ChangesetConverter(
         // BinData and a string comparand matches nothing: the UpdateMany reports zero matched, which is
         // indistinguishable from a successful write. Convert through the schema, exactly as the child
         // branch above already does for its array-indexer identifier.
-        var (property, _) = converter.ToMongoDBProperty(joined.OnProperty, ArrayIndexers.NoIndexers);
-        return new(property, ToFilterValue(joined.Key, joined.OnProperty));
+        return CreateRootJoinTarget(joined.OnProperty, joined.Key);
+    }
+
+    /// <summary>
+    /// Build the property and comparand of a join on a root level property.
+    /// </summary>
+    /// <param name="onProperty">The property being joined.</param>
+    /// <param name="key">The key used for the join.</param>
+    /// <returns>The <see cref="JoinFilterTarget"/>.</returns>
+    internal JoinFilterTarget CreateRootJoinTarget(PropertyPath onProperty, object key)
+    {
+        var (property, _) = converter.ToMongoDBProperty(onProperty, ArrayIndexers.NoIndexers);
+        return new(property, ToFilterValue(key, onProperty));
     }
 
     static bool TryMergeJoinedChangeIntoChildAdded(IList<Change> changes, Joined joined)
@@ -241,7 +252,6 @@ public class ChangesetConverter(
 
     async Task<UpdateDefinitionAndArrayFilters> ToUpdateDefinition(Key key, IEnumerable<Change> changes, ExpandoObject? initialState, EventSequenceNumber eventSequenceNumber, SinkMultiDocumentWrites directWrites, AppliedEventMarkerContext? markers = null)
     {
-        var tracker = markers is null ? null : new AppliedEventMarkerTracker();
         var hasChanges = false;
         var updateDefinitionBuilder = Builders<BsonDocument>.Update;
         UpdateDefinition<BsonDocument>? updateBuilder = default;
@@ -250,6 +260,9 @@ public class ChangesetConverter(
         var arrayFiltersForDocument = new ArrayFilters();
         var nullParentPaths = new HashSet<string>();
         var nullArrayParents = new List<NullArrayParent>();
+        var groups = markers is { RecordOwnSlot: true }
+            ? new AppliedEventMarkerGroups(markers, AppliedEventMarkerSlots.Own(AppliedEventMarkerSlots.SegmentOf(normalizedChanges, markers)))
+            : null;
         await ApplyActualChanges(
             key,
             normalizedChanges,
@@ -263,7 +276,7 @@ public class ChangesetConverter(
             eventSequenceNumber,
             directWrites,
             markers,
-            tracker);
+            groups);
 
         // EventSequenceNumber sentinels (Unavailable, Max) are not positions in the sequence. Letting one through
         // would pin the $max watermark at the top of the range and permanently block every later guarded write to
@@ -273,20 +286,18 @@ public class ChangesetConverter(
             BuildLastHandledEventSequenceNumber(updateDefinitionBuilder, ref updateBuilder, eventSequenceNumber);
         }
 
-        FilterDefinition<BsonDocument>? appliedCondition = null;
-        if (markers is { RecordOwnSlot: true } && hasChanges)
+        if (groups is not null && hasChanges)
         {
-            var slot = AppliedEventMarkerSlots.Own(AppliedEventMarkerSlots.SegmentOf(normalizedChanges, markers));
-            updateBuilder = updateBuilder!.Set(slot, AppliedEventMarkerSlots.Value(markers.OwnStream, markers.SequenceNumber));
-            appliedCondition = AppliedEventMarkerSlots.NotApplied(slot, markers.OwnStream, markers.SequenceNumber);
+            // Eligible projections are root level and keyed by the event source id, so nothing here needs array filters
+            // or parent repairs: the whole changeset is one pipeline update that guards each of its writes by its own slot.
+            groups.CloseOwn(ref updateBuilder);
+            return new(groups.ToUpdate(), [], hasChanges) { IsConditional = true };
         }
 
         var distinctArrayFilters = arrayFiltersForDocument.DistinctBy(_ => _.Document).ToArray();
 
         return new(updateBuilder!, distinctArrayFilters, hasChanges)
         {
-            AppliedCondition = appliedCondition,
-            ResolvedJoinSlots = tracker?.ResolvedJoins ?? [],
             NullParentPaths = nullParentPaths.OrderBy(_ => _.Count(ch => ch == '.')).ToArray(),
             NullArrayParents = nullArrayParents.DistinctBy(_ => (_.Path, string.Join('|', _.ArrayFilters.Select(filter => filter.Document.ToJson())))).ToArray(),
             RequiredArrayPaths = [.. arrayFiltersForDocument.ArrayPaths]
@@ -306,7 +317,7 @@ public class ChangesetConverter(
         EventSequenceNumber eventSequenceNumber,
         SinkMultiDocumentWrites directWrites,
         AppliedEventMarkerContext? markers,
-        AppliedEventMarkerTracker? tracker)
+        AppliedEventMarkerGroups? groups)
     {
         var joinTasks = new List<Task>();
         var changesToApply = changes.ToList();
@@ -341,9 +352,16 @@ public class ChangesetConverter(
                     break;
 
                 case ResolvedJoin resolvedJoined:
-                    tracker?.Add(resolvedJoined);
-                    var applyActualChangesTask = ApplyActualChanges(key, resolvedJoined.Changes, initialState, nullParentPaths, nullArrayParents, updateDefinitionBuilder, ref updateBuilder, ref hasChanges, arrayFiltersForDocument, eventSequenceNumber, directWrites, markers, tracker);
-                    joinTasks.Add(applyActualChangesTask);
+                    if (groups is not null && resolvedJoined.Source is AppendedEvent source && resolvedJoined.ArrayIndexers.IsEmpty)
+                    {
+                        groups.CloseOwn(ref updateBuilder);
+                        UpdateDefinition<BsonDocument>? joinBuilder = default;
+                        joinTasks.Add(ApplyActualChanges(key, resolvedJoined.Changes, initialState, nullParentPaths, nullArrayParents, updateDefinitionBuilder, ref joinBuilder, ref hasChanges, arrayFiltersForDocument, eventSequenceNumber, directWrites, markers, null));
+                        groups.AddResolvedJoin(joinBuilder, resolvedJoined, source, CreateRootJoinTarget(resolvedJoined.OnProperty, resolvedJoined.Key));
+                        break;
+                    }
+
+                    joinTasks.Add(ApplyActualChanges(key, resolvedJoined.Changes, initialState, nullParentPaths, nullArrayParents, updateDefinitionBuilder, ref updateBuilder, ref hasChanges, arrayFiltersForDocument, eventSequenceNumber, directWrites, markers, null));
                     break;
             }
         }

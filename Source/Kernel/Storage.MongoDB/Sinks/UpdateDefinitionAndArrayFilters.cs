@@ -30,14 +30,9 @@ public record UpdateDefinitionAndArrayFilters(UpdateDefinition<BsonDocument> Upd
     internal IReadOnlyList<string> RequiredArrayPaths { get; init; } = [];
 
     /// <summary>
-    /// Gets the condition that holds while the write to the key document has not already been applied for its event, or null when none is kept.
+    /// Gets a value indicating whether the update is a guarded pipeline update that decides for itself which of its writes apply.
     /// </summary>
-    internal FilterDefinition<BsonDocument>? AppliedCondition { get; init; }
-
-    /// <summary>
-    /// Gets the slots of the joins the changeset resolved into the key document.
-    /// </summary>
-    internal IReadOnlyList<AppliedResolvedJoinSlot> ResolvedJoinSlots { get; init; } = [];
+    internal bool IsConditional { get; init; }
 
     /// <summary>
     /// Compares only the original positional values, excluding internal repair metadata.

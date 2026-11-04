@@ -46,13 +46,6 @@ public sealed partial class FencedSinkWrites
             {
                 await BulkWrite(collection, requests.Take(failedAt).ToList(), guardedUpserts, cancellationToken);
             }
-            if (UnfencedSinkWrites.IsRejectedConditionalUpsert(error, requests))
-            {
-                // Try the request once more as a plain update, in a transaction of its own.
-                ConditionalUpsertRequests.RetryAsUpdate(requests[failedAt]);
-                await BulkWrite(collection, requests.Skip(failedAt).ToArray(), guardedUpserts, cancellationToken);
-                return;
-            }
             if (!UnfencedSinkWrites.IsRejectedGuardedUpsert(error, requests, guardedUpserts))
             {
                 throw;

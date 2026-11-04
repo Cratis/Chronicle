@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using MongoDB.Bson;
+using Cratis.Chronicle.Storage.MongoDB.Sinks;
 using MongoDB.Driver;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Generations.Fencing;
@@ -39,9 +40,18 @@ internal sealed class SinkBatchDocuments(int cap)
     /// <param name="update">The update.</param>
     /// <param name="maxBatchSize">The maximum number of documents of one transaction.</param>
     /// <exception cref="NonIdempotentWriteCannotBeSplit">The update is not idempotent.</exception>
+    /// <remarks>
+    /// An applied event marker pipeline is accepted: every one of its fields is guarded by the predicate of its slot, so applying
+    /// it again after a partial commit changes nothing.
+    /// </remarks>
     internal static void RequireRetrySafe(IMongoCollection<BsonDocument> collection, UpdateDefinition<BsonDocument> update, int maxBatchSize)
     {
         var rendered = update.Render(new(collection.DocumentSerializer, collection.Settings.SerializerRegistry));
+        if (rendered is BsonArray pipeline && IsAppliedEventMarkerPipeline(update, pipeline))
+        {
+            return;
+        }
+
         if (rendered is not BsonDocument document)
         {
             throw new NonIdempotentWriteCannotBeSplit(collection.CollectionNamespace.CollectionName, ["(pipeline update)"], maxBatchSize);
@@ -55,6 +65,11 @@ internal sealed class SinkBatchDocuments(int cap)
             throw new NonIdempotentWriteCannotBeSplit(collection.CollectionNamespace.CollectionName, document.Names.Where(IsBlocking).ToArray(), maxBatchSize);
         }
     }
+
+    static bool IsAppliedEventMarkerPipeline(UpdateDefinition<BsonDocument> update, BsonArray pipeline) =>
+        AppliedEventMarkerUpdates.IsMarked(update) &&
+        pipeline.Count > 0 &&
+        pipeline.All(stage => stage is BsonDocument { ElementCount: 1 } document && document.GetElement(0).Name is "$set" or "$unset");
 
     /// <summary>
     /// Refuses bulk operations that cannot be replayed after partial progress.

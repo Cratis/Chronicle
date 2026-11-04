@@ -38,10 +38,10 @@ public partial class Sink
             return null;
         }
 
-        // Once per source event, every join is its own segment, so the slot of a segment records exactly what it wrote.
-        return MarkersFor(changeset, eventSequenceNumber, plan, options) is null
-            ? ChangesetWriteOrder.SegmentsFor(changeset.Changes)
-            : ChangesetWriteOrder.SegmentsAtEveryJoin(changeset.Changes);
+        // With markers recorded the converter writes the whole changeset as one guarded update in change order.
+        return MarkersFor(changeset, eventSequenceNumber, plan, options) is { RecordOwnSlot: true }
+            ? null
+            : ChangesetWriteOrder.SegmentsFor(changeset.Changes);
     }
 
     async Task<IEnumerable<FailedPartition>> WriteSegments(
@@ -66,7 +66,6 @@ public partial class Sink
             var write = ScopeToExistingArrays(NewWrite(key, eventSequenceNumber, converted, plan));
             await UnsetNullParents(write, options);
             failures.AddRange(await WriteUpdate(write, changeset, options));
-            await RecordResolvedJoinSlots(write, converted, plan, options);
         }
 
         await RemoveChildrenFromAll(changeset);

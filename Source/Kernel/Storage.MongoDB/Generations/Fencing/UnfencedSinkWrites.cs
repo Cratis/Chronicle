@@ -59,14 +59,6 @@ public sealed class UnfencedSinkWrites : ISinkWrites
                 await collection.BulkWriteAsync(remaining, cancellationToken: cancellationToken);
                 return;
             }
-            catch (MongoBulkWriteException<BsonDocument> exception) when (IsRejectedConditionalUpsert(exception, remaining))
-            {
-                // The insert collided with an existing document: either the write was already applied or the document was
-                // inserted concurrently. Try the same request once more as a plain update, which applies it only when its condition holds.
-                var failedIndex = exception.WriteErrors[0].Index;
-                ConditionalUpsertRequests.RetryAsUpdate(remaining[failedIndex]);
-                remaining = remaining.Skip(failedIndex).ToArray();
-            }
             catch (MongoBulkWriteException<BsonDocument> exception) when (IsRejectedGuardedUpsert(exception, remaining, guardedUpserts))
             {
                 remaining = remaining.Skip(exception.WriteErrors[0].Index + 1).ToArray();
@@ -83,18 +75,7 @@ public sealed class UnfencedSinkWrites : ISinkWrites
     /// <returns>Whether the failed request is a watermark no-op.</returns>
     internal static bool IsRejectedGuardedUpsert(MongoBulkWriteException<BsonDocument> exception, IReadOnlyList<WriteModel<BsonDocument>> requests, IReadOnlySet<WriteModel<BsonDocument>>? guardedUpserts) =>
         IsDuplicateIdAtARequest(exception, requests) &&
-        !ConditionalUpsertRequests.IsConditionalUpsert(requests[exception.WriteErrors[0].Index]) &&
         guardedUpserts?.Contains(requests[exception.WriteErrors[0].Index]) == true;
-
-    /// <summary>
-    /// Determines whether an ordered batch stopped at a conditional upsert whose insert collided with an existing document.
-    /// </summary>
-    /// <param name="exception">The ordered bulk failure.</param>
-    /// <param name="requests">The submitted requests.</param>
-    /// <returns>Whether the failed request is a conditional upsert to try once more as an update.</returns>
-    internal static bool IsRejectedConditionalUpsert(MongoBulkWriteException<BsonDocument> exception, IReadOnlyList<WriteModel<BsonDocument>> requests) =>
-        IsDuplicateIdAtARequest(exception, requests) &&
-        ConditionalUpsertRequests.IsConditionalUpsert(requests[exception.WriteErrors[0].Index]);
 
     static bool IsDuplicateIdAtARequest(MongoBulkWriteException<BsonDocument> exception, IReadOnlyList<WriteModel<BsonDocument>> requests) =>
         exception.WriteConcernError is null && exception.WriteErrors.Count == 1 &&

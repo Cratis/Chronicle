@@ -485,9 +485,7 @@ public partial class Sink(
             await UnsetNullParents(write, options);
         }
 
-        var failures = await WriteUpdate(write, changeset, options);
-        await RecordResolvedJoinSlots(write, converted, plan, options);
-        return failures;
+        return await WriteUpdate(write, changeset, options);
     }
 
     async Task<BulkBatch?> FlushBeforeJoin(IChangeset<AppendedEvent, ExpandoObject> changeset, SinkWriteOptions options)
@@ -697,21 +695,17 @@ public partial class Sink(
         var updateOptions = new UpdateOptions
         {
             IsUpsert = write.IsUpsert,
-            ArrayFilters = write.Converted.ArrayFilters
+            ArrayFilters = ArrayFiltersOf(write)
         };
-        if (write.IdFilter is { } idFilter && write.IsUpsert)
-        {
-            await writes.ConditionalUpsertOne(Collection, write.Filter, idFilter, write.Converted.UpdateDefinition, updateOptions);
-        }
-        else
-        {
-            await writes.UpdateOne(Collection, write.Filter, write.Converted.UpdateDefinition, updateOptions);
-        }
+        await writes.UpdateOne(Collection, write.Filter, write.Converted.UpdateDefinition, updateOptions);
 
         CacheImmediateWrite(write, changeset, options);
 
         return [];
     }
+
+    static IEnumerable<BsonDocumentArrayFilterDefinition<BsonDocument>>? ArrayFiltersOf(UpdateWrite write) =>
+        write.Converted.ArrayFilters.Any() ? write.Converted.ArrayFilters : null;
 
     async Task<IEnumerable<FailedPartition>?> TryBufferUpdate(UpdateWrite write, IChangeset<AppendedEvent, ExpandoObject> changeset, SinkWriteOptions options)
     {
@@ -720,28 +714,26 @@ public partial class Sink(
             return null;
         }
 
-        var isConditionalUpsert = write.IdFilter is not null && write.IsUpsert;
+        var isConditional = write.Converted.IsConditional;
         var updateModel = new UpdateOneModel<BsonDocument>(write.Filter, write.Converted.UpdateDefinition)
         {
             IsUpsert = write.IsUpsert,
-            ArrayFilters = write.Converted.ArrayFilters
+            ArrayFilters = ArrayFiltersOf(write)
         };
-        if (isConditionalUpsert)
-        {
-            ConditionalUpsertRequests.Mark(updateModel);
-        }
 
         var hasJoined = changeset.HasJoined();
-        var cacheState = hasJoined || options.Mode == SinkWriteMode.GuardedUpsert || isConditionalUpsert ? null : CreateCacheState(write.Key, changeset, write.EventSequenceNumber);
+        var cacheState = hasJoined || options.Mode == SinkWriteMode.GuardedUpsert || isConditional ? null : CreateCacheState(write.Key, changeset, write.EventSequenceNumber);
 
         void WhenQueued()
         {
             // Guarded writes may be rejected without failing the batch. Neither their state nor their
             // watermark is a safe answer for another operation in this bulk window.
-            if (options.Mode == SinkWriteMode.GuardedUpsert || isConditionalUpsert)
+            if (options.Mode == SinkWriteMode.GuardedUpsert || isConditional)
             {
                 InvalidateGuardedBulkState(write.Key);
-                if (updateModel.IsUpsert)
+
+                // A guarded pipeline update filters on the document id alone, so its upsert cannot collide with another document.
+                if (!isConditional && updateModel.IsUpsert)
                 {
                     _guardedBulkUpserts.Add(updateModel);
                 }
@@ -767,7 +759,7 @@ public partial class Sink(
             return;
         }
 
-        if (options.Mode == SinkWriteMode.GuardedUpsert || write.IdFilter is not null)
+        if (options.Mode == SinkWriteMode.GuardedUpsert || write.Converted.IsConditional)
         {
             writes.AfterCommit(() => EvictBulkState(write.Key));
         }
@@ -2053,10 +2045,7 @@ public partial class Sink(
         EventSequenceNumber EventSequenceNumber,
         UpdateDefinitionAndArrayFilters Converted,
         FilterDefinition<BsonDocument> Filter,
-        bool IsUpsert)
-    {
-        public FilterDefinition<BsonDocument>? IdFilter { get; init; }
-    }
+        bool IsUpsert);
 
     sealed record PageRequest(IMongoCollection<BsonDocument> Collection, string ContainerName, bool IsPrimary, int Skip, int Take, ReadModelInstanceVisibility Visibility);
 

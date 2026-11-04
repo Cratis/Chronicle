@@ -55,31 +55,6 @@ public interface ISinkWrites
     Task<UpdateResult> UpdateOne(IMongoCollection<BsonDocument> collection, FilterDefinition<BsonDocument> filter, UpdateDefinition<BsonDocument> update, UpdateOptions options);
 
     /// <summary>
-    /// Upserts one document under a filter that holds a condition besides its primary key, such as a marker that the write was already applied.
-    /// </summary>
-    /// <param name="collection">The collection to write.</param>
-    /// <param name="filter">The filter, holding the primary key and the condition.</param>
-    /// <param name="idFilter">The filter of the primary key alone.</param>
-    /// <param name="update">The update.</param>
-    /// <param name="options">The options, whose upsert is what makes the document appear.</param>
-    /// <returns>The <see cref="UpdateResult"/>; it matches nothing when the condition did not hold.</returns>
-    /// <remarks>
-    /// When the document exists and the condition does not hold, the insert of the upsert collides with the primary key. That
-    /// means the write was already applied, so it is suppressed. A collision with a concurrent insert is tried once more as a plain update.
-    /// </remarks>
-    async Task<UpdateResult> ConditionalUpsertOne(IMongoCollection<BsonDocument> collection, FilterDefinition<BsonDocument> filter, FilterDefinition<BsonDocument> idFilter, UpdateDefinition<BsonDocument> update, UpdateOptions options)
-    {
-        try
-        {
-            return await UpdateOne(collection, filter, update, options);
-        }
-        catch (MongoWriteException exception) when (exception.WriteError.Category == ServerErrorCategory.DuplicateKey && exception.WriteError.Message.Contains("index: _id_", StringComparison.Ordinal))
-        {
-            return await UpdateOne(collection, filter, update, new UpdateOptions { IsUpsert = false, ArrayFilters = options.ArrayFilters });
-        }
-    }
-
-    /// <summary>
     /// Updates every matching document.
     /// </summary>
     /// <param name="collection">The collection to write.</param>

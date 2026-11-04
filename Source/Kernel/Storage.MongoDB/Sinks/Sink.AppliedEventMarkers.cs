@@ -40,9 +40,7 @@ public partial class Sink : ISinkAppliedEventMarkers
     }
 
     static UpdateWrite NewWrite(Key key, EventSequenceNumber eventSequenceNumber, UpdateDefinitionAndArrayFilters converted, WritePlan plan) =>
-        converted.AppliedCondition is { } condition
-            ? new(key, eventSequenceNumber, converted, Builders<BsonDocument>.Filter.And(plan.Filter, condition), plan.IsUpsert) { IdFilter = plan.Filter }
-            : new(key, eventSequenceNumber, converted, plan.Filter, plan.IsUpsert);
+        new(key, eventSequenceNumber, converted, plan.Filter, plan.IsUpsert);
 
     AppliedEventMarkerContext? MarkersFor(IChangeset<AppendedEvent, ExpandoObject> changeset, EventSequenceNumber eventSequenceNumber, WritePlan plan, SinkWriteOptions options) =>
         options.Mode == SinkWriteMode.OncePerSourceEvent && changeset.Incoming is { } incoming && eventSequenceNumber.IsActualValue && changesetConverter is IChangesetConverterWithDirectWrites
@@ -55,24 +53,5 @@ public partial class Sink : ISinkAppliedEventMarkers
         return markers is null
             ? filter
             : Builders<BsonDocument>.Filter.And(filter, AppliedEventMarkerSlots.NotApplied(AppliedEventMarkerSlots.Own("0"), markers.OwnStream, markers.SequenceNumber));
-    }
-
-    async Task RecordResolvedJoinSlots(UpdateWrite write, UpdateDefinitionAndArrayFilters converted, WritePlan plan, SinkWriteOptions options)
-    {
-        if (IsWrittenThroughJoinTargets(plan))
-        {
-            return;
-        }
-
-        foreach (var slot in converted.ResolvedJoinSlots)
-        {
-            var path = AppliedEventMarkerSlots.Join(slot.DefinitionId);
-            var filter = Builders<BsonDocument>.Filter.And(plan.Filter, AppliedEventMarkerSlots.NotApplied(path, slot.Stream, slot.SequenceNumber));
-            var update = Builders<BsonDocument>.Update.Set(path, AppliedEventMarkerSlots.Value(slot.Stream, slot.SequenceNumber));
-            if (!await TryBufferOperation(new UpdateOneModel<BsonDocument>(filter, update), write, options))
-            {
-                await writes.UpdateOne(Collection, filter, update, new UpdateOptions());
-            }
-        }
     }
 }
