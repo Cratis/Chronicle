@@ -28,20 +28,21 @@ public partial class EventSequence
         IEnumerable<Causation> causation,
         Identity causedBy,
         ConcurrencyScopes concurrencyScopes,
-        EffectReceipt effectReceipt) =>
-        AppendManyValidated(events, correlationId, causation, causedBy, concurrencyScopes, effectReceipt);
+        EffectReceipt effectReceipt)
+    {
+        if (!_mayWriteSequence) throw new ReservedEventSequenceName(_eventSequenceId);
+        return AppendManyValidated(events, correlationId, causation, causedBy, concurrencyScopes, effectReceipt);
+    }
 
     /// <inheritdoc/>
     public async Task<RecordEffectReceiptResult> RecordEffectReceipt(EffectReceipt effectReceipt, EffectOutcome outcome, IReadOnlyList<string> reasons)
     {
+        if (!_mayWriteSequence) throw new ReservedEventSequenceName(_eventSequenceId);
         var id = ReceiptId(effectReceipt);
         var existing = await EffectReceiptStorage.GetEffectReceipt(id);
         if (existing is not null) return new(EffectReceiptStatus.AlreadyRecorded, EffectReceiptConverters.ToDetails(existing));
         ValidateEffectReceipt(effectReceipt);
-        if (outcome is not (EffectOutcome.NoEvents or EffectOutcome.Refused))
-        {
-            throw new InvalidEffectReceipt("Receipt-only writes must be NoEvents or Refused.");
-        }
+        ValidateReceiptOnlyOutcome(outcome);
 
         var receipt = new StoredEffectReceipt(id, new(new(effectReceipt.OccurrenceId), effectReceipt.Epoch), outcome, null, null, null, reasons, effectReceipt.Response, _timeProvider.GetUtcNow());
         var result = await WriteEffectReceiptForSettlement([], receipt);
@@ -51,6 +52,14 @@ public partial class EventSequence
 
         // The command executor carries exceptions as a failed CommandResult on the wire, not a success status.
         throw new EffectReceiptUnsettled();
+    }
+
+    static void ValidateReceiptOnlyOutcome(EffectOutcome outcome)
+    {
+        if (outcome is not (EffectOutcome.NoEvents or EffectOutcome.Refused))
+        {
+            throw new InvalidEffectReceipt("Receipt-only writes must be NoEvents or Refused.");
+        }
     }
 
     async Task<AppendManyResult?> FindEffectReceipt(EffectReceipt effectReceipt, CorrelationId correlationId)
