@@ -62,7 +62,7 @@ public class when_recording_observer_initialization : Specification, IDisposable
         "orders",
         _database,
         Substitute.For<IInstancesOf<ISinkFactory>>(),
-        Substitute.For<Orleans.Storage.IJobsStorage>(),
+        Substitute.For<Choreography.Storage.IJobsStorage>(),
         new JsonSerializerOptions(),
         Substitute.For<Json.IExpandoObjectConverter>());
 }

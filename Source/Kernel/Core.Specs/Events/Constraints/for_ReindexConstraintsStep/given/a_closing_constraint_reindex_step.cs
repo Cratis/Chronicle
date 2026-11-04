@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
+using Cratis.Choreography.Jobs;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Events.Constraints;
 using Cratis.Chronicle.Concepts.EventSequences;
@@ -15,7 +16,6 @@ using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Chronicle.Storage.InMemory.EventSequences;
 using Cratis.Monads;
-using Cratis.Orleans.Jobs;
 using Microsoft.Extensions.Logging.Abstractions;
 using Orleans.TestKit;
 
@@ -77,7 +77,7 @@ public class a_closing_constraint_reindex_step : Specification
         silo.AddService(Substitute.For<IExpandoObjectConverter>());
         silo.AddService(Substitute.For<IJobStepThrottle>());
         silo.AddService(NullLogger<ReindexConstraintsStep>.Instance);
-        silo.AddPersistentStateStorage<ReindexConstraintsStepState>(nameof(ReindexConstraintsStepState), Cratis.Orleans.WellKnownGrainStorageProviders.JobSteps);
+        silo.AddPersistentStateStorage<ReindexConstraintsStepState>(nameof(ReindexConstraintsStepState), Cratis.Choreography.WellKnownGrainStorageProviders.JobSteps);
         _step = await silo.CreateGrainAsync<ReindexConstraintsStep>(_runId.Value, new JobStepKey(_jobId, "store", "ns"));
         _state = new() { EventSequenceId = EventSequenceId.Log, Changes = [new("closing", true, [ConstraintChangeType.EventAdded])] };
     }

@@ -4,6 +4,7 @@
 using System.Dynamic;
 using System.Reflection;
 using System.Text.Json;
+using Cratis.Choreography.Jobs;
 using Cratis.Chronicle.Concepts.Auditing;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
@@ -16,7 +17,6 @@ using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Monads;
-using Cratis.Orleans.Jobs;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Orleans.TestKit;
@@ -109,7 +109,7 @@ public class the_job_step : Specification
         _jobStepKey = new JobStepKey(JobId.New(), StoreName, NamespaceName);
         _stateStorage = _silo.AddPersistentStateStorage<CopyEventSourceEventsStepState>(
             nameof(CopyEventSourceEventsStepState),
-            Cratis.Orleans.WellKnownGrainStorageProviders.JobSteps);
+            Cratis.Choreography.WellKnownGrainStorageProviders.JobSteps);
 
         _jobStep = await _silo.CreateGrainAsync<CopyEventSourceEventsStep>(JobStepId.New(), _jobStepKey);
     }

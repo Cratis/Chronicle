@@ -2,11 +2,11 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Arc.Commands.ModelBound;
+using Cratis.Choreography.Jobs;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.EventSequences.Copy;
 using Cratis.Chronicle.Grpc;
-using Cratis.Orleans.Jobs;
 
 namespace Cratis.Chronicle.Sequences;
 

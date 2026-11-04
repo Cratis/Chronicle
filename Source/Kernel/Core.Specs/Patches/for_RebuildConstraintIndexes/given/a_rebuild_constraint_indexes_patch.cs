@@ -1,12 +1,12 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Choreography.Jobs;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Patches;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Events.Constraints;
-using Cratis.Orleans.Jobs;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Core.Specs.Patches.for_RebuildConstraintIndexes.given;
