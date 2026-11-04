@@ -15,6 +15,12 @@
         <Compile Include="../Core.Specs/Compliance/given/protected_values.cs" Link="Compliance/given/protected_values.cs" />
         <ProjectReference Include="../Core/Core.csproj" />
         <PackageReference Include="Testcontainers" />
+        <Compile Include="../../../Integration/Client/SqlServerContainerImage.cs" Link="SqlServerContainerImage.cs" />
+        <Compile Include="../../../Integration/Client/ContainerStartup.cs" Link="ContainerStartup.cs" />
+        <Compile Include="../../../Integration/Client/ContainerStartupAttempt.cs" Link="ContainerStartupAttempt.cs" />
+        <Compile Include="../../../Integration/Client/ContainerStartupFailed.cs" Link="ContainerStartupFailed.cs" />
+        <Compile Include="../../../Integration/Client/ContainerExit.cs" Link="ContainerExit.cs" />
+        <Compile Include="../../../Integration/Client/DockerContainerEvidence.cs" Link="DockerContainerEvidence.cs" />
         <PackageReference Include="SSH.NET" />
         <ProjectReference Include="../Storage.Sql/Storage.Sql.csproj" />
         <ProjectReference Include="../Concepts/Concepts.csproj" />

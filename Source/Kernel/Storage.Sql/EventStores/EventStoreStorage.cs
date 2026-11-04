@@ -32,11 +32,11 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores;
 /// <param name="eventStore">The name of the event store.</param>
 /// <param name="database">The <see cref="IDatabase"/> to use for storage operations.</param>
 /// <param name="sinkFactories"><see cref="IInstancesOf{T}"/> for getting all <see cref="ISinkFactory"/> instances.</param>
-/// <param name="jobsStorage">The <see cref="Cratis.Orleans.Storage.IJobsStorage"/> resolving jobs storage for an event store namespace.</param>
+/// <param name="jobsStorage">The <see cref="Cratis.Choreography.Storage.IJobsStorage"/> resolving jobs storage for an event store namespace.</param>
 /// <param name="jsonSerializerOptions">The global <see cref="JsonSerializerOptions"/>.</param>
 /// <param name="converter">The schema-aware content converter.</param>
 /// <param name="loggerFactory">Optional <see cref="ILoggerFactory"/> used for logging inside the storages.</param>
-public class EventStoreStorage(EventStoreName eventStore, IDatabase database, IInstancesOf<ISinkFactory> sinkFactories, Cratis.Orleans.Storage.IJobsStorage jobsStorage, JsonSerializerOptions jsonSerializerOptions, Json.IExpandoObjectConverter converter, ILoggerFactory? loggerFactory = null) : IEventStoreStorage
+public class EventStoreStorage(EventStoreName eventStore, IDatabase database, IInstancesOf<ISinkFactory> sinkFactories, Cratis.Choreography.Storage.IJobsStorage jobsStorage, JsonSerializerOptions jsonSerializerOptions, Json.IExpandoObjectConverter converter, ILoggerFactory? loggerFactory = null) : IEventStoreStorage
 {
     readonly Occurrences.OccurrencesStorage<EventStoreDbContext> _occurrences = new(() => database.EventStore(eventStore));
 
@@ -84,6 +84,9 @@ public class EventStoreStorage(EventStoreName eventStore, IDatabase database, II
 
     /// <inheritdoc/>
     public IProjectionDefinitionsStorage Projections { get; } = new Projections.ProjectionDefinitionsStorage(eventStore, database);
+
+    /// <inheritdoc/>
+    public IProjectionDefinitionHistoryStorage ProjectionDefinitionHistory { get; } = new Projections.ProjectionDefinitionHistoryStorage(eventStore, database);
 
     /// <inheritdoc/>
     public IWebhookDefinitionsStorage Webhooks { get; } = new Webhooks.WebhookDefinitionsStorage(eventStore, database);

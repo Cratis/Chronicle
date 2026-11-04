@@ -1,10 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Choreography.Storage.MongoDB.Serialization;
 using Cratis.Chronicle.Concepts.Recommendations;
 using Cratis.Chronicle.Recommendations;
 using Cratis.Chronicle.Storage.Recommendations;
-using Cratis.Orleans.Storage.MongoDB.Serialization;
 using Cratis.Strings;
 using MongoDB.Bson;
 using MongoDB.Bson.IO;

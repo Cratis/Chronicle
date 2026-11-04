@@ -21,7 +21,8 @@ public class when_deactivating : Specification
             Substitute.For<ILogger<ConnectedClients>>(),
             Substitute.For<IMeter<ConnectedClients>>(),
             Options.Create(new ChronicleOptions()),
-            Substitute.For<IStorage>());
+            Substitute.For<IStorage>(),
+            Substitute.For<IClientDepartureNotifier>());
         _timer = Substitute.For<IGrainTimer>();
 
         typeof(ConnectedClients)

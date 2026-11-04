@@ -1,5 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
+export * from './AllFailedPartitionGroups';
 export * from './AllFailedPartitions';
 export * from './AllObservers';
 export * from './ClearFailedPartitions';
@@ -7,6 +8,7 @@ export * from './ClearObserverQuarantine';
 export * from './ClearPartitionQuarantine';
 export * from './FailedPartitionAttemptDetails';
 export * from './FailedPartitionDetails';
+export * from './FailedPartitionGroup';
 export * from './FastForward';
 export * from './GetFailedPartitions';
 export * from './GetObserversForEventType';

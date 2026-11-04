@@ -28,6 +28,26 @@ For a labeled event, the image-push guard checks `github.actor`—the account th
 - .NET SDK (version matches `global.json`)
 - Built binaries — run `dotnet build` from the repository root before running tests for the first time, or after any source change
 
+## Local kernel images
+
+Building the repository without `-p:DisableDockerBuild=true` also builds the kernel images the suites run. Build first so the tests use your working tree:
+
+| Image | Built by | Dockerfile | MongoDB |
+| ----- | -------- | ---------- | ------- |
+| `cratis/chronicle:local-development-slim` | `Integration/Client` and `Integration/SqlClustering` | `Docker/LocalSlim` | Not embedded |
+| `cratis/chronicle:local-development` | `Integration/Api` and `Benchmarks` | `Docker/Local` | Embedded |
+
+A local build never produces a published name (`latest*` or `<version>*`), so it cannot replace the registry image other projects on the machine use. CI enforces this. `CRATIS_CHRONICLE_LOCAL_IMAGE` overrides the image name for both the build and the tests. Use `-p:DisableDockerBuild=true` to skip the image build.
+
+Builds made before this change may have left `cratis/chronicle:latest-development` built from a working tree. Remove that stale local image and pull the published image again:
+
+```bash
+docker image rm cratis/chronicle:latest-development
+docker pull cratis/chronicle:latest-development
+```
+
+Also remove `cratis/chronicle:latest` if you ever ran `dockerize.sh`.
+
 ## Test Suites
 
 | Suite | Project | Description |
@@ -100,6 +120,14 @@ For SQLite, you can optionally set:
 ```bash
 export CHRONICLE_SQLITE_CONNECTION_DETAILS="Data Source=/tmp/chronicle.db"
 ```
+
+### SQL Server image pin and startup crashes
+
+All SQL Server fixtures, both CI pre-pulls and the local compose service use the explicit SQL Server 2025 CU image in `Integration/Client/SqlServerContainerImage.cs`. Moving to an older major or CU is not an acceptable startup-flake mitigation. The earlier image-pin workaround was not supported by a bounded repeat-start measurement; the SQL Server 2025 startup failure reported in [#4282](https://github.com/Cratis/Chronicle/issues/4282) is not assumed fixed merely by pinning an image.
+
+When updating the pin, choose a newer CU, update both SQL Server pre-pulls in `.github/workflows/integration.yml` and the service in `Source/Kernel/Server/docker-compose.yml` to match, then run `python3 .github/scripts/test-sql-server-image-pin.py`. CI rejects drifting literals, floating tags and older majors. Confirm the candidate with repeated fresh-container starts and the SQL Server client, storage and clustering shards before landing it.
+
+SQL Server fixtures allow at most three fresh-container startup attempts. Only a fresh Docker inspection showing an exited/dead process, or a `ContainerNotRunningException` when inspection is unavailable, permits a retry. Readiness timeouts with a still-running process are not retried. Before removal, each crashed attempt captures exit code, OOM/error state and up to 64 log lines / 16 KiB within a ten-second evidence deadline. Retry warnings and the final `ContainerStartupFailed` include this evidence, so an `IsPreemptiveOnEntry()` assert remains visible even when a later attempt succeeds. This bounded mitigation does not fix that SQL Server assert.
 
 ### Running against an external MongoDB
 

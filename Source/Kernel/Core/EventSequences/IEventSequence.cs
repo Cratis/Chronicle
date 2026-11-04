@@ -10,6 +10,7 @@ using Cratis.Chronicle.Concepts.EventSequences.Concurrency;
 using Cratis.Chronicle.Concepts.Identities;
 using Cratis.Chronicle.Grpc;
 using Cratis.Monads;
+using Orleans.CodeGeneration;
 using Orleans.Concurrency;
 
 namespace Cratis.Chronicle.EventSequences;
@@ -19,8 +20,35 @@ namespace Cratis.Chronicle.EventSequences;
 /// </summary>
 [KeyedBy<EventSequenceKey>]
 [BelongsTo(WellKnownServices.EventSequenceQueries)]
+[Version(1)]
 public interface IEventSequence : IGrainWithStringKey
 {
+    /// <summary>
+    /// Appends a compensating event for an event that is already in the event sequence.
+    /// </summary>
+    /// <param name="compensationFor">The <see cref="EventSequenceNumber"/> of the event being compensated for.</param>
+    /// <param name="eventType">The <see cref="EventType"/> of the compensating event. It must be declared as a compensation for the type of the event being compensated.</param>
+    /// <param name="content">The JSON payload of the compensating event.</param>
+    /// <param name="correlationId">The <see cref="CorrelationId"/> for the event.</param>
+    /// <param name="causation">Collection of <see cref="Causation"/> for the event.</param>
+    /// <param name="causedBy">The <see cref="Identity"/> of the entity that caused the event.</param>
+    /// <param name="tags">Collection of <see cref="Tag"/> for the event.</param>
+    /// <param name="occurred">Optional occurred time. If null, the server will set it to approximately the time of append.</param>
+    /// <returns>An <see cref="AppendResult"/> indicating the result of the operation.</returns>
+    /// <remarks>
+    /// The compensating event is appended to the same event source and stream as the original and records the
+    /// original's sequence number. The original event is never changed.
+    /// </remarks>
+    Task<AppendResult> Compensate(
+        EventSequenceNumber compensationFor,
+        EventType eventType,
+        JsonObject content,
+        CorrelationId correlationId,
+        IEnumerable<Causation> causation,
+        Identity causedBy,
+        IEnumerable<Tag> tags,
+        DateTimeOffset? occurred = null);
+
     /// <summary>
     /// Rehydrate the event sequence.
     /// </summary>
@@ -53,7 +81,7 @@ public interface IEventSequence : IGrainWithStringKey
     /// <summary>
     /// Suspend repair writes for constraints being rebuilt by a job.
     /// </summary>
-    /// <param name="runId">The stable job step identity.</param>
+    /// <param name="runId">The job step identity, attempt, start time and owning job; earlier kernels omit the owning job.</param>
     /// <param name="names">The constraints being rebuilt.</param>
     /// <returns>Awaitable task.</returns>
     Task ConstraintIndexRebuildStarting(ConstraintIndexRebuildRunId runId, IEnumerable<ConstraintName> names);
@@ -61,7 +89,7 @@ public interface IEventSequence : IGrainWithStringKey
     /// <summary>
     /// Restore index updates beyond a rebuild's confirmed progress.
     /// </summary>
-    /// <param name="runId">The stable job step identity.</param>
+    /// <param name="runId">The job step identity, attempt, start time and owning job; earlier kernels omit the owning job.</param>
     /// <param name="names">The rebuilt constraints.</param>
     /// <param name="outcome">The job's confirmed write progress.</param>
     /// <returns>Awaitable task.</returns>

@@ -50,22 +50,12 @@ public class ReactorMethodAnalyzer : DiagnosticAnalyzer
     {
         context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
         context.EnableConcurrentExecution();
-        context.RegisterCompilationStartAction(start =>
-        {
-            var evidence = new Lazy<ExplicitRegistrationEvidence>(() => ExplicitRegistrationEvidence.Create(start.Compilation, start.CancellationToken));
-            start.RegisterSymbolAction(symbol => AnalyzeMethod(symbol, evidence.Value), SymbolKind.Method);
-        });
+        context.RegisterSymbolAction(AnalyzeMethod, SymbolKind.Method);
     }
 
-    static void AnalyzeMethod(SymbolAnalysisContext context, ExplicitRegistrationEvidence evidence)
+    static void AnalyzeMethod(SymbolAnalysisContext context)
     {
         var methodSymbol = (IMethodSymbol)context.Symbol;
-
-        // Check if the containing type implements IReactor
-        if (!WellKnownTypes.ImplementsIReactor(methodSymbol.ContainingType, context.Compilation) && !evidence.IsReactor(methodSymbol.ContainingType))
-        {
-            return;
-        }
 
         // Skip special methods (constructors, property accessors, etc.)
         if (methodSymbol.MethodKind != MethodKind.Ordinary)
@@ -85,6 +75,14 @@ public class ReactorMethodAnalyzer : DiagnosticAnalyzer
 
         // Skip if first parameter is object (can't determine event type)
         if (firstParamType.SpecialType == SpecialType.System_Object)
+        {
+            return;
+        }
+
+        var evidence = ExplicitRegistrationEvidence.For(context.Compilation, context.CancellationToken);
+
+        // Check if the containing type implements IReactor
+        if (!WellKnownTypes.ImplementsIReactor(methodSymbol.ContainingType, context.Compilation) && !evidence.IsReactor(methodSymbol.ContainingType))
         {
             return;
         }

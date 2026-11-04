@@ -67,3 +67,7 @@ jobs:
       - name: Compile Kotlin client
         working-directory: ./Source/Clients/Kotlin
         run: gradle compileKotlin --no-configuration-cache
+
+      - name: Test Kotlin client
+        working-directory: ./Source/Clients/Kotlin
+        run: gradle test --no-configuration-cache

@@ -8,6 +8,8 @@ using Cratis.Chronicle.Transactions;
 using Cratis.Traces;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -26,6 +28,8 @@ public static class UnitOfWorkServiceCollectionExtensions
     public static IServiceCollection AddUnitOfWork(this IServiceCollection services)
     {
         services.AddTransient<IStartupFilter, UnitOfWorkStartupFilter>();
+        services.AddOptions();
+        services.TryAddEnumerable(ServiceDescriptor.Transient<IConfigureOptions<MvcOptions>, UnitOfWorkMvcOptions>());
         services.AddScoped<IUnitOfWorkManager>(sp => new UnitOfWorkManager(
             () => sp.GetRequiredService<IEventStore>(),
             sp.GetKeyedService<IActivitySource<UnitOfWork>>(ClientActivity.SourceName),

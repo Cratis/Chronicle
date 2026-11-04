@@ -93,6 +93,8 @@ The SQL sink gives each read model type its own table, with columns derived from
 
 A composite key is stored as one value, its parts joined with `_`, and reads return the key object. When a key part contains `_`, is empty, or cannot be read back as its declared type, the instance is returned without its key and the kernel logs a warning. Such keys can also collide; that is tracked in [#5335](https://github.com/Cratis/Chronicle/issues/5335).
 
+A read model whose identifier is spelled `ID` (or any casing other than `Id` or `id`) gets a key column spelled exactly like the property. Tables created by earlier releases keep the synthesized `Id` key they were created with, and the sink reads their layout once, when it first uses the table.
+
 Updates from the projection engine touch only the columns that changed. Tables are created automatically on first use via `IReadModelMigrator`. You do not need to write migrations by hand.
 
 Declared top-level scalar indexes are ensured idempotently. Populated primary tables use background
@@ -128,7 +130,9 @@ and float properties keep their floating-point storage types.
 SQLite sink paging sorts decimal keys numerically before applying page limits, with the original
 key text as a stable tie-breaker. Scalar decimal joins narrow candidates by exact canonical equality,
 including equal values with different scales. Declared decimal indexes target the registered ordering
-column, replacing only the old Chronicle non-unique TEXT index; custom and unique indexes are preserved.
+column, ascending or descending, and a top-level decimal inside a composite `[CompositeIndex]` is keyed by that column
+too, so both order and range-scan numerically. The previous Chronicle non-unique TEXT index is replaced on upgrade; custom and
+unique indexes are preserved. Decimals nested inside JSON objects are not covered yet.
 These operations use the [SQL shadow-column contract](../events/schema-representation#kernel-shadow-columns).
 Original decimal digits and scale remain unchanged and internal columns never appear in documents.
 

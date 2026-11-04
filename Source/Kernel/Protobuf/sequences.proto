@@ -231,6 +231,7 @@ message AppendedEventResponse {
    repeated EventRevision Revisions = 5;
    repeated KeyValuePair_Int32_String GenerationalContent = 6;
    uint32 RevisedGeneration = 7;
+   repeated string ErasedProperties = 8;
 }
 message AppendedEventsRequest {
    string EventStore = 2;
@@ -319,6 +320,15 @@ message CommandResult_CompleteStreamResponse {
    string AuthorizationFailureReason = 6;
    CompleteStreamResponse Response = 7;
 }
+message CommandResult_Guid {
+   .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   bool IsAuthorized = 2;
+   repeated ValidationResult ValidationResults = 3;
+   repeated string ExceptionMessages = 4;
+   string ExceptionStackTrace = 5;
+   string AuthorizationFailureReason = 6;
+   .bcl.Guid Response = 7; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+}
 message CommandResult_ReopenStreamScopeResponse {
    .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
    bool IsAuthorized = 2;
@@ -336,6 +346,19 @@ message CommandResult_VerifyContentResponse {
    string ExceptionStackTrace = 5;
    string AuthorizationFailureReason = 6;
    VerifyContentResponse Response = 7;
+}
+message CompensateRequest {
+   string EventStore = 1;
+   string Namespace = 2;
+   string EventSequenceId = 3;
+   uint64 CompensationFor = 4;
+   EventType EventType = 5;
+   string Content = 6;
+   .bcl.Guid CorrelationId = 7;
+   repeated string Tags = 8;
+   SerializableDateTimeOffset Occurred = 9;
+   repeated Causation Causation = 10;
+   Identity CausedBy = 11;
 }
 enum CompleteStreamError {
    COMPLETE_STREAM_ERROR_None = 0;
@@ -406,6 +429,14 @@ enum ContentVerificationResult {
    Equal = 1;
    Different = 2;
 }
+message CopyEventsForEventSourceRequest {
+   string EventStore = 1;
+   string Namespace = 2;
+   string EventSequenceId = 3;
+   string SourceId = 4;
+   string TargetId = 5;
+   repeated string EventTypes = 6;
+}
 enum EffectOutcome {
    Appended = 0;
    NoEvents = 1;
@@ -450,6 +481,7 @@ message EventContext {
    string Subject = 14;
    repeated NamedTag NamedTags = 15;
    string EventSource = 16;
+   uint64 CompensationFor = 17;
 }
 message EventForEventSourceId {
    string EventSourceId = 1;
@@ -583,6 +615,14 @@ message FromSequenceNumberRequest {
    uint64 FromEventSequenceNumber = 5;
    string EventSourceId = 6;
    string EventTypeIds = 7;
+}
+message FromSequenceNumberWithErasedPropertiesRequest {
+   string EventStore = 1;
+   string Namespace = 2;
+   string EventSequenceId = 3;
+   uint64 FromEventSequenceNumber = 4;
+   string EventSourceId = 5;
+   string EventTypeIds = 6;
 }
 message HasEventsForEventSourceIdRequest {
    string EventStore = 1;
@@ -952,12 +992,15 @@ service EventSequences {
    rpc AppendOnceWithNamedTags (AppendOnceWithNamedTagsRequest) returns (CommandResult_AppendOnceResponse);
    rpc AppendWithNamedTags (AppendWithNamedTagsRequest) returns (CommandResult_AppendResponse);
    rpc ClosedStreams (ClosedStreamsRequest) returns (QueryResult_IEnumerable_ClosedStreamResponse);
+   rpc Compensate (CompensateRequest) returns (CommandResult_AppendResponse);
    rpc CompleteStream (CompleteStreamRequest) returns (CommandResult_CompleteStreamResponse);
    rpc CompleteStreamScope (CompleteStreamScopeRequest) returns (CommandResult_CompleteStreamResponse);
+   rpc CopyEventsForEventSource (CopyEventsForEventSourceRequest) returns (CommandResult_Guid);
    rpc EndOf (EndOfRequest) returns (QueryResult_SerializableDateTimeOffset);
    rpc ExportEvents (ExportEventsRequest) returns (QueryResult_IEnumerable_ExportedEventResponse);
    rpc ForEventSourceIdAndEventTypes (ForEventSourceIdAndEventTypesRequest) returns (QueryResult_IEnumerable_AppendedEventResponse);
    rpc FromSequenceNumber (FromSequenceNumberRequest) returns (QueryResult_IEnumerable_AppendedEventResponse);
+   rpc FromSequenceNumberWithErasedProperties (FromSequenceNumberWithErasedPropertiesRequest) returns (QueryResult_IEnumerable_AppendedEventResponse);
    rpc HasEventsForEventSourceId (HasEventsForEventSourceIdRequest) returns (QueryResult_EventSourceEventsResponse);
    rpc IsStreamScopeCompleted (IsStreamScopeCompletedRequest) returns (QueryResult_StreamScopeCompletionResponse);
    rpc MetadataAt (MetadataAtRequest) returns (QueryResult_IEnumerable_EventMetadataResponse);

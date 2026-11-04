@@ -20,7 +20,8 @@ public class when_reserving_a_connection : Specification
             Substitute.For<ILogger<ConnectedClients>>(),
             Substitute.For<IMeter<ConnectedClients>>(),
             Options.Create(new ChronicleOptions()),
-            Substitute.For<IStorage>());
+            Substitute.For<IStorage>(),
+            Substitute.For<IClientDepartureNotifier>());
     }
 
     async Task Because()

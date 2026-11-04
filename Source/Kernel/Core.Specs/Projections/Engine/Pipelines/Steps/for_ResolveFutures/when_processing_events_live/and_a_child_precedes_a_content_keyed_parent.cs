@@ -61,8 +61,8 @@ public class and_a_child_precedes_a_content_keyed_parent : Cratis.Chronicle.Proj
         _futures.GetFutures().Returns(Task.FromResult<IEnumerable<ProjectionFuture>>([_future]));
         _tracker = new ProjectionFuturesTracker { HasPending = true };
         _step = new ResolveFutures(
-            _futures,
             _tracker,
+            new ProjectionFuturesStore(_futures),
             Substitute.For<ITypeFormats>(),
             new ObjectComparer(),
             NullLogger<ResolveFutures>.Instance,

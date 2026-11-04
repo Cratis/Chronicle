@@ -168,7 +168,9 @@ public static class SchemaMetadataExtensions
             return false;
         }
 
-        var hasMatch = actual.GetSchemaMetadata(category).Any(metadata => predicate(metadata.metadataType));
+        var hasMatch = new[] { schema, actual }.Distinct()
+            .SelectMany(candidate => candidate.GetSchemaMetadata(category))
+            .Any(metadata => predicate(metadata.metadataType));
 
         if (!hasMatch && actual.Properties.Count > 0)
         {
@@ -209,7 +211,8 @@ public static class SchemaMetadataExtensions
             return false;
         }
 
-        var hasMetadata = actual.ExtensionData?.ContainsKey(key) ?? false;
+        // A reference can carry metadata beside $ref as well as on the referenced schema.
+        var hasMetadata = new[] { schema, actual }.Any(candidate => candidate.ExtensionData?.ContainsKey(key) ?? false);
 
         if (!hasMetadata && actual.Properties.Count > 0)
         {

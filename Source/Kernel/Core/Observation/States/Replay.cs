@@ -2,12 +2,12 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using Cratis.Choreography.Jobs;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Observation;
-using Cratis.Orleans.Jobs;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Observation.States;
@@ -57,12 +57,19 @@ public class Replay(
 
         var subscription = await Observer.GetSubscription();
 
-        LastStartedJobId = await jobsManager.StartOrResumeObserverJobFor<IReplayObserver, ReplayObserverRequest>(
+        var request = new ReplayObserverRequest(observerKey, definitionState.State.Type, definitionState.State.EventTypes)
+        {
+            ReaderScope = ObserverReaderScope.For(state.SubscribesToAllEvents, definitionState.State.EventTypes)
+        };
+        var claims = StateMachine as IObserverOwnershipClaims;
+
+        // Granted and persisted before the job starts, so admission finds the claim the job is stamped with.
+        Func<ReplayObserverRequest, Task<ReplayObserverRequest>>? stampBeforeStart = claims is null
+            ? null
+            : async toStart => toStart with { OwnershipEpoch = await claims.GrantObserverWideBeforeStart(ClaimHolderKind.ObserverReplay, EventSequenceNumber.First) };
+        LastStartedJobId = await jobsManager.StartOrResumeObserverJobReportingDrops<IReplayObserver, ReplayObserverRequest>(
             logger,
-            new ReplayObserverRequest(observerKey, definitionState.State.Type, definitionState.State.EventTypes)
-            {
-                ReaderScope = ObserverReaderScope.For(state.SubscribesToAllEvents, definitionState.State.EventTypes)
-            },
+            () => request,
             requestPredicate: null,
             () =>
             {
@@ -78,7 +85,13 @@ public class Replay(
             {
                 logger.StartReplayJob();
                 return Task.CompletedTask;
-            });
+            },
+            null,
+            null,
+            0,
+            null,
+            stampBeforeStart,
+            claims is null ? null : claims.IsObsolete);
 
         await storage
             .GetEventStore(observerKey.EventStore)

@@ -4,6 +4,7 @@
 using System.Collections.Frozen;
 using System.Reflection;
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Observation;
 
 namespace Cratis.Chronicle.Reducers;
 
@@ -13,21 +14,22 @@ namespace Cratis.Chronicle.Reducers;
 internal static class SelfReducerMethods
 {
     static readonly EventTypeRegistryCache<FrozenDictionary<Type, MethodInfo>> _cache = new();
+    static readonly EventTypeSetCache<FrozenDictionary<Type, MethodInfo>> _sharedCache = new();
 
     /// <summary>
     /// Recognizes the structural signal without classifying classic reducers as self models.
     /// </summary>
     /// <param name="model">The candidate model.</param>
     /// <returns>Whether a valid static reduction method is declared.</returns>
-    internal static bool HasSelfShape(Type model) => CanBeSelf(model) && ReduceMethods(model).Any(method => InvalidReason(model, method) is null);
+    internal static bool HasSelfShape(Type model) => CanBeSelf(model) && (ReduceMethods(model).Any(method => InvalidReason(model, method) is null) || BatchReduceMethods(model).Any());
 
     /// <summary>
     /// Includes near-misses for nonfatal discovery diagnostics.
     /// </summary>
     /// <param name="model">The candidate model.</param>
     /// <returns>Whether its methods warrant discovery inspection.</returns>
-    internal static bool IsDiscoveryCandidate(Type model) => CanBeSelf(model) && ReduceMethods(model).Any(method =>
-        method.IsStatic && (ReturnsModel(model, method) || method.GetParameters().ElementAtOrDefault(1)?.ParameterType == model));
+    internal static bool IsDiscoveryCandidate(Type model) => CanBeSelf(model) && (BatchReduceMethods(model).Any() || ReduceMethods(model).Any(method =>
+        method.IsStatic && (ReturnsModel(model, method) || method.GetParameters().ElementAtOrDefault(1)?.ParameterType == model)));
 
     /// <summary>
     /// Refuses an explicitly nominated near-miss rather than silently ignoring it.
@@ -44,13 +46,13 @@ internal static class SelfReducerMethods
     }
 
     /// <summary>
-    /// Gets the registry-local dispatch map.
+    /// Gets the immutable dispatch map for the registry's CLR type set.
     /// </summary>
     /// <param name="eventTypes">The owning registry.</param>
     /// <param name="model">The self model.</param>
     /// <returns>The unique selected methods.</returns>
     internal static FrozenDictionary<Type, MethodInfo> Get(IEventTypes eventTypes, Type model) =>
-        _cache.Get(eventTypes, model, model, types => Build(model, types));
+        _cache.Get(eventTypes, model, model, types => _sharedCache.Get(types, model, model, snapshot => Build(model, snapshot)));
 
     /// <summary>
     /// Enumerates the declared hierarchy, retaining hidden methods for validation.
@@ -70,7 +72,10 @@ internal static class SelfReducerMethods
 
     static bool CanBeSelf(Type model) => model.IsClass && !model.IsAbstract && !model.IsGenericType && !model.IsAssignableTo(typeof(IReducer));
 
-    static IEnumerable<MethodInfo> ReduceMethods(Type model) => DeclaredMethods(model).Where(method => method.Name == "Reduce" && !method.IsSpecialName);
+    static IEnumerable<MethodInfo> ReduceMethods(Type model) => DeclaredMethods(model).Where(method => method.Name == "Reduce" && !method.IsSpecialName && !method.TakesEventBatch());
+
+    static IEnumerable<MethodInfo> BatchReduceMethods(Type model) => DeclaredMethods(model).Where(method =>
+        method.Name == "Reduce" && method.IsStatic && method.IsPublic && method.TakesEventBatch() && method.GetParameters().ElementAtOrDefault(1)?.ParameterType == model);
 
     static bool ReturnsModel(Type model, MethodInfo method) => method.ReturnType == model || method.ReturnType == typeof(Task<>).MakeGenericType(model);
 
@@ -79,7 +84,7 @@ internal static class SelfReducerMethods
         var methods = ReduceMethods(model).ToArray();
         if (methods.Length == 0)
         {
-            throw new SelfReducerHasNoReduceMethods(model);
+            return BatchReduceMethods(model).Any() ? FrozenDictionary<Type, MethodInfo>.Empty : throw new SelfReducerHasNoReduceMethods(model);
         }
         foreach (var method in methods)
         {
@@ -89,10 +94,11 @@ internal static class SelfReducerMethods
             }
         }
 
+        var handledTypes = methods.ToDictionary(method => method, method => method.GetParameters()[0].ParameterType.GetEventTypes(eventTypes).ToFrozenSet());
         var selected = new Dictionary<Type, MethodInfo>();
         foreach (var eventType in eventTypes.Where(type => type != typeof(object)))
         {
-            var candidates = methods.Where(method => method.GetParameters()[0].ParameterType.GetEventTypes(eventTypes).Contains(eventType)).ToArray();
+            var candidates = methods.Where(method => handledTypes[method].Contains(eventType)).ToArray();
             if (candidates.Length > 0)
             {
                 selected.Add(eventType, Select(model, eventType, candidates));

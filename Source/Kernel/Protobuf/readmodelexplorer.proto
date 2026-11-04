@@ -36,6 +36,7 @@ message EventContext {
    string Subject = 14;
    repeated NamedTag NamedTags = 15;
    string EventSource = 16;
+   uint64 CompensationFor = 17;
 }
 enum EventObservationState {
    None = 0;

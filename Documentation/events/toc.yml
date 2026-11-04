@@ -28,7 +28,11 @@
   href: schema-representation.mdx
 - name: Revision
   href: revision.md
+- name: Compensation
+  href: compensation.md
 - name: Redaction
   href: redaction.mdx
+- name: Copying events
+  href: copying.mdx
 - name: Public events
   href: public-events.md

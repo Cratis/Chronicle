@@ -9,12 +9,27 @@ public class FakeTokenEndpointHandler : HttpMessageHandler
 {
     public int Requests { get; private set; }
     public bool Fail { get; set; }
+    public HttpStatusCode? RespondWithStatus { get; set; }
+    public bool Cancel { get; set; }
     public string Token { get; set; } = "the-token";
     public int ExpiresIn { get; set; } = 3600;
 
     protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
         Requests++;
+        if (Cancel)
+        {
+            throw new OperationCanceledException();
+        }
+
+        if (RespondWithStatus is { } status)
+        {
+            return Task.FromResult(new HttpResponseMessage(status)
+            {
+                Content = new StringContent("{\"error\":\"invalid_client\"}")
+            });
+        }
+
         if (Fail)
         {
             throw new HttpRequestException("Simulated token endpoint failure");

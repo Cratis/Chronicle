@@ -18,6 +18,8 @@ public class when_ignoring : given.all_dependencies
     async Task Because() => _error = await Catch.Exception(recommendation.Ignore);
 
     [Fact] void should_not_fail() => _error.ShouldBeNull();
-    [Fact] void should_not_write_state() => storageStats.Writes.ShouldEqual(0);
-    [Fact] void should_clear_state_once() => storageStats.Clears.ShouldEqual(1);
+    [Fact] void should_write_state_once() => storageStats.Writes.ShouldEqual(1);
+    [Fact] void should_not_clear_state() => storageStats.Clears.ShouldEqual(0);
+    [Fact] void should_mark_the_recommendation_as_ignored() => storage.State.IsIgnored.ShouldBeTrue();
+    [Fact] void should_keep_the_request() => storage.State.Request.ShouldEqual(_request);
 }

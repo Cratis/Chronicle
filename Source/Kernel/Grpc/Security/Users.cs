@@ -63,6 +63,7 @@ internal sealed class Users(
             exception => logger.QueryFailed(exception, "Users", "GetStatus"));
 
     /// <inheritdoc/>
+    [global::Microsoft.AspNetCore.Authorization.Authorize(Policy = "Chronicle.Administrator")]
     public IObservable<global::Cratis.Chronicle.Contracts.Queries.QueryResult<IEnumerable<global::Cratis.Chronicle.Contracts.Security.UserResponse>>> AllUsers(global::ProtoBuf.Grpc.CallContext callContext = default) =>
         QueryExecutor.Execute<IEnumerable<global::Cratis.Chronicle.Contracts.Security.UserResponse>>(
             () => global::Cratis.Chronicle.Security.User.AllUsers(storage)

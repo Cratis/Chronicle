@@ -70,6 +70,18 @@ public class EventMigrationPropertyBuilderFor<TTarget, TSource>(IEventMigrationP
     }
 
     /// <inheritdoc/>
+    public IEventMigrationPropertyBuilder<TTarget, TSource> DefaultValue<TElementProperty>(
+        Expression<Func<TTarget, IEnumerable<TElementProperty>>> targetProperty,
+        TElementProperty value)
+    {
+        inner.DefaultValue(
+            GetPropertyName(targetProperty),
+            value!);
+
+        return this;
+    }
+
+    /// <inheritdoc/>
     public IEventMigrationPropertyBuilder<TTarget, TSource> MapValues<TProperty, TSourceProperty>(
         Expression<Func<TTarget, TProperty>> targetProperty,
         Expression<Func<TSource, TSourceProperty>> sourceProperty,
