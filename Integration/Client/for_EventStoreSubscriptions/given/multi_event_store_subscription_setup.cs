@@ -55,6 +55,13 @@ public class multi_event_store_subscription_setup(ChronicleFixture chronicleInPr
             sourceEventStoreName,
             configure);
 
+        await WaitForSubscriptionsToBeProcessed(targetEventStoreName);
+    }
+
+    protected async Task WaitForSubscriptionsToBeProcessed(string targetEventStoreName)
+    {
+        var targetEventStore = await ChronicleClient.GetEventStore(targetEventStoreName);
+
         // Wait for subscription reactor to process
         var subscriptionsReactor = await targetEventStore.Reactors.WaitForHandlerById(
             "$system.Cratis.Chronicle.Observation.EventStoreSubscriptions.EventStoreSubscriptionsReactor",

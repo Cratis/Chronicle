@@ -11,6 +11,18 @@ namespace Cratis.Chronicle.Integration.Clustering.for_Occurrences;
 /// </summary>
 public static class OccurrenceScenarios
 {
+    public static async Task ReconnectingWithoutAutomaticRegistration(OccurrenceFixture fixture)
+    {
+        var signals = new OccurrenceSignals();
+        await using var app = await OccurrenceApp.Start(fixture.SiloServices, signals, Guid.NewGuid().ToString("N"), lifecycle: false, automaticRegistration: false);
+        var firstId = (await app.Store.Occurrences.Record(new OccurrenceWork("before-reconnect"), Guid.NewGuid().ToString("N"))).Id.Value;
+        await app.WaitFor("p3c-work", rows => rows.Any(row => row.Id == firstId && row.State == OccurrenceState.Completed), application: false);
+        await app.Reconnect();
+        var secondId = (await app.Store.Occurrences.Record(new OccurrenceWork("after-reconnect"), Guid.NewGuid().ToString("N"))).Id.Value;
+        await app.WaitFor("p3c-work", rows => rows.Any(row => row.Id == secondId && row.State == OccurrenceState.Completed), application: false);
+        signals.Effects(secondId).ShouldEqual(1);
+    }
+
     public static async Task LogicalStartup(OccurrenceFixture fixture)
     {
         var activation = Guid.NewGuid().ToString("N");
