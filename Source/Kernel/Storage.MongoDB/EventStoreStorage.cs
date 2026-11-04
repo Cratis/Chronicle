@@ -118,6 +118,9 @@ public class EventStoreStorage(
     public IWebhookDefinitionsStorage Webhooks { get; } = new WebhookDefinitionsStorage(eventStoreDatabase);
 
     /// <inheritdoc/>
+    public IWebhookSigningKeysStorage WebhookSigningKeys { get; } = new WebhookSigningKeysStorage(eventStoreDatabase);
+
+    /// <inheritdoc/>
     public IExternalServiceDefinitionsStorage ExternalServices { get; } = new ExternalServiceDefinitionsStorage(eventStoreDatabase);
 
     /// <inheritdoc/>

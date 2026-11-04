@@ -122,6 +122,9 @@ public sealed class EventStoreStorage(
     public IWebhookDefinitionsStorage Webhooks { get; } = new WebhookDefinitionsStorage();
 
     /// <inheritdoc/>
+    public IWebhookSigningKeysStorage WebhookSigningKeys { get; } = new WebhookSigningKeysStorage();
+
+    /// <inheritdoc/>
     public IEventStoreSubscriptionDefinitionsStorage EventStoreSubscriptions { get; } = new EventStoreSubscriptionDefinitionsStorage();
 
     /// <inheritdoc/>

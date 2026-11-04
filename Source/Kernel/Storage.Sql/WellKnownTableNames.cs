@@ -244,6 +244,11 @@ public static class WellKnownTableNames
     public const string WebhookDefinitions = "WebhookDefinitions";
 
     /// <summary>
+    /// The table that holds webhook signing keys.
+    /// </summary>
+    public const string WebhookSigningKeys = "WebhookSigningKeys";
+
+    /// <summary>
     /// The table that holds external service definitions.
     /// </summary>
     public const string ExternalServiceDefinitions = "ExternalServiceDefinitions";
