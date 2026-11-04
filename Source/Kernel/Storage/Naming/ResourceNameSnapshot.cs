@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.Storage.Naming;
 /// </summary>
 public sealed class ResourceNameSnapshot : IResourceNameSnapshot
 {
-    static readonly State _empty = new(true, new HashSet<string>(), new HashSet<string>());
+    static readonly State _empty = new(true, [], FrozenDictionary<string, FrozenSet<string>>.Empty);
 
     volatile State _state;
 
@@ -27,10 +27,10 @@ public sealed class ResourceNameSnapshot : IResourceNameSnapshot
     public bool HasQuarantine => _state.HasQuarantine;
 
     /// <summary>
-    /// Create a snapshot that is not ready until <see cref="Publish"/> has been called.
+    /// Create a snapshot that is not ready until <see cref="Publish(ResourceNameAuditResult)"/> has been called.
     /// </summary>
     /// <returns>A new <see cref="ResourceNameSnapshot"/>.</returns>
-    public static ResourceNameSnapshot NotReady() => new() { _state = new State(false, new HashSet<string>(), new HashSet<string>()) };
+    public static ResourceNameSnapshot NotReady() => new() { _state = new State(false, [], FrozenDictionary<string, FrozenSet<string>>.Empty) };
 
     /// <summary>
     /// Publish a new state, which makes the snapshot ready.
@@ -38,10 +38,15 @@ public sealed class ResourceNameSnapshot : IResourceNameSnapshot
     /// <param name="eventStores">The quarantined event stores.</param>
     /// <param name="namespaces">The quarantined namespaces, by event store.</param>
     public void Publish(IEnumerable<EventStoreName> eventStores, IEnumerable<(EventStoreName EventStore, EventStoreNamespaceName Namespace)> namespaces) =>
-        _state = new State(
-            true,
-            eventStores.Select(_ => _.Value).ToFrozenSet(StringComparer.OrdinalIgnoreCase),
-            namespaces.Select(_ => Key(_.EventStore.Value, _.Namespace.Value)).ToFrozenSet(StringComparer.OrdinalIgnoreCase));
+        Replace(
+            eventStores.Select(_ => _.Value),
+            namespaces.Select(_ => new ResourceOwner(_.EventStore.Value, _.Namespace.Value)));
+
+    /// <summary>
+    /// Publish the outcome of the check of the names in use, which makes the snapshot ready.
+    /// </summary>
+    /// <param name="result">The <see cref="ResourceNameAuditResult"/>.</param>
+    public void Publish(ResourceNameAuditResult result) => Replace(result.QuarantinedStores, result.QuarantinedNamespaces);
 
     /// <inheritdoc/>
     public ResourceNameStatus Check(string eventStore, string? @namespace = null)
@@ -57,7 +62,7 @@ public sealed class ResourceNameSnapshot : IResourceNameSnapshot
             return eventStore == EventStoreName.System.Value ? ResourceNameStatus.Available : ResourceNameStatus.NotReady;
         }
 
-        return state.EventStores.Contains(eventStore) || (@namespace is not null && state.Namespaces.Contains(Key(eventStore, @namespace)))
+        return state.EventStores.Contains(eventStore) || (@namespace is not null && state.Namespaces.TryGetValue(eventStore, out var namespaces) && namespaces.Contains(@namespace))
             ? ResourceNameStatus.Quarantined
             : ResourceNameStatus.Available;
     }
@@ -69,9 +74,18 @@ public sealed class ResourceNameSnapshot : IResourceNameSnapshot
     public bool IsQuarantined(EventStoreName eventStore, EventStoreNamespaceName @namespace) =>
         Check(eventStore.Value, @namespace.Value) == ResourceNameStatus.Quarantined;
 
-    static string Key(string eventStore, string @namespace) => $"{eventStore}#{@namespace}";
+    static FrozenDictionary<string, FrozenSet<string>> Group(IEnumerable<ResourceOwner> namespaces) =>
+        namespaces
+            .GroupBy(_ => _.EventStore, StringComparer.OrdinalIgnoreCase)
+            .ToFrozenDictionary(
+                _ => _.Key,
+                _ => _.Select(owner => owner.Namespace!).ToFrozenSet(StringComparer.OrdinalIgnoreCase),
+                StringComparer.OrdinalIgnoreCase);
 
-    sealed record State(bool IsReady, IReadOnlySet<string> EventStores, IReadOnlySet<string> Namespaces)
+    void Replace(IEnumerable<string> eventStores, IEnumerable<ResourceOwner> namespaces) =>
+        _state = new State(true, eventStores.ToFrozenSet(StringComparer.OrdinalIgnoreCase), Group(namespaces));
+
+    sealed record State(bool IsReady, FrozenSet<string> EventStores, FrozenDictionary<string, FrozenSet<string>> Namespaces)
     {
         public bool HasQuarantine => EventStores.Count > 0 || Namespaces.Count > 0;
     }

@@ -2,8 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
-using System.Globalization;
-using System.Text;
 using Cratis.Chronicle.Concepts;
 using Microsoft.Extensions.Logging;
 
@@ -24,8 +22,6 @@ public class ResourceNameGate(
     ILogger<ResourceNameGate> logger,
     IResourcePhysicalNames? physicalNames = null) : IResourceNameGate
 {
-    const int MaximumLoggedLength = 128;
-
     readonly ConcurrentDictionary<(string EventStore, string? Namespace), byte> _registered = new();
 
     /// <inheritdoc/>
@@ -180,24 +176,6 @@ public class ResourceNameGate(
         .. physical.Select(_ => $"res:{Fold(_)}").Distinct()
     ];
 
-    static string Escape(string value)
-    {
-        var builder = new StringBuilder();
-        foreach (var character in value.Length > MaximumLoggedLength ? value[..MaximumLoggedLength] : value)
-        {
-            if (character is >= ' ' and <= '~')
-            {
-                builder.Append(character);
-            }
-            else
-            {
-                builder.Append("\\u").Append(((int)character).ToString("X4", CultureInfo.InvariantCulture));
-            }
-        }
-
-        return builder.ToString();
-    }
-
     void EnsureRule(string eventStore, string? @namespace)
     {
         var storeViolation = ResourceNames.ForEventStore(eventStore);
@@ -232,20 +210,20 @@ public class ResourceNameGate(
             case ResourceNameStatus.NotReady:
                 throw new ResourceNamesNotReady();
             case ResourceNameStatus.Quarantined:
-                logger.NameQuarantined(Escape(name));
+                logger.NameQuarantined(ResourceNameText.Escape(name));
                 throw new ResourceQuarantined();
         }
     }
 
     InvalidResourceName Refuse(ResourceNameViolation violation, string name, InvalidResourceName exception)
     {
-        logger.NameRefused(violation, Escape(name));
+        logger.NameRefused(violation, ResourceNameText.Escape(name));
         return exception;
     }
 
     ResourceNameConflict Conflict(ResourceNameConflictKind kind, string name)
     {
-        logger.NameConflict(kind, Escape(name));
+        logger.NameConflict(kind, ResourceNameText.Escape(name));
         return new ResourceNameConflict(kind);
     }
 }

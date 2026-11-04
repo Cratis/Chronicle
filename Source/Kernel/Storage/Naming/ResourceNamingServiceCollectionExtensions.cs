@@ -24,4 +24,24 @@ public static class ResourceNamingServiceCollectionExtensions
         services.TryAddSingleton<IResourceNameGate, ResourceNameGate>();
         return services;
     }
+
+    /// <summary>
+    /// Add the <see cref="ResourceNameAudit"/>, and make the names unavailable until it has published its outcome.
+    /// </summary>
+    /// <param name="services">The <see cref="IServiceCollection"/>.</param>
+    /// <returns>The <see cref="IServiceCollection"/> for continuation.</returns>
+    /// <remarks>
+    /// Call this after the backend has added its services. It replaces the snapshot of <see cref="AddResourceNameGate"/>,
+    /// which is ready by default, so hosts that do not run the audit keep working.
+    /// </remarks>
+    public static IServiceCollection AddResourceNameAudit(this IServiceCollection services)
+    {
+        services.RemoveAll<ResourceNameSnapshot>();
+        services.RemoveAll<IResourceNameSnapshot>();
+        services.AddSingleton(_ => ResourceNameSnapshot.NotReady());
+        services.AddSingleton<IResourceNameSnapshot>(sp => sp.GetRequiredService<ResourceNameSnapshot>());
+        services.TryAddSingleton(TimeProvider.System);
+        services.TryAddSingleton<ResourceNameAudit>();
+        return services;
+    }
 }
