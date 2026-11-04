@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Setup;
+using Cratis.Chronicle.Storage.Naming;
 using Cratis.Orleans.Jobs;
 using Cratis.Orleans.Storage;
 using Cratis.Orleans.Storage.MongoDB.Serialization;
@@ -57,6 +58,7 @@ public class when_configuring_a_database_name_prefix : Specification
     void Because()
     {
         _host = _builder.Build();
+        _host.Services.GetRequiredService<ResourceNameSnapshot>().Publish([], []);
         var database = _host.Services.GetRequiredService<IDatabase>();
         database.GetEventStoreDatabase(new EventStoreName("Ada")).GetNamespaceDatabase(new EventStoreNamespaceName("Contoso"));
         database.GetReadModelDatabase(new EventStoreName("Ada"), EventStoreNamespaceName.Default);
