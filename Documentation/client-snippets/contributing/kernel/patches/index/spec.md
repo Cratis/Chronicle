@@ -3,14 +3,15 @@ using Cratis.Specifications;
 using NSubstitute;
 using Xunit;
 
-public class when_rolling_back_the_patch : Specification
+public class when_applying_the_patch : Specification
 {
-    readonly ILogger<PatchesRollbackPatch> _logger = Substitute.For<ILogger<PatchesRollbackPatch>>();
-    PatchesRollbackPatch _patch = default!;
+    readonly IStorage _storage = Substitute.For<IStorage>();
+    readonly ILogger<PatchesBasicPatch> _logger = Substitute.For<ILogger<PatchesBasicPatch>>();
+    PatchesBasicPatch _patch = default!;
 
-    void Establish() => _patch = new PatchesRollbackPatch(_logger);
+    void Establish() => _patch = new PatchesBasicPatch(_storage, _logger);
 
-    Task Because() => _patch.Down();
+    Task Because() => _patch.Up();
 
     [Fact] void should_complete_without_throwing() => true.ShouldBeTrue();
 }
