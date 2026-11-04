@@ -28,6 +28,16 @@ For a labeled event, the image-push guard checks `github.actor`—the account th
 - .NET SDK (version matches `global.json`)
 - Built binaries — run `dotnet build` from the repository root before running tests for the first time, or after any source change
 
+## Local Docker image tags
+
+Local builds of `Integration/Client` and `Integration/SqlClustering` produce `cratis/chronicle:local-development-slim`, and their fixtures use the same default. This slim image contains the kernel without an embedded database; the suites start backing stores separately. API and benchmark builds use `cratis/chronicle:local-development`, the full image with embedded MongoDB.
+
+Set `CRATIS_CHRONICLE_LOCAL_IMAGE` for both the build and test processes to override the Client or SqlClustering image (CI supplies its own image this way). Use `-p:DisableDockerBuild=true` to skip building the image when you already have the required image available.
+
+The repository's `dockerize.sh` tags Production as `cratis/chronicle:local` and Development as `cratis/chronicle:local-development`. These local tags do not replace the published tags used by shipped XUnit/Aspire consumers or previous-release fixtures.
+
+Changing these defaults does not repair a published tag shadowed by an earlier local build. If you suspect one, inspect that specific tag with `docker image inspect <suspect-tag>`. If you no longer need that local image, remove only that tag with `docker image rm <suspect-tag>`, then fetch the published image with `docker pull <suspect-tag>`.
+
 ## Test Suites
 
 | Suite | Project | Description |

@@ -79,7 +79,7 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
         Options.StorageProvider == ChronicleStorageProvider.MsSql
         && RuntimeInformation.OSArchitecture == Architecture.Arm64;
 
-    readonly string _imageName = Environment.GetEnvironmentVariable("CRATIS_CHRONICLE_LOCAL_IMAGE") ?? "cratis/chronicle:latest-development";
+    readonly string _imageName = Environment.GetEnvironmentVariable("CRATIS_CHRONICLE_LOCAL_IMAGE") ?? "cratis/chronicle:local-development-slim";
     readonly string _outOfProcessSqlDatabaseName = $"chronicle_{Guid.NewGuid():N}";
 
     readonly Lazy<string> _inProcessSqliteDirectory = new(CreateInProcessSqliteDirectory);

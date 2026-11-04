@@ -148,6 +148,9 @@ jobs:
             ${{ env.DOTNET9_VERSION }}
             ${{ env.DOTNET_VERSION }}
 
+      - name: Spec local Docker image tags
+        run: node --test .github/scripts/test-local-docker-image-tags.mjs
+
       # Shared org cache: pull requests restore only; the nightly build and default-branch runs save (Cratis/Workflows#164).
       - name: Cache NuGet packages
         uses: Cratis/Workflows/.github/actions/dotnet-cache@main
