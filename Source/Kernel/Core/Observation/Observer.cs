@@ -618,6 +618,7 @@ public partial class Observer(
         if (reminderName == AlertReminderName)
         {
             await ReconcileAlertsIfNeeded();
+            await ReleaseAlertReminderWhenSettled();
             return;
         }
 

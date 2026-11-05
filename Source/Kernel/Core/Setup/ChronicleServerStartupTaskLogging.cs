@@ -28,11 +28,14 @@ internal static partial class ChronicleServerStartupTaskLogging
     [LoggerMessage(LogLevel.Warning, "Skipping persisted projection definition '{Identifier}' during startup because the current engine rejected it. Chronicle will continue starting so a client can re-register the projection with its current definition")]
     internal static partial void FailedRegisteringPersistedProjectionDefinition(this ILogger<ChronicleServerStartupTask> logger, Exception exception, ProjectionId identifier);
 
-    [LoggerMessage(LogLevel.Warning, "Startup step '{Step}' could not reach a sibling silo on attempt {Attempt} of {MaxAttempts} - retrying in {Delay}. A cluster that is still forming answers late, which is not a failure of the step itself")]
+    [LoggerMessage(LogLevel.Warning, "Startup step '{Step}' did not complete in time on attempt {Attempt} of {MaxAttempts} - retrying in {Delay}. A silo that is still catching up, or a cluster that is still forming, answers late, which is not a failure of the step itself")]
     internal static partial void RetryingStartupStep(this ILogger<ChronicleServerStartupTask> logger, Exception exception, string step, int attempt, int maxAttempts, TimeSpan delay);
 
-    [LoggerMessage(LogLevel.Critical, "Startup step '{Step}' still could not reach a sibling silo after {MaxAttempts} attempts. The cluster has had longer than membership normally takes to settle, so this is a real failure rather than a forming cluster")]
-    internal static partial void StartupStepExhaustedRetries(this ILogger<ChronicleServerStartupTask> logger, Exception exception, string step, int maxAttempts);
+    [LoggerMessage(LogLevel.Error, "Startup step '{Step}' still did not complete after {MaxAttempts} attempts. The silo stays running and not ready, and tries the step again in {Delay} (round {Round} of {MaxRounds}). The call may have been to this silo itself, which is then busy catching up, rather than to a sibling")]
+    internal static partial void StartupStepStillBusy(this ILogger<ChronicleServerStartupTask> logger, Exception exception, string step, int maxAttempts, TimeSpan delay, int round, int maxRounds);
+
+    [LoggerMessage(LogLevel.Critical, "Startup step '{Step}' still did not complete after {MaxRounds} rounds of {MaxAttempts} attempts. It is not waiting for a forming cluster or a busy silo any longer, so this is a real failure")]
+    internal static partial void StartupStepExhaustedRetries(this ILogger<ChronicleServerStartupTask> logger, Exception exception, string step, int maxAttempts, int maxRounds);
 
     [LoggerMessage(LogLevel.Critical, "Startup step '{Step}' failed because a silo in this cluster most likely runs a Chronicle release this one cannot exchange grain calls with. Retrying cannot help while both releases share the cluster. Upgrade by stopping every silo and then starting this release, rather than replacing silos one at a time. See https://cratis.io/chronicle/hosting/rolling-deploy/ Local release: {LocalRelease}; cluster releases: {ClusterReleases}")]
     internal static partial void StartupStepReachedIncompatibleSilo(this ILogger<ChronicleServerStartupTask> logger, Exception exception, string step, string localRelease, string clusterReleases);

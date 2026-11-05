@@ -92,7 +92,18 @@ internal sealed class ChronicleServerStartupTask(
     /// </remarks>
     const int MaxAttempts = 5;
 
+    /// <summary>
+    /// How many rounds of <see cref="MaxAttempts"/> a required step is tried before the host is failed.
+    /// </summary>
+    /// <remarks>
+    /// A silo restarted into a backlog - thousands of overdue reminders activating grains at once - answers its own
+    /// calls late. Stopping the process then only restarts the same backlog, so a required step waits for the silo to catch up,
+    /// unready, for a long while before it is believed to be broken (#5676, #4068).
+    /// </remarks>
+    const int MaxRounds = 10;
+
     static readonly TimeSpan _initialRetryDelay = TimeSpan.FromSeconds(2);
+    static readonly TimeSpan _busyRetryDelay = TimeSpan.FromMinutes(1);
 
     readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
 
@@ -198,7 +209,7 @@ internal sealed class ChronicleServerStartupTask(
                 // There will be no new NamespaceAdded broadcast for an already registered namespace.
                 try
                 {
-                    await Step("SubscribePatternCapture", () => patternCapture.Subscribe(eventStore, namespaceName));
+                    await RunStep("SubscribePatternCapture", () => patternCapture.Subscribe(eventStore, namespaceName), cancellationToken, maxRounds: 1);
                 }
                 catch (Exception exception) when (!cancellationToken.IsCancellationRequested)
                 {
@@ -299,12 +310,13 @@ internal sealed class ChronicleServerStartupTask(
     /// still failing once the budget is spent - propagates, so a genuine defect still fails the
     /// host on startup rather than being started around.
     /// </remarks>
-    async Task RunStep(string step, Func<Task> action, CancellationToken cancellationToken) =>
-        await TryRunStep(step, action, cancellationToken, failOnExhaustion: true);
+    async Task RunStep(string step, Func<Task> action, CancellationToken cancellationToken, int maxRounds = MaxRounds) =>
+        await TryRunStep(step, action, cancellationToken, failOnExhaustion: true, maxRounds);
 
-    async Task<bool> TryRunStep(string step, Func<Task> action, CancellationToken cancellationToken, bool failOnExhaustion = false)
+    async Task<bool> TryRunStep(string step, Func<Task> action, CancellationToken cancellationToken, bool failOnExhaustion = false, int maxRounds = MaxRounds)
     {
         var delay = _initialRetryDelay;
+        var round = 1;
         for (var attempt = 1; ; attempt++)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -322,7 +334,17 @@ internal sealed class ChronicleServerStartupTask(
             catch (Exception exception) when (IsTransient(exception))
             {
                 if (!failOnExhaustion) return false;
-                logger.StartupStepExhaustedRetries(exception, step, MaxAttempts);
+                if (round < maxRounds)
+                {
+                    logger.StartupStepStillBusy(exception, step, MaxAttempts, _busyRetryDelay, round, maxRounds);
+                    await Task.Delay(_busyRetryDelay, _timeProvider, cancellationToken);
+                    round++;
+                    attempt = 0;
+                    delay = _initialRetryDelay;
+                    continue;
+                }
+
+                logger.StartupStepExhaustedRetries(exception, step, MaxAttempts, maxRounds);
                 throw;
             }
             catch (Exception exception) when (IncompatibleSiloRelease.IsLikely(exception))
