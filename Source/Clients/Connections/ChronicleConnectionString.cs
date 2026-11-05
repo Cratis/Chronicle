@@ -3,6 +3,7 @@
 
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Cratis.Chronicle.Connections;
 
@@ -160,6 +161,15 @@ public class ChronicleConnectionString
     /// it exists.
     /// </remarks>
     public bool SkipKeepAlive => _builder.SkipKeepAlive;
+
+    /// <summary>
+    /// Gets whether the .NET client runs in serverless mode.
+    /// </summary>
+    /// <remarks>
+    /// See <see cref="ChronicleConnectionStringBuilder.Serverless"/> for what this does.
+    /// </remarks>
+    [Experimental("CHRX0001", UrlFormat = "https://www.cratis.io/docs/chronicle/clients/dotnet/serverless-mode")]
+    public bool Serverless => _builder.Serverless;
 
     /// <summary>
     /// Gets the path to the certificate file for TLS.

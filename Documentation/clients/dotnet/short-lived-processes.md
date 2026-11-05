@@ -55,6 +55,8 @@ projections, constraints, and read models on every start. Choose `AtDeployment` 
 has already registered the definitions; [register definitions as a deployment step](./explicit-artifacts#register-definitions-as-a-deployment-step)
 explains that workflow. `RegistrationMode` only has an effect when `AutoDiscoverAndRegister` is enabled.
 
+For functions and other scaled-to-zero hosts, see [Serverless mode](./serverless-mode.md), which builds on this preset.
+
 ## From a connection string
 
 The same keep-alive behavior is available from the connection string with `skipKeepAlive=true`, and from the builder with `WithKeepAliveSkipped()`. See [connection strings](../../connection-strings/server.md).

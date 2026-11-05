@@ -52,6 +52,7 @@ verification mechanisms, not .NET client methods. See
 
 - [Health checks](./health-checks.md)
 - [Short-lived processes](./short-lived-processes.md)
+- [Serverless mode](./serverless-mode.md)
 - [Explicit artifact registration](./explicit-artifacts)
 - [Discovery reports and identity drift](./discovery-report.md)
 - [Registration outcomes](./registration-outcome.md)

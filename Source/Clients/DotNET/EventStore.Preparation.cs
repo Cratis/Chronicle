@@ -5,6 +5,7 @@ using Cratis.Chronicle.Discovery;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Registrations;
 using Cratis.Chronicle.Seeding;
+using Cratis.Chronicle.Serverless;
 
 namespace Cratis.Chronicle;
 
@@ -104,9 +105,11 @@ public partial class EventStore
     {
         _logger.DiscoverAllArtifacts();
         _storeArtifacts?.Prepare();
+        PlanObserverDeliveries();
 
         // Finalize identities before schema, migration, source, constraint or observer construction.
-        if (_nominatesClientObservers && !ClientObserverHosting.IsAvailable(Connection))
+        // In serverless mode nominated stream observers are skipped and reported rather than refused.
+        if (!_serverless && _nominatesClientObservers && !ClientObserverHosting.IsAvailable(Connection))
         {
             throw new ClientObserversRequireKeepAlive(_nominatedObserverKind ?? "Reactor", _nominatedObserverId ?? "(nominated)");
         }
@@ -125,5 +128,16 @@ public partial class EventStore
             Discovery = report;
             _logger.LogDiscovery(report, Name, Namespace);
         }
+    }
+
+    void PlanObserverDeliveries()
+    {
+        var observers = _clientArtifactsProvider.Reactors
+            .Select(_ => (Id: RegisteredObserverMetadata.ReactorIdFor(_clientArtifactsProvider, _).Value, Type: (Type?)_))
+            .Concat(_clientArtifactsProvider.Reducers
+                .Select(_ => (Id: RegisteredObserverMetadata.ReducerIdFor(_clientArtifactsProvider, _).Value, Type: (Type?)_)))
+            .Concat(_storeArtifacts?.ExplicitReactorIds.Select(_ => (Id: _.Value, Type: (Type?)null)) ?? []);
+        DeliveryPlan = ObserverDeliveryPlan.Create(Deliveries, observers);
+        DeliveryPlan.ThrowIfNotDeliverable(_chronicleOptions);
     }
 }

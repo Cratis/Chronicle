@@ -118,6 +118,7 @@ that enforces authentication, calls to protected services fail as unauthenticate
 | `skipTlsValidation` | boolean | Connects over TLS without validating the server certificate | `?skipTlsValidation=true` |
 | `disableTls` | boolean | Connects without TLS, over cleartext HTTP/2 (h2c), to a server running with `tls.enabled=false`. See [Connecting without TLS](#connecting-without-tls) | `?disableTls=true` |
 | `skipCompatibilityCheck` | boolean | Skips the connect-time wire-compatibility check against the server | `?skipCompatibilityCheck=true` |
+| `serverless` | boolean | Turns on serverless mode in the .NET client (equal to Cratis:Chronicle:Serverless:Mode=Serverless). Implies skipping keep-alive. Other clients ignore it | `?serverless=true` |
 | `skipKeepAlive` | boolean | Skips the keep-alive connection, for short-lived processes. A client that skips it cannot host reactors or reducers | `?skipKeepAlive=true` |
 | `loadBalancer` | string | Load balancer strategy when multiple servers are configured | `?loadBalancer=round-robin` |
 | `srvNameServer` | string | DNS name server (host[:port], port defaults to 53) for `chronicle+srv` lookups; defaults to the system's name servers | `?srvNameServer=10.0.0.53` |
