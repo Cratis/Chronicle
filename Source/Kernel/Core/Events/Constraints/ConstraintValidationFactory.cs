@@ -36,7 +36,7 @@ public class ConstraintValidationFactory(IStorage storage) : IConstraintValidati
             {
                 UniqueConstraintDefinition unique => new UniqueConstraintValidator(unique, uniqueConstraintsStorage),
                 UniqueEventTypeConstraintDefinition uniqueEventType => new UniqueEventTypeConstraintValidator(uniqueEventType, uniqueEventTypeConstraintsStorage),
-                ClosesStreamConstraintDefinition closing => new ClosesStreamConstraintValidator(closing, closedStreamsStorage),
+                ClosesStreamConstraintDefinition closing => new ClosesStreamConstraintValidator(closing, closedStreamsStorage, eventSequenceKey.EventSequenceId),
                 _ => throw new UnknownConstraintType(_.GetType())
             })
             .Append(new ClosedStreamConstraintValidator(closedStreamsStorage, closedStreamDimensions, closingDefinitions))

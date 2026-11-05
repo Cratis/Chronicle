@@ -535,6 +535,7 @@ public partial class EventSequence(
         scope = scope.Normalized();
         if (scope.IsEmpty) return CompleteStreamError.EmptyScope;
         if (scope.IsDefaultStreamOnly) return CompleteStreamError.DefaultStreamCannotBeCompleted;
+        if (!ClosedStreamKeyLength.Fits(_eventSequenceId, scope, ClosedStreamOwner.Manual.Value)) throw new ClosedStreamScopeTooLong();
 
         var closures = await ClosedStreamsStorage.GetCovering(scope, await ClosedStreamsStorage.GetDimensionsInUse());
         if (closures.Any(closure => closure.Owner == ClosedStreamOwner.Manual)) return CompleteStreamError.AlreadyCompleted;

@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Events.Constraints;
+using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Storage.Events.Constraints;
 
 namespace Cratis.Chronicle.Events.Constraints;
@@ -12,7 +13,8 @@ namespace Cratis.Chronicle.Events.Constraints;
 /// </summary>
 /// <param name="definition">The closing declaration.</param>
 /// <param name="storage">The closure storage.</param>
-public class ClosesStreamConstraintValidator(ClosesStreamConstraintDefinition definition, IClosedStreamsConstraintStorage storage) : IConstraintValidator, IHaveUpdateConstraintIndex, IObserveConstraintBatchEvents
+/// <param name="eventSequenceId">The event sequence the validator runs for. Defaults to the event log.</param>
+public class ClosesStreamConstraintValidator(ClosesStreamConstraintDefinition definition, IClosedStreamsConstraintStorage storage, EventSequenceId? eventSequenceId = default) : IConstraintValidator, IHaveUpdateConstraintIndex, IObserveConstraintBatchEvents
 {
     /// <inheritdoc/>
     public IConstraintDefinition Definition => definition;
@@ -24,7 +26,11 @@ public class ClosesStreamConstraintValidator(ClosesStreamConstraintDefinition de
     /// <inheritdoc/>
     public Task<ConstraintValidationResult> Validate(ConstraintValidationContext context)
     {
-        if (definition.TryResolveScope(context, out var scope)) return Task.FromResult(ConstraintValidationResult.Success);
+        if (definition.TryResolveScope(context, out var scope))
+        {
+            return Task.FromResult(FitsTheStoredKey(context, scope) ? ConstraintValidationResult.Success : TooLong(context));
+        }
+
         var message = definition.EventStreamIdFrom is null
             ? "A closing stream scope must have every participating dimension set"
             : $"Closing stream property '{definition.EventStreamIdFrom}' must have a non-empty value";
@@ -53,4 +59,17 @@ public class ClosesStreamConstraintValidator(ClosesStreamConstraintDefinition de
             context.BatchClaims.RecordClosure(new(scope, definition.Name.Value, EventSequenceNumber.Unavailable, null));
         }
     }
+
+    bool FitsTheStoredKey(ConstraintValidationContext context, ClosedStreamScope scope) =>
+        !definition.EventTypeIds.Contains(context.EventTypeId) ||
+        ClosedStreamKeyLength.Fits(eventSequenceId ?? EventSequenceId.Log, scope.Normalized(), definition.Name.Value);
+
+    ConstraintValidationResult TooLong(ConstraintValidationContext context) => new()
+    {
+        Violations = [this.CreateViolation(
+            context,
+            EventSequenceNumber.Unavailable,
+            $"The closing stream scope is too long to be stored: its identifiers may total at most {ClosedStreamKeyLength.MaxTotalLength} characters and each at most {ClosedStreamKeyLength.MaxColumnLength}",
+            new() { { WellKnownConstraintDetailKeys.PropertyName, definition.EventStreamIdFrom ?? string.Empty } })]
+    };
 }
