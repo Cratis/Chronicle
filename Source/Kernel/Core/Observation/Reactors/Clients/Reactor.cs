@@ -32,7 +32,6 @@ public class Reactor(
     IOptions<ChronicleOptions> options,
     ILogger<Reactor> logger) : Grain<ReactorDefinition>, IReactor
 {
-    IConnectedClients? _connectedClients;
     ConnectedObserverKey? _observerKey;
     IObserver? _observer;
     ReactorDefinition? _deferredDefinition;
@@ -41,8 +40,6 @@ public class Reactor(
     /// <inheritdoc/>
     public override Task OnActivateAsync(CancellationToken cancellationToken)
     {
-        _connectedClients = GrainFactory.GetConnectedClients(localSiloDetails.SiloAddress);
-
         _observerKey = ConnectedObserverKey.Parse(this.GetPrimaryKeyString());
 
         return Task.CompletedTask;
@@ -143,12 +140,13 @@ public class Reactor(
 
         if (!await _observer.KnowsClient(_observerKey.ConnectionId))
         {
-            if (!await _connectedClients!.IsConnected(_observerKey.ConnectionId))
+            var owner = await FindConnectionOwner();
+            if (owner is null)
             {
                 return;
             }
 
-            var connectedClient = await _connectedClients!.GetConnectedClient(_observerKey.ConnectionId);
+            var connectedClient = await owner.GetConnectedClient(_observerKey.ConnectionId);
             logger.RestoringLostClientSubscription(_observerKey.ObserverId, _observerKey.ConnectionId);
             try
             {
@@ -207,13 +205,23 @@ public class Reactor(
         logger.WaitingForWebhook(_observerKey!.ObserverId);
     }
 
+    /// <summary>The connection may be registered on another silo than the one its streams reach, so every silo is considered.</summary>
+    Task<IConnectedClients?> FindConnectionOwner() =>
+        ConnectedClientsLocator.Find(GrainFactory, localSiloDetails.SiloAddress, _observerKey!.ConnectionId);
+
     /// <summary>Lets the connection registry tell this observer when the connection is dropped, instead of leaving it to the watchdog.</summary>
     /// <remarks>Best effort: a failure (for example during a rolling upgrade) leaves takeover to the watchdog and never fails the subscription.</remarks>
     async Task RecordObserver()
     {
         try
         {
-            await _connectedClients!.RecordObserver(
+            var owner = await FindConnectionOwner();
+            if (owner is null)
+            {
+                return;
+            }
+
+            await owner.RecordObserver(
                 _observerKey!.ConnectionId,
                 new ObserverKey(_observerKey.ObserverId, _observerKey.EventStore, _observerKey.Namespace, _observerKey.EventSequenceId));
         }
@@ -226,7 +234,8 @@ public class Reactor(
     async Task SubscribeToObserver(ReactorKey key, ReactorDefinition definition)
     {
         _observer = GrainFactory.GetGrain<IObserver>(key);
-        var connectedClient = await _connectedClients!.GetConnectedClient(_observerKey!.ConnectionId!);
+        var owner = await FindConnectionOwner() ?? throw new ClientIsNotConnected(_observerKey!.ConnectionId!);
+        var connectedClient = await owner.GetConnectedClient(_observerKey!.ConnectionId!);
         var eventTypes = definition.EventTypes.Select(e => e.EventType).ToArray();
         if (definition.StartAtTail)
         {

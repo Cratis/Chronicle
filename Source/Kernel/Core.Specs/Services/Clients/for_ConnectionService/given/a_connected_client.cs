@@ -50,6 +50,9 @@ public class a_connected_client : Specification
 
         var grainFactory = Substitute.For<IGrainFactory>();
         grainFactory.GetGrain<IConnectedClients>(silo.ToParsableString(), Arg.Any<string>()).Returns(_connectedClients);
+        var management = Substitute.For<IManagementGrain>();
+        management.GetHosts(true).Returns(new Dictionary<SiloAddress, SiloStatus> { [silo] = SiloStatus.Active });
+        grainFactory.GetGrain<IManagementGrain>(0, Arg.Any<string>()).Returns(management);
 
         var localSiloDetails = Substitute.For<ILocalSiloDetails>();
         localSiloDetails.SiloAddress.Returns(silo);
