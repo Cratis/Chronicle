@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Collections.Concurrent;
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Storage.Compliance;
@@ -21,7 +20,6 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.Encryption;
 public class EncryptionKeyStorage(IDatabase database, ILogger<EncryptionKeyStorage>? logger = null) : IEncryptionKeyStorage
 {
     readonly ILogger<EncryptionKeyStorage> _logger = logger ?? NullLogger<EncryptionKeyStorage>.Instance;
-    readonly ConcurrentDictionary<(EventStoreName, EventStoreNamespaceName), bool> _reviewsReported = new();
 
     /// <inheritdoc/>
     public async Task SaveFor(
@@ -33,7 +31,7 @@ public class EncryptionKeyStorage(IDatabase database, ILogger<EncryptionKeyStora
     {
         await using var scope = await database.Namespace(eventStore, eventStoreNamespace);
         var stored = EncryptionKeyIdentifierColumn.Value(scope.DbContext, identifier);
-        await EnsureNotUnderReview(eventStore, eventStoreNamespace, scope.DbContext, identifier, stored);
+        await EnsureNotUnderReview(scope.DbContext, identifier, stored);
 
         var actualRevision = IsLatest(revision)
             ? await GetNextRevision(scope.DbContext, stored)
@@ -69,7 +67,7 @@ public class EncryptionKeyStorage(IDatabase database, ILogger<EncryptionKeyStora
             .FirstOrDefaultAsync();
         if (entity is null)
         {
-            await EnsureNotUnderReview(eventStore, eventStoreNamespace, scope.DbContext, identifier, stored);
+            await EnsureNotUnderReview(scope.DbContext, identifier, stored);
             return null;
         }
 
@@ -125,7 +123,7 @@ public class EncryptionKeyStorage(IDatabase database, ILogger<EncryptionKeyStora
             : await scope.DbContext.EncryptionKeys.AnyAsync(e => e.Identifier == stored && e.Revision == revision!.Value);
         if (!has)
         {
-            await EnsureNotUnderReview(eventStore, eventStoreNamespace, scope.DbContext, identifier, stored);
+            await EnsureNotUnderReview(scope.DbContext, identifier, stored);
         }
 
         return has;
@@ -151,7 +149,7 @@ public class EncryptionKeyStorage(IDatabase database, ILogger<EncryptionKeyStora
 
         if (entity is null)
         {
-            await EnsureNotUnderReview(eventStore, eventStoreNamespace, scope.DbContext, identifier, stored);
+            await EnsureNotUnderReview(scope.DbContext, identifier, stored);
             return null;
         }
 
@@ -176,7 +174,7 @@ public class EncryptionKeyStorage(IDatabase database, ILogger<EncryptionKeyStora
     {
         await using var scope = await database.Namespace(eventStore, eventStoreNamespace);
         var stored = EncryptionKeyIdentifierColumn.Value(scope.DbContext, identifier);
-        await EnsureNotUnderReview(eventStore, eventStoreNamespace, scope.DbContext, identifier, stored);
+        await EnsureNotUnderReview(scope.DbContext, identifier, stored);
 
         if (IsLatest(revision))
         {
@@ -199,7 +197,14 @@ public class EncryptionKeyStorage(IDatabase database, ILogger<EncryptionKeyStora
         EncryptionKeyIdentifier identifier)
     {
         await using var scope = await database.Namespace(eventStore, eventStoreNamespace);
-        return await ErasureIn(scope.DbContext, EncryptionKeyIdentifierColumn.Value(scope.DbContext, identifier));
+        var stored = EncryptionKeyIdentifierColumn.Value(scope.DbContext, identifier);
+        var erasure = await ErasureIn(scope.DbContext, stored);
+        if (erasure is null)
+        {
+            await EnsureNotUnderReview(scope.DbContext, identifier, stored);
+        }
+
+        return erasure;
     }
 
     /// <inheritdoc/>
@@ -211,7 +216,7 @@ public class EncryptionKeyStorage(IDatabase database, ILogger<EncryptionKeyStora
         await using var scope = await database.Namespace(eventStore, eventStoreNamespace);
 
         var stored = EncryptionKeyIdentifierColumn.Value(scope.DbContext, identifier);
-        await EnsureNotUnderReview(eventStore, eventStoreNamespace, scope.DbContext, identifier, stored);
+        await EnsureNotUnderReview(scope.DbContext, identifier, stored);
 
         var present = await scope.DbContext.EncryptionKeys
             .Where(e => e.Identifier == stored)
@@ -232,7 +237,7 @@ public class EncryptionKeyStorage(IDatabase database, ILogger<EncryptionKeyStora
     {
         await using var scope = await database.Namespace(eventStore, eventStoreNamespace);
         var stored = EncryptionKeyIdentifierColumn.Value(scope.DbContext, identifier);
-        await EnsureNotUnderReview(eventStore, eventStoreNamespace, scope.DbContext, identifier, stored);
+        await EnsureNotUnderReview(scope.DbContext, identifier, stored);
         if (await ErasureIn(scope.DbContext, stored) is not { } erasure)
         {
             return;
@@ -277,8 +282,6 @@ public class EncryptionKeyStorage(IDatabase database, ILogger<EncryptionKeyStora
     }
 
     async Task EnsureNotUnderReview(
-        EventStoreName eventStore,
-        EventStoreNamespaceName eventStoreNamespace,
         NamespaceDbContext dbContext,
         EncryptionKeyIdentifier identifier,
         string stored)
@@ -286,15 +289,6 @@ public class EncryptionKeyStorage(IDatabase database, ILogger<EncryptionKeyStora
         if (!dbContext.Database.IsSqlServer())
         {
             return;
-        }
-
-        if (_reviewsReported.TryAdd((eventStore, eventStoreNamespace), true))
-        {
-            var count = await dbContext.Database.SqlQueryRaw<int>("SELECT COUNT(*) AS [Value] FROM [EncryptionKeyIdentifierReviews]").SingleAsync();
-            if (count > 0)
-            {
-                _logger.IdentifiersAwaitingReview(count);
-            }
         }
 
         // The raw value is compared with the column's pre-upgrade collation, the encoded value with the exact one.

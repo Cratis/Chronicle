@@ -84,6 +84,8 @@ public partial class Database(IServiceProvider serviceProvider, IOptions<Chronic
     }.ToFrozenSet(StringComparer.OrdinalIgnoreCase);
 #endif
 
+    readonly System.Collections.Concurrent.ConcurrentDictionary<string, bool> _reviewsReported = new();
+    readonly Lazy<ILogger> _encryptionKeyLogger = new(() => (serviceProvider.GetService<ILoggerFactory>() ?? NullLoggerFactory.Instance).CreateLogger(typeof(Database).FullName!));
     readonly Lazy<ILogger> _liveQueryLogger = new(() => (serviceProvider.GetService<ILoggerFactory>() ?? NullLoggerFactory.Instance).CreateLogger(typeof(LiveQuery).FullName!));
     readonly Lazy<ILogger> _readCommittedSnapshotLogger = new(() => (serviceProvider.GetService<ILoggerFactory>() ?? NullLoggerFactory.Instance).CreateLogger("SqlServerReadCommittedSnapshot"));
     readonly SqlConnectionResolution _resolution = SqlConnectionResolution.From(serviceProvider, options.Value.Storage);

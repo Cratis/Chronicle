@@ -10,9 +10,6 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.Encryption;
 /// </summary>
 internal static partial class EncryptionKeyStorageLogging
 {
-    [LoggerMessage(LogLevel.Warning, "Encryption key identifiers stored before exact comparison are awaiting review: {Count} rows in EncryptionKeyIdentifierReviews")]
-    internal static partial void IdentifiersAwaitingReview(this ILogger logger, int count);
-
     [LoggerMessage(LogLevel.Warning, "An encryption key operation was refused because its identifier is under review; see the compliance storage documentation")]
     internal static partial void IdentifierUnderReview(this ILogger logger);
 }
