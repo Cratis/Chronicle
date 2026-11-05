@@ -57,7 +57,7 @@ public partial class EventSequenceStorage
         foreach (var type in types)
         {
             var candidate = await query.Where(e => e.Type == type && e.SequenceNumber < from.Value)
-                .OrderByDescending(e => e.SequenceNumber).FirstOrDefaultAsync(cancellationToken);
+                .OrderByDescending(e => e.SequenceNumber).WithoutHistory().FirstOrDefaultAsync(cancellationToken);
             if (candidate is not null && (predecessor is null || candidate.SequenceNumber > predecessor.SequenceNumber))
             {
                 predecessor = candidate;

@@ -305,6 +305,12 @@ public partial class EventSequenceStorage(
         // already triggered its own rewind, producing duplicate EventRedacted notifications.
         if (eventEntry.Type == GlobalEventTypes.Redaction)
         {
+            if (ClearLeftoverHistory(eventEntry))
+            {
+                scope.DbContext.Events.Update(eventEntry);
+                await scope.DbContext.SaveChangesAsync();
+            }
+
             return await BuildAppendedEventFromRedactionEntry(eventEntry, scope);
         }
 
@@ -382,6 +388,11 @@ public partial class EventSequenceStorage(
         {
             if (eventEntry.Type == GlobalEventTypes.Redaction)
             {
+                if (ClearLeftoverHistory(eventEntry))
+                {
+                    scope.DbContext.Events.Update(eventEntry);
+                }
+
                 continue;
             }
 
@@ -1046,6 +1057,18 @@ public partial class EventSequenceStorage(
         SqlException sqlServer => sqlServer.Number is 2627 or 2601,
         _ => false
     };
+
+    static bool ClearLeftoverHistory(EventEntry eventEntry)
+    {
+        if (eventEntry.OriginalContent is null && eventEntry.Revisions is null)
+        {
+            return false;
+        }
+
+        eventEntry.OriginalContent = null;
+        eventEntry.Revisions = null;
+        return true;
+    }
 
     EventCursor CreateCursor(IQueryable<EventEntry> query, DbContextScope<EventSequenceDbContext> scope, CancellationToken cancellationToken)
     {
