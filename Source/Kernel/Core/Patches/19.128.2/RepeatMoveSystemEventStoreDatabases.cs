@@ -23,7 +23,7 @@ namespace Cratis.Chronicle.Patches;
 public class RepeatMoveSystemEventStoreDatabases(IStorage storage, ILogger<RepeatMoveSystemEventStoreDatabases> logger) : ICanApplyPatch
 {
     /// <inheritdoc/>
-    public SemanticVersion Version => new(20, 1, 0);
+    public SemanticVersion Version => new(19, 128, 2);
 
     /// <inheritdoc/>
     public async Task Up()

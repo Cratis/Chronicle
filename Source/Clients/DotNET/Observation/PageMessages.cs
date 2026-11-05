@@ -55,5 +55,5 @@ internal static class PageMessages
     public static IReadOnlyList<ReducerPartition> PartitionsOf(this ReduceOperationMessage operation) =>
         operation.Partitions.Count > 0
             ? [.. operation.Partitions]
-            : [new ReducerPartition { Partition = operation.Partition ?? string.Empty, InitialState = operation.InitialState, Events = operation.Events }];
+            : [new ReducerPartition { Partition = operation.Partition ?? string.Empty, InitialState = operation.InitialState, InitialStateUnchanged = operation.InitialStateUnchanged, Events = operation.Events }];
 }

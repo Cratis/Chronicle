@@ -31,7 +31,7 @@ public class ReactorObserverSubscriber(
     IReactorMediator reactorMediator,
     ILogger<ReactorObserverSubscriber> logger,
     TimeProvider? timeProvider = null,
-    IOptions<ChronicleOptions>? options = null) : Grain, IReactorObserverSubscriber
+    IOptions<ChronicleOptions>? options = null) : Grain, IReactorObserverSubscriber, IReactorPageObserverSubscriber
 {
     readonly ClientObserverSubscriberMetrics _metrics = new(options?.Value?.Telemetry.MetricNames ?? MetricNames.Legacy);
     readonly TimeProvider _clock = timeProvider ?? TimeProvider.System;
@@ -88,4 +88,50 @@ public class ReactorObserverSubscriber(
             return ObserverSubscriberResult.Failed(EventSequenceNumber.Unavailable, "Task was cancelled");
         }
     }
+
+    /// <inheritdoc/>
+    public async Task<ObserverPageResult> OnNextPartitions(IReadOnlyList<ObserverPartitionBatch> batches, ObserverSubscriberContext context)
+    {
+        var deliveryWait = new ClientDeliveryWait(_clock, logger, _key, ObserverSubscriberKey.AllPartitions, _metrics);
+        if (deliveryWait.Expired(context))
+        {
+            return Settled(batches, ObserverSubscriberResult.Failed(EventSequenceNumber.Unavailable, "Delivery expired before dispatch"));
+        }
+
+        if (context.Metadata is not ConnectedClient connectedClient)
+        {
+            throw new MissingStateForReactorSubscriber(_key.ObserverId);
+        }
+
+        foreach (var @event in batches.SelectMany(_ => _.Events))
+        {
+            logger.EventReceived(
+                _key.ObserverId,
+                _key.EventStore,
+                _key.Namespace,
+                @event.Context.EventType.Id,
+                _key.EventSequenceId,
+                @event.Context.SequenceNumber);
+        }
+
+        var completions = batches.ToDictionary(_ => _.Partition, _ => new TaskCompletionSource<ObserverSubscriberResult>(TaskCreationOptions.RunContinuationsAsynchronously));
+        try
+        {
+            reactorMediator.OnNextPage(_key.ObserverId, connectedClient.ConnectionId, _key.EventStore, _key.Namespace, batches, completions, context.RemainingDeliveryTime(_clock), context.Origin);
+            var results = await deliveryWait.For(Task.WhenAll(completions.Select(async _ => (_.Key, Result: await _.Value.Task))), answers => answers.Length > 0 ? answers[0].Result : ObserverSubscriberResult.Ok(EventSequenceNumber.Unavailable), context);
+            return new(batches.ToDictionary(_ => _.Partition, _ => results.First(r => r.Key.Equals(_.Partition)).Result.ResumingDeferralWithin(_.Events)));
+        }
+        catch (AbandonedDeliveryDiscarded)
+        {
+            return Settled(batches, ObserverSubscriberResult.Failed(EventSequenceNumber.Unavailable, "Abandoned delivery result discarded"));
+        }
+        catch (TaskCanceledException taskCanceledException)
+        {
+            logger.OnNextException(taskCanceledException, _key.ObserverId, _key.EventStore, _key.Namespace);
+            return Settled(batches, ObserverSubscriberResult.Failed(EventSequenceNumber.Unavailable, "Task was cancelled"));
+        }
+    }
+
+    static ObserverPageResult Settled(IReadOnlyList<ObserverPartitionBatch> batches, ObserverSubscriberResult result) =>
+        new(batches.ToDictionary(_ => _.Partition, _ => result));
 }

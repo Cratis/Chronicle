@@ -15,7 +15,7 @@ public class when_applying_up : given.a_repeat_move_patch
     async Task Because() => await _patch.Up();
 
     [Fact] async Task should_move_the_system_event_store_to_its_configured_location() => await _storage.Received(1).MoveSystemEventStoreTo(SystemEventStoreLocation.Configured);
-    [Fact] void should_run_after_the_release_it_ships_after() => (_patch.Version > new SemanticVersion(20, 0, 0)).ShouldBeTrue();
+    [Fact] void should_run_after_the_release_it_ships_after() => (_patch.Version > new SemanticVersion(19, 128, 1)).ShouldBeTrue();
 
     [Fact] void should_not_share_the_name_of_the_patch_it_repeats() => ((ICanApplyPatch)_patch).Name.ShouldNotEqual(nameof(MoveSystemEventStoreDatabases));
 }

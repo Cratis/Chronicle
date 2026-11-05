@@ -33,4 +33,9 @@ public record ReactorDefinition(
     /// Gets a value indicating whether the reactor begins at the tail of the event sequence when it is registered for the first time.
     /// </summary>
     public bool StartAtTail { get; init; }
+
+    /// <summary>
+    /// Gets the page delivery the client declared, or null when it receives one partition per delivery.
+    /// </summary>
+    public PageDeliveryDefinition? PageDelivery { get; init; }
 }

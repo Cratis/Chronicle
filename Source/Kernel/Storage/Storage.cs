@@ -33,6 +33,10 @@ public class Storage(
         clusterStorage.ReadGenerationFloors();
 
     /// <inheritdoc/>
+    public Task<string?> FindMisplacedSystemEventStoreData() =>
+        systemEventStoreRelocation?.FindMisplacedData() ?? Task.FromResult<string?>(null);
+
+    /// <inheritdoc/>
     public Task MoveSystemEventStoreTo(SystemEventStoreLocation location) =>
         systemEventStoreRelocation?.MoveTo(location) ?? Task.CompletedTask;
 
