@@ -29,7 +29,8 @@ namespace Cratis.Chronicle.Storage.Graphs;
 /// projection. A replay is mark-and-sweep: <see cref="BeginReplay"/> starts a new generation, an element of the owner that
 /// is not yet stamped with it is stale and reads as absent, so the first write to it in the replay replaces it, and
 /// <see cref="EndReplay"/> deletes every element of the owner that is still stale. Elements the projection never declared
-/// are never touched, which includes nodes that edges created.
+/// are never touched, which includes nodes that edges created. A stale node that edges of other owners still point at is
+/// not deleted but kept as a bare node, because an edge cannot exist without its end nodes.
 /// </para>
 /// <para>
 /// <b>Reads while replaying.</b> <see cref="FindNode"/> and <see cref="FindEdge"/> are what the engine reads counters
