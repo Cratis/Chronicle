@@ -34,12 +34,18 @@ public static class WellKnownCapabilities
     public static readonly Capability ManageComplianceKeys = "chronicle.compliance.key-lifecycle";
 
     /// <summary>
+    /// Reading the alert incidents of an event store.
+    /// </summary>
+    public static readonly Capability ReadAlerts = "chronicle.alerts.read";
+
+    /// <summary>
     /// Gets the capabilities decided for an event store namespace.
     /// </summary>
     internal static readonly IReadOnlySet<Capability> StoreScoped = new HashSet<Capability>
     {
         ReleaseCompliance,
-        ManageComplianceKeys
+        ManageComplianceKeys,
+        ReadAlerts
     };
 
     /// <summary>

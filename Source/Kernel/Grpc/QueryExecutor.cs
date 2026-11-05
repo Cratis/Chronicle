@@ -71,7 +71,7 @@ internal static class QueryExecutor
     internal static IObservable<QueryResult<TData>> Execute<TData>(CallContext callContext, QueryRouting routing, Func<IObservable<TData>> query, Action<Exception>? onError = null)
     {
         if (routing.HasSeparator) return Observable.Return(SeparatorRefused<TData>());
-        if (!routing.TargetsSystem) return Execute(query, onError);
+        if (!routing.TargetsSystem) return routing.Capability is null ? Execute(query, onError) : ExecuteObservableForStore(callContext, routing, query, onError);
 
         return ExecuteObservableForSystem(callContext, query, onError);
     }
@@ -89,10 +89,17 @@ internal static class QueryExecutor
     internal static Task<QueryResult<TData>> Execute<TData>(CallContext callContext, QueryRouting routing, Func<Task<TData>> query, Action<Exception>? onError = null)
     {
         if (routing.HasSeparator) return Task.FromResult(SeparatorRefused<TData>());
-        if (!routing.TargetsSystem) return Execute(query, onError);
+        if (!routing.TargetsSystem) return routing.Capability is null ? Execute(query, onError) : ExecuteForStore(callContext, routing, query, onError);
 
         return ExecuteForSystem(callContext, query, onError);
     }
+
+    static IObservable<QueryResult<TData>> ExecuteObservableForStore<TData>(CallContext callContext, QueryRouting routing, Func<IObservable<TData>> query, Action<Exception>? onError) =>
+        Observable.FromAsync(() => StoreCapabilityGuard.Permits(callContext, routing))
+            .SelectMany(permitted => permitted ? Execute(query, onError) : Observable.Return(SystemRefused<TData>()));
+
+    static async Task<QueryResult<TData>> ExecuteForStore<TData>(CallContext callContext, QueryRouting routing, Func<Task<TData>> query, Action<Exception>? onError) =>
+        await StoreCapabilityGuard.Permits(callContext, routing) ? await Execute(query, onError) : SystemRefused<TData>();
 
     static IObservable<QueryResult<TData>> ExecuteObservableForSystem<TData>(CallContext callContext, Func<IObservable<TData>> query, Action<Exception>? onError) =>
         Observable.FromAsync(() => SystemStoreGuard.IsCallerAllowed(callContext))

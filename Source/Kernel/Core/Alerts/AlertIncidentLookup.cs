@@ -16,6 +16,7 @@ namespace Cratis.Chronicle.Alerts;
 /// <param name="Incident">Matching open incident, or normal not-found.</param>
 [ReadModel]
 [BelongsTo(WellKnownServices.Alerts)]
+[StoreCapability("chronicle.alerts.read")]
 public record AlertIncidentLookup(
     AlertIncidentsReadinessState Status,
     AlertIncidentDetails? Incident)

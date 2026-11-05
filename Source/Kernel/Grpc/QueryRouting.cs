@@ -14,7 +14,8 @@ namespace Cratis.Chronicle.Services;
 /// <param name="Third">The third further routing component.</param>
 /// <param name="Fourth">The fourth further routing component.</param>
 /// <param name="Fifth">The fifth further routing component.</param>
-internal readonly record struct QueryRouting(string? Store, string? First = null, string? Second = null, string? Third = null, string? Fourth = null, string? Fifth = null)
+/// <param name="Capability">The capability the caller is decided for at the addressed event store, or null when the query needs none.</param>
+internal readonly record struct QueryRouting(string? Store, string? First = null, string? Second = null, string? Third = null, string? Fourth = null, string? Fifth = null, string? Capability = null)
 {
     /// <summary>
     /// Gets a value indicating whether the query addresses the System event store.
