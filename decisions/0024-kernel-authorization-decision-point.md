@@ -79,3 +79,23 @@ immutable grant set, with a benchmark.
 - Scoped grants.
 - Re-checks at execution time for asynchronous operations.
 - Exposing outcomes to clients.
+
+## Addendum: the exception mechanism (skeleton)
+
+Status: pending. The default values below are not decided; they are recorded here so the mechanism is one pattern.
+
+Where a behavior has an enforcing form that cannot be the default yet, it follows one pattern:
+
+- **A flag.** Each is a boolean under `Authentication`, with a one-line public default constant beside it, so changing a default is a one-line change that the specs cover for both values.
+- **Independent flags.** A flag governs its own scope. A broader flag that is on still enforces its broader scope.
+- **Temporary opt-outs.** An opt-out exists to ease an upgrade, is documented with the release that removes it, and does not widen what any other flag covers.
+- **Startup notices.** A flag whose default differs from the enforcing form may log one notice at startup stating which behavior is in effect. The notice carries no caller data.
+- **Decisions are logged.** In the non-enforcing form a decision that would have been refused is logged, and in the enforcing form the refusal is logged.
+
+| Flag | Scope | Default (pending) |
+| --- | --- | --- |
+| `EnforceAdministratorPolicyForOperations` | operational mutations | pending |
+| `EnforceComplianceCapabilities` | compliance operations per event store | pending |
+| `EnforceDestructiveOperations` | System-store destructive operations and cross-store compliance key operations | pending |
+
+Open for the addendum: the release in which each default changes, the opt-out period, and the wording of the startup notices.
