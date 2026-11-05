@@ -99,7 +99,7 @@ internal sealed class ReactorDispatcher(
         {
             if (handle is null)
             {
-                await HandleReplayNotification(handler, events.ReplayState, events.Partition);
+                await HandleReplayNotification(handler, @namespace, events.ReplayState, events.Partition);
             }
             return;
         }
@@ -131,6 +131,20 @@ internal sealed class ReactorDispatcher(
             return;
         }
 
+        ObserverDelivery delivery;
+        try
+        {
+            delivery = ObserverDelivery.Enter(serviceProvider, DeliveryContextFor(handler, @namespace));
+        }
+        catch (Exception enterException)
+        {
+            span?.Activity?.RecordFailure(enterException);
+            outcomes.AddRange(partitions.Select(_ => PartitionOutcome.Failed(_.Partition ?? string.Empty, enterException)));
+            PublishResult();
+            return;
+        }
+
+        using var deliveryScope = delivery;
         await using var serviceProviderScope = serviceProvider.CreateAsyncScope();
         var activatedReactorResult = artifactActivator.Activate(serviceProviderScope.ServiceProvider, handler.ReactorType);
         if (activatedReactorResult.TryGetException(out var exception))
@@ -426,8 +440,23 @@ internal sealed class ReactorDispatcher(
         }
     }
 
-    async Task HandleReplayNotification(ReactorHandler handler, ReplayState replayState, string partition)
+    ObserverDeliveryContext DeliveryContextFor(ReactorHandler handler, EventStoreNamespaceName @namespace) =>
+        new(eventStore.Name, @namespace, new(handler.Id.Value), ObserverDeliveryKind.Reactor, handler.ReactorType);
+
+    async Task HandleReplayNotification(ReactorHandler handler, EventStoreNamespaceName @namespace, ReplayState replayState, string partition)
     {
+        ObserverDelivery delivery;
+        try
+        {
+            delivery = ObserverDelivery.Enter(serviceProvider, DeliveryContextFor(handler, @namespace));
+        }
+        catch (Exception enterException)
+        {
+            logger.FailedEnteringDeliveryScopeForReactorReplayNotification(enterException, handler.Id, replayState);
+            return;
+        }
+
+        using var deliveryScope = delivery;
         await using var serviceProviderScope = serviceProvider.CreateAsyncScope();
         var activatedReactorResult = artifactActivator.Activate(serviceProviderScope.ServiceProvider, handler.ReactorType);
         if (activatedReactorResult.TryGetException(out var ex))

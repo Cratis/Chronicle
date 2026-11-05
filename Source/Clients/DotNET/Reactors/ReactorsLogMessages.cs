@@ -53,4 +53,7 @@ internal static partial class ReactorsLogMessages
 
     [LoggerMessage(LogLevel.Error, "Failed to activate Reactor '{ReactorId}' for replay notification '{ReplayState}'")]
     internal static partial void FailedActivatingReactorForReplayNotification(this ILogger<Reactors> logger, Exception ex, ReactorId reactorId, ReplayState replayState);
+
+    [LoggerMessage(LogLevel.Error, "Failed to enter the delivery scope for Reactor {ReactorId} and replay notification {ReplayState}")]
+    internal static partial void FailedEnteringDeliveryScopeForReactorReplayNotification(this ILogger<Reactors> logger, Exception ex, ReactorId reactorId, ReplayState replayState);
 }
