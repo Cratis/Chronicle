@@ -199,9 +199,10 @@ public class ConnectionLifecycle(ILogger<ConnectionLifecycle> logger) : IConnect
         {
             while (true)
             {
-                // Logged on both paths: the connection holds its handshake here before it ever reaches Connected, so
-                // this is where the next generation is actually held back behind the disconnect.
-                logger.WaitingForDisconnectToComplete();
+                if (connecting)
+                {
+                    logger.WaitingForDisconnectToComplete();
+                }
 
                 await fence.WaitAsync(linked.Token);
 
