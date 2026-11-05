@@ -9,12 +9,13 @@ namespace Cratis.Chronicle.Clients;
 /// Represents the identity of the caller that opened a client connection.
 /// </summary>
 /// <param name="Issuer">The issuer of the subject claim.</param>
-/// <param name="Subject">The subject of the caller. Empty for the well-known owners.</param>
+/// <param name="Subject">The subject of the caller, or the client identifier when there is no subject. Empty for the well-known owners.</param>
+/// <param name="IsClient">Whether <paramref name="Subject"/> is a client identifier rather than a subject.</param>
 /// <remarks>
-/// Both parts are compared with ordinal string equality. The well-known owners have an empty subject, so they can
-/// never equal an owner derived from a real principal.
+/// All parts are compared with ordinal equality. The well-known owners have an empty subject, so they can
+/// never equal an owner derived from a real principal, and a client never equals a subject with the same value.
 /// </remarks>
-public readonly record struct ConnectionOwner(string Issuer, string Subject)
+public readonly record struct ConnectionOwner(string Issuer, string Subject, bool IsClient = false)
 {
     /// <summary>
     /// Gets the owner of every connection while authentication is disabled.
@@ -40,14 +41,17 @@ public readonly record struct ConnectionOwner(string Issuer, string Subject)
     /// Derives the owner from a principal.
     /// </summary>
     /// <param name="principal">The <see cref="ClaimsPrincipal"/>, if any.</param>
-    /// <returns>The <see cref="ConnectionOwner"/>, or <see cref="Unidentified"/> when the principal is not authenticated or has no subject.</returns>
+    /// <returns>The <see cref="ConnectionOwner"/>, or <see cref="Unidentified"/> when the principal is not authenticated or has neither a subject nor a client identifier.</returns>
     public static ConnectionOwner From(ClaimsPrincipal? principal)
     {
         if (principal?.Identity?.IsAuthenticated is not true) return Unidentified;
 
-        var claim = principal.FindFirst("sub") ?? principal.FindFirst(ClaimTypes.NameIdentifier);
-        if (claim is null || string.IsNullOrEmpty(claim.Value)) return Unidentified;
+        var subject = principal.FindFirst("sub") ?? principal.FindFirst(ClaimTypes.NameIdentifier);
+        if (subject is not null && !string.IsNullOrEmpty(subject.Value)) return new(subject.Issuer, subject.Value);
 
-        return new(claim.Issuer, claim.Value);
+        var client = principal.FindFirst("azp") ?? principal.FindFirst("client_id");
+        if (client is null || string.IsNullOrEmpty(client.Value)) return Unidentified;
+
+        return new(client.Issuer, client.Value, true);
     }
 }
