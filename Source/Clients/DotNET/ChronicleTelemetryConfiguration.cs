@@ -11,14 +11,14 @@ namespace Cratis.Chronicle;
 public sealed record ChronicleTelemetryConfiguration(Action<ChronicleTelemetryOptions> Configure)
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="ChronicleTelemetryConfiguration"/> class that leaves the telemetry defaults unchanged.
+    /// Initializes a new instance of the <see cref="ChronicleTelemetryConfiguration"/> class that applies no changes.
     /// </summary>
     /// <remarks>
-    /// A container that binds this type without an <see cref="Action{T}"/> of <see cref="ChronicleTelemetryOptions"/> registered uses this constructor,
-    /// so a host that never calls WithTelemetry starts with the telemetry defaults.
+    /// Gives the container a constructor it can always satisfy, so a host whose type discovery still registers this
+    /// carrier by convention starts instead of failing to resolve the callback.
     /// </remarks>
     public ChronicleTelemetryConfiguration()
-        : this(_ => { })
+        : this(static _ => { })
     {
     }
 }

@@ -18,11 +18,13 @@ namespace Cratis.Chronicle.Storage;
 /// <param name="systemStorage">The <see cref="ISystemStorage"/> instance.</param>
 /// <param name="sinkFactories"><see cref="ISinkFactory"/> instances.</param>
 /// <param name="gate">The <see cref="IResourceNameGate"/> checking event store names.</param>
+/// <param name="systemEventStoreRelocation">The <see cref="ISystemEventStoreRelocation"/> of the storage provider, when it has one.</param>
 public class Storage(
     IClusterStorage clusterStorage,
     ISystemStorage systemStorage,
     IInstancesOf<ISinkFactory> sinkFactories,
-    IResourceNameGate gate) : IStorage
+    IResourceNameGate gate,
+    ISystemEventStoreRelocation? systemEventStoreRelocation = null) : IStorage
 {
     /// <summary>
     /// The cached event stores, keyed case-insensitively so case variants share one slot; the entry keeps the owner's exact name.
@@ -35,6 +37,10 @@ public class Storage(
     /// <inheritdoc/>
     public Task<IReadOnlyDictionary<EventStoreName, Concepts.Projections.Generations.Enablement.GenerationFloor>> ReadGenerationFloors() =>
         clusterStorage.ReadGenerationFloors();
+
+    /// <inheritdoc/>
+    public Task MoveSystemEventStoreTo(SystemEventStoreLocation location) =>
+        systemEventStoreRelocation?.MoveTo(location) ?? Task.CompletedTask;
 
     /// <inheritdoc/>
     public async Task<IEnumerable<EventStoreName>> GetEventStores() => (await clusterStorage.GetEventStores()).Where(IsListed);

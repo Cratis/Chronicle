@@ -116,7 +116,9 @@ Chronicle keeps its own state, such as the System event log and the observers th
 For environment-variable configuration, use `Cratis__Chronicle__Storage__SystemDatabaseName`.
 
 :::caution[Upgrading moves the System event store's databases]
-Kernels before 19.117 named the System event store's databases `System+es`, `System+es+<namespace>` and `System`. On its first start, 19.117 moves them to the configured name as a patch: it copies every collection with its indexes into the new database and then drops the old one. Take a backup before upgrading. A kernel older than 19.117 looks for the old names, so after the move it no longer finds the System event store's data. To keep the old names, set `storage.systemDatabaseName` to `System` before upgrading; nothing is moved then. The patch runs once, so changing the name later does not move the data again.
+Kernels before 19.117 named the System event store's databases `System+es`, `System+es+<namespace>` and `System`. On its first start, a newer kernel moves them to the configured name as a patch: it copies every collection with its indexes into the new database, confirms that each collection arrived, and only then drops the old database. A database whose copy cannot be confirmed is kept, with a warning in the log, so nothing is lost to a move that came up short. Take a backup before upgrading.
+
+Releases 19.117 to 20.0 recorded the patch as applied without moving anything, which left the old databases in place and the kernel running against empty new ones. 20.1 repeats the move; it keeps whatever the kernel wrote under the new name, copies what is missing, and drops the old databases. A kernel older than 19.117 looks for the old names, so after the move it no longer finds the System event store's data. To keep the old names, set `storage.systemDatabaseName` to `System` before upgrading; nothing is moved then. A move runs once per patch, so changing the name later does not move the data again.
 :::
 
 ## PostgreSQL
