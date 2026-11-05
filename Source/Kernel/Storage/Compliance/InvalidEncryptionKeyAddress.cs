@@ -11,4 +11,4 @@ namespace Cratis.Chronicle.Storage.Compliance;
 /// </remarks>
 /// <param name="component">The kind of component that was rejected, for example <c language="csharp">identifier</c>.</param>
 public class InvalidEncryptionKeyAddress(string component)
-    : Exception($"The {component} of an encryption key address is empty, too long or not valid text.");
+    : EncryptionKeyIdentifierRefused($"The {component} of an encryption key address is empty, too long or not valid text.");

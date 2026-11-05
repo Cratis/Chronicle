@@ -438,7 +438,7 @@ public class CompositeEncryptionKeyStorage : IEncryptionKeyStorage, IEvictEncryp
 
     void LogFailure(Exception error, Action log)
     {
-        if (error is EncryptionKeyIdentifierUnderReview)
+        if (error is EncryptionKeyIdentifierRefused)
         {
             // A store that refuses the identifier is never outvoted by one that has no opinion on it.
             _logger.InnerStoreRefusedIdentifier();

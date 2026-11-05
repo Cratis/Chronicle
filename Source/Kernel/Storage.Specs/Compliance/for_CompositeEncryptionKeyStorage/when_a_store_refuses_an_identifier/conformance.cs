@@ -10,6 +10,7 @@ namespace Cratis.Chronicle.Storage.Compliance.for_CompositeEncryptionKeyStorage.
 public abstract class conformance : given.two_key_stores
 {
     given.CapturingLogger<CompositeEncryptionKeyStorage> _logger;
+    Exception _refusal;
     Exception _read;
     Exception _latest;
     Exception _has;
@@ -22,21 +23,24 @@ public abstract class conformance : given.two_key_stores
 
     void Establish()
     {
+        _refusal = Refusal();
         var refusing = Substitute.For<IEncryptionKeyStorage>();
-        refusing.TryGetFor(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<EncryptionKeyIdentifier>(), Arg.Any<EncryptionKeyRevision?>()).ThrowsAsync(new EncryptionKeyIdentifierUnderReview());
-        refusing.TryGetLatestFor(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<EncryptionKeyIdentifier>()).ThrowsAsync(new EncryptionKeyIdentifierUnderReview());
-        refusing.HasFor(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<EncryptionKeyIdentifier>(), Arg.Any<EncryptionKeyRevision?>()).ThrowsAsync(new EncryptionKeyIdentifierUnderReview());
-        refusing.GetErasureFor(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<EncryptionKeyIdentifier>()).ThrowsAsync(new EncryptionKeyIdentifierUnderReview());
-        refusing.DeleteFor(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<EncryptionKeyIdentifier>(), Arg.Any<EncryptionKeyRevision?>()).ThrowsAsync(new EncryptionKeyIdentifierUnderReview());
-        refusing.RecordErasureFor(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<EncryptionKeyIdentifier>()).ThrowsAsync(new EncryptionKeyIdentifierUnderReview());
-        refusing.AllowNewKeyFor(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<EncryptionKeyIdentifier>()).ThrowsAsync(new EncryptionKeyIdentifierUnderReview());
-        refusing.SaveFor(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<EncryptionKeyIdentifier>(), Arg.Any<EncryptionKey>(), Arg.Any<EncryptionKeyRevision?>()).ThrowsAsync(new EncryptionKeyIdentifierUnderReview());
-        refusing.GetOrAddFor(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<EncryptionKeyIdentifier>(), Arg.Any<EncryptionKey>()).ThrowsAsync(new EncryptionKeyIdentifierUnderReview());
+        refusing.TryGetFor(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<EncryptionKeyIdentifier>(), Arg.Any<EncryptionKeyRevision?>()).ThrowsAsync(_refusal);
+        refusing.TryGetLatestFor(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<EncryptionKeyIdentifier>()).ThrowsAsync(_refusal);
+        refusing.HasFor(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<EncryptionKeyIdentifier>(), Arg.Any<EncryptionKeyRevision?>()).ThrowsAsync(_refusal);
+        refusing.GetErasureFor(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<EncryptionKeyIdentifier>()).ThrowsAsync(_refusal);
+        refusing.DeleteFor(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<EncryptionKeyIdentifier>(), Arg.Any<EncryptionKeyRevision?>()).ThrowsAsync(_refusal);
+        refusing.RecordErasureFor(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<EncryptionKeyIdentifier>()).ThrowsAsync(_refusal);
+        refusing.AllowNewKeyFor(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<EncryptionKeyIdentifier>()).ThrowsAsync(_refusal);
+        refusing.SaveFor(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<EncryptionKeyIdentifier>(), Arg.Any<EncryptionKey>(), Arg.Any<EncryptionKeyRevision?>()).ThrowsAsync(_refusal);
+        refusing.GetOrAddFor(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<EncryptionKeyIdentifier>(), Arg.Any<EncryptionKey>()).ThrowsAsync(_refusal);
         _logger = new();
         _composite = Compose(_logger, refusing);
     }
 
     protected abstract CompositeEncryptionKeyStorage Compose(given.CapturingLogger<CompositeEncryptionKeyStorage> logger, IEncryptionKeyStorage refusing);
+
+    protected virtual Exception Refusal() => new EncryptionKeyIdentifierUnderReview();
 
     async Task Because()
     {
@@ -51,15 +55,15 @@ public abstract class conformance : given.two_key_stores
         _provision = await Catch.Exception(() => _composite.GetOrAddFor(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, _identifier, KeyNamed("provisioned")));
     }
 
-    [Fact] public void should_refuse_a_read() => _read.ShouldBeOfExactType<EncryptionKeyIdentifierUnderReview>();
-    [Fact] public void should_refuse_a_latest_read() => _latest.ShouldBeOfExactType<EncryptionKeyIdentifierUnderReview>();
-    [Fact] public void should_refuse_a_presence_check() => _has.ShouldBeOfExactType<EncryptionKeyIdentifierUnderReview>();
-    [Fact] public void should_refuse_an_erasure_lookup() => _erasure.ShouldBeOfExactType<EncryptionKeyIdentifierUnderReview>();
-    [Fact] public void should_refuse_a_delete() => _delete.ShouldBeOfExactType<EncryptionKeyIdentifierUnderReview>();
-    [Fact] public void should_refuse_recording_an_erasure() => _record.ShouldBeOfExactType<EncryptionKeyIdentifierUnderReview>();
-    [Fact] public void should_refuse_allowing_a_new_key() => _allow.ShouldBeOfExactType<EncryptionKeyIdentifierUnderReview>();
-    [Fact] public void should_refuse_a_save() => _save.ShouldBeOfExactType<EncryptionKeyIdentifierUnderReview>();
-    [Fact] public void should_refuse_provisioning_on_the_primary() => _provision.ShouldBeOfExactType<EncryptionKeyIdentifierUnderReview>();
+    [Fact] public void should_refuse_a_read() => _read.ShouldBeSame(_refusal);
+    [Fact] public void should_refuse_a_latest_read() => _latest.ShouldBeSame(_refusal);
+    [Fact] public void should_refuse_a_presence_check() => _has.ShouldBeSame(_refusal);
+    [Fact] public void should_refuse_an_erasure_lookup() => _erasure.ShouldBeSame(_refusal);
+    [Fact] public void should_refuse_a_delete() => _delete.ShouldBeSame(_refusal);
+    [Fact] public void should_refuse_recording_an_erasure() => _record.ShouldBeSame(_refusal);
+    [Fact] public void should_refuse_allowing_a_new_key() => _allow.ShouldBeSame(_refusal);
+    [Fact] public void should_refuse_a_save() => _save.ShouldBeSame(_refusal);
+    [Fact] public void should_refuse_provisioning_on_the_primary() => _provision.ShouldBeSame(_refusal);
 
     [Fact]
     public void should_not_name_the_identifier_in_any_exception() =>
