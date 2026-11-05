@@ -189,7 +189,8 @@ public static class ChronicleServerSiloBuilderExtensions
                 new Cratis.Chronicle.Services.Compliance.ComplianceService(
                     grainFactory,
                     sp.GetRequiredService<IJsonSchemaMetadataManager>(),
-                    sp.GetRequiredService<ILogger<Cratis.Chronicle.Services.Compliance.ComplianceService>>()),
+                    sp.GetRequiredService<ILogger<Cratis.Chronicle.Services.Compliance.ComplianceService>>(),
+                    sp.GetRequiredService<Cratis.Chronicle.Services.Compliance.ComplianceAuthorization>()),
                 ActivatorUtilities.CreateInstance<Cratis.Chronicle.Services.EventStores.EventStores>(sp),
                 ActivatorUtilities.CreateInstance<Cratis.Chronicle.Services.Namespaces.Namespaces>(sp),
                 ActivatorUtilities.CreateInstance<Cratis.Chronicle.Services.Recommendations.Recommendations>(sp),

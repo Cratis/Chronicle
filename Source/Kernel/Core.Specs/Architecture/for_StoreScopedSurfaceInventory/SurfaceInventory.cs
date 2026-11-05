@@ -35,6 +35,8 @@ public static class SurfaceInventory
         ["gRPC:Compliance.ICompliance.Release"] = new(StoreRead, "Returns released content."),
         ["gRPC:Compliance.ICompliance.DeleteEncryptionKey"] = new(StoreManage),
         ["gRPC:Compliance.ICompliance.AllowNewEncryptionKey"] = new(StoreManage),
+        ["gRPC:Compliance.ICompliance.DeleteEncryptionKeyWithCoverage"] = new(StoreManage),
+        ["gRPC:Compliance.ICompliance.AllowNewEncryptionKeyWithCoverage"] = new(StoreManage),
         ["gRPC:Events.Constraints.IConstraints.Register"] = new(StoreManage),
         ["gRPC:EventSequences.IEventSequenceQueries.IsStreamCompleted"] = new(StoreRead),
         ["gRPC:EventSources.IEventSources.RegisterEventSources"] = new(StoreManage),

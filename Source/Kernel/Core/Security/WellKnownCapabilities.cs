@@ -24,6 +24,25 @@ public static class WellKnownCapabilities
     public static readonly Capability AccessSystemStore = "chronicle.event-store.access";
 
     /// <summary>
+    /// Releasing protected content in an event store namespace.
+    /// </summary>
+    public static readonly Capability ReleaseCompliance = "chronicle.compliance.release";
+
+    /// <summary>
+    /// Erasing or authorizing a new encryption key in an event store namespace.
+    /// </summary>
+    public static readonly Capability ManageComplianceKeys = "chronicle.compliance.key-lifecycle";
+
+    /// <summary>
+    /// Gets the capabilities decided for an event store namespace.
+    /// </summary>
+    internal static readonly IReadOnlySet<Capability> StoreScoped = new HashSet<Capability>
+    {
+        ReleaseCompliance,
+        ManageComplianceKeys
+    };
+
+    /// <summary>
     /// Gets the capabilities bundled by the administrator role.
     /// </summary>
     internal static readonly IReadOnlySet<Capability> Administrator = new HashSet<Capability>
