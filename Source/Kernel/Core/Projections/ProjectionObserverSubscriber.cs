@@ -353,7 +353,9 @@ public class ProjectionObserverSubscriber(
             }
 
             // Note: We don't want to send changesets if the projection is not active
-            if (changeset?.HasChanges == true && CanNotify(changeset.CurrentState))
+            // A run that only removes children from every parent changes no instance of its own: the parents are notified
+            // with their own state instead, so the removal event's partition never gets an empty model.
+            if (changeset?.HasChanges == true && !ChangesetChildRemovals.OnlyRemovesChildrenFromAll(changeset) && CanNotify(changeset.CurrentState))
             {
                 notification = CreateNotification(partition.ToString(), changeset, isNewInstance, lastSuccessfullyObservedEvent!);
             }
