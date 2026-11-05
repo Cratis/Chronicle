@@ -17,6 +17,16 @@ reserves connections. None of the changes alter a wire contract or a grain inter
   of other event stores. Callers allowed on the requested store still receive the list of stores that
   were not covered.
 
+## Store capabilities
+
+- **Alert queries are decided for the addressed event store.** Reading alerts requires the
+  `chronicle.alerts.read` capability at the event store the query addresses. The same decision applies
+  over gRPC and over HTTP.
+- **Users are not enrolled yet.** A user who has not been granted the capability on an ordinary event store
+  is allowed, and the decision is recorded in the log.
+- **Unknown capabilities and failed decisions are refused.** A capability that is not known, or a decision
+  that cannot be made, refuses the query.
+
 ## Caller identity
 
 - **Tokens without a subject are identified by `azp` or `client_id`.** A token that carries neither

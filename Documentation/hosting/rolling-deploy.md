@@ -69,6 +69,14 @@ recognize a persisted reason cannot safely replay that history. Do not roll back
 writing those grants. A roster without active administrators must be recovered through the server-local
 recovery configuration, not by disabling policy enforcement on a reachable node.
 
+## Connection reservation in a mixed-version cluster
+
+Updated nodes reserve a connection id across the cluster through a new grain. Nodes that have not been
+updated neither host this grain nor call it, so a connection id opened on such a node is not part of the
+reservation. Until every node is updated, the cluster-wide reservation is therefore incomplete, and each
+node still applies its own local connection ownership. Once the last older node is replaced, the
+reservation covers every connection. No action is needed beyond completing the rollout.
+
 ## Know what a starting node does
 
 Every node runs the same startup. Nothing in it is specific to the first node, so the order of your rollout decides which node does the work:

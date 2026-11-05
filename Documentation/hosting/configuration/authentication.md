@@ -27,6 +27,8 @@ The legacy `identityProvider.certificate` option is ignored; see [Identity Provi
 | audience | string | "chronicle" | Required audience for external-authority access tokens |
 | requireHttpsMetadata | bool | true | Require HTTPS when retrieving external-authority metadata |
 | enforceAdministratorPolicyForOperations | bool | false | Enforce administrator privilege for System-store operational recovery instead of auditing would-be denials |
+| enforceDestructiveOperations | bool | false | Refuse non-administrators the destructive operations on the System store or at kernel scope, and compliance key operations beyond the requested event store. When off, such operations are logged and allowed |
+| enforceComplianceCapabilities | bool | false | Require the compliance capability per event store for compliance operations. When off, decisions are audited only |
 | defaultAdminUsername | string | "admin" | Default admin username created on first startup when `adminUser` is not configured |
 | initialAdminSetupToken | string | null | Optional operator-provided token for initial password setup; use secret management |
 
