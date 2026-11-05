@@ -169,14 +169,26 @@ public class ClosedStreamsConstraintStorage(EventStoreName eventStore, EventStor
         }
 
         query = query.OrderBy(row => row.Owner).ThenBy(row => row.EventSourceId).ThenBy(row => row.EventSourceType)
-            .ThenBy(row => row.StreamType).ThenBy(row => row.StreamId).Skip(skip);
-        if (take is not null) query = query.Take(take.Value);
+            .ThenBy(row => row.StreamType).ThenBy(row => row.StreamId);
+
+        // Only SQL Server compares identifiers loosely, so only there are the rows checked again for an exact match
+        // before they are paged. Other providers page in the query exactly as before.
+        var exactInMemory = within is not null && context.DbContext.Database.IsSqlServer();
+        if (!exactInMemory)
+        {
+            query = query.Skip(skip);
+            if (take is not null) query = query.Take(take.Value);
+        }
 
         var all = await query.ToArrayAsync();
         if (within is not null)
         {
             var scope = within.Normalized();
-            all = [.. all.Where(row => IsOrdinalMatch(row, scope) || !row.ExactSpelling)];
+            if (exactInMemory)
+            {
+                all = [.. all.Where(row => !row.ExactSpelling || IsWithin(row, scope)).Skip(skip).Take(take ?? int.MaxValue)];
+            }
+
             ReportPending(all, [scope]);
         }
 
@@ -208,6 +220,12 @@ public class ClosedStreamsConstraintStorage(EventStoreName eventStore, EventStor
         && string.Equals(row.EventSourceType, scope.EventSourceType?.Value ?? string.Empty, StringComparison.Ordinal)
         && string.Equals(row.StreamType, scope.EventStreamType?.Value ?? string.Empty, StringComparison.Ordinal)
         && string.Equals(row.StreamId, scope.EventStreamId?.Value ?? string.Empty, StringComparison.Ordinal);
+
+    static bool IsWithin(ClosedStreamEntry row, ClosedStreamScope scope) =>
+        (scope.EventSourceId is null || string.Equals(row.EventSourceId, scope.EventSourceId.Value, StringComparison.Ordinal))
+        && (scope.EventSourceType is null || string.Equals(row.EventSourceType, scope.EventSourceType.Value, StringComparison.Ordinal))
+        && (scope.EventStreamType is null || string.Equals(row.StreamType, scope.EventStreamType.Value, StringComparison.Ordinal))
+        && (scope.EventStreamId is null || string.Equals(row.StreamId, scope.EventStreamId.Value, StringComparison.Ordinal));
 
     static ClosedStream ToClosure(ClosedStreamEntry row) => new(
         new(
