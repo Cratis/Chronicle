@@ -29,6 +29,7 @@ Use this table to decide how to upgrade:
 | --- | --- | --- |
 | From 19.111 or later | Yes | Replace nodes one at a time. Releases are checked in CI against the release before them. |
 | From a 19.x release before 19.111 | Yes | Stop every node, then start the new version. Older releases lack the patch-manager handover or have incompatible grain calls. |
+| From a release before 19.123.1 to 19.123.1 or later | No | Stop every node, then start the new version. The serializers were renamed from `Cratis.Orleans` to `Cratis.Choreography` in 19.123.1, and a node of either side cannot read a concept value written by the other. Replacing nodes one at a time crash-loops the new node and fills the old nodes with grain errors. A new node that finds such a release in the cluster logs a critical message and stops. |
 | To a new major | No | Stop every node, then start the new version. A major release may change grain calls. |
 
 To stop every node in Kubernetes, scale the deployment to zero and back, or use the `Recreate` strategy for that one upgrade. In Azure Container Apps, use single revision mode with no overlap. Stopping the old nodes first is safe; it is the overlap that fails.
