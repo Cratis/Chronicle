@@ -101,6 +101,7 @@ public class a_replay_observer_job : Specification
         loggerFactory.CreateLogger(Arg.Any<string>()).Returns(NullLogger.Instance);
 
         _observer = Substitute.For<IObserver>();
+        _observer.GetSubscription().Returns(ObserverSubscription.Unsubscribed);
         _silo.AddProbe(_ => _observer);
 
         _stateStorage = _silo.StorageManager.GetStorage<JobStateWithLastHandledEvent>(

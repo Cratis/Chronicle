@@ -114,7 +114,9 @@ public class ReplayObserver(
         State.FailedPartitionKeys = (await observer.GetFailedPartitionKeys()).Distinct().ToList();
         State.ReplayPartitionSteps.Clear();
 
-        if (request.ObserverType == ObserverType.Projection)
+        // An observer that takes pages spanning partitions is replayed in one walk, like a projection, so its pages are filled.
+        State.ReplayedInOneSweep = request.ObserverType == ObserverType.Projection || (await observer.GetSubscription()).DeliversPartitionPages;
+        if (State.ReplayedInOneSweep)
         {
             return
             [
@@ -354,7 +356,7 @@ public class ReplayObserver(
             {
                 // A projection's single ordered step covers every partition up to its own global watermark.
                 // Reactors and reducers have independent steps: only a successful result from that partition counts.
-                coveredPartitions = Request.ObserverType == ObserverType.Projection
+                coveredPartitions = Request.ObserverType == ObserverType.Projection || State.ReplayedInOneSweep
                     ? State.FailedPartitionKeys.ToDictionary(_ => _, _ => State.LastHandledEventSequenceNumber)
                     : State.ReplayPartitionSteps
                         .Where(_ => _.LastHandledEventSequenceNumber.IsActualValue)
