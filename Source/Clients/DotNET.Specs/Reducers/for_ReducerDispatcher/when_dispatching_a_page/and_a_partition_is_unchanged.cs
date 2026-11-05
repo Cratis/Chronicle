@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Contracts.Observation;
-using Cratis.Chronicle.Contracts.Observation.Reducers;
 using Cratis.Chronicle.Events;
 
 namespace Cratis.Chronicle.Reducers.for_ReducerDispatcher.when_dispatching_a_page;
