@@ -22,6 +22,12 @@ Each change tells you:
 
 The change carries the current read model state, not the previous state. If you need to detect a transition, keep the last value you saw for each key or react to the domain event with a reactor.
 
+### When a join removes children
+
+When a projection removes a child from every parent with `RemovedWithJoin`, a watcher receives one change for each parent that held the child. Each change carries the full state of that parent after the removal, and `Removed` is false. There is no per-child delta, and nothing is sent for the key of the removal event itself. A parent that is removed too only produces its own removal change.
+
+These changes are produced after the event is handled, so they can arrive after later changes. They are produced only while the projection is being watched.
+
 ## Watch a read model
 
 The read model type must be registered before you subscribe.

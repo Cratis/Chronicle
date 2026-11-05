@@ -34,6 +34,8 @@ When using `RemovedWithJoin<>()`:
 3. **Child lookup**: All projections with children joined on that key are found
 4. **Removal**: The matching child items are removed from all affected collections
 
+Watchers of the read model are notified once for each parent that held the child. See [When a join removes children](../../read-models/watching-read-models.mdx#when-a-join-removes-children).
+
 ## RemoveWithJoin with explicit keys
 
 You can specify which property to use as the key for removal:
