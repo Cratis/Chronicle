@@ -203,7 +203,7 @@ A [graph projection](../projections/graph-projections.mdx) writes nodes and edge
 | Sink type | Description |
 | --- | --- |
 | `InMemoryGraph` | Keeps the graph in memory. It is the executable reference for the graph sink semantics: operations, watermarks and replay. Use it for development and tests. |
-| `Neo4j` | The default graph sink type, `DefaultGraphSinkTypeId`. A projection that targets it needs the Neo4j graph sink to be available in the kernel; a graph sink type that is not available fails with `UnknownSink`. |
+| `Neo4j` | The default graph sink type, `DefaultGraphSinkTypeId`. It stores the graph in Neo4j, with a database per event store and namespace. See [Neo4j graph sink](neo4j.mdx). A graph sink type that is not available fails with `UnknownSink`. |
 
 ## Choosing a Sink
 
