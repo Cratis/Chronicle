@@ -4,7 +4,7 @@ description: A Chronicle sink is the storage backend where read model instances 
 ---
 # Sinks
 
-A sink is the storage backend where Chronicle writes read model instances produced by projections and reducers. Chronicle ships with two built-in sink types.
+A sink is the storage backend where Chronicle writes read model instances produced by projections and reducers. Chronicle ships with two built-in sink types for document and relational read models, and has graph sink types for [graph projections](../projections/graph-projections.mdx).
 
 :::note[Client coverage]
 Enabling/registering the SQL sink below is a .NET-hosting-specific DI registration step (`IServiceCollection`), matching the same client-startup pattern already noted elsewhere in this section (namespaces, migrations, connection-strings, event-store subscriptions). Which sink a read model uses is a server-side/kernel concern, not something the other client SDKs configure differently — see each client's own connection/startup options for the equivalent of "which event store/namespace to connect to."
@@ -195,6 +195,15 @@ The SQL sink is provided by the `Cratis.Chronicle.Storage.Sql` NuGet package. Ad
 <ChronicleClientTabs snippet="sinks/index/register-sql-storage" />
 
 Refer to the hosting documentation for full server setup details.
+
+## Graph sinks
+
+A [graph projection](../projections/graph-projections.mdx) writes nodes and edges instead of read model instances. It uses a graph sink, which implements `IGraphSink` instead of `ISink`. The graph sink types are:
+
+| Sink type | Description |
+| --- | --- |
+| `InMemoryGraph` | Keeps the graph in memory. It is the executable reference for the graph sink semantics: operations, watermarks and replay. Use it for development and tests. |
+| `Neo4j` | The default graph sink type, `DefaultGraphSinkTypeId`. A projection that targets it needs the Neo4j graph sink to be available in the kernel; a graph sink type that is not available fails with `UnknownSink`. |
 
 ## Choosing a Sink
 
