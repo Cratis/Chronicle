@@ -79,6 +79,7 @@ internal sealed class ComplianceService(IGrainFactory grainFactory, IJsonSchemaM
     {
         await SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace));
         var coverage = await authorization.KeyLifecycle("delete-key", request.EventStore, request.Namespace, context);
+        EnsureRequestedStoreAllowed(coverage);
         if (coverage.Allowed.Count > 0)
         {
             await GetPIIManager(request.EventStore, request.Namespace).DeleteEncryptionKeyIn(request.Identifier, coverage.Allowed.ToArray());
@@ -93,6 +94,7 @@ internal sealed class ComplianceService(IGrainFactory grainFactory, IJsonSchemaM
     {
         await SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace));
         var coverage = await authorization.KeyLifecycle("allow-new-key", request.EventStore, request.Namespace, context);
+        EnsureRequestedStoreAllowed(coverage);
         if (coverage.Allowed.Count > 0)
         {
             await GetPIIManager(request.EventStore, request.Namespace).AllowNewEncryptionKeyIn(request.Identifier, coverage.Allowed.ToArray());
@@ -100,6 +102,14 @@ internal sealed class ComplianceService(IGrainFactory grainFactory, IJsonSchemaM
 
         EnsureListed(coverage);
         return new() { NotCoveredEventStores = coverage.NotCovered.Select(store => store.Value).ToArray() };
+    }
+
+    static void EnsureRequestedStoreAllowed(ComplianceKeyCoverage coverage)
+    {
+        if (coverage.RequestedDenied)
+        {
+            throw new RpcException(new Status(StatusCode.PermissionDenied, "Compliance operation is not permitted."));
+        }
     }
 
     static void EnsureListed(ComplianceKeyCoverage coverage)

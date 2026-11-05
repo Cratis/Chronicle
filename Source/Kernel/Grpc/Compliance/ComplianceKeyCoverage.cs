@@ -11,4 +11,5 @@ namespace Cratis.Chronicle.Services.Compliance;
 /// <param name="Allowed">The authorized targets to mutate.</param>
 /// <param name="NotCovered">The targets that must not be mutated.</param>
 /// <param name="ListingFailed">Whether other eligible targets could not be listed.</param>
-public record ComplianceKeyCoverage(IReadOnlyList<EventStoreName> Allowed, IReadOnlyList<EventStoreName> NotCovered, bool ListingFailed = false);
+/// <param name="RequestedDenied">Whether the caller is not allowed on the requested event store itself.</param>
+public record ComplianceKeyCoverage(IReadOnlyList<EventStoreName> Allowed, IReadOnlyList<EventStoreName> NotCovered, bool ListingFailed = false, bool RequestedDenied = false);

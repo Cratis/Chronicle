@@ -49,4 +49,33 @@ public class when_using_legacy_key_rpcs : given.a_compliance_boundary
         if (allowNew) await _keyStore.Received(1).AllowNewKeyFor(EventStore, EventStoreNamespace, Identifier);
         else await _keyStore.Received(1).DeleteFor(EventStore, EventStoreNamespace, Identifier);
     }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task should_not_reveal_other_stores_when_the_requested_store_is_denied(bool allowNew)
+    {
+        Deny(EventStore);
+        var exception = await Catch.Exception(() => allowNew
+            ? _service.AllowNewEncryptionKey(new() { EventStore = EventStore, Namespace = EventStoreNamespace, Identifier = Identifier }, _context)
+            : _service.DeleteEncryptionKey(new() { EventStore = EventStore, Namespace = EventStoreNamespace, Identifier = Identifier }, _context));
+        var rpc = (RpcException)exception;
+        rpc.StatusCode.ShouldEqual(StatusCode.PermissionDenied);
+        rpc.Trailers.Count.ShouldEqual(0);
+        rpc.Status.Detail.ShouldNotContain(OtherEventStore.Value);
+        ShouldNotHaveTouched(EventStore);
+        ShouldNotHaveTouched(OtherEventStore);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task should_list_the_other_stores_when_only_they_are_denied(bool allowNew)
+    {
+        Deny(OtherEventStore);
+        var exception = await Catch.Exception(() => allowNew
+            ? _service.AllowNewEncryptionKey(new() { EventStore = EventStore, Namespace = EventStoreNamespace, Identifier = Identifier }, _context)
+            : _service.DeleteEncryptionKey(new() { EventStore = EventStore, Namespace = EventStoreNamespace, Identifier = Identifier }, _context));
+        ((RpcException)exception).Trailers.Any(entry => entry.Key == "not-covered-event-stores-bin").ShouldBeTrue();
+    }
 }

@@ -4,6 +4,7 @@
 using System.Security.Claims;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Security;
+using Grpc.Core;
 
 namespace Cratis.Chronicle.Services.Compliance.for_ComplianceService;
 
@@ -38,11 +39,12 @@ public class when_deciding_key_lifecycle_targets : given.a_compliance_boundary
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public async Task should_not_change_any_store_when_the_requested_store_is_denied(bool allowNew)
+    public async Task should_refuse_without_a_store_list_and_change_no_store_when_the_requested_store_is_denied(bool allowNew)
     {
         Deny(EventStore);
-        var notCovered = await Operate(allowNew);
-        notCovered.ShouldEqual([EventStore.Value, OtherEventStore.Value, ThirdEventStore.Value]);
+        var exception = await Catch.Exception(() => Operate(allowNew));
+        exception.ShouldBeOfExactType<RpcException>();
+        ((RpcException)exception).StatusCode.ShouldEqual(StatusCode.PermissionDenied);
         ShouldNotHaveTouched(EventStore);
         ShouldNotHaveTouched(OtherEventStore);
         ShouldNotHaveTouched(ThirdEventStore);

@@ -74,7 +74,7 @@ public class ComplianceAuthorization(
         var denied = results.Where(result => !result.IsAllowed).Select(result => result.Scope.EventStore!).ToArray();
 
         // A denied requested store makes this a denied call, not a command from a forbidden address.
-        if (denied.Contains((EventStoreName)eventStore)) return new([], targets, listingFailed);
+        if (denied.Contains((EventStoreName)eventStore)) return new([], [], listingFailed, RequestedDenied: true);
         return new(targets.Except(denied).ToArray(), denied, listingFailed);
     }
 
