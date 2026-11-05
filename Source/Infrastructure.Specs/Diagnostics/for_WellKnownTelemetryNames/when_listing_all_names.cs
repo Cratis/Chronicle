@@ -85,6 +85,7 @@ public partial class when_listing_all_names : given.all_telemetry_names
         ["Metrics.SqlSchemaLockWaitDuration"] = "cratis.chronicle.sql.schema_lock.wait_duration",
         ["Metrics.SqlLiveQueryPollFailures"] = "cratis.chronicle.sql.live_query.poll_failures",
         ["Metrics.SqlUpsertRecoveredCollisions"] = "cratis.chronicle.sql.upsert.recovered_collisions",
+        ["Metrics.SqlEncryptionKeyIdentifiersRefused"] = "cratis.chronicle.sql.encryption_key.refused_identifiers",
         ["Metrics.SqlCompositeKeyStampFailures"] = "cratis.chronicle.sql.composite_key.stamp_failures",
         ["Metrics.SqlCompositeKeyCollisions"] = "cratis.chronicle.sql.composite_key.collisions",
         ["Spans.EventSequenceAppend"] = "cratis.chronicle.event_sequence.append",
@@ -150,6 +151,7 @@ public partial class when_listing_all_names : given.all_telemetry_names
         ["Metrics.SqlSchemaLockWaitDurationUnit"] = "s",
         ["Metrics.SqlLiveQueryPollFailuresUnit"] = "{poll}",
         ["Metrics.SqlUpsertRecoveredCollisionsUnit"] = "{collision}",
+        ["Metrics.SqlEncryptionKeyIdentifiersRefusedUnit"] = "{operation}",
         ["Metrics.SqlCompositeKeyStampFailuresUnit"] = "{failure}",
         ["Metrics.SqlCompositeKeyCollisionsUnit"] = "{collision}"
     };
