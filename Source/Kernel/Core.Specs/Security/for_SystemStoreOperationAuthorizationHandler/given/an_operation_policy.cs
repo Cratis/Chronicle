@@ -21,12 +21,16 @@ public class an_operation_policy : Specification
     protected bool _enforce;
     protected bool _enforceDestructive;
     protected bool _authenticationEnabled = true;
+    protected bool _useConfigurationDefaults;
     protected IAuthorizationDecisions? _decisions;
 
     protected async Task AuthorizeOperation()
     {
         _context = new AuthorizationHandlerContext([new SystemStoreOperationRequirement()], _principal, _operation);
-        var options = Options.Create(new ChronicleOptions { Authentication = new Authentication { Enabled = _authenticationEnabled, EnforceAdministratorPolicyForOperations = _enforce, EnforceDestructiveOperations = _enforceDestructive } });
+        var authentication = _useConfigurationDefaults
+            ? new Authentication()
+            : new Authentication { Enabled = _authenticationEnabled, EnforceAdministratorPolicyForOperations = _enforce, EnforceDestructiveOperations = _enforceDestructive };
+        var options = Options.Create(new ChronicleOptions { Authentication = authentication });
         await new SystemStoreOperationAuthorizationHandler(_decisions ?? new AuthorizationDecisions(_authorization, options, NullLogger<AuthorizationDecisions>.Instance), options, _logger).HandleAsync(_context);
     }
 

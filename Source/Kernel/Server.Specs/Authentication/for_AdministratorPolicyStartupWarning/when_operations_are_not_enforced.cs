@@ -20,6 +20,7 @@ public class when_operations_are_not_enforced : Specification
 
     [Fact] void should_warn_once() => _logger.Entries.Single().Level.ShouldEqual(LogLevel.Warning);
     [Fact] void should_describe_the_opt_out() => _logger.Entries.Single().Message.ShouldContain("EnforceAdministratorPolicyForOperations");
+    [Fact] void should_say_the_opt_out_is_removed_in_the_next_major_release() => _logger.Entries.Single().Message.ShouldContain("removed in the next major release");
 
     sealed class RecordingLogger : ILogger<AdministratorPolicyStartupWarning>
     {

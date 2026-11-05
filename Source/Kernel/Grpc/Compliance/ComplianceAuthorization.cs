@@ -3,10 +3,12 @@
 
 using System.Security.Claims;
 using Cratis.Chronicle.Clients;
+using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Security;
 using Cratis.Chronicle.Storage;
+using Cratis.Chronicle.Storage.Compliance;
 using Cratis.DependencyInjection;
 using Grpc.Core;
 using Microsoft.Extensions.DependencyInjection;
@@ -63,9 +65,11 @@ public class ComplianceAuthorization(
     /// <param name="operation">The key-lifecycle operation name.</param>
     /// <param name="eventStore">The requested event store.</param>
     /// <param name="namespace">The addressed namespace.</param>
+    /// <param name="identifier">The encryption key identifier the operation addresses.</param>
+    /// <param name="kind">Which key operation this is, which decides what makes another event store affected.</param>
     /// <param name="context">The current call.</param>
     /// <returns>The allowed and not-covered targets.</returns>
-    public async Task<ComplianceKeyCoverage> KeyLifecycle(string operation, string eventStore, string @namespace, CallContext context)
+    public async Task<ComplianceKeyCoverage> KeyLifecycle(string operation, string eventStore, string @namespace, EncryptionKeyIdentifier identifier, ComplianceKeyOperation kind, CallContext context)
     {
         var caller = Caller(context);
         var (targets, listingFailed) = await Targets(eventStore);
@@ -86,10 +90,41 @@ public class ComplianceAuthorization(
 
         // A denied requested store makes this a denied call, not a command from a forbidden address.
         if (denied.Contains((EventStoreName)eventStore)) return new([], [], listingFailed, RequestedDenied: true);
-        return new(targets.Except(denied).ToArray(), denied, listingFailed);
+
+        // Only a store the operation would actually change is refused and reported; the others are left alone.
+        var affected = await Affected(denied, @namespace, identifier, kind);
+        return new(targets.Except(denied).ToArray(), affected, listingFailed);
     }
 
     static bool IsSystem(EventStoreName eventStore) => eventStore.Value.Equals(EventStoreName.System.Value, StringComparison.OrdinalIgnoreCase);
+
+    async Task<EventStoreName[]> Affected(EventStoreName[] denied, EventStoreNamespaceName @namespace, EncryptionKeyIdentifier identifier, ComplianceKeyOperation kind)
+    {
+        List<EventStoreName> affected = [];
+        foreach (var store in denied)
+        {
+            if (await IsAffected(store, @namespace, identifier, kind)) affected.Add(store);
+        }
+
+        return [.. affected];
+    }
+
+    async Task<bool> IsAffected(EventStoreName store, EventStoreNamespaceName @namespace, EncryptionKeyIdentifier identifier, ComplianceKeyOperation kind)
+    {
+        try
+        {
+            await using var serviceScope = scopes.CreateAsyncScope();
+            var keys = serviceScope.ServiceProvider.GetRequiredService<IEncryptionKeyStorage>();
+            return kind == ComplianceKeyOperation.Delete
+                ? await keys.HasFor(store, @namespace, identifier)
+                : await keys.GetErasureFor(store, @namespace, identifier) is not null;
+        }
+        catch
+        {
+            // Fail closed: a check that cannot be answered counts as affected.
+            return true;
+        }
+    }
 
     ConnectionCaller Caller(CallContext context)
     {

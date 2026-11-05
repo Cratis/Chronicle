@@ -78,7 +78,7 @@ internal sealed class ComplianceService(IGrainFactory grainFactory, IJsonSchemaM
     public async Task<DeleteEncryptionKeyResponse> DeleteEncryptionKeyWithCoverage(DeleteEncryptionKeyRequest request, CallContext context = default)
     {
         await SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace));
-        var coverage = await authorization.KeyLifecycle("delete-key", request.EventStore, request.Namespace, context);
+        var coverage = await authorization.KeyLifecycle("delete-key", request.EventStore, request.Namespace, request.Identifier, ComplianceKeyOperation.Delete, context);
         EnsureRequestedStoreAllowed(coverage);
         if (coverage.Allowed.Count > 0)
         {
@@ -93,7 +93,7 @@ internal sealed class ComplianceService(IGrainFactory grainFactory, IJsonSchemaM
     public async Task<AllowNewEncryptionKeyResponse> AllowNewEncryptionKeyWithCoverage(AllowNewEncryptionKeyRequest request, CallContext context = default)
     {
         await SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace));
-        var coverage = await authorization.KeyLifecycle("allow-new-key", request.EventStore, request.Namespace, context);
+        var coverage = await authorization.KeyLifecycle("allow-new-key", request.EventStore, request.Namespace, request.Identifier, ComplianceKeyOperation.AllowNew, context);
         EnsureRequestedStoreAllowed(coverage);
         if (coverage.Allowed.Count > 0)
         {

@@ -17,8 +17,16 @@ public partial class AdministratorPolicyStartupWarning(IOptions<ChronicleOptions
     public Task StartAsync(CancellationToken cancellationToken)
     {
         var authentication = options.Value.Authentication;
-        if (!authentication.Enabled) WarnAuthenticationDisabled(logger);
-        else if (!authentication.EnforceAdministratorPolicyForOperations) WarnOperationsNotEnforced(logger);
+        if (!authentication.Enabled)
+        {
+            WarnAuthenticationDisabled(logger);
+        }
+        else
+        {
+            if (!authentication.EnforceAdministratorPolicyForOperations) WarnOperationsNotEnforced(logger);
+            if (!authentication.EnforceDestructiveOperations) WarnDestructiveOperationsNotEnforced(logger);
+        }
+
         if (authentication.ExternalAdministratorClaim is { } mapping)
         {
             if (!authentication.Enabled) WarnMappingIgnored(logger);
@@ -38,8 +46,11 @@ public partial class AdministratorPolicyStartupWarning(IOptions<ChronicleOptions
     [LoggerMessage(LogLevel.Warning, "Authentication is disabled; administrator authorization allows all callers")]
     static partial void WarnAuthenticationDisabled(ILogger logger);
 
-    [LoggerMessage(LogLevel.Warning, "Administrator policy for operations is not enforced; operations it would refuse are logged and allowed. Set Authentication:EnforceAdministratorPolicyForOperations to true to enforce it")]
+    [LoggerMessage(LogLevel.Warning, "Administrator policy for operations is not enforced; operations it would refuse are logged and allowed. Authentication:EnforceAdministratorPolicyForOperations is a temporary opt-out that is removed in the next major release; set it to true to enforce it")]
     static partial void WarnOperationsNotEnforced(ILogger logger);
+
+    [LoggerMessage(LogLevel.Warning, "Destructive operations are not enforced; compliance key operations beyond the requested event store are logged and allowed. Authentication:EnforceDestructiveOperations is a temporary opt-out that is removed in the next major release; set it to true to enforce it")]
+    static partial void WarnDestructiveOperationsNotEnforced(ILogger logger);
 
     [LoggerMessage(LogLevel.Warning, "External-authority administrator mapping is configured but authentication is disabled; it has no effect")]
     static partial void WarnMappingIgnored(ILogger logger);

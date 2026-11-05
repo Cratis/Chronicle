@@ -3,12 +3,14 @@
 
 using System.Security.Claims;
 using System.Text.Json.Nodes;
+using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Compliance.GDPR;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Contracts.Compliance;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Security;
+using Cratis.Chronicle.Storage.Compliance;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -44,11 +46,12 @@ public class a_compliance_boundary : Chronicle.Compliance.GDPR.for_PIIManager.gi
         _grainFactory = Substitute.For<IGrainFactory>();
         _grainFactory.GetGrain<IPIIManager>(Guid.Empty, new PIIManagerKey(EventStore, EventStoreNamespace)).Returns(_manager);
         _audit = new DecisionLogger();
-        _services = new ServiceCollection().AddScoped(_ => _decisions).BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true });
+        _services = new ServiceCollection().AddScoped(_ => _decisions).AddSingleton(_keyStore).BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true });
         _storage.GetEventStores().Returns([EventStore, OtherEventStore, ThirdEventStore, EventStoreName.System, (EventStoreName)"system", OtherEventStore]);
         _keys = [EventStore, OtherEventStore, ThirdEventStore, EventStoreName.System];
         _keyStore.When(store => store.DeleteFor(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Identifier))
             .Do(call => _keys.Remove(call.Arg<EventStoreName>()));
+        _keyStore.HasFor(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Identifier, Arg.Any<EncryptionKeyRevision?>()).Returns(true);
         var observedDecisions = _decisions;
         _keyStore.When(store => store.RecordErasureFor(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Identifier))
             .Do(_ => _allDecidedBeforeMutation = observedDecisions.ReceivedCalls().Count(call => call.GetMethodInfo().Name == nameof(IAuthorizationDecisions.Decide)) == 3);
@@ -56,9 +59,12 @@ public class a_compliance_boundary : Chronicle.Compliance.GDPR.for_PIIManager.gi
         Configure(enforce: true);
     }
 
-    protected void Configure(bool enforce, bool authenticationEnabled = true, bool enforceDestructive = false)
+    protected void Configure(bool enforce, bool authenticationEnabled = true, bool enforceDestructive = false, bool useDefaults = false)
     {
-        var options = Options.Create(new ChronicleOptions { Authentication = new() { Enabled = authenticationEnabled, EnforceComplianceCapabilities = enforce, EnforceDestructiveOperations = enforceDestructive } });
+        var authentication = useDefaults
+            ? new Authentication()
+            : new Authentication { Enabled = authenticationEnabled, EnforceComplianceCapabilities = enforce, EnforceDestructiveOperations = enforceDestructive };
+        var options = Options.Create(new ChronicleOptions { Authentication = authentication });
         var authorization = new ComplianceAuthorization(options, _storage, _services.GetRequiredService<IServiceScopeFactory>(), _audit);
         _service = new ComplianceService(_grainFactory, _schema, NullLogger<ComplianceService>.Instance, authorization);
     }
@@ -69,6 +75,32 @@ public class a_compliance_boundary : Chronicle.Compliance.GDPR.for_PIIManager.gi
         _requestScope = _services.CreateScope();
         var httpContext = new DefaultHttpContext { User = principal, RequestServices = _requestScope.ServiceProvider };
         _context = new CallContext(new object(), new for_QueryExecutor.FakeServerCallContext(httpContext));
+    }
+
+    /// <summary>
+    /// Makes only the given event stores hold a key and an erasure for the identifier.
+    /// </summary>
+    /// <param name="stores">The event stores that hold the identifier.</param>
+    protected void HoldIdentifierOnlyIn(params EventStoreName[] stores)
+    {
+        _keyStore.HasFor(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Identifier, Arg.Any<EncryptionKeyRevision?>())
+            .Returns(call => stores.Contains(call.Arg<EventStoreName>()));
+        _keyStore.GetErasureFor(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Identifier)
+            .Returns(call => stores.Contains(call.Arg<EventStoreName>())
+                ? new EncryptionKeyErasure(EncryptionKeyRevision.Initial, [Key.Fingerprint], NewKeyAllowed: false)
+                : null);
+    }
+
+    /// <summary>
+    /// Makes the key-existence and erasure checks for the given event store throw.
+    /// </summary>
+    /// <param name="store">The event store whose checks fail.</param>
+    protected void FailChecksFor(EventStoreName store)
+    {
+        _keyStore.HasFor(store, Arg.Any<EventStoreNamespaceName>(), Identifier, Arg.Any<EncryptionKeyRevision?>())
+            .Returns(Task.FromException<bool>(new InvalidOperationException("sensitive lookup detail")));
+        _keyStore.GetErasureFor(store, Arg.Any<EventStoreNamespaceName>(), Identifier)
+            .Returns(Task.FromException<EncryptionKeyErasure?>(new InvalidOperationException("sensitive lookup detail")));
     }
 
     protected void Deny(EventStoreName eventStore, bool throws = false) =>
