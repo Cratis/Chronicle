@@ -9,6 +9,7 @@ using Cratis.Chronicle.Storage.Alerts;
 using Cratis.Chronicle.Storage.Changes;
 using Cratis.Chronicle.Storage.Events.Constraints;
 using Cratis.Chronicle.Storage.EventSequences;
+using Cratis.Chronicle.Storage.EventSequences.Mutations;
 using Cratis.Chronicle.Storage.Identities;
 using Cratis.Chronicle.Storage.Keys;
 using Cratis.Chronicle.Storage.Observation;
@@ -52,6 +53,9 @@ public class EventStoreNamespaceStorage(EventStoreName eventStore, EventStoreNam
 
     /// <inheritdoc/>
     public IIdentityStorage Identities { get; } = new Identities.IdentityStorage(eventStore, @namespace, database);
+
+    /// <inheritdoc/>
+    public IEventSequenceMutationRegistry EventSequenceMutations { get; } = new EventSequences.Mutations.EventSequenceMutationRegistry(eventStore, @namespace, database);
 
     /// <inheritdoc/>
     public IJobStorage Jobs => jobsStorage.GetFor(eventStore, @namespace).Jobs;

@@ -2,7 +2,7 @@
 id: 0025-mutation-operation-receipts
 title: Mutation-operation receipts
 status: accepted
-stage: none
+stage: implemented
 class: contract
 reversibility: costly
 decided: 2026-11-05
@@ -46,7 +46,7 @@ Every archived mutation leaves one payload-free, fixed-size receipt in a history
 | `FinalStateVersion` | int64 |
 | `RepairState` | enum |
 | `ReceiptDigestV1` | 32 bytes |
-| `DigestVersion` | byte: digest algorithm / key version (`1` = domain-separated SHA-256, unkeyed) |
+| `DigestVersion` | int: digest algorithm / key version (`1` = domain-separated SHA-256, unkeyed) |
 | `ArchivedAt` | Unix ms, int64 |
 
 "Through" is `EndExclusive − 1`. The key is (event store, namespace, event sequence, `MutationId`) with a unique (sequence, ordinal). Explicitly absent: payload, command hash, origin, reason, content, event-source id. Redaction targets exist only inside the definition digest.
