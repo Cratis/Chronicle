@@ -210,19 +210,31 @@ internal class ChronicleConnection(
             new KernelCore::Cratis.Chronicle.Clients.ConnectedClientsVisibility(chronicleOptions, connectionOwnership, new Microsoft.AspNetCore.Http.HttpContextAccessor()),
             loggerFactory.CreateLogger<ConnectionService>(),
             chronicleOptions);
+        var firstResponse = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         _connectionService.Connect(new()
         {
             ConnectionId = lifecycle.ConnectionId,
             IsRunningWithDebugger = KeepAliveExempt,
             ClientType = ".NET",
-        }).Subscribe(HandleConnection);
+        }).Subscribe(
+            _ =>
+            {
+                firstResponse.TrySetResult();
+                HandleConnection();
+            },
+            error => firstResponse.TrySetException(error),
+            () => firstResponse.TrySetException(new InvalidOperationException("The connection stream ended before the server responded.")));
+
+        // The first response only arrives after the server has claimed the connection, so registrations made
+        // from the OnConnected callbacks are not refused for lack of ownership.
+        await firstResponse.Task;
 
         // The capabilities must be known before the OnConnected callbacks fire, because they read them.
         await FetchCapabilities();
         await lifecycle.Connected();
     }
 
-    void HandleConnection(ConnectionKeepAlive keepAlive) => _ = SendKeepAlive();
+    void HandleConnection() => _ = SendKeepAlive();
 
     async Task SendKeepAlive()
     {

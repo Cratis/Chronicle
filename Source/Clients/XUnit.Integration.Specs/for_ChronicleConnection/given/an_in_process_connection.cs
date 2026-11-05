@@ -22,7 +22,12 @@ public class an_in_process_connection : Specification
     {
         _grainFactory = Substitute.For<IGrainFactory>();
         _siloDetails = Substitute.For<ILocalSiloDetails>();
-        _siloDetails.SiloAddress.Returns(SiloAddress.New(new IPEndPoint(IPAddress.Loopback, 11111), 0));
+        var silo = SiloAddress.New(new IPEndPoint(IPAddress.Loopback, 11111), 0);
+        _siloDetails.SiloAddress.Returns(silo);
+
+        var management = Substitute.For<IManagementGrain>();
+        management.GetHosts(true).Returns(new Dictionary<SiloAddress, SiloStatus> { [silo] = SiloStatus.Active });
+        _grainFactory.GetGrain<IManagementGrain>(Arg.Any<long>(), Arg.Any<string>()).Returns(management);
 
         var lifecycle = new ConnectionLifecycle(NullLogger<ConnectionLifecycle>.Instance);
         _connection = new ChronicleConnection(lifecycle, _grainFactory, _siloDetails, new KernelCore::Cratis.Chronicle.Clients.ConnectionOwnership(TimeProvider.System), NullLoggerFactory.Instance);
