@@ -20,6 +20,7 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.Encryption;
 public class EncryptionKeyStorage(IDatabase database, ILogger<EncryptionKeyStorage>? logger = null) : IEncryptionKeyStorage
 {
     readonly ILogger<EncryptionKeyStorage> _logger = logger ?? NullLogger<EncryptionKeyStorage>.Instance;
+    readonly SqlStorageTelemetry _telemetry = SqlStorageTelemetry.For(database);
 
     /// <inheritdoc/>
     public async Task SaveFor(
@@ -104,7 +105,7 @@ public class EncryptionKeyStorage(IDatabase database, ILogger<EncryptionKeyStora
             // propagates: nothing was persisted, so the candidate must never be handed back.
             var winner = await TryGetFor(eventStore, eventStoreNamespace, identifier, revision)
                 ?? throw new EncryptionKeyProvisioningConflict(identifier, revision);
-            SqlStorageTelemetry.RecoveredCollision("encryption-key");
+            _telemetry.RecoveredCollision("encryption-key");
             return new(winner, revision);
         }
     }
@@ -297,7 +298,7 @@ public class EncryptionKeyStorage(IDatabase database, ILogger<EncryptionKeyStora
             .AnyAsync();
         if (underReview)
         {
-            SqlStorageTelemetry.EncryptionKeyIdentifierRefused();
+            _telemetry.EncryptionKeyIdentifierRefused();
             _logger.IdentifierUnderReview();
             throw new EncryptionKeyIdentifierUnderReview();
         }

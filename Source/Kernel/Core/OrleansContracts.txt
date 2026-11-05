@@ -420,6 +420,12 @@ interface [GrainInterfaceType("Cratis.Chronicle.Observation.Webhooks.IWebhooks")
   5CDB4041: SetTargetUrl(Cratis.Chronicle.Concepts.Observation.Webhooks.WebhookId, Cratis.Chronicle.Concepts.Observation.Webhooks.WebhookTargetUrl) -> Task
   73A40E5D: Update(Cratis.Chronicle.Concepts.Observation.Webhooks.WebhookDefinition) -> Task
 
+interface [GrainInterfaceType("Cratis.Chronicle.Observation.Webhooks.Signing.IWebhookSigningKeyRing")] Cratis.Chronicle.Observation.Webhooks.Signing.IWebhookSigningKeyRing [Version(0)]
+  E5E4DCAC: GetSigningKeys() -> Task<System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Observation.Webhooks.WebhookSigningKey>>
+  8106DA1D: Rotate(Cratis.Chronicle.Concepts.Observation.Webhooks.WebhookSigningKeyOverlap) -> Task<Cratis.Chronicle.Concepts.Observation.Webhooks.WebhookSigningKey>
+
+class [GrainType("webhooksigningkeyring")] Cratis.Chronicle.Observation.Webhooks.Signing.WebhookSigningKeyRing
+
 class [GrainType("webhook")] Cratis.Chronicle.Observation.Webhooks.Webhook
 
 class [GrainType("webhookobserversubscriber")] Cratis.Chronicle.Observation.Webhooks.WebhookObserverSubscriber

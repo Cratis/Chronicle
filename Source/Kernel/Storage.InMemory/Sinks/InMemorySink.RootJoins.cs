@@ -28,9 +28,16 @@ public partial class InMemorySink
             }
 
             var candidate = staged.CandidateFor(rowKey);
+            var hasIdentity = ((IDictionary<string, object?>)candidate).TryGetValue("id", out var identity);
             foreach (var joined in matching)
             {
                 candidate = ApplyActualChanges(new Key(rowKey, ArrayIndexers.NoIndexers), joined.Changes, candidate);
+            }
+
+            if (hasIdentity)
+            {
+                // A mapping may set the id to a different value; the row keeps the identity it is stored under.
+                ((IDictionary<string, object?>)candidate)["id"] = identity;
             }
 
             staged.Stage(rowKey, candidate, advancesWatermark: true);

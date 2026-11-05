@@ -15,6 +15,7 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
+using Cratis.Chronicle.Diagnostics;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
@@ -73,6 +74,8 @@ public partial class Sink : ISink, ICanReconcileIndexes, ISinkCompositeKeyLookup
     readonly bool _needsLayout;
     readonly ReplayingTables _replayingTables;
     readonly ILogger<Sink> _logger;
+    readonly SqlStorageTelemetry _telemetry;
+    readonly SqlCompositeKeyShadow _compositeKeyShadow;
     readonly ConcurrentDictionary<string, bool> _reportedKeyRebuildFailures = new();
     readonly object _layoutLock = new();
     IReadOnlyList<ProjectedColumn> _columns;
@@ -121,6 +124,8 @@ public partial class Sink : ISink, ICanReconcileIndexes, ISinkCompositeKeyLookup
         ILogger<Sink> logger)
     {
         _logger = logger;
+        _telemetry = SqlStorageTelemetry.For(database);
+        _compositeKeyShadow = new(database is Database sql ? sql.MetricNames : MetricNames.Legacy);
         _replayingTables = replayingTables;
         _eventStoreName = eventStoreName;
         _namespace = @namespace;
@@ -241,7 +246,7 @@ public partial class Sink : ISink, ICanReconcileIndexes, ISinkCompositeKeyLookup
         ApplyChangesToEntity(entry, nonJoinedChanges, key.ArrayIndexers);
         AdvanceLastHandledSequenceNumber(entry, eventSequenceNumber);
         await SaveRecoveringFromInsertRace(scope, entry, new PendingWrite(id, nonJoinedChanges, eventSequenceNumber, key.ArrayIndexers));
-        await SqlCompositeKeyShadow.Stamp(scope.DbContext, key, id, _logger);
+        await _compositeKeyShadow.Stamp(scope.DbContext, key, id, _logger);
 
         return _noFailedPartitions;
     }
@@ -333,7 +338,7 @@ public partial class Sink : ISink, ICanReconcileIndexes, ISinkCompositeKeyLookup
             ApplyChangesToEntity(reloadedEntry, write.Changes, write.ArrayIndexers);
             AdvanceLastHandledSequenceNumber(reloadedEntry, write.SequenceNumber);
             await scope.DbContext.SaveChangesAsync();
-            SqlStorageTelemetry.RecoveredCollision("read-model");
+            _telemetry.RecoveredCollision("read-model");
         }
     }
 

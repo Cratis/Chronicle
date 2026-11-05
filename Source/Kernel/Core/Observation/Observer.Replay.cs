@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Runtime.ExceptionServices;
 using Cratis.Choreography.Jobs;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
@@ -32,6 +33,7 @@ public partial class Observer
         // Refuse before resetting progress, entering replay, or starting a job. The handler also guards
         // persisted jobs that resume without coming through this observer entry point.
         await GlobalProjectionReplay.EnsureSupported(storage, _observerKey, Definition.Type);
+        await GenerationInitializationReplay.EnsureReplayAdmitted(storage, _observerKey, Definition.Type);
 
         while (_catchUpHandoversSettled is { } settled)
         {
@@ -54,6 +56,7 @@ public partial class Observer
             await TransitionTo<Replay>();
             if (State.RunningState != ObserverRunningState.Replaying)
             {
+                await ThrowIfReplayStartWasRefused(canReplay);
                 if (canReplay)
                 {
                     logger.ReplayTransitionDidNotTakeEffect();
@@ -298,6 +301,19 @@ public partial class Observer
             // back to catch-up from the captured bound, as a refused replay does, and report the failure.
             await ReleaseRefusedPartitionReplay(partition, heldBackFrom, epochs[partition]);
             throw;
+        }
+    }
+
+    /// <summary>
+    /// Reports the job-boundary refusal only after the transition and its release have finished.
+    /// </summary>
+    /// <param name="enteredReplay">Whether this request entered replay.</param>
+    /// <returns>Awaitable task.</returns>
+    async Task ThrowIfReplayStartWasRefused(bool enteredReplay)
+    {
+        if (enteredReplay && (await GetStates()).OfType<Replay>().First().StartRefusal is { } refusal)
+        {
+            ExceptionDispatchInfo.Throw(refusal);
         }
     }
 

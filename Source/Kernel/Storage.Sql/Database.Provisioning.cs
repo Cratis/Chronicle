@@ -109,7 +109,7 @@ public partial class Database
             {
                 // EF Core takes its own migrations lock in the database as well; this one also covers the history
                 // table it creates before taking that lock, and keeps all of Chronicle's schema changes in one queue.
-                await DatabaseSchemaLock.Run(context, () => context.Database.MigrateAsync());
+                await DatabaseSchemaLock.Run(context, () => context.Database.MigrateAsync(), Telemetry);
             }
             catch (Exception ex) when (IsAlreadyExistsException(ex))
             {

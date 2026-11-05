@@ -97,7 +97,7 @@ public class ReplayObserver(
         {
             await EnsureReplaySupported();
         }
-        catch (GlobalProjectionReplayNotSupported)
+        catch (ReplayNotSupported)
         {
             return Result.Failed<ResumeJobSuccess, ResumeJobError>(CannotResumeJobError.JobCannotBeResumed);
         }
@@ -323,8 +323,10 @@ public class ReplayObserver(
             finalized = false;
             release = true;
         }
-        catch (Exception exception)
+        catch (Exception exception) when (exception is not ReplayNotSupported)
         {
+            // A refusal is not a failed finalization: it propagates, its notification already scheduled, so nothing
+            // reports the replay as completed and the observer does not advance past work that was never promoted.
             logger.ReplayFinalizationFailed(exception);
             finalized = false;
         }
@@ -453,8 +455,9 @@ public class ReplayObserver(
         try
         {
             await GlobalProjectionReplay.EnsureSupported(storage, request.ObserverKey, request.ObserverType, State, WriteStateAsync);
+            await GenerationInitializationReplay.EnsureContinueAllowed(storage, request, State, WriteStateAsync);
         }
-        catch (GlobalProjectionReplayNotSupported)
+        catch (ReplayNotSupported)
         {
             if (!_refusalNotificationScheduled)
             {

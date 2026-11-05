@@ -14,6 +14,9 @@ internal static partial class WebhookObserverSubscriberLogging
     [LoggerMessage(LogLevel.Warning, "An error occurred while handling webhook for key {Key}.")]
     internal static partial void ErrorHandling(this ILogger<WebhookObserverSubscriber> logger, Exception ex, ObserverKey key);
 
+    [LoggerMessage(LogLevel.Warning, "An error occurred while handling webhook for key {Key}. {Diagnostic}")]
+    internal static partial void DeliveryFailed(this ILogger<WebhookObserverSubscriber> logger, ObserverKey key, string diagnostic);
+
     [LoggerMessage(LogLevel.Trace, "Successfully handled all events for webhook for key {Key}")]
     internal static partial void SuccessfullyHandledAllEvents(this ILogger<WebhookObserverSubscriber> logger, ObserverKey key);
 }

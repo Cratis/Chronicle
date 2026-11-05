@@ -89,13 +89,17 @@ public class when_clearing_quarantine_after_automatic_reconciliation_with_pendin
     [Fact] void should_be_active() => _stateStorage.State.RunningState.ShouldEqual(ObserverRunningState.Active);
     [Fact] void should_resume_the_stopped_catchup_job() => _jobsManager.Received(1).Resume(_catchupJobId);
     [Fact] void should_resume_the_stopped_retry_job() => _jobsManager.Received(1).Resume(_retryJobId);
-    [Fact] void should_not_duplicate_the_stopped_retry_job() => _jobsManager.DidNotReceive()
+    [Fact]
+    void should_not_duplicate_the_stopped_retry_job() => _jobsManager.DidNotReceive()
         .Start<IRetryFailedPartition, RetryFailedPartitionRequest>(Arg.Is<RetryFailedPartitionRequest>(request => request.Key == _failedPartition.Partition));
-    [Fact] void should_leave_the_individually_quarantined_partition_alone() => _jobsManager.DidNotReceive()
+    [Fact]
+    void should_leave_the_individually_quarantined_partition_alone() => _jobsManager.DidNotReceive()
         .Start<IRetryFailedPartition, RetryFailedPartitionRequest>(Arg.Is<RetryFailedPartitionRequest>(request => request.Key == _quarantinedPartition.Partition));
-    [Fact] void should_recover_the_in_flight_partition() => _jobsManager.Received(1)
+    [Fact]
+    void should_recover_the_in_flight_partition() => _jobsManager.Received(1)
         .Start<ICatchUpObserverPartition, CatchUpObserverPartitionRequest>(Arg.Is<CatchUpObserverPartitionRequest>(request => request.Key == _inFlightPartition));
-    [Fact] void should_not_duplicate_existing_partition_catchup() => _jobsManager.DidNotReceive()
+    [Fact]
+    void should_not_duplicate_existing_partition_catchup() => _jobsManager.DidNotReceive()
         .Start<ICatchUpObserverPartition, CatchUpObserverPartitionRequest>(Arg.Is<CatchUpObserverPartitionRequest>(request => request.Key == _catchingUpPartition));
 
     JobState AsReportingResumed(JobState job) => _resumedJobs.Contains(job.Id)

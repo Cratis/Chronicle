@@ -63,6 +63,7 @@
     <!-- The embedded kernel's runtime dependencies must travel with the package, as checked by the closure specs. -->
     <ItemGroup>
         <PackageReference Include="AspNetCore.HealthChecks.MongoDb" />
+        <PackageReference Include="BouncyCastle.Cryptography" />
         <PackageReference Include="Cratis.Arc" />
         <PackageReference Include="Cratis.Arc.Core" />
         <PackageReference Include="Cratis.Choreography" />

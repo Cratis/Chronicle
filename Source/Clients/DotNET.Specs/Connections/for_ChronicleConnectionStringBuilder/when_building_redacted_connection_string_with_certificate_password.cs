@@ -21,7 +21,7 @@ public class when_building_redacted_connection_string_with_certificate_password 
 
     void Because() => _url = _builder.BuildRedacted();
 
-    [Fact] void should_keep_the_certificate_path() => _url.Contains("certificatePath=%2Fcerts%2Fclient.pfx", StringComparison.Ordinal).ShouldBeTrue();
-    [Fact] void should_mask_the_certificate_password() => _url.Contains("certificatePassword=REDACTED", StringComparison.Ordinal).ShouldBeTrue();
+    [Fact] void should_hide_the_certificate_path() => _url.Contains("client.pfx", StringComparison.Ordinal).ShouldBeFalse();
+    [Fact] void should_use_opaque_diagnostics() => _url.ShouldEqual("REDACTED");
     [Fact] void should_not_expose_the_certificate_password() => _url.Contains("certificate-secret", StringComparison.Ordinal).ShouldBeFalse();
 }

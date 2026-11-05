@@ -138,15 +138,7 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
 
                 // Register delegate factories that always resolve from MutableServiceRegistry so
                 // that updates between tests are picked up by subsequent resolutions.
-                foreach (var descriptor in capturingCollection)
-                {
-                    services.AddTransient(descriptor.ServiceType, sp =>
-                    {
-                        var registry = sp.GetRequiredService<MutableServiceRegistry>();
-                        return registry.TryGet(descriptor.ServiceType, sp)
-                            ?? ActivatorUtilities.CreateInstance(sp, descriptor.ImplementationType ?? descriptor.ServiceType);
-                    });
-                }
+                services.AddContextServiceForwarders(capturingCollection, SharedHostTestAssembly);
             });
         builder.AddCratisChronicle();
 

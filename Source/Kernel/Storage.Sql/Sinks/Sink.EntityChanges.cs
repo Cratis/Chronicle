@@ -82,6 +82,12 @@ public partial class Sink
             return;
         }
 
+        // The sink owns the row identity from Key, matching MongoDB's IsMongoDBKey filter.
+        if (column.IsKey)
+        {
+            return;
+        }
+
         if (!column.IsJson)
         {
             if (difference.PropertyPath.Segments.Count() == 1)
@@ -112,7 +118,7 @@ public partial class Sink
         // for an empty path, so use it to detect "replace the entire column value".
         if (!subPath.IsSet)
         {
-            entry.Entity[column.Name] = SerializeJsonColumn(UnwrapForJson(difference.Changed), column);
+            entry.Entity[column.Name] = SerializeJsonColumnReplacement(UnwrapForJson(difference.Changed), column);
         }
         else
         {
@@ -122,6 +128,9 @@ public partial class Sink
 
         entry.Property(column.Name).IsModified = true;
     }
+
+    static string? SerializeJsonColumnReplacement(object? value, ProjectedColumn column) =>
+        value is null && !column.IsArray ? null : SerializeJsonColumn(value, column);
 
     void TryApplyDifferenceViaArrayIndexers(EntityEntry<DynamicReadModelEntity> entry, PropertyDifference difference)
     {
