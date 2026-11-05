@@ -98,7 +98,14 @@ internal class VaultKeyStoreUpgradeCheck(IVaultClient vaultClient, string? mount
     static EncryptionKeyStoreUpgradeStatus Layout(bool verified, bool conflict) =>
         new(verified, conflict, 0, 0, 0, false);
 
-    static bool IsEarlierEntry(string entry) => entry != $"{VaultPathSegments.Root}/" && !entry.StartsWith('~');
+    /// <summary>
+    /// Gets whether a root entry is an event store from an earlier version. Only the two names this version reserves are
+    /// skipped, and only when they are exactly those: the root directory and the marker leaf. Anything else, whatever
+    /// character it starts with, is an event store from an earlier version.
+    /// </summary>
+    /// <param name="entry">The entry listed at the root of the mount.</param>
+    /// <returns>True when the entry is from an earlier version, false otherwise.</returns>
+    static bool IsEarlierEntry(string entry) => entry != $"{VaultPathSegments.Root}/" && entry != VaultPathSegments.LayoutMarker;
 
     static void Classify(List<string> segments, Counts counts)
     {
