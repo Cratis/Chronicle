@@ -5,7 +5,7 @@ namespace Cratis.Chronicle.Storage.Vault.for_VaultPathSegments.when_deciding_on_
 
 public class and_the_address_is_not_eligible : given.segments
 {
-    static readonly string[] _identifiers = ["a~b", "a/b", "a%b", "a\\b", "..", "a.", "a\u0000", "\uFF0F", "\u00D8/x", "\u00D8.", "\u00D8 x", "\u00D8\uD800"];
+    static readonly string[] _identifiers = ["a/b", "a%b", "a\\b", "a?b", "a#b", "a b", "a\tb", "..", ".", "a.", "a\u0000", "\uFF0F", "\u00D8/x", "\u00D8.", "\u00D8 x", "\u00D8\uD800", string.Empty];
 
     List<string> _eligible = [];
 

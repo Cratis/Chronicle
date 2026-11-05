@@ -24,10 +24,11 @@ namespace Cratis.Chronicle.Storage.Vault;
 /// taken from the <c language="csharp">connectionDetails</c> constructor parameter.
 /// </para>
 /// <para>
-/// Each part of an address becomes one path segment, encoded by <see cref="VaultPathSegments"/>, so every distinct
-/// address has its own directory whatever characters it contains. Keys stored before segments were encoded are still
-/// read, and removed together with the key, for the addresses <see cref="VaultPathSegments.LegacyDirectory"/> accepts:
-/// those with letters outside ASCII and nothing that is special in a path. Earlier paths are never written.
+/// Each part of an address becomes one path segment, encoded by <see cref="VaultPathSegments"/>, and every path
+/// written by this version lives under <see cref="VaultPathSegments.Root"/>, so every distinct address has its own
+/// directory whatever characters it contains. Keys stored by earlier versions are still read, and removed together
+/// with the key, for the addresses <see cref="VaultPathSegments.LegacyDirectory"/> accepts: those made of characters
+/// that can belong to one address only. Earlier paths are never written.
 /// </para>
 /// </remarks>
 public class VaultEncryptionKeyStorage : IEncryptionKeyStorage
@@ -38,6 +39,7 @@ public class VaultEncryptionKeyStorage : IEncryptionKeyStorage
     const string ErasedThroughField = "erasedThrough";
     const string ErasedKeyFingerprintsField = "erasedKeyFingerprints";
     const string NewKeyAllowedField = "newKeyAllowed";
+    const string LayoutField = "layout";
 
     /// <summary>
     /// The error Vault answers a check-and-set write with when the path already has a version.
@@ -251,7 +253,8 @@ public class VaultEncryptionKeyStorage : IEncryptionKeyStorage
     static Dictionary<string, object> KeyData(EncryptionKey key) => new()
     {
         [PublicKeyField] = Convert.ToBase64String(key.Public),
-        [PrivateKeyField] = Convert.ToBase64String(key.Private)
+        [PrivateKeyField] = Convert.ToBase64String(key.Private),
+        [LayoutField] = VaultPathSegments.Root
     };
 
     static bool IsCheckAndSetMismatch(VaultApiException exception) =>
@@ -349,7 +352,8 @@ public class VaultEncryptionKeyStorage : IEncryptionKeyStorage
         {
             [ErasedThroughField] = erasure.ErasedThrough.Value.ToString(),
             [ErasedKeyFingerprintsField] = string.Join(',', erasure.ErasedKeyFingerprints),
-            [NewKeyAllowedField] = erasure.NewKeyAllowed.ToString()
+            [NewKeyAllowedField] = erasure.NewKeyAllowed.ToString(),
+            [LayoutField] = VaultPathSegments.Root
         };
 
         await _vaultClient.V1.Secrets.KeyValue.V2.WriteSecretAsync(locations.ErasurePath, data, mountPoint: _mountPoint);
@@ -392,9 +396,8 @@ public class VaultEncryptionKeyStorage : IEncryptionKeyStorage
         {
             var list = await _vaultClient.V1.Secrets.KeyValue.V2.ReadSecretPathsAsync(directory, mountPoint: _mountPoint);
             return list.Data.Keys
-                .Select(key => key.TrimEnd('/'))
-                .Where(trimmed => uint.TryParse(trimmed, out _))
-                .Select(trimmed => (EncryptionKeyRevision)uint.Parse(trimmed))
+                .Where(key => !key.EndsWith('/') && uint.TryParse(key, out _))
+                .Select(key => (EncryptionKeyRevision)uint.Parse(key))
                 .ToList();
         }
         catch (VaultApiException ex) when (ex.HttpStatusCode == HttpStatusCode.NotFound)

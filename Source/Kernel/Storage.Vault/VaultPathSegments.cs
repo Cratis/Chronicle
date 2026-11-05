@@ -25,6 +25,10 @@ namespace Cratis.Chronicle.Storage.Vault;
 /// A segment never starts with <c language="csharp">~</c> followed by something other than two hexadecimal digits. Such segments
 /// are therefore free to be used for secrets that belong to the store itself.
 /// </para>
+/// <para>
+/// New paths live under <see cref="Root"/>. Paths without that root are from earlier versions, and are read only for
+/// addresses they can belong to alone.
+/// </para>
 /// </remarks>
 internal static class VaultPathSegments
 {
@@ -32,6 +36,16 @@ internal static class VaultPathSegments
     /// The largest number of UTF-8 bytes a segment may be made of.
     /// </summary>
     public const int MaxBytes = 1024;
+
+    /// <summary>
+    /// The first segment of every path written by this version.
+    /// </summary>
+    public const string Root = "k1";
+
+    /// <summary>
+    /// The name of the secret, at the root of the mount, that records the layout in use.
+    /// </summary>
+    public const string LayoutMarker = "~layout";
 
     const char Escape = '~';
     const string UpperHex = "0123456789ABCDEF";
@@ -76,34 +90,30 @@ internal static class VaultPathSegments
     /// <param name="identifier">The identifier.</param>
     /// <returns>The earlier directory, or null when the address does not use it.</returns>
     /// <remarks>
-    /// An address that is made of ordinary ASCII text has the same directory before and after, so it needs no second
-    /// one. Only an address with a non-ASCII character, made of letters, marks and digits besides the characters kept
-    /// as they are, is looked up under its earlier directory as well.
+    /// An address is looked up under its earlier directory only when every component is made of the characters kept as
+    /// they are, <c language="csharp">~</c>, and letters, marks and digits outside ASCII, and does not end in
+    /// <c language="csharp">.</c>. Such a directory has exactly three segments, so it can belong to one address only.
     /// </remarks>
     public static string? LegacyDirectory(string eventStore, string eventStoreNamespace, string identifier) =>
         IsEligibleForLegacyDirectory(eventStore, eventStoreNamespace, identifier)
-            ? $"{eventStore}/{eventStoreNamespace}/{identifier}"
+            ? RawDirectory(eventStore, eventStoreNamespace, identifier)
             : null;
 
-    static bool IsEligibleForLegacyDirectory(string eventStore, string eventStoreNamespace, string identifier)
+    /// <summary>
+    /// Gets the directory an earlier version addressed, exactly as it was built then.
+    /// </summary>
+    /// <param name="eventStore">The event store.</param>
+    /// <param name="eventStoreNamespace">The namespace.</param>
+    /// <param name="identifier">The identifier.</param>
+    /// <returns>The earlier directory.</returns>
+    public static string RawDirectory(string eventStore, string eventStoreNamespace, string identifier) =>
+        $"{eventStore}/{eventStoreNamespace}/{identifier}";
+
+    static bool IsEligibleForLegacyDirectory(string eventStore, string eventStoreNamespace, string identifier) =>
+        IsEligibleLegacyComponent(eventStore) && IsEligibleLegacyComponent(eventStoreNamespace) && IsEligibleLegacyComponent(identifier);
+
+    static bool IsEligibleLegacyComponent(string component)
     {
-        var anyNonAscii = false;
-        foreach (var component in new[] { eventStore, eventStoreNamespace, identifier })
-        {
-            if (!IsEligibleLegacyComponent(component, out var hasNonAscii))
-            {
-                return false;
-            }
-
-            anyNonAscii |= hasNonAscii;
-        }
-
-        return anyNonAscii;
-    }
-
-    static bool IsEligibleLegacyComponent(string component, out bool hasNonAscii)
-    {
-        hasNonAscii = false;
         if (component.Length == 0 || component[^1] == '.')
         {
             return false;
@@ -114,7 +124,7 @@ internal static class VaultPathSegments
         {
             if (rune.IsAscii)
             {
-                if (!IsLiteral((char)rune.Value))
+                if (rune.Value != Escape && !IsLiteral((char)rune.Value))
                 {
                     return false;
                 }
@@ -122,7 +132,6 @@ internal static class VaultPathSegments
                 continue;
             }
 
-            hasNonAscii = true;
             if (!IsLetterMarkOrDigit(rune))
             {
                 return false;
