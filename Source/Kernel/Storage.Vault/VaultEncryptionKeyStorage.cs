@@ -248,6 +248,16 @@ public class VaultEncryptionKeyStorage : IEncryptionKeyStorage
         await WriteErasure(locations, erasure with { NewKeyAllowed = true });
     }
 
+    /// <summary>
+    /// Gets whether an exception is the answer Vault gives to a check-and-set write that lost.
+    /// </summary>
+    /// <param name="exception">The <see cref="VaultApiException"/>.</param>
+    /// <returns>True when the write lost, false otherwise.</returns>
+    internal static bool IsCheckAndSetMismatch(VaultApiException exception) =>
+        exception.HttpStatusCode == HttpStatusCode.BadRequest &&
+        ((exception.ApiErrors?.Any(error => error.Contains(CheckAndSetMismatch, StringComparison.OrdinalIgnoreCase)) ?? false) ||
+         exception.Message.Contains(CheckAndSetMismatch, StringComparison.OrdinalIgnoreCase));
+
     static bool IsLatest(EncryptionKeyRevision? revision) => revision is null || revision == EncryptionKeyRevision.Latest;
 
     static Dictionary<string, object> KeyData(EncryptionKey key) => new()
@@ -256,11 +266,6 @@ public class VaultEncryptionKeyStorage : IEncryptionKeyStorage
         [PrivateKeyField] = Convert.ToBase64String(key.Private),
         [LayoutField] = VaultPathSegments.Root
     };
-
-    static bool IsCheckAndSetMismatch(VaultApiException exception) =>
-        exception.HttpStatusCode == HttpStatusCode.BadRequest &&
-        ((exception.ApiErrors?.Any(error => error.Contains(CheckAndSetMismatch, StringComparison.OrdinalIgnoreCase)) ?? false) ||
-         exception.Message.Contains(CheckAndSetMismatch, StringComparison.OrdinalIgnoreCase));
 
     static VaultClient CreateVaultClient(string address)
     {
