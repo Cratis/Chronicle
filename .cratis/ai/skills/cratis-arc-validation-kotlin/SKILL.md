@@ -1,6 +1,6 @@
 ---
 name: cratis-arc-validation-kotlin
-description: Add a rejection rule to a Cratis Arc command or query in Kotlin or Java — FluentModelValidator shared rules that also emit TypeScript, plus the server-only CommandValidator, QueryValidator, ConceptValidator, and ModelValidator. Use when expressing JVM rejection checks with FluentModelValidator or Kotlin/Java server validators for Arc commands and queries. Do not use for C# rejection placement (use cratis-arc-command-validation) or Node.js ruleFor (use cratis-arc-validation-typescript); new command shapes belong to cratis-arc-command-kotlin, append-time uniqueness to cratis-chronicle-event-constraints.
+description: Use when adding shared fluent rules or server-side rejection checks to Kotlin or Java Arc commands and queries. Not for C# or Node.js validators, new command definitions or append-time uniqueness.
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/cratis-arc-validation-kotlin/SKILL.md -->
@@ -184,6 +184,21 @@ when omission is invalid for the selected query.
 
 ### `ConceptValidator<TConcept>`
 
+Requires Arc.Kotlin 7.8.0 for shared Fundamentals concepts and their validators; check `./gradlew dependencies`, or retain the legacy Arc concepts and validators until upgrading.
+
+Prefer `io.cratis.fundamentals.concepts.ConceptAs` for new concepts and
+`FundamentalsConceptValidator<TConcept>` for their rules. It implements
+`ModelValidator<TConcept>` and exposes `conceptType` plus
+`validate(concept): List<ValidationResult>`; read the primitive via `value()`.
+JSON, validation, proxy generation, Spring conversion, Chronicle bridging and
+testing recognize the shared concept type. The old Arc `ConceptAs` extends it
+and is deprecated, as is `ArcCamelCase` (use Fundamentals `toCamelCase`).
+Existing Arc concepts/validators keep compiling and linking unchanged.
+
+The legacy Arc concept example below remains valid with `ConceptValidator` and
+its `value` property; do not copy that property shape to a new Fundamentals-only
+concept, whose interface method is `value()`.
+
 A reusable invariant on a `ConceptAs<T>` concept type, walked automatically
 wherever that concept type appears — command, nested model, collection,
 array, or map — without each owner repeating the rule. Matching uses
@@ -207,9 +222,11 @@ Jakarta `Validator` bean. Exclude one direct edge deliberately with
 Java record component/field) whose *declared* type implements `ConceptAs`. A
 scalar root, a collection element, or a nested path cannot be excluded this
 way — register the nested owner type and its direct member instead. Excluding
-an edge suppresses only `ConceptValidator` execution there; owner rules, exact
-`ModelValidator` rules, Jakarta constraints, and root typed validators still
-run.
+an edge suppresses concept-rule execution there, including
+`FundamentalsConceptValidator`; owner rules, exact `ModelValidator` rules,
+Jakarta constraints, and root typed validators still run.
+
+Requires Arc.Kotlin 7.8.1 for exclusions to suppress FundamentalsConceptValidator; check `./gradlew dependencies`, or upgrade before relying on a shared-concept exclusion.
 
 ### `ModelValidator<T>`
 

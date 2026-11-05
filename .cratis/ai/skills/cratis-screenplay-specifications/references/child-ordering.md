@@ -70,7 +70,10 @@ module Orders
           orderId = "00000000-0000-0000-0000-000000000001"
         then readmodel OrderView
           orderId = "00000000-0000-0000-0000-000000000001"
-          lines = [{"lineNumber":1,"amount":10}]
+          lines
+            item
+              lineNumber = 1
+              amount     = 10
       specification ChildBeforeGivenParent
         given LineAdded
           orderId = "00000000-0000-0000-0000-000000000001"
@@ -80,7 +83,10 @@ module Orders
           orderId = "00000000-0000-0000-0000-000000000001"
         then readmodel OrderView
           orderId = "00000000-0000-0000-0000-000000000001"
-          lines = [{"lineNumber":1,"amount":10}]
+          lines
+            item
+              lineNumber = 1
+              amount     = 10
       specification ParentBeforeChild
         given OrderAdded
           orderId = "00000000-0000-0000-0000-000000000001"
@@ -90,7 +96,10 @@ module Orders
           amount = 10
         then readmodel OrderView
           orderId = "00000000-0000-0000-0000-000000000001"
-          lines = [{"lineNumber":1,"amount":10}]
+          lines
+            item
+              lineNumber = 1
+              amount     = 10
       specification ParentNeverArrives
         given LineAdded
           orderId = "00000000-0000-0000-0000-000000000001"

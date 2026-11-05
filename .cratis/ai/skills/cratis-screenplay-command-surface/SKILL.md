@@ -1,6 +1,6 @@
 ---
 name: cratis-screenplay-command-surface
-description: Write the write side of a Cratis Screenplay `.play` model — the `command` block and its `identifier`, `reads`, `validate`, `authorize`, `produces`, `handler` and `concurrency` clauses, plus `event`, `constraint`, `policy`, `persona`, `concept`, `type` and `seed`. Use when declaring or changing a command, an event shape, a validation or authorization rule, an append-time constraint, or a strongly-typed value in Screenplay. Do not use for projections, queries, screens, captures or reactions.
+description: Use when writing Screenplay command, event, constraint, authorization or strongly-typed value syntax. Not for deciding stream boundaries or declaring queries, screens, projections and reactive edges.
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/cratis-screenplay-command-surface/SKILL.md -->
@@ -16,8 +16,8 @@ they are all built from.
 ## Locate the model
 
 Look first for the project's existing `.play` files: their folder is the model.
-For a new model, check `Source/` or `src/`, else use `Screenplay/` at the repository
-root. Never put a model under `.cratis/` or hand-copy it between repositories.
+Reuse existing model/workspace roots; code-only `Source/` or `src/` does not
+qualify. Otherwise use repository-root `Screenplay/` ([discovery/version gates](../cratis-screenplay-event-modeling/references/file-layout.md#locate-the-model)). Never put a model under `.cratis/` or hand-copy it between repositories.
 `cratis ai install` manages `.cratis/ai/`, never model files. Keep explanatory
 Markdown in project documentation; `.play` is the single flow model.
 
@@ -106,11 +106,12 @@ fix to migrate. `--warnaserror` does not reject information diagnostics.
 properties, `reads`, `authorize`, `validate`, `produces`/`handler`, `concurrency`.
 Keep to it.
 
-A file/code `handler` cannot coexist with `produces` and fails binding
-with PLAY0800 (`CommandHandlerRequiresAttachment`): gap-fill the slice in code
-with a constrained implementation attachment, not by waiting for a new ESM version.
+A file/code `handler` beside unconditional `produces`, with a resolved nonempty body,
+binds as the v23 result contract: `produces` fixes the
+events and the body owns their property values. Without `produces`, with `produces ... when`,
+or with an unresolved body it fails binding with PLAY0800 (`CommandHandlerRequiresAttachment`).
 Read the required typed `subject` argument for the command, never parse the message.
-Requires Screenplay 4.210.0 (`screenplay --version`) for PLAY0800; older binders use PLAY0268 for this refusal. A pending `handler implementation` beside unconditional `produces`
+Requires Screenplay 4.250.0 (`screenplay --version`); 4.210.0 to 4.249.x refuse every attached handler with PLAY0800 and older binders use PLAY0268. A pending `handler implementation` beside unconditional `produces`
 is a described command (ESM v23): the body owns payload values only. Prefer plain
 `produces` for declarative logic. Read [described handlers](references/described-handlers.md)
 when logic needs prose, for the result contract, PLAY0695–0698, Unsupported
@@ -122,7 +123,32 @@ At most one command property may carry `identifier`. It names the value the
 runtime uses as the event source id, so **choosing it is choosing the stream
 boundary** — the highest-consequence decision in the slice. Leave it out only
 when the runtime should allocate a fresh `Uuid` (a command that creates
-something whose identity the caller does not supply).
+something whose identity the caller does not supply); for a create command prefer
+`generated identifier` below, which also keeps the id out of the rendered form.
+
+**A command that creates something has no caller-supplied id.** Declare
+`<id> <IdConcept> generated identifier` (ESM v7, Screenplay 4.68.0 or later) and `returns <id>` when the
+caller needs it back. Symptom of getting it wrong: `organizationId OrganizationId identifier` on a create
+command makes the rendered form ask the user to type an Organization Id. Keep plain `identifier` for
+commands that act on an existing stream (the id comes from the selected row). Specifications pin the
+allocated value with `for "<value>"` in `when` and `then` (see the generated-values reference). Read
+[generated values](references/generated-values-and-responses.md) before writing one.
+
+```screenplay excerpt
+command RegisterOrganization
+  organizationId OrganizationId generated identifier
+  name           OrganizationName
+  produces event OrganizationRegistered
+    name OrganizationName = name
+  returns organizationId
+specification RegistersAnOrganization
+  when RegisterOrganization
+    for "11111111-1111-1111-1111-111111111111"
+    name = "Acme"
+  then OrganizationRegistered
+    for "11111111-1111-1111-1111-111111111111"
+    name = "Acme"
+```
 
 - A second `identifier` on the same command is an error: *only one property can be
   the identifier*.
@@ -188,6 +214,8 @@ comparisons; older binders report PLAY0268. Read [date comparisons](references/d
 when ordering a retention window with `require to >= from`, comparing instants
 across offsets, or rejecting offset-less inputs before rules. It covers admitted
 positions, PLAY0268/0273, ordinal `then` matching and Stage's STAGE-ESM-046 renderer refusal.
+The same file lists the parsed-but-not-runnable calendar and clock forms (`time zone`, `calendar`,
+`today - 7 days`, `date of occurred`; PLAY0812 to PLAY0814): do not author them into executable models.
 
 Requires Screenplay 4.205.0 (ESM v28; `screenplay --version`) for `==`/`!=` between Uuid
 values (properties, concepts, identities, canonical literals, and read paths in `require`);
@@ -196,7 +224,9 @@ rule, PLAY0268/0273 and the refused shapes (ordering, Uuid validation rules, Uui
 
 **Rules whose logic is code.** A bare `rule <Name>` has no portable meaning (`PLAY0268`) and a bodied rule binds only as
 opaque code. Read [references/validate-rules.md](references/validate-rules.md) when a rule's logic must live in a `file`
-or fenced code body.
+or fenced code body. Built-in inline languages are `csharp`, `typescript`, `react`, `html`, `sql` and `java`;
+the body is opaque and travels unchanged, and the Cratis render target refuses `java` bodies.
+Requires Screenplay 4.244.0 (`screenplay --version`) for that refusal.
 
 **Put format rules on the `concept`, not the command** (except date comparisons,
 which bind only on command properties, not as concept rules). A concept carries its own

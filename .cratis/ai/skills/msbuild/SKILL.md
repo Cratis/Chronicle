@@ -1,6 +1,6 @@
 ---
 name: msbuild
-description: 'Investigates MSBuild build failures, diagnoses build performance, and reviews build XML and extension contracts using binary logs. Use for failing dotnet build, restore, pack, or publish; .binlog capture and replay; project, props, and targets conditions; custom-target inputs/outputs; Import/Exists hooks and packed NuGet imports; slow evaluation, compilation, copying, or no-change builds; and controlled timing comparisons. Not for legacy or non-SDK project migration, framework or package upgrades, SDK installation, C# refactoring, runtime profiling, assertions after a successful build, or non-MSBuild builds.'
+description: Use when troubleshooting MSBuild failures, slow builds or build-authoring contracts from project files and binary logs. Not for SDK installation, package upgrades, legacy migration, C# refactoring or runtime profiling.
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/msbuild/SKILL.md -->

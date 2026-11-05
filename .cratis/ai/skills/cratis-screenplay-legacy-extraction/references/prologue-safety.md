@@ -152,6 +152,20 @@ Record in the evidence table: who ran which statements, when, and the verificati
 summary.
 
 ## 5. Capture verification before interpreting
+
+Requires Prologue 2.0.5 for the emission/image behavior below; check pinned package/image versions and `cratis --version` against its bundle, or upgrade before relying on it.
+
+Upgrade older Extractor installations for the PKCS denial-of-service dependency
+fixes. Extractor, Interpreter and Receiver images support linux/amd64 and
+linux/arm64; Apple Silicon does not need a forced amd64 platform.
+
+Heuristics-only interpretation retains each command's own correlated events
+when routes merge, declares shared events once, treats insert-plus-update in one
+transaction as creation, omits text-only `not empty` rules for required numbers
+and declares/key-identifies referenced read models. Do not retain manual
+workarounds for old emitter defects. These repairs do not prove intent or compile
+the output for you: still run executable validation on the emitted model, not
+only parsing, and record remaining diagnostics.
 - Capture files exist for every enabled source.
 - Commands per route match the scenario script; status-code mix matches expected rejections.
 - Fraction of DB transactions correlated to a command (low: concurrency or jobs).

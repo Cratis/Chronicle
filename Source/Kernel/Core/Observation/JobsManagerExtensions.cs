@@ -201,6 +201,16 @@ public static partial class JobsManagerExtensions
             requestPredicate(observerRequest) &&
             !(concludedJobs?.Contains(job.Id) ?? false)).ToImmutableList();
         var now = DateTimeOffset.UtcNow;
+
+        // A job stuck in preparation without any step is neither live nor resumable, and would block the work forever.
+        var abandoned = jobs.Where(job => JobLiveness.PreparationAbandoned(job, now)).ToList();
+        foreach (var job in abandoned)
+        {
+            logger.DeletingAbandonedPreparingJob(job.Id);
+            await jobsManager.Delete(job.Id);
+        }
+
+        jobs = jobs.RemoveRange(abandoned);
         var alreadyRunningJob = jobs.FirstOrDefault(job => job.IsLive(now));
         if (alreadyRunningJob is not null)
         {
@@ -271,7 +281,7 @@ public static partial class JobsManagerExtensions
     /// a hung completion. Treating it as running told an operator a replay had started while nothing was created.
     /// </remarks>
     internal static bool IsLive(this JobState job, DateTimeOffset now) =>
-        (job.IsPreparingOrRunning || job.Status == JobStatus.Removing) && !JobLiveness.HasConcludedAllStepsLongAgo(job, now);
+        (job.IsPreparingOrRunning || job.Status == JobStatus.Removing) && !JobLiveness.HasConcludedAllStepsLongAgo(job, now) && !JobLiveness.PreparationAbandoned(job, now);
 
     /// <summary>
     /// Gets whether a job ever reached its steps. Mirrors Job.JobIsPrepared in Cratis.Choreography: a stopped job that
@@ -395,6 +405,9 @@ public static partial class JobsManagerExtensions
 
     [LoggerMessage(LogLevel.Warning, "Could not resume stopped job {JobId} - nothing will drive it forward")]
     static partial void CouldNotResumeJob(this ILogger logger, JobId jobId);
+
+    [LoggerMessage(LogLevel.Warning, "Deleting job {JobId} that stayed in preparation without a step - nothing will ever drive it forward")]
+    static partial void DeletingAbandonedPreparingJob(this ILogger logger, JobId jobId);
 
     [LoggerMessage(LogLevel.Warning, "Dropping stopped job {JobId} that was never prepared and can never resume")]
     static partial void DroppingJobThatCanNeverResume(this ILogger logger, JobId jobId);

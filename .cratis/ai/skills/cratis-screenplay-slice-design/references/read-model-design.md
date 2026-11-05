@@ -281,7 +281,7 @@ module Berths
       screen OpenBooking
         title "Open booking"
         data OpenBooking via query OpenBookingById
-        action CancelBooking
+        action CancelBooking for item
       specification CancelledBookingLeavesTheList
         given caller
           authenticated

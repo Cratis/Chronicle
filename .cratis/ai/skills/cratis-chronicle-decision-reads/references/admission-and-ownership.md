@@ -29,8 +29,12 @@ an adapter for arbitrary read-model storage:
 Whole-source key admission supports string/Guid schemas, with canonical lowercase
 D-form Guid source ids assumed. A renamed or custom-converted key is not made
 safe by a cast in the caller. Runtime definition comparison is a diagnostic, not
-proof of equality with an executing projection. Keep integration specifications
-for the actual kernel pair and model shape.
+proof of equality with an executing projection. Arc/Chronicle own kernel-pair
+integration and the platform guard matrix. Application specs have just one cheap
+assembly-level shape-admission check,
+`DecisionReadAdmissions.ShouldAdmitDecisionReadsIn(assembly)`; see the
+[scenario rule](../../../rules/specs.scenarios.csharp.md). It checks the
+application's own discovered models/projections without running Chronicle.
 
 Do not silently replace a refused decision read with a materialized sink read.
 Redesign the decision model as a focused admitted projection only when the

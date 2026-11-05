@@ -227,6 +227,9 @@ internal static partial class ObserverLogMessages
     [LoggerMessage(LogLevel.Warning, "Watchdog detected that the replay job is missing while observer is in replaying state. Re-routing observer.")]
     internal static partial void WatchdogReplayJobMissing(this ILogger<Observer> logger);
 
+    [LoggerMessage(LogLevel.Warning, "Replay job restarted {Attempts} times without a live job in between. The next restart is held back for {Delay}.")]
+    internal static partial void WatchdogRestartingReplayWithBackoff(this ILogger<Observer> logger, int attempts, TimeSpan delay);
+
     [LoggerMessage(LogLevel.Warning, "Watchdog detected that the catch-up job is missing while observer has catching-up partitions. Re-routing observer.")]
     internal static partial void WatchdogCatchupJobMissing(this ILogger<Observer> logger);
 

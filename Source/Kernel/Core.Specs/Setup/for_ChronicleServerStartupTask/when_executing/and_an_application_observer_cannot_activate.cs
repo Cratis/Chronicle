@@ -13,6 +13,6 @@ public class and_an_application_observer_cannot_activate : given.a_startup_task_
     async Task Because() => _error = await Catch.Exception(Execute);
 
     [Fact] void should_fail_startup_with_the_application_observer_failure() => _error.ShouldEqual(_activationFailure);
-    [Fact] async Task should_exhaust_the_required_rehydration_retry_budget() => await _reactorObserver.Received(5).Ensure();
+    [Fact] async Task should_exhaust_the_required_rehydration_retry_budget() => await _reactorObserver.Received(50).Ensure();
     [Fact] void should_not_run_the_final_authentication_step() => _bootstrapClientsEnsured.ShouldBeFalse();
 }

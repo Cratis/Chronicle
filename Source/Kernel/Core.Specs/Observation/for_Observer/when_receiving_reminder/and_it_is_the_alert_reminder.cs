@@ -17,5 +17,5 @@ public class and_it_is_the_alert_reminder : given.an_observer
     async Task Because() => await _observer.ReceiveReminder(Observer.AlertReminderName, default);
 
     [Fact] async Task should_report_the_activation_level() => await _observerAlerts.Received(1).Reconcile(Arg.Is<ObserverAlertSnapshot>(_ => _.FailedPartitions.Count == 0));
-    [Fact] void should_not_unregister_the_lifetime_reminder() => _silo.ReminderRegistry.Mock.Verify(registry => registry.UnregisterReminder(It.IsAny<GrainId>(), It.IsAny<IGrainReminder>()), Times.Never);
+    [Fact] void should_unregister_the_reminder_once_nothing_is_left_to_report() => _silo.ReminderRegistry.Mock.Verify(registry => registry.UnregisterReminder(It.IsAny<GrainId>(), It.IsAny<IGrainReminder>()), Times.Once);
 }

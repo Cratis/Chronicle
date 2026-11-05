@@ -238,7 +238,7 @@ not uncertain remote acknowledgments or the external provider's durability.
   `UncompensatedCount`/`FailedCompensationCount`, and remaining callbacks attempted.
 
 Arc's [failure recipes](https://github.com/Cratis/Arc/blob/main/Documentation/backend/csharp/testing/command-operation-failures.md)
-contain the full cases. Run `dotnet test <Your.Specs.csproj>`; assert behavior,
+contain the full cases. Run the owning project's built spec executable (see [specs.csharp](../../../rules/specs.csharp.md)); assert behavior,
 not just command success. These corpus excerpts are source-checked, not compiled
 by the corpus text-verification gate. Test provider ownership, repeated finalized
 requests, conflicting keys, and delayed creates at the provider integration boundary.

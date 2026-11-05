@@ -328,6 +328,13 @@ public class ChronicleOptions(
     public SinkTypeId DefaultSinkTypeId { get; set; } = WellKnownSinkTypes.MongoDB;
 
     /// <summary>
+    /// Gets or sets the default <see cref="SinkTypeId"/> used when registering graph projections, which project events onto a property graph.
+    /// When not explicitly configured, defaults to <see cref="WellKnownSinkTypes.Neo4j"/>.
+    /// Set to <see cref="WellKnownSinkTypes.InMemoryGraph"/> for development and tests.
+    /// </summary>
+    public SinkTypeId DefaultGraphSinkTypeId { get; set; } = WellKnownSinkTypes.Neo4j;
+
+    /// <summary>
     /// Create a <see cref="ChronicleOptions"/> from a connection string.
     /// </summary>
     /// <param name="connectionString">Connection string to create from.</param>

@@ -60,3 +60,16 @@ Read [host wiring](hosting.md) for the deployment distinction.
 > TLS enabled (the default) and no configured certificate. **A production connection string must set
 > `skipTlsValidation=false`** (or `Tls.SkipCertificateValidation = false`)
 > against a server whose certificate is actually verifiable.
+
+## Partition concurrency
+
+Requires Chronicle 19.90.0 for concurrent .NET reactor/reducer partitions.
+
+`ChronicleOptions.Reactors.MaxConcurrentPartitions` and
+`ChronicleOptions.Reducers.MaxConcurrentPartitions` independently limit parallel
+partitions per observer. Both default to processor count capped at 8 and require
+at least 1. Set 1 for one-at-a-time handling if shared state is not thread-safe;
+one partition's batches remain ordered. These are .NET client settings, not
+kernel `observers` settings. Verified at **v19.110.1**:
+`Source/Clients/DotNET/Reactors/ReactorOptions.cs`, `Reducers/ReducerOptions.cs`
+and `Observation/PartitionedDeliveryScheduler.cs`.

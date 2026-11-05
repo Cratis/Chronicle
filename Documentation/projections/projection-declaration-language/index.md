@@ -13,6 +13,53 @@ Chronicle-specific choices that affect whether a declaration compiles and which 
 it uses. To inspect results without saving a projection, use
 [ad-hoc querying](adhoc-querying).
 
+## Graph targets
+
+A projection can build a property graph instead of a read model: write `=> graph <Name>` after the
+projection name and describe the `node` and `edge` blocks. Chronicle lowers the declaration into a graph
+projection definition and registers the graph as a read model whose schema carries the `x-graph-*`
+annotations, the same shape the .NET client registers for a model-bound or fluent graph projection.
+
+```screenplay
+graph Organization
+  node Person
+    personId Uuid key
+    name String
+  node Group
+    groupId Uuid key
+    name String
+  edge MEMBER_OF source Person target Group
+    since DateTime
+
+projection OrganizationGraph => graph Organization
+  node Person
+    from PersonRegistered key personId
+      name = name
+    remove with PersonRemoved key personId detach
+  node Group
+    from GroupCreated key groupId
+      name = name
+  edge MEMBER_OF
+    from MemberAdded source personId target groupId
+      since = $eventContext.occurred
+    remove with MemberRemoved source personId target groupId
+```
+
+Save the graph and its projection together as one declaration. The declaration holds exactly one graph
+projection and the graph it builds; top-level `concept` lines are allowed, and a graph property otherwise uses
+a primitive type (`Uuid`, `String`, `Int`, `Decimal`, `Bool`, `Date`, `DateTime`). Chronicle stores graph read
+models in the graph sink (Neo4j).
+
+- Properties an event shares by name with a node or edge are mapped automatically, as for a model-bound graph.
+- An `every` block is applied to each `from` of its block, so a rendered declaration writes the mappings out
+  under every `from` instead of in an `every`.
+- Previewing a graph projection is not supported.
+- Rendering a registered graph projection, whichever client registered it, produces a declaration that
+  saves unchanged.
+
+See [Screenplay — Graph projections](/screenplay/projections/graphs/) and [Screenplay — Graphs](/screenplay/graphs/)
+for the language.
+
 ## Pinned event generations
 
 Set the save request's `GenerationDelivery` to `Pinned` to resolve each event reference to the

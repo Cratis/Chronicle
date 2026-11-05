@@ -5,7 +5,7 @@ description: Cratis Chronicle sinks store projection and reducer output as read 
 ---
 A Cratis Chronicle sink receives the state produced by a projection or reducer and either stores it as a read model or publishes it as a new event. Use a read-model sink when queries need current state. Use an event-sequence sink when downstream consumers need events derived from that state.
 
-MongoDB is the default read-model sink; SQL is another storage option. Publishing events is a separate target choice, with its own destination rules and replay behavior.
+MongoDB is the default read-model sink; SQL is another storage option. [Graph projections](../projections/graph-projections.mdx) write to graph sinks, described [below](#graph-sinks). Publishing events is a separate target choice, with its own destination rules and replay behavior.
 
 The SQL registration examples are specific to .NET hosting. The Kernel host registers the storage implementation; the client host selects the default read-model sink. These examples do not establish equivalent configuration APIs in other clients.
 
@@ -197,6 +197,15 @@ The SQL sink is provided by the `Cratis.Chronicle.Storage.Sql` NuGet package. Ad
 <ChronicleClientTabs snippet="sinks/index/register-sql-storage" />
 
 Continue with the [hosting configuration](../hosting/configuration/index.md) for the full Kernel setup.
+
+## Graph sinks
+
+A [graph projection](../projections/graph-projections.mdx) writes nodes and edges instead of read model instances. It uses a graph sink, which implements `IGraphSink` instead of `ISink`. The graph sink types are:
+
+| Sink type | Description |
+| --- | --- |
+| `InMemoryGraph` | Keeps the graph in memory. It is the executable reference for the graph sink semantics: operations, watermarks and replay. Use it for development and tests. |
+| `Neo4j` | The default graph sink type, `DefaultGraphSinkTypeId`. It stores the graph in Neo4j, with a database per event store and namespace. See [Neo4j graph sink](neo4j.mdx). A graph sink type that is not available fails with `UnknownSink`. |
 
 ## Choosing a Sink
 

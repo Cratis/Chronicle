@@ -5,6 +5,7 @@ using System.Collections.Concurrent;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
+using Cratis.Chronicle.Storage.Graphs;
 using Cratis.Types;
 
 namespace Cratis.Chronicle.Storage.Sinks;
@@ -26,6 +27,7 @@ public class Sinks(
     readonly Dictionary<SinkTypeId, ISinkFactory> _factories = sinkFactories.Where(_ => _ is not null).ToDictionary(_ => _.TypeId, _ => _);
     readonly ConcurrentDictionary<SinkKey, SinkEntry> _sinks = new();
     readonly ConcurrentDictionary<SinkKey, SemaphoreSlim> _gates = new();
+    readonly ConcurrentDictionary<SinkKey, Lazy<Task<IGraphSink>>> _graphSinks = new();
 
     /// <inheritdoc/>
     public Task<ISink> GetFor(ReadModelDefinition readModel) => Get(readModel, initialize: true);
@@ -38,7 +40,30 @@ public class Sinks(
         GetFor(readModel with { ContainerName = container });
 
     /// <inheritdoc/>
+    public Task<IGraphSink> GetGraphFor(ReadModelDefinition readModel)
+    {
+        ThrowIfUnknownSink(readModel.Sink.Type);
+        if (_factories[readModel.Sink.Type] is not IGraphSinkFactory factory)
+        {
+            throw new SinkIsNotAGraphSink(readModel.Sink.Type);
+        }
+
+        var key = new SinkKey(readModel.Sink.Type, readModel.Sink.Configuration, readModel.ContainerName, readModel.Sink.EventSequence);
+        return _graphSinks.GetOrAdd(
+            key,
+            static (_, state) => new Lazy<Task<IGraphSink>>(() => CreateGraphSink(state.Factory, state.EventStore, state.Namespace, state.ReadModel)),
+            (Factory: factory, EventStore: eventStoreName, Namespace: eventStoreNamespaceName, ReadModel: readModel)).Value;
+    }
+
+    /// <inheritdoc/>
     public bool HasType(SinkTypeId typeId) => _factories.ContainsKey(typeId);
+
+    static async Task<IGraphSink> CreateGraphSink(IGraphSinkFactory factory, EventStoreName eventStore, EventStoreNamespaceName @namespace, ReadModelDefinition readModel)
+    {
+        var sink = factory.CreateGraphFor(eventStore, @namespace, readModel);
+        await sink.EnsureSchema();
+        return sink;
+    }
 
     static async Task Initialize(ISink sink, bool changed)
     {
