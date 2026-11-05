@@ -48,7 +48,7 @@ public sealed class NamespaceOpeningGuard(IResourceNameGate gate, Func<Task<IEnu
             return;
         }
 
-        var existing = Wait(namespaces.GetAll()).Select(_ => _.Name.Value).ToArray();
+        var existing = Wait(namespaces.GetAll).Select(_ => _.Name.Value).ToArray();
         if (existing.Contains(@namespace.Value))
         {
             gate.MarkRegistered(eventStore, @namespace);
@@ -60,15 +60,27 @@ public sealed class NamespaceOpeningGuard(IResourceNameGate gate, Func<Task<IEnu
             eventStore,
             @namespace,
             existing,
-            Wait(eventStoreNames()));
-        Wait(gate.EnsureCanCreate(creation));
+            Wait(eventStoreNames));
+        Wait(() => gate.EnsureCanCreate(creation));
         _checked.TryAdd((eventStore.Value, @namespace.Value), 0);
     }
 
     static bool IsRegistered(INamespaceStorage namespaces, EventStoreNamespaceName @namespace) =>
-        Wait(namespaces.GetAll()).Any(_ => _.Name.Value == @namespace.Value);
+        Wait(namespaces.GetAll).Any(_ => _.Name.Value == @namespace.Value);
 
-    static T Wait<T>(Task<T> task) => Task.Run(() => task).GetAwaiter().GetResult();
+    /// <summary>
+    /// Runs asynchronous storage work to completion for the synchronous open.
+    /// </summary>
+    /// <remarks>
+    /// Opening a namespace is synchronous, and it is reached from grain activations whose scheduler runs one thing at a
+    /// time. The work is therefore started on the thread pool, not merely awaited there: started on the caller's
+    /// scheduler, its continuations would be queued behind the very call that blocks waiting for them. Failures still
+    /// surface to the caller unchanged, so a check that cannot complete refuses the open.
+    /// </remarks>
+    /// <typeparam name="T">The result type.</typeparam>
+    /// <param name="work">Starts the work.</param>
+    /// <returns>The result.</returns>
+    static T Wait<T>(Func<Task<T>> work) => Task.Run(work).GetAwaiter().GetResult();
 
-    static void Wait(Task task) => Task.Run(() => task).GetAwaiter().GetResult();
+    static void Wait(Func<Task> work) => Task.Run(work).GetAwaiter().GetResult();
 }
