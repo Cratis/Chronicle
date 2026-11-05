@@ -15,6 +15,7 @@ public class when_checking : Specification
     [InlineData("EventSequences")]
     [InlineData("JobSteps")]
     [InlineData("__cratis_named_tags")]
+    [InlineData("__cratis_spelling_reviews")]
     [InlineData("__EFMigrationsHistory")]
     [InlineData("orders_email_constraint")]
     [InlineData("orders_email_constraint_values")]

@@ -27,6 +27,7 @@ public class SqlReservedEventSequenceIds : IReservedEventSequenceIds
             .Where(_ => _.IsLiteral && _.FieldType == typeof(string))
             .Select(_ => (string)_.GetRawConstantValue()!)
             .Append(EventSequenceMigrator.NamedTagsTable)
+            .Append(EventSequenceMigrator.SpellingReviewsTable)
             .Append(MigrationsHistoryTable),
         StringComparer.OrdinalIgnoreCase);
 

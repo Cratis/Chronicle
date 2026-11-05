@@ -31,6 +31,11 @@ public partial class EventSequenceMigrator(
             throw new NamedTagsTableCollision();
         }
 
+        if (string.Equals(tableName, SpellingReviewsTable, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException($"The table name {SpellingReviewsTable} is reserved and cannot be used for an event sequence.");
+        }
+
         await tableMigrator.EnsureTableMigrated(
             tableName,
             context,
@@ -43,6 +48,7 @@ public partial class EventSequenceMigrator(
             {
                 await EnsureNamedTagsTable(db);
                 await UpgradeTable(db, name);
+                await ReportSpellingReview(db, name);
             });
     }
 

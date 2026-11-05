@@ -17,6 +17,14 @@ public interface IEventSequenceMigrator
     Task EnsureTableMigrated(string tableName, EventSequenceDbContext context);
 
     /// <summary>
+    /// Counts identifiers that exist in more than one spelling and records the counts for review. Only acts on SQL Server.
+    /// </summary>
+    /// <param name="context">The <see cref="EventSequenceDbContext"/> for the table.</param>
+    /// <param name="tableName">The name of the event sequence table.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    Task CheckSpelling(EventSequenceDbContext context, string tableName);
+
+    /// <summary>
     /// Clears cached migration state for all tables whose connection string starts with the given prefix.
     /// </summary>
     /// <param name="connectionStringPrefix">

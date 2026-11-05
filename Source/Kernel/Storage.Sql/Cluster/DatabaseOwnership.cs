@@ -94,7 +94,7 @@ internal sealed class DatabaseOwnership(SqlDatabaseCatalog catalog, Func<string,
 
         // Dynamic table names are supplied by the application, but their engine-owned column shapes are fixed.
         namespaceTables.UnionWith(tables.Where(pair => IsNamespaceTable(pair.Value)).Select(pair => pair.Key));
-        namespaceTables.UnionWith([WellKnownTableNames.Jobs, WellKnownTableNames.JobSteps, WellKnownTableNames.FailedJobSteps, EventSequenceMigrator.NamedTagsTable]);
+        namespaceTables.UnionWith([WellKnownTableNames.Jobs, WellKnownTableNames.JobSteps, WellKnownTableNames.FailedJobSteps, EventSequenceMigrator.NamedTagsTable, EventSequenceMigrator.SpellingReviewsTable]);
         return kind switch
         {
             DatabaseKind.EventStore => history.Any(migration => !IsNamespaceMigration(migration)) || tables.Keys.Any(storeTables.Contains),

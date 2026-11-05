@@ -125,6 +125,7 @@ public partial class Database
         {
             await using var context = new EventSequenceDbContext(BuildOptions<EventSequenceDbContext>(target), name, eventSequenceMigrator);
             await EnsureTableMigrated(context, target);
+            await eventSequenceMigrator.CheckSpelling(context, name);
         }
     }
 
