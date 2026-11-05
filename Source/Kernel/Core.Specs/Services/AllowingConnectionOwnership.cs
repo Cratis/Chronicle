@@ -43,8 +43,8 @@ public static class AllowingConnectionOwnership
     public static void WithAllowingReservations(IGrainFactory grainFactory)
     {
         var reservation = Substitute.For<IConnectionReservation>();
-        reservation.Claim(Arg.Any<ConnectionOwner>(), Arg.Any<SiloAddress>()).Returns(true);
-        reservation.Release(Arg.Any<ConnectionOwner>(), Arg.Any<SiloAddress>()).Returns(Task.CompletedTask);
+        reservation.Claim(Arg.Any<ConnectionOwner>(), Arg.Any<SiloAddress>(), Arg.Any<Guid>(), Arg.Any<TimeSpan>()).Returns(true);
+        reservation.Release(Arg.Any<ConnectionOwner>(), Arg.Any<Guid>()).Returns(Task.CompletedTask);
         grainFactory.GetGrain<IConnectionReservation>(Arg.Any<string>(), Arg.Any<string>()).Returns(reservation);
     }
 

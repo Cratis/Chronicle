@@ -39,6 +39,13 @@ internal sealed class ConnectionService(
     ILogger<ConnectionService> logger,
     IOptions<ChronicleOptions> options) : IConnectionService
 {
+    /// <summary>
+    /// How many keep-alive intervals a reservation lease lasts without being renewed. The holder renews it once per
+    /// keep-alive interval, so a lease survives a few missed or slow renewals but a reservation nobody holds any more
+    /// - a lost release, a holder that died - lapses within a few intervals.
+    /// </summary>
+    const int ReservationLeaseIntervals = 4;
+
     static readonly Status _notAvailableToCaller = new(StatusCode.PermissionDenied, "The connection is not available to the caller.");
     static readonly Lazy<string> _schemaDefinition = new(GenerateSchema);
     static readonly Lazy<WireContract> _wireContract = new(() => WireContractReader.Read(Contracts.WireContractDescriptorSet.Bytes));
@@ -218,19 +225,20 @@ internal sealed class ConnectionService(
         ConnectionOwner owner,
         CancellationToken cancellationToken)
     {
-        if (!await TryClaim(subject, request, owner, cancellationToken))
+        var token = Guid.NewGuid();
+        if (!await TryClaim(subject, request, owner, token, cancellationToken))
         {
             return;
         }
 
         try
         {
-            await Serve(subject, connectedClients, request, cancellationToken);
+            await Serve(subject, connectedClients, request, owner, token, cancellationToken);
         }
         finally
         {
             ownership.Release(request.ConnectionId, owner);
-            ReleaseReservation(request.ConnectionId, owner);
+            ReleaseReservation(request.ConnectionId, owner, token);
         }
     }
 
@@ -238,6 +246,7 @@ internal sealed class ConnectionService(
         ReplaySubject<ConnectionKeepAlive> subject,
         ConnectRequest request,
         ConnectionOwner owner,
+        Guid token,
         CancellationToken cancellationToken)
     {
         if (owner.IsUnidentified)
@@ -261,11 +270,24 @@ internal sealed class ConnectionService(
                 return false;
             }
 
-            if (!await TryReserve(request, owner, cancellationToken))
+            var reservation = await TryReserve(request, owner, token, cancellationToken);
+            if (reservation != ReservationOutcome.Granted)
             {
                 ownership.Release(request.ConnectionId, owner);
-                logger.ConnectionRefusedForAnotherCaller(request.ConnectionId);
-                subject.OnError(new RpcException(_notAvailableToCaller));
+                if (reservation == ReservationOutcome.Refused)
+                {
+                    logger.ConnectionRefusedForAnotherCaller(request.ConnectionId);
+                    subject.OnError(new RpcException(_notAvailableToCaller));
+                }
+                else if (cancellationToken.IsCancellationRequested)
+                {
+                    subject.OnCompleted();
+                }
+                else
+                {
+                    subject.OnError(new RpcException(new Status(StatusCode.Unavailable, "Client registration could not be verified")));
+                }
+
                 return false;
             }
         }
@@ -284,39 +306,66 @@ internal sealed class ConnectionService(
         return true;
     }
 
-    async Task<bool> TryReserve(ConnectRequest request, ConnectionOwner owner, CancellationToken cancellationToken)
+    async Task<ReservationOutcome> TryReserve(ConnectRequest request, ConnectionOwner owner, Guid token, CancellationToken cancellationToken)
     {
         try
         {
-            return await grainFactory
-                .GetGrain<IConnectionReservation>(request.ConnectionId)
-                .Claim(owner, localSiloDetails.SiloAddress)
-                .WaitAsync(options.Value.Clustering.ResponseTimeout, RegistrationTimeProvider, cancellationToken)
-                .ConfigureAwait(false);
+            return await ClaimReservation(request.ConnectionId, owner, token, cancellationToken).ConfigureAwait(false);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            return false;
+            // The claim may still be processed after it was given up on, so it has to be undone.
+            ReleaseReservation(request.ConnectionId, owner, token);
+            return ReservationOutcome.Failed;
         }
         catch (Exception ex)
         {
             logger.ConnectionReservationFailed(request.ConnectionId, ex);
-            return false;
+            ReleaseReservation(request.ConnectionId, owner, token);
+            return ReservationOutcome.Failed;
         }
     }
 
-    void ReleaseReservation(string connectionId, ConnectionOwner owner)
+    async Task<ReservationOutcome> RenewReservation(ConnectRequest request, ConnectionOwner owner, Guid token, CancellationToken cancellationToken)
     {
-        var reservation = grainFactory.GetGrain<IConnectionReservation>(connectionId);
-        _ = ReleaseReservation(reservation, connectionId, owner);
+        try
+        {
+            return await ClaimReservation(request.ConnectionId, owner, token, cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            return ReservationOutcome.Failed;
+        }
+        catch (Exception ex)
+        {
+            // The lease outlasts a few missed renewals, so this is tried again at the next keep-alive.
+            logger.FailedToRenewReservation(request.ConnectionId, ex);
+            return ReservationOutcome.Failed;
+        }
     }
 
-    async Task ReleaseReservation(IConnectionReservation reservation, string connectionId, ConnectionOwner owner)
+    async Task<ReservationOutcome> ClaimReservation(string connectionId, ConnectionOwner owner, Guid token, CancellationToken cancellationToken)
+    {
+        var granted = await grainFactory
+            .GetGrain<IConnectionReservation>(connectionId)
+            .Claim(owner, localSiloDetails.SiloAddress, token, _keepAliveInterval * ReservationLeaseIntervals)
+            .WaitAsync(options.Value.Clustering.ResponseTimeout, RegistrationTimeProvider, cancellationToken)
+            .ConfigureAwait(false);
+        return granted ? ReservationOutcome.Granted : ReservationOutcome.Refused;
+    }
+
+    void ReleaseReservation(string connectionId, ConnectionOwner owner, Guid token)
+    {
+        var reservation = grainFactory.GetGrain<IConnectionReservation>(connectionId);
+        _ = ReleaseReservation(reservation, connectionId, owner, token);
+    }
+
+    async Task ReleaseReservation(IConnectionReservation reservation, string connectionId, ConnectionOwner owner, Guid token)
     {
         try
         {
             await reservation
-                .Release(owner, localSiloDetails.SiloAddress)
+                .Release(owner, token)
                 .WaitAsync(options.Value.Clustering.ResponseTimeout, RegistrationTimeProvider, CancellationToken.None)
                 .ConfigureAwait(false);
         }
@@ -330,9 +379,12 @@ internal sealed class ConnectionService(
         ReplaySubject<ConnectionKeepAlive> subject,
         IConnectedClients connectedClients,
         ConnectRequest request,
+        ConnectionOwner owner,
+        Guid token,
         CancellationToken cancellationToken)
     {
         var terminated = false;
+        var reservedByAnother = false;
         try
         {
             if (!await TryRegister(subject, connectedClients, request, cancellationToken))
@@ -372,6 +424,13 @@ internal sealed class ConnectionService(
                         break;
                     }
 
+                    if (await RenewReservation(request, owner, token, cancellationToken).ConfigureAwait(false) == ReservationOutcome.Refused)
+                    {
+                        logger.ConnectionClosedForAnotherCaller(request.ConnectionId);
+                        reservedByAnother = true;
+                        break;
+                    }
+
                     subject.OnNext(new ConnectionKeepAlive
                     {
                         ConnectionId = request.ConnectionId
@@ -388,7 +447,15 @@ internal sealed class ConnectionService(
             }
 
             terminated = true;
-            subject.OnCompleted();
+            if (reservedByAnother)
+            {
+                subject.OnError(new RpcException(_notAvailableToCaller));
+            }
+            else
+            {
+                subject.OnCompleted();
+            }
+
             openConnections.Closed(request.ConnectionId);
 
             // A registry check given up on above may still be putting the client back. Let it settle first, so the

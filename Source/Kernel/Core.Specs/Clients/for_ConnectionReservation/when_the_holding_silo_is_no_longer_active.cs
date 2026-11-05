@@ -9,11 +9,11 @@ public class when_the_holding_silo_is_no_longer_active : a_reservation
 
     async Task Establish()
     {
-        await _reservation.Claim(Alice, _first);
+        await _reservation.Claim(Alice, _first, _token, Lease);
         _active.Remove(_first);
     }
 
-    async Task Because() => _result = await _reservation.Claim(Bob, _second);
+    async Task Because() => _result = await _reservation.Claim(Bob, _second, _otherToken, Lease);
 
     [Fact] void should_still_refuse_within_the_retention() => _result.ShouldBeFalse();
 }

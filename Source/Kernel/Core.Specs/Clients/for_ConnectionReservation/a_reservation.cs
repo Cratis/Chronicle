@@ -10,11 +10,14 @@ public class a_reservation : Specification
 {
     protected static readonly ConnectionOwner Alice = new("issuer", "alice");
     protected static readonly ConnectionOwner Bob = new("issuer", "bob");
+    protected static readonly TimeSpan Lease = TimeSpan.FromMinutes(2);
     protected SiloAddress _first;
     protected SiloAddress _second;
     protected ManualClock _clock;
     protected IClusterMembershipService _membership;
     protected TestReservation _reservation;
+    protected Guid _token;
+    protected Guid _otherToken;
     protected HashSet<SiloAddress> _active;
 
     void Establish()
@@ -27,8 +30,12 @@ public class a_reservation : Specification
         _membership.CurrentSnapshot.Returns(_ => new ClusterMembershipSnapshot(
             _active.ToImmutableDictionary(silo => silo, silo => new ClusterMember(silo, SiloStatus.Active, silo.ToString())),
             new MembershipVersion(1)));
-        _reservation = new(_membership) { Clock = _clock };
+        _token = Guid.NewGuid();
+        _otherToken = Guid.NewGuid();
+        _reservation = NewGrain();
     }
+
+    protected TestReservation NewGrain() => new(_membership) { Clock = _clock };
 
     protected sealed class TestReservation(IClusterMembershipService membership) : ConnectionReservation(membership)
     {

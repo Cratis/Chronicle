@@ -23,6 +23,7 @@ public class a_two_silo_cluster : Specification
 {
     protected const string Id = "the-connection";
     protected ManualClock _clock;
+    protected ConnectionReservation _grain;
     protected IConnectionReservation _reservation;
     protected SiloAddress _siloA;
     protected SiloAddress _siloB;
@@ -30,6 +31,7 @@ public class a_two_silo_cluster : Specification
     protected ConnectionOwnership _ownershipB;
     private protected KernelConnectionService _serviceA;
     private protected KernelConnectionService _serviceB;
+    readonly TaskCompletionSource<Exception?> _terminated = new(TaskCreationOptions.RunContinuationsAsynchronously);
     readonly TaskCompletionSource _released = new(TaskCreationOptions.RunContinuationsAsynchronously);
     readonly List<IDisposable> _subscriptions = [];
 
@@ -42,7 +44,8 @@ public class a_two_silo_cluster : Specification
         membership.CurrentSnapshot.Returns(new ClusterMembershipSnapshot(
             new[] { _siloA, _siloB }.ToImmutableDictionary(silo => silo, silo => new ClusterMember(silo, SiloStatus.Active, silo.ToString())),
             new MembershipVersion(1)));
-        _reservation = new SignallingReservation(CreateReservation(membership), _released);
+        _grain = new SharedReservation(membership) { Clock = _clock };
+        _reservation = new SignallingReservation(Decorate(_grain), _released);
 
         var options = Options.Create(new ChronicleOptions { ConnectedClients = new() { KeepAliveIntervalSeconds = 1 }, Clustering = new() { ResponseTimeout = TimeSpan.FromMilliseconds(300) } });
         (_serviceA, _ownershipA) = CreateService(_siloA, options);
@@ -50,11 +53,11 @@ public class a_two_silo_cluster : Specification
     }
 
     /// <summary>
-    /// Creates the reservation the silos share.
+    /// Gives a spec the chance to put something between the silos and the reservation grain they share.
     /// </summary>
-    /// <param name="membership">The <see cref="IClusterMembershipService"/>.</param>
-    /// <returns>The <see cref="IConnectionReservation"/>.</returns>
-    protected virtual IConnectionReservation CreateReservation(IClusterMembershipService membership) => new SharedReservation(membership) { Clock = _clock };
+    /// <param name="grain">The reservation grain.</param>
+    /// <returns>The <see cref="IConnectionReservation"/> the silos use.</returns>
+    protected virtual IConnectionReservation Decorate(IConnectionReservation grain) => grain;
 
     protected bool Owns(ConnectionOwnership ownership, string subject) => ownership.IsOwnedBy(Id, AuthenticatedCalls.OwnerOf(subject));
 
@@ -63,10 +66,24 @@ public class a_two_silo_cluster : Specification
         var outcome = new TaskCompletionSource<Exception?>(TaskCreationOptions.RunContinuationsAsynchronously);
         _subscriptions.Add(service.Connect(new ConnectRequest { ConnectionId = Id }, context).Subscribe(
             _ => outcome.TrySetResult(null),
-            error => outcome.TrySetResult(error),
-            () => outcome.TrySetResult(new InvalidOperationException("ended"))));
+            error =>
+            {
+                outcome.TrySetResult(error);
+                _terminated.TrySetResult(error);
+            },
+            () =>
+            {
+                outcome.TrySetResult(new InvalidOperationException("ended"));
+                _terminated.TrySetResult(null);
+            }));
         return await outcome.Task.WaitAsync(TimeSpan.FromSeconds(10), TimeProvider.System);
     }
+
+    /// <summary>
+    /// Waits until the stream of a connection has ended.
+    /// </summary>
+    /// <returns>The error it ended with, or null when it completed.</returns>
+    protected Task<Exception?> Terminated() => _terminated.Task.WaitAsync(TimeSpan.FromSeconds(10), TimeProvider.System);
 
     /// <summary>
     /// Waits until the reservation has been released by a silo.
@@ -108,11 +125,11 @@ public class a_two_silo_cluster : Specification
 
     sealed class SignallingReservation(IConnectionReservation inner, TaskCompletionSource released) : IConnectionReservation
     {
-        public Task<bool> Claim(ConnectionOwner owner, SiloAddress silo) => inner.Claim(owner, silo);
+        public Task<bool> Claim(ConnectionOwner owner, SiloAddress silo, Guid token, TimeSpan lease) => inner.Claim(owner, silo, token, lease);
 
-        public async Task Release(ConnectionOwner owner, SiloAddress silo)
+        public async Task Release(ConnectionOwner owner, Guid token)
         {
-            await inner.Release(owner, silo);
+            await inner.Release(owner, token);
             released.TrySetResult();
         }
     }

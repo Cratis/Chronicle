@@ -7,9 +7,9 @@ public class when_another_owner_claims_while_held : a_reservation
 {
     bool _result;
 
-    async Task Establish() => await _reservation.Claim(Alice, _first);
+    async Task Establish() => await _reservation.Claim(Alice, _first, _token, Lease);
 
-    async Task Because() => _result = await _reservation.Claim(Bob, _second);
+    async Task Because() => _result = await _reservation.Claim(Bob, _second, _otherToken, Lease);
 
     [Fact] void should_refuse_the_other_owner() => _result.ShouldBeFalse();
 }

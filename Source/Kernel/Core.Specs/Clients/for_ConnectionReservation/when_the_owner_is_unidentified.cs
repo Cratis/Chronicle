@@ -7,7 +7,7 @@ public class when_the_owner_is_unidentified : a_reservation
 {
     bool _result;
 
-    async Task Because() => _result = await _reservation.Claim(ConnectionOwner.Unidentified, _first);
+    async Task Because() => _result = await _reservation.Claim(ConnectionOwner.Unidentified, _first, _token, Lease);
 
     [Fact] void should_refuse() => _result.ShouldBeFalse();
 }

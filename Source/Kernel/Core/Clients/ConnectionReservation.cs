@@ -7,65 +7,64 @@ namespace Cratis.Chronicle.Clients;
 /// Represents an implementation of <see cref="IConnectionReservation"/>.
 /// </summary>
 /// <remarks>
-/// The state is in memory only. The grain is kept active while a connection is held and for
-/// <see cref="ConnectionOwnership.ReleasedClaimRetention"/> after the last one is released, following the same rules
-/// as <see cref="ConnectionOwnership"/>.
+/// The state is in memory only. Every claim is a lease that lapses unless its holder renews it, so a claim that is
+/// never released - a lost call, a holder that died - ends by itself, and a grain that was reactivated empty is filled
+/// again by the next renewal. The grain is kept active while a connection is held and for
+/// <see cref="ConnectionOwnership.ReleasedClaimRetention"/> after the last one ends, following the same rules as
+/// <see cref="ConnectionOwnership"/>.
 /// </remarks>
 /// <param name="clusterMembership"><see cref="IClusterMembershipService"/> for telling which silos are still active.</param>
 public class ConnectionReservation(IClusterMembershipService clusterMembership) : Grain, IConnectionReservation
 {
     static readonly TimeSpan _pruneInterval = TimeSpan.FromMinutes(1);
 
-    readonly Dictionary<SiloAddress, int> _streams = [];
+    readonly Dictionary<Guid, Lease> _leases = [];
     ConnectionOwner? _owner;
     DateTimeOffset? _releasedAt;
 
     /// <summary>
-    /// Gets or sets the clock used for the retention of released claims.
+    /// Gets or sets the clock used for leases and the retention of released claims.
     /// </summary>
     internal TimeProvider Clock { get; set; } = TimeProvider.System;
 
     /// <inheritdoc/>
     public override Task OnActivateAsync(CancellationToken cancellationToken)
     {
-        this.RegisterGrainTimer(PruneInactiveSilos, new() { DueTime = _pruneInterval, Period = _pruneInterval });
+        this.RegisterGrainTimer(Prune, new() { DueTime = _pruneInterval, Period = _pruneInterval });
         return Task.CompletedTask;
     }
 
     /// <inheritdoc/>
-    public Task<bool> Claim(ConnectionOwner owner, SiloAddress silo)
+    public Task<bool> Claim(ConnectionOwner owner, SiloAddress silo, Guid token, TimeSpan lease)
     {
-        if (owner.IsUnidentified) return Task.FromResult(false);
+        if (owner.IsUnidentified || lease <= TimeSpan.Zero) return Task.FromResult(false);
 
         var now = Clock.GetUtcNow();
-        DropInactiveSilos(now, silo);
+        DropEndedLeases(now, silo);
 
         if (_owner is { } current && !current.Equals(owner))
         {
-            if (_streams.Count > 0 || _releasedAt is null || now - _releasedAt < ConnectionOwnership.ReleasedClaimRetention)
+            if (_leases.Count > 0 || _releasedAt is null || now - _releasedAt < ConnectionOwnership.ReleasedClaimRetention)
             {
                 return Task.FromResult(false);
             }
 
-            _streams.Clear();
+            _leases.Clear();
         }
 
         _owner = owner;
         _releasedAt = null;
-        _streams[silo] = _streams.GetValueOrDefault(silo) + 1;
+        _leases[token] = new(silo, now + lease);
         Keep(TimeSpan.MaxValue);
         return Task.FromResult(true);
     }
 
     /// <inheritdoc/>
-    public Task Release(ConnectionOwner owner, SiloAddress silo)
+    public Task Release(ConnectionOwner owner, Guid token)
     {
-        if (_owner is { } current && current.Equals(owner) && _streams.TryGetValue(silo, out var streams))
+        if (_owner is { } current && current.Equals(owner) && _leases.Remove(token) && _leases.Count == 0)
         {
-            if (streams <= 1) _streams.Remove(silo);
-            else _streams[silo] = streams - 1;
-
-            if (_streams.Count == 0) MarkReleased(Clock.GetUtcNow());
+            MarkReleased(Clock.GetUtcNow());
         }
 
         return Task.CompletedTask;
@@ -77,28 +76,33 @@ public class ConnectionReservation(IClusterMembershipService clusterMembership) 
     /// <param name="period">How long to keep it active. <see cref="TimeSpan.MaxValue"/> keeps it active until changed.</param>
     internal virtual void Keep(TimeSpan period) => DelayDeactivation(period);
 
-    Task PruneInactiveSilos(CancellationToken cancellationToken)
+    Task Prune(CancellationToken cancellationToken)
     {
-        DropInactiveSilos(Clock.GetUtcNow(), null);
+        DropEndedLeases(Clock.GetUtcNow(), null);
         return Task.CompletedTask;
     }
 
-    void DropInactiveSilos(DateTimeOffset now, SiloAddress? except)
+    void DropEndedLeases(DateTimeOffset now, SiloAddress? except)
     {
-        if (_streams.Count == 0) return;
+        if (_leases.Count == 0) return;
 
         var members = clusterMembership.CurrentSnapshot.Members;
-        var inactive = _streams.Keys
-            .Where(silo => !silo.Equals(except) && !(members.TryGetValue(silo, out var member) && member.Status == SiloStatus.Active))
+        var ended = _leases
+            .Where(_ => _.Value.ExpiresAt <= now || (!_.Value.Silo.Equals(except) && !(members.TryGetValue(_.Value.Silo, out var member) && member.Status == SiloStatus.Active)))
             .ToArray();
+        if (ended.Length == 0) return;
 
-        foreach (var silo in inactive) _streams.Remove(silo);
-        if (inactive.Length > 0 && _streams.Count == 0) MarkReleased(now);
+        // A lease that lapsed counts as released when it lapsed. One whose silo is gone counts from when that was noticed.
+        var releasedAt = ended.Max(_ => _.Value.ExpiresAt <= now ? _.Value.ExpiresAt : now);
+        foreach (var lease in ended) _leases.Remove(lease.Key);
+        if (_leases.Count == 0) MarkReleased(releasedAt);
     }
 
-    void MarkReleased(DateTimeOffset now)
+    void MarkReleased(DateTimeOffset releasedAt)
     {
-        _releasedAt = now;
+        _releasedAt = releasedAt;
         Keep(ConnectionOwnership.ReleasedClaimRetention);
     }
+
+    sealed record Lease(SiloAddress Silo, DateTimeOffset ExpiresAt);
 }

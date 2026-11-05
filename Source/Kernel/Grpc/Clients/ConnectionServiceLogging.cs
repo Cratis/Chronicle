@@ -44,6 +44,12 @@ internal static partial class ConnectionServiceLogMessages
     [LoggerMessage(LogLevel.Warning, "Connection {ConnectionId} was not opened because its reservation could not be verified across the cluster")]
     internal static partial void ConnectionReservationFailed(this ILogger<ConnectionService> logger, string connectionId, Exception exception);
 
+    [LoggerMessage(LogLevel.Warning, "The cluster-wide reservation for connection {ConnectionId} could not be renewed. Retrying at the next keep-alive")]
+    internal static partial void FailedToRenewReservation(this ILogger<ConnectionService> logger, string connectionId, Exception exception);
+
+    [LoggerMessage(LogLevel.Warning, "Connection {ConnectionId} was closed because it is now reserved for another caller")]
+    internal static partial void ConnectionClosedForAnotherCaller(this ILogger<ConnectionService> logger, string connectionId);
+
     [LoggerMessage(LogLevel.Warning, "The cluster-wide reservation for connection {ConnectionId} could not be released")]
     internal static partial void FailedToReleaseReservation(this ILogger<ConnectionService> logger, string connectionId, Exception exception);
 }
