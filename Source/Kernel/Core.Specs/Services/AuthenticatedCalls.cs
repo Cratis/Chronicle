@@ -37,6 +37,24 @@ public static class AuthenticatedCalls
     }
 
     /// <summary>
+    /// Gets the owner a call made by the given client has.
+    /// </summary>
+    /// <param name="client">The client identifier.</param>
+    /// <returns>The <see cref="ConnectionOwner"/>.</returns>
+    public static ConnectionOwner OwnerOfClient(string client) => new("issuer", client, true);
+
+    /// <summary>
+    /// Creates the context of a call made by an authenticated caller that has a client identifier but no subject.
+    /// </summary>
+    /// <param name="client">The client identifier.</param>
+    /// <returns>The <see cref="CallContext"/>.</returns>
+    public static CallContext AsClient(string client)
+    {
+        var principal = new ClaimsPrincipal(new ClaimsIdentity([new Claim("client_id", client, ClaimValueTypes.String, "issuer")], "test"));
+        return Served(principal, false, default);
+    }
+
+    /// <summary>
     /// Creates the context of a call whose request carries no authenticated principal.
     /// </summary>
     /// <param name="cancellationToken">The optional token that ends the call.</param>
