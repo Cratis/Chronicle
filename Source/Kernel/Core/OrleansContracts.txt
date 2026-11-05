@@ -41,6 +41,8 @@ interface [GrainInterfaceType("Cratis.Chronicle.Captures.ICapturesManager")] Cra
 
 class [GrainType("connectedclients")] Cratis.Chronicle.Clients.ConnectedClients
 
+class [GrainType("connectionreservation")] Cratis.Chronicle.Clients.ConnectionReservation
+
 interface [GrainInterfaceType("Cratis.Chronicle.Clients.IConnectedClients")] Cratis.Chronicle.Clients.IConnectedClients [Version(2)]
   AE0E91A3: DeclaresProjection(Cratis.Chronicle.Concepts.EventStoreName, Cratis.Chronicle.Concepts.Projections.ProjectionId) -> Task<bool>
   4317FD1C: GetAllConnectedClients() -> Task<System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Clients.ConnectedClient>>
@@ -56,6 +58,10 @@ interface [GrainInterfaceType("Cratis.Chronicle.Clients.IConnectedClients")] Cra
   27E68A56: RecordDeclaredProjections(Cratis.Chronicle.Concepts.Clients.ConnectionId, Cratis.Chronicle.Concepts.EventStoreName, System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Projections.ProjectionId>) -> Task
   1F595548: RecordObserver(Cratis.Chronicle.Concepts.Clients.ConnectionId, Cratis.Chronicle.Concepts.Observation.ObserverKey) -> Task
   710D6431: ReserveConnection() -> Task
+
+interface [GrainInterfaceType("Cratis.Chronicle.Clients.IConnectionReservation")] Cratis.Chronicle.Clients.IConnectionReservation [Version(1)]
+  E64C2B79: Claim(Cratis.Chronicle.Clients.ConnectionOwner, Orleans.Runtime.SiloAddress) -> Task<bool>
+  B043504B: Release(Cratis.Chronicle.Clients.ConnectionOwner, Orleans.Runtime.SiloAddress) -> Task
 
 class [GrainType("encryptionkeycachegrainservice")] Cratis.Chronicle.Compliance.EncryptionKeyCacheGrainService
 

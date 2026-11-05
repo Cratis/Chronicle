@@ -15,7 +15,12 @@ namespace Cratis.Chronicle.Clients;
 /// All parts are compared with ordinal equality. The well-known owners have an empty subject, so they can
 /// never equal an owner derived from a real principal, and a client never equals a subject with the same value.
 /// </remarks>
-public readonly record struct ConnectionOwner(string Issuer, string Subject, bool IsClient = false)
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Clients.ConnectionOwner")]
+public readonly record struct ConnectionOwner(
+    [property: Id(0)] string Issuer,
+    [property: Id(1)] string Subject,
+    [property: Id(2)] bool IsClient = false)
 {
     static readonly string[] _subjectClaimTypes = ["sub", ClaimTypes.NameIdentifier];
     static readonly string[] _clientClaimTypes = ["azp", "client_id"];

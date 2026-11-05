@@ -153,6 +153,10 @@ json Cratis.Chronicle.Captures.Engine.CaptureValidationMessage
   column: int
   line: int
   message: string
+orleans [Alias("Cratis.Chronicle.Clients.ConnectionOwner")] Cratis.Chronicle.Clients.ConnectionOwner
+  [Id(0)] Issuer: string
+  [Id(1)] Subject: string
+  [Id(2)] IsClient: bool
 concept Cratis.Chronicle.Compliance.EncryptionKeyIdentifier : string
 enum Cratis.Chronicle.Concepts.Alerts.AlertClearedReason : int
   Cleared = 1

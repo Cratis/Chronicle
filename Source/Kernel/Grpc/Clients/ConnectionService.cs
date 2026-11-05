@@ -230,6 +230,7 @@ internal sealed class ConnectionService(
         finally
         {
             ownership.Release(request.ConnectionId, owner);
+            ReleaseReservation(request.ConnectionId, owner);
         }
     }
 
@@ -259,6 +260,14 @@ internal sealed class ConnectionService(
                 subject.OnError(new RpcException(_notAvailableToCaller));
                 return false;
             }
+
+            if (!await TryReserve(request, owner, cancellationToken))
+            {
+                ownership.Release(request.ConnectionId, owner);
+                logger.ConnectionRefusedForAnotherCaller(request.ConnectionId);
+                subject.OnError(new RpcException(_notAvailableToCaller));
+                return false;
+            }
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -273,6 +282,48 @@ internal sealed class ConnectionService(
         }
 
         return true;
+    }
+
+    async Task<bool> TryReserve(ConnectRequest request, ConnectionOwner owner, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await grainFactory
+                .GetGrain<IConnectionReservation>(request.ConnectionId)
+                .Claim(owner, localSiloDetails.SiloAddress)
+                .WaitAsync(options.Value.Clustering.ResponseTimeout, RegistrationTimeProvider, cancellationToken)
+                .ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            return false;
+        }
+        catch (Exception ex)
+        {
+            logger.ConnectionReservationFailed(request.ConnectionId, ex);
+            return false;
+        }
+    }
+
+    void ReleaseReservation(string connectionId, ConnectionOwner owner)
+    {
+        var reservation = grainFactory.GetGrain<IConnectionReservation>(connectionId);
+        _ = ReleaseReservation(reservation, connectionId, owner);
+    }
+
+    async Task ReleaseReservation(IConnectionReservation reservation, string connectionId, ConnectionOwner owner)
+    {
+        try
+        {
+            await reservation
+                .Release(owner, localSiloDetails.SiloAddress)
+                .WaitAsync(options.Value.Clustering.ResponseTimeout, RegistrationTimeProvider, CancellationToken.None)
+                .ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            logger.FailedToReleaseReservation(connectionId, ex);
+        }
     }
 
     async Task Serve(
