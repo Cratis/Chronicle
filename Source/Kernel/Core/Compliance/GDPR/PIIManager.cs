@@ -8,7 +8,6 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.ProtectedValues;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Compliance;
-using Cratis.Chronicle.Storage.EventSequences.Mutations;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Compliance.GDPR;
@@ -99,9 +98,8 @@ public class PIIManager(
         // Defense in depth: the PII path never constructs an identifier carrying the reserved marker (see
         // EncryptedValueKeyIdentifiers), so this can only be reached when a caller on the compliance gRPC surface
         // - the one entry point that accepts an arbitrary caller-supplied identifier - addresses an erasure or
-        // authorization at one directly. The mutation receipt digest secret is reserved the same way: erasing it would
-        // make every keyed receipt of the event store unverifiable, and it holds no personal data to erase.
-        if (EncryptedValueKeyIdentifiers.IsEncryptedValueIdentifier(identifier) || EventSequenceMutationDigestKeyIdentifiers.IsReserved(identifier))
+        // authorization at one directly.
+        if (EncryptedValueKeyIdentifiers.IsEncryptedValueIdentifier(identifier))
         {
             throw new EncryptionKeyIsNotErasable(identifier);
         }

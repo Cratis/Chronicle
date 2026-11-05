@@ -23,6 +23,10 @@ namespace Cratis.Chronicle.Storage.Vault;
 /// The Vault token is read from the <c language="csharp">VAULT_TOKEN</c> environment variable. The Vault address is
 /// taken from the <c language="csharp">connectionDetails</c> constructor parameter.
 /// </para>
+/// <para>
+/// Kernel-internal secrets are not supported yet: <see cref="IEncryptionKeyStorage.GetOrAddInternalSecretFor"/> keeps its
+/// default and throws <see cref="InternalSecretsNotSupported"/>, so features that depend on one fail closed.
+/// </para>
 /// </remarks>
 public class VaultEncryptionKeyStorage : IEncryptionKeyStorage
 {

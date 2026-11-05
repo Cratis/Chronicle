@@ -101,13 +101,32 @@ public class v19_127_0 : Migration
             table: WellKnownTableNames.EventSequenceMutationHistory,
             column: "MutationId",
             unique: true);
+
+        CreateInternalSecrets(migrationBuilder);
     }
 
     protected override void Down(MigrationBuilder migrationBuilder)
     {
+        migrationBuilder.DropTable(name: WellKnownTableNames.InternalSecrets);
         migrationBuilder.DropTable(name: WellKnownTableNames.EventSequenceMutationHistory);
         migrationBuilder.DropTable(name: WellKnownTableNames.EventSequenceMutationHeads);
     }
+
+    /// <summary>
+    /// Creates the table for kernel-internal secrets, such as the one mutation receipt digests are keyed from. It is
+    /// kept apart from subject encryption keys.
+    /// </summary>
+    /// <param name="migrationBuilder">The <see cref="MigrationBuilder"/>.</param>
+    static void CreateInternalSecrets(MigrationBuilder migrationBuilder) =>
+        migrationBuilder.CreateTable(
+            name: WellKnownTableNames.InternalSecrets,
+            columns: table => new
+            {
+                Purpose = table.StringColumn(migrationBuilder, maxLength: 64, nullable: false),
+                PublicKey = table.Column<byte[]>(nullable: false),
+                PrivateKey = table.Column<byte[]>(nullable: false)
+            },
+            constraints: table => table.PrimaryKey($"PK_{WellKnownTableNames.InternalSecrets}", x => x.Purpose));
 
     static string CanonicalSqliteMutationId(string column) =>
         $"typeof(\"{column}\") = 'text' AND " +

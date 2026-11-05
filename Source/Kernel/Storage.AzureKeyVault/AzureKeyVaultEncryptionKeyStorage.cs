@@ -25,6 +25,13 @@ namespace Cratis.Chronicle.Storage.AzureKeyVault;
 /// Double hyphens (<c language="csharp">--</c>) are used as separators and cannot appear within sanitized components.
 /// </para>
 /// <para>
+/// Kernel-internal secrets are named <c language="csharp">chronicle-internal--{eventStore}--{purpose}</c>. A subject key
+/// name always has a hyphen right after <c language="csharp">chronicle-</c>, because it starts with the separator
+/// <c language="csharp">chronicle--</c>; an internal secret name has an <c language="csharp">i</c> there. No subject key
+/// name, erasure name or subject key prefix can therefore equal or enumerate an internal secret name, whatever the
+/// event store, namespace or identifier.
+/// </para>
+/// <para>
 /// Authentication is performed using the <see cref="Azure.Core.TokenCredential"/> provided to the
 /// <see cref="SecretClient"/> constructor parameter.
 /// </para>
@@ -47,6 +54,7 @@ namespace Cratis.Chronicle.Storage.AzureKeyVault;
 public partial class AzureKeyVaultEncryptionKeyStorage : IEncryptionKeyStorage
 {
     const string SecretNamePrefix = "chronicle";
+    const string InternalSecretNamePrefix = "chronicle-internal";
     const string PublicKeyField = "publicKey";
     const string PrivateKeyField = "privateKey";
     const string ErasedThroughField = "erasedThrough";
@@ -278,6 +286,75 @@ public partial class AzureKeyVaultEncryptionKeyStorage : IEncryptionKeyStorage
         await WriteErasure(eventStore, eventStoreNamespace, identifier, erasure with { NewKeyAllowed = true });
     }
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// The secret is provisioned through the same candidate election as subject keys, so concurrent creators converge
+    /// on one stored secret.
+    /// </remarks>
+    public async Task<EncryptionKey> GetOrAddInternalSecretFor(EventStoreName eventStore, InternalSecretPurpose purpose, EncryptionKey candidate)
+    {
+        var name = BuildInternalSecretName(eventStore, purpose);
+        if (await ReadKey(name) is { } existing)
+        {
+            return existing;
+        }
+
+        var secret = new KeyVaultSecret(name, Serialize(candidate));
+        ProvisioningCandidateElection.MarkAsCandidate(secret);
+        await _secretClient.SetSecretAsync(secret);
+        return await _election.Elect(name) ?? throw new InternalSecretProvisioningConflict(purpose);
+    }
+
+    /// <summary>
+    /// Builds the secret name of a subject key revision.
+    /// </summary>
+    /// <param name="eventStore">The <see cref="EventStoreName"/>.</param>
+    /// <param name="eventStoreNamespace">The <see cref="EventStoreNamespaceName"/>.</param>
+    /// <param name="identifier">The <see cref="EncryptionKeyIdentifier"/>.</param>
+    /// <param name="revision">The <see cref="EncryptionKeyRevision"/>.</param>
+    /// <returns>The secret name.</returns>
+    internal static string BuildSecretName(
+        EventStoreName eventStore,
+        EventStoreNamespaceName eventStoreNamespace,
+        EncryptionKeyIdentifier identifier,
+        EncryptionKeyRevision revision) =>
+        $"{SecretNamePrefix}--{Sanitize(eventStore.Value)}--{Sanitize(eventStoreNamespace.Value)}--{Sanitize(identifier.Value)}--{revision.Value}";
+
+    /// <summary>
+    /// Builds the secret name prefix shared by every revision and the erasure of a subject key.
+    /// </summary>
+    /// <param name="eventStore">The <see cref="EventStoreName"/>.</param>
+    /// <param name="eventStoreNamespace">The <see cref="EventStoreNamespaceName"/>.</param>
+    /// <param name="identifier">The <see cref="EncryptionKeyIdentifier"/>.</param>
+    /// <returns>The secret name prefix.</returns>
+    internal static string BuildSecretPrefix(
+        EventStoreName eventStore,
+        EventStoreNamespaceName eventStoreNamespace,
+        EncryptionKeyIdentifier identifier) =>
+        $"{SecretNamePrefix}--{Sanitize(eventStore.Value)}--{Sanitize(eventStoreNamespace.Value)}--{Sanitize(identifier.Value)}--";
+
+    /// <summary>
+    /// Builds the secret name of a kernel-internal secret.
+    /// </summary>
+    /// <param name="eventStore">The <see cref="EventStoreName"/>.</param>
+    /// <param name="purpose">The <see cref="InternalSecretPurpose"/>.</param>
+    /// <returns>The secret name.</returns>
+    internal static string BuildInternalSecretName(EventStoreName eventStore, InternalSecretPurpose purpose) =>
+        $"{InternalSecretNamePrefix}--{Sanitize(eventStore.Value)}--{purpose.Value}";
+
+    /// <summary>
+    /// Builds the secret name of the erasure of a subject key.
+    /// </summary>
+    /// <param name="eventStore">The <see cref="EventStoreName"/>.</param>
+    /// <param name="eventStoreNamespace">The <see cref="EventStoreNamespaceName"/>.</param>
+    /// <param name="identifier">The <see cref="EncryptionKeyIdentifier"/>.</param>
+    /// <returns>The secret name.</returns>
+    internal static string BuildErasureSecretName(
+        EventStoreName eventStore,
+        EventStoreNamespaceName eventStoreNamespace,
+        EncryptionKeyIdentifier identifier) =>
+        $"{BuildSecretPrefix(eventStore, eventStoreNamespace, identifier)}{ErasureSuffix}";
+
     static bool IsLatest(EncryptionKeyRevision? revision) => revision is null || revision == EncryptionKeyRevision.Latest;
 
     static string Serialize(EncryptionKey key) => JsonSerializer.Serialize(new Dictionary<string, string>
@@ -301,25 +378,6 @@ public partial class AzureKeyVaultEncryptionKeyStorage : IEncryptionKeyStorage
 
     static string Sanitize(string input) =>
         SanitizeRegex.Replace(input.ToLowerInvariant(), "-").Trim('-');
-
-    string BuildSecretName(
-        EventStoreName eventStore,
-        EventStoreNamespaceName eventStoreNamespace,
-        EncryptionKeyIdentifier identifier,
-        EncryptionKeyRevision revision) =>
-        $"{SecretNamePrefix}--{Sanitize(eventStore.Value)}--{Sanitize(eventStoreNamespace.Value)}--{Sanitize(identifier.Value)}--{revision.Value}";
-
-    string BuildSecretPrefix(
-        EventStoreName eventStore,
-        EventStoreNamespaceName eventStoreNamespace,
-        EncryptionKeyIdentifier identifier) =>
-        $"{SecretNamePrefix}--{Sanitize(eventStore.Value)}--{Sanitize(eventStoreNamespace.Value)}--{Sanitize(identifier.Value)}--";
-
-    string BuildErasureSecretName(
-        EventStoreName eventStore,
-        EventStoreNamespaceName eventStoreNamespace,
-        EncryptionKeyIdentifier identifier) =>
-        $"{BuildSecretPrefix(eventStore, eventStoreNamespace, identifier)}{ErasureSuffix}";
 
     async Task WriteErasure(
         EventStoreName eventStore,

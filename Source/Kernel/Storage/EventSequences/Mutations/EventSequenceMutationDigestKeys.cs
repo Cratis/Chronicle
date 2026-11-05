@@ -15,10 +15,12 @@ namespace Cratis.Chronicle.Storage.EventSequences.Mutations;
 /// </summary>
 /// <remarks>
 /// <para>
-/// Each event store has one secret, stored under <see cref="EventSequenceMutationDigestKeyIdentifiers.Secret"/> in the
-/// default namespace. It is created on first use through <see cref="IEncryptionKeyStorage.GetOrAddFor"/>, the key store's
-/// create-if-absent operation, which returns the stored key rather than the candidate when another silo won the race.
-/// Every silo therefore adopts the same secret.
+/// Each event store has one secret, held as the internal secret for <see cref="InternalSecretPurpose.MutationReceiptDigest"/>.
+/// Internal secrets are stored apart from subject keys, so nothing on the compliance surface can read, erase or
+/// re-provision it. It is created on first use through <see cref="IEncryptionKeyStorage.GetOrAddInternalSecretFor"/>, a
+/// create-if-absent operation that returns the stored secret rather than the candidate when another silo won the race.
+/// Every silo therefore adopts the same secret. A key store that cannot hold internal secrets refuses, and the caller
+/// fails closed.
 /// </para>
 /// <para>
 /// The derived key is cached per event store for the life of the process, so a mutation does not read the key store.
@@ -45,11 +47,7 @@ public class EventSequenceMutationDigestKeys(IEncryptionKeyStorage keyStorage, I
             var candidate = new EncryptionKey(
                 RandomNumberGenerator.GetBytes(EventSequenceMutationDigestKey.MinimumSecretLength),
                 RandomNumberGenerator.GetBytes(EventSequenceMutationDigestKey.MinimumSecretLength));
-            var stored = await keyStorage.GetOrAddFor(
-                eventStore,
-                EventSequenceMutationDigestKeyIdentifiers.Namespace,
-                EventSequenceMutationDigestKeyIdentifiers.Secret,
-                candidate);
+            var stored = await keyStorage.GetOrAddInternalSecretFor(eventStore, InternalSecretPurpose.MutationReceiptDigest, candidate);
             return _keys.GetOrAdd(eventStore, static (name, secret) => EventSequenceMutationDigestKey.DeriveFrom(name, secret), stored.Private);
         }
         catch (Exception ex)

@@ -63,12 +63,14 @@ public sealed class EventStoreStorage(
     /// <param name="sinksFactory">The sinks factory.</param>
     /// <param name="jobsStorage">The jobs storage.</param>
     /// <param name="eventTypesFactory">The event-types storage factory.</param>
+    /// <param name="mutationDigestKeys">The source of mutation digest keys; without one, every mutation fails closed.</param>
     internal EventStoreStorage(
         EventStoreName eventStore,
         SinksFactory sinksFactory,
         Cratis.Choreography.Storage.IJobsStorage jobsStorage,
-        Func<EventStoreName, IEventTypesStorage> eventTypesFactory)
-        : this(eventStore, sinksFactory, jobsStorage)
+        Func<EventStoreName, IEventTypesStorage> eventTypesFactory,
+        IEventSequenceMutationDigestKeys? mutationDigestKeys)
+        : this(eventStore, sinksFactory, jobsStorage, mutationDigestKeys)
     {
         EventTypes = eventTypesFactory(eventStore);
     }

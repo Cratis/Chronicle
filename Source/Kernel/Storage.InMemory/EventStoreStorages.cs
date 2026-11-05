@@ -49,11 +49,13 @@ public sealed class EventStoreStorages(
     /// <param name="sinkFactories">The available sink factories.</param>
     /// <param name="jobsStorage">The jobs storage.</param>
     /// <param name="eventTypesFactory">The event-types storage factory.</param>
+    /// <param name="mutationDigestKeys">The source of mutation digest keys; without one, every mutation fails closed.</param>
     internal EventStoreStorages(
         IInstancesOf<ISinkFactory> sinkFactories,
         Cratis.Choreography.Storage.IJobsStorage jobsStorage,
-        Func<EventStoreName, IEventTypesStorage> eventTypesFactory)
-        : this(sinkFactories, jobsStorage)
+        Func<EventStoreName, IEventTypesStorage> eventTypesFactory,
+        IEventSequenceMutationDigestKeys mutationDigestKeys)
+        : this(sinkFactories, jobsStorage, mutationDigestKeys)
     {
         _eventTypesFactory = eventTypesFactory;
     }
@@ -113,7 +115,7 @@ public sealed class EventStoreStorages(
         var sinks = sinksFactory ?? CreateDefaultSinksFactory(eventStore);
         var created = _eventTypesFactory is null
             ? new EventStoreStorage(eventStore, sinks, jobsStorage, mutationDigestKeys)
-            : new EventStoreStorage(eventStore, sinks, jobsStorage, _eventTypesFactory);
+            : new EventStoreStorage(eventStore, sinks, jobsStorage, _eventTypesFactory, mutationDigestKeys);
         created.GenerationFloor = _generationFloors.GetOrAdd(eventStore, _ => new Generations.GenerationFloorStorage());
         var storage = _eventStores.GetOrAdd(eventStore, created);
 

@@ -15,6 +15,7 @@ public sealed class EncryptionKeyStorage : IEncryptionKeyStorage
 {
     readonly ConcurrentDictionary<Key, EncryptionKey> _keys = new();
     readonly ConcurrentDictionary<Scope, EncryptionKeyErasure> _erasures = new();
+    readonly ConcurrentDictionary<(EventStoreName EventStore, InternalSecretPurpose Purpose), EncryptionKey> _internalSecrets = new();
 
     /// <inheritdoc/>
     public Task SaveFor(
@@ -164,6 +165,11 @@ public sealed class EncryptionKeyStorage : IEncryptionKeyStorage
 
         return Task.CompletedTask;
     }
+
+    /// <inheritdoc/>
+    /// <remarks>Internal secrets live in their own dictionary, which no subject key member reads or writes.</remarks>
+    public Task<EncryptionKey> GetOrAddInternalSecretFor(EventStoreName eventStore, InternalSecretPurpose purpose, EncryptionKey candidate) =>
+        Task.FromResult(_internalSecrets.GetOrAdd((eventStore, purpose), candidate));
 
     static bool IsLatest(EncryptionKeyRevision? revision) => revision is null || revision == EncryptionKeyRevision.Latest;
 

@@ -24,6 +24,11 @@ public class EncryptionKeyStorage(IDatabase database) : IEncryptionKeyStorage
     /// </summary>
     internal const string CollectionName = "encryption-keys";
 
+    /// <summary>
+    /// The internal secret collection name. It sits in the event store database and no subject key operation uses it.
+    /// </summary>
+    internal const string InternalSecretsCollectionName = "internal-secrets";
+
     readonly ConcurrentDictionary<string, byte> _ensuredIndexes = new();
 
     /// <summary>
@@ -216,6 +221,34 @@ public class EncryptionKeyStorage(IDatabase database) : IEncryptionKeyStorage
         }
 
         await UpsertErasure(eventStore, eventStoreNamespace, identifier, erasure with { NewKeyAllowed = true });
+    }
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// The secret is a document in <see cref="InternalSecretsCollectionName"/>, keyed by the purpose. Inserting it is the
+    /// ordering point: a concurrent creator that loses the race reads back the winner's document.
+    /// </remarks>
+    public async Task<EncryptionKey> GetOrAddInternalSecretFor(EventStoreName eventStore, InternalSecretPurpose purpose, EncryptionKey candidate)
+    {
+        var collection = database
+            .GetEventStoreDatabase(eventStore)
+            .GetCollection<InternalSecretForPurpose>(InternalSecretsCollectionName);
+        if (await collection.Find(_ => _.Id == purpose.Value).FirstOrDefaultAsync() is { } existing)
+        {
+            return new(existing.PublicKey, existing.PrivateKey);
+        }
+
+        try
+        {
+            await collection.InsertOneAsync(new InternalSecretForPurpose(purpose.Value, candidate.Public, candidate.Private));
+            return candidate;
+        }
+        catch (MongoWriteException ex) when (ex.WriteError?.Category == ServerErrorCategory.DuplicateKey)
+        {
+            var winner = await collection.Find(_ => _.Id == purpose.Value).FirstOrDefaultAsync()
+                ?? throw new InternalSecretProvisioningConflict(purpose);
+            return new(winner.PublicKey, winner.PrivateKey);
+        }
     }
 
     static bool IsLatest(EncryptionKeyRevision? revision) => revision is null || revision == EncryptionKeyRevision.Latest;

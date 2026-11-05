@@ -6,7 +6,6 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.ProtectedValues;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.Compliance;
-using Cratis.Chronicle.Storage.EventSequences.Mutations;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -56,7 +55,7 @@ public class PIICompliancePropertyValueHandler(
     /// <inheritdoc/>
     public async Task<(JsonNode Value, EncryptionKeyUse? Key)> ApplyReportingKey(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, string identifier, JsonNode value)
     {
-        if (EncryptedValueKeyIdentifiers.IsEncryptedValueIdentifier(identifier) || EventSequenceMutationDigestKeyIdentifiers.IsReserved(identifier))
+        if (EncryptedValueKeyIdentifiers.IsEncryptedValueIdentifier(identifier))
         {
             throw new PIIIdentifierIsReserved(identifier);
         }

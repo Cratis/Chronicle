@@ -294,6 +294,11 @@ public static class WellKnownTableNames
     public const string EncryptionKeyErasures = "EncryptionKeyErasures";
 
     /// <summary>
+    /// The table that holds kernel-internal secrets, apart from subject encryption keys.
+    /// </summary>
+    public const string InternalSecrets = "InternalSecrets";
+
+    /// <summary>
     /// The table that holds OAuth tokens.
     /// </summary>
     public const string Tokens = "Tokens";

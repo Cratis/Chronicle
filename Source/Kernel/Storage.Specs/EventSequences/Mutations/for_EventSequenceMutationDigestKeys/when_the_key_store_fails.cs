@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Storage.Compliance;
 
@@ -16,10 +15,10 @@ public class when_the_key_store_fails : given.a_key_store
     void Establish()
     {
         _failing = Substitute.For<IEncryptionKeyStorage>();
-        _failing.GetOrAddFor(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<EncryptionKeyIdentifier>(), Arg.Any<EncryptionKey>())
+        _failing.GetOrAddInternalSecretFor(Arg.Any<EventStoreName>(), Arg.Any<InternalSecretPurpose>(), Arg.Any<EncryptionKey>())
             .Returns(
                 _ => Task.FromException<EncryptionKey>(new InvalidOperationException("unreachable")),
-                call => _keyStore.GetOrAddFor(call.ArgAt<EventStoreName>(0), call.ArgAt<EventStoreNamespaceName>(1), call.ArgAt<EncryptionKeyIdentifier>(2), call.ArgAt<EncryptionKey>(3)));
+                call => _keyStore.GetOrAddInternalSecretFor(call.ArgAt<EventStoreName>(0), call.ArgAt<InternalSecretPurpose>(1), call.ArgAt<EncryptionKey>(2)));
     }
 
     async Task Because()

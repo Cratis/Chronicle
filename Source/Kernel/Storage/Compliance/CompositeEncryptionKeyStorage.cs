@@ -339,6 +339,15 @@ public class CompositeEncryptionKeyStorage : IEncryptionKeyStorage, IEvictEncryp
     }
 
     /// <inheritdoc/>
+    /// <remarks>
+    /// Internal secrets live only in the primary, which is authoritative and which every silo reads, so they converge
+    /// on one stored secret. When the primary cannot hold internal secrets the call fails rather than falling back to
+    /// another store: a secret kept anywhere else would change with the order of the stores.
+    /// </remarks>
+    public Task<EncryptionKey> GetOrAddInternalSecretFor(EventStoreName eventStore, InternalSecretPurpose purpose, EncryptionKey candidate) =>
+        _inner[0].GetOrAddInternalSecretFor(eventStore, purpose, candidate);
+
+    /// <inheritdoc/>
     public void EvictFromCache(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier)
     {
         // Cluster-wide crypto-shred reaches the registered IEncryptionKeyStorage on every silo. The composite is

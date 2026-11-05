@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Storage.Compliance;
 
@@ -20,12 +19,12 @@ public class when_two_silos_create_the_key_concurrently : given.a_key_store
         _candidates = [];
         var bothArrived = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var racing = Substitute.For<IEncryptionKeyStorage>();
-        racing.GetOrAddFor(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<EncryptionKeyIdentifier>(), Arg.Any<EncryptionKey>())
+        racing.GetOrAddInternalSecretFor(Arg.Any<EventStoreName>(), Arg.Any<InternalSecretPurpose>(), Arg.Any<EncryptionKey>())
             .Returns(async call =>
             {
                 lock (_candidates)
                 {
-                    _candidates.Add(call.ArgAt<EncryptionKey>(3));
+                    _candidates.Add(call.ArgAt<EncryptionKey>(2));
                     if (_candidates.Count == 2)
                     {
                         bothArrived.SetResult();
@@ -33,14 +32,14 @@ public class when_two_silos_create_the_key_concurrently : given.a_key_store
                 }
 
                 await bothArrived.Task;
-                return await _keyStore.GetOrAddFor(call.ArgAt<EventStoreName>(0), call.ArgAt<EventStoreNamespaceName>(1), call.ArgAt<EncryptionKeyIdentifier>(2), call.ArgAt<EncryptionKey>(3));
+                return await _keyStore.GetOrAddInternalSecretFor(call.ArgAt<EventStoreName>(0), call.ArgAt<InternalSecretPurpose>(1), call.ArgAt<EncryptionKey>(2));
             });
 
         var first = Task.Run(() => KeysOver(racing).TryGetFor("event-store"));
         var second = Task.Run(() => KeysOver(racing).TryGetFor("event-store"));
         _first = await first;
         _second = await second;
-        _stored = await _keyStore.GetFor("event-store", EventSequenceMutationDigestKeyIdentifiers.Namespace, EventSequenceMutationDigestKeyIdentifiers.Secret);
+        _stored = await _keyStore.GetOrAddInternalSecretFor("event-store", InternalSecretPurpose.MutationReceiptDigest, new([9], [9]));
     }
 
     [Fact] void should_have_proposed_two_different_secrets() => _candidates[0].Private.SequenceEqual(_candidates[1].Private).ShouldBeFalse();

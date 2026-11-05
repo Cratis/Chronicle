@@ -97,6 +97,11 @@ public class NamespaceDbContext(DbContextOptions<NamespaceDbContext> options) : 
     public DbSet<Encryption.EncryptionKeyErasure> EncryptionKeyErasures { get; set; } = null!;
 
     /// <summary>
+    /// Gets or sets the kernel-internal secrets DbSet.
+    /// </summary>
+    public DbSet<Encryption.InternalSecret> InternalSecrets { get; set; } = null!;
+
+    /// <summary>
     /// Gets or sets the closed streams DbSet.
     /// </summary>
     public DbSet<ClosedStreamEntry> ClosedStreams { get; set; } = null!;
