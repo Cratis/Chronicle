@@ -103,7 +103,7 @@ public static class ImplementationMethods
             ? $"global::{context.ContractsNamespace}.{method.Name}Request request, {CallContextType} callContext = default"
             : $"{CallContextType} callContext = default";
 
-        var source = QueryDispatch(method.Name, method.Method, invocation, parameters, readModelType, serviceName, context, RoutingFor(wireParameters, StoreCapability(readModelType)))
+        var source = QueryDispatch(method.Name, method.Method, invocation, parameters, readModelType, serviceName, context, RoutingFor(wireParameters, StoreCapability(readModelType), readModelType.FullName ?? readModelType.Name))
             .Replace("    public ", AuthorizationAttributes(readModelType, method.Method) + "    public ", StringComparison.Ordinal);
         return AllowsAnonymous(readModelType) || AllowsAnonymous(method.Method)
             ? source.Replace("    public ", "    [global::Microsoft.AspNetCore.Authorization.AllowAnonymous]\n    public ", StringComparison.Ordinal)
@@ -357,17 +357,23 @@ public static class ImplementationMethods
     /// </summary>
     /// <param name="parameters">The parameters that arrive on the wire.</param>
     /// <param name="capability">The capability the read model declares for the addressed event store, if any.</param>
+    /// <param name="artifact">The name of the read model, for diagnostics.</param>
     /// <returns>The C# expression, or null when no parameter carries a routing value.</returns>
-    /// <exception cref="UnsupportedServiceShape">Thrown when the query addresses more routing components than the guard carries.</exception>
-    static string? RoutingFor(IReadOnlyList<ParameterInfo> parameters, string? capability = null)
+    /// <exception cref="UnsupportedServiceShape">Thrown when the query addresses more routing components than the guard carries, or declares a capability without addressing an event store.</exception>
+    static string? RoutingFor(IReadOnlyList<ParameterInfo> parameters, string? capability = null, string artifact = "")
     {
         var routing = parameters.Where(IsRouting).ToList();
+        var store = routing.FirstOrDefault(IsStore);
+        if (capability is not null && store is null)
+        {
+            throw new UnsupportedServiceShape(artifact, $"it declares the store capability '{capability}' but no parameter addresses an event store.");
+        }
+
         if (routing.Count == 0)
         {
             return null;
         }
 
-        var store = routing.FirstOrDefault(IsStore);
         var components = routing.Where(p => p != store).ToList();
         if (components.Count > MaximumRoutingComponents)
         {

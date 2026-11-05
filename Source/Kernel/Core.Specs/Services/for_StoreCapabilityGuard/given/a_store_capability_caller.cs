@@ -48,25 +48,30 @@ public class a_store_capability_caller : Specification
     {
         public List<string> Messages { get; } = [];
 
+        public List<LogLevel> Levels { get; } = [];
+
         public void AddProvider(ILoggerProvider provider)
         {
         }
 
-        public ILogger CreateLogger(string categoryName) => new Recorder(Messages);
+        public ILogger CreateLogger(string categoryName) => new Recorder(Messages, Levels);
 
         public void Dispose()
         {
         }
 
-        sealed class Recorder(List<string> messages) : ILogger
+        sealed class Recorder(List<string> messages, List<LogLevel> levels) : ILogger
         {
             public IDisposable? BeginScope<TState>(TState state)
                 where TState : notnull => null;
 
             public bool IsEnabled(LogLevel logLevel) => true;
 
-            public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter) =>
+            public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
+            {
                 messages.Add(formatter(state, exception));
+                levels.Add(logLevel);
+            }
         }
     }
 }

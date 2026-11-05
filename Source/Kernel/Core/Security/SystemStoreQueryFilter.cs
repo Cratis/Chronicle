@@ -29,6 +29,8 @@ public class SystemStoreQueryFilter : IAuthorizationQueryFilter
         if (!context.Name.Value.StartsWith(KernelQueryPrefix, StringComparison.Ordinal)) return _noVerdict;
 
         var targetsSystem = false;
+        string? store = null;
+        string? @namespace = null;
         foreach (var argument in arguments)
         {
             var name = RoutingName(argument.Key);
@@ -41,9 +43,15 @@ public class SystemStoreQueryFilter : IAuthorizationQueryFilter
             }
 
             targetsSystem |= SystemStoreRouting.IsStoreName(name) && SystemStoreAccess.IsSystem(value);
+            if (string.Equals(name, "EventStore", StringComparison.Ordinal)) store = value;
+            else if (string.Equals(name, "Namespace", StringComparison.Ordinal)) @namespace = value;
         }
 
-        return targetsSystem ? AuthorizeSystem(context) : _noVerdict;
+        if (targetsSystem) return AuthorizeSystem(context);
+
+        return StoreCapabilityDecision.CapabilityOf(context.Name.Value) is { } capability
+            ? AuthorizeStore(context, capability, store, @namespace)
+            : _noVerdict;
     }
 
     static string? RoutingName(string key)
@@ -62,6 +70,17 @@ public class SystemStoreQueryFilter : IAuthorizationQueryFilter
         {
             var access = services.GetRequiredService<ISystemStoreAccess>();
             if (await access.IsAllowed(SystemStoreRouting.CallerFor(services, context.AuthorizedPrincipal))) return null!;
+        }
+
+        return QueryResult.Unauthorized(context.CorrelationId);
+    }
+
+    static async Task<QueryResult> AuthorizeStore(QueryContext context, string capability, string? store, string? @namespace)
+    {
+        if (store is not null && context.ServiceProvider is { } services)
+        {
+            var user = SystemStoreRouting.CallerFor(services, context.AuthorizedPrincipal);
+            if (await StoreCapabilityDecision.Permits(services, user, capability, store, @namespace)) return null!;
         }
 
         return QueryResult.Unauthorized(context.CorrelationId);

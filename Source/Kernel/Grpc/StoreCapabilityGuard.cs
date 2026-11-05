@@ -3,7 +3,6 @@
 
 using Cratis.Chronicle.Security;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using ProtoBuf.Grpc;
 
 namespace Cratis.Chronicle.Services;
@@ -20,9 +19,7 @@ internal static class StoreCapabilityGuard
     /// <param name="routing">The routing values the query addresses.</param>
     /// <returns>True if the query may run.</returns>
     /// <remarks>
-    /// The decision is made through <see cref="IAuthorizationDecisions"/>, so a per-store entitlement takes effect here without
-    /// the queries changing. Until then a caller that is not granted the capability at an ordinary event store is allowed
-    /// and the decision is recorded; the System event store is refused before this is reached.
+    /// The decision is shared with the HTTP query pipeline through <see cref="StoreCapabilityDecision"/>, so both transports behave the same.
     /// </remarks>
     internal static async Task<bool> Permits(CallContext callContext, QueryRouting routing)
     {
@@ -31,46 +28,17 @@ internal static class StoreCapabilityGuard
         var httpContext = SystemStoreGuard.HttpContextFor(callContext);
         if (httpContext is null && callContext.ServerCallContext is null && SystemStoreGuard.InProcessServices is null) return true;
 
-        var capability = new Capability(routing.Capability);
-        var scope = routing.First is null
-            ? AuthorizationScope.ForEventStore(routing.Store)
-            : AuthorizationScope.ForNamespace(routing.Store, routing.First);
-
-        AuthorizationDecision decision;
-        ILogger logger;
-        try
+        if (httpContext is not null)
         {
-            if (httpContext is not null)
-            {
-                logger = LoggerFor(httpContext.RequestServices);
-                decision = await httpContext.RequestServices.GetRequiredService<IAuthorizationDecisions>().Decide(httpContext.User, capability, scope);
-            }
-            else if (callContext.ServerCallContext is null && SystemStoreGuard.InProcessServices is { } services)
-            {
-                await using var serviceScope = services.CreateAsyncScope();
-                logger = LoggerFor(serviceScope.ServiceProvider);
-                decision = await serviceScope.ServiceProvider.GetRequiredService<IAuthorizationDecisions>().Decide(null, capability, scope);
-            }
-            else
-            {
-                return false;
-            }
-        }
-        catch
-        {
-            return false;
+            return await StoreCapabilityDecision.Permits(httpContext.RequestServices, httpContext.User, routing.Capability, routing.Store, routing.First);
         }
 
-        if (!decision.IsAllowed) logger.StoreCapabilityNotGranted(routing.Capability, decision.Reason.ToString());
-        return Interim(decision);
+        if (callContext.ServerCallContext is null && SystemStoreGuard.InProcessServices is { } services)
+        {
+            await using var serviceScope = services.CreateAsyncScope();
+            return await StoreCapabilityDecision.Permits(serviceScope.ServiceProvider, null, routing.Capability, routing.Store, routing.First);
+        }
+
+        return false;
     }
-
-    /// <summary>
-    /// The interim outcome for a decision: ordinary event stores stay open to authenticated callers until per-store entitlements exist.
-    /// </summary>
-    /// <param name="decision">The decision.</param>
-    /// <returns>True if the query may run.</returns>
-    static bool Interim(AuthorizationDecision decision) => decision.IsAllowed || decision.Reason != AuthorizationReason.Failed;
-
-    static ILogger LoggerFor(IServiceProvider services) => services.GetRequiredService<ILoggerFactory>().CreateLogger(typeof(StoreCapabilityGuard).FullName!);
 }
