@@ -336,15 +336,37 @@ class SparseIntegrationWorkflows(unittest.TestCase):
         self.assertIn('--filter "$filter"', run)
         self.assertTrue(any(step.get("uses") == "./.github/actions/assert-tests-ran" for step in steps))
         self.assertEqual("coverage-results-specs-sql-${{ matrix.shard }}", steps[-1]["with"]["name"])
+        self.assertIn('--coverage', run)
+        download = next(step for step in jobs["coverage-merge-and-cache"]["steps"]
+                        if step["name"] == "Download all coverage artifacts")
+        self.assertEqual("coverage-results-*", download["with"]["pattern"])
+
+    def test_ordinary_shards_keep_runtime_guards_and_unique_artifacts(self):
+        jobs = self.build["jobs"]
         ordinary = next(step["run"] for step in jobs["specs-other"]["steps"]
                         if step["name"] == "Run tests with coverage")
-        self.assertEqual("node .github/scripts/run-mixed-specs.mjs", ordinary)
+        self.assertEqual("node .github/scripts/run-mixed-specs.mjs --shard ${{ matrix.shard }} --shards 2", ordinary)
+        other = jobs["specs-other"]
+        self.assertEqual(["1", "2"], other["strategy"]["matrix"]["shard"])
+        self.assertEqual("false", other["strategy"]["fail-fast"])
+        self.assertNotIn("continue-on-error", other)
+        self.assertEqual("specs-other (${{ matrix.shard }})", other["name"])
+        self.assertEqual("coverage-results-specs-other-${{ matrix.shard }}", other["steps"][-1]["with"]["name"])
+        self.assertEqual("true", other["steps"][-1]["with"]["overwrite"])
+        self.assertTrue(any(step.get("uses") == "./.github/actions/assert-tests-ran" for step in other["steps"]))
+        names = [step.get("name") for step in other["steps"]]
+        for name in ("Restore mixed runner evaluation inputs", "Restore pinned coverage tool",
+                     "Verify real collector exit and deadline cleanup"):
+            self.assertLess(names.index(name), names.index("Run tests with coverage"))
+        contracts = next(step["run"] for step in jobs["dotnet-build"]["steps"]
+                         if step.get("name") == "Spec executable runner contracts and forbid test-host dispatch")
+        self.assertIn("test-spec-shards.mjs", contracts)
+        self.assertIn("spec-shards.mjs --dry-run", contracts)
         selection = subprocess.run(
             ["node", "--input-type=module", "-e", """
-                import { ordinaryProjects, v3Projects, shippingProjects }
-                    from './.github/scripts/mixed-specs-selection.mjs';
-                const infos = [...v3Projects, ...shippingProjects].map(project => ({ project }));
-                console.log(JSON.stringify(ordinaryProjects(infos).map(info => info.project)));
+                import { validateSourceProjects } from './.github/scripts/mixed-specs-selection.mjs';
+                const source = await validateSourceProjects(process.cwd());
+                console.log(JSON.stringify(source.ordinary));
             """], cwd=WORKFLOWS.parents[1], check=True, capture_output=True, text=True, timeout=30)
         projects = json.loads(selection.stdout)
         self.assertNotIn("Source/Kernel/Storage.Sql.Specs/Storage.Sql.Specs.csproj", projects)
@@ -360,10 +382,6 @@ class SparseIntegrationWorkflows(unittest.TestCase):
         self.assertIn("dotnet build Source/Kernel/Storage.AzureKeyVault.Specs/Storage.AzureKeyVault.Specs.csproj --configuration Release", prepare)
         self.assertIn("Source/Kernel/Storage.MongoDB.Specs/Storage.MongoDB.Specs.csproj", projects)
         self.assertFalse(any(project.startswith("Integration/") for project in projects))
-        self.assertIn('--coverage', run)
-        download = next(step for step in jobs["coverage-merge-and-cache"]["steps"]
-                        if step["name"] == "Download all coverage artifacts")
-        self.assertEqual("coverage-results-*", download["with"]["pattern"])
 
     def test_every_job_is_skipped_when_the_workflow_already_succeeded_on_this_commit(self):
         jobs = self.build["jobs"]
@@ -385,6 +403,22 @@ class SparseIntegrationWorkflows(unittest.TestCase):
         aggregate = self.build["jobs"]["specs"]
         self.assertEqual("${{ needs.already-ran.outputs.skip != 'true' && (always()) }}", aggregate["if"])
         self.assertEqual(["specs-other", "specs-sql"], prerequisites_of(aggregate))
+        self.assertEqual({"contents": "read", "actions": "read"}, aggregate["permissions"])
+        self.assertEqual("Checkout shard contract", aggregate["steps"][1]["name"])
+        self.assertEqual("false", aggregate["steps"][1]["with"]["persist-credentials"])
+        for index in (1, 3):
+            self.assertRegex(aggregate["steps"][index]["uses"], r"@[a-f0-9]{40}$")
+        producer = aggregate["steps"][2]
+        self.assertEqual("producers", producer["id"])
+        self.assertEqual({"GH_TOKEN": "${{ github.token }}"}, producer["env"])
+        self.assertEqual("node .github/scripts/spec-shards.mjs --select-producers .ai-work/5501/producers.json", producer["run"])
+        download = aggregate["steps"][3]
+        self.assertEqual("${{ steps.producers.outputs.artifact_ids }}", download["with"]["artifact-ids"])
+        self.assertNotIn("pattern", download["with"])
+        self.assertEqual("false", download["with"]["merge-multiple"])
+        self.assertEqual("node .github/scripts/spec-shards.mjs --verify-results .ai-work/5501/spec-shard-receipts --producers .ai-work/5501/producers.json",
+                         aggregate["steps"][4]["run"])
+        self.assertFalse(any("continue-on-error" in step for step in aggregate["steps"]))
         step = aggregate["steps"][0]
         self.assertEqual("${{ needs.specs-other.result }}", step["env"]["OTHER_RESULT"])
         self.assertEqual("${{ needs.specs-sql.result }}", step["env"]["SQL_RESULT"])
@@ -528,7 +562,6 @@ class SparseIntegrationWorkflows(unittest.TestCase):
             self.assertFalse(condition_allows(coverage, context))
 
 
-VERSION_STAMPED_CLIENT_REBUILD = "Rebuild the client under test with a version above the previous release"
 ROLLING_DELIVERY_DIAGNOSTIC_REBUILD = "Build isolated rolling delivery diagnostic candidate"
 
 
@@ -547,16 +580,6 @@ class IntegrationSingleBuildContracts(unittest.TestCase):
                 self.assertFalse(any("cache" in step.get("uses", "") for step in steps))
                 for step in steps:
                     command = step.get("run", "")
-                    if lane == "sql-clustering" and step.get("name") == VERSION_STAMPED_CLIENT_REBUILD:
-                        # The version-stamped rebuild: the rolling-upgrade leg stamps the client under test above the
-                        # previous release so the compatibility check orders the two sides correctly (#5353).
-                        self.assertEqual("matrix.provider == 'RollingUpgrade'", step.get("if"))
-                        self.assertIn('-p:Version="$CRATIS_CHRONICLE_CLIENT_VERSION"', command)
-                        self.assertIn("Integration/SqlClustering/SqlClustering.csproj", command)
-                        self.assertEqual(1, len(re.findall(r"\bdotnet\b", command)))
-                        self.assertRegex(command.strip(), r"^dotnet\s+build\s+Integration/SqlClustering/SqlClustering\.csproj\s")
-                        self.assertNotRegex(command, r"[;&|`]|\$\(|\n")
-                        continue
                     if lane == "sql-clustering" and step.get("name") == ROLLING_DELIVERY_DIAGNOSTIC_REBUILD:
                         # #5300 needs a compile-time-enabled diagnostic variant; the normal build artifact must
                         # remain diagnostics-free. Pin the entire script, including provenance and IL verification,
@@ -565,7 +588,7 @@ class IntegrationSingleBuildContracts(unittest.TestCase):
                         self.assertEqual(
                             'set -euo pipefail\n'
                             'printf \'diagnostic-source=%s client-version=%s artifacts=%s\\n\' '
-                            '"$(git rev-parse HEAD)" "$CRATIS_CHRONICLE_CLIENT_VERSION" '
+                            '"$(git rev-parse HEAD)" "$CRATIS_CHRONICLE_BUILD_VERSION" '
                             '"$RUNNER_TEMP/rolling-delivery-diagnostics"\n'
                             'dotnet build .github/scripts/rolling-delivery-il/RollingDeliveryIl.csproj '
                             '-c Release -warnaserror \\\n'
@@ -575,14 +598,14 @@ class IntegrationSingleBuildContracts(unittest.TestCase):
                             '-c Release -warnaserror \\\n'
                             '  -p:EnableDevelopmentSymbol=true -p:DisableProxyGenerator=true '
                             '-p:DisableDockerBuild=true \\\n'
-                            '  -p:Version="$CRATIS_CHRONICLE_CLIENT_VERSION" '
+                            '  -p:Version="$CRATIS_CHRONICLE_BUILD_VERSION" '
                             '-p:EnableRollingDeliveryDiagnostics=true \\\n'
                             '  --artifacts-path "$RUNNER_TEMP/rolling-delivery-diagnostics"\n'
                             'dotnet "$RUNNER_TEMP/rolling-il-tool/RollingDeliveryIl.dll" \\\n'
                             '  Source/Clients/DotNET/bin/Release/net10.0/Cratis.Chronicle.dll \\\n'
                             '  --enabled "$RUNNER_TEMP/rolling-delivery-diagnostics/bin/DotNET/'
                             'release/Cratis.Chronicle.dll"\n'
-                            'grep -a -F -q -- "$CRATIS_CHRONICLE_CLIENT_VERSION" '
+                            'grep -a -F -q -- "$CRATIS_CHRONICLE_BUILD_VERSION" '
                             '"$RUNNER_TEMP/rolling-delivery-diagnostics/bin/DotNET/release/Cratis.Chronicle.dll"\n',
                             command)
                         continue
@@ -597,6 +620,23 @@ class IntegrationSingleBuildContracts(unittest.TestCase):
             self.assertIn('test -d "$project/bin/Release/net10.0"', pack)
             self.assertIn("exit 1", pack)
             self.assertEqual("error", steps[-1]["with"]["if-no-files-found"])
+
+    def test_rolling_upgrade_reads_and_checks_the_stamped_build_version(self):
+        steps = workflow("integration.yml")["jobs"]["sql-clustering-integration-specs"]["steps"]
+        extract = next(step for step in steps if step["name"] == "Extract build output")
+        stamp = next(step for step in steps if step["name"] == "Read the stamped build version")
+        self.assertEqual(steps.index(extract) + 1, steps.index(stamp))
+        self.assertEqual("matrix.provider == 'RollingUpgrade'", stamp.get("if"))
+        self.assertEqual(
+            'set -euo pipefail\n'
+            'line=$(python3 .github/scripts/derive-build-version.py)\n'
+            'echo "$line" >> "$GITHUB_ENV"\n'
+            'if ! grep -a -F -q -- "${line#*=}" Source/Clients/DotNET/bin/Release/net10.0/Cratis.Chronicle.dll; then\n'
+            '  echo "::error::Downloaded client does not contain the stamped build version ${line#*=}."\n'
+            '  exit 1\n'
+            'fi\n', stamp["run"])
+        for step in steps:
+            self.assertNotIn("CRATIS_CHRONICLE_" + "CLIENT_VERSION", step.get("run", ""))
 
     def test_effective_test_arguments_survive_every_retry_and_missing_outputs(self):
         root = WORKFLOWS.parents[1]

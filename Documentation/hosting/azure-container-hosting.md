@@ -16,6 +16,8 @@ The configuration in this guide runs one kernel instance without failover. A res
 
 The kernel opens its listeners before silo startup finishes. A listening port does not mean it is ready to process events: use liveness for startup probes and readiness to decide when to send traffic, as described below.
 
+To size the container memory limit, see [Size the kernel for a container](container-resources.md).
+
 The kernel waits up to 10 seconds for a graceful shutdown, so size the platform's termination grace period accordingly. Observer progress that is not saved before the process stops is not lost: those events are delivered again after the restart (at-least-once).
 
 ### Applications that connect to the kernel

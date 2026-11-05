@@ -3,16 +3,15 @@ title: "Version Patch System"
 description: "Cratis Chronicle kernel patches upgrade stored state between versions; startup discovers pending patches, applies them in order and tracks completion."
 ---
 
-Chronicle includes a version-based patch system to handle breaking changes during upgrades. Patches are automatically discovered and applied during server startup, ensuring the system state is migrated correctly between versions.
+Chronicle uses the [startup patching of Cratis Choreography](https://www.cratis.io/choreography/patching/) to handle breaking changes during upgrades. Patches are automatically discovered and applied during server startup, ensuring the system state is migrated correctly between versions. A new Chronicle release can join a running cluster while the previous release keeps serving, so an upgrade never needs the replica set scaled down and back up.
 
 ## Overview
 
 The patch system:
 
-- **Automatically discovers** patches using reflection (`IInstancesOf<ICanApplyPatch>`)
+- **Automatically discovers** patches that implement `ICanApplyPatch` from `Cratis.Choreography.Patching`
 - **Applies patches in order** based on semantic version
 - **Tracks applied patches** to prevent re-execution
-- **Declares a reverse step** through `Down()` — which Chronicle does not run for you; see below
 - **Runs at startup** before other Chronicle services initialize
 
 ## Key Concepts
@@ -32,16 +31,16 @@ Patches are tied to semantic versions (e.g., `1.5.0`, `2.0.0-beta.1`). The syste
 
 ### Storage
 
-Patches are tracked in MongoDB:
-- **Collection**: `patches` (in system database)
-- **Version**: Stored separately as the current system version
-- **State**: PatchManager grain maintains state of all applied patches
+Chronicle keeps the record in its system storage, as every release has, so a store patched by an earlier release is not patched again:
+- **Applied patches**: the `patches` collection (in the system database) or the equivalent SQL table
+- **Patched version**: stored on the system grain as the current system version
+- **Patching kernel version**: the newest kernel that completed patching, stored beside it
 
 ## Writing a Patch
 
 ### Basic Structure
 
-Create a patch by implementing `ICanApplyPatch`:
+Create a patch by implementing `ICanApplyPatch` from `Cratis.Choreography.Patching`. A patch has a `Version` and an `Up()` method; Chronicle never runs patches backwards:
 
 <ChronicleClientTabs snippet="contributing/kernel/patches/index/basic-structure" />
 
@@ -67,19 +66,13 @@ Use proper semantic logging with `LoggerMessage` attributes:
 
 <ChronicleClientTabs snippet="contributing/kernel/patches/index/semantic-logging" />
 
-### 2. Implement Down() for Safety
+### 2. Handle Idempotency
 
-Implement `Down()` so that the reverse of each patch is written down and reviewed alongside it. Chronicle only ever applies `Up()`: nothing calls `Down()` automatically, and running an older Chronicle version against patched storage does not undo a patch. Rolling back means restoring a backup taken before the upgrade:
-
-<ChronicleClientTabs snippet="contributing/kernel/patches/index/implement-down" />
-
-### 3. Handle Idempotency
-
-Patches should be idempotent where possible. The system prevents re-execution, but defensive coding helps:
+A patch is recorded only after `Up()` completes, so a patch that was interrupted runs again from the beginning, for example when the silo that was running it is replaced during a rolling deployment. Write `Up()` so that running it twice is safe:
 
 <ChronicleClientTabs snippet="contributing/kernel/patches/index/idempotency" />
 
-### 4. Test Thoroughly
+### 3. Test Thoroughly
 
 Write comprehensive specs for your patches:
 
@@ -90,7 +83,7 @@ Write comprehensive specs for your patches:
 ### Startup Sequence
 
 1. **Server Initialization**: Chronicle server starts
-2. **Patch Discovery**: `PatchManager` grain discovers all `ICanApplyPatch` implementations
+2. **Patch Discovery**: the patch manager grain of Cratis Choreography discovers all `ICanApplyPatch` implementations
 3. **Version Check**: The patching kernel high-water mark is checked, then the current system version is retrieved from storage
 4. **Patch Selection**: Patches newer than current version are selected
 5. **Sequential Application**: Patches are applied in ascending version order
@@ -101,13 +94,13 @@ Write comprehensive specs for your patches:
 
 Patch selection uses the last applied **patch version**, while a separate **patching kernel version** records the newest kernel that successfully completed patching. They are not the event-store generation floor: an older kernel skips patching with a warning when the recorded kernel version is newer, but continues starting. Generation-floor admission still runs first and can refuse an incompatible kernel independently.
 
-`IPatchManager` is versioned so that a new kernel's startup call cannot be served by an older interface implementation. If an activation has the interface but runs an older kernel than the caller, it requests relocation and deactivates. Startup retries a bounded number of times; local-preferred placement lets the caller's newer silo host the activation. Exhausting relocation retries fails startup rather than silently omitting patches. The legacy `ApplyPatches()` call remains available to older callers.
+The patch manager is one grain for the whole cluster. If it is active on a silo that runs an older kernel than the one asking, it answers that it must relocate and moves to the asking silo; the new silo asks again with back-off. Exhausting the relocation attempts fails startup rather than silently omitting patches. A call that fails for a reason other than a failing patch, such as a lost silo or a patch that outlasts the grain call timeout, is asked again until patching completes, for up to `PatchingOptions.MaxWait` (15 minutes by default). The `IPatchManager` grain of earlier Chronicle releases remains and forwards to the new manager, so a silo of an earlier release that starts during an upgrade is served.
 
 The high-water mark uses system-information record `Id = 1` in MongoDB and SQL, separate from the last patch version at `Id = 0`. In-memory storage keeps the same separation. Successful patching never lowers the mark. Failed patching does not advance it. Each patch application logs the running kernel version without changing the stored patch schema.
 
 Development placeholder versions `1.0.0` and `0.0.0` (or an unreadable version) bypass this gate with a warning and record no kernel version. Release builds must stamp the server executable's informational version; build metadata is excluded from version comparisons.
 
-Rolling back does not call `Down()` or clear the high-water mark. An older kernel continues without patching. Resetting the mark is an explicit manual recovery action, never an automatic downgrade: stop all kernels, restore a known-compatible backup, and only then remove the patching-kernel record if the recovery requires patch execution again. Never lower it while a newer kernel can still patch the store.
+Rolling back does not undo patches or clear the high-water mark. An older kernel continues without patching. Resetting the mark is an explicit manual recovery action, never an automatic downgrade: stop all kernels, restore a known-compatible backup, and only then remove the patching-kernel record if the recovery requires patch execution again. Never lower it while a newer kernel can still patch the store.
 
 ### Error Handling
 

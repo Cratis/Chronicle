@@ -19,6 +19,11 @@
     font-style: italic;
 }
 
+.workbench-event-store-key-figures--unauthorized {
+    color: var(--cratis-error-color, #e24c4c);
+    font-style: normal;
+}
+
 .workbench-event-store-key-figures__figure {
     display: inline-flex;
     align-items: baseline;

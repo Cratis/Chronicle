@@ -13,6 +13,7 @@ public partial class EventSequence
     /// <inheritdoc/>
     public async Task<IdempotentAppendManyResult> AppendManyWithIdempotencyKeys(IEnumerable<EventToAppend> events, IReadOnlyList<IdempotencyKey?> idempotencyKeys, CorrelationId correlationId, IEnumerable<Causation> causation, Identity causedBy, ConcurrencyScopes concurrencyScopes)
     {
+        if (!_mayWriteSequence) throw new ReservedEventSequenceName(_eventSequenceId);
         var materialized = events.ToList();
         if (materialized.Count != idempotencyKeys.Count)
         {

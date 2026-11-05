@@ -6,7 +6,6 @@ using System.Security.Claims;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
-using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Security;
@@ -29,7 +28,7 @@ public class and_a_chronicle_user_supplies_another_identity : given.an_append_en
         var context = Concepts.Events.EventContext.From("store", "namespace", eventType, EventSourceType.Default, "source", EventStreamType.All, EventStreamId.Default, 0UL, CorrelationId.New());
         var schema = await JsonSchema.FromJsonAsync("{}");
         _storage.GetEventStore("store").GetNamespace("namespace").GetEventSequence(EventSequenceId.Log).GetEventAt(0UL).Returns(new Concepts.Events.AppendedEvent(context, new ExpandoObject()));
-        _storage.GetEventStore("store").EventTypes.GetFor(eventType.Id, eventType.Generation).Returns(new EventTypeSchema(eventType, EventTypeOwner.Server, EventTypeSource.Code, schema));
+        _storage.GetEventStore("store").EventTypes.GetDefinition(eventType.Id).Returns(new EventTypeDefinition(eventType.Id, EventTypeOwner.Server, false, [new(eventType.Generation, schema)], []));
         _metadata.Apply("store", "namespace", schema, "source", Arg.Any<JsonObject>()).Returns(new JsonObject());
     }
 

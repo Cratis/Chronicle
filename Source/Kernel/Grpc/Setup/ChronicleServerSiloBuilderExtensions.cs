@@ -21,6 +21,7 @@ using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Chronicle.Observation.Placement;
 using Cratis.Chronicle.Observation.Reactors.Clients;
 using Cratis.Chronicle.Observation.Reducers.Clients;
+using Cratis.Chronicle.Patching;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Releases;
 using Cratis.Chronicle.Schemas;
@@ -71,7 +72,9 @@ public static class ChronicleServerSiloBuilderExtensions
             options.DefaultVersionSelectorStrategy = nameof(AllCompatibleVersions);
         });
 
-        builder.AddIncomingGrainCallFilter<CorrelationIdIncomingCallFilter>();
+        // Off by default; enabling requires a whole-cluster restart because silos
+        // with different directory implementations cannot share a cluster.
+        builder.AddConfiguredGrainDirectory().AddIncomingGrainCallFilter<CorrelationIdIncomingCallFilter>();
         builder.AddIncomingGrainCallFilter<SerializableFailureIncomingCallFilter>();
         builder.AddOutgoingGrainCallFilter<CorrelationIdOutgoingCallFilter>();
         builder.AddIncomingGrainCallFilter<UserIdentityIncomingCallFilter>();
@@ -104,6 +107,7 @@ public static class ChronicleServerSiloBuilderExtensions
                 StepCheckpointFlushInterval = chronicleOptions.Jobs.StepCheckpointFlushInterval
             });
         });
+        builder.AddChroniclePatching();
         AddClusterReleaseSupport(builder.Services);
         builder.Services.TryAddSingleton<ITypeFormats, TypeFormats>();
         builder.Services.TryAddSingleton<Cratis.Chronicle.Services.Clients.OpenConnections>();

@@ -46,6 +46,13 @@ internal static class KernelHostComposition
     }
 
     /// <summary>
+    /// Registers storage authorization diagnostics as a readiness check.
+    /// </summary>
+    /// <param name="services">The host services.</param>
+    internal static void AddStorageAuthorizationHealthCheck(this IServiceCollection services) =>
+        services.AddHealthChecks().AddCheck<StorageAuthorizationHealthCheck>("storage-authorization", tags: ["ready"]);
+
+    /// <summary>
     /// Maps readiness checks at the configured endpoint and its ready subpath, and liveness without checks.
     /// </summary>
     /// <param name="app">The kernel web application.</param>

@@ -23,6 +23,7 @@ Before accepting traffic, configure [Data Protection Key Encryption](encryption-
 ## All Hosting Topics
 
 - [Production](production.md): Docker-based production deployment
+- [Container Resources](container-resources.md): memory and garbage collection settings for the kernel image
 - [Tracing Client Operations](client-tracing): send client spans to OpenTelemetry
 - [Data Protection Key Encryption](encryption-certificate.md): configure, rotate, and back up encryption certificates
 - [Configuration](configuration/index.md): server settings reference

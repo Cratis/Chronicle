@@ -67,7 +67,7 @@ public class EventStoreStorage(
     ILoggerFactory loggerFactory) : IEventStoreStorage
 {
     readonly ConcurrentDictionary<EventStoreNamespaceName, IEventStoreNamespaceStorage> _namespaces = new();
-    readonly Occurrences.OccurrencesStorage _occurrences = new(eventStoreDatabase.GetCollection<BsonDocument>("occurrences").Database);
+    readonly Occurrences.OccurrencesStorage _occurrences = new(eventStoreDatabase.GetCollection<BsonDocument>(WellKnownCollectionNames.Occurrences).Database);
 
     /// <inheritdoc/>
     public Chronicle.Storage.Generations.IGenerationInitializationStorage GenerationInitialization { get; } = new Generations.GenerationInitializationStorage(eventStoreDatabase.GetCollection<BsonDocument>("generation-initialization"));

@@ -14,11 +14,11 @@ namespace Cratis.Chronicle.Security;
 /// <summary>
 /// Applies the operational policy only to System, auditing denials unless enforcement is enabled.
 /// </summary>
-/// <param name="authorization">The administrator check.</param>
+/// <param name="decisions">The authorization decision point.</param>
 /// <param name="options">The server configuration.</param>
 /// <param name="logger">The logger.</param>
 public class SystemStoreOperationAuthorizationHandler(
-    IAdministratorAuthorization authorization,
+    IAuthorizationDecisions decisions,
     IOptions<ChronicleOptions> options,
     ILogger<SystemStoreOperationAuthorizationHandler> logger) : AuthorizationHandler<SystemStoreOperationRequirement>
 {
@@ -28,16 +28,16 @@ public class SystemStoreOperationAuthorizationHandler(
         var operation = context.Resource is CommandContext commandContext ? commandContext.Command : context.Resource;
         var store = operation?.GetType().GetProperty("EventStore")?.GetValue(operation);
         var storeName = store is EventStoreName name ? name.Value : store as string;
-        if (storeName is not null && !string.Equals(storeName, EventStoreName.System.Value, StringComparison.OrdinalIgnoreCase))
+        var scope = storeName is null ? AuthorizationScope.Kernel : AuthorizationScope.ForEventStore(storeName);
+        var decision = await decisions.Decide(context.User, WellKnownCapabilities.OperateEventStore, scope);
+        if (decision.IsAllowed)
         {
             context.Succeed(requirement);
             return;
         }
-        if (await authorization.IsAuthorized(context.User))
-        {
-            context.Succeed(requirement);
-            return;
-        }
+
+        // A decision that could not be established is never audit-allowed: it fails closed.
+        if (decision.Reason == AuthorizationReason.Failed) return;
         if (options.Value.Authentication.EnforceAdministratorPolicyForOperations) return;
         logger.AdministratorOperationWouldDeny(CallerKind(context.User), operation?.GetType().Name ?? "unknown");
         context.Succeed(requirement);

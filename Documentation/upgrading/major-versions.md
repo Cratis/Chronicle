@@ -37,12 +37,14 @@ stored state does not.
 | [16 → 17](#16-to-17) | Wire | Every gRPC service regenerated; method names and envelopes changed |
 | [17 → 18](#17-to-18) | Wire | Append `Content` back to a plain JSON string |
 | [18 → 19](#18-to-19) | Compile-time | One .NET parameter `bool` → `bool?`; rebuild |
+| [19 → 20](#19-to-20) | Cluster | Kernel silos of 19 and 20 cannot share a cluster; upgrade every silo together |
 
 ### Reading the Touches column
 
 - **Compile-time** — it breaks the build and you fix it once, against the version you land on.
 - **Stored state** — it concerns data already written. Ordered: skipping past it does not skip it.
 - **Wire** — kernel and clients must move together across it.
+- **Cluster** — kernel silos of the two majors cannot run side by side, so the whole kernel moves at once.
 - **Config, endpoints** — deployment and configuration change, not your code.
 
 ## The boundaries
@@ -196,6 +198,18 @@ One public .NET method parameter moved from `bool` to `bool?`. Nothing changed o
 See [Upgrading from 18 to 19](18-to-19.mdx).
 
 **You do:** rebuild.
+
+### 19 to 20
+
+**Cratis Choreography** — released 2026-11-04.
+
+The kernel now builds on `Cratis.Choreography`, the renamed `Cratis.Orleans`. Grain interfaces that take a job or
+job step identifier carry the new types, so their wire identities changed, and silos of 19 and 20 cannot share a cluster.
+Stored job and job step state keeps its identifiers, so existing data still resolves. Clients and their wire contract are
+unaffected.
+
+**You do:** stop every kernel silo of the cluster and start them on 20 together, rather than rolling pods one at a time
+across this boundary.
 
 ## Skipping several majors at once
 

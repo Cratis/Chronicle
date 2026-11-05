@@ -7,5 +7,5 @@ public class and_the_schema_of_the_stored_generation_is_not_known : given.a_join
 {
     void Because() => ResolveJoinOfEventStoredAt(first_generation, second_generation, storedSchemaKnown: false);
 
-    [Fact] void should_release_the_stored_event_with_the_schema_the_projection_was_built_with() => _eventCompliance.Received(1).Release(_storedEvent, _projectionSchema);
+    [Fact] void should_resolve_current_protection_instead_of_using_the_projection_schema() => _eventCompliance.Received(1).Release(_storedEvent, _projectionSchema);
 }

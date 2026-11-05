@@ -150,6 +150,8 @@ Pin the Chronicle and database image versions you have tested rather than deploy
 
 Configure probes as described below before enabling automated restarts or rollouts. Set timeouts for your infrastructure using the [Configuration](configuration/index.md) reference, and monitor readiness, storage connectivity, and startup failures.
 
+Size memory and GC for your container as described in [Container resources](container-resources.md).
+
 ## Health Checks
 
 Chronicle binds its listeners before starting the Orleans silo. `/health/live` returns 200 while the process is running and accepting requests, including during startup. `/health` and `/health/ready` return 503 until the silo has completed startup and the host has started, and become unready when shutdown begins. Existing storage health checks also contribute to readiness.

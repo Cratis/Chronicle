@@ -51,6 +51,8 @@ public partial class EventTypesStorage(
     /// of registered event types.
     /// </summary>
     readonly ConcurrentDictionary<EventTypeId, EventTypeDefinition> _definitionsByType = new();
+    readonly object _definitionInvalidation = new();
+    long _definitionRevision;
 
     /// <inheritdoc/>
     public async Task<bool> Register(Concepts.Events.EventType type, JsonSchema schema, EventTypeOwner owner = EventTypeOwner.Client, EventTypeSource source = EventTypeSource.Code, EventTypeVisibility visibility = EventTypeVisibility.Unspecified, string origin = "")
@@ -262,21 +264,39 @@ public partial class EventTypesStorage(
             return cached;
         }
 
-        var filter = GetFilterForSpecificEventType(eventTypeId);
-        using var result = await GetCollection().FindAsync(filter).ConfigureAwait(false);
-        var eventType = await result.FirstOrDefaultAsync();
-        if (eventType is null)
+        while (true)
         {
-            var schema = await GetFor(eventTypeId);
-            return new EventTypeDefinition(
-                eventTypeId,
-                EventTypeOwner.None,
-                false,
-                [new EventTypeGenerationDefinition(schema.Type.Generation, schema.Schema)],
-                []);
-        }
+            long revision;
+            lock (_definitionInvalidation)
+            {
+                revision = _definitionRevision;
+            }
 
-        return _definitionsByType.GetOrAdd(eventTypeId, static (_, document) => document.ToDefinition(), eventType);
+            var filter = GetFilterForSpecificEventType(eventTypeId);
+            using var result = await GetCollection().FindAsync(filter).ConfigureAwait(false);
+            var eventType = await result.FirstOrDefaultAsync();
+            if (eventType is null)
+            {
+                var schema = await GetFor(eventTypeId);
+                return new EventTypeDefinition(
+                    eventTypeId,
+                    EventTypeOwner.None,
+                    false,
+                    [new EventTypeGenerationDefinition(schema.Type.Generation, schema.Schema)],
+                    []);
+            }
+
+            lock (_definitionInvalidation)
+            {
+                // A read started before invalidation cannot repopulate the definition cache.
+                if (revision != _definitionRevision)
+                {
+                    continue;
+                }
+
+                return _definitionsByType.GetOrAdd(eventTypeId, static (_, document) => document.ToDefinition(), eventType);
+            }
+        }
     }
 
     /// <inheritdoc/>
@@ -333,7 +353,12 @@ public partial class EventTypesStorage(
     /// <inheritdoc/>
     public void Invalidate(EventTypeId eventTypeId)
     {
-        _definitionsByType.TryRemove(eventTypeId, out _);
+        lock (_definitionInvalidation)
+        {
+            _definitionRevision++;
+            _definitionsByType.TryRemove(eventTypeId, out _);
+        }
+
         foreach (var key in _schemasByTypeAndGeneration.Keys)
         {
             if (key.Id == eventTypeId)
