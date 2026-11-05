@@ -74,6 +74,16 @@ public interface ISink
     Task<Option<Key>> TryFindRootKeyByChildValue(PropertyPath childPropertyPath, object childValue);
 
     /// <summary>
+    /// Find the keys of the read models that hold the child a <see cref="ChildRemovedFromAll"/> change would remove.
+    /// </summary>
+    /// <param name="childRemoved">The <see cref="ChildRemovedFromAll"/> change.</param>
+    /// <returns>The keys of every read model holding the child; empty when none does or the sink cannot tell.</returns>
+    /// <remarks>
+    /// Read-only and using the same predicate as the removal. Only used while the projection is watched.
+    /// </remarks>
+    Task<IReadOnlyCollection<Key>> FindKeysHoldingChild(ChildRemovedFromAll childRemoved) => Task.FromResult<IReadOnlyCollection<Key>>([]);
+
+    /// <summary>
     /// Update or insert read model based on key.
     /// </summary>
     /// <param name="key">Key of the read model to upsert.</param>
