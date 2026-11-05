@@ -141,16 +141,16 @@ public class ProjectionChangesetNotifier(
         try
         {
             bool isWatched;
-            bool published;
             do
             {
                 isWatched = _subscribers.Count > 0;
-                published = await TryPublish(isWatched);
+                await TryPublish(isWatched);
 
-                // A subscribe or unsubscribe during the await may have changed the state that was just published; publish again
-                // so a stale state can never be the last one the silos hear.
+                // A subscribe or unsubscribe during the await may have changed the state that was attempted; publish again, whether
+                // the attempt succeeded or failed, so a stale state is never the last one attempted. An unchanged state is not retried
+                // after a failure: the TTL or the next subscribe renews it.
             }
-            while (published && isWatched != _subscribers.Count > 0);
+            while (isWatched != _subscribers.Count > 0);
         }
         finally
         {
@@ -163,7 +163,7 @@ public class ProjectionChangesetNotifier(
         }
     }
 
-    async Task<bool> TryPublish(bool isWatched)
+    async Task TryPublish(bool isWatched)
     {
         try
         {
@@ -171,12 +171,10 @@ public class ProjectionChangesetNotifier(
             await projectionsServiceClient.SetWatchState(key.EventStore, key.Namespace, key.ObserverId, isWatched);
             _hasPublished = true;
             _lastPublished = _timeProvider.GetTimestamp();
-            return true;
         }
         catch (Exception ex)
         {
             logger.PublishingWatchStateFailed(ex, this.GetPrimaryKeyString(), isWatched);
-            return false;
         }
     }
 }
