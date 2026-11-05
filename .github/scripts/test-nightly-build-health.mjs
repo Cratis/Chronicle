@@ -180,6 +180,40 @@ test('pagination uses Link, including empty intermediate pages, for runs/issues/
     assert.equal(result.summary.jobs.length, 1);
 });
 
+test('a next Link may reshape path and swap to a cursor, as long as it stays on api.github.com', async () => {
+    const f = fixture();
+    const issuesPath = `${root}/issues?state=all&per_page=100&page=1`;
+    // GitHub rewrites large issue lists to /repositories/{id}/issues with an opaque `after` cursor
+    // instead of repeating /repos/{owner}/{repo}/issues with an incremented page number.
+    const cursorPath = '/repositories/999/issues?state=all&per_page=100&page=2&after=opaque-cursor';
+    f.pages.set(issuesPath, { data: [], link: `<https://api.github.com${cursorPath}>; rel="next"` });
+    f.pages.set(cursorPath, { data: [] });
+    const result = await f.check();
+    assert.equal(result.status, 'ok');
+    assert.ok(f.calls.some(call => call.path === cursorPath));
+});
+
+test('a next Link to a foreign host is never followed, even on a legitimate-looking path', async () => {
+    const f = fixture();
+    const issuesPath = `${root}/issues?state=all&per_page=100&page=1`;
+    f.pages.set(issuesPath, { data: [], link: `<https://evil.invalid${issuesPath}>; rel="next"` });
+    const result = await f.check();
+    assert.equal(result.status, 'failed');
+    assert.equal(f.mutations.length, 0);
+});
+
+test('built-in REST adapter follows a /repositories/{id} continuation but rejects a bare URL endpoint', async () => {
+    const calls = [];
+    const fetchImpl = async url => {
+        calls.push(new URL(url).pathname);
+        return { ok: true, status: 200, headers: { get: () => null }, json: async () => [] };
+    };
+    const transport = restTransport({ token: 'fixture-only', fetchImpl });
+    await transport('GET', '/repositories/999/issues?page=2');
+    assert.deepEqual(calls, ['/repositories/999/issues']);
+    await assert.rejects(transport('GET', 'https://evil.invalid/repos/x/y'));
+});
+
 test('ambiguous issues, tampered markers and incomplete history fail before writing', async () => {
     for (const alteration of [
         f => f.pages.set(`${root}/actions/workflows/42/runs?event=schedule&branch=main&status=completed&per_page=100&page=1`, { data: { total_count: 2, workflow_runs: [run()] } }),
