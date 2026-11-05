@@ -33,6 +33,8 @@ public sealed class SpellingHarness(string provider, Func<Task<string>> createDa
     string _connectionString;
     ulong _next;
 
+    public CommandCounter Counter { get; } = new();
+
     public EventSequenceStorage Events { get; private set; }
     public ClosedStreamsConstraintStorage ClosedStreams { get; private set; }
 
@@ -112,6 +114,7 @@ public sealed class SpellingHarness(string provider, Func<Task<string>> createDa
     {
         var builder = new DbContextOptionsBuilder<EventSequenceDbContext>().AddConceptAsSupport().WithoutServiceProviderCaching();
         Configure(builder);
+        builder.AddInterceptors(Counter);
         return new(builder.Options, _tableName, _migrator);
     }
 
