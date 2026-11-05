@@ -30,7 +30,7 @@ public class and_one_namespace_has_no_receipts_on_postgresql(PostgreSqlFixture f
             Storage = new() { Type = StorageType.PostgreSql, ConnectionDetails = ConnectionString, SchemaMode = SchemaMode.Verify }
         });
         var database = services.GetRequiredService<Database>();
-        _error = await Catch.Exception(() => for_SchemaProvisioner.given.silo_startup.Run(database));
+        _error = await Catch.Exception(() => new ClusterDbContextMigrator(database).Execute(CancellationToken.None));
     }
 
     [Fact] void should_refuse_to_start() => _error.ShouldBeOfExactType<SchemaNotCurrent>();

@@ -19,10 +19,6 @@ namespace Cratis.Chronicle.Patching;
 /// again over the stores they already reached repeats work but changes nothing. That is why a single applied record
 /// is enough and no per-store record is kept.
 /// </para>
-/// <para>
-/// The skipped resources live on the patch instance, so <see cref="PatchingSiloBuilderExtensions.AddChroniclePatching(ISiloBuilder)"/>
-/// registers every patch that implements this as a single shared instance: the one that ran is the one that is asked.
-/// </para>
 /// </remarks>
 public interface IReportSkippedResources
 {

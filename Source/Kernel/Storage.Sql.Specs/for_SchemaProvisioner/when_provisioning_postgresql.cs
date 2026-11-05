@@ -30,7 +30,7 @@ public class when_provisioning_postgresql(PostgreSqlFixture fixture) : for_Datab
             Storage = new() { Type = StorageType.PostgreSql, ConnectionDetails = ConnectionString, SchemaMode = SchemaMode.Verify }
         });
         var database = services.GetRequiredService<Database>();
-        _startupFailure = await Catch.Exception(() => given.silo_startup.Run(database));
+        _startupFailure = await Catch.Exception(() => new ClusterDbContextMigrator(database).Execute(CancellationToken.None));
         await using var jobs = await database.SchemaContext<Cratis.Choreography.Storage.Sql.Jobs.JobsDbContext>(new DatabaseIdentity(DatabaseKind.Namespace, Store, "production"), static options => new Cratis.Choreography.Storage.Sql.Jobs.JobsDbContext(options), true);
         _pendingJobs = (await jobs.Database.GetPendingMigrationsAsync()).ToArray();
     }
