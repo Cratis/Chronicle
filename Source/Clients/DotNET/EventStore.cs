@@ -276,7 +276,8 @@ public partial class EventStore : IEventStore
             loggerFactory.CreateLogger<Projections.Projections>())
         {
             GenerationDelivery = options.Value.EventGenerationDelivery,
-            SoftwareVersion = options.Value.SoftwareVersion
+            SoftwareVersion = options.Value.SoftwareVersion,
+            Graphs = new(clientArtifactsProvider, artifactActivator, namingPolicy, EventTypes, schemaGenerator, options.Value.DefaultGraphSinkTypeId)
         };
 
         _projections = projections;

@@ -69,6 +69,9 @@ All rules follow the identifier format `CHR####`. Numbers are assigned sequentia
 | [CHR0063](CHR0063) | Scope stream does not match append | Warning | A definition-linked scope guards a different stream than the single-route append it is passed to |
 | [CHR0064](CHR0064) | Invalid read model event stream | Error | A per-stream read model must name one declared stream, keep the event source ID as its key, and cannot be reducer-backed |
 | [CHR0065](CHR0065) | Read model fold method will not be discovered | Warning | An event fold on a read model has the wrong name or is not static, so it cannot be discovered as a self reducer |
+| [CHR0066](CHR0066) | A node or an edge can only have primitive properties | Error | A property of a node or an edge in a graph projection that is an object |
+| [CHR0067](CHR0067) | A node needs exactly one key | Error | A node without exactly one key, or an edge with more than one key |
+| [CHR0068](CHR0068) | A node or an edge cannot be a read model | Error | A type that is both a node or an edge in a graph and a read model |
 
 ## Explicit registration evidence
 
