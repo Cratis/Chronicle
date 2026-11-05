@@ -4,6 +4,7 @@
 using System.Dynamic;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Events.Constraints;
+using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Storage.InMemory.Events.Constraints;
 
 namespace Cratis.Chronicle.Events.Constraints.for_ConstraintValidation.when_validating_a_batch.given;
@@ -20,7 +21,7 @@ public class a_batch_with_a_closing_constraint : Specification
         _storage = new();
         _claims = new();
         var definition = new ClosesStreamConstraintDefinition("closing", ["Closed"], _scope.Dimensions, ["Reopened"]);
-        _validation = new([new ClosesStreamConstraintValidator(definition, _storage), new ClosedStreamConstraintValidator(_storage, [definition.Dimensions], [definition])]);
+        _validation = new([new ClosesStreamConstraintValidator(definition, _storage, EventSequenceId.Log), new ClosedStreamConstraintValidator(_storage, [definition.Dimensions], [definition])]);
     }
 
     protected ConstraintValidationContext ContextFor(EventTypeId eventType) =>

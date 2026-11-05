@@ -17,6 +17,6 @@ public class a_stream_only_closing_constraint : for_EventSequence.given.an_event
         _namespaceStorage.GetClosedStreamsConstraints(SequenceId).Returns(_closures);
         var definition = new ClosesStreamConstraintDefinition("closing", [_eventType.Id], ClosedStreamDimensions.EventStreamType | ClosedStreamDimensions.EventStreamId, ["Reopened"]);
         _registeredConstraints.Add(definition);
-        _currentValidation = new ConstraintValidation([new ClosesStreamConstraintValidator(definition, _closures), new ClosedStreamConstraintValidator(_closures, [definition.Dimensions], [definition])]);
+        _currentValidation = new ConstraintValidation([new ClosesStreamConstraintValidator(definition, _closures, SequenceId), new ClosedStreamConstraintValidator(_closures, [definition.Dimensions], [definition])]);
     }
 }

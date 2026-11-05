@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Events.Constraints;
+using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Storage.InMemory.Events.Constraints;
 
 namespace Cratis.Chronicle.Events.Constraints.for_ClosesStreamConstraintValidator.when_validating;
@@ -10,7 +11,7 @@ public class and_the_dimension_mask_is_empty : given.a_property_sourced_closing_
 {
     ConstraintValidationResult _result;
 
-    void Establish() => _validator = new(_definition with { Dimensions = ClosedStreamDimensions.None, EventStreamIdFrom = null }, new ClosedStreamsConstraintStorage());
+    void Establish() => _validator = new(_definition with { Dimensions = ClosedStreamDimensions.None, EventStreamIdFrom = null }, new ClosedStreamsConstraintStorage(), EventSequenceId.Log);
 
     async Task Because() => _result = await _validator.Validate(_context);
 

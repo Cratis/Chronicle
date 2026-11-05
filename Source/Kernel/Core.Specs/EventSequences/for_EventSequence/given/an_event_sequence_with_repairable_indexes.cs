@@ -85,14 +85,14 @@ public class an_event_sequence_with_repairable_indexes : an_event_sequence
         _namespaceStorage.GetClosedStreamsConstraints(SequenceId).Returns(closed);
         var otherDefinition = _otherDefinition = new UniqueConstraintDefinition("other", [new("OtherEvent", ["email"])]);
         _currentValidation = Closing
-            ? new ConstraintValidation([new ClosesStreamConstraintValidator(_closingDefinition, closed), new ClosedStreamConstraintValidator(closed, [_closingDefinition.Dimensions], [_closingDefinition])])
+            ? new ConstraintValidation([new ClosesStreamConstraintValidator(_closingDefinition, closed, SequenceId), new ClosedStreamConstraintValidator(closed, [_closingDefinition.Dimensions], [_closingDefinition])])
             : new ConstraintValidation([new UniqueConstraintValidator(_uniqueDefinition, unique), new UniqueConstraintValidator(otherDefinition, unique)]);
         _registeredConstraints.Add(Closing ? _closingDefinition : _uniqueDefinition);
         if (!Closing) _registeredConstraints.Add(otherDefinition);
         if (IncludeUniqueWithClosing)
         {
             _registeredConstraints.Add(_uniqueDefinition);
-            _currentValidation = new ConstraintValidation([new UniqueConstraintValidator(_uniqueDefinition, unique), new ClosesStreamConstraintValidator(_closingDefinition, closed), new ClosedStreamConstraintValidator(closed, [_closingDefinition.Dimensions], [_closingDefinition])]);
+            _currentValidation = new ConstraintValidation([new UniqueConstraintValidator(_uniqueDefinition, unique), new ClosesStreamConstraintValidator(_closingDefinition, closed, SequenceId), new ClosedStreamConstraintValidator(closed, [_closingDefinition.Dimensions], [_closingDefinition])]);
         }
         _eventSequenceStorage.GetFromSequenceNumber(Arg.Any<EventSequenceNumber>(), Arg.Any<EventSourceId?>(), Arg.Any<EventSourceType?>(), Arg.Any<EventStreamType?>(), Arg.Any<EventStreamId?>(), Arg.Any<IEnumerable<EventType>?>(), Arg.Any<IEnumerable<Tag>?>(), Arg.Any<CancellationToken>())
             .Returns(call =>

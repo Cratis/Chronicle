@@ -4,6 +4,7 @@
 using System.Dynamic;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Events.Constraints;
+using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Storage.Events.Constraints;
 
 namespace Cratis.Chronicle.Events.Constraints.for_ClosedStreamConstraintValidator.when_validating;
@@ -35,7 +36,7 @@ public class and_a_batch_reopens_a_persisted_closure : Specification
             .Returns([new ClosedStream(scope, "closing", 7, null, pendingReview)]);
         var claims = new ConstraintBatchClaims();
         ConstraintValidationContext Context(EventTypeId eventType) => new([], "source", eventType, new ExpandoObject(), eventStreamType: "transactions", eventStreamId: "period", batchClaims: claims);
-        var observer = (IObserveConstraintBatchEvents)new ClosesStreamConstraintValidator(definition, storage);
+        var observer = (IObserveConstraintBatchEvents)new ClosesStreamConstraintValidator(definition, storage, EventSequenceId.Log);
         observer.RecordBatchEvent(Context("Reopened"));
         if (closeAgain)
         {

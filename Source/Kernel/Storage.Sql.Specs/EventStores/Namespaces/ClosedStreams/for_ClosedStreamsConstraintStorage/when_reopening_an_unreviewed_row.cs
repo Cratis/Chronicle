@@ -3,6 +3,7 @@
 
 using System.Dynamic;
 using Cratis.Chronicle.Concepts.Events.Constraints;
+using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.Storage.Sql.Sinks;
 
@@ -54,7 +55,7 @@ public class when_reopening_an_unreviewed_row(SqlServerFixture fixture) : EventS
         var definition = new ClosesStreamConstraintDefinition("owner", ["Closed"], ClosedStreamDimensions.EventSourceId, ["Reopened"]);
         var claims = new ConstraintBatchClaims();
         var reopening = new ConstraintValidationContext([], "alice", "Reopened", new ExpandoObject(), batchClaims: claims);
-        ((IObserveConstraintBatchEvents)new ClosesStreamConstraintValidator(definition, storage)).RecordBatchEvent(reopening);
+        ((IObserveConstraintBatchEvents)new ClosesStreamConstraintValidator(definition, storage, EventSequenceId.Log)).RecordBatchEvent(reopening);
         var appending = new ConstraintValidationContext([], "alice", "Appended", new ExpandoObject(), batchClaims: claims);
         return await new ClosedStreamConstraintValidator(storage, [ClosedStreamDimensions.EventSourceId], [definition]).Validate(appending);
     }

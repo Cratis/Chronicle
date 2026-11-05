@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Events.Constraints;
+using Cratis.Chronicle.Concepts.EventSequences;
 
 namespace Cratis.Chronicle.Events.Constraints.for_ConstraintValidation.when_validating_a_batch;
 
@@ -13,7 +14,7 @@ public class with_an_invalid_closing_property : given.a_batch_with_a_closing_con
     void Establish()
     {
         var definition = new ClosesStreamConstraintDefinition("closing", ["Closed"], _scope.Dimensions, [], "missing");
-        _validation = new([new ClosesStreamConstraintValidator(definition, _storage), new ClosedStreamConstraintValidator(_storage, [definition.Dimensions], [definition])]);
+        _validation = new([new ClosesStreamConstraintValidator(definition, _storage, EventSequenceId.Log), new ClosedStreamConstraintValidator(_storage, [definition.Dimensions], [definition])]);
     }
 
     async Task Because()

@@ -13,8 +13,8 @@ namespace Cratis.Chronicle.Events.Constraints;
 /// </summary>
 /// <param name="definition">The closing declaration.</param>
 /// <param name="storage">The closure storage.</param>
-/// <param name="eventSequenceId">The event sequence the validator runs for. Defaults to the event log.</param>
-public class ClosesStreamConstraintValidator(ClosesStreamConstraintDefinition definition, IClosedStreamsConstraintStorage storage, EventSequenceId? eventSequenceId = default) : IConstraintValidator, IHaveUpdateConstraintIndex, IObserveConstraintBatchEvents
+/// <param name="eventSequenceId">The event sequence the validator runs for.</param>
+public class ClosesStreamConstraintValidator(ClosesStreamConstraintDefinition definition, IClosedStreamsConstraintStorage storage, EventSequenceId eventSequenceId) : IConstraintValidator, IHaveUpdateConstraintIndex, IObserveConstraintBatchEvents
 {
     /// <inheritdoc/>
     public IConstraintDefinition Definition => definition;
@@ -62,7 +62,7 @@ public class ClosesStreamConstraintValidator(ClosesStreamConstraintDefinition de
 
     bool FitsTheStoredKey(ConstraintValidationContext context, ClosedStreamScope scope) =>
         !definition.EventTypeIds.Contains(context.EventTypeId) ||
-        ClosedStreamKeyLength.Fits(eventSequenceId ?? EventSequenceId.Log, scope.Normalized(), definition.Name.Value);
+        ClosedStreamKeyLength.Fits(eventSequenceId, scope.Normalized(), definition.Name.Value);
 
     ConstraintValidationResult TooLong(ConstraintValidationContext context) => new()
     {

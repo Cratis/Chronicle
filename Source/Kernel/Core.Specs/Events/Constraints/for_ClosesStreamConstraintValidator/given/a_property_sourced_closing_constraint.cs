@@ -4,6 +4,7 @@
 using System.Dynamic;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Events.Constraints;
+using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Storage.InMemory.Events.Constraints;
 
 namespace Cratis.Chronicle.Events.Constraints.for_ClosesStreamConstraintValidator.given;
@@ -18,7 +19,7 @@ public class a_property_sourced_closing_constraint : Specification
     void Establish()
     {
         _definition = new("closing", ["Closed"], ClosedStreamDimensions.EventSourceId | ClosedStreamDimensions.EventStreamId, ["Reopened"], "period");
-        _validator = new(_definition, new ClosedStreamsConstraintStorage());
+        _validator = new(_definition, new ClosedStreamsConstraintStorage(), EventSequenceId.Log);
         _content = new();
         _context = new([], "source", "Closed", _content, EventSourceType.Default, EventStreamType.All, EventStreamId.Default);
     }
