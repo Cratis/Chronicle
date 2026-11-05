@@ -16,11 +16,13 @@ namespace Cratis.Chronicle.Integration.for_ReadModels.when_a_deferred_child_carr
 public class and_the_child_update_arrives_before_the_root(context context) : Given<context>(context)
 {
     const string UpdatedEmail = "updated@example.com";
+    const string InitialEmail = "initial@example.com";
 
     public class context(ChronicleFixture fixture) : Specification(fixture)
     {
         public EventSourceId RootId { get; } = "deferred-pii-update-root";
         public ChildId ChildId { get; } = ChildId.New();
+        public UpdatedRoot? AfterRoot { get; private set; }
         public UpdatedRoot? Result { get; private set; }
         public BsonDocument? StoredDocument { get; private set; }
         public bool DocumentCanBeInspected => StoredReadModelDocument.CanBeInspected(ChronicleFixture);
@@ -37,7 +39,8 @@ public class and_the_child_update_arrives_before_the_root(context context) : Giv
             await projection.WaitTillReachesEventSequenceNumber(update.SequenceNumber);
             var root = await EventStore.EventLog.Append(RootId, new RootCreated("Root"));
             await projection.WaitTillReachesEventSequenceNumber(root.SequenceNumber);
-            var child = await EventStore.EventLog.Append(RootId, new ChildAddedToRoot(ChildId, "initial@example.com", "Child"));
+            AfterRoot = await EventStore.ReadModels.GetInstanceById<UpdatedRoot>(RootId.Value);
+            var child = await EventStore.EventLog.Append(RootId, new ChildAddedToRoot(ChildId, InitialEmail, "Child"));
             await projection.WaitTillReachesEventSequenceNumber(child.SequenceNumber);
 
             Result = await EventStore.ReadModels.GetInstanceById<UpdatedRoot>(RootId.Value);
@@ -47,7 +50,8 @@ public class and_the_child_update_arrives_before_the_root(context context) : Giv
         }
     }
 
-    [Fact] void should_release_the_child_email() => Context.Result!.Children.Single().Email.Value.ShouldEqual(UpdatedEmail);
+    [Fact] void should_release_the_deferred_child_email_when_the_root_arrives() => Context.AfterRoot!.Children.Single().Email.Value.ShouldEqual(UpdatedEmail);
+    [Fact] void should_let_the_later_add_set_the_child_email() => Context.Result!.Children.Single().Email.Value.ShouldEqual(InitialEmail);
     [Fact] void should_keep_the_unprotected_child_name() => Context.Result!.Children.Single().Name.ShouldEqual("Child");
     [Fact] void should_have_read_the_stored_document_when_the_backend_allows_it() => (!Context.DocumentCanBeInspected || Context.StoredDocument is not null).ShouldBeTrue();
     [Fact]
@@ -59,7 +63,7 @@ public class and_the_child_update_arrives_before_the_root(context context) : Giv
         var email = StoredReadModelDocument.Field(children[0].AsBsonDocument, "Email");
         email.ShouldNotBeNull();
         email!.AsString.ShouldNotEqual(UpdatedEmail);
-        email.AsString.ShouldNotEqual("initial@example.com");
+        email.AsString.ShouldNotEqual(InitialEmail);
     }
 }
 
