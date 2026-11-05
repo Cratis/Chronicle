@@ -2,8 +2,6 @@
 title: Stage and commit Chronicle events with a unit of work
 description: A Chronicle unit of work stages events in the .NET client until commit. Use transactional appends to collect a workflow's events into an atomic batch.
 ---
-# Transactions and Unit of Work
-
 A Chronicle unit of work stages events in the .NET client and sends them as one append batch when you commit. Use it when a workflow produces events across several calls, but none should be sent until the workflow is ready. The staged events share a correlation id so you can trace the operation.
 
 Commit is still an event append operation. Chronicle checks constraints and concurrency at that point, then persists an accepted batch atomically. A unit of work does not make other work, such as an HTTP call or a write to another database, part of that event transaction.

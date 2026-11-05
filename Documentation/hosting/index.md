@@ -2,8 +2,6 @@
 title: Cratis Chronicle hosting
 description: Host the Cratis Chronicle Kernel with Docker Compose or Microsoft Aspire locally, then configure storage, certificates, and health probes for production.
 ---
-# Hosting
-
 Hosting Cratis Chronicle means running its Kernel, the server that stores events, builds read models through projections, and runs event handlers called observers. Your applications connect to this server to append events and query their state. Start with a local container, then configure durable storage and certificates before deploying the production image.
 
 ## Getting Started

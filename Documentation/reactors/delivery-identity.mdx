@@ -2,8 +2,6 @@
 title: Reactor delivery identity for repeat-safe side effects
 description: ReactorDelivery identifies repeated event deliveries in Cratis Chronicle so you can key side effects; your application owns the duplicate protection.
 ---
-# Delivery identity
-
 `ReactorDelivery` identifies one event delivered to one reactor partition in Cratis Chronicle, where events are grouped by event source id. Its identity stays the same when recovery or replay delivers that event again. Use it to key a side-effect receipt or a request to a receiver that deduplicates repeated requests; the identity alone does not prevent duplicate work.
 
 <ChronicleClientTabs snippet="reactors/delivery-identity/basic" />

@@ -4,8 +4,6 @@ title: Cratis Chronicle event subjects for PII encryption
 description: A Cratis Chronicle event subject identifies who the event is about and selects its PII encryption key. It defaults to the event source identifier.
 ---
 
-# Subject
-
 An event's subject in Cratis Chronicle identifies who the event is about and selects the key that protects its personally identifiable information (PII). Set it explicitly when the [`EventSourceId`](event-source.md) identifies something else, such as an order. The subject is not the actor who caused the event; that actor is recorded by [identity](./correlation-identity-causation.mdx#identity).
 
 For a `ShippingAddressChanged` event, the `EventSourceId` can be the order identifier while the subject is the customer whose address changed. Using the customer as the subject groups their protected data under that person's key, even when events belong to different orders. Keys are scoped by event store, namespace and subject.

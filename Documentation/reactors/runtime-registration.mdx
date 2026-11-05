@@ -2,8 +2,6 @@
 title: "Cratis Chronicle reactors: register runtime event types"
 description: Register a Cratis Chronicle reactor at runtime in .NET to handle JSON events by type identifier and generation, without defining a .NET class per event.
 ---
-# Register a Reactor at Runtime
-
 Cratis Chronicle's .NET runtime reactor API handles events as JSON when a bridge or plugin host knows their identifiers but has no .NET event classes. Register a stable reactor ID, the event types and generations to observe, and an asynchronous callback in the application that will process them.
 
 A generation identifies a version of an event type's schema. Include it in the subscription so Chronicle knows which event representation you are requesting:

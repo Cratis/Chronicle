@@ -2,8 +2,6 @@
 title: Cratis Chronicle projection tags
 description: Label Chronicle projection definitions with tags in C# or TypeScript to describe their purpose or domain, without filtering the events they observe.
 ---
-# Tagging Projections
-
 Projection tags in Cratis Chronicle label a projection definition with its purpose or domain, such as `Analytics` or `Inventory`. Use them to describe what a projection is for. They do not filter the events it observes or select projections for operations such as rebuilds.
 
 To control projection input, declare the event types and select the event sequence. If you need a reducer or reactor to process only events with particular metadata, use [appended event metadata filters](../events/filtering/index.md) instead of projection tags.

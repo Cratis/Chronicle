@@ -2,8 +2,6 @@
 title: Internalizing dependencies in Cratis Chronicle clients
 description: How Chronicle clients hide internal dependencies from consumers with runtime-only packaging so the public API surface stays clear.
 ---
-# Internalization
-
 Clients must present a single, clear, and idiomatic API surface. Any dependencies required to implement this API should remain hidden from consumers.
 This prevents confusion caused by exposing internal concepts or types that may exist in multiple namespaces or packages for different purposes.
 When tools like IDEs auto-import namespaces, exposing these internals can lead to ambiguous references and a degraded developer experience.

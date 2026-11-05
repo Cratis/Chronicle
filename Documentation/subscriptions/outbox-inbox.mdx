@@ -2,8 +2,6 @@
 title: Chronicle outbox and inbox event delivery
 description: Publish integration events to a Chronicle outbox and forward them into a consumer inbox, where observers process the stored events independently.
 ---
-# Outbox and Inbox
-
 Cratis Chronicle uses an outbox and inbox to separate publishing an event from processing it in another service. The source publishes to its outbox, the kernel forwards subscribed events into the consumer's inbox, and the consumer processes that stored copy.
 
 ## The Outbox

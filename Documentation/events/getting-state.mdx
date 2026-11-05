@@ -2,8 +2,6 @@
 title: Cratis Chronicle sequence state for checkpoints and progress
 description: Read a Cratis Chronicle sequence's tail to capture a history boundary, then compare observer progress separately to assess whether processing has caught up.
 ---
-# Getting state
-
 The tail sequence number in Cratis Chronicle identifies the latest appended event matching a read's filters. Use it to capture a boundary for a history read or to compare with an observer's progress. It says what has been appended, not what a projection, reactor, or reducer has finished processing.
 
 In .NET, `IEventSequence.GetTailSequenceNumber` returns that position. A read with no matching events returns `EventSequenceNumber.Unavailable`; do not save that sentinel as an event locator. A captured tail does not freeze the sequence or prevent duplicate processing when you resume.

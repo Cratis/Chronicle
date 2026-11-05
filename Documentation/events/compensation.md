@@ -2,8 +2,6 @@
 title: Cratis Chronicle event compensation for recorded mistakes
 description: Cratis Chronicle appends a compensating event linked to an earlier event, leaving the original unchanged so your domain can record the correction.
 ---
-# Event compensation
-
 Use event compensation in Cratis Chronicle when a correction belongs in the business history as a new fact. A posted ledger entry, for example, stays posted; a second entry offsets it. Chronicle links the compensating event to the original, while your event content and observers define what the correction does.
 
 Compensation is different from [revision](revision.md). A revision replaces how an event reads, in place, and keeps the original content beside it. A compensation adds a new event to the sequence and leaves the original event as it was.

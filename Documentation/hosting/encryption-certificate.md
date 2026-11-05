@@ -2,8 +2,6 @@
 title: Cratis Chronicle encryption certificate configuration and rotation
 description: Configure Cratis Chronicle encryption certificates to protect stored keys and webhook credentials, retain access during rotation, and restore backups.
 ---
-# Data Protection Key Encryption
-
 Configure an encryption certificate in Cratis Chronicle to protect stored Data Protection keys and webhook credentials, and to provide signing and encryption keys for its internal OAuth authority. Keep the certificate and its private key when you rotate it: stored data and backups may still need it after a new certificate becomes active.
 
 ## Overview

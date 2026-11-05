@@ -2,8 +2,6 @@
 title: Configure the Cratis Chronicle Kernel
 description: Configure the Chronicle Kernel with chronicle.json and environment overrides for storage, authentication, certificates, and observer processing.
 ---
-# Configuration
-
 Configure the Chronicle Kernel with a `chronicle.json` file, `Cratis__Chronicle__` environment variables, or both. Environment variables override matching file settings, letting you share a configuration file while supplying deployment-specific connections and credentials separately.
 
 Start with [Configuration File](configuration-file.md) to place the file, or [Docker Configuration](docker.md) to mount it in a container. Use [Configuration Precedence](configuration-precedence.md) when a setting does not match the value you expected.

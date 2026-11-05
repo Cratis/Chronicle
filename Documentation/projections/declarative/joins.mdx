@@ -2,8 +2,6 @@
 title: Chronicle projection joins across event streams
 description: Chronicle projection joins combine data from separate event streams in one read model. Choose join keys and mappings, and understand arrival-order limits.
 ---
-# Projection with joins
-
 Use a join in a Cratis Chronicle projection when one read model needs facts from separate event streams, such as a user and the group they belong to. The read model stores a join key, and Chronicle uses it to find the related events and apply their property mappings.
 
 ## Defining a projection with joins

@@ -2,8 +2,6 @@
 title: Generate gRPC bindings for a Cratis Chronicle client
 description: "Two ways to get typed bindings for Chronicle's gRPC services when building a client: generate them from the .proto files or request a generated package."
 ---
-# Two ways to start
-
 Before writing a line of idiomatic code, a new client needs typed bindings for Chronicle's gRPC
 services. There are two ways to get them, and they're not equally good uses of your time.
 

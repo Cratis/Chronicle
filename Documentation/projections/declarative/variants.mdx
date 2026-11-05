@@ -2,8 +2,6 @@
 title: "Cratis Chronicle projection variants: model lifecycle stages"
 description: "Use projection variants in Cratis Chronicle to give each lifecycle stage its own read model and remove the previous variant when a new stage is entered."
 ---
-# Variants
-
 Projection variants in Cratis Chronicle give each lifecycle stage of an entity its own read model. An entering event creates one variant and triggers removal from the others in its group. Use variants when callers need a stage-specific view, such as backlog items before a pull request exists and pull-request items afterwards.
 
 Each variant has its own projection and collection. The shapes can differ, with fields that only make sense in one stage, or share nearly all their properties. Either way, querying one collection selects that stage without a `Status` filter.

@@ -2,8 +2,6 @@
 title: Cratis Chronicle event compensation in .NET
 description: Declare a Cratis Chronicle compensation event type and append a correction linked to the original event's sequence number, without changing the original.
 ---
-# Compensating events in .NET
-
 Cratis Chronicle event compensation appends a new event that offsets an earlier event without changing it. Use compensation when the correction must remain part of the record, such as a reversal of a posted ledger entry. Your observers decide how that correction affects application state.
 
 ## Declare a compensation event type

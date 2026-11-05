@@ -2,8 +2,6 @@
 title: Reactor OnceOnly behavior during replay and recovery
 description: OnceOnly skips a Cratis Chronicle reactor handler during replay, but recovery and initial catch-up can still invoke it. Protect side effects separately.
 ---
-# OnceOnly
-
 The `OnceOnly` attribute skips a reactor handler during replay in Cratis Chronicle. Use it when replaying history should not resend a notification or repeat an external integration call. It does not limit the handler to one invocation: initial catch-up and recovery of a failed partition can still call it.
 
 <ChronicleClientTabs snippet="reactors/once-only/basic" />

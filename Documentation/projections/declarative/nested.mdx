@@ -2,8 +2,6 @@
 title: Chronicle projections for optional nested objects
 description: Use Nested in a Chronicle projection to update one optional object, such as an active contract. ClearWith sets the object to null when it ends.
 ---
-# Projection with a Nested Object
-
 Use `Nested()` in a Cratis Chronicle projection when a read model has one optional object, such as an employee's active contract or a task's current assignee. Events update properties inside that object, and `ClearWith<TEvent>()` sets it to `null` when the relationship ends. Use [children collections](children) instead when the parent owns several items identified by keys.
 
 ## Defining a nested object projection

@@ -2,8 +2,6 @@
 title: Configure constraint-index repair in Cratis Chronicle
 description: Configure Chronicle constraint-index repair retries, time budgets, cadence, poison threshold, and memory caps in chronicle.json or environment variables.
 ---
-# Constraint index repair
-
 The `constraintIndexRepair` section controls how an event sequence keeps its constraint indexes in step with the event log. When an index write fails or runs out of time, the sequence repairs the index from the log rather than failing the append. Use this section to tune the retries, time budgets, repair cadence, and memory caps of that repair. See [Constraints](../../understanding-constraints.mdx) for the constraints themselves.
 
 The defaults are suitable for most installations. Change them only when your storage latency or memory budget calls for it.

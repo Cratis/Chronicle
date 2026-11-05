@@ -2,8 +2,6 @@
 title: Configuring the PrimeUI license for Cratis Chronicle
 description: How to supply a PrimeUI license key when building the Chronicle Workbench frontend locally and in CI, or contribute without one.
 ---
-# PrimeUI License
-
 The Workbench frontend is built on [Cratis Components](https://github.com/Cratis/Components), which in turn
 builds on PrimeReact. From version 11, PrimeReact is PrimeTek's commercially licensed **PrimeUI** rather
 than the MIT-licensed library version 10 was. It verifies a license key when its provider mounts, and

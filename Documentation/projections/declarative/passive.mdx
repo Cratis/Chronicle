@@ -2,8 +2,6 @@
 title: "Cratis Chronicle passive projections: compute state on demand"
 description: "Use Passive() in Cratis Chronicle to compute a read model from one event source's history on each read instead of maintaining a stored read model."
 ---
-# Passive projection
-
 A passive projection in Cratis Chronicle computes a read model from events when you request it, rather than maintaining a stored result. Use it for source-local lookups when you want to read from event history without waiting for a background observer to update a read-model store.
 
 ## Defining a passive projection

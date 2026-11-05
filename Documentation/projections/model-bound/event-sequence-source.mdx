@@ -2,8 +2,6 @@
 title: "Model-bound projections: choose an event sequence"
 description: "Choose the event sequence a Chronicle model-bound projection reads, or let .NET infer the event log or inbox from its event types."
 ---
-# Event Sequence Source
-
 A model-bound projection reads events from one event sequence. In .NET, Chronicle uses the event log unless the model selects another sequence or its event types imply an inbox. Set `[EventSequence]` on the read model when you need to choose the source explicitly:
 
 <ChronicleClientTabs snippet="projections/model-bound/event-sequence-source/model-bound" />

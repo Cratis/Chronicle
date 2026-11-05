@@ -2,8 +2,6 @@
 title: Chronicle migrations for evolving event schemas
 description: Cratis Chronicle migrations store multiple event schema generations so readers can use different versions. Learn how registration and backfill work.
 ---
-# Migrations
-
 Cratis Chronicle migrations let you change an event's schema while keeping representations for readers that use older generations. You declare how to transform between adjacent generations, and the kernel applies those declarations when events are appended. A separate background job adds missing generations to existing events.
 
 ```mermaid

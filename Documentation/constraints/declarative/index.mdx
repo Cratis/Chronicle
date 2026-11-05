@@ -2,8 +2,6 @@
 title: Declare Chronicle constraints with fluent rules
 description: Define Chronicle constraints in a dedicated class to share uniqueness rules across event types, release claims, or close stream scopes at append time.
 ---
-# Declarative constraints
-
 Declarative constraints keep an append-time rule in a dedicated class rather than on an event type. Use them when several events share one uniqueness rule, when a violation needs a dynamic message, or when you want to control the constraint's name. In .NET, implement `IConstraint` and describe the rule through its fluent builder, chaining calls that select the events, properties, and release behavior.
 
 For a rule that belongs directly on an event type or property, start with [Model-bound constraints](../model-bound/). Both approaches send definitions to the Chronicle Kernel, where the append is checked.

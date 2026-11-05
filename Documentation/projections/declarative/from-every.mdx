@@ -2,8 +2,6 @@
 title: Chronicle FromEvery mappings for audit fields
 description: FromEvery updates shared fields, such as audit timestamps, for events a Chronicle projection already handles. It does not subscribe to unrelated events.
 ---
-# Projection With FromEvery
-
 Use `FromEvery` in a Cratis Chronicle projection to update shared fields, such as a last-updated timestamp, whenever the projection handles an event. It saves you from repeating the same mapping in each event declaration. It does not subscribe the projection to unrelated event types; use [FromAll](from-all) for that.
 
 The client APIs use different names: .NET has `FromEvery`, TypeScript has `fromEvery`, and Elixir has `from_every`. The examples show the declaration for each client.

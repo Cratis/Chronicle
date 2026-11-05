@@ -3,8 +3,6 @@ uid: Chronicle.ConcurrencyScope
 title: Protect Chronicle decisions with concurrency scopes
 description: A Chronicle concurrency scope rejects an append if matching events arrived after an expected position. Capture that position before reading state.
 ---
-# Concurrency
-
 A Chronicle concurrency scope rejects an append when matching events have arrived after the position your decision relies on. Use it when two operations could read the same state and both try to act on it, such as two withdrawals from one account. Capture the expected position before reading the facts so the check covers the decision, not just the write.
 
 :::caution[A scope guards a decision only if its position is captured before you read]

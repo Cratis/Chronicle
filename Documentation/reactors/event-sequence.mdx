@@ -2,8 +2,6 @@
 title: "Cratis Chronicle reactors: choose an event sequence"
 description: Choose the event sequence a Cratis Chronicle reactor observes, override inferred inbox routing in .NET, or explicitly select the default event log.
 ---
-# Event Sequence
-
 A Cratis Chronicle reactor observes one event sequence: the ordered source of events it handles. Select the sequence that contains the events your handler needs. Without another selection, reactors read the default event log, although .NET can infer an inbox for events from another event store.
 
 In .NET, `[EventSequence]` and the `eventSequence` parameter on `[Reactor]` make the selection explicit. If both are present, `[EventSequence]` takes precedence. An explicit selection also prevents automatic inbox routing.

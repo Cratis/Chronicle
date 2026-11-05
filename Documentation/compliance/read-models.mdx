@@ -4,8 +4,6 @@ title: Cratis Chronicle read-model PII storage and release
 description: Mark personal fields on Cratis Chronicle read models for encrypted storage, preserve their subject ownership, and release values through supported query paths.
 ---
 
-# Read models and PII
-
 Cratis Chronicle encrypts personally identifiable information (PII) in managed read models when their own schemas mark those fields as personal. An event annotation alone does not protect a projection destination. Use Chronicle's query methods to release, or decrypt, stored values; call release explicitly for raw storage, cached instances or watch streams.
 
 :::note[The same mechanism also protects `[Encrypted]` values]

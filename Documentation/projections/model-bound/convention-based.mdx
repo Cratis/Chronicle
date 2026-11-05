@@ -2,8 +2,6 @@
 title: "Cratis Chronicle model-bound projections: Map matching properties"
 description: Use convention-based mapping in Cratis Chronicle to copy matching event properties to read models, with explicit mappings for exceptions.
 ---
-# Convention-Based Mapping
-
 Use convention-based mapping in Cratis Chronicle when an event and a read model share property names and compatible shapes. Declare the source event on the read model, and Chronicle copies the matching properties without a set mapping on each one. This is the model-bound form of `AutoMap`.
 
 Add explicit mappings for exceptions: a different source name, a value from event context, or an operation such as adding an amount instead of replacing a value.

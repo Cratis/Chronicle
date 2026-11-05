@@ -2,8 +2,6 @@
 title: "Model-bound joins: map facts from related event sources"
 description: "Use Join in a Chronicle model-bound projection to copy related event data into a read model and update matching instances when that data changes."
 ---
-# Joins
-
 A model-bound join copies facts from a related event source into a read model. Use it when an order needs a customer's name or a line item needs product details, so the query can read those values from the model. In .NET, `[Join<TEvent>]` declares the source event and the model property used to find a match.
 
 ## Basic Join

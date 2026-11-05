@@ -2,8 +2,6 @@
 title: Reactor and reducer replay lifecycle notifications
 description: Replay notifications tell Cratis Chronicle reactors and reducers when replay begins and ends. In C#, share lifecycle state outside the handler instance.
 ---
-# Replay notifications
-
 Replay notifications tell a reactor or reducer when Cratis Chronicle begins and ends a [replay](replay). Use them to coordinate replay-specific work, such as changing how a reactor writes to an external index. They are lifecycle calls, not a mechanism for preventing duplicate side effects.
 
 In C#, implement `ICanBeNotifiedWhenReplay` on the reactor or reducer class to receive `BeginReplay()` and `EndReplay()`. The interface lives in the `Cratis.Chronicle.Observation` namespace. Store any state needed across those calls outside the reactor or reducer instance.

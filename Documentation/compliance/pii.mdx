@@ -4,8 +4,6 @@ title: Cratis Chronicle PII classification and encryption
 description: Mark personal values in Cratis Chronicle schemas for subject-key encryption. Choose property or concept declarations and account for historical plaintext.
 ---
 
-# Marking data as PII
-
 Cratis Chronicle encrypts personally identifiable information (PII) when you mark the values in the event schema. Use a C# `[PII]` attribute, Kotlin/Java `@Pii` annotation, TypeScript `@pii()` decorator or Elixir `pii` macro to declare which values need subject-key protection. The kernel encrypts them on append and releases, or decrypts, them on read.
 
 For a reusable personal value, put the declaration on its concept type. For a single field, mark the property. In .NET, a marker on a composite value object reaches its declared leaf values: the individual values inside the object, rather than the object container. Collections have a different boundary, described below.

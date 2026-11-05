@@ -2,8 +2,6 @@
 title: Cratis Chronicle event copying to another event source
 description: Copy event history to another event source in Cratis Chronicle with a durable job that appends new events and leaves the source history unchanged.
 ---
-# Copying events
-
 Copying in Cratis Chronicle seeds one event source with history from another event source in the same event sequence. Use it to create a variant of an entity under a different identifier without changing the source history.
 
 Each copy is a new event with a new sequence number. Observers process these appends, so review their effects before starting: copying history can trigger application actions as well as build state. The source and target identifiers must differ.

@@ -2,8 +2,6 @@
 title: Cratis Chronicle event reads for inspecting history
 description: Read Cratis Chronicle event history by event source or sequence number, choose bounded pages for large histories, or inspect metadata without content.
 ---
-# Getting events
-
 Read events directly from Cratis Chronicle when you need to inspect an entity's history or diagnose the facts behind its current state. Use an event source read for one entity, a sequence-number read for a known position, or a metadata lookup when you do not need the payload.
 
 The .NET examples use `IEventSequence` and its specialized `IEventLog`. For a history view that should not load everything at once, use [.NET keyset-paged reads](./paged-reads): pages advance by sequence number rather than by an offset. `GetPage` reads forward or backward within inclusive bounds; `GetLatest` starts at the tail and returns matching events newest first. Both return a continuation only when another matching page exists.

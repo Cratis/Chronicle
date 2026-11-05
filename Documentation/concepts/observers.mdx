@@ -2,8 +2,6 @@
 title: Cratis Chronicle observers and recovery
 description: Cratis Chronicle observers process subscribed events to build state or perform actions. Learn when to replay, clear quarantine, fast-forward, or remove one.
 ---
-# Observers
-
 An observer in Cratis Chronicle processes subscribed event types from an [event sequence](./event-sequence.md) to build state or perform an action. Use its recorded progress and failure state to decide whether it needs recovery, replay, or removal; these operations have different effects on existing data.
 
 Projections and reducers build read models. Reactors perform actions such as sending an email, calling an API, or producing a follow-up event:

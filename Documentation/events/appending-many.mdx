@@ -2,8 +2,6 @@
 title: Chronicle batch appends with AppendMany
 description: AppendMany stores an ordered batch of Chronicle events atomically. Use it when one operation produces several events that must commit together.
 ---
-# Appending many
-
 `AppendMany` stores several events in one atomic batch: either all are committed or none are. Use it when one decision produces several facts that must stay together, or when an import has a batch ready to write. Events in the batch can belong to different event sources.
 
 > [!NOTE]

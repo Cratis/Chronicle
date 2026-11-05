@@ -2,8 +2,6 @@
 title: Cratis Chronicle local hosting with Docker Compose
 description: Run Cratis Chronicle locally with bundled MongoDB and an Aspire OpenTelemetry dashboard using Docker Compose, with service ports bound to loopback.
 ---
-# Running with Docker Compose
-
 Run Cratis Chronicle with Docker Compose when you want a local event store and a dashboard for its telemetry without creating an Aspire AppHost. This setup uses the development image, which bundles a single-node MongoDB replica set and generates a self-signed TLS certificate. You do not need a separate database service or certificate file.
 
 Save the following as `docker-compose.yml`. The `aspire-dashboard` service runs the [Microsoft Aspire](https://learn.microsoft.com/en-us/dotnet/aspire/get-started/aspire-overview) dashboard; it does not run your application or an AppHost.

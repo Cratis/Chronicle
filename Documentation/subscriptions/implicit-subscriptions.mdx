@@ -4,8 +4,6 @@ title: Chronicle implicit subscriptions from shared event contracts
 description: Use EventStore attributes on shared C# event contracts so Chronicle registers forwarding and routes consumers to the source store's inbox.
 ---
 
-# Implicit Event Store Subscriptions
-
 Cratis Chronicle can register forwarding and route C# observers automatically when their event contracts identify a source event store. Use implicit subscriptions when services share those contracts: the consumer handles the events it needs, and Chronicle routes it to that source's inbox without a separate subscription API call.
 
 :::note[Client coverage]

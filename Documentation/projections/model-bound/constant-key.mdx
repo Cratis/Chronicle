@@ -2,8 +2,6 @@
 title: "Cratis Chronicle model-bound projections: Use constant keys"
 description: Use ConstantKey in Cratis Chronicle model-bound projections to route events from different event sources into one shared read model instance.
 ---
-# Constant Keys
-
 Use a constant key in Cratis Chronicle when events from different event sources should update one shared read model instance. Instead of selecting an instance by the event source id, the mapping uses a fixed string, such as `"metrics"`. This lets a counter track a total across sources rather than a separate total for each source.
 
 ## FromEvent with ConstantKey

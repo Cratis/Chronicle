@@ -2,8 +2,6 @@
 title: Configure the Cratis Chronicle Kernel in Docker
 description: Configure Chronicle in Docker with a read-only chronicle.json mount and environment overrides, then supply the production image's required certificates.
 ---
-# Docker Configuration
-
 Configure the Chronicle Kernel in Docker by mounting `chronicle.json` at `/app/chronicle.json`, passing `Cratis__Chronicle__` environment variables, or combining both. Environment variables override matching file settings, so you can keep shared configuration in the file and supply deployment-specific values separately.
 
 The commands below show how configuration reaches the container, not a complete production start. With the default TLS settings, the production image needs a TLS certificate as well as an encryption certificate and stops at startup without them. Configure and mount those certificates before starting; [Production hosting](../production.md) covers the requirements and the supported TLS alternatives.

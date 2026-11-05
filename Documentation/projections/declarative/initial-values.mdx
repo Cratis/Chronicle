@@ -2,8 +2,6 @@
 title: Chronicle projection initial values for read model defaults
 description: Initial values give a Chronicle read model business defaults before event mappings apply. Capture deterministic starting state in the projection definition.
 ---
-# Projection With Initial Values
-
 Initial values give a Cratis Chronicle read model meaningful defaults before event mappings assign its properties. Use them for a draft status, an inventory threshold, or another starting value that events may leave unchanged. Chronicle captures this state in the projection definition; it is not a factory run for each event or query.
 
 .NET exposes `WithInitialValues`, while TypeScript exposes `withInitialValues`. Kotlin and Elixir capture defaults declared on the read model itself.

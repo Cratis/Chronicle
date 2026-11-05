@@ -2,8 +2,6 @@
 title: Chronicle Workbench local access
 description: Open Chronicle Workbench at https://localhost:35000 with a development image, handle its local certificate, and sign in with the built-in account.
 ---
-# Development
-
 Chronicle Workbench is served at `https://localhost:35000` by the Development and Development-slim Docker images. Use the built-in administrator account to inspect your local Chronicle instance. If you have not started a container yet, follow the [Workbench local setup](index.mdx#start-locally) first.
 
 ## Accessing the Workbench

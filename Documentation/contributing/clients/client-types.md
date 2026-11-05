@@ -3,8 +3,6 @@ title: Client types in Cratis Chronicle
 description: The kinds of Chronicle clients, where they live in the repository, and the project dependencies and building blocks they share.
 ---
 
-# Client Types
-
 Chronicle provides several types of clients, each designed for specific scenarios and use cases.
 All client implementations are found in `./Source/Clients` at the root of the Chronicle repository.
 Client types include standard clients, test clients, and REST APIs.

@@ -2,8 +2,6 @@
 title: Cratis Chronicle .NET namespace resolution
 description: Configure a namespace resolver for the Cratis Chronicle .NET client so direct clients and hosted services select the intended tenant's event store.
 ---
-# DotNET client usage
-
 The Cratis Chronicle .NET client uses `IEventStoreNamespaceResolver` to select a namespace when you call `GetEventStore` without an explicit namespace. The returned event store stays bound to that namespace. Configure a resolver when a worker service or console application needs to select tenant data from its current execution context.
 
 :::note[Client coverage]

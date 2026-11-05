@@ -2,8 +2,6 @@
 title: "Cratis Chronicle projections: remove children with RemovedWithJoin"
 description: "Use RemovedWithJoin<TEvent>() in Cratis Chronicle to remove matching children across parent read models when a related entity is deleted or closed."
 ---
-# Projection with RemoveWithJoin
-
 `RemovedWithJoin<TEvent>()` in Cratis Chronicle removes matching child items across the parent read models maintained by a projection. Use it when a related entity changes independently: disbanding a group, for example, should remove that group's membership from every user's collection without listing the users in the event.
 
 ## Understanding RemoveWithJoin vs RemovedWith

@@ -3,8 +3,6 @@ uid: Chronicle.Compliance.Arc
 title: Cratis Chronicle PII release in Arc queries
 description: Arc's Chronicle integration decrypts marked personal data before intercepted query responses. Configure subjects and authorize access on the backend.
 ---
-# Compliance in Arc applications
-
 Cratis Arc uses Chronicle's read-model release to decrypt personally identifiable information (PII) before intercepted query responses reach clients. Use Cratis Chronicle's personal-data annotations and subject identifiers to protect storage and select the right key. Generated frontend proxies do not configure that protection or authorize access.
 
 ## From storage to a query response

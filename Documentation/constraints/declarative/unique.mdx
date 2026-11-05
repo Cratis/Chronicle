@@ -2,8 +2,6 @@
 title: Declare Chronicle unique property constraints
 description: Reserve property values across event sources with Chronicle unique constraints, combine event types in one rule, and release values when they can be reused.
 ---
-# Unique property constraint
-
 A unique property constraint reserves a value for an event source so another source cannot claim it. Use it for a project name or email address that must stay unique even when different event types introduce or change the value. The owning source can claim its own value again without a violation.
 
 In .NET, call `builder.Unique(...)` inside an `IConstraint` implementation. The client's default artifact discovery finds these classes without separate registration. See [Declarative constraints](index.mdx) for client-specific API differences.

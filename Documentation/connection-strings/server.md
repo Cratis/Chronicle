@@ -2,8 +2,6 @@
 title: Server support
 description: The Chronicle connection string format the server supports, with chronicle:// and chronicle+srv:// schemes, multiple hosts, load balancing and query parameters.
 ---
-# Server support
-
 Cratis Chronicle connection strings specify server addresses, authentication and connection options. This reference describes the .NET client's behavior.
 
 Connection strings follow this general format:

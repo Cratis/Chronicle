@@ -2,8 +2,6 @@
 title: Chronicle OpenTelemetry configuration
 description: Export Chronicle metrics, traces, and logs over OTLP, choose how traces expose event source ids, and connect a local or hosted telemetry backend.
 ---
-# Open Telemetry
-
 Chronicle exports metrics, traces, and logs through the [OpenTelemetry Protocol (OTLP)](https://opentelemetry.io/docs/specs/otlp/) so you can investigate event processing and observer failures in your telemetry backend. Instrumentation is always enabled; use standard OpenTelemetry environment variables to configure export.
 
 ## Signals

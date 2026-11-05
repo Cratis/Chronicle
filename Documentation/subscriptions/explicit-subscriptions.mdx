@@ -4,8 +4,6 @@ title: Chronicle explicit subscriptions for event forwarding
 description: Register a Chronicle subscription with a stable ID and selected event types to forward source outbox events into a consuming store's inbox.
 ---
 
-# Explicit Event Store Subscriptions
-
 An explicit subscription in Cratis Chronicle forwards selected event types from a source store's outbox into the consuming store's inbox. Register it through the client API when you need to choose the subscription ID, control which types arrive, or create and remove the relationship at runtime.
 
 The source must publish the events to its Chronicle outbox. Explicit registration does not import events directly from an external system; see [Outbox and Inbox](outbox-inbox) for the publication and delivery flow.

@@ -2,8 +2,6 @@
 title: Provision and verify Cratis Chronicle MongoDB indexes
 description: Provision Chronicle MongoDB indexes before deployment and verify them without starting the Kernel, using the configured schema connection identity.
 ---
-# MongoDB Index Operations
-
 Chronicle's one-shot schema commands provision MongoDB indexes before deployment or check them without starting the Kernel. They read the normal configuration files and environment variables but do not start Orleans, HTTP listeners, or observers. Use `--verify-schema` when a deployment must stop if required indexes are missing or incompatible; MongoDB's startup `Verify` mode only warns.
 
 ## Provision before deployment

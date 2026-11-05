@@ -2,8 +2,6 @@
 title: Cratis Chronicle projection declarations with PDL
 description: Write Chronicle projections in the Projection Declaration Language (PDL), using registered read model names and choosing how event generations are resolved.
 ---
-# Projection Declaration Language
-
 The Projection Declaration Language (PDL) describes how Cratis Chronicle builds read models from
 events using text declarations instead of projection classes. PDL is part of Cratis Screenplay,
 the indentation-based language for describing Cratis applications. Chronicle uses the Screenplay

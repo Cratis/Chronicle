@@ -2,8 +2,6 @@
 title: Cratis Chronicle configuration best practices
 description: Keep Chronicle deployments repeatable with pinned images, read-only configuration, environment-specific secrets, and workload-based observer settings.
 ---
-# Best Practices
-
 For repeatable Chronicle Kernel deployments, pin the server image version, mount shared configuration read-only, and supply credentials at deployment time. Keep environment-specific values outside the shared file so a storage connection or secret does not travel with it into another environment.
 
 Use `chronicle.json` for shared settings and environment variables for overrides. A matching environment variable wins over the file; [Configuration Precedence](configuration-precedence.md) explains how the Kernel combines these sources.

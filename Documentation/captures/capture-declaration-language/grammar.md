@@ -4,8 +4,6 @@ description: The formal EBNF grammar of the Capture Declaration Language (CDL) f
 sidebar:
   label: Grammar (EBNF)
 ---
-# Grammar (EBNF)
-
 This document defines the formal grammar for the Capture Declaration Language (CDL).
 
 ## EBNF notation

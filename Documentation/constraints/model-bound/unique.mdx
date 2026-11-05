@@ -2,8 +2,6 @@
 title: Cratis Chronicle unique property constraints
 description: Use Cratis Chronicle unique property constraints to reserve values across event sources, choose how claims are retained, and release them with events.
 ---
-# Unique property constraint
-
 A Cratis Chronicle unique property constraint prevents different event sources from claiming the same value, such as an email address or handle. The source that owns a value can append it again without a violation, so use this rule to protect ownership of a value rather than to prevent repeated events.
 
 In .NET, apply `[Unique]` to the event property. The client discovers the declaration on registered event types and sends its constraint definition to the Kernel when it starts.

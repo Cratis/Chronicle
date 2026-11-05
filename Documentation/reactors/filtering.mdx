@@ -2,8 +2,6 @@
 title: "Cratis Chronicle reactor filtering by event metadata"
 description: Filter Cratis Chronicle reactor delivery by event tags, event source type, or stream type so a handler runs only for the scope it is meant to process.
 ---
-# Filter reactors by appended event metadata
-
 Cratis Chronicle reactor filters restrict delivery by event metadata before a handler runs. Use them when one event type serves several workflows but a reactor should handle only a subset, such as priority orders or events from one source type.
 
 Filtering does not remove events from storage or change what other observers receive. It narrows this reactor's subscription within its selected event sequence. Without filters, the reactor receives events of the types it handles.

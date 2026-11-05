@@ -2,8 +2,6 @@
 title: Filter Chronicle reducers and reactors by event metadata
 description: Filter Chronicle reducers and reactors using appended event metadata so handlers receive only events that match their tags, source type or stream type.
 ---
-# Filter observers by appended event metadata
-
 Chronicle filters let a reducer or reactor handle only events with matching tags, event source type or event stream type. Put filter attributes on the observer, then supply the corresponding metadata when appending. For example, a `priority` tag can select orders for one reducer without changing the order event's payload.
 
 ## How filters correlate to append operations

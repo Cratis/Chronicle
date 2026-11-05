@@ -2,8 +2,6 @@
 title: Reactor replay handlers for historical events
 description: A Replay handler replaces a reactor's regular handler while Cratis Chronicle replays history. Use OnceOnly when replay should skip the handler instead.
 ---
-# Replay
-
 A `Replay` handler replaces the regular handler for the same event type while Cratis Chronicle replays that reactor's history. Use it when historical events need different work, such as updating an external index without resending the original order confirmation.
 
 In C#, mark the second handler with the `Replay` attribute. Replaying a separate projection does not itself replay the reactor; the replacement applies when this reactor's observer is replaying.

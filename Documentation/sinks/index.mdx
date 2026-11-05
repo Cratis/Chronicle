@@ -3,8 +3,6 @@ uid: Chronicle.Sinks
 title: "Cratis Chronicle sinks: choose an output target"
 description: Cratis Chronicle sinks store projection and reducer output as read models or publish it as events. Choose a target and understand its limits.
 ---
-# Sinks
-
 A Cratis Chronicle sink receives the state produced by a projection or reducer and either stores it as a read model or publishes it as a new event. Use a read-model sink when queries need current state. Use an event-sequence sink when downstream consumers need events derived from that state.
 
 MongoDB is the default read-model sink; SQL is another storage option. Publishing events is a separate target choice, with its own destination rules and replay behavior.

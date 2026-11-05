@@ -2,8 +2,6 @@
 title: Provision and verify Cratis Chronicle SQL schemas
 description: Apply Chronicle SQL migrations before rolling out replicas, then verify schema readiness without joining the cluster or changing the database.
 ---
-# SQL schema operations
-
 Run Chronicle SQL migrations as a separate deployment step when Kernel replicas must start without applying versioned schema changes. Use `--migrate-only` to provision, `--verify-schema` to check readiness without changing the database, and `SchemaMode=Verify` on the replicas. These operations support PostgreSQL, SQL Server, and SQLite.
 
 Use the same Chronicle Server build and storage placement for the migration job and replicas, while selecting the appropriate schema or runtime identity through [storage connection resolution](storage-connection-resolution.md). Verification prevents versioned migrations at runtime; it does not prohibit all data definition operations (DDL), because dynamically shaped tables can still be created on first use.

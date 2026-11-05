@@ -2,8 +2,6 @@
 title: Build a Cratis Chronicle client
 description: Building a Chronicle client in a new language means solving gRPC bindings, token authentication and server discovery; this section shows how.
 ---
-# Building a Chronicle Client
-
 Chronicle speaks gRPC. In theory that means any language with a gRPC implementation can talk to
 it. In practice, hand-rolling a client means solving the same handful of hard problems every
 client has to solve before it can do anything useful: generating strongly-typed bindings from the

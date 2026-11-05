@@ -2,8 +2,6 @@
 title: Configure read models in Cratis Chronicle Server
 description: Configure Cratis Chronicle Server read model replay retention and write batch sizes, and understand retention behavior and generation limits.
 ---
-# Read Models
-
 Read model configuration controls how many revert containers Chronicle keeps after a read model is replayed, and the batch size read-model writes are split at. This page describes what Chronicle does today, including what it does not do.
 
 ## Example configuration

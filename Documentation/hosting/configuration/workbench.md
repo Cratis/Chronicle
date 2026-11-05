@@ -2,8 +2,6 @@
 title: Chronicle Workbench reverse proxy configuration
 description: Serve the Chronicle Workbench under a reverse proxy path prefix, keep assets and live updates on that path, and avoid double-prefixing behind Stage.
 ---
-# Workbench
-
 Set `workbench.basePath` when a reverse proxy serves the Chronicle Workbench under a path such as `/my-instance/chronicle`. The setting keeps the page's assets and API calls under that prefix, so the browser reaches the right kernel. Leave it empty when you connect directly or give Chronicle its own host name.
 
 Without the setting, the page requests scripts and styles from the host root. Behind a path-routing proxy, those requests can reach the wrong service and leave the Workbench blank.

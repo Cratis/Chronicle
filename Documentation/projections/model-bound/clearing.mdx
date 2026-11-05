@@ -2,8 +2,6 @@
 title: "Cratis Chronicle model-bound projections: Clear nullable values"
 description: Use ClearWith in Cratis Chronicle model-bound projections to set a nullable read model member to null when an event removes its value.
 ---
-# Clearing Values
-
 Use `ClearWith` in a Cratis Chronicle model-bound projection when an event removes a value, such as deleting a note or dropping a due date. The member must be nullable: the mapping writes `null` when the event is processed, including when rebuilding the read model from earlier events.
 
 ## Basic Usage

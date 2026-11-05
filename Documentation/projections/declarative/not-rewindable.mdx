@@ -2,8 +2,6 @@
 title: "Cratis Chronicle projections: declare NotRewindable"
 description: "Call NotRewindable() to set IsRewindable to false on a Cratis Chronicle projection definition without changing its event mappings or subscriptions."
 ---
-# Projection with NotRewindable
-
 In Cratis Chronicle, `NotRewindable()` records `IsRewindable = false` on a projection definition. Use it to declare that flag, not to prevent observer replay: the flag is separate from observer replayability and does not change event handling.
 
 ## Defining a non-rewindable projection

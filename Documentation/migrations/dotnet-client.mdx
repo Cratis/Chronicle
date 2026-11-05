@@ -2,8 +2,6 @@
 title: Chronicle event type migrations in C#
 description: Declare Chronicle event generations and C# migrators so the kernel can transform events between schemas. Includes property operations and validation.
 ---
-# C# client usage
-
 To evolve an event schema with the Cratis Chronicle .NET client, keep a record type for each generation and define a migrator between each adjacent pair. The client discovers these declarations and registers them with the kernel, which applies the transformations when events are appended.
 
 ## Prerequisites

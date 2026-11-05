@@ -2,8 +2,6 @@
 title: Chronicle subscriptions and PII protection
 description: Chronicle preserves subject identity when forwarding events and copies missing encryption keys without restoring keys for erased subjects.
 ---
-# Compliance and PII
-
 Cratis Chronicle preserves an event's subject when a subscription forwards it to another event store. For personally identifiable information (PII), Chronicle also copies the subject's encryption key if the target has no key and permits one. This keeps forwarding tied to the subject's identity without restoring a key after erasure.
 
 ## What is preserved during forwarding

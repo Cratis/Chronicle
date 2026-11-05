@@ -2,8 +2,6 @@
 title: Cratis Chronicle event metadata tags for stream routing
 description: Cratis Chronicle uses source and stream metadata to identify events and scope concurrency checks. Custom tags label events without guarding appends.
 ---
-# Event Metadata Tags
-
 Event metadata tags in Cratis Chronicle identify which source and stream an event belongs to. Use them to distinguish an account's transactions from its onboarding events, or to check for concurrent changes to a particular stream before appending. These four values sit alongside the event's payload.
 
 ## EventSourceType

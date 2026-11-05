@@ -2,8 +2,6 @@
 title: Cratis Chronicle event type identity and generations
 description: A Cratis Chronicle event type identifies stored events and their schema generations. Preserve its ID through code renames to keep history accessible.
 ---
-# Event Type
-
 An event type in Cratis Chronicle gives a stored [event](./event.md) a stable identity and a schema for its content. Preserve that identity when refactoring code so existing events still reach their handlers; use generations when the schema needs to change.
 
 Before appending to an [event sequence](./event-sequence.md), the client must register the event type with the [event store](./event-store.md). The client uses that registration to associate the event's code type with its stored identity and schema.

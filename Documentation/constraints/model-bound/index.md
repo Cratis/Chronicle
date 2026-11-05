@@ -2,8 +2,6 @@
 title: Cratis Chronicle model-bound constraints
 description: Define Cratis Chronicle constraints on event models to reserve unique values, limit event occurrences, or close a stream after a domain event.
 ---
-# Model-bound constraints
-
 Cratis Chronicle model-bound constraints keep an append rule on the event property or type it protects. Use them to reserve an email address across event sources, allow an initialization event once per source, or close a stream when a domain event ends its lifecycle. An event source is the identity whose events you append, such as a user or project.
 
 You do not need a separate constraint class. The .NET client uses attributes, TypeScript uses decorators, and Kotlin and Java use annotations. Elixir uses `unique(fields, opts)`, `unique_event_type(opts)`, and `remove_constraint(name)` on the event type module, with options including `:message` and `:scope`. The uniqueness guides below show each client's syntax. Options differ between clients; a setting shown in one tab does not imply that every client exposes it.

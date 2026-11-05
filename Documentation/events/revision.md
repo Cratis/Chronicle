@@ -2,8 +2,6 @@
 title: Cratis Chronicle event revision for correcting recorded data
 description: Cratis Chronicle revision corrects stored event content, retains the original, and requests replay for affected observers that permit replay.
 ---
-# Event Revision
-
 Event revision in Cratis Chronicle corrects incorrectly recorded content at an event's existing sequence number. It retains the original payload and stores a revision alongside it, so later reads can use the corrected content. Use it to repair a recorded mistake, not to erase data or record a new business decision.
 
 ## Why revision instead of deletion

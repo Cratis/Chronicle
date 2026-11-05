@@ -2,8 +2,6 @@
 title: "FromEvery: update audit fields from handled events"
 description: "FromEvery updates a Chronicle read model property for each handled event, so audit fields can track occurrence time, sequence number, or correlation id."
 ---
-# From Every Event
-
 `FromEvery` updates a read model property whenever the projection processes a handled event. Use it to maintain a last-modified timestamp or identify the operation that last changed the model without repeating the mapping for each event type.
 
 An event-specific mapping runs only for its declared event type. An every-event mapping runs across the projection's handled types; it does not subscribe to unrelated types in the sequence. Use [From All](./from-all.mdx) when you need that wider subscription.

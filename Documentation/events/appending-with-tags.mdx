@@ -2,8 +2,6 @@
 title: Append Chronicle events with tags
 description: Add plain or named tags when appending Chronicle events to categorize them, filter reducers and reactors, or find events by a runtime identifier.
 ---
-# Appending with Tags
-
 Add tags when appending Chronicle events so you can categorize or find them without adding fields to the event payload. Use plain string tags to select events for reducers and reactors, or named tags to attach a name and value such as a checkout session identifier.
 
 Custom tags do not take part in concurrency control. A [concurrency scope](./concurrency.mdx) narrows by the built-in metadata tags below and by event type.

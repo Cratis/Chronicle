@@ -2,8 +2,6 @@
 title: Cratis Chronicle unique event type constraints
 description: Declare a Cratis Chronicle unique event type constraint to allow an event once per source, then release it with a named removal event.
 ---
-# Unique event type constraint
-
 A Cratis Chronicle unique event type constraint allows an event type once per event source until a removal event releases the constraint. Use it when repeating the event would contradict the domain, such as initializing the same project twice.
 
 Declare the rule on the event type itself. In .NET, apply `[Unique]` to the class; the client discovers it on registered event types and sends the constraint definition to the Kernel when it starts.

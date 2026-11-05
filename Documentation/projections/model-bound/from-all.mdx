@@ -2,8 +2,6 @@
 title: "FromAll: subscribe a Chronicle projection to every event type"
 description: "FromAll subscribes a Chronicle projection to every event type in its sequence, including undeclared types, to build read models across event sources."
 ---
-# From All
-
 `FromAll` subscribes a Chronicle projection to every event type in its event sequence, including types the projection does not declare. Use it when a read model needs to record activity across event sources. It can create or update instances keyed by the event source id unless another key is configured; join-only events have the exception described below.
 
 The declaration language's `all` block has the same scope. If you only need updates from event types the projection already handles, use [From Every Event](./from-every) instead.

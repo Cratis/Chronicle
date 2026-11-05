@@ -2,8 +2,6 @@
 title: Add cross-cutting properties to Chronicle events
 description: Use ICanProvideAdditionalEventInformation in the Chronicle .NET client to add shared properties to event payloads without changing each event type.
 ---
-# Cross-cutting properties
-
 Cross-cutting properties add shared fields to Chronicle event payloads without requiring each event type to declare them. Use them for values supplied outside domain code, such as a tenant identifier or a system-generated timestamp.
 
 In the .NET client, implement `ICanProvideAdditionalEventInformation` to modify the serialized event before it is appended:

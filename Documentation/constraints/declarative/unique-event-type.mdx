@@ -2,8 +2,6 @@
 title: Declare Chronicle unique event type constraints
 description: Use Chronicle unique event type constraints to allow a fact once per event source, restart a cycle with a release event, or exclude competing outcomes.
 ---
-# Unique event type constraint
-
 A unique event type constraint allows a fact to happen once per event source, such as initializing a project once per project id. Unlike a unique property constraint, it checks whether the event has occurred, not whether a value belongs to another source. You can also declare a release event when the rule should reset for a new cycle.
 
 In .NET, declare the rule with `builder.Unique<TEventType>()` inside `IConstraint`. The client's default artifact discovery finds these implementations without separate registration. See [Declarative constraints](index.mdx) for client-specific API differences.

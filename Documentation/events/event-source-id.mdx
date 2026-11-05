@@ -2,8 +2,6 @@
 title: Choose a Chronicle event source id
 description: A Chronicle event source id groups the events for one entity in a sequence. Use a stable, non-sensitive identifier and reuse it for that entity.
 ---
-# Event Source Id
-
 An event source id groups the events for one entity within a Chronicle event sequence. For an order, use the same order identifier when appending its placement, payment, and cancellation events. Every appended event has one event source id; changing it puts the new event in a different group.
 
 Choose a stable, non-sensitive value. Event source ids are stored as plaintext metadata, so do not use a secret or personal data as the id. Use a surrogate identifier and keep personal values in protected event content instead; see [Personal data in events](../compliance/pii.mdx).

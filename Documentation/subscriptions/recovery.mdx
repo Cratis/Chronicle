@@ -4,8 +4,6 @@ title: Chronicle subscription recovery and replay
 description: Locate a Chronicle subscription failure before replaying. Forwarding can add duplicate inbox events; consumer replay processes stored events again.
 ---
 
-# Subscription recovery
-
 Recover a Cratis Chronicle subscription by first checking whether the event reached the consumer's inbox. If it is there but the view is empty, investigate consumer processing; replaying source forwarding can add duplicate inbox events without fixing the consumer's failure.
 
 Check the source outbox, the target's `inbox-{sourceEventStore}` sequence, and the affected consumer observer in that order. The point where progress stops tells you which part of the flow needs attention.
