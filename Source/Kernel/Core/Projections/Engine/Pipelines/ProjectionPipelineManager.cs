@@ -32,6 +32,7 @@ namespace Cratis.Chronicle.Projections.Engine.Pipelines;
 /// <param name="readModelsCompliance">The <see cref="IReadModelsCompliance"/> for encrypting and decrypting compliance and security fields.</param>
 /// <param name="options">The <see cref="ChronicleOptions"/> holding the read model write configuration.</param>
 /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
+/// <param name="watchGates">The <see cref="IProjectionWatchGates"/> telling whether a projection is watched; without it no projection is considered watched.</param>
 [Singleton]
 public class ProjectionPipelineManager(
     IStorage storage,
@@ -40,7 +41,8 @@ public class ProjectionPipelineManager(
     ITypeFormats typeFormats,
     IReadModelsCompliance readModelsCompliance,
     IOptions<ChronicleOptions> options,
-    ILoggerFactory loggerFactory) : IProjectionPipelineManager
+    ILoggerFactory loggerFactory,
+    IProjectionWatchGates? watchGates = null) : IProjectionPipelineManager
 {
     readonly ConcurrentDictionary<string, CachedPipeline> _pipelines = new();
 
@@ -194,7 +196,7 @@ public class ProjectionPipelineManager(
             new EncryptChangeset(readModelsCompliance, objectComparer, eventStore, @namespace),
             new StoreFutures(futuresTracker, projectionFutures, loggerFactory.CreateLogger<StoreFutures>()),
             resolveFuturesStep,
-            new SaveChanges(projectionFutures, sink, changesetStorage, options.Value.ReadModels.GuardSinkWritesOnWatermark, loggerFactory.CreateLogger<SaveChanges>(), generation?.Destination)
+            new SaveChanges(projectionFutures, sink, changesetStorage, options.Value.ReadModels.GuardSinkWritesOnWatermark, loggerFactory.CreateLogger<SaveChanges>(), generation?.Destination, watchGates?.GateFor(new ProjectionChangesetNotifierKey(projection.Identifier.Value, eventStore, @namespace)) ?? ProjectionWatchGate.Closed)
         ];
 
         var handleLock = _handleLocks.GetOrAdd(key, _ => new ProjectionHandleLock());
