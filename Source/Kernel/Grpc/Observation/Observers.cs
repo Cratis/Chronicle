@@ -4,9 +4,11 @@
 using System.Reactive.Linq;
 using Cratis.Chronicle.Clients;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Services.Events;
 using Cratis.Chronicle.Storage;
+using Microsoft.Extensions.Options;
 using ProtoBuf.Grpc;
 
 // Cratis.Chronicle.Observation cannot be imported wholesale here: it declares the kernel-side command records that
@@ -21,7 +23,14 @@ namespace Cratis.Chronicle.Services.Observation;
 /// <param name="grainFactory">The <see cref="IGrainFactory"/>.</param>
 /// <param name="storage">The <see cref="IStorage"/>.</param>
 /// <param name="observerRemover">The <see cref="IObserverRemover"/> for removing observers.</param>
-internal sealed class Observers(IGrainFactory grainFactory, IStorage storage, IObserverRemover observerRemover) : IObservers
+/// <param name="visibility">The <see cref="IConnectedClientsVisibility"/> limiting which connected clients a caller sees.</param>
+/// <param name="options">The <see cref="IOptions{ChronicleOptions}"/> for configuration.</param>
+internal sealed class Observers(
+    IGrainFactory grainFactory,
+    IStorage storage,
+    IObserverRemover observerRemover,
+    IConnectedClientsVisibility visibility,
+    IOptions<ChronicleOptions> options) : IObservers
 {
     const int ObserverCompletionPollingDelayMs = 50;
     const ulong MaximumObserverCompletionRange = 10_000;
@@ -303,6 +312,7 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage, IO
     public async Task<IEnumerable<Contracts.Clients.ConnectedClient>> GetConnectedClientsForObserver(GetConnectedClientsForObserverRequest request, CallContext context = default)
     {
         await SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace, request.ObserverId, request.EventSequenceId));
+        var caller = ConnectionCallers.From(context, options.Value);
         var subscription = await (await grainFactory.GetObserver(request, storage)).GetSubscription();
         var clients = new List<Contracts.Clients.ConnectedClient>();
         foreach (var target in subscription.Targets.Where(_ => _.ConnectedClient is not null))
@@ -331,7 +341,7 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage, IO
             });
         }
 
-        return clients;
+        return await visibility.Filter(clients, caller);
     }
 
     /// <inheritdoc/>

@@ -47,6 +47,7 @@ public class a_registration : Specification
             new JsonSerializerOptions(),
             new ActivitySource<Reactors>(),
             Options.Create(new ChronicleOptions()),
+            AllowingConnectionOwnership.Create(),
             NullLogger<Reactors>.Instance,
             _gate);
         _grainFactory.ClearReceivedCalls();

@@ -70,6 +70,7 @@ public class two_observation_streams_for_the_same_connection : Specification
             new JsonSerializerOptions(),
             new ActivitySource<Reducers>(),
             Options.Create(new ChronicleOptions()),
+            AllowingConnectionOwnership.Create(),
             _logger,
             Substitute.For<IObserverRegistrationGate>());
 
