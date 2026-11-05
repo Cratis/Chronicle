@@ -24,6 +24,8 @@ public class a_service_with_real_ownership : Specification
     private protected OpenConnections _openConnections;
     protected SiloAddress _silo;
     protected TaskCompletionSource _hostsLookup;
+    protected readonly TaskCompletionSource _hostsLookupRequested = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    readonly TaskCompletionSource _released = new(TaskCreationOptions.RunContinuationsAsynchronously);
     protected IManagementGrain _management;
     readonly List<IDisposable> _subscriptions = [];
 
@@ -38,6 +40,7 @@ public class a_service_with_real_ownership : Specification
 
         var grainFactory = Substitute.For<IGrainFactory>();
         grainFactory.GetGrain<IConnectedClients>(_silo.ToParsableString(), Arg.Any<string>()).Returns(_connectedClients);
+        AllowingConnectionOwnership.WithAllowingReservations(grainFactory);
         _management = Substitute.For<IManagementGrain>();
         _management.GetHosts(true).Returns(_ => Hosts());
         grainFactory.GetGrain<IManagementGrain>(Arg.Any<long>(), Arg.Any<string>()).Returns(_management);
@@ -46,14 +49,15 @@ public class a_service_with_real_ownership : Specification
 
         var options = Options.Create(new ChronicleOptions { ConnectedClients = new() { KeepAliveIntervalSeconds = 1 } });
         _ownership = new();
+        var ownership = new ReleaseSignallingOwnership(_ownership, () => _released.TrySetResult());
         _openConnections = new();
         _service = new(
             grainFactory,
             localSilo,
             new ConnectedClientsQuery(grainFactory, options),
             _openConnections,
-            _ownership,
-            new ConnectedClientsVisibility(options, _ownership, new Microsoft.AspNetCore.Http.HttpContextAccessor()),
+            ownership,
+            new ConnectedClientsVisibility(options, ownership, new Microsoft.AspNetCore.Http.HttpContextAccessor()),
             NullLogger<KernelConnectionService>.Instance,
             options);
     }
@@ -81,17 +85,31 @@ public class a_service_with_real_ownership : Specification
     protected async Task<Exception?> KeepAlive(CallContext context, string id = Id) =>
         await Catch.Exception(() => _service.ConnectionKeepAlive(new ConnectionKeepAlive { ConnectionId = id }, context));
 
-    protected static async Task Eventually(Func<bool> condition)
-    {
-        var deadline = DateTime.UtcNow.AddSeconds(10);
-        while (!condition() && DateTime.UtcNow < deadline) await Task.Delay(TimeSpan.FromMilliseconds(10), TimeProvider.System);
-    }
+    /// <summary>
+    /// Waits until the service has released a connection claim.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    protected Task ClaimReleased() => _released.Task.WaitAsync(TimeSpan.FromSeconds(10), TimeProvider.System);
 
     void Destroy() => _subscriptions.ForEach(_ => _.Dispose());
 
     async Task<Dictionary<SiloAddress, SiloStatus>> Hosts()
     {
+        _hostsLookupRequested.TrySetResult();
         if (_hostsLookup is not null) await _hostsLookup.Task;
         return new() { [_silo] = SiloStatus.Active };
+    }
+
+    sealed class ReleaseSignallingOwnership(IConnectionOwnership inner, Action released) : IConnectionOwnership
+    {
+        public ConnectionClaim Claim(ConnectionId connectionId, ConnectionOwner owner) => inner.Claim(connectionId, owner);
+
+        public void Release(ConnectionId connectionId, ConnectionOwner owner)
+        {
+            inner.Release(connectionId, owner);
+            released();
+        }
+
+        public bool IsOwnedBy(string connectionId, ConnectionOwner owner) => inner.IsOwnedBy(connectionId, owner);
     }
 }

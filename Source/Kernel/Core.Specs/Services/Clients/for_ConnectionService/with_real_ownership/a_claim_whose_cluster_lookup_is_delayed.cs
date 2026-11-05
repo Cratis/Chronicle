@@ -18,7 +18,7 @@ public class a_claim_whose_cluster_lookup_is_delayed : given.a_service_with_real
     async Task Because()
     {
         var opening = Open(AuthenticatedCalls.As("alice"));
-        await Task.Delay(TimeSpan.FromMilliseconds(300), TimeProvider.System);
+        await _hostsLookupRequested.Task.WaitAsync(TimeSpan.FromSeconds(10), TimeProvider.System);
         _answeredWhileDelayed = opening.IsCompleted;
         _ownedWhileDelayed = Owns("alice");
         _registrationsWhileDelayed = Calls(nameof(IConnectedClients.OnClientConnected));

@@ -8,6 +8,8 @@ namespace Cratis.Chronicle.Services.Clients.for_ConnectionService.with_real_owne
 public class a_stream_that_ends_normally : given.a_service_with_real_ownership
 {
     readonly CancellationTokenSource _cancellation = new();
+    bool _ownedAfterTheStreamEnded;
+    ConnectionClaim _claimedAgain;
 
     async Task Establish()
     {
@@ -18,9 +20,11 @@ public class a_stream_that_ends_normally : given.a_service_with_real_ownership
     async Task Because()
     {
         await _cancellation.CancelAsync();
-        await Eventually(() => !Owns("alice"));
+        await ClaimReleased();
+        _ownedAfterTheStreamEnded = Owns("alice");
+        _claimedAgain = _ownership.Claim(Id, AuthenticatedCalls.OwnerOf("alice"));
     }
 
-    [Fact] void should_release_the_claim() => Owns("alice").ShouldBeFalse();
-    [Fact] void should_let_the_same_owner_claim_it_again() => _ownership.Claim(Id, AuthenticatedCalls.OwnerOf("alice")).ShouldEqual(ConnectionClaim.Claimed);
+    [Fact] void should_release_the_claim() => _ownedAfterTheStreamEnded.ShouldBeFalse();
+    [Fact] void should_let_the_same_owner_claim_it_again() => _claimedAgain.ShouldEqual(ConnectionClaim.Claimed);
 }

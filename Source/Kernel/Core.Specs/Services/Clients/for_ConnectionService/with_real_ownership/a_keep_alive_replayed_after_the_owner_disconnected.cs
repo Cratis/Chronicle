@@ -15,7 +15,7 @@ public class a_keep_alive_replayed_after_the_owner_disconnected : given.a_servic
     {
         await Open(AuthenticatedCalls.As("alice", cancellationToken: _cancellation.Token));
         await _cancellation.CancelAsync();
-        await Eventually(() => !Owns("alice"));
+        await ClaimReleased();
     }
 
     async Task Because() => _result = await KeepAlive(AuthenticatedCalls.As("bob"));
