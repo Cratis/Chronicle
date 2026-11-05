@@ -17,6 +17,7 @@ internal sealed class SqlStorageMetrics
     readonly MetricInstrument<int, CounterMetricRecorder<int>> _liveQueryPollFailed;
     readonly MetricInstrument<int, CounterMetricRecorder<int>> _upsertCollisionRecovered;
     readonly MetricInstrument<int, CounterMetricRecorder<int>> _encryptionKeyIdentifierRefused;
+    readonly MetricInstrument<int, CounterMetricRecorder<int>> _closedStreamEntriesPendingReview;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SqlStorageMetrics"/> class.
@@ -29,6 +30,7 @@ internal sealed class SqlStorageMetrics
         _liveQueryPollFailed = instruments.Counter<int>(WellKnownMetricNames.SqlLiveQueryPollFailures, WellKnownMetricNames.SqlLiveQueryPollFailuresUnit, "Failed SQL live-query polls; each is retried", WellKnownTelemetryAttributes.SqlLiveQueryName, WellKnownTelemetryAttributes.SqlLiveQueryFailureKind);
         _upsertCollisionRecovered = instruments.Counter<int>(WellKnownMetricNames.SqlUpsertRecoveredCollisions, WellKnownMetricNames.SqlUpsertRecoveredCollisionsUnit, "Concurrent SQL insert collisions recovered by storage", WellKnownTelemetryAttributes.SqlUpsertOperation);
         _encryptionKeyIdentifierRefused = instruments.Counter<int>(WellKnownMetricNames.SqlEncryptionKeyIdentifiersRefused, WellKnownMetricNames.SqlEncryptionKeyIdentifiersRefusedUnit, "Encryption key operations refused because their identifier is under review");
+        _closedStreamEntriesPendingReview = instruments.Counter<int>(WellKnownMetricNames.SqlClosedStreamEntriesPendingReview, WellKnownMetricNames.SqlClosedStreamEntriesPendingReviewUnit, "Closed-stream entries written before identifier comparison became exact that still apply to every spelling");
     }
 
     /// <summary>Records a schema lock wait.</summary>
@@ -49,4 +51,8 @@ internal sealed class SqlStorageMetrics
 
     /// <summary>Records an encryption key operation refused because its identifier is under review.</summary>
     internal void EncryptionKeyIdentifierRefused() => _encryptionKeyIdentifierRefused.Record(1);
+
+    /// <summary>Records closed-stream entries that apply to every spelling of their identifier until reviewed.</summary>
+    /// <param name="count">The number of entries.</param>
+    internal void ClosedStreamEntriesPendingReview(int count) => _closedStreamEntriesPendingReview.Record(count);
 }

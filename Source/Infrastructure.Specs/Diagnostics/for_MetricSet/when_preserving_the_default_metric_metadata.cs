@@ -59,6 +59,7 @@ public class when_preserving_the_default_metric_metadata : Specification
         new("chronicle-sql-live-query-poll-failures", null, "Failed SQL live-query polls; each is retried"),
         new("chronicle-sql-upsert-collisions-recovered", null, "Concurrent SQL insert collisions recovered by storage"),
         new("chronicle-sql-encryption-key-identifiers-refused", null, "Encryption key operations refused because their identifier is under review"),
+        new("chronicle-sql-closed-stream-entries-pending-review", null, "Closed-stream entries written before identifier comparison became exact that still apply to every spelling"),
         new("chronicle.sql.composite_key.stamp_failures", null, null),
         new("chronicle.sql.composite_key.collisions", null, null)
     ];

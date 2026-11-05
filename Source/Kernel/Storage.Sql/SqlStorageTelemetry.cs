@@ -68,4 +68,10 @@ internal sealed class SqlStorageTelemetry
     /// Counts an encryption key operation that was refused because its identifier is under review.
     /// </summary>
     internal void EncryptionKeyIdentifierRefused() => _metrics.EncryptionKeyIdentifierRefused();
+
+    /// <summary>
+    /// Counts closed-stream entries that apply to every spelling of their identifier until reviewed.
+    /// </summary>
+    /// <param name="count">The number of entries.</param>
+    internal void ClosedStreamEntriesPendingReview(int count) => _metrics.ClosedStreamEntriesPendingReview(count);
 }

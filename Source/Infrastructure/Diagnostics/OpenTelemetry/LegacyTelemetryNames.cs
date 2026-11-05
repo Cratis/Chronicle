@@ -81,6 +81,7 @@ internal static class LegacyTelemetryNames
         [WellKnownMetricNames.SqlLiveQueryPollFailures] = [new("chronicle-sql-live-query-poll-failures", null, "Failed SQL live-query polls; each is retried")],
         [WellKnownMetricNames.SqlUpsertRecoveredCollisions] = [new("chronicle-sql-upsert-collisions-recovered", null, "Concurrent SQL insert collisions recovered by storage")],
         [WellKnownMetricNames.SqlEncryptionKeyIdentifiersRefused] = [new("chronicle-sql-encryption-key-identifiers-refused", null, "Encryption key operations refused because their identifier is under review")],
+        [WellKnownMetricNames.SqlClosedStreamEntriesPendingReview] = [new("chronicle-sql-closed-stream-entries-pending-review", null, "Closed-stream entries written before identifier comparison became exact that still apply to every spelling")],
         [WellKnownMetricNames.SqlCompositeKeyStampFailures] = [new("chronicle.sql.composite_key.stamp_failures", null, null)],
         [WellKnownMetricNames.SqlCompositeKeyCollisions] = [new("chronicle.sql.composite_key.collisions", null, null)],
     };

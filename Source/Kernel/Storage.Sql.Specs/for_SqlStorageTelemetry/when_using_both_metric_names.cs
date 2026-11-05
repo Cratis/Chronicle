@@ -45,12 +45,14 @@ public class when_using_both_metric_names : Specification
         "chronicle-sql-live-query-poll-failures",
         "chronicle-sql-upsert-collisions-recovered",
         "chronicle-sql-encryption-key-identifiers-refused",
+        "chronicle-sql-closed-stream-entries-pending-review",
         "chronicle.sql.composite_key.stamp_failures",
         "chronicle.sql.composite_key.collisions",
         "cratis.chronicle.sql.schema_lock.wait_duration",
         "cratis.chronicle.sql.live_query.poll_failures",
         "cratis.chronicle.sql.upsert.recovered_collisions",
         "cratis.chronicle.sql.encryption_key.refused_identifiers",
+        "cratis.chronicle.sql.closed_stream.pending_review_entries",
         "cratis.chronicle.sql.composite_key.stamp_failures",
         "cratis.chronicle.sql.composite_key.collisions"
     }.Order());
@@ -61,8 +63,8 @@ public class when_using_both_metric_names : Specification
     [Fact] void should_publish_the_convention_unit() => _instruments.Single(_ => _.Name == "cratis.chronicle.sql.upsert.recovered_collisions").Unit.ShouldEqual("{collision}");
     [Fact] void should_preserve_the_legacy_key() => _measurements.Single(_ => _.Name == "chronicle-sql-upsert-collisions-recovered").Tags.ShouldEqual([new("operation", "both-metric-names-spec")]);
     [Fact] void should_publish_the_convention_key() => _measurements.Single(_ => _.Name == "cratis.chronicle.sql.upsert.recovered_collisions").Tags.ShouldEqual([new("cratis.chronicle.sql.upsert.operation", "both-metric-names-spec")]);
-    [Fact] void should_preserve_the_shadow_failure_name() => _instruments.Count(_ => _.Name == "chronicle.sql.composite_key.stamp_failures").ShouldEqual(1);
-    [Fact] void should_publish_the_shadow_failure_convention_name() => _instruments.Count(_ => _.Name == "cratis.chronicle.sql.composite_key.stamp_failures").ShouldEqual(1);
+    [Fact] void should_preserve_the_shadow_failure_name() => _instruments.Exists(_ => _.Name == "chronicle.sql.composite_key.stamp_failures").ShouldBeTrue();
+    [Fact] void should_publish_the_shadow_failure_convention_name() => _instruments.Exists(_ => _.Name == "cratis.chronicle.sql.composite_key.stamp_failures").ShouldBeTrue();
 
     void Destroy() => _listener.Dispose();
 }

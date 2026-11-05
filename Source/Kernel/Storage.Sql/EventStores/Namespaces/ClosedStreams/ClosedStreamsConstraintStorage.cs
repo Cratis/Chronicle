@@ -25,6 +25,7 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ClosedStreams;
 public class ClosedStreamsConstraintStorage(EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId, IDatabase database, ILogger<ClosedStreamsConstraintStorage>? logger = default) : IClosedStreamsConstraintStorage
 {
     static readonly ConcurrentDictionary<(string Store, string Namespace, string Sequence), bool> _reported = new();
+    readonly SqlStorageTelemetry _telemetry = SqlStorageTelemetry.For(database);
     readonly ILogger<ClosedStreamsConstraintStorage> _logger = logger ?? NullLogger<ClosedStreamsConstraintStorage>.Instance;
 
     /// <inheritdoc/>
@@ -219,6 +220,7 @@ public class ClosedStreamsConstraintStorage(EventStoreName eventStore, EventStor
         var count = rows.Count(row => !row.ExactSpelling && !scopes.Any(scope => IsOrdinalMatch(row, scope)));
         if (count > 0 && _reported.TryAdd((eventStore.Value, @namespace.Value, eventSequenceId.Value), true))
         {
+            _telemetry.ClosedStreamEntriesPendingReview(count);
             _logger.ClosedStreamEntriesPendingReview(count, eventSequenceId.Value);
         }
     }

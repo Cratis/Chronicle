@@ -302,6 +302,12 @@ public static class WellKnownMetricNames
     /// <summary>Unit of <see cref="SqlEncryptionKeyIdentifiersRefused"/>.</summary>
     public const string SqlEncryptionKeyIdentifiersRefusedUnit = "{operation}";
 
+    /// <summary>Number of closed-stream entries that apply to every spelling of their identifier until reviewed.</summary>
+    public const string SqlClosedStreamEntriesPendingReview = "cratis.chronicle.sql.closed_stream.pending_review_entries";
+
+    /// <summary>Unit of <see cref="SqlClosedStreamEntriesPendingReview"/>.</summary>
+    public const string SqlClosedStreamEntriesPendingReviewUnit = "{entry}";
+
     /// <summary>Number of failed composite key stamps.</summary>
     public const string SqlCompositeKeyStampFailures = "cratis.chronicle.sql.composite_key.stamp_failures";
 
