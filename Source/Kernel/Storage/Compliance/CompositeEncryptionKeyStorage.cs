@@ -94,7 +94,7 @@ public class CompositeEncryptionKeyStorage : IEncryptionKeyStorage, IEvictEncryp
             catch (Exception error)
             {
                 (failures ??= []).Add(error);
-                LogFailure(error, () => _logger.ReadingFromInnerStoreFailed(identifier, error));
+                LogFailure(error, () => _logger.ReadingFromInnerStoreFailed(error));
                 continue;
             }
 
@@ -106,7 +106,7 @@ public class CompositeEncryptionKeyStorage : IEncryptionKeyStorage, IEvictEncryp
 
             if (await AnyStoreDestroyed(eventStore, eventStoreNamespace, identifier, key))
             {
-                _logger.ErasedKeySurvivedInAnotherStore(identifier);
+                _logger.ErasedKeySurvivedInAnotherStore();
                 return null;
             }
 
@@ -138,7 +138,7 @@ public class CompositeEncryptionKeyStorage : IEncryptionKeyStorage, IEvictEncryp
             catch (Exception error)
             {
                 (failures ??= []).Add(error);
-                LogFailure(error, () => _logger.ReadingFromInnerStoreFailed(identifier, error));
+                LogFailure(error, () => _logger.ReadingFromInnerStoreFailed(error));
                 continue;
             }
 
@@ -150,7 +150,7 @@ public class CompositeEncryptionKeyStorage : IEncryptionKeyStorage, IEvictEncryp
 
             if (await AnyStoreDestroyed(eventStore, eventStoreNamespace, identifier, pair.Key))
             {
-                _logger.ErasedKeySurvivedInAnotherStore(identifier);
+                _logger.ErasedKeySurvivedInAnotherStore();
                 return null;
             }
 
@@ -179,12 +179,12 @@ public class CompositeEncryptionKeyStorage : IEncryptionKeyStorage, IEvictEncryp
                 var mirrored = await store.GetOrAddWithRevisionFor(eventStore, eventStoreNamespace, identifier, provisioned.Key);
                 if (!mirrored.Key.Public.SequenceEqual(provisioned.Key.Public))
                 {
-                    _logger.InnerStoreHoldsDivergentKey(identifier);
+                    _logger.InnerStoreHoldsDivergentKey();
                 }
             }
             catch (Exception error)
             {
-                LogFailure(error, () => _logger.MirroringToInnerStoreFailed(identifier, error));
+                LogFailure(error, () => _logger.MirroringToInnerStoreFailed(error));
             }
         }
 
@@ -217,7 +217,7 @@ public class CompositeEncryptionKeyStorage : IEncryptionKeyStorage, IEvictEncryp
                 var mirrored = await store.GetOrAddFor(eventStore, eventStoreNamespace, identifier, provisioned);
                 if (!mirrored.Public.SequenceEqual(provisioned.Public))
                 {
-                    _logger.InnerStoreHoldsDivergentKey(identifier);
+                    _logger.InnerStoreHoldsDivergentKey();
                 }
             }
             catch (Exception error)
@@ -225,7 +225,7 @@ public class CompositeEncryptionKeyStorage : IEncryptionKeyStorage, IEvictEncryp
                 // The key is persisted on the primary and is usable. Failing the provisioning would stop every
                 // write of a protected value while a secondary store is unavailable; the read path heals the
                 // secondary the next time the key is asked for.
-                LogFailure(error, () => _logger.MirroringToInnerStoreFailed(identifier, error));
+                LogFailure(error, () => _logger.MirroringToInnerStoreFailed(error));
             }
         }
 
@@ -253,7 +253,7 @@ public class CompositeEncryptionKeyStorage : IEncryptionKeyStorage, IEvictEncryp
             catch (Exception error)
             {
                 (failures ??= []).Add(error);
-                LogFailure(error, () => _logger.ReadingFromInnerStoreFailed(identifier, error));
+                LogFailure(error, () => _logger.ReadingFromInnerStoreFailed(error));
             }
         }
 
@@ -306,7 +306,7 @@ public class CompositeEncryptionKeyStorage : IEncryptionKeyStorage, IEvictEncryp
             catch (Exception error)
             {
                 (failures ??= []).Add(error);
-                LogFailure(error, () => _logger.ReadingFromInnerStoreFailed(identifier, error));
+                LogFailure(error, () => _logger.ReadingFromInnerStoreFailed(error));
             }
         }
 
@@ -412,7 +412,7 @@ public class CompositeEncryptionKeyStorage : IEncryptionKeyStorage, IEvictEncryp
                 // protected value reading back empty, which is the outcome an untrue absence causes and the one
                 // this class exists to avoid. A fence only that member holds is missed until it is back, and its
                 // erasure was reported incomplete when it was recorded.
-                LogFailure(error, () => _logger.ReadingFromInnerStoreFailed(identifier, error));
+                LogFailure(error, () => _logger.ReadingFromInnerStoreFailed(error));
             }
         }
 
@@ -431,7 +431,7 @@ public class CompositeEncryptionKeyStorage : IEncryptionKeyStorage, IEvictEncryp
             {
                 // Healing is opportunistic - the caller already holds a usable key, and failing the read because
                 // a store could not be written to would turn an available key into an outage.
-                LogFailure(error, () => _logger.HealingInnerStoreFailed(identifier, error));
+                LogFailure(error, () => _logger.HealingInnerStoreFailed(error));
             }
         }
     }

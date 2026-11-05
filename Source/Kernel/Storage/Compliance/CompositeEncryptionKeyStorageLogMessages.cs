@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Compliance;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Storage.Compliance;
@@ -14,20 +13,20 @@ internal static partial class CompositeEncryptionKeyStorageLogMessages
     [LoggerMessage(LogLevel.Information, "Encryption keys are served by a composite of {StoreCount} stores. The first store is read first and is the only one new keys are provisioned on; keys found in a later store are healed into the earlier ones as they are read")]
     internal static partial void Composed(this ILogger<CompositeEncryptionKeyStorage> logger, int storeCount);
 
-    [LoggerMessage(LogLevel.Warning, "Reading the encryption key for '{Identifier}' from one of the composed key stores failed. The remaining stores are still consulted, and the absence of a key is only reported when every store agreed on it")]
-    internal static partial void ReadingFromInnerStoreFailed(this ILogger<CompositeEncryptionKeyStorage> logger, EncryptionKeyIdentifier identifier, Exception error);
+    [LoggerMessage(LogLevel.Warning, "Reading the encryption key from one of the composed key stores failed. The remaining stores are still consulted, and the absence of a key is only reported when every store agreed on it")]
+    internal static partial void ReadingFromInnerStoreFailed(this ILogger<CompositeEncryptionKeyStorage> logger, Exception error);
 
-    [LoggerMessage(LogLevel.Warning, "Healing the encryption key for '{Identifier}' into one of the composed key stores failed. The key was returned to the caller and the store is healed on a later read")]
-    internal static partial void HealingInnerStoreFailed(this ILogger<CompositeEncryptionKeyStorage> logger, EncryptionKeyIdentifier identifier, Exception error);
+    [LoggerMessage(LogLevel.Warning, "Healing the encryption key into one of the composed key stores failed. The key was returned to the caller and the store is healed on a later read")]
+    internal static partial void HealingInnerStoreFailed(this ILogger<CompositeEncryptionKeyStorage> logger, Exception error);
 
-    [LoggerMessage(LogLevel.Warning, "Mirroring the newly provisioned encryption key for '{Identifier}' into one of the composed key stores failed. The key is persisted on the primary store and the mirror is healed on a later read")]
-    internal static partial void MirroringToInnerStoreFailed(this ILogger<CompositeEncryptionKeyStorage> logger, EncryptionKeyIdentifier identifier, Exception error);
+    [LoggerMessage(LogLevel.Warning, "Mirroring the newly provisioned encryption key into one of the composed key stores failed. The key is persisted on the primary store and the mirror is healed on a later read")]
+    internal static partial void MirroringToInnerStoreFailed(this ILogger<CompositeEncryptionKeyStorage> logger, Exception error);
 
-    [LoggerMessage(LogLevel.Warning, "One of the composed key stores already held a different encryption key for '{Identifier}' than the primary store provisioned. Values protected under one of them cannot be read back through the other - reconcile the stores before completing the cutover")]
-    internal static partial void InnerStoreHoldsDivergentKey(this ILogger<CompositeEncryptionKeyStorage> logger, EncryptionKeyIdentifier identifier);
+    [LoggerMessage(LogLevel.Warning, "One of the composed key stores already held a different encryption key than the primary store provisioned. Values protected under one of them cannot be read back through the other - reconcile the stores before completing the cutover")]
+    internal static partial void InnerStoreHoldsDivergentKey(this ILogger<CompositeEncryptionKeyStorage> logger);
 
-    [LoggerMessage(LogLevel.Error, "One of the composed key stores has the encryption key for '{Identifier}' recorded as erased while another still holds it. The key is not served and not healed across - the erasure did not reach every store, so repeat it until it does")]
-    internal static partial void ErasedKeySurvivedInAnotherStore(this ILogger<CompositeEncryptionKeyStorage> logger, EncryptionKeyIdentifier identifier);
+    [LoggerMessage(LogLevel.Error, "One of the composed key stores has the encryption key recorded as erased while another still holds it. The key is not served and not healed across - the erasure did not reach every store, so repeat it until it does")]
+    internal static partial void ErasedKeySurvivedInAnotherStore(this ILogger<CompositeEncryptionKeyStorage> logger);
 
     [LoggerMessage(LogLevel.Warning, "One of the composed key stores refused an encryption key operation because its identifier is under review. See the compliance storage documentation")]
     internal static partial void InnerStoreRefusedIdentifier(this ILogger<CompositeEncryptionKeyStorage> logger);

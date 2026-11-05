@@ -14,14 +14,7 @@ public class when_scanning_storage_assemblies : Specification
     [
 
         // The identifier is the name of a column, not a value.
-        "Cratis.Chronicle.Storage.Sql.Sinks.SinkLogging.LegacyKeyKept",
-
-        // Temporary: the encryption key identifiers are kept out of the log in a later step, which removes this entry.
-        "Cratis.Chronicle.Storage.Compliance.CompositeEncryptionKeyStorageLogMessages.ReadingFromInnerStoreFailed",
-        "Cratis.Chronicle.Storage.Compliance.CompositeEncryptionKeyStorageLogMessages.HealingInnerStoreFailed",
-        "Cratis.Chronicle.Storage.Compliance.CompositeEncryptionKeyStorageLogMessages.MirroringToInnerStoreFailed",
-        "Cratis.Chronicle.Storage.Compliance.CompositeEncryptionKeyStorageLogMessages.InnerStoreHoldsDivergentKey",
-        "Cratis.Chronicle.Storage.Compliance.CompositeEncryptionKeyStorageLogMessages.ErasedKeySurvivedInAnotherStore"
+        "Cratis.Chronicle.Storage.Sql.Sinks.SinkLogging.LegacyKeyKept"
     ];
 
     string[] _offenders;
