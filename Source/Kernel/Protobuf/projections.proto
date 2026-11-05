@@ -66,6 +66,38 @@ message GetAllDeclarationsRequest {
 message GetAllDefinitionsRequest {
    string EventStore = 1;
 }
+message GraphEdgeFromDefinition {
+   string SourceKey = 1;
+   string TargetKey = 2;
+   string Identity = 3;
+   map<string,string> Properties = 4;
+}
+message GraphEdgeProjectionDefinition {
+   map<string,GraphEdgeFromDefinition> From = 1;
+   map<string,GraphEdgeRemovedWithDefinition> RemovedWith = 2;
+}
+message GraphEdgeRemovedWithDefinition {
+   string SourceKey = 1;
+   string TargetKey = 2;
+   string Identity = 3;
+}
+message GraphNodeFromDefinition {
+   string Key = 1;
+   map<string,string> Properties = 2;
+   bool UpdateOnly = 3;
+}
+message GraphNodeProjectionDefinition {
+   map<string,GraphNodeFromDefinition> From = 1;
+   map<string,GraphNodeRemovedWithDefinition> RemovedWith = 2;
+}
+message GraphNodeRemovedWithDefinition {
+   string Key = 1;
+   bool Detach = 2;
+}
+message GraphProjectionDefinition {
+   map<string,GraphNodeProjectionDefinition> Nodes = 1;
+   map<string,GraphEdgeProjectionDefinition> Edges = 2;
+}
 message IEnumerable_ProjectionDefinition {
    repeated ProjectionDefinition items = 1;
 }
@@ -143,6 +175,7 @@ message ProjectionDefinition {
    bool SubscribesToAllEvents = 19;
    repeated string NoAutoMapProperties = 20;
    EventGenerationDelivery GenerationDelivery = 21;
+   GraphProjectionDefinition Graph = 22;
 }
 enum ProjectionOwner {
    PROJECTION_OWNER_None = 0;

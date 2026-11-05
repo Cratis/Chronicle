@@ -8,6 +8,7 @@ using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Generations;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Observation;
+using Cratis.Chronicle.Projections.Engine.Graphs;
 using Cratis.Chronicle.Projections.Engine.Pipelines.Steps;
 using Cratis.Chronicle.Projections.Generations;
 using Cratis.Chronicle.ReadModels;
@@ -73,6 +74,20 @@ public class ProjectionPipelineManager(
         pipeline?.Pipeline.ClearPreparedPage();
         var namespaceStorage = storage.GetEventStore(eventStore).GetNamespace(@namespace);
 
+        if (projection.Graph is { } graph)
+        {
+            var graphSink = await namespaceStorage.Sinks.GetGraphFor(projection.ReadModel);
+            var graphPipeline = new GraphProjectionPipeline(
+                projection,
+                new GraphChangesetBuilder(graph, graphSink, projection.Identifier),
+                graphSink,
+                _handleLocks.GetOrAdd(key, _ => new ProjectionHandleLock()),
+                objectComparer,
+                loggerFactory.CreateLogger<GraphProjectionPipeline>());
+            _pipelines[key] = new(graphPipeline, projection.DefinitionFingerprint);
+            return graphPipeline;
+        }
+
         // A projection is observed per namespace whatever its scope - the events it reacts to only exist there.
         // The scope decides where the result lands. A globally scoped projection resolves its sink against the
         // NotSet namespace, the same event-store-level sentinel event seeding uses, so every namespace's observer
@@ -98,6 +113,7 @@ public class ProjectionPipelineManager(
         EngineProjection projection,
         MaterializationGenerationIdentity generation)
     {
+        if (projection.Graph is not null) throw new EventGenerationDeliveryNotSupported();
         MaterializationGenerationCapabilities.ThrowIfCannotBuild(projection, generation);
         var key = GenerationKey(eventStore, @namespace, generation);
         if (_pipelines.TryGetValue(key, out var pipeline) && pipeline.Fingerprint == projection.DefinitionFingerprint)
