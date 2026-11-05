@@ -5,6 +5,7 @@ using System.Security.Claims;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Observation;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
 namespace Cratis.Chronicle.Security.for_SystemStoreOperationAuthorizationHandler.given;
@@ -18,12 +19,13 @@ public class an_operation_policy : Specification
     protected RecordingLogger _logger;
     protected AuthorizationHandlerContext _context;
     protected bool _enforce;
+    protected IAuthorizationDecisions? _decisions;
 
     protected async Task AuthorizeOperation()
     {
         _context = new AuthorizationHandlerContext([new SystemStoreOperationRequirement()], _principal, _operation);
         var options = Options.Create(new ChronicleOptions { Authentication = new Authentication { EnforceAdministratorPolicyForOperations = _enforce } });
-        await new SystemStoreOperationAuthorizationHandler(_authorization, options, _logger).HandleAsync(_context);
+        await new SystemStoreOperationAuthorizationHandler(_decisions ?? new AuthorizationDecisions(_authorization, options, NullLogger<AuthorizationDecisions>.Instance), options, _logger).HandleAsync(_context);
     }
 
     void Establish()

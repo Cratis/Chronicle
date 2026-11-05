@@ -11,11 +11,17 @@ import { v3Projects, shippingProjects, shippingRunners, ordinaryFilter, childCom
 import { collectorArgs, verifyExit, verifyDeadline, main as verifyCollector } from './verify-mixed-specs-collector.mjs';
 import './spec-project-contracts.mjs';
 import { benchmarkProject, inventory, ordinaryProjects, validateSolutionProjects } from './mixed-specs-selection.mjs';
+import { sourcePlan } from './spec-shards.mjs';
+import { selectProducerArtifacts, loadProducerEvidence } from './run-mixed-specs.mjs';
 
 const scratch = path.resolve('.ai-work/chronicle-spec5-runners/mock-contracts');
 async function fixture() {
     await mkdir(scratch, { recursive: true });
     const root = await mkdtemp(path.join(scratch, 'case-'));
+    for (const project of [...v3Projects, ...shippingProjects]) {
+        await mkdir(path.dirname(path.join(root, project)), { recursive: true });
+        await writeFile(path.join(root, project), '<Project/>');
+    }
     await mkdir(path.join(root, 'Source', 'Library'), { recursive: true });
     await writeFile(path.join(root, 'Source', 'Library', 'Decision.cs'), '// mock production source');
     const directory = path.join(root, 'output');
@@ -219,12 +225,97 @@ test('MOCK stale results are rejected before launch', async () => {
     await assert.rejects(runProject({ project: v3Projects[0], runner: 'v3', dll: options.dll }, options, async () => assert.fail('must not launch')), /fresh and empty/);
 });
 
-test('MOCK whole ordinary dispatch validates all 34, launches 24 once, keeps SQL/integration separate', async () => {
+const retryContext = { sha: 'merge-sha', runId: '123', runAttempt: '2' };
+function producerFixture(attempts = [1, 1]) {
+    const jobs = attempts.flatMap((attempt, index) => Array.from({ length: attempt }, (_, i) => ({
+        id: (index + 1) * 10 + i, name: `specs-other (${index + 1})`, run_id: 123, run_attempt: i + 1,
+        head_sha: 'head-sha', status: 'completed', conclusion: 'success',
+        started_at: `2026-11-01T00:0${i + 1}:00Z`, completed_at: `2026-11-01T00:0${i + 1}:30Z`
+    })));
+    const artifacts = attempts.map((attempt, index) => ({
+        id: index + 100, name: `coverage-results-specs-other-${index + 1}`, expired: false,
+        created_at: `2026-11-01T00:0${attempt}:15Z`, workflow_run: { id: 123, head_sha: 'head-sha' }
+    }));
+    return [[{ jobs, total_count: jobs.length }], [{ artifacts, total_count: artifacts.length }]];
+}
+test('API evidence selects retained and mixed successful producer attempts, not aggregate attempt', () => {
+    for (const attempts of [[1, 1], [1, 2], [2, 1], [2, 2]]) {
+        const pages = producerFixture(attempts);
+        for (const job of pages[0][0].jobs) {
+            if (job.run_attempt < attempts[Number(job.name.match(/\d/)[0]) - 1]) job.conclusion = 'failure';
+        }
+        const evidence = selectProducerArtifacts(...pages, retryContext);
+        assert.deepEqual(evidence.producers.map(p => p.runAttempt), attempts.map(String));
+        assert.deepEqual(evidence.producers.map(p => p.artifactId), [100, 101]);
+    }
+});
+test('API evidence accepts reusable workflow caller names, including retained and mixed attempts', () => {
+    for (const attempts of [[1, 1], [1, 2]]) {
+        const [jobs, artifacts] = producerFixture(attempts);
+        for (const job of jobs[0].jobs) job.name = `requested-integration-5501 / ${job.name}`;
+        assert.deepEqual(selectProducerArtifacts(jobs, artifacts, retryContext).producers.map(p => p.runAttempt), attempts.map(String));
+    }
+});
+test('API evidence rejects ambiguous caller prefixes, including direct/reusable and disjoint attempts', () => {
+    for (const prefix of ['', 'other-caller / ']) {
+        const [jobs, artifacts] = producerFixture([1, 2]);
+        const duplicate = { ...jobs[0].jobs[0], id: 999, name: `${prefix}specs-other (1)`, run_attempt: 2 };
+        for (const job of jobs[0].jobs) job.name = `requested-integration-5501 / ${job.name}`;
+        jobs[0].jobs.push(duplicate);
+        jobs[0].total_count++;
+        assert.throws(() => selectProducerArtifacts(jobs, artifacts, retryContext), /Ambiguous producer caller/);
+    }
+});
+test('API evidence does not match unrelated job-name suffixes', () => {
+    const [jobs, artifacts] = producerFixture();
+    jobs[0].jobs[0].name = 'caller / xspecs-other (1)';
+    assert.throws(() => selectProducerArtifacts(jobs, artifacts, retryContext), /Missing successful latest producer/);
+});
+test('API evidence rejects unsuccessful latest jobs and stale, wrong-run/SHA, incomplete or duplicate provenance', () => {
+    const reject = mutate => {
+        const [jobs, artifacts] = producerFixture([1, 2]);
+        mutate(jobs[0], artifacts[0]);
+        assert.throws(() => selectProducerArtifacts(jobs, artifacts, retryContext), /producer/i);
+    };
+    for (const conclusion of ['failure', 'cancelled', 'skipped', null]) reject(j => { j.jobs[2].conclusion = conclusion; });
+    reject(j => { j.jobs[2].status = 'in_progress'; });
+    reject(j => { j.jobs[2].run_attempt = 3; });
+    reject(j => { j.jobs[0].run_id = 999; });
+    reject((j, a) => { a.artifacts[0].workflow_run.id = 999; });
+    reject((j, a) => { a.artifacts[0].workflow_run.head_sha = 'wrong-sha'; });
+    reject((j, a) => { a.artifacts[1].created_at = '2026-11-01T00:01:15Z'; });
+    reject((j, a) => { a.artifacts[0].expired = true; });
+    reject((j, a) => { a.artifacts[0].created_at = 'invalid'; });
+    reject((j, a) => { a.artifacts[0].created_at = '2026-11-01T00:03:00Z'; });
+    reject(j => { j.jobs = j.jobs.filter(job => job.name !== 'specs-other (1)'); j.total_count = j.jobs.length; });
+    reject((j, a) => { a.artifacts.pop(); a.total_count--; });
+    reject(j => { j.jobs.pop(); });
+    reject(j => { j.jobs.push({ ...j.jobs[0], id: 999 }); j.total_count++; });
+    reject((j, a) => { a.artifacts.push({ ...a.artifacts[0], id: 999 }); a.total_count++; });
+});
+test('producer API acquisition paginates all attempts and propagates unavailable/malformed evidence', async () => {
+    const pages = producerFixture([1, 2]);
+    const jobs = pages[0][0].jobs;
+    pages[0] = [{ jobs: jobs.slice(0, 1), total_count: 3 }, { jobs: jobs.slice(1), total_count: 3 }];
+    let calls = 0;
+    const options = { env: { GITHUB_REPOSITORY: 'Cratis/Chronicle' }, execute: async (command, args) => {
+        assert.equal(command, 'gh');
+        assert.deepEqual(args.slice(0, 3), ['api', '--paginate', '--slurp']);
+        if (calls === 0) assert.ok(args[3].endsWith('/123/jobs?filter=all&per_page=100'));
+        return { code: 0, stdout: JSON.stringify(pages[calls++]) };
+    } };
+    assert.equal((await loadProducerEvidence(retryContext, options)).producers[1].runAttempt, '2');
+    assert.equal(calls, 2);
+    await assert.rejects(loadProducerEvidence(retryContext, { ...options, execute: async () => ({ code: 1 }) }), /API failed/);
+    await assert.rejects(loadProducerEvidence(retryContext, { ...options, execute: async () => ({ code: 0, stdout: '{}' }) }), /pages/);
+});
+
+async function ordinaryDispatch(mode) {
     const { root } = await fixture();
     await writeFile(path.join(root, 'Chronicle.slnx'), `<Solution>${v3Projects.filter(project => !project.includes('Storage.AzureKeyVault.Specs/')).map(project => `<Project Path="${project}" />`).join('')}</Solution>`);
     await mkdir(path.join(root, 'Benchmarks/Chronicle.Benchmarks.Clustering'), { recursive: true });
     await writeFile(path.join(root, 'Benchmarks/Chronicle.Benchmarks.Clustering/RebuildBaselineMath.cs'), '// mock benchmark production source');
-    await mkdir(path.join(root, 'Integration'));
+    await mkdir(path.join(root, 'Integration'), { recursive: true });
     await writeFile(path.join(root, 'specs.runsettings'), '<RunSettings><TestSessionTimeout>1234</TestSessionTimeout><TestCaseFilter>Name!~excluded&amp;Name!~also</TestCaseFilter></RunSettings>');
     const queried = [], launched = [];
     let benchmarkDll;
@@ -243,6 +334,7 @@ test('MOCK whole ordinary dispatch validates all 34, launches 24 once, keeps SQL
         }
         assert.equal(queried.length, 34, 'validate every selection before any child');
         launched.push(args);
+        if (mode === 'failed-shard') return { code: 7 };
         assert.equal(options.timeout, 1234);
         const directory = path.dirname(args[8]);
         const filter = args[9];
@@ -253,13 +345,37 @@ test('MOCK whole ordinary dispatch validates all 34, launches 24 once, keeps SQL
         await writeFile(path.join(directory, 'coverage.cobertura.xml'), coverage(source));
         return { code: 0 };
     };
-    await main([], { root, execute });
+    const shardId = mode === 'shard-2' ? 2 : 1;
+    const args = mode === 'whole' ? [] : ['--shard', String(shardId), '--shards', '2'];
+    const receiptPath = path.join(root, 'coverage-results', 'shard-receipt.json');
+    if (mode === 'failed-shard') {
+        await mkdir(path.dirname(receiptPath), { recursive: true });
+        await writeFile(receiptPath, 'stale receipt must not survive failure');
+        await assert.rejects(main(args, { root, execute }), error => error.exitCode === 7);
+        assert.deepEqual(queried, [...v3Projects, ...shippingProjects]);
+        await assert.rejects(readFile(receiptPath), error => error.code === 'ENOENT');
+        return;
+    }
+    await main(args, { root, execute });
     assert.deepEqual(queried, [...v3Projects, ...shippingProjects]);
-    assert.equal(launched.length, 24);
-    assert.equal(launched.filter(args => args[0] === 'tool').length, 24);
-    assert.equal(new Set(launched.map(args => args[8])).size, 24);
-    assert.ok(launched.some(args => args[9].includes(benchmarkDll)));
-});
+    const shard = (await sourcePlan(root)).find(s => s.shard === shardId);
+    const expectedProjects = mode === 'whole' ? ordinaryProjects(queried.map(project => ({ project }))).map(x => x.project) : shard.projects;
+    const actualProjects = launched.map(args => queried.find((project, index) => args[9].includes(path.join(root, `Assembly${index + 1}.dll`))));
+    assert.deepEqual([...actualProjects].sort(), [...expectedProjects].sort());
+    const expected = expectedProjects.length;
+    assert.equal(launched.length, expected);
+    assert.equal(launched.filter(args => args[0] === 'tool').length, expected);
+    assert.equal(new Set(launched.map(args => args[8])).size, expected);
+    if (mode === 'whole') assert.ok(launched.some(args => args[9].includes(benchmarkDll)));
+    else {
+        const receipt = JSON.parse(await readFile(receiptPath, 'utf8'));
+        assert.deepEqual(receipt.completed, shard.projects);
+        assert.deepEqual(receipt.projects, shard.projects);
+    }
+}
+for (const mode of ['whole', 'shard-1', 'shard-2', 'failed-shard']) {
+    test(`MOCK ${mode} dispatch validates all 34 before children and preserves coverage guards`, () => ordinaryDispatch(mode));
+}
 
 test('MOCK missing executable and missing DLL never succeed', async () => {
     await assert.rejects(runProcess('/nonexistent/mock-collector', [], { timeout: 2000 }), /ENOENT/);

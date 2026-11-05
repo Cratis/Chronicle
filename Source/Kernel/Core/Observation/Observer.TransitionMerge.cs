@@ -22,9 +22,19 @@ public partial class Observer
     ObserverState? _stateHandedToTransitionHook;
     ObserverState? _stateRecordedDuringTransitionHook;
 
+    /// <summary>
+    /// Whether a state transition has started leaving a state and not yet finished entering the next one.
+    /// </summary>
+    /// <remarks>
+    /// Set when leaving starts and cleared once entering has completed. A hook that throws leaves it set until the next
+    /// transition completes, which only makes the fast handover fall back to the full subscribe.
+    /// </remarks>
+    bool _stateTransitionInProgress;
+
     /// <inheritdoc/>
     protected override Task OnBeforeLeavingState(IState<ObserverState> state)
     {
+        _stateTransitionInProgress = true;
         BeginTransitionHook();
         return Task.CompletedTask;
     }

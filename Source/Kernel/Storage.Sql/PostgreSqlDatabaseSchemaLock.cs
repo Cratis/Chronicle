@@ -36,7 +36,7 @@ internal sealed class PostgreSqlDatabaseSchemaLock : IDatabaseSchemaLock
         {
             if (DateTimeOffset.UtcNow >= deadline)
             {
-                throw new DatabaseSchemaLockNotAcquired(connection.Database, resource, $"timed out after {timeout}");
+                throw new DatabaseSchemaLockNotAcquired(connection.Database, resource, $"timed out after {timeout}", DatabaseSchemaLockOutcome.Timeout);
             }
 
             await Task.Delay(delay, cancellationToken);

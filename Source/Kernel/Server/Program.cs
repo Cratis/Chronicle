@@ -118,6 +118,7 @@ if (chronicleOptions.Storage.SchemaMode == SchemaMode.Verify && string.Equals(ch
 ClusteringStorageValidation.Validate(chronicleOptions);
 KernelStartupDiagnostics.ReportIdentityProviderCertificate(chronicleOptions, logger);
 KernelStartupDiagnostics.ReportSubscriberTimeout(chronicleOptions, logger);
+KernelStartupDiagnostics.ReportGrainDirectory(chronicleOptions, logger);
 ForwardedHeadersTrust.Configure(builder.Services, chronicleOptions);
 var isSqlStorage = string.Equals(chronicleOptions.Storage.Type, StorageType.Sqlite, StringComparison.OrdinalIgnoreCase)
     || string.Equals(chronicleOptions.Storage.Type, StorageType.MsSql, StringComparison.OrdinalIgnoreCase)
@@ -322,6 +323,7 @@ hostBuilder
            services.Remove(descriptor);
 
        services.UseDeferredSiloStart();
+       services.AddStorageAuthorizationHealthCheck();
    });
 
 var app = builder.Build();

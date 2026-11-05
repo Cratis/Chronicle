@@ -12,6 +12,7 @@ public partial class EventSequence
     /// <inheritdoc/>
     protected override Task WriteStateAsync()
     {
+        if (!_mayWriteSequence) return Task.CompletedTask;
         var previous = _catchUpSnapshotWrite;
         return _catchUpSnapshotWrite = WriteSnapshotAfter(previous);
     }

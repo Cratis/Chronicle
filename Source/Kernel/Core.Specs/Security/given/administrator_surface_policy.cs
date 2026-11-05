@@ -62,6 +62,7 @@ public static class administrator_surface_policy
         ["Captures.CaptureDetails"] = "read-only capture inspection",
         ["Clients.ConnectedClientDetails"] = "read-only client diagnostics",
         ["DevelopmentTools.DevelopmentToolsAvailability"] = "read-only feature availability",
+        ["Diagnostics.StorageAuthorizationDiagnostic"] = "read-only cluster-wide storage authorization diagnostics",
         ["EventSources.EventSourceDetails"] = "read-only event-source inspection",
         ["EventStores.EventStoreDeployment"] = "read-only deployment diagnostics; generation and artifact fingerprint only",
         ["EventStores.EventStoreNames"] = "read-only store discovery",

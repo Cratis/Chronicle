@@ -19,4 +19,12 @@ internal static partial class ProjectionsLogging
     /// <param name="connectionId">The declaring connection.</param>
     [LoggerMessage(LogLevel.Warning, "Failed recording projection declarations for event store {EventStore} from connection {ConnectionId}; registration will continue")]
     internal static partial void FailedRecordingDeclarations(this ILogger<Projections> logger, Exception exception, string eventStore, string connectionId);
+
+    /// <summary>
+    /// Logs that the signature of a registration could not be computed.
+    /// </summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="exception">The failure.</param>
+    [LoggerMessage(LogLevel.Warning, "Failed computing the signature of a projection registration; it will be registered without sharing the work with identical ones")]
+    internal static partial void FailedComputingRegistrationSignature(this ILogger<Projections> logger, Exception exception);
 }

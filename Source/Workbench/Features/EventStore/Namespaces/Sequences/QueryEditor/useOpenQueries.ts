@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+import { randomUuid } from '../../../../../Utils/randomUuid';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { SequenceQuery } from 'Features/SequenceQueries';
 import { SequenceQueryScope } from 'Features/Concepts/SequenceQueries';
@@ -64,7 +65,7 @@ export const useOpenQueries = (saved: SequenceQuery[], namespace: string, newQue
 
         setOpen(current => {
             const reconciled = reconcileOpenQueries(
-                saved, current, newQueryName, crypto.randomUUID(), namespace, readRemembered(namespace));
+                saved, current, newQueryName, randomUuid(), namespace, readRemembered(namespace));
             if (reconciled.activeIndex >= 0) setActiveIndex(Math.max(0, reconciled.activeIndex));
 
             return reconciled.open;
@@ -120,7 +121,7 @@ export const useOpenQueries = (saved: SequenceQuery[], namespace: string, newQue
     const add = useCallback((scope: SequenceQueryScope = SequenceQueryScope.user, folder = '') => {
         setOpen(current => {
             setActiveIndex(current.length);
-            const state = createSequenceQueryState(crypto.randomUUID(), newQueryName, namespace, scope, folder);
+            const state = createSequenceQueryState(randomUuid(), newQueryName, namespace, scope, folder);
 
             return [...current, { state, saved: null }];
         });
@@ -135,7 +136,7 @@ export const useOpenQueries = (saved: SequenceQuery[], namespace: string, newQue
 
             if (remaining.length > 0) return remaining;
 
-            return [{ state: createSequenceQueryState(crypto.randomUUID(), newQueryName, namespace), saved: null }];
+            return [{ state: createSequenceQueryState(randomUuid(), newQueryName, namespace), saved: null }];
         });
     }, [namespace, newQueryName]);
 
@@ -149,7 +150,7 @@ export const useOpenQueries = (saved: SequenceQuery[], namespace: string, newQue
 
             if (remaining.length > 0) return remaining;
 
-            return [{ state: createSequenceQueryState(crypto.randomUUID(), newQueryName, namespace), saved: null }];
+            return [{ state: createSequenceQueryState(randomUuid(), newQueryName, namespace), saved: null }];
         }), [namespace, newQueryName]);
 
     return { open, activeIndex, setActiveIndex, update, markSaved, applyPersisted, add, close: closeAt, closeById, openSaved };

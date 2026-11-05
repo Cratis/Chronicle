@@ -28,6 +28,7 @@ public class ResolveFutures : ICanPerformProjectionPipelineStep
     readonly ProjectionFuturesTracker _futuresTracker;
     readonly ITypeFormats _typeFormats;
     readonly IObjectComparer _objectComparer;
+    readonly ICanProtectFutureChangesets _futureChangesetProtection;
     readonly ILogger<ResolveFutures> _logger;
     readonly IEventSequenceStorage _eventSequenceStorage;
     readonly ISink _sink;
@@ -39,6 +40,7 @@ public class ResolveFutures : ICanPerformProjectionPipelineStep
     /// <param name="futuresTracker"><see cref="ProjectionFuturesTracker"/> shared with the <see cref="StoreFutures"/> step.</param>
     /// <param name="typeFormats"><see cref="ITypeFormats"/> for resolving actual CLR types for schemas.</param>
     /// <param name="objectComparer"><see cref="IObjectComparer"/> for creating changesets when resolving futures.</param>
+    /// <param name="futureChangesetProtection">Protection for resolved future changesets.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     /// <param name="eventSequenceStorage"><see cref="IEventSequenceStorage"/> for retrying deferred keys.</param>
     /// <param name="sink"><see cref="ISink"/> for retrying deferred keys.</param>
@@ -47,10 +49,11 @@ public class ResolveFutures : ICanPerformProjectionPipelineStep
         ProjectionFuturesTracker futuresTracker,
         ITypeFormats typeFormats,
         IObjectComparer objectComparer,
+        ICanProtectFutureChangesets futureChangesetProtection,
         ILogger<ResolveFutures> logger,
         IEventSequenceStorage eventSequenceStorage,
         ISink sink)
-        : this(futuresTracker, new ProjectionFuturesStore(projectionFutures), typeFormats, objectComparer, logger, eventSequenceStorage, sink)
+        : this(futuresTracker, new ProjectionFuturesStore(projectionFutures), typeFormats, objectComparer, futureChangesetProtection, logger, eventSequenceStorage, sink)
     {
     }
 
@@ -61,6 +64,7 @@ public class ResolveFutures : ICanPerformProjectionPipelineStep
     /// <param name="futuresStore"><see cref="IProjectionFuturesStore"/> for managing futures.</param>
     /// <param name="typeFormats"><see cref="ITypeFormats"/> for resolving actual CLR types for schemas.</param>
     /// <param name="objectComparer"><see cref="IObjectComparer"/> for creating changesets when resolving futures.</param>
+    /// <param name="futureChangesetProtection">Protection for resolved future changesets.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     /// <param name="eventSequenceStorage"><see cref="IEventSequenceStorage"/> for retrying deferred keys.</param>
     /// <param name="sink"><see cref="ISink"/> for retrying deferred keys.</param>
@@ -69,6 +73,7 @@ public class ResolveFutures : ICanPerformProjectionPipelineStep
         IProjectionFuturesStore futuresStore,
         ITypeFormats typeFormats,
         IObjectComparer objectComparer,
+        ICanProtectFutureChangesets futureChangesetProtection,
         ILogger<ResolveFutures> logger,
         IEventSequenceStorage eventSequenceStorage,
         ISink sink)
@@ -77,6 +82,7 @@ public class ResolveFutures : ICanPerformProjectionPipelineStep
         _futuresTracker = futuresTracker;
         _typeFormats = typeFormats;
         _objectComparer = objectComparer;
+        _futureChangesetProtection = futureChangesetProtection;
         _logger = logger;
         _eventSequenceStorage = eventSequenceStorage;
         _sink = sink;
@@ -214,6 +220,8 @@ public class ResolveFutures : ICanPerformProjectionPipelineStep
 
                     ProvideToAncestors(childProjection, futureContext);
                     childProjection.OnNext(futureContext);
+
+                    await ProtectFutureChangeset(projection, futureContext);
 
                     await QueueFutureSave(context, new PendingFutureSave(key, futureChangeset) { FutureId = future.Id }, queuedFutures);
                     _failedFutures.Remove(future.Id);
@@ -578,6 +586,11 @@ public class ResolveFutures : ICanPerformProjectionPipelineStep
 
     static bool IsSamePosition(ArrayIndexer actual, ArrayIndexer expected) =>
         actual.ArrayProperty == expected.ArrayProperty && actual.IdentifierProperty == expected.IdentifierProperty;
+
+    ValueTask ProtectFutureChangeset(IProjection projection, ProjectionEventContext context) =>
+        context.Changeset.HasChanges
+            ? _futureChangesetProtection.ProtectFutureChangeset(projection, context)
+            : ValueTask.CompletedTask;
 
     async Task<(bool Found, List<ArrayIndexer> ParentIndexers, ResolvedKey? RetriedKey)> FindParentForFuture(
         IProjection childProjection,

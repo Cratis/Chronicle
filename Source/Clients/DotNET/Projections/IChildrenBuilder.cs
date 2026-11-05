@@ -46,6 +46,15 @@ public interface IChildrenBuilder<TParentReadModel, TChildReadModel> : IProjecti
     IChildrenBuilder<TParentReadModel, TChildReadModel> IdentifiedBy<TProperty>(Expression<Func<TChildReadModel, TProperty>> propertyExpression);
 
     /// <summary>
+    /// Defines a child-specific join on the identity configured with IdentifiedBy().
+    /// IdentifiedBy() must be called before Join().
+    /// </summary>
+    /// <typeparam name="TEvent">Type of event to join.</typeparam>
+    /// <param name="builderCallback">Optional callback for configuring the child join.</param>
+    /// <returns>Builder continuation.</returns>
+    IChildrenBuilder<TParentReadModel, TChildReadModel> Join<TEvent>(Action<IChildrenJoinBuilder<TChildReadModel, TEvent>>? builderCallback = default);
+
+    /// <summary>
     /// Defines the event and property on it that the child should be created as a value from.
     /// </summary>
     /// <param name="propertyExpression">The expression that represents the property on the event to use.</param>

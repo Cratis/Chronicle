@@ -7,7 +7,6 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Services.Events;
 using Cratis.Chronicle.Storage;
-using Cratis.Reactive;
 using ProtoBuf.Grpc;
 
 // Cratis.Chronicle.Observation cannot be imported wholesale here: it declares the kernel-side command records that
@@ -127,7 +126,7 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage, IO
             var failedObserverIds = failedPartitions.Partitions.Select(_ => _.ObserverId.Value).ToHashSet(StringComparer.Ordinal);
             var undecidedObservers = observers.Where(_ => NeedsSubscription(_, eventTypeTails, request.TailEventSequenceNumber, failedObserverIds)).ToArray();
             var subscriptions = await Task.WhenAll(undecidedObservers.Select(observer =>
-                grainFactory.GetGrain<Cratis.Chronicle.Observation.IObserver>(
+                grainFactory.GetGrain<Chronicle.Observation.IObserver>(
                     new Concepts.Observation.ObserverKey(observer.Id, request.EventStore, request.Namespace, request.EventSequenceId)).GetSubscription()));
             var matchingObserverIds = new HashSet<string>(StringComparer.Ordinal);
             var outstanding = new List<string>();
@@ -424,32 +423,35 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage, IO
         return Observable.Defer(() =>
         {
             var changedAt = new RunningStatesChangedAtCache(observerStateStorage);
-            return observerStateStorage
+            var enrichedStates = observerStateStorage
                 .ObserveAll()
-                .CompletedBy(context.CancellationToken)
                 .Select(observerStates => Observable.FromAsync(async () =>
                 {
                     var snapshot = observerStates as IReadOnlyCollection<Storage.Observation.ObserverState> ?? observerStates.ToArray();
-
-                    // TODO: We will be formalizing these things in Grains, until then this is less than optimal.
-                    // Definitions are still read per emission because IObserverDefinitionsStorage has no change source.
-                    var observerDefinitions = await storage.GetEventStore(request.EventStore).Observers.GetAll();
                     var runningStatesChangedAt = await changedAt.GetFor(snapshot);
-                    var observers =
-                        from definition in observerDefinitions
-                        join state in snapshot on definition.Identifier equals state.Identifier into stateGroup
-                        from state in stateGroup.DefaultIfEmpty(Storage.Observation.ObserverState.Empty)
-                        select (definition, state);
-
-                    return observers.ToContract(runningStatesChangedAt);
+                    return (States: snapshot, RunningStatesChangedAt: runningStatesChangedAt);
                 }))
                 .Concat();
+
+            return enrichedStates.CombineLatest(
+                storage.GetEventStore(request.EventStore).Observers.ObserveAll(),
+                (enriched, definitions) =>
+                {
+                    var observers =
+                        from definition in definitions
+                        join state in enriched.States on definition.Identifier equals state.Identifier into stateGroup
+                        from state in stateGroup.DefaultIfEmpty(Storage.Observation.ObserverState.Empty)
+                        select (definition, state);
+                    return observers.ToContract(enriched.RunningStatesChangedAt).ToArray();
+                })
+                .TakeUntil(Observable.Create<bool>(observer =>
+                    context.CancellationToken.Register(() => observer.OnNext(true))));
         });
     }
 
     async Task<EventSequenceNumber?> GetLastMatchingEvent(
         WaitForObserverCompletionRequest request,
-        Cratis.Chronicle.Observation.ObserverSubscription subscription,
+        Chronicle.Observation.ObserverSubscription subscription,
         EventSequenceNumber lastHandled,
         EventSequenceNumber target,
         Concepts.Observation.ObserverFilters filters,
@@ -502,7 +504,7 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage, IO
 
     sealed record CachedMatchingEvent(
         Concepts.Observation.ObserverFilters Filters,
-        Concepts.Events.EventType[] SubscriptionEventTypes,
+        EventType[] SubscriptionEventTypes,
         string[] ObserverEventTypeIds,
         bool IncludesHandledEvents,
         EventSequenceNumber LastMatchingEvent);

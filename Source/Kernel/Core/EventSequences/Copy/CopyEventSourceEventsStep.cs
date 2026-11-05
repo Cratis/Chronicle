@@ -8,6 +8,7 @@ using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.EventSequences.Concurrency;
 using Cratis.Chronicle.Concepts.Identities;
 using Cratis.Chronicle.Events.Constraints;
+using Cratis.Chronicle.EventTypes;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
@@ -26,6 +27,7 @@ namespace Cratis.Chronicle.EventSequences.Copy;
 /// <param name="metadataManager">The <see cref="IJsonSchemaMetadataManager"/> releasing personal data.</param>
 /// <param name="converter">The <see cref="IExpandoObjectConverter"/>.</param>
 /// <param name="logger">The <see cref="ILogger{CopyEventSourceEventsStep}"/> for logging.</param>
+/// <param name="schemaCache">The <see cref="IEventTypeSchemaCache"/> for the stored event content schemas.</param>
 public class CopyEventSourceEventsStep(
     [PersistentState(nameof(CopyEventSourceEventsStepState), Cratis.Choreography.WellKnownGrainStorageProviders.JobSteps)]
     IPersistentState<CopyEventSourceEventsStepState> state,
@@ -34,7 +36,8 @@ public class CopyEventSourceEventsStep(
     IGrainFactory grainFactory,
     IJsonSchemaMetadataManager metadataManager,
     IExpandoObjectConverter converter,
-    ILogger<CopyEventSourceEventsStep> logger) : JobStep<CopyEventSourceEventsRequest, object, CopyEventSourceEventsStepState>(state, throttle, logger), ICopyEventSourceEventsStep
+    ILogger<CopyEventSourceEventsStep> logger,
+    IEventTypeSchemaCache schemaCache) : JobStep<CopyEventSourceEventsRequest, object, CopyEventSourceEventsStepState>(state, throttle, logger), ICopyEventSourceEventsStep
 {
     const int BatchSize = 100;
     static readonly CausationType _causationType = new("CopyEventSourceEvents");
@@ -65,7 +68,7 @@ public class CopyEventSourceEventsStep(
             var eventStoreStorage = storage.GetEventStore(jobStepKey.Scope);
             var sequenceStorage = eventStoreStorage.GetNamespace(jobStepKey.Namespace).GetEventSequence(currentState.EventSequenceId);
             var sequence = grainFactory.GetEventSequence(currentState.EventSequenceId, jobStepKey.Scope, jobStepKey.Namespace);
-            var content = new StoredConstraintEventContent(jobStepKey.Scope, jobStepKey.Namespace, eventStoreStorage.EventTypes, metadataManager, converter);
+            var content = new StoredConstraintEventContent(jobStepKey.Scope, jobStepKey.Namespace, eventStoreStorage.EventTypes, metadataManager, converter, schemaCache);
             var eventTypes = currentState.EventTypes.Count == 0
                 ? null
                 : currentState.EventTypes.Select(_ => new EventType(_, EventTypeGeneration.First)).ToArray();

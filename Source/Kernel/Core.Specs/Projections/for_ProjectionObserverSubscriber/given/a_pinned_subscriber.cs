@@ -41,7 +41,7 @@ public class a_pinned_subscriber : a_subscriber_with_a_cached_pipeline
             {
                 [2] = converter.ToExpandoObject(new JsonObject { ["fullName"] = ((JsonObject)call[2])["name"]!.DeepClone() }, pinnedSchema)
             });
-        _release = new EventGenerationRelease(storage, new EventCompliance(metadata, converter), _migrations, metadata, converter);
+        _release = new EventGenerationRelease(storage, new EventCompliance(metadata, converter, new OwnGenerationSchemaCache()), _migrations, metadata, converter, new OwnGenerationSchemaCache());
         var schemas = new Dictionary<EventType, EventTypeSchema> { [_pin] = new(_pin, EventTypeOwner.Client, EventTypeSource.Code, pinnedSchema) };
         _projection.GenerationDelivery.Returns(EventGenerationDelivery.Pinned);
         _projection.EventTypes.Returns([_pin]);

@@ -80,7 +80,7 @@ public static class LiveQuery
         IDatabase database,
         string name,
         IEqualityComparer<TResult>? comparer = null) =>
-        Observe(query, database.LiveQueryPollingInterval, comparer, name, database is Database sql ? sql.LiveQueryLogger : NullLogger.Instance, TimeProvider.System);
+        Observe(query, database.LiveQueryPollingInterval, comparer, name, LiveQueryDiagnostics.For(database), TimeProvider.System, static rows => rows);
 
     /// <summary>
     /// Observes a query, retrying failed polls with capped exponential backoff instead of faulting the subscription.
@@ -100,7 +100,7 @@ public static class LiveQuery
         string name,
         ILogger logger,
         TimeProvider timeProvider) =>
-        Observe(query, pollingInterval, comparer, name, logger, timeProvider, static rows => rows);
+        Observe(query, pollingInterval, comparer, name, new LiveQueryDiagnostics(logger, SqlStorageTelemetry.Legacy), timeProvider, static rows => rows);
 
     /// <summary>
     /// Observes a query for a SQL storage, comparing the polled rows and mapping them to results only when a change is detected.
@@ -119,7 +119,7 @@ public static class LiveQuery
         string name,
         IEqualityComparer<TRow> comparer,
         Func<TRow[], IEnumerable<TResult>> project) =>
-        Observe(query, database.LiveQueryPollingInterval, comparer, name, database is Database sql ? sql.LiveQueryLogger : NullLogger.Instance, TimeProvider.System, project);
+        Observe(query, database.LiveQueryPollingInterval, comparer, name, LiveQueryDiagnostics.For(database), TimeProvider.System, project);
 
     /// <summary>
     /// Observes a query, comparing the polled rows and mapping them to results only when a change is detected.
@@ -128,7 +128,7 @@ public static class LiveQuery
     /// <param name="pollingInterval">The interval between successful polls, and the first retry delay.</param>
     /// <param name="comparer">The row equality comparer, or null for the default.</param>
     /// <param name="name">The bounded query name used in logs and metrics.</param>
-    /// <param name="logger">The logger for poll failures and recovery.</param>
+    /// <param name="diagnostics">The logger and preselected instruments for poll failures and recovery.</param>
     /// <param name="timeProvider">The time provider used for delays.</param>
     /// <param name="project">Maps a changed snapshot of rows to the emitted results. Not invoked for unchanged polls.</param>
     /// <typeparam name="TRow">The type of each polled row.</typeparam>
@@ -139,7 +139,7 @@ public static class LiveQuery
         TimeSpan pollingInterval,
         IEqualityComparer<TRow>? comparer,
         string name,
-        ILogger logger,
+        LiveQueryDiagnostics diagnostics,
         TimeProvider timeProvider,
         Func<TRow[], IEnumerable<TResult>> project)
     {
@@ -164,8 +164,8 @@ public static class LiveQuery
                 {
                     failures++;
                     var delay = RetryDelayAfter(failures, pollingInterval);
-                    SqlStorageTelemetry.LiveQueryPollFailed(name, error);
-                    logger.LiveQueryPollFailed(error, name, failures, delay);
+                    diagnostics.Telemetry.LiveQueryPollFailed(name, error);
+                    diagnostics.Logger.LiveQueryPollFailed(error, name, failures, delay);
                     if (!await Wait(delay, timeProvider, cancellationToken))
                     {
                         return;
@@ -176,7 +176,7 @@ public static class LiveQuery
 
                 if (failures > 0)
                 {
-                    logger.LiveQueryRecovered(name, failures);
+                    diagnostics.Logger.LiveQueryRecovered(name, failures);
                     failures = 0;
                 }
 

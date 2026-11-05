@@ -527,6 +527,7 @@ enum Cratis.Chronicle.Concepts.Observation.WebhookFailureDisposition : int
   Configuration = 1
   Gone = 2
   Retryable = 0
+concept Cratis.Chronicle.Concepts.Observation.Webhooks.EncryptedWebhookSigningSecret : string
 oneof Cratis.Chronicle.Concepts.Observation.Webhooks.WebhookAuthorization
   case0: Cratis.Chronicle.Concepts.Security.BasicAuthorization
   case1: Cratis.Chronicle.Concepts.Security.BearerTokenAuthorization
@@ -547,6 +548,25 @@ enum Cratis.Chronicle.Concepts.Observation.Webhooks.WebhookOwner : int
   Client = 1
   Kernel = 2
   Unspecified = 0
+enum Cratis.Chronicle.Concepts.Observation.Webhooks.WebhookSigningAlgorithm : int
+  Ed25519 = 0
+  HmacSha256 = 1
+json Cratis.Chronicle.Concepts.Observation.Webhooks.WebhookSigningKey
+  algorithm: Cratis.Chronicle.Concepts.Observation.Webhooks.WebhookSigningAlgorithm
+  createdAt: System.DateTimeOffset
+  encryptedSecret: Cratis.Chronicle.Concepts.Observation.Webhooks.EncryptedWebhookSigningSecret
+  keyId: Cratis.Chronicle.Concepts.Observation.Webhooks.WebhookSigningKeyId
+  overlapEndsAt: System.DateTimeOffset?
+  publicKey: string
+  retiredAt: System.DateTimeOffset?
+  status: Cratis.Chronicle.Concepts.Observation.Webhooks.WebhookSigningKeyStatus
+  webhook: Cratis.Chronicle.Concepts.Observation.Webhooks.WebhookId
+concept Cratis.Chronicle.Concepts.Observation.Webhooks.WebhookSigningKeyId : string
+concept Cratis.Chronicle.Concepts.Observation.Webhooks.WebhookSigningKeyOverlap : System.TimeSpan
+enum Cratis.Chronicle.Concepts.Observation.Webhooks.WebhookSigningKeyStatus : int
+  Active = 0
+  Overlap = 1
+  Retired = 2
 json Cratis.Chronicle.Concepts.Observation.Webhooks.WebhookTarget
   authorization: Cratis.Chronicle.Concepts.Observation.Webhooks.WebhookAuthorization
   headers: System.Collections.Generic.IReadOnlyDictionary<string,string>

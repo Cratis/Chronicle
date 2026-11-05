@@ -68,6 +68,16 @@ public class ChildrenBuilder<TParentReadModel, TChildReadModel>(
         return this;
     }
 
+    /// <inheritdoc/>
+    public IChildrenBuilder<TParentReadModel, TChildReadModel> Join<TEvent>(Action<IChildrenJoinBuilder<TChildReadModel, TEvent>>? builderCallback = default)
+    {
+        ValidateEventType(typeof(TEvent));
+        var builder = new ChildrenJoinBuilder<TParentReadModel, TChildReadModel, TEvent>(this, _namingPolicy);
+        builderCallback?.Invoke(builder);
+        _joinDefinitions[EventTypes.GetEventTypeFor(typeof(TEvent)).ToContract()] = builder.Build();
+        return this;
+    }
+
     /// <summary>
     /// Build the <see cref="ChildrenDefinition"/>.
     /// </summary>

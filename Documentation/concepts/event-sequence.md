@@ -27,6 +27,20 @@ Chronicle has formalized the following event sequences:
 | ---- | ----------- |
 | Event Log | The main sequence you typically append to |
 
+## Naming your own event sequences
+
+An event sequence is stored under its identifier, so Chronicle refuses to create a new event sequence
+whose name the storage provider uses for its own storage. Pick a different name. Event sequences that
+already exist are unaffected. The reserved names depend on the storage provider:
+
+| Storage provider | Reserved names |
+| ---------------- | -------------- |
+| MongoDB | Chronicle's own collection names, for example `observers`, `jobs` or `event-sequences`, and any name ending in `+constraint` |
+| SQL | Chronicle's own table names, the migrations history table, and any name ending in `_constraint` or `_constraint_values` |
+| In-memory | None |
+
+The same applies to an event sequence a projection or reducer publishes to, and such a destination may not contain `#`.
+
 ## Event Type generations
 
 Every [event type](./event-type.md) can evolve over time. Evolutions are represented as generations.

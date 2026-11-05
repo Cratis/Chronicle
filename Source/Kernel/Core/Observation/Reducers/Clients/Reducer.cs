@@ -66,8 +66,21 @@ public class Reducer(
         var previousDefinition = State;
         var compareResult = await reducerDefinitionComparer.Compare(key, previousDefinition, definition);
 
+        var isUnchanged = previousDefinition.EventTypes is not null && ReducerDefinitionIdentity.IsIdentical(previousDefinition, definition);
         State = definition;
-        await WriteStateAsync();
+        if (!isUnchanged)
+        {
+            try
+            {
+                await WriteStateAsync();
+            }
+            catch
+            {
+                // Keep the stored definition in memory, so a retry on this activation does not see the unpersisted one as identical.
+                State = previousDefinition;
+                throw;
+            }
+        }
 
         if (compareResult == ReducerDefinitionCompareResult.Different)
         {

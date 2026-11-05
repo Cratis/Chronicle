@@ -74,6 +74,7 @@
     -->
     <ItemGroup>
         <PackageReference Include="AspNetCore.HealthChecks.MongoDb" />
+        <PackageReference Include="BouncyCastle.Cryptography" />
         <PackageReference Include="Cratis.Arc" />
         <PackageReference Include="Cratis.Arc.Core" />
         <PackageReference Include="Cratis.Choreography" />

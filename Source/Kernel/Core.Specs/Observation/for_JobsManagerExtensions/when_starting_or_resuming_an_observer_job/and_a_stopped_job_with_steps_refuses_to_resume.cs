@@ -7,7 +7,7 @@ using Cratis.Choreography.Storage.Jobs;
 namespace Cratis.Chronicle.Observation.for_JobsManagerExtensions.when_starting_or_resuming_an_observer_job;
 
 /// <summary>
-/// A stopped job that did prepare steps carries work, so a refused resume - possibly a transient one - must never delete it.
+/// A stopped job that got as far as running its steps carries work, so a refused resume - possibly a transient one - must never delete it.
 /// </summary>
 public class and_a_stopped_job_with_steps_refuses_to_resume : given.a_jobs_manager
 {
@@ -15,7 +15,7 @@ public class and_a_stopped_job_with_steps_refuses_to_resume : given.a_jobs_manag
 
     void Establish()
     {
-        _stopped = AJob(JobStatus.Stopped);
+        _stopped = APreparedJob(JobStatus.Stopped);
         _stopped.Progress = new() { TotalSteps = 3, SuccessfulSteps = 1 };
         HasJobs(_stopped);
         _jobsManager.Resume(_stopped.Id).Returns(false);

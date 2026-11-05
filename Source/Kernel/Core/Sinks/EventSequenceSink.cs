@@ -15,9 +15,11 @@ using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Storage;
+using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.ReadModels;
 using Cratis.Chronicle.Storage.Sinks;
 using Cratis.Monads;
+using ReservedEventSequenceRules = Cratis.Chronicle.Sequences.ReservedEventSequenceRules;
 
 namespace Cratis.Chronicle.Sinks;
 
@@ -36,6 +38,9 @@ namespace Cratis.Chronicle.Sinks;
 /// A mapping change replays under a new occurrence: state starts empty and new public instances are appended. History is
 /// never rewritten and never removed. Removal of state cannot be expressed as a public fact and fails explicitly.
 /// </para>
+/// <para>
+/// A destination reserved by storage and not yet existing is refused once per sink instance.
+/// </para>
 /// </remarks>
 /// <param name="eventStore">The <see cref="EventStoreName"/> the sink belongs to.</param>
 /// <param name="namespace">The <see cref="EventStoreNamespaceName"/> the sink belongs to.</param>
@@ -44,6 +49,7 @@ namespace Cratis.Chronicle.Sinks;
 /// <param name="grainFactory">The <see cref="IGrainFactory"/> for reaching the destination sequence.</param>
 /// <param name="storage">The <see cref="IStorage"/> used for reading published state.</param>
 /// <param name="expandoObjectConverter">The <see cref="IExpandoObjectConverter"/>.</param>
+/// <param name="reservedEventSequenceIds">The <see cref="IReservedEventSequenceIds"/> of the active storage provider.</param>
 public class EventSequenceSink(
     EventStoreName eventStore,
     EventStoreNamespaceName @namespace,
@@ -51,7 +57,8 @@ public class EventSequenceSink(
     EventSequenceSinkConfiguration configuration,
     IGrainFactory grainFactory,
     IStorage storage,
-    IExpandoObjectConverter expandoObjectConverter) : ISink
+    IExpandoObjectConverter expandoObjectConverter,
+    IReservedEventSequenceIds reservedEventSequenceIds) : ISink
 {
     /// <summary>
     /// The occurrence used when no replay has happened.
@@ -69,6 +76,14 @@ public class EventSequenceSink(
     const string ObserverProperty = "observer";
 
     string? _replayOccurrence;
+    DestinationVerdict _destinationVerdict;
+
+    enum DestinationVerdict
+    {
+        Unknown = 0,
+        Allowed = 1,
+        Refused = 2
+    }
 
     /// <inheritdoc/>
     public SinkTypeId TypeId => WellKnownSinkTypes.EventSequence;
@@ -110,6 +125,11 @@ public class EventSequenceSink(
         }
 
         if (!changeset.HasChanges) return [];
+
+        if (!await DestinationMayBeWritten())
+        {
+            return [Failed(key, eventSequenceNumber, ReservedEventSequenceRules.Message(configuration.Destination.Value))];
+        }
 
         var last = await FindLast(key);
         var occurrence = _replayOccurrence ?? (last is null ? InitialOccurrence : OccurrenceOf(last));
@@ -247,6 +267,20 @@ public class EventSequenceSink(
 
     static FailedPartition Failed(Key key, EventSequenceNumber sequenceNumber, string reason) => new(key, sequenceNumber) { Reason = reason };
 
+    ValueTask<bool> DestinationMayBeWritten() => _destinationVerdict switch
+    {
+        DestinationVerdict.Allowed => new(true),
+        DestinationVerdict.Refused => new(false),
+        _ => new(VerifyDestination())
+    };
+
+    async Task<bool> VerifyDestination()
+    {
+        var allowed = await ReservedEventSequenceRules.MayBeWritten(storage, reservedEventSequenceIds, eventStore.Value, @namespace.Value, configuration.Destination.Value);
+        _destinationVerdict = allowed ? DestinationVerdict.Allowed : DestinationVerdict.Refused;
+        return allowed;
+    }
+
     string ObserverName() => $"{definition.ObserverType}/{definition.ObserverIdentifier}/{definition.Identifier}";
 
     IEventSequence EventSequence(Concepts.EventSequences.EventSequenceId destination) =>
@@ -260,6 +294,9 @@ public class EventSequenceSink(
     /// <returns>The last event this observer published for the key, or null.</returns>
     async Task<AppendedEvent?> FindLast(Key key)
     {
+        // A refused destination is never opened: opening sequence storage can provision tables.
+        if (!await DestinationMayBeWritten()) return null;
+
         var sequenceStorage = storage.GetEventStore(eventStore).GetNamespace(@namespace).GetEventSequence(configuration.Destination);
         var eventSourceId = new EventSourceId(key.Value?.ToString() ?? string.Empty);
         var observer = ObserverName();

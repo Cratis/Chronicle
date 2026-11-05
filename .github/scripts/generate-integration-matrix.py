@@ -230,10 +230,14 @@ def main():
         namespace_configs = configs
         if namespace == "SqlServerAlertIncidents":
             namespace_configs = [config for config in configs if config[1] == "mssql"]
-        # The kernel TLS lifecycle specs own the out-of-process MongoDB kernel container they start and kill,
-        # and assert that configuration; any other lane has no such container to own.
-        if namespace == "for_KernelTlsLifecycle":
+        # Kernel TLS lifecycle specs own an out-of-process MongoDB kernel container;
+        # PerProcess activation specs need its gRPC listener and cover client identity once.
+        if namespace in {"for_KernelTlsLifecycle", "for_PerProcessActivation"}:
             namespace_configs = [config for config in configs if config[0] == "outofprocess" and config[1] == "mongodb"]
+        # Process recovery owns a PostgreSQL database and an external kernel regardless of lane settings.
+        # Schedule it only once, in the lane matching the infrastructure it actually exercises.
+        if namespace == "for_OccurrenceProcessRecovery":
+            namespace_configs = [config for config in configs if config[0] == "outofprocess" and config[1] == "postgresql"]
         fully_qualified = NAMESPACE_PREFIX + namespace
         for shard_label, test_filter in _shards_for(namespace):
             for mode, database, needs_docker in namespace_configs:

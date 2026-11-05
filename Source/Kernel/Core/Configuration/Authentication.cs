@@ -38,6 +38,11 @@ public class Authentication
     public string? Authority { get; init; }
 
     /// <summary>
+    /// Gets the opt-in claim that grants administrator privilege to external-authority callers. Null (the default) disables the mapping.
+    /// </summary>
+    public ExternalAdministratorClaim? ExternalAdministratorClaim { get; init; }
+
+    /// <summary>
     /// Gets the audience external-authority access tokens must target.
     /// </summary>
     public string Audience { get; init; } = "chronicle";

@@ -182,7 +182,8 @@ public partial class EventStore : IEventStore
             this,
             serviceProvider.GetKeyedService<IActivitySource<UnitOfWork>>(ClientActivity.SourceName),
             options.Value.UnitOfWorkLifecyclePolicy,
-            loggerFactory.CreateLogger<UnitOfWork>())
+            loggerFactory.CreateLogger<UnitOfWork>(),
+            _telemetry.SpanNames)
         {
             TagResolver = _tagResolver
         };
@@ -239,7 +240,8 @@ public partial class EventStore : IEventStore
             new ReactorContextValuesBuilder(new InstancesOf<IReactorContextValuesProvider>(types, serviceProvider)),
             new ReactorMethodArgumentsResolver(),
             loggerFactory.CreateLogger<Reactors.Reactors>(),
-            loggerFactory)
+            loggerFactory,
+            _telemetry.SpanNames)
         {
             GenerationDelivery = options.Value.EventGenerationDelivery,
             MaxConcurrentPartitions = options.Value.Reactors.MaxConcurrentPartitions
@@ -263,7 +265,8 @@ public partial class EventStore : IEventStore
             identityProvider,
             reducerObservers,
             serviceProvider.GetRequiredKeyedService<IActivitySource<Reducers.Reducers>>(ClientActivity.SourceName),
-            loggerFactory.CreateLogger<Reducers.Reducers>())
+            loggerFactory.CreateLogger<Reducers.Reducers>(),
+            _telemetry.SpanNames)
         {
             GenerationDelivery = options.Value.EventGenerationDelivery,
             MaxConcurrentPartitions = options.Value.Reducers.MaxConcurrentPartitions

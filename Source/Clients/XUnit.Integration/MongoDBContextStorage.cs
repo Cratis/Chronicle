@@ -65,7 +65,7 @@ internal sealed class MongoDBContextStorage(Func<string, MongoDBDatabase> create
         var names = await cursor.ToListAsync();
         foreach (var name in names.Where(name => _prefixes.Any(prefix => name.StartsWith(prefix, StringComparison.Ordinal))))
         {
-            await client.DropDatabaseAsync(name);
+            await MongoDBDatabaseDropper.DropAndWait(client, name);
         }
     }
 

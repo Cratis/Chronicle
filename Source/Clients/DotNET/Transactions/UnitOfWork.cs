@@ -155,6 +155,9 @@ public partial class UnitOfWork : IUnitOfWork
     /// </summary>
     internal EventTagResolver? TagResolver { get; set; }
 
+    /// <summary>Gets the client span naming convention.</summary>
+    internal ClientSpanNames SpanNames { get; init; }
+
     /// <inheritdoc/>
     public void UseEffectReceipt(EffectKey key, JsonNode? response = null)
     {
@@ -414,7 +417,7 @@ public partial class UnitOfWork : IUnitOfWork
             if (_completing || IsCompleted) return;
             if (_commitOwner is not null && _hasEnrolledDecisionReads) throw new ProtectedUnitOfWorkRequiresOwner();
 
-            using var span = _activitySource.Rollback(CorrelationId.ToString());
+            using var span = _activitySource.Rollback(CorrelationId.ToString(), SpanNames);
             CompleteRollback();
         }
         _onCompleted(this);
@@ -478,7 +481,7 @@ public partial class UnitOfWork : IUnitOfWork
     Task RollbackCore(DecisionReadCommitOwner? owner, bool fromOwner, ImmediateAppendRefusal? appendOwner = null)
     {
         ReadProtectionGuard.RequireUnit(this);
-        using var span = _activitySource.Rollback(CorrelationId.ToString());
+        using var span = _activitySource.Rollback(CorrelationId.ToString(), SpanNames);
 
         lock (_decisionLock)
         {
@@ -502,7 +505,7 @@ public partial class UnitOfWork : IUnitOfWork
     async Task CommitCore(bool fromOwner, ImmediateAppendRefusal? appendOwner = null)
     {
         ReadProtectionGuard.RequireUnit(this);
-        using var span = _activitySource.Commit(CorrelationId.ToString());
+        using var span = _activitySource.Commit(CorrelationId.ToString(), SpanNames);
 
         KeyValuePair<EventSourceId, ConcurrencyScope>[] scopes;
         EventForEventSourceId[] events;

@@ -183,7 +183,8 @@ public class ProjectionPipelineManager(
     {
         var replayScopedStorage = new ReplayScopedEventSequenceStorage(namespaceStorage.GetEventSequence(projection.EventSequenceId));
         var futuresTracker = new ProjectionFuturesTracker();
-        var resolveFuturesStep = new ResolveFutures(futuresTracker, projectionFutures, typeFormats, objectComparer, loggerFactory.CreateLogger<ResolveFutures>(), replayScopedStorage, sink);
+        var encryptChangeset = new EncryptChangeset(readModelsCompliance, objectComparer, eventStore, @namespace);
+        var resolveFuturesStep = new ResolveFutures(futuresTracker, projectionFutures, typeFormats, objectComparer, encryptChangeset, loggerFactory.CreateLogger<ResolveFutures>(), replayScopedStorage, sink);
 
         IEnumerable<ICanPerformProjectionPipelineStep> steps =
         [
@@ -191,7 +192,7 @@ public class ProjectionPipelineManager(
             new SetInitialState(sink, loggerFactory.CreateLogger<SetInitialState>()),
             new DecryptInitialState(readModelsCompliance, eventStore, @namespace),
             new HandleEvent(replayScopedStorage, sink, loggerFactory.CreateLogger<HandleEvent>()),
-            new EncryptChangeset(readModelsCompliance, objectComparer, eventStore, @namespace),
+            encryptChangeset,
             new StoreFutures(futuresTracker, projectionFutures, loggerFactory.CreateLogger<StoreFutures>()),
             resolveFuturesStep,
             new SaveChanges(projectionFutures, sink, changesetStorage, options.Value.ReadModels.GuardSinkWritesOnWatermark, loggerFactory.CreateLogger<SaveChanges>(), generation?.Destination)

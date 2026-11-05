@@ -44,6 +44,11 @@ internal sealed class ReactorDispatcher(
     ILogger<Reactors> logger,
     ILoggerFactory loggerFactory)
 {
+    /// <summary>
+    /// Gets or sets the client span naming convention.
+    /// </summary>
+    internal ClientSpanNames SpanNames { get; set; }
+
 #if CHRONICLE_ROLLING_DIAGNOSTICS
     /// <summary>
     /// Dispatches an isolated diagnostic candidate's batch with stream-local correlation.
@@ -100,10 +105,8 @@ internal sealed class ReactorDispatcher(
         }
 
         using var span = activitySource.Handle(
-            eventStore.Name,
-            @namespace,
-            handler.EventSequenceId,
-            handler.Id);
+            new(eventStore.Name, @namespace, handler.EventSequenceId, handler.Id),
+            SpanNames);
 
         var partitions = events.PartitionsOf();
         var outcomes = new List<PartitionOutcome>(partitions.Count);

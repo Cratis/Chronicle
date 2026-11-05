@@ -11,8 +11,7 @@ public class DecRemoveWithJoinDeveloperProjectsProjection : IProjectionFor<DecRe
                 .UsingParentKey(e => e.DeveloperId)
                 .UsingKey(e => e.ProjectId)
                 .Set(m => m.AssignedAt).ToEventContextProperty(c => c.Occurred))
-            .Join<DecRemoveWithJoinProjectInitiated>(_ => _
-                .On(m => m.ProjectId))
+            .Join<DecRemoveWithJoinProjectInitiated>()
             .RemovedWith<DecRemoveWithJoinDeveloperUnassignedFromProject>(_ => _
                 .UsingParentKey(e => e.DeveloperId)
                 .UsingKey(e => e.ProjectId))
