@@ -44,7 +44,7 @@ public class a_mutation_validation : Specification
             EventSequenceMutationPhase.Reserved,
             EventSequenceMutationPhase.None,
             EventSequenceMutationRepairState.Unspecified);
-        _witness = new(7L, _definition.DefinitionDigestV1, new(new byte[32]), EventSequenceMutationDigestVersion.Sha256DomainSeparated);
+        _witness = new(7L, _definition.DefinitionDigestV1, new(new byte[32]), _definition.DefinitionDigestVersion);
         _history = new(
             _request.Id,
             42L,
@@ -77,10 +77,12 @@ public class a_mutation_validation : Specification
     {
         var actualRequest = request ?? _request;
         var actualTarget = target ?? _target;
+        var version = EventSequenceMutationDigestCalculator.CurrentDigestVersion;
         return new(
             actualRequest,
             actualTarget,
-            EventSequenceMutationDigestCalculator.CalculateDefinitionDigest(_scope, actualRequest, actualTarget));
+            EventSequenceMutationDigestCalculator.CalculateDefinitionDigest(_scope, actualRequest, actualTarget, version),
+            version);
     }
 
     protected EventSequenceMutationHistoryEntry WithValidReceiptDigest(EventSequenceMutationHistoryEntry history)
@@ -90,7 +92,8 @@ public class a_mutation_validation : Specification
             _scope,
             history,
             witness.FinalStateVersion,
-            witness.DefinitionDigestV1);
+            witness.DefinitionDigestV1,
+            witness.DigestVersion);
         return history with { TerminalWitness = witness with { ReceiptDigestV1 = digest } };
     }
 }

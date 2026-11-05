@@ -26,6 +26,13 @@ public static class EventSequenceMutationDigestCalculator
     public static EventSequenceMutationDigestVersion CurrentDigestVersion => EventSequenceMutationDigestSeam.CurrentVersion;
 
     /// <summary>
+    /// Determines whether digests of a version can be recomputed. Any supported version is accepted when reading a persisted receipt.
+    /// </summary>
+    /// <param name="version">The persisted digest version.</param>
+    /// <returns><see langword="true"/> when the version is supported.</returns>
+    public static bool IsSupportedDigestVersion(EventSequenceMutationDigestVersion version) => EventSequenceMutationDigestSeam.IsSupported(version);
+
+    /// <summary>
     /// Calculates the deterministic version 1 identifier for a mutation origin and target event sequence.
     /// </summary>
     /// <param name="target">The target event sequence identity.</param>
@@ -74,7 +81,23 @@ public static class EventSequenceMutationDigestCalculator
     public static EventSequenceMutationDefinitionDigestV1 CalculateDefinitionDigest(
         EventSequenceKey scope,
         EventSequenceMutationRequest request,
-        EventSequenceMutationTarget target)
+        EventSequenceMutationTarget target) =>
+        CalculateDefinitionDigest(scope, request, target, CurrentDigestVersion);
+
+    /// <summary>
+    /// Calculates the definition digest for a request and its winning frozen target with a specific digest version.
+    /// </summary>
+    /// <param name="scope">The target event sequence scope.</param>
+    /// <param name="request">The immutable mutation request.</param>
+    /// <param name="target">The winning frozen target.</param>
+    /// <param name="version">The digest version to compute with; the persisted one when verifying a stored digest.</param>
+    /// <returns>The definition digest.</returns>
+    /// <exception cref="UnsupportedEventSequenceMutationDigestVersion">Thrown when the version is not supported.</exception>
+    public static EventSequenceMutationDefinitionDigestV1 CalculateDefinitionDigest(
+        EventSequenceKey scope,
+        EventSequenceMutationRequest request,
+        EventSequenceMutationTarget target,
+        EventSequenceMutationDigestVersion version)
     {
         var frame = new CanonicalFrameWriter(_definitionDomain);
         frame.WriteText("eventStore", scope.EventStore.Value);
@@ -90,7 +113,7 @@ public static class EventSequenceMutationDigestCalculator
         frame.WriteUInt64(target.EndExclusive.Value);
         frame.WriteUInt64(target.ExpectedCount.Value);
 
-        return new(EventSequenceMutationDigestSeam.Compute(scope.EventStore, frame.WrittenSpan).Digest);
+        return new(EventSequenceMutationDigestSeam.Compute(scope.EventStore, version, frame.WrittenSpan));
     }
 
     /// <summary>
@@ -106,7 +129,26 @@ public static class EventSequenceMutationDigestCalculator
         EventSequenceKey scope,
         EventSequenceMutationHistoryEntry receipt,
         EventSequenceMutationStateVersion finalStateVersion,
-        EventSequenceMutationDefinitionDigestV1 definitionDigest)
+        EventSequenceMutationDefinitionDigestV1 definitionDigest) =>
+        CalculateReceiptDigest(scope, receipt, finalStateVersion, definitionDigest, CurrentDigestVersion);
+
+    /// <summary>
+    /// Calculates the terminal receipt digest for a mutation in an event sequence scope with a specific digest version.
+    /// </summary>
+    /// <param name="scope">The target event sequence scope.</param>
+    /// <param name="receipt">The persisted terminal receipt fields.</param>
+    /// <param name="finalStateVersion">The final persisted mutation state version.</param>
+    /// <param name="definitionDigest">The mutation definition digest.</param>
+    /// <param name="version">The digest version to compute with; the persisted one when verifying a stored digest.</param>
+    /// <returns>The terminal receipt digest.</returns>
+    /// <exception cref="UnsupportedEventSequenceId">Thrown when the target or origin event sequence identifier is unsupported.</exception>
+    /// <exception cref="UnsupportedEventSequenceMutationDigestVersion">Thrown when the version is not supported.</exception>
+    public static EventSequenceMutationReceiptDigestV1 CalculateReceiptDigest(
+        EventSequenceKey scope,
+        EventSequenceMutationHistoryEntry receipt,
+        EventSequenceMutationStateVersion finalStateVersion,
+        EventSequenceMutationDefinitionDigestV1 definitionDigest,
+        EventSequenceMutationDigestVersion version)
     {
         var targetIdentity = GetIdentity(scope.EventSequenceId.Value);
         var frame = new CanonicalFrameWriter(_receiptDomain);
@@ -125,7 +167,7 @@ public static class EventSequenceMutationDigestCalculator
         frame.WriteRaw(definitionDigest.Snapshot());
         frame.WriteInt64(receipt.ArchivedAt.ToUnixTimeMilliseconds());
 
-        return new(EventSequenceMutationDigestSeam.Compute(scope.EventStore, frame.WrittenSpan).Digest);
+        return new(EventSequenceMutationDigestSeam.Compute(scope.EventStore, version, frame.WrittenSpan));
     }
 
     static EventSequenceMutationIdentity GetIdentity(string display)

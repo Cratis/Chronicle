@@ -49,7 +49,13 @@ sealed class EventSequenceMutationRegistryState
                 }
 
                 var archivedScope = Scope(request.TargetSequence, eventStore, @namespace);
-                var archivedDefinition = EventSequenceMutationDefinition.Create(archivedScope, request, archivedHistory.Target);
+                var archivedVersion = archivedHistory.TerminalWitness.DigestVersion;
+                if (!EventSequenceMutationDigestCalculator.IsSupportedDigestVersion(archivedVersion))
+                {
+                    return EventSequenceMutationBeginResult.Corrupt();
+                }
+
+                var archivedDefinition = EventSequenceMutationDefinition.Create(archivedScope, request, archivedHistory.Target, archivedVersion);
                 if (archivedDefinition.DefinitionDigestV1 != archivedHistory.TerminalWitness.DefinitionDigestV1)
                 {
                     return EventSequenceMutationBeginResult.DefinitionConflict(request.Id);

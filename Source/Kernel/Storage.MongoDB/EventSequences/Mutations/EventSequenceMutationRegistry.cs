@@ -421,10 +421,15 @@ public class EventSequenceMutationRegistry(
 
         var history = ToStorageHistory(document);
 
+        if (!EventSequenceMutationDigestCalculator.IsSupportedDigestVersion(history.TerminalWitness.DigestVersion))
+        {
+            return EventSequenceMutationBeginResult.Corrupt();
+        }
+
         EventSequenceMutationDefinition candidateDefinition;
         try
         {
-            candidateDefinition = EventSequenceMutationDefinition.Create(scope, request, history.Target);
+            candidateDefinition = EventSequenceMutationDefinition.Create(scope, request, history.Target, history.TerminalWitness.DigestVersion);
         }
         catch (InvalidEventSequenceMutation)
         {

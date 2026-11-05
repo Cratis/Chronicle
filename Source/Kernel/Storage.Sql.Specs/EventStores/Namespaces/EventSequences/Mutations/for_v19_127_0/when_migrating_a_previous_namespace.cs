@@ -287,7 +287,7 @@ public class when_migrating_a_previous_namespace : Specification
                 }
             }
         }
-        return activeColumns == 15;
+        return activeColumns == 16;
     }
 
     async Task<bool> ColumnExists(string tableName, string columnName)

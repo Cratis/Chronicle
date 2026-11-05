@@ -45,7 +45,7 @@ public class a_registry_contract : Specification
             EventSequenceMutationPhase.None,
             EventSequenceMutationRepairState.Unspecified);
         _token = EventSequenceMutationStateToken.Create(_scope, _active);
-        var witness = new EventSequenceMutationTerminalWitness(1L, _definition.DefinitionDigestV1, new(new byte[32]), EventSequenceMutationDigestVersion.Sha256DomainSeparated);
+        var witness = new EventSequenceMutationTerminalWitness(1L, _definition.DefinitionDigestV1, new(new byte[32]), _definition.DefinitionDigestVersion);
         _history = new(
             _request.Id,
             7L,
@@ -55,7 +55,7 @@ public class a_registry_contract : Specification
             EventSequenceMutationRepairState.NotRequired,
             witness,
             DateTimeOffset.FromUnixTimeMilliseconds(1_700_000_000_123));
-        var receiptDigest = EventSequenceMutationDigestCalculator.CalculateReceiptDigest(_scope, _history, witness.FinalStateVersion, witness.DefinitionDigestV1);
+        var receiptDigest = EventSequenceMutationDigestCalculator.CalculateReceiptDigest(_scope, _history, witness.FinalStateVersion, witness.DefinitionDigestV1, witness.DigestVersion);
         _history = _history with { TerminalWitness = witness with { ReceiptDigestV1 = receiptDigest } };
         _archivedRegistration = new(_definition, EventSequenceMutationRegistryLifecycle.Archived, 7L, _history.TerminalWitness);
         _activeRegistration = new(_definition, EventSequenceMutationRegistryLifecycle.Bound, 7L, null);

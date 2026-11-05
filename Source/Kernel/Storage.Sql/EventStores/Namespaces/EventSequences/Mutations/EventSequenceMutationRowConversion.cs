@@ -52,7 +52,7 @@ static class EventSequenceMutationRowConversion
             row.ActiveKind!.Value,
             new EventSequenceMutationCommandEnvelope(row.ActiveCommandPayload!, row.ActiveCommandHash!));
         var frozenTarget = new EventSequenceMutationTarget(row.ActiveTargetStart!, row.ActiveTargetEndExclusive!, row.ActiveTargetExpectedCount!);
-        return new EventSequenceMutationDefinition(request, frozenTarget, row.ActiveDefinitionDigestV1!);
+        return new EventSequenceMutationDefinition(request, frozenTarget, row.ActiveDefinitionDigestV1!, (EventSequenceMutationDigestVersion)row.ActiveDefinitionDigestVersion!.Value);
     }
 
     /// <summary>
@@ -74,6 +74,7 @@ static class EventSequenceMutationRowConversion
         row.ActiveTargetEndExclusive = active.Target.EndExclusive;
         row.ActiveTargetExpectedCount = active.Target.ExpectedCount;
         row.ActiveDefinitionDigestV1 = active.Definition.DefinitionDigestV1;
+        row.ActiveDefinitionDigestVersion = (int)active.Definition.DefinitionDigestVersion;
         row.ActivePhase = active.Phase;
         row.ActiveBlockedFrom = active.BlockedFrom;
         row.ActiveRepairState = active.RepairState;

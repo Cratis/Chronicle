@@ -95,6 +95,11 @@ public class EventSequenceMutationHeadEntry
     public EventSequenceMutationDefinitionDigestV1? ActiveDefinitionDigestV1 { get; set; }
 
     /// <summary>
+    /// Gets or sets the digest version, as an integer, that produced <see cref="ActiveDefinitionDigestV1"/>.
+    /// </summary>
+    public int? ActiveDefinitionDigestVersion { get; set; }
+
+    /// <summary>
     /// Gets or sets the active mutation phase.
     /// </summary>
     public EventSequenceMutationPhase? ActivePhase { get; set; }

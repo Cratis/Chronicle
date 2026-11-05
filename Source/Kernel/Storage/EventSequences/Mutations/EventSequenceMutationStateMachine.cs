@@ -130,11 +130,14 @@ public static class EventSequenceMutationStateMachine
 
         var finalStateVersion = current.StateVersion.Next();
         var definitionDigest = current.Definition.DefinitionDigestV1;
+
+        // The receipt is written with the version the definition digest was written with, so one version covers both digests.
+        var digestVersion = current.Definition.DefinitionDigestVersion;
         var provisionalWitness = new EventSequenceMutationTerminalWitness(
             finalStateVersion,
             definitionDigest,
             new(new byte[32]),
-            EventSequenceMutationDigestCalculator.CurrentDigestVersion);
+            digestVersion);
         var history = new EventSequenceMutationHistoryEntry(
             current.Id,
             current.Ordinal,
@@ -148,7 +151,8 @@ public static class EventSequenceMutationStateMachine
             scope,
             history,
             finalStateVersion,
-            definitionDigest);
+            definitionDigest,
+            digestVersion);
         history = history with
         {
             TerminalWitness = provisionalWitness with { ReceiptDigestV1 = receiptDigest }

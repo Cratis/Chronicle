@@ -182,6 +182,7 @@ public class NamespaceDbContext(DbContextOptions<NamespaceDbContext> options) : 
                     .HasConversion(d => EventSequenceMutationDigestColumns.DefinitionDigestToHex(d!), s => EventSequenceMutationDigestColumns.DefinitionDigestFromHex(s))
                     .HasMaxLength(64)
                     .IsRequired(false);
+                entity.Property(e => e.ActiveDefinitionDigestVersion).IsRequired(false);
                 entity.Property(e => e.ActivePhase).IsRequired(false);
                 entity.Property(e => e.ActiveBlockedFrom).IsRequired(false);
                 entity.Property(e => e.ActiveRepairState).IsRequired(false);

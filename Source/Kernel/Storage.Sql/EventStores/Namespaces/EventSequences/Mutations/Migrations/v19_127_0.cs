@@ -42,6 +42,7 @@ public class v19_127_0 : Migration
                 ActiveTargetEndExclusive = table.NumberColumn<ulong>(migrationBuilder, nullable: true),
                 ActiveTargetExpectedCount = table.NumberColumn<ulong>(migrationBuilder, nullable: true),
                 ActiveDefinitionDigestV1 = table.StringColumn(migrationBuilder, maxLength: 64, nullable: true),
+                ActiveDefinitionDigestVersion = table.NumberColumn<int>(migrationBuilder, nullable: true),
                 ActivePhase = table.NumberColumn<int>(migrationBuilder, nullable: true),
                 ActiveBlockedFrom = table.NumberColumn<int>(migrationBuilder, nullable: true),
                 ActiveRepairState = table.NumberColumn<int>(migrationBuilder, nullable: true)

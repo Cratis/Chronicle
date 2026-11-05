@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.EventSequences.Mutations;
 using Cratis.Chronicle.Storage.EventSequences.Mutations;
@@ -117,6 +118,7 @@ public sealed class EventSequenceMutationRegistry(
                     .SetProperty(h => h.ActiveTargetEndExclusive, active.Target.EndExclusive)
                     .SetProperty(h => h.ActiveTargetExpectedCount, active.Target.ExpectedCount)
                     .SetProperty(h => h.ActiveDefinitionDigestV1, active.Definition.DefinitionDigestV1)
+                    .SetProperty(h => h.ActiveDefinitionDigestVersion, (int)active.Definition.DefinitionDigestVersion)
                     .SetProperty(h => h.ActivePhase, active.Phase)
                     .SetProperty(h => h.ActiveBlockedFrom, active.BlockedFrom)
                     .SetProperty(h => h.ActiveRepairState, active.RepairState),
@@ -140,14 +142,20 @@ public sealed class EventSequenceMutationRegistry(
         EventSequenceMutationRequest request,
         EventSequenceMutationHistoryEntry historyRow)
     {
+        var storedVersion = (EventSequenceMutationDigestVersion)historyRow.DigestVersion;
+        if (!EventSequenceMutationDigestCalculator.IsSupportedDigestVersion(storedVersion))
+        {
+            return EventSequenceMutationBeginResult.Corrupt();
+        }
+
         var frozenTarget = new EventSequenceMutationTarget(historyRow.TargetStart, historyRow.TargetEndExclusive, historyRow.TargetExpectedCount);
-        var recomputedDigest = EventSequenceMutationDigestCalculator.CalculateDefinitionDigest(scope, request, frozenTarget);
+        var recomputedDigest = EventSequenceMutationDigestCalculator.CalculateDefinitionDigest(scope, request, frozenTarget, storedVersion);
         if (recomputedDigest != historyRow.DefinitionDigestV1)
         {
             return EventSequenceMutationBeginResult.DefinitionConflict(request.Id);
         }
 
-        var definition = EventSequenceMutationDefinition.Create(scope, request, frozenTarget);
+        var definition = EventSequenceMutationDefinition.Create(scope, request, frozenTarget, storedVersion);
         var witness = EventSequenceMutationRowConversion.ToTerminalWitness(historyRow);
         var registration = new EventSequenceMutationRegistration(definition, EventSequenceMutationRegistryLifecycle.Archived, historyRow.Ordinal, witness);
         var history = EventSequenceMutationRowConversion.ToStorageHistory(historyRow);
@@ -537,7 +545,21 @@ public sealed class EventSequenceMutationRegistry(
             .ExecuteUpdateAsync(
                 s => s
                     .SetProperty(h => h.ActiveMutationId, (EventSequenceMutationId?)null)
-                    .SetProperty(h => h.ActiveCommandPayload, (string?)null),
+                    .SetProperty(h => h.ActiveOrdinal, (EventSequenceMutationOrdinal?)null)
+                    .SetProperty(h => h.ActiveStateVersion, (EventSequenceMutationStateVersion?)null)
+                    .SetProperty(h => h.ActiveOriginSequence, (EventSequenceId?)null)
+                    .SetProperty(h => h.ActiveOriginSequenceNumber, (EventSequenceNumber?)null)
+                    .SetProperty(h => h.ActiveKind, (EventSequenceMutationKind?)null)
+                    .SetProperty(h => h.ActiveCommandPayload, (string?)null)
+                    .SetProperty(h => h.ActiveCommandHash, (EventSequenceMutationCommandHash?)null)
+                    .SetProperty(h => h.ActiveTargetStart, (EventSequenceNumber?)null)
+                    .SetProperty(h => h.ActiveTargetEndExclusive, (EventSequenceNumber?)null)
+                    .SetProperty(h => h.ActiveTargetExpectedCount, (EventCount?)null)
+                    .SetProperty(h => h.ActiveDefinitionDigestV1, (EventSequenceMutationDefinitionDigestV1?)null)
+                    .SetProperty(h => h.ActiveDefinitionDigestVersion, (int?)null)
+                    .SetProperty(h => h.ActivePhase, (EventSequenceMutationPhase?)null)
+                    .SetProperty(h => h.ActiveBlockedFrom, (EventSequenceMutationPhase?)null)
+                    .SetProperty(h => h.ActiveRepairState, (EventSequenceMutationRepairState?)null),
                 cancellationToken);
     }
 

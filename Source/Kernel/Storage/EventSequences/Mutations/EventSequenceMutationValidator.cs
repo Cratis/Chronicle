@@ -139,7 +139,12 @@ public static class EventSequenceMutationValidator
             return Invalid(EventSequenceMutationValidationError.InvalidDigest, nameof(definition.DefinitionDigestV1));
         }
 
-        var digest = EventSequenceMutationDigestCalculator.CalculateDefinitionDigest(scope!, definition.Request, definition.Target);
+        if (!EventSequenceMutationDigestCalculator.IsSupportedDigestVersion(definition.DefinitionDigestVersion))
+        {
+            return Invalid(EventSequenceMutationValidationError.InvalidDigest, nameof(definition.DefinitionDigestVersion));
+        }
+
+        var digest = EventSequenceMutationDigestCalculator.CalculateDefinitionDigest(scope!, definition.Request, definition.Target, definition.DefinitionDigestVersion);
         return digest == definition.DefinitionDigestV1
             ? EventSequenceMutationValidationResult.Valid
             : Invalid(EventSequenceMutationValidationError.InvalidDigest, nameof(definition.DefinitionDigestV1));
@@ -265,7 +270,8 @@ public static class EventSequenceMutationValidator
             scope!,
             history,
             witness.FinalStateVersion,
-            witness.DefinitionDigestV1);
+            witness.DefinitionDigestV1,
+            witness.DigestVersion);
 
         return expected == witness.ReceiptDigestV1
             ? EventSequenceMutationValidationResult.Valid
@@ -309,7 +315,8 @@ public static class EventSequenceMutationValidator
                            request.Id == history.Id &&
                            request.Kind == history.Kind &&
                            definition.Target == history.Target &&
-                           definition.DefinitionDigestV1 == history.TerminalWitness.DefinitionDigestV1;
+                           definition.DefinitionDigestV1 == history.TerminalWitness.DefinitionDigestV1 &&
+                           definition.DefinitionDigestVersion == history.TerminalWitness.DigestVersion;
 
         return exactLineage
             ? EventSequenceMutationValidationResult.Valid
@@ -449,7 +456,7 @@ public static class EventSequenceMutationValidator
             ReceiptDigestV1: not null
         } &&
         expectedDefinitionDigest is not null &&
-        witness.DigestVersion == EventSequenceMutationDigestCalculator.CurrentDigestVersion &&
+        EventSequenceMutationDigestCalculator.IsSupportedDigestVersion(witness.DigestVersion) &&
         witness.DefinitionDigestV1 == expectedDefinitionDigest;
 
     static bool IdentityEquals(EventSequenceMutationIdentity? left, EventSequenceMutationIdentity? right) =>
