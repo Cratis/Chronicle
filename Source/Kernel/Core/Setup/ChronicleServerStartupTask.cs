@@ -102,6 +102,11 @@ internal sealed class ChronicleServerStartupTask(
     /// </remarks>
     const int MaxRounds = 10;
 
+    /// <summary>
+    /// How many observers are activated at once while startup rehydrates them.
+    /// </summary>
+    const int MaxConcurrentObserverActivations = 32;
+
     static readonly TimeSpan _initialRetryDelay = TimeSpan.FromSeconds(2);
     static readonly TimeSpan _busyRetryDelay = TimeSpan.FromMinutes(1);
 
@@ -303,6 +308,7 @@ internal sealed class ChronicleServerStartupTask(
     /// <param name="step">The name of the step, for the operator reading the log.</param>
     /// <param name="action">The work to perform.</param>
     /// <param name="cancellationToken">Token for cancelling startup and retry backoff.</param>
+    /// <param name="maxRounds">How many rounds of attempts are made before the host is failed.</param>
     /// <returns>Awaitable task.</returns>
     /// <remarks>
     /// Only the failures <see cref="SiblingSiloInstability.IsTransient"/> or the registered
@@ -446,6 +452,11 @@ internal sealed class ChronicleServerStartupTask(
             .Select(_ => new ObserverKey(_.Identifier, eventStore, namespaceName, _.EventSequenceId));
         var observerKeys = reducerObserverKeys.Concat(reactorObserverKeys).Distinct().ToArray();
 
-        await Task.WhenAll(observerKeys.Select(_ => grainFactory.GetGrain<IObserver>(_).Ensure()));
+        // A store can hold thousands of observers, and activating them all at once starves the silo's own calls (#4068, #5676).
+        // The failure of any one still fails the step, as it did when they were awaited together.
+        await Parallel.ForEachAsync(
+            observerKeys,
+            new ParallelOptions { MaxDegreeOfParallelism = MaxConcurrentObserverActivations },
+            async (key, _) => await grainFactory.GetGrain<IObserver>(key).Ensure());
     }
 }

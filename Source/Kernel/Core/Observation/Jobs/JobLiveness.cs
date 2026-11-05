@@ -40,14 +40,21 @@ internal static class JobLiveness
     internal static readonly TimeSpan PreparationAbandonedAfter = TimeSpan.FromMinutes(15);
 
     /// <summary>
-    /// Gets whether a job recorded as preparing never produced a step and has not moved on since <see cref="PreparationAbandonedAfter"/>.
+    /// Gets whether a job recorded as preparing or starting has no step left to drive it and has not moved on since <see cref="PreparationAbandonedAfter"/>.
     /// </summary>
     /// <param name="job">The <see cref="JobState"/> to check.</param>
     /// <param name="now">The current time.</param>
     /// <returns>True if the job is preparing with no steps and nothing that could still start them.</returns>
     internal static bool PreparationAbandoned(JobState job, DateTimeOffset now)
     {
-        if (job.Status == JobStatus.Running || !job.IsPreparingOrRunning || job.Progress.TotalSteps > 0)
+        if (job.Status == JobStatus.Running || !job.IsPreparingOrRunning)
+        {
+            return false;
+        }
+
+        // Steps that are still outstanding are being started; only a job with none, or with every one already concluded, has nothing left to drive it.
+        var progress = job.Progress;
+        if (progress.TotalSteps > 0 && progress.SuccessfulSteps + progress.FailedSteps + progress.StoppedSteps < progress.TotalSteps)
         {
             return false;
         }
