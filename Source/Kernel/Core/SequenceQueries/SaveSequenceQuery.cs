@@ -5,6 +5,7 @@ using Cratis.Arc.Authorization;
 using Cratis.Arc.Commands.ModelBound;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.SequenceQueries;
+using Cratis.Chronicle.Security;
 using Cratis.Chronicle.Storage;
 
 namespace Cratis.Chronicle.SequenceQueries;
@@ -57,18 +58,25 @@ public record SaveSequenceQuery(
     /// Handles the command.
     /// </summary>
     /// <param name="currentPrincipalAccessor"><see cref="ICurrentPrincipalAccessor"/> for resolving the owner.</param>
+    /// <param name="administratorAuthorization">The <see cref="IAdministratorAuthorization"/> for the administrator override.</param>
     /// <param name="storage">The <see cref="IStorage"/> holding the saved queries.</param>
     /// <returns>Awaitable task.</returns>
-    public Task Handle(ICurrentPrincipalAccessor currentPrincipalAccessor, IStorage storage) =>
-        storage.GetEventStore(EventStore).SequenceQueries.Save(
+    public async Task Handle(ICurrentPrincipalAccessor currentPrincipalAccessor, IAdministratorAuthorization administratorAuthorization, IStorage storage)
+    {
+        var queries = storage.GetEventStore(EventStore).SequenceQueries;
+        var existing = await queries.Get(Id);
+        if (!await SequenceQueryChangeAccess.IsPermitted(existing?.Owner.Value, currentPrincipalAccessor, administratorAuthorization)) return;
+
+        await queries.Save(
             new SequenceQueryDefinition(
                 Id,
                 Name,
                 Scope,
 
                 // Ownership follows the principal saving the query, never a value the client supplies,
-                // so a caller cannot plant a query into somebody else's private set.
-                SequenceQueryOwners.GetCurrent(currentPrincipalAccessor),
+                // so a caller cannot plant a query into somebody else's private set. Updating an
+                // existing query keeps the owner it is stored under.
+                existing?.Owner ?? SequenceQueryOwners.GetCurrent(currentPrincipalAccessor),
                 Folder,
                 Namespace,
                 EventSequenceId,
@@ -83,4 +91,5 @@ public record SaveSequenceQuery(
                     OccurredTo),
                 SequenceQuerySortByParser.Parse(SortBy),
                 Descending));
+    }
 }

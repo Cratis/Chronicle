@@ -31,6 +31,14 @@ public class SequenceQueryStorage : ISequenceQueryStorage, IDisposable
     }
 
     /// <inheritdoc/>
+    public Task<SequenceQueryDefinition?> Get(SequenceQueryId id) =>
+        Task.FromResult(_definitions.TryGetValue(id.Value, out var definition) ? definition : null);
+
+    /// <inheritdoc/>
+    public Task<SequenceQueryFolderDefinition?> GetFolder(SequenceQueryFolderId id) =>
+        Task.FromResult(_folders.TryGetValue(id.Value, out var folder) ? folder : null);
+
+    /// <inheritdoc/>
     public Task Save(SequenceQueryDefinition definition)
     {
         _definitions[definition.Id.Value] = definition;
