@@ -43,6 +43,9 @@ internal static partial class ChronicleServerStartupTaskLogging
     [LoggerMessage(LogLevel.Critical, "This silo cannot join the cluster: it holds a Chronicle release from before the serializers were renamed to Cratis.Choreography (19.123.1), and releases on either side of that cannot exchange grain calls. Upgrade by stopping every silo and then starting this release, for example with the Recreate strategy in Kubernetes. See https://cratis.io/chronicle/hosting/rolling-deploy/ Local release: {LocalRelease}; cluster releases: {ClusterReleases}")]
     internal static partial void StartupRefusedBecauseOfIncompatibleRelease(this ILogger<ChronicleServerStartupTask> logger, string localRelease, string clusterReleases);
 
+    [LoggerMessage(LogLevel.Critical, "Startup refused: {Description}")]
+    internal static partial void StartupRefusedBecauseSystemDataIsMisplaced(this ILogger<ChronicleServerStartupTask> logger, string description);
+
     [LoggerMessage(LogLevel.Critical, "Patch manager could not relocate to a kernel at least as new as the caller. Local release: {LocalRelease}; cluster releases: {ClusterReleases}")]
     internal static partial void PatchManagerCouldNotRelocate(this ILogger<ChronicleServerStartupTask> logger, string localRelease, string clusterReleases);
 

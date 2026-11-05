@@ -140,6 +140,7 @@ internal sealed class ChronicleServerStartupTask(
     async Task Execute(CancellationToken cancellationToken)
     {
         RefuseIncompatibleCluster();
+        await RefuseMisplacedSystemData();
         await (generationFloorAdmission ?? new GenerationFloorAdmission(storage)).Admit(cancellationToken);
 
         Task Step(string step, Func<Task> action) => RunStep(step, action, cancellationToken);
@@ -272,6 +273,27 @@ internal sealed class ChronicleServerStartupTask(
 
         logger.StartupRefusedBecauseOfIncompatibleRelease(local.ToString(), clusterReleases.Summarize().ToString());
         throw new IncompatibleClusterRelease(local, incompatible);
+    }
+
+    /// <summary>
+    /// Refuses to start when the System event store's data sits under the name this kernel is not configured to use.
+    /// </summary>
+    /// <remarks>
+    /// Starting anyway would create a fresh administrator roster in an empty store and fail with a message that
+    /// does not say the databases were renamed (#5690).
+    /// </remarks>
+    /// <returns>Awaitable task.</returns>
+    /// <exception cref="SystemEventStoreDataMisplaced">The data is under the other name.</exception>
+    async Task RefuseMisplacedSystemData()
+    {
+        var misplaced = await storage.FindMisplacedSystemEventStoreData();
+        if (string.IsNullOrWhiteSpace(misplaced))
+        {
+            return;
+        }
+
+        logger.StartupRefusedBecauseSystemDataIsMisplaced(misplaced);
+        throw new SystemEventStoreDataMisplaced(misplaced);
     }
 
     async Task RegisterKernelProjections(EventStoreName eventStore, CancellationToken cancellationToken)
