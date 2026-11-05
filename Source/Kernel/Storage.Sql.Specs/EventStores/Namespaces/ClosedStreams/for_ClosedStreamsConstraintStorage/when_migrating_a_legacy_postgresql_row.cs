@@ -32,7 +32,7 @@ public class when_migrating_a_legacy_postgresql_row(PostgreSqlFixture fixture) :
         var history = context.GetService<IHistoryRepository>();
         var sqlGenerator = context.GetService<IMigrationsSqlGenerator>();
         await context.Database.ExecuteSqlRawAsync(history.GetCreateIfNotExistsScript());
-        foreach (var (id, type) in assembly.Migrations.Where(entry => entry.Key != "NS-ClosedStreams-v19_38_0"))
+        foreach (var (id, type) in assembly.Migrations.Where(entry => entry.Key is not ("NS-ClosedStreams-v19_38_0" or "NS-ClosedStreams-v20_0_2")))
         {
             var migration = assembly.CreateMigration(type, context.Database.ProviderName);
             foreach (var command in sqlGenerator.Generate(migration.UpOperations))

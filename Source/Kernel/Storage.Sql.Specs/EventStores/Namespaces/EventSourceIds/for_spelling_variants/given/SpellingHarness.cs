@@ -35,6 +35,8 @@ public sealed class SpellingHarness(string provider, Func<Task<string>> createDa
 
     public CommandCounter Counter { get; } = new();
 
+    public CapturedWarnings Warnings { get; } = new();
+
     public EventSequenceStorage Events { get; private set; }
     public ClosedStreamsConstraintStorage ClosedStreams { get; private set; }
 
@@ -67,7 +69,7 @@ public sealed class SpellingHarness(string provider, Func<Task<string>> createDa
             Substitute.For<ILogger<EventSequenceStorage>>(),
             Substitute.For<Chronicle.Storage.EventTypes.IEventTypesStorage>(),
             new Json.ExpandoObjectConverter(new Schemas.TypeFormats()));
-        ClosedStreams = new(_eventStore, _namespace, sequenceId, database);
+        ClosedStreams = new(_eventStore, _namespace, sequenceId, database, Warnings);
     }
 
     public async Task<ulong> Append(EventSourceId eventSourceId)
@@ -99,6 +101,12 @@ public sealed class SpellingHarness(string provider, Func<Task<string>> createDa
             numbers.AddRange(cursor.Current.Select(_ => _.Context.SequenceNumber.Value));
         }
         return [.. numbers.Order()];
+    }
+
+    public async Task Execute(string sql)
+    {
+        await using var context = NamespaceContext();
+        await context.Database.ExecuteSqlRawAsync(sql);
     }
 
     public async ValueTask DisposeAsync() => await dropDatabase(_connectionString);

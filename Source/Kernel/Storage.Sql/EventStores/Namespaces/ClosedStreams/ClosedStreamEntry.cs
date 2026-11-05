@@ -55,6 +55,19 @@ public class ClosedStreamEntry
     public int Dimensions { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether the entry was written when identifiers were compared exactly.
+    /// Entries that were not apply to every spelling of their identifiers until reviewed.
+    /// </summary>
+    public bool ExactSpelling { get; set; }
+
+    /// <summary>
+    /// Gets or sets the hash of the stored identifier bytes. Computed by SQL Server, not mapped for other providers.
+    /// </summary>
+#pragma warning disable CA1819 // Properties should not return arrays: a mapped binary column.
+    public byte[]? ExactKey { get; set; }
+#pragma warning restore CA1819
+
+    /// <summary>
     /// Gets or sets the closing sequence number.
     /// </summary>
     public decimal SequenceNumber { get; set; }

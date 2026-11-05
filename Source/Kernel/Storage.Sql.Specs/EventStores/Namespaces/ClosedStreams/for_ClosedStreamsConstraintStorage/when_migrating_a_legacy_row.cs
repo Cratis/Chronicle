@@ -23,7 +23,7 @@ public class when_migrating_a_legacy_row : given.an_unmigrated_closed_streams_da
 
         // These migration IDs are not EF timestamp IDs. Apply the prior schema and history directly,
         // matching the other namespace upgrade specifications, then use Migrate for the real upgrade.
-        foreach (var (id, type) in assembly.Migrations.Where(entry => entry.Key != "NS-ClosedStreams-v19_38_0"))
+        foreach (var (id, type) in assembly.Migrations.Where(entry => entry.Key is not ("NS-ClosedStreams-v19_38_0" or "NS-ClosedStreams-v20_0_2")))
         {
             var migration = assembly.CreateMigration(type, context.Database.ProviderName);
             foreach (var command in sqlGenerator.Generate(migration.UpOperations))

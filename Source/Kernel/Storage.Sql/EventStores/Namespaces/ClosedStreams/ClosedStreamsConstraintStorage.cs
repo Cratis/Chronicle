@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Concurrent;
 using System.Linq.Expressions;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
@@ -8,6 +9,8 @@ using Cratis.Chronicle.Concepts.Events.Constraints;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Storage.Events.Constraints;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ClosedStreams;
 
@@ -18,24 +21,32 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ClosedStreams;
 /// <param name="namespace">The namespace.</param>
 /// <param name="eventSequenceId">The event sequence.</param>
 /// <param name="database">The database.</param>
-public class ClosedStreamsConstraintStorage(EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId, IDatabase database) : IClosedStreamsConstraintStorage
+/// <param name="logger">Optional logger; no logging when not given.</param>
+public class ClosedStreamsConstraintStorage(EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId, IDatabase database, ILogger<ClosedStreamsConstraintStorage>? logger = default) : IClosedStreamsConstraintStorage
 {
+    static readonly ConcurrentDictionary<(string Store, string Namespace, string Sequence), bool> _reported = new();
+    readonly ILogger<ClosedStreamsConstraintStorage> _logger = logger ?? NullLogger<ClosedStreamsConstraintStorage>.Instance;
+
     /// <inheritdoc/>
     public async Task<IEnumerable<ClosedStream>> GetCovering(ClosedStreamScope target, IEnumerable<ClosedStreamDimensions> masks)
     {
         target = target.Normalized();
         var parameter = Expression.Parameter(typeof(ClosedStreamEntry), "row");
         Expression clauses = Expression.Constant(false);
+        var scopes = new List<ClosedStreamScope>();
         foreach (var mask in masks.Distinct().Where(mask => mask != ClosedStreamDimensions.None && (mask & target.Dimensions) == mask))
         {
             var scope = ClosedStreamScope.ForAppend(target.EventSourceId ?? EventSourceId.Unspecified, target.EventSourceType ?? EventSourceType.Unspecified, target.EventStreamType ?? EventStreamType.All, target.EventStreamId ?? EventStreamId.Default, mask);
+            scopes.Add(scope);
             var clause = ExactScope(scope);
             clauses = Expression.OrElse(clauses, new ReplaceParameter(clause.Parameters[0], parameter).Visit(clause.Body));
         }
 
         await using var context = await database.Namespace(eventStore, @namespace);
         var predicate = Expression.Lambda<Func<ClosedStreamEntry, bool>>(clauses, parameter);
-        var rows = await ForSequence(context.DbContext).Where(predicate).ToArrayAsync();
+        var found = await ForSequence(context.DbContext).Where(predicate).ToArrayAsync();
+        var rows = found.Where(row => scopes.Exists(scope => IsOrdinalMatch(row, scope) || !row.ExactSpelling)).ToArray();
+        ReportPending(rows, scopes);
 
         return rows.Select(ToClosure).ToArray();
     }
@@ -54,7 +65,8 @@ public class ClosedStreamsConstraintStorage(EventStoreName eventStore, EventStor
     {
         var scope = closure.Scope.Normalized();
         await using var context = await database.Namespace(eventStore, @namespace);
-        var row = await ForSequence(context.DbContext).Where(row => row.Owner == closure.Owner.Value).FirstOrDefaultAsync(ExactScope(scope), cancellationToken);
+        var candidates = await ForSequence(context.DbContext).Where(row => row.Owner == closure.Owner.Value).Where(ExactScope(scope)).ToArrayAsync(cancellationToken);
+        var row = candidates.FirstOrDefault(candidate => IsOrdinalMatch(candidate, scope));
         if (row is null)
         {
             row = new ClosedStreamEntry
@@ -65,9 +77,14 @@ public class ClosedStreamsConstraintStorage(EventStoreName eventStore, EventStor
                 EventSourceId = scope.EventSourceId?.Value ?? string.Empty,
                 EventSourceType = scope.EventSourceType?.Value ?? string.Empty,
                 Owner = closure.Owner.Value,
-                Dimensions = (int)scope.Dimensions
+                Dimensions = (int)scope.Dimensions,
+                ExactSpelling = true
             };
             context.DbContext.ClosedStreams.Add(row);
+        }
+        else
+        {
+            context.DbContext.ClosedStreams.Attach(row);
         }
 
         row.SequenceNumber = closure.SequenceNumber.Value;
@@ -79,7 +96,9 @@ public class ClosedStreamsConstraintStorage(EventStoreName eventStore, EventStor
     public async Task<bool> Reopen(ClosedStreamOwner owner, ClosedStreamScope scope, CancellationToken cancellationToken = default)
     {
         await using var context = await database.Namespace(eventStore, @namespace);
-        var rows = await ForSequence(context.DbContext).Where(row => row.Owner == owner.Value).Where(ExactScope(scope.Normalized())).ToArrayAsync(cancellationToken);
+        var normalized = scope.Normalized();
+        var found = await ForSequence(context.DbContext).Where(row => row.Owner == owner.Value).Where(ExactScope(normalized)).ToArrayAsync(cancellationToken);
+        var rows = found.Where(row => IsOrdinalMatch(row, normalized)).ToArray();
         context.DbContext.ClosedStreams.RemoveRange(rows);
         await context.DbContext.SaveChangesAsync(cancellationToken);
 
@@ -90,7 +109,14 @@ public class ClosedStreamsConstraintStorage(EventStoreName eventStore, EventStor
     public async Task<ClosedStream?> GetFor(ClosedStreamOwner owner, ClosedStreamScope scope, CancellationToken cancellationToken = default)
     {
         await using var context = await database.Namespace(eventStore, @namespace);
-        var row = await ForSequence(context.DbContext).Where(row => row.Owner == owner.Value).FirstOrDefaultAsync(ExactScope(scope.Normalized()), cancellationToken);
+        var normalized = scope.Normalized();
+        var found = await ForSequence(context.DbContext).Where(row => row.Owner == owner.Value).Where(ExactScope(normalized)).ToArrayAsync(cancellationToken);
+        var row = found.FirstOrDefault(candidate => IsOrdinalMatch(candidate, normalized)) ?? found.FirstOrDefault(candidate => !candidate.ExactSpelling);
+        if (row is not null && !IsOrdinalMatch(row, normalized))
+        {
+            ReportPending([row], [normalized]);
+        }
+
         return row is null ? null : ToClosure(row);
     }
 
@@ -141,7 +167,15 @@ public class ClosedStreamsConstraintStorage(EventStoreName eventStore, EventStor
             .ThenBy(row => row.StreamType).ThenBy(row => row.StreamId).Skip(skip);
         if (take is not null) query = query.Take(take.Value);
 
-        return (await query.ToArrayAsync()).Select(ToClosure).ToArray();
+        var all = await query.ToArrayAsync();
+        if (within is not null)
+        {
+            var scope = within.Normalized();
+            all = [.. all.Where(row => IsOrdinalMatch(row, scope) || !row.ExactSpelling)];
+            ReportPending(all, [scope]);
+        }
+
+        return all.Select(ToClosure).ToArray();
     }
 
     /// <inheritdoc/>
@@ -164,6 +198,12 @@ public class ClosedStreamsConstraintStorage(EventStoreName eventStore, EventStor
         return row => row.EventSourceId == sourceId && row.EventSourceType == sourceType && row.StreamType == streamType && row.StreamId == streamId && row.Dimensions == dimensions;
     }
 
+    static bool IsOrdinalMatch(ClosedStreamEntry row, ClosedStreamScope scope) =>
+        string.Equals(row.EventSourceId, scope.EventSourceId?.Value ?? string.Empty, StringComparison.Ordinal)
+        && string.Equals(row.EventSourceType, scope.EventSourceType?.Value ?? string.Empty, StringComparison.Ordinal)
+        && string.Equals(row.StreamType, scope.EventStreamType?.Value ?? string.Empty, StringComparison.Ordinal)
+        && string.Equals(row.StreamId, scope.EventStreamId?.Value ?? string.Empty, StringComparison.Ordinal);
+
     static ClosedStream ToClosure(ClosedStreamEntry row) => new(
         new(
             row.EventSourceId.Length == 0 ? null : new EventSourceId(row.EventSourceId),
@@ -174,8 +214,17 @@ public class ClosedStreamsConstraintStorage(EventStoreName eventStore, EventStor
         new EventSequenceNumber((ulong)row.SequenceNumber),
         row.ClosedAt);
 
+    void ReportPending(IEnumerable<ClosedStreamEntry> rows, IReadOnlyCollection<ClosedStreamScope> scopes)
+    {
+        var count = rows.Count(row => !row.ExactSpelling && !scopes.Any(scope => IsOrdinalMatch(row, scope)));
+        if (count > 0 && _reported.TryAdd((eventStore.Value, @namespace.Value, eventSequenceId.Value), true))
+        {
+            _logger.ClosedStreamEntriesPendingReview(count, eventSequenceId.Value);
+        }
+    }
+
     IQueryable<ClosedStreamEntry> ForSequence(NamespaceDbContext context) =>
-        context.ClosedStreams.Where(row => row.EventSequenceId == eventSequenceId.Value);
+        context.ClosedStreams.AsNoTracking().Where(row => row.EventSequenceId == eventSequenceId.Value);
 
     sealed class ReplaceParameter(ParameterExpression source, ParameterExpression target) : ExpressionVisitor
     {

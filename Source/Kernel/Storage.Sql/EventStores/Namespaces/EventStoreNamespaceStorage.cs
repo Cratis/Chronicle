@@ -20,6 +20,7 @@ using Cratis.Chronicle.Storage.Seeding;
 using Cratis.Chronicle.Storage.Sinks;
 using Cratis.Types;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using ReadModelsReplayContexts = Cratis.Chronicle.Storage.ReadModels.ReplayContexts;
 using SinksSinks = Cratis.Chronicle.Storage.Sinks.Sinks;
@@ -37,7 +38,8 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces;
 /// <param name="jsonSerializerOptions">The global <see cref="JsonSerializerOptions"/>.</param>
 /// <param name="eventTypesStorage">The event store's shared event type storage.</param>
 /// <param name="converter">The schema-aware content converter.</param>
-public class EventStoreNamespaceStorage(EventStoreName eventStore, EventStoreNamespaceName @namespace, IDatabase database, IInstancesOf<ISinkFactory> sinkFactories, Choreography.Storage.IJobsStorage jobsStorage, JsonSerializerOptions jsonSerializerOptions, Chronicle.Storage.EventTypes.IEventTypesStorage eventTypesStorage, Json.IExpandoObjectConverter converter) : IEventStoreNamespaceStorage
+/// <param name="loggerFactory">Optional logger factory used for logging inside the storages.</param>
+public class EventStoreNamespaceStorage(EventStoreName eventStore, EventStoreNamespaceName @namespace, IDatabase database, IInstancesOf<ISinkFactory> sinkFactories, Choreography.Storage.IJobsStorage jobsStorage, JsonSerializerOptions jsonSerializerOptions, Chronicle.Storage.EventTypes.IEventTypesStorage eventTypesStorage, Json.IExpandoObjectConverter converter, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null) : IEventStoreNamespaceStorage
 {
     readonly Sql.EventStores.Occurrences.OccurrencesStorage<NamespaceDbContext> _occurrences = new(() => database.Namespace(eventStore, @namespace), database);
 
@@ -140,7 +142,7 @@ public class EventStoreNamespaceStorage(EventStoreName eventStore, EventStoreNam
     public IUniqueEventTypesConstraintsStorage GetUniqueEventTypesConstraints(EventSequenceId eventSequenceId) => new UniqueEventTypesConstraints.UniqueEventTypesConstraintsStorage(eventStore, @namespace, eventSequenceId, database);
 
     /// <inheritdoc/>
-    public IClosedStreamsConstraintStorage GetClosedStreamsConstraints(EventSequenceId eventSequenceId) => new ClosedStreams.ClosedStreamsConstraintStorage(eventStore, @namespace, eventSequenceId, database);
+    public IClosedStreamsConstraintStorage GetClosedStreamsConstraints(EventSequenceId eventSequenceId) => new ClosedStreams.ClosedStreamsConstraintStorage(eventStore, @namespace, eventSequenceId, database, loggerFactory?.CreateLogger<ClosedStreams.ClosedStreamsConstraintStorage>());
 
     /// <inheritdoc/>
     /// <remarks>

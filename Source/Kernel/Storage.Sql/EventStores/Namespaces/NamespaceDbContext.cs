@@ -4,6 +4,7 @@
 using Cratis.Arc.EntityFrameworkCore;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ClosedStreams;
 using Microsoft.EntityFrameworkCore;
+using ClosedStreamsMigration = Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ClosedStreams.Migrations.v20_0_2;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces;
 
@@ -131,8 +132,18 @@ public class NamespaceDbContext(DbContextOptions<NamespaceDbContext> options) : 
             .Entity<ClosedStreamEntry>(entity =>
             {
                 entity.ToTable(WellKnownTableNames.ClosedStreams);
-                entity.HasKey(e => new { e.EventSequenceId, e.StreamType, e.StreamId, e.EventSourceId, e.EventSourceType, e.Owner, e.Dimensions });
                 entity.Property(e => e.SequenceNumber).HasPrecision(20, 0);
+                if (Database.IsSqlServer())
+                {
+                    // The hash keeps spellings apart in the table. As a concurrency token it also makes updates and deletes address exactly one spelling.
+                    entity.Property(e => e.ExactKey).HasComputedColumnSql(ClosedStreamsMigration.ExactKeyExpression, stored: true).IsConcurrencyToken();
+                }
+                else
+                {
+                    entity.Ignore(e => e.ExactKey);
+                }
+
+                entity.HasKey(e => new { e.EventSequenceId, e.StreamType, e.StreamId, e.EventSourceId, e.EventSourceType, e.Owner, e.Dimensions });
             })
             .Entity<InFlightEvents.InFlightEventEntry>(entity =>
             {
