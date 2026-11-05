@@ -46,6 +46,9 @@ public class Storage(
         new ClusterStorage(database, expandoObjectConverter, jsonSerializerOptions, jobsStorage, options, loggerFactory).ReadGenerationFloors();
 
     /// <inheritdoc/>
+    public Task<string?> FindMisplacedSystemEventStoreData() => systemEventStoreRelocation.FindMisplacedData();
+
+    /// <inheritdoc/>
     public Task MoveSystemEventStoreTo(SystemEventStoreLocation location) => systemEventStoreRelocation.MoveTo(location);
 
     /// <inheritdoc/>

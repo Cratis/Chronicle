@@ -25,11 +25,16 @@ public class an_observation_stream : Specification
     protected readonly Subject<ReducerMessage> _messages = new();
     protected readonly List<ReduceOperationMessage> _deliveries = [];
     protected ReducerEventsObserver _deliver;
+    protected ReducerReplayObserver _replay;
     IDisposable _subscription;
 
     private protected virtual IActivitySource<Reducers> CreateActivitySource() => new ActivitySource<Reducers>();
 
     protected virtual PageDelivery? PageDelivery => null;
+
+    protected virtual StateCaching? StateCaching => null;
+
+    protected virtual IExpandoObjectConverter CreateExpandoObjectConverter() => Substitute.For<IExpandoObjectConverter>();
 
     async Task Establish()
     {
@@ -42,6 +47,8 @@ public class an_observation_stream : Specification
                 _deliver = call.Arg<ReducerEventsObserver>();
                 subscribed.TrySetResult();
             });
+        mediator.When(_ => _.SubscribeReplayNotifications(Arg.Any<ReducerId>(), Arg.Any<ConnectionId>(), Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<ReducerReplayObserver>()))
+            .Do(call => _replay = call.Arg<ReducerReplayObserver>());
         var grainFactory = Substitute.For<IGrainFactory>();
         var readModel = Substitute.For<IReadModel>();
         grainFactory.GetGrain<IReadModel>(Arg.Any<string>()).Returns(readModel);
@@ -61,7 +68,7 @@ public class an_observation_stream : Specification
         var reducers = new Reducers(
             grainFactory,
             mediator,
-            Substitute.For<IExpandoObjectConverter>(),
+            CreateExpandoObjectConverter(),
             new JsonSerializerOptions(),
             CreateActivitySource(),
             Options.Create(new ChronicleOptions()),
@@ -74,6 +81,7 @@ public class an_observation_stream : Specification
             EventStore = "store",
             Namespace = "namespace",
             PageDelivery = PageDelivery,
+            StateCaching = StateCaching,
             Reducer = new Contracts.Observation.Reducers.ReducerDefinition { ReducerId = "reducer", EventSequenceId = "event-log", ReadModel = "model" }
         })));
         await subscribed.Task.WaitAsync(TimeSpan.FromSeconds(5));

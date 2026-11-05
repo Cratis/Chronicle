@@ -36,6 +36,8 @@ internal sealed class ReducerDispatcher(
     IActivitySource<Reducers> activitySource,
     ILogger<Reducers> logger)
 {
+    readonly ReducerStateCache _stateCache = new();
+
     /// <summary>Gets or sets the client span naming convention.</summary>
     internal ClientSpanNames SpanNames { get; set; }
 
@@ -55,6 +57,15 @@ internal sealed class ReducerDispatcher(
     {
         if (operation.ReplayState != ReplayState.None)
         {
+            if (string.IsNullOrEmpty(operation.Partition))
+            {
+                _stateCache.ForgetAll(handler.Id);
+            }
+            else
+            {
+                _stateCache.Forget(handler.Id, operation.Partition);
+            }
+
             await HandleReplayNotification(handler, operation.ReplayState, operation.Partition);
             return;
         }
@@ -98,23 +109,39 @@ internal sealed class ReducerDispatcher(
                 var appendedEvents = partition.Events.Select(ToAppendedEvent).ToList();
                 await using var serviceProviderScope = serviceProvider.CreateAsyncScope();
                 identityProvider.SetCurrentIdentity(Identity.System);
-                var initialState = partition.InitialState is null ? null : JsonSerializer.Deserialize(partition.InitialState, handler.ReadModelType, jsonSerializerOptions);
+                var initialStateJson = partition.InitialState;
+                if (partition.InitialStateUnchanged && !_stateCache.TryGet(handler.Id, partitionKey, out initialStateJson))
+                {
+                    // The kernel believes we hold the state, but we do not (evicted, restarted or never cached). Failing clears
+                    // the kernel's record of it, so the redelivery carries the full state.
+                    _stateCache.Forget(handler.Id, partitionKey);
+                    return PartitionOutcome.Failed(partitionKey, new InvalidOperationException($"The kernel sent the state of partition '{partitionKey}' as unchanged, but reducer '{handler.Id}' has no cached state for it. The state is requested in full on redelivery."));
+                }
+
+                var initialState = initialStateJson is null ? null : JsonSerializer.Deserialize(initialStateJson, handler.ReadModelType, jsonSerializerOptions);
                 var reduceResult = handler is ReducerHandler reducerHandler
                     ? await reducerHandler.OnNext(appendedEvents, initialState, serviceProviderScope.ServiceProvider, batchContext)
                     : await handler.OnNext(appendedEvents, initialState, serviceProviderScope.ServiceProvider);
 
                 if (reduceResult.RetryAfter is { } retryAfter)
                 {
+                    _stateCache.Forget(handler.Id, partitionKey);
                     return new(partitionKey, ObservationState.Deferred, EventSequenceNumber.Unavailable, [], string.Empty) { RetryAfter = retryAfter };
                 }
 
                 if (reduceResult.IsSuccess)
                 {
+                    var readModelState = reduceResult.ReadModelState is null ? null : JsonSerializer.Serialize(reduceResult.ReadModelState, jsonSerializerOptions);
+
+                    // Remember exactly what the kernel is told, so an unchanged marker resolves to the state the kernel fingerprinted.
+                    _stateCache.Set(handler.Id, partitionKey, readModelState);
                     return new(partitionKey, ObservationState.Success, reduceResult.LastSuccessfullyObservedEvent, [], string.Empty)
                     {
-                        ReadModelState = reduceResult.ReadModelState is null ? null : JsonSerializer.Serialize(reduceResult.ReadModelState, jsonSerializerOptions)
+                        ReadModelState = readModelState
                     };
                 }
+
+                _stateCache.Forget(handler.Id, partitionKey);
 
                 span?.Activity?.RecordFailure(reduceResult.ExceptionType ?? "reducer_error");
                 logger.ReducerFailed(handler.Id, firstEvent, lastEvent, string.Join(Environment.NewLine, reduceResult.ErrorMessages));
@@ -122,6 +149,7 @@ internal sealed class ReducerDispatcher(
             }
             catch (Exception ex)
             {
+                _stateCache.Forget(handler.Id, partitionKey);
                 span?.Activity?.RecordFailure(ex);
                 logger.ErrorWhileHandlingEvents(ex, firstEvent, lastEvent, handler.Id);
                 return PartitionOutcome.Failed(partitionKey, ex);

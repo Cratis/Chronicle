@@ -244,6 +244,7 @@ interface [GrainInterfaceType("Cratis.Chronicle.Observation.IObserver")] Cratis.
   98A3B662: GetState() -> Task<Cratis.Chronicle.Storage.Observation.ObserverState>
   08DD9D90: GetSubscription() -> Task<Cratis.Chronicle.Observation.ObserverSubscription>
   F2A145F7: Handle(Cratis.Chronicle.Concepts.Keys.Key, System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Events.AppendedEvent>) -> Task
+  0AB2E3C6: HandlePage(System.Collections.Generic.IReadOnlyList<Cratis.Chronicle.Observation.ObserverPartitionBatch>) -> Task
   056816D9: HasFailedPartitions() -> Task<bool>
   2155BE82: IsCatchUpBackedOff() -> Task<bool>
   C6C2E50F: IsObserverQuarantined() -> Task<bool>
@@ -302,6 +303,9 @@ interface [GrainInterfaceType("Cratis.Chronicle.Observation.IObserver")] Cratis.
 
 interface [GrainInterfaceType("Cratis.Chronicle.Observation.IObserverPageSubscriber")] Cratis.Chronicle.Observation.IObserverPageSubscriber [Version(1)]
   50EF116D: OnNextPage(System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Events.AppendedEvent>, Cratis.Chronicle.Observation.ObserverSubscriberContext) -> Task<Cratis.Chronicle.Observation.ObserverSubscriberResult>
+
+interface [GrainInterfaceType("Cratis.Chronicle.Observation.IObserverPartitionPageSubscriber")] Cratis.Chronicle.Observation.IObserverPartitionPageSubscriber [Version(1)]
+  85360CA0: OnNextPartitions(System.Collections.Generic.IReadOnlyList<Cratis.Chronicle.Observation.ObserverPartitionBatch>, Cratis.Chronicle.Observation.ObserverSubscriberContext) -> Task<Cratis.Chronicle.Observation.ObserverPageResult>
 
 interface [GrainInterfaceType("Cratis.Chronicle.Observation.IObserverService")] Cratis.Chronicle.Observation.IObserverService [Version(0)]
   6CB341E4: AbandonReplayFor(Cratis.Chronicle.Observation.ObserverDetails) -> Task
@@ -368,6 +372,8 @@ interface [GrainInterfaceType("Cratis.Chronicle.Observation.Reactors.Clients.IRe
   E42078DB: Unsubscribe() -> Task
 
 interface [GrainInterfaceType("Cratis.Chronicle.Observation.Reactors.Clients.IReactorObserverSubscriber")] Cratis.Chronicle.Observation.Reactors.Clients.IReactorObserverSubscriber [Version(0)]
+
+interface [GrainInterfaceType("Cratis.Chronicle.Observation.Reactors.Clients.IReactorPageObserverSubscriber")] Cratis.Chronicle.Observation.Reactors.Clients.IReactorPageObserverSubscriber [Version(0)]
 
 class [GrainType("reactor")] Cratis.Chronicle.Observation.Reactors.Clients.Reactor
 

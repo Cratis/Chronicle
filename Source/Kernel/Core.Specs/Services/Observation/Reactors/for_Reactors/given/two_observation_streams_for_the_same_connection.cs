@@ -112,6 +112,12 @@ public class two_observation_streams_for_the_same_connection : Specification
             _subscribed[Interlocked.Increment(ref _subscribeCount) - 1].TrySetResult();
         }
 
+        public void SubscribePages(ReactorId reactorId, ConnectionId connectionId, EventStoreName eventStore, EventStoreNamespaceName @namespace, ReactorPageObserver target) =>
+            inner.SubscribePages(reactorId, connectionId, eventStore, @namespace, target);
+
+        public void OnNextPage(ReactorId reactorId, ConnectionId connectionId, EventStoreName eventStore, EventStoreNamespaceName @namespace, IReadOnlyList<ObserverPartitionBatch> batches, IReadOnlyDictionary<Key, TaskCompletionSource<ObserverSubscriberResult>> completions, TimeSpan? deliverWithin = null, Concepts.Observation.ObservationOrigin origin = Concepts.Observation.ObservationOrigin.Unknown) =>
+            inner.OnNextPage(reactorId, connectionId, eventStore, @namespace, batches, completions, deliverWithin, origin);
+
         public void SubscribeReplayNotifications(ReactorId reactorId, ConnectionId connectionId, EventStoreName eventStore, EventStoreNamespaceName @namespace, ReactorReplayObserver target) =>
             inner.SubscribeReplayNotifications(reactorId, connectionId, eventStore, @namespace, target);
 

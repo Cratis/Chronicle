@@ -14,6 +14,7 @@ internal sealed class PendingDeliveries<TResult>
     readonly Lock _lock = new();
     readonly Dictionary<ulong, Pending> _byId = [];
     readonly Dictionary<EventSourceId, LinkedList<ulong>> _byPartition = [];
+    readonly Dictionary<ulong, Dictionary<EventSourceId, TaskCompletionSource<TResult>>> _pages = [];
     ulong _lastId;
     bool _disconnected;
     TResult _disconnectedResult = default!;
@@ -46,6 +47,32 @@ internal sealed class PendingDeliveries<TResult>
     }
 
     /// <summary>
+    /// Registers one delivery that carries several partitions, each answered on its own.
+    /// </summary>
+    /// <param name="completions">The completion of each partition in the delivery.</param>
+    /// <returns>The delivery id shared by every partition in it.</returns>
+    public ulong AddPage(IReadOnlyDictionary<EventSourceId, TaskCompletionSource<TResult>> completions)
+    {
+        ulong id;
+        lock (_lock)
+        {
+            id = checked(++_lastId);
+            if (!_disconnected)
+            {
+                _pages.Add(id, new Dictionary<EventSourceId, TaskCompletionSource<TResult>>(completions));
+                return id;
+            }
+        }
+
+        foreach (var completion in completions.Values)
+        {
+            completion.TrySetResult(_disconnectedResult);
+        }
+
+        return id;
+    }
+
+    /// <summary>
     /// Completes exactly the named delivery, or the oldest for an id-less client.
     /// </summary>
     /// <param name="id">The echoed identifier, or zero for a legacy client.</param>
@@ -57,6 +84,22 @@ internal sealed class PendingDeliveries<TResult>
         Pending pending;
         lock (_lock)
         {
+            if (_pages.TryGetValue(id, out var page))
+            {
+                if (!page.Remove(partition, out var completion))
+                {
+                    return false;
+                }
+
+                if (page.Count == 0)
+                {
+                    _pages.Remove(id);
+                }
+
+                // The caller's continuation runs asynchronously, so completing under the lock cannot re-enter it.
+                return completion.TrySetResult(result);
+            }
+
             if (id == 0 && _byPartition.TryGetValue(partition, out var ids))
             {
                 id = ids.First!.Value;
@@ -86,17 +129,25 @@ internal sealed class PendingDeliveries<TResult>
     public void Disconnect(TResult result)
     {
         Pending[] pending;
+        TaskCompletionSource<TResult>[] pages;
         lock (_lock)
         {
             _disconnected = true;
             _disconnectedResult = result;
             pending = _byId.Values.ToArray();
+            pages = _pages.Values.SelectMany(_ => _.Values).ToArray();
             _byId.Clear();
             _byPartition.Clear();
+            _pages.Clear();
         }
         foreach (var delivery in pending)
         {
             delivery.Completion.TrySetResult(result);
+        }
+
+        foreach (var completion in pages)
+        {
+            completion.TrySetResult(result);
         }
     }
 

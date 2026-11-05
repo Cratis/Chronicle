@@ -581,6 +581,7 @@ public partial class Reducers : IReducers
             EventStore = _eventStore.Name,
             Namespace = _eventStore.Namespace,
             PageDelivery = new() { Enabled = true },
+            StateCaching = new() { Enabled = true },
             Reducer = new ReducerDefinition
             {
                 GenerationDelivery = (Contracts.Observation.EventGenerationDelivery)GenerationDelivery,
