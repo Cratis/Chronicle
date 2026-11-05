@@ -55,10 +55,17 @@ internal static class JobLiveness
     }
 
     /// <summary>
-    /// Gets whether a job was stopped before it prepared a single step.
+    /// Gets whether a job was stopped before it ever reached its steps.
     /// </summary>
     /// <param name="job">The <see cref="JobState"/> to check.</param>
-    /// <returns>True if the job is stopped and has no steps - it carries no work and resuming it can never drive anything.</returns>
+    /// <returns>True if the job is stopped and has no steps, or never got as far as starting them - it carries no work, and resuming it can never drive anything.</returns>
+    /// <remarks>
+    /// This is the same test Cratis.Choreography applies when it refuses to resume a job as not prepared: the status history never
+    /// holds <see cref="JobStatus.StartingSteps"/>. The progress is no evidence either way. A job stopped half way through preparing a large
+    /// number of steps - a restart while it prepares thousands of partitions - has already counted all of them in
+    /// <see cref="JobProgress.TotalSteps"/>, yet no step can have run before the job started its steps, and the refusal is permanent.
+    /// Keeping such a job left its observer stranded behind the event sequence for good, because every later catch-up found the same stopped job.
+    /// </remarks>
     internal static bool NeverPrepared(JobState job) =>
-        job.Status == JobStatus.Stopped && job.Progress.TotalSteps <= 0;
+        job.Status == JobStatus.Stopped && (job.Progress.TotalSteps <= 0 || !job.WasEverPrepared());
 }
