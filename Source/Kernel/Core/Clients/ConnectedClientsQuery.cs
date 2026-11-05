@@ -43,6 +43,24 @@ public sealed class ConnectedClientsQuery(IGrainFactory grainFactory, IOptions<C
     }
 
     /// <summary>
+    /// Checks whether a connection identifier is registered on any silo other than the given one.
+    /// </summary>
+    /// <param name="localSilo">The silo to leave out of the check.</param>
+    /// <param name="connectionId">The connection identifier to look for.</param>
+    /// <returns>True if another silo has the connection registered; false otherwise.</returns>
+    /// <remarks>
+    /// A failing lookup propagates, so a caller cannot mistake a silo that did not answer for one that does not know the connection.
+    /// </remarks>
+    public async Task<bool> IsConnectedOnAnotherSilo(SiloAddress localSilo, string connectionId)
+    {
+        var hosts = await grainFactory.GetGrain<IManagementGrain>(0).GetHosts(onlyActive: true);
+        var answers = await Task.WhenAll(hosts.Keys
+            .Where(silo => !silo.Equals(localSilo))
+            .Select(silo => grainFactory.GetConnectedClients(silo).IsConnected(connectionId)));
+        return answers.Any(connected => connected);
+    }
+
+    /// <summary>
     /// Observes every client connected to the cluster, across all silos.
     /// </summary>
     /// <param name="cancellationToken"><see cref="CancellationToken"/> for cancelling the observation.</param>
