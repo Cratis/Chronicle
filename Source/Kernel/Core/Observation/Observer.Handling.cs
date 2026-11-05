@@ -412,8 +412,8 @@ public partial class Observer
         {
             State = State with
             {
-                NextEventSequenceNumber = observedTailEventSequenceNumber.Next(),
-                TailEventSequenceNumber = observedTailEventSequenceNumber
+                NextEventSequenceNumber = CursorAfter(observedTailEventSequenceNumber.Next()),
+                TailEventSequenceNumber = TailAfter(observedTailEventSequenceNumber)
             };
             RecordedHandlingState();
             await WriteProgressStateDebounced();
@@ -428,8 +428,8 @@ public partial class Observer
             {
                 State = State with
                 {
-                    NextEventSequenceNumber = observedTailEventSequenceNumber.Next(),
-                    TailEventSequenceNumber = observedTailEventSequenceNumber
+                    NextEventSequenceNumber = CursorAfter(observedTailEventSequenceNumber.Next()),
+                    TailEventSequenceNumber = TailAfter(observedTailEventSequenceNumber)
                 };
                 RecordedHandlingState();
                 await WriteProgressStateDebounced();
@@ -442,8 +442,8 @@ public partial class Observer
             {
                 State = State with
                 {
-                    NextEventSequenceNumber = observedTailEventSequenceNumber.Next(),
-                    TailEventSequenceNumber = observedTailEventSequenceNumber
+                    NextEventSequenceNumber = CursorAfter(observedTailEventSequenceNumber.Next()),
+                    TailEventSequenceNumber = TailAfter(observedTailEventSequenceNumber)
                 };
                 RecordedHandlingState();
                 await WriteProgressStateDebounced();
@@ -455,8 +455,8 @@ public partial class Observer
             {
                 State = State with
                 {
-                    NextEventSequenceNumber = observedTailEventSequenceNumber.Next(),
-                    TailEventSequenceNumber = observedTailEventSequenceNumber
+                    NextEventSequenceNumber = CursorAfter(observedTailEventSequenceNumber.Next()),
+                    TailEventSequenceNumber = TailAfter(observedTailEventSequenceNumber)
                 };
                 RecordedHandlingState();
                 await WriteProgressStateDebounced();
@@ -470,7 +470,7 @@ public partial class Observer
         var failurePolicy = WebhookDeliveryFailurePolicy.Retry;
         var exceptionMessages = Enumerable.Empty<string>();
         var exceptionStackTrace = string.Empty;
-        var tailEventSequenceNumber = State.NextEventSequenceNumber;
+        var tailEventSequenceNumber = _pageFloor ?? State.NextEventSequenceNumber;
 
         var eventsToHandle = events.Where(_ => _.Context.SequenceNumber >= tailEventSequenceNumber).ToArray();
         NoteDiscardedEvents(partition, events, tailEventSequenceNumber);
@@ -517,6 +517,20 @@ public partial class Observer
                             ? SiloAddress.Zero
                             : target.SiloAddress;
                         var key = _subscription.GetSubscriberKeyFor(partition, siloAddress);
+
+                        if (_prefetchedPartitions.Remove(partition, out var prefetched) &&
+                            !(prefetched.Failure is null && prefetched.Result!.State == ObserverSubscriberState.Disconnected && target.ConnectedClient is not null && _subscription.Targets.Count > 1))
+                        {
+                            // The page this partition belongs to has already been delivered; this is its settlement.
+                            deliveryFence = prefetched.Fence;
+                            if (prefetched.Failure is not null)
+                            {
+                                throw prefetched.Failure;
+                            }
+
+                            result = prefetched.Result!;
+                            break;
+                        }
 
                         var subscriber = (GrainFactory.GetGrain(_subscription.SubscriberType, key) as IObserverSubscriber)!;
                         var context = new ObserverSubscriberContext(target.ConnectedClient ?? _subscription.Arguments) { Origin = ObservationOrigin.Live }.WithDeadlines(subscriberTimeout, hold, _clock);
@@ -570,8 +584,8 @@ public partial class Observer
                         stateChanged = true;
                         State = State with
                         {
-                            NextEventSequenceNumber = result.LastSuccessfulObservation.Next(),
-                            TailEventSequenceNumber = observedTailEventSequenceNumber
+                            NextEventSequenceNumber = CursorAfter(result.LastSuccessfulObservation.Next()),
+                            TailEventSequenceNumber = TailAfter(observedTailEventSequenceNumber)
                         };
                         var previousLastHandled = State.LastHandledEventSequenceNumber;
                         var shouldSetLastHandled =

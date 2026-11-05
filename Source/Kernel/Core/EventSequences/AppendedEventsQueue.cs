@@ -37,6 +37,7 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     /// </remarks>
     internal const int MaxPartitionRunsPerLiveDispatch = 256;
 
+
     /// <summary>
     /// Upper bound on how many queued batches a single dispatch coalesces before delivering. Bounds the size of the
     /// merged batch (and therefore the work of one dispatch); any remaining backlog is drained on the next loop pass.
@@ -57,6 +58,7 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     readonly int _queueDepletionWaitTimeoutMs;
     readonly AsyncManualResetEvent _queueEmptyEvent = new();
     readonly Lock _subscriptionsLock = new();
+    readonly System.Collections.Concurrent.ConcurrentDictionary<ObserverKey, bool> _pageObservers = new();
     readonly List<AppendedEventsQueueObserverSubscription> _subscriptions = [];
     readonly List<Task> _catchupTriggers = [];
     readonly Dictionary<ObserverKey, AppendedEventsQueueObserverLane> _lanes = [];
@@ -630,8 +632,29 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     async Task DeliverToObserver(AppendedEventsQueueObserverLane lane, IReadOnlyList<AppendedEvent> events)
     {
         var runs = SplitIntoPartitionRuns(events as List<AppendedEvent> ?? [.. events]);
-        if (runs.Count > MaxPartitionRunsPerLiveDispatch && SpillFragmentedSubscriptionToCatchup(CurrentSubscriptionOf(lane)))
+        var deliversPages = await DeliversPages(lane);
+        if (!deliversPages && runs.Count > MaxPartitionRunsPerLiveDispatch && SpillFragmentedSubscriptionToCatchup(CurrentSubscriptionOf(lane)))
         {
+            return;
+        }
+
+        if (deliversPages && runs.Count > 1)
+        {
+            if (_isResetting || lane.IsClosed)
+            {
+                return;
+            }
+
+            try
+            {
+                await DispatchPage(lane.Observer, runs, CurrentSubscriptionOf(lane));
+            }
+            catch (Exception ex)
+            {
+                // DispatchPage has spilled the subscription, which closes the lane.
+                LaneFailed(ex);
+            }
+
             return;
         }
 
@@ -652,6 +675,49 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
                 // Dispatch has spilled the subscription, which closes the lane for the runs after this one.
                 LaneFailed(ex);
             }
+        }
+    }
+
+    /// <summary>
+    /// Gets whether the observer of a lane takes a page spanning partitions in one call. The answer is asked of the observer once.
+    /// </summary>
+    /// <param name="lane">The <see cref="AppendedEventsQueueObserverLane"/> of the observer.</param>
+    /// <returns>True if the observer delivers pages; otherwise false.</returns>
+    async Task<bool> DeliversPages(AppendedEventsQueueObserverLane lane)
+    {
+        var key = CurrentSubscriptionOf(lane).ObserverKey;
+        if (_pageObservers.TryGetValue(key, out var known))
+        {
+            return known;
+        }
+
+        try
+        {
+            var delivers = (await lane.Observer.GetSubscription()).DeliversPartitionPages;
+            _pageObservers[key] = delivers;
+            return delivers;
+        }
+        catch (Exception ex) when (ObservationOnlyFailures.CanBeContained(ex))
+        {
+            return false;
+        }
+    }
+
+    async Task DispatchPage(IObserver observer, List<(EventSourceId Partition, List<AppendedEvent> Events)> runs, AppendedEventsQueueObserverSubscription subscription)
+    {
+        try
+        {
+            await observer.HandlePage([.. runs.Select(run => new ObserverPartitionBatch(run.Partition, run.Events))]);
+        }
+        catch (Exception ex) when (ObservationOnlyFailures.CanBeContained(ex))
+        {
+            foreach (var (partition, events) in runs)
+            {
+                ReportSuspectedUndeliveredEvents(partition, [.. events], subscription.ObserverKey);
+            }
+
+            SpillFailedSubscriptionToCatchup(subscription, [.. runs.SelectMany(_ => _.Events)]);
+            throw;
         }
     }
 
@@ -786,6 +852,12 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
 
         foreach (var subscription in GetSubscriptionsSnapshot())
         {
+            // An observer that takes pages is not slowed down by many partitions in one dispatch.
+            if (_pageObservers.TryGetValue(subscription.ObserverKey, out var deliversPages) && deliversPages)
+            {
+                continue;
+            }
+
             if (CountRunsUpTo(subscription, runs, MaxPartitionRunsPerLiveDispatch + 1) > MaxPartitionRunsPerLiveDispatch &&
                 SpillFragmentedSubscriptionToCatchup(subscription))
             {

@@ -105,4 +105,9 @@ public record ObserverSubscription(
             eventSourceId,
             siloAddress.ToParsableString());
     }
+
+    /// <summary>
+    /// Gets a value indicating whether the subscriber receives pages spanning partitions.
+    /// </summary>
+    public bool DeliversPartitionPages => SubscriberType.IsAssignableTo(typeof(IObserverPartitionPageSubscriber));
 }

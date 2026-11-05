@@ -26,6 +26,30 @@ public interface IReactorMediator
     void Subscribe(ReactorId reactorId, ConnectionId connectionId, EventStoreName eventStore, EventStoreNamespaceName @namespace, ReactorEventsObserver target);
 
     /// <summary>
+    /// Subscribe to pages of events spanning partitions for a specific <see cref="ConnectionId"/>. A connection that does not subscribe
+    /// to pages is given a page one partition at a time.
+    /// </summary>
+    /// <param name="reactorId"><see cref="ReactorId"/> to subscribe for.</param>
+    /// <param name="connectionId"><see cref="ConnectionId"/> to subscribe for.</param>
+    /// <param name="eventStore"><see cref="EventStoreName"/> to subscribe for.</param>
+    /// <param name="namespace"><see cref="EventStoreNamespaceName"/> to subscribe for.</param>
+    /// <param name="target"><see cref="ReactorPageObserver"/> delegate that will be called with pages.</param>
+    void SubscribePages(ReactorId reactorId, ConnectionId connectionId, EventStoreName eventStore, EventStoreNamespaceName @namespace, ReactorPageObserver target);
+
+    /// <summary>
+    /// Notify that a page of events spanning partitions should be observed.
+    /// </summary>
+    /// <param name="reactorId"><see cref="ReactorId"/> to send to.</param>
+    /// <param name="connectionId"><see cref="ConnectionId"/> to send to.</param>
+    /// <param name="eventStore"><see cref="EventStoreName"/> to send to.</param>
+    /// <param name="namespace"><see cref="EventStoreNamespaceName"/> to send to.</param>
+    /// <param name="batches">The <see cref="ObserverPartitionBatch"/> of each partition in the page.</param>
+    /// <param name="completions">The <see cref="TaskCompletionSource{T}"/> of each partition to return its <see cref="ObserverSubscriberResult"/> to.</param>
+    /// <param name="deliverWithin">How long the kernel waits for the results, or null when it waits without a deadline.</param>
+    /// <param name="origin">The <see cref="ObservationOrigin"/> the events came from.</param>
+    void OnNextPage(ReactorId reactorId, ConnectionId connectionId, EventStoreName eventStore, EventStoreNamespaceName @namespace, IReadOnlyList<ObserverPartitionBatch> batches, IReadOnlyDictionary<Key, TaskCompletionSource<ObserverSubscriberResult>> completions, TimeSpan? deliverWithin = null, ObservationOrigin origin = ObservationOrigin.Unknown);
+
+    /// <summary>
     /// Subscribe to replay notifications for a specific <see cref="ConnectionId"/>.
     /// </summary>
     /// <param name="reactorId"><see cref="ReactorId"/> to subscribe for.</param>
