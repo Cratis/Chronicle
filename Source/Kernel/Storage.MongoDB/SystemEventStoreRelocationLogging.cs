@@ -22,6 +22,12 @@ internal static partial class SystemEventStoreRelocationLogging
     [LoggerMessage(LogLevel.Information, "Database '{Name}' is named explicitly by connection resolution and stays where it is")]
     internal static partial void DatabaseNameUnchanged(this ILogger<SystemEventStoreRelocation> logger, string name);
 
+    [LoggerMessage(LogLevel.Warning, "Could not confirm that collection '{Collection}' was copied from '{From}' to '{To}': {SourceCount} documents in the source, {TargetCount} in the target. The source is kept")]
+    internal static partial void UnconfirmedCopy(this ILogger logger, string collection, string from, string to, long sourceCount, long targetCount);
+
+    [LoggerMessage(LogLevel.Warning, "Kept database '{Name}' because its copy could not be confirmed. Nothing was deleted; the System event store's data is incomplete in '{To}' until it is")]
+    internal static partial void DatabaseKept(this ILogger<SystemEventStoreRelocation> logger, string name, string to);
+
     [LoggerMessage(LogLevel.Debug, "Keeping the existing index '{Index}' on '{Collection}' in database '{Database}'")]
     internal static partial void KeepingExistingIndex(this ILogger logger, string index, string collection, string database);
 }
