@@ -8,8 +8,9 @@ This reference holds the three meanings of `file` and the rules for paths and lo
 Three meanings, one word:
 
 - **Backend implementation attachment.** On an attached command `handler`
-  (PLAY0800: permanent constrained-attachment requirement, gap-filled in code;
-  pending described handlers instead bind v23 without a file), a validation
+  (binds as the v23 result contract beside unconditional `produces` with a resolved
+  body from Screenplay 4.250.0, otherwise PLAY0800; pending described handlers bind
+  v23 without a file), a validation
   rule predicate, a query `performer`, a reducer rule, a reaction trigger, a
   `constraint` and a `policy`, `file` stands in for the inline body: the
   implementation lives there. These are the files a host inventories.
@@ -23,7 +24,7 @@ Three meanings, one word:
   `readmodel`, `projection`, `slice`, `specification`, top-level `trigger` — it
   only records which file realizes it.
 
-Requires Screenplay 4.210.0 (`screenplay --version`) for the file/inline handler's PLAY0800; older binders use PLAY0268. Read its required typed `arguments.subject` to identify the command, never the message.
+Requires Screenplay 4.250.0 (`screenplay --version`) for a file/inline handler beside `produces` to bind; 4.210.0 to 4.249.x refuse it with PLAY0800 and older binders use PLAY0268. Read its required typed `arguments.subject` to identify the command, never the message.
 
 The rules:
 

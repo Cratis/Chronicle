@@ -4,6 +4,7 @@
 ## Contents
 
 - Role catalogue on `persona`
+- Persona goals and canvas notes
 - What a Cannot line becomes
 - Cannot resolved to an executable gate
 - Checks while building
@@ -52,6 +53,45 @@ persona Harbourmaster
 
 Parent document: the complete example under "Cannot resolved to an executable gate" below
 declares the same policies and persona with the one-line form.
+
+## Persona goals and canvas notes
+
+Requires Screenplay 4.239.0 or later (`screenplay --version`); older compilers reject the canvas directives. Defer goals, layout and sticky-note syntax until the compiler is upgraded; keep ordinary persona declarations.
+
+Read this when capturing what a persona wants or arranging the personas canvas.
+After the optional `description` (first body line), a persona can have repeated
+`goal "<text>"` lines, policy lines, then optional `position <x> <y>` and
+`size <width> <height>`. Each pair uses integers: position may be negative;
+size must be nonnegative.
+
+Use a top-level `sticky note on personas` for context, pain points or open
+questions about the personas. Its `description` and `position` are required;
+write description first, optional `colour`, position, then optional size.
+The grammar token is `colour`, with `yellow` (default), `pink`, `green` or `blue`;
+size uses the same nonnegative integer pair. A description can be a quoted line
+or a fenced block. This canvas note does not replace an anchored `question`
+note required for discovery handoff.
+
+```screenplay
+persona Shopper
+  description "Browses the catalog and buys"
+  goal "Find the right product quickly"
+  position 0 0
+  size 300 180
+
+sticky note on personas
+  description "Pain point: the checkout asks for too much"
+  colour pink
+  position 340 0
+  size 220 140
+```
+
+Goals, layout and sticky notes are authoring-only: they do not change executable
+semantic model (ESM) bytes or revision. A goal is not an enforceable rule or an
+authorization gate; persona policy and denial guidance below still applies.
+Malformed goals, invalid coordinate or size pairs, invalid `colour` values,
+and missing required sticky-note fields report `PLAY0030`. Unknown directives,
+including the incorrect spelling `color`, report `PLAY0032`.
 
 ## What a Cannot line becomes
 

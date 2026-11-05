@@ -1,6 +1,6 @@
 ---
 name: cratis-arc-command-operation
-description: Declare immediate inline work as a Cratis Arc ICommandOperation returned by a model-bound command, with optional compensation and commit-aware recovery. Use when moving service writes out of Handle(), choosing operation return shapes, diagnosing recovery, or specifying execution and compensation through CommandScenario. Do not use for durable after-commit delivery, validation-only changes, or framework return-type extensions through response value handlers.
+description: Use when moving immediate service writes into returned Arc command operations or diagnosing their compensation and recovery. Not for durable after-commit delivery or validation-only changes.
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/cratis-arc-command-operation/SKILL.md -->

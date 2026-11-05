@@ -12,7 +12,7 @@ paths:
 > **⚠️ APPLIES ONLY TO PROJECTS USING MICROSOFT ORLEANS**
 > If your project does not reference `Microsoft.Orleans` or any Orleans packages, **ignore this entire file**. These rules are irrelevant outside of Orleans contexts.
 
-In the Cratis organization, Orleans is the Chronicle kernel's actor runtime (`Source/Kernel/`). The kernel conventions below are verified against `Cratis/Chronicle` **v19.50.0**. Shared hosting and jobs come from `Cratis/Orleans` **v1.16.3**; use its setup for other services that co-host a silo.
+In the Cratis organization, Orleans is the Chronicle kernel's actor runtime (`Source/Kernel/`). The kernel conventions below are verified against `Cratis/Chronicle` **v19.50.0**. Shared hosting and jobs come from `Cratis/Orleans` **v1.30.0**; use its setup for other services that co-host a silo.
 
 ## General
 
@@ -51,7 +51,7 @@ framework/service guidance; they do not impose application slice architecture.
 
 For service authors, `Cratis.Orleans` supplies hosting, grain serializers, and the
 shared job system without requiring Chronicle. With `Cratis.Orleans` and
-`Cratis.Orleans.Storage.MongoDB` 1.16.3, this host uses durable MongoDB membership
+`Cratis.Orleans.Storage.MongoDB` 1.30.0, this host uses durable MongoDB membership
 and jobs storage (a local MongoDB server is required):
 
 ```csharp
@@ -64,7 +64,8 @@ using Microsoft.AspNetCore.Builder;
 using MongoDB.Driver;
 
 var builder = WebApplication.CreateBuilder(args);
-const string connectionString = "mongodb://localhost:27017";
+var connectionString = builder.Configuration.GetConnectionString("Mongo")
+    ?? throw new InvalidOperationException("Configure the Mongo connection string.");
 builder.AddCratisOrleans(new CratisOrleansOptions
 {
     ClusterId = "my-service",
@@ -82,6 +83,14 @@ app.Run();
 - Register jobs storage separately: `AddCratisOrleansMongoDBJobsStorage`,
   `AddCratisOrleansSqlJobsStorage` (`Cratis.Orleans.Setup`), or
   `AddCratisOrleansInMemoryJobsStorage` (`Cratis.Orleans.Storage`).
+- Use the local `IJobs` service to start/stop/delete typed jobs during rolling
+  upgrades; generic manager calls can land on a release that does not know the
+  type. Provide singleton `IJobsManagerKeys` on every silo for all host-owned
+  scope/namespace pairs; process-local discovery is not a recovery catalog.
+- Controller and worker placement are separate opt-ins through `AddJobPlacement`
+  and `AddJobStepPlacement`. Enable them only after every silo supports the
+  strategies and register them identically. Worker throttling is not admission;
+  see **cratis-orleans-jobs** for drain-before-replacement and metadata limits.
 - Give grain implementations a unique `[GrainType("unique-name")]`. Orleans'
   default type name derives from the class name alone; a collision across
   assemblies prevents silo startup.

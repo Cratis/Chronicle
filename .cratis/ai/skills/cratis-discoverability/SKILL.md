@@ -1,6 +1,6 @@
 ---
 name: cratis-discoverability
-description: Check Cratis content before publishing for search and AI answers without sacrificing readability. Use when reviewing discoverability, SEO, AEO or GEO; writing fact blocks or download claims; editing package/repo metadata; checking docs titles, descriptions or LLM export budgets; or reviewing founder/company JSON-LD and member profile indexing. Not for page voice and structure (cratis-documentation-writing), llms.txt design (cratis-llm-friendly-documentation), distribution plans (cratis-developer-marketing) or length decisions (cratis-content-length).
+description: Use when checking Cratis search discoverability, metadata, adoption claims, structured data or indexing before publication. Not for page voice, export architecture, distribution strategy or content length.
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/cratis-discoverability/SKILL.md -->
@@ -25,12 +25,13 @@ Read `references/page-checklist.md` when checking a page, including docs lint ba
 ## Checks by content type
 
 - **Docs page.** The `description` is written by hand as one self-contained
-  definition or outcome sentence. Tutorials, getting-started pages and explanations follow
-  `writing-cratis-docs` (scenario first); the definition lives in the `description`, and one
-  definition sentence may follow the opening scenario where it reads naturally. `writing-cratis-docs`
-  wins on voice and structure. Product index pages open with the definition sentence.
-  Reference pages stay terse: title is the exact name plus its product, no question headings, no
-  intro. Titles are unique across the site and name the product ("Chronicle projections"). Keep
+  definition or outcome sentence. Follow `writing-cratis-docs` for the page's purpose, voice and
+  structure; it takes precedence over discoverability suggestions. A scenario can help a tutorial
+  or explanation, but is not a required opener. Product index pages should make the product's
+  purpose clear near the beginning without forcing a definition into the first sentence.
+  Reference pages stay terse: title is the exact name plus its product, headings support lookup,
+  and introductory context appears only where needed to use the entry. Titles are unique across
+  the site and name the product ("Chronicle projections"). Keep
   description and duplicate-title lint baselines at 0; never raise a baseline to pass. Check
   rendered titles and measure `llms.txt` / `llms-small.txt` bytes against the site budgets.
 - **Blog post.** The title states the topic in the words a reader would search. The intro gives the
@@ -84,8 +85,8 @@ Read `scripts/verify-discoverability.mjs` only when changing the checker.
 
 ## Pitfalls
 
-- Question headings everywhere: use them only where they read naturally (concept pages, FAQs,
-  comparisons, blog), never on reference pages or tutorial steps.
+- Question headings everywhere: use a question only when it expresses the reader's actual question
+  more clearly than a subject or action heading. Do not impose one heading form across page types.
 - Padding to a word count: there is no minimum length; a complete page is done.
 - Apex `https://cratis.io/` links: the docs host is `https://www.cratis.io`.
 - A description that repeats the title or a sibling page's description.

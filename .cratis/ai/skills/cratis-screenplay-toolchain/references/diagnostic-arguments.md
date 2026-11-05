@@ -67,7 +67,7 @@ PLAY0781–PLAY0785 need Screenplay 4.207.0; earlier compilers omit these argume
 command gives one, else the read model name. The PLAY0781 `reason` keywords are listed in command-surface
 [protected reads](../../cratis-screenplay-command-surface/references/protected-reads.md); each refused read gets its own PLAY0781.
 
-Requires Screenplay 4.210.0 (`screenplay --version`) for PLAY0800 (`CommandHandlerRequiresAttachment`) and its `subject`; older binders report attached command handlers as PLAY0268. `arguments.subject.kind` is `command` and `path` names the command. Treat the refusal as permanent: deliver a constrained implementation attachment by code gap-fill, not by waiting for ESM admission. Switch on the code and navigate the subject, never match message text.
+Requires Screenplay 4.210.0 (`screenplay --version`) for PLAY0800 (`CommandHandlerRequiresAttachment`) and its `subject`; older binders report attached command handlers as PLAY0268. `arguments.subject.kind` is `command` and `path` names the command. From Screenplay 4.250.0 the code fires only when the handler lacks unconditional `produces` or a resolved, nonempty body; fix that shape or gap-fill in code. Switch on the code and navigate the subject, never match message text.
 
 For PLAY0524, `step` is given, given readmodel, when, when append or then.
 `stepIndex` counts every authored given/when/then clause once across all forms,
