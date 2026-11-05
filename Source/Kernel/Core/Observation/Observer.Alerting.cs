@@ -30,6 +30,7 @@ public partial class Observer
     bool _alertReportInProgress;
     bool? _projectionDefinitionExists;
     bool _observerExists;
+    bool _alertReminderRegistered = true;
 
     bool IsRetired => _alertDisposition == AlertDisposition.Retired;
 
@@ -50,6 +51,7 @@ public partial class Observer
     internal void ScheduleAlertReport()
     {
         _alertReconciliationPending = true;
+        EnsureAlertReminderRegistered();
         if (_deferAlertReports || _alertReportScheduled || _removed || !_observerExists)
         {
             return;
@@ -220,11 +222,51 @@ public partial class Observer
         await EnsureAlertState();
     }
 
+    /// <summary>
+    /// Registers the alert reminder again after a settled observer gave it up.
+    /// </summary>
+    void EnsureAlertReminderRegistered()
+    {
+        if (_alertReminderRegistered || !_observerExists || _removed)
+        {
+            return;
+        }
+
+        _alertReminderRegistered = true;
+        this.ScheduleInSeparateTurn(() => this.RegisterOrUpdateReminder(AlertReminderName, _minimumRetryReminderPeriod, _minimumRetryReminderPeriod));
+    }
+
+    /// <summary>
+    /// Gives the alert reminder up once a tick finds nothing to report.
+    /// </summary>
+    /// <remarks>
+    /// An observer with nothing wrong does not need to be woken every minute. Thousands of them, all overdue after the
+    /// kernel was down, activated at once on start and exhausted the connection pool (#5677). A change that needs
+    /// reporting registers the reminder again through <see cref="ScheduleAlertReport"/>.
+    /// </remarks>
+    async Task ReleaseAlertReminderWhenSettled()
+    {
+        // A sealed activation keeps its wakeup until reactivation can tell whether the source still exists.
+        if (_removed ||
+            !_observerExists ||
+            _alertReconciliationPending ||
+            _alertStateNeedsPersistence ||
+            Failures.HasFailedPartitions ||
+            State.RunningState == ObserverRunningState.Quarantined)
+        {
+            return;
+        }
+
+        _alertReminderRegistered = false;
+        await UnregisterReminderNamed(AlertReminderName);
+    }
+
     async Task EnsureAlertState()
     {
         _observerExists = true;
 
-        // Retain this reminder even while healthy. Unregistering on an acknowledgment races interleaved recovery.
+        // The reminder is retained until a tick finds nothing to report, see ReleaseAlertReminderWhenSettled.
+        _alertReminderRegistered = true;
         await this.RegisterOrUpdateReminder(AlertReminderName, _minimumRetryReminderPeriod, _minimumRetryReminderPeriod);
         if (_alertLifecycleId == Guid.Empty)
         {

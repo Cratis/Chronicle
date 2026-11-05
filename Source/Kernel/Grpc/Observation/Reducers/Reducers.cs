@@ -54,6 +54,14 @@ internal sealed class Reducers(
     ILogger<Reducers> logger,
     IObserverRegistrationGate registrationGate) : IReducers
 {
+    /// <summary>
+    /// The size, in characters, of a reducer's serialized state from which each reduce is reported as expensive.
+    /// </summary>
+    /// <remarks>
+    /// Every reduce sends the whole current state to the client, so the cost of a reduce grows with the read model.
+    /// </remarks>
+    internal const int LargeStateWarningThreshold = 8 * 1024 * 1024;
+
     /// <inheritdoc/>
     public IObservable<ReduceOperationMessage> Observe(IObservable<ReducerMessage> messages, CallContext context = default)
     {
@@ -161,7 +169,13 @@ internal sealed class Reducers(
                         deliver = (reduceOperation, tcs) =>
                         {
                             var deliveryId = pendingDeliveries.Add(reduceOperation.Partition, tcs);
-                            var initialState = reduceOperation.InitialState is null ? null : expandoObjectConverter.ToJsonObject(reduceOperation.InitialState, model.GetSchemaForLatestGeneration()).ToString();
+
+                            // Compact JSON: JsonNode.ToString() writes indented JSON, which inflates every reduce's state by the whitespace.
+                            var initialState = reduceOperation.InitialState is null ? null : expandoObjectConverter.ToJsonObject(reduceOperation.InitialState, model.GetSchemaForLatestGeneration()).ToJsonString(jsonSerializerOptions);
+                            if (initialState?.Length > LargeStateWarningThreshold)
+                            {
+                                logger.LargeInitialState(observerId, reduceOperation.Partition.ToString()!, initialState.Length);
+                            }
                             var partition = reduceOperation.Partition.Value.ToString()!;
                             var events = reduceOperation.Events.Select(_ => _.ToContract(jsonSerializerOptions)).ToArray();
                             var message = new ReduceOperationMessage()

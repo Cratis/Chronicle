@@ -39,7 +39,7 @@ public class a_schema_lock_startup_step : for_DatabaseSchemaLock.given.a_command
         });
     }
 
-    protected Task Execute() => (Task)_runStep.Invoke(_startup, ["schema change", (Func<Task>)Acquire, _cancellation.Token])!;
+    protected Task Execute() => (Task)_runStep.Invoke(_startup, ["schema change", (Func<Task>)Acquire, _cancellation.Token, 1])!;
 
     async Task Acquire()
     {

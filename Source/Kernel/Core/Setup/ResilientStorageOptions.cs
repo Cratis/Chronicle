@@ -19,6 +19,11 @@ public class ResilientStorageOptions
     public RetryStrategyOptions Retry { get; set; } = new();
 
     /// <summary>
+    /// Gets or sets the most grain storage operations that run against the database at once; zero or less means no bound.
+    /// </summary>
+    public int MaxConcurrentOperations { get; set; } = 128;
+
+    /// <summary>
     /// The <see cref="TimeoutStrategyOptions"/>.
     /// </summary>
     [Required]
