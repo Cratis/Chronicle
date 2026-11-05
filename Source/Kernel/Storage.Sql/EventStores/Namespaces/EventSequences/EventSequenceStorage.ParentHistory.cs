@@ -28,7 +28,7 @@ public partial class EventSequenceStorage
         await using var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);
         foreach (var source in sources)
         {
-            var query = scope.DbContext.Events.AsNoTracking().Where(e => e.EventSourceId == source && e.SequenceNumber <= upTo.Value);
+            var query = scope.DbContext.Events.AsNoTracking().WhereEventSource(scope.DbContext, source).Where(e => e.SequenceNumber <= upTo.Value);
             var entries = await ParentHistoryWindow(query, types, from, upTo, cancellationToken);
             if (entries.Count > 0)
             {
