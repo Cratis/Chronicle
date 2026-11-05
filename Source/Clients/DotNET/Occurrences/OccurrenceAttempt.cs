@@ -164,7 +164,7 @@ internal sealed class OccurrenceAttempt(
     {
         using var delivery = context.Namespace is { } deliveredNamespace
             ? ObserverDelivery.Enter(services, new(eventStore.Name, deliveredNamespace, ObserverId.Unspecified, ObserverDeliveryKind.Occurrence, handlerType))
-            : default;
+            : ObserverDelivery.EnterCleared();
         await using var scope = services.CreateAsyncScope();
         var activation = activator.Activate(scope.ServiceProvider, handlerType);
         if (activation.TryGetException(out var failure)) throw failure;

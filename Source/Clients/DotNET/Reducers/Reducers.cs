@@ -160,7 +160,7 @@ public partial class Reducers : IReducers
     /// <summary>
     /// Gets how the re-registration work is started. Specs replace this to run the work deterministically.
     /// </summary>
-    internal Func<Func<Task>, Task> ScheduleReconnectWork { get; init; } = work => Task.Run(work);
+    internal Func<Func<Task>, Task> ScheduleReconnectWork { get; init; } = Observation.ObserverDelivery.RunDetached;
 
     /// <inheritdoc/>
     public Task Discover()

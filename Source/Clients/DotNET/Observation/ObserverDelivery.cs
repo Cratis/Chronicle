@@ -15,7 +15,7 @@ namespace Cratis.Chronicle.Observation;
 /// </remarks>
 internal readonly struct ObserverDelivery : IDisposable
 {
-    static readonly ConditionalWeakTable<IServiceProvider, IObserverDeliveryScope[]> _scopesByProvider = new();
+    static readonly ConditionalWeakTable<IServiceProvider, Lazy<IObserverDeliveryScope[]>> _scopesByProvider = new();
     static readonly IObserverDeliveryScope[] _noScopes = [];
 
     readonly ObserverDeliveryContext? _previous;
@@ -81,10 +81,43 @@ internal readonly struct ObserverDelivery : IDisposable
         return new(previous, entered);
     }
 
+    /// <summary>
+    /// Enters a flow that is explicitly outside any delivery, so that <see cref="ObserverDeliveryContext.Current"/> is null until disposed.
+    /// </summary>
+    /// <returns>The <see cref="ObserverDelivery"/> to dispose to restore the previous context.</returns>
+    internal static ObserverDelivery EnterCleared()
+    {
+        var previous = ObserverDeliveryContext.Current;
+        ObserverDeliveryContext.Current = null;
+        return new(previous, null);
+    }
+
+    /// <summary>
+    /// Runs long-lived background work on the thread pool without capturing the execution context of the caller,
+    /// so that the work never inherits the <see cref="ObserverDeliveryContext"/> of the delivery that happened to start it.
+    /// </summary>
+    /// <param name="work">The work to run.</param>
+    /// <returns>The task representing the work.</returns>
+    internal static Task RunDetached(Func<Task> work)
+    {
+        if (ExecutionContext.IsFlowSuppressed())
+        {
+            return Task.Run(work);
+        }
+
+        Task started;
+        using (ExecutionContext.SuppressFlow())
+        {
+            started = Task.Run(work);
+        }
+
+        return started;
+    }
+
     static IObserverDeliveryScope[] ScopesOf(IServiceProvider serviceProvider) =>
         _scopesByProvider.TryGetValue(serviceProvider, out var scopes)
-            ? scopes
-            : _scopesByProvider.GetValue(serviceProvider, Resolve);
+            ? scopes.Value
+            : _scopesByProvider.GetValue(serviceProvider, provider => new Lazy<IObserverDeliveryScope[]>(() => Resolve(provider))).Value;
 
     static IObserverDeliveryScope[] Resolve(IServiceProvider serviceProvider)
     {
