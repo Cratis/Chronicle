@@ -45,7 +45,7 @@ public partial class EventSequenceStorage
         if (from <= upTo)
         {
             var window = await query.Where(e => types.Contains(e.Type) && e.SequenceNumber >= from.Value)
-                .OrderBy(e => e.SequenceNumber).ToListAsync(cancellationToken);
+                .OrderBy(e => e.SequenceNumber).WithoutHistory().ToListAsync(cancellationToken);
             entries.AddRange(window);
         }
         return entries;

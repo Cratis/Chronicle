@@ -58,6 +58,7 @@ public class EventCursor(
             .OrderBy(e => e.SequenceNumber)
             .Skip(_currentOffset)
             .Take(_batchSize)
+            .WithoutHistory()
             .ToListAsync(_cancellationToken);
 
         if (eventEntries.Count == 0)

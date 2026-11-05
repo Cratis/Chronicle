@@ -42,7 +42,7 @@ public partial class EventSequenceStorage
 
                 // Check if sequence number already exists
                 var appendManySeqNum = eventToAppend.SequenceNumber.Value;
-                var existingEvent = await scope.DbContext.Events
+                var existingEvent = await scope.DbContext.Events.WithoutHistory()
                     .FirstOrDefaultAsync(e => e.SequenceNumber == appendManySeqNum);
 
                 if (existingEvent is not null)

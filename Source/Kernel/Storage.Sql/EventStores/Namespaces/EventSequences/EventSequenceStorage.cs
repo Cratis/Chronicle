@@ -166,7 +166,7 @@ public partial class EventSequenceStorage(
             occurred = TruncateToMicrosecond(occurred);
 
             var seqNumValue = sequenceNumber.Value;
-            var existingEvent = await scope.DbContext.Events
+            var existingEvent = await scope.DbContext.Events.WithoutHistory()
                 .FirstOrDefaultAsync(e => e.SequenceNumber == seqNumValue);
 
             if (existingEvent is not null)
@@ -295,7 +295,7 @@ public partial class EventSequenceStorage(
         var firstValue = first.Value;
         var lastValue = last.Value;
         var entries = await scope.DbContext.Events.AsNoTracking().Where(e => e.SequenceNumber >= firstValue && e.SequenceNumber <= lastValue)
-            .OrderBy(e => e.SequenceNumber).ToListAsync(cancellationToken);
+            .OrderBy(e => e.SequenceNumber).WithoutHistory().ToListAsync(cancellationToken);
         var events = new List<AppendedEvent>();
         foreach (var entry in entries) events.Add(await ToAppendedEvent(entry, scope));
         return new MaterializedEventCursor(events);
@@ -598,6 +598,7 @@ public partial class EventSequenceStorage(
                     && e.EventSourceId == eventSourceId
                     && e.SequenceNumber < currentSequenceNumberValue)
                 .OrderByDescending(e => e.SequenceNumber)
+                .WithoutHistory()
                 .FirstOrDefaultAsync();
 
             if (eventEntry is null)
@@ -683,6 +684,7 @@ public partial class EventSequenceStorage(
                 e.EventSourceId == eventSourceId
                 && eventTypeIds.Contains(e.Type))
             .OrderByDescending(e => e.SequenceNumber)
+            .WithoutHistory()
             .FirstOrDefaultAsync();
 
         if (eventEntry is null)
@@ -854,7 +856,7 @@ public partial class EventSequenceStorage(
             _ => order.Descending ? query.OrderByDescending(e => e.SequenceNumber) : query.OrderBy(e => e.SequenceNumber)
         };
 
-        var entries = await ordered.Skip(skip).Take(take).ToListAsync(cancellationToken);
+        var entries = await ordered.Skip(skip).Take(take).WithoutHistory().ToListAsync(cancellationToken);
 
         // The page is bounded and its order is already decided here, so materialize it rather than
         // handing it to EventCursor - that cursor re-sorts ascending as it batches.
