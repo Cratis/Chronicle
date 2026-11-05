@@ -7,13 +7,16 @@ using Azure.Security.KeyVault.Secrets;
 namespace Cratis.Chronicle.Storage.AzureKeyVault.for_AzureKeyVaultEncryptionKeyStorage.when_the_service_reports_a_disabled_secret.given;
 
 /// <summary>
-/// An in-memory <see cref="SecretClient"/> that answers a read of a disabled secret the way the service does: forbidden.
+/// An in-memory <see cref="SecretClient"/> that keeps every version of a secret and answers a read of a disabled
+/// latest version the way the service does: forbidden.
 /// </summary>
 /// <param name="errorCode">The error code the forbidden answer carries.</param>
-/// <param name="listingShowsDisabled">Whether the listings report a disabled secret as disabled, or as enabled.</param>
+/// <param name="listingShowsDisabled">Whether the listing of secrets reports a disabled latest version as disabled, or as enabled.</param>
 public class DisablingSecretClient(string errorCode, bool listingShowsDisabled) : SecretClient
 {
-    readonly Dictionary<string, List<(string Value, bool Enabled)>> _secrets = [];
+    static readonly DateTimeOffset _created = DateTimeOffset.UtcNow.AddHours(-1);
+
+    readonly Dictionary<string, List<StoredVersion>> _secrets = [];
 
     /// <summary>
     /// Gets the number of secret versions written.
@@ -31,31 +34,50 @@ public class DisablingSecretClient(string errorCode, bool listingShowsDisabled) 
     public IEnumerable<string> LiveNames => _secrets.Keys;
 
     /// <summary>
-    /// Disables the latest version of a secret.
+    /// Adds a version of a secret without counting it as a write.
     /// </summary>
     /// <param name="name">The name of the secret.</param>
-    public void Disable(string name)
+    /// <param name="value">The value of the version.</param>
+    /// <param name="candidate">Whether the version is marked as a provisioning candidate.</param>
+    /// <param name="enabled">Whether the version is enabled.</param>
+    public void Add(string name, string value, bool candidate = false, bool enabled = true)
     {
-        var versions = _secrets[name];
-        versions[^1] = (versions[^1].Value, false);
-    }
-
-    /// <inheritdoc/>
-    public override Task<Response<KeyVaultSecret>> SetSecretAsync(string name, string value, CancellationToken cancellationToken = default)
-    {
-        Writes++;
         if (!_secrets.TryGetValue(name, out var versions))
         {
             _secrets[name] = versions = [];
         }
 
-        versions.Add((value, true));
-        return Task.FromResult(Response.FromValue(Create(name, value, true), Substitute.For<Response>()));
+        versions.Add(new(value, enabled, candidate));
+    }
+
+    /// <summary>
+    /// Disables the latest version of a secret.
+    /// </summary>
+    /// <param name="name">The name of the secret.</param>
+    public void Disable(string name) => DisableVersion(name, _secrets[name].Count - 1);
+
+    /// <summary>
+    /// Disables one version of a secret.
+    /// </summary>
+    /// <param name="name">The name of the secret.</param>
+    /// <param name="index">The zero-based position of the version, oldest first.</param>
+    public void DisableVersion(string name, int index) => _secrets[name][index] = _secrets[name][index] with { Enabled = false };
+
+    /// <inheritdoc/>
+    public override Task<Response<KeyVaultSecret>> SetSecretAsync(string name, string value, CancellationToken cancellationToken = default)
+    {
+        Writes++;
+        Add(name, value);
+        return Task.FromResult(Response.FromValue(Create(name, _secrets[name].Count - 1), Substitute.For<Response>()));
     }
 
     /// <inheritdoc/>
-    public override Task<Response<KeyVaultSecret>> SetSecretAsync(KeyVaultSecret secret, CancellationToken cancellationToken = default) =>
-        SetSecretAsync(secret.Name, secret.Value, cancellationToken);
+    public override Task<Response<KeyVaultSecret>> SetSecretAsync(KeyVaultSecret secret, CancellationToken cancellationToken = default)
+    {
+        Writes++;
+        Add(secret.Name, secret.Value, ProvisioningCandidateElection.IsCandidate(secret.Properties));
+        return Task.FromResult(Response.FromValue(Create(secret.Name, _secrets[secret.Name].Count - 1), Substitute.For<Response>()));
+    }
 
     /// <inheritdoc/>
     public override Task<Response<KeyVaultSecret>> GetSecretAsync(string name, string? version = null, SecretContentType? outContentType = null, CancellationToken cancellationToken = default)
@@ -65,26 +87,26 @@ public class DisablingSecretClient(string errorCode, bool listingShowsDisabled) 
             throw new RequestFailedException(404, "Secret not found", "SecretNotFound", null);
         }
 
-        var latest = versions[^1];
-        if (!latest.Enabled)
+        var index = version is null ? versions.Count - 1 : int.Parse(version);
+        if (!versions[index].Enabled)
         {
             throw new RequestFailedException(403, "Operation get is not allowed on a disabled secret.", errorCode, null);
         }
 
-        return Task.FromResult(Response.FromValue(Create(name, latest.Value, true), Substitute.For<Response>()));
+        return Task.FromResult(Response.FromValue(Create(name, index), Substitute.For<Response>()));
     }
 
     /// <inheritdoc/>
     public override AsyncPageable<SecretProperties> GetPropertiesOfSecretsAsync(CancellationToken cancellationToken = default) =>
         AsyncPageable<SecretProperties>.FromPages([Page<SecretProperties>.FromValues(
-            [.. _secrets.Select(pair => Properties(pair.Key, "0", pair.Value[^1].Enabled || !listingShowsDisabled))],
+            [.. _secrets.Select(pair => Properties(pair.Key, pair.Value.Count - 1, pair.Value[^1].Enabled || !listingShowsDisabled))],
             null,
             Substitute.For<Response>())]);
 
     /// <inheritdoc/>
     public override AsyncPageable<SecretProperties> GetPropertiesOfSecretVersionsAsync(string name, CancellationToken cancellationToken = default) =>
         AsyncPageable<SecretProperties>.FromPages([Page<SecretProperties>.FromValues(
-            [.. (_secrets.TryGetValue(name, out var versions) ? versions : []).Select((version, index) => Properties(name, index.ToString(), version.Enabled))],
+            [.. (_secrets.TryGetValue(name, out var versions) ? versions : []).Select((version, index) => Properties(name, index, version.Enabled))],
             null,
             Substitute.For<Response>())]);
 
@@ -110,15 +132,20 @@ public class DisablingSecretClient(string errorCode, bool listingShowsDisabled) 
         return Task.FromResult(Substitute.For<Response>());
     }
 
-    static KeyVaultSecret Create(string name, string value, bool enabled)
+    SecretProperties Properties(string name, int index, bool enabled)
     {
-        return SecretModelFactory.KeyVaultSecret(Properties(name, "0", enabled), value);
-    }
-
-    static SecretProperties Properties(string name, string version, bool enabled)
-    {
-        var properties = SecretModelFactory.SecretProperties(name: name, version: version);
+        var properties = SecretModelFactory.SecretProperties(name: name, version: index.ToString(), createdOn: _created.AddSeconds(index));
         properties.Enabled = enabled;
+        if (_secrets[name][index].Candidate)
+        {
+            properties.Tags[ProvisioningCandidateElection.CandidateTag] = bool.TrueString;
+        }
+
         return properties;
     }
+
+    KeyVaultSecret Create(string name, int index) =>
+        SecretModelFactory.KeyVaultSecret(Properties(name, index, _secrets[name][index].Enabled), _secrets[name][index].Value);
+
+    sealed record StoredVersion(string Value, bool Enabled, bool Candidate);
 }

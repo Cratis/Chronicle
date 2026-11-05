@@ -26,10 +26,15 @@ public class a_storage_over_a_disabling_client : Specification
 
     protected string ErasureName => SecretLocations.For(_eventStore, _namespace, Identifier).ErasureName;
 
-    protected async Task Seed(string errorCode, bool listingShowsDisabled)
+    protected void Start(string errorCode, bool listingShowsDisabled)
     {
         _client = new DisablingSecretClient(errorCode, listingShowsDisabled);
         _storage = new AzureKeyVaultEncryptionKeyStorage(_client, TimeProvider.System);
+    }
+
+    protected async Task Seed(string errorCode, bool listingShowsDisabled)
+    {
+        Start(errorCode, listingShowsDisabled);
         await _storage.SaveFor(_eventStore, _namespace, Identifier, Key);
     }
 }

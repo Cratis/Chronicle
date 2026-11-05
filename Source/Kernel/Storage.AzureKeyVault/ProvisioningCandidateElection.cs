@@ -72,7 +72,7 @@ internal sealed class ProvisioningCandidateElection(SecretClient secretClient, T
     /// </summary>
     /// <param name="name">The name of the secret.</param>
     /// <returns>The elected <see cref="EncryptionKey"/>, or <see langword="null"/> when no candidate can be read.</returns>
-    /// <exception cref="EncryptionKeyUnavailable">The candidate that sorts first is disabled.</exception>
+    /// <exception cref="EncryptionKeyUnavailable">A version of the secret is disabled.</exception>
     public async Task<EncryptionKey?> Elect(string name)
     {
         for (var round = 0; ; round++)
@@ -125,6 +125,13 @@ internal sealed class ProvisioningCandidateElection(SecretClient secretClient, T
         {
             await foreach (var version in secretClient.GetPropertiesOfSecretVersionsAsync(name))
             {
+                if (version.Enabled == false)
+                {
+                    // Any disabled version, candidate or not, ends the election: it may be the key everyone agrees on.
+                    EncryptionKeyUpgradeMetrics.Unavailable();
+                    throw new EncryptionKeyUnavailable();
+                }
+
                 if (IsCandidate(version) && (elected is null || SortsBefore(version, elected)))
                 {
                     elected = version;

@@ -232,9 +232,21 @@ public class AzureKeyVaultEncryptionKeyStorage : IEncryptionKeyStorage
                 // A disabled key cannot be read to fingerprint it. It is covered by revision, and purged by the deletion that follows.
                 highestDisabled = Math.Max(highestDisabled, revision.Value);
             }
-            else if (await ReadKey(secret.Name) is { } key)
+            else
             {
-                present.Add((revision, key));
+                try
+                {
+                    if (await ReadKey(secret.Name) is { } key)
+                    {
+                        present.Add((revision, key));
+                    }
+                }
+                catch (EncryptionKeyUnavailable)
+                {
+                    // Some version other than the latest is disabled, so the key cannot be read to fingerprint it either.
+                    // The revision is covered, and every version of the secret is purged by the deletion that follows.
+                    highestDisabled = Math.Max(highestDisabled, revision.Value);
+                }
             }
         }
 
@@ -355,6 +367,31 @@ public class AzureKeyVaultEncryptionKeyStorage : IEncryptionKeyStorage
         return new();
     }
 
+    /// <summary>
+    /// Fails when any version of a secret is disabled, not only the latest. A disabled version can be the one that
+    /// carries an erasure or wins an election, so a decision that skipped it could differ from the one the operator disabled it to stop.
+    /// </summary>
+    /// <param name="name">The name of the secret.</param>
+    /// <returns>A <see cref="Task"/> for continuation.</returns>
+    /// <exception cref="EncryptionKeyUnavailable">A version of the secret is disabled.</exception>
+    async Task ThrowIfAnyVersionIsDisabled(string name)
+    {
+        try
+        {
+            await foreach (var version in _secretClient.GetPropertiesOfSecretVersionsAsync(name))
+            {
+                if (version.Enabled == false)
+                {
+                    throw Unavailable();
+                }
+            }
+        }
+        catch (RequestFailedException ex) when (ex.Status == 404)
+        {
+            // Removed between reading it and listing its versions; the read already answered.
+        }
+    }
+
     async Task<EncryptionKey?> Elect(string name)
     {
         try
@@ -406,6 +443,8 @@ public class AzureKeyVaultEncryptionKeyStorage : IEncryptionKeyStorage
             {
                 throw Unavailable();
             }
+
+            await ThrowIfAnyVersionIsDisabled(name);
 
             if (JsonSerializer.Deserialize<Dictionary<string, string>>(secret.Value.Value) is not { } data ||
                 !data.TryGetValue(ErasedThroughField, out var erasedThrough))
@@ -529,6 +568,7 @@ public class AzureKeyVaultEncryptionKeyStorage : IEncryptionKeyStorage
             throw Unavailable();
         }
 
+        await ThrowIfAnyVersionIsDisabled(name);
         return ProvisioningCandidateElection.IsCandidate(latest.Properties) ? await Elect(name) : Deserialize(latest.Value);
     }
 
