@@ -7,6 +7,7 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Events.Constraints;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Storage.Events.Constraints;
+using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences;
 using Microsoft.Data.SqlClient;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
@@ -67,12 +68,12 @@ public class UniqueConstraintsStorage(EventStoreName eventStore, EventStoreNames
         if (definition.Mode == UniqueConstraintMode.PerValue)
         {
             await using var scope = await database.UniqueConstraintValuesTable(eventStore, @namespace, GetValuesTableName(definition.Name, scopeKey));
-            var values = await scope.DbContext.Entries.AsNoTracking().Where(row => row.EventSourceId == eventSourceId.Value).Select(row => row.Value).ToArrayAsync(cancellationToken);
+            var values = await scope.DbContext.Entries.AsNoTracking().WhereOwner(scope.DbContext, eventSourceId.Value).Select(row => row.Value).ToArrayAsync(cancellationToken);
             return values.Select(value => new UniqueConstraintValue(value)).ToArray();
         }
 
         await using var sourceScope = await database.UniqueConstraintTable(eventStore, @namespace, GetTableName(definition.Name, scopeKey));
-        var sourceValues = await sourceScope.DbContext.Entries.AsNoTracking().Where(row => row.EventSourceId == eventSourceId.Value).Select(row => row.Value).ToArrayAsync(cancellationToken);
+        var sourceValues = await sourceScope.DbContext.Entries.AsNoTracking().WhereOwner(sourceScope.DbContext, eventSourceId.Value).Select(row => row.Value).ToArrayAsync(cancellationToken);
         return sourceValues.Select(value => new UniqueConstraintValue(value)).ToArray();
     }
 
@@ -82,7 +83,7 @@ public class UniqueConstraintsStorage(EventStoreName eventStore, EventStoreNames
         if (definition.Mode == UniqueConstraintMode.PerValue)
         {
             await using var scope = await database.UniqueConstraintValuesTable(eventStore, @namespace, GetValuesTableName(definition.Name, scopeKey));
-            await foreach (var value in scope.DbContext.Entries.AsNoTracking().Where(row => row.EventSourceId == eventSourceId.Value).Select(row => row.Value).AsAsyncEnumerable().WithCancellation(cancellationToken))
+            await foreach (var value in scope.DbContext.Entries.AsNoTracking().WhereOwner(scope.DbContext, eventSourceId.Value).Select(row => row.Value).AsAsyncEnumerable().WithCancellation(cancellationToken))
             {
                 yield return new UniqueConstraintValue(value);
             }
@@ -90,7 +91,7 @@ public class UniqueConstraintsStorage(EventStoreName eventStore, EventStoreNames
         }
 
         await using var sourceScope = await database.UniqueConstraintTable(eventStore, @namespace, GetTableName(definition.Name, scopeKey));
-        await foreach (var value in sourceScope.DbContext.Entries.AsNoTracking().Where(row => row.EventSourceId == eventSourceId.Value).Select(row => row.Value).AsAsyncEnumerable().WithCancellation(cancellationToken))
+        await foreach (var value in sourceScope.DbContext.Entries.AsNoTracking().WhereOwner(sourceScope.DbContext, eventSourceId.Value).Select(row => row.Value).AsAsyncEnumerable().WithCancellation(cancellationToken))
         {
             yield return new UniqueConstraintValue(value);
         }
@@ -166,7 +167,7 @@ public class UniqueConstraintsStorage(EventStoreName eventStore, EventStoreNames
             {
                 var subjectValue = subject?.Value;
                 await scope.DbContext.Entries
-                    .Where(_ => _.Value == value.Value && _.EventSourceId == eventSourceId.Value)
+                    .Where(_ => _.Value == value.Value).WhereOwner(scope.DbContext, eventSourceId.Value)
                     .ExecuteUpdateAsync(_ => _.SetProperty(row => row.Subject, subjectValue), cancellationToken);
             }
 
@@ -215,7 +216,7 @@ public class UniqueConstraintsStorage(EventStoreName eventStore, EventStoreNames
         }
 
         await using var scope = await database.UniqueConstraintValuesTable(eventStore, @namespace, GetValuesTableName(definition.Name, scopeKey));
-        await scope.DbContext.Entries.Where(_ => _.EventSourceId == eventSourceId.Value).ExecuteDeleteAsync(cancellationToken);
+        await scope.DbContext.Entries.WhereOwner(scope.DbContext, eventSourceId.Value).ExecuteDeleteAsync(cancellationToken);
     }
 
     /// <summary>
@@ -230,7 +231,7 @@ public class UniqueConstraintsStorage(EventStoreName eventStore, EventStoreNames
     public async Task RemoveValue(EventSourceId eventSourceId, UniqueConstraintDefinition definition, UniqueConstraintValue value, string scopeKey = "", CancellationToken cancellationToken = default)
     {
         await using var scope = await database.UniqueConstraintValuesTable(eventStore, @namespace, GetValuesTableName(definition.Name, scopeKey));
-        await scope.DbContext.Entries.Where(_ => _.Value == value.Value && _.EventSourceId == eventSourceId.Value).ExecuteDeleteAsync(cancellationToken);
+        await scope.DbContext.Entries.Where(_ => _.Value == value.Value).WhereOwner(scope.DbContext, eventSourceId.Value).ExecuteDeleteAsync(cancellationToken);
     }
 
     /// <inheritdoc/>
@@ -270,7 +271,8 @@ public class UniqueConstraintsStorage(EventStoreName eventStore, EventStoreNames
 
         var eventSourceIdValue = eventSourceId.Value;
         var entry = await scope.DbContext.Entries
-            .FirstOrDefaultAsync(u => u.EventSourceId == eventSourceIdValue, cancellationToken);
+            .WhereOwner(scope.DbContext, eventSourceIdValue)
+            .FirstOrDefaultAsync(cancellationToken);
 
         if (entry is not null)
         {
@@ -304,7 +306,7 @@ public class UniqueConstraintsStorage(EventStoreName eventStore, EventStoreNames
 
             // A concurrent insert of this source won the primary-key race. Retry as an update,
             // even if it claimed a different value; the unique value index still settles the move.
-            var winner = await scope.DbContext.Entries.FirstOrDefaultAsync(_ => _.EventSourceId == eventSourceIdValue, cancellationToken);
+            var winner = await scope.DbContext.Entries.WhereOwner(scope.DbContext, eventSourceIdValue).FirstOrDefaultAsync(cancellationToken);
             if (winner is null)
             {
                 throw;
@@ -340,7 +342,8 @@ public class UniqueConstraintsStorage(EventStoreName eventStore, EventStoreNames
 
         var eventSourceIdValue = eventSourceId.Value;
         var entry = await scope.DbContext.Entries
-            .FirstOrDefaultAsync(u => u.EventSourceId == eventSourceIdValue, cancellationToken);
+            .WhereOwner(scope.DbContext, eventSourceIdValue)
+            .FirstOrDefaultAsync(cancellationToken);
 
         if (entry is not null)
         {

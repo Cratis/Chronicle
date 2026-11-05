@@ -4,12 +4,14 @@
 using Cratis.Arc.EntityFrameworkCore.Concepts;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Events.Constraints;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Identities;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Storage.Identities;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.InFlightEvents;
+using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.UniqueConstraints;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -30,6 +32,7 @@ public abstract class a_storage_that_captures_statements(bool useSqlServer) : Sp
     protected readonly CapturedStatements _captured = new();
     protected EventSequenceStorage _events;
     protected InFlightEventsStorage _inFlight;
+    protected UniqueConstraintsStorage _unique;
 
     void Establish()
     {
@@ -52,6 +55,11 @@ public abstract class a_storage_that_captures_statements(bool useSqlServer) : Sp
             Substitute.For<Chronicle.Storage.EventTypes.IEventTypesStorage>(),
             new Json.ExpandoObjectConverter(new Schemas.TypeFormats()));
         _inFlight = new("capture-store", "capture-namespace", database);
+        database.UniqueConstraintValuesTable(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<string>())
+            .Returns(call => Task.FromResult(new DbContextScope<UniqueConstraintValuesDbContext>(
+                new UniqueConstraintValuesDbContext(Options<UniqueConstraintValuesDbContext>(), call.ArgAt<string>(2), Substitute.For<IUniqueConstraintMigrator>()),
+                () => { })));
+        _unique = new("capture-store", "capture-namespace", new EventSequenceId("events"), database);
     }
 
     protected async Task ReadBySource(EventSourceId eventSourceId)
@@ -71,6 +79,9 @@ public abstract class a_storage_that_captures_statements(bool useSqlServer) : Sp
         using var cursor = await _events.GetFromSequenceNumber(EventSequenceNumber.First, default, default, eventStreamType, eventStreamId);
         await cursor.MoveNext();
     }
+
+    protected Task RemoveUniqueValue(EventSourceId owner) =>
+        _unique.RemoveValue(owner, new UniqueConstraintDefinition("claims", []) { Mode = UniqueConstraintMode.PerValue }, new string('a', 64));
 
     protected Task RemoveFromInFlight(Key partition) => _inFlight.Remove(new ObserverId("observer"), partition, EventSequenceNumber.First);
 

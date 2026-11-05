@@ -56,6 +56,10 @@ public class UniqueConstraintDbContext(DbContextOptions<UniqueConstraintDbContex
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+        if (Database.IsSqlServer())
+        {
+            ExactIdentifiers.RegisterByteLength(modelBuilder);
+        }
 
         modelBuilder.Entity<UniqueConstraintIndexEntry>(entity =>
         {

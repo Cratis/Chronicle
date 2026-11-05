@@ -10,6 +10,7 @@ public class when_translating_a_read_for_sql_server() : given.a_storage_that_cap
     string _byDefaultSourceType;
     string _byStream;
     string _inFlight;
+    string _unique;
 
     async Task Because()
     {
@@ -27,6 +28,9 @@ public class when_translating_a_read_for_sql_server() : given.a_storage_that_cap
         _captured.Clear();
         await RemoveFromInFlight(new("Alice", Chronicle.Properties.ArrayIndexers.NoIndexers));
         _inFlight = Only();
+        _captured.Clear();
+        await RemoveUniqueValue("Alice");
+        _unique = Only();
     }
 
     [Fact] void should_seek_on_the_event_source_id_column() => _bySource.ShouldContain(SourceSeek);
@@ -47,4 +51,6 @@ public class when_translating_a_read_for_sql_server() : given.a_storage_that_cap
     [Fact] void should_seek_on_the_partition_column() => _inFlight.ShouldContain(PartitionSeek);
     [Fact] void should_compare_the_partition_in_binary_collation() => _inFlight.ShouldContain("COLLATE Latin1_General_100_BIN2");
     [Fact] void should_compare_the_partition_length_in_bytes() => _inFlight.ShouldContain("DATALENGTH(");
+    [Fact] void should_compare_the_unique_constraint_owner_in_binary_collation() => _unique.ShouldContain("COLLATE Latin1_General_100_BIN2");
+    [Fact] void should_compare_the_unique_constraint_owner_length_in_bytes() => _unique.ShouldContain("DATALENGTH(");
 }

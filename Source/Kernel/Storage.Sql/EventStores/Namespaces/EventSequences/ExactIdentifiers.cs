@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.InFlightEvents;
+using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.UniqueConstraints;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Query.SqlExpressions;
 
@@ -117,6 +118,44 @@ static class ExactIdentifiers
 
         var bytes = partition.Length * BytesPerCharacter;
         return narrowed.Where(e => EF.Functions.Collate(e.Partition, BinaryCollation) == partition && ByteLength(e.Partition) == bytes);
+    }
+
+    /// <summary>
+    /// Narrow a query to the unique constraint rows owned by an event source.
+    /// </summary>
+    /// <param name="query">The query to narrow.</param>
+    /// <param name="context">The context the query runs on.</param>
+    /// <param name="owner">The owning event source id to match.</param>
+    /// <returns>The narrowed query.</returns>
+    internal static IQueryable<UniqueConstraintValueEntry> WhereOwner(this IQueryable<UniqueConstraintValueEntry> query, DbContext context, string owner)
+    {
+        var narrowed = query.Where(e => e.EventSourceId == owner);
+        if (!context.Database.IsSqlServer())
+        {
+            return narrowed;
+        }
+
+        var bytes = owner.Length * BytesPerCharacter;
+        return narrowed.Where(e => EF.Functions.Collate(e.EventSourceId, BinaryCollation) == owner && ByteLength(e.EventSourceId) == bytes);
+    }
+
+    /// <summary>
+    /// Narrow a query to the unique constraint rows owned by an event source.
+    /// </summary>
+    /// <param name="query">The query to narrow.</param>
+    /// <param name="context">The context the query runs on.</param>
+    /// <param name="owner">The owning event source id to match.</param>
+    /// <returns>The narrowed query.</returns>
+    internal static IQueryable<UniqueConstraintIndexEntry> WhereOwner(this IQueryable<UniqueConstraintIndexEntry> query, DbContext context, string owner)
+    {
+        var narrowed = query.Where(e => e.EventSourceId == owner);
+        if (!context.Database.IsSqlServer())
+        {
+            return narrowed;
+        }
+
+        var bytes = owner.Length * BytesPerCharacter;
+        return narrowed.Where(e => EF.Functions.Collate(e.EventSourceId, BinaryCollation) == owner && ByteLength(e.EventSourceId) == bytes);
     }
 
     /// <summary>
