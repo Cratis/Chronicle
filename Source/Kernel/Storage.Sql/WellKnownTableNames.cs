@@ -284,6 +284,11 @@ public static class WellKnownTableNames
     public const string EncryptionKeyErasures = "EncryptionKeyErasures";
 
     /// <summary>
+    /// The table that holds the encryption key identifiers stored before they were compared exactly on SQL Server.
+    /// </summary>
+    public const string EncryptionKeyIdentifierReviews = "EncryptionKeyIdentifierReviews";
+
+    /// <summary>
     /// The table that holds OAuth tokens.
     /// </summary>
     public const string Tokens = "Tokens";

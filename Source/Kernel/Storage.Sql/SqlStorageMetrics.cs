@@ -20,4 +20,7 @@ internal static partial class SqlStorageMetrics
 
     [Counter<int>("chronicle-sql-upsert-collisions-recovered", "Concurrent SQL insert collisions recovered by storage")]
     internal static partial void UpsertCollisionRecovered(this IMeter<SqlStorageTelemetry> meter, string operation, int count);
+
+    [Counter<int>("chronicle-sql-encryption-key-identifiers-refused", "Encryption key operations refused because their identifier is under review")]
+    internal static partial void EncryptionKeyIdentifierRefused(this IMeter<SqlStorageTelemetry> meter, int count);
 }

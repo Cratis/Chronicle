@@ -49,4 +49,9 @@ internal sealed class SqlStorageTelemetry
     /// <param name="operation">The bounded storage operation name.</param>
     /// <param name="count">The number of collision retries recovered by the operation.</param>
     internal static void RecoveredCollision(string operation, int count = 1) => _meter.UpsertCollisionRecovered(operation, count);
+
+    /// <summary>
+    /// Counts an encryption key operation that was refused because its identifier is under review.
+    /// </summary>
+    internal static void EncryptionKeyIdentifierRefused() => _meter.EncryptionKeyIdentifierRefused(1);
 }
