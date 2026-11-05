@@ -20,7 +20,7 @@ public class when_accessing_keys_for_different_namespaces_and_stores : Specifica
 
     void Establish()
     {
-        var jobs = Substitute.For<Cratis.Orleans.Storage.IJobsStorage>();
+        var jobs = Substitute.For<Cratis.Choreography.Storage.IJobsStorage>();
         _first = new EventStoreStorage("first", _ => Substitute.For<ISinks>(), jobs);
         _second = new EventStoreStorage("second", _ => Substitute.For<ISinks>(), jobs);
         _key = UniqueConstraintEncodingKey.Create();

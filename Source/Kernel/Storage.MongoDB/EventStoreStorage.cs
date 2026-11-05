@@ -88,6 +88,9 @@ public class EventStoreStorage(
     public Chronicle.Storage.Generations.IGenerationFloorStorage GenerationFloor { get; } = new Generations.GenerationFloorStorage(eventStoreDatabase.GetCollection<BsonDocument>(WellKnownCollectionNames.GenerationFloor));
 
     /// <inheritdoc/>
+    public IUniqueConstraintEncodingStorage UniqueConstraintEncoding { get; } = new Events.Constraints.UniqueConstraintEncodingStorage(eventStoreDatabase.GetCollection<BsonDocument>(WellKnownCollectionNames.UniqueConstraintEncodingKey));
+
+    /// <inheritdoc/>
     public EventStoreName EventStore { get; } = eventStore;
 
     /// <inheritdoc/>

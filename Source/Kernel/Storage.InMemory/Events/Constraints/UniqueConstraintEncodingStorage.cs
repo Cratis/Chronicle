@@ -30,6 +30,7 @@ public sealed class UniqueConstraintEncodingStorage : IUniqueConstraintEncodingS
     public Task<UniqueConstraintEncodingKey> CreateKeyIfAbsent(UniqueConstraintEncodingKey candidate)
     {
         ArgumentNullException.ThrowIfNull(candidate);
+        _ = UniqueConstraintStoreKeyIdBytes.From(candidate.KeyId);
         lock (_gate)
         {
             _key ??= candidate;

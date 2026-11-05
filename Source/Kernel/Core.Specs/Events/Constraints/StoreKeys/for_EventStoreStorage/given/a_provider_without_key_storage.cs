@@ -66,5 +66,11 @@ public sealed class a_provider_without_key_storage : IEventStoreStorage
     public Storage.Seeding.IEventSeedingStorage EventSeeding => throw new NotSupportedException();
 
     /// <inheritdoc/>
+    public Storage.Projections.IProjectionDefinitionHistoryStorage ProjectionDefinitionHistory => throw new NotSupportedException();
+
+    /// <inheritdoc/>
+    public Storage.Observation.Webhooks.IWebhookSigningKeysStorage WebhookSigningKeys => throw new NotSupportedException();
+
+    /// <inheritdoc/>
     public IEventStoreNamespaceStorage GetNamespace(EventStoreNamespaceName @namespace) => throw new NotSupportedException();
 }
