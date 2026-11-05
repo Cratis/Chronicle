@@ -49,6 +49,10 @@ public class Authentication
     /// that would reach event stores other than the requested one, and the destructive System-store operational
     /// recovery operations. It is independent of <see cref="EnforceAdministratorPolicyForOperations"/> and
     /// <see cref="EnforceComplianceCapabilities"/>; either of those being on still enforces its broader scope.
+    /// The scope is deliberately narrow: destructive operations on the System store or at kernel scope, and compliance key
+    /// fan-out beyond the requested event store. Operations on an ordinary event store, such as an application replaying its
+    /// own observers, stay with the per-store rules and are not affected by this flag. Rotating an application secret is
+    /// deliberately excluded, because an administrator can rotate it again.
     /// When this is off, such operations are logged and allowed as before.
     /// </summary>
     public bool EnforceDestructiveOperations { get; init; } = DefaultEnforceDestructiveOperations;
