@@ -31,6 +31,32 @@ internal static class JobLiveness
     internal static readonly TimeSpan ResumeStalledAfter = TimeSpan.FromMinutes(5);
 
     /// <summary>
+    /// How long a job may stay in preparation without a single step before it is considered abandoned.
+    /// </summary>
+    /// <remarks>
+    /// Preparing counts each step as it is created, so a job that is really preparing has a step count. A job written by
+    /// a release that predates the step plan can stay in preparation with none forever (#5667).
+    /// </remarks>
+    internal static readonly TimeSpan PreparationAbandonedAfter = TimeSpan.FromMinutes(15);
+
+    /// <summary>
+    /// Gets whether a job recorded as preparing never produced a step and has not moved on since <see cref="PreparationAbandonedAfter"/>.
+    /// </summary>
+    /// <param name="job">The <see cref="JobState"/> to check.</param>
+    /// <param name="now">The current time.</param>
+    /// <returns>True if the job is preparing with no steps and nothing that could still start them.</returns>
+    internal static bool PreparationAbandoned(JobState job, DateTimeOffset now)
+    {
+        if (job.Status == JobStatus.Running || !job.IsPreparingOrRunning || job.Progress.TotalSteps > 0)
+        {
+            return false;
+        }
+
+        var lastChange = job.StatusChanges.Select(_ => _.Occurred).DefaultIfEmpty(job.Created).Max();
+        return now - lastChange > PreparationAbandonedAfter;
+    }
+
+    /// <summary>
     /// Gets whether every step of the job has concluded and the job has not moved on since <see cref="StaleAfter"/>.
     /// </summary>
     /// <param name="job">The <see cref="JobState"/> to check.</param>

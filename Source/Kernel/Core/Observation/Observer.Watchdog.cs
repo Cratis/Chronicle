@@ -268,9 +268,21 @@ public partial class Observer
                 req.ObserverKey == _observerKey &&
                 job.IsLive(now));
 
-            if (!hasRunningReplayJob)
+            if (hasRunningReplayJob)
             {
+                _replayRestarts.Reset();
+            }
+            else if (_replayRestarts.IsDue(StalledJobsTimeProvider.GetUtcNow()))
+            {
+                // Each restart starts a new replay job. A replay that keeps failing must not be restarted on every tick,
+                // so the next restart is held back by a growing delay (#5667).
                 logger.WatchdogReplayJobMissing();
+                var attempt = _replayRestarts.Record(StalledJobsTimeProvider.GetUtcNow());
+                if (attempt > 1)
+                {
+                    logger.WatchdogRestartingReplayWithBackoff(attempt, _replayRestarts.NextDelay);
+                }
+
                 await TransitionTo<Routing>();
                 return true;
             }
