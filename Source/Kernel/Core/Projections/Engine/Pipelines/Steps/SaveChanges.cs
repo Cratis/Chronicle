@@ -146,25 +146,40 @@ public class SaveChanges : ICanPerformProjectionPipelineStep
         return failedPartitions.Any(failure => Equals(failure.EventSourceId.Value, ownPartition) || Equals(failure.EventSourceId.Value, key.Value));
     }
 
-    async Task<IEnumerable<FailedPartition>> ApplyMainChanges(IProjection projection, ProjectionEventContext context, PendingFutureSave[] foldedFutureSaves)
+    /// <summary>
+    /// Applies the main changes. Deliberately not async: with the watch gate closed it forwards the sink task directly, as it always did,
+    /// so an unwatched write allocates no state machine. Only the watched path goes through the async helper.
+    /// </summary>
+    /// <param name="projection">The projection being handled.</param>
+    /// <param name="context">The event context holding the changeset.</param>
+    /// <param name="foldedFutureSaves">Future saves already folded into the changeset.</param>
+    /// <returns>The failed partitions reported by the sink.</returns>
+    Task<IEnumerable<FailedPartition>> ApplyMainChanges(IProjection projection, ProjectionEventContext context, PendingFutureSave[] foldedFutureSaves)
     {
         if (_watchGate.IsOpen && ChangesetChildRemovals.HasChildRemovalsFromAll(context.Changeset))
         {
-            await RecordAffectedParents(context);
+            return RecordAffectedParentsThenApply(projection, context, foldedFutureSaves);
         }
 
-        var mode = WriteModeFor(projection, context);
-        return foldedFutureSaves.Length > 0
-            ? await _sink.ApplyChangesImmediately(context.Key, context.Changeset, context.Event.Context.SequenceNumber, mode)
-            : await _sink.ApplyChanges(context.Key, context.Changeset, context.Event.Context.SequenceNumber, mode);
+        return ApplyToSink(projection, context, foldedFutureSaves);
     }
 
-    async Task RecordAffectedParents(ProjectionEventContext context)
+    Task<IEnumerable<FailedPartition>> ApplyToSink(IProjection projection, ProjectionEventContext context, PendingFutureSave[] foldedFutureSaves)
+    {
+        var mode = WriteModeFor(projection, context);
+        return foldedFutureSaves.Length > 0
+            ? _sink.ApplyChangesImmediately(context.Key, context.Changeset, context.Event.Context.SequenceNumber, mode)
+            : _sink.ApplyChanges(context.Key, context.Changeset, context.Event.Context.SequenceNumber, mode);
+    }
+
+    async Task<IEnumerable<FailedPartition>> RecordAffectedParentsThenApply(IProjection projection, ProjectionEventContext context, PendingFutureSave[] foldedFutureSaves)
     {
         foreach (var removal in context.Changeset.Changes.OfType<ChildRemovedFromAll>())
         {
             context.AddAffectedParentKeys(await _sink.FindKeysHoldingChild(removal));
         }
+
+        return await ApplyToSink(projection, context, foldedFutureSaves);
     }
 
     async Task ApplyPendingFutureSaves(ProjectionEventContext context)
