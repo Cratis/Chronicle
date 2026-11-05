@@ -54,12 +54,16 @@ public class a_connected_client : Specification
         var localSiloDetails = Substitute.For<ILocalSiloDetails>();
         localSiloDetails.SiloAddress.Returns(silo);
 
+        AllowingConnectionOwnership.WithActiveSilos(grainFactory, silo);
+        var ownership = AllowingConnectionOwnership.Create();
         var options = Options.Create(new ChronicleOptions { ConnectedClients = new() { KeepAliveIntervalSeconds = 1 } });
         _connectionService = new KernelConnectionService(
             grainFactory,
             localSiloDetails,
             new ConnectedClientsQuery(grainFactory, options),
             _openConnections,
+            ownership,
+            AllowingConnectionOwnership.VisibilityFor(options, ownership),
             NullLogger<KernelConnectionService>.Instance,
             options);
     }

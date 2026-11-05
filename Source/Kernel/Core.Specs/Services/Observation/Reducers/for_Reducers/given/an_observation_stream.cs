@@ -65,6 +65,7 @@ public class an_observation_stream : Specification
             new JsonSerializerOptions(),
             CreateActivitySource(),
             Options.Create(new ChronicleOptions()),
+            AllowingConnectionOwnership.Create(),
             NullLogger<Reducers>.Instance,
             Substitute.For<IObserverRegistrationGate>());
         _subscription = reducers.Observe(_messages).Subscribe(_deliveries.Add);

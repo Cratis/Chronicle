@@ -11,4 +11,4 @@ namespace Cratis.Chronicle.Storage.Compliance;
 /// The identifier is deliberately not part of the message.
 /// </remarks>
 public class EncryptionKeyIdentifierUnderReview()
-    : Exception("The encryption key identifier differs only in letter case, width or trailing spaces from an identifier stored before identifiers were compared exactly. It is refused until the matching rows in EncryptionKeyIdentifierReviews have been reviewed; see the compliance storage documentation.");
+    : EncryptionKeyIdentifierRefused("The encryption key identifier differs only in letter case, width or trailing spaces from an identifier stored before identifiers were compared exactly. It is refused until the matching rows in EncryptionKeyIdentifierReviews have been reviewed; see the compliance storage documentation.");
