@@ -34,6 +34,36 @@ public partial class Observer
 
     bool IsRetired => _alertDisposition == AlertDisposition.Retired;
 
+    /// <summary>
+    /// Gets when the alert reminder first fires. Orleans anchors every later tick to this moment, so a due time derived
+    /// from the observer key spreads thousands of reminders over the period instead of letting them tick in one second.
+    /// </summary>
+    TimeSpan AlertReminderDueTime
+    {
+        get
+        {
+            // string.GetHashCode is randomized per process, so use a stable hash to keep the phase across restarts.
+            var hash = 2166136261u;
+            foreach (var character in this.GetPrimaryKeyString())
+            {
+                hash = (hash ^ character) * 16777619u;
+            }
+
+            var offset = TimeSpan.FromTicks(_minimumRetryReminderPeriod.Ticks * (hash % 1000) / 1000);
+            return _minimumRetryReminderPeriod + offset;
+        }
+    }
+
+    /// <summary>
+    /// Gets a value indicating whether something is waiting to be reported, which is the only time the reminder is needed.
+    /// </summary>
+    bool HasAlertWorkPending =>
+        _alertReconciliationPending ||
+        _alertStateNeedsPersistence ||
+        _alertLifecycleId == Guid.Empty ||
+        Failures.HasFailedPartitions ||
+        State.RunningState == ObserverRunningState.Quarantined;
+
     /// <inheritdoc/>
     public void Dispose()
     {
@@ -235,36 +265,6 @@ public partial class Observer
         _alertReminderRegistered = true;
         this.ScheduleInSeparateTurn(() => this.RegisterOrUpdateReminder(AlertReminderName, AlertReminderDueTime, _minimumRetryReminderPeriod));
     }
-
-    /// <summary>
-    /// Gets when the alert reminder first fires. Orleans anchors every later tick to this moment, so a due time derived
-    /// from the observer key spreads thousands of reminders over the period instead of letting them tick in one second.
-    /// </summary>
-    TimeSpan AlertReminderDueTime
-    {
-        get
-        {
-            // string.GetHashCode is randomized per process, so use a stable hash to keep the phase across restarts.
-            var hash = 2166136261u;
-            foreach (var character in this.GetPrimaryKeyString())
-            {
-                hash = (hash ^ character) * 16777619u;
-            }
-
-            var offset = TimeSpan.FromTicks(_minimumRetryReminderPeriod.Ticks * (hash % 1000) / 1000);
-            return _minimumRetryReminderPeriod + offset;
-        }
-    }
-
-    /// <summary>
-    /// Gets a value indicating whether something is waiting to be reported, which is the only time the reminder is needed.
-    /// </summary>
-    bool HasAlertWorkPending =>
-        _alertReconciliationPending ||
-        _alertStateNeedsPersistence ||
-        _alertLifecycleId == Guid.Empty ||
-        Failures.HasFailedPartitions ||
-        State.RunningState == ObserverRunningState.Quarantined;
 
     /// <summary>
     /// Gives the alert reminder up once a tick finds nothing to report.
