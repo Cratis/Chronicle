@@ -22,13 +22,15 @@ Event captures use the typed event fixtures and overlay rules in
 
 Use `given clock`, never `given time`, to state the scenario occurrence time and
 assert a value mapped from `$context.occurred`. In a command's `produces`, that
-mapping executes when the scenario has `given clock`. It is not the same as
-`$eventContext.occurred` in a projection, which the execution plan refuses (SKILL.md, "Reference execution — what actually runs").
+mapping executes when the scenario has `given clock`. `$eventContext.occurred` in a
+projection is the fact's occurrence time: the reference runner executes it in `from`,
+`every` and `children` blocks for facts appended during the run under `given clock`, and a
+`given` fact carries none (Unsupported).
 
 **Which tools bind these actions.** A compiler that admits ESM v6 binds the clock, trigger
 and capture actions, and the `Automation` and `Translate` slices, reactions and captures they
 drive; the reference runner executes them through `screenplay test` or MCP `run-specifications`,
-with the semantics in [Reactions and cascades](reactions-and-cascades.md). The complete example in
+with the semantics in [Reactions and one slice per specification](reactions-and-cascades.md). The complete example in
 that reference reports `executableReady` with no executable error in `open-workspace` readiness
 and `read-workspace` view `executable-diagnostics`.
 

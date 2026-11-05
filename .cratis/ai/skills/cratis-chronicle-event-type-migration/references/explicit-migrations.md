@@ -42,6 +42,6 @@ the store-local alias. Custom schema generators resolving explicit compensation
 targets need the registry-aware overloads or throw
 `RegistryAwareEventTypeSchemasNotSupported`.
 
-Run `dotnet build -c Debug` and migration specs with `dotnet test`; assert both
+Run `dotnet build -c Debug` and migration spec executables (see [specs.csharp](../../../rules/specs.csharp.md)); assert both
 directions and real observer delivery where pinning or protected-value release
 matters. A successful nomination alone does not prove a generation can be read.

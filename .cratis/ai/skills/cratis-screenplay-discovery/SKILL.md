@@ -1,6 +1,6 @@
 ---
 name: cratis-screenplay-discovery
-description: "Discover a domain and its event timeline by interview and live storming, landing results directly in `.play` as modules, personas with Does/Reads/Cannot, features and past-tense events with essential fields, in story order, with branches, way-outs and endings named. Use when starting a model, exploring a workflow, supporting a human workshop, or turning notes, tickets or documents into events. Not for: command or read-model design (use `cratis-screenplay-slice-design`), reviewing a finished model (use `cratis-screenplay-model-review`), or reverse-engineering code (use `cratis-screenplay-legacy-extraction`)."
+description: Use when discovering a domain's event timeline from interviews, workshops or process documents for a .play model. Not for command and view design, finished-model review or extracting behavior from existing code.
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/cratis-screenplay-discovery/SKILL.md -->
@@ -207,7 +207,7 @@ Read [references/neighbouring-skills.md](references/neighbouring-skills.md) when
 - `references/interview-questions.md` - questions by topic, why, follow-ups.
 - `references/storming-loop.md` - the loop, edit kinds, a compiled discovery skeleton.
 - `references/event-naming.md` - naming rules, not-an-event filter, repairs.
-- `references/personas-and-causes.md` - role catalogue, Cannot resolved to executable gates.
+- Read `references/personas-and-causes.md` when cataloging roles, capturing persona goals, placing personas or sticky notes on the personas canvas, or resolving Cannot lines to executable gates.
 - `references/divergent-sweep.md` - lenses for the wide pass.
 - `references/document-intake.md` - read when the source is a document or a package of documents: rigor rules, the facts file, reading long sources, fact kind to declaration, the blueprint summary.
 - `references/domain-analysis-template.md` - read when requirements arrive as prose and a person must confirm your reading before you model: the note shape, requirement checks, expert questions.

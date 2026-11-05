@@ -94,9 +94,6 @@ module Exams
           for "7e9d1c2b-4a3f-4e5d-8c6b-1a2b3c4d5e06"
           outcome = "passed"
           score   = 87
-        then ExamPassed
-          for "7e9d1c2b-4a3f-4e5d-8c6b-1a2b3c4d5e06"
-          score = 87
     slice Automation RecordExamResult
       reaction PassTranslator
         when ProctorResultReceived
@@ -116,6 +113,14 @@ module Exams
       constraint OneResultPerAttempt
         unique event ExamPassed
         unique event ExamFailed
+      specification RecordingAPass
+        when append ProctorResultReceived
+          for "7e9d1c2b-4a3f-4e5d-8c6b-1a2b3c4d5e06"
+          outcome = "passed"
+          score   = 87
+        then ExamPassed
+          for "7e9d1c2b-4a3f-4e5d-8c6b-1a2b3c4d5e06"
+          score = 87
       specification RefusingASecondResult
         given ExamPassed
           for "7e9d1c2b-4a3f-4e5d-8c6b-1a2b3c4d5e06"
@@ -132,7 +137,8 @@ module Exams
 - Keep the capture and its appended event in Translate; put reactions to that local
   event in a separate Automation. Co-location in a directionless Translate warns
   PLAY0694 and fails `--warnaserror`; explicit inbound refuses it with PLAY0616.
-  `then` lists every new fact, so `TranslatingAPass` includes the Automation result.
+  A specification runs only its own slice (Screenplay decision 0115), so `TranslatingAPass`
+  states the Translate slice's fact and `RecordingAPass` states the Automation's result.
 - `when added` records first sight; the separate `when outcome` append handles
   later changes. For an update spec, seed the same reference with `given capture`.
   Requires Screenplay 4.175.0 or later (`screenplay --version`); older evaluators

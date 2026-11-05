@@ -1,6 +1,6 @@
 ---
 name: vectorization
-description: 'Designs, implements, optimizes, and reviews SIMD code in .NET: vectorizing scalar loops with TensorPrimitives, Vector64, Vector128, Vector256, Vector512, or hardware intrinsics, and reviewing existing SIMD code, including the generic Vector type, for contract equivalence, tail handling, memory safety, portability, fallbacks, and measured performance. Use when a .NET loop or SIMD routine is being written or reviewed. Not for performance work unrelated to SIMD.'
+description: Use when vectorizing a .NET scalar loop or reviewing SIMD behavior, memory safety, tails and fallbacks. Not for performance work unrelated to SIMD.
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/vectorization/SKILL.md -->

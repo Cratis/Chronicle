@@ -1,6 +1,6 @@
 ---
 name: cratis-screenplay-model-authoring
-description: Author, inspect, refactor and verify a Cratis Screenplay .play model through its typed AST and MCP workspace tools. Use for creating or changing model elements, navigating large split models, reviewing references/specifications, revision-checked screen/UI authoring proposals, or distinguishing source validity from executable/runtime readiness. Do not use for rendering a model into an application or hand-written Arc/Chronicle code.
+description: Use when inspecting or changing Screenplay model elements through typed AST proposals, navigating split models or recovering workspace state. Not for rendering the model or writing Arc and Chronicle application code.
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/cratis-screenplay-model-authoring/SKILL.md -->
@@ -51,8 +51,9 @@ it owns fallback discovery, fixed-root limits and the initialization protocol.
 Discover `tools/list` schemas.
 
 Look first for the project's existing `.play` files: their folder is the model.
-New models go in `Source/` or `src/`, else root `Screenplay/`, never `.cratis/`
-(configuration/shared corpus only). The source is the single flow model;
+Reuse existing model/workspace roots; code-only `Source/` or `src/` is not a
+model root. Otherwise use repository-root `Screenplay/`, never `.cratis/`
+([root selection and version gates](../cratis-screenplay-event-modeling/references/file-layout.md#locate-the-model)). The source is the single flow model;
 explanatory Markdown belongs in repository documentation.
 
 `cratis ai install` manages `.cratis/ai/`, never model files. Select the
@@ -106,7 +107,10 @@ for handler views: `executableReady` means binding, not an implemented body.
 ## Compare models
 
 Compare with `main` through `semantic-diff` worktree `path`, not two exports.
-Read [comparison sources](references/mcp-tools.md#semantic-revision-comparison) for paging.
+Read [comparison sources](references/mcp-tools.md#semantic-revision-comparison) for paging
+and [enum numeric identity](references/mcp-tools.md#enum-numeric-identity) for
+stored-value risks: implicit reorders can renumber values; stable explicit-number
+reorders do not. Static comparison never proves storage or behavioral compatibility.
 
 ## Make one coherent proposal
 

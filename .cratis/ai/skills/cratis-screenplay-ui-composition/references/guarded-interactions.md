@@ -4,7 +4,7 @@
 
 # Choose a gesture's whole action list
 
-`on click`, `on double click` and `on select` accept ordered block-form `when`
+`on click`, `on double click`, `on select` and `on change` accept ordered block-form `when`
 alternatives and an optional final `otherwise`. Use the same strict condition
 language and data-item subject as [guarded screen actions](../../cratis-screenplay-read-surface/references/guarded-actions.md):
 `item.<path>` compared with a literal, joined by `and`, `or` and parentheses.
@@ -48,17 +48,19 @@ unavailable command never falls through; backend commands retain their rules.
 Unlike labeled actions, no choice was displayed beforehand to refresh at click.
 
 A table click/double click uses the activated row; select uses the newly selected
-item, and clearing selection runs nothing. Elsewhere use the nearest enclosing
+item, and clearing selection runs nothing; change uses the item that changed (see
+[change alternatives](change-alternatives.md)). Elsewhere use the nearest enclosing
 single item or selected row, with guarded actions' sibling precedence. Check named
 behaviors at each `uses` site. Component `context` or `selectedItem` bindings do
 not supply the subject in this version; unresolved/equally near subjects report
 PLAY0346.
 
-Submit, event, change, interval and application triggers have no alternatives.
+Submit, event, interval and application triggers have no alternatives.
 The one-line `on row-click navigate to … by …` remains unchanged. Opaque `where`
-on click/double click/select is deprecated (PLAY0564): strict item conditions warn
+on click/double click/select is deprecated (PLAY0564); a `change` keeps its opaque
+`where`, which PLAY0564 does not flag. Strict item conditions warn
 and C# offers a typed repair to one `when` with no fallback; other guard text is
-Information without repair. Other triggers' `where` remains unchanged. Repairs
+Information without repair. Other triggers' `where`, including change, remains unchanged. Repairs
 require individual review, canonical formatting, preserve comments and refuse
 comment loss; TypeScript diagnoses but offers no repair. PLAY0563 has a C# repair
 expanding a one-line alternative to the block form. Neither repair supports

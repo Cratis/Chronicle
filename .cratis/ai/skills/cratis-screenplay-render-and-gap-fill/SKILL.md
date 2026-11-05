@@ -1,6 +1,6 @@
 ---
 name: cratis-screenplay-render-and-gap-fill
-description: "Deliver an accepted Screenplay `.play` model as code: probe whether `cratis render` admits the whole model, publish, then report admission, publication, Debug build and Debug tests as separate results mapped to the generated specification classes; triage model fix versus capability gap; bounded `Customizations/` adapters; drift by manifest revision; and hand non-renderable scope to `slice-implementer` with the model as the contract. Use when an accepted model must become running code, when asking whether a model renders, or after a model change. Not for: changing the model (use `cratis-screenplay-slice-design`), Stage internals (use `cratis-stage-rendering-and-sandbox`), or checking hand-written code against its slice (use `cratis-application-slice-conformance`)."
+description: Use when probing whether an accepted Screenplay model renders, delivering admitted scope or triaging a renderer gap. Not for changing the model, Stage internals or auditing hand-written slice conformance.
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/cratis-screenplay-render-and-gap-fill/SKILL.md -->
@@ -36,16 +36,23 @@ Tool versions are covered in `cratis-screenplay-toolchain` `SKILL.md`; read it b
 ## Language modes that block target delivery
 
 Read [language admission](../cratis-screenplay-toolchain/references/language-admission.md)
-for v22–v25: Stage rendering refuses atomic batches, described bodies (even Stub mode)
-but renders admitted protected reads in a supporting bundle. Semantic Host/executor
+for version selection, and [current Stage boundaries](../cratis-stage-rendering-and-sandbox/references/current-boundaries.md)
+for realization. Bounded atomic batches, source-event Translate captures/publication and resolved
+C# validation bodies now render. Described handlers still refuse even in Stub
+mode; query-performer gaps are a separate contract, not completed behavior. Protected reads still need an admitted shape. Semantic Host/executor
 support is not generated-app protection.
 Preserve contracts; reference success is not target realization.
 
-File/inline command handlers permanently require constrained attachments: gap-fill
-in code, not by waiting for ESM admission. Requires Screenplay 4.210.0
-(`screenplay --version`) for PLAY0800 and required typed `arguments.subject`;
-older binders use PLAY0268. Read [renderability gate](references/renderability-gate.md)
+A file/inline command handler binds beside unconditional `produces` with a resolved
+body (v23 result contract, Screenplay 4.250.0); without them it refuses PLAY0800 with a
+required typed `arguments.subject`. 4.210.0 to 4.249.x refuse every attached handler
+with PLAY0800; older binders use PLAY0268. Read [renderability gate](references/renderability-gate.md)
 when classifying a handler or other binding refusal; never parse message text.
+
+Inline bodies (`csharp`, `typescript`, `react`, `html`, `sql`, `java`) are opaque and reach the target
+unchanged; each target decides which it realizes. The Cratis target refuses `java` bodies: gap-fill
+that scope in code and record the refusal.
+Requires Screenplay 4.244.0 (`screenplay --version`) for the `java` refusal.
 
 ## Interview phase
 Ask only for missing inputs: accepted model/root, stable `--name`, destination,
@@ -69,15 +76,18 @@ Supported UUID/String generation, v15 freshness, responses, fixtures and
 types (`STAGE-ESM-028`) and result combinations (`-038`) still require case A or C:
 preserve the model and its specifications. See Stage's `references/admission.md`.
 Supported event-triggered Automation slices also render as managed Chronicle reactors;
-refused reactions, captures and Translate slices remain gap-fill. A `given clock` fixture
+bounded source-event captures and outbound Translate also render; refused reaction/Translate shapes remain gap-fill. A `given clock` fixture
 in the semantic executor is not support for rendering clock triggers.
 Requires Stage 4.141.0 to render v26 Date/DateTime command comparisons; older renderers
 refuse `STAGE-ESM-046`. Read [rendered date comparisons](../cratis-stage-rendering-and-sandbox/references/date-comparisons.md)
 when delivering dates for remaining refusals and input-binding differences.
 
 Source/stream routes bind and reference-execute as v8; target admission is separate.
-Requires Cratis CLI 3.75.0 for v27 admission; older bundles stop earlier, v28 is
-`CLI-RENDER-004`. Read toolchain `references/renderable-subset.md` and
+Requires Cratis CLI 3.75.0 for v27 admission; older bundles stop earlier.
+The reviewed CLI admits semantic versions through v30; its bundled Stage then
+applies matched-pair and construct gates. V32 needs a direct caller of the reviewed
+Stage baseline; see [CLI bundle details](../cratis-screenplay-toolchain/references/language-admission.md#stage-admission-and-execution).
+Read toolchain `references/renderable-subset.md` and
 `references/sources-and-streams.md` when delivering routes, actor gates or filters.
 Preserve refused public/foreign events, production overrides and opaque gates as A/C.
 
@@ -172,12 +182,32 @@ Adapters and non-renderable scope follow the contract rules of `cratis-applicati
 - The `cratis run` sandbox's legacy EventModel engine (the default engine before CLI 3.73.0) enforces only simple literal validation rules and no
   authorization; it is no evidence for denial behaviour or for any other rule.
 - Never remove `pii`, `secret`, authorization or rules to get a render through; report the gap.
+- Generated .NET apps validate concept `matches` rules at runtime with the `Cratis.Screenplay.Matching` package (`PortableMatcher`),
+  the matcher the compiler admitted; reference it at the same version as the Screenplay compiler.
+  Requires Screenplay 4.241.0 (`screenplay --version`) for that package.
 - Stop and ask only on a genuine contradiction between model, specs, descriptions and declared
   contracts, after reading the slice fully (`cratis-screenplay-modeling-lifecycle` `references/stop-or-assume.md`).
 - Commit set after a delivery the user accepts: the destination's `.cratis-render.json`,
   managed output and `Customizations/`. The model and identity catalog were committed at P6.
   Never `.cratis-render/` (the journal directory) and never `.ai-work/`.
 - Limits stated in this text are prompt policy unless a guard enforces them; say so.
+
+## Hand-written query logic and re-render
+
+Symptom: a today-relative query (overdue, due today) was written by editing the body of a generated query
+file; the next `render` refused with `Managed artifact '<file>' was modified by the user; pass --force to
+replace it.` Query filters are equality only and there is no `today` in a filter or projection, so this
+logic is gap-fill. Cause: a managed file's hash is in `.cratis-render.json`, and an edited one blocks the
+whole re-render. What to do:
+
+- Never edit a managed file. Put the logic in a new unmanaged file, for example `Customizations/<Name>.cs`
+  (compiled with the project, never replaced by `render`), with its own endpoint or query class, and record it
+  as gap-fill (`references/gap-fill-handoff.md`).
+- `--force` replaces the edited managed file with the generated one and discards the edit; use it only with
+  approval that names the file.
+- Screens reported as `PLAY0269` are information that the backend profile defers them. They are not
+  proof of a rendered screen: check the running app (`cratis-screenplay-toolchain` `references/fast-path.md`)
+  and list any authored screen that is missing as not rendered.
 
 ## Gate
 

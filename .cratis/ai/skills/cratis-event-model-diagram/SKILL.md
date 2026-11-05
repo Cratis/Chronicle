@@ -1,6 +1,6 @@
 ---
 name: cratis-event-model-diagram
-description: Create and maintain Mermaid eventmodeling diagrams for a Cratis module or feature, and keep them in sync with their authority (the accepted `.play` model where one covers the scope, otherwise the code). Use when adding, renaming, moving, or deleting a module, feature, behavior, command, event, read model, automation, translation, or cross-module flow. Do not use to decide the event vocabulary or stream boundaries - settle the model first, then render it here.
+description: Use when drawing or updating a Mermaid eventmodeling diagram to match an already-decided Cratis model or code flow. Not for choosing event vocabulary, stream boundaries or behavior.
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/cratis-event-model-diagram/SKILL.md -->

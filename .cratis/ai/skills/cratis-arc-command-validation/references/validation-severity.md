@@ -19,4 +19,4 @@ remove the floor, and an explicit attribute wins. Check with
 
 Specify both the default refusal and a caller sending a permissive severity.
 Assert the command did not write events; a displayed message alone is not proof
-that validation blocked execution. Run `dotnet test` on the owning spec project.
+that validation blocked execution. Run the owning spec project's built executable (see [specs.csharp](../../../rules/specs.csharp.md)).
