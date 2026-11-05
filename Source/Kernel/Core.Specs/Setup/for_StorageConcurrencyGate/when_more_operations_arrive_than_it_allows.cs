@@ -9,12 +9,17 @@ public class when_more_operations_arrive_than_it_allows : Specification
     int _running;
     int _mostRunning;
     int _completed;
+    TaskCompletionSource _release;
 
-    void Establish() => _gate = new(2);
+    void Establish()
+    {
+        _gate = new(2);
+        _release = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    }
 
     async Task Because()
     {
-        await Task.WhenAll(Enumerable.Range(0, 20).Select(_ => _gate.Run(async () =>
+        var operations = Enumerable.Range(0, 20).Select(_ => _gate.Run(async () =>
         {
             var now = Interlocked.Increment(ref _running);
             lock (this)
@@ -22,10 +27,12 @@ public class when_more_operations_arrive_than_it_allows : Specification
                 _mostRunning = Math.Max(_mostRunning, now);
             }
 
-            await Task.Delay(5);
+            await _release.Task;
             Interlocked.Decrement(ref _running);
             Interlocked.Increment(ref _completed);
-        })));
+        })).ToArray();
+        _release.SetResult();
+        await Task.WhenAll(operations);
     }
 
     [Fact] void should_never_run_more_than_allowed() => _mostRunning.ShouldBeLessThanOrEqual(2);
