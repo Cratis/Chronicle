@@ -1190,22 +1190,7 @@ public partial class Sink(
     public async Task<IReadOnlyCollection<Key>> FindKeysHoldingChild(ChildRemovedFromAll childRemoved)
     {
         await SettleGuardedBulkReads();
-        var keys = new List<Key>();
-        var seen = new HashSet<Key>();
-
-        if (_isBulkMode)
-        {
-            var pathSegments = childRemoved.ChildrenProperty.Segments.Concat(childRemoved.IdentifiedByProperty.Segments).ToArray();
-            foreach (var (cacheKey, cachedState) in _bulkStateCache)
-            {
-                if (TryFindValueInDocument(cachedState, pathSegments, 0, childRemoved.Key) &&
-                    _bulkKeysByCacheKey.TryGetValue(cacheKey, out var cachedKey) &&
-                    seen.Add(cachedKey))
-                {
-                    keys.Add(cachedKey);
-                }
-            }
-        }
+        var keys = new HashSet<Key>(FindBulkKeysHoldingChild(childRemoved));
 
         var names = childRemoved.ChildrenProperty.Segments.Concat(childRemoved.IdentifiedByProperty.Segments)
             .Select(segment => segment.Value.ToMongoDBPropertyName());
@@ -1217,19 +1202,30 @@ public partial class Sink(
 
         foreach (var document in await cursor.ToListAsync())
         {
-            if (!document.TryGetValue("_id", out var idValue))
+            if (document.TryGetValue("_id", out var idValue))
             {
-                continue;
-            }
-
-            var key = new Key(idValue.IsGuid ? idValue.AsGuid : idValue.ToString()!, ArrayIndexers.NoIndexers);
-            if (seen.Add(key))
-            {
-                keys.Add(key);
+                keys.Add(new Key(idValue.IsGuid ? idValue.AsGuid : idValue.ToString()!, ArrayIndexers.NoIndexers));
             }
         }
 
         return keys;
+    }
+
+    IEnumerable<Key> FindBulkKeysHoldingChild(ChildRemovedFromAll childRemoved)
+    {
+        if (!_isBulkMode)
+        {
+            yield break;
+        }
+
+        var pathSegments = childRemoved.ChildrenProperty.Segments.Concat(childRemoved.IdentifiedByProperty.Segments).ToArray();
+        foreach (var (cacheKey, cachedState) in _bulkStateCache)
+        {
+            if (TryFindValueInDocument(cachedState, pathSegments, 0, childRemoved.Key) && _bulkKeysByCacheKey.TryGetValue(cacheKey, out var cachedKey))
+            {
+                yield return cachedKey;
+            }
+        }
     }
 
     /// <inheritdoc/>
