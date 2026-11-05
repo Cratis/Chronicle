@@ -1,10 +1,9 @@
 ---
 uid: Chronicle.Compliance.Arc
-description: Use Chronicle PII metadata and read-model release with Arc queries, while keeping subject selection, authorization, and erasure boundaries explicit.
+title: Cratis Chronicle PII release in Arc queries
+description: Arc's Chronicle integration decrypts marked personal data before intercepted query responses. Configure subjects and authorize access on the backend.
 ---
-# Compliance in Arc applications
-
-Arc's Chronicle integration releases encrypted read-model values before supported query responses reach clients. Use Chronicle's compliance annotations and subject model for encryption and erasure; generated frontend proxies do not replace those backend responsibilities.
+Cratis Arc uses Chronicle's read-model release to decrypt personally identifiable information (PII) before intercepted query responses reach clients. Use Cratis Chronicle's personal-data annotations and subject identifiers to protect storage and select the right key. Generated frontend proxies do not configure that protection or authorize access.
 
 ## From storage to a query response
 
@@ -12,7 +11,7 @@ Chronicle encrypts PII using a subject's key. A projection's read-model schema m
 
 Arc's Chronicle read-model registration installs `ReadModelInterceptor<TReadModel>`. That interceptor calls `IReadModels.Release(...)` for the model being served, so an ordinary intercepted query does not need handwritten decryption code. Release uses the model's schema and resolved subject; it is not a frontend proxy feature and is not an authorization check.
 
-For example, the **data portion** of an authorized customer-profile response might look like this after release:
+For example, the data portion of an authorized customer-profile response might look like this after release:
 
 ```json
 {
@@ -30,7 +29,7 @@ Erasing a subject's key makes genuinely encrypted values unreadable; it does not
 
 Do not treat a release failure as proof of erasure. Models without applicable metadata can pass through unchanged; service errors can retain the original instance, and transport or deserialization failures can throw. Authorize queries independently and verify the response paths your application exposes.
 
-For detailed guidance on using compliance features from an Arc application, see [Arc Chronicle compliance](/arc/backend/csharp/chronicle/compliance/).
+To configure the integration in your application, continue with [Arc Chronicle compliance](/arc/backend/csharp/chronicle/compliance/).
 
 ## See also
 

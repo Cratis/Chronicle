@@ -1,8 +1,7 @@
 ---
+title: Configure event queues in Cratis Chronicle Server
 description: Configure Chronicle event queues, snapshot persistence, constraint checks, and causation property retention in chronicle.json or environment variables.
 ---
-# Events
-
 The `events` section controls how Chronicle delivers appended events to observers and retains event-sequence state and causation properties. Use it to tune burst handling or reduce persisted audit metadata without changing your application's event types.
 
 ## Example configuration

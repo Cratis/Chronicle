@@ -1,13 +1,15 @@
 ---
-title: Event source questions and pitfalls
-description: Short answers about event sources, streams and tags, stable names and renames, concurrency surprises and when not to use a definition.
+title: Chronicle event source questions and pitfalls
+description: Understand Chronicle event source names, stream filters and concurrency surprises, including renames and when a definition is unnecessary.
 ---
 
-Use this page for a quick answer. Each answer links to the page that explains it.
+Event source definitions in Cratis Chronicle give appends and observer filters a shared set of names without rewriting stored events. Use these answers when choosing whether to add a definition or diagnosing an unexpected filter or concurrency result.
 
 ## What is the difference between an event source, a stream and a tag?
 
-An **event source** is one instance of a kind of thing, such as one account. You identify it with the `EventSourceId`, and its kind is the event source type, which is the name of the definition. A **stream** is a named part of an event source, such as the transactions of one month, identified by an event stream type and an event stream id. A **tag** is a label on an event that you can filter by. Only the first two take part in concurrency scopes. Tags do not. See [Event source](../concepts/event-source.md) and [Appending with tags](../events/appending-with-tags.mdx).
+An event source is one instance of a kind of thing, such as one account. Its `EventSourceId` identifies the instance; its event source type identifies the kind and comes from the definition's name. A stream is a named part of that history, such as one month's transactions, identified by an event stream type and an event stream id.
+
+A tag is a label on an event that you can filter by. Event source and stream values can narrow a concurrency scope, the set of events checked for conflicting writes. Tags cannot. See [Event source](../concepts/event-source.md) and [Appending with tags](../events/appending-with-tags.mdx).
 
 ## Can an event belong to two event sources or two streams?
 
@@ -15,7 +17,7 @@ No. Each event has one event source id and one stream. A fact that concerns two 
 
 ## Is the event source id part of the definition?
 
-No. The definition declares the kind. The id is passed on every append, so one definition serves every account, every project and every transfer.
+No. The definition declares the kind, while each append supplies the instance's id. One account definition serves all accounts; you do not create a new definition for each account.
 
 ## When should I not use a definition?
 
@@ -33,9 +35,9 @@ The definition's names are written on every event, so a rename is a data change,
 - Events already stored keep the old event source type and event stream type. Observers that filter on the new name do not see them.
 - The kernel keeps the old registration, because stored events refer to it. Registering the new name adds a second definition.
 - If you rename a stream inside a definition, the registered definition is replaced. Appends to the old stream name are rejected, but stored events keep it.
-- A closure is stored by value. Closing the old name does not close the new one.
+- Closures follow their declared dimensions. By default, `[ClosesStream]` uses the event source id, stream type and stream id, so renaming the event source type alone does not bypass a closure. Renaming the stream type addresses a different scope. If you customize the closing dimensions, check which renamed values participate. See [Close a stream](./closing.mdx).
 
-Choose stable names. If the name must change, keep the old string as the name and put the new wording in `Description`, or append new events under the new name and have observers handle both until the old events no longer matter.
+For a wording change, keep the stored name and put the new wording in `Description`. If new events must use a new name, plan how observers will handle both names for as long as they need the old history.
 
 ## Can a stream turn off its event source's concurrency dimensions?
 
@@ -51,7 +53,7 @@ The batch needs different guards for one event source id, but the connected kern
 
 ## Why does my observer not see events I appended?
 
-Observers match on the stored event source type and event stream type. Check that the append names the stream, since an append without one has the default stream type and does not pass a stream filter. Check the spelling and casing of both names. Events written before you switched to a definition match only if the definition's names equal the old strings. See [Filter observers](./filtering.mdx).
+Observers match the stored event source type and event stream type, not the C# definition type. Check that the append names the intended stream: an append without one uses the default stream type and will not match a filter for a named stream. Compare the spelling and casing of both stored names with the filter. If the events predate a move to definitions, follow [Migrate from string routing](./migrating.mdx); [Filter observers](./filtering.mdx) explains the matching rules.
 
 ## Does a definition limit which event types I can append?
 
@@ -63,10 +65,8 @@ No. Event source ids are stored in plaintext and cannot be encrypted. See [Event
 
 ## Does a definition replace a decision read?
 
-No. A definition says what an append is guarded by when you pass nothing. A decision read guards a decision based on state you read. They work together. See [Dynamic Consistency Boundary](./dcb.mdx).
+No. A definition supplies a default guard for an append. A decision read builds a guard from the state you read to make a decision, such as whether a withdrawal stays within a monthly limit. Use them together when the rule depends on that state. See [Dynamic Consistency Boundary](./dcb.mdx).
 
 ## Next steps
 
-- [Overview](./index.mdx)
-- [Scenarios](./scenarios.mdx)
-- [How it works](./how-it-works.mdx)
+Start with [Event sources and streams](./index.mdx) if you are choosing a structure for your histories. For concrete scope choices, use [Scenarios](./scenarios.mdx); for discovery, registration and kernel checks, read [How it works](./how-it-works.mdx).

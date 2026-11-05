@@ -1,9 +1,10 @@
 ---
+title: Server support
 description: The Chronicle connection string format the server supports, with chronicle:// and chronicle+srv:// schemes, multiple hosts, load balancing and query parameters.
 ---
-# Server support
+Cratis Chronicle connection strings specify server addresses, authentication and connection options. This reference describes the .NET client's behavior.
 
-Chronicle connection strings follow this general format:
+Connection strings follow this general format:
 
 ```text
 chronicle://[username:password@]host[:port][,host[:port],...][/?options]
@@ -30,8 +31,8 @@ chronicle://node1:35000,node2:35000,node3:35000
 
 | Strategy | Description |
 |----------|-------------|
-| `least-connections` | Default. Asks every candidate server how many clients it currently has connected and picks the one with the fewest. See below for how the probe works |
-| `round-robin` | Cycles through the servers in order, starting at a random offset so a fleet of client instances spreads across the servers. For a small fleet (two clients, two servers) the random offset can still coincide by chance - `least-connections` doesn't have this limitation |
+| `least-connections` | Default. With multiple candidates, asks each server for its connection count, including pending reservations, and picks the lowest count. See below for how the probe works |
+| `round-robin` | Cycles through the servers in order, starting at a random offset. Independently started clients can still pick the same server; `least-connections` uses server counts to reduce this risk, but does not guarantee an even spread |
 | `random` | Picks a random server on every connect |
 
 Select the strategy with the `loadBalancer` query parameter, or programmatically through
@@ -48,40 +49,31 @@ to ask before it has authenticated:
 
 | Endpoint | Purpose |
 |----------|---------|
-| `GET /connections/count` | Returns how many clients are currently connected to *that specific server* - not the cluster-wide total |
+| `GET /connections/count` | Returns the connected-client count plus unexpired reservations for *that specific server* - not the cluster-wide total |
 | `POST /connections/reserve` | Reserves a connection slot on that server ahead of the client actually connecting |
 
-Before connecting (and on every reconnect), the client asks every candidate server for its count in
-parallel and picks whichever answered with the lowest number - ties are broken randomly rather than
-always preferring the first candidate. It then calls `POST /connections/reserve` on the server it
-picked, before starting the real connect handshake (TLS plus a compatibility check), and only then
-proceeds to connect.
+When more than one candidate remains, the client asks each candidate server for its count in
+parallel and picks the lowest count - ties are broken randomly rather than always preferring the
+first candidate. It then makes a best-effort call to `POST /connections/reserve` on the server it
+picked before starting the connection handshake. A failed reservation does not stop the connection
+attempt. With a single candidate, the client connects without probing or reserving a slot.
 
-The reservation exists because the gap between "decided to connect here" and "actually registered
-as connected" is wide enough for another client to probe in the middle of it. Without a
-reservation, two clients starting at the same time (a rollout, a composition bringing up several
-instances together) can both probe before either has registered, both see the same low count, and
-both pick the same server - random tie-breaking alone only turns a guaranteed collision into a coin
-flip, it doesn't prevent it. The reservation is reflected in `/connections/count` immediately, so a
-second client probing a moment later sees the first client's pick and routes around it. Once the
-real connection registers, the server clears the reservation that stood in for it, so a successful
-connect is only ever counted once. A reservation that never converts - the client crashes, or
-picks a different server after all - is not explicitly released; it simply expires on its own
-(30 seconds), so an abandoned connection attempt doesn't permanently inflate a server's reported
-count.
+A successful reservation makes a pending connection visible in `/connections/count` before the
+client has finished connecting. Later probes can account for that pending connection instead of
+all seeing the same low count. When a real connection registers, the server removes its oldest
+outstanding reservation. Reservations not consumed by a connection expire; their lifetime defaults
+to 30 seconds and is configurable on the server.
 
-Before every probe (not just the first) the client also waits a small random delay, up to 250ms.
-This covers the case reservation alone doesn't: two clients whose *probes themselves* land within
-microseconds of each other, before either has had a chance to reserve anything - the common case
-for a fleet starting together, and just as common when a fleet reconnects together (every instance
-was waiting on the same unavailable server and now retries at the same moment it comes back). The
-jitter is deliberately applied on every attempt, not only the first, because a synchronized retry
-needs the same protection a cold start does.
+Before every multi-candidate probe, including on reconnect, the client waits a random delay below
+250ms by default. This reduces synchronized probes from clients starting or reconnecting together.
+The delay and reservations reduce collisions, but cannot prevent concurrent clients from picking
+the same server.
 
 A server that doesn't answer within 2 seconds, or that can't be reached at all, is treated as
 maximally loaded rather than failing the selection - it simply won't be picked over a server that
 did respond. This makes `least-connections` a safe default even while a server is restarting or
-briefly unreachable: the client routes around it instead of erroring out.
+briefly unreachable: the client prefers a server that answered. If every probe fails, all candidates
+tie at the maximum count and one is selected randomly; selection does not establish that it is reachable.
 
 ## DNS SRV lookup
 
@@ -102,9 +94,10 @@ For the example above, the client queries the SRV records for
 
 Chronicle supports multiple authentication modes. The mode is determined by the credentials present in the connection string:
 
-- **Client credentials**: Username and password supplied in the authority section. This is also what a
-  connection string with *no* credentials falls back to — it performs the exchange with the development
-  credentials rather than connecting anonymously
+- **Client credentials**: Username and password supplied in the authority section. With TLS enabled,
+  no credentials and no external token endpoint or authority configured, the client falls back to the
+  development credentials. An external token endpoint or authority requires explicit client credentials.
+  With `disableTls=true` and no credentials, the client instead connects without authentication
 - **API key**: `apiKey` query parameter
 - **None**: `auth=none` query parameter — the client presents no credentials at all
 
@@ -114,7 +107,7 @@ overrides both, so credentials left behind by a shared configuration cannot quie
 `auth=none` only works against a server running with
 [authentication turned off](../hosting/configuration/authentication.md#turning-authentication-off), which is
 meant for a Chronicle embedded alongside its own client rather than reachable over a network. Against a server
-that enforces authentication, every call fails as unauthenticated.
+that enforces authentication, calls to protected services fail as unauthenticated.
 
 ## Query parameters
 
@@ -131,15 +124,16 @@ that enforces authentication, every call fails as unauthenticated.
 
 ## TLS
 
-The client always connects over TLS, but by default it does **not** validate the server certificate — any certificate, including a self-signed one, is accepted. The development images (`latest-development` and `latest-development-slim`) generate a self-signed certificate on every start when none is configured, so this default is what lets a development client connect with no certificate setup. The production image (`latest` and the version tags) generates none and stops at startup without a configured certificate — see [Production deployment](../hosting/production.md). Set `skipTlsValidation=false` to require full certificate chain validation against a server whose certificate is verifiable — do this for anything beyond a trusted network, as the default removes protection against man-in-the-middle attacks. In the .NET client this option and `Tls.SkipCertificateValidation` combine so that whichever one asks for validation wins, so either setting alone is enough and an omitted second setting can never silently turn validation back off.
+The client connects over TLS unless `disableTls=true` is set, but by default it does **not** validate the server certificate — any certificate, including a self-signed one, is accepted. With TLS enabled, the development images (`latest-development` and `latest-development-slim`) generate a self-signed certificate on every start when none is configured, so this default is what lets a development client connect with no certificate setup. The production image (`latest` and the version tags) generates none and, with TLS enabled, stops at startup without a configured certificate — see [Production deployment](../hosting/production.md). Set `skipTlsValidation=false` to require full certificate chain validation against a server whose certificate is verifiable — do this for anything beyond a trusted network, as the default removes protection against man-in-the-middle attacks. In the .NET client this option and `Tls.SkipCertificateValidation` combine so that whichever one asks for validation wins, so either setting alone is enough and an omitted second setting can never silently turn validation back off.
 
-See [TLS configuration (client)](../configuration/tls) for certificate setup.
+See [TLS configuration (client)](../configuration/tls.mdx) for certificate setup.
 
 ### Connecting without TLS
 
-A server running with `tls.enabled=false` serves cleartext HTTP/2 (h2c) only. That is the case behind a
-TLS-terminating proxy that forwards h2c, or when you reach the server's port directly with `kubectl port-forward`.
-Set `disableTls=true` to connect to such a server, for example `chronicle://localhost:35001/?disableTls=true&auth=none`.
+A server running with `tls.enabled=false` serves cleartext HTTP/2 (h2c) only, for example behind a
+TLS-terminating proxy that forwards h2c. Set `disableTls=true` when connecting directly to that
+cleartext listener, including through `kubectl port-forward`, for example `chronicle://localhost:35001/?disableTls=true&auth=none`.
+Port forwarding does not itself disable TLS; a server with TLS enabled still requires a TLS connection.
 
 Chronicle serves its token endpoint (`/connect/token`) over TLS only. With TLS disabled and authentication turned
 on, the server requires an external HTTPS authority. So a client connecting with `disableTls=true` cannot exchange
@@ -152,6 +146,6 @@ client credentials:
 
 ## Compatibility check
 
-Before treating a connection as usable, the client checks that its wire contract and the server's are still compatible — see [Clustering and the connection lifecycle: the wire-compatibility handshake](../building-a-client/clustering-and-connection-lifecycle#the-wire-compatibility-handshake) for how the check itself works. This is a real safety check, not a formality: it exists to catch a genuine mismatch, such as a client sent to a server that no longer has fields or methods the client depends on.
+Before treating a connection as usable, the client checks that its wire contract and the server's are still compatible — see [Clustering and the connection lifecycle: the wire-compatibility handshake](../building-a-client/clustering-and-connection-lifecycle.md#the-wire-compatibility-handshake) for how the check itself works. This is a real safety check, not a formality: it exists to catch a genuine mismatch, such as a client sent to a server that no longer has fields or methods the client depends on.
 
 Set `skipCompatibilityCheck=true` only as a deliberate, temporary escape hatch — for example when a client that has only *gained* capabilities since the server's release is (incorrectly) refused by a server that cannot be redeployed immediately. Skipping the check does not make an incompatibility disappear; it trades a clear, immediate connect-time failure for whatever less obvious failure the actual incompatibility causes later. Remove the setting once the server is upgraded or the client's assumption about compatibility is otherwise confirmed.

@@ -1,8 +1,7 @@
 ---
+title: Build a Cratis Chronicle client
 description: Building a Chronicle client in a new language means solving gRPC bindings, token authentication and server discovery; this section shows how.
 ---
-# Building a Chronicle Client
-
 Chronicle speaks gRPC. In theory that means any language with a gRPC implementation can talk to
 it. In practice, hand-rolling a client means solving the same handful of hard problems every
 client has to solve before it can do anything useful: generating strongly-typed bindings from the
@@ -54,14 +53,14 @@ flowchart TB
 
 ## Talk to us first
 
-Before generating anything yourself, get in touch with the Cratis team. Every contracts package
-Chronicle has shipped so far — TypeScript, Elixir, Kotlin, and Python — was generated from the
-kernel's own `.proto` files and published to the right registry (npm, Hex, Maven Central, PyPI)
-from Chronicle's own release pipeline, version-locked to the kernel release it matches. That
-pipeline already exists; turning it on for a new language is normally a matter of days, not the
-weeks it takes to build a `protoc` toolchain from scratch and get the packaging right. See
-[Two ways to start](./starting-points.md) for what that conversation looks like and what you get
-out of it.
+Before generating anything yourself, get in touch with the Cratis team. Chronicle's release
+pipeline generates TypeScript, Elixir, and Kotlin contracts from the kernel's `.proto` files and
+publishes them to npm, Hex, and Maven Central, version-locked to the kernel release. The
+`Chronicle.Python` repository also exists: its `cratis-chronicle` package depends on a generated
+contracts wheel attached to a Chronicle GitHub release, not a PyPI package. Python publishing
+in Chronicle's release pipeline is disabled until PyPI trusted publishing and the protected
+GitHub environment are configured. See [Two ways to start](./starting-points.md) for the
+available distribution paths and how to discuss a contracts package for another language.
 
 :::note
 This section is written for whoever builds and maintains a **new** Chronicle client — Cratis team

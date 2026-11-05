@@ -2475,5 +2475,18 @@ window.COVERAGE_DATA = {
         "commit": "2d04391"
       }
     ]
+  },
+  "schemaVersion": 2,
+  "latestAttempt": {
+    "state": "missing",
+    "attemptedAt": 1793837518387,
+    "observer": {
+      "releaseContext": "unverified",
+      "runId": 41938919155,
+      "runAttempt": 1,
+      "executionSha": "b251b968c2b5714a4ebbb164d7e25d380b6b8fc0",
+      "requestedVersion": "19.126.1"
+    },
+    "reason": "no scheduled main coverage producer within 30 runs/30 days"
   }
 };

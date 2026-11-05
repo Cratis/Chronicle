@@ -1,8 +1,7 @@
 ---
+title: Resolve storage connections in Cratis Chronicle
 description: Let Chronicle ask a resolver where each tenant's database lives, instead of one connectionDetails, for multi-tenant storage placement.
 ---
-# Storage Connection Resolution
-
 A multi-tenant platform often decides where each tenant's database lives: which server, which database, which schema, and which identity is allowed in. With a single `connectionDetails`, Chronicle cannot follow that. It derives a database name for every event store and namespace, connects with one credential, and creates whatever is missing.
 
 Connection resolution lets Chronicle ask instead. Whenever it connects to a database, it describes what it is connecting for: the kind of database, the event store, the namespace, and the purpose. A resolver answers with the parts it decides. Anything it leaves out keeps Chronicle's default.
@@ -245,7 +244,7 @@ On SQL Server, the kernel supports every Microsoft Entra ID mode of the `Authent
 
 Do not combine an `identity.accessToken` returned by a resolver with `Authentication=`, `Password` or `Integrated Security` in `connectionDetails` or in the resolved `connectionString`. SqlClient rejects a connection that has both a token and a credential. Pick one way per connection: either the connection string carries the authentication mode, or the resolver returns the token on an otherwise credential-free connection string.
 
-For Azure Database for PostgreSQL, [native Entra authentication](../azure.md#azure-database-for-postgresql) acquires and refreshes tokens without a resolver. Enable `storage.postgreSqlEntra.enabled`, optionally set `storage.postgreSqlEntra.managedIdentityClientId`, and provide the PostgreSQL `Username` but no password in the connection string. Do not combine native authentication with a resolver returning credentials; placement and schema resolution remain supported.
+For Azure Database for PostgreSQL, [native Entra authentication](../azure.md#store-events-in-azure-database-for-postgresql) acquires and refreshes tokens without a resolver. Enable `storage.postgreSqlEntra.enabled`, optionally set `storage.postgreSqlEntra.managedIdentityClientId`, and provide the PostgreSQL `Username` but no password in the connection string. Do not combine native authentication with a resolver returning credentials; placement and schema resolution remain supported.
 
 With native authentication disabled (the default), a resolver can instead return the Entra token as `identity.accessToken`, and Chronicle uses it as the password:
 

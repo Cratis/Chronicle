@@ -1,63 +1,68 @@
 ---
-description: The Projection Declaration Language (PDL) is the part of the Cratis Screenplay language that Chronicle compiles into projection definitions.
+title: Cratis Chronicle projection declarations with PDL
+description: Write Chronicle projections in the Projection Declaration Language (PDL), using registered read model names and choosing how event generations are resolved.
 ---
-# Projection Declaration Language
+The Projection Declaration Language (PDL) describes how Cratis Chronicle builds read models from
+events using text declarations instead of projection classes. PDL is part of Cratis Screenplay,
+the indentation-based language for describing Cratis applications. Chronicle uses the Screenplay
+compiler to turn those declarations into projection definitions.
 
-The Projection Declaration Language (PDL) is part of the **Cratis Screenplay** language — the
-declarative, indentation-based language for describing Cratis applications. Chronicle uses the
-Screenplay compiler to parse projection declarations and turn them into projection definitions.
-
-The full language reference — from-event rules, property mapping, auto-map, keys, event context,
-counters, arithmetic, joins, children, nested objects, removal, expressions, and the grammar — lives
-in the Screenplay documentation:
-
-- [Screenplay — Projections](/screenplay/projections/)
+Start with [Screenplay — Projections](/screenplay/projections/) for declaration syntax, property
+mapping, keys, counters, joins, children, and the full grammar. This page explains the
+Chronicle-specific choices that affect whether a declaration compiles and which event generations
+it uses. To inspect results without saving a projection, use
+[ad-hoc querying](adhoc-querying).
 
 ## Pinned event generations
 
-When you save a PDL projection with the request's `GenerationDelivery` set to `Pinned`, Chronicle
-resolves each event reference once and persists the resulting generation in the definition:
+Set the save request's `GenerationDelivery` to `Pinned` to resolve each event reference to the
+latest registered generation when you save. For example, `from PersonRegistered` records the latest
+registered generation of `PersonRegistered` in the projection definition. Registering a newer
+generation later does not change that pin; saving the declaration again resolves the name against
+the generations registered at that time.
 
-| Reference | Pinned definition |
-| --- | --- |
-| `from PersonRegistered` | Latest registered generation at registration time |
+The same resolution applies to join and removal references, including clauses inside children and
+nested objects. A pinned projection can name only one generation per event type across all its
+clauses. Registration rejects conflicting pins, but different event types can pin different
+generations.
 
-The same rule applies to join and removal references and to clauses inside children and nested
-objects. A pinned projection can name only one generation per event type across all its clauses;
-registration rejects conflicting pins, including those in children and nested objects. Different
-event types can pin different generations. Registering a new generation does not change an existing pin.
-Saving a declaration again resolves its bare names against the generations registered at that time.
-PDL has no generation-qualified event reference syntax. For explicit per-clause generations, use the
-[.NET projection builders](../declarative/simple-projection.mdx) or model-bound attributes with the
-CLR event type representing the desired generation.
+PDL has no generation-qualified event reference syntax. To name a generation explicitly in code,
+use the [.NET projection builders](../declarative/simple-projection.mdx) or model-bound attributes
+with the CLR event type representing that generation. The one-generation-per-event-type rule still
+applies to pinned projections.
 
-`Compatibility` remains the default and retains the previous behavior: bare names mean generation
-1 in the definition, while event dispatch matches the event type identifier without its generation.
-Ad-hoc queries and immediate projections do not opt into this behavior through the save request.
-Wildcard (`all`) projections keep Compatibility; Pinned wildcard registration is not supported.
-See [Event type migrations](../../concepts/event-type-migrations.mdx) for delivery and protection rules.
+`Compatibility` is the default: bare event names become generation 1 in the definition, while event
+dispatch matches the event type identifier without its generation. The save request's setting does
+not apply to ad-hoc queries or immediate projections. Wildcard (`all`) projections use
+`Compatibility`; `Pinned` wildcard registration is not supported. Read
+[Event type migrations](../../concepts/event-type-migrations.mdx) before changing delivery policy
+or migrating events used by a pinned projection.
 
 ## Read-model identifiers and property names
 
-The target after `=>` is the registered read-model identifier, not its display name or schema
-title. For the .NET client, this is the full type name (`typeof(TReadModel).FullName`), such as
-`MyApp.ReadModels.Order`. Chronicle renders registered projections with that identifier so you
+Use the registered read-model identifier after `=>`, not its display name or schema title. In the
+.NET client, that identifier is the full type name (`typeof(TReadModel).FullName`), such as
+`MyApp.ReadModels.Order`. Chronicle renders registered projections with this identifier, so you
 can save the declaration unchanged.
 
-Identifiers and property paths must match their registered spelling and casing exactly. The
-.NET client's default naming policy uses PascalCase properties. A missing name remains a compiler
-error; when a title, short type name, or differently cased name matches a known identifier or
-property, the diagnostic suggests the registered spelling. Ambiguous matches list the candidates.
+Match registered spelling and casing exactly in identifiers and property paths. The .NET client's
+default naming policy preserves CLR property names, which are normally PascalCase. If a name does
+not match exactly, compilation fails. When a display title, short type name, or differently cased
+name matches a known identifier or property, the diagnostic suggests the registered spelling.
+If several names match, it lists the candidates so you can choose the intended identifier.
 
 ## Child-level `every` mappings
 
-An `every` block inside `children` includes descendant events unless it declares `exclude children`.
-After upgrading, re-save the original PDL declarations that use `every` inside `children` to apply
-the corrected behavior, then replay if recommended. A kernel upgrade or replay alone does not
-recompile stored definitions.
+An `every` block inside `children` applies its mappings to descendant events too, unless it declares
+`exclude children`. This lets a child-level mapping respond to events from deeper in its hierarchy.
+
+For stored declarations created before this behavior was corrected, re-save the original PDL that
+uses `every` inside `children`, then replay if recommended. A kernel upgrade or replay alone does
+not recompile stored definitions.
 
 ## What remains here
 
-Chronicle-specific client APIs that consume PDL declarations are documented in this section:
-
-- [Ad-hoc Querying](adhoc-querying) — running a PDL declaration ad-hoc with `IProjections.Query()`.
+Continue with [Ad-hoc Querying](adhoc-querying) to send a declaration through `IProjections.Query()`
+and inspect the resulting JSON read models. That API processes a bounded event set without
+registering the projection; it is useful for exploration, not a substitute for a maintained read
+model.

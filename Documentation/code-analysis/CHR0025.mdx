@@ -1,8 +1,7 @@
 ---
+title: "CHR0025: Explicitly sourced read model property may be overwritten by AutoMap"
 description: Chronicle analyzer rule CHR0025 reports explicitly sourced read model properties that AutoMap may overwrite when other referenced events share the name.
 ---
-# CHR0025: Explicitly sourced read model property may be overwritten by AutoMap
-
 ## Rule Description
 
 AutoMap runs per *event* across every event a model-bound projection references — it does **not** defer to your explicit setters. A property set with `[SetFrom<A>]` (or `[SetValue]`, `[AddFrom]`, `[SubtractFrom]`, `[SetFromContext]`, `[Join]`) can therefore be overwritten when another referenced event `B` carries a property of the same name, because AutoMap writes `B`'s value on top of the value you mapped explicitly.
