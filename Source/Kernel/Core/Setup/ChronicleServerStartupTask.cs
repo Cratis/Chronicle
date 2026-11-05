@@ -123,6 +123,7 @@ internal sealed class ChronicleServerStartupTask(
 
     async Task Execute(CancellationToken cancellationToken)
     {
+        RefuseIncompatibleCluster();
         await (generationFloorAdmission ?? new GenerationFloorAdmission(storage)).Admit(cancellationToken);
 
         Task Step(string step, Func<Task> action) => RunStep(step, action, cancellationToken);
@@ -229,6 +230,33 @@ internal sealed class ChronicleServerStartupTask(
 #if DEVELOPMENT
         await Step(nameof(IAuthenticationService.EnsureDefaultClientCredentials), authenticationService.EnsureDefaultClientCredentials);
 #endif
+    }
+
+    /// <summary>
+    /// Stops the silo when the cluster holds a release it can never exchange grain calls with.
+    /// </summary>
+    /// <remarks>
+    /// Without this the silo goes on to call grains on the other release, and the failure shows up as a crash loop and
+    /// thousands of grain errors on both sides instead of a reason (#5666).
+    /// </remarks>
+    /// <exception cref="IncompatibleClusterRelease">The cluster holds a release across a boundary.</exception>
+    void RefuseIncompatibleCluster()
+    {
+        var local = Cratis.Chronicle.Sys.KernelVersion.Current;
+        if (!Cratis.Chronicle.Sys.KernelVersion.IsKnown(local))
+        {
+            return;
+        }
+
+        var summary = clusterReleases.Summarize();
+        var incompatible = ClusterReleaseBoundary.FindIncompatible(local, summary);
+        if (incompatible.Count == 0)
+        {
+            return;
+        }
+
+        logger.StartupRefusedBecauseOfIncompatibleRelease(local.ToString(), summary.ToString());
+        throw new IncompatibleClusterRelease(local, incompatible);
     }
 
     async Task RegisterKernelProjections(EventStoreName eventStore, CancellationToken cancellationToken)
