@@ -40,12 +40,9 @@ public partial class EventSequenceStorage
                 // later. See the comment in Append for details.
                 var truncatedOccurred = TruncateToMicrosecond(eventToAppend.Occurred);
 
-                // Check if sequence number already exists
+                // Check if sequence number already exists. Existence only, as in Append: no projection on the per-event probe.
                 var appendManySeqNum = eventToAppend.SequenceNumber.Value;
-                var existingEvent = await scope.DbContext.Events.WithoutHistory()
-                    .FirstOrDefaultAsync(e => e.SequenceNumber == appendManySeqNum);
-
-                if (existingEvent is not null)
+                if (await scope.DbContext.Events.AnyAsync(e => e.SequenceNumber == appendManySeqNum))
                 {
                     // Keyed batches must settle identities before classifying an occupied slot.
                     if (persistIdentities && await ClassifyIdentityCollision(eventsArray) is { } collision)

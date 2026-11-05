@@ -165,11 +165,9 @@ public partial class EventSequenceStorage(
             // tighter cap.
             occurred = TruncateToMicrosecond(occurred);
 
+            // Existence only: a member-init projection here costs ~2 KB of query-pipeline allocation per append.
             var seqNumValue = sequenceNumber.Value;
-            var existingEvent = await scope.DbContext.Events.WithoutHistory()
-                .FirstOrDefaultAsync(e => e.SequenceNumber == seqNumValue);
-
-            if (existingEvent is not null)
+            if (await scope.DbContext.Events.AnyAsync(e => e.SequenceNumber == seqNumValue))
             {
                 return new DuplicateEventSequenceNumber(await GetNextAvailableSequenceNumber(scope));
             }
