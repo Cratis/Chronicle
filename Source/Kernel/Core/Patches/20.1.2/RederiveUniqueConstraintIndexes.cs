@@ -23,10 +23,11 @@ namespace Cratis.Chronicle.Patches;
 public class RederiveUniqueConstraintIndexes(IStorage storage, IGrainFactory grainFactory, ILogger<RederiveUniqueConstraintIndexes> logger) : ICanApplyPatch
 {
     /// <summary>
-    /// The version of the patch. A placeholder that is set when the release train is cut. It must stay above the
-    /// version that the previous release recorded, since a patch is only selected when its version is above it.
+    /// The version of the patch. Choreography runs a patch when its version is above the version recorded by the last patch that ran, not the
+    /// version of the host, and every store that has run the repeat move patch (20.1.0, shipped from 19.127.0) has 20.1.0 or higher recorded.
+    /// The version therefore has to stay above every patch version that ships before it, and below those that ship after it.
     /// </summary>
-    public static readonly SemanticVersion PatchVersion = new(20, 1, 1);
+    public static readonly SemanticVersion PatchVersion = new(20, 1, 2);
 
     /// <inheritdoc/>
     public SemanticVersion Version => PatchVersion;
