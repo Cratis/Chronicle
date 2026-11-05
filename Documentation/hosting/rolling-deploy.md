@@ -17,7 +17,7 @@ This guide shows an operator how to replace the nodes of a Chronicle kernel clus
 
 When upgrading from a version before 19.115.0, stop all nodes, or keep public client traffic off the cluster until every node runs 19.115.0.
 
-Rolling upgrades are supported from 19.111 onward. Upgrading from an older release needs a stop-all upgrade: stop every silo, then start the new release. Older releases lack the patch-manager handover or have changed grain interfaces that prevent the old and new silos from exchanging calls.
+Rolling upgrades are supported from 19.111 onward, except that SQL Server storage requires 19.115.1 or later. Releases before 19.115 cannot connect to SQL Server, and 19.115.0 is listed as unusable in `.github/rolling-upgrade-unusable-releases.txt` because its administrator roster can deadlock on the Data Protection key ring (#5485). Upgrading from an older release needs a stop-all upgrade: stop every silo, then start the new release. Older releases lack the patch-manager handover or have changed grain interfaces that prevent the old and new silos from exchanging calls.
 
 ## Check that the two versions can share a cluster
 
@@ -27,7 +27,7 @@ Use this table to decide how to upgrade:
 
 | Upgrading | Within one major | How to upgrade |
 | --- | --- | --- |
-| From 19.111 or later | Yes | Replace nodes one at a time. Releases are checked in CI against the release before them. |
+| From 19.111 or later (19.115.1 or later for SQL Server) | Yes | Replace nodes one at a time. Releases are checked in CI against the release before them. |
 | From a 19.x release before 19.111 | Yes | Stop every node, then start the new version. Older releases lack the patch-manager handover or have incompatible grain calls. |
 | To a new major | No | Stop every node, then start the new version. A major release may change grain calls. |
 
@@ -95,6 +95,8 @@ Cratis Chronicle Server started successfully - ready and listening on port 35000
 The server writes this line when the host has finished starting, which includes the startup task above. If the node fails instead, read the failure in step 6 before you continue.
 
 ### 3. Replace the remaining nodes one at a time
+
+SQL nodes from the supported source releases read revised content during the rollout; revisions made by earlier nodes are served but are not recorded in revision history. Originals already overwritten by a revision before this release are lost and are not backfilled; such events report no original content.
 
 Allow one node to be unavailable at a time. In Kubernetes, set `maxUnavailable: 1` on the rolling update strategy and set `maxSurge` to a small number. Replacing nodes one at a time keeps the cluster membership changing slowly enough for the remaining silos to agree on who is alive.
 
