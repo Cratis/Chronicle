@@ -215,7 +215,8 @@ public partial class EventSequenceStorage(
                 await identityStorage.GetFor(causedByChain),
                 tags,
                 eventHash,
-                Subject: resolvedSubject) { NamedTags = namedTags, AppendedGeneration = eventType.Generation };
+                Subject: resolvedSubject)
+            { NamedTags = namedTags, AppendedGeneration = eventType.Generation };
 
             var generationalContent = EventEntryConverter.BuildGenerationalContent(content);
             return new AppendedEvent(eventContext, returnContent)
@@ -247,20 +248,8 @@ public partial class EventSequenceStorage(
         ExpandoObject content,
         EventHash hash)
     {
-        await using var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);
-
-        var seqNumRevise = sequenceNumber.Value;
-        var eventEntry = await scope.DbContext.Events.FirstOrDefaultAsync(e => e.SequenceNumber == seqNumRevise);
-        if (eventEntry is null)
-        {
-            return;
-        }
-
-        EventEntryConverter.UpdateContentForGeneration(eventEntry, eventType.Generation, content);
-        EventEntryConverter.UpdateHashForGeneration(eventEntry, eventType.Generation, hash);
-        eventEntry.RevisedGeneration = eventType.Generation.Value;
-        scope.DbContext.Events.Update(eventEntry);
-        await scope.DbContext.SaveChangesAsync();
+        var revision = new EventRevisionEntry(eventType.Generation.Value, correlationId.Value, causation.ToArray(), causedByChain.Select(_ => _.Value).ToArray(), occurred, EventEntryConverter.SerializeContent(content), hash.Value);
+        await ReviseWithHistory(sequenceNumber, eventType.Generation, content, revision);
     }
 
     /// <inheritdoc/>
@@ -337,6 +326,8 @@ public partial class EventSequenceStorage(
         eventEntry.Content = redactionContent;
         eventEntry.ContentHashes = string.Empty;
         eventEntry.RevisedGeneration = null;
+        eventEntry.OriginalContent = null;
+        eventEntry.Revisions = null;
 
         scope.DbContext.Events.Update(eventEntry);
         await scope.DbContext.SaveChangesAsync();
@@ -409,6 +400,8 @@ public partial class EventSequenceStorage(
             eventEntry.Content = redactionContent;
             eventEntry.ContentHashes = string.Empty;
             eventEntry.RevisedGeneration = null;
+            eventEntry.OriginalContent = null;
+            eventEntry.Revisions = null;
 
             scope.DbContext.Events.Update(eventEntry);
         }
@@ -1067,6 +1060,10 @@ public partial class EventSequenceStorage(
 
     async Task<AppendedEvent> ToAppendedEvent(EventEntry entry, DbContextScope<EventSequenceDbContext> scope)
     {
+        if (entry.Type != GlobalEventTypes.Redaction && entry.Revisions is not null && !RevisionHistory.IsCurrent(entry))
+        {
+            logger.IncompleteRevisionHistory(entry.SequenceNumber);
+        }
         var namedTags = await NamedTagEntries.LoadFor(scope.DbContext, eventSequenceId.Value, [entry.SequenceNumber]);
         var schemas = new EventSchemaResolver(eventTypesStorage);
         return await EventEntryConverter.ToAppendedEvent(entry, eventStore, @namespace, identityStorage, NamedTagEntries.At(namedTags, entry.SequenceNumber), schemas.GetFor, converter);
