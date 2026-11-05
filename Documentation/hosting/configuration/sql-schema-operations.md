@@ -143,11 +143,13 @@ List the entries that have not been reviewed:
 SELECT * FROM [ClosedStreams] WHERE ExactSpelling = 0;
 ```
 
-For each entry that you confirm applies to exactly one spelling, mark it as reviewed:
+Review the entries one at a time. Once you confirm that an entry applies to exactly one spelling, mark only that entry as reviewed by filtering on its full key (`EventSequenceId`, `StreamType` and `StreamId`, copied from the listing):
 
 ```sql
-UPDATE [ClosedStreams] SET ExactSpelling = 1 WHERE ExactSpelling = 0 AND EventSourceId = N'<confirmed event source id>';
+UPDATE [ClosedStreams] SET ExactSpelling = 1 WHERE ExactSpelling = 0 AND EventSequenceId = N'<event sequence id>' AND StreamType = N'<stream type>' AND StreamId = N'<stream id>';
 ```
+
+Do not mark all pending entries at once by leaving out the key filter. An unreviewed entry is the protection for every spelling it used to match, so marking all entries at once removes that protection for every entry, including those you have not looked at.
 
 Run the listing and the update in each namespace database that holds closed-stream entries. Reopening an entry that has not been reviewed does nothing and reports that nothing was reopened; reopening it is possible after review.
 
