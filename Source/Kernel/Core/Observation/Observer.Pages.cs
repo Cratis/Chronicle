@@ -86,6 +86,8 @@ public partial class Observer
             return;
         }
 
+        logger.DeliveringPage(candidates.Sum(_ => _.Events.Count), candidates.Count);
+
         // Every partition of the page is in flight until it is settled, and that is made durable before the subscriber sees any of it,
         // so a silo that dies in between drives catch-up on the next activation.
         State = State with { InFlightPartitions = new HashSet<Key>(State.InFlightPartitions.Concat(candidates.Select(_ => _.Partition))) };

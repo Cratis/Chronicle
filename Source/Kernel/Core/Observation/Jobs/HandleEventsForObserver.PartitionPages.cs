@@ -32,6 +32,7 @@ public partial class HandleEventsForObserver
             return (null, lastSuccessfullyHandledEventSequenceNumber);
         }
 
+        logger.DeliveringPage(events.Length, batches.Count);
         var dispatched = false;
         var delivery = await TryHandlePartitionPage(batches, subscriberTimeout, () => dispatched = true);
         if (delivery.TryGetException(out var exception))
@@ -98,7 +99,7 @@ public partial class HandleEventsForObserver
     }
 
     async Task<Catch<(ObserverPageResult Result, ObserverPartitionBatch[] Batches), None>> TryHandlePartitionPage(
-        IReadOnlyList<ObserverPartitionBatch> batches,
+        List<ObserverPartitionBatch> batches,
         TimeSpan subscriberTimeout,
         Action onDispatch)
     {

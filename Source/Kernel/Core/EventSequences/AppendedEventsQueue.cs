@@ -37,7 +37,6 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     /// </remarks>
     internal const int MaxPartitionRunsPerLiveDispatch = 256;
 
-
     /// <summary>
     /// Upper bound on how many queued batches a single dispatch coalesces before delivering. Bounds the size of the
     /// merged batch (and therefore the work of one dispatch); any remaining backlog is drained on the next loop pass.

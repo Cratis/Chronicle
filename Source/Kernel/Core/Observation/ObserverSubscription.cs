@@ -75,6 +75,11 @@ public record ObserverSubscription(
     public bool IsCollapsingProjection => SubscriberType.IsAssignableTo(typeof(ICollapsingProjectionObserverSubscriber));
 
     /// <summary>
+    /// Gets a value indicating whether the subscriber receives pages spanning partitions.
+    /// </summary>
+    public bool DeliversPartitionPages => SubscriberType.IsAssignableTo(typeof(IObserverPartitionPageSubscriber));
+
+    /// <summary>
     /// Gets the <see cref="ObserverSubscriberKey"/> that resolves the subscriber a partition's events are
     /// delivered through.
     /// </summary>
@@ -105,9 +110,4 @@ public record ObserverSubscription(
             eventSourceId,
             siloAddress.ToParsableString());
     }
-
-    /// <summary>
-    /// Gets a value indicating whether the subscriber receives pages spanning partitions.
-    /// </summary>
-    public bool DeliversPartitionPages => SubscriberType.IsAssignableTo(typeof(IObserverPartitionPageSubscriber));
 }

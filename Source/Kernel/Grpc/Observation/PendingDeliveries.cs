@@ -47,13 +47,6 @@ internal sealed class PendingDeliveries<TResult>
     }
 
     /// <summary>
-    /// Completes exactly the named delivery, or the oldest for an id-less client.
-    /// </summary>
-    /// <param name="id">The echoed identifier, or zero for a legacy client.</param>
-    /// <param name="partition">The partition echoed by the client.</param>
-    /// <param name="result">The delivery result.</param>
-    /// <returns>Whether a pending wait accepted the result.</returns>
-    /// <summary>
     /// Registers one delivery that carries several partitions, each answered on its own.
     /// </summary>
     /// <param name="completions">The completion of each partition in the delivery.</param>
@@ -79,6 +72,13 @@ internal sealed class PendingDeliveries<TResult>
         return id;
     }
 
+    /// <summary>
+    /// Completes exactly the named delivery, or the oldest for an id-less client.
+    /// </summary>
+    /// <param name="id">The echoed identifier, or zero for a legacy client.</param>
+    /// <param name="partition">The partition echoed by the client.</param>
+    /// <param name="result">The delivery result.</param>
+    /// <returns>Whether a pending wait accepted the result.</returns>
     public bool TryComplete(ulong id, EventSourceId partition, TResult result)
     {
         Pending pending;

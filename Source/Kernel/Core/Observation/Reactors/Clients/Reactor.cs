@@ -258,11 +258,10 @@ public class Reactor(
 
         try
         {
-            if (definition.GenerationDelivery == Concepts.Observation.EventGenerationDelivery.Pinned)
+            var deliversPages = definition.PageDelivery is not null;
+            if (definition.GenerationDelivery == Concepts.Observation.EventGenerationDelivery.Pinned && deliversPages)
             {
-                if (definition.PageDelivery is not null)
-                {
-                    await _observer.SubscribeWithGenerationDelivery<IReactorPageObserverSubscriber>(
+                await _observer.SubscribeWithGenerationDelivery<IReactorPageObserverSubscriber>(
                     ObserverType.Reactor,
                     eventTypes,
                     localSiloDetails.SiloAddress,
@@ -270,10 +269,10 @@ public class Reactor(
                     connectedClient,
                     definition.IsReplayable,
                     definition.Filters);
-                }
-                else
-                {
-                    await _observer.SubscribeWithGenerationDelivery<IReactorObserverSubscriber>(
+            }
+            else if (definition.GenerationDelivery == Concepts.Observation.EventGenerationDelivery.Pinned)
+            {
+                await _observer.SubscribeWithGenerationDelivery<IReactorObserverSubscriber>(
                     ObserverType.Reactor,
                     eventTypes,
                     localSiloDetails.SiloAddress,
@@ -281,30 +280,26 @@ public class Reactor(
                     connectedClient,
                     definition.IsReplayable,
                     definition.Filters);
-                }
+            }
+            else if (deliversPages)
+            {
+                await _observer.Subscribe<IReactorPageObserverSubscriber>(
+                    ObserverType.Reactor,
+                    eventTypes,
+                    localSiloDetails.SiloAddress,
+                    connectedClient,
+                    definition.IsReplayable,
+                    definition.Filters);
             }
             else
             {
-                if (definition.PageDelivery is not null)
-                {
-                    await _observer.Subscribe<IReactorPageObserverSubscriber>(
+                await _observer.Subscribe<IReactorObserverSubscriber>(
                     ObserverType.Reactor,
                     eventTypes,
                     localSiloDetails.SiloAddress,
                     connectedClient,
                     definition.IsReplayable,
                     definition.Filters);
-                }
-                else
-                {
-                    await _observer.Subscribe<IReactorObserverSubscriber>(
-                    ObserverType.Reactor,
-                    eventTypes,
-                    localSiloDetails.SiloAddress,
-                    connectedClient,
-                    definition.IsReplayable,
-                    definition.Filters);
-                }
             }
 
             await RecordObserver();
