@@ -1,20 +1,21 @@
 ---
-description: Reduce all of a partition's events in one Chronicle reducer method, declare its event types with Observes, and pattern-match on them.
+title: Cratis Chronicle reducer batch methods
+description: Fold a partition's delivered events in one Cratis Chronicle .NET reducer call, with the current read model and partition-level failure handling.
 ---
-# Reducing events in batches
 
-Chronicle delivers events to a reducer in **pages**, and the client folds each partition of a page separately. Per-event
-`Reduce` methods keep working as they always have. A **batch method** is called once per partition instead, with all of
-that partition's events of the types it observes and the current read model, and returns the new read model. A reducer
-stays a fold over one partition's events in order.
+<span id="reducing-events-in-batches"></span>
+
+A batch method in Cratis Chronicle's .NET client updates a read model from one partition's delivered events in a single call. Use it when the transition needs to consider several events together rather than handle each event separately.
+
+Chronicle delivers events in pages. A partition groups events for one event source, such as an account, and the client reduces each partition separately. The batch contains the observed event types from that partition in the current page, not its entire history. Your method folds those events in sequence order with the current read model and returns the next state.
 
 <ChronicleClientTabs snippet="reducers/batches/self-reducing" />
 
 ## Declaring a batch method
 
-A batch method takes an `EventBatch` first and the current read model second, and returns the read model, or a task of
-it. Returning `null` removes the read model, as it does from a per-event method. It may also take a `BatchContext`, a
-`CancellationToken`, and services. Declare each event type it observes with `[Observes<TEvent>]`.
+The account example applies deposits and withdrawals to the balance so far. Each item exposes the event through `Event`, allowing the method to choose the transition by event type.
+
+A batch method takes an `EventBatch` first and the nullable current read model second, and returns the read model or a task of it. The current model is `null` before the partition has state; returning `null` removes the read model. Declare each observed event type with `[Observes<TEvent>]`. Optional parameters can receive `BatchContext`, `CancellationToken`, and services.
 
 On a [self-reducing read model](self-reducing-read-models) the batch method is a public static method named `Reduce`.
 On a separate reducer implementing `IReducerFor<TReadModel>` it can have any name.
@@ -25,8 +26,8 @@ method that does not take and return the read model.
 
 ## Reporting outcomes
 
-Throwing, or calling `Fail` on the batch, fails the partition and writes no state, as a failing per-event method does.
-Calling `Defer` delivers the partition again after the delay you give, without failing it and without writing state.
-The other partitions of the page are not affected.
+Throwing or calling `Fail` on the batch fails the partition without writing its new state. Calling `Defer` requests delivery again after the delay you supply, without failing the partition or writing state. Deferral requires kernel support; without it, the client reports a failure instead.
 
-Partitions of one page are reduced in parallel on the client.
+Other partitions in the page can still succeed. The client reduces partitions in parallel, while keeping each partition's events in order. Keep state changes local to the partition rather than relying on another partition finishing first.
+
+For the per-event alternative and replay behavior, continue with [reducer event processing](event-processing).

@@ -1,6 +1,6 @@
 ---
 title: "Version Patch System"
-description: "Write kernel patches that upgrade stored state between Chronicle versions, and how they are applied."
+description: "Cratis Chronicle kernel patches upgrade stored state between versions; startup discovers pending patches, applies them in order and tracks completion."
 ---
 
 Chronicle includes a version-based patch system to handle breaking changes during upgrades. Patches are automatically discovered and applied during server startup, ensuring the system state is migrated correctly between versions.

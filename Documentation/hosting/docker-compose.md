@@ -1,11 +1,12 @@
 ---
-description: Run Chronicle with MongoDB and optional telemetry services using Docker Compose for more control than the development image offers.
+title: Cratis Chronicle local hosting with Docker Compose
+description: Run Cratis Chronicle locally with bundled MongoDB and an Aspire OpenTelemetry dashboard using Docker Compose, with service ports bound to loopback.
 ---
 # Running with Docker Compose
 
-Using the development image of Chronicle is convenient for getting started quickly. For more control over the runtime environment, you can run Chronicle with MongoDB and other services such as telemetry collectors.
+Run Cratis Chronicle with Docker Compose when you want a local event store and a dashboard for its telemetry without creating an Aspire AppHost. This setup uses the development image, which bundles a single-node MongoDB replica set and generates a self-signed TLS certificate. You do not need a separate database service or certificate file.
 
-The following configures a `docker-compose.yml` with Chronicle and [Microsoft Aspire](https://learn.microsoft.com/en-us/dotnet/aspire/get-started/aspire-overview).
+Save the following as `docker-compose.yml`. The `aspire-dashboard` service runs the [Microsoft Aspire](https://learn.microsoft.com/en-us/dotnet/aspire/get-started/aspire-overview) dashboard; it does not run your application or an AppHost.
 
 ```yaml
 services:
@@ -30,9 +31,11 @@ services:
       - 127.0.0.1:4317:18889
 ```
 
-Every port is published on this machine only: the development image's Workbench accepts well-known credentials, its bundled MongoDB has no authentication, and the dashboard allows anonymous access. The Orleans ports (`11111`, `30000`) are left unpublished because a single local node does not need them. The sysctl reserves those ports and the Chronicle port from ephemeral outbound allocation inside the container. If your container runtime rejects this sysctl, remove the `sysctls` block and retry; Chronicle's bounded bind retry still applies.
+Start the services with `docker compose up -d`. Once Chronicle is ready, open the Workbench at `https://localhost:35000` and the telemetry dashboard at `http://localhost:18888`. Your browser may warn about Chronicle's self-signed certificate. Chronicle sends telemetry to the dashboard's OTLP endpoint on the Compose network; host applications can send telemetry to `http://localhost:4317`.
 
-With this setup, Chronicle runs alongside Microsoft Aspire, which provides a dashboard for OpenTelemetry.
+Every published port binds to loopback because the Workbench has well-known development credentials, bundled MongoDB has no authentication, and the dashboard allows anonymous access. Keep these bindings when sharing the Compose file. The Orleans cluster ports (`11111`, `30000`) remain unpublished because this setup runs one local node.
+
+The `sysctls` setting reserves the cluster and Chronicle ports from ephemeral outbound allocation inside the container. If your container runtime rejects it, remove the `sysctls` block and retry; Chronicle also retries port binding a bounded number of times.
 
 ## Private cluster ports
 
@@ -47,5 +50,7 @@ services:
       Cratis__Chronicle__Clustering__GatewayEnabled: "false"
 ```
 
-This is an opt-in change; the gateway remains enabled by default. Multi-node deployments still need the silo port reachable between nodes. If you set `Cratis__Chronicle__Clustering__AdvertisedIP` with MongoDB or SQL clustering, it must be the node's actual private interface/container IP, reachable from peers, not a host port mapping or external NAT address. See [Clustering](configuration/clustering.md#listener-and-network-boundaries) for binding and Kubernetes NetworkPolicy guidance.
+The gateway remains enabled unless you make this change. Multi-node deployments still need the silo port reachable between nodes. If you set `Cratis__Chronicle__Clustering__AdvertisedIP` with MongoDB or SQL clustering, use the node's private interface or container IP that peers can reach, not a host port mapping or external NAT address. See [Clustering](configuration/clustering.md#listener-and-network-boundaries) for binding and Kubernetes NetworkPolicy guidance.
+
+When you move beyond local development, follow [Production hosting](production.md). Changing the image tag alone is not enough: the production image needs external storage and configured certificates.
 

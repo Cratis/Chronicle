@@ -1,19 +1,14 @@
 ---
 applyTo: "**"
-description: The subject of a Chronicle event is the identity the event is about, which keys PII encryption and erasure and defaults to the event source id.
+title: Cratis Chronicle event subjects for PII encryption
+description: A Cratis Chronicle event subject identifies who the event is about and selects its PII encryption key. It defaults to the event source identifier.
 ---
 
 # Subject
 
-The **subject** of an event is the target the event is *about* — the identity used to key
-compliance concerns such as PII encryption. In most systems the subject and the
-[`EventSourceId`](event-source.md) are the same, but they don't have to be.
+An event's subject in Cratis Chronicle identifies who the event is about and selects the key that protects its personally identifiable information (PII). Set it explicitly when the [`EventSourceId`](event-source.md) identifies something else, such as an order. The subject is not the actor who caused the event; that actor is recorded by [identity](./correlation-identity-causation.mdx#identity).
 
-Consider a `ShippingAddressChanged` event. The `EventSourceId` is the order identifier
-(that is what binds all events for that order together), but the *subject* is the customer
-the address is about. PII encryption keys are held per-subject, not per-event-source, so that
-every event that touches the same person can be decrypted with the same key regardless of
-which aggregate produced it.
+For a `ShippingAddressChanged` event, the `EventSourceId` can be the order identifier while the subject is the customer whose address changed. Using the customer as the subject groups their protected data under that person's key, even when events belong to different orders. Keys are scoped by event store, namespace and subject.
 
 ```mermaid
 flowchart TB
@@ -26,53 +21,38 @@ flowchart TB
 
 ## Default — the `EventSourceId`
 
-When you don't specify a subject, Chronicle uses the `EventSourceId` as the subject. This is
-the right default for most slices where the aggregate and the subject coincide:
+When you provide neither an explicit subject nor an event-property subject, Chronicle uses the `EventSourceId`. Keep this default when the event source already identifies the person the event is about:
 
 <ChronicleClientTabs snippet="concepts/subject/default" />
 
 ## Specifying an explicit subject
 
-When the event source is different from the subject, pass `Subject` explicitly. `Subject` has
-an implicit conversion from `EventSourceId`, so mixing the two is painless:
+Pass a subject explicitly when the event source identifies something else, such as an order. In .NET, `Subject` converts implicitly from `EventSourceId`, so you can supply an existing identifier without constructing a wrapper:
 
 <ChronicleClientTabs snippet="concepts/subject/explicit" />
 
-`Subject` also converts implicitly from `string` and `Guid`. Kotlin, Java and TypeScript pass a subject through `AppendOptions`; TypeScript also accepts a `subject` on each entry it passes to `appendMany`.
+The .NET `Subject` type also converts implicitly from `string` and `Guid`. Kotlin, Java and TypeScript accept a subject through `AppendOptions`; TypeScript also accepts a `subject` on each entry passed to `appendMany`.
 
 ## Implicit subject with `[Subject]`
 
-Rather than threading `subject` through every call site, decorate the relevant property on the
-event type with `[Subject]`. Chronicle will read the property value automatically when no
-explicit subject is provided:
+In .NET, mark the event property that identifies the person with `[Subject]`. The client reads its value when no explicit subject is provided. This keeps the choice with the event type instead of repeating it at every append:
 
 <ChronicleClientTabs snippet="concepts/subject/implicit-with-attribute" />
 
-An explicit `subject` argument always takes precedence over a `[Subject]` property. Resolving the subject from an event property on append works in C# and Elixir (`subject: :field` on the event type); Kotlin, Java, and TypeScript pass the subject explicitly on every append (shown above). Kotlin and Java (`@Subject`), TypeScript (`@subject()`) and Elixir (`subject :field`) each have a read-model subject marker, which Chronicle uses when releasing a read model, not when appending an event.
+An explicit `subject` argument takes precedence over a `[Subject]` property. Elixir can derive an append subject with `subject: :field` on the event type, and TypeScript can derive it from an event property marked `@subject()`. Kotlin and Java pass the append subject explicitly.
+
+Read-model subject markers select the key used to decrypt protected values when a read model is returned. These are `@Subject` in Kotlin and Java, `@subject()` in TypeScript, and `subject :field` in Elixir. A Kotlin or Java read-model marker does not supply an event's append subject.
 
 ## Reading the subject back
 
-The subject travels with the event. Whatever an event was appended with is what you get back on
-`EventContext.Subject` — both when reading an event sequence and when an observer such as a reactor
-or reducer is notified. When no explicit subject was supplied, that value is the `EventSourceId`,
-exactly as on append.
+The subject resolved at append time is returned as `EventContext.Subject` when you read the event sequence or receive the event in an observer, such as a reactor or reducer. If neither an explicit value nor an event property supplied a subject, the returned value is the `EventSourceId`.
 
-This matters when an observer forwards an event onward: forwarding `context.Subject` keeps the
-original compliance identity, so the encryption key, erasure target and cross-store propagation stay
-with the person the event is about rather than with the stream it happened to be written to.
+When an observer forwards an event, pass `context.Subject` to preserve who the event is about. Otherwise, the destination can fall back to its own event source identifier and select a different compliance subject.
 
 ## Compliance
 
-When an event type declares `[PII]` properties, Chronicle encrypts those properties at append
-time using a per-subject encryption key. The key is created on first use and stored in the
-encryption key store. Because the key lives under the subject, every event that shares a
-subject is encrypted with the same key — and once that key is deleted (for example, to honor a
-right-to-erasure request), every PII property across every event for that subject becomes
-unrecoverable in one operation.
+Properties marked as PII, for example with .NET's `[PII]`, are encrypted at append time under the subject's key. Chronicle provisions the key on first use and stores it in the encryption key store. Adding a PII marker later does not encrypt values already stored as plaintext.
 
-That one operation covers one event store and one namespace. A subject whose events are
-forwarded to another event store by a subscription holds a key in that store too, and erasing
-them takes one delete per event store and namespace — see
-[Erasing a subject](./../compliance/erasing-a-subject).
+Erasure deletes the subject's key revisions across event stores within the addressed namespace. Repeat the operation for each namespace holding that person's data. Events remain in the log, but their protected values cannot be decrypted without the deleted keys. This does not erase plaintext, exported copies or keys retained in backups.
 
-Read more about [PII compliance](./../compliance/pii).
+Follow [Erasing a subject](./../compliance/erasing-a-subject) for the erasure procedure, including stopping in-flight PII writes and handling subsequent appends. [PII compliance](./../compliance/pii) explains how to mark the data that needs this protection.

@@ -1,4 +1,5 @@
 ---
+title: Generate gRPC bindings for a Cratis Chronicle client
 description: "Two ways to get typed bindings for Chronicle's gRPC services when building a client: generate them from the .proto files or request a generated package."
 ---
 # Two ways to start
@@ -45,26 +46,27 @@ TypeScript, Elixir, and Kotlin's contracts packages, for your language. Concrete
    whole release on a wire-compatibility check, so a contracts package can never ship out of step
    with the server it talks to.
 
-This is precisely how it happened for every contracts package that exists today:
+The existing contracts packages use these distribution paths:
 
-| Language | Contracts package | Registry |
+| Language | Contracts package | Distribution |
 |---|---|---|
 | TypeScript | `@cratis/chronicle.contracts` | npm |
 | Kotlin/Java | `io.cratis:chronicle-contracts` | Maven Central |
 | Elixir | `cratis_chronicle_contracts` | Hex |
-| Python | `cratis-chronicle-contracts` | PyPI |
+| Python | `cratis-chronicle-contracts` | Wheel attached to a Chronicle GitHub release; not on PyPI |
 
-Python is the newest addition, and it's worth noticing what stage it's at: the contracts package
-exists and publishes on its own, but there's no idiomatic `Chronicle.Python` repo built on top of
-it yet. That's expected — [layering an idiomatic client](./layering-an-idiomatic-client) on top
-of the contracts package is a separate, later step, not something that has to land in the same
-change as the contracts package itself.
+The `Chronicle.Python` repository provides the `cratis-chronicle` package structure for an
+idiomatic client. Its `pyproject.toml` depends directly on a SHA-256-pinned contracts wheel
+attached to a Chronicle GitHub release. Neither Python package is published to PyPI.
+Chronicle's `publish-python-client` job is disabled until PyPI trusted publishing and the
+protected GitHub environment are configured. [Layering an idiomatic client](./layering-an-idiomatic-client)
+remains a separate task from generating and distributing its contracts.
 
-None of these client repos generate or own their own contracts — the packages are built and
-published from parallel jobs in Chronicle's own `publish.yml`, all consuming the same `.proto`
-artifact, all gated behind the same `wire-compatibility` check. It happens fast, too: Elixir's
-idiomatic client already depended on a published, versioned contracts package
-(`{:cratis_chronicle_contracts, ">= 0.1.0"}`) in its very first commit.
+The TypeScript, Kotlin, and Elixir client repos do not generate or own their own contracts —
+those packages are built and published from parallel jobs in Chronicle's own `publish.yml`,
+consuming the same `.proto` artifact and gated behind the same `wire-compatibility` check.
+An Elixir dependency declaration such as `{:cratis_chronicle_contracts, ">= 0.1.0"}` names the
+generated contracts package, not the idiomatic client.
 
 ### Why this is worth asking for
 

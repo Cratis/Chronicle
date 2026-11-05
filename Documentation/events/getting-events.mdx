@@ -1,21 +1,12 @@
 ---
-description: Read events from a Chronicle event sequence by sequence locator, event source or checkpoint with the IEventSequence and IEventLog APIs.
+title: Cratis Chronicle event reads for inspecting history
+description: Read Cratis Chronicle event history by event source or sequence number, choose bounded pages for large histories, or inspect metadata without content.
 ---
 # Getting events
 
-Event sequences support multiple ways of reading events depending on your needs. The `IEventSequence` APIs (and the specialized `IEventLog`) cover common patterns such as:
+Read events directly from Cratis Chronicle when you need to inspect an entity's history or diagnose the facts behind its current state. Use an event source read for one entity, a sequence-number read for a known position, or a metadata lookup when you do not need the payload.
 
-- Reading events from a sequence in order
-- Reading events for a specific event source
-- Reading a range of events based on sequence numbers
-- Reading a fixed number of events from the tail
-
-Use the client APIs to select the pattern that best matches your scenario, such as replaying state, building read models, or auditing changes.
-
-For bounded history views and endless scrolling, use [.NET keyset-paged reads](./paged-reads).
-`GetPage` reads forward or backward with inclusive bounds and filters; `GetLatest` starts
-at the tail and returns matching events newest first. Both return a continuation only
-when another matching page exists.
+The .NET examples use `IEventSequence` and its specialized `IEventLog`. For a history view that should not load everything at once, use [.NET keyset-paged reads](./paged-reads): pages advance by sequence number rather than by an offset. `GetPage` reads forward or backward within inclusive bounds; `GetLatest` starts at the tail and returns matching events newest first. Both return a continuation only when another matching page exists.
 
 ## Read metadata by sequence locator
 
@@ -46,17 +37,17 @@ identity names, tags and causation properties.
 
 <ChronicleClientTabs snippet="events/getting-events/for-event-source" />
 
-Kotlin, Java, and TypeScript don't currently expose a way to read raw events back for an event source — their public event sequence APIs only support appending and checking for existence.
+The .NET example filters by event source and event types. Kotlin supports an optional event-source filter on `getFromSequenceNumber`, and Java's blocking wrapper accepts it too. Use TypeScript's `getForEventSourceIdAndEventTypes` to filter by event source and event types. Elixir provides `get_for_event_source/3`.
 
 ### Read from a checkpoint
 
 <ChronicleClientTabs snippet="events/getting-events/from-checkpoint" />
 
-This is currently a C#-only capability — no other client exposes a way to resume reading from an arbitrary sequence number.
+The start position is inclusive: passing the last processed sequence number reads it again if it matches the filters. Save the next unread position when you want to resume without rereading that event. Kotlin, Java, and TypeScript expose `getFromSequenceNumber`; Elixir exposes `get_from_sequence_number/3`.
 
 ### Read the last events in a sequence
 
 <ChronicleClientTabs snippet="events/getting-events/tail" />
 
-Reading the tail this way also relies on resuming from a sequence number, so it's currently C#-only too. Kotlin, Java, and TypeScript can still get the tail sequence *number* (see [Getting state](./getting-state)), just not the events at it.
+This .NET example calculates a start position from the tail, reads forward, and trims the result in memory. It does not limit the server response to that count. Use [`GetLatest`](./paged-reads#read-the-newest-matching-events) for a bounded newest-first read, or [Getting state](./getting-state) if you need only the tail sequence number.
 

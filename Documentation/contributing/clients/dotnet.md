@@ -1,4 +1,5 @@
 ---
+title: Cratis Chronicle .NET client internals
 description: How the Chronicle .NET client, the foundation of most clients, is designed and packaged for quick onboarding with full control when needed.
 ---
 # .NET Client
@@ -18,8 +19,9 @@ customization for those who need it.
 
 ## Packaging
 
-The .NET client uses runtime-only packaging to hide internal implementation details. It includes the [contracts](../kernel/contracts) and
-the `Connection` project as runtime-only assemblies, ensuring they're not exposed in IntelliSense or available for direct compilation by consumers.
+The .NET client uses runtime-only packaging to hide internal implementation details. The [contracts](../kernel/contracts.mdx) dependency is marked with `PrivateAssets=all`
+and packaged privately for runtime use, so its types are not exposed in IntelliSense or available for direct compilation by consumers.
+The `Connections` project is a public dependency, so its public types are available at compile time.
 See [internalization](./internalization.md) for details on how this works.
 
 ## Using statements

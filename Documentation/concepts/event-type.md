@@ -1,29 +1,24 @@
 ---
-description: A Chronicle event type gives every stored event an identity and generations, and clients must declare event types before appending events.
+title: Cratis Chronicle event type identity and generations
+description: A Cratis Chronicle event type identifies stored events and their schema generations. Preserve its ID through code renames to keep history accessible.
 ---
 # Event Type
 
-Every [event](./event.md) stored in the [event store](./event-store.md) must have
-a type associated with it.
+An event type in Cratis Chronicle gives a stored [event](./event.md) a stable identity and a schema for its content. Preserve that identity when refactoring code so existing events still reach their handlers; use generations when the schema needs to change.
 
-Any client connecting to Chronicle needs to communicate the event types before any events
-can be appended to an [event sequence](./event-sequence.md).
+Before appending to an [event sequence](./event-sequence.md), the client must register the event type with the [event store](./event-store.md). The client uses that registration to associate the event's code type with its stored identity and schema.
 
 ## Identity survives a code rename only if you preserve it
 
-The default event type id is the class name, not its full namespace-qualified name. Renaming the class changes that id unless you explicitly retain the previous value. Stored history stays under the old id; handlers for the new id do not see those events. Moving the class to another namespace without changing its name does not change its default id.
+In the .NET client, the default event type ID is the class name, without its namespace. Renaming the class changes that ID unless you explicitly retain the previous value. Stored history stays under the old ID; handlers for the new ID do not see those events. Moving the class to another namespace without changing its name leaves its default ID unchanged.
 
-When refactoring an existing event, preserve its stored id. When changing its schema, use a new generation of that same identity and an [event type migration](./event-type-migrations.mdx), not a new id to bypass the old contract. The [.NET discovery diagnostics](../clients/dotnet/discovery-report.md) warn about likely event type renames based on schema shape, but cannot prove that two types represent the same fact.
+When refactoring an existing event, preserve its stored ID. When changing its schema, use a new generation of that identity and an [event type migration](./event-type-migrations.mdx). Giving it a new ID would leave the existing history under a separate identity. The [.NET discovery diagnostics](../clients/dotnet/discovery-report.md) warn about likely event type renames based on schema shape, but cannot prove that two types represent the same fact.
 
 ## Generations
 
-An event type can contain multiple generations. Every new event starts with generation 1
-and any changes to the event should then become a new generation. This allows versioning
-your event types so that multiple schema generations can coexist in the same event store.
+An event type starts at generation 1. When its schema changes, introduce a new generation of the same type so old and new schemas can coexist in the event store. Each generation registers its own JSON schema, which Chronicle uses to validate the event's content.
 
-The concept of generations is important when working with systems that evolve over time.
-Each generation registers its own JSON schema, which Chronicle uses to validate and store
-events correctly for that generation.
+For example, `PersonRegistered` can retain its identity while migrations transform its content between generations:
 
 ```mermaid
 flowchart LR
@@ -32,11 +27,6 @@ flowchart LR
     G2 -->|migration| G3["Generation 3 + JSON schema"]
 ```
 
-You keep the record for every past generation in your codebase alongside the current one. The
-recommended way to declare a previous generation is `[EventTypeGenerationFor<T>]`, where `T` is
-the current generation's type — Chronicle resolves the shared event type id from `T`'s own
-`[EventType]`, so the previous generation never carries (and can never mistype) an id of its own.
+Keep a record for each past generation alongside the current one. In .NET, declare a previous generation with `[EventTypeGenerationFor<T>]`, where `T` is the current generation's type. Chronicle resolves the shared event type ID from `T`'s `[EventType]`, so you do not have to repeat the ID on each historical record.
 
-For detailed information on how to define and use migrations — including this attribute, the
-older explicit-id style it replaces, and the operations available for transforming events between
-generations — see [Event Type Migrations](./event-type-migrations).
+Continue with [Event Type Migrations](./event-type-migrations) to define those records and the transformations between them, or to work with the older explicit-ID style.

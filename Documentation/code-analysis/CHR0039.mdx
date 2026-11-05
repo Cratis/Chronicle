@@ -1,8 +1,7 @@
 ---
+title: "CHR0039: Assertion result is discarded and can never fail"
 description: Chronicle analyzer rule CHR0039 reports discarded Chronicle test assertion results that can never fail, and how to await them in a test.
 ---
-# CHR0039: Assertion result is discarded and can never fail
-
 ## Rule Description
 
 The event-sequence assertions in `Cratis.Chronicle.Testing` — `ShouldHaveAppendedEvent<T>(...)` and `ShouldHaveTailSequenceNumber(...)`, in every overload — return a `Task`. They signal failure by throwing an `EventSequenceAssertionException` on that `Task`. The kernel-backed integration assertions in `Cratis.Chronicle.XUnit.Integration.Events` — `ShouldHaveAppendedEvent<T>(...)`, `ShouldHaveNextSequenceNumber(...)` and `ShouldHaveTailSequenceNumber(...)` — work the same way.

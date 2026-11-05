@@ -1,40 +1,45 @@
 ---
-description: The C# syntax for declaring Chronicle event type migrations: marking generations, defining migrators and the C# discovery and validation behavior.
+title: Chronicle event type migrations in C#
+description: Declare Chronicle event generations and C# migrators so the kernel can transform events between schemas. Includes property operations and validation.
 ---
 # C# client usage
 
-This page covers the C# syntax. For what each operation does, see [Event Type Migrations](../concepts/event-type-migrations.mdx).
+To evolve an event schema with the Cratis Chronicle .NET client, keep a record type for each generation and define a migrator between each adjacent pair. The client discovers these declarations and registers them with the kernel, which applies the transformations when events are appended.
 
 ## Prerequisites
 
 - A Chronicle-enabled .NET application
-- An event type marked with `[EventType]` that has evolved beyond generation 1
+- The existing event record and the new schema it needs to support
+
+This guide uses attributes to identify event generations. If your contracts must stay free of client attributes, use [explicit registration](explicit-registration) instead. Before deploying a new generation, follow the [kernel rollout guidance](./#migrations-happen-in-place).
 
 ## Marking event types with generations
 
-Every `[EventType]` that has evolved past its first version must declare its current generation. You keep both the old and new record types in your codebase — Chronicle identifies them as the same event type by a shared event type id, not by C# class name.
+Keep the old record and introduce the new shape with an explicit generation number. Both records represent the same event type: Chronicle connects them through their event type id, not their C# class names.
 
 <ChronicleClientTabs snippet="migrations/dotnet-client/generations" variants="csharp" />
 
-The current generation, `MigrationsDotnetClientAuthorRegistered`, carries the real `[EventType]` with its explicit id. The previous generation, `MigrationsDotnetClientAuthorRegisteredV1`, carries `[EventTypeGenerationFor<MigrationsDotnetClientAuthorRegistered>(1)]` instead — it has no independent id of its own at all. Its event type id is resolved directly from the current generation's `[EventType]`, so the two can never end up with different ids no matter how the records are renamed later.
+Generation 2 splits `Name` into `FirstName` and `LastName`. Its record, `MigrationsDotnetClientAuthorRegistered`, declares the stable id with `[EventType]`. The older `MigrationsDotnetClientAuthorRegisteredV1` uses `[EventTypeGenerationFor<MigrationsDotnetClientAuthorRegistered>(1)]` to take its id from that declaration. You can rename either record without maintaining two copies of the id string.
 
-:::note[The old, explicit-id style still works]
-You can still mark every generation with its own `[EventType]`, as long as you pass the **exact same explicit id string** on all of them and vary only `generation:`. This is fully backward compatible — it is not deprecated. What it no longer is, is the recommended default: an id left off a previous generation silently falls back to the CLR type name rather than being "derived from the type name base" in any way that stays in sync with the current generation, and Chronicle then treats the two records as unrelated event types entirely. `[EventTypeGenerationFor<T>]` removes that failure mode by construction.
+:::note[Using an explicit id on every generation]
+You can still put `[EventType]` on every generation; this style is not deprecated. Pass exactly the same explicit id string on each record and vary `generation:`. Omitting an id makes it fall back to the CLR type name, which can make the records unrelated event types. Prefer `[EventTypeGenerationFor<T>]` for previous generations to avoid that mismatch.
 :::
 
 ## Defining a migrator
 
-Extend `EventTypeMigration<TUpgrade, TPrevious>` where `TUpgrade` is the **newer** generation and `TPrevious` is the **older** one:
+Extend `EventTypeMigration<TUpgrade, TPrevious>` with the newer generation first and the older generation second. Declare the older-to-newer transformation in `Upcast` and the reverse in `Downcast`:
 
 <ChronicleClientTabs snippet="migrations/dotnet-client/migrator" variants="csharp" />
 
-The `From` and `To` generation numbers are read automatically — from `TPrevious`'s `[EventTypeGenerationFor<T>]` (or its `[EventType]`, if you're using the old style) and from `TUpgrade`'s `[EventType]`. You do not declare them yourself. The base class constructor also validates, at that point, that both generations resolve to the **same event type id** (throwing `MigrationGenerationsMustShareEventTypeId` immediately if they don't) and that `To == From + 1` (throwing `InvalidMigrationGenerationGap` otherwise), preventing both an accidental identity mismatch and a generation gap.
+Here, `Upcast` splits the old `Name`, while `Downcast` combines the new fields into the shape generation 1 expects. The base class reads `From` and `To` from the endpoint attributes, whether `[EventType]` or `[EventTypeGenerationFor<T>]`; you do not set the numbers again in the migrator.
 
-Migrators are discovered automatically at startup — no explicit registration is needed. If two different migrator classes both claim to bridge the same generation pair for one event type, `EventTypeMigrators.GetMigratorsFor` throws `MultipleMigratorsForSameEventTypeGeneration` — exactly one migrator may own a given transition.
+The base constructor rejects different event type ids with `MigrationGenerationsMustShareEventTypeId` and non-adjacent generations with `InvalidMigrationGenerationGap`. Each migrator must bridge exactly one step: `To == From + 1`.
+
+With the default discovery setup, migrators are found at startup without explicit registration. Keep one migrator for each transition. If two classes claim the same generation pair for one event type, `EventTypeMigrators.GetMigratorsFor` throws `MultipleMigratorsForSameEventTypeGeneration`.
 
 ## Migration operations
 
-All operations are called on the property builder inside `builder.Properties(pb => ...)`. Each call declares one output property using a target property expression and one or more source property expressions drawn from the opposite generation's record.
+Declare property operations inside `builder.Properties(pb => ...)`. The target expression names a property in the generation you are producing; source expressions refer to the generation you are reading. `DefaultValue` supplies a literal instead of reading a source property. See [Event Type Migrations](../concepts/event-type-migrations.mdx) for the operation semantics.
 
 ### Split
 
@@ -58,43 +63,45 @@ Maps a property from its old name in the source generation to its new name in th
 
 ### DefaultValue
 
-Provides a literal default for a property that did not exist in the source generation. Chronicle applies this value to any event stored before the property was introduced.
-
-When the default is an object, its members are named with the client's JSON naming policy (`[JsonPropertyName]` takes precedence), the same way the event's payload and schema are. The same applies to object values in `MapValues`, so a map can match object payloads under those policies. Scalars, enums (rendered as their underlying number), concepts and raw string paths are unchanged, and so is the output under the default naming policy.
-
-This changes persisted migration content for clients that use a camelCase or custom naming policy, and therefore changes the migration hash. Content derived after the upgrade uses the corrected names; generations that were already derived are not corrected. Upgrade all clients of an event store promptly: while old and new clients alternate registrations, each replacement of the current definition flips it, clears its cache and re-subscribes pattern capture. Registering the same definition again is idempotent.
+Supply a literal value when the source generation has no value for a target property:
 
 <ChronicleClientTabs snippet="migrations/dotnet-client/default-value" variants="csharp" />
 
+Object defaults use the client's JSON naming policy for their members, with `[JsonPropertyName]` taking precedence. Object values in `MapValues` follow the same rules so they can match serialized payloads. Scalars and concepts keep their serialized values; enums use their underlying numbers.
+
+If you upgrade from a client that did not apply the naming policy to object literals, the resulting migration content and hash change under camelCase or custom policies. Newly derived content uses the corrected names; already-derived generations are not corrected. Upgrade clients of the same event store together where possible: alternating registrations from old and new clients can replace the definition repeatedly, invalidate its cache and re-subscribe pattern capture. Registering the same definition again is idempotent.
+
 ## Properties inside a nested object
 
-An event's payload is rarely flat — a value object groups related values, and that inner record evolves on its own schedule. Every operation above addresses such a property by the expression you would write anyway:
+Use a member expression to reach a property inside a nested object. This example adds a description to the event's `Price` object:
 
 <ChronicleClientTabs snippet="migrations/dotnet-client/nested-property" variants="csharp" />
 
-A typed expression such as `e => e.Price.Description` identifies CLR members. Chronicle resolves each member to its JSON name: `[JsonPropertyName]` takes precedence, otherwise the client's JSON naming policy applies. Without explicit names, a camelCase policy produces `price.description`. Chronicle resolves that payload path segment by segment: reading walks into the object, writing creates the objects along the way when the stored payload does not carry them yet. That also lets a migration restructure a payload — `RenamedFrom(m => m.Price.Amount, e => e.Amount)` moves a value that used to sit at the top level into the object it now belongs to.
+Chronicle resolves each member in `e => e.Price.Description` to its JSON name. `[JsonPropertyName]` takes precedence over the client's naming policy; without explicit names, camelCase produces `price.description`. The kernel reads that path through the nested object and creates missing objects when writing the target. The same path handling lets `RenamedFrom(m => m.Price.Amount, e => e.Amount)` move a top-level value into `Price`.
 
-This resolution applies to typed source and target expressions for every operation, including bidirectional value maps. Raw string paths on `IEventMigrationPropertyBuilder` are already JSON paths and remain **exactly as supplied**. For example, a raw path `price.description` is not converted again, even with a custom naming policy. Use the exact names in the serialized payload, including explicit `[JsonPropertyName]` names. Existing raw-string migrations need no naming-policy upgrade workaround.
+Typed source and target expressions use this resolution for every operation, including bidirectional value maps. Raw string paths on `IEventMigrationPropertyBuilder` are already JSON paths and remain exactly as supplied. Use the serialized names, including any `[JsonPropertyName]` names: `price.description` is not converted again under a custom naming policy. Existing raw-string paths need no naming-policy workaround.
 
-Separators, default values, and mapped values are literals and are not renamed. These builders describe property paths, not arbitrary custom-converter transformations.
+Path resolution does not rewrite a separator or a scalar literal, and these builders do not describe arbitrary custom-converter transformations. Object literals follow the serialization rules described under `DefaultValue`.
 
-A path that goes nowhere is rejected at registration with `InvalidMigrationPropertyForEventType`, naming the path so you can see which segment is wrong.
+Registration checks paths against the generation schemas. An undeclared path is rejected with `InvalidMigrationPropertyForEventType`, identifying the path to check.
 
 ## Properties inside the elements of a collection
 
-A property on every element of a list is addressed with `Select`: `DefaultValue(m => m.Days.Select(day => day.Activity), "work")` gives each element that does not carry an `activity` the default. The path is written `days[].activity`, and a raw string path may use the same form. The kernel applies the operation element by element and keeps the collection. `RenamedFrom` and `MapValues` accept the same form when their sources are written with the same `days[].` prefix. A path that reaches into a collection without `[]` is refused rather than replacing the collection with an object.
+Use `Select` to address a property on every element: `DefaultValue(m => m.Days.Select(day => day.Activity), "work")` supplies the default where an element has no activity. Under camelCase, the path is `days[].activity`; raw string paths can use the same form.
+
+The kernel applies the operation to each element and preserves the collection. `RenamedFrom` and `MapValues` use the same form when their source paths share the `days[].` prefix. A path into a collection without `[]` is rejected instead of replacing the collection with an object.
 
 ## When you need no operations at all
 
-Adding or removing an **optional** property, at any depth, needs a migration class but no property operations inside it. The [concept page](../concepts/event-type-migrations.mdx#when-no-operations-are-needed) explains why:
+When a schema change only adds or removes an optional property, keep a migration class for that generation pair but leave its property operations empty. This applies to nested properties too:
 
 <ChronicleClientTabs snippet="migrations/dotnet-client/no-operations" variants="csharp" />
 
-The class only has to exist so the generation chain is complete. See [Validation: missing migrators](#validation-missing-migrators). Use `DefaultValue` when absent is the wrong answer.
+The class completes the generation chain even though there is no value to transform. Use `DefaultValue` when an absent value is not acceptable. The [concept page](../concepts/event-type-migrations.mdx#when-no-operations-are-needed) explains how schema conversion handles unchanged and optional properties; [validation](#validation-missing-migrators) still requires a complete chain.
 
 ## MapValues
 
-A value map changes the values themselves. See [Value map](../concepts/event-type-migrations.mdx#value-map) for what it does. In C#, you declare it by overriding `MapValues` on the migration, unlike the property-builder operations:
+Use a [value map](../concepts/event-type-migrations.mdx#value-map) when a property keeps its role but its values change, such as renumbered enum members. Override `MapValues` on the migration to declare a map used in both directions:
 
 <ChronicleClientTabs snippet="migrations/dotnet-client/map-values" variants="csharp" />
 
@@ -104,29 +111,24 @@ For a translation that is not symmetric (see [Value maps in one direction](../co
 
 ## Multi-generation migrations
 
-Define one migrator per generation pair. Chronicle chains them; see [Chaining several generations](../concepts/event-type-migrations.mdx#chaining-several-generations).
+Define one migrator for each adjacent pair. To move from generation 1 to generation 3, Chronicle applies 1→2 followed by 2→3; a direct 1→3 migrator is not a substitute. See [Chaining several generations](../concepts/event-type-migrations.mdx#chaining-several-generations).
 
 <ChronicleClientTabs snippet="migrations/dotnet-client/multi-generation" variants="csharp" />
 
 
 ## How registration works
 
-When your application connects to Chronicle, the client:
+When your application connects, the .NET client discovers migrators through `IClientArtifactsProvider`. It invokes `Upcast` and `Downcast` to capture their declarations, then sends the generation schemas and declarative migration expressions to the kernel during event type registration.
 
-1. Discovers all `EventTypeMigration<TUpgrade, TPrevious>` implementations via `IClientArtifactsProvider`
-2. Invokes `Upcast` and `Downcast` on each migrator to capture the transformation declarations
-3. Converts the declarations into JmesPath expressions
-4. Sends the complete `EventTypeDefinition` — including all generations and their migration definitions — to the Kernel during event type registration
-
-From that point on, the Kernel applies the migrations on every event append, without further involvement from the client. The steps are the same for every client; see [Registration](../concepts/event-type-migrations.mdx#registration).
+The kernel applies those definitions on append without invoking your C# migrator again. Registering a new generation also starts the [background backfill](./#background-upcasting-for-new-generations) for existing events in the default namespace's event log. Registration and backfill completion are separate: an accepted definition does not mean every historical event already has the new generation. See [Registration](../concepts/event-type-migrations.mdx#registration) for the shared model.
 
 ## Validation: missing migrators
 
-If an event type is declared with a generation higher than 1 but has no migrators covering all generations up to the current one, Chronicle throws `MissingEventTypeMigrators` during startup. This prevents silent data loss from an incomplete migration chain.
+When generation validation is enabled, the kernel rejects an event type above generation 1 if its migration chain is incomplete. `MissingEventTypeMigrators` means no migrators were supplied. A chain that has no transition from generation 1 produces `MissingFirstGenerationForEventType`; a later gap produces `MissingMigrationForEventTypeGeneration`.
 
 ```text
 Cratis.Chronicle.Events.Migrations.MissingEventTypeMigrators:
   Event type 'AuthorRegistered' is at generation 3 but no migrators are registered for it.
 ```
 
-Ensure every generation gap has a corresponding `EventTypeMigration<TUpgrade, TPrevious>` subclass before deploying an event type with a new generation.
+Before deploying, check that every adjacent generation pair has one `EventTypeMigration<TUpgrade, TPrevious>` subclass and that the old record types remain discoverable. If registration fails, use the reported event type and generation to find the missing transition rather than adding a direct jump to the current generation.

@@ -1,41 +1,41 @@
 ---
-description: Pin a Chronicle reactor to an event sequence other than the default event log with [EventSequence], [Reactor] or [EventLog], including inbox routing.
+title: "Cratis Chronicle reactors: choose an event sequence"
+description: Choose the event sequence a Cratis Chronicle reactor observes, override inferred inbox routing in .NET, or explicitly select the default event log.
 ---
 # Event Sequence
 
-By default, reactors observe the default event log. You can override this by specifying a different event sequence using either the `[EventSequence]` attribute or the `eventSequence` parameter on the `[Reactor]` attribute.
+A Cratis Chronicle reactor observes one event sequence: the ordered source of events it handles. Select the sequence that contains the events your handler needs. Without another selection, reactors read the default event log, although .NET can infer an inbox for events from another event store.
+
+In .NET, `[EventSequence]` and the `eventSequence` parameter on `[Reactor]` make the selection explicit. If both are present, `[EventSequence]` takes precedence. An explicit selection also prevents automatic inbox routing.
 
 ## Using the `[EventSequence]` Attribute
 
-Apply `[EventSequence]` directly to your reactor class to pin it to a specific event sequence:
+Apply `[EventSequence]` to a .NET reactor class when the sequence is the only option you need to set:
 
 <ChronicleClientTabs snippet="reactors/event-sequence/event-sequence-attribute" />
 
-TypeScript reaches the same result through the `reactor()` decorator's `eventSequenceId` parameter, and Kotlin and Java through the `eventSequence` parameter on `@Reactor` — all shown under [Using the `[Reactor]` Attribute](#using-the-reactor-attribute) below, rather than as a separate attribute. Elixir doesn't currently support targeting a non-default event sequence at all.
+Kotlin and Java also provide `@EventSequence`, which takes precedence over the `eventSequence` parameter on `@Reactor`. TypeScript uses `eventSequenceId` on its `reactor()` decorator, shown under [Using the `[Reactor]` Attribute](#using-the-reactor-attribute). Elixir's reactor declaration has no option for a non-default event sequence.
 
 ## Using the `[Reactor]` Attribute
 
-When you are already using the `[Reactor]` attribute to set a custom identifier or other options, use its `eventSequence` parameter instead of adding a separate `[EventSequence]` attribute:
+If you already use `[Reactor]` to set a stable identifier, set `eventSequence` there too rather than adding another attribute:
 
 <ChronicleClientTabs snippet="reactors/event-sequence/reactor-attribute" />
 
-Both approaches produce the same result. Prefer `[Reactor(eventSequence: ...)]` when you are already customizing the reactor with other parameters on that attribute.
+In .NET, either declaration selects the same sequence when used on its own. Keep the selection in one place so a later edit does not leave conflicting values on the class.
 
 ## Convenience: `[EventLog]`
 
-Use `[EventLog]` when you want to be explicit that the reactor reads from the default event log, even when event types in the assembly carry a `[EventStore]` attribute pointing elsewhere:
+Use `[EventLog]` in .NET to select the default event log explicitly, even when handled event types carry an `[EventStore]` attribute pointing elsewhere:
 
 <ChronicleClientTabs snippet="reactors/event-sequence/event-log-attribute" />
 
-This convenience is C#-only — it exists to disambiguate against C#'s `[EventStore]` attribute on event types, which the other clients don't have.
+This .NET convenience prevents the handled events' store metadata from routing the reactor to an inbox. Use it only when those events are meant to be read from the local event log.
 
 ## External Event Store Inbox Routing
 
-For outbox-to-inbox subscriptions between event stores, including automatic inbox routing and observer-level `[EventStore]` usage, see [Subscribe Reactors to External Event Stores](external-event-store-subscriptions).
+If the events originate in another event store, choosing a local sequence is only part of the setup. Follow [Subscribe Reactors to External Event Stores](external-event-store-subscriptions) to configure outbox-to-inbox delivery, automatic inbox routing, and observer-level `[EventStore]` usage.
 
 ## When to Use `[EventSequence]` Explicitly
 
-- When you need to read from a specific sequence other than the inferred one
-- To suppress automatic inbox routing for a reactor that handles foreign events
-- For reactors that target a specialized or partitioned event stream
-- When an explicit sequence name improves readability and makes intent clear
+Set the sequence explicitly when the reactor reads a named sequence other than the default, or when you need to override .NET's inferred inbox. An event sequence is not an event stream type: to select events by their source or stream metadata within the sequence, use [reactor filtering](filtering).

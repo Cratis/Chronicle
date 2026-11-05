@@ -1,4 +1,5 @@
 ---
+title: Configure clustering in Cratis Chronicle Server
 description: Configure how multiple Chronicle Server nodes form one Orleans cluster and distribute workloads by role for horizontal scale out.
 ---
 # Clustering

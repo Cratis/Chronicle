@@ -1,19 +1,20 @@
 ---
-description: Populate a single nullable child object on a read model from events with nested model-bound Chronicle projections, available in the .NET client.
+title: "Nested model-bound projections: populate and clear one object"
+description: "Nested model-bound Chronicle projections let events populate, update, or clear one nullable object inside a parent read model, with its own mappings."
 ---
 # Nested Objects
 
-Nested model-bound projections populate a single nullable child object on a read model. Use them when an event should set, update, or clear one scalar object inside the parent, rather than managing a collection of child items.
+A nested model-bound projection lets events populate, update, or clear one nullable object inside a parent read model. Use it for an optional part of the view, such as a command definition, whose fields change together. Use a child collection when the parent can contain several independently identified items.
 
-The current model-bound nested API is available in the .NET client. TypeScript currently rejects `@nested` during projection registration, and the Kotlin and Elixir clients do not expose an equivalent model-bound nested API.
+The examples below use the .NET `[Nested]` attribute. TypeScript exposes `@nested`, and Kotlin and Java expose `@Nested`; the Elixir model-bound API does not expose a nested-object declaration.
 
 ## Basic Lifecycle
 
-Mark the nullable parent property as nested. The nested type declares the events that populate it and, optionally, the events that clear it.
+Mark the nullable parent property as nested, then declare the populate events on the nested type. Add clear events if the relationship can end:
 
 <ChronicleClientTabs snippet="projections/model-bound/nested/basic-lifecycle" />
 
-The lifecycle is:
+The object starts empty. As events arrive:
 
 1. The first populate event creates the nested object.
 2. Later populate events update the existing nested object.
@@ -21,7 +22,7 @@ The lifecycle is:
 
 ## Parent Property
 
-The nested marker belongs on the single nullable property that holds the child object.
+Put `[Nested]` on the parent property that holds the object. Keeping it nullable represents both the initial empty state and the state after a clear event:
 
 <ChronicleClientTabs snippet="projections/model-bound/nested/parent-property" />
 
@@ -37,11 +38,11 @@ Use multiple clear annotations when more than one event should clear the same ne
 
 <ChronicleClientTabs snippet="projections/model-bound/nested/multiple-clear-events" />
 
-The same annotation on the *parent property* clears the same nested object. Prefer it when the nested type is shared, so the owner names the event that ends its own relationship and the nested type does not have to know about it. To clear a single member of the nested object rather than the whole object, put the annotation on that member — see [Clearing Values](clearing).
+You can also put the clear annotation on the parent property. This is useful when several parents share the nested type but different events end their relationships. To clear one member while keeping the nested object, put the annotation on that member. See [Clearing Values](clearing) for that distinction.
 
 ## Updating From Multiple Events
 
-A nested type can be populated or updated by several events. Matching property names are auto-mapped by default.
+Declare each event that can populate or update the nested type. Matching property names are auto-mapped by default, so a rename event can update `Name` while a schema-change event updates `Schema`:
 
 <ChronicleClientTabs snippet="projections/model-bound/nested/multiple-from-events" />
 
@@ -57,19 +58,21 @@ AutoMap is enabled by default for nested types. Disable it on the nested type wh
 
 ## Multiple Nested Objects
 
-A parent can hold more than one nested object. Each nested property points to a type with its own event lifecycle.
+A parent can hold more than one nested object. Each nested property points to a type with its own populate and clear events:
 
 <ChronicleClientTabs snippet="projections/model-bound/nested/multiple-nested" />
 
 ## Nested Objects Inside Children
 
-Nested objects can also appear inside child collection items.
+A child collection item can hold a nested object with its own lifecycle:
 
 <ChronicleClientTabs snippet="projections/model-bound/nested/nested-in-children" />
 
+Joins inside such a nested object are not supported by the kernel. Keep those join mappings on the collection item itself; see [Joins](./joins.mdx).
+
 ## Complete Example
 
-This example shows a parent read model with a command definition that can be set, renamed, updated, and cleared.
+The parent in this example keeps an optional command definition. Setting the command populates it, later events change selected fields, and clearing it leaves the parent read model in place:
 
 <ChronicleClientTabs snippet="projections/model-bound/nested/complete" />
 
@@ -91,17 +94,16 @@ This example shows a parent read model with a command definition that can be set
 | `AddFrom` / `SubtractFrom` | Yes |
 | `SetFromContext` | Yes |
 | `Increment` / `Decrement` / `Count` | Yes |
-| `Join` | Yes |
+| `Join` | Supported on a root-level nested object, not on a nested object inside a child collection. |
 | `Nested` recursively | Yes |
-| `ChildrenFrom` inside nested objects | Yes |
+| `ChildrenFrom` inside nested objects | Not supported by the kernel. |
 | `NoAutoMap` | Yes |
 
 ## Best Practices
 
-1. Declare the nested property as nullable because it starts empty and is populated by events.
-2. Keep the populate and clear annotations close to the nested type so its lifecycle is visible.
-3. Rely on AutoMap when event and nested property names match.
-4. Use a child collection instead when there can be multiple independent child objects.
+Keep the populate events on the nested type and place clear annotations where the lifecycle is owned: on that type for a shared lifecycle, or on the parent property for an owner-specific one. Use AutoMap while names match and add explicit mappings where they differ.
+
+For multiple independent objects, move to a [child collection](children). Nested objects cannot contain child collections, and removal through a join is not supported for nested objects.
 
 ## See Also
 

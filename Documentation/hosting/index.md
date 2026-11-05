@@ -1,31 +1,31 @@
 ---
-description: Hosting Chronicle means running the Chronicle Kernel as a standalone server process from its Docker image, locally, in CI or in production.
+title: Cratis Chronicle hosting
+description: Host the Cratis Chronicle Kernel with Docker Compose or Microsoft Aspire locally, then configure storage, certificates, and health probes for production.
 ---
 # Hosting
 
-Hosting Chronicle means running the **Chronicle Kernel** as a standalone server process. The Kernel is the heart of the system — it manages the event store, processes projections, coordinates observers, and exposes the API that client applications connect to. All event-sourced state flows through it, so the Kernel must be running before any client can append or query events.
-
-Chronicle ships as a Docker image, making it straightforward to run anywhere containers are supported — locally for development, in CI, or in production clusters.
+Hosting Cratis Chronicle means running its Kernel, the server that stores events, builds read models through projections, and runs event handlers called observers. Your applications connect to this server to append events and query their state. Start with a local container, then configure durable storage and certificates before deploying the production image.
 
 ## Getting Started
 
-For day-to-day development, [Docker Compose](docker-compose.md) is the fastest way to get a Kernel and MongoDB running locally. [Aspire](aspire) is an alternative if your team uses the .NET Aspire application model.
+Use [Docker Compose](docker-compose.md) to run the development image with its bundled MongoDB and an OpenTelemetry dashboard. If you already run your application through Microsoft Aspire, [add Chronicle to your AppHost](aspire) so Aspire manages its container and passes the endpoint to your application.
+
+The development image generates a self-signed TLS certificate. You only need [Local Certificates](local-certificates) when you want to supply your own, for example to test certificate trust.
 
 ## Going to Production
 
-Running the Kernel in production requires two things beyond a basic Docker deployment:
+Follow [Production hosting](production.md) to deploy the production image with external storage, certificates, and health probes. Unlike the development image, it has no bundled MongoDB and does not generate certificates.
 
-- **[Production](production.md)** — how to deploy the Chronicle Docker image with MongoDB, including port configuration, Docker Compose setup, health checks, and security considerations.
-- **[Data Protection Key Encryption](encryption-certificate.md)** — Chronicle uses ASP.NET Core Data Protection to protect sensitive values at rest. In production you must supply a certificate so that data protection keys are encrypted. Without one the Kernel refuses to start, because the internal OAuth authority requires the certificate. Turn that authority off — or point Chronicle at an external one — and the Kernel starts happily while writing its data protection keys unencrypted, which is the quieter and more dangerous outcome.
+TLS protects connections to Chronicle. A separate encryption-certificate setting protects stored ASP.NET Core Data Protection keys and supplies keys to Chronicle's internal OAuth authority, which issues authentication tokens. The internal authority requires this certificate in production. Using an external authority removes that startup requirement, but does not protect the stored keys: without an encryption certificate, Data Protection writes them unencrypted.
 
-Both steps are required. A production deployment that skips key encryption is not secure.
+Before accepting traffic, configure [Data Protection Key Encryption](encryption-certificate.md) and include the encryption certificates and their passwords in your backup plan. You need those certificates to read protected data after a restore or a certificate rotation.
 
 ## All Hosting Topics
 
-- **[Production](production.md)** — Docker-based production deployment
-- **[Tracing Client Operations](client-tracing)** — Send the Chronicle client's spans to OpenTelemetry
-- **[Data Protection Key Encryption](encryption-certificate.md)** — Certificate-backed key encryption for production
-- **[Configuration](configuration/index.md)** — Complete configuration reference
-- **[Aspire](aspire)** — Microsoft Aspire hosting integration
-- **[Docker Compose](docker-compose.md)** — Multi-container setup for development and testing
-- **[Local Certificates](local-certificates)** — TLS certificates for local development
+- [Production](production.md): Docker-based production deployment
+- [Tracing Client Operations](client-tracing): send client spans to OpenTelemetry
+- [Data Protection Key Encryption](encryption-certificate.md): configure, rotate, and back up encryption certificates
+- [Configuration](configuration/index.md): server settings reference
+- [Aspire](aspire): Microsoft Aspire hosting integration
+- [Docker Compose](docker-compose.md): local development with telemetry
+- [Local Certificates](local-certificates): supply a TLS certificate for development

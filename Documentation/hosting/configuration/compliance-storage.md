@@ -1,4 +1,5 @@
 ---
+title: Configure compliance storage in Cratis Chronicle
 description: Store Chronicle's encryption keys in a separate, independently secured compliance storage instead of alongside application data.
 ---
 # Compliance Storage

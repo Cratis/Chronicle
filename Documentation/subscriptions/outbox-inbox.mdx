@@ -1,37 +1,34 @@
 ---
-description: Chronicle formalizes the outbox and inbox pattern as kernel-managed event sequences for reliably integrating event stores and distributed systems.
+title: Chronicle outbox and inbox event delivery
+description: Publish integration events to a Chronicle outbox and forward them into a consumer inbox, where observers process the stored events independently.
 ---
 # Outbox and Inbox
 
-The outbox/inbox pattern is a well-established way to integrate distributed systems reliably. Chronicle formalizes this pattern as first-class, kernel-managed event sequences.
+Cratis Chronicle uses an outbox and inbox to separate publishing an event from processing it in another service. The source publishes to its outbox, the kernel forwards subscribed events into the consumer's inbox, and the consumer processes that stored copy.
 
 ## The Outbox
 
-Every event store in Chronicle has a well-known **outbox** sequence (`EventSequenceId.Outbox`). Events appended to the outbox are visible to any other event store that has set up a subscription.
+The **outbox** is the source store's event sequence for publishing events to other stores. In C#, its well-known identifier is `EventSequenceId.Outbox`. A subscription selects which event types to forward from that sequence.
 
-The outbox exists by convention — you do not need to create it. Append events to it the same way you append to any other event sequence.
+You do not need to create the outbox separately. Append events to it as you would to another event sequence. Appending to the source's ordinary event log alone does not publish an event to subscribers.
 
 ## The Inbox
 
-When event store **A** subscribes to event store **B**, Chronicle automatically manages an **inbox** sequence on A for events forwarded from B. The well-known inbox sequence is `EventSequenceId.Inbox`, and the per-source inbox identifier is derived from the source event store name using `EventSequenceId.InboxPrefix`:
+An **inbox** stores the forwarded events in the consuming store. Each source has its own sequence, named `inbox-{sourceEventStore}`. For example, subscribing to `fulfillment-service` sends its matching events to `inbox-fulfillment-service` in the target store.
+
+C# declares the well-known `EventSequenceId.Inbox` identifier and uses `EventSequenceId.InboxPrefix` to construct a per-source identifier:
 
 <ChronicleClientTabs snippet="subscriptions/outbox-inbox/inbox-id" />
 
-`EventSequenceId.InboxPrefix` is a small C#-only convenience constant — the other clients don't have a dedicated helper for it, since the inbox sequence id itself (`"inbox-<source-event-store>"`) is just a plain string wherever event sequence ids are used.
+Use the per-source sequence when you need to inspect a particular source's delivery. Let Chronicle write the forwarded events rather than appending them to the inbox yourself.
 
-You never write to an inbox directly. Chronicle forwards events from the source outbox to the target inbox as they are appended.
-
-Forwarding now preserves the source event's append tags as well as its event-source and stream-route metadata. Tag-filtered observers on the inbox can select these events. Events forwarded by earlier releases that dropped tags remain untagged; upgrading does not backfill them.
+Forwarding preserves the source event's append tags, event-source identity, and stream-route metadata. Tag-filtered inbox observers can select those events. Events forwarded by earlier releases that dropped tags remain untagged; upgrading does not backfill them. [Compliance and PII](compliance-and-pii.md) explains how forwarding preserves subject identity and handles encryption keys.
 
 ## Lifecycle
 
-Subscriptions are **kernel-managed** and **persistent**. Once registered, a subscription:
+The kernel stores subscription definitions for the target event store, independently of a client session. They survive client disconnections and are re-established when the kernel starts.
 
-- Survives client disconnections
-- Is restarted automatically when the Kernel starts
-- Is tracked per event store, not per client session
-
-This means you can call `Subscribe` at application startup without worrying about duplicate registration — if the subscription already exists with the same identifier, no new event is appended.
+You can register the same definition under the same subscription ID at application startup without creating a duplicate. Reusing the ID with a changed definition updates the subscription; an ID alone does not make every registration identical.
 
 ## Event Flow
 
@@ -45,15 +42,19 @@ Source event store               Target event store
    └─────────┘                    └─────────┘
 ```
 
-The `EventStoreSubscriptionObserverSubscriber` grain on the Kernel side observes the source outbox and appends forwarded events to the corresponding target inbox.
+The kernel's forwarding subscriber, `EventStoreSubscriptionObserverSubscriber`, receives events from the source outbox observer and appends them to the target inbox. Delivery into the inbox and processing by the consumer have separate progress: an event can have arrived even when a derived view has not updated.
 
 A fresh subscription forwards matching retained outbox history from sequence number zero. Reconnecting the same subscription identity can instead resume from its saved forwarding progress. Replaying that source forwarding observer can append events to the inbox again; replaying a consumer inbox observer reprocesses rows already there. See [Subscription recovery](recovery) before choosing an operation.
 
 ## Reactors, Projections, and Reducers on the Inbox
 
-Client-side observers (reactors, projections, reducers) can target `EventSequenceId.Inbox` to process all events arriving from subscribed sources. The client SDK automatically routes inbox-targeted observers to the correct per-source inbox sequence.
+Route each consumer observer to the inbox for the source it handles. In C#, [implicit subscriptions](implicit-subscriptions) infer that source from `[EventStore]` on the event contracts. With [explicit subscriptions](explicit-subscriptions), configure the observer's source or sequence separately; registering forwarding does not change a handler's input sequence.
+
+The following snippet shows how a reactor handles an incoming event. It does not select an inbox; add the source routing described in [Subscribe Reactors to External Event Stores](../reactors/external-event-store-subscriptions) before using it as an inbox consumer.
 
 <ChronicleClientTabs snippet="subscriptions/outbox-inbox/inbox-reactor" />
+
+To check the whole flow, publish an event to the source outbox, find its copy in the target's per-source inbox, and then check the consumer's result. If one step is missing, follow [Subscription recovery](recovery) to investigate that step rather than replaying the entire flow.
 
 ## See Also
 

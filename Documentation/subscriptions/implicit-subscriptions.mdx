@@ -1,28 +1,28 @@
 ---
 uid: implicit-subscriptions
-description: Chronicle implicit subscriptions route events from a source event store's outbox to the right inbox automatically, driven by [EventStore] attributes in C#.
+title: Chronicle implicit subscriptions from shared event contracts
+description: Use EventStore attributes on shared C# event contracts so Chronicle registers forwarding and routes consumers to the source store's inbox.
 ---
 
 # Implicit Event Store Subscriptions
 
-Chronicle supports **implicit subscriptions** — automatic routing of events from a source event store's outbox to the correct inbox sequence, driven entirely by `[EventStore]` attributes on event types.
+Cratis Chronicle can register forwarding and route C# observers automatically when their event contracts identify a source event store. Use implicit subscriptions when services share those contracts: the consumer handles the events it needs, and Chronicle routes it to that source's inbox without a separate subscription API call.
 
 :::note[Client coverage]
-This entire page is C#-only. It depends on the `[EventStore]` attribute (already confirmed absent from Kotlin, Elixir, and TypeScript throughout this docs effort) plus .NET-specific packaging and build mechanics (NuGet packages, `AssemblyInfo.cs`/`GlobalUsings.cs`/`<AssemblyAttribute>` in a `.csproj`) that have no equivalent in the other ecosystems. Use [explicit subscriptions](./explicit-subscriptions) instead for Kotlin, Elixir, or TypeScript — all three support them.
+This page describes C# attributes and NuGet packaging. For Kotlin, Elixir, or TypeScript, use the client APIs described in [explicit subscriptions](./explicit-subscriptions) rather than applying the C# setup.
 :::
 
-Implicit subscriptions are ideal when:
-- Event types are published as a NuGet package by the source service
-- You want zero configuration — just reference the package and observe the events
-- The consuming service doesn't need fine-grained control over which event types to forward
+The source still needs to publish events to its outbox. Adding `[EventStore]` to a contract identifies its origin; it does not publish events or move them out of the source's ordinary event log.
 
 ## How Implicit Subscriptions Work
 
-When every event type handled by an observer shares the same `[EventStore]` attribute, Chronicle infers the source event store name and automatically routes the observer to the corresponding inbox sequence. A **kernel-side subscription is created and persisted automatically** the first time an observer targets those events.
+During client registration, Chronicle gathers the event types consumed by reactors, projections, and reducers and groups them by source store. For external sources, it registers a persistent forwarding subscription on the kernel and routes each observer to the corresponding inbox in the consumer's store.
+
+For reactors and reducers using automatic sequence inference, one declared external source selects its inbox. A source matching the current store, or no declared source, selects the log. Fluent projections infer an inbox from one declared source even when it names the current store. These rules do not locate local publications. When producers reuse their own attributed contracts, explicitly select the sequence containing those publications, normally `EventSequenceId.Outbox`, as described below.
 
 ## The `[EventStore]` Attribute
 
-Apply `[EventStore]` to any event type that originates from a foreign event store:
+Apply `[EventStore]` to an event type to name the store that owns it:
 
 <ChronicleClientTabs snippet="subscriptions/implicit-subscriptions/event-store-attribute" />
 
@@ -30,15 +30,13 @@ The string argument is the **name of the source event store** — the same name 
 
 ## Publishing Event Types in a NuGet Package
 
-A common pattern is to publish your public event contracts as a NuGet package. Consumers add a reference to your package; the `[EventStore]` attribute provides all the routing information needed without additional configuration.
-
-A typical public events package looks like this:
+A shared NuGet package lets the source service publish event contracts that name their origin. Consumers reference those types rather than redeclaring the contract and source name independently:
 
 <ChronicleClientTabs snippet="subscriptions/implicit-subscriptions/nuget-package" />
 
 ## Assembly-Level Configuration with `[EventStore]`
 
-To avoid repeating `[EventStore]` on every event type, apply the attribute once at the assembly level in your **GlobalUsings.cs** or **AssemblyInfo.cs** file. This is the **recommended approach** for creating reusable event contracts.
+When contracts in an assembly share one source, apply `[EventStore]` once in `GlobalUsings.cs` or `AssemblyInfo.cs`. A type-level attribute takes precedence if a particular contract needs a different source.
 
 ### The `.Contracts` Project Pattern
 
@@ -52,11 +50,11 @@ FulfillmentService.Events.Contracts/
 └── FulfillmentService.Events.Contracts.csproj
 ```
 
-This `.Contracts` project contains **only your event type definitions** and minimal dependencies. It's lightweight, fast to build, and safe to share as a NuGet package.
+Keep the `.Contracts` project focused on event definitions and the dependencies needed to describe them. Consumers can then reference the contracts without taking a dependency on the source service's implementation.
 
 ### Project File Configuration
 
-Configure your `.Contracts` .csproj with appropriate metadata for sharing:
+Set the package identity and metadata in the `.Contracts` project file. The example uses placeholder package versions; choose versions that match your application:
 
 ```xml
 <Project Sdk="Microsoft.NET.Sdk">
@@ -116,7 +114,7 @@ You can apply the assembly-level `[EventStore]` attribute directly from your `.c
 </ItemGroup>
 ```
 
-MSBuild will emit `[assembly: Cratis.Chronicle.Events.EventStoreAttribute("fulfillment-service")]` in the auto-generated `AssemblyInfo.cs` file — no manual C# file required.
+MSBuild emits `[assembly: Cratis.Chronicle.Events.EventStoreAttribute("fulfillment-service")]` in the generated `AssemblyInfo.cs` file, so you do not need a separate C# file for the attribute.
 
 > **Note:** This approach requires `<GenerateAssemblyInfo>` to be `true` (the default). If your project sets `<GenerateAssemblyInfo>false</GenerateAssemblyInfo>`, the `<AssemblyAttribute>` item will have no effect since it relies on the auto-generated file.
 
@@ -126,21 +124,13 @@ Now your event types only need `[EventType]`:
 
 <ChronicleClientTabs snippet="subscriptions/implicit-subscriptions/event-types-with-assembly-attribute" />
 
-All events in this assembly are automatically associated with the `fulfillment-service` event store.
+These event types inherit `fulfillment-service` as their source. A type-level `[EventStore]` overrides that assembly default.
 
 ### Publishing and Consuming
 
-**In your FulfillmentService (source):**
-- Reference your own `.Contracts` project
-- Event types are published to `fulfillment-service` outbox
+In FulfillmentService, reference the `.Contracts` project and publish the integration events to the `fulfillment-service` outbox. The attribute identifies the source but does not replace that publication step.
 
-**In consuming services:**
-- Add a NuGet reference to `FulfillmentService.Events.Contracts`
-- Create observers (reactors, projections, reducers) that handle the event types
-- Events are automatically routed to the `inbox-fulfillment-service` sequence
-- **No explicit subscription or configuration needed**
-
-Example consumer setup:
+In the consuming service, reference `FulfillmentService.Events.Contracts` and create observers for the types you need. Configure Chronicle with the consumer's own event store name, as shown below. Chronicle registers forwarding and routes those observers to `inbox-fulfillment-service`; you do not need a separate `Subscribe` call.
 
 <ChronicleClientTabs snippet="subscriptions/implicit-subscriptions/consumer-setup" />
 
@@ -153,44 +143,41 @@ Automatic inbox routing is documented per observer type:
 
 ### Projections
 
+A fluent projection can build the consumer's view from forwarded events. Without an explicit sequence, one declared source selects `inbox-{sourceEventStore}` even when that source is the current store:
+
 <ChronicleClientTabs snippet="subscriptions/implicit-subscriptions/projection" />
+
+If the source service reuses these attributed contracts in its own fluent projection, select the sequence containing its publications. Normally, call `FromEventSequence(EventSequenceId.Outbox)` on the projection builder. These contracts register as public events, which the kernel rejects in the log. `EventSequenceId` is in the `Cratis.Chronicle.EventSequences` namespace. Without this explicit selection, the projection reads the inbox named for its own store, not its local publications.
+
+After publishing an event to the source outbox, check for its copy in the consumer inbox and then for the read-model update. If the event arrives but the view does not change, investigate the projection rather than recreating the forwarding subscription.
 
 ## Subscription Lifecycle
 
-The kernel automatically manages the implicit subscription:
+Once registered, the forwarding definition survives client disconnections and kernel restarts. The kernel can continue forwarding matching outbox events while the consumer is offline. Consumer observers still need to run to process the inbox events.
 
-1. **Creation** — When the first observer targeting the event type is registered, the kernel creates a persistent subscription to the source outbox.
-2. **Persistence** — The subscription is stored and persists across kernel restarts.
-3. **Forwarding** — Events appended to the source outbox are continuously forwarded to the inbox.
-4. **Cleanup** — If no observers are targeting events from a source, the subscription remains active but idle. Subscriptions are not automatically removed.
+Removing the consumer's handlers does not automatically remove the stored forwarding subscription. Implicit registrations use the source store name as the subscription ID. If the relationship is no longer needed, remove the consuming observers and remove the stored subscription through the [explicit subscription API](explicit-subscriptions).
 
 ## Mixing Event Stores Is Not Allowed
 
-An observer may only handle event types from a **single** event store. Mixing types annotated with different `[EventStore]` values on the same observer throws `MultipleEventStoresDefined` at startup:
+With automatic sequence inference, multiple distinct declared `[EventStore]` sources in one observer throw `MultipleEventStoresDefined` during registration:
 
 <ChronicleClientTabs snippet="subscriptions/implicit-subscriptions/mixing-not-allowed" />
 
-To observe events from multiple sources, create a separate observer for each source event store:
+Unannotated local event types have no declared source and are ignored by this check. Mixing them with one external source does not throw: automatic routing selects that source's inbox, so the observer does not receive local events from its own log. Avoid mixing local and external handlers in one observer.
+
+Keep each observer on one source by splitting the handlers:
 
 <ChronicleClientTabs snippet="subscriptions/implicit-subscriptions/separate-reactors" />
 
 ## Schema Registration and Metadata
 
-When event types are registered with the kernel, the source event store name is included in the registration metadata. This allows the kernel to associate inbox events with their originating store and display that information in the Workbench.
+Event type registration includes the source event store name in its metadata. Keep that name aligned with the publisher's configured store: Chronicle uses it to select the source outbox and derive the consumer's `inbox-{sourceEventStore}` sequence.
 
 ## When to Use Implicit Subscriptions
 
-**Use implicit subscriptions when:**
-- Event types are published in a shared NuGet package
-- All events from a source should be forwarded (or at least all events you observe on)
-- You want zero configuration overhead
-- The package owner controls the event types and their `[EventStore]` attributes
+Use implicit subscriptions when the shared C# contracts describe where events come from and the consumer's observers determine which types it needs. Only those consumed types are selected for forwarding, not every type in the source store.
 
-**Use [explicit subscriptions](explicit-subscriptions) when:**
-- You need fine-grained control over which event types are forwarded
-- You want to manually manage subscription lifecycle and cleanup
-- Events are not in a shared NuGet package, or you need dynamic subscription configuration
-- You need to subscribe to only a subset of events from a source
+Use [explicit subscriptions](explicit-subscriptions) when the consumer needs to choose a stable subscription ID, manage the relationship at runtime, or select types through the API instead. For either approach, [Subscription recovery](recovery.mdx) helps locate a delivery failure before you replay events.
 
 ## See Also
 

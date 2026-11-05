@@ -1,4 +1,5 @@
 ---
+title: Environment variables for Cratis Chronicle Server
 description: Set any Chronicle Server option with environment variables using the Cratis__Chronicle__ prefix and double underscores for nested sections.
 ---
 # Environment Variables

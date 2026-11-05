@@ -1,45 +1,46 @@
 ---
-description: Use Join in a declarative Chronicle projection to combine data from events with a different event source id into one read model.
+title: Chronicle projection joins across event streams
+description: Chronicle projection joins combine data from separate event streams in one read model. Choose join keys and mappings, and understand arrival-order limits.
 ---
 # Projection with joins
 
-Joins allow projections to incorporate data from events that don't share the same event source ID. This enables building read models that combine data from different streams.
+Use a join in a Cratis Chronicle projection when one read model needs facts from separate event streams, such as a user and the group they belong to. The read model stores a join key, and Chronicle uses it to find the related events and apply their property mappings.
 
 ## Defining a projection with joins
 
-Use the `Join()` method to include data from events with different keys:
+Use `From` for the events that establish the read model and `Join` for related events. In the .NET builder, `.On(m => m.GroupId)` selects the read model property that identifies the group stream:
 
 <ChronicleClientTabs snippet="projections/declarative/joins/basic" />
 
 ## Read model with joined data
 
-The read model includes properties populated from different event sources:
+The model can keep user fields alongside group fields. The following shape separates `Name` from `GroupName`, so those fields need different mappings:
 
 <ChronicleClientTabs snippet="projections/declarative/joins/read-model" />
 
+`On` selects the relationship; it does not rename properties. For this shape, explicitly map the group-created event's `Name` to `GroupName` and `Description` to `GroupDescription`, then map the rename event's `NewName` to `GroupName`. For example, add `.Set(m => m.GroupName).To(e => e.NewName)` inside the rename join. With AutoMap enabled, a group event's `Name` would otherwise target the user's same-named `Name` property, not `GroupName`. See [AutoMap](auto-map) to control name-based mapping.
+
 ## Event definitions
 
-Events come from different streams but are joined based on common identifiers:
+Append group-created and group-renamed events with the group's event source ID. In this example, the assignment event also belongs to the group stream; its `UserId` selects the user read model, and `.ToEventSourceId()` records the group stream's ID as `GroupId`:
 
 <ChronicleClientTabs snippet="projections/declarative/joins/events" />
 
 ## How joins work
 
-1. **Primary events** establish the read model and may set join keys
-2. **Join conditions** specify which property links to other streams
-3. **Joined events** update properties when their event source ID matches the join key
-4. Join properties are updated whenever relevant events occur
-5. **Joined values take precedence** — a joined property is applied over any value a `From` block wrote for the same property, in whichever order the events arrived
+A `From` event creates or updates a read model and can set the join key. When a related event arrives, Chronicle matches its key against the read model's `On` property and applies the joined mappings. For a default join, that event key is its event source ID.
+
+Chronicle also resolves earlier joined events when processing a `From` event. This backfill lets a newly established relationship pick up data already present in the joined stream. Joined mappings run after `From` mappings, so they take precedence when both write the same property.
 
 ## Join scenarios
 
 ### Setting join keys
 
-Join keys are typically set from events that establish relationships — in the example above, `UserAssignedToGroup` sets `GroupId` to the group's own event source ID via `.ToEventSourceId()`.
+Set the join key from the event that establishes the relationship. The assignment mapping above uses `.UsingKey(e => e.UserId)` to select the user and `.Set(m => m.GroupId).ToEventSourceId()` to store the group ID. If your assignment event belongs to the user stream instead, map `GroupId` from the event's group-ID property rather than its event source ID.
 
 ### Joining on the key
 
-Joins match events based on their event source ID and the join property — `.Join<GroupCreated>(j => j.On(m => m.GroupId))` links in group data whenever a `GroupCreated`/`GroupRenamed` event's event source ID matches the read model's `GroupId`.
+Declare a join for each related event type you want to handle. Both group-created and group-renamed joins use `.On(m => m.GroupId)` because they refer to the same relationship. Their property mappings determine which group fields change.
 
 ### Joining by an event property
 
@@ -49,29 +50,30 @@ Append the root before the keyed join event when its key differs from its event 
 
 ### Join precedence
 
-When a `From` block and a join write the same property, the joined value wins — regardless of arrival order. Whenever the projection handles a `From` event, Chronicle re-resolves the join against the joined stream's last stored event and applies the joined properties after the `From` mappings. A `From` block therefore cannot reset or clear a property a join has written; there is no "clear this joined value" operation. If a property must reflect which fact happened most recently, give each fact its own property (for example, two timestamps) and compare them, rather than latching a single flag written from both sides. The [CHR0042](../../code-analysis/CHR0042) analyzer warns when the same property is written from both sides.
+Do not use arrival order to decide whether a `From` mapping or a join owns a property. On a `From` event, Chronicle resolves the latest stored event of each joined type before that event's sequence number and applies its mappings after the `From` mappings. A local write cannot clear a value that this join resolution reapplies; there is no dedicated "clear this joined value" operation.
+
+If a field must reflect which fact happened most recently, store each fact separately, such as two timestamps, and compare them. The [CHR0042](../../code-analysis/CHR0042) analyzer warns when a `From` mapping and a join write the same property.
 
 ### Multiple joins
 
-A projection can join with multiple streams:
+Use a separate join key for each relationship when the read model needs data from several streams. Map each source into its intended fields, such as `GroupName`, `DepartmentName`, and `LocationAddress`; differently named fields need explicit mappings:
 
 <ChronicleClientTabs snippet="projections/declarative/joins/multiple-joins" />
 
 ### Joining children
 
-Joins can also be used within child collections. Inside `Children` a join always matches the joined event's event source against the child's identity (`IdentifiedBy`), so `.On()` is not used there. Identify the children by the id of the stream you join; here each member on a project board gets its name from the member's own `MemberRegistered` event:
+Inside a .NET `Children` builder, the join uses the child's `IdentifiedBy` property as its target, so do not specify `.On()`. By default, the joined event's event source ID selects the child. Here each project-board member is identified by the member stream's ID, allowing a member-registration event to populate that child's name:
 
 <ChronicleClientTabs snippet="projections/declarative/joins/children-join" />
 
 ## Automatic mapping in declaration-language joins
 
-A `with <Event>` block inherits the projection's `automap` setting by default. Use `no automap` inside that `with` block to map only properties you declare explicitly, even when the joined event and read model have same-named properties. Use `automap` there to enable matching by name even if the enclosing projection disables it. This setting also applies when Chronicle backfills joined values from earlier events. Per-join `automap` and `no automap` are declaration-language only: the .NET `JoinBuilder` and the C#, Kotlin, and TypeScript code generators do not express them. Code generated from a declaration with a per-join override will not preserve that override; keep the declaration as the source of truth.
+In the declaration language, a `with <Event>` block inherits the projection's `automap` setting. Put `no automap` inside that block to use only explicit mappings, or `automap` to enable name-based mapping when the enclosing projection disables it. The setting also applies during backfill.
+
+Per-join `automap` and `no automap` are declaration-language only: the .NET `JoinBuilder` and the C#, Kotlin, and TypeScript code generators do not express them. Generated code will not preserve a per-join override, so keep the declaration as the source of truth when using one.
 
 ## Performance considerations
 
-- Joins require Chronicle to track relationships between streams
-- The system automatically manages join indexes and updates
-- Consider the frequency of joined events when designing projections
-- Large numbers of joins may impact projection performance
+A joined event can update several read models that refer to the same key. Consider how many instances share each relationship and how often the joined data changes when choosing what belongs in the projection.
 
-Joins enable powerful cross-stream read models while maintaining the benefits of event sourcing and proper stream boundaries.
+For related data owned by one parent, compare [Children](children) and [Nested objects](nested). They model collections and optional objects within the parent rather than joining independent streams.

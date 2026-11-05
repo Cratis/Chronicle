@@ -1,4 +1,5 @@
 ---
+title: Configure event queues in Cratis Chronicle Server
 description: Configure Chronicle event queues, snapshot persistence, constraint checks, and causation property retention in chronicle.json or environment variables.
 ---
 # Events

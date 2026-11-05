@@ -1,8 +1,7 @@
 ---
+title: "CHR0015: Projection must not have side effects"
 description: Chronicle analyzer rule CHR0015 reports projections that inject ICommandPipeline or IEventLog, because projections must be pure state builders.
 ---
-# CHR0015: Projection must not have side effects
-
 ## Rule Description
 
 A class implementing `IProjectionFor<T>` must not inject `ICommandPipeline` or `IEventLog` via its constructor. Projections are pure state builders that derive read models from events and must not produce side effects.

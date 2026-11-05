@@ -1,9 +1,10 @@
 ---
-description: Chronicle migrations evolve immutable events by upcasting and downcasting event type generations in the kernel, in place and without rewriting history.
+title: Chronicle migrations for evolving event schemas
+description: Cratis Chronicle migrations store multiple event schema generations so readers can use different versions. Learn how registration and backfill work.
 ---
 # Migrations
 
-Every system evolves. Business rules change, data models improve, and properties get renamed, split, or combined. In event-sourced systems this creates a challenge: events are immutable facts, and the historical record cannot simply be edited. Chronicle solves this with a declarative migration system that lets you evolve event schemas without losing backward compatibility.
+Cratis Chronicle migrations let you change an event's schema while keeping representations for readers that use older generations. You declare how to transform between adjacent generations, and the kernel applies those declarations when events are appended. A separate background job adds missing generations to existing events.
 
 ```mermaid
 flowchart LR
@@ -14,38 +15,32 @@ flowchart LR
 
 ## Why migrations?
 
-Events in Chronicle represent things that happened, not the current state. That immutability is a feature — it gives you a reliable audit trail and the ability to replay history. But it also means you need a principled way to handle changes to event schemas over time.
+Suppose an event records an author's `Name`, but your application now needs `FirstName` and `LastName`. Changing the record alone leaves older events in a shape the new code does not expect. Replacing the old schema also leaves older readers without the contract they use.
 
-Chronicle's migration system addresses this through **generations**. Each version of an event type is a distinct generation. When you introduce a new generation, you declare how to transform events between that generation and its predecessor in both directions:
+A **generation** is a version of one event type's schema. Keep the original shape as generation 1, introduce the new shape as generation 2, and declare the transformations in both directions:
 
-- **Upcasting** — transforming an older generation into a newer one (e.g. splitting a `Name` field into `FirstName` and `LastName`)
-- **Downcasting** — transforming a newer generation back into an older one (e.g. recombining `FirstName` and `LastName` into `Name`)
+- Upcasting transforms an older generation into a newer one, such as splitting `Name` into `FirstName` and `LastName`.
+- Downcasting transforms a newer generation into an older one, such as combining those fields back into `Name`.
+
+Choose these transformations for your data. Splitting on a space, for example, describes a specific name format; it does not establish how every name should be interpreted. The [event type migration reference](../concepts/event-type-migrations.mdx) explains the available operations.
 
 ## Architecture: Kernel-side migrations
 
-**Migrations are a Kernel concern, not a client concern.** The Chronicle Kernel evaluates and applies migrations regardless of whether a client is connected. This is a fundamental design principle:
+The client registers schemas and transformation declarations; the Chronicle kernel executes them. A migration class describes the transformation rather than running application code for each event.
 
-- Migrations run during event append inside the Kernel
-- The Kernel stores every generation of an event simultaneously
-- No client coordination is required for migrations to take effect
-- Clients that are offline or on older code versions are unaffected
-
-This means your migration logic is durable. Once a migrator is registered with the Kernel, it operates on every event that passes through, whether it originated from a .NET client, a REST call, or a future integration you haven't written yet.
+Once registered, the definitions apply during append without the registering client staying connected. The kernel derives and stores the registered generations from the appended generation. Readers can request the generation they understand, but the result still depends on the transformations you declared.
 
 ## Multi-version storage
 
-When an event with generation migrations arrives at the Kernel, it stores **all generations** of that event, whether appended individually or as part of an `AppendMany` batch:
+For an event type with a complete migration chain, the kernel stores all registered generations on append, whether the event is appended individually or in an `AppendMany` batch:
 
-- Appending a generation 1 event with a 1→2 migration stores gen 1 and gen 2
-- Appending a generation 2 event with a 1→2 migration stores gen 2 and the downcasted gen 1
-- Appending a generation 3 event with 1→2 and 2→3 migrations stores gen 1, gen 2, and gen 3
+| Appended generation | Registered transitions | Stored generations |
+| --- | --- | --- |
+| 1 | 1→2 | 1 and 2 |
+| 2 | 1→2 | 2 and downcasted 1 |
+| 3 | 1→2 and 2→3 | 1, 2 and 3 |
 
-This multi-version storage is what makes event-sourced systems with migrations genuinely decoupled. Consider two services that share an event type:
-
-- **Service A** is running the latest code and expects generation 2
-- **Service B** is running older code and expects generation 1
-
-Both services read the same event and each gets the generation they expect. There is no negotiation, no shared upgrade schedule, no risk of one service breaking another. The Kernel handles the translation, and each consumer reads the generation it understands.
+This lets two services read different shapes of the same event. Service A can request generation 2 while Service B continues to request generation 1. Their read contracts differ, but both representations come from the same appended event.
 
 ```text
 Append gen 1 event
@@ -62,22 +57,22 @@ Append gen 1 event
 
 ## Migrations happen in place
 
-Current generation backfills are **add-only**: they produce missing representations alongside stored generations without replacing their content. Events backfilled by earlier releases may already have been overwritten; upgrading cannot recover those originals. SQL revisions also overwrite a generation's content in place, so backfill can preserve only the content still stored there.
+Generation backfills are **add-only**: they add missing representations alongside stored generations without replacing their content. This is different from revising an event's content. Backfill can preserve only the content still stored; it cannot recover originals overwritten by earlier backfill implementations or revisions.
 
-This is what makes running multiple versions of the same software against the same event store safe. Service A on the latest code reads generation 2; Service B on the previous release reads generation 1. Both read from the same physical storage. Neither service needs to know about the other, and no upgrade coordination is required between client services. Upgrading the kernel is separate: see the rollout rule below.
+Before registering a new generation, upgrade every kernel silo. A silo is a node in the kernel's Orleans cluster. Upgraded workers use add-only backfill, including when they resume legacy jobs, but workers still running an older release can overwrite content during a rolling upgrade.
 
 ### Background upcasting for new generations
 
-Registering a new generation automatically starts a background job for that event type in the **default namespace's event log only**. Other namespaces and event sequences are not backfilled by this job.
+Registering a new generation starts a background job for that event type in the **default namespace's event log only**. The job does not backfill other namespaces or event sequences, and registration does not mean historical events already have the new representation.
 
-The source is the known appended generation's base content, never a separate revision. If the appended generation is unknown, the job uses the highest stored base generation and records it as a derived source; the appended generation stays unknown. The same fallback applies when the appended generation is known but its content is missing: the backfill uses the highest stored generation and logs a warning. Each added generation records its source and the content-addressed migration-definition version that produced it. Content, hash, and provenance are written atomically only if the event has not been concurrently revised, redacted, or populated by another worker.
+When an event has revision content and a revised generation, the job derives missing generations from that revision. Otherwise it uses the appended generation's stored content. If the appended generation is unknown or its content is missing, the job falls back to the highest stored generation and records a derived source. An unknown appended generation stays unknown; missing content for a known appended generation produces a warning.
 
-On a conflict the job re-reads the event and retries once. If the retry also conflicts, it logs and skips that event without failing the step. Already-stored generations remain unchanged, including when migration definitions change. Changing a migration alone does not start another backfill.
+Each addition records its source generation and the content-addressed version of the migration definitions used to produce it. The job writes content, hash and provenance together only if the stored event still matches the state it read. A concurrent revision, redaction or generation addition causes it to re-read and retry once. A second conflict is logged and skipped without failing the step.
 
-Register new generations **only after every kernel silo has been upgraded**. New jobs use add-only workers and legacy jobs resumed on upgraded silos delegate to add-only backfill, but workers still running an older release can overwrite content during the rollout.
+Already-stored generations remain unchanged, even when migration definitions change. Changing a migration alone does not start another backfill, so it is not a way to repair an already-derived representation.
 
 ## Topics
 
-- [Event Type Migrations](../concepts/event-type-migrations.mdx) — the operation-by-operation reference for every client
-- [C# client usage](dotnet-client)
-- [Explicit registration](explicit-registration) — nominate migration recipes for registered generation identities
+Use [C# client usage](dotnet-client) to declare generations and migrators with attributes. If your application registers event identities at its composition root, follow [Explicit registration](explicit-registration) instead. Both routes produce definitions for the same kernel-side migration engine.
+
+For the meaning of each transformation and how generations are chained, continue with [Event Type Migrations](../concepts/event-type-migrations.mdx).

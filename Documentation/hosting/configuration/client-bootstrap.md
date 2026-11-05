@@ -1,4 +1,5 @@
 ---
+title: Bootstrap clients in Cratis Chronicle Server
 description: Define Chronicle clients, as clientId and clientSecret pairs, at startup through configuration or secrets management instead of the API.
 ---
 # Client Bootstrap Configuration

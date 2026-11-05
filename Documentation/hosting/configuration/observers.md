@@ -1,4 +1,5 @@
 ---
+title: Configure observers in Cratis Chronicle Server
 description: Configure Chronicle observer retry behavior, timeouts, watchdog monitoring and fan-out, and how definition changes are evolved.
 ---
 # Observers

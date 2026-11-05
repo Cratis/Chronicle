@@ -1,78 +1,74 @@
 ---
-description: Use the Join attribute in a model-bound Chronicle projection to enrich a read model with properties from related events sharing a key.
+title: "Model-bound joins: map facts from related event sources"
+description: "Use Join in a Chronicle model-bound projection to copy related event data into a read model and update matching instances when that data changes."
 ---
 # Joins
 
-Model-bound projections support joining data from different events using the `Join` attribute. This allows you to enrich your read models with data from related events.
+A model-bound join copies facts from a related event source into a read model. Use it when an order needs a customer's name or a line item needs product details, so the query can read those values from the model. In .NET, `[Join<TEvent>]` declares the source event and the model property used to find a match.
 
 ## Basic Join
 
-The `Join` attribute maps properties from events that are related through a common key:
+The `on` property holds the related event source's identifier. Chronicle matches that value to the joined event's event source id, then copies the selected event property into the model:
 
 <ChronicleClientTabs snippet="projections/model-bound/joins/basic" />
 
 ### Parameters
 
-- **on** (optional): Property on the read model to join on. For root projections, this is typically required unless joining within children
-- **eventPropertyName** (optional): Property name on the event. If not specified, uses the read model property name
+| Parameter | Meaning |
+| --- | --- |
+| `on` | Property on the read model holding the related identifier. If omitted at the root, it defaults to the annotated property itself. Specify it when the identifier is stored in another property. |
+| `eventPropertyName` | Property to copy from the event. If omitted, it defaults to the annotated read model property's name. |
 
 ## Join in Children
 
-Joins work within child collections. When used in children, the `on` parameter is optional if the child has an `identifiedBy` property:
+A child collection item can join related data independently of its parent. If the child has an `identifiedBy` property, omitting `on` uses that property as the join target:
 
 <ChronicleClientTabs snippet="projections/model-bound/joins/children" />
 
 ## Multiple Joins
 
-You can join with multiple different events:
+Use separate join attributes when different events supply different fields on the same model:
 
 <ChronicleClientTabs snippet="projections/model-bound/joins/multiple-joins" />
 
 ## Recursive Join Processing
 
-Join attributes on related types are processed recursively:
+Join annotations are also processed on child types. This keeps each child's related-data mappings beside the properties they populate:
 
 <ChronicleClientTabs snippet="projections/model-bound/joins/multiple-join-sources" />
 
 ## Complete Example
 
-Here's a comprehensive example showing joins at multiple levels:
+This order model joins customer details at the root and product details on each line item:
 
 <ChronicleClientTabs snippet="projections/model-bound/joins/full-example" />
 
 ## Event Processing Flow
 
-1. **CustomerRegistered** - Customer data becomes available for joining
-2. **ProductCreated** - Product data becomes available for joining
-3. **OrderPlaced** - Order is created, joins pull in customer data
-4. **LineItemAdded** - Line item is added, joins pull in product data
-5. **ProductPriceChanged** - Updates price on all relevant line items through join
-6. **CustomerProfileUpdated** - Updates phone number on all relevant orders through join
+If `CustomerRegistered` and `ProductCreated` arrive first, their data is available when `OrderPlaced` creates the order and `LineItemAdded` adds a line. Chronicle resolves the matching stored events to fill in the customer and product fields.
+
+Later, `ProductPriceChanged` updates the price on matching line items, and `CustomerProfileUpdated` updates the phone number on matching orders. A join therefore handles both data already present when the model is populated and related events that arrive afterward.
 
 ## Join vs SetFrom
 
-**SetFrom:**
-- Maps properties from events directly related to the entity
-- Event is "about" the entity (same event source ID)
-- Direct parent-child relationship
-
-**Join:**
-- Maps properties from events about related entities
-- Event is about a different entity but shares a common key
-- Used for enrichment and denormalization
+Use `SetFrom` when a handled event directly updates the model selected by that event's configured key. Use `Join` when the model stores a reference to a related event source and needs values from its events. The join copies those values into the read model, a form of denormalization that avoids looking them up separately at query time.
 
 ## Join Precedence
 
-When a `Join` and a local mapping — `SetFrom`, or an AutoMapped `FromEvent` property — target the same property, **the joined value wins, regardless of the order the events arrive**. Every time the projection handles one of the read model's own events, Chronicle re-resolves the join against the last stored event of the joined stream and applies the joined properties *after* the local mappings. Only while the joined stream has no matching event yet does a locally written value stay in place.
+When a `Join` and a local mapping (`SetFrom` or an auto-mapped `FromEvent` property) target the same property, the joined value takes precedence. When processing a local event that resolves the join, Chronicle finds the last matching joined event stored before that event's sequence number and applies the joined properties after the local mappings. A locally written value stays in place while no matching joined event is available.
 
 :::caution
-A local mapping cannot reset or clear a property a join has written — there is no "clear this joined value" operation. A `bool` latch that a local event sets and a joined event clears will silently stick on the joined value, even when the local event is the most recent one. If a property must reflect which fact happened most recently, give each fact its own property (for example, two timestamps) and compare them in the query instead. The [CHR0042](../../code-analysis/CHR0042) analyzer warns when a property is written from both sides.
+A local mapping cannot reset or clear a property a join has written. There is no "clear this joined value" operation. A `bool` latch that a local event sets and a joined event clears will keep the joined value, even when the local event is more recent. If the property must reflect which fact happened most recently, give each fact its own property, such as two timestamps, and compare them in the query. The [CHR0042](../../code-analysis/CHR0042) analyzer warns when a property is written from both sides.
 :::
+
+## Limitations
+
+Use a declarative projection for [join-context values](./index.mdx#join-context-values) or
+[child and nested every-mappings on join-only events](./index.mdx#child-or-nested-every-mappings-on-join-only-events).
+The [model-bound limitations](./index.mdx#limitations) show these alternatives and mappings for a reused CLR type.
 
 ## Best Practices
 
-1. **Use meaningful join keys** - Ensure the `on` parameter clearly identifies the relationship
-2. **Handle missing data** - Joins may not find matching data; consider nullable properties
-3. **Be mindful of updates** - Joined data updates when the source event changes
-4. **Avoid circular joins** - Don't create circular dependencies between projections
-5. **Consider cardinality** - Joins work best for one-to-one and many-to-one relationships
+Choose an `on` property that stores the related event source's identifier, and allow for missing data when a matching event has not arrived. Nullable properties can make that absence visible to readers.
+
+For a single object with its own populate-and-clear lifecycle, continue with [Nested Objects](./nested.mdx). For independently identified items, use [Children](./children).

@@ -1,25 +1,26 @@
 ---
-description: Define the read model state a Chronicle projection starts from before event mappings apply, such as business defaults and empty collections.
+title: Chronicle projection initial values for read model defaults
+description: Initial values give a Chronicle read model business defaults before event mappings apply. Capture deterministic starting state in the projection definition.
 ---
 # Projection With Initial Values
 
-Initial values define the read model state Chronicle starts from before applying event mappings. Use them when a property needs a meaningful default even though no event has assigned it yet.
+Initial values give a Cratis Chronicle read model meaningful defaults before event mappings assign its properties. Use them for a draft status, an inventory threshold, or another starting value that events may leave unchanged. Chronicle captures this state in the projection definition; it is not a factory run for each event or query.
 
-The exact API name depends on the client. .NET exposes `WithInitialValues`, while TypeScript exposes `withInitialValues`.
+.NET exposes `WithInitialValues`, while TypeScript exposes `withInitialValues`. Kotlin and Elixir capture defaults declared on the read model itself.
 
 ## Basic Usage
 
-Provide a factory that returns a fresh read model instance with the desired default values. Event mappings then apply on top of that initial state.
+In .NET or TypeScript, provide a callback that returns the starting model. The builder evaluates it while creating the definition, and event mappings later apply on top of the captured state.
 
-Kotlin and Elixir don't have a `WithInitialValues`-style builder call, but they reach the same result idiomatically: as the client builds the projection definition it registers, it reads the read model type's own declared defaults — Kotlin's primary-constructor defaults, Elixir's `defstruct` defaults — and captures them into that definition (see [Collections](#collections) below for a working example that doesn't need event context). That capture is why the defaults reach the stored state: they travel with the registered definition, exactly as `WithInitialValues` values do. Nothing runs the constructor when a document is later read — see [The constructor may not run](../../concepts/designing-read-models#the-constructor-may-not-run). This particular example also maps an event context property (`Occurred`), which neither client's fluent projection API can access yet.
+For Kotlin, give every primary-constructor parameter a default so the client can construct the initial model without arguments. For Elixir, use `defstruct` defaults. These defaults become part of the registered projection definition rather than being supplied by a constructor when a stored document is read. See [The constructor may not run](../../concepts/designing-read-models#the-constructor-may-not-run) for why query-time construction is not a substitute for projection defaults.
 
 <ChronicleClientTabs snippet="projections/declarative/initial-values/basic" />
 
 ## Why Use Initial Values
 
-Without initial values, properties that are not touched by a projection mapping keep the platform's default representation. That can mean `null`, `0`, `false`, an empty string, or an unset date depending on the client and storage representation.
+An event often describes only the fields that changed. Initial values let the remaining fields carry a deliberate starting value rather than relying on the client's or storage layer's representation of a missing property.
 
-Initial values are useful for:
+Choose defaults according to what readers need:
 
 | Need | Example |
 | --- | --- |
@@ -30,36 +31,28 @@ Initial values are useful for:
 
 ## Business Defaults
 
-Set defaults that describe the domain state before the first relevant event changes it.
+Set a default that describes the state before a relevant event changes it. For example, an order can start as draft while its creation event supplies the customer and order details:
 
 <ChronicleClientTabs snippet="projections/declarative/initial-values/business-defaults" />
 
 ## Collections
 
-Initialize collections so consumers can treat them as empty collections instead of checking for missing values.
+For ordinary collection-valued properties, an empty collection can let consumers enumerate values without checking for `null`. A collection managed by `Children()` follows different rules, explained below.
 
 <ChronicleClientTabs snippet="projections/declarative/initial-values/collections" />
 
 :::caution
-This does not work for a child collection. A children path is applied only by the child add and remove operations, so
-an initial value for it is dropped before it reaches the sink — deliberately, because writing an empty array from the
-root event would erase a child a parallel replay had already added. Declare the property non-nullable instead, and
-Chronicle materializes it as an empty collection on read. See
-[Empty child collections](/chronicle/read-models/empty-child-collections/).
+Initial values do not populate a child collection managed by `Children()`. Child add and remove operations own that path; a root event's initial array is dropped before it reaches the sink. Otherwise, an empty array could erase children already added during parallel replay. Declare the child collection non-nullable to have Chronicle materialize an empty collection on read. See [Empty child collections](/chronicle/read-models/empty-child-collections/).
 :::
 
 ## Events That Do Not Cover Every Property
 
-Initial values are useful when events update operational fields but leave configuration fields unchanged.
-
-> **TypeScript note:** this example uses `Add()`/`With()`, the fluent builder's variable-delta accumulation operators. TypeScript's `add()`/`subtract()` are not implemented yet (`FromBuilder.ts` throws at runtime even though the call type-checks), so this specific example is unsupported in TypeScript for now. Elixir's `add:`/`subtract:` property options **do** work, so this example is also shown there.
+Keep configuration defaults separate from event-driven changes. In this inventory example, stock events change quantities while minimum levels and reorder points retain their initial values. The [Add and Subtract functions](functions#add-and-subtract-with-values) apply each event's quantity to the current value:
 
 <ChronicleClientTabs snippet="projections/declarative/initial-values/partial-events" />
 
 ## Best Practices
 
-- Use the factory form so each read model starts from a fresh instance.
-- Prefer deterministic defaults. The initial state is captured when the projection definition is built.
-- Keep defaults domain meaningful; do not duplicate platform defaults unless the value communicates intent.
-- Initialize collections that readers naturally expect to enumerate.
-- Let events own facts that actually happened; initial values are for the state before those facts are projected.
+Keep defaults deterministic because they are captured when the projection definition is built. Reading the current time in the callback would capture definition-build time, not the time a later read model instance is created. For a timestamp describing an event, map its [event context](event-context) instead.
+
+Use initial values for starting state, not for facts that should be recorded in events. Once the defaults are in place, continue with [Set properties](set-properties) for assignments or [Functions](functions) for counters and running totals.

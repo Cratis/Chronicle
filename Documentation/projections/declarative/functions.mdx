@@ -1,53 +1,45 @@
 ---
-description: Use built-in Chronicle projection functions such as Count, Increment, Decrement, Add and Subtract to calculate values without custom logic.
+title: Chronicle projection functions for counters and totals
+description: Chronicle projection functions update counters and totals as events are processed. Use Count for occurrences and Add or Subtract for event amounts.
 ---
 # Projection functions
 
-Projections support several built-in functions for mathematical operations and counting. These functions allow you to perform calculations directly within projections without needing custom logic.
+Cratis Chronicle projection functions maintain counters and totals from events, so your application can read a login count, stock quantity, or account balance without calculating it on each query. Choose a function according to what the event contributes: one occurrence, one item, or an amount carried in the event.
 
 ## Counting events
 
-Use `Count()` to increment a counter each time an event is processed:
+Use `Count()` inside a `From` mapping to add one for each handled event of that type. In this example, login events and action events update separate counters; neither counter includes unrelated event types:
 
 <ChronicleClientTabs snippet="projections/declarative/functions/count" />
 
 ## Increment and decrement
 
-Use `Increment()` and `Decrement()` to add or subtract 1 from a property:
+Use `Increment()` and `Decrement()` when an event changes a quantity by one. An item-added event increases inventory; an item-removed event decreases it:
 
 <ChronicleClientTabs snippet="projections/declarative/functions/increment-decrement" />
 
-These functions always change the value by exactly 1.
+Each call changes the value by exactly one, regardless of the event's payload. `Count()` and `Increment()` both add one; choose the name that expresses the meaning of the field.
 
 ## Add and subtract with values
 
-Use `Add()` and `Subtract()` to add or subtract specific values from event properties:
+Use `Add()` or `Subtract()` when the change comes from an event property. In the .NET builder, `.With(e => e.Amount)` supplies the amount to apply to the current balance:
 
 <ChronicleClientTabs snippet="projections/declarative/functions/add-subtract" />
 
 ## Supported types
 
-All projection functions work with these numeric types:
-
-- `int`
-- `long`
-- `float`
-- `double`
-- `decimal`
-
-The functions automatically handle type conversion and maintain the target property's type.
+The kernel supports numeric targets including `int`, `long`, `float`, `double`, and `decimal`. It uses the target property's schema to select the numeric type and converts values for the operation. Declare a target type suitable for the values you accumulate; client-language type names differ.
 
 ## How functions work
 
-1. **Initialization**: Properties start at 0 (or their default value) when first accessed
-2. **Accumulation**: Functions apply their operations incrementally as events are processed
-3. **Type safety**: Values are converted to match the target property type
-4. **State preservation**: Current values are maintained between events
+Each function reads the property's current value, applies the change, and stores the result for the next event. A missing numeric property starts at zero. If the read model needs another starting value, declare [initial values](initial-values) before accumulating events.
+
+The read model key determines which instance receives the change. A balance keyed by account accumulates that account's events, not every account's events. See [composite keys](composite-keys) when one identifier is not enough to select the instance.
 
 ## Combining functions
 
-You can use multiple functions in a single projection:
+A single event can update several properties. Here each transaction increases the transaction count and processed-event count by one, while its amount is added to the total:
 
 <ChronicleClientTabs snippet="projections/declarative/functions/combined" />
 
-These functions provide powerful aggregation capabilities while keeping projection logic simple and declarative.
+For a field that should copy a value rather than accumulate it, use [Set properties](set-properties). For a timestamp that should follow every handled event, use [FromEvery](from-every).

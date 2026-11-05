@@ -1,9 +1,9 @@
 ---
-title: Production hosting
-description: Run the Chronicle production image with durable storage, TLS and encryption certificates, health probes, backups, and clustering.
+title: Cratis Chronicle production hosting
+description: Deploy the Cratis Chronicle production image with external storage, TLS and encryption certificates, health probes, and a restorable backup plan.
 ---
 
-The production image differs from the development images in ways that stop a first deployment cold: it has no bundled database, generates no certificates, and creates no default administrator password. This page lists what the production image requires, and how to run, probe, back up, secure, and scale it. MongoDB is the storage used in the examples; the image also supports PostgreSQL, SQL Server, and SQLite through the [storage configuration](configuration/storage.mdx).
+Deploy Cratis Chronicle's production image with external storage and configured certificates before accepting application traffic. Unlike the development image, it has no bundled database, generates no certificates, and creates no default administrator password. The examples below use MongoDB; you can also configure PostgreSQL, SQL Server, or SQLite through [storage configuration](configuration/storage.mdx).
 
 ## Docker Image
 
@@ -21,15 +21,13 @@ docker pull cratis/chronicle:19.6.1
 
 ## Configuration
 
-Chronicle requires configuration to define its runtime behavior. For complete configuration details, see the [Configuration](configuration/index.md) guide.
-
-The configuration file must be mounted into the container at `/app/chronicle.json`, or you can use environment variables with the `Cratis__Chronicle__` prefix.
+Mount your configuration file at `/app/chronicle.json`, or supply settings through environment variables with the `Cratis__Chronicle__` prefix. Environment variables override the corresponding file settings. The [Configuration](configuration/index.md) reference covers settings beyond the deployment requirements below.
 
 ### What makes a build a production build
 
-The production code paths are selected by the **`DEVELOPMENT` compile-time symbol**, not by `ASPNETCORE_ENVIRONMENT` or `DOTNET_ENVIRONMENT`. The symbol is defined for `Debug` builds only, so `cratis/chronicle:latest` — published from a Release build — always takes the production path, and no environment variable can switch it back. Only the `latest-development` and `latest-development-slim` images are compiled with the symbol.
+Certificate generation and development authentication defaults depend on the `DEVELOPMENT` compile-time symbol, not `ASPNETCORE_ENVIRONMENT` or `DOTNET_ENVIRONMENT`. Debug builds define the symbol, and the publishing workflow also passes it explicitly when building the development images in Release configuration. The production image omits it; setting a runtime environment variable cannot enable those development defaults.
 
-That matters because the production path needs all three of these before it will run — and two of them stop startup dead:
+Prepare these settings for the default production setup:
 
 | Setting | Environment variable | Why it is required |
 | --- | --- | --- |
@@ -37,17 +35,17 @@ That matters because the production path needs all three of these before it will
 | TLS certificate | `Cratis__Chronicle__Tls__CertificatePath` (and `__CertificatePassword`) | Required by default for port 35000 to multiplex gRPC and HTTP/1.1. Without it the server throws "No TLS certificate is configured" at startup. Explicit `Tls__Enabled=false` instead requires a private h2c backend behind an HTTPS proxy |
 | Encryption certificate | `Cratis__Chronicle__EncryptionCertificate__CertificatePath` (and `__CertificatePassword`) | Protects the internal OAuth authority's signing and encryption keys. Without a certificate the server throws "An encryption certificate is required in production" at startup — unless the internal authority is not in play, see below |
 
-The encryption certificate is required because the **internal OAuth authority** needs it. It is therefore not required when that authority is out of the picture: turning the `oAuthAuthority` feature off, or pointing `Cratis__Chronicle__Authentication__Authority` at an external authority (which disables the internal one automatically), removes the requirement. See [Features](configuration/features.md). The value-encryption subsystem is separate — it still throws `EncryptionCertificateNotConfigured` on first use if you encrypt values without a certificate configured.
+The internal OAuth authority issues authentication tokens and needs the encryption certificate. Turning the `oAuthAuthority` feature off, or setting `Cratis__Chronicle__Authentication__Authority` to an external authority, removes that startup requirement. See [Features](configuration/features.md). It does not remove the need to protect stored data: without a certificate, Data Protection writes keys unencrypted and webhook encryption throws `EncryptionCertificateNotConfigured` on first use.
 
-"Not configured" and "configured wrongly" are different states. A `CertificatePath` pointing at a file that is not there stops startup with `EncryptionCertificateFileNotFound`, naming the path — it does not quietly fall back to running without a certificate. See [What a broken ring does](encryption-certificate.md#what-a-broken-ring-does).
+A configured encryption `CertificatePath` must name a readable PFX containing its private key. A missing file stops startup with `EncryptionCertificateFileNotFound`; Chronicle does not fall back to running without it. See [What a broken ring does](encryption-certificate.md#what-a-broken-ring-does).
 
-The development images generate a self-signed TLS certificate and fall back to ephemeral OAuth keys instead of throwing, which is exactly why a Compose file that works against `latest-development` fails against `latest`. See [Data Protection Key Encryption](encryption-certificate.md) and [TLS Configuration](configuration/tls.md) for generating and mounting the certificates.
+Before changing a Compose file from `latest-development` to `latest`, configure the certificates that the development image supplies or substitutes automatically. Follow [Data Protection Key Encryption](encryption-certificate.md) for encryption keys and [TLS Configuration](configuration/tls.md) for the listener certificate.
 
 ## Storage requirements
 
-Chronicle opens MongoDB transactions when it appends events, and transactions are only served by a replica set (or a sharded cluster) — a standalone `mongod` rejects them. **Every MongoDB deployment behind Chronicle must be a replica set**, including a single-node one. The Compose recipes below initialize a single-node replica set named `rs0`; a real production deployment uses a multi-member replica set or a managed service such as MongoDB Atlas, which is already one.
+Chronicle uses MongoDB transactions to append events and change streams to follow storage changes. A standalone `mongod` cannot provide these operations. Use a replica set, even for a single-node installation; MongoDB sharded clusters also support these operations.
 
-Chronicle's connection string carries `?directConnection=true` so the driver talks to the member it was given instead of following the replica set's advertised host name. This does not disable transactions — they keep working because MongoDB is running as a replica set.
+The Compose examples initialize a single-node replica set named `rs0`. Their connection strings include `?directConnection=true` so Chronicle connects to the supplied address instead of following the member's advertised hostname, `localhost:27017`, into its own container. This does not disable transactions. For a production database, plan replication and failover with a multi-member replica set or a managed service rather than relying on this single-node example.
 
 ## Port Configuration
 
@@ -79,7 +77,7 @@ docker run -d \
   cratis/chronicle:latest
 ```
 
-Both certificates and the storage connection are mandatory — see [What makes a build a production build](#what-makes-a-build-a-production-build). The MongoDB instance this points at must be a replica set.
+This command assumes `mongodb` resolves to a reachable replica set from inside the container; it does not create the database or its network. Mount the configuration and certificate files before starting, and supply the two password variables from your secret store. See [What makes a build a production build](#what-makes-a-build-a-production-build) for the TLS and external-authority alternatives.
 
 ### Docker Compose
 
@@ -142,20 +140,15 @@ volumes:
 
 The `mongodb-init` service is a one-shot container: it waits for `mongod` to answer, initiates the `rs0` replica set if it is not already initiated, and exits. This single-node MongoDB is a starting point, not a hardened database: it runs without authentication, so it is published on loopback only. A real deployment enables MongoDB authentication and TLS, or uses a managed replica set, and puts the credentials in the connection string from your secret store. Advertising the member as `localhost:27017` keeps the replica set reachable from host tools such as `mongosh` and Compass, while Chronicle reaches MongoDB over the Compose network with `directConnection=true` so it does not follow that advertised host back into its own container.
 
-If an existing MongoDB data volume was initialized with a different replica-set host, wipe it (`docker compose down -v`) before starting again so `rs.initiate()` can apply the new host.
+If an existing volume has a different replica-set hostname, reconfigure the replica set for the intended network before using this recipe. The initializer does not change an existing configuration. Only for disposable local data, `docker compose down -v` removes the volumes so a new replica set can be initialized; it deletes stored data and is not a production migration procedure.
 
 The remaining settings stay in the mounted `chronicle.json`; the environment variables above override any values it holds for the same keys. Keep the certificate passwords out of the file — supply them from your secret store, as the `${...}` references do here.
 
 ## Best Practices
 
-1. **Use specific version tags** instead of `latest` for production deployments
-2. **Mount configuration as read-only** (`-v /path/to/chronicle.json:/app/chronicle.json:ro`)
-3. **Use environment-specific connection strings** for MongoDB
-4. **Configure appropriate timeouts** based on your infrastructure (see [Configuration](configuration/index.md))
-5. **Enable health checks** for container orchestration
-6. **Set up monitoring** for all exposed ports
-7. **Use secrets management** for sensitive configuration values
-8. **Enable TLS** with proper certificates (see [TLS Configuration](configuration/tls.md))
+Pin the Chronicle and database image versions you have tested rather than deploying floating `latest` tags. Mount configuration read-only and supply database credentials and certificate passwords through your secret-management system.
+
+Configure probes as described below before enabling automated restarts or rollouts. Set timeouts for your infrastructure using the [Configuration](configuration/index.md) reference, and monitor readiness, storage connectivity, and startup failures.
 
 ## Health Checks
 
@@ -164,7 +157,10 @@ Chronicle binds its listeners before starting the Orleans silo. `/health/live` r
 While unready, non-health requests receive HTTP 503 with `Retry-After`, or gRPC `Unavailable`. This includes the Workbench and static files. Background catch-up does not delay readiness after startup completes.
 
 > [!IMPORTANT]
-> **Probe Chronicle from outside the container.** The production image is built on `mcr.microsoft.com/dotnet/aspnet:10.0-noble-chiseled`, which ships no shell and no `curl` or `wget`. A Docker `HEALTHCHECK` — or a Compose `healthcheck:` — runs *inside* the container, so any command you give it fails immediately and the container is reported unhealthy no matter how healthy Chronicle is.
+> Probe Chronicle from outside the container. The production image uses
+> `mcr.microsoft.com/dotnet/aspnet:10.0-noble-chiseled-extra`, without a shell, `curl`, or `wget`.
+> Docker `HEALTHCHECK` and Compose `healthcheck:` commands run inside the container, so probes that
+> invoke those tools fail even when Chronicle is healthy.
 
 Use your orchestrator's own HTTP probe instead. The default TLS main port may use a self-signed certificate that some probers reject; a private h2c main port requires an HTTP/2-capable prober. Publish a dedicated plaintext HTTP/1.1 health port when either presents a problem:
 
@@ -199,7 +195,7 @@ Treat that port as internal — it serves the other HTTP/1.1 endpoints too, so d
 
 ## Backup and restore
 
-A Chronicle deployment is not restorable from a database backup alone. Three things have to be backed up, and restored **in this order** — restoring them in the wrong order produces data nothing can read, and nothing about the restore reports it.
+Back up the encryption certificates alongside the database: the database contains protected keys and credentials, not the private keys needed to read them. If you use a separate compliance key store for personal data, include that too. Restore in this order before serving traffic:
 
 | Order | What | Where it lives |
 | --- | --- | --- |
@@ -216,24 +212,19 @@ Start one node after a restore and read `GET /diagnostics/encryption-certificate
 
 ## Security Considerations
 
-- **Network Isolation**: Run Chronicle in a private network with MongoDB
-- **Connection Encryption**: Use TLS for all connections in production
-- **Client certificate validation**: The .NET client connects over TLS but accepts *any* server certificate unless the connection string sets `skipTlsValidation=false`. Trust the server's CA on client machines and inside application containers, or configure a matching `certificatePath` pin, then enable validation for every client that reaches a production kernel. The client logs one warning at construction if validation is skipped for a non-loopback target or DNS SRV lookup; localhost, 127.0.0.0/8, and ::1 are exempt. A future major version validates by default. See [Client TLS](../configuration/tls.mdx) and [Server connection strings](../connection-strings/server.md)
-- **Workbench behind a path-routed proxy**: When one host serves several instances by path, set `Workbench:BasePath` so the Workbench works under its prefix. See [Workbench](configuration/workbench.md)
-- **Initial administrator**: The production image creates the administrator without a password. Initial setup requires the token from server logs or `Authentication:InitialAdminSetupToken`. Protect access to that token and remove it from configuration after setup. Supply the initial password from your secret store through `Authentication:AdminUser` to avoid interactive setup, and keep the port unreachable until setup is done. See [Authentication](configuration/authentication.md)
-- **Access Control**: Implement proper firewall rules for exposed ports
-- **Secrets Management**: Use external secret management for sensitive configuration
-- **Regular Updates**: Keep Chronicle and MongoDB images updated
-- **TLS Certificates**: Configure valid TLS certificates for production (see [TLS Configuration](configuration/tls.md))
+Keep Chronicle and its storage on private networks, allow only the ports each caller needs, and use TLS for production connections. Store sensitive configuration outside the Compose file and keep deployed images updated through tested upgrades.
+
+The .NET client connects over TLS but accepts any server certificate unless the connection string sets `skipTlsValidation=false`. Trust the server's certificate authority on client machines and in application containers, or configure a matching `certificatePath` pin, then enable validation for each production connection. The client warns when validation is skipped for a non-loopback target or DNS SRV lookup; localhost, 127.0.0.0/8, and ::1 are exempt. See [Client TLS](../configuration/tls.mdx) and [Server connection strings](../connection-strings/server.md).
+
+Complete administrator setup before making the service reachable by users. The production image creates the administrator without a password; setup requires the token from server logs or `Authentication:InitialAdminSetupToken`. Protect that token and remove it from configuration after setup. To avoid interactive setup, supply the initial password from your secret store through `Authentication:AdminUser`. See [Authentication](configuration/authentication.md).
+
+If one proxy host serves several instances by path, set `Workbench:BasePath` to the instance's prefix. The [Workbench configuration](configuration/workbench.md) explains how its URLs follow that prefix.
 
 ## Scaling
 
-Chronicle supports horizontal scaling through Orleans clustering:
+Run multiple Chronicle containers as one Orleans cluster when you need multiple active nodes. All nodes must share storage and the same cluster and service identifiers. MongoDB, PostgreSQL, and SQL Server support this topology; SQLite requires a single instance. Put a load balancer in front of API traffic on port 35000.
 
-1. **Multiple Instances**: Deploy multiple Chronicle containers
-2. **Load Balancing**: Use a load balancer for API traffic (port 35000)
-3. **Orleans Clustering**: Allow the silo port (11111) only between trusted nodes, and the gateway (30000) only for trusted Orleans clients. HTTP/gRPC-only deployments can set `clustering.gatewayEnabled=false`. Do not publish either Orleans port publicly; they do not use Chronicle's HTTP authentication. See [Clustering network boundaries](configuration/clustering.md#listener-and-network-boundaries) for interface binding and a Kubernetes NetworkPolicy example.
-4. **Shared Storage**: All instances must connect to the same storage. MongoDB, PostgreSQL and SQL Server support more than one node; with SQLite, run a single instance (see [Clustering](configuration/clustering.md))
+Allow the silo port (11111) only between trusted nodes and the gateway (30000) only for trusted Orleans clients. HTTP/gRPC-only deployments can set `clustering.gatewayEnabled=false`. Neither Orleans port uses Chronicle's HTTP authentication, so do not publish them publicly. See [Clustering network boundaries](configuration/clustering.md#listener-and-network-boundaries) for interface binding and a Kubernetes NetworkPolicy example, and [Clustering](configuration/clustering.md) for storage-specific settings.
 
 > [!WARNING]
 > Every multi-node deployment **must** set the clustering type to `MongoDB` or `Sql` to match its storage.
@@ -250,8 +241,8 @@ the platform waits for it to become ready before stopping the old holder.
 They wait for the replacement to be ready before retiring the active revision. There is currently no
 supported zero-downtime handover for Localhost mode on those platforms. Explicitly stop the old revision
 before starting its replacement (accepting downtime), or use `MongoDB` or `Sql` clustering for multiple active nodes.
-Do not disable the lease to bypass this rollout failure. A ready-while-waiting standby and early health
-binding are separate follow-up work, not implemented by this lease.
+Do not disable the lease to bypass this rollout failure. A replacement waiting for the single-writer
+lease does not report ready.
 
 A lost renewal for half the TTL causes Critical logging and process shutdown with a nonzero exit code;
 a stuck shutdown is force-terminated before another holder can acquire the lease. Configure the restart

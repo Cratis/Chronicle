@@ -1,23 +1,24 @@
 ---
 uid: Chronicle.Compliance.ReadModels
-description: How Chronicle keeps [PII] fields encrypted at rest in managed read models, decrypts them for observers and queries, and supports GDPR erasure.
+title: Cratis Chronicle read-model PII storage and release
+description: Mark personal fields on Cratis Chronicle read models for encrypted storage, preserve their subject ownership, and release values through supported query paths.
 ---
 
 # Read models and PII
 
-Chronicle stores PII fields encrypted at rest in both the event log and managed read models (projections and reducers). The encryption and decryption is handled automatically by the kernel — your application code works with plaintext values at all times.
+Cratis Chronicle encrypts personally identifiable information (PII) in managed read models when their own schemas mark those fields as personal. An event annotation alone does not protect a projection destination. Use Chronicle's query methods to release, or decrypt, stored values; call release explicitly for raw storage, cached instances or watch streams.
 
 :::note[The same mechanism also protects `[Encrypted]` values]
-Everything on this page about *how* a read model is encrypted and released — the projection pipeline, `IReadModels.Release`, the automatic decryption on every query — applies identically to `[Encrypted]` values, not only `[PII]` ones. A read model can mix both on the same document; each resolves under its own, disjoint key. What is specific to `[PII]` on this page is the GDPR mechanics: the `[Subject]`/erasure behavior below has no equivalent for `[Encrypted]`, because an operational secret has no data subject and nothing about it is ever erasable. See [Security](../security/) for `[Encrypted]` and its wider key scopes.
+The projection pipeline and `IReadModels.Release` also handle `[Encrypted]` properties, using separate confidentiality keys. A document can contain both classifications on different properties, but subject erasure for PII does not delete confidentiality keys. Use [Security](../security/) to choose `[Encrypted]` key scopes for operational secrets rather than treating it as a substitute for personal-data erasure.
 :::
 
 :::note[Client coverage]
-The C# examples on this page combine several mechanisms already covered elsewhere for their per-client support ([PII property annotation](./pii), [projections](../projections/), [reducers](../reducers/)) — this page's specific focus (marking projected properties as PII on the read model, and the `_subject`/GDPR-erasure mechanics) hasn't been individually re-verified per client yet.
+The `IReadModels` APIs described here are .NET APIs. Select your client in the examples, and check its [PII declaration support](./pii), [projection APIs](../projections/) and [reducer APIs](../reducers/) before applying the pattern. The kernel storage rules below do not imply identical client query or release APIs.
 :::
 
 ## Observer decryption
 
-All observers — reactors, webhooks, reducers, and projections — receive decrypted events from a single, central decryption point in `Observer.Handle()`. This means encryption is applied consistently regardless of the observer type, and no observer implementation needs to handle decryption itself.
+The kernel releases events before delivering them to observers, including reactors, webhooks, reducers and projections. `Observer.Handle()` calls the event compliance handler, so individual observers do not need their own event-decryption code. This event path is separate from releasing a stored read model for a query.
 
 The compliance identifier used for key lookup follows this rule: if an explicit `Subject` was set on the event at append time, that value is used. Otherwise, the `EventSourceId` is used as the fallback identifier. This mirrors the encryption key that was used when the event was originally written to the event log.
 
@@ -29,7 +30,7 @@ Mark every read model property that holds PII, either with `[PII]` on the proper
 
 <ChronicleClientTabs snippet="compliance/read-models/projection-lineage" />
 
-The `Name` property is mapped from `PersonName` on the event, and carries `[PII]` itself, so it is stored encrypted in MongoDB. When a query returns `Employee` records, the kernel decrypts the values before they reach the caller.
+The read model's `Name` property receives `PersonName` from the event and carries its own `[PII]` declaration, so the managed sink stores it encrypted. Chronicle query methods release the value before returning `Employee` records; direct storage reads do not.
 
 ## Reducers — explicit `[PII]` required
 
@@ -37,7 +38,7 @@ Reducers follow the same rule as projections: you must annotate PII properties o
 
 <ChronicleClientTabs snippet="compliance/read-models/reducer-explicit-pii" />
 
-The `[PII]` attribute on `Name` tells the kernel to encrypt that property before storage and decrypt it on retrieval.
+The `[PII]` attribute on `Name` tells the kernel to encrypt that property before storage. Use the query and release paths below to obtain its plaintext value.
 
 ## Stored subjects
 
@@ -60,16 +61,13 @@ In this example, `advisorName` is encrypted, released, and erased under `advisor
 
 ## GDPR erasure
 
-Deleting an encryption key is the Chronicle mechanism for GDPR erasure:
+Use the Compliance API to erase a subject's key; [Erasing a subject](erasing-a-subject.mdx) describes the operation. Chronicle's release path then returns empty values for PII encrypted under that key. The stored documents still contain ciphertext: this is crypto-shredding, making encrypted data unreadable by removing its key rather than deleting each stored value.
 
-1. Delete the key for the subject (the data subject's identifier) via the Compliance API — see [Erasing a subject](erasing-a-subject.mdx).
-2. Read models need no further step to stop exposing the data: reading them releases each PII value with the subject's key, and with the key gone the value comes back empty.
-
-Read model documents written before the erasure still hold the ciphertext. Nothing can decrypt it once the key is gone, which is what crypto-shredding relies on.
+This boundary covers data genuinely encrypted under the erased key. Historical plaintext, unmarked projection fields and independently retained copies remain readable. Authorization is also separate: release does not decide whether the caller may access personal data.
 
 ## Rebuilding after erasure
 
-Projection and reducer replay can rebuild stored read models after erasure without authorizing a new key. Materialization writes an empty marker for an erased subject's PII boundary; it does not recreate the key or clear the fence. On release, an erased string leaf is empty and an erased protected array has no elements. Do not depend on a single null representation for erased protected objects. Public siblings and live subjects' protected values remain available. Per-property ownership keeps contributed PII under its originating subject, even when another subject owns the document.
+Projection and reducer replay can rebuild stored read models after erasure without authorizing a new key. Materialization writes an empty marker at the erased subject's PII boundary; it does not recreate the key or clear the erasure record that prevents new protection under that lifecycle. On release, an erased string leaf is empty and an erased protected array has no elements. Do not depend on a single null representation for erased protected objects. Public siblings and live subjects' protected values remain available. Per-property ownership keeps contributed PII under its originating subject, even when another subject owns the document.
 
 :::caution[Replay over existing storage is not a scrub]
 Replay applies emitted changes. It does not prove that stale fields, orphan documents, legacy wrong-subject ciphertext, or copies outside Chronicle have disappeared. For cleanup, drop and rebuild the affected read-model storage into a clean container, rebuild into a new container and switch readers after validation, or perform an audited migration that proves ownership and rewrites or removes every affected copy. Retire the old container deliberately; a clean destination does not remove it for you.
@@ -77,34 +75,40 @@ Replay applies emitted changes. It does not prove that stale fields, orphan docu
 
 Do not authorize a new lifecycle merely to replay historical data. Authorization is for a deliberate new lawful basis to protect future data, not a repair step for erased history — see [The encryption key lifecycle](key-lifecycle.mdx).
 
-For full erasure of event content, combine key deletion with [event redaction](../events/redaction).
+If event content itself must be removed rather than left as ciphertext, review [event redaction](../events/redaction). Neither operation proves that copies outside the affected storage have been removed.
 
 ## Querying
 
-Read model queries are transparent to PII encryption. No changes to query code are needed:
+The .NET `IReadModels` query methods release marked fields before returning results:
 
 <ChronicleClientTabs snippet="compliance/read-models/querying" />
 
-Chronicle decrypts PII fields automatically before returning results to the caller. When the encryption key has been deleted for a subject, `Name` returns an empty string — the caller receives an `Employee` record with an empty name, never an exception or partial result. Properties that are not strings release as the empty value of their type, listed in the table below.
+When the subject's key has been erased, an encrypted `Name` string releases as an empty string. Other property types use the empty values described below. This behavior does not guarantee that every query succeeds: key-store, transport, schema or deserialization failures can still prevent a usable result.
 
 That automatic decryption covers `IReadModels`' query methods. For an instance that arrived some other way — built from raw storage, restored from a cache, or delivered through `Watch`, which streams changes without releasing them — call `IReadModels.Release` yourself; see [Releasing PII](../read-models/releasing-pii).
 
-### One property never fails the whole read
+<a id="one-property-never-fails-the-whole-read"></a>
 
-Decryption is resolved per property, and a property that cannot be read never fails the read model or the query returning it:
+### Property-level release and failures
+
+The default schema release path handles decryption failures per property. These are the expected outcomes when that path completes:
 
 | The stored value | What the caller gets |
 |---|---|
 | Encrypted under this subject | The decrypted value. |
 | Encrypted, but the subject's key was deleted | The empty value of the property's type — the erasure case above. |
-| Never encrypted under this subject | The value, untouched. |
-| Encrypted under a *different* subject and missing ownership metadata | An empty value for that property, plus an error in the Kernel log naming the property, the subject, and the likely cause. |
+| Plaintext that does not have Chronicle's ciphertext shape | The value, untouched. |
+| Ciphertext that fails decryption with the resolved subject's key | An empty value for that property, plus a kernel log entry naming the property, subject and likely cause. |
 
-The empty value of a property's type is an empty string for a string, `0` or `false` for a non-nullable number or boolean, `null` for a nullable one, and an empty collection or object for a collection or value object. An erased value therefore cannot be told apart from one genuinely stored as `0`, `false` or empty; whether to make them distinguishable is an open decision in [issue 4620](https://github.com/Cratis/Chronicle/issues/4620).
+Schema release uses an empty string for a string, `0` or `false` for a non-nullable number or boolean, `null` for a nullable scalar, and an empty array or object for a protected container. Materializing that JSON into a particular concept or value-object type can still fail. Test erased values with your serializers rather than assuming every type accepts them.
 
-The third row matters when a `[PII]`-typed property is resolved in memory at the query edge — for display on a view whose own compliance subject is not that person — or when a property was marked `[PII]` after values had already been stored. Chronicle recognizes the shape of the values it encrypts, so a value it never encrypted is passed through rather than blanked or rejected.
+An empty value alone is not proof of erasure: it can also be a genuine stored value or the result of a release failure. [Issue 4620](https://github.com/Cratis/Chronicle/issues/4620) discusses distinguishing erased values.
 
-The fourth row can occur for legacy data that was written before per-property ownership was tracked, or for data written outside Chronicle's managed projection sinks. New projection writes keep the ownership map with the ciphertext, so joined PII releases under the subject of the event it came from.
+The third row covers plaintext resolved in memory for display and values stored before a property was marked `[PII]`. Chronicle checks the ciphertext shape before looking up a key. Plaintext that does not match that shape passes through unchanged, including after subject erasure.
+
+A decryption failure in the fourth row can come from ciphertext paired with the wrong subject. This can occur in legacy data written before per-property ownership was tracked, or in data written outside managed projection sinks. New projection writes keep the ownership map with the ciphertext so joined PII releases under its originating event's subject.
+
+These property-level fallbacks do not cover every failure. An instance without applicable metadata can pass through unchanged, and the .NET releaser returns the original instance on a service error; transport or deserialization failures can throw. Check application response paths explicitly. For a service caller that needs all-or-nothing release, see [Strict compliance release](pii#strict-compliance-release).
 
 > [!NOTE]
 > Applying protection normally fails the write if encryption fails; plaintext fallback is never acceptable. Stored read-model materialization handles only the specific `EncryptionKeyErased` failure from a PII handler as an empty marker. Key-store outages, other protection failures, and failures from non-PII handlers still fail the write.

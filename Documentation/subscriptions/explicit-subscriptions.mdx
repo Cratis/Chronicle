@@ -1,29 +1,22 @@
 ---
 uid: explicit-subscriptions
-description: Register Chronicle subscriptions between event stores manually with the Subscriptions API, choosing the subscription id and event types to forward.
+title: Chronicle explicit subscriptions for event forwarding
+description: Register a Chronicle subscription with a stable ID and selected event types to forward source outbox events into a consuming store's inbox.
 ---
 
 # Explicit Event Store Subscriptions
 
-Chronicle supports **explicit subscriptions** — manual registration of subscriptions between event stores using the `Subscriptions` API. When you configure a subscription explicitly, you control:
+An explicit subscription in Cratis Chronicle forwards selected event types from a source store's outbox into the consuming store's inbox. Register it through the client API when you need to choose the subscription ID, control which types arrive, or create and remove the relationship at runtime.
 
-- Which event types are forwarded
-- Subscription lifecycle and management
-- The subscription identifier for reference and cleanup
+The source must publish the events to its Chronicle outbox. Explicit registration does not import events directly from an external system; see [Outbox and Inbox](outbox-inbox) for the publication and delivery flow.
 
-Explicit subscriptions are ideal when:
-- You need fine-grained control over which event types are forwarded
-- The source service's event types are not in a shared NuGet package
-- You want to dynamically create or remove subscriptions
-- Events come from a legacy or external system
-
-:::note[Client coverage]
-Explicit subscriptions are real in Elixir (`Chronicle.subscribe_to_event_store/3,4`, `Chronicle.unsubscribe_from_event_store/1,2`), TypeScript (`store.subscriptions.subscribe`/`.unsubscribe`), and Kotlin/Java (`store.eventStoreSubscriptions.subscribe`) too — all map closely onto C#'s `Subscriptions` API. The host-builder-specific registration patterns further down this page (ASP.NET Core startup) aren't ported — see each client's own startup/registration conventions for the equivalent.
+:::note[Client APIs]
+C# uses `eventStore.Subscriptions`. Elixir exposes `Chronicle.subscribe_to_event_store/3,4` and `Chronicle.unsubscribe_from_event_store/1,2`; TypeScript uses `store.subscriptions.subscribe` and `.unsubscribe`; Kotlin/Java exposes `store.eventStoreSubscriptions.subscribe`. Use each client's registration conventions. The ASP.NET Core startup patterns below apply to C#.
 :::
 
 ## Setting Up an Explicit Subscription
 
-Use the `Subscriptions` property on `IEventStore` to subscribe:
+In the consuming application, use the `Subscriptions` property on its `IEventStore`. The source name identifies the store to read from; the `IEventStore` you call determines where forwarded events are stored:
 
 <ChronicleClientTabs snippet="subscriptions/explicit-subscriptions/basic" />
 
@@ -37,67 +30,51 @@ The three arguments are:
 
 ### Subscription ID
 
-The subscription ID must be unique within the target event store. It serves as the persistent identifier for the subscription on the kernel side. If you call `Subscribe` with the same ID, the kernel treats it as idempotent — no duplicate subscription is created.
+Choose a stable subscription ID that is unique within the target event store. The kernel stores the definition under this ID. Repeating an identical registration does not create another subscription; changing the definition under the same ID updates that subscription.
 
-A typical naming convention:
+A name that describes the consuming relationship is easier to recognize later:
 
 <ChronicleClientTabs snippet="subscriptions/explicit-subscriptions/naming-convention" />
 
 ## Filtering Event Types
 
-Without a configuration callback, the subscription forwards every event type **your client knows about** when it registers the subscription — in practice, the contract types your application references. Source events of a type your client does not have are not forwarded. Use `WithEventType<T>()` to limit the subscription to specific types:
+Without a configuration callback, the C# builder selects every event type registered with that client when it builds the subscription. It does not request every possible type from the source. Use `WithEventType<T>()` to select only the contracts the consumer needs:
 
 <ChronicleClientTabs snippet="subscriptions/explicit-subscriptions/filtering" />
 
-To subscribe without filtering — every event type your client knows about — omit the configuration callback entirely:
+Omit the callback to select all event types known to the C# client:
 
 <ChronicleClientTabs snippet="subscriptions/explicit-subscriptions/no-filter" />
 
 ## Pin the Generation Your Application Understands
 
-Opt in per subscription with `WithGenerationDelivery(EventGenerationDelivery.Pinned)`. A generic
-`WithEventType<T>()` pins the generation declared by that event type. An identifier-only declaration
-resolves to the single generation your client knows; use the identifier-and-generation overload
-when that declaration is ambiguous or the type has no CLR representation.
+An event type's generation identifies a version of its schema. To keep forwarding on the generation your C# application understands, opt in per subscription with `WithGenerationDelivery(EventGenerationDelivery.Pinned)`.
+
+A generic `WithEventType<T>()` pins the generation declared by that event type. An identifier-only declaration resolves to the single generation your client knows. Use the identifier-and-generation overload when the identifier is ambiguous or you have no .NET type for that contract.
 
 <ChronicleClientTabs snippet="subscriptions/explicit-subscriptions/pinned-generations" />
 
-Register the exact generation in both the source and target event stores before subscribing.
-The kernel validates the entire pinned registration request before changing any definitions.
-An unavailable generation or conflicting generations for the same event type fails explicitly;
-a readiness timeout cannot substitute for this validation. Upgrade every kernel silo before opting in.
+Register the exact generation in both stores before subscribing, and upgrade every kernel node (silo) before opting in. The kernel validates the entire pinned request before changing definitions. Missing generations or conflicting generations for one event type fail registration; waiting longer for readiness cannot resolve them.
 
-The source outbox observer selects and releases the pin on live, catch-up, replay, and retry delivery.
-The target inbox appends that delivered generation, not the source event's original append generation.
-Protected values are released with the selected source schema and protected again by the target append;
-an erased target subject's key is never reinstated. If a generation disappears from the target's
-registration later, forwarding fails without appending that event or advancing past it.
+The source forwarding observer delivers the pinned generation for live events, catch-up, replay, and retries. The inbox stores that delivered generation rather than the event's original append generation. Protected values are decrypted using the selected source schema and encrypted again on the target append. Forwarding does not restore an erased target subject's key. If the target later loses the pinned schema registration, forwarding fails at that event without appending it or advancing past it.
 
-Pins and the delivery policy survive restarts, reconnects, and identical registrations. Register the
-same subscription ID with a deliberately changed generation or policy to update it; reconciliation
-rebinds the source observer without an unsubscribe gap. `GetAll()` exposes the policy in
-`GenerationDelivery` and exact generations in `EventTypePins`, alongside the existing id-only `EventTypes`.
+Pins and the delivery policy survive restarts, reconnects, and identical registrations. To change them, register a deliberately changed definition under the same subscription ID. The kernel updates the source observer without an unsubscribe gap. Inspect `GetAll()` to read `GenerationDelivery` and `EventTypePins`, alongside the id-only `EventTypes`.
 
-The default remains `Compatibility`: existing subscriptions still send generation 1 in their registration
-and retain their existing forwarding behavior. The global client generation-delivery option does not
-opt subscriptions in.
+The default is `Compatibility`. Existing subscriptions continue to send generation 1 in their registration and retain their forwarding behavior. The global client generation-delivery option does not opt subscriptions into pinned delivery.
 
 ## Accessing Forwarded Events
 
-Events forwarded via an explicit subscription are placed into the inbox sequence for the source event store. Access inbox events through any observer (reactor, projection, reducer):
+Forwarded events arrive in the target store's `inbox-{sourceEventStore}` sequence. Configure the consuming reactor, projection, or reducer to observe that sequence; creating the forwarding subscription alone does not route a handler to it. The following example shows the handler body, not the source-inbox routing configuration:
 
 <ChronicleClientTabs snippet="subscriptions/explicit-subscriptions/inbox-reactor" />
 
-The kernel automatically routes incoming events to the appropriate `inbox-{sourceEventStore}` event sequence. You do not need to reference the subscription ID when observing the events.
+For C# routing configuration, follow [Subscribe Reactors to External Event Stores](../reactors/external-event-store-subscriptions) or [Subscribe Reducers to External Event Stores](../reducers/external-event-store-subscriptions). Consumers observe the source inbox, not a sequence named after the subscription ID. Check that the event reaches that inbox before diagnosing the handler or its derived view.
 
 ## Removing a Subscription
 
 <ChronicleClientTabs snippet="subscriptions/explicit-subscriptions/unsubscribe" />
 
-Calling `Unsubscribe` with the subscription ID:
-- Stops event forwarding from the source outbox
-- Removes the persistent subscription definition from the kernel
-- Existing inbox events are **not deleted** — they remain available for observation
+Calling `Unsubscribe` requests removal of the persistent definition. Once the kernel processes that removal, forwarding stops. Existing inbox events remain available to consumers; unsubscribing does not delete them.
 
 Removing a subscription stops forwarding but does not erase its forwarding observer's progress. Recreating the same subscription identity can resume from that retained checkpoint, including catching up on events published while it was disconnected. A new identity with no retained progress starts from the beginning of the retained source outbox.
 
@@ -105,9 +82,7 @@ See [Subscription recovery](recovery) before replaying either the forwarding obs
 
 ## Idempotent Registration
 
-Subscriptions are identified by their subscription ID. Calling `Subscribe` with the same ID more than once is safe — if the subscription already exists, no duplicate subscription is created.
-
-This makes it safe to register all subscriptions at application startup without checking if they already exist:
+Register the same definition at application startup rather than checking whether it already exists. The stable ID lets the kernel recognize the registration:
 
 <ChronicleClientTabs snippet="subscriptions/explicit-subscriptions/startup-registration" />
 
@@ -116,12 +91,7 @@ the same subscription, including its exact pins and delivery policy when you opt
 
 ## Subscription Lifecycle
 
-Explicit subscriptions are **kernel-managed** and **persistent**:
-
-- **Created** when you call `Subscribe`, stored on the kernel, and assigned a subscription ID
-- **Persisted** — survive client disconnections and kernel restarts
-- **Re-established** automatically when the kernel starts, even if the client is not connected
-- **Removed** only when you explicitly call `Unsubscribe`
+The kernel persists the definition under the ID you supply and manages forwarding independently of the client connection. Subscriptions survive client disconnections and are re-established when the kernel starts, even if the consuming application is offline. Remove a subscription explicitly when the relationship is no longer needed.
 
 ## Typical Setup Pattern
 
@@ -131,16 +101,9 @@ A common pattern is to register all subscriptions once during application startu
 
 ## When to Use Explicit Subscriptions
 
-**Use explicit subscriptions when:**
-- You need fine-grained control over which event types are forwarded
-- Event types are not published in a shared NuGet package
-- You need to dynamically create or remove subscriptions at runtime
-- The subscription relationship is consuming-service-specific
+Choose explicit subscriptions when the consumer owns the forwarding decision: which event types it needs, what to call the relationship, and when to remove it. Event contracts do not need to be distributed through a shared NuGet package.
 
-**Use [implicit subscriptions](implicit-subscriptions) when:**
-- Event types are published in a shared NuGet package with `[EventStore]` attributes
-- All events from a source should be automatically forwarded
-- You prefer zero configuration and automatic routing
+For a C# application that shares contracts carrying `[EventStore]` attributes, [implicit subscriptions](implicit-subscriptions) can infer the source and register the types its observers consume. They do not mean that every event type in the source store is forwarded.
 
 ## See Also
 

@@ -1,37 +1,32 @@
 ---
-description: Convention-based model-bound mapping projects a read model from an event and maps same-named properties automatically, like AutoMap.
+title: "Cratis Chronicle model-bound projections: Map matching properties"
+description: Use convention-based mapping in Cratis Chronicle to copy matching event properties to read models, with explicit mappings for exceptions.
 ---
 # Convention-Based Mapping
 
-Convention-based model-bound mapping lets a client say: "this read model is projected from this event, and matching property names should map automatically." It is the model-bound counterpart to AutoMap in a declarative projection.
+Use convention-based mapping in Cratis Chronicle when an event and a read model share property names and compatible shapes. Declare the source event on the read model, and Chronicle copies the matching properties without a set mapping on each one. This is the model-bound form of `AutoMap`.
 
-Use it when event properties and read model properties share names and compatible shapes. Add explicit mappings only for the properties that need a different source name, a context value, or a different operation.
+Add explicit mappings for exceptions: a different source name, a value from event context, or an operation such as adding an amount instead of replacing a value.
 
 ## How It Works
 
-Convention-based mapping follows the same projection rules as AutoMap:
+Chronicle matches event properties to read model properties by name and compatible type. Nested objects can map when their internal names match; collections can map when their element shapes are compatible. A read model property absent from the event is left unchanged for that event.
 
-1. The event and read model property names must match.
-2. The property types must be compatible.
-3. Nested objects can be mapped when their internal property names match.
-4. Collections can be mapped when the element shape is compatible.
-5. Properties that do not exist on the event are skipped for that event.
-
-The client syntax differs, but the Chronicle projection definition still contains the event type, key expression, read model, and AutoMap behavior.
+Client syntax differs, but each client produces a projection definition containing the event type, the key that selects a read model instance, and the automatic mapping behavior.
 
 ## Basic Convention Mapping
 
-Apply the client's model-bound "from event" marker at the read model level. Matching properties are then mapped without per-property set mappings.
+Declare the source event at the read model level, using the syntax for your client. Matching properties then map without per-property set declarations:
 
 <ChronicleClientTabs snippet="projections/model-bound/convention-based/basic" />
 
-This is equivalent to writing explicit set mappings for every property:
+For these matching properties, the result is the same as declaring each set mapping explicitly:
 
 <ChronicleClientTabs snippet="projections/model-bound/convention-based/explicit-equivalent" />
 
 ## Multiple Events
 
-A read model can use convention mapping from more than one event type. Each event updates the matching properties it contains and leaves the rest unchanged.
+Declare more than one source event when several event types contribute to a read model. Each event updates the matching properties it contains and leaves the rest unchanged. If two events both contain a matching property, either can replace its value.
 
 <ChronicleClientTabs snippet="projections/model-bound/convention-based/multiple-events" />
 
@@ -41,11 +36,7 @@ By default, convention-based mappings use the event source id as the read model 
 
 <ChronicleClientTabs snippet="projections/model-bound/convention-based/custom-key" />
 
-Custom keys are useful when:
-
-- the event source id is not the read model id
-- one event source can update multiple read model instances
-- an event from one source updates a cross-source or cross-aggregate view
+The custom key changes which instance receives the event; it does not change how property names match.
 
 ## Relationship To Declarative AutoMap
 
@@ -53,33 +44,35 @@ Convention-based model-bound mapping and declarative AutoMap describe the same m
 
 <ChronicleClientTabs snippet="projections/model-bound/convention-based/automap-equivalent" />
 
-Use the model-bound form when the mapping belongs naturally on the read model. Use a declarative projection when you need joins, richer key selection, or a projection definition that should stay separate from the read model shape.
+Keep the model-bound form when the mapping is easiest to understand beside the read model's properties. Use a [declarative projection](../declarative/) when its builder operations fit the mapping better or the definition should stay separate from the read model type.
 
 ## Matching Structures
 
-Convention mapping also works for nested values and collections when the names and shapes match.
+Matching names and shapes can also map nested values and collections. Check the members inside the nested value or collection element, not just the outer property name:
 
 <ChronicleClientTabs snippet="projections/model-bound/convention-based/matching-structures" />
 
 ## Partial Events
 
-Events do not need to contain every read model property. Chronicle maps the properties that exist on each event.
+An event can supply only part of the read model. Here, each event updates its matching properties without clearing values supplied by the other events:
 
 <ChronicleClientTabs snippet="projections/model-bound/convention-based/partial-events" />
 
 ## Excluding A Property From Mapping
 
-Convention mapping applies to every event the read model subscribes to — including an event pulled in only to `[Count]`, `[Increment]`, or `[Join]`. If such an event carries a property whose name matches one you set explicitly, convention mapping would otherwise overwrite your value with the unrelated event's. Chronicle handles the common form of this automatically and gives you an attribute for the rest.
+An event subscribed through a property mapping or join can also carry properties that match by convention. An explicit mapping from one event does not, by itself, stop another event from overwriting the same read model property by name.
+
+Events used only for aggregation are excluded automatically. For other collisions, exclude the affected property with `[NoAutoMap]`.
 
 ### Aggregate-Only Events
 
-An event a read model subscribes to **only to aggregate** — `[Count]`, `[Increment]`, `[Decrement]`, `[Add]`, or `[Subtract]` — does not contribute its other properties to convention mapping. Counting an event does not copy its unrelated fields onto the read model, so a same-named property on it cannot overwrite an explicit value. No annotation is needed.
+When every mapping for an event is an aggregate operation, such as count, increment, decrement, add, or subtract, Chronicle does not copy that event's other properties by convention. Counting an event therefore cannot, on its own, overwrite a name or description with an unrelated same-named field. No exclusion attribute is needed.
 
 <ChronicleClientTabs snippet="projections/model-bound/convention-based/aggregate-only" />
 
 ### `[NoAutoMap]` On A Property
 
-For the collisions Chronicle cannot infer — a value-mapped (`[SetFrom]`) or `[Join]`ed event that carries an identically named property — apply `[NoAutoMap]` to the read model property (or record parameter). That property is then set only from its explicit source; convention mapping never touches it, while every other property keeps mapping.
+For a collision involving a value-mapped (`[SetFrom]`) or joined (`[Join]`) event, apply `[NoAutoMap]` to the read model property or record parameter. Only explicit mappings can then change that property; the other properties keep mapping by convention.
 
 <ChronicleClientTabs snippet="projections/model-bound/convention-based/no-auto-map-property" />
 
@@ -87,19 +80,6 @@ For the collisions Chronicle cannot infer — a value-mapped (`[SetFrom]`) or `[
 
 ## When To Use It
 
-Use convention-based mapping when:
+Start with convention mapping when most properties are direct copies and names are consistent. Add explicit mappings where the source or operation differs, and use a property-level exclusion when a value must only come from its declared source.
 
-- the event and read model use consistent names
-- most properties are simple set mappings
-- the read model is easiest to understand next to its event mappings
-- you want to keep explicit attributes or decorators for the exceptions only
-
-Use explicit mappings when:
-
-- names differ between the event and read model
-- the property comes from event context
-- the property needs add, subtract, count, or another operation
-- the mapping needs a custom key for only one event
-- being explicit is clearer than relying on naming
-
-Convention-based mapping is evaluated when the projection definition is built. Event processing uses the compiled projection definition, so there is no per-event reflection penalty compared with explicit set mappings.
+The client builds the projection definition from the model metadata; Chronicle processes events using that definition rather than reflecting over your model attributes for every event. For the explicit operations, continue with [basic property mapping](basic-mapping).

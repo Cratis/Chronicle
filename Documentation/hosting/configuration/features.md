@@ -1,5 +1,6 @@
 ---
-description: Turn Chronicle Server capabilities such as the API, Workbench and OAuth authority on or off with feature toggles.
+title: Configure feature toggles in Cratis Chronicle Server
+description: Configure Cratis Chronicle Server feature toggles for the HTTP API, Workbench, changeset storage and built-in OAuth authority.
 ---
 # Features
 

@@ -1,4 +1,5 @@
 ---
+title: Configuring the PrimeUI license for Cratis Chronicle
 description: How to supply a PrimeUI license key when building the Chronicle Workbench frontend locally and in CI, or contribute without one.
 ---
 # PrimeUI License

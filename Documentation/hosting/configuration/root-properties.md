@@ -1,4 +1,5 @@
 ---
+title: Root configuration properties in Cratis Chronicle
 description: Root properties of chronicle.json for Chronicle Server, including the bind timeout, health check endpoint and graceful shutdown.
 ---
 # Root Properties

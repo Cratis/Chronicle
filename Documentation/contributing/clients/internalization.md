@@ -1,4 +1,5 @@
 ---
+title: Internalizing dependencies in Cratis Chronicle clients
 description: How Chronicle clients hide internal dependencies from consumers with runtime-only packaging so the public API surface stays clear.
 ---
 # Internalization
@@ -24,7 +25,7 @@ The core idea is to:
 
 This means:
 
-- IntelliSense/autocomplete shows only SDK types
+- IntelliSense/autocomplete shows SDK types and public dependencies such as `Connections`
 - `using Cratis.Chronicle.Projections;` binds to SDK's IProjection interface
 - Even if consumers manually type internal server type names, they won't compile (no compile-time reference to those DLLs)
 - Server/contracts can contain identical namespaces and types—they simply aren't part of compilation
@@ -37,9 +38,9 @@ flowchart TB
         subgraph lib["lib/ (Compile-time)"]
             SDK["Cratis.Chronicle.dll (SDK API)"]
             InProcess["Cratis.Chronicle.InProcess.dll (InProcess API)"]
+            Connections["Cratis.Chronicle.Connections.dll (Public dependency)"]
         end
         subgraph runtimes["runtimes/ (Runtime-only)"]
-            Connections["Cratis.Chronicle.Connections.dll"]
             Contracts["Cratis.Chronicle.Contracts.dll"]
             ContractsImpl["Cratis.Chronicle.Contracts.Implementations.dll"]
             Core["Cratis.Chronicle.Core.dll"]
@@ -116,14 +117,16 @@ The target only fires for library projects (`OutputType != Exe`) that have at le
 To efficiently reuse the core connection logic while internalizing implementation details, we take a specialized approach
 to generating and consuming gRPC clients.
 
-When kernel assemblies are packaged as runtime-only, types such as `ChronicleConnection` from the `Connections` project are not available at compile-time, making it
-impossible to reference them in generated gRPC client code. To address this, we generate the required client
-types at build time and include them in the .NET client assembly.
+`Connections` is a public dependency of the .NET client: `DotNET.csproj` references it without `PrivateAssets=all`,
+so public types such as `ChronicleConnection` are available to consumers at compile time. The `Contracts` dependency
+is marked with `PrivateAssets=all` and packaged privately for runtime use.
+
+The gRPC client implementations are generated at build time and shipped in `Cratis.Chronicle.Contracts.Implementations.dll`.
 
 This process involves two key steps:
 
 - **Build-time client generation:** The `GrpcClients` project uses `System.Reflection.Emit` and gRPC tooling to generate a dedicated assembly containing all required client implementations. These types are pre-generated and ready for use, eliminating the need for runtime code generation.
-- **Custom ClientFactory:** We override the default `ClientFactory` to discover and instantiate these pre-generated client types. Instead of attempting to create new clients dynamically (which would fail due to missing compile-time references), the factory locates and uses the generated implementations.
+- **Custom ClientFactory:** We override the default `ClientFactory` to discover and instantiate these pre-generated client types, falling back to the default factory when no implementation is found.
 
 The resulting workflow for the .NET client is as follows:
 

@@ -1,11 +1,16 @@
 ---
-description: Configure how the Chronicle kernel serves the Workbench, including a base path when a reverse proxy mounts it under a prefix.
+title: Chronicle Workbench reverse proxy configuration
+description: Serve the Chronicle Workbench under a reverse proxy path prefix, keep assets and live updates on that path, and avoid double-prefixing behind Stage.
 ---
 # Workbench
 
-The kernel serves the Workbench on the main port, at the root of the host. That is all it needs when you reach Chronicle directly, or through a proxy that gives it a host of its own. When a reverse proxy routes by path instead — one shared host, one path per instance — the root-absolute scripts, styles and API calls of the page point at the wrong place and the page stays blank. The `workbench.basePath` setting fixes that.
+Set `workbench.basePath` when a reverse proxy serves the Chronicle Workbench under a path such as `/my-instance/chronicle`. The setting keeps the page's assets and API calls under that prefix, so the browser reaches the right kernel. Leave it empty when you connect directly or give Chronicle its own host name.
+
+Without the setting, the page requests scripts and styles from the host root. Behind a path-routing proxy, those requests can reach the wrong service and leave the Workbench blank.
 
 ## Configuration
+
+Add the public path prefix to `chronicle.json`, without a `Cratis:Chronicle` wrapper:
 
 ```json
 {
@@ -16,6 +21,8 @@ The kernel serves the Workbench on the main port, at the root of the host. That 
 ```
 
 ### Environment variable
+
+You can set the same value through the environment instead:
 
 ```bash
 Cratis__Chronicle__Workbench__BasePath=/my-instance/chronicle
@@ -35,13 +42,13 @@ With a base path set, the kernel:
 - prefixes the root-absolute `src` and `href` references of the page; and
 - accepts requests with or without the prefix, so it does not matter whether your proxy strips the prefix before forwarding or passes it through.
 
-Everything else is untouched. gRPC clients connect to the same address as before.
+The prefix does not restrict access to unprefixed routes: the kernel accepts both forms. gRPC clients keep their existing connection address.
 
-For the example above, the Workbench is served at `https://admin.example.com/my-instance/chronicle/`, and the proxy only needs to route that path to the kernel's main port.
+For this example, route `https://admin.example.com/my-instance/chronicle/` to the kernel's main port. Open that URL and inspect the browser's network requests: scripts, styles and API calls should all use `/my-instance/chronicle/`. If the page loads but live data does not, check the proxy's streaming and WebSocket settings below.
 
 ## Reverse proxy examples
 
-The setting is the same whichever way the proxy treats the prefix. Keep TLS enabled on the kernel, and let the proxy either trust its certificate or validate it, as you would for any backend. Only the Workbench is path-routed; gRPC clients connect to the kernel directly and never use the prefix.
+Use the same `basePath` whether the proxy passes the prefix through or strips it. The examples below keep TLS enabled on the kernel; configure the proxy to trust the backend certificate. See [TLS configuration](tls.md) for certificate setup. The path prefix is for Workbench browser traffic, not the gRPC client connection.
 
 ### Traefik
 
@@ -55,7 +62,7 @@ labels:
   - traefik.http.services.chronicle.loadbalancer.server.scheme=https
 ```
 
-Or strip it first, by adding a `stripprefix` middleware to the router. Chronicle behaves the same:
+To strip the prefix before forwarding instead, add this `stripprefix` middleware to the router. Keep the same Workbench `basePath`:
 
 ```yaml
   - traefik.http.routers.chronicle.middlewares=chronicle-strip
@@ -78,16 +85,18 @@ location /my-instance/chronicle/ {
 }
 ```
 
-Chronicle streams live updates to the Workbench over server-sent events and WebSockets, so keep response buffering off and allow connection upgrades. In nginx that is `proxy_buffering off;`, `proxy_http_version 1.1;` and the `Upgrade` and `Connection` headers.
+Chronicle sends live updates to the Workbench over server-sent events (SSE) and WebSockets. Keep response buffering off so SSE updates arrive as they happen, and allow connection upgrades for WebSockets. In nginx, configure `proxy_buffering off;`, `proxy_http_version 1.1;` and the `Upgrade` and `Connection` headers in the chosen location block. The path-routing examples above do not include those streaming settings.
 
 ### Try it
 
-The [WorkbenchBehindProxy sample](https://github.com/Cratis/Chronicle/tree/main/Samples/WorkbenchBehindProxy) runs two instances behind Traefik, one for each style, with `docker compose up`.
+To compare both routing styles locally, use the [WorkbenchBehindProxy sample](https://github.com/Cratis/Chronicle/tree/main/Samples/WorkbenchBehindProxy). It runs two instances behind Traefik with `docker compose up`, one passing the prefix through and one stripping it.
 
 ## Why a setting and not a forwarded header
 
-Chronicle does not read `X-Forwarded-Prefix`. The kernel trusts forwarded headers from loopback and from the proxies you list in `forwardedHeaders`, and a prefix taken from a header would let anything that can reach the kernel rewrite the page it serves. An explicit setting is also what a deployment on Kubernetes already has at hand: it is configuration of that instance.
+The kernel does not read `X-Forwarded-Prefix`; set `workbench.basePath` explicitly in the instance's deployment configuration. Its forwarded-header policy accepts the client IP and public scheme from loopback and the proxies listed in `forwardedHeaders`. That policy does not supply a Workbench path prefix.
 
 ## Behind Cratis Stage
 
-A Cratis Stage play session serves the Workbench of its own bundled kernel under `/workbench`, and works out the prefix itself on every request, including the one a proxy in front of the Stage states in `X-Forwarded-Prefix`. It rewrites the page on the way through. Leave `workbench.basePath` empty for that kernel: with it empty the page is served exactly as it ships, which is what the Stage rewrites. Setting both would prefix the page twice.
+Leave `workbench.basePath` empty for the kernel bundled with a Cratis Stage play session. Stage serves that kernel's Workbench under `/workbench` and rewrites the page as it proxies the response. It resolves the public prefix on each request, including a prefix supplied by an upstream proxy through `X-Forwarded-Prefix`.
+
+Stage needs the kernel to serve the page with its original root-relative asset paths and empty `base-path` meta tag. Setting the kernel's base path as well would prefix the assets twice.

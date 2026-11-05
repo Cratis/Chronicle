@@ -1,15 +1,16 @@
 ---
-description: A compensating event records, as a new fact, that an earlier event is being offset. Chronicle links the two by sequence number and never changes the original.
+title: Cratis Chronicle event compensation for recorded mistakes
+description: Cratis Chronicle appends a compensating event linked to an earlier event, leaving the original unchanged so your domain can record the correction.
 ---
 # Event compensation
 
-Some domains cannot quietly correct a mistake. A ledger entry that was posted stays posted, and the correction is a second entry that offsets the first. A compensating event is that second entry: a new event that records which earlier event it compensates for.
+Use event compensation in Cratis Chronicle when a correction belongs in the business history as a new fact. A posted ledger entry, for example, stays posted; a second entry offsets it. Chronicle links the compensating event to the original, while your event content and observers define what the correction does.
 
 Compensation is different from [revision](revision.md). A revision replaces how an event reads, in place, and keeps the original content beside it. A compensation adds a new event to the sequence and leaves the original event as it was.
 
 ## Declare a compensation event type
 
-A compensation event type is an ordinary event type that says which event type it compensates for. Chronicle stores this on the event type's schema, so every client and the Workbench can discover which compensations exist for an event type. See [Compensating events in .NET](../clients/dotnet/compensation.md) for the attribute.
+A compensation event type is an ordinary event type declared to compensate for another type. Chronicle stores that relationship on the event type's schema. The Workbench uses it to offer the matching compensation types. To declare the relationship and append a compensation in C#, follow [Compensating events in .NET](../clients/dotnet/compensation.md).
 
 ## Compensate an event
 
@@ -20,9 +21,9 @@ Compensating works like appending, with one difference: you name the event you a
 3. Appends the new event to the same event source, event stream and subject as the original.
 4. Stores the original's sequence number on the new event as `CompensationFor`.
 
-Constraints, concurrency checks and compliance run for the compensating event like any other append. Observers receive it like any other event, and can read `CompensationFor` from the event context to relate the two.
+The compensating event goes through append validation, including constraints and compliance, but this operation does not request an optimistic concurrency check. Observers receive the new event and can read `CompensationFor` from its context to relate the two.
 
-Compensating never changes the original event. The same event can be compensated more than once if your domain allows it. Chronicle does not decide what a compensation means for your data; the compensating event's content and your observers do.
+Compensation leaves the original event unchanged. Chronicle does not prevent multiple compensations for the same event, so enforce any domain rule that permits only one. Appending a compensation does not automatically reverse a payment, retract a message, or change a read model; your handlers must implement the intended effect.
 
 ## Compensate from the Workbench
 
@@ -30,4 +31,4 @@ In the Workbench, select an event in the event sequence. When the event type has
 
 ## Wire values
 
-On the wire, `CompensationFor` is the sequence number of the compensated event. Clients that cannot express an absent number read an event that is not a compensation as `0`. Use the .NET client, or check that the event's type is a compensation type, when that distinction matters.
+On the wire, `CompensationFor` is an optional sequence number identifying the compensated event. The .NET client preserves that absence as a nullable value. If a client represents absence as `0`, check that the event's type is a compensation type before interpreting the number as a link.

@@ -1,19 +1,20 @@
 ---
-description: Use an every-event mapping in a model-bound Chronicle projection to update a property after any processed event, such as last-modified audit metadata.
+title: "FromEvery: update audit fields from handled events"
+description: "FromEvery updates a Chronicle read model property for each handled event, so audit fields can track occurrence time, sequence number, or correlation id."
 ---
 # From Every Event
 
-Use an every-event mapping when a read model property should update whenever any event in the projection is processed. This is usually audit metadata such as the last modification time, the latest event sequence number, or the correlation id of the operation that last touched the read model.
+`FromEvery` updates a read model property whenever the projection processes a handled event. Use it to maintain a last-modified timestamp or identify the operation that last changed the model without repeating the mapping for each event type.
 
-Every-event mappings are different from event-specific mappings. A set mapping applies only when its event type is processed. An every-event mapping applies after any event that belongs to the projection.
+An event-specific mapping runs only for its declared event type. An every-event mapping runs across the projection's handled types; it does not subscribe to unrelated types in the sequence. Use [From All](./from-all.mdx) when you need that wider subscription.
 
 ## Map Event Context
 
-Event context is the most common source for every-event mappings because every event has the same context shape. This keeps audit fields independent from the event payloads.
+Event context is the metadata carried alongside an event, such as occurrence time, sequence number, and correlation id. Its shared shape lets you maintain audit fields without requiring unrelated event payloads to contain the same properties:
 
 <ChronicleClientTabs snippet="projections/model-bound/from-every/context-property" />
 
-You can map multiple context fields when the read model needs a small audit trail.
+Map more than one context field when readers need to know both when the model changed and which operation changed it. These fields describe the latest handled event, not a history of changes:
 
 <ChronicleClientTabs snippet="projections/model-bound/from-every/context-fields" />
 
@@ -29,18 +30,15 @@ If a client supports convention-based property mapping, omitting the source prop
 
 ## Combine With Event-Specific Mappings
 
-When an event is processed, Chronicle applies the event-specific mappings for that event and the every-event mappings for the projection. This lets the read model update business fields and audit metadata in the same event pass.
+Keep business changes in event-specific mappings and share the audit mapping across them. Chronicle applies both while processing the event:
 
 <ChronicleClientTabs snippet="projections/model-bound/from-every/combined" />
 
-For example, when the name-change event in the examples above is processed:
-
-1. The name mapping updates the read model's name.
-2. The every-event mapping updates the last-modified field from the event context.
+When the name-change event is processed, the name mapping updates the business field and the every-event mapping records the event's occurrence time in the last-modified field.
 
 ## Declarative Equivalent
 
-Every-event mappings are part of the projection definition Chronicle receives. Clients that expose both model-bound and standalone projection definitions send the same kind of every-event definition to Chronicle.
+If you move the mapping into a standalone projection, the intent stays the same. Both styles send an every-event definition to Chronicle:
 
 <ChronicleClientTabs snippet="projections/model-bound/from-every/declarative-equivalent" />
 
@@ -57,15 +55,18 @@ Prefer context properties for audit metadata. Use payload properties only when t
 
 ## Child Events
 
-The kernel now honors child inclusion in every-event mappings. In .NET, `[FromEvery]` includes events handled only by child projections, including nested child collections. A child's event updates the containing parent's audit fields using the child's resolved parent key; it does not create a root document keyed by the child identifier.
+In .NET, a root `[FromEvery]` includes events handled only by child projections, including nested child collections. Chronicle uses the child's resolved parent key to update the containing parent's audit fields. It does not create a root document keyed by the child identifier.
 
 A child-only event advances a root `[FromEvery]` timestamp even without a root `[FromEvent]` for that event. In the declaration language, `every` includes child events by default; use `exclude children` to keep mappings local to their level.
 
-Put `[FromEvery]` on a child's own property to update that child instead. The mapping applies on the child's creating event as well as later events handled by that child. The same ownership rule applies to nested objects and `[FromAll]`: a mapping belongs to the object that declares it. Parent fields are never copied into a newly added child.
+Put `[FromEvery]` on a child's own property when the child needs its own audit value. That mapping applies on the creating event and later events handled by the child. The same ownership rule applies to nested objects and `[FromAll]`: the object declaring the property owns the mapping. Parent fields are never copied into a newly added child.
 
 For compatibility with clients that still put child mappings at the root, see [Child and nested properties](./from-all.mdx#child-and-nested-properties). A property declared on both root and child cannot be disambiguated until the client is upgraded.
 
 ## Limitations
+
+For child or nested every-mappings on join-only events, use the
+[declarative alternative in model-bound limitations](./index.mdx#child-or-nested-every-mappings-on-join-only-events).
 
 - Only one every-event mapping can target the same read model property.
 - Payload-property mappings are skipped for events that do not carry the source property. A source property that is present with a null value still maps null.

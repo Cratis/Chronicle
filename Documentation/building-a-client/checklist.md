@@ -1,4 +1,5 @@
 ---
+title: Cratis Chronicle client implementation checklist
 description: A top-to-bottom checklist for building a new Chronicle client, covering contracts, the idiomatic layer, authentication, clustering and connection strings.
 ---
 # The checklist

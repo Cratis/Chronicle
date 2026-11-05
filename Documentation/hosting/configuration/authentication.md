@@ -1,4 +1,5 @@
 ---
+title: Authentication in Cratis Chronicle Server
 description: Configure Chronicle Server authentication, using its built-in OpenIdDict authority or an external OAuth provider, behind a proxy or turned off.
 ---
 # Authentication

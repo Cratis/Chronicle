@@ -1,4 +1,5 @@
 ---
+title: Configure health endpoints in Cratis Chronicle Server
 description: Configure Chronicle's health check endpoint, served on the main port by default or on an optional dedicated port for orchestrator probes.
 ---
 # Health Endpoint

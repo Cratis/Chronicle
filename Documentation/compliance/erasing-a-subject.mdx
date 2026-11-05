@@ -1,20 +1,24 @@
 ---
 uid: Chronicle.Compliance.Erasure
-title: "Erasing a subject"
-description: "Erase a person's data with one call, what it reaches, and what you still have to do yourself."
+title: "Erase a subject's PII in Cratis Chronicle"
+description: "Cratis Chronicle erases a subject's PII by deleting its encryption keys. Repeat per namespace and handle backups, read models and exported copies."
 ---
 
-A right-to-erasure request arrives naming one person, and Chronicle gives you exactly one call to make. This page covers what that call reaches, what happens to that person afterwards, and what you still have to do yourself before you can certify the erasure as complete.
+Cratis Chronicle supports erasure of a subject's personally identifiable information (PII) by deleting the encryption keys that protect it. The events remain in the log, but their encrypted PII can no longer be read without those keys. Use this as one step in a right-to-erasure workflow: it does not remove historical plaintext, exported copies or keys held in backups.
 
 ## The one call
 
-Erasure in Chronicle is the deletion of an encryption key. Every `[PII]` value is encrypted at append time under a key held for the event's [subject](../concepts/subject), so deleting that key makes every PII value for that subject unreadable at once, without touching the append-only log:
+Identify the event's [subject](../concepts/subject) and each namespace containing that person's data. Values marked `[PII]` are encrypted at append time under the subject's key; values stored before the marker was added are not retroactively protected.
+
+Stop appends and forwarding of that subject's PII before erasing. The fence described below blocks later provisioning, but an already-running key write can race with erasure. Repeat the erasure after those writes have stopped if they overlapped it. Subsequent PII appends fail until you explicitly authorize a new key.
+
+With an `IEventStore` resolved for the relevant namespace, erase the subject's key:
 
 <ChronicleClientTabs snippet="compliance/erasure/delete-key" />
 
-`IEventStore.PII` is an `IPIIManager`. `DeleteEncryptionKeyFor` removes every revision of the key, evicts it from every silo's cache, and records the erasure so that nothing puts the key back afterwards.
+`IEventStore.PII` is an `IPIIManager`. `DeleteEncryptionKeyFor` records an erasure fence, deletes every key revision, removes unique-index claims that reserve values for the subject, and evicts the key from every silo's cache. A silo is a Chronicle kernel node. The fence lets the key store distinguish an erased subject from one that never had a key.
 
-Read one of that subject's events afterwards and nothing breaks. The event is still there, its sequence number is still there, and every field that was not marked `[PII]` still holds its value — only the PII properties lose their values. What a caller gets for an erased property depends on its schema type:
+After key deletion, reading an event still returns its sequence number and unprotected fields. Encrypted PII whose key is gone is released as an empty value according to its schema type:
 
 | Property type | Released value after erasure |
 |---|---|
@@ -24,7 +28,7 @@ Read one of that subject's events afterwards and nothing breaks. The event is st
 | Collection | An empty collection |
 | Object or value object | An empty object |
 
-That is the whole point of crypto-shredding: the log stays immutable and the personal data stops existing. In 19.x, existing reads keep these defaults. A normal read cannot distinguish an erased `0`, `false` or empty string from a genuine value. An explicit .NET sequence read can additionally report confirmed erased paths.
+This mechanism is called crypto-shredding: the ciphertext stays in the immutable log, but its decryption key is destroyed. It depends on deleting all usable copies of the key; [key-store erasure guarantees](key-store-erasure-guarantees.md) explain the storage-specific limits. In 19.x, existing reads keep these defaults. A normal read cannot distinguish an erased `0`, `false` or empty string from a genuine value. An explicit .NET sequence read can additionally report confirmed erased paths.
 
 ### Opt in to erased paths in .NET
 
@@ -42,7 +46,7 @@ Causation property values are not encrypted under the subject's key, so deleting
 
 The erasure covers **every event store in the namespace you erased in**, not only the event store you resolved `PII` from.
 
-That is not generosity, it is arithmetic. When an [event store subscription](../subscriptions/index.md) forwards a subject's events from one event store to another, Chronicle copies that subject's encryption key into the target event store — and it never copies across namespaces. So the set of places the key can have reached is exactly *every event store, in this namespace*, and that is the set the erasure covers:
+An [event store subscription](../subscriptions/index.md) can copy the subject's encryption key into a target event store when forwarding events. Forwarding stays within the namespace, so erasure must reach all event stores there, including stores that do not currently hold the key:
 
 ```mermaid
 flowchart LR
@@ -61,39 +65,37 @@ flowchart LR
     E -.->|never| D
 ```
 
-The erasure runs in two phases across that set: it records the erasure in every event store first, and only then destroys the key material. Fencing everything before destroying anything is what closes the window a per-store fan-out could not — between the first delete and the last, one event store still held the key and another did not, and an event forwarded in that interval copied the survivor into a store that had just been cleared.
+Chronicle attempts to record the fence in every event store before deleting key material anywhere. This ordering prevents a later forwarded event from copying a surviving key into a store already cleared. It then deletes key material, removes those uniqueness claims and evicts cached keys.
 
-Every phase attempts every event store even when one of them fails, and the failures are reported together as `EncryptionKeyErasureIncomplete`. **A partial erasure is not an erasure** — repeat the call once the failing store is reachable. A call that returns without throwing reached everything.
+Each phase attempts every event store even after a failure. Failures are reported together as `EncryptionKeyErasureIncomplete`; resolve them and repeat the call. A return without an error means those operations completed across the enumerated event stores, not that backups, stale replicas or external copies have been erased.
 
 > [!IMPORTANT]
-> The namespace is the boundary. In a multi-tenant deployment the same person in two namespaces has two keys and is, as far as Chronicle is concerned, two subjects. Erasing in one namespace deliberately leaves the other untouched — issue one erasure per namespace the person appears in.
+> Erasing in one namespace leaves the same person's keys in other namespaces untouched. Issue one erasure per namespace containing that person's data.
 
 ## The subject is fenced, not banned
 
-Deleting the key is only half of an erasure; the other half is making sure nothing puts it back. Chronicle records the erasure beside the keys, and from then on that store refuses to provision a key for the subject, refuses to accept the destroyed key material back, and refuses to let a subscription copy a key in.
+The fence blocks automatic provisioning for the erased subject and rejects saves of the destroyed key material. It also prevents a subscription from copying that material back through the key-store API. It does not validate every key read, so a restored key or stale replica can still make old ciphertext readable.
 
-The practical consequence is worth knowing before you erase:
+Appending a `[PII]` value for an erased subject fails with `EncryptionKeyErased`. Chronicle neither silently creates a replacement key nor stores the value as blank.
 
-**Appending a `[PII]` value for an erased subject fails.** It does not quietly mint a new key, and it does not quietly blank the value — both of those would be a silent surprise, one restarting protection for a person who asked to be forgotten and the other losing data with no signal. It fails with `EncryptionKeyErased` instead.
-
-If the same person later has a lawful basis to be protected again, say so:
+If your application establishes a lawful basis to store new PII for the same person, explicitly authorize a new key:
 
 <ChronicleClientTabs snippet="compliance/erasure/allow-new-key" />
 
-That creates no key. It authorizes the next `[PII]` value written for the subject to provision a fresh, independent one — which protects data written from then on and can decrypt nothing that came before. The erased key itself never comes back. Like the erasure, the authorization covers every event store in the namespace.
+The call creates no key. It allows the next `[PII]` write to provision a fresh key that cannot decrypt data protected by the erased one. The fence continues to reject the old key material. Authorization reaches every event store in the namespace; it does not authorize processing on your application's behalf.
 
 The mechanics of the fence, and what it cannot protect you against, are in [The encryption key lifecycle](key-lifecycle).
 
 ## What you still have to do
 
-Chronicle erases keys. It does not know what else your system did with the data.
+Treat a successful key deletion as evidence for one part of your erasure procedure. Before recording the request as complete:
 
-- **Erase in every namespace the person appears in.** One call per namespace; there is no cross-namespace erasure, by design.
-- **Deal with the failed partition, if there is one.** An event carrying `[PII]` for a subject you erased cannot be appended, so a forwarding subscription or a reactor that keeps producing them will report a failed partition for that event source. That is the signal that something is still writing the person's data — either stop it, or authorize a new key.
-- **Rebuild stored read models without restarting protection.** Projection and reducer replay materialize an erased subject's PII as empty markers, without creating a key or removing the erasure fence. Live subjects remain protected normally. You do not need to authorize a new key just to rebuild. For stale or wrong-subject copies, use a clean destination or an audited migration; replaying over existing storage is not a scrub — see [read-model rebuilds](read-models.mdx#rebuilding-after-erasure).
-- **Record the *who*.** Chronicle logs that an erasure completed, which event stores it reached, and the subject as a one-way binding rather than by name — see [what Chronicle records](key-lifecycle). What it cannot know, and therefore cannot record, is who asked for the erasure and under what legal basis. That part is yours.
-- **Chase the copies outside Chronicle.** Read models exported to a warehouse, search indexes, and anything a reactor sent to a third party are outside the key store and outside the erasure.
-- **Keep erasures from coming back with a restore.** A backup of the key store taken before the erasure still holds the key, and restoring it brings the key back without any error. Plan a restore-and-re-erase step, and restore the key store at the same point in time as the rest of the storage — see [what the fence cannot protect against](key-lifecycle.mdx#not-stopped) and [backup and restore ordering](../hosting/configuration/compliance-storage.md#backup-and-restore-ordering).
+1. Repeat the call in every relevant namespace and resolve any incomplete erasures. Check failed observer partitions for that event source: a forwarding subscription or reactor still producing PII must stop, unless you deliberately authorize a new key.
+2. Rebuild stale stored read models using a clean destination or an audited migration. Projection and reducer replay materialize erased PII as empty markers without creating a key or removing the fence; live subjects retain normal protection. You do not need a new key just to rebuild. Replaying over existing storage does not prove cleanup; follow the [read-model rebuild procedure](read-models.mdx#rebuilding-after-erasure).
+3. Handle copies outside Chronicle, including warehouse exports, search indexes and data sent to third parties. Also assess historical causation values separately from encrypted event content.
+4. Define what happens when a backup restores the key and removes its fence. Restore the key store consistently with the rest of storage and block access until required erasures have been reapplied. See [what the fence cannot protect against](key-lifecycle.mdx#not-stopped) and [backup and restore ordering](../hosting/configuration/compliance-storage.md#backup-and-restore-ordering).
+
+Record who requested and authorized the erasure, and under what legal basis. Chronicle logs completion, the event stores reached and a one-way subject binding instead of the person's name, but it does not know the actor. [What Chronicle records](key-lifecycle) explains how to use those logs alongside your application's record.
 
 ## See also
 

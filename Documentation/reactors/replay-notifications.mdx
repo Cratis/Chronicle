@@ -1,11 +1,12 @@
 ---
-description: Implement ICanBeNotifiedWhenReplay so a Chronicle reactor or reducer learns when a replay begins and ends, for example to pause external work.
+title: Reactor and reducer replay lifecycle notifications
+description: Replay notifications tell Cratis Chronicle reactors and reducers when replay begins and ends. In C#, share lifecycle state outside the handler instance.
 ---
 # Replay notifications
 
-A [replay](replay) re-delivers history to an observer, and some reactors and reducers need to know when that starts and when it is over. A reactor that feeds a cache or an external index might pause its writes for the duration; a reducer that keeps in-memory state might reset it.
+Replay notifications tell a reactor or reducer when Cratis Chronicle begins and ends a [replay](replay). Use them to coordinate replay-specific work, such as changing how a reactor writes to an external index. They are lifecycle calls, not a mechanism for preventing duplicate side effects.
 
-Implement `ICanBeNotifiedWhenReplay` on the reactor or reducer class and Chronicle calls `BeginReplay()` when a replay of the observer begins and `EndReplay()` when it ends. The interface lives in the `Cratis.Chronicle.Observation` namespace.
+In C#, implement `ICanBeNotifiedWhenReplay` on the reactor or reducer class to receive `BeginReplay()` and `EndReplay()`. The interface lives in the `Cratis.Chronicle.Observation` namespace. Store any state needed across those calls outside the reactor or reducer instance.
 
 <ChronicleClientTabs snippet="reactors/replay-notifications/reactor" variants="csharp,elixir" />
 
@@ -15,11 +16,13 @@ Reducers use the same interface:
 
 ## Notifications are separate from events
 
-The notifications are calls of their own. They are not events and they do not go through the event handlers, so a `[Replay]` handler does not see them and an event handler is not called for them. The events of the replay are delivered between the two calls, as they always are.
+A notification does not go through the event handlers, so a `[Replay]` handler does not receive it. Replay events are delivered between the lifecycle calls. To change which handler processes those events, use [Replay](replay); to skip a handler during replay, use [OnceOnly](once-only).
 
 ## Each notification gets a new instance
 
-Chronicle creates the reactor or reducer for each notification, from a new dependency injection scope, and disposes it afterwards. `BeginReplay()` and `EndReplay()` therefore run on different instances, and neither is the instance that handles the events. Anything they need to share must live outside the class, in a service registered as a singleton, such as the one injected in the reactor example above. A scoped or transient service is created anew for each notification, so it could not carry state from `BeginReplay()` to `EndReplay()`.
+The .NET client creates a reactor or reducer in a new dependency injection scope for each notification and disposes it afterwards. `BeginReplay()` and `EndReplay()` run on different instances, separate from the instances handling events. An instance field set in `BeginReplay()` therefore cannot tell an event handler that replay is active.
+
+For state shared within one application process, use a singleton service such as the one in the reactor example. A scoped or transient service is created anew for each notification. A singleton does not share state across application processes or preserve it after a restart; use storage outside the process if your coordination needs either.
 
 ## Replaying a single partition
 
@@ -27,9 +30,10 @@ Replaying one partition, for example with the [`observers replay-partition`](/cl
 
 <ChronicleClientTabs snippet="reactors/replay-notifications/partition" variants="csharp,elixir" />
 
-The two interfaces are independent. Implement either or both, depending on which replays you need to know about.
+The two interfaces are independent. Implement the partition interface for single-partition replay, the observer interface for full replay, or both if your coordination must handle either operation.
 
 ## What is not notified
 
-- A reactor that has no class to implement the interface on: one defined fluently with the reactor builder, or registered at runtime with a handler delegate. Those are never notified.
-- Other clients. These interfaces are part of the .NET and Elixir clients.
+In the .NET client, reactors defined fluently with the reactor builder or registered at runtime with a handler delegate do not receive these notifications: they have no reactor class implementing the interface.
+
+For Elixir, use the `on_replay_begin/0`, `on_replay_end/0`, `on_partition_replay_begin/1` and `on_partition_replay_end/1` callbacks. TypeScript exposes `ICanBeNotifiedWhenReplay` and `ICanBeNotifiedWhenPartitionReplayed`. See [Getting started with reactors](getting-started) for the client entry points; the instance-lifetime guidance on this page is specific to .NET.

@@ -1,5 +1,8 @@
 ---
+title: CDL grammar reference for Cratis Chronicle
 description: The formal EBNF grammar of the Capture Declaration Language (CDL) for Chronicle captures, with the compiler's semantic validation rules.
+sidebar:
+  label: Grammar (EBNF)
 ---
 # Grammar (EBNF)
 

@@ -1,62 +1,57 @@
 ---
-description: Run a Chronicle projection ad hoc from the .NET client with IProjections.Query() and a PDL declaration, without a read model type or registration.
+title: Cratis Chronicle ad-hoc projection queries
+description: Run a PDL projection with IProjections.Query() in the Chronicle .NET client to inspect JSON read models without registration, within a 1,000-event limit.
 ---
 # Ad-hoc Querying with `IProjections.Query()`
 
-The `IProjections.Query()` method lets you run a projection ad-hoc from the .NET client — without defining a read model type or registering a permanent projection. You write a PDL declaration, send it to the server, and get back the projected read model entries as JSON strings.
+Use `IProjections.Query()` in the Cratis Chronicle .NET client to inspect projected state without registering a permanent projection. Send a Projection Declaration Language (PDL) declaration and receive read model entries as JSON strings. You can omit the read model type when exploring a small set of events.
 
 > [!WARNING]
-> **This API is not a replacement for registered projections.**
-> Every call to `Query()` replays events from the beginning of the event sequence up to an internal limit.
-> It is designed for **small, bounded event volumes** — tooling, back-office dashboards, diagnostics,
-> and similar scenarios where you have control over (or can reason about) the number of relevant events.
-> Using it in high-throughput code paths or against event sequences with tens of thousands of events
-> will be slow and resource-intensive.
+> Each call reads from the beginning of the selected event sequence, up to 1,000 matching events.
+> If more events match, the results are incomplete. Use this API for small, bounded investigations,
+> not as a replacement for a registered projection. Repeated calls repeat the event processing work.
 
 ## Basic Usage
 
-Inject `IProjections` into your service, then call `Query()` with a PDL declaration string:
+Start with a connected .NET client and registered event types for the events named in your declaration. Inject `IProjections` into your service, then call `Query()` with the PDL string:
 
 <ChronicleClientTabs snippet="projections/projection-declaration-language/adhoc-querying/basic" />
 
-`ReadModelEntries` is a `IReadOnlyList<string>` where each element is the JSON representation of one projected read model instance.
+`ReadModelEntries` is an `IReadOnlyList<string>`. Each string represents one projected read model instance. The example deserializes those strings into `PdlOrderSummary` records for the caller; that local result type does not need to be registered as a read model.
 
 ## Explicit vs. Inferred Read Model
 
-You can optionally specify a `=> ReadModelType` in your declaration. When you do, the server resolves the schema from the registered read model definition. When you omit it, the schema is **inferred** from the event properties.
+Include `=> ReadModelType` when you want to use an existing registered read model schema. The target must be its registered identifier, such as `MyApp.ReadModels.PdlOrderReadModel`, rather than a display name. Omit the target to let the server infer a schema from the event properties.
 
 <ChronicleClientTabs snippet="projections/projection-declaration-language/adhoc-querying/inferred-vs-explicit" />
 
-When using an inferred schema with multiple `from` blocks, all events that contribute the same property name must use compatible types. The compiler reports an error at query time if there is a mismatch:
+In the inferred declaration, both `from` blocks contribute properties to the same schema. If those events share a property name, its types must be compatible. A string in one event and an integer in another produces a compiler error at query time:
 
 <ChronicleClientTabs snippet="projections/projection-declaration-language/adhoc-querying/type-mismatch" />
 
 ## Error Handling
 
-If the declaration contains syntax or type errors, `Query()` throws `UnableToQueryProjection`:
+`Query()` throws `UnableToQueryProjection` when the declaration contains syntax or type errors. Read the exception message, correct the declaration or conflicting event property types, and submit the query again:
 
 <ChronicleClientTabs snippet="projections/projection-declaration-language/adhoc-querying/error-handling" />
 
 ## Targeting a Different Event Sequence
 
-By default `Query()` reads from the `event-log` sequence. Pass a different sequence identifier as the second argument:
+By default, `Query()` reads from the `event-log` sequence in the client's event store and namespace. Pass a different sequence identifier as the second argument to inspect another sequence:
 
 <ChronicleClientTabs snippet="projections/projection-declaration-language/adhoc-querying/custom-sequence" />
 
 ## Practical Use Cases
 
-`Query()` is well-suited for situations where you want projection results without the overhead of defining and registering a permanent read model:
-
-- **Back-office tooling** — maintenance screens for technical staff that need one-off views into the event log.
-- **Diagnostic dashboards** — quick summaries during incident investigation.
-- **Development utilities** — exploring what data an event sequence contains while building a feature.
-- **Integration tests** — asserting projected state in test scenarios without registering a projection.
+Use an ad-hoc query when you need a one-off view of a known, small event set: inspecting an order during diagnosis, exploring event data while developing a feature, or asserting projected state in a test. Check the number of matching events before relying on the result. A successful call does not establish that the query processed the full history.
 
 ## Limitations
 
 | Concern | Detail |
 |---------|--------|
-| **Event volume** | The server reads up to an internal maximum (currently 1 000 events). Sequences with more matching events will return incomplete results. |
-| **No persistence** | Results are not stored. Every call replays the relevant portion of the event log. |
-| **No registration** | A projection without `=> ReadModelType` can never be saved as a permanent projection. |
-| **No change notifications** | Results are a point-in-time snapshot; there is no observable / reactive variant of this API. |
+| Event volume | The server reads at most 1,000 matching events. More matching events mean incomplete results. |
+| No persistence | Results are not stored. Every call processes events again from the beginning of the selected sequence. |
+| No registration | `Query()` does not register a projection, with or without an explicit `=> ReadModelType` target. |
+| No change notifications | Results are a point-in-time snapshot; this API has no observable or reactive variant. |
+
+For a view that stays up to date as events arrive, define a [registered projection](../declarative/simple-projection.mdx). For declaration syntax and Chronicle's naming rules, return to [Projection Declaration Language](index.md).

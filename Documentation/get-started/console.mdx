@@ -1,15 +1,15 @@
 ---
-title: Add Chronicle to a console app
-description: Wire Chronicle into a plain .NET console app by hand, with no DI container or web host, using events, a projection and a reactor.
+title: Add Cratis Chronicle to a .NET console app
+description: Connect a .NET console app to Cratis Chronicle, record a book event, and check the event log and projected read models without setting up a host.
 ---
 
-A console app is the smallest place to run Chronicle: no web host, no dependency-injection container, nothing between you and the client. That's exactly why it's the clearest place to start — every moving part is something you write explicitly, so nothing is hidden by convention. (The [Worker Service](./worker) and [ASP.NET Core](./aspnetcore) guides let the host's DI container wire the same pieces up for you; start here if you want to see what that wiring actually does.)
+Use a .NET console app to learn how Cratis Chronicle records events and turns them into queryable state without setting up a web or worker host. You create the client and control its lifetime; the Chronicle kernel runs separately and stores the events.
 
-We'll build a small, familiar domain — a library — and by the end you'll have appended events and projected them into read models you can query in MongoDB.
+This guide follows a library book from registration to borrowing and return. Your first checkpoint is a book event in the workbench, followed by a read model: the current state built from those events. If you already need a long-running application, the [Worker Service](./worker) and [ASP.NET Core](./aspnetcore) guides use dependency injection (DI) to supply the client services.
 
 ## Before you start
 
-Have the Chronicle kernel running locally. [Run Chronicle locally](./choose-hosting-model#run-chronicle-locally) brings it up with a single `docker run` and lists the prerequisites (.NET 8+, Docker); this guide assumes it's listening on `chronicle://localhost:35000`.
+You need .NET 8 or higher and a local Chronicle kernel. Follow [Run Chronicle locally](./choose-hosting-model#run-chronicle-locally) to start the development image with Docker and check its health. This guide uses `chronicle://localhost:35000` and the image's bundled MongoDB at `mongodb://localhost:27017`.
 
 For a runnable console application, see the [SimpleConsole sample](https://github.com/Cratis/Chronicle/tree/main/Samples/SimpleConsole) on GitHub. It uses an employee domain rather than the library domain in this guide.
 
@@ -38,11 +38,13 @@ The [TypeScript client guide](/chronicle/clients/typescript/getting-started/) co
 
 ## Connect the client
 
-Everything in Chronicle is reached through a `ChronicleClient`. From a client you ask for the **event store** you want to work with — here, one named `Quickstart`. Because there's no DI container to do it for you, you create the client yourself:
+Create a `ChronicleClient` and open the `Quickstart` event store, the named space for this example's events and read models:
 
 <ChronicleClientTabs snippet="get-started/console/connect" />
 
-Each client has a built-in development connection for the local kernel, which carries the kernel's well-known development credentials: `ChronicleConnectionString.Development` in C#, `ChronicleOptions.development()` in Kotlin and TypeScript, and `Chronicle.Connections.ConnectionString.development()` in Elixir. Spell it out as shown. The .NET client also uses these credentials when you call `new ChronicleClient()` with no arguments. Given a `chronicle://` connection string without credentials, the .NET, Kotlin, Java and TypeScript clients fall back to them too, but the Elixir client does not and connects without authentication, so use `Chronicle.Connections.ConnectionString.development()` there. To connect to another kernel, pass your own `chronicle://…` connection string.
+`ChronicleConnectionString.Development` supplies the local endpoint and its well-known development credentials. The .NET parameterless constructor uses the same connection, but naming it here makes the choice explicit. Use your own connection string and credentials for a kernel outside this local setup.
+
+The snippet defines a helper method. Call `await GetStartedConsoleClient.Run()` from `Program.cs` to see the connection message. Add the append and query calls below inside `Run`, while the client is still alive. Creating the client explicitly does not disable artifact discovery: the .NET client still discovers your event types, projections, and reactors.
 
 That single `eventStore` is your handle to everything that follows:
 
@@ -55,6 +57,12 @@ flowchart LR
 
 [!INCLUDE [common](./_includes/common.mdx)]
 
+## Check the console app's result
+
+Inside `Run`, call `new GetStartedBookService(eventStore).AddBook()` and await the returned book id. Run the app and look in the `Quickstart` event store's **Sequences** view for `GetStartedBookAdded`. That confirms the append reached the kernel, rather than only confirming a connection.
+
+Query the read model after projection processing catches up. A materialized read model is stored state updated in the background, so an immediate read can be empty. Keep the client alive while checking reactor output; disposing it ends this application's event processing.
+
 ## Configure the MongoDB client
 
 The `GetStartedBooks` query above reads documents Chronicle wrote. With no container to hand you an `IMongoCollection<GetStartedBook>`, you create one yourself: connect a `MongoClient` to `mongodb://localhost:27017`, open the `Quickstart` database, and get the `GetStartedBooks` collection. For the driver to deserialize those documents, it also needs to match how Chronicle stores them — register these conventions once at startup, before the first query:
@@ -65,10 +73,8 @@ With the conventions registered, the `GetStartedBooks` query reads the projectio
 
 ## Recap
 
-You wired Chronicle into a bare console app by hand: created a `ChronicleClient`, opened the `Quickstart` event store, appended events for a small library domain, projected them into the `GetStartedBook` and `GetStartedBorrowedBook` read models with model-bound attributes, queried them through Chronicle and straight from the MongoDB sink, and reacted to one with a reactor. Because there was no DI container, every connection was explicit and in plain sight.
+The console app owns the client lifetime and appends events to `Quickstart`. The workbench shows the recorded facts; the read models show the library's current state. A host is not required to learn that flow, though it helps manage services in a long-running application.
 
 ## Where to go next
 
-- **[Build the same domain step by step](/chronicle/tutorial/)** — the tutorial walks the library model one concept at a time, explaining each as you go.
-- **Let a host wire it up** — move the same code into a [Worker Service](./worker) or an [ASP.NET Core](./aspnetcore) app and let its DI container register the artifacts for you.
-- **Understand the pieces** — the [Concepts](/chronicle/concepts/) section defines events, projections, reducers, and reactors in depth.
+Continue with the [tutorial](/chronicle/tutorial/) to build the library model step by step, or move the client setup into a [Worker Service](./worker) or [ASP.NET Core](./aspnetcore) app when you need a host. The [Concepts](/chronicle/concepts/) section explains the event log, projections, reducers, and reactors.

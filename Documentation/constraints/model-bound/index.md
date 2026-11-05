@@ -1,27 +1,25 @@
 ---
-description: Model-bound constraints declare Chronicle uniqueness rules with [Unique] and [RemoveConstraint] attributes directly on event types.
+title: Cratis Chronicle model-bound constraints
+description: Define Cratis Chronicle constraints on event models to reserve unique values, limit event occurrences, or close a stream after a domain event.
 ---
 # Model-bound constraints
 
-Model-bound constraints let you declare uniqueness rules directly on event types using attributes. No separate constraint class is needed — adorn the event type or its properties with attributes, and Chronicle registers the constraints automatically when the client starts.
+Cratis Chronicle model-bound constraints keep an append rule on the event property or type it protects. Use them to reserve an email address across event sources, allow an initialization event once per source, or close a stream when a domain event ends its lifecycle. An event source is the identity whose events you append, such as a user or project.
 
-> [!NOTE]
-> Elixir has a real equivalent: `unique(fields, opts)`, `unique_event_type(opts)`, and `remove_constraint(name)` macros declared directly on the event type module — it supports custom constraint names, grouping by name, a `:message` string or `{Module, :function}` callback, and `:scope` narrowing. Kotlin, Java, and TypeScript have no attribute/macro-based constraint declaration at all — only the [declarative](../declarative/) `IConstraint` class style, and even that is narrower than C#'s (see its own coverage note).
+You do not need a separate constraint class. The .NET client uses attributes, TypeScript uses decorators, and Kotlin and Java use annotations. Elixir uses `unique(fields, opts)`, `unique_event_type(opts)`, and `remove_constraint(name)` on the event type module, with options including `:message` and `:scope`. The uniqueness guides below show each client's syntax. Options differ between clients; a setting shown in one tab does not imply that every client exposes it.
 
-Use model-bound constraints when:
-
-- The uniqueness rule applies to a single event type
-- You want constraint metadata co-located with the event type it protects
-- You want the simplest possible syntax
+Choose the [declarative](../declarative/) approach when the rule needs configuration beyond your client's model-bound declarations. It also lets you keep a rule that spans several event types in one place.
 
 ## Constraint types
 
 | Type | Description |
 |---|---|
-| [Unique property](unique) | Enforce that a property value is unique across one or more event types |
-| [Unique event type](unique-event-type) | Enforce that only one event of a specific type can be appended per event source |
-| [Closing stream](closing-stream) | Close a stream scope when an event of a specific type is appended |
+| [Unique property](unique) | Prevent different event sources from claiming the same property value |
+| [Unique event type](unique-event-type) | Allow an event type once per event source until a removal event releases the constraint |
+| [Closing stream](closing-stream) | Stop further appends within a closed scope using the .NET attribute workflow |
 
 ## Discovery
 
-Chronicle scans all loaded assemblies for types adorned with `[Unique]` and `[RemoveConstraint]` and registers the constraints with the Kernel automatically when the client starts. No explicit registration is required.
+In .NET, the default artifact discovery finds model-bound constraints on registered event types and registers their definitions with the Kernel when the client starts. This includes `[Unique]`, `[RemoveConstraint]`, and `[ClosesStream]` declarations.
+
+If you supply a custom `IClientArtifactsProvider`, return the relevant event types through `UniqueConstraints`, `UniqueEventTypeConstraints`, `RemoveConstraintEventTypes`, and `ClosesStreamEventTypes`. The provider determines which declarations the client discovers.

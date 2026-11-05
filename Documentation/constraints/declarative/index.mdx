@@ -1,34 +1,35 @@
 ---
-description: Define Chronicle constraints in a class that implements IConstraint, which Chronicle discovers automatically without any registration.
+title: Declare Chronicle constraints with fluent rules
+description: Define Chronicle constraints in a dedicated class to share uniqueness rules across event types, release claims, or close stream scopes at append time.
 ---
 # Declarative constraints
 
-The declarative API lets you define constraints in a dedicated class by implementing `IConstraint`. Chronicle discovers all `IConstraint` implementations automatically — no registration is needed.
+Declarative constraints keep an append-time rule in a dedicated class rather than on an event type. Use them when several events share one uniqueness rule, when a violation needs a dynamic message, or when you want to control the constraint's name. In .NET, implement `IConstraint` and describe the rule through its fluent builder, chaining calls that select the events, properties, and release behavior.
+
+For a rule that belongs directly on an event type or property, start with [Model-bound constraints](../model-bound/). Both approaches send definitions to the Chronicle Kernel, where the append is checked.
 
 :::note[Client coverage]
-Kotlin and Java have a real `IConstraint`/`IConstraintBuilder` API, but it's narrower than C#'s: it has no `RemovedWith` (releasing a held value), no `WithName` (custom constraint names), no dynamic message callback, and its `on(...)` can only target a single event type per unique constraint — no chaining across multiple event types. Tabs on this page that need any of those are marked as gaps for Kotlin/Java rather than silently omitted. Elixir declares a constraint as a standalone module with `use Chronicle.Events.Constraint`, and also as event-type-attribute macros — see [Model-bound constraints](../model-bound/) — both of which support name-based grouping and releasing.
+Kotlin and Java provide `IConstraint`/`IConstraintBuilder` and can combine different event types in one property constraint. They do not provide `RemovedWith` to release a claim, `WithName` for a custom name, or a dynamic message callback. Their unique event type API is `uniqueFor`.
+
+Elixir uses a standalone module with `use Chronicle.Events.Constraint`, or event-type-attribute macros in the model-bound form. Both forms support name-based grouping and releasing claims. Use the client tabs for the syntax and limits of the selected client; the .NET method names below do not imply matching APIs in every language.
 :::
-
-Use declarative constraints when you need:
-
-- Uniqueness spanning multiple event types with different property names
-- A callback to compose dynamic violation messages
-- More explicit control over constraint names
 
 ## Constraint types
 
-| Type | Description |
+| Rule you need | Constraint |
 |---|---|
-| [Unique property](unique) | Enforce that a property value is unique across one or more event types |
-| [Unique event type](unique-event-type) | Enforce that only one event of a specific type can be appended per event source |
-| [Closing stream](closing-stream) | Close a stream scope when an event of a specific type is appended |
+| Reserve a value, such as a project name, so another event source cannot claim it | [Unique property](unique) |
+| Allow an event only once per event source, or once per cycle ended by a release event | [Unique event type](unique-event-type) |
+| Stop later appends in a selected scope after a closing event | [Closing stream](closing-stream) |
 
 ## Defining a constraint
 
-Implement `IConstraint` and call the builder in `Define`:
+The following rule reserves a project's name when it is created and releases the name when the project is removed. In .NET, put the declaration in `Define`:
 
 <ChronicleClientTabs snippet="constraints/declarative/index/defining" />
 
+The name belongs to the project event source. Appending that same name again for the same project is allowed; a different project cannot claim it while it is held. Continue with [Unique property constraints](unique) to choose how long values stay reserved.
+
 ## Discovery
 
-Chronicle scans all loaded assemblies for types that implement `IConstraint` and registers them with the Kernel automatically when the client starts. No explicit registration is required.
+The .NET client's default artifact discovery finds `IConstraint` implementations in the assemblies it scans and registers their definitions with the Kernel during client startup. You do not need to register each class separately when using that discovery.

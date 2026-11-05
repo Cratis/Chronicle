@@ -1,4 +1,5 @@
 ---
+title: Configure server TLS in Cratis Chronicle
 description: Configure TLS for Chronicle Server, which serves gRPC, the Workbench, REST API, OAuth and health endpoints over HTTPS on one port.
 ---
 # TLS Configuration (Server)

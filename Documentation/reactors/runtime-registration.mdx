@@ -1,16 +1,35 @@
 ---
-description: Register an in-process Chronicle reactor at runtime with a stable ID for bridges and plugin hosts that discover subscriptions from configuration.
+title: "Cratis Chronicle reactors: register runtime event types"
+description: Register a Cratis Chronicle reactor at runtime in .NET to handle JSON events by type identifier and generation, without defining a .NET class per event.
 ---
 # Register a Reactor at Runtime
 
-When a bridge or plugin host discovers its event subscriptions from configuration, it need not create a reactor class for each subscription. Register an in-process reactor with a stable ID, one or more event types (including their generations), and an asynchronous handler:
+Cratis Chronicle's .NET runtime reactor API handles events as JSON when a bridge or plugin host knows their identifiers but has no .NET event classes. Register a stable reactor ID, the event types and generations to observe, and an asynchronous callback in the application that will process them.
+
+A generation identifies a version of an event type's schema. Include it in the subscription so Chronicle knows which event representation you are requesting:
 
 <ChronicleClientTabs snippet="reactors/runtime-registration/delegate" />
 
-The handler receives the event context and JSON content as delivered by Chronicle, along with the kernel's generation-to-JSON map. It does not deserialize the event into a typed event or select a different generation's content. The map may contain only some generations; it is not a promise that every subscribed generation is present. On storage reads and catch-up, the context's generation reflects what the kernel delivers, which may differ from the generation originally appended when content was migrated. Do not use it as an immutable original-generation identifier across replay.
+## Read the delivered event
 
-Registration observes the event log by default; use `OnEventSequence` to choose another sequence. A reactor is replayable by default; use `NotReplayable` if repeating its side effects is unsafe. The handler must complete successfully before Chronicle acknowledges its partition. If it throws or its task fails, the partition fails without advancing past that event. Make downstream effects idempotent to tolerate retries and reconnects.
+The callback receives `ReactorEvent`: its `Context` describes the delivery, `Content` holds JSON, and `GenerationalContent` maps generation numbers to JSON strings. This API does not deserialize a .NET event or select another generation's content for you.
 
-Keep the reactor ID stable across restarts so Chronicle can retain its observation position. The returned handler exposes state and failed partitions through the same APIs as a typed reactor; use `GetHandlerById` to look it up later. `Unregister(id)` disconnects the local observation stream and removes the callback from this client. It does not erase the kernel's stored observer state. A still-registered reactor reconnects with its original subscription and callback. Unregistering an unknown ID does nothing. Delegate handlers report `typeof(object)` as their `ReactorType`. Duplicate reactor IDs are rejected, including IDs shared by two discovered reactor classes: one kernel observer ID cannot independently track two reactors.
+The map can contain only some generations, so check for the entry you need rather than assuming every subscribed generation is present. During storage reads and catch-up, the context's generation describes what the kernel delivers. If content has been migrated, that can differ from the originally appended generation. Do not use it as an immutable original-generation identifier across replay.
 
-For known event types, prefer a [typed reactor](getting-started) with discovered handler methods.
+## Choose the sequence and replay policy
+
+Runtime registration observes the default event log. Use `OnEventSequence` to select another sequence, and `NotReplayable` to disable replay when the effect must not run through history again. Disabling replay does not prevent initial catch-up or retries. Runtime registration has no start-at-tail option, so a new observer still catches up on existing history.
+
+Chronicle awaits the callback before acknowledging progress. If it throws or its task fails, the partition fails without advancing past that event. Make downstream effects idempotent: repeating a request must not repeat its business outcome. An external call can succeed even if the handler later fails to report success.
+
+## Keep the registration identity stable
+
+Keep the reactor ID unchanged across restarts so Chronicle can retain its observation position. IDs must be unique among the reactors registered with that event store, including discovered reactor classes. Duplicate IDs are rejected because one observer ID cannot independently track two reactors.
+
+The returned handler exposes state and failed partitions through the same APIs as a typed reactor. Use `GetHandlerById` to retrieve it later. Delegate handlers report `typeof(object)` as their `ReactorType`; that value does not identify the subscribed event types.
+
+## Disconnect or unregister
+
+A registered reactor reconnects with its original subscription and callback after a connection loss. `Unregister(id)` instead disconnects its local observation stream and removes the callback from this client. It does not erase the kernel's stored observer state, and unregistering an unknown ID does nothing.
+
+When .NET event types are available, prefer a [typed reactor](getting-started) with discovered methods or [fluent registration](fluent-registration) with typed delegates. Those APIs supply deserialized events instead of leaving JSON handling to the callback.

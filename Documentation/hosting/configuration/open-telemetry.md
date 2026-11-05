@@ -1,9 +1,10 @@
 ---
-description: Chronicle exports OpenTelemetry signals over OTLP, configured with standard environment variables, for example to the Aspire Dashboard or Prometheus.
+title: Chronicle OpenTelemetry configuration
+description: Export Chronicle metrics, traces, and logs over OTLP, choose how traces expose event source ids, and connect a local or hosted telemetry backend.
 ---
 # Open Telemetry
 
-Chronicle exports telemetry signals through the [OpenTelemetry Protocol (OTLP)](https://opentelemetry.io/docs/specs/otlp/). Telemetry is always enabled and configured via standard OpenTelemetry environment variables.
+Chronicle exports metrics, traces, and logs through the [OpenTelemetry Protocol (OTLP)](https://opentelemetry.io/docs/specs/otlp/) so you can investigate event processing and observer failures in your telemetry backend. Instrumentation is always enabled; use standard OpenTelemetry environment variables to configure export.
 
 ## Signals
 
@@ -21,20 +22,22 @@ Telemetry is configured using standard OpenTelemetry environment variables:
 
 | Variable | Default | Description |
 | --- | --- | --- |
-| `OTEL_EXPORTER_OTLP_ENDPOINT` | none | OTLP receiver endpoint (e.g. `http://localhost:4317`) |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | exporter default | OTLP receiver endpoint (e.g. `http://localhost:4317`) |
 | `OTEL_EXPORTER_OTLP_PROTOCOL` | `grpc` | Export protocol: `grpc` or `http/protobuf` |
 | `OTEL_EXPORTER_OTLP_HEADERS` | none | Additional headers (e.g. API keys for cloud backends) |
 | `OTEL_SERVICE_NAME` | `Chronicle` | Service name reported to the telemetry backend |
 
-When `OTEL_EXPORTER_OTLP_ENDPOINT` is not set, Chronicle does not export telemetry but the instrumentation is still active.
+Set `OTEL_EXPORTER_OTLP_ENDPOINT` to the receiver you want Chronicle to use. Leaving it unset is not an opt-out: Chronicle registers OTLP exporters without requiring this variable.
 
 ## Event source ids and log levels
 
-Event source ids are `Raw` in traces by default. Opt into `Hashed` or `Omitted` separately in the kernel and clients. Orleans grain-instance ids are always removed before span export, and Chronicle append metrics do not use event source ids as dimensions. These settings do not redact logs. See [event source ids in telemetry](/chronicle/hosting/configuration/telemetry-identifiers/) for configuration, key rotation, metric dimensions, and observer log levels.
+Before exporting traces, decide whether your backend should receive original event source ids. Chronicle uses `Raw` by default; choose `Hashed` for keyed correlation or `Omitted` to leave the id out. Apply the choice separately in the kernel and each client.
+
+The kernel removes Orleans grain-instance id tags before span export, and Chronicle append metrics do not use event source ids as dimensions. Logs can still contain raw ids and exception details. Follow [event source ids in telemetry](/chronicle/hosting/configuration/telemetry-identifiers/) to configure the policy and plan key rotation; protect log access and retention separately.
 
 ## Local development with .NET Aspire Dashboard
 
-The Kernel ships with a `docker-compose.yml` that starts the [.NET Aspire Dashboard](https://learn.microsoft.com/en-us/dotnet/aspire/fundamentals/dashboard/overview) as a lightweight all-in-one OTLP receiver and telemetry viewer.
+For a local telemetry viewer, use the [.NET Aspire Dashboard](https://learn.microsoft.com/en-us/dotnet/aspire/fundamentals/dashboard/overview) service in `Source/Kernel/Server/docker-compose.yml`. It receives OTLP data and displays metrics, traces, and logs. The example below allows anonymous access, so keep it local and do not expose its ports publicly.
 
 ```yaml
 aspire-dashboard:
@@ -47,13 +50,13 @@ aspire-dashboard:
     - 4317:18889    # OTLP/gRPC receiver
 ```
 
-Start the services:
+From `Source/Kernel/Server`, start the services:
 
 ```bash
 docker compose up -d
 ```
 
-Then set the endpoint environment variable before starting the Kernel:
+When running the kernel on your host machine, set the endpoint to the dashboard's published OTLP port:
 
 ```bash
 OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317 dotnet run
@@ -63,7 +66,7 @@ Open the Aspire Dashboard at [http://localhost:18888](http://localhost:18888) to
 
 ## Example: Prometheus and Grafana
 
-For production-grade metric collection, connect Chronicle to a Prometheus-compatible OTLP receiver (for example the [OpenTelemetry Collector](https://opentelemetry.io/docs/collector/)):
+To view Chronicle metrics in Grafana through Prometheus, send them to an OTLP receiver with Prometheus export configured, such as the [OpenTelemetry Collector](https://opentelemetry.io/docs/collector/):
 
 ```bash
 OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
@@ -80,9 +83,11 @@ OTEL_EXPORTER_OTLP_HEADERS=x-api-key=your-api-key
 
 ## Generated instrument names
 
-Chronicle consumes `Cratis.Metrics.Roslyn` 7.27.0, which includes the instrument-name fix released in 7.20.0. Generated counters and gauges now keep the description in the instrument's description metadata, not its unit. For example, the successful-observation counter has the instrument name `chronicle-observer-successful-observations`, no unit, and description `Number of successful observations per observer in a given event store and namespace`. A Prometheus exporter using default translation is expected to expose `chronicle_observer_successful_observations_total` with that description as its HELP text, rather than including the description in the metric name. Translation depends on the backend; OTLP serialization coverage alone does not verify Prometheus exposition or HELP text.
+Chronicle uses `Cratis.Metrics.Roslyn` 7.32.0 to generate counters and gauges. Descriptions belong to the instrument's description metadata, not its unit. For example, the successful-observation counter is named `chronicle-observer-successful-observations`, has no unit, and has the description `Number of successful observations per observer in a given event store and namespace`.
 
-The observer failure counters and suspected-undelivered queue counter remain hand-written to preserve their failure-path initialization and observer tagging. They no longer need a workaround for generated names. Revisit that implementation with the [convention-name migration](https://github.com/Cratis/Chronicle/issues/4459), keeping the existing instrument names during this fix. That migration is separate and still pending; coordinate dashboard and alert changes with it rather than assuming the generator upgrade also renames instruments to the convention.
+With default Prometheus translation, expect `chronicle_observer_successful_observations_total` with that description as its HELP text, rather than a name containing the description. Check the name exposed by your backend before writing a query: OTLP serialization alone does not verify Prometheus exposition or HELP text.
+
+The observer failure counters and suspected-undelivered queue counter are hand-written to preserve their failure-path initialization and observer tagging. Their names are unchanged. The [convention-name migration](https://github.com/Cratis/Chronicle/issues/4459) is a separate change; do not assume a generator upgrade also renames instruments in your dashboards and alerts.
 
 ## Metrics instrumented
 
@@ -234,7 +239,8 @@ produce `cratis.chronicle.observer.handle` spans with `cratis.observer.id`, `cra
 `cratis.event.count` tags.
 
 Kernel gRPC client instrumentation is disabled by default to reduce trace volume. To opt in, set
-`Cratis:Chronicle:Telemetry:GrpcClientTracing` to `true`:
+`Cratis:Chronicle:Telemetry:GrpcClientTracing` to `true`. This example shows the full configuration
+hierarchy used in `appsettings.json`; in `chronicle.json`, use only the inner `telemetry` section:
 
 ```json
 {
@@ -254,14 +260,15 @@ exporter, endpoint, or resource configuration.
 
 ### Orleans trace volume
 
-Chronicle's own telemetry setup (`AddChronicleTelemetry`) **no longer exports Orleans runtime and grain-call spans by default**. These sources accounted
-for about 99% of kernel spans during replay. Chronicle spans remain enabled, and Orleans
-`AddActivityPropagation()` remains in place: trace context continues across grain calls without
-exporting their carrier activities. Chronicle spans in the called grain keep the caller's trace id,
+Chronicle's telemetry setup (`AddChronicleTelemetry`) leaves Orleans runtime and grain-call spans
+out of exports by default to reduce trace volume. Chronicle spans remain enabled, and Orleans
+`AddActivityPropagation()` keeps trace context flowing across grain calls without exporting the
+Orleans activities that carry it. Chronicle spans in the called grain keep the caller's trace id,
 but their direct parent is an unexported Orleans span, so a trace viewer may show a missing
 intermediate parent. Calls outside an existing trace do not create carrier activities.
 
-To restore Orleans spans, set `Cratis:Chronicle:Telemetry:OrleansTracing=true`:
+To include Orleans spans, set `Cratis:Chronicle:Telemetry:OrleansTracing=true`. As above, this is the
+full configuration hierarchy; omit the `cratis` and `chronicle` wrappers in `chronicle.json`:
 
 ```json
 {

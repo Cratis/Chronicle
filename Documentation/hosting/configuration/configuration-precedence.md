@@ -1,4 +1,5 @@
 ---
+title: Configuration precedence in Cratis Chronicle
 description: Chronicle configuration precedence from built-in defaults through chronicle.json to Cratis__Chronicle__ environment variable overrides.
 ---
 # Configuration Precedence

@@ -1,4 +1,5 @@
 ---
+title: Documentation and snippets for Cratis Chronicle clients
 description: How to shape a new Chronicle client's Documentation folder, snippets and CI validator so it plugs into the shared Chronicle docs site.
 ---
 # Documentation and snippets

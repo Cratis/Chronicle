@@ -1,4 +1,5 @@
 ---
+title: Configure constraint-index repair in Cratis Chronicle
 description: Configure Chronicle constraint-index repair retries, time budgets, cadence, poison threshold, and memory caps in chronicle.json or environment variables.
 ---
 # Constraint index repair

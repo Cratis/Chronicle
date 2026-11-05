@@ -1,11 +1,12 @@
 ---
-description: Attach plain and custom tags to appended Chronicle events as metadata for categorization and filtering, for single appends and AppendMany.
+title: Append Chronicle events with tags
+description: Add plain or named tags when appending Chronicle events to categorize them, filter reducers and reactors, or find events by a runtime identifier.
 ---
 # Appending with Tags
 
-Chronicle lets you associate tags with appended events. Tags are stored as event metadata and can be used for categorization and filtering. There are two kinds: plain tags, which are simple strings, and named tags, which pair a name with a value.
+Add tags when appending Chronicle events so you can categorize or find them without adding fields to the event payload. Use plain string tags to select events for reducers and reactors, or named tags to attach a name and value such as a checkout session identifier.
 
-The tags you add don't take part in concurrency control. A [concurrency scope](./concurrency.mdx) narrows by the built-in metadata tags below and by event type.
+Custom tags do not take part in concurrency control. A [concurrency scope](./concurrency.mdx) narrows by the built-in metadata tags below and by event type.
 
 ## Built-in metadata tags
 
@@ -20,11 +21,13 @@ You can add custom tags in addition to these built-in tags. For the full list an
 
 ## Custom tags
 
-Custom tags are simple strings that you provide when appending. They are merged with any static tags defined on the event type.
+Pass plain string tags through the `tags:` argument when appending. Chronicle merges them with any static tags defined on the event type.
 
 ## Append with tags
 
 <ChronicleClientTabs snippet="events/appending-with-tags/append" />
+
+To deliver only matching events to a reducer or reactor, add a [tag filter](filtering/by-tag.mdx) to that observer. Tags on the event supply the metadata; the observer's filter decides which events it receives.
 
 ## AppendMany with tags
 
@@ -38,17 +41,15 @@ A named tag pairs a name with an exact value, for example `checkout-session` = `
 
 ### Append with named tags
 
-Use `AppendWithNamedTags` for a tagged append; the existing `Append` call remains unchanged.
+Use `AppendWithNamedTags` to supply name/value pairs alongside any plain tags. The existing `Append` call remains unchanged.
 
 <ChronicleClientTabs snippet="events/appending-with-tags/append-named-tags" />
 
-Named tags are stored separately from plain tags. You can pass both on the same append, and neither affects the other.
+In this example, `checkout-session` identifies the session and `sales-channel` records `web`. The plain `checkout` tag remains separate: named tags do not change plain-tag matching.
 
 ### AppendMany with named tags
 
-Use `AppendManyWithNamedTags` when supplying call-level named tags.
-
-Each event in a batch can carry its own named tags, and the append call can add named tags that apply to every event. Chronicle merges the two for each event:
+Use `AppendManyWithNamedTags` to add named tags to every event in a batch. Each event can also carry its own named tags, so a transfer can share one identifier while the withdrawal and deposit retain different `ledger-side` values. Chronicle merges the two sets for each event:
 
 - An exact duplicate of a name and value pair is kept once.
 - The same name with a different value stays as a separate tag.

@@ -1,4 +1,5 @@
 ---
+title: REST API internals in Cratis Chronicle
 description: The Chronicle REST API client is exposed by the kernel container behind a feature flag, mainly for the Workbench; this covers its internals.
 ---
 # API

@@ -1,4 +1,5 @@
 ---
+title: Empty results and query failures in Cratis Chronicle clients
 description: How a Chronicle client should normalize empty collection results and distinguish them from query failures at the contract boundary.
 ---
 # Empty results and query failures

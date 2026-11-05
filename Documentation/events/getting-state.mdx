@@ -1,21 +1,14 @@
 ---
-description: Read Chronicle event sequence state such as the tail sequence number to capture checkpoints or check whether an observer has caught up.
+title: Cratis Chronicle sequence state for checkpoints and progress
+description: Read a Cratis Chronicle sequence's tail to capture a history boundary, then compare observer progress separately to assess whether processing has caught up.
 ---
 # Getting state
 
-Event sequence state provides information about how far a sequence has progressed. The most common state value is the tail sequence number, which represents the latest event appended to the sequence. Use the `IEventSequence` APIs, such as `GetTailSequenceNumber` and related state calls, to capture the current position.
+The tail sequence number in Cratis Chronicle identifies the latest appended event matching a read's filters. Use it to capture a boundary for a history read or to compare with an observer's progress. It says what has been appended, not what a projection, reactor, or reducer has finished processing.
 
-Use sequence state for scenarios such as:
+In .NET, `IEventSequence.GetTailSequenceNumber` returns that position. A read with no matching events returns `EventSequenceNumber.Unavailable`; do not save that sentinel as an event locator. A captured tail does not freeze the sequence or prevent duplicate processing when you resume.
 
-- Tracking progress for consumers and observers
-- Capturing a point in time for read model time travel
-- Avoiding duplicate processing when resuming work
-
-For point-in-time reads of read models, capture the sequence position from the event sequence state and use it alongside the read model APIs described in the read models guides.
-
-Related reading:
-
-- [Getting a Collection of Instances](../read-models/getting-collection-instances)
+For point-in-time read models, follow [Getting snapshots](../read-models/getting-snapshots.mdx) and check the snapshot requirements rather than treating a tail value as a snapshot. To read current query results instead, use [Getting a Collection of Instances](../read-models/getting-collection-instances).
 
 ## Examples
 
@@ -23,16 +16,18 @@ Related reading:
 
 <ChronicleClientTabs snippet="events/getting-state/tail" />
 
-Kotlin and Java don't currently expose a way to read the tail sequence number at all — their public event sequence APIs only support appending and checking for existence.
+This captures a history boundary; it does not persist a consumer checkpoint. Save your consumer's successfully processed position separately, and account for the inclusive start when [reading from a checkpoint](./getting-events#read-from-a-checkpoint). Kotlin, Java, and TypeScript expose `getTailSequenceNumber`; Elixir exposes `get_tail_sequence_number/2`.
 
 ### Capture the tail for a specific event source and event types
 
 <ChronicleClientTabs snippet="events/getting-state/tail-for-event-source" />
 
-This scoped form (filtering by event source and event types) is currently C#-only. TypeScript can capture the *overall* tail (see above) but doesn't expose a way to scope it to specific event types. Elixir scopes the tail to an observer's event types with `get_tail_sequence_number_for_observer/2`.
+The .NET example narrows the tail to one event source and selected event types. TypeScript also accepts event-source and event-type filters on `getTailSequenceNumber`. Kotlin and Java accept an optional event source identifier on that method, without an event-type filter.
 
 ### Check whether an observer is caught up
 
 <ChronicleClientTabs snippet="events/getting-state/tail-for-observer" />
 
-Computing the relevant tail for a specific observer is currently a C#-only capability.
+This .NET call calculates the tail for the event types handled by the observer; it does not read the observer's progress. Compare that boundary with the observer's recorded position and check for failures or quarantined partitions before concluding that processing is complete. See [Observers](../concepts/observers.mdx) for progress and recovery.
+
+TypeScript provides `getTailSequenceNumberForObserver`, and Elixir provides `get_tail_sequence_number_for_observer/2`. These helpers calculate a relevant event tail, not a completion guarantee.
