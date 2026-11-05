@@ -1,6 +1,6 @@
 ---
 title: Closing events
-description: Declare an event type that closes a stream scope in the same step as its append, and the event types that reopen it.
+description: Declare Chronicle closing events that commit a stream closure with the event append, choose the scope, configure reopening events, and test the behavior.
 ---
 
 A manual `CompleteStream` call writes nothing to the log, cannot be rebuilt from events and is a second step after the final append. A closing event removes all three problems. You declare that appending a particular event type closes a scope. The kernel then writes the event and the closure together, and the closure can be rebuilt from the log.

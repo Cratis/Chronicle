@@ -1,6 +1,6 @@
 ---
 title: Roll out a new version to a multi-node Chronicle cluster
-description: Check whether two Chronicle versions can share a cluster, replace the nodes one at a time, know what each starting node does to a SQL database, and see which guarantees Chronicle does not give you.
+description: Check Chronicle version compatibility before a rolling deployment, replace cluster nodes in order, and plan SQL schema changes, probes, and recovery.
 ---
 
 This guide shows an operator how to replace the nodes of a Chronicle kernel cluster one node at a time. You finish knowing whether the two versions can run side by side at all, with a rollout order, probe settings and a list of things to watch while it runs.

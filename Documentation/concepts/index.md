@@ -1,6 +1,6 @@
 ---
 title: Concepts
-description: Understand Chronicle's core event-sourcing concepts, terminology, and consistency model.
+description: Explore Chronicle's event-sourcing building blocks, from event stores and sequences to observers, projections, reducers, and consistency boundaries.
 ---
 
 The concepts area explains the building blocks of Chronicle: the event store, events and event sequences, and the observers (projections, reducers and reactors) that turn events into read models and side effects.

@@ -1,6 +1,6 @@
 ---
 title: Watching Read Models
-description: Subscribe to read model changes when a client needs pushed updates instead of polling.
+description: Subscribe to Chronicle read model changes with Watch<T>() for pushed updates instead of polling, and choose between changesets and collection snapshots.
 ---
 
 Watching a read model gives a client a stream of changes as Chronicle applies projections and reducers. Use it for live dashboards, cache invalidation, background coordination, and interfaces that should update without polling.

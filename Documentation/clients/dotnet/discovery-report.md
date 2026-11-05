@@ -1,6 +1,6 @@
 ---
 title: Discovery report and identity drift
-description: Inspect discovered .NET client artifacts and configure diagnostics for likely identity changes before registration.
+description: Inspect Chronicle .NET artifact discovery reports, configure identity-drift diagnostics, and distinguish discovery from successful registration.
 ---
 
 Use `IEventStore.Discovery` to inspect what the .NET client found, and `Registration.IdentityDrift` to inspect likely renames before registration. These are diagnostics, not proof that every artifact registered successfully; use the [registration outcome](registration-outcome.md) for that.

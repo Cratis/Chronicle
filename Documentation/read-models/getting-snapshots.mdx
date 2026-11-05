@@ -1,6 +1,6 @@
 ---
 title: Getting Snapshots
-description: Inspect the historical states Chronicle produced for one read model key, grouped by correlation ID.
+description: Inspect Chronicle projection snapshots for one read model key, grouped by correlation ID, to trace historical state changes and understand replay cost.
 ---
 
 Snapshots let you inspect how a read model reached its current state. Chronicle groups events by correlation ID, replays the read model after each group, and returns the state produced by each step.

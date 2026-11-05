@@ -1,6 +1,6 @@
 ---
 title: Read models scoped to one event stream
-description: Declare a passive, source-keyed model for a monthly rule and read only its declared event stream.
+description: Declare a passive Chronicle read model scoped to one event stream, keep the source as its key, and guard decisions while routing every writer consistently.
 ---
 
 Use a per-stream read model when a rule depends on folded state for one stream, such as withdrawals for one account in one month. A whole-account balance would mix months; keying only by month would collide across accounts. Keep the account as the model's `Id` and scope the fold to the stream instead.

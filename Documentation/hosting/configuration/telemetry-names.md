@@ -1,6 +1,6 @@
 ---
 title: Telemetry names
-description: Migrate Chronicle metrics, attributes, and client spans to the shared Cratis OpenTelemetry naming convention.
+description: Opt into Chronicle's shared Cratis OpenTelemetry metric and span names, map legacy attributes, and plan kernel and client naming migrations separately.
 ---
 
 Chronicle preserves existing kernel metric names and metadata by default (`Telemetry:MetricNames=Legacy`). Opt into `Telemetry:MetricNames=Convention` to publish metrics under `cratis.chronicle.*`, with UCUM units and shared attribute keys. The public .NET registry is the `WellKnownTelemetryAttributes`, `WellKnownMetricNames`, `WellKnownSpanNames` and `WellKnownClientSpanNames` classes in `Cratis.Chronicle.Diagnostics`. Client metrics will use `cratis.chronicle.client.*`; this change does not add client metrics.

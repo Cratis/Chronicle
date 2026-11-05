@@ -1,6 +1,6 @@
 ---
 title: Host the kernel on Container Apps, App Service or Cloud Run
-description: Run the Chronicle kernel as a single instance on Azure Container Apps, an App Service sidecar or Google Cloud Run, with h2c ingress, probes and always-allocated CPU.
+description: Host a single Chronicle kernel on Azure Container Apps, App Service, or Google Cloud Run, configuring ingress, TLS, health probes, and CPU allocation.
 ---
 
 This page lists what changes when you run the Chronicle kernel on Azure Container Apps (ACA), Azure App Service or Google Cloud Run instead of Kubernetes or virtual machines. For storage and identity, see [Run Chronicle on Azure](azure.md). For the general production checklist, see [Production deployment](production.md).

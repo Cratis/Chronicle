@@ -1,6 +1,6 @@
 ---
 title: "Interpreting Integration Timings"
-description: "Separate build, fixture, scenario, SQL command and cleanup costs without adding overlapping measurements."
+description: "Collect and interpret opt-in Chronicle integration timings to separate build, fixture, scenario, SQL, and cleanup costs without double-counting phases."
 ---
 
 Opt-in integration timings explain where an existing test invocation spends time. They do not change test selection, timeouts, retries, database isolation or host lifetime. They are diagnostics, not a benchmark or a speedup claim.

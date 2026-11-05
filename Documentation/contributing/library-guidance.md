@@ -1,6 +1,6 @@
 ---
 title: Library guidance
-description: How Microsoft's .NET library, options, and logging guidance applies to Chronicle contributions, with bounded evidence and the repository's exception-naming convention.
+description: Review Chronicle contributions against Microsoft's .NET library, options, and logging guidance, with scoped evidence and domain exception naming conventions.
 ---
 
 Use this checklist when reviewing a Chronicle library contribution. It connects Microsoft's guidance to specific .NET client and kernel surfaces; it is not a claim that every Chronicle package, API, or platform conforms. Source paths below are relative to the repository root.

@@ -1,6 +1,6 @@
 ---
 title: Closing stream constraint
-description: Adorn an event type with [ClosesStream] so that appending it closes a stream scope, and name the events that reopen it.
+description: Apply [ClosesStream] to a Chronicle event type to close a stream scope on append, select scope dimensions, and configure names and reopening events.
 ---
 
 Adorn the event type class with `[ClosesStream]` to close a stream scope whenever an event of that type is appended. The closure is written in the same step as the event, and later appends inside the scope are rejected with a `StreamClosed` violation. For the concept, the guarantees and when to prefer it over `CompleteStream`, see [Closing events](../../closing-streams/closing-events.mdx).

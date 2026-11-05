@@ -1,6 +1,6 @@
 ---
 title: "Model-Bound Projections"
-description: "Build read models by putting projection attributes on the read model type itself."
+description: "Build Chronicle read models with projection attributes on the model, combining convention-based mapping with explicit metadata, stable identity, and discovery."
 ---
 
 Model-bound projections let the read model describe how it is built. Instead of creating a separate `IProjectionFor<T>` class, you put the projection metadata directly on the read model type and Chronicle builds the projection definition from those attributes.

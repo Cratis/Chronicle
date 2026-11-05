@@ -1,6 +1,6 @@
 ---
 title: Compliance
-description: Protect personally identifiable information in an immutable event log with encryption, erasure, and redaction.
+description: Protect personal data in Chronicle's immutable event log with PII markers, encryption, subject erasure, and redaction while understanding compliance limits.
 ---
 
 Modern applications collect and store personal data. Regulations such as the General Data Protection Regulation (GDPR) require that this data be protected, identifiable, and erasable on demand. Chronicle provides first-class support for compliance requirements directly in the event sourcing model, so that protection is applied consistently and automatically rather than scattered across application code. GDPR is one regime among several; see [Regulatory responsibilities](regulatory-responsibilities.md) for HIPAA, SEC/PCAOB, PCI DSS and cross-border transfers.

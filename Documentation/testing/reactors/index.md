@@ -1,6 +1,6 @@
 ---
 uid: Chronicle.Testing.Reactors
-description: Test Chronicle reactors by putting logic in pure functions and proving the framework contract with ReactorScenario.
+description: Test Chronicle reactor logic through direct handler calls, then verify side-effect wiring with ReactorScenario in process without a kernel or transport.
 ---
 # Testing Reactors
 

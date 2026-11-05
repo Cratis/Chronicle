@@ -1,6 +1,6 @@
 ---
 title: Close the books
-description: End a period, version or batch with a domain fact, then continue in the next stream without a rollover race.
+description: Close a Chronicle ledger period with a domain event, route new facts to the next stream, and handle corrections and carry-over without a rollover race.
 ---
 
 **Goal:** a ledger, a monthly report or a billing run works in periods. When a period is finished, nothing more may be appended to it, and new facts must go to the next period.

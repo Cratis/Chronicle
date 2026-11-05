@@ -1,6 +1,6 @@
 ---
 title: "Event Sequence"
-description: "What an event sequence is, how the event log relates to other sequences, and how events are revised."
+description: "Understand Chronicle event sequences, sequence numbers and metadata, how the event log relates to named sequences, and event generations and revisions."
 ---
 
 Chronicle has the concept of event sequences. These can be looked upon as collections of events.

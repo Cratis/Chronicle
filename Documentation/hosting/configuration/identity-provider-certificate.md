@@ -1,6 +1,6 @@
 ---
 title: "Identity Provider Certificate Configuration"
-description: "Migrate away from the ignored identityProvider.certificate setting."
+description: "Replace the ignored Chronicle identityProvider.certificate setting with the server TLS certificate used by the internal OAuth token endpoint."
 ---
 
 ## Migrate to the server TLS certificate

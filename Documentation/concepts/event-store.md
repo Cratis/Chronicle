@@ -1,6 +1,6 @@
 ---
 title: "Event Store"
-description: "What a Chronicle event store holds, and the databases it can be stored in."
+description: "Understand what a Chronicle event store holds, from event sequences to observers and read models, and how namespaces and storage databases fit together."
 ---
 
 Chronicle offers what is called an event store which basically means a special purpose database

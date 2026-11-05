@@ -1,6 +1,6 @@
 ---
 title: "Returning Side Effects from Reactor Handler Methods"
-description: "Return events from a reactor handler and let Chronicle append them, and why such handlers are marked [OnceOnly]."
+description: "Return side-effect events from Chronicle reactor handlers, route them to event sources, add concurrency scopes, and understand OnceOnly and client limits."
 ---
 
 Reactor handler methods can return side-effect events directly instead of taking a dependency on `IEventLog`. The framework automatically appends the returned events to the correct sequence after the handler completes.

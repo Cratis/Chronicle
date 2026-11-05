@@ -1,6 +1,6 @@
 ---
 title: Designing read models
-description: Read models are cheap, disposable, and meant to be specialized — design them for the query, not for reuse.
+description: Design disposable Chronicle read models around specific queries, choose declarative projections, and account for eventual consistency and materialization.
 ---
 
 If [modeling events well](./modeling-events) is about capturing truth, designing read models is about *presenting* it. The events are your single source of truth; a read model is just one view of them, built for one job. That reframing changes how you design.

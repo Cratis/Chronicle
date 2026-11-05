@@ -1,6 +1,6 @@
 ---
 title: Reactor identity and renaming
-description: Preserve a reactor's processing position during refactoring and remove abandoned observers safely.
+description: Keep Chronicle reactor identities stable across renames and namespace moves, preserve processing positions, and find and remove abandoned observers safely.
 ---
 
 A reactor's id identifies its observer and processing position. By default, the id is the full type name, including its namespace. Moving a reactor to another namespace or renaming its class therefore creates a different observer unless you preserve the id explicitly.

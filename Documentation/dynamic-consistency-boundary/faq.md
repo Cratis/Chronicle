@@ -1,6 +1,6 @@
 ---
 title: Questions and answers
-description: Short answers about making write-side rules hold with the Chronicle client, with links to the full explanation.
+description: Find answers about Chronicle decision reads, append guards, read protection, and cross-entity rules, including DCB limitations and diagnostic guidance.
 ---
 
 Use this page for a quick answer. Each answer links to the page that explains it.

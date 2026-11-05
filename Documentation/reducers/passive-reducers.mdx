@@ -1,6 +1,6 @@
 ---
 title: Passive and inactive reducers
-description: Choose on-demand reconstruction or disable active observation without changing read semantics.
+description: Choose passive Chronicle reducer reads for on-demand reconstruction, distinguish inactive observation from read behavior, and understand analysis limits.
 ---
 
 Use a passive read model when you want to reconstruct state from events on demand instead of maintaining a sink. Disabling a reducer's activity is a different choice: it stops observation, but does not change how the model is read.

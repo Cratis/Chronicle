@@ -1,6 +1,6 @@
 ---
 title: "Projection with FromEventSequence"
-description: "Build a declarative projection from an event sequence other than the event log."
+description: "Use FromEventSequence() in Chronicle fluent projections to select a named event sequence instead of the default event log and build a read model from it."
 ---
 
 The `FromEventSequence()` method allows you to specify which event sequence a projection should source events from. This is useful when you have multiple event sequences in your system and want to create projections that only process events from specific sequences.

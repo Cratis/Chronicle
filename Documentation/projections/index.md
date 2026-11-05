@@ -1,6 +1,6 @@
 ---
 title: Projections
-description: Build specialized, queryable read models from events and choose the right projection style and consistency model.
+description: Build queryable Chronicle read models from events with projections, compare model-bound and fluent definitions, and choose the required consistency behavior.
 ---
 
 A Chronicle projection is an observer that declaratively maps events onto a read model and keeps it up to date.

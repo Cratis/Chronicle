@@ -1,6 +1,6 @@
 ---
 title: "Event Redaction"
-description: "Remove an event's content from the log with redaction, what it records, and how observers see it."
+description: "Redact Chronicle event content while retaining sequence slots and limited audit metadata, and handle EventRedacted notifications in observers."
 ---
 
 Redaction removes the meaningful content of a previously appended event when you need to erase data — for example, to comply with a right-to-erasure request. Rather than deleting the event entirely, Chronicle replaces the event's payload with a redaction marker that preserves the sequence number and limited audit metadata. The original event type, occurrence, correlation ID, caused-by identities, and causation types and times remain; original causation property values, revision history, and content hashes do not.

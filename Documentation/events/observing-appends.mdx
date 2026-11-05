@@ -1,7 +1,7 @@
 ---
 uid: Chronicle.Events.ObservingAppends
 title: "Observing Append Operations"
-description: "Observe append operations on an event sequence, and wait for observers to catch up after an append."
+description: "Subscribe to Chronicle AppendOperations on an event sequence and wait for observer completion after Append or AppendMany in integration tests."
 ---
 
 `IEventSequence` exposes an `AppendOperations` observable that emits after every `Append` or

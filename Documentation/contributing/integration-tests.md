@@ -1,6 +1,6 @@
 ---
 title: "Running Integration Tests"
-description: "Run Chronicle's client integration tests in-process or out-of-process against each supported database."
+description: "Run Chronicle client integration tests with Docker, select in-process or out-of-process suites and storage backends, and inspect optional test backups."
 ---
 
 Integration tests run from the `Integration/Client` project and can execute in either in-process or out-of-process mode. They require Docker to be running on your machine.

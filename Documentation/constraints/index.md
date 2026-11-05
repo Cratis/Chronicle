@@ -1,6 +1,6 @@
 ---
 title: Define constraints
-description: Enforce server-side invariants before Chronicle commits events.
+description: Enforce server-side invariants before Chronicle commits events, compare constraint types and definition styles, and choose constraints or decision reads.
 ---
 
 Constraints define server-side rules that must be satisfied before events are committed. They run inside the Chronicle Kernel and protect data integrity across event streams and event sources.

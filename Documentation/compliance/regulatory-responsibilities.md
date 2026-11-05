@@ -1,6 +1,6 @@
 ---
 title: Regulatory responsibilities
-description: Which duties under HIPAA, SEC and PCAOB rules, PCI DSS and GDPR transfer rules Chronicle supports today, which you configure, and which stay with your application and deployment.
+description: Map Chronicle's supported controls and your responsibilities under HIPAA, SEC/PCAOB, PCI DSS, and GDPR transfer rules without assuming certification.
 ---
 
 You are deciding whether Chronicle can sit in a regulated system, and you need to know who does what. This page separates what Chronicle provides today from what you configure, what stays yours, and what is only planned.

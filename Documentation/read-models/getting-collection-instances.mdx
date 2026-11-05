@@ -1,6 +1,6 @@
 ---
 title: Getting a Collection of Instances
-description: Read every instance of a read model for small reports, diagnostics, and current-state analysis.
+description: Read all Chronicle read model instances for small reports or diagnostics, filter results in memory, limit replay, and recognize when paging is a better fit.
 ---
 
 Sometimes you need every instance of a read model at once: a small report, an integrity check, a back-office export, or a diagnostic script. Chronicle answers this the same way it answers a single-instance read — from the materialized store when the read model has one, and by replaying events when it does not.

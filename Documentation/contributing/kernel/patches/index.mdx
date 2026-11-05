@@ -1,6 +1,6 @@
 ---
 title: "Version Patch System"
-description: "Write kernel patches that upgrade stored state between Chronicle versions, and how they are applied."
+description: "Write Chronicle kernel patches for stored-state upgrades, configure version ordering and dependencies, and understand startup discovery and failure handling."
 ---
 
 Chronicle uses the [startup patching of Cratis Choreography](https://www.cratis.io/choreography/patching/) to handle breaking changes during upgrades. Patches are automatically discovered and applied during server startup, ensuring the system state is migrated correctly between versions. A new Chronicle release can join a running cluster while the previous release keeps serving, so an upgrade never needs the replica set scaled down and back up.

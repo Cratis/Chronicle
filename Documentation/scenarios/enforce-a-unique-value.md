@@ -1,6 +1,6 @@
 ---
 title: Enforce a unique value
-description: Reject an append when a value (email, ISBN, username) would duplicate an existing one.
+description: Enforce unique email addresses, ISBNs, or usernames with Chronicle append-time constraints rather than race-prone checks against eventual read models.
 ---
 
 **Goal:** a value must be unique — no two members with the same email, no two books with the same ISBN — and you want the system to *reject* an append that would break that, rather than discover the duplicate later.

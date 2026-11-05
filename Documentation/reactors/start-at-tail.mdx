@@ -1,6 +1,6 @@
 ---
 title: StartAtTail
-description: Keep a new side-effecting reactor from acting on events that predate its first registration.
+description: Mark a new Chronicle reactor with StartAtTail to skip events predating its first registration, and understand OnceOnly, renaming, and version requirements.
 ---
 
 A new reactor starts from the first event in the event sequence and catches up on everything that is already there. That is what you want for a reactor that builds something from history. It is not what you want for one that sends an email, calls an external system or starts a job, because it will do that once for every event in history the moment it is deployed.

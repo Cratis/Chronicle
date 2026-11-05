@@ -1,6 +1,6 @@
 ---
 title: Rebuild a read model
-description: Replay events to rebuild a read model after you change its projection.
+description: Rebuild a Chronicle read model after changing its projection by replaying immutable events, then track progress and account for eventual consistency.
 ---
 
 **Goal:** you changed a [projection](../concepts/projection.md) (added a property, fixed a mapping) and the existing read model still reflects the old logic. You want it rebuilt from the events.
