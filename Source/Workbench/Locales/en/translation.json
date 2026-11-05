@@ -609,6 +609,10 @@
                         "title": "Delete folder",
                         "empty": "Delete the folder \"{folder}\"?",
                         "withQueries": "Delete the folder \"{folder}\" and the {count} queries filed under it? This cannot be undone."
+                    },
+                    "partiallyApplied": {
+                        "title": "Some items were not changed",
+                        "message": "{count} of {total} items belong to another owner and were left as they were."
                     }
                 },
                 "details": {
