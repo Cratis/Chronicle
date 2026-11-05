@@ -150,7 +150,9 @@ public class Reactor(
             logger.RestoringLostClientSubscription(_observerKey.ObserverId, _observerKey.ConnectionId);
             try
             {
-                await _observer.RestoreClientSubscription<IReactorObserverSubscriber>(
+                if (definition.PageDelivery is not null)
+                {
+                    await _observer.RestoreClientSubscription<IReactorPageObserverSubscriber>(
                     ObserverType.Reactor,
                     definition.EventTypes.Select(e => e.EventType).ToArray(),
                     localSiloDetails.SiloAddress,
@@ -158,6 +160,18 @@ public class Reactor(
                     definition.IsReplayable,
                     definition.Filters,
                     definition.GenerationDelivery);
+                }
+                else
+                {
+                    await _observer.RestoreClientSubscription<IReactorObserverSubscriber>(
+                    ObserverType.Reactor,
+                    definition.EventTypes.Select(e => e.EventType).ToArray(),
+                    localSiloDetails.SiloAddress,
+                    connectedClient,
+                    definition.IsReplayable,
+                    definition.Filters,
+                    definition.GenerationDelivery);
+                }
                 await RecordObserver();
             }
             catch (ObserverServedByAnotherTransport)
@@ -244,13 +258,35 @@ public class Reactor(
 
         try
         {
-            if (definition.GenerationDelivery == Concepts.Observation.EventGenerationDelivery.Pinned)
+            var deliversPages = definition.PageDelivery is not null;
+            if (definition.GenerationDelivery == Concepts.Observation.EventGenerationDelivery.Pinned && deliversPages)
+            {
+                await _observer.SubscribeWithGenerationDelivery<IReactorPageObserverSubscriber>(
+                    ObserverType.Reactor,
+                    eventTypes,
+                    localSiloDetails.SiloAddress,
+                    definition.GenerationDelivery,
+                    connectedClient,
+                    definition.IsReplayable,
+                    definition.Filters);
+            }
+            else if (definition.GenerationDelivery == Concepts.Observation.EventGenerationDelivery.Pinned)
             {
                 await _observer.SubscribeWithGenerationDelivery<IReactorObserverSubscriber>(
                     ObserverType.Reactor,
                     eventTypes,
                     localSiloDetails.SiloAddress,
                     definition.GenerationDelivery,
+                    connectedClient,
+                    definition.IsReplayable,
+                    definition.Filters);
+            }
+            else if (deliversPages)
+            {
+                await _observer.Subscribe<IReactorPageObserverSubscriber>(
+                    ObserverType.Reactor,
+                    eventTypes,
+                    localSiloDetails.SiloAddress,
                     connectedClient,
                     definition.IsReplayable,
                     definition.Filters);

@@ -20,7 +20,7 @@ namespace Cratis.Chronicle.Observation;
 /// deliberately not part of this grain contract - state transitions are driven from within the observer
 /// implementation, never across a grain reference.
 /// </remarks>
-[Version(6)]
+[Version(7)]
 public interface IObserver : IGrainWithStringKey
 {
     /// <summary>
@@ -814,4 +814,12 @@ public interface IObserver : IGrainWithStringKey
     /// <param name="events">Collection of <see cref="AppendedEvent"/>.</param>
     /// <returns>Awaitable task.</returns>
     Task Handle(Key partition, IEnumerable<AppendedEvent> events);
+
+    /// <summary>
+    /// Handle a page of events spanning several partitions. Each partition settles on its own: a partition that fails
+    /// is parked while the others in the page carry on. Handling a page of one partition is the same as <see cref="Handle(Key, IEnumerable{AppendedEvent})"/>.
+    /// </summary>
+    /// <param name="batches">The <see cref="ObserverPartitionBatch"/> of each partition in the page, each in sequence order.</param>
+    /// <returns>Awaitable task.</returns>
+    Task HandlePage(IReadOnlyList<ObserverPartitionBatch> batches);
 }

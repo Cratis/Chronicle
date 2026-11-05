@@ -477,6 +477,9 @@ enum Cratis.Chronicle.Concepts.Observation.ObserverType : int
   Reactor = 1
   Reducer = 3
   Unknown = 0
+json Cratis.Chronicle.Concepts.Observation.PageDeliveryDefinition
+  maxDelay: System.TimeSpan
+  maxEventsPerPage: int
 json Cratis.Chronicle.Concepts.Observation.PartitionDeferral
   id: System.Guid
   reason: Cratis.Chronicle.Concepts.Observation.PartitionDeferralReason
@@ -502,6 +505,7 @@ json Cratis.Chronicle.Concepts.Observation.Reactors.ReactorDefinition
   identifier: Cratis.Chronicle.Concepts.Observation.Reactors.ReactorId
   isReplayable: bool
   owner: Cratis.Chronicle.Concepts.Observation.Reactors.ReactorOwner
+  pageDelivery: Cratis.Chronicle.Concepts.Observation.PageDeliveryDefinition
   startAtTail: bool
   tags: System.Collections.Generic.IEnumerable<string>
 concept Cratis.Chronicle.Concepts.Observation.Reactors.ReactorId : string
@@ -1163,6 +1167,11 @@ json Cratis.Chronicle.Observation.Jobs.RetryFailedPartitionRequest
 json Cratis.Chronicle.Observation.ObserverDetails
   key: Cratis.Chronicle.Concepts.Observation.ObserverKey
   type: Cratis.Chronicle.Concepts.Observation.ObserverType
+json Cratis.Chronicle.Observation.ObserverPageResult
+  results: System.Collections.Generic.IReadOnlyDictionary<Cratis.Chronicle.Concepts.Keys.Key,Cratis.Chronicle.Observation.ObserverSubscriberResult>
+json Cratis.Chronicle.Observation.ObserverPartitionBatch
+  events: System.Collections.Generic.IReadOnlyList<Cratis.Chronicle.Concepts.Events.AppendedEvent>
+  partition: Cratis.Chronicle.Concepts.Keys.Key
 custom Cratis.Chronicle.Observation.ObserverSubscriberContext
 json Cratis.Chronicle.Observation.ObserverSubscriberResult
   deferral: Cratis.Chronicle.Concepts.Observation.PartitionDeferral
