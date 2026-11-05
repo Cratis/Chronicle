@@ -19,7 +19,7 @@ flowchart LR
 | **Namespace**: the logical partition of events, observers and read models | Chronicle, from the tenant. With Arc the tenant id is the namespace name | `Default` |
 | **Placement**: the physical database, server, schema and credentials | Chronicle derives names. With [storage connection resolution](../hosting/configuration/storage-connection-resolution.md) your platform decides | One server, one credential, names derived from the event store and namespace |
 
-Chronicle isolates by the namespace it is given. It does not check that a caller may use a tenant, so authorize before you select.
+Chronicle isolates by the namespace it is given. It does not check that a caller may use a tenant, so authorize before you select. Cratis products call the tenant a workspace and keep it apart from the customer's organization; see [organization, workspace and namespace](/concepts/organization-workspace-namespace/).
 
 ## How it works by default
 
