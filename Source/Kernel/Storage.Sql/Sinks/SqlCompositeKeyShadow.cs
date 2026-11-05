@@ -59,7 +59,7 @@ internal sealed partial class SqlCompositeKeyShadow
             var encoding = CompositeKeyEncoding.Encode(parts);
             if (encoding.Length > MaximumLength)
             {
-                EncodingTooLong(logger, context.TableName, id, MaximumLength);
+                EncodingTooLong(logger, context.TableName, MaximumLength);
                 return;
             }
 
@@ -67,13 +67,13 @@ internal sealed partial class SqlCompositeKeyShadow
             if (CompositeKeyEncoding.IsEncoded(stored) && !string.Equals(stored, encoding, StringComparison.Ordinal))
             {
                 _collisions.Record(1);
-                KeyCollision(logger, context.TableName, id);
+                KeyCollision(logger, context.TableName);
             }
         }
         catch (Exception exception)
         {
             _failures.Record(1);
-            StampingFailed(logger, exception, context.TableName, id);
+            StampingFailed(logger, exception, context.TableName);
         }
     }
 
@@ -89,12 +89,12 @@ internal sealed partial class SqlCompositeKeyShadow
 #pragma warning restore EF1002
     }
 
-    [LoggerMessage(LogLevel.Warning, "SQL composite-key encoding for {Table} at legacy id {Id} exceeds {MaximumLength} characters; the row was not stamped")]
-    static partial void EncodingTooLong(ILogger<Sink> logger, string table, string id, int maximumLength);
+    [LoggerMessage(LogLevel.Warning, "SQL composite-key encoding for {Table} exceeds {MaximumLength} characters for a legacy id; the row was not stamped")]
+    static partial void EncodingTooLong(ILogger<Sink> logger, string table, int maximumLength);
 
-    [LoggerMessage(LogLevel.Warning, "SQL composite-key collision for {Table} at legacy id {Id}; preserved the existing v1 shadow stamp and the legacy write behavior")]
-    static partial void KeyCollision(ILogger<Sink> logger, string table, string id);
+    [LoggerMessage(LogLevel.Warning, "SQL composite-key collision for {Table}; preserved the existing v1 shadow stamp and the legacy write behavior")]
+    static partial void KeyCollision(ILogger<Sink> logger, string table);
 
-    [LoggerMessage(LogLevel.Warning, "SQL composite-key stamping failed for {Table} at legacy id {Id}; the committed write is unchanged")]
-    static partial void StampingFailed(ILogger<Sink> logger, Exception exception, string table, string id);
+    [LoggerMessage(LogLevel.Warning, "SQL composite-key stamping failed for {Table}; the committed write is unchanged")]
+    static partial void StampingFailed(ILogger<Sink> logger, Exception exception, string table);
 }

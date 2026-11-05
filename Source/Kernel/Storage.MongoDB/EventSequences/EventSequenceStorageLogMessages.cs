@@ -21,11 +21,11 @@ internal static partial class EventSequenceStorageLogMessages
     [LoggerMessage(LogLevel.Debug, "Getting tail sequence number for event sequence {EventSequenceId}")]
     internal static partial void GettingTailSequenceNumber(this ILogger<EventSequenceStorage> logger, EventSequenceId eventSequenceId);
 
-    [LoggerMessage(LogLevel.Debug, "Getting last instance of event of type '{EventTypeId}' and event source id '{EventSourceId}' in event sequence {EventSequenceId}")]
-    internal static partial void GettingLastInstanceFor(this ILogger<EventSequenceStorage> logger, EventSequenceId eventSequenceId, EventTypeId eventTypeId, EventSourceId eventSourceId);
+    [LoggerMessage(LogLevel.Debug, "Getting last instance of event of type '{EventTypeId}' in event sequence {EventSequenceId}")]
+    internal static partial void GettingLastInstanceFor(this ILogger<EventSequenceStorage> logger, EventSequenceId eventSequenceId, EventTypeId eventTypeId);
 
-    [LoggerMessage(LogLevel.Debug, "Getting last instance of event of types ['{EventTypes}'] and event source id '{EventSourceId}' in event sequence {EventSequenceId}")]
-    internal static partial void GettingLastInstanceOfAny(this ILogger<EventSequenceStorage> logger, EventSequenceId eventSequenceId, EventSourceId eventSourceId, IEnumerable<EventTypeId> eventTypes);
+    [LoggerMessage(LogLevel.Debug, "Getting last instance of event of types ['{EventTypes}'] in event sequence {EventSequenceId}")]
+    internal static partial void GettingLastInstanceOfAny(this ILogger<EventSequenceStorage> logger, EventSequenceId eventSequenceId, IEnumerable<EventTypeId> eventTypes);
 
     [LoggerMessage(LogLevel.Debug, "Getting events from sequence number {From} in event sequence {EventSequenceId}")]
     internal static partial void GettingFromSequenceNumber(this ILogger<EventSequenceStorage> logger, EventSequenceId eventSequenceId, EventSequenceNumber from);
@@ -39,8 +39,8 @@ internal static partial class EventSequenceStorageLogMessages
     [LoggerMessage(LogLevel.Information, "Redacting event with sequence number {EventSequenceNumber} from sequence {EventSequenceId}")]
     internal static partial void Redacting(this ILogger<EventSequenceStorage> logger, EventSequenceId eventSequenceId, EventSequenceNumber eventSequenceNumber);
 
-    [LoggerMessage(LogLevel.Information, "Redacting events with event source id {EventSourceId} and event types {EventTypes} from sequence {EventSequenceId}")]
-    internal static partial void RedactingMultiple(this ILogger<EventSequenceStorage> logger, EventSequenceId eventSequenceId, EventSourceId eventSourceId, IEnumerable<EventType> eventTypes);
+    [LoggerMessage(LogLevel.Information, "Redacting events with event types {EventTypes} from sequence {EventSequenceId}")]
+    internal static partial void RedactingMultiple(this ILogger<EventSequenceStorage> logger, EventSequenceId eventSequenceId, IEnumerable<EventType> eventTypes);
 
     [LoggerMessage(LogLevel.Debug, "Getting instance of event at sequence number {EventSequenceNumber} in event sequence {EventSequenceId}")]
     internal static partial void GettingEventAtSequenceNumber(this ILogger<EventSequenceStorage> logger, EventSequenceId eventSequenceId, EventSequenceNumber eventSequenceNumber);

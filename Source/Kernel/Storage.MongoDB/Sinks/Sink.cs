@@ -436,7 +436,7 @@ public partial class Sink(
         catch (NonIdempotentWriteCannotBeSplit error)
         {
             var partition = options.PartitionOr(key);
-            logger.RefusedOversizedChangesetSplit(readModel.Identifier, key.ToString(), partition.ToString(), error.Collection, error.MaxBatchSize, string.Join(", ", error.Operations));
+            logger.RefusedOversizedChangesetSplit(readModel.Identifier, error.Collection, error.MaxBatchSize, string.Join(", ", error.Operations));
             throw new OversizedChangesetCannotBeSplit(readModel.Identifier, key, partition, error);
         }
         return joinBatch is null ? failures : TakeBulkFailures([joinBatch]).Concat(failures).ToArray();
@@ -1739,7 +1739,7 @@ public partial class Sink(
             }
             catch (MongoBulkWriteException ex)
             {
-                var reasons = ReportBulkWriteErrors(ex, remainingIndexes, batch.Metadata);
+                var reasons = ReportBulkWriteErrors(ex, remainingIndexes);
                 AddFailedPartitions(remainingIndexes, batch.Metadata, batch.FailedPartitions, reasons, ex.WriteConcernError is not null);
                 break;
             }
@@ -1771,7 +1771,7 @@ public partial class Sink(
                 remainingIndexes = remainingIndexes.Skip(skipped).ToList();
             }
         }
-        var reasons = ReportBulkWriteErrors(exception, remainingIndexes, batch.Metadata);
+        var reasons = ReportBulkWriteErrors(exception, remainingIndexes);
 
         if (!CanResumeAfter(exception, remaining))
         {
@@ -1859,7 +1859,6 @@ public partial class Sink(
     /// </summary>
     /// <param name="exception">The <see cref="MongoBulkWriteException"/> the write raised.</param>
     /// <param name="remainingIndexes">Indexes into the flushed batch of the operations that were sent, in the order they were sent.</param>
-    /// <param name="metadata">The partition and event sequence number for each operation in the flushed batch.</param>
     /// <returns>The <see cref="BulkWriteFailureReasons"/> for the write.</returns>
     /// <remarks>
     /// Only codes and the server's messages are used. The error details document and the exception itself are left
@@ -1867,8 +1866,7 @@ public partial class Sink(
     /// </remarks>
     BulkWriteFailureReasons ReportBulkWriteErrors(
         MongoBulkWriteException exception,
-        List<int> remainingIndexes,
-        Dictionary<int, (Key ReadModelKey, Key EventSourceId, EventSequenceNumber SequenceNumber)> metadata)
+        List<int> remainingIndexes)
     {
         var collection = collections.GetCollection().CollectionNamespace?.CollectionName ?? readModel.ContainerName.Value;
         var byOperation = new Dictionary<int, string>();
@@ -1876,7 +1874,7 @@ public partial class Sink(
 
         foreach (var error in exception.WriteErrors)
         {
-            var (operationIndex, reason) = ReportWriteError(collection, error, remainingIndexes, metadata);
+            var (operationIndex, reason) = ReportWriteError(collection, error, remainingIndexes);
             byOperation.TryAdd(operationIndex, reason);
             if (first.Length == 0)
             {
@@ -1896,12 +1894,10 @@ public partial class Sink(
     (int OperationIndex, string Reason) ReportWriteError(
         string collection,
         BulkWriteError error,
-        List<int> remainingIndexes,
-        Dictionary<int, (Key ReadModelKey, Key EventSourceId, EventSequenceNumber SequenceNumber)> metadata)
+        List<int> remainingIndexes)
     {
         var operationIndex = error.Index >= 0 && error.Index < remainingIndexes.Count ? remainingIndexes[error.Index] : -1;
-        var partition = metadata.TryGetValue(operationIndex, out var operation) ? operation.EventSourceId.Value.ToString() ?? string.Empty : string.Empty;
-        logger.BulkWriteErrorOccurred(collection, readModel.Identifier, partition, operationIndex, error.Code, error.Category, error.Message);
+        logger.BulkWriteErrorOccurred(collection, readModel.Identifier, operationIndex, error.Code, error.Category, error.Message);
 
         return (operationIndex, $"MongoDB write error {error.Code} ({error.Category}): {error.Message}");
     }

@@ -49,7 +49,7 @@ public class IdentityStorage(
         _identityIdsByUserName = _identitiesByIdentityId
                                     .GroupBy(_ => _.Value.UserName.ToLowerInvariant())
                                     .ToDictionary(_ => _.Key, _ => _.Last().Key);
-        _identityIdsByUserName.ForEach(_ => logger.IdentityRegisteredByUserName(_.Key, _.Value));
+        _identityIdsByUserName.ForEach(_ => logger.IdentityRegisteredByUserName(_.Value));
     }
 
     /// <inheritdoc/>
@@ -97,7 +97,7 @@ public class IdentityStorage(
         var userName = identity.UserName.ToLowerInvariant();
         if (string.IsNullOrEmpty(userName))
         {
-            logger.IdentityHasNoUserName(identity.Subject);
+            logger.IdentityHasNoUserName();
             userName = Username.Unknown;
         }
 
@@ -180,23 +180,23 @@ public class IdentityStorage(
     bool TryGetSingleFor(Identity identity, out IdentityId identityId)
     {
         var userName = identity.UserName.ToLowerInvariant();
-        logger.TryingToGetSingleFor(identity.UserName, identity.Subject);
+        logger.TryingToGetSingleFor();
 
         if (!string.IsNullOrEmpty(identity.Subject) && _identityIdsBySubject.TryGetValue(identity.Subject, out var identityIdBySubject))
         {
             identityId = identityIdBySubject;
-            logger.UserFoundBySubject(identity.Subject, identityId);
+            logger.UserFoundBySubject(identityId);
             return true;
         }
 
         if (!string.IsNullOrEmpty(identity.UserName) && _identityIdsByUserName.TryGetValue(userName, out var identityIdByUserName))
         {
             identityId = identityIdByUserName;
-            logger.UserFoundByName(identity.UserName, identityId);
+            logger.UserFoundByName(identityId);
             return true;
         }
         identityId = Guid.Empty;
-        logger.UserNotFound(identity.UserName, identity.Subject);
+        logger.UserNotFound();
 
         return false;
     }

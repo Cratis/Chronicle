@@ -530,7 +530,7 @@ public partial class EventSequenceStorage(
         IEnumerable<IdentityId> causedByChain,
         DateTimeOffset occurred)
     {
-        logger.RedactingMultiple(eventSequenceId, eventSourceId, eventTypes ?? []);
+        logger.RedactingMultiple(eventSequenceId, eventTypes ?? []);
         var collection = _collection;
         var affectedEventTypes = new HashSet<EventType>();
 
@@ -845,7 +845,7 @@ public partial class EventSequenceStorage(
         EventSourceId eventSourceId,
         IEnumerable<EventTypeId> eventTypes)
     {
-        logger.GettingLastInstanceOfAny(eventSequenceId, eventSourceId, eventTypes);
+        logger.GettingLastInstanceOfAny(eventSequenceId, eventTypes);
         var anyEventTypes = Builders<Event>.Filter.In(e => e.Type, eventTypes);
         var filter = Builders<Event>.Filter.And(
             anyEventTypes,
