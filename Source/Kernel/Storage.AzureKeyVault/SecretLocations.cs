@@ -11,7 +11,8 @@ namespace Cratis.Chronicle.Storage.AzureKeyVault;
 /// </summary>
 /// <param name="Prefix">The prefix every current secret name of the address starts with.</param>
 /// <param name="LegacyPrefix">The prefix of the names used before hashing, or null when the address does not use them.</param>
-internal readonly record struct SecretLocations(string Prefix, string? LegacyPrefix)
+/// <param name="UnresolvedLegacyPrefix">The prefix of the names used before hashing when other addresses share it, or null when the address is eligible for them.</param>
+internal readonly record struct SecretLocations(string Prefix, string? LegacyPrefix, string? UnresolvedLegacyPrefix = null)
 {
     /// <summary>
     /// The suffix an erasure is stored under, beside the numbered revisions.
@@ -34,6 +35,11 @@ internal readonly record struct SecretLocations(string Prefix, string? LegacyPre
     public string? LegacyErasureName => LegacyPrefix is null ? null : $"{LegacyPrefix}{ErasureSuffix}";
 
     /// <summary>
+    /// Gets the name of the earlier erasure secret that cannot be addressed unambiguously, or null when there is none.
+    /// </summary>
+    public string? UnresolvedLegacyErasureName => UnresolvedLegacyPrefix is null ? null : $"{UnresolvedLegacyPrefix}{ErasureSuffix}";
+
+    /// <summary>
     /// Gets the locations of an address.
     /// </summary>
     /// <param name="eventStore">The <see cref="EventStoreName"/>.</param>
@@ -43,7 +49,8 @@ internal readonly record struct SecretLocations(string Prefix, string? LegacyPre
     public static SecretLocations For(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier) =>
         new(
             SecretNames.KeyPrefix(eventStore, eventStoreNamespace, identifier),
-            SecretNames.LegacyPrefix(eventStore, eventStoreNamespace, identifier));
+            SecretNames.LegacyPrefix(eventStore, eventStoreNamespace, identifier),
+            SecretNames.UnresolvedLegacyPrefix(eventStore, eventStoreNamespace, identifier));
 
     /// <summary>
     /// Gets the name of a revision's secret.

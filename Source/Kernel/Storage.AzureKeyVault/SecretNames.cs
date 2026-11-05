@@ -74,8 +74,24 @@ internal static partial class SecretNames
     /// <returns>The earlier prefix, or null when the address is not eligible for it.</returns>
     public static string? LegacyPrefix(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier) =>
         IsEligibleForLegacyNames(eventStore.Value, eventStoreNamespace.Value, identifier.Value)
-            ? $"{LegacyNamePrefix}--{Sanitize(eventStore.Value)}--{Sanitize(eventStoreNamespace.Value)}--{Sanitize(identifier.Value)}--"
+            ? SanitizedPrefix(eventStore.Value, eventStoreNamespace.Value, identifier.Value)
             : null;
+
+    /// <summary>
+    /// Gets the prefix the secrets of an address were named with before hashing, when the address may not use them
+    /// because other addresses were given the same prefix.
+    /// </summary>
+    /// <param name="eventStore">The <see cref="EventStoreName"/>.</param>
+    /// <param name="eventStoreNamespace">The <see cref="EventStoreNamespaceName"/>.</param>
+    /// <param name="identifier">The <see cref="EncryptionKeyIdentifier"/>.</param>
+    /// <returns>The earlier prefix, or null when the address is eligible for <see cref="LegacyPrefix"/>.</returns>
+    public static string? UnresolvedLegacyPrefix(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier) =>
+        IsEligibleForLegacyNames(eventStore.Value, eventStoreNamespace.Value, identifier.Value)
+            ? null
+            : SanitizedPrefix(eventStore.Value, eventStoreNamespace.Value, identifier.Value);
+
+    static string SanitizedPrefix(string eventStore, string eventStoreNamespace, string identifier) =>
+        $"{LegacyNamePrefix}--{Sanitize(eventStore)}--{Sanitize(eventStoreNamespace)}--{Sanitize(identifier)}--";
 
     static bool IsEligibleForLegacyNames(string eventStore, string eventStoreNamespace, string identifier) =>
         (eventStore == EncryptedValueKeyIdentifiers.GlobalEventStore.Value || IsEligibleScopeName(eventStore)) &&

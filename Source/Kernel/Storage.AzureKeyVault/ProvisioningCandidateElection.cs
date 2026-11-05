@@ -14,7 +14,7 @@ namespace Cratis.Chronicle.Storage.AzureKeyVault;
 /// <remarks>
 /// <para>
 /// Every write to a secret adds a version and Key Vault keeps them all, so no racer's material is lost - the race is
-/// only about which version everyone uses. The winner is the oldest enabled candidate by creation time, tie-broken
+/// only about which version everyone uses. The winner is the oldest candidate by creation time, tie-broken
 /// ordinally on the version identifier, which every caller computes the same way from the same versions.
 /// </para>
 /// <para>
@@ -72,6 +72,7 @@ internal sealed class ProvisioningCandidateElection(SecretClient secretClient, T
     /// </summary>
     /// <param name="name">The name of the secret.</param>
     /// <returns>The elected <see cref="EncryptionKey"/>, or <see langword="null"/> when no candidate can be read.</returns>
+    /// <exception cref="EncryptionKeyUnavailable">The candidate that sorts first is disabled.</exception>
     public async Task<EncryptionKey?> Elect(string name)
     {
         for (var round = 0; ; round++)
@@ -81,6 +82,13 @@ internal sealed class ProvisioningCandidateElection(SecretClient secretClient, T
             if (elected is null)
             {
                 return null;
+            }
+
+            if (elected.Enabled == false)
+            {
+                // Never fall through to a later candidate: the key that sorts first is the key everyone agrees on.
+                EncryptionKeyUpgradeMetrics.Unavailable();
+                throw new EncryptionKeyUnavailable();
             }
 
             var settledAt = (elected.CreatedOn ?? DateTimeOffset.MinValue) + SettleTime;
@@ -117,7 +125,7 @@ internal sealed class ProvisioningCandidateElection(SecretClient secretClient, T
         {
             await foreach (var version in secretClient.GetPropertiesOfSecretVersionsAsync(name))
             {
-                if (version.Enabled == true && IsCandidate(version) && (elected is null || SortsBefore(version, elected)))
+                if (IsCandidate(version) && (elected is null || SortsBefore(version, elected)))
                 {
                     elected = version;
                 }

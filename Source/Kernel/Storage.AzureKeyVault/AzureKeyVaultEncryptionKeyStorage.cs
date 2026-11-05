@@ -7,6 +7,8 @@ using Azure.Security.KeyVault.Secrets;
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Storage.Compliance;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Cratis.Chronicle.Storage.AzureKeyVault;
 
@@ -58,13 +60,15 @@ public class AzureKeyVaultEncryptionKeyStorage : IEncryptionKeyStorage
 
     readonly SecretClient _secretClient;
     readonly ProvisioningCandidateElection _election;
+    readonly ILogger<AzureKeyVaultEncryptionKeyStorage> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AzureKeyVaultEncryptionKeyStorage"/> class.
     /// </summary>
     /// <param name="secretClient">The <see cref="SecretClient"/> to use for communicating with Azure Key Vault.</param>
-    public AzureKeyVaultEncryptionKeyStorage(SecretClient secretClient)
-        : this(secretClient, TimeProvider.System)
+    /// <param name="logger">Optional <see cref="ILogger{TCategoryName}"/>.</param>
+    public AzureKeyVaultEncryptionKeyStorage(SecretClient secretClient, ILogger<AzureKeyVaultEncryptionKeyStorage>? logger = null)
+        : this(secretClient, TimeProvider.System, logger)
     {
     }
 
@@ -73,8 +77,10 @@ public class AzureKeyVaultEncryptionKeyStorage : IEncryptionKeyStorage
     /// </summary>
     /// <param name="secretClient">The <see cref="SecretClient"/> to use for communicating with Azure Key Vault.</param>
     /// <param name="timeProvider">The <see cref="TimeProvider"/> elections are settled against.</param>
-    internal AzureKeyVaultEncryptionKeyStorage(SecretClient secretClient, TimeProvider timeProvider)
+    /// <param name="logger">Optional <see cref="ILogger{TCategoryName}"/>.</param>
+    internal AzureKeyVaultEncryptionKeyStorage(SecretClient secretClient, TimeProvider timeProvider, ILogger<AzureKeyVaultEncryptionKeyStorage>? logger = null)
     {
+        _logger = logger ?? NullLogger<AzureKeyVaultEncryptionKeyStorage>.Instance;
         _secretClient = secretClient;
         _election = new(secretClient, timeProvider, Deserialize);
     }
@@ -87,7 +93,7 @@ public class AzureKeyVaultEncryptionKeyStorage : IEncryptionKeyStorage
         EncryptionKey key,
         EncryptionKeyRevision? revision = null)
     {
-        var locations = SecretLocations.For(eventStore, eventStoreNamespace, identifier);
+        var locations = await Resolve(eventStore, eventStoreNamespace, identifier);
         var actualRevision = IsLatest(revision)
             ? await GetNextRevision(locations)
             : revision!;
@@ -107,12 +113,12 @@ public class AzureKeyVaultEncryptionKeyStorage : IEncryptionKeyStorage
 
     /// <inheritdoc/>
     public async Task<EncryptionKeyAtRevision?> TryGetLatestFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier) =>
-        await TryGetLatest(SecretLocations.For(eventStore, eventStoreNamespace, identifier));
+        await TryGetLatest(await Resolve(eventStore, eventStoreNamespace, identifier));
 
     /// <inheritdoc/>
     public async Task<EncryptionKeyAtRevision> GetOrAddWithRevisionFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKey key)
     {
-        var locations = SecretLocations.For(eventStore, eventStoreNamespace, identifier);
+        var locations = await Resolve(eventStore, eventStoreNamespace, identifier);
         if (await TryGetLatest(locations) is { } existing)
         {
             return existing;
@@ -126,7 +132,7 @@ public class AzureKeyVaultEncryptionKeyStorage : IEncryptionKeyStorage
 
         // Converge on the elected candidate, which is ours unless another provisioner raced us. It is never the
         // candidate unread: if no candidate can be read back, the secret was removed concurrently.
-        var winner = await _election.Elect(name) ?? throw new EncryptionKeyProvisioningConflict(identifier, revision);
+        var winner = await Elect(name) ?? throw new EncryptionKeyProvisioningConflict(identifier, revision);
         return new(winner, revision);
     }
 
@@ -137,7 +143,7 @@ public class AzureKeyVaultEncryptionKeyStorage : IEncryptionKeyStorage
         EncryptionKeyIdentifier identifier,
         EncryptionKeyRevision? revision = null)
     {
-        var locations = SecretLocations.For(eventStore, eventStoreNamespace, identifier);
+        var locations = await Resolve(eventStore, eventStoreNamespace, identifier);
         if (IsLatest(revision))
         {
             return await GetHighestRevision(locations) is not null;
@@ -154,7 +160,7 @@ public class AzureKeyVaultEncryptionKeyStorage : IEncryptionKeyStorage
         EncryptionKeyIdentifier identifier,
         EncryptionKeyRevision? revision = null)
     {
-        var locations = SecretLocations.For(eventStore, eventStoreNamespace, identifier);
+        var locations = await Resolve(eventStore, eventStoreNamespace, identifier);
         if (IsLatest(revision))
         {
             return (await TryGetLatest(locations))?.Key;
@@ -208,7 +214,7 @@ public class AzureKeyVaultEncryptionKeyStorage : IEncryptionKeyStorage
         EventStoreName eventStore,
         EventStoreNamespaceName eventStoreNamespace,
         EncryptionKeyIdentifier identifier) =>
-        await GetErasureFor(SecretLocations.For(eventStore, eventStoreNamespace, identifier));
+        await GetErasureFor(await Resolve(eventStore, eventStoreNamespace, identifier));
 
     /// <inheritdoc/>
     public async Task RecordErasureFor(
@@ -218,15 +224,26 @@ public class AzureKeyVaultEncryptionKeyStorage : IEncryptionKeyStorage
     {
         var locations = SecretLocations.For(eventStore, eventStoreNamespace, identifier);
         var present = new List<(EncryptionKeyRevision Revision, EncryptionKey Key)>();
-        foreach (var (revision, name) in await ListRevisions(locations))
+        var highestDisabled = 0u;
+        foreach (var (revision, secret) in await ListRevisions(locations))
         {
-            if (await ReadKey(name) is { } key)
+            if (!secret.Enabled)
+            {
+                // A disabled key cannot be read to fingerprint it. It is covered by revision, and purged by the deletion that follows.
+                highestDisabled = Math.Max(highestDisabled, revision.Value);
+            }
+            else if (await ReadKey(secret.Name) is { } key)
             {
                 present.Add((revision, key));
             }
         }
 
         var erasure = EncryptionKeyErasure.Covering(await GetErasureFor(locations), present);
+        if (highestDisabled > erasure.ErasedThrough.Value)
+        {
+            erasure = erasure with { ErasedThrough = highestDisabled };
+        }
+
         await WriteErasure(locations, erasure);
     }
 
@@ -236,7 +253,7 @@ public class AzureKeyVaultEncryptionKeyStorage : IEncryptionKeyStorage
         EventStoreNamespaceName eventStoreNamespace,
         EncryptionKeyIdentifier identifier)
     {
-        var locations = SecretLocations.For(eventStore, eventStoreNamespace, identifier);
+        var locations = await Resolve(eventStore, eventStoreNamespace, identifier);
         if (await GetErasureFor(locations) is not { } erasure)
         {
             return;
@@ -244,6 +261,11 @@ public class AzureKeyVaultEncryptionKeyStorage : IEncryptionKeyStorage
 
         await WriteErasure(locations, erasure with { NewKeyAllowed = true });
     }
+
+    static bool IsDisabled(RequestFailedException exception) =>
+        exception.Status == 403 &&
+        (string.Equals(exception.ErrorCode, "SecretDisabled", StringComparison.OrdinalIgnoreCase) ||
+         exception.Message.Contains("disabled", StringComparison.OrdinalIgnoreCase));
 
     static bool IsLatest(EncryptionKeyRevision? revision) => revision is null || revision == EncryptionKeyRevision.Latest;
 
@@ -287,6 +309,65 @@ public class AzureKeyVaultEncryptionKeyStorage : IEncryptionKeyStorage
         return false;
     }
 
+    async Task<SecretLocations> Resolve(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier)
+    {
+        var locations = SecretLocations.For(eventStore, eventStoreNamespace, identifier);
+        if (locations.UnresolvedLegacyPrefix is null || await IsStoredAtNewLocation(locations) || !await HoldsEarlierMaterial(locations))
+        {
+            return locations;
+        }
+
+        EncryptionKeyUpgradeMetrics.Refused();
+        _logger.KeyNeedsUpgrade();
+        throw new EncryptionKeyNeedsUpgrade();
+    }
+
+    async Task<bool> IsStoredAtNewLocation(SecretLocations locations) =>
+        (await ListSecrets(locations)).Count > 0 || (await ReadErasure(locations.ErasureName)).Found;
+
+    async Task<bool> HoldsEarlierMaterial(SecretLocations locations)
+    {
+        try
+        {
+            await foreach (var secretProperties in _secretClient.GetPropertiesOfSecretsAsync())
+            {
+                if (secretProperties.Name.StartsWith(locations.UnresolvedLegacyPrefix!, StringComparison.OrdinalIgnoreCase) &&
+                    (secretProperties.Name.Equals(locations.UnresolvedLegacyErasureName, StringComparison.OrdinalIgnoreCase) ||
+                     uint.TryParse(secretProperties.Name[locations.UnresolvedLegacyPrefix!.Length..], out _)))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+        catch (RequestFailedException)
+        {
+            // The earlier names cannot be inspected, so they cannot be ruled out. Refuse rather than mint a key beside them.
+            return true;
+        }
+    }
+
+    EncryptionKeyUnavailable Unavailable()
+    {
+        EncryptionKeyUpgradeMetrics.Unavailable();
+        _logger.KeyUnavailable();
+        return new();
+    }
+
+    async Task<EncryptionKey?> Elect(string name)
+    {
+        try
+        {
+            return await _election.Elect(name);
+        }
+        catch (EncryptionKeyUnavailable)
+        {
+            _logger.KeyUnavailable();
+            throw;
+        }
+    }
+
     async Task<EncryptionKeyAtRevision?> TryGetLatest(SecretLocations locations)
     {
         var revisions = await ListRevisions(locations);
@@ -295,8 +376,13 @@ public class AzureKeyVaultEncryptionKeyStorage : IEncryptionKeyStorage
             return null;
         }
 
-        var (revision, name) = revisions.MaxBy(pair => pair.Key.Value);
-        var key = await ReadKey(name);
+        var (revision, secret) = revisions.MaxBy(pair => pair.Key.Value);
+        if (!secret.Enabled)
+        {
+            throw Unavailable();
+        }
+
+        var key = await ReadKey(secret.Name);
         return key is null ? null : new(key, revision);
     }
 
@@ -316,8 +402,12 @@ public class AzureKeyVaultEncryptionKeyStorage : IEncryptionKeyStorage
         try
         {
             var secret = await _secretClient.GetSecretAsync(name);
-            if (secret.Value.Properties.Enabled == false ||
-                JsonSerializer.Deserialize<Dictionary<string, string>>(secret.Value.Value) is not { } data ||
+            if (secret.Value.Properties.Enabled == false)
+            {
+                throw Unavailable();
+            }
+
+            if (JsonSerializer.Deserialize<Dictionary<string, string>>(secret.Value.Value) is not { } data ||
                 !data.TryGetValue(ErasedThroughField, out var erasedThrough))
             {
                 return (true, null);
@@ -333,6 +423,10 @@ public class AzureKeyVaultEncryptionKeyStorage : IEncryptionKeyStorage
         catch (RequestFailedException ex) when (ex.Status == 404)
         {
             return (false, null);
+        }
+        catch (RequestFailedException ex) when (IsDisabled(ex))
+        {
+            throw Unavailable();
         }
     }
 
@@ -366,18 +460,18 @@ public class AzureKeyVaultEncryptionKeyStorage : IEncryptionKeyStorage
     /// </summary>
     /// <param name="locations">The <see cref="SecretLocations"/> of the address.</param>
     /// <returns>The revisions and their names.</returns>
-    async Task<Dictionary<EncryptionKeyRevision, string>> ListRevisions(SecretLocations locations)
+    async Task<Dictionary<EncryptionKeyRevision, ListedSecret>> ListRevisions(SecretLocations locations)
     {
-        var revisions = new Dictionary<EncryptionKeyRevision, string>();
+        var revisions = new Dictionary<EncryptionKeyRevision, ListedSecret>();
         foreach (var secret in await ListSecrets(locations))
         {
             if (secret.IsCurrent)
             {
-                revisions[secret.Revision] = secret.Name;
+                revisions[secret.Revision] = secret;
             }
             else
             {
-                revisions.TryAdd(secret.Revision, secret.Name);
+                revisions.TryAdd(secret.Revision, secret);
             }
         }
 
@@ -390,10 +484,9 @@ public class AzureKeyVaultEncryptionKeyStorage : IEncryptionKeyStorage
 
         await foreach (var secretProperties in _secretClient.GetPropertiesOfSecretsAsync())
         {
-            if (secretProperties.Enabled == true &&
-                TryParseRevision(secretProperties.Name, locations, out var revision, out var isCurrent))
+            if (TryParseRevision(secretProperties.Name, locations, out var revision, out var isCurrent))
             {
-                secrets.Add(new(revision, secretProperties.Name, isCurrent));
+                secrets.Add(new(revision, secretProperties.Name, isCurrent, secretProperties.Enabled != false));
             }
         }
 
@@ -408,7 +501,7 @@ public class AzureKeyVaultEncryptionKeyStorage : IEncryptionKeyStorage
         {
             if (TryParseRevision(deleted.Name, locations, out var revision, out var isCurrent))
             {
-                secrets.Add(new(revision, deleted.Name, isCurrent));
+                secrets.Add(new(revision, deleted.Name, isCurrent, true));
             }
         }
 
@@ -426,20 +519,34 @@ public class AzureKeyVaultEncryptionKeyStorage : IEncryptionKeyStorage
         {
             return null;
         }
+        catch (RequestFailedException ex) when (IsDisabled(ex))
+        {
+            throw Unavailable();
+        }
 
-        return ProvisioningCandidateElection.IsCandidate(latest.Properties) ? await _election.Elect(name) : Deserialize(latest.Value);
+        if (latest.Properties.Enabled == false)
+        {
+            throw Unavailable();
+        }
+
+        return ProvisioningCandidateElection.IsCandidate(latest.Properties) ? await Elect(name) : Deserialize(latest.Value);
     }
 
     async Task<bool> SecretExists(string name)
     {
         try
         {
-            var response = await _secretClient.GetSecretAsync(name);
-            return response.Value.Properties.Enabled != false;
+            await _secretClient.GetSecretAsync(name);
+            return true;
         }
         catch (RequestFailedException ex) when (ex.Status == 404)
         {
             return false;
+        }
+        catch (RequestFailedException ex) when (IsDisabled(ex))
+        {
+            // A disabled secret is present.
+            return true;
         }
     }
 
@@ -469,5 +576,5 @@ public class AzureKeyVaultEncryptionKeyStorage : IEncryptionKeyStorage
         }
     }
 
-    readonly record struct ListedSecret(EncryptionKeyRevision Revision, string Name, bool IsCurrent);
+    readonly record struct ListedSecret(EncryptionKeyRevision Revision, string Name, bool IsCurrent, bool Enabled);
 }

@@ -5,6 +5,8 @@ using System.Net;
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Storage.Compliance;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using VaultSharp;
 using VaultSharp.Core;
 using VaultSharp.V1.AuthMethods.Token;
@@ -48,14 +50,16 @@ public class VaultEncryptionKeyStorage : IEncryptionKeyStorage
 
     readonly IVaultClient _vaultClient;
     readonly string _mountPoint;
+    readonly ILogger<VaultEncryptionKeyStorage> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="VaultEncryptionKeyStorage"/> class.
     /// </summary>
     /// <param name="connectionDetails">The Vault server address (for example <c language="csharp">http://vault:8200</c>).</param>
     /// <param name="mountPoint">KV v2 mount point. Defaults to <c language="csharp">secret</c> when <see langword="null"/> or empty.</param>
-    public VaultEncryptionKeyStorage(string connectionDetails, string? mountPoint = null)
-        : this(CreateVaultClient(connectionDetails), mountPoint)
+    /// <param name="logger">Optional <see cref="ILogger{TCategoryName}"/>.</param>
+    public VaultEncryptionKeyStorage(string connectionDetails, string? mountPoint = null, ILogger<VaultEncryptionKeyStorage>? logger = null)
+        : this(CreateVaultClient(connectionDetails), mountPoint, logger)
     {
     }
 
@@ -64,8 +68,10 @@ public class VaultEncryptionKeyStorage : IEncryptionKeyStorage
     /// </summary>
     /// <param name="vaultClient">The <see cref="IVaultClient"/> to talk to Vault through.</param>
     /// <param name="mountPoint">KV v2 mount point. Defaults to <c language="csharp">secret</c> when <see langword="null"/> or empty.</param>
-    internal VaultEncryptionKeyStorage(IVaultClient vaultClient, string? mountPoint = null)
+    /// <param name="logger">Optional <see cref="ILogger{TCategoryName}"/>.</param>
+    internal VaultEncryptionKeyStorage(IVaultClient vaultClient, string? mountPoint = null, ILogger<VaultEncryptionKeyStorage>? logger = null)
     {
+        _logger = logger ?? NullLogger<VaultEncryptionKeyStorage>.Instance;
         _vaultClient = vaultClient;
         _mountPoint = string.IsNullOrEmpty(mountPoint) ? DefaultMountPoint : mountPoint;
     }
@@ -78,7 +84,7 @@ public class VaultEncryptionKeyStorage : IEncryptionKeyStorage
         EncryptionKey key,
         EncryptionKeyRevision? revision = null)
     {
-        var locations = VaultKeyLocations.For(eventStore, eventStoreNamespace, identifier);
+        var locations = await Resolve(eventStore, eventStoreNamespace, identifier);
         var actualRevision = IsLatest(revision)
             ? await GetNextRevision(locations)
             : revision!;
@@ -102,12 +108,12 @@ public class VaultEncryptionKeyStorage : IEncryptionKeyStorage
 
     /// <inheritdoc/>
     public async Task<EncryptionKeyAtRevision?> TryGetLatestFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier) =>
-        await TryGetLatest(VaultKeyLocations.For(eventStore, eventStoreNamespace, identifier));
+        await TryGetLatest(await Resolve(eventStore, eventStoreNamespace, identifier));
 
     /// <inheritdoc/>
     public async Task<EncryptionKeyAtRevision> GetOrAddWithRevisionFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKey key)
     {
-        var locations = VaultKeyLocations.For(eventStore, eventStoreNamespace, identifier);
+        var locations = await Resolve(eventStore, eventStoreNamespace, identifier);
         if (await TryGetLatest(locations) is { } existing)
         {
             return existing;
@@ -136,7 +142,7 @@ public class VaultEncryptionKeyStorage : IEncryptionKeyStorage
         EncryptionKeyIdentifier identifier,
         EncryptionKeyRevision? revision = null)
     {
-        var locations = VaultKeyLocations.For(eventStore, eventStoreNamespace, identifier);
+        var locations = await Resolve(eventStore, eventStoreNamespace, identifier);
         if (IsLatest(revision))
         {
             return (await ListRevisions(locations)).Count > 0;
@@ -153,7 +159,7 @@ public class VaultEncryptionKeyStorage : IEncryptionKeyStorage
         EncryptionKeyIdentifier identifier,
         EncryptionKeyRevision? revision = null)
     {
-        var locations = VaultKeyLocations.For(eventStore, eventStoreNamespace, identifier);
+        var locations = await Resolve(eventStore, eventStoreNamespace, identifier);
         if (IsLatest(revision))
         {
             return (await TryGetLatest(locations))?.Key;
@@ -211,7 +217,7 @@ public class VaultEncryptionKeyStorage : IEncryptionKeyStorage
         EventStoreName eventStore,
         EventStoreNamespaceName eventStoreNamespace,
         EncryptionKeyIdentifier identifier) =>
-        await GetErasureFor(VaultKeyLocations.For(eventStore, eventStoreNamespace, identifier));
+        await GetErasureFor(await Resolve(eventStore, eventStoreNamespace, identifier));
 
     /// <inheritdoc/>
     public async Task RecordErasureFor(
@@ -239,7 +245,7 @@ public class VaultEncryptionKeyStorage : IEncryptionKeyStorage
         EventStoreNamespaceName eventStoreNamespace,
         EncryptionKeyIdentifier identifier)
     {
-        var locations = VaultKeyLocations.For(eventStore, eventStoreNamespace, identifier);
+        var locations = await Resolve(eventStore, eventStoreNamespace, identifier);
         if (await GetErasureFor(locations) is not { } erasure)
         {
             return;
@@ -280,6 +286,35 @@ public class VaultEncryptionKeyStorage : IEncryptionKeyStorage
         var authMethod = new TokenAuthMethodInfo(token);
         var settings = new VaultClientSettings(address, authMethod);
         return new VaultClient(settings);
+    }
+
+    async Task<VaultKeyLocations> Resolve(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier)
+    {
+        var locations = VaultKeyLocations.For(eventStore, eventStoreNamespace, identifier);
+        if (locations.UnresolvedLegacyDirectory is null || await IsStoredAtNewLocation(locations) || !await HoldsEarlierMaterial(locations))
+        {
+            return locations;
+        }
+
+        EncryptionKeyUpgradeMetrics.Refused();
+        _logger.KeyNeedsUpgrade();
+        throw new EncryptionKeyNeedsUpgrade();
+    }
+
+    async Task<bool> IsStoredAtNewLocation(VaultKeyLocations locations) =>
+        (await ListRevisionsIn(locations.Directory)).Count > 0 || (await ReadErasure(locations.ErasurePath)).Found;
+
+    async Task<bool> HoldsEarlierMaterial(VaultKeyLocations locations)
+    {
+        try
+        {
+            return (await ListRevisionsIn(locations.UnresolvedLegacyDirectory!)).Count > 0 || (await ReadErasure(locations.UnresolvedLegacyErasurePath!)).Found;
+        }
+        catch (VaultApiException)
+        {
+            // The earlier location cannot be inspected, so it cannot be ruled out. Refuse rather than mint a key over it.
+            return true;
+        }
     }
 
     async Task<EncryptionKeyAtRevision?> TryGetLatest(VaultKeyLocations locations)
