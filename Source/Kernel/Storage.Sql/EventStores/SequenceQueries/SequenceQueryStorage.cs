@@ -45,6 +45,26 @@ public class SequenceQueryStorage(EventStoreName eventStore, IDatabase database)
     }
 
     /// <inheritdoc/>
+    public async Task<Concepts.SequenceQueries.SequenceQueryDefinition?> Get(SequenceQueryId id)
+    {
+        await using var scope = await database.EventStore(eventStore);
+        var value = id.Value;
+        var definition = await scope.DbContext.SequenceQueries.AsNoTracking().SingleOrDefaultAsync(_ => _.Id == value);
+
+        return definition?.ToKernel();
+    }
+
+    /// <inheritdoc/>
+    public async Task<SequenceQueryFolderDefinition?> GetFolder(SequenceQueryFolderId id)
+    {
+        await using var scope = await database.EventStore(eventStore);
+        var value = id.Value;
+        var folder = await scope.DbContext.SequenceQueryFolders.AsNoTracking().SingleOrDefaultAsync(_ => _.Id == value);
+
+        return folder?.ToKernel();
+    }
+
+    /// <inheritdoc/>
     public async Task Save(Concepts.SequenceQueries.SequenceQueryDefinition definition)
     {
         await using var scope = await database.EventStore(eventStore);

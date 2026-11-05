@@ -42,6 +42,26 @@ public class SequenceQueryStorage(IEventStoreDatabase eventStoreDatabase) : ISeq
     }
 
     /// <inheritdoc/>
+    public async Task<Concepts.SequenceQueries.SequenceQueryDefinition?> Get(SequenceQueryId id)
+    {
+        var value = id.Value;
+        using var result = await Collection.FindAsync(_ => _.Id == value);
+        var definition = await result.FirstOrDefaultAsync();
+
+        return definition?.ToKernel();
+    }
+
+    /// <inheritdoc/>
+    public async Task<SequenceQueryFolderDefinition?> GetFolder(SequenceQueryFolderId id)
+    {
+        var value = id.Value;
+        using var result = await FolderCollection.FindAsync(_ => _.Id == value);
+        var folder = await result.FirstOrDefaultAsync();
+
+        return folder?.ToKernel();
+    }
+
+    /// <inheritdoc/>
     /// <remarks>
     /// The driver's result is deliberately awaited and dropped rather than returned as the task's
     /// value. The interface promises a plain <see cref="Task"/>, and a caller that reflects over

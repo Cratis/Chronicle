@@ -30,6 +30,16 @@ public interface ISequenceQueryStorage
     ISubject<IEnumerable<SequenceQueryDefinition>> ObserveAllFor(SequenceQueryOwner owner);
 
     /// <summary>
+    /// Get a single query by its identifier, regardless of who owns it.
+    /// </summary>
+    /// <param name="id">The <see cref="SequenceQueryId"/> of the query to get.</param>
+    /// <returns>The <see cref="SequenceQueryDefinition"/> if it exists, otherwise null.</returns>
+    /// <remarks>
+    /// Intended for deciding whether a change is permitted, so it does not narrow by owner.
+    /// </remarks>
+    Task<SequenceQueryDefinition?> Get(SequenceQueryId id);
+
+    /// <summary>
     /// Save a query, replacing any existing query with the same identifier.
     /// </summary>
     /// <param name="definition">The <see cref="SequenceQueryDefinition"/> to save.</param>
@@ -49,6 +59,16 @@ public interface ISequenceQueryStorage
     /// <param name="owner">The <see cref="SequenceQueryOwner"/> to get for.</param>
     /// <returns>A collection of <see cref="SequenceQueryFolderDefinition"/>.</returns>
     Task<IEnumerable<SequenceQueryFolderDefinition>> GetAllFoldersFor(SequenceQueryOwner owner);
+
+    /// <summary>
+    /// Get a single folder by its identifier, regardless of who owns it.
+    /// </summary>
+    /// <param name="id">The <see cref="SequenceQueryFolderId"/> of the folder to get.</param>
+    /// <returns>The <see cref="SequenceQueryFolderDefinition"/> if it exists, otherwise null.</returns>
+    /// <remarks>
+    /// Intended for deciding whether a change is permitted, so it does not narrow by owner.
+    /// </remarks>
+    Task<SequenceQueryFolderDefinition?> GetFolder(SequenceQueryFolderId id);
 
     /// <summary>
     /// Save a folder, replacing any existing folder with the same identifier.
