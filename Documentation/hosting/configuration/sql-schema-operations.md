@@ -105,7 +105,7 @@ env:
 The runtime identity still needs permissions for Chronicle's dynamic per-table operations. In Verify mode, these tables are still created when first used:
 
 - Event-sequence tables for sequences that did not exist when `--migrate-only` ran.
-- Unique-constraint tables.
+- Unique-constraint tables for constraints that did not exist when `--migrate-only` ran.
 - Read-model tables, including the per-generation tables created when a projection is rebuilt.
 
 The `chronicle_sink_cycle_receipts` table is not created in Verify mode. Run `--migrate-only` first, including after an upgrade. A Verify replica now fails at startup with `SchemaNotCurrent` if the receipt table or its required index is missing or drifted in any known event store and namespace, including the system store and default namespaces. It does not report ready or repair the table. `--verify-schema` checks the same schema. Multi-write cycles still fail clearly with `SchemaNotCurrent` if the receipt schema is missing or drifted when accessed at runtime.
@@ -187,6 +187,14 @@ UPDATE [__cratis_spelling_reviews] SET Reviewed = 1 WHERE TableName = N'<event s
 ```
 
 The row is reset to not reviewed if a later `--migrate-only` run finds a different count.
+
+### Unique-constraint claims
+
+Unique-constraint claim tables compare the owner exactly in the same way. `--migrate-only` upgrades the existing claim tables in one transaction per table: it adds `ExactSpelling` and, on the per-event-source tables, `ExactKey`, a persisted hash of the stored owner bytes that becomes part of the primary key. No row is rewritten or removed.
+
+Rows written by an earlier release are pending (`ExactSpelling = 0`). A pending row still holds its value against every other spelling of its owner, and no other spelling can overwrite or release it. The runtime and `--migrate-only` log how many rows are pending, as a count only.
+
+The first start of the new release rebuilds the unique-constraint indexes from the event log for every event sequence that has pending rows, using the same reindex job as a changed constraint definition. The rebuilt rows are exact (`ExactSpelling = 1`). Wait for the job to finish before you rely on the exact comparison; until then the pending rows keep protecting their values. Nodes of the previous release do not know the exact key, so stop them before you run `--migrate-only`.
 
 Every other schema object comes from versioned migrations, which `--migrate-only` applies and Verify checks.
 
