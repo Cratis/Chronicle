@@ -69,6 +69,10 @@ Soft-delete alone is not an erasure. Azure Key Vault [keeps a soft-deleted secre
 - **Purge permission.** The identity Chronicle runs as needs permission to purge deleted secrets in addition to the Get, List, Set and Delete permissions listed in [Compliance Storage](../hosting/configuration/compliance-storage.md#azure-key-vault). Chronicle also lists deleted secrets to finish an earlier incomplete erasure, which needs permission to list them.
 - **No purge protection.** With [purge protection](https://learn.microsoft.com/en-us/azure/key-vault/general/soft-delete-overview) enabled, a deleted object cannot be purged until the retention period passes. Such a vault cannot support Chronicle's erasure. Chronicle does not detect the setting in advance; the first erasure fails.
 
+### Disabled secrets
+
+A key secret that is disabled in the vault counts as present but unavailable. Chronicle does not read it, does not replace it with a new key, and does not reuse its revision number: the operation throws `EncryptionKeyUnavailable`, the metric `chronicle-encryption-key-unavailable` is incremented and one warning without identifiers is logged. A disabled erasure secret is treated the same way, so a disabled fence never reads as no fence. Erasing the subject removes and purges the disabled secret, and the erasure covers its revision.
+
 ### What happens when the purge is refused
 
 The vault answers the purge with HTTP 403. The erasure fails with `EncryptionKeyNotPurged`, which names the secret and the status. The state at that point is:
