@@ -123,6 +123,44 @@ The five-minute limit is the verification window for retries **within one call**
 
 This is not deduplication across redelivery. A redelivered cycle starts a new call with a new receipt id; it can apply the writes again, even if the previous call's receipt remains. Expired or deleted receipts cannot establish that an earlier delivery committed, and a new call does not emit the old call's outcome-unknown Error merely because it was redelivered. Finished receipts are cleaned up in batches; receipts left by crashed owners are swept after 24 hours. Do not use that retention period as a redelivery or exactly-once guarantee.
 
+## Identifier comparison on SQL Server
+
+On SQL Server, Chronicle compares event source ids and event stream identifiers exactly: letter case, character width, accents and trailing spaces all count. Two identifiers that differ only in spelling are two different identifiers. Other providers already compared them this way.
+
+Closed-stream entries written by an earlier release were matched with the database collation, so such an entry applies to every spelling of its identifier until you review it. The upgrade keeps these rows and marks them as not yet reviewed (`ExactSpelling = 0`). An unreviewed row still closes every spelling it used to match. The runtime logs a count of unreviewed rows once per event sequence and never logs identifier values.
+
+### Check during `--migrate-only`
+
+`--migrate-only` counts, for each event sequence table, the event source ids and event streams stored in more than one spelling, and records the counts in the `__cratis_spelling_reviews` table. The check reads the whole event sequence table once per table, so expect a duration roughly proportional to the table size. Verify mode does not run the check or create the table; the runtime only reads the recorded counts and logs them.
+
+Stop all nodes, run `--migrate-only`, then start the new release. Nodes of the previous release do not know the exact comparison and can disagree with it while both run.
+
+### Review closed-stream entries
+
+List the entries that have not been reviewed:
+
+```sql
+SELECT * FROM [ClosedStreams] WHERE ExactSpelling = 0;
+```
+
+For each entry that you confirm applies to exactly one spelling, mark it as reviewed:
+
+```sql
+UPDATE [ClosedStreams] SET ExactSpelling = 1 WHERE ExactSpelling = 0 AND EventSourceId = N'<confirmed event source id>';
+```
+
+Run the listing and the update in each namespace database that holds closed-stream entries.
+
+### Mark a spelling review as done
+
+After you have reviewed the identifiers reported for an event sequence table, mark its row in the review table:
+
+```sql
+UPDATE [__cratis_spelling_reviews] SET Reviewed = 1 WHERE TableName = N'<event sequence table name>';
+```
+
+The row is reset to not reviewed if a later `--migrate-only` run finds a different count.
+
 Every other schema object comes from versioned migrations, which `--migrate-only` applies and Verify checks.
 
 Replicas from the previous release keep running against the migrated schema during a rollout. They ignore migrations they do not know, so a rollout stays safe as long as each release only adds tables, columns and indexes. Keep schema connection resolution consistent with the [storage connection resolution configuration](storage-connection-resolution.md).
