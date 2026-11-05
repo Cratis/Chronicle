@@ -5,9 +5,7 @@ using Cratis.Arc.Authorization;
 using Cratis.Arc.Queries.ModelBound;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.SequenceQueries;
-using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Storage;
-using Microsoft.Extensions.Options;
 
 namespace Cratis.Chronicle.SequenceQueries;
 
@@ -37,15 +35,13 @@ public record QueryFolder(
     /// <param name="eventStore">Event store to get for.</param>
     /// <param name="currentPrincipalAccessor"><see cref="ICurrentPrincipalAccessor"/> for resolving the owner.</param>
     /// <param name="storage">The <see cref="IStorage"/> holding the saved queries.</param>
-    /// <param name="options">The server configuration.</param>
     /// <returns>A collection of <see cref="QueryFolder"/>.</returns>
     public static async Task<IEnumerable<QueryFolder>> AllQueryFolders(
         EventStoreName eventStore,
         ICurrentPrincipalAccessor currentPrincipalAccessor,
-        IStorage storage,
-        IOptions<ChronicleOptions> options)
+        IStorage storage)
     {
-        var owner = SequenceQueryOwners.GetCurrent(currentPrincipalAccessor, options.Value.Authentication);
+        var owner = SequenceQueryOwners.GetCurrent(currentPrincipalAccessor);
         var folders = await storage.GetEventStore(eventStore).SequenceQueries.GetAllFoldersFor(owner);
 
         return folders.ToReadModel();

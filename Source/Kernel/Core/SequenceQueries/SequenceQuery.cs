@@ -5,9 +5,7 @@ using Cratis.Arc.Authorization;
 using Cratis.Arc.Queries.ModelBound;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.SequenceQueries;
-using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Storage;
-using Microsoft.Extensions.Options;
 
 namespace Cratis.Chronicle.SequenceQueries;
 
@@ -57,7 +55,6 @@ public record SequenceQuery(
     /// <param name="eventStore">Event store to get for.</param>
     /// <param name="currentPrincipalAccessor"><see cref="ICurrentPrincipalAccessor"/> for resolving the owner.</param>
     /// <param name="storage">The <see cref="IStorage"/> holding the saved queries.</param>
-    /// <param name="options">The server configuration.</param>
     /// <returns>A collection of <see cref="SequenceQuery"/>.</returns>
     /// <remarks>
     /// A snapshot rather than an observable: which queries an identity may see depends on the
@@ -66,10 +63,9 @@ public record SequenceQuery(
     public static async Task<IEnumerable<SequenceQuery>> AllSequenceQueries(
         EventStoreName eventStore,
         ICurrentPrincipalAccessor currentPrincipalAccessor,
-        IStorage storage,
-        IOptions<ChronicleOptions> options)
+        IStorage storage)
     {
-        var owner = SequenceQueryOwners.GetCurrent(currentPrincipalAccessor, options.Value.Authentication);
+        var owner = SequenceQueryOwners.GetCurrent(currentPrincipalAccessor);
         var queries = await storage.GetEventStore(eventStore).SequenceQueries.GetAllFor(owner);
 
         return queries.ToReadModel();

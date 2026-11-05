@@ -5,9 +5,7 @@ using Cratis.Arc.Authorization;
 using Cratis.Arc.Commands.ModelBound;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.SequenceQueries;
-using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Storage;
-using Microsoft.Extensions.Options;
 
 namespace Cratis.Chronicle.SequenceQueries;
 
@@ -36,9 +34,8 @@ public record SaveSequenceQueryFolder(
     /// </summary>
     /// <param name="currentPrincipalAccessor"><see cref="ICurrentPrincipalAccessor"/> for resolving the owner.</param>
     /// <param name="storage">The <see cref="IStorage"/> holding the saved queries.</param>
-    /// <param name="options">The server configuration.</param>
     /// <returns>Awaitable task.</returns>
-    public Task Handle(ICurrentPrincipalAccessor currentPrincipalAccessor, IStorage storage, IOptions<ChronicleOptions> options) =>
+    public Task Handle(ICurrentPrincipalAccessor currentPrincipalAccessor, IStorage storage) =>
         storage.GetEventStore(EventStore).SequenceQueries.SaveFolder(
             new SequenceQueryFolderDefinition(
                 Id,
@@ -46,7 +43,7 @@ public record SaveSequenceQueryFolder(
 
                 // Ownership follows the principal creating the folder, never a value the client
                 // supplies, so a caller cannot plant a folder into somebody else's private set.
-                SequenceQueryOwners.GetCurrent(currentPrincipalAccessor, options.Value.Authentication),
+                SequenceQueryOwners.GetCurrent(currentPrincipalAccessor),
                 Namespace,
                 Path));
 }
