@@ -14,7 +14,12 @@ This reference holds the observer annotations, their arguments, filtering annota
 | `@Constraint` | `id = ""` | `constraints/Constraint.kt` |
 | `@Seeder` | none | `seeding/Seeder.kt` |
 
-Handler-level: `@Replay`, `@OnceOnly`. Observer filtering: `@Tag`/`@Tags`,
+Requires Chronicle.Kotlin 6.15.0 and kernel 19.70.0 for StartAtTail; check Gradle dependencies and the server version, or retain initial catch-up.
+
+`@StartAtTail` on a reactor class skips initial history only. Existing positions
+are unchanged.
+`@OnceOnly` targets both classes and functions: it skips replay, not initial
+catch-up or redelivery. Handler-level replay override: `@Replay`. Observer filtering: `@Tag`/`@Tags`,
 `@FilterEventsByTag`/`@FilterEventsByTags`, `@EventSequence`,
 `@EventSourceType`, `@EventStreamType`.
 

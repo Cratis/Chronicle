@@ -1,6 +1,6 @@
 ---
 name: cratis-engineering-csharp-conventions
-description: Apply the Cratis C# house conventions when writing or reviewing C# in a Cratis repository - formatting, naming, records and primary constructors, nullable handling, XML documentation, custom exceptions, structured logging, dependency injection, and service lifetimes. Use for any "how should this be written" C# style question; defer product API decisions and specification authoring to their focused workflows.
+description: Use when writing or reviewing C# house style in a Cratis repository, including naming, formatting and service lifetimes. Not for product API behavior or specification authoring.
 license: LICENSE
 ---
 <!-- cratis-ai-managed: skills/cratis-engineering-csharp-conventions/SKILL.md -->

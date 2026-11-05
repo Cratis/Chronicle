@@ -1,5 +1,18 @@
 ---
-applyTo: "**/*"
+applyTo: "**/*.cs,**/*.ts,**/*.tsx,**/*.go,**/*.kt,**/*.kts,**/*.java,**/*.ex,**/*.exs,**/*.play,**/Documentation/**/*.md,**/Documentation/**/*.mdx"
+paths:
+  - "**/*.cs"
+  - "**/*.ts"
+  - "**/*.tsx"
+  - "**/*.go"
+  - "**/*.kt"
+  - "**/*.kts"
+  - "**/*.java"
+  - "**/*.ex"
+  - "**/*.exs"
+  - "**/*.play"
+  - "**/Documentation/**/*.md"
+  - "**/Documentation/**/*.mdx"
 ---
 <!-- cratis-ai-managed: harnesses/copilot/instructions/glossary.instructions.md -->
 <!-- cratis-ai: generated Copilot instructions. Do not edit; rules/ is the source. -->

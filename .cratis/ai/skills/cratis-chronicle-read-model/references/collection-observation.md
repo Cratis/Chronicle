@@ -42,7 +42,7 @@ pretending observation succeeded.
 
 ## Verify
 
-Run `dotnet build -c Debug` and `dotnet test` for the owning query specs. Cover
+Run `dotnet build -c Debug` and the owning query spec executable (see [specs.csharp](../../../rules/specs.csharp.md)). Cover
 empty, add, update, remove, filter exit and disposal.
 Requires Arc 22.87.0 for Chronicle observations in `QueryScenario`.
 Requires Arc 22.91.1 with Chronicle 19.59.1 for default-mode children/joins/reducers. Scenario rebuilds do

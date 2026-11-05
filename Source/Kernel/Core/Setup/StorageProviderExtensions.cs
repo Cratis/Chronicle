@@ -7,6 +7,7 @@ using Cratis.Chronicle.Setup;
 using Cratis.Chronicle.Storage.Observation;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Orleans.Storage;
 using Polly;
 using Polly.Registry;
@@ -58,6 +59,8 @@ public static class StorageProviderExtensions
 
         builder.ConfigureServices(services =>
         {
+            services.AddSingleton(serviceProvider => new StorageConcurrencyGate(
+                serviceProvider.GetRequiredService<IOptionsMonitor<ResilientStorageOptions>>().Get(ResilientGrainStorage.ResiliencePipelineKey).MaxConcurrentOperations));
             services.AddKeyedSingleton(WellKnownGrainStorageProviders.Namespaces, CreateResilientStorageFor<Cratis.Chronicle.Namespaces.NamespacesStateStorageProvider>);
             services.AddKeyedSingleton(WellKnownGrainStorageProviders.EventSequences, CreateResilientStorageFor<Cratis.Chronicle.EventSequences.EventSequencesStorageProvider>);
             services.AddKeyedSingleton(WellKnownGrainStorageProviders.ObserverDefinitions, CreateResilientStorageFor<Cratis.Chronicle.Observation.ObserverDefinitionGrainStorageProvider>);
@@ -92,5 +95,5 @@ public static class StorageProviderExtensions
     static IGrainStorage CreateResilientStorageFor<TStorage>(IServiceProvider serviceProvider, object? context)
 #pragma warning restore CA1859
         where TStorage : class, IGrainStorage
-        => new ResilientGrainStorage(serviceProvider.GetRequiredService<TStorage>(), serviceProvider.GetRequiredService<ResiliencePipelineProvider<string>>());
+        => new ResilientGrainStorage(serviceProvider.GetRequiredService<TStorage>(), serviceProvider.GetRequiredService<ResiliencePipelineProvider<string>>(), serviceProvider.GetRequiredService<StorageConcurrencyGate>());
 }

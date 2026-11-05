@@ -1,6 +1,6 @@
 ---
 name: cratis-components-schema-editor
-description: Use the Cratis Components schema editors — SchemaEditor for editing a JSON schema's property structure, and ObjectContentEditor for viewing and editing an object instance against a schema. Covers the exact props, the narrow JSON-schema subset they consume, how edits come back out, the type-format vocabulary, property-name validation, and the real editing limits. Use when building a UI that lets a user shape an event or payload schema, or inspect and edit a stored object. Do not use for a command form bound to a generated Arc command.
+description: Use when building a Cratis UI to edit a schema's structure or inspect and edit object data against a schema. Not for forms bound to generated Arc commands; use cratis-arc-react-page.
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/cratis-components-schema-editor/SKILL.md -->

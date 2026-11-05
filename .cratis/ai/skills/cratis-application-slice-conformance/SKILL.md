@@ -1,6 +1,6 @@
 ---
 name: cratis-application-slice-conformance
-description: "Reconcile a Cratis slice's hand-written or gap-filled code and specifications with its contract (the `.play` slice and its specifications, else the agreed slice outline) in both directions: every contracted field, rule, event, read-model property and specification has a realization, and nothing in code lacks authority. Use when implementing a slice, re-delivering after a model change, finishing gap-fill after a render, or reviewing slice code. Not for: deciding what the slice should do (use `cratis-chronicle-event-modeling` or `cratis-screenplay-slice-design`), writing the specifications themselves (use `cratis-application-slice-specifications`), or rendering (use `cratis-screenplay-render-and-gap-fill`)."
+description: Use when finishing or reviewing hand-written slice code, gap-fill or re-delivery against its accepted model or outline. Not for deciding behavior, writing specifications or running the renderer.
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/cratis-application-slice-conformance/SKILL.md -->
@@ -45,7 +45,7 @@ This skill is a method: it names no API of its own. When the Screenplay skills a
 | --- | --- |
 | Where each rule lives (validator, `Provide()`, handler result, constraint, exception) | `rules/vertical-slices.md` "The decision matrix"  |
 | A customization never makes a rejected model renderable; managed output is never hand-edited | Stage (`Customizations/` is the unmanaged seam; managed output is regenerated) |
-| Attached file or inline command handlers are refused with PLAY0800, a permanent requirement for a code implementation attachment (Requires Screenplay 4.210.0; older binders report PLAY0268); pending handlers with unconditional productions bind v23 as described commands, but reached bodies are Unsupported ImplementationBody and Stage refuses STAGE-IMPL-002 even in Stub mode | Screenplay and Stage; use the model as the gap-fill contract |
+| Attached file or inline command handlers bind beside unconditional `produces` with a resolved body (Screenplay 4.250.0) and are otherwise refused with PLAY0800 (4.210.0 to 4.249.x refuse every attached handler; older binders report PLAY0268); pending handlers with unconditional productions bind v23 as described commands, but reached bodies are Unsupported ImplementationBody and Stage refuses STAGE-IMPL-002 even in Stub mode | Screenplay and Stage; use the model as the gap-fill contract |
 
 ## Procedure
 

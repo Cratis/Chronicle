@@ -326,6 +326,8 @@ hostBuilder
        services.AddStorageAuthorizationHealthCheck();
    });
 
+// A repeated failure is written a few times and then counted, see RepeatedFailureLog.
+Cratis.Chronicle.Diagnostics.RepeatedFailureLoggerProvider.ThrottleRepeatedFailures(builder.Services);
 var app = builder.Build();
 _ = app.Services.GetRequiredService<IShutdownDrainBudget>();
 

@@ -23,7 +23,7 @@ complete: the first claimant in event-log order retains the value, later duplica
 claims are logged and skipped. Reindexing does not retract their stored events.
 Older kernels can fail the reindex instead.
 
-Run the affected specifications with `dotnet test`, asserting a second source's
+Run the affected specifications with the owning project's built spec executable (see [specs.csharp](../../../rules/specs.csharp.md)), asserting a second source's
 rejection, unchanged original claim after a failed move, and successful reuse
 after release. Real SQL integration must prove two competing claims cannot both
 succeed; an in-memory pass does not prove the SQL index was upgraded.

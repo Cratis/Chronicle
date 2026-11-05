@@ -11,10 +11,11 @@ probe reports and choosing what to do. Do not copy the code table here.
 1. The CLI compiles and binds the **whole** model with its **bundled** Screenplay (the ESM level it renders is bounded by the bundle; older bundles bound less). Binding is never scoped:
    any binding error blocks even a `--scope` render. Binding errors are `PLAY0268` (outside the admitted vertical), `PLAY0269`
    (deferred), `PLAY0270` (report-only information), `PLAY0271` (legacy semantics) and `PLAY0273`
-   (a specification shape). File/inline command handlers instead report PLAY0800
-   (`CommandHandlerRequiresAttachment`), a permanent constrained-attachment requirement.
-   Requires Screenplay 4.210.0 (`screenplay --version`); older bundled binders use
-   PLAY0268 for these handlers. Hosts read the required typed `arguments.subject`
+   (a specification shape). A file/inline command handler without unconditional `produces`
+   or a resolved body instead reports PLAY0800 (`CommandHandlerRequiresAttachment`); beside
+   unconditional `produces` with a resolved body it binds as the v23 result contract.
+   Requires Screenplay 4.250.0 (`screenplay --version`); 4.210.0 to 4.249.x refuse every
+   attached handler with PLAY0800 and older bundled binders use PLAY0268 for these handlers. Hosts read the required typed `arguments.subject`
    to identify the command, never the message.
 2. Execution planning builds the plan and can emit `PLAN-*` diagnostics before Stage runs.
 3. Stage plans the target and admits or rejects each member: `STAGE-ESM-0xx`; profile and path
@@ -36,8 +37,8 @@ ESM). Only the probe answers renderability. `PLAY0270` entries are information, 
 | Class | Meaning | Typical examples (each verified in `admission.md`) | Action |
 | --- | --- | --- | --- |
 | **Model fix (in mode)** | the model is in, or the user chose, renderable mode and breaks its own subset in a way that has a renderable equivalent with the same meaning | a `produces` whose `for` is not the command identifier; two projections for one read model (`-007`); a policy Stage cannot express portably (`-015`; role-only and opaque pure policies render) | edit request to the modeler session with address, change and rationale |
-| **Capability gap** | the intended meaning needs a construct Stage does not render yet | DateTime equality filters and required parameters after optional filters (`-010`); context/single-result filters, opaque `scoped to` and a list-query `by` block remain PLAY0268; a query `performer` (opaque read, PLAY0270) is left out of the model so render emits nothing for it: write the code the model needs by hand as a gap-fill item; a read model with several key parts or a projection keyed by parts (v27) refuses `STAGE-ESM-048` and a single-instance query by parts `STAGE-ESM-047` (Chronicle#4265); Translate, clocks, captures, non-event triggers and opaque reaction bodies (`-024`); claim-reading/opaque `runs as` gates (`-034`), legacy `from` (`-035`), mixed effects in one handler (`-037`, retries can duplicate events; keep it whole), unsupported reaction mappings (`-039`); unsupported generated types/result combinations (`-028`/`-038`); `then no readmodel` (`-027`); evolved events (`STAGE-ESM-026`); unsupported expression/enum production conditions (`-006`; supported conditional productions render); legacy reads (`PLAY0271`), protected reads the renderer cannot preserve, or any protected read in an older CLI bundle (STAGE-ESM-044 despite v25 admission; semantic Host/executor support is separate); code validation (`-005`); protected identities/enums (`-040`) or unadmitted explicit subject lineage (`PLAY0268`); described handlers (v23, STAGE-IMPL-002 even Stub mode), atomic mode (STAGE-ESM-043; v22 admission Requires Stage 4.139.0, older Stage reports -016) | keep the model; fallback record entry; options a to c in `SKILL.md`; link the Stage issue |
-| **Implementation attachment** | a permanent limitation, not future ESM admission | file/inline command handlers (PLAY0800; typed `subject` names the command) | keep the model contract and gap-fill the slice in code with a constrained implementation attachment; do not wait for a new ESM version |
+| **Capability gap** | the intended meaning needs a construct Stage does not render yet | DateTime equality filters and required parameters after optional filters (`-010`); context/single-result filters, opaque `scoped to` and a list-query `by` block remain PLAY0268; an unsupported query performer (observable, a non-C# body, or a missing, changed or non-compiling body) becomes an explicit implementation gap, while a verified C# body renders ([performer bodies](../../cratis-screenplay-read-surface/SKILL.md#performer-bodies-are-rendered)); a read model with several key parts or a projection keyed by parts (v27) refuses `STAGE-ESM-048` (always for a DateTime or decimal key part; the decimal refusal lifts with Stage#847 once Chronicle#5427 lands) and a single-instance query by parts `STAGE-ESM-047` (Chronicle#4265); Translate, clocks, captures, non-event triggers and opaque reaction bodies (`-024`); claim-reading/opaque `runs as` gates (`-034`), legacy `from` (`-035`), mixed effects in one handler (`-037`, retries can duplicate events; keep it whole), unsupported reaction mappings (`-039`); unsupported generated types/result combinations (`-028`/`-038`); `then no readmodel` (`-027`); evolved events (`STAGE-ESM-026`); unsupported expression/enum production conditions (`-006`; supported conditional productions render); legacy reads (`PLAY0271`), protected reads the renderer cannot preserve, or any protected read in an older CLI bundle (STAGE-ESM-044 despite v25 admission; semantic Host/executor support is separate); code validation (`-005`); protected identities/enums (`-040`) or unadmitted explicit subject lineage (`PLAY0268`); described handlers (v23, STAGE-IMPL-002 even Stub mode), atomic mode (STAGE-ESM-043; v22 admission Requires Stage 4.139.0, older Stage reports -016) | keep the model; fallback record entry; options a to c in `SKILL.md`; link the Stage issue |
+| **Implementation attachment** | the handler shape, not future ESM admission | file/inline command handlers without unconditional `produces` or a resolved body (PLAY0800; typed `subject` names the command) | declare unconditional `produces` beside a resolved body, split variable outcomes into separate commands, or keep the model contract and gap-fill the slice in code |
 | **Tool skew** | the bundled compiler disagrees with documented semantics | the false `PLAY0285` on reaction cascades from an older bundle; codes the standalone compiler does not raise | record in the session state and the fallback record; never "fix" a correct model |
 | **Environment** | not the model | restore failures, missing SDK, a destination that is not writable | fix the environment or report blocked |
 
@@ -60,6 +61,14 @@ Requires Stage 4.138.0 for the Cratis renderer to render protected reads.
   `--scope` render of the admitted slices as an option, never a silently thinner render.
 - Admission can pass and a Debug test still fail. Admission is never a passing test; see
   `cratis-stage-rendering-and-sandbox` `references/render-example.md`.
+
+## Authentication and onboarding are realized
+A model's `authentication` and `onboarding` blocks are rendered by Stage (AuthProxy and Ante
+configuration, personas, provisioning, emails); do not gap-fill them by hand
+(`cratis-stage-rendering-and-sandbox` `references/rendered-application.md`). A provider kind
+AuthProxy does not support is left out of the render with the warning `STAGE-AUTH-001`; the
+render still publishes, so report it as a model decision, not as a hand-written provider.
+Requires cratis CLI 3.116.0 with Stage 4.211.0 (`cratis --version`); older releases report `authentication` and `onboarding` as unrendered warnings.
 
 ## Stage issues to cite in fallback record entries
 Historical issue pointers (not a fresh issue-state check): portable query semantics Stage#58;

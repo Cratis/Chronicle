@@ -99,13 +99,19 @@ The goal is to cover *decisions and transformations* — code where bugs hide. S
 
 **Avoid file names starting with:** `when_getting_*`, `when_returning_*` — if a spec name starts with "getting" or "returning", it's probably testing a simple getter, which is not worth specifying.
 
+## Choosing the harness
+
+Call the code. A function whose result depends only on its arguments is specified by calling it with those arguments and asserting the result: no host, container or harness. Use a harness (scenario, fixture, in-memory engine) for behavior that exists only in the framework: discovery, attribute- or convention-driven wiring, authorization, persistence-time rules and declarative mappings. Name each such spec after the wiring it proves, and do not repeat through the harness a decision a plain call already proves.
+
+Substitute collaborators (a service, a clock, a sender) freely in a plain call. Never substitute the event store, a read-model store or the pipeline as proof of persistence, projection or pipeline behavior: either make the code a pure function of its inputs, or keep the harness. Harness coverage is an obligation per behavior the framework owns, not a quota. Fast, parallel-safe harnesses are required by [fast-feedback.md](./fast-feedback.instructions.md).
+
 ## Multiple Outcomes
 
 Each distinct outcome deserves its own spec file. This keeps specs small, focused, and independently verifiable. When a spec fails, you immediately know *which* outcome broke — no debugging through a multi-assertion file.
 
 - When a behavior has multiple outcomes, create a `when_<behavior>/` folder with separate files for each outcome.
 - For simple behaviors with a single outcome, use a single file: `when_<behavior>`.
-- Never write a single file that tests an entire class.
+- Never write a single file that tests an entire class's unrelated behaviors. **C# declarative read-model mappings are the exception:** use one scenario class per read model by default (another only for a sequence that cannot share it, such as a removal or another key), one shared event sequence with captured intermediate states, and many read-only facts for fields and lifecycle outcomes. See [specs.scenarios.csharp.md](./specs.scenarios.csharp.instructions.md) for scenario selection and cost budgets.
 
 ## Reusable Context
 

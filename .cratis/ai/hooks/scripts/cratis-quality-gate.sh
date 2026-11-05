@@ -23,7 +23,21 @@ set -euo pipefail
 [ "${CRATIS_HOOKS_SKIP_GATE:-0}" = "1" ] && exit 0
 
 input="$(hook_read_stdin)"
-hook_have jq || exit 0
+root="$(hook_repo_root)"
+if ! hook_have jq; then
+    # Without JSON parsing, still honor Stop re-entry and never block an unchanged tree.
+    LC_ALL=C grep -Eq '"stop_hook_active"[[:space:]]*:[[:space:]]*true' <<<"$input" && exit 0
+    git -C "$root" rev-parse --git-dir >/dev/null 2>&1 || exit 0
+    [ -n "$(git -C "$root" status --porcelain --untracked-files=normal 2>/dev/null || true)" ] || exit 0
+    {
+        printf 'BLOCKED by cratis-quality-gate: jq is not installed, so no quality gates ran on this change.\n'
+        hook_jq_install_hint
+        printf '\nA person who accepts ending turns without the gate sets CRATIS_HOOKS_SKIP_GATE=1 in the environment the agent\n'
+        printf 'harness was started from; setting it inside the command has no effect.\n'
+    } >&2
+    [ "${CRATIS_HOOKS_GATE_DRYRUN:-0}" = "1" ] && exit 0
+    exit 2
+fi
 
 # Never re-enter: Claude Code sets stop_hook_active when the previous Stop hook already
 # blocked and the model is continuing. Blocking again would loop forever.
@@ -31,8 +45,8 @@ if [ -n "$input" ] && [ "$(hook_json "$input" '.stop_hook_active')" = "true" ]; 
     exit 0
 fi
 
-root="$(hook_repo_root)"
 here="$(cd -P "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
+export CRATIS_HOOKS_SCRIPTS_DIR="$here"
 config="${CRATIS_HOOKS_GATES:-$here/quality-gates.json}"
 dryrun="${CRATIS_HOOKS_GATE_DRYRUN:-0}"
 

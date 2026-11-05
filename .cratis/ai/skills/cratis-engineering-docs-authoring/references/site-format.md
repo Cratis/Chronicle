@@ -4,6 +4,11 @@
 Use these rules for a page that will render on the Cratis Astro Starlight site.
 The owning repository remains authoritative when it defines a stricter format.
 
+For purposeful Astro components and text/AI export limitations, read the
+canonical [site presentation guide](../../cratis-documentation-writing/references/cratis-site.md).
+Ordinary product Markdown supports native aside directives; component imports
+require an eligible MDX pipeline. Choose aids for this task, not a uniform layout.
+
 ## Frontmatter and headings
 
 - Include `title` and `description` frontmatter.

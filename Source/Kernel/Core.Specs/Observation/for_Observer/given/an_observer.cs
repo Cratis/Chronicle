@@ -113,6 +113,9 @@ public class an_observer : Specification
             silo.AddKeyedService(WellKnown.MeterName, _meter);
         }
 
+        var management = Substitute.For<IManagementGrain>();
+        management.GetHosts(true).Returns(new Dictionary<SiloAddress, SiloStatus>());
+        silo.AddProbe(_ => management);
         silo.AddProbe(_ => _observerAlerts);
         silo.AddProbe(_ => _subscriber);
         silo.AddProbe(_ => _jobsManager);

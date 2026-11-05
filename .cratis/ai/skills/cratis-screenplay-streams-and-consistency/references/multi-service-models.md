@@ -169,12 +169,14 @@ Requires Screenplay 4.155.0 or later for `PLAY0687`; older compilers accept a mi
   then the same for `Billing`. `--name` is the application identity and becomes the
   Chronicle event-store name and the MongoDB database name, so it must equal every
   consumer's `from "…"` origin.
-- Stage refuses public events and event-target builders (`STAGE-ESM-032`), foreign
-  events and events-source captures (`STAGE-ESM-033`) and directed Translate slices
-  (`STAGE-ESM-024`). Render the admitted modules with `--scope` and gap-fill the
-  publication and the consumer translation by hand against the model, using
-  `cratis-multi-service-architecture` for the runtime shape
-  (`cratis-screenplay-render-and-gap-fill` owns the workflow).
+- Stage now renders bounded inbound source-event captures and outbound
+  public-event projections; unsupported foreign/public/Translate uses retain
+  STAGE-ESM-032/033/024. Check [Stage target boundaries](../../cratis-stage-rendering-and-sandbox/references/current-boundaries.md).
+  Render admitted modules with `--scope`; gap-fill refused integration scope by
+  hand against the model, using `cratis-multi-service-architecture` for the
+  runtime shape (`cratis-screenplay-render-and-gap-fill` owns the workflow).
+  A semantic Host's seeded foreign facts/local public appends are not proof of
+  real cross-service delivery.
 - Each rendered scaffold carries its own single-kernel compose file with fixed host
   ports. Run one kernel for all services instead
   (`cratis-multi-service-local-orchestration`).

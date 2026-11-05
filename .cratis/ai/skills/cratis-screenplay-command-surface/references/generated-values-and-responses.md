@@ -260,7 +260,11 @@ Stage emits strategy-specific `IGeneratable<T>.New()` factories over Fundamental
 checks atomically at append: a batch's scopes are checked once against the state before
 the batch, all or nothing, and a storage retry that renumbers the append checks them again. Generated rejection specs assert
 `ValidationResultReason.ConcurrencyViolation`, not Arc's message text. This is
-Stage's explicit realization, not a claim that Arc delivers the same guard.
+Stage's explicit realization and renderer-owned smoke coverage, not a claim that
+Arc delivers the same guard or an instruction to hand-write an application guard
+matrix. Application decisions use direct `Handle()`/validator calls with supplied
+state; the one cheap application-shape admission spec is their only decision-read
+obligation. See [specs.scenarios.csharp.md](../../../rules/specs.scenarios.csharp.md).
 Time-based factories use the command's receipt time through `IGeneratableInContext<T>`
 and `GenerationContext`, the same instant as `$context.occurred`.
 
