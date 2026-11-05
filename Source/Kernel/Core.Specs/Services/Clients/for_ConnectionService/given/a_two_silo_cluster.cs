@@ -34,6 +34,8 @@ public class a_two_silo_cluster : Specification
     readonly TaskCompletionSource<Exception?> _terminated = new(TaskCreationOptions.RunContinuationsAsynchronously);
     readonly TaskCompletionSource _released = new(TaskCreationOptions.RunContinuationsAsynchronously);
     readonly List<IDisposable> _subscriptions = [];
+    readonly List<(int Count, TaskCompletionSource Reached)> _waiting = [];
+    int _keepAlives;
 
     void Establish()
     {
@@ -47,9 +49,36 @@ public class a_two_silo_cluster : Specification
         _grain = new SharedReservation(membership) { Clock = _clock };
         _reservation = new SignallingReservation(Decorate(_grain), _released);
 
-        var options = Options.Create(new ChronicleOptions { ConnectedClients = new() { KeepAliveIntervalSeconds = 1 }, Clustering = new() { ResponseTimeout = TimeSpan.FromMilliseconds(300) } });
+        var options = Options.Create(new ChronicleOptions { ConnectedClients = new() { KeepAliveIntervalSeconds = 1 }, Clustering = new() { ResponseTimeout = ResponseTimeout } });
         (_serviceA, _ownershipA) = CreateService(_siloA, options);
         (_serviceB, _ownershipB) = CreateService(_siloB, options);
+    }
+
+    /// <summary>
+    /// Gets how long a silo waits for the reservation grain.
+    /// </summary>
+    protected virtual TimeSpan ResponseTimeout => TimeSpan.FromMilliseconds(300);
+
+    /// <summary>
+    /// Gets the number of keep-alives received so far on the opened stream.
+    /// </summary>
+    protected int KeepAlivesReceived => Volatile.Read(ref _keepAlives);
+
+    /// <summary>
+    /// Waits until the opened stream has received the given number of keep-alives in total.
+    /// </summary>
+    /// <param name="count">The total number of keep-alives.</param>
+    /// <returns>An awaitable task.</returns>
+    protected Task KeepAlivesReached(int count)
+    {
+        var reached = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        lock (_waiting)
+        {
+            if (KeepAlivesReceived >= count) reached.TrySetResult();
+            else _waiting.Add((count, reached));
+        }
+
+        return reached.Task.WaitAsync(TimeSpan.FromSeconds(10), TimeProvider.System);
     }
 
     /// <summary>
@@ -65,7 +94,16 @@ public class a_two_silo_cluster : Specification
     {
         var outcome = new TaskCompletionSource<Exception?>(TaskCreationOptions.RunContinuationsAsynchronously);
         _subscriptions.Add(service.Connect(new ConnectRequest { ConnectionId = Id }, context).Subscribe(
-            _ => outcome.TrySetResult(null),
+            _ =>
+            {
+                outcome.TrySetResult(null);
+                lock (_waiting)
+                {
+                    var total = Interlocked.Increment(ref _keepAlives);
+                    foreach (var (count, reached) in _waiting.Where(_ => total >= _.Count)) reached.TrySetResult();
+                    _waiting.RemoveAll(_ => total >= _.Count);
+                }
+            },
             error =>
             {
                 outcome.TrySetResult(error);

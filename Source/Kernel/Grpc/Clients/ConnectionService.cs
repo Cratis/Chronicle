@@ -40,8 +40,8 @@ internal sealed class ConnectionService(
     IOptions<ChronicleOptions> options) : IConnectionService
 {
     /// <summary>
-    /// How many keep-alive intervals a reservation lease lasts without being renewed. The holder renews it once per
-    /// keep-alive interval, so a lease survives a few missed or slow renewals but a reservation nobody holds any more
+    /// How many keep-alive intervals a reservation lease lasts without being renewed. The holder renews it every
+    /// half lease, off the keep-alive path, so a lease survives a few missed or slow renewals but a reservation nobody holds any more
     /// - a lost release, a holder that died - lapses within a few intervals.
     /// </summary>
     const int ReservationLeaseIntervals = 4;
@@ -67,6 +67,16 @@ internal sealed class ConnectionService(
     /// Gets or sets the clock used for registration deadlines.
     /// </summary>
     internal TimeProvider RegistrationTimeProvider { get; set; } = TimeProvider.System;
+
+    /// <summary>
+    /// How often the holder renews its lease: half of the lease, so a lease survives a missed renewal.
+    /// </summary>
+    TimeSpan RenewalPeriod => _keepAliveInterval * ReservationLeaseIntervals / 2;
+
+    /// <summary>
+    /// How long a renewal may wait for the reservation: never longer than the period, so one renewal is over before the next is due.
+    /// </summary>
+    TimeSpan RenewalTimeout => options.Value.Clustering.ResponseTimeout < RenewalPeriod ? options.Value.Clustering.ResponseTimeout : RenewalPeriod;
 
     /// <inheritdoc/>
     public IObservable<ConnectionKeepAlive> Connect(
@@ -310,7 +320,7 @@ internal sealed class ConnectionService(
     {
         try
         {
-            return await ClaimReservation(request.ConnectionId, owner, token, cancellationToken).ConfigureAwait(false);
+            return await ClaimReservation(request.ConnectionId, owner, token, options.Value.Clustering.ResponseTimeout, cancellationToken).ConfigureAwait(false);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -330,7 +340,7 @@ internal sealed class ConnectionService(
     {
         try
         {
-            return await ClaimReservation(request.ConnectionId, owner, token, cancellationToken).ConfigureAwait(false);
+            return await ClaimReservation(request.ConnectionId, owner, token, RenewalTimeout, cancellationToken).ConfigureAwait(false);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -338,18 +348,18 @@ internal sealed class ConnectionService(
         }
         catch (Exception ex)
         {
-            // The lease outlasts a few missed renewals, so this is tried again at the next keep-alive.
+            // The lease outlasts a few missed renewals, so this is tried again at the next renewal period.
             logger.FailedToRenewReservation(request.ConnectionId, ex);
             return ReservationOutcome.Failed;
         }
     }
 
-    async Task<ReservationOutcome> ClaimReservation(string connectionId, ConnectionOwner owner, Guid token, CancellationToken cancellationToken)
+    async Task<ReservationOutcome> ClaimReservation(string connectionId, ConnectionOwner owner, Guid token, TimeSpan timeout, CancellationToken cancellationToken)
     {
         var granted = await grainFactory
             .GetGrain<IConnectionReservation>(connectionId)
             .Claim(owner, localSiloDetails.SiloAddress, token, _keepAliveInterval * ReservationLeaseIntervals)
-            .WaitAsync(options.Value.Clustering.ResponseTimeout, RegistrationTimeProvider, cancellationToken)
+            .WaitAsync(timeout, RegistrationTimeProvider, cancellationToken)
             .ConfigureAwait(false);
         return granted ? ReservationOutcome.Granted : ReservationOutcome.Refused;
     }
@@ -394,6 +404,8 @@ internal sealed class ConnectionService(
 
             openConnections.Opened(request, DateTimeOffset.UtcNow);
             var keepRegistered = Task.CompletedTask;
+            Task<ReservationOutcome>? renewal = null;
+            var lastRenewal = RegistrationTimeProvider.GetTimestamp();
 
             try
             {
@@ -424,11 +436,24 @@ internal sealed class ConnectionService(
                         break;
                     }
 
-                    if (await RenewReservation(request, owner, token, cancellationToken).ConfigureAwait(false) == ReservationOutcome.Refused)
+                    // A renewal never holds back a keep-alive: it runs on its own, at most one at a time, and only
+                    // a finished renewal that was refused closes the stream.
+                    if (renewal is { IsCompleted: true })
                     {
-                        logger.ConnectionClosedForAnotherCaller(request.ConnectionId);
-                        reservedByAnother = true;
-                        break;
+                        var outcome = await renewal.ConfigureAwait(false);
+                        renewal = null;
+                        if (outcome == ReservationOutcome.Refused)
+                        {
+                            logger.ConnectionClosedForAnotherCaller(request.ConnectionId);
+                            reservedByAnother = true;
+                            break;
+                        }
+                    }
+
+                    if (renewal is null && RegistrationTimeProvider.GetElapsedTime(lastRenewal) >= RenewalPeriod)
+                    {
+                        lastRenewal = RegistrationTimeProvider.GetTimestamp();
+                        renewal = RenewReservation(request, owner, token, cancellationToken);
                     }
 
                     subject.OnNext(new ConnectionKeepAlive
