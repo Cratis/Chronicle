@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.Encryption;
+namespace Cratis.Chronicle.Storage.Compliance;
 
 /// <summary>
 /// Exception that gets thrown when an encryption key identifier differs only in letter case, width, accents or trailing
