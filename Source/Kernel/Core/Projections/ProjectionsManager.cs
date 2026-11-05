@@ -165,20 +165,39 @@ public partial class ProjectionsManager(
     /// <remarks>
     /// Runs interleaved, and only touches the table of registrations in flight: the work itself is queued on the
     /// grain's ordinary serialized path by the first caller, and every identical registration that arrives before it
-    /// finishes waits for that one instead of queueing behind it.
+    /// finishes waits for that one instead of queueing behind it. A registration that repeats one that just completed
+    /// is answered here without being queued at all: queued, it would wait behind subscription and recovery work in
+    /// this non-reentrant grain only to find there is nothing to do, and the caller's retry of the timeout it caused
+    /// would lengthen the queue further (#5688).
     /// </remarks>
-    public Task RegisterShared(string signature, IEnumerable<ProjectionDefinition> definitions, ProjectionOwner? fullSetOwner = null, string? registrant = null, string? version = null)
+    public async Task RegisterShared(string signature, IEnumerable<ProjectionDefinition> definitions, ProjectionOwner? fullSetOwner = null, string? registrant = null, string? version = null)
     {
         if (_sharedRegistrations.TryGetValue(signature, out var inFlight))
         {
             logger.JoiningRegistrationInFlight(_eventStoreName, registrant ?? string.Empty);
-            return inFlight;
+            await inFlight;
+            return;
+        }
+
+        var submitted = definitions as IReadOnlyList<ProjectionDefinition> ?? [.. definitions];
+        if (await IsRepeatOfRecentRegistration(signature, submitted))
+        {
+            logger.SkippingRepeatedRegistration(_eventStoreName, registrant ?? string.Empty, submitted.Count);
+            return;
+        }
+
+        // This method interleaves, so another identical registration may have started while the check above awaited.
+        if (_sharedRegistrations.TryGetValue(signature, out inFlight))
+        {
+            logger.JoiningRegistrationInFlight(_eventStoreName, registrant ?? string.Empty);
+            await inFlight;
+            return;
         }
 
         var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         _sharedRegistrations[signature] = completion.Task;
-        _ = LeadSharedRegistration(signature, completion, definitions, fullSetOwner, registrant, version);
-        return completion.Task;
+        _ = LeadSharedRegistration(signature, completion, submitted, fullSetOwner, registrant, version);
+        await completion.Task;
     }
 
     /// <inheritdoc/>
