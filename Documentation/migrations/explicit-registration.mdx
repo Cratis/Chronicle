@@ -1,6 +1,6 @@
 ---
 title: Register migrations explicitly
-description: Nominate migration recipes when event generations are registered at the composition root.
+description: Register Chronicle .NET event generations and typed or plain migration recipes at the composition root, with preparation and duplicate bridge validation.
 ---
 
 Explicit registration lets you keep event contracts free of client markers while declaring their generation relationship in the application. Register both endpoint event types with one stable id and adjacent generations, then nominate the migration recipe.

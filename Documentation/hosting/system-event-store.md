@@ -1,6 +1,6 @@
 ---
 title: The System event store
-description: Who can use the System event store, what is refused, and how a quarantined System observer recovers.
+description: Understand administrator access to Chronicle's System event store, refused client registrations, upgrade behavior, and quarantined observer recovery.
 ---
 
 The System event store is available only to administrators.

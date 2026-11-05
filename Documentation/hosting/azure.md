@@ -1,6 +1,6 @@
 ---
 title: Run Chronicle on Azure with Microsoft Entra ID
-description: Deploy the Chronicle kernel on Azure with Azure SQL or Azure Database for PostgreSQL, managed identities instead of passwords, per-tenant connection resolution, health checks and Entra-protected webhooks.
+description: Deploy Chronicle on Azure with SQL or PostgreSQL, managed identities, tenant database resolution, health checks, and Microsoft Entra-protected webhooks.
 ---
 
 This guide shows a platform engineer how to run the Chronicle kernel on Azure without database passwords: storage on Azure SQL or Azure Database for PostgreSQL, a managed identity for the kernel, per-tenant database placement resolved over HTTP, and webhooks that call Entra-protected endpoints. You finish with one set of environment variables that fits Azure Container Apps or AKS.

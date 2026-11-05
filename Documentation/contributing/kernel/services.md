@@ -1,6 +1,6 @@
 ---
 title: "Services"
-description: "Where the kernel's gRPC service implementations live, and how the generated ones are produced."
+description: "Locate Chronicle kernel gRPC services, generate new contracts and implementations from Core artifacts, and distinguish the remaining hand-written services."
 ---
 
 All gRPC service implementations for our [contracts](./contracts) reside in the `Grpc` project (`Source/Kernel/Grpc`).

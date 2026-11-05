@@ -1,7 +1,7 @@
 ---
 uid: Chronicle.ReadModels.ConsistencyModels
 title: "Consistency Models"
-description: "Eventual, on-demand, and read-after-write consistency for read models, and how to choose between them."
+description: "Compare Chronicle read model consistency options, from materialized eventual reads to on-demand computation and read-after-write observer catch-up."
 ---
 
 Read models in Chronicle can be retrieved with different consistency guarantees, depending on how they are computed and when they reflect the latest events. Understanding these models helps you make the right trade-off between data freshness, query latency, and throughput.

@@ -1,6 +1,6 @@
 ---
 title: Webhooks
-description: Push observed events to external HTTP endpoints as they're appended.
+description: Register Chronicle webhooks for HTTP event delivery, configure authentication and pinned generations, and handle back-pressure, retries, and quarantine.
 ---
 
 A webhook forwards events Chronicle observes to an external HTTP endpoint — use it to notify another system without that system needing to connect to Chronicle itself. Webhooks are configured server-side (the Kernel makes the HTTP calls), so registering one is a one-time setup step, not something you do per request.

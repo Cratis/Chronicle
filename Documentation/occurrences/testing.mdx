@@ -1,6 +1,6 @@
 ---
 title: Specify occurrences and receipts in process
-description: Drive trigger deliveries, effect receipts, lease expiry, retries and lost replies with isolated in-process scenarios.
+description: Test Chronicle triggers and effect receipts in isolated in-process scenarios, driving lease expiry, retries, lost replies, and explicit time advancement.
 ---
 
 Use `Cratis.Chronicle.Testing` to specify a trigger handler's effects, retries and recovery without a running kernel. Each scenario owns isolated in-memory storage. Recording and delivery are separate actions: advancing time never invokes a handler.

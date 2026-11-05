@@ -1,6 +1,6 @@
 ---
 title: Effect receipts
-description: Deduplicate an occurrence's Chronicle effects and recover the recorded outcome after a lost acknowledgment.
+description: Use Chronicle effect receipts to deduplicate retryable work, commit events with a recorded outcome, and recover after a lost acknowledgment.
 ---
 
 A worker can commit events and disappear before acknowledging its work. Running it again may produce different events or a different response. An **effect receipt** lets you recover the first committed outcome instead of appending another set of events.

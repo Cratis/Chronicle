@@ -1,6 +1,6 @@
 ---
 title: Observing Read Models
-description: Keep a complete read model list current with collection snapshots.
+description: Subscribe to Chronicle read model collections with Observe<T>() for initial and replacement snapshots, including filtering, lifetime, and error handling.
 ---
 
 Use `IReadModels.Observe<T>()` when a list needs its current contents on subscription and a replacement collection whenever the stored data changes. Unlike [Watch](watching-read-models.mdx), it emits whole collections rather than individual changesets.

@@ -1,6 +1,6 @@
 ---
 title: Closing stream constraint
-description: Declare in an IConstraint class that appending an event type closes a stream scope, and which events reopen it.
+description: Declare Chronicle closing stream constraints with IConstraint and ClosesStreamOn<TEvent>, configure scope dimensions, and specify reopening events.
 ---
 
 Use `ClosesStreamOn<TEvent>` on the constraint builder to close a stream scope whenever an event of that type is appended. The closure is written in the same step as the event, and later appends inside the scope are rejected with a `StreamClosed` violation. For the concept and the guarantees, see [Closing events](../../closing-streams/closing-events.mdx). For the attribute style, see the [model-bound closing stream constraint](../model-bound/closing-stream.mdx).

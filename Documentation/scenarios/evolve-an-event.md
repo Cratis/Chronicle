@@ -1,6 +1,6 @@
 ---
 title: Evolve an event's shape
-description: Change an event type over time without rewriting the history that's already been written.
+description: Evolve a Chronicle event's shape through generations and migration transforms without rewriting immutable history, and plan safe reader and writer rollout.
 ---
 
 **Goal:** an [event type](../concepts/event-type.md) needs to change — a renamed field, a split into two events, a new value with a sensible default — but you have years of old events already in the log that you must not corrupt.

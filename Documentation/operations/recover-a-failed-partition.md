@@ -1,6 +1,6 @@
 ---
 title: Recover a failed partition
-description: Decide between retry, partition replay, full observer replay and clearing quarantine for an observer that stopped on a failing partition, and know when you are done.
+description: Choose retry, partition replay, full replay, or quarantine clearing for a failed Chronicle observer partition, and verify recovery after fixing the cause.
 ---
 
 An observer stopped on one partition and the other partitions carry on. This page tells you which recovery to pick. The commands live in the Cratis CLI runbook [Fix a stuck observer](/cli/scenarios/fix-a-stuck-observer/), and this page does not repeat them.

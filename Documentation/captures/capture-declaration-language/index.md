@@ -1,6 +1,6 @@
 ---
 title: "Capture Declaration Language"
-description: "Syntax of the Capture Declaration Language, and which parts the capturing engine runs today."
+description: "Define Chronicle captures with CDL syntax for sources, keys, mappings, nested data, and append rules, and distinguish language support from runtime limits."
 ---
 
 The Capture Declaration Language (CDL) is an indentation-based DSL for defining captures that transform external data changes into Chronicle events.

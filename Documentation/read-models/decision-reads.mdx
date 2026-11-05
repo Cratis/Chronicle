@@ -1,6 +1,6 @@
 ---
 title: Decision-consistent reads
-description: Guard an event-log append against changes to an event-source-keyed projection read for a decision.
+description: Use Chronicle decision reads to fold source-keyed state and guard an event-log append against intervening changes, with lifecycle and projection limits.
 ---
 
 Use a decision read when a rule depends on state you read first: a count, a stock, a status, a limit. A decision read folds a projection from the event log in a fresh session and gives you a guard for the append that follows. If an event that could change the read model arrives for the same source after the read, the guarded append reports a concurrency violation and writes nothing.

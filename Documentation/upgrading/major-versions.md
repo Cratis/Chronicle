@@ -1,6 +1,6 @@
 ---
 title: Every major version, and what it meant
-description: What each Chronicle major changed, so you can tell what a jump from one version to another actually costs you.
+description: Review Chronicle major-version boundaries from 6 through 20, identify breaking changes and affected clients, and plan upgrades that skip several majors.
 ---
 
 One row per major boundary, oldest recorded first. Read the rows between where you are and

@@ -1,6 +1,6 @@
 ---
 title: Read models
-description: Build specialized, queryable views from events and choose how to retrieve and observe them.
+description: Build specialized Chronicle read models from projections or reducers, understand when instances become visible, and choose how to retrieve and observe views.
 ---
 
 A Chronicle read model is a shaped, queryable view of your data that is built from events by projections or reducers.

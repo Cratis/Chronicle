@@ -1,6 +1,6 @@
 ---
 title: Glossary
-description: One definition for each core Chronicle term, so the same word means the same thing everywhere in the docs.
+description: Look up Chronicle event-sourcing terminology, including aggregates, event sources, observers, projections, and namespaces, with links to detailed guides.
 ---
 
 Event sourcing comes with its own vocabulary, and the same word can mean subtly different things in different products. This page is the single source of truth for what each term means in Chronicle. Where a term has a fuller treatment, the definition links to it.

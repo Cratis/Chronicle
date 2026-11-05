@@ -1,6 +1,6 @@
 ---
 title: Short-lived processes
-description: Use the .NET client from command line tools, functions and jobs that connect, do a little work and exit.
+description: Configure Chronicle's .NET short-lived process preset for CLI tools, functions, and jobs that append or read events without hosting observers.
 ---
 
 A command line tool, a function or a job connects, appends or reads a few events and exits. It does not want a long-lived keep-alive stream or a watchdog, and it does not host reactors or reducers. The short-lived preset configures the client for exactly that.

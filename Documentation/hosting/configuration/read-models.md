@@ -1,5 +1,5 @@
 ---
-description: Configure replay retention and fenced sink transaction batch sizes in Chronicle Server.
+description: Configure Chronicle read model replay retention and fenced sink write batch sizes, inspect leftover revert containers, and understand cleanup limits.
 ---
 # Read Models
 

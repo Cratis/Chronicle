@@ -1,6 +1,6 @@
 ---
 title: Immediate projections
-description: Chronicle has no synchronous projection mode. How to get a read model that includes the event you just appended.
+description: Understand why Chronicle has no synchronous projection mode and choose passive reads or observer catch-up to read a model after appending an event.
 ---
 
 You may have been told that an *immediate projection* updates its read model synchronously, inside the append, so the read model is current before the append returns. **Chronicle has no such mode.** Every append returns once the event is in the log, and materialized read models catch up afterwards.

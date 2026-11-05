@@ -1,6 +1,6 @@
 ---
 title: "2. Building a read model"
-description: Turn the library's stream of events into a queryable Books read model — declaratively, with no update code.
+description: Build a queryable Chronicle Books catalog from library events with a declarative projection, map state changes, and remove a view when a book leaves.
 ---
 
 We can record that a book arrived, but the librarian can't *see* the catalog yet — the books live only as history in the log. In this chapter we'll fix that: we'll build a `Books` read model that always reflects the current state of every book, and — here's the part that surprises people coming from CRUD — we'll do it **without writing a single line that updates anything**.

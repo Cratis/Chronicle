@@ -1,6 +1,6 @@
 ---
 title: "Code Analysis Rules"
-description: "Every CHR analyzer rule for the .NET client, its severity, and how the analyzers reach your build."
+description: "Browse Chronicle .NET CHR analyzer rules and severities, installation details, quick fixes, and the explicit registration evidence recognized at build time."
 ---
 
 This section documents the code analysis rules provided by the Chronicle Code Analyzer for the .NET client.

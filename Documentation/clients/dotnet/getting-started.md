@@ -1,6 +1,6 @@
 ---
 title: Get started with the .NET client
-description: Connect a .NET application to Chronicle and append an event.
+description: Connect a C# application to Chronicle with the .NET client, define an event, append it to an event store, and choose a host integration.
 ---
 
 Use the .NET client when you want direct typed access to Chronicle from a C# application. The smallest useful loop is:

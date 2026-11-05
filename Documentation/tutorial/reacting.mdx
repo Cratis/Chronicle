@@ -1,6 +1,6 @@
 ---
 title: "3. Reacting to events"
-description: Notify the next member on the waitlist when a book comes back — and learn why reactors must be idempotent.
+description: Write a Chronicle reactor that notifies a waitlisted library member when a book returns, using event data and idempotent handling for safe retries.
 ---
 
 Our library can record what happens and show the catalog. One thing's missing: when a popular book comes back, the next person waiting for it should hear about it. Projections build *state*; for *doing something* — sending a notification, calling another system, kicking off a process — we reach for a **reactor**. Let's write one, and meet the rules that keep it well-behaved.

@@ -1,6 +1,6 @@
 ---
 title: .NET client
-description: Use the .NET client when your Chronicle application runs on C# or another .NET language.
+description: Install the Chronicle .NET client for C# applications and find setup guides for typed event stores, observers, migrations, and host integrations.
 ---
 
 The .NET client is the C#/.NET SDK for Chronicle. It gives .NET applications typed access to event stores, event logs, read models, projections, reducers, reactors, constraints, migrations, namespaces, and hosting integration.

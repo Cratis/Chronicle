@@ -1,5 +1,5 @@
 ---
-description: Reference of the ports Chronicle Server exposes, with TLS defaults and an optional dedicated health port.
+description: Look up Chronicle Server ports and TLS defaults, configure exposed listeners, and put health checks on an optional dedicated port.
 ---
 # Port Reference
 

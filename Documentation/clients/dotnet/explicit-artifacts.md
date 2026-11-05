@@ -1,6 +1,6 @@
 ---
 title: Explicit artifact registration
-description: Configure marker-free .NET artifacts, their identities, and their store-local registration lifetime.
+description: Register marker-free .NET artifacts with ChronicleOptions.ExplicitArtifacts, configure identities, and understand store-local discovery and validation.
 ---
 
 Use `ChronicleOptions.ExplicitArtifacts` when your contract types cannot reference Chronicle or you want to nominate artifacts at the composition root. Existing attributes and interfaces keep working. Plain reactors and classic instance reducers still require nomination. A concrete, non-generic model with the exact public static self-reduction shape is the exception: it is discovered structurally. See [self-reducing read models](/chronicle/reducers/self-reducing-read-models/).

@@ -1,5 +1,5 @@
 ---
-description: Provision SQL schemas before starting Chronicle and verify versioned schema readiness without joining the cluster.
+description: Provision Chronicle SQL schemas as a deployment step, check versioned readiness without joining the cluster, and interpret migration exit codes.
 ---
 # SQL schema operations
 

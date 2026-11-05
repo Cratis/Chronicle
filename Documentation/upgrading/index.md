@@ -1,6 +1,6 @@
 ---
 title: Upgrading Chronicle
-description: What a Chronicle major version means for you, and where to find the guide for each one.
+description: Find Chronicle upgrade guides, understand shared package major versions, plan multi-major upgrades, and check decimal schemas and forwarded-header changes.
 ---
 
 Every major version of Chronicle has an upgrade guide, and every guide answers the same
