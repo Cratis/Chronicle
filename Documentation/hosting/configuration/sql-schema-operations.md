@@ -143,10 +143,35 @@ List the entries that have not been reviewed:
 SELECT * FROM [ClosedStreams] WHERE ExactSpelling = 0;
 ```
 
-Review the entries one at a time. Once you confirm that an entry applies to exactly one spelling, mark only that entry as reviewed by filtering on its full key (`EventSequenceId`, `StreamType` and `StreamId`, copied from the listing):
+Review the entries one at a time. Once you confirm that an entry applies to exactly one spelling, mark only that entry as reviewed by filtering on its full primary key. The key has eight columns: `EventSequenceId`, `StreamType`, `StreamId`, `EventSourceId`, `EventSourceType`, `Owner`, `Dimensions` and `ExactKey`. `ExactKey` is a binary hash of the stored identifier bytes, so it tells apart entries that differ only in spelling. Copy the eight values from this listing, which shows `ExactKey` as a `0x...` literal:
 
 ```sql
-UPDATE [ClosedStreams] SET ExactSpelling = 1 WHERE ExactSpelling = 0 AND EventSequenceId = N'<event sequence id>' AND StreamType = N'<stream type>' AND StreamId = N'<stream id>';
+SELECT EventSequenceId, StreamType, StreamId, EventSourceId, EventSourceType, Owner, Dimensions,
+       CONVERT(varchar(66), ExactKey, 1) AS ExactKey
+FROM [ClosedStreams]
+WHERE ExactSpelling = 0;
+```
+
+Then mark the entry. The statement updates exactly one row or changes nothing:
+
+```sql
+BEGIN TRAN;
+UPDATE [ClosedStreams] SET ExactSpelling = 1
+WHERE ExactSpelling = 0
+  AND EventSequenceId = N'<event sequence id>'
+  AND StreamType = N'<stream type>'
+  AND StreamId = N'<stream id>'
+  AND EventSourceId = N'<event source id>'
+  AND EventSourceType = N'<event source type>'
+  AND Owner = N'<owner>'
+  AND Dimensions = <dimensions>
+  AND ExactKey = <exact key, the 0x... value from the listing>;
+IF @@ROWCOUNT <> 1
+BEGIN
+    ROLLBACK;
+    THROW 50000, 'Expected exactly one row; nothing changed.', 1;
+END;
+COMMIT;
 ```
 
 Do not mark all pending entries at once by leaving out the key filter. An unreviewed entry is the protection for every spelling it used to match, so marking all entries at once removes that protection for every entry, including those you have not looked at.
