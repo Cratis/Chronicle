@@ -1,8 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Patches;
 using Cratis.Choreography.Patching;
+using Cratis.Chronicle.Patches;
 using Cratis.Chronicle.Storage;
 
 namespace Cratis.Chronicle.Core.Specs.Patches.for_RepeatMoveSystemEventStoreDatabases;

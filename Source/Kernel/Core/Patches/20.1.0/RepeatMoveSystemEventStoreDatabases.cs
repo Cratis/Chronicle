@@ -31,7 +31,4 @@ public class RepeatMoveSystemEventStoreDatabases(IStorage storage, ILogger<Repea
         logger.MovingToConfiguredLocation();
         await storage.MoveSystemEventStoreTo(SystemEventStoreLocation.Configured);
     }
-
-    /// <inheritdoc/>
-    public Task Down() => Task.CompletedTask;
 }
