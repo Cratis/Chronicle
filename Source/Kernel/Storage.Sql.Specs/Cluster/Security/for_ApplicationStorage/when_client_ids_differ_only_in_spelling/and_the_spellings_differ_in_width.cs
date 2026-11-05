@@ -1,0 +1,16 @@
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+using Cratis.Chronicle.Storage.Sql.Sinks;
+
+namespace Cratis.Chronicle.Storage.Sql.Cluster.Security.for_ApplicationStorage.when_client_ids_differ_only_in_spelling;
+
+[Collection(SqlServerCollection.Name)]
+public class and_the_spellings_differ_in_width(SqlServerFixture fixture) : given.two_client_id_spellings(fixture, "alice", "ａlice")
+{
+    Task Because() => SaveBoth();
+
+    [Fact] void should_be_collapsed_by_the_collation_of_the_database() => _collapsedByCollation.ShouldEqual(1);
+    [Fact] void should_find_the_stored_spelling() => _foundForFirst.ShouldNotBeNull();
+    [Fact] void should_not_find_the_other_spelling() => _foundForSecond.ShouldBeNull();
+}

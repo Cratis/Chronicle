@@ -3,6 +3,7 @@
 
 using System.Linq.Expressions;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.InFlightEvents;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.UniqueConstraints;
 using Microsoft.EntityFrameworkCore;
@@ -25,7 +26,6 @@ static class ExactIdentifiers
     /// </summary>
     internal const string BinaryCollation = "Latin1_General_100_BIN2";
     const int BytesPerCharacter = 2;
-    static readonly System.Reflection.MethodInfo _byteLengthOfString = typeof(ExactIdentifiers).GetMethod(nameof(ByteLength), System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic, [typeof(string)])!;
 
     /// <summary>
     /// Narrow a query to the events of an event source.
@@ -207,12 +207,26 @@ static class ExactIdentifiers
     /// <param name="column">Selects the identifier column. It must be a string column of Unicode type.</param>
     /// <param name="value">The value to match.</param>
     /// <returns>The narrowed query.</returns>
-    internal static IQueryable<TEntity> WhereExact<TEntity>(this IQueryable<TEntity> query, DbContext context, Expression<Func<TEntity, string?>> column, string value)
+    internal static IQueryable<TEntity> WhereExact<TEntity>(this IQueryable<TEntity> query, DbContext context, Expression<Func<TEntity, string?>> column, string value) =>
+        query.WhereExact<TEntity, string?>(context, column, value, value);
+
+    /// <summary>
+    /// Narrow a query to the rows whose identifier column of a concept type holds exactly one spelling of a value.
+    /// </summary>
+    /// <typeparam name="TEntity">The type of entity queried.</typeparam>
+    /// <typeparam name="TValue">The type of the column, which needs a registered byte length overload.</typeparam>
+    /// <param name="query">The query to narrow.</param>
+    /// <param name="context">The context the query runs on.</param>
+    /// <param name="column">Selects the identifier column.</param>
+    /// <param name="value">The value to match.</param>
+    /// <param name="text">The text of the value, used for its length.</param>
+    /// <returns>The narrowed query.</returns>
+    internal static IQueryable<TEntity> WhereExact<TEntity, TValue>(this IQueryable<TEntity> query, DbContext context, Expression<Func<TEntity, TValue>> column, TValue value, string text)
     {
         var parameter = column.Parameters[0];
-        var holder = Expression.Constant(new ExactValue(value, value.Length * BytesPerCharacter));
+        var holder = Expression.Constant(new ExactValue<TValue>(value, text.Length * BytesPerCharacter));
         var stored = column.Body;
-        var plain = Expression.Equal(stored, Expression.Property(holder, nameof(ExactValue.Value)));
+        var plain = Expression.Equal(stored, Expression.Property(holder, nameof(ExactValue<TValue>.Value)));
         if (!context.Database.IsSqlServer())
         {
             return query.Where(Expression.Lambda<Func<TEntity, bool>>(plain, parameter));
@@ -221,14 +235,15 @@ static class ExactIdentifiers
         var collate = Expression.Call(
             typeof(RelationalDbFunctionsExtensions),
             nameof(RelationalDbFunctionsExtensions.Collate),
-            [typeof(string)],
+            [typeof(TValue)],
             Expression.Constant(EF.Functions),
             stored,
             Expression.Constant(BinaryCollation));
-        var binary = Expression.Equal(collate, Expression.Property(holder, nameof(ExactValue.Value)));
+        var binary = Expression.Equal(collate, Expression.Property(holder, nameof(ExactValue<TValue>.Value)));
+        var byteLength = typeof(ExactIdentifiers).GetMethod(nameof(ByteLength), System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic, [typeof(TValue)])!;
         var length = Expression.Equal(
-            Expression.Call(_byteLengthOfString, stored),
-            Expression.Property(holder, nameof(ExactValue.Bytes)));
+            Expression.Call(byteLength, stored),
+            Expression.Property(holder, nameof(ExactValue<TValue>.Bytes)));
         var exact = Expression.AndAlso(plain, Expression.AndAlso(binary, length));
         return query.Where(Expression.Lambda<Func<TEntity, bool>>(exact, parameter));
     }
@@ -257,13 +272,17 @@ static class ExactIdentifiers
     /// <param name="value">The stored value.</param>
     internal static int ByteLength(string value) => throw new NotSupportedException();
 
+    /// <inheritdoc cref="ByteLength(EventSourceId)"/>
+    /// <param name="value">The stored value.</param>
+    internal static int ByteLength(ProjectionId value) => throw new NotSupportedException();
+
     /// <summary>
     /// Registers the server side byte length function for every overload used by the exact predicates.
     /// </summary>
     /// <param name="modelBuilder">The <see cref="ModelBuilder"/> to register on.</param>
     internal static void RegisterByteLength(ModelBuilder modelBuilder)
     {
-        foreach (var type in new[] { typeof(EventSourceId), typeof(EventSourceType), typeof(EventStreamType), typeof(EventStreamId), typeof(string) })
+        foreach (var type in new[] { typeof(EventSourceId), typeof(EventSourceType), typeof(EventStreamType), typeof(EventStreamId), typeof(string), typeof(ProjectionId) })
         {
             modelBuilder
                 .HasDbFunction(typeof(ExactIdentifiers).GetMethod(nameof(ByteLength), System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic, [type])!)

@@ -42,7 +42,8 @@ public class InFlightEventsStorage(EventStoreName eventStore, EventStoreNamespac
         var partitionValue = partition.ToString();
         decimal sequenceNumber = eventSequenceNumber.Value;
         await scope.DbContext.InFlightEvents
-            .Where(_ => _.ObserverId == observer && _.EventSequenceNumber == sequenceNumber)
+            .WhereExact(scope.DbContext, _ => _.ObserverId, observer)
+            .Where(_ => _.EventSequenceNumber == sequenceNumber)
             .WherePartition(scope.DbContext, partitionValue)
             .ExecuteDeleteAsync();
     }
@@ -55,7 +56,8 @@ public class InFlightEventsStorage(EventStoreName eventStore, EventStoreNamespac
         var partitionValue = partition.ToString();
         decimal upTo = upToInclusive.Value;
         await scope.DbContext.InFlightEvents
-            .Where(_ => _.ObserverId == observer && _.EventSequenceNumber <= upTo)
+            .WhereExact(scope.DbContext, _ => _.ObserverId, observer)
+            .Where(_ => _.EventSequenceNumber <= upTo)
             .WherePartition(scope.DbContext, partitionValue)
             .ExecuteDeleteAsync();
     }
@@ -67,7 +69,7 @@ public class InFlightEventsStorage(EventStoreName eventStore, EventStoreNamespac
         var observer = observerId.Value;
         var entries = await scope.DbContext.InFlightEvents
             .AsNoTracking()
-            .Where(_ => _.ObserverId == observer)
+            .WhereExact(scope.DbContext, _ => _.ObserverId, observer)
             .ToListAsync();
 
         return entries.Select(_ => new InFlightEvent
