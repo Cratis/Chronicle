@@ -9,7 +9,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using VaultSharp;
 using VaultSharp.Core;
-using VaultSharp.V1.AuthMethods.Token;
 
 namespace Cratis.Chronicle.Storage.Vault;
 
@@ -273,20 +272,7 @@ public class VaultEncryptionKeyStorage : IEncryptionKeyStorage
         [LayoutField] = VaultPathSegments.Root
     };
 
-    static VaultClient CreateVaultClient(string address)
-    {
-        var token = Environment.GetEnvironmentVariable("VAULT_TOKEN");
-        if (string.IsNullOrEmpty(token))
-        {
-            throw new InvalidOperationException(
-                "VAULT_TOKEN environment variable is required for HashiCorp Vault authentication. " +
-                "Set this variable to a valid Vault token before starting Chronicle.");
-        }
-
-        var authMethod = new TokenAuthMethodInfo(token);
-        var settings = new VaultClientSettings(address, authMethod);
-        return new VaultClient(settings);
-    }
+    static VaultClient CreateVaultClient(string address) => VaultClients.Create(address);
 
     async Task<VaultKeyLocations> Resolve(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier)
     {

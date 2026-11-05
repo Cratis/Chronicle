@@ -38,6 +38,9 @@ public static class VaultChronicleBuilderExtensions
             return builder;
         }
 
+        builder.Services.AddSingleton<IEncryptionKeyStoreUpgradeCheck>(_ =>
+            new Storage.Vault.VaultKeyStoreUpgradeCheck(Storage.Vault.VaultClients.Create(complianceStorage.ConnectionDetails)));
+
         return builder.WithComplianceEncryptionKeyStorage(
             options,
             serviceProvider => new CacheEncryptionKeyStorage(

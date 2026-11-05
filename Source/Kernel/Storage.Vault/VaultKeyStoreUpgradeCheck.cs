@@ -38,8 +38,20 @@ internal class VaultKeyStoreUpgradeCheck(IVaultClient vaultClient, string? mount
             return layout;
         }
 
-        var earlier = await ListRootEntries();
-        return layout with { EarlierNameKeys = earlier.Count(IsEarlierEntry) };
+        var earlierRoots = (await ListRootEntries()).Where(IsEarlierEntry).ToList();
+        if (!full)
+        {
+            // Each earlier root is an event store with at least one entry, so this is a lower bound.
+            return layout with { EarlierNameKeys = earlierRoots.Count };
+        }
+
+        var counts = new Counts();
+        foreach (var root in earlierRoots)
+        {
+            await Walk([root.TrimEnd('/')], counts, cancellationToken);
+        }
+
+        return layout with { EarlierNameKeys = counts.Keys, EarlierNameErasures = counts.Erasures, UnresolvedShapes = counts.Unresolved, Complete = true };
     }
 
     /// <summary>
@@ -86,6 +98,42 @@ internal class VaultKeyStoreUpgradeCheck(IVaultClient vaultClient, string? mount
 
     static bool IsEarlierEntry(string entry) => entry != $"{VaultPathSegments.Root}/" && !entry.StartsWith('~');
 
+    static void Classify(List<string> segments, Counts counts)
+    {
+        var eligible = segments.Count == 4 &&
+            VaultPathSegments.LegacyDirectory(segments[0], segments[1], segments[2]) is not null;
+        if (eligible && segments[3] == "erasure")
+        {
+            counts.Erasures++;
+        }
+        else if (eligible && uint.TryParse(segments[3], out _))
+        {
+            counts.Keys++;
+        }
+        else
+        {
+            counts.Unresolved++;
+        }
+    }
+
+    async Task Walk(List<string> path, Counts counts, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var entries = await ListEntries(string.Join('/', path));
+        foreach (var entry in entries)
+        {
+            var segments = new List<string>(path) { entry.TrimEnd('/') };
+            if (entry.EndsWith('/'))
+            {
+                await Walk(segments, counts, cancellationToken);
+            }
+            else
+            {
+                Classify(segments, counts);
+            }
+        }
+    }
+
     async Task<bool> HasMarker()
     {
         try
@@ -100,16 +148,27 @@ internal class VaultKeyStoreUpgradeCheck(IVaultClient vaultClient, string? mount
         }
     }
 
-    async Task<List<string>> ListRootEntries()
+    async Task<List<string>> ListRootEntries() => await ListEntries(string.Empty);
+
+    async Task<List<string>> ListEntries(string path)
     {
         try
         {
-            var list = await _vaultClient.V1.Secrets.KeyValue.V2.ReadSecretPathsAsync(string.Empty, mountPoint: _mountPoint);
+            var list = await _vaultClient.V1.Secrets.KeyValue.V2.ReadSecretPathsAsync(path, mountPoint: _mountPoint);
             return [.. list.Data.Keys];
         }
         catch (VaultApiException ex) when (ex.HttpStatusCode == HttpStatusCode.NotFound)
         {
             return [];
         }
+    }
+
+    sealed class Counts
+    {
+        public long Keys { get; set; }
+
+        public long Erasures { get; set; }
+
+        public long Unresolved { get; set; }
     }
 }
