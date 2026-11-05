@@ -141,6 +141,10 @@ secret/<event-store>/<namespace>/<identifier>/<revision>
 
 Each revision is an independent secret, which means individual revisions can be deleted without affecting others (for example, when rotating keys or when the full key history is required for a limited time).
 
+Each of `<event-store>`, `<namespace>` and `<identifier>` is a single path segment. Letters, digits and `- _ . @ + = , : $` are kept as they are. Every other character, including `/`, `~` and every non-ASCII character, is written as `~XX` for each of its UTF-8 bytes in uppercase hexadecimal, and so is a trailing `.`. Ordinary identifiers such as GUIDs are therefore unchanged. A segment must not be empty and is at most 1,024 bytes of UTF-8.
+
+Keys stored before segments were encoded are still read, and removed together with the key, for identifiers that contain letters outside ASCII and nothing else that is special in a path. New keys are always written to the encoded path.
+
 | Property | Type | Required | Description |
 | --- | --- | --- | --- |
 | type | string | Yes | Must be `vault` |
@@ -185,7 +189,15 @@ Encryption keys are stored as individual secrets. Secret names follow this patte
 chronicle--{event-store}--{namespace}--{identifier}--{revision}
 ```
 
-Each component is sanitized to lowercase alphanumeric characters with single hyphens replacing any other character sequences. Double hyphens (`--`) serve as unambiguous separators between components.
+The names are derived from the address in this way:
+
+```text
+chronicle-k1--{hash}--{revision}
+```
+
+`{hash}` is the lowercase hexadecimal SHA-256 of the event store, namespace and identifier, each taken with its length. Every address has its own names, whatever characters it contains, and the names do not contain the identifiers.
+
+Keys stored under the earlier `chronicle--{event-store}--{namespace}--{identifier}--{revision}` names are still read, and erasing such a key also removes the earlier secret, for identifiers made of lowercase letters, digits and single hyphens, and for the identifiers Chronicle builds for encrypted values. New keys are always written under the `chronicle-k1--` names.
 
 | Property | Type | Required | Description |
 | --- | --- | --- | --- |

@@ -201,7 +201,7 @@ Backend by backend, the fence needs:
 | MongoDB | An `encryption-key-erasures` collection per `(event store, namespace)`, created on first use |
 | SQL | An `EncryptionKeyErasures` table, created by a migration that runs automatically on startup |
 | HashiCorp Vault | An `erasure` secret beside the revisions under `{store}/{namespace}/{identifier}` |
-| Azure Key Vault | A `chronicle--{store}--{namespace}--{identifier}--erasure` secret |
+| Azure Key Vault | A `chronicle-k1--{hash}--erasure` secret |
 | In-memory | Nothing persisted; the fence lives as long as the process |
 
 ## See also

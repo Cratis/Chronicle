@@ -57,7 +57,7 @@ Chronicle stores each revision at its own path in a KV v2 mount. To erase, it li
 
 Source: `Source/Kernel/Storage.AzureKeyVault/AzureKeyVaultEncryptionKeyStorage.cs`, `EncryptionKeyNotPurged.cs`.
 
-Chronicle stores each revision as a secret named `chronicle--{event-store}--{namespace}--{identifier}--{revision}`. Erasing a revision does two things:
+Chronicle stores each revision as a secret named `chronicle-k1--{hash}--{revision}`, where `{hash}` is derived from the event store, namespace and identifier. Erasing a revision does two things:
 
 1. It soft-deletes the secret and waits for the delete to finish.
 2. It purges the deleted secret.
