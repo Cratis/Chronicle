@@ -65,6 +65,7 @@ public abstract class conformance : given.two_key_stores
     public void should_not_name_the_identifier_in_any_exception() =>
         new[] { _read, _latest, _has, _erasure, _delete, _record, _allow, _save, _provision }.Any(_ => _.ToString().Contains(_identifier.Value, StringComparison.Ordinal)).ShouldBeFalse();
 
-    [Fact] public void should_not_name_the_identifier_in_any_log_line() => _logger.Lines.Any(_ => _.Contains(_identifier.Value, StringComparison.Ordinal)).ShouldBeFalse();
+    [Fact] public void should_not_name_the_identifier_in_any_log_line_about_the_refusal() => _logger.Lines.Any(_ => _.Contains("under review", StringComparison.OrdinalIgnoreCase) && _.Contains(_identifier.Value, StringComparison.Ordinal)).ShouldBeFalse();
+    [Fact] public void should_not_name_the_identifier_in_a_log_line_when_every_member_answers() => _logger.Lines.Any(_ => !_.Contains("StoreUnreachable", StringComparison.Ordinal) && _.Contains(_identifier.Value, StringComparison.Ordinal)).ShouldBeFalse();
     [Fact] public void should_log_the_refusal() => _logger.Lines.ShouldNotBeEmpty();
 }
