@@ -54,17 +54,21 @@ public class SystemEventStoreRelocation(
         var eventStore = connections.GetDatabase(StorageConnectionKind.EventStore, DatabaseNames.ForEventStore(system, prefix, from), system.Value);
         var server = clientManager.GetClientFor(Setup.MongoDBChronicleBuilderExtensions.GetMongoClientSettings(mongoDBOptions.Value.Server));
 
+        var complete = true;
         foreach (var @namespace in await Namespaces(eventStore, prefix, from))
         {
-            await Move(StorageConnectionKind.Namespace, DatabaseNames.ForEventStoreNamespace(system, @namespace, prefix, from), DatabaseNames.ForEventStoreNamespace(system, @namespace, prefix, to), @namespace);
-            await Move(StorageConnectionKind.ReadModels, DatabaseNames.ForReadModels(system, @namespace, prefix, from), DatabaseNames.ForReadModels(system, @namespace, prefix, to), @namespace);
-            await Move(
+            complete &= await Move(StorageConnectionKind.Namespace, DatabaseNames.ForEventStoreNamespace(system, @namespace, prefix, from), DatabaseNames.ForEventStoreNamespace(system, @namespace, prefix, to), @namespace);
+            complete &= await Move(StorageConnectionKind.ReadModels, DatabaseNames.ForReadModels(system, @namespace, prefix, from), DatabaseNames.ForReadModels(system, @namespace, prefix, to), @namespace);
+            complete &= await Move(
                 server.GetDatabase(DatabaseNames.ForEventStoreNamespace(system, @namespace, prefix, from)),
                 server.GetDatabase(DatabaseNames.ForEventStoreNamespace(system, @namespace, prefix, to)));
         }
 
-        await Move(StorageConnectionKind.EventStore, DatabaseNames.ForEventStore(system, prefix, from), DatabaseNames.ForEventStore(system, prefix, to), EventStoreNamespaceName.Default, includeNamespace: false);
-        logger.Moved(from, to);
+        complete &= await Move(StorageConnectionKind.EventStore, DatabaseNames.ForEventStore(system, prefix, from), DatabaseNames.ForEventStore(system, prefix, to), EventStoreNamespaceName.Default, includeNamespace: false);
+        if (complete)
+        {
+            logger.Moved(from, to);
+        }
     }
 
     static async Task<IEnumerable<EventStoreNamespaceName>> Namespaces(IMongoDatabase eventStore, string prefix, string from)
@@ -86,12 +90,12 @@ public class SystemEventStoreRelocation(
             .ToArray();
     }
 
-    Task Move(StorageConnectionKind kind, string fromName, string toName, EventStoreNamespaceName @namespace, bool includeNamespace = true) =>
+    Task<bool> Move(StorageConnectionKind kind, string fromName, string toName, EventStoreNamespaceName @namespace, bool includeNamespace = true) =>
         Move(
             connections.GetDatabase(kind, fromName, EventStoreName.System.Value, includeNamespace ? @namespace.Value : string.Empty),
             connections.GetDatabase(kind, toName, EventStoreName.System.Value, includeNamespace ? @namespace.Value : string.Empty));
 
-    async Task Move(IMongoDatabase source, IMongoDatabase target)
+    async Task<bool> Move(IMongoDatabase source, IMongoDatabase target)
     {
         var sourceName = source.DatabaseNamespace.DatabaseName;
         var targetName = target.DatabaseNamespace.DatabaseName;
@@ -101,12 +105,20 @@ public class SystemEventStoreRelocation(
         if (string.Equals(sourceName, targetName, StringComparison.OrdinalIgnoreCase))
         {
             logger.DatabaseNameUnchanged(sourceName);
-            return;
+            return true;
         }
 
-        if (await MongoDatabaseMove.Move(source, target, logger))
+        switch (await MongoDatabaseMove.Move(source, target, logger))
         {
-            logger.DatabaseMoved(sourceName, targetName);
+            case DatabaseMoveOutcome.Moved:
+                logger.DatabaseMoved(sourceName, targetName);
+                break;
+
+            case DatabaseMoveOutcome.Kept:
+                logger.DatabaseKept(sourceName, targetName);
+                return false;
         }
+
+        return true;
     }
 }
