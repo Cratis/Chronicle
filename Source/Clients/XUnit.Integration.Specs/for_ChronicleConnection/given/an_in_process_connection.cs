@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+extern alias KernelCore;
+
 using System.Net;
 using Cratis.Chronicle.Connections;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -23,7 +25,7 @@ public class an_in_process_connection : Specification
         _siloDetails.SiloAddress.Returns(SiloAddress.New(new IPEndPoint(IPAddress.Loopback, 11111), 0));
 
         var lifecycle = new ConnectionLifecycle(NullLogger<ConnectionLifecycle>.Instance);
-        _connection = new ChronicleConnection(lifecycle, _grainFactory, _siloDetails, NullLoggerFactory.Instance);
+        _connection = new ChronicleConnection(lifecycle, _grainFactory, _siloDetails, new KernelCore::Cratis.Chronicle.Clients.ConnectionOwnership(TimeProvider.System), NullLoggerFactory.Instance);
         _capabilities = _connection;
 
         lifecycle.OnConnected += () =>

@@ -12,6 +12,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using ConnectionService = KernelGrpc::Cratis.Chronicle.Services.Clients.ConnectionService;
 using IConnectedClients = KernelCore::Cratis.Chronicle.Clients.IConnectedClients;
+using IConnectionOwnership = KernelCore::Cratis.Chronicle.Clients.IConnectionOwnership;
 using KernelConnectionId = KernelConcepts::Cratis.Chronicle.Concepts.Clients.ConnectionId;
 using OpenConnections = KernelGrpc::Cratis.Chronicle.Services.Clients.OpenConnections;
 
@@ -31,11 +32,13 @@ namespace Cratis.Chronicle.XUnit.Integration;
 /// <param name="lifecycle"><see cref="IConnectionLifecycle"/> for managing lifecycle.</param>
 /// <param name="grainFactory"><see cref="IGrainFactory"/> for working with grains.</param>
 /// <param name="localSiloDetails"><see cref="ILocalSiloDetails"/> for the silo the client is co-hosted with.</param>
+/// <param name="connectionOwnership"><see cref="IConnectionOwnership"/> telling which caller opened each connection.</param>
 /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
 internal class ChronicleConnection(
     IConnectionLifecycle lifecycle,
     IGrainFactory grainFactory,
     ILocalSiloDetails localSiloDetails,
+    IConnectionOwnership connectionOwnership,
     ILoggerFactory loggerFactory) : IChronicleConnection, IChronicleServicesAccessor, IKernelCapabilities
 {
     /// <summary>
@@ -203,6 +206,8 @@ internal class ChronicleConnection(
             localSiloDetails,
             new KernelCore::Cratis.Chronicle.Clients.ConnectedClientsQuery(grainFactory, chronicleOptions),
             new OpenConnections(),
+            connectionOwnership,
+            new KernelCore::Cratis.Chronicle.Clients.ConnectedClientsVisibility(chronicleOptions, connectionOwnership, new Microsoft.AspNetCore.Http.HttpContextAccessor()),
             loggerFactory.CreateLogger<ConnectionService>(),
             chronicleOptions);
         _connectionService.Connect(new()
