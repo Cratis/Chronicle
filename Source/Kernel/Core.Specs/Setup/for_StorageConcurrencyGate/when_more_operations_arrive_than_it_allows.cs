@@ -8,6 +8,7 @@ public class when_more_operations_arrive_than_it_allows : Specification
     StorageConcurrencyGate _gate;
     int _running;
     int _mostRunning;
+    readonly object _lock = new();
     int _completed;
     TaskCompletionSource _release;
 
@@ -22,7 +23,7 @@ public class when_more_operations_arrive_than_it_allows : Specification
         var operations = Enumerable.Range(0, 20).Select(_ => _gate.Run(async () =>
         {
             var now = Interlocked.Increment(ref _running);
-            lock (this)
+            lock (_lock)
             {
                 _mostRunning = Math.Max(_mostRunning, now);
             }
