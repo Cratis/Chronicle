@@ -69,6 +69,33 @@ As an environment variable:
 export Cratis__Chronicle__Compliance__Encryption__MigrateFromDefaultStorage=true
 ```
 
+## Encryption key identifiers on SQL Server
+
+When the keys live in SQL Server, identifiers are compared exactly: letter case, character width, accents and trailing spaces are all significant, so `Alice` and `alice` name two different keys. Identifiers can be up to 256 characters long.
+
+The upgrade that introduces this behavior keeps every stored row and records each stored spelling in the `EncryptionKeyIdentifierReviews` table, together with the collation the column had before. While a spelling differs from a stored one only in case, width, accents or trailing spaces, Chronicle refuses to read, create, delete or erase a key for it and throws `EncryptionKeyIdentifierUnderReview`. The message never contains the identifier. One warning with the number of rows awaiting review is logged for every SQL Server namespace database when its schema has been migrated, including with `--migrate-only`, and the `chronicle-sql-encryption-key-identifiers-refused` counter (`sql.encryption_key.refused_identifiers` under the convention names, see [Telemetry names](telemetry-names.md)) increases for every refused operation.
+
+List the spellings that need a decision:
+
+```sql
+SELECT r.[Identifier], r.[LegacyIdentifier]
+FROM [EncryptionKeyIdentifierReviews] r
+WHERE EXISTS (
+    SELECT 1 FROM [EncryptionKeyIdentifierReviews] o
+    WHERE o.[LegacyIdentifier] = r.[LegacyIdentifier] AND o.[Identifier] <> r.[Identifier])
+ORDER BY r.[LegacyIdentifier], r.[Identifier];
+```
+
+To look at one identifier, filter on `[LegacyIdentifier] = N'<identifier>'`. The comparison uses the collation the column had before the upgrade, so it finds the spellings that used to be treated as one.
+
+Resolve each group in one of two ways:
+
+- The spellings belong to different subjects. Delete that group's rows from `EncryptionKeyIdentifierReviews`. Values written earlier for the other spelling stay bound to the key of the spelling that was stored.
+- The spellings belong to the same subject. Make the application use the stored spelling and leave the rows in place.
+
+> [!WARNING]
+> Do not copy key rows between spellings. A copy is not removed when the other spelling's key is erased.
+
 ## Backup and restore ordering
 
 The compliance key store is the third item in a Chronicle backup set, alongside the encryption-certificate ring and the storage backend. It is an independent subsystem: **the encryption certificate does not protect these keys, and these keys do not protect anything the certificate protects.** The two are backed up separately and restored separately, and getting either wrong loses different data.

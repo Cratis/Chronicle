@@ -17,7 +17,7 @@ This guide shows an operator how to replace the nodes of a Chronicle kernel clus
 
 When upgrading from a version before 19.115.0, stop all nodes, or keep public client traffic off the cluster until every node runs 19.115.0.
 
-This release changes how identifiers are compared on SQL Server. Stop all nodes and run `--migrate-only` before starting the new release; see [Identifier comparison on SQL Server](configuration/sql-schema-operations.md#identifier-comparison-on-sql-server).
+This release changes how identifiers and encryption key identifiers are compared on SQL Server. Stop all nodes, or apply the release with `--migrate-only` first, before starting it. See [identifier comparison on SQL Server](configuration/sql-schema-operations.md#identifier-comparison-on-sql-server) and [encryption key identifiers on SQL Server](configuration/compliance-storage.md#encryption-key-identifiers-on-sql-server).
 
 Rolling upgrades are supported from 19.111 onward. Upgrading from an older release needs a stop-all upgrade: stop every silo, then start the new release. Older releases lack the patch-manager handover or have changed grain interfaces that prevent the old and new silos from exchanging calls.
 

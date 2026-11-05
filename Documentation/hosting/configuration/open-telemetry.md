@@ -113,6 +113,7 @@ SQL storage publishes these instruments on the `Cratis.Chronicle` meter:
 | --- | --- | --- | --- |
 | `chronicle-sql-schema-lock-wait` | Histogram (seconds) | `provider`, `outcome` | Elapsed database schema-lock acquisition time, including failed waits. Outcomes are `acquired` and `failed`. |
 | `chronicle-sql-upsert-collisions-recovered` | Counter | `operation` | Concurrent inserts handled by an existing SQL recovery or idempotency path. Unhandled conflicts and ordinary updates do not increment it. |
+| `chronicle-sql-encryption-key-identifiers-refused` | Counter | none | Encryption key operations refused because their identifier is under review. |
 | `chronicle-sql-live-query-poll-failures` | Counter | `query`, `kind` | A failed SQL live-query poll. The query is retried with backoff (polling interval doubling to 30 s, or the polling interval if longer) and the subscription stays open. `kind` is `transient` or `other`; a sustained `other` rate needs an operator. |
 
 Schema-lock timing excludes opening the connection, migration execution, and the
