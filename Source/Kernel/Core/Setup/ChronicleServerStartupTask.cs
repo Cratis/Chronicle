@@ -248,14 +248,13 @@ internal sealed class ChronicleServerStartupTask(
             return;
         }
 
-        var summary = clusterReleases.Summarize();
-        var incompatible = ClusterReleaseBoundary.FindIncompatible(local, summary);
+        var incompatible = clusterReleases.FindIncompatible(local);
         if (incompatible.Count == 0)
         {
             return;
         }
 
-        logger.StartupRefusedBecauseOfIncompatibleRelease(local.ToString(), summary.ToString());
+        logger.StartupRefusedBecauseOfIncompatibleRelease(local.ToString(), clusterReleases.Summarize().ToString());
         throw new IncompatibleClusterRelease(local, incompatible);
     }
 
