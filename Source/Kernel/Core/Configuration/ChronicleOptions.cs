@@ -101,6 +101,11 @@ public class ChronicleOptions : IValidatableObject
     public Sql Sql { get; init; } = new Sql();
 
     /// <summary>
+    /// Gets or inits the Neo4j graph sink configuration.
+    /// </summary>
+    public Neo4jOptions Neo4j { get; init; } = new Neo4jOptions();
+
+    /// <summary>
     /// Gets or inits the compliance configuration.
     /// When <see cref="Encryption.Storage"/> is not set, the general <see cref="Storage"/> is used for compliance data.
     /// </summary>

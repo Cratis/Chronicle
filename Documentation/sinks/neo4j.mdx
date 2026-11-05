@@ -1,0 +1,149 @@
+---
+uid: Chronicle.Sinks.Neo4j
+description: Store graph projections in Neo4j with one database per event store and namespace, a single-database mode for development, connection resolution and replay as mark and sweep.
+---
+# Neo4j graph sink
+
+The Neo4j sink stores the nodes and edges of a [graph projection](../projections/graph-projections.mdx) in a Neo4j database. Its sink type is `Neo4j`, which is the default graph sink type of the clients. It works with every storage backend of the kernel: a kernel on MongoDB, SQL or in memory can project graphs to Neo4j.
+
+The sink follows the same rules as the in-memory graph sink, which is the executable reference: a write at or below the watermark of an element is skipped, a replay is mark and sweep, and a changeset is atomic.
+
+## Configure the server
+
+Add a `neo4j` section to `chronicle.json`. Everything but the server is optional.
+
+```json
+{
+  "neo4j": {
+    "server": "bolt://graph.example:7687",
+    "userName": "chronicle",
+    "passwordSecret": "NEO4J_PASSWORD",
+    "databasePrefix": "cratis",
+    "databaseMode": "PerNamespace",
+    "createIfMissing": true
+  }
+}
+```
+
+| Property | Type | Default | Description |
+| --- | --- | --- | --- |
+| server | string | empty | The bolt URI of the server, such as `bolt://localhost:7687` or `neo4j+s://graph.example`. Leave it empty when the connection resolution gives a URI for every graph |
+| userName | string | none | The user to authenticate with. Without a user name and password the driver connects without authentication |
+| passwordSecret | string | none | The name of the configuration key that holds the password, such as an environment variable name. The password itself is never written in the options |
+| databasePrefix | string | none | Prefix of the database names, for sharing one Neo4j server between applications |
+| databaseMode | string | PerNamespace | `PerNamespace` for a database per event store and namespace, or `Single` for one database |
+| singleDatabase | string | neo4j | The database used in `Single` mode |
+| createIfMissing | boolean | true | Create a missing database on first use. Turn it off when the identity may not create databases. Has no effect in `Single` mode |
+
+The same configuration through environment variables:
+
+```bash
+Cratis__Chronicle__Neo4j__Server=bolt://graph.example:7687
+Cratis__Chronicle__Neo4j__UserName=chronicle
+Cratis__Chronicle__Neo4j__PasswordSecret=NEO4J_PASSWORD
+NEO4J_PASSWORD=from-your-secret-store
+```
+
+Chronicle keeps one pooled driver for every server and identity, so all graphs on the same server share one connection pool.
+
+## One database per namespace
+
+In `PerNamespace` mode every event store and namespace has its own Neo4j database, so tenants are isolated by the database and not by a filter in a query. The sink creates the database on first use when `createIfMissing` is on and the identity is allowed to. A database that a connection resolver names is never created: the platform owns its placement.
+
+The database name is `[prefix-]eventStore[-namespace]`, made safe for Neo4j:
+
+1. The `Default` namespace, exactly, adds nothing to the name, so it uses the bare event store name.
+2. The name is lower-cased, and every character outside `a-z`, `0-9` and `-` becomes `-`.
+3. A name that does not start with a letter gets the prefix `g-`.
+4. A name that sanitizing changed, or that is longer than 63 or shorter than 3 characters, is cut to 54 characters and gets `-` and the first eight hex characters of the SHA-256 of the unsanitized name. Lower-casing alone does not change the name in that sense, so `Acme` and `acme` share a database.
+
+| Prefix | Event store | Namespace | Database |
+| --- | --- | --- | --- |
+| none | `Orders` | `Default` | `orders` |
+| none | `Orders` | `acme` | `orders-acme` |
+| none | `Orders` | `Acme` | `orders-acme` |
+| none | `Orders` | `default` | `orders-default` |
+| `cratis` | `Orders` | `Default` | `cratis-orders` |
+| `cratis` | `Orders` | `acme` | `cratis-orders-acme` |
+| none | `Orders` | `Acme Corp` | `orders-acme-corp-fd6ee09c` |
+| none | `Orders` | `Müller` | `orders-m-ller-21f1b1e6` |
+| none | `_Orders` | `Default` | `g--orders-5cfcdfc7` |
+| none | `ab` | `Default` | `ab-fb8e20fc` |
+
+Cratis Arc names databases by the same algorithm, so an application reads the graph the kernel wrote with no further configuration.
+
+Removing a namespace does not drop its Neo4j database. The database belongs to the application, as the read model databases do.
+
+## Single database mode
+
+Neo4j Community Edition has one user database. Set `databaseMode` to `Single` to put every event store and namespace in `singleDatabase`. Every node and relationship then carries the namespace as `_namespace`, a node is identified by its key and namespace together, and every query of the sink filters on it.
+
+:::caution
+Use `Single` mode for development and tests only. Nothing but the filter separates one namespace from another, so a query of your own that leaves out `_namespace` reads across tenants.
+:::
+
+## What the sink stores
+
+A node gets the label and the key property of the graph definition, and an edge gets its type and its identifying property when it has one. The sink adds properties of its own, all starting with an underscore:
+
+| Property | On | Meaning |
+| --- | --- | --- |
+| `_watermark` | nodes and edges | The sequence number of the last event that wrote the element. A node that only an edge created has none |
+| `_owner` | nodes and edges | The projection that owns the element |
+| `_generation` | nodes and edges | The replay generation of the owner the element was written in |
+| `_namespace` | nodes and edges | The namespace, in `Single` mode only |
+
+A property of a graph definition must not start with an underscore. The sink refuses the graph with `ReservedGraphPropertyName` so the two can never collide. Owners keep their current replay generation on a node labeled `_Owner`.
+
+Chronicle creates these when the graph is registered, and repeating it changes nothing:
+
+- A uniqueness constraint `IF NOT EXISTS` on the key of every node label. In `Single` mode it covers the key and `_namespace`.
+- A uniqueness constraint on the owner node.
+- An index on the identifying property of every edge type that has one.
+
+## How operations are applied
+
+Every statement is parameterized Cypher. A label, a relationship type or a property name is taken from the graph definition and quoted with backticks, and a label that the definition does not know is refused. Keys, identities and values from events are parameters and never part of the statement text.
+
+| Operation | Cypher |
+| --- | --- |
+| Upsert a node | `MERGE (n:Label {key: $key}) SET n += $properties, n._watermark = $sequence`, then the owner and generation are stamped when the node has no owner or is already owned by the projection |
+| Set properties | `MATCH` the node or relationship, then the same `SET` |
+| Delete a node | `MATCH … DELETE n`, or `DETACH DELETE n` with detach. Without detach, a node that still has edges fails with `NodeStillHasEdges` |
+| Upsert an edge | `MERGE` of both end nodes without properties, then `MERGE (s)-[r:TYPE {identity: $identity}]->(t)` and the same `SET` |
+| Delete an edge | `MATCH … DELETE r`. The end nodes stay |
+
+The sink reads the stored watermark, owner and generation of an element first and skips a write at or below the watermark, in the same transaction as the write.
+
+One transaction applies the operations of one event, so a changeset is applied completely or not at all. When a statement fails, the transaction is rolled back and the error reaches the observer, which fails the partition the way it does for any projection. Nothing is caught and continued.
+
+## Replay
+
+A replay is mark and sweep:
+
+- `BeginReplay` starts a new generation for the projection. An element of the projection that is not written in it reads as absent, so counters are rebuilt from zero, and the first write replaces the element.
+- `EndReplay` deletes the edges of the projection that were not written, then the stale nodes. A stale node that edges of other projections still point at is kept as a bare node, because an edge cannot exist without its end nodes. The new generation becomes the current one in the same transaction.
+- `LeaveReplay` abandons the replay without sweeping.
+- Preparing an initial run deletes everything the projection wrote, with the edges attached to it.
+
+Elements that other projections wrote, and nodes that only edges created, are never swept.
+
+## Connection resolution
+
+The sink resolves its connections through the [storage connection resolution](../hosting/configuration/storage-connection-resolution.md) with the storage `Neo4j`. A request has the scope kind `readModels`, the event store and the namespace, and one of two purposes:
+
+- `Runtime` reads and writes the graph.
+- `Schema` creates the database and the constraints.
+
+A resolver may answer a `connectionString`, which is a bolt URI, a `database` and an `identity`. The identity is a user name and password, or an access token that is sent as a bearer token. Parts it leaves out keep their configured values.
+
+The sink hands the identity to the driver through its authentication token manager. The resolution is cached, so a rotated credential or an expiring token reaches the driver the next time it opens a connection. When the server rejects the identity, the cached resolution is dropped and the connection is retried once.
+
+## Limits
+
+- A graph stores primitives and arrays of primitives. A `decimal` is stored as a floating point number, because Neo4j has no decimal type.
+- A key keeps its type: the key `1` and the key `"1"` are different nodes. Use the same type for a key in every projection that writes the label.
+- Property names that start with an underscore are reserved.
+- Neo4j Community Edition supports `Single` mode only.
+- The sink does not buffer writes, so bulk mode has no effect and a failure surfaces on the event that caused it.
+- The replay generation of a projection is read when a changeset is applied, and the replay state of a running replay lives in the memory of the node that runs it.

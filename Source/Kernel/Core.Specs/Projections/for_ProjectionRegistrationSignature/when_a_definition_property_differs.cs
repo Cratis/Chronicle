@@ -7,6 +7,7 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
+using Cratis.Chronicle.Concepts.Projections.Graphs;
 using Cratis.Chronicle.Properties;
 
 namespace Cratis.Chronicle.Projections.for_ProjectionRegistrationSignature;
@@ -25,7 +26,7 @@ public class when_a_definition_property_differs : a_registration
     {
         [nameof(ProjectionDefinition.LastUpdated)] = "A timestamp the receiver controls; it is not something the client registered.",
         [nameof(ProjectionDefinition.IsKernelOwned)] = "Derived from Owner, which is covered.",
-        [nameof(ProjectionDefinition.IsEmpty)] = "Derived from From, Children and Nested, which are covered.",
+        [nameof(ProjectionDefinition.IsEmpty)] = "Derived from From, Children, Nested and Graph, which are covered.",
         ["EqualityContract"] = "Compiler generated."
     };
 
@@ -54,7 +55,18 @@ public class when_a_definition_property_differs : a_registration
         [nameof(ProjectionDefinition.Scope)] = _ => _ with { Scope = ProjectionScope.Global },
         [nameof(ProjectionDefinition.GenerationDelivery)] = _ => _ with { GenerationDelivery = Concepts.Observation.EventGenerationDelivery.Pinned },
         [nameof(ProjectionDefinition.Version)] = _ => _ with { Version = "9.9.9" },
-        [nameof(ProjectionDefinition.HasLegacyStorageFields)] = _ => _ with { HasLegacyStorageFields = !_.HasLegacyStorageFields }
+        [nameof(ProjectionDefinition.HasLegacyStorageFields)] = _ => _ with { HasLegacyStorageFields = !_.HasLegacyStorageFields },
+        [nameof(ProjectionDefinition.Graph)] = _ => _ with
+        {
+            Graph = new GraphProjectionDefinition(
+                new Dictionary<string, GraphNodeProjectionDefinition>
+                {
+                    ["Person"] = new(
+                        new Dictionary<string, GraphNodeFromDefinition> { ["Registered+1"] = new("personId", new Dictionary<string, string>()) },
+                        new Dictionary<string, GraphNodeRemovedWithDefinition>())
+                },
+                new Dictionary<string, GraphEdgeProjectionDefinition>())
+        }
     };
 
     string[] _unlistedProperties;

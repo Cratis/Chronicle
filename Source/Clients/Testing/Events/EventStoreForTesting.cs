@@ -230,7 +230,10 @@ public class EventStoreForTesting : IEventStore, IDisposable
             _namingPolicy,
             _artifactActivator,
             _jsonSerializerOptions,
-            NullLogger<Projections.Projections>.Instance);
+            NullLogger<Projections.Projections>.Instance)
+        {
+            Graphs = new(ClientArtifactsProvider, _artifactActivator, _namingPolicy, _eventTypes, JsonSchemaGenerator, Chronicle.Sinks.WellKnownSinkTypes.InMemoryGraph)
+        };
         if (Metadata is not null)
         {
             _projections.ModelBoundSource = Metadata.ModelBoundSource;

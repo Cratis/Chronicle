@@ -1,0 +1,20 @@
+---
+title: "CHR0068: A node or an edge cannot be a read model"
+description: "CHR0068 reports a type that is both a node or an edge in a graph and a read model."
+---
+
+## Rule description
+
+A node or an edge is projected onto a property graph, while a type marked with `[ReadModel]` is projected onto a document or relational store. A type is one or the other.
+
+## Severity
+
+Error
+
+## How to fix
+
+Remove `[ReadModel]` from the node or edge, or remove `[Node]` or `[Edge]` and the graph projection attributes from the read model.
+
+## Related topics
+
+- [Graph projections](../projections/graph-projections.mdx)

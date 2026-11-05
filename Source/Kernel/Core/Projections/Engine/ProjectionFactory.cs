@@ -23,6 +23,7 @@ using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Projections.Engine.Expressions;
 using Cratis.Chronicle.Projections.Engine.Expressions.EventValues;
 using Cratis.Chronicle.Projections.Engine.Expressions.Keys;
+using Cratis.Chronicle.Projections.Engine.Graphs;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
@@ -49,6 +50,7 @@ namespace Cratis.Chronicle.Projections.Engine;
 /// <param name="logger">The logger.</param>
 /// <param name="eventCompliance">Optional <see cref="IEventCompliance"/> for releasing stored join events before projecting them.</param>
 /// <param name="eventGenerationRelease">The pinned-generation release boundary for stored key and join events.</param>
+/// <param name="graphProjectionFactory">Optional <see cref="IGraphProjectionFactory"/> for projections that target a graph.</param>
 [Singleton]
 public class ProjectionFactory(
     IReadModelPropertyExpressionResolvers propertyMapperExpressionResolvers,
@@ -59,7 +61,8 @@ public class ProjectionFactory(
     IStorage storage,
     ILogger<ProjectionFactory> logger,
     IEventCompliance? eventCompliance = null,
-    IEventGenerationRelease? eventGenerationRelease = null) : IProjectionFactory
+    IEventGenerationRelease? eventGenerationRelease = null,
+    IGraphProjectionFactory? graphProjectionFactory = null) : IProjectionFactory
 {
     /// <summary>
     /// The versioned algorithm for complete, registration-metadata-independent definition content.
@@ -102,6 +105,16 @@ public class ProjectionFactory(
         }
 
         readModelDefinition.Sink.EnsureReadModelSupported();
+        if (definition.Graph is not null)
+        {
+            if (definition.GenerationDelivery == EventGenerationDelivery.Pinned || graphProjectionFactory is null)
+            {
+                throw new EventGenerationDeliveryNotSupported();
+            }
+
+            return graphProjectionFactory.Create(definition, readModelDefinition, DefinitionFingerprintFor(definition));
+        }
+
         ProjectionGenerationDeliveryValidation.Validate(definition);
         if (definition.GenerationDelivery == EventGenerationDelivery.Pinned &&
             (eventGenerationRelease is null || definition.SubscribesToAllEvents))
