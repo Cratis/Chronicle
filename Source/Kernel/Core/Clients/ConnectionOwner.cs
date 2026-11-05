@@ -17,6 +17,9 @@ namespace Cratis.Chronicle.Clients;
 /// </remarks>
 public readonly record struct ConnectionOwner(string Issuer, string Subject, bool IsClient = false)
 {
+    static readonly string[] _subjectClaimTypes = ["sub", ClaimTypes.NameIdentifier];
+    static readonly string[] _clientClaimTypes = ["azp", "client_id"];
+
     /// <summary>
     /// Gets the owner of every connection while authentication is disabled.
     /// </summary>
@@ -46,12 +49,23 @@ public readonly record struct ConnectionOwner(string Issuer, string Subject, boo
     {
         if (principal?.Identity?.IsAuthenticated is not true) return Unidentified;
 
-        var subject = principal.FindFirst("sub") ?? principal.FindFirst(ClaimTypes.NameIdentifier);
-        if (subject is not null && !string.IsNullOrEmpty(subject.Value)) return new(subject.Issuer, subject.Value);
+        var subject = FirstNonEmpty(principal, _subjectClaimTypes);
+        if (subject is not null) return new(subject.Issuer, subject.Value);
 
-        var client = principal.FindFirst("azp") ?? principal.FindFirst("client_id");
-        if (client is null || string.IsNullOrEmpty(client.Value)) return Unidentified;
+        var client = FirstNonEmpty(principal, _clientClaimTypes);
+        return client is null ? Unidentified : new(client.Issuer, client.Value, true);
+    }
 
-        return new(client.Issuer, client.Value, true);
+    static Claim? FirstNonEmpty(ClaimsPrincipal principal, string[] claimTypes)
+    {
+        foreach (var claimType in claimTypes)
+        {
+            foreach (var claim in principal.FindAll(claimType))
+            {
+                if (!string.IsNullOrEmpty(claim.Value)) return claim;
+            }
+        }
+
+        return null;
     }
 }

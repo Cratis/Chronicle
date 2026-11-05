@@ -34,7 +34,10 @@ public class ChronicleClaimsTransformation(UserManager<Storage.Security.User> us
                 var userId = userManager.GetUserId(principal);
                 if (!string.IsNullOrWhiteSpace(userId))
                 {
-                    claimsIdentity.AddClaim(new Claim("sub", userId));
+                    var source = principal.FindFirst(userManager.Options.ClaimsIdentity.UserIdClaimType) ?? principal.FindFirst(ClaimTypes.NameIdentifier);
+                    claimsIdentity.AddClaim(source is null
+                        ? new Claim("sub", userId)
+                        : new Claim("sub", userId, ClaimValueTypes.String, source.Issuer, source.OriginalIssuer));
                 }
             }
 
