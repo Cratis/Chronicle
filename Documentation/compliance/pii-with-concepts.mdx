@@ -1,11 +1,11 @@
 ---
 uid: Chronicle.Compliance.PIIWithConcepts
-description: Declare [PII] once on a ConceptAs type so every Chronicle event property that uses the concept is encrypted as personally identifiable data.
+description: Declare PII once on a concept type so every Chronicle event property that uses it is encrypted as personally identifiable data.
 ---
 
 # Declaring PII on a concept
 
-The most robust way to declare that a value is personally identifiable is to mark the `ConceptAs<T>` type itself with `[PII]`. Doing so means the declaration lives exactly once — on the type — and every event property that uses that type is automatically encrypted, regardless of where or how many times it appears across your event model.
+The most robust way to declare that a value is personally identifiable is to mark its concept type as PII — for example, `[PII]` on a .NET `ConceptAs<T>`. Doing so means the declaration lives exactly once — on the type — and every event property that uses that type is automatically encrypted, regardless of where or how many times it appears across your event model.
 
 :::note[Client coverage]
 This page covers the **property type** path — Chronicle resolves `[PII]` through four paths in total (property, declaring type, property type, constructor parameter), and marking a concept's type once is not C#-only:
@@ -17,7 +17,7 @@ This page covers the **property type** path — Chronicle resolves `[PII]` throu
 | Property type (concept) | yes | yes | yes | yes |
 | Constructor parameter | yes | yes | no | n/a |
 
-**Every client supports the pattern on this page.** C#, Kotlin/Java and TypeScript each have a `ConceptAs<T>`; Elixir has `Chronicle.Concept`, which serializes as the value it wraps in the same way. Declare the marker once on the concept and every event and read model property using that type is encrypted — see [Marking data as PII](./pii) for the full path table and the two remaining gaps.
+**The clients in this table support the pattern on this page.** C#, Kotlin/Java and TypeScript each have a `ConceptAs<T>`; Elixir has `Chronicle.Concept`, which serializes as the value it wraps in the same way. Declare the marker once on the concept and every event and read model property using that type is encrypted — see [Marking data as PII](./pii) for the full path table and the two remaining gaps.
 :::
 
 > [!TIP]
@@ -25,7 +25,7 @@ This page covers the **property type** path — Chronicle resolves `[PII]` throu
 
 ## Why concept-level declaration is preferred
 
-When you mark a property directly with `[PII]`, you must remember to repeat the attribute on every event or read model that carries that value.
+When you classify a property directly as PII, you must remember to repeat the declaration on every event or read model that carries that value.
 If a new event is added months later and the developer forgets the annotation, a plaintext value is written to the event log with no warning.
 
 A concept type solves this by making the protection part of the type's identity. You cannot use `PersonName` without the encryption — the two are inseparable.
@@ -34,7 +34,7 @@ A concept type solves this by making the protection part of the type's identity.
 
 ## Defining a PII concept type
 
-Follow the standard `ConceptAs<T>` pattern and add `[PII]` to the record declaration:
+Follow your client's concept-type pattern and mark the type as PII (`[PII]` on the record in C#):
 
 <ChronicleClientTabs snippet="compliance/pii-with-concepts/defining-concept" />
 

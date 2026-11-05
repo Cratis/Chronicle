@@ -1,13 +1,13 @@
 ---
 title: "Declarative Projections"
-description: "Define projections in code with the fluent IProjectionFor<T> builder."
+description: "Define projections in code with your client's fluent builder."
 ---
 
-Declarative projections let you define read models with a fluent, code-first projection builder. They are ideal when you need explicit mapping, joins, or hierarchical projections that go beyond simple attribute mapping.
+Declarative projections let you define read models with a fluent, code-first projection builder. They are ideal when you need explicit mapping, joins, or hierarchical projections that go beyond simple model-bound mapping.
 
 ## Overview
 
-Declarative projections implement `IProjectionFor<TReadModel>` and use an `IProjectionBuilderFor<TReadModel>` to define how events map to read model properties. The builder gives you control over mapping, relationships, and event context while keeping the projection definition separate from the read model type.
+A declarative projection uses a builder to define how events map to read model properties. The builder gives you control over mapping, relationships, and event context while keeping the projection definition separate from the read model type. In .NET, this is an `IProjectionFor<TReadModel>` implementation using `IProjectionBuilderFor<TReadModel>`; the tabs show each client's equivalent.
 
 ## Basic Example
 
@@ -17,9 +17,10 @@ Auto-mapping is enabled by default at the top level, so matching properties are 
 
 ## Discovery
 
-Projection types are discovered by implementing `IProjectionFor<TReadModel>`. The events must be
-registered in the owning client's event-type registry, normally through `[EventType]`; .NET also
-supports [explicit event nominations](../../clients/dotnet/explicit-artifacts.md).
+Discovery and registration depend on your client. Register event types and projections using your
+client's setup conventions. In .NET, projection types are discovered through `IProjectionFor<TReadModel>`
+and events normally through `[EventType]`; .NET also supports
+[explicit event nominations](../../clients/dotnet/explicit-artifacts.md).
 
 In .NET, a projection class must target only one read model. Implementing two closed `IProjectionFor<TReadModel>` interfaces, including through inheritance, throws `TypeImplementsMultipleProjectionInterfaces` during default artifact discovery. Split the class into one projection per read model. [CHR0057](../../code-analysis/CHR0057) reports this before runtime.
 
@@ -37,12 +38,12 @@ In .NET, a projection class must target only one read model. Implementing two cl
 
 ## When to Use
 
-Start with model-bound attributes; use fluent mappings when keys, joins, hierarchy, or keeping the
-model attribute-free makes a separate definition clearer. Use reducer code when the logic reads better
-as state transitions, with a self-reducing model as the default for new reducers. Follow
+Start with model-bound declarations; use fluent mappings when keys, joins, hierarchy, or keeping the
+model free of mapping metadata makes a separate definition clearer. Use reducer code when the logic
+reads better as state transitions. In .NET, a self-reducing model is the default for new reducers. Follow
 [Choose how to build a read model](../choosing-a-read-model-style.mdx) for scenarios and limits.
 
-`Define` emits a kernel-executed definition. Dependencies can help build it, but the builder lambdas
+The builder emits a kernel-executed definition (`Define` in .NET). Dependencies can help build it, but the builder lambdas
 are not arbitrary per-event handlers with dependency injection.
 
 ## Projection recipes

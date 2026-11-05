@@ -1,13 +1,13 @@
 ---
-title: Trace Chronicle client operations with OpenTelemetry
-description: Register the Chronicle client activity source so appends, unit-of-work commits and reactor and reducer handling show up as spans in your tracing backend.
+title: Trace Chronicle .NET client operations with OpenTelemetry
+description: Register the Chronicle .NET client activity source so appends, unit-of-work commits and reactor and reducer handling show up as spans in your tracing backend.
 ---
 
-The Chronicle client creates spans for the work it does inside your application: appending events, committing a unit of work, and handling an event in a reactor or a reducer. Those spans are emitted on an activity source named `Cratis.Chronicle.Client`, and an OpenTelemetry tracer provider only records a source it has been told about. If you never register it, nothing is recorded, nothing fails, and the spans are simply missing from your traces.
+The Chronicle .NET client creates spans for the work it does inside your application: appending events, committing a unit of work, and handling an event in a reactor or a reducer. Those spans are emitted on an activity source named `Cratis.Chronicle.Client`, and an OpenTelemetry tracer provider only records a source it has been told about. If you never register it, nothing is recorded, nothing fails, and the spans are simply missing from your traces.
 
 One call registers it: `AddCratisChronicleInstrumentation()`.
 
-This page is about the client in your application. The Chronicle server exports its own telemetry; see [Open Telemetry](/chronicle/hosting/configuration/open-telemetry/) for that.
+This page covers .NET client instrumentation in your application, not a shared configuration API for all clients. The Chronicle server exports its own telemetry; see [Open Telemetry](/chronicle/hosting/configuration/open-telemetry/) for that.
 
 ## Register the instrumentation
 

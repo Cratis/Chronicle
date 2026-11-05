@@ -1,11 +1,11 @@
 ---
-description: Label Chronicle reducers with the [Tag] attribute to organize and find them; tags describe the reducer and do not filter the events it handles.
+description: Label Chronicle reducers with descriptive tags to organize and find them; these tags do not filter the events a reducer handles.
 ---
 # Tagging Reducers
 
-Tags provide a way to organize and categorize your reducers for better discoverability and management. By applying the `[Tag]` attribute to your reducer classes, you can assign one or more tags that describe the purpose or domain of the reducer.
+Tags provide a way to organize and categorize your reducers for better discoverability and management. Use your client's tag declarations to assign labels that describe the reducer's purpose or domain.
 
-`[Tag]` and `[Tags]` label the reducer itself. They do not filter which appended events the reducer handles. For event filtering based on appended metadata, see [Filter reducers and reactors by tag](../events/filtering/by-tag), [Filter reducers and reactors by event source type](../events/filtering/by-event-source-type), and [Filter reducers and reactors by event stream type](../events/filtering/by-event-stream-type).
+Descriptive tags label the reducer itself (`[Tag]` and `[Tags]` in .NET). They do not filter which appended events the reducer handles. For event filtering based on appended metadata, see [Filter reducers and reactors by tag](../events/filtering/by-tag), [Filter reducers and reactors by event source type](../events/filtering/by-event-source-type), and [Filter reducers and reactors by event stream type](../events/filtering/by-event-stream-type).
 
 Kotlin and Java use repeatable `@Tag` annotations. TypeScript uses `@tag(...)` or `@tags(...)` on
 the reducer class; those labels are sent with its observer registration.
@@ -24,13 +24,13 @@ Apply a single tag to your reducer:
 
 ### Multiple Tags (Single Attribute)
 
-Use the params feature to specify multiple tags in a single attribute:
+Pass several labels in one declaration using your client's syntax:
 
 <ChronicleClientTabs snippet="reducers/tagging-reducers/multiple-tags-single-attribute" />
 
 ### Multiple Tags (Multiple Attributes)
 
-Apply multiple `[Tag]` attributes:
+Repeat the tag declaration where your client supports it:
 
 <ChronicleClientTabs snippet="reducers/tagging-reducers/multiple-tags-multiple-attributes" />
 

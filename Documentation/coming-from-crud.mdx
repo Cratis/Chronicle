@@ -1,9 +1,9 @@
 ---
-title: CRUD, EF Core, and Chronicle
-description: If you build apps with EF Core and think in tables, rows, and SaveChanges, here's how those ideas translate to Chronicle.
+title: From CRUD to Chronicle
+description: If you think in tables, rows, and saving current state, here's how those ideas translate to Chronicle.
 ---
 
-If your instinct is to add a table, map an entity, and call `SaveChanges()`, you already have useful muscle memory. This page maps the CRUD/EF Core model onto Chronicle so the differences are explicit.
+If your instinct is to add a table, map an entity, and save its current state, you already have useful muscle memory. This page maps that CRUD model onto Chronicle, whether you use an ORM or write database queries yourself.
 
 ## The mental shift in one sentence
 
@@ -11,21 +11,21 @@ In CRUD you **store the current state and overwrite it**; in Chronicle you **sto
 
 ## How the pieces map
 
-| You know (CRUD / EF Core) | In Chronicle |
+| You know (CRUD) | In Chronicle |
 |---|---|
 | A table / entity | An [event source](/chronicle/concepts/event-source.md) and its stream of events |
 | `INSERT` a row | Append a "created" [event](/chronicle/concepts/event.md) |
 | `UPDATE` a column | Append an event describing *what changed* (e.g. `AddressChanged`) |
 | `DELETE` a row | Append a "removed/closed" event — history is never erased |
-| `DbContext.SaveChanges()` | `EventLog.Append(...)` |
-| `SELECT` / LINQ query | A query over a [read model](/chronicle/read-models/) built by a [projection](/chronicle/concepts/projection.md) |
+| Save changes through your ORM or database driver | Append events to the event log |
+| `SELECT` or an ORM query | A query over a [read model](/chronicle/read-models/) built by a [projection](/chronicle/concepts/projection.md) |
 | A computed/denormalized view | A purpose-built read model — make as many as you need |
-| `ALTER TABLE` / EF migration | [Event type migration](/chronicle/concepts/event-type-migrations) + replay the projection |
+| `ALTER TABLE` or a schema migration | [Event type migration](/chronicle/concepts/event-type-migrations) + replay the projection |
 | Optimistic concurrency token | Constraints and the event stream's ordering |
 
 ## What stays the same
 
-- You still use C# records and dependency injection.
+- You still use your language's data types and application composition conventions.
 - You still query data and render it — the read side looks like querying a collection.
 - You can still keep a relational/document database for the genuinely-CRUD parts of your app; Chronicle doesn't demand all-or-nothing.
 
@@ -38,12 +38,11 @@ In CRUD you **store the current state and overwrite it**; in Chronicle you **sto
 
 ## Side by side
 
-CRUD: update a row, then read it back. This is illustrative EF Core pseudocode, not a compiled example:
+CRUD: update a row, then read it back. This is illustrative SQL, with parameters supplied by your database driver:
 
-```text
-customer.Address = newAddress;
-await db.SaveChangesAsync();
-var current = await db.Customers.FindAsync(id);
+```sql
+UPDATE Customers SET Address = :newAddress WHERE Id = :id;
+SELECT * FROM Customers WHERE Id = :id;
 ```
 
 Chronicle: the same change is a fact you append and a read side you declare. First, define the verbs as event types:
@@ -54,13 +53,13 @@ Then declare the read side. This is the [projection](/chronicle/concepts/project
 
 <ChronicleClientTabs snippet="coming-from-crud/read-model" />
 
-`[FromEvent<T>]` (`@fromEvent` in TypeScript) maps event properties onto the record by name — the name arrives with `CustomerRegistered`, and the address is kept current by every `AddressChanged`. The counter tracks the moves. There is no `UPDATE` statement anywhere: Chronicle derives the card from the facts.
+The creation mapping (`[FromEvent<T>]` in C#, `@fromEvent` in TypeScript) maps event properties onto the model by name — the name arrives with `CustomerRegistered`, and the address is kept current by every `AddressChanged`. The counter tracks the moves. There is no `UPDATE` statement anywhere: Chronicle derives the card from the facts.
 
 Now the write and the read-back:
 
 <ChronicleClientTabs snippet="coming-from-crud/write-and-read" />
 
-`GetInstanceById` hands back the card Chronicle derives from those events — `TimesRelocated` included, a fact the CRUD row lost the moment `SaveChanges` ran. Chronicle keeps that card up to date as events land, so a read right after an append can be a beat behind; when a read must reflect the append that preceded it, [consistency](/chronicle/read-models/consistency/) shows how.
+The instance read hands back the card derived from those events — relocation count included, a fact the CRUD row lost when its address was overwritten. Chronicle keeps that card up to date as events land, so a read right after an append can be a beat behind; when a read must reflect the append that preceded it, [consistency](/chronicle/read-models/consistency/) shows how.
 
 ## Not sure it's worth it?
 

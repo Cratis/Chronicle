@@ -1,11 +1,11 @@
 ---
-description: Label Chronicle reactors with the [Tag] attribute to organize and find them; tags describe the reactor and do not filter the events it handles.
+description: Label Chronicle reactors with descriptive tags to organize and find them; these tags do not filter the events a reactor handles.
 ---
 # Tagging Reactors
 
-Tags provide a way to organize and categorize your reactors for better discoverability and management. By applying the `[Tag]` attribute to your reactor classes, you can assign one or more tags that describe the purpose or domain of the reactor.
+Tags provide a way to organize and categorize your reactors for better discoverability and management. Where your client supports descriptive reactor tags, assign labels that describe the reactor's purpose or domain.
 
-`[Tag]` and `[Tags]` label the reactor itself. They do not filter which appended events the reactor handles. For event filtering based on appended metadata, see [Filter reducers and reactors by tag](../events/filtering/by-tag), [Filter reducers and reactors by event source type](../events/filtering/by-event-source-type), and [Filter reducers and reactors by event stream type](../events/filtering/by-event-stream-type).
+Descriptive tags label the reactor itself (`[Tag]` and `[Tags]` in .NET). They do not filter which appended events the reactor handles. For event filtering based on appended metadata, see [Filter reducers and reactors by tag](../events/filtering/by-tag), [Filter reducers and reactors by event source type](../events/filtering/by-event-source-type), and [Filter reducers and reactors by event stream type](../events/filtering/by-event-stream-type).
 
 :::note[Client coverage]
 Kotlin and Java tag a reactor with `@Tag`, which is repeatable and takes any number of tags. Elixir's `use Chronicle.Reactors.Reactor` and TypeScript's `reactor()` expose no way to attach descriptive tags to the reactor itself.
@@ -23,13 +23,13 @@ Apply a single tag to your reactor:
 
 ### Multiple Tags (Single Attribute)
 
-Use the params feature to specify multiple tags in a single attribute:
+In C# and Kotlin/Java, one tag attribute or annotation accepts several labels:
 
 <ChronicleClientTabs snippet="concepts/tagging-reactors/multiple-tags-single-attribute" />
 
 ### Multiple Tags (Multiple Attributes)
 
-Apply multiple `[Tag]` attributes:
+In C# and Kotlin/Java, repeat the tag attribute or annotation:
 
 <ChronicleClientTabs snippet="concepts/tagging-reactors/multiple-tags-multiple-attributes" />
 

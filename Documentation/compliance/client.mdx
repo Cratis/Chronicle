@@ -8,14 +8,14 @@ description: Annotate your domain model for Chronicle PII encryption from the cl
 Chronicle's PII encryption is applied transparently by the kernel. From a client perspective, your responsibility is to annotate your domain model correctly so that the kernel knows which values to encrypt. There are two places to put this annotation, and you will typically use both in the same codebase.
 
 :::note[Client coverage]
-Both options work in every client. C#, Kotlin/Java and TypeScript have a `ConceptAs<T>`; Elixir has `Chronicle.Concept`. All four serialize a concept as the value it wraps, so adopting one for a property already in production changes neither the wire format nor the registered schema.
+Both options work in the clients listed here. C#, Kotlin/Java and TypeScript have a `ConceptAs<T>`; Elixir has `Chronicle.Concept`. All four serialize a concept as the value it wraps, so adopting one for a property already in production changes neither the wire format nor the registered schema.
 
 The DI-container registration step is genuinely C#-specific — it is `IServiceCollection` wiring, and each other client discovers its artifacts its own way. See [Marking data as PII](./pii) for the full per-path support matrix.
 :::
 
 ## Option 1 — Annotate your event types
 
-Apply `[PII]` directly to individual properties on your event records. This is the simplest starting point and works well when a value is PII only in the context of one specific event.
+Declare PII directly on event properties using your client's syntax (`[PII]` in C#). This is the simplest starting point and works well when a value is PII only in the context of one specific event.
 
 <ChronicleClientTabs snippet="compliance/client/property-annotation" />
 
@@ -25,17 +25,17 @@ Apply `[PII]` directly to individual properties on your event records. This is t
 
 Use property-level annotation when:
 
-- The property type is a primitive (`string`, `int`) and you do not need a dedicated concept type.
+- The property type is a primitive (a string or integer) and you do not need a dedicated concept type.
 - The value is PII in this event but is conceptually not a PII concept elsewhere.
 - You are incrementally adding compliance to an existing model and want to make targeted changes.
 
 ### Limitation
 
-The main drawback of property-level annotation is that you must remember to add `[PII]` every time a new event carries the same kind of value. If a future event includes an employee's name without the attribute, it will be written as plaintext.
+The main drawback of property-level annotation is that you must remember to declare PII every time a new event carries the same kind of value. If a future event includes an employee's name without that declaration, it will be written as plaintext.
 
 ## Option 2 — Annotate your ConceptAs types
 
-Apply `[PII]` to a `ConceptAs<T>` concept type. Chronicle then encrypts every event property that uses that type, automatically, across all events.
+Declare PII on the concept type (`[PII]` on `ConceptAs<T>` in C#). Chronicle then encrypts every event property that uses that type, automatically, across all events.
 
 <ChronicleClientTabs snippet="compliance/client/concept-annotation" />
 
@@ -64,15 +64,15 @@ The two approaches complement each other. Use concept types for inherently perso
 
 ## EventSourceId cannot be marked PII
 
-Do not apply `[PII]` to types that inherit from `EventSourceId` or `EventSourceId<T>`. Chronicle throws `PIINotSupportedOnEventSourceId` because event source identifiers are required for key lookup and cannot be encrypted.
+Event source identifiers are required for key lookup and cannot be encrypted. In .NET, do not apply `[PII]` to types that inherit from `EventSourceId` or `EventSourceId<T>`; the client throws `PIINotSupportedOnEventSourceId`.
 
 <ChronicleClientTabs snippet="compliance/client/event-source-id-restriction" />
 
-If the identifier itself is sensitive, use a non-sensitive surrogate key as the event source identifier (a randomly generated `Guid` works well) and store the sensitive value in a `[PII]`-marked event property.
+If the identifier itself is sensitive, use a non-sensitive surrogate key as the event source identifier (a randomly generated UUID works well) and store the sensitive value in an event property declared as PII.
 
 ## Registering compliance services
 
-Compliance support is registered with a single extension method in your ASP.NET Core setup:
+In .NET, register compliance support with the extension method in your ASP.NET Core setup. Other clients use their own artifact and schema registration conventions:
 
 <ChronicleClientTabs snippet="compliance/client/registering-compliance" />
 

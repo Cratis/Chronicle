@@ -30,21 +30,21 @@ Here's the shift. In a database you'd write code to keep a `Books` table in sync
 
 <ChronicleClientTabs snippet="tutorial/read-model/book" />
 
-Read the attributes as a sentence: a book is *made from* `BookAdded` — its `Title` and `Isbn` come straight off the event; `OnLoan` is `false` when the book is added, `true` when it's borrowed, and `false` again when it's returned; `BorrowedBy` is set to whoever borrowed it. You're *declaring* how each fact maps onto the view — not writing imperative updates, not worrying about ordering. Chronicle replays the events in order and applies your mapping.
+Read the mapping as a sentence: a book is *made from* `BookAdded` — its `Title` and `Isbn` come straight off the event; `OnLoan` is `false` when the book is added, `true` when it's borrowed, and `false` again when it's returned; `BorrowedBy` is set to whoever borrowed it. You're *declaring* how each fact maps onto the view — not writing imperative updates, not worrying about ordering. Chronicle replays the events in order and applies your mapping.
 
 :::note[FromEvent maps by convention]
-The class-level `[FromEvent<BookAdded>]` maps event properties to read model properties **by naming convention** — `BookAdded.Title` lands in `Book.Title` and `BookAdded.Isbn` in `Book.Isbn` because the names match, with nothing else to write. You only reach for a property-level `[SetFrom<T>]` when the names *don't* line up — like `BookBorrowed.MemberName` feeding `BorrowedBy` above.
+A creation mapping can copy event properties to read model properties **by naming convention** — the book's title and ISBN keep the same names. An explicit property mapping handles names that *don't* line up, like the borrowing member's name feeding `BorrowedBy`. In C#, these are `[FromEvent<BookAdded>]` and `[SetFrom<T>]`; the other tabs show their client's declaration.
 :::
 
 :::tip[Reach for the declarative path first]
-For mappings like this — "events map onto fields" — the model-bound attributes (`[FromEvent<T>]` for by-convention mapping, `[SetFrom<T>]` and `[SetValue<T>]` for the exceptions) express it with almost no code. Only when a view genuinely needs hand-written, imperative folding should you drop to a [reducer](/chronicle/reducers/). Try the projection first; you'll rarely need more.
+For mappings like this — "events map onto fields" — model-bound declarations express it with almost no code. Only when a view genuinely needs hand-written, imperative folding should you drop to a [reducer](/chronicle/reducers/). Try the projection first; you'll rarely need more.
 :::
 
 Kotlin and Java's model-bound projections don't currently have an equivalent to `[SetValue<T>]` — setting a literal value per event type — so this particular projection isn't available in those two clients yet.
 
 ## Query it
 
-By default Chronicle **materializes** the projection into its configured **sink** storage — MongoDB unless you change it — so the `Book` read model is just a collection you query, exactly what you're used to. It lives in a collection named after the read model, pluralized (`Books`), in the database named after your event store; [the MongoDB setup in Get started](/chronicle/get-started/console/#configure-the-mongodb-client) shows how to point the driver at it:
+By default Chronicle **materializes** the projection into its configured **sink** storage — MongoDB unless you change it — so the `Book` read model is just a collection you query, exactly what you're used to. The examples query `Books` in the database named after your event store. Configure your language's MongoDB driver for that database; [.NET's MongoDB setup](/chronicle/get-started/console/#configure-the-mongodb-client) shows that host's configuration:
 
 <ChronicleClientTabs snippet="tutorial/read-model/query" />
 
@@ -66,7 +66,7 @@ And its own query, just as plain as the last one:
 
 <ChronicleClientTabs snippet="tutorial/read-model/borrowed-books-query" />
 
-Two attributes carry the whole lifecycle. `[FromEvent<BookBorrowed>]` creates the instance when the borrow happens — `MemberName` mapped by convention, keyed by the book's id. `[RemovedWith<BookReturned>]` is the new move: when a `BookReturned` arrives on that same book's stream, Chronicle **deletes the instance from the sink**. No `IsActive` flag, no soft-delete column, no cleanup job — the collection *is* the answer to "what's out right now", because instances that no longer apply simply aren't in it.
+Two mappings carry the whole lifecycle. The creation mapping makes an instance when the borrow happens — the member's name mapped by convention, keyed by the book's id. The removal mapping is the new move: when a `BookReturned` arrives on that same book's stream, Chronicle **deletes the instance from the sink**. In C#, these mappings are `[FromEvent<BookBorrowed>]` and `[RemovedWith<BookReturned>]`. No `IsActive` flag, no soft-delete column, no cleanup job — the collection *is* the answer to "what's out right now", because instances that no longer apply simply aren't in it.
 
 Notice what just happened to your modeling instincts, too: instead of bending one `Books` table to answer every question, you built a second, purpose-shaped view over the *same events*. Read models are cheap in Chronicle — they're derived, so you can have as many as you have questions.
 

@@ -1,13 +1,13 @@
 ---
 title: "Model-Bound Projections"
-description: "Build read models by putting projection attributes on the read model type itself."
+description: "Build read models by declaring projection mappings on the model itself."
 ---
 
-Model-bound projections let the read model describe how it is built. Instead of creating a separate `IProjectionFor<T>` class, you put the projection metadata directly on the read model type and Chronicle builds the projection definition from those attributes.
+Model-bound projections let the read model describe how it is built. Instead of creating a separate projection class, you put projection metadata on the model and Chronicle builds the definition from it. Depending on the client, that metadata uses attributes, decorators, annotations, or module declarations.
 
 ## Overview
 
-Start with convention-based mapping and add explicit attributes only where the event and read model use different names. That keeps the common case small while still making the exceptions visible.
+Start with convention-based mapping and add explicit mappings only where the event and read model use different names. That keeps the common case small while still making the exceptions visible.
 
 ## Basic Example
 
@@ -15,14 +15,17 @@ Start with convention-based mapping and add explicit attributes only where the e
 
 In this example:
 
-- `[FromEvent<AccountOpened>]` creates or updates an `AccountInfo` instance when an `AccountOpened` event is processed
-- `[Key]` marks the read model identifier
+- The creation mapping makes or updates an `AccountInfo` instance when `AccountOpened` is processed
+- The key declaration identifies the read model instance
 - `Name` maps by convention because both the event and the read model use the same property name
-- `Balance` uses `[SetFrom<TEvent>]` because the event property is called `InitialBalance`
+- `Balance` is mapped explicitly because the event property is called `InitialBalance`
+
+The C# tab expresses these with `[FromEvent<AccountOpened>]`, `[Key]`, and `[SetFrom<TEvent>]`.
+Other tabs show the corresponding client declarations.
 
 ## Discovery
 
-Types are automatically discovered by the presence of:
+In .NET, types are automatically discovered by the presence of:
 
 - Class/record-level projection annotations such as `FromEvent` or `NotRewindable`, or event-sequence selection
 - Member mapping attributes such as `SetFrom`, `AddFrom`, or `Join`
@@ -32,7 +35,7 @@ how an already-defined model is read, and can also configure a reducer model.
 
 ## Stable Projection Identity
 
-By default, a model-bound projection uses the read model's fully qualified CLR type name as its identifier.
+By default, a .NET model-bound projection uses the read model's fully qualified CLR type name as its identifier.
 Use `[Projection(id: "...")]` from `Cratis.Chronicle.Projections` on a class, record, or record struct to
 keep that projection identity when renaming the type or moving its namespace. When adding the attribute
 to an existing projection, use its previous identifier:
@@ -60,8 +63,9 @@ identifier or storage container name; a type rename can still change those defau
 
 ## Key Features
 
-Model-bound projections cover the common projection operations below. Specialized builder features,
-such as fluent dynamic dictionary counters, do not all have attribute equivalents.
+Model-bound projections cover the common projection operations below. Names and availability vary
+by client; the examples on each page show the available declarations. Specialized builder features,
+such as fluent dynamic dictionary counters, do not all have model-bound equivalents.
 
 - **Property Mapping**: SetFrom, AddFrom, SubtractFrom, SetFromContext
 - **FromEvery**: Set properties from all events

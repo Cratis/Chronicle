@@ -87,7 +87,7 @@ The `EventRedacted` record is defined in `Cratis.Chronicle.Events` and carries:
 
 ### Subscribing in a Reducer
 
-The same approach applies to Reducers. Include `EventRedacted` handling inside the `IReducerFor<TReadModel>` implementation to update the read model when a source event is erased.
+The same approach applies to reducers. Add an `EventRedacted` handler to the reducer (`IReducerFor<TReadModel>` in .NET) to update the read model when a source event is erased.
 
 <ChronicleClientTabs snippet="events/redaction/reducer" />
 

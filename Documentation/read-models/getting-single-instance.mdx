@@ -3,7 +3,7 @@ title: Getting a Single Instance
 description: Read one read model instance by key, and understand whether the answer comes from the materialized store or from replaying events.
 ---
 
-When you need one read model and you have its key, ask Chronicle for it by key. You always call the same operation; what differs is where the answer comes from.
+When you need one read model and you have its key, ask Chronicle for it by key. The .NET client automatically routes that read to materialized storage or replay as described below. Use the client tabs for the read path available in your client.
 
 Chronicle knows whether the read model is **materialized** — whether an observer writes its state to a sink. If it is, the kernel reads the stored instance and releases any PII before returning it. If it is not — a passive read model has no observer and therefore no sink — the kernel rebuilds the instance from the events that feed it. You do not choose between the two at the call site; the read model's own definition decides.
 

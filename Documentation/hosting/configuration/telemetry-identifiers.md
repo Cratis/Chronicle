@@ -3,7 +3,7 @@ title: Event source ids in telemetry
 description: Choose Raw, Hashed, or Omitted event source ids in traces, and understand which identifiers Chronicle excludes from metric dimensions.
 ---
 
-Event source ids can contain personal data. Chronicle includes them unchanged in traces by default. Choose `Hashed` to correlate an id without sending its original value, or `Omitted` to keep the id out of spans entirely. Configure the kernel and each client separately; neither inherits the other's choice.
+Event source ids can contain personal data. Chronicle includes them unchanged in traces by default. Choose `Hashed` to correlate an id without sending its original value, or `Omitted` to keep the id out of spans entirely. Configure the kernel and client telemetry separately; neither inherits the other's choice. The client configuration below is for .NET.
 
 ## Configure kernel traces
 
@@ -30,7 +30,7 @@ Kernel spans always omit `orleans.rpc.target_id` and `orleans.rpc.source_id`, re
 
 ## Configure clients
 
-Use `WithTelemetry` when configuring your client host. See [client tracing](/chronicle/hosting/client-tracing/#choose-how-event-source-ids-appear) for the builder example. Client options expose the same `Telemetry:EventSourceIdTracing` and `Telemetry:EventSourceIdHashKey` properties. Worker and ASP.NET Core hosts both apply them; they do not change event ids sent to the kernel or written to storage. Client spans retain `event_source_id`; kernel spans retain `cratis.eventsource.id`. Both also carry `cratis.event_source.id`. The exposure policy applies equally to both copies: hashed values match, and omitted values appear under neither key.
+Use `WithTelemetry` when configuring your .NET client host. See [client tracing](/chronicle/hosting/client-tracing/#choose-how-event-source-ids-appear) for the builder example. Client options expose the same `Telemetry:EventSourceIdTracing` and `Telemetry:EventSourceIdHashKey` properties. Worker and ASP.NET Core hosts both apply them; they do not change event ids sent to the kernel or written to storage. Client spans retain `event_source_id`; kernel spans retain `cratis.eventsource.id`. Both also carry `cratis.event_source.id`. The exposure policy applies equally to both copies: hashed values match, and omitted values appear under neither key.
 
 ## Correlate hashes across processes
 

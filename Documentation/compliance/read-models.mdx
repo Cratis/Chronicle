@@ -1,6 +1,6 @@
 ---
 uid: Chronicle.Compliance.ReadModels
-description: How Chronicle keeps [PII] fields encrypted at rest in managed read models, decrypts them for observers and queries, and supports GDPR erasure.
+description: How Chronicle keeps PII fields encrypted at rest in managed read models, decrypts them for observers and queries, and supports GDPR erasure.
 ---
 
 # Read models and PII
@@ -25,7 +25,7 @@ The compliance identifier used for key lookup follows this rule: if an explicit 
 
 A projection copies values from events into a read model, but the kernel decides what to encrypt from the read model's own schema, not from the events the values came from. Marking an event property as PII does not mark the read model property it is mapped to. Without `[PII]` on that read model property, the projected value is stored in plain text, and it stays readable after the subject's key is erased.
 
-Mark every read model property that holds PII, either with `[PII]` on the property or by giving it a concept type that is itself marked `[PII]` (see [Declaring PII on a concept](./pii-with-concepts)).
+Mark every read model property that holds PII using your client's schema declarations. In .NET, either put `[PII]` on the property or give it a concept type that is itself marked `[PII]` (see [Declaring PII on a concept](./pii-with-concepts)).
 
 <ChronicleClientTabs snippet="compliance/read-models/projection-lineage" />
 
@@ -33,7 +33,7 @@ The `Name` property is mapped from `PersonName` on the event, and carries `[PII]
 
 ## Reducers — explicit `[PII]` required
 
-Reducers follow the same rule as projections: you must annotate PII properties on the read model record with `[PII]`. Reducers also use arbitrary C# logic to compute state, so there is no mapping from event properties to follow.
+Reducers follow the same rule as projections: declare PII on the read model's properties using your client's syntax (`[PII]` in .NET). Reducers use arbitrary application logic to compute state, so there is no mapping from event properties to follow.
 
 <ChronicleClientTabs snippet="compliance/read-models/reducer-explicit-pii" />
 

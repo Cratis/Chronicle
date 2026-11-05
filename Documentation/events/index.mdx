@@ -3,11 +3,11 @@ title: Events
 description: Define, append, read, and manage the immutable facts stored in Chronicle event sequences.
 ---
 
-A Chronicle event is an immutable fact, stored in an event sequence, that records something that happened in your system. Chronicle identifies events by their event type rather than the .NET CLR type, which makes the CLR type a convenient vessel for expressing intent and structure.
+A Chronicle event is an immutable fact, stored in an event sequence, that records something that happened in your system. Chronicle identifies events by their event type rather than a client-language type, which makes the language type a convenient vessel for expressing intent and structure.
 
 ```mermaid
 flowchart LR
-    T["[EventType] record"] --> A[Append]
+    T["Registered event type"] --> A[Append]
     A --> S["Event sequence (immutable, ordered)"]
     S --> O["Observers (projections · reducers · reactors)"]
 ```
@@ -18,7 +18,7 @@ flowchart LR
 
 Events live in event sequences, which are ordered, append-only streams. Each event receives a monotonically increasing sequence number that makes it possible to replay events, resume processing, and reason about how far consumers have progressed.
 
-Chronicle includes a specialized event sequence called the event log. It is the default sequence used throughout the system and is exposed through the `IEventLog` API.
+Chronicle includes a specialized event sequence called the event log. It is the default sequence used throughout the system and is exposed through each client's event-log API (`IEventLog` in .NET).
 
 <ChronicleClientTabs snippet="events/index/event-log" />
 

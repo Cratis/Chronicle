@@ -37,4 +37,4 @@ You don't have to choose globally. Event-source the core domain and the processe
 ## Next
 
 - Convinced it fits? Start with [Get started](../get-started/) and the [tutorial](../tutorial/).
-- Comparing with a CRUD/EF Core model? Read [CRUD, EF Core, and Chronicle](../coming-from-crud).
+- Comparing with a CRUD model? Read [From CRUD to Chronicle](../coming-from-crud).

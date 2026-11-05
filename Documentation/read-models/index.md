@@ -28,9 +28,9 @@ the events:
 - A [projection](../projections/) maps events into the model declaratively — the usual choice.
 - A [reducer](../reducers/) folds events into the model as state-transition code.
 
-Start with model-bound attributes, move to fluent mappings when the definition needs structure, and
-choose reducer code when transitions are clearer; a self-reducing model is the default for new
-reducers. **[Choose how to build a read model](../projections/choosing-a-read-model-style.mdx)** gives you
+Start with model-bound declarations, move to fluent mappings when the definition needs structure, and
+choose reducer code when transitions are clearer. Each client provides its own authoring APIs; in .NET,
+a self-reducing model is the default for new reducers. **[Choose how to build a read model](../projections/choosing-a-read-model-style.mdx)** gives you
 one decision path with scenarios, the same view four ways, and the cost of switching later.
 
 ## When an instance becomes visible

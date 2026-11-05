@@ -19,14 +19,14 @@ tf 04 readmodel Library.Book ->> 01 ->> 02 ->> 03
 tf 05 processor Library.WaitlistNotifier
 ```
 
-Every block is a real Chronicle primitive — which is what makes an event model such a good plan. The three **events** become `[EventType]` records, the **read model** becomes a queryable `Book` projected from all three of them, and the **processor** becomes a **reactor** — an `IReactor` that acts when something happens. You'll build them in that order. There's no screen or command here because Chronicle appends events directly — put a UI and commands on top with [Arc](/arc/) and the model gains those blocks too, as [the full-stack capstone](/build-a-full-app/) shows.
+Every block is a real Chronicle primitive — which is what makes an event model such a good plan. The three **events** become registered event types, the **read model** becomes a queryable `Book` projected from all three of them, and the **processor** becomes a **reactor** that acts when something happens. You'll build them in that order. There's no screen or command here because Chronicle appends events directly — put a UI and commands on top with [Arc](/arc/) and the model gains those blocks too, as [the full-stack capstone](/build-a-full-app/) shows.
 
 ## What you'll need
 
-Start the Chronicle kernel and pick a client. The worked narrative follows C#, while the client tabs show the supported equivalents for the other Chronicle clients.
+Start the Chronicle kernel and connect a client in your language. Select that language in the example tabs; each tab shows its client's declaration or explains when that example is unavailable.
 
-- [Get started](/chronicle/get-started/) walks through starting the kernel.
-- [Choose an application host model](/chronicle/get-started/choose-hosting-model/) picks the level your code runs at — console, worker, or ASP.NET Core.
+- [Get started](/chronicle/get-started/) walks through starting the kernel and links to each client's installation, connection setup, and runtime integration guides.
+- For .NET applications, [choose an application host model](/chronicle/get-started/choose-hosting-model/) — console, worker, or ASP.NET Core.
 
 ## The tour
 

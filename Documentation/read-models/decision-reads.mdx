@@ -14,6 +14,9 @@ Use a decision read when a rule depends on state you read first: a count, a stoc
 
 For a unique value or a create-once rule, a [constraint](../constraints/index.md) is simpler and cheaper. A plain read through `IReadModels` or an injected read model guards nothing, even when it is passive. [Choosing how a rule holds](../dynamic-consistency-boundary/choosing.mdx) compares the options, [Scenarios](../dynamic-consistency-boundary/scenarios.mdx) shows each as code, and the measured cost is in [What a decision read costs](../dynamic-consistency-boundary/limits.mdx#what-a-decision-read-costs). To see exactly what a guard covers, read [How guards are derived](../dynamic-consistency-boundary/how-guards-are-derived.mdx).
 
+The API names and unit-of-work lifecycle rules below describe the .NET client. The client tabs
+show each client's available workflow or explain when it is unavailable.
+
 ## Your first decision read
 
 A workshop has a fixed number of places. Read the workshop, check the rule, and append with the read as the guard.
@@ -28,7 +31,7 @@ Three things make it work:
 
 To tell a conflict from another failure, ask the result. A conflict names the model and key; `IsSuccess` also covers constraint violations.
 
-<ChronicleClientTabs snippet="read-models/decision-reads/detached-read" variants="csharp" />
+<ChronicleClientTabs snippet="read-models/decision-reads/detached-read" variants="csharp,elixir" />
 
 `Get<T>(key)` enrolls the read in the unit of work instead of returning a detached guard. The next section covers that.
 

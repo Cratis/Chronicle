@@ -3,9 +3,9 @@ title: "Projection Architecture"
 description: "How the projection engine compiles model-bound, declarative, and PDL projections and materializes read models."
 ---
 
-Attributes, fluent definitions, and PDL all become projection definitions that the kernel executes.
-For application code, start with model-bound attributes, then fluent mappings when you need structure,
-then reducer code when state transitions read better; start new reducers as self-reducing models.
+Model-bound declarations, fluent definitions, and PDL all become projection definitions that the kernel executes.
+For application code, start with model-bound declarations, then fluent mappings when you need structure,
+then reducer code when state transitions read better. In .NET, start new reducers as self-reducing models.
 [Choose how to build a read model](choosing-a-read-model-style.mdx) explains that decision. This page
 follows the three projection inputs through their common engine.
 

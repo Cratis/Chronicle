@@ -32,9 +32,11 @@ It's tempting to make one `Customer` read model serve every screen. Resist it. T
 
 ## Reach for the declarative path first
 
-You rarely write code that *updates* a read model — you declare how events map onto it and let Chronicle do the folding. Start with [model-bound projections](../projections/model-bound/), where attributes on the read model record describe the mapping. When the mapping needs logic the attributes can't express cleanly, step up to the fluent [declarative projection builder](../projections/declarative/) (`IProjectionFor<T>`), and only reach for a [reducer](../reducers/) when the model is genuinely easier to express as code folding over previous state.
+You rarely write code that *updates* a read model — you declare how events map onto it and let Chronicle do the folding. Start with [model-bound projections](../projections/model-bound/), where your client's attributes, decorators, annotations, or declarations describe the mapping on the model. When that form cannot express the mapping cleanly, use a separate [declarative projection builder](../projections/declarative/). Reach for a [reducer](../reducers/) when the model is genuinely easier to express as code folding over previous state.
 
 ## The constructor may not run
+
+Deserialization differs between client runtimes and database drivers. Keep defaults and validation in the projection or write side rather than relying on a model constructor. The following example concerns .NET records read through the MongoDB driver.
 
 Sooner or later you'll want to put a small piece of logic in the read model record itself — a normalizer that turns a `null` collection into an empty one, a computed default, a guard that rejects a value that should never arrive:
 
@@ -50,7 +52,7 @@ So a guard written in a read model record is not a guard. Put the intent somewhe
 
 | You want | Where it belongs |
 | --- | --- |
-| A collection that is never `null` | The declaration. A non-nullable collection property materializes as empty — see [Empty child collections](../read-models/empty-child-collections). |
+| A collection that is never `null` | In .NET, the declaration: a non-nullable collection property materializes as empty. Other clients have their own deserialization rules — see [Empty child collections](../read-models/empty-child-collections). |
 | A meaningful default before any event assigns the property | The projection — [SetValue](../projections/model-bound/set-value) or [initial values](../projections/declarative/initial-values) — so the default is part of the projected state every reader sees. |
 | A rule that rejects bad data | The write side, before the event is appended. A read model is derived from facts that already happened; refusing them here is too late to help. |
 
@@ -58,11 +60,11 @@ So a guard written in a read model record is not a guard. Put the intent somewhe
 
 A *materialized* read model updates *after* the event is appended, so what's stored is [eventually consistent](../read-models/consistency.md). Design with that in mind: don't read a stored model back inside a command or reactor to make a decision (use a [constraint](../constraints/) for invariants instead), and prefer [observable queries](../scenarios/real-time-query) so the UI reflects changes the moment the projection catches up.
 
-Eventual is the default, though — not a law. Mark the read model `[Passive]` and nothing materializes it, so `IReadModels` computes it from its events on every read — a strongly consistent read that includes an event you appended a millisecond ago:
+Eventual is the default for stored views, though — not a law. A passive read model is computed from its events rather than maintained in sink storage. Each client's declaration and read API differ; in .NET, `[Passive]` makes `IReadModels` compute it on every read:
 
 <ChronicleClientTabs snippet="concepts/designing-read-models/strongly-consistent" />
 
-The call site is the same either way; the read model's own declaration decides where the answer comes from. [Deep dive: consistency](./consistency.md) covers when each model is the right call.
+In .NET, the call site is the same either way; the read model's declaration decides where the answer comes from. [Deep dive: consistency](./consistency.md) covers when each model is the right call.
 
 ## Query it
 
@@ -70,11 +72,9 @@ When it's time to read, Chronicle gives you a ladder — trade consistency for c
 
 <ChronicleClientTabs snippet="concepts/designing-read-models/query-ladder" />
 
-- **`GetInstances<T>()`** returns every instance in one call — read from the materialized store, or rebuilt from the event log when the read model is `[Passive]`. You can force a bounded replay with an event count (`GetInstances<T>(eventCount)`), but a capped replay may return incomplete results. Good for [reporting and small populations](../read-models/getting-collection-instances), not for your production list view.
-- **`Materialized.GetInstances<T>(skip, take)`** reads what projections have already stored, with paging — cheap and fast, a moment behind. See [Materialized read models](../read-models/materialized-pagination).
-- **Need filtering, sorting, or aggregation?** Go to the sink's native query tools — `IMongoCollection<T>` or your `DbContext` — because a materialized read model is just data in a [database](../sinks/), shaped for exactly this.
-
-Kotlin and Java have the same ladder: `getInstances`, and `materialized.getInstances(skip, take)` for paging, as the tabs show.
+- **Read all instances** for [reporting and small populations](../read-models/getting-collection-instances), not for your production list view. In .NET, `GetInstances<T>()` reads from the materialized store or rebuilds a passive model from the event log. Its event-count overload bounds replay but can return incomplete results. Check your client's tab for its read behavior.
+- **Page materialized instances** to read what projections have already stored — cheap and fast, a moment behind. See [Materialized read models](../read-models/materialized-pagination).
+- **Need filtering, sorting, or aggregation?** Use the sink's native query tools in your language, because a materialized read model is just data in a [database](../sinks/), shaped for exactly this.
 
 ## Keep the read side ignorant of the write side
 

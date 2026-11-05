@@ -1,13 +1,13 @@
 ---
-description: Use [EventStreamType] so a Chronicle reducer or reactor handles only events appended to a matching event stream type.
+description: Filter a Chronicle reducer or reactor to events appended to a matching event stream type.
 ---
 # Filter reducers and reactors by event stream type
 
-Use `[EventStreamType]` on a reducer or reactor when it should only handle events appended to a specific stream type.
+Configure a stream type filter on a reducer or reactor when it should only handle events appended to that stream type. In C#, use `[EventStreamType]`; the tabs show each client's syntax.
 
 ## How the match works
 
-Chronicle compares the observer attribute to the `eventStreamType:` value used when appending the event. If the values do not match, the reducer or reactor is skipped.
+Chronicle compares the observer's filter to the stream type supplied when appending the event (`eventStreamType:` in C#). If the values do not match, the reducer or reactor is skipped.
 
 ## Filter a reactor by event stream type
 
@@ -27,4 +27,4 @@ Use stream type filtering when the same event source can produce distinct proces
 
 ## Filter by a declared stream
 
-To resolve the stream type from an [event source definition](../../event-sources/defining.mdx), use `[FromEventSource<TSource>("Stream")]`, which also sets the event source type. See [Filter observers by event source and stream](../../event-sources/filtering.mdx). The stream type is a dimension a concurrency scope can narrow to, which is how a decision can be guarded per stream. See [Event sources and the Dynamic Consistency Boundary](../../event-sources/dcb.mdx). A filter on an observer takes no part in that.
+In .NET, to resolve the stream type from an [event source definition](../../event-sources/defining.mdx), use `[FromEventSource<TSource>("Stream")]`, which also sets the event source type. See [Filter observers by event source and stream](../../event-sources/filtering.mdx). The stream type is a dimension a concurrency scope can narrow to, which is how a decision can be guarded per stream. See [Event sources and the Dynamic Consistency Boundary](../../event-sources/dcb.mdx). A filter on an observer takes no part in that.

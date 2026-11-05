@@ -9,9 +9,9 @@ When a view depends on the previous state, writing its transitions as code can b
 mapping properties. A reducer folds events one at a time, receiving the state the previous event
 produced and returning the next state for that event source.
 
-Start with model-bound projection attributes, use fluent mappings when the definition needs structure,
-and choose a reducer when state-transition code is clearer; a self-reducing model is the default for
-new reducer code. [Choose how to build a read model](../projections/choosing-a-read-model-style.mdx)
+Start with model-bound projection declarations, use fluent mappings when the definition needs structure,
+and choose a reducer when state-transition code is clearer. Authoring and registration conventions
+vary by client; in .NET, a self-reducing model is the default for new reducer code. [Choose how to build a read model](../projections/choosing-a-read-model-style.mdx)
 compares the forms and shows when a separate instance reducer is useful.
 
 ## Key Concepts
@@ -36,11 +36,11 @@ Reducers are ideal when you need to:
 
 <ChronicleClientTabs snippet="reducers/self-reducing-read-models/basic" />
 
-The static `Reduce` shape lets Chronicle discover the model's fold without a marker or separate class.
+In .NET, the static `Reduce` shape lets Chronicle discover the model's fold without a marker or separate class.
 Continue with [self-reducing read models](self-reducing-read-models.mdx) to register, test, and configure it.
 
-Use `IReducerFor<T>` when the fold needs injected services, instance behavior during replay, or must
-live apart from a shared model contract. See the [separate-reducer guide](getting-started.mdx).
+Use a separate reducer when the fold needs dependencies or must live apart from a shared model
+contract. In .NET, this is `IReducerFor<T>`; the other tabs show each client's equivalent. See the [separate-reducer guide](getting-started.mdx).
 
 <ChronicleClientTabs snippet="reducers/index/basic-example" />
 

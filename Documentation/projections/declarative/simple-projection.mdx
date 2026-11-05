@@ -1,5 +1,5 @@
 ---
-description: A simple Chronicle projection implements IProjectionFor<TReadModel> and automatically maps event properties to read model properties of matching names.
+description: A simple Chronicle projection maps event properties to read model properties with matching names.
 ---
 # Simple projection
 
@@ -7,7 +7,7 @@ A projection in Cratis is a way to create read models from events in the event s
 
 ## Defining a simple projection
 
-A projection implements `IProjectionFor<TReadModel>` and defines its behavior in the `Define` method:
+Use your client's projection builder to declare which event feeds the read model. In .NET, the projection implements `IProjectionFor<TReadModel>` and defines its behavior in `Define`:
 
 <ChronicleClientTabs snippet="projections/declarative/simple-projection/projection" />
 

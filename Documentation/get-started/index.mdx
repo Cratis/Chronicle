@@ -1,13 +1,13 @@
 ---
 title: Get started
-description: Start the Chronicle kernel, choose a client SDK, and see the same event-sourcing loop across C#, Kotlin, Java, Elixir, and TypeScript.
+description: Start the Chronicle kernel, choose a client SDK, and follow the event-sourcing loop in your language.
 ---
 
 import { Aside } from '@astrojs/starlight/components';
 
 The fastest way to understand Chronicle is to watch one fact travel through it. Chronicle stores the fact as an event, projections fold it into read models, and reactors respond to it. That loop is the same no matter which client SDK you use.
 
-This page is the shared Chronicle starting point. It explains the common model and shows the same examples in every supported client. Use the client-specific setup guides for package installation, project scaffolding, host integration, and runtime idioms.
+This page is the shared Chronicle starting point. It explains the common model and shows client-owned examples where available. Use the client-specific setup guides for package installation, project scaffolding, host integration, and runtime idioms.
 
 <Aside type="note" title="Never done event sourcing?">
 You don't need any event-sourcing background to follow the loop below. If you'd rather understand the *why* before the *how*, read [Why Event Sourcing](/chronicle/why-event-sourcing/) first, then come back. Either order is fine.
@@ -50,7 +50,7 @@ curl --insecure --fail --retry 30 --retry-all-errors --retry-delay 1 https://loc
 
 `--insecure` is there because the development image serves a self-signed certificate. Remove the container with `docker rm -f chronicle` when you are done; its data goes with it.
 
-If you need Docker Compose, Aspire, a separate database, or production-style hosting, use [Choose an application host model](./choose-hosting-model).
+For Docker Compose, a separate database, or production-style hosting, see [Hosting](../hosting/). For .NET host integration, see [Choose an application host model](./choose-hosting-model).
 
 ## The Chronicle loop
 
@@ -88,7 +88,7 @@ Each client has its own syntax, but the Chronicle shape is the same: create a cl
 
 Reading top to bottom: the client connects to the kernel, asks for an **event store** by name, and **appends** a `TestEvent` to its event log. That append is the only operation that changes the event store. Everything else reacts to the recorded fact.
 
-The event itself is just a record marked as a fact:
+The event itself is a data type registered with the client as a fact:
 
 <ChronicleClientTabs snippet="get-started/test-event" />
 
@@ -116,5 +116,5 @@ After you run one of the client setup guides or the example flow above, choose t
 
 - **Pick your client** — start with [.NET](/chronicle/clients/dotnet/getting-started/), [Kotlin/JVM](/chronicle/clients/kotlin/get-started/), [Elixir](/chronicle/clients/elixir/get-started/), or [TypeScript](/chronicle/clients/typescript/getting-started/).
 - **Build something real, step by step** — the [tutorial](/chronicle/tutorial/) builds a small library system one concept at a time.
-- **Run Chronicle your way** — [choose an application host model and run the kernel](./choose-hosting-model).
+- **Run Chronicle your way** — see [Hosting](../hosting/) for kernel deployment options.
 - **Understand the model** — [Why Event Sourcing](/chronicle/why-event-sourcing/) makes the case, and the [Concepts](/chronicle/concepts/) section defines every term you just met.

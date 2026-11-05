@@ -21,7 +21,7 @@ Chronicle resolves `[PII]` on a property through four paths, checked in this ord
 | Property type (concept) | yes | yes | yes | yes |
 | Constructor parameter | yes | yes | no | n/a |
 
-Every client covers the **property** path, and every client resolves a marker on the property's **concept type** — declare it once on the concept and every event and read model using that type is covered. That is the preferred approach; see [Declaring PII on a concept](pii-with-concepts).
+Every client in this table covers the **property** path and resolves a marker on the property's **concept type** — declare it once on the concept and every event and read model using that type is covered. That is the preferred approach; see [Declaring PII on a concept](pii-with-concepts).
 
 Two gaps remain. Elixir has no way to mark a whole multi-field struct as PII in one declaration — a concept wraps a single value, so mark the fields you need. And the TypeScript decorator does not read a constructor parameter, which matters only for classes that take their values positionally rather than as declared properties.
 
@@ -46,7 +46,7 @@ it has been registered; an older writer without it is refused.
 
 ## Marker signatures
 
-The marker, in each client:
+The marker signatures for the clients covered here:
 
 ```text
 // C#

@@ -7,6 +7,9 @@ Use a passive read model when you want to reconstruct state from events on deman
 
 ## Choose the read behavior
 
+The table uses .NET declarations and read routing. Consult the client tabs for your runtime's
+configuration and read behavior.
+
 | Configuration | Active observation | Sink | By-id read |
 | --- | --- | --- | --- |
 | Default | Enabled | Configured sink | Current materialized state, eventually consistent |
@@ -17,11 +20,11 @@ For a [self reducer](self-reducing-read-models), the read model is also the redu
 
 ### On-demand reads
 
-Mark the read model `[Passive]`:
+Declare the read model passive (`[Passive]` in .NET):
 
 <ChronicleClientTabs snippet="reducers/passive-reducers/passive-attribute" />
 
-This disables active observation regardless of the reducer's `isActive` setting and selects on-demand reads through `IReadModels`. A sink collection cannot reconstruct passive state.
+In .NET, this disables active observation regardless of the reducer's `isActive` setting and selects on-demand reads through `IReadModels`. A sink collection cannot reconstruct passive state.
 
 <ChronicleClientTabs snippet="reducers/passive-reducers/retrieving-state" />
 

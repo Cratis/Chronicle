@@ -1,12 +1,12 @@
 ---
 title: Build a separate reducer
-description: Put a read-model fold in an IReducerFor<T> class when it needs injected services or separation from the model.
+description: Put a read-model fold on a separate type or module when it needs dependencies or separation from the model.
 ---
 
-Use a separate `IReducerFor<T>` when the fold needs injected services, instance behavior during replay,
-or must live apart from its model. For application code, start with model-bound attributes, then fluent
-mappings, then reducer code; a [self-reducing model](self-reducing-read-models.mdx) is the default for new
-reducers. [Choose how to build a read model](../projections/choosing-a-read-model-style.mdx) explains the
+Use a separate reducer when the fold needs dependencies or must live apart from its model.
+In .NET, this is an `IReducerFor<T>` implementation, activated through the service provider.
+For application code, start with model-bound declarations, then fluent mappings, then reducer code;
+in .NET, a [self-reducing model](self-reducing-read-models.mdx) is the default for new reducers. [Choose how to build a read model](../projections/choosing-a-read-model-style.mdx) explains the
 choice; this guide shows the separate-class form.
 
 ## Prerequisites
@@ -21,13 +21,14 @@ Before you begin, ensure you have:
 
 ### 1. Define Your Read Model
 
-First, create a record representing the state you want to compute:
+First, define the state you want to compute using your language's data types:
 
 <ChronicleClientTabs snippet="reducers/getting-started/read-model" />
 
 ### 2. Implement the Reducer
 
-Create a reducer by implementing `IReducerFor<TReadModel>` with methods for each event type:
+Declare a reducer with handlers for each event type using your client's conventions. In .NET,
+implement `IReducerFor<TReadModel>`:
 
 <ChronicleClientTabs snippet="reducers/getting-started/reducer-implementation" />
 
@@ -36,7 +37,7 @@ can take it as a third argument after the event and current state.
 
 ## Method Signatures
 
-Reducer methods are discovered by convention and support the following signatures:
+Handler selection and signatures depend on the client. The tabs show their supported forms:
 
 ### Synchronous Methods
 
@@ -100,7 +101,7 @@ Reducer methods are called for each event matching the event type:
 
 The `current` parameter in each method:
 
-- Is `null` when no previous state exists for this event source
+- Represents absent state when no previous state exists for this event source (`null` in .NET)
 - Contains the current persisted state for this event source
 
 ## Best Practices

@@ -3,7 +3,7 @@ title: Empty Child Collections
 description: Why a child collection with no children is stored as an absent field, what Chronicle materializes it as, and how to say whether absent means empty.
 ---
 
-A read model with a `[ChildrenFrom<T>]` collection — or a declarative `.Children(...)` projection — has no children until a child event arrives. That is not an edge case. It is the state every instance is in the moment its root event creates it, so it is the first read of every new instance. This page covers what Chronicle stores then, what you read back, and how to say which answer you want.
+A read model with a child collection has no children until a child event arrives. In .NET, declare it with `[ChildrenFrom<T>]` or a declarative `.Children(...)` mapping. That is not an edge case. It is the state every instance is in the moment its root event creates it, so it is the first read of every new instance. This page covers what Chronicle stores then, what you read back, and how to say which answer you want.
 
 ## A child collection with no children is not stored
 
@@ -25,7 +25,9 @@ So absence is the encoding: a child collection with no children is a field that 
 
 ## What you read back
 
-When Chronicle materializes a read model for you, a collection property the stored data carries no value for is filled in according to how you declared it:
+The following rules describe the .NET client's reader. Other clients use their runtime's deserialization rules; check how yours handles an absent field.
+
+When the .NET client materializes a read model for you, a collection property the stored data carries no value for is filled in according to how you declared it:
 
 | Declared as | No value stored | A value stored |
 | --- | --- | --- |

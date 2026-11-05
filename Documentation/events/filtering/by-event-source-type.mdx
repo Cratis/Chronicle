@@ -1,13 +1,13 @@
 ---
-description: Use [EventSourceType] so a Chronicle reducer or reactor handles only events appended with a matching event source type.
+description: Filter a Chronicle reducer or reactor to events appended with a matching event source type.
 ---
 # Filter reducers and reactors by event source type
 
-Use `[EventSourceType]` on a reducer or reactor when it should only handle events appended with a specific event source type.
+Configure an event source type filter on a reducer or reactor when it should only handle events appended with that source type. In C#, use `[EventSourceType]`; the tabs show each client's syntax.
 
 ## How the match works
 
-Chronicle compares the observer attribute to the `eventSourceType:` value used when appending the event. If the values do not match, the reducer or reactor is skipped.
+Chronicle compares the observer's filter to the event source type supplied when appending the event (`eventSourceType:` in C#). If the values do not match, the reducer or reactor is skipped.
 
 ## Filter a reactor by event source type
 
@@ -23,8 +23,8 @@ If you append the same event with `eventSourceType: "supplier"`, this reducer do
 
 ## Combine with other filters
 
-You can combine `[EventSourceType]` with `[FilterEventsByTag]` or `[EventStreamType]`. When you do, Chronicle requires all configured filter categories to match.
+You can combine the source type filter with tag or stream type filters. When you do, Chronicle requires all configured filter categories to match.
 
 ## Filter by a declared event source
 
-To get the event source type from an [event source definition](../../event-sources/defining.mdx) instead of a string, use `[FromEventSource<TSource>("Stream")]`. See [Filter observers by event source and stream](../../event-sources/filtering.mdx). The event source type is one of the values a concurrency scope can narrow to, which makes it part of a [Dynamic Consistency Boundary](../../dynamic-consistency-boundary/chronicle.md) guard. A filter on an observer is not.
+In .NET, to get the event source type from an [event source definition](../../event-sources/defining.mdx) instead of a string, use `[FromEventSource<TSource>("Stream")]`. See [Filter observers by event source and stream](../../event-sources/filtering.mdx). The event source type is one of the values a concurrency scope can narrow to, which makes it part of a [Dynamic Consistency Boundary](../../dynamic-consistency-boundary/chronicle.md) guard. A filter on an observer is not.

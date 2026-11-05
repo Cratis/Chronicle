@@ -23,7 +23,7 @@ flowchart TD
 | | Projection | Reducer | Reactor |
 |---|---|---|---|
 | **Purpose** | Build a read model | Build a read model | Do a side effect |
-| **How** | Declarative (`[ReadModel]` + model-bound attributes, AutoMap) | Imperative fold you write | A method per event type |
+| **How** | Declarative (model-bound mappings or a fluent builder, AutoMap) | Imperative fold you write | A method per event type |
 | **Produces** | A read model instance you query | A value you query | Nothing (acts on the outside world) |
 | **Reach for it when** | The read side is shaped like data | A projection can't express the logic cleanly | You must notify, integrate, or trigger a command |
 | **Must be idempotent** | Handled for you | Handled for you | **Yes — you own this** |

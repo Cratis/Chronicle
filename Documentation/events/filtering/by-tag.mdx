@@ -1,18 +1,18 @@
 ---
-description: Use [FilterEventsByTag] so a Chronicle reducer or reactor handles only events that carry specific tags, with one or several filter tags.
+description: Filter a Chronicle reducer or reactor to events that carry specific tags, with one or several filter tags.
 ---
 # Filter reducers and reactors by tag
 
-Use `[FilterEventsByTag]` when a reducer or reactor should only handle events that carry specific tags.
+Configure a tag filter when a reducer or reactor should only handle events that carry specific tags. In C#, use `[FilterEventsByTag]`; the tabs show each client's syntax.
 
 ## What counts as a matching tag
 
 Chronicle compares the filter tag against the tags on the appended event. Those tags can come from:
 
-- `[Tag]` or `[Tags]` on the event type
-- The `tags:` argument when you append the event
+- Static tags declared on the event type (`[Tag]` or `[Tags]` in C#)
+- Tags supplied when appending the event
 
-`[Tag]` and `[Tags]` on the reducer or reactor do not filter anything. They only label the observer itself.
+Descriptive tags on the reducer or reactor do not filter anything. They only label the observer itself.
 
 ## Filter a reactor by tag
 
@@ -28,7 +28,7 @@ The reducer only updates when the appended event carries the `priority` tag.
 
 ## Use multiple filter tags
 
-Multiple `[FilterEventsByTag]` attributes widen the match:
+Multiple tag filters widen the match (in C#, apply `[FilterEventsByTag]` more than once):
 
 <ChronicleClientTabs snippet="events/filtering/by-tag/multiple-filters" />
 

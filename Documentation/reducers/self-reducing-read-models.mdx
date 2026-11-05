@@ -4,10 +4,13 @@ description: Declare static state transitions on a read model without a separate
 ---
 
 Keep a read model's transitions beside its state when a separate reducer adds no useful separation.
-Start with model-bound projection attributes, use fluent mappings when the definition needs structure,
-and choose reducer code when state transitions read better; a self-reducing model is the default for
-new reducers. [Choose how to build a read model](../projections/choosing-a-read-model-style.mdx) shows
+Start with model-bound projection declarations, use fluent mappings when the definition needs structure,
+and choose reducer code when state transitions read better. In .NET, a self-reducing model is the
+default for new reducers. [Choose how to build a read model](../projections/choosing-a-read-model-style.mdx) shows
 when fold-time dependencies or a shared contract call for a separate `IReducerFor<T>` instead.
+
+The discovery rules, method signatures, and registration APIs below describe the .NET implementation.
+Use the client tabs for the declarations available in other clients.
 
 A self reducer uses the same reducer pipeline, storage, filtering, and replay machinery as a classic
 reducer. Only discovery and invocation differ.

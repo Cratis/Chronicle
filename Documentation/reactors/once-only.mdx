@@ -1,9 +1,10 @@
 ---
-description: The OnceOnly attribute marks a Chronicle reactor handler that must not run again when its observer is replayed, and what it guarantees.
+description: Mark a Chronicle reactor handler as once-only to exclude it from replay, and understand what that guarantees.
 ---
 # OnceOnly
 
-The `OnceOnly` attribute marks a reactor handler that must not run again when its observer is replayed.
+A once-only declaration marks a reactor handler that must not run again when its observer is replayed.
+The tabs show each client's declaration; C# uses `[OnceOnly]`.
 
 There are scenarios where you need side effects to occur only on the initial event processing,
 such as sending notifications, triggering external integrations, or performing non-idempotent operations.
@@ -38,7 +39,7 @@ In C#, the events a handler returns are also appended with [idempotency keys der
 
 ## Where you put it
 
-`OnceOnly` goes on a handler method or on the reactor class, and the two mean different things:
+In C#, `[OnceOnly]` goes on a handler method or on the reactor class, and the two mean different things:
 
 - **On a method** — that handler is skipped for every event that arrives as part of a replay. The rest of the
   reactor still replays, which is what you want when only one of its handlers has a non-idempotent side effect.

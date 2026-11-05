@@ -1,18 +1,18 @@
 ---
-description: Chronicle tags organize and identify events and observers such as reactors, reducers and projections through the [Tag] and [Tags] attributes.
+description: Chronicle tags organize and identify events and observers such as reactors, reducers and projections.
 ---
 # Tagging
 
-Tags provide a flexible way to organize, categorize, and identify events and observers (reactors, reducers, projections, read models) within Chronicle. By applying the `[Tag]` or `[Tags]` attribute, you can assign one or more tags that describe the purpose, domain, or context of your artifacts.
+Tags provide a flexible way to organize, categorize, and identify events and observers (reactors, reducers, projections, read models) within Chronicle. Assign tags that describe the purpose, domain, or context of your artifacts using your client's supported declarations or append options. The tabs show each client's syntax or explain where a declaration is unavailable.
 
-> **Note**: Both `[Tag]` and `[Tags]` attributes can be used interchangeably. Use whichever feels more natural, or mix them - all tags will be merged together.
+> **Note**: In .NET, `[Tag]` and `[Tags]` are interchangeable. Use either or mix them — all tags will be merged together.
 
 ## Overview
 
 Tags are strings that can be attached to:
 
-- **Events** - both statically (via attributes) and dynamically (when appending)
-- **Reactors** - for organizing and filtering reactive behaviors
+- **Events** - both statically (in the event declaration) and dynamically (when appending)
+- **Reactors** - for organizing reactive behaviors; descriptive tags are not event filters
 - **Reducers** - for categorizing state aggregation logic
 - **Projections** - for organizing view models and read models
 - **Read Models** - for categorizing data models
@@ -23,11 +23,11 @@ Events can also carry [named tags](#named-tags): a name paired with a value, suc
 
 ## Tagging Events
 
-Events can be tagged in two ways: statically using attributes, or dynamically when appending events.
+Events can be tagged in two ways: statically in the event declaration where supported, or dynamically when appending events.
 
 ### Static Event Tags
 
-Apply the `[Tag]` or `[Tags]` attribute to your event types to assign static tags that will always be associated with that event type:
+Declare static tags on the event type using your client's syntax — for example, `[Tag]` or `[Tags]` in .NET:
 
 <ChronicleClientTabs snippet="concepts/tagging/static-event-tags" />
 
@@ -51,11 +51,11 @@ A plain tag says what kind of event you have: `"checkout"`, `"audit"`. Sometimes
 
 ### Appending named tags
 
-You supply named tags with `AppendWithNamedTags` (or `AppendManyWithNamedTags` for a batch). Unlike plain tags, there is no attribute that declares them on an event type.
+Supply named tags when appending. In .NET, use `AppendWithNamedTags` (or `AppendManyWithNamedTags` for a batch). Unlike plain tags, named tags are not declared as event-type metadata.
 
 <ChronicleClientTabs snippet="concepts/tagging/named-tags" />
 
-Named tags and plain tags are stored separately. The `[Tag]` attribute and the `tags` values above still produce plain tags, and a named tag never appears in the plain tag list. [Appending with Tags](../events/appending-with-tags.mdx#named-tags) covers batch appends and how per-event and call-level named tags combine.
+Named tags and plain tags are stored separately. Static tags and the append-time `tags` values above still produce plain tags, and a named tag never appears in the plain tag list. [Appending with Tags](../events/appending-with-tags.mdx#named-tags) covers batch appends and how per-event and call-level named tags combine.
 
 ### Names and values
 
@@ -96,7 +96,7 @@ Named tags are plaintext, indexed metadata. [PII encryption](../compliance/pii.m
 
 ## Tagging Observers
 
-Observers (reactors, reducers, and projections) can be tagged to organize and categorize them:
+Where supported by the client, observers (reactors, reducers, and projections) can carry descriptive tags to organize and categorize them. These do not filter their incoming events.
 
 ### Single Tag
 
@@ -104,7 +104,7 @@ Observers (reactors, reducers, and projections) can be tagged to organize and ca
 
 ### Multiple Tags (Single Attribute)
 
-You can use either `[Tag]` or `[Tags]` (plural) for convenience:
+In .NET, either `[Tag]` or `[Tags]` accepts multiple labels. Kotlin/Java uses `@Tag`:
 
 <ChronicleClientTabs snippet="concepts/tagging/observer-multiple-tags-single-attribute" />
 
@@ -114,7 +114,7 @@ You can use either `[Tag]` or `[Tags]` (plural) for convenience:
 
 ### Mixed Approach
 
-You can mix both `[Tag]` and `[Tags]` attributes - all tags will be merged:
+In .NET, you can mix `[Tag]` and `[Tags]` — all tags will be merged:
 
 <ChronicleClientTabs snippet="concepts/tagging/observer-mixed-approach" />
 

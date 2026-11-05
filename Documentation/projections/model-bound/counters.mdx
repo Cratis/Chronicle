@@ -1,13 +1,13 @@
 ---
 title: "Counters"
-description: "Increment, decrement, and count with model-bound projection attributes."
+description: "Increment, decrement, and count with model-bound projection declarations."
 ---
 
 Model-bound projections provide three counter operations for tracking occurrences and quantities: Increment, Decrement, and Count.
 
 ## Increment
 
-The `Increment` attribute increments a numeric property when an event occurs. This is useful for tracking counters that increase with specific events.
+An increment mapping (`[Increment<TEvent>]` in C#) increments a numeric property when an event occurs. This is useful for tracking counters that increase with specific events.
 
 <ChronicleClientTabs snippet="projections/model-bound/counters/basic-increment" />
 
@@ -15,7 +15,7 @@ Each time a `UserLoggedIn` event occurs, `LoginCount` is incremented by 1.
 
 ## Decrement
 
-The `Decrement` attribute decrements a numeric property when an event occurs. This is useful for tracking decreasing counters.
+A decrement mapping (`[Decrement<TEvent>]` in C#) decrements a numeric property when an event occurs. This is useful for tracking decreasing counters.
 
 <ChronicleClientTabs snippet="projections/model-bound/counters/increment-decrement" />
 
@@ -23,13 +23,13 @@ When a `UserConnected` event occurs, `ActiveConnections` increases by 1. When a 
 
 ## Count
 
-The `Count` attribute adds one to the property for every matching event, starting from zero, so on its own it holds the number of times the event occurred. It is not a separate running tally: it adds to whatever the property currently holds, so another attribute that writes the same property changes the number it counts on from.
+A count mapping (`[Count<TEvent>]` in C#) adds one to the property for every matching event, starting from zero, so on its own it holds the number of times the event occurred. It is not a separate running tally: it adds to whatever the property currently holds, so another mapping that writes the same property changes the number it counts on from.
 
 <ChronicleClientTabs snippet="projections/model-bound/counters/count" />
 
 ## Multiple Events
 
-You can use multiple attributes on the same property to respond to different events:
+Declare multiple mappings on the same property to respond to different events:
 
 <ChronicleClientTabs snippet="projections/model-bound/counters/combined" />
 

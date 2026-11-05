@@ -32,11 +32,11 @@ What it does **not** cover:
 - Full-text or range searches
 - Complex joins or projections across collections
 
-For those needs, inject the sink's native client directly. If your sink is MongoDB, inject `IMongoCollection<TReadModel>`. If it is SQL, inject your `DbContext`. Those tools are purpose-built for complex queries and Chronicle does not try to replace them.
+For those needs, use the sink's native driver or query library in your language. In .NET, for example, use `IMongoCollection<TReadModel>` for MongoDB or your `DbContext` for an EF-backed SQL query. Those tools are purpose-built for complex queries and Chronicle does not try to replace them.
 
 ## Accessing the API
 
-`IMaterializedReadModels` is exposed through `IReadModels.Materialized`:
+Use your client's materialized read API. In .NET, `IMaterializedReadModels` is exposed through `IReadModels.Materialized`:
 
 <ChronicleClientTabs snippet="read-models/materialized-pagination/accessing-api" />
 
@@ -56,7 +56,7 @@ Both `skip` and `take` are optional with sensible defaults. Use them for page-ba
 
 ### Pagination Parameters
 
-The parameters use strongly-typed concepts that convert implicitly from `int`:
+In .NET, the parameters use strongly-typed concepts that convert implicitly from `int`:
 
 | Parameter | Type | Default | Named Constants |
 |---|---|---|---|
@@ -73,7 +73,7 @@ The parameters use strongly-typed concepts that convert implicitly from `int`:
 
 For a complete live collection with optional client-side filtering, use [Observing Read Models](observing-read-models.mdx). `IReadModels.Observe<T>()` has no 50-instance default window; `Materialized.ObserveInstances` below observes only the requested page.
 
-`ObserveInstances` returns an `IObservable<IEnumerable<TReadModel>>` that emits a new page snapshot whenever the underlying stored data changes. This is useful for live-updating UIs, dashboards, and monitoring tools.
+In .NET, `ObserveInstances` returns an `IObservable<IEnumerable<TReadModel>>` that emits a new page snapshot whenever the underlying stored data changes. This is useful for live-updating UIs, dashboards, and monitoring tools.
 
 <ChronicleClientTabs snippet="read-models/materialized-pagination/observing" />
 

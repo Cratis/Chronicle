@@ -26,14 +26,14 @@ flowchart LR
 
 ## How you'll define one
 
-Start with model-bound attributes, move to fluent `IProjectionFor<T>` when the mapping needs structure,
-and use a reducer when the logic reads better as state transitions; a self-reducing model is the default
-for new reducer code. [Choose how to build a read model](choosing-a-read-model-style.mdx) compares the
-forms on the same event history and explains when separation or dependency injection warrants an
-`IReducerFor<T>`, when to nominate a plain class, and when tooling-authored PDL fits.
+Start with model-bound declarations, move to a fluent builder when the mapping needs structure,
+and use a reducer when the logic reads better as state transitions. The available authoring forms
+and registration conventions depend on your client. [Choose how to build a read model](choosing-a-read-model-style.mdx)
+compares the forms on the same event history, including .NET-specific self reducers and explicit
+registration, and explains when tooling-authored PDL fits.
 
 Projections join **events** (never other read models). Fluent mappings use AutoMap by default;
-model-bound projections opt into event mappings with attributes such as `[FromEvent<T>]`.
+model-bound projections opt into event mappings through the client's declarations, such as .NET's `[FromEvent<T>]`.
 
 ## Choose your consistency
 
@@ -57,8 +57,8 @@ No projection updates synchronously inside the append, and a read cannot enforce
 | ------ | ----------- |
 | [Architecture](architecture) | How the projection engine turns events into read models |
 | [Choose how to build a read model](choosing-a-read-model-style.mdx) | One decision path, worked examples, capabilities, and switching costs |
-| [Model-Bound Projections](model-bound/) | Build read models with attributes — the default style |
-| [Declarative Projections](declarative/) | Build read models with the fluent `IProjectionFor<T>` API |
+| [Model-Bound Projections](model-bound/) | Declare mappings on the read model — the default style |
+| [Declarative Projections](declarative/) | Build read models with a separate fluent projection definition |
 | [Immediate Projections](immediate-projections.md) | Why there is no synchronous projection mode, and what to use instead |
 | [Eventual Consistency](eventual-consistency) | The default — how and when eventual projections catch up |
 | [Registration lifecycle](registration-lifecycle.md) | What happens when projections register, change, fail, or are no longer declared |
