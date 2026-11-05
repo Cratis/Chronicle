@@ -29,7 +29,7 @@ public class AuthorizationDecisions(
             if (IsUnenrolled(capability, scope)) return AuthorizationDecision.Allow(AuthorizationReason.NotEnrolled, capability, scope);
             if (!options.Value.Authentication.Enabled) return AuthorizationDecision.Allow(AuthorizationReason.AuthenticationDisabled, capability, scope);
             if (principal?.Identity?.IsAuthenticated is not true) return AuthorizationDecision.Deny(AuthorizationReason.NoPrincipal, capability, scope);
-            if (WellKnownCapabilities.Administrator.Contains(capability))
+            if (WellKnownCapabilities.Administrator.Contains(capability) || WellKnownCapabilities.StoreScoped.Contains(capability))
             {
                 return await administrators.IsAuthorized(principal)
                     ? AuthorizationDecision.Allow(AuthorizationReason.Granted, capability, scope)
@@ -44,7 +44,8 @@ public class AuthorizationDecisions(
         }
     }
 
-    static bool IsKnown(Capability capability) => capability is not null && WellKnownCapabilities.Administrator.Contains(capability);
+    static bool IsKnown(Capability capability) => capability is not null
+        && (WellKnownCapabilities.Administrator.Contains(capability) || WellKnownCapabilities.StoreScoped.Contains(capability));
 
     static bool IsUnenrolled(Capability capability, AuthorizationScope scope) =>
         capability == WellKnownCapabilities.OperateEventStore

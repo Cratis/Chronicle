@@ -33,6 +33,11 @@ public class Authentication
     public bool EnforceAdministratorPolicyForOperations { get; init; }
 
     /// <summary>
+    /// Gets whether to enforce per-store compliance capabilities. Defaults to audit-only.
+    /// </summary>
+    public bool EnforceComplianceCapabilities { get; init; }
+
+    /// <summary>
     /// Gets the authentication authority URL. If not configured, uses the internal OAuth authority.
     /// </summary>
     public string? Authority { get; init; }
