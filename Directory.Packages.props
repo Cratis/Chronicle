@@ -33,7 +33,7 @@
     <PackageVersion Include="Cratis.Arc.ProxyGenerator.Build" Version="22.156.4" />
     <PackageVersion Include="Cratis.Arc.Swagger" Version="22.156.4" />
     <PackageVersion Include="Cratis.Arc.Testing" Version="22.156.4" />
-    <PackageVersion Include="Cratis.Screenplay" Version="4.249.2" />
+    <PackageVersion Include="Cratis.Screenplay" Version="5.7.0" />
     <!-- Microsoft -->
     <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.403" />
     <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.14" />
@@ -138,6 +138,7 @@
     <!-- Not categorized -->
     <PackageVersion Include="DnsClient" Version="1.8.0" />
     <PackageVersion Include="MongoDB.Driver" Version="3.13.0" />
+    <PackageVersion Include="Neo4j.Driver" Version="6.5.1" />
     <PackageVersion Include="protobuf-net.Grpc.AspNetCore.Reflection" Version="1.3.14" />
     <PackageVersion Include="protobuf-net.Grpc.Reflection" Version="1.3.14" />
     <PackageVersion Include="OpenIddict.AspNetCore" Version="7.7.2" />

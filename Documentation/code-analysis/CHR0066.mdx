@@ -1,0 +1,20 @@
+---
+title: "CHR0066: A node or an edge can only have primitive properties"
+description: "CHR0066 reports a property of a node or an edge in a graph projection that is an object."
+---
+
+## Rule description
+
+Nodes and edges in a property graph hold primitive values and arrays of primitive values. The rule reports a property or constructor parameter of a type marked with `[Node]` or `[Edge]` whose type is a class, record or struct that is not a primitive, a string, a date or time type, a `Guid`, an enum, a concept, or an array or list of those.
+
+## Severity
+
+Error
+
+## How to fix
+
+Model the object as its own node and connect it to the node it belongs to with an edge. Alternatively, flatten the object into primitive properties on the node or edge.
+
+## Related topics
+
+- [Graph projections](../projections/graph-projections.mdx)

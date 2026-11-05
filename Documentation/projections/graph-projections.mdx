@@ -1,0 +1,102 @@
+---
+uid: Chronicle.Projections.GraphProjections
+description: Project events onto a property graph with nodes, edges and properties, using model-bound attributes or a fluent builder, and understand the operations a graph sink applies.
+---
+# Graph projections
+
+A graph projection projects events onto a **property graph**: nodes, edges and their properties. It works like a projection onto a document read model. It uses the same observer, the same event routing, the same key and property expressions, the same replay and the same failed partition handling. The difference is the target. Instead of folding events into one document per key, it turns each event into a few idempotent **operations** on nodes and edges.
+
+The graph is what the events leave behind. Nothing writes to it directly.
+
+## Nodes and edges
+
+A **node** has a label, a unique key and properties. The label is the name of the type. A property is a primitive or an array of primitives. An object property is an error: model the object as a node of its own and connect it with an edge.
+
+An **edge** connects two nodes. It has a type, such as `MEMBER_OF`, a source node, a target node and properties. By default an edge is identified by its type, source and target, so there is at most one edge of a type between two nodes. An edge type can name an **identifying property**, which allows several edges of the same type between the same two nodes.
+
+A graph is named. Put `[Graph("Organization")]` on the types or on the assembly. Without it, the graph is named after the assembly's root namespace.
+
+## Model-bound
+
+Mark the types with `[Node]` and `[Edge]` and use the model-bound projection attributes on them. `[Key]` on a node marks its unique key. On an edge, `[Source<>]` and `[Target<>]` mark the members that hold the keys of the end nodes. Those members are not properties of the edge.
+
+<ChronicleClientTabs snippet="projections/graph/model-bound" />
+
+Properties are mapped by name from an event that has a property of the same name, or explicitly with the attributes you already know: `[SetFrom<>]`, `[SetFromContext<>]`, `[Increment<>]`, `[Decrement<>]`, `[Count<>]`, `[AddFrom<>]` and `[SubtractFrom<>]`. The node key is the event source id unless `[FromEvent<>]` names an event property.
+
+## Fluent
+
+The same graph can be declared with a fluent builder. It produces exactly the same definition as the attributes.
+
+<ChronicleClientTabs snippet="projections/graph/fluent" />
+
+## Counters
+
+Counters work on node and edge properties.
+
+<ChronicleClientTabs snippet="projections/graph/counters" />
+
+## Edges with an identity
+
+Give an edge a `[Key]` member to identify it among edges of the same type between the same two nodes. Every mapping of the edge must then say which event property holds the identity, with the `identity` argument or `UsingIdentity`. A sink that cannot hold several edges between the same pair of nodes rejects such an edge type.
+
+<ChronicleClientTabs snippet="projections/graph/identified-edge" />
+
+## The operations
+
+A graph projection does not produce state diffs. For every event it produces a `GraphChangeset`, a list of five idempotent operations:
+
+| Operation | What it does |
+| --- | --- |
+| `UpsertNode` | Creates the node when it does not exist and sets its properties. |
+| `SetProperties` | Sets properties on a node or an edge that exists. Nothing is created. |
+| `DeleteNode` | Deletes a node. With `detach`, the edges attached to it are deleted too; without, a node that still has edges cannot be deleted. |
+| `UpsertEdge` | Creates the edge when it does not exist and sets its properties. |
+| `DeleteEdge` | Deletes an edge. The nodes at both ends stay. |
+
+Some rules follow from the operations:
+
+- **Edges ensure their nodes.** An edge operation creates a bare end node, without properties, when it does not exist. A node mapping completes it later.
+- **A projection owns what it declares.** It owns the edges and the node properties it maps, and it never deletes a node it did not declare.
+- **Counters carry absolute values.** The engine reads the current value of the node or edge from the sink, applies the counter, and the operation carries the result.
+- **Removing a node needs an explicit decision.** `RemovedWith` deletes the node. Set `detach` to delete its edges with it.
+
+## Redelivery and replay
+
+Every node and edge stores the **watermark**: the sequence number of the event that last wrote it. A write whose event sequence number is at or below the watermark is skipped. Redelivered and out-of-order events therefore do not apply twice. A bare node that only an edge has created has no watermark yet, so its node mapping can still write it.
+
+Replay is **mark and sweep**. A replay starts a new generation for the replaying projection. An element of the projection that the replay has not written yet reads as absent, so counters are rebuilt from zero instead of counted on top of the previous result, and the first write replaces the element. When the replay ends, every element of the projection that was not written is deleted. Elements that other projections wrote, and nodes that only edges created, are never touched. A stale node that edges of other projections still point at stays as a bare node.
+
+## Choosing the sink
+
+A graph is stored by a graph sink. The sink type is set per client with `DefaultGraphSinkTypeId`, which defaults to `Neo4j`.
+
+<ChronicleClientTabs snippet="projections/graph/sink" />
+
+Read the [sinks overview](../sinks/index.mdx) for the available sink types, and [Neo4j graph sink](../sinks/neo4j.mdx) for the default.
+
+## Writing a graph sink
+
+A sink implements `IGraphSink`, separate from the `ISink` of document read models, because the fold semantics of `ISink` do not apply. A graph sink:
+
+- Applies a `GraphChangeset` with `ApplyGraphChanges`, subject to the watermark rule, and applies the operations of one changeset atomically.
+- Stamps every element it writes with the owning projection and its replay generation, and implements `BeginReplay`, `ResumeReplay`, `EndReplay` and `LeaveReplay` as mark and sweep.
+- Reports an element of the replaying owner that has not been rewritten as absent from `FindNode` and `FindEdge`.
+- Creates its constraints and indexes from the graph definition in `EnsureSchema`.
+- Reads instances for the Workbench with `GetNodes` and `GetEdges`.
+
+The in-memory graph sink is the executable reference for these semantics, and every behavior has a specification.
+
+## Testing
+
+`GraphScenario` runs a graph projection against the in-memory graph sink, so a specification can append events and assert the nodes and edges.
+
+<ChronicleClientTabs snippet="projections/graph/testing" />
+
+## Analyzers
+
+The code analysis package reports a graph declaration that cannot work:
+
+- [CHR0066](../code-analysis/CHR0066.mdx): a node or an edge has an object property.
+- [CHR0067](../code-analysis/CHR0067.mdx): a node does not have exactly one key, or an edge has more than one.
+- [CHR0068](../code-analysis/CHR0068.mdx): a type is both a node or an edge and a read model.

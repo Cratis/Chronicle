@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <AssemblyName>Cratis.Chronicle.Storage.Neo4j.Specs</AssemblyName>
+        <RootNamespace>Cratis.Chronicle.Storage.Neo4j</RootNamespace>
+        <IsTestProject>true</IsTestProject>
+        <OutputType>Exe</OutputType>
+        <CratisSpecificationsReadableNames>false</CratisSpecificationsReadableNames>
+        <IsPackable>false</IsPackable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../Storage.Neo4j/Storage.Neo4j.csproj" />
+        <!-- The in-memory graph sink is the executable reference the live integration specs compare against. -->
+        <ProjectReference Include="../Storage.InMemory/Storage.InMemory.csproj" />
+        <ProjectReference Include="../Storage/Storage.csproj" />
+        <ProjectReference Include="../Core/Core.csproj" />
+        <ProjectReference Include="../Concepts/Concepts.csproj" />
+    </ItemGroup>
+</Project>

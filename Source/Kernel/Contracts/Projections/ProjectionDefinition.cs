@@ -138,4 +138,10 @@ public class ProjectionDefinition
     /// </summary>
     [ProtoMember(21)]
     public Observation.EventGenerationDelivery GenerationDelivery { get; set; }
+
+    /// <summary>
+    /// Gets or sets the graph mappings when the projection targets a graph instead of a document or relational read model.
+    /// </summary>
+    [ProtoMember(22)]
+    public GraphProjectionDefinition? Graph { get; set; }
 }

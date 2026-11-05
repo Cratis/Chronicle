@@ -45,10 +45,10 @@ function graph(projectPath = v3Projects[0]) {
     };
 }
 
-test('exact 31 executable v3 + 3 shipping boundary, not a Storage prefix heuristic', () => {
-    assert.equal(v3Projects.length, 31);
+test('exact 32 executable v3 + 3 shipping boundary, not a Storage prefix heuristic', () => {
+    assert.equal(v3Projects.length, 32);
     assert.deepEqual(Object.values(shippingRunners), ['none', 'v2', 'v3']);
-    assert.equal(new Set([...v3Projects, ...shippingProjects]).size, 34);
+    assert.equal(new Set([...v3Projects, ...shippingProjects]).size, 35);
     assert.ok(v3Projects.includes(benchmarkProject));
     for (const name of ['Aspire', 'Storage.Vault', 'Storage.AzureKeyVault']) assert.ok(v3Projects.some(x => x.endsWith(`/${name}.Specs.csproj`)));
     assert.equal(v3Projects.filter(x => x.startsWith('Integration/')).length, 6);
@@ -332,7 +332,7 @@ async function ordinaryDispatch(mode) {
             await writeFile(assets, JSON.stringify(g.assets));
             return { code: 0, stdout: JSON.stringify(g.evaluated) };
         }
-        assert.equal(queried.length, 34, 'validate every selection before any child');
+        assert.equal(queried.length, 35, 'validate every selection before any child');
         launched.push(args);
         if (mode === 'failed-shard') return { code: 7 };
         assert.equal(options.timeout, 1234);
@@ -374,7 +374,7 @@ async function ordinaryDispatch(mode) {
     }
 }
 for (const mode of ['whole', 'shard-1', 'shard-2', 'failed-shard']) {
-    test(`MOCK ${mode} dispatch validates all 34 before children and preserves coverage guards`, () => ordinaryDispatch(mode));
+    test(`MOCK ${mode} dispatch validates all 35 before children and preserves coverage guards`, () => ordinaryDispatch(mode));
 }
 
 test('MOCK missing executable and missing DLL never succeed', async () => {
