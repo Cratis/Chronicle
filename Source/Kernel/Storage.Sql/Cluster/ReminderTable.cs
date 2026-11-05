@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences;
 using Microsoft.EntityFrameworkCore;
 
 namespace Cratis.Chronicle.Storage.Sql.Cluster;
@@ -53,7 +54,7 @@ public class ReminderTable(IDatabase database) : IReminderTable
         await using var scope = await database.Cluster();
         var dbContext = scope.DbContext;
         var reminders = await dbContext.Reminders
-            .Where(r => r.GrainId == grainId.ToString())
+            .WhereExact(dbContext, r => r.GrainId, grainId.ToString())
             .ToListAsync();
 
         return new ReminderTableData(reminders.Select(r => r.ToOrleans()));
@@ -90,7 +91,9 @@ public class ReminderTable(IDatabase database) : IReminderTable
 
         var legacyKey = ReminderEntryConverters.GetLegacyRowKey(grainId, reminderName);
         return key != legacyKey && await dbContext.Reminders
-            .Where(r => r.Id == legacyKey && r.GrainId == grainId.ToString() && r.ReminderName == reminderName && r.ETag == eTag)
+            .Where(r => r.Id == legacyKey && r.ETag == eTag)
+            .WhereExact(dbContext, r => r.GrainId, grainId.ToString())
+            .WhereExact(dbContext, r => r.ReminderName, reminderName)
             .ExecuteDeleteAsync() == 1;
     }
 
