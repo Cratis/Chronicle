@@ -3,7 +3,6 @@
 
 using Cratis.Chronicle.Concepts.EventSequences.Mutations;
 using Cratis.Chronicle.Storage.EventSequences.Mutations;
-using Cratis.Chronicle.Storage.MongoDB.Sinks;
 using MongoDB.Driver;
 
 namespace Cratis.Chronicle.Storage.MongoDB.EventSequences.Mutations.for_EventSequenceMutationRegistry.given;
@@ -12,8 +11,8 @@ namespace Cratis.Chronicle.Storage.MongoDB.EventSequences.Mutations.for_EventSeq
 /// Provides an <see cref="EventSequenceMutationRegistry"/> backed by a real, isolated MongoDB database for one
 /// spec run, together with the request-building helpers the in-memory reference specs use.
 /// </summary>
-/// <param name="fixture">The <see cref="MongoDBFixture"/> providing the MongoDB server.</param>
-public abstract class a_mutation_registry(MongoDBFixture fixture) : Specification
+/// <param name="fixture">The <see cref="ReplicaSetMongoDBFixture"/> providing the MongoDB server.</param>
+public abstract class a_mutation_registry(ReplicaSetMongoDBFixture fixture) : Specification
 {
     IMongoClient _client = default!;
     string _databaseName = default!;
@@ -94,6 +93,52 @@ public abstract class a_mutation_registry(MongoDBFixture fixture) : Specificatio
         EventSequenceMutationTransition transition) =>
         await registry.Transition(begin.Active!.TargetSequence, begin.Token!, transition);
 
+    /// <summary>
+    /// Creates a registry over the same collections whose first transactional head release is preceded by an
+    /// out-of-transaction write that changes the head, simulating a head that moves while the archive is in flight.
+    /// </summary>
+    /// <param name="interleave">The write to perform once, before the first transactional head update.</param>
+    /// <returns>The registry that observes the interleave.</returns>
+    protected IEventSequenceMutationRegistry BeforeNextArchiveRelease(Func<Task> interleave)
+    {
+        var heads = Database.GetCollection<EventSequenceMutationHeadEntry>(WellKnownCollectionNames.EventSequenceMutationHeads);
+        var controlledHeads = Substitute.For<IMongoCollection<EventSequenceMutationHeadEntry>>();
+        var interleaved = 0;
+        controlledHeads.CollectionNamespace.Returns(heads.CollectionNamespace);
+        controlledHeads.FindAsync(
+            Arg.Any<FilterDefinition<EventSequenceMutationHeadEntry>>(),
+            Arg.Any<FindOptions<EventSequenceMutationHeadEntry, EventSequenceMutationHeadEntry>>(),
+            Arg.Any<CancellationToken>()).Returns(call => heads.FindAsync(
+                call.Arg<FilterDefinition<EventSequenceMutationHeadEntry>>(),
+                call.Arg<FindOptions<EventSequenceMutationHeadEntry, EventSequenceMutationHeadEntry>>(),
+                call.Arg<CancellationToken>()));
+        controlledHeads.UpdateOneAsync(
+            Arg.Any<IClientSessionHandle>(),
+            Arg.Any<FilterDefinition<EventSequenceMutationHeadEntry>>(),
+            Arg.Any<UpdateDefinition<EventSequenceMutationHeadEntry>>(),
+            Arg.Any<UpdateOptions>(),
+            Arg.Any<CancellationToken>()).Returns(async call =>
+            {
+                if (Interlocked.Exchange(ref interleaved, 1) == 0)
+                {
+                    await interleave();
+                }
+
+                return await heads.UpdateOneAsync(
+                    call.Arg<IClientSessionHandle>(),
+                    call.Arg<FilterDefinition<EventSequenceMutationHeadEntry>>(),
+                    call.Arg<UpdateDefinition<EventSequenceMutationHeadEntry>>(),
+                    call.Arg<UpdateOptions>(),
+                    call.Arg<CancellationToken>());
+            });
+        var history = Database.GetCollection<EventSequenceMutationHistoryEntry>(WellKnownCollectionNames.EventSequenceMutationHistory);
+        var database = Substitute.For<IEventStoreNamespaceDatabase>();
+        database.Client.Returns(_client);
+        database.GetCollection<EventSequenceMutationHeadEntry>(WellKnownCollectionNames.EventSequenceMutationHeads).Returns(controlledHeads);
+        database.GetCollection<EventSequenceMutationHistoryEntry>(WellKnownCollectionNames.EventSequenceMutationHistory).Returns(history);
+        return RegistryOver(database);
+    }
+
     protected IEventSequenceMutationRegistry BeforeNextClaimOrTransition(Func<Task> interleave)
     {
         var heads = Database.GetCollection<EventSequenceMutationHeadEntry>(WellKnownCollectionNames.EventSequenceMutationHeads);
@@ -120,6 +165,7 @@ public abstract class a_mutation_registry(MongoDBFixture fixture) : Specificatio
             });
         var history = Database.GetCollection<EventSequenceMutationHistoryEntry>(WellKnownCollectionNames.EventSequenceMutationHistory);
         var database = Substitute.For<IEventStoreNamespaceDatabase>();
+        database.Client.Returns(_client);
         controlledHeads.CollectionNamespace.Returns(heads.CollectionNamespace);
         database.GetCollection<EventSequenceMutationHeadEntry>(WellKnownCollectionNames.EventSequenceMutationHeads).Returns(controlledHeads);
         database.GetCollection<EventSequenceMutationHistoryEntry>(WellKnownCollectionNames.EventSequenceMutationHistory)
@@ -141,6 +187,7 @@ public abstract class a_mutation_registry(MongoDBFixture fixture) : Specificatio
         var mongoDatabase = _client.GetDatabase(_databaseName);
 
         Database = Substitute.For<IEventStoreNamespaceDatabase>();
+        Database.Client.Returns(_client);
         Database.GetCollection<EventSequenceMutationHeadEntry>(WellKnownCollectionNames.EventSequenceMutationHeads)
             .Returns(mongoDatabase.GetCollection<EventSequenceMutationHeadEntry>(WellKnownCollectionNames.EventSequenceMutationHeads));
         Database.GetCollection<EventSequenceMutationHistoryEntry>(WellKnownCollectionNames.EventSequenceMutationHistory)

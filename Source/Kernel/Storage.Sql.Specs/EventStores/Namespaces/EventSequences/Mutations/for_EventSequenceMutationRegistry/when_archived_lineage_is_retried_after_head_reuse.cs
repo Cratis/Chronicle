@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences.Mutations.for_EventSequenceMutationRegistry;
 
-public class when_retrying_after_head_reuse : ArchiveRetryConformance
+public class when_archived_lineage_is_retried_after_head_reuse : ArchivedLineageConformance
 {
     SqliteConnection _connection;
     IDatabase _database;

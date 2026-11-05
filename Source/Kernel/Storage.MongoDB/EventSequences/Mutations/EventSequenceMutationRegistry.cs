@@ -39,6 +39,13 @@ public class EventSequenceMutationRegistry(
     readonly IMongoCollection<EventSequenceMutationHeadEntry> _heads = database.GetCollection<EventSequenceMutationHeadEntry>(WellKnownCollectionNames.EventSequenceMutationHeads);
     readonly IMongoCollection<EventSequenceMutationHistoryEntry> _history = database.GetCollection<EventSequenceMutationHistoryEntry>(WellKnownCollectionNames.EventSequenceMutationHistory);
 
+    enum ArchiveAttempt
+    {
+        Committed = 0,
+        StateConflict = 1,
+        DuplicateReceipt = 2
+    }
+
     /// <inheritdoc/>
     public async Task<EventSequenceMutationBeginResult> Begin(
         EventSequenceMutationRequest request,
@@ -237,19 +244,19 @@ public class EventSequenceMutationRegistry(
         var history = prepared.History;
         var document = ToDocument(history, targetId);
 
-        try
+        var committed = await TryArchiveAtomically(scope, document, history, cancellationToken).ConfigureAwait(false);
+        if (committed == ArchiveAttempt.StateConflict)
         {
-            await _history.InsertOneAsync(document, cancellationToken: cancellationToken).ConfigureAwait(false);
+            return EventSequenceMutationRegistryArchiveResult.StateConflict();
         }
-        catch (MongoWriteException ex) when (ex.WriteError?.Category == ServerErrorCategory.DuplicateKey)
+
+        if (committed == ArchiveAttempt.DuplicateReceipt)
         {
             var existing = await FindHistoryById(token.Id, cancellationToken).ConfigureAwait(false);
             return existing is null
                 ? EventSequenceMutationRegistryArchiveResult.Corrupt()
                 : await RecoverArchive(scope, token, existing, cancellationToken).ConfigureAwait(false);
         }
-
-        await ReleaseArchivedHead(scope, history, cancellationToken).ConfigureAwait(false);
 
         var registration = new EventSequenceMutationRegistration(
             active.Definition,
@@ -371,6 +378,29 @@ public class EventSequenceMutationRegistry(
         token.Id == active.Id &&
         token.Ordinal == active.Ordinal &&
         token.DefinitionDigestV1 == active.Definition.DefinitionDigestV1;
+
+    static async Task AbortQuietly(IClientSessionHandle session)
+    {
+        if (session.IsInTransaction)
+        {
+            await session.AbortTransactionAsync().ConfigureAwait(false);
+        }
+    }
+
+    static FilterDefinition<EventSequenceMutationHeadEntry> ExactTerminalHead(EventSequenceKey scope, ProviderNeutralHistoryEntry history)
+    {
+        var filter = Builders<EventSequenceMutationHeadEntry>.Filter;
+        return filter.And(
+            filter.Eq(_ => _.EventSequenceId, scope.EventSequenceId),
+            filter.Eq(_ => _.LastAssignedOrdinal, history.Ordinal),
+            filter.Eq(_ => _.Active!.Definition.Request.Id, history.Id),
+            filter.Eq(_ => _.Active!.Ordinal, history.Ordinal),
+            filter.Eq(_ => _.Active!.Definition.DefinitionDigestV1, history.TerminalWitness.DefinitionDigestV1),
+            filter.Eq(_ => _.Active!.StateVersion, new EventSequenceMutationStateVersion(history.TerminalWitness.FinalStateVersion.Value - 1)),
+            filter.Eq(_ => _.Active!.Phase, EventSequenceMutationPhase.SourceCommitted),
+            filter.Eq(_ => _.Active!.BlockedFrom, EventSequenceMutationPhase.None),
+            filter.Eq(_ => _.Active!.RepairState, history.RepairState));
+    }
 
     static FilterDefinition<EventSequenceMutationHeadEntry> ExactHead(EventSequenceId targetId, EventSequenceMutation active) =>
         Builders<EventSequenceMutationHeadEntry>.Filter.And(
@@ -526,17 +556,7 @@ public class EventSequenceMutationRegistry(
 
     async Task ReleaseArchivedHead(EventSequenceKey scope, ProviderNeutralHistoryEntry history, CancellationToken cancellationToken)
     {
-        var filter = Builders<EventSequenceMutationHeadEntry>.Filter;
-        var exactTerminalHead = filter.And(
-            filter.Eq(_ => _.EventSequenceId, scope.EventSequenceId),
-            filter.Eq(_ => _.LastAssignedOrdinal, history.Ordinal),
-            filter.Eq(_ => _.Active!.Definition.Request.Id, history.Id),
-            filter.Eq(_ => _.Active!.Ordinal, history.Ordinal),
-            filter.Eq(_ => _.Active!.Definition.DefinitionDigestV1, history.TerminalWitness.DefinitionDigestV1),
-            filter.Eq(_ => _.Active!.StateVersion, new EventSequenceMutationStateVersion(history.TerminalWitness.FinalStateVersion.Value - 1)),
-            filter.Eq(_ => _.Active!.Phase, EventSequenceMutationPhase.SourceCommitted),
-            filter.Eq(_ => _.Active!.BlockedFrom, EventSequenceMutationPhase.None),
-            filter.Eq(_ => _.Active!.RepairState, history.RepairState));
+        var exactTerminalHead = ExactTerminalHead(scope, history);
         await _heads.UpdateOneAsync(exactTerminalHead, Builders<EventSequenceMutationHeadEntry>.Update.Set(_ => _.Active, null), cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 
@@ -600,4 +620,64 @@ public class EventSequenceMutationRegistry(
                 Builders<EventSequenceMutationHistoryEntry>.IndexKeys.Ascending(_ => _.EventSequenceId),
                 Builders<EventSequenceMutationHistoryEntry>.IndexKeys.Ascending(_ => _.Ordinal)),
             new CreateIndexOptions { Name = "eventSequenceId_ordinal", Background = true, Sparse = false, Unique = true }));
+
+    /// <summary>
+    /// Inserts the receipt and releases the exact terminal head in one MongoDB transaction, retrying a transient
+    /// transaction conflict once. Without a committed transaction nothing is written.
+    /// </summary>
+    /// <param name="scope">The <see cref="EventSequenceKey"/> of the archived target.</param>
+    /// <param name="document">The receipt document to insert.</param>
+    /// <param name="history">The provider-neutral receipt used to build the exact terminal head filter.</param>
+    /// <param name="cancellationToken">The caller cancellation token.</param>
+    /// <returns>The <see cref="ArchiveAttempt"/> outcome.</returns>
+    async Task<ArchiveAttempt> TryArchiveAtomically(
+        EventSequenceKey scope,
+        EventSequenceMutationHistoryEntry document,
+        ProviderNeutralHistoryEntry history,
+        CancellationToken cancellationToken)
+    {
+        for (var attempt = 0; attempt < 2; attempt++)
+        {
+            using var session = await database.Client.StartSessionAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
+            try
+            {
+                session.StartTransaction();
+                await _history.InsertOneAsync(session, document, cancellationToken: cancellationToken).ConfigureAwait(false);
+                var released = await _heads.UpdateOneAsync(
+                    session,
+                    ExactTerminalHead(scope, history),
+                    Builders<EventSequenceMutationHeadEntry>.Update.Set(_ => _.Active, null),
+                    cancellationToken: cancellationToken).ConfigureAwait(false);
+                if (released.MatchedCount != 1)
+                {
+                    await AbortQuietly(session).ConfigureAwait(false);
+                    return ArchiveAttempt.StateConflict;
+                }
+
+                await session.CommitTransactionAsync(cancellationToken).ConfigureAwait(false);
+                return ArchiveAttempt.Committed;
+            }
+            catch (MongoException error) when (error.HasErrorLabel("UnknownTransactionCommitResult"))
+            {
+                // Never guess whether the commit happened; the caller retries the exact archive, which recovers from the receipt.
+                throw;
+            }
+            catch (MongoException error) when (error.HasErrorLabel("TransientTransactionError"))
+            {
+                await AbortQuietly(session).ConfigureAwait(false);
+            }
+            catch (MongoWriteException error) when (error.WriteError?.Category == ServerErrorCategory.DuplicateKey)
+            {
+                await AbortQuietly(session).ConfigureAwait(false);
+                return ArchiveAttempt.DuplicateReceipt;
+            }
+            catch
+            {
+                await AbortQuietly(session).ConfigureAwait(false);
+                throw;
+            }
+        }
+
+        return ArchiveAttempt.StateConflict;
+    }
 }

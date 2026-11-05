@@ -26,8 +26,8 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences.Mut
 /// mutation is bound (not yet archived); the history table is deliberately payload-free (see
 /// <see cref="Cratis.Chronicle.Storage.EventSequences.Mutations.EventSequenceMutationHistoryEntry"/>).
 /// Retries validate the token binding and durable receipt without depending on residual head columns.
-/// Archive inserts the receipt before releasing the exact terminal head; a retry safely finishes that
-/// release after a crash, without clearing a newer mutation.
+/// Archive inserts the receipt and releases the exact terminal head in one transaction; a retry of an
+/// already archived mutation recovers the stored receipt without clearing a newer mutation.
 /// </para>
 /// </remarks>
 public sealed class EventSequenceMutationRegistry(
@@ -442,7 +442,7 @@ public sealed class EventSequenceMutationRegistry(
         {
             EventSequenceMutationArchiveOutcome.Conflict => EventSequenceMutationRegistryArchiveResult.StateConflict(),
             EventSequenceMutationArchiveOutcome.Prepared when prepared.History is not null =>
-                await CommitArchive(db, mutationScope, key, current, prepared.History, cancellationToken),
+                await CommitArchive(db, mutationScope, key, token, current, prepared.History, cancellationToken),
             _ => EventSequenceMutationRegistryArchiveResult.Corrupt()
         };
     }
@@ -451,6 +451,7 @@ public sealed class EventSequenceMutationRegistry(
         NamespaceDbContext db,
         EventSequenceKey scope,
         EventSequenceId key,
+        EventSequenceMutationStateToken token,
         EventSequenceMutation preArchive,
         Chronicle.Storage.EventSequences.Mutations.EventSequenceMutationHistoryEntry history,
         CancellationToken cancellationToken)
@@ -461,37 +462,46 @@ public sealed class EventSequenceMutationRegistry(
             history.Ordinal,
             history.TerminalWitness);
 
-        var historyRow = EventSequenceMutationRowConversion.ToRow(key, history);
-        db.EventSequenceMutationHistory.Add(historyRow);
-        try
+        // The receipt insert and the exact-terminal head release are one provider transaction, so there is no
+        // window in which a receipt exists while the head is still active, or the head is released without a receipt.
+        return await db.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
         {
-            await db.SaveChangesAsync(cancellationToken);
-        }
-        catch (DbUpdateException)
-        {
-            db.Entry(historyRow).State = EntityState.Detached;
-
-            // Someone else already archived this mutation id (the unique index on MutationId).
-            // Verify it is the exact lineage we just prepared before reporting success.
-            var existing = await db.EventSequenceMutationHistory.AsNoTracking()
-                .FirstOrDefaultAsync(h => h.MutationId == history.Id, cancellationToken);
-            if (existing is null)
+            db.ChangeTracker.Clear();
+            var historyRow = EventSequenceMutationRowConversion.ToRow(key, history);
+            await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+            db.EventSequenceMutationHistory.Add(historyRow);
+            try
             {
-                return EventSequenceMutationRegistryArchiveResult.Corrupt();
+                await db.SaveChangesAsync(cancellationToken);
+            }
+            catch (DbUpdateException)
+            {
+                db.Entry(historyRow).State = EntityState.Detached;
+                await transaction.RollbackAsync(cancellationToken);
+
+                // Someone else already archived this mutation id (the unique index on MutationId).
+                // Verify it is the exact lineage we just prepared before reporting success.
+                var existing = await db.EventSequenceMutationHistory.AsNoTracking()
+                    .FirstOrDefaultAsync(h => h.MutationId == history.Id, cancellationToken);
+                if (existing is null)
+                {
+                    return EventSequenceMutationRegistryArchiveResult.Corrupt();
+                }
+
+                // The stored receipt is authoritative (its archive time differs from ours); verify it against the token.
+                return await RecoverArchive(db, scope, token, existing, cancellationToken);
             }
 
-            var existingHistory = EventSequenceMutationRowConversion.ToStorageHistory(existing);
-            if (existingHistory != history)
+            if (await ReleaseArchivedHead(db, key, history, cancellationToken) != 1)
             {
+                db.Entry(historyRow).State = EntityState.Detached;
+                await transaction.RollbackAsync(cancellationToken);
                 return EventSequenceMutationRegistryArchiveResult.StateConflict();
             }
 
-            await ReleaseArchivedHead(db, key, history, cancellationToken);
-            return EventSequenceMutationRegistryArchiveResult.AlreadyArchived(scope, registration, existingHistory);
-        }
-
-        await ReleaseArchivedHead(db, key, history, cancellationToken);
-        return EventSequenceMutationRegistryArchiveResult.Archived(scope, registration, history);
+            await transaction.CommitAsync(cancellationToken);
+            return EventSequenceMutationRegistryArchiveResult.Archived(scope, registration, history);
+        });
     }
 
     async Task<EventSequenceMutationRegistryArchiveResult> RecoverArchive(
@@ -511,14 +521,14 @@ public sealed class EventSequenceMutationRegistry(
         return result;
     }
 
-    async Task ReleaseArchivedHead(
+    async Task<int> ReleaseArchivedHead(
         NamespaceDbContext db,
         EventSequenceId key,
         Chronicle.Storage.EventSequences.Mutations.EventSequenceMutationHistoryEntry history,
         CancellationToken cancellationToken)
     {
         var version = new EventSequenceMutationStateVersion(history.TerminalWitness.FinalStateVersion.Value - 1);
-        await db.EventSequenceMutationHeads
+        return await db.EventSequenceMutationHeads
             .Where(h => h.EventSequenceId == key && h.ActiveMutationId == history.Id &&
                 h.LastAssignedOrdinal == history.Ordinal && h.ActiveOrdinal == history.Ordinal &&
                 h.ActiveDefinitionDigestV1 == history.TerminalWitness.DefinitionDigestV1 &&

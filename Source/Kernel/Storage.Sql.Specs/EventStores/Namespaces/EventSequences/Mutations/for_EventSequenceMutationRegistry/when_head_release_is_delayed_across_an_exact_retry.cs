@@ -17,7 +17,7 @@ public class when_head_release_is_delayed_across_an_exact_retry : given.a_contro
         var begin = await _registry.Begin(_request, _proposedTarget);
         var terminal = await Commit(_registry, begin);
         var nextRequest = Request(_target, 43);
-        var delayed = BeforeNextWrite(async () =>
+        var delayed = BeforeNextTransaction(async () =>
         {
             _retry = await _registry.Archive(_target, terminal.Token!);
             var next = await _registry.Begin(nextRequest, _proposedTarget);
@@ -27,7 +27,8 @@ public class when_head_release_is_delayed_across_an_exact_retry : given.a_contro
         _observed = await _registry.Begin(nextRequest, _proposedTarget);
     }
 
-    [Fact] void should_accept_the_original_archive() => _original.Outcome.ShouldEqual(EventSequenceMutationRegistryArchiveOutcome.Archived);
-    [Fact] void should_recover_the_concurrent_retry() => _retry.Outcome.ShouldEqual(EventSequenceMutationRegistryArchiveOutcome.AlreadyArchived);
+    [Fact] void should_recover_the_delayed_archive_to_the_stored_receipt() => _original.Outcome.ShouldEqual(EventSequenceMutationRegistryArchiveOutcome.AlreadyArchived);
+    [Fact] void should_commit_the_racing_retry() => _retry.Outcome.ShouldEqual(EventSequenceMutationRegistryArchiveOutcome.Archived);
+    [Fact] void should_return_the_same_receipt() => _original.History.ShouldEqual(_retry.History);
     [Fact] void should_not_release_a_later_terminal_head_with_the_same_state_version() => _observed.Active.ShouldEqual(_next.Active);
 }

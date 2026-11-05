@@ -3,7 +3,6 @@
 
 using Cratis.Chronicle.Concepts.EventSequences.Mutations;
 using Cratis.Chronicle.Storage.EventSequences.Mutations;
-using Cratis.Chronicle.Storage.MongoDB.Sinks;
 
 namespace Cratis.Chronicle.Storage.MongoDB.EventSequences.Mutations.for_EventSequenceMutationRegistry.when_transitioning_a_mutation;
 
@@ -14,9 +13,9 @@ namespace Cratis.Chronicle.Storage.MongoDB.EventSequences.Mutations.for_EventSeq
 /// rejected once replayed against the state the cycle left behind (the ABA case: the phase looks the same again,
 /// but the state version has moved on).
 /// </summary>
-/// <param name="fixture">The <see cref="MongoDBFixture"/> providing the MongoDB server.</param>
-[Collection(MongoDBCollection.Name)]
-public class and_advancing_through_the_full_graph(MongoDBFixture fixture) : given.a_mutation_registry(fixture)
+/// <param name="fixture">The <see cref="ReplicaSetMongoDBFixture"/> providing the MongoDB server.</param>
+[Collection(ReplicaSetMongoDBCollection.Name)]
+public class and_advancing_through_the_full_graph(ReplicaSetMongoDBFixture fixture) : given.a_mutation_registry(fixture)
 {
     EventSequenceMutationRegistryTransitionResult[] _applied = default!;
     EventSequenceMutationRegistryTransitionResult _retry = default!;

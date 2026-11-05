@@ -2,13 +2,12 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Storage.EventSequences.Mutations;
-using Cratis.Chronicle.Storage.MongoDB.Sinks;
 using MongoDB.Driver;
 
 namespace Cratis.Chronicle.Storage.MongoDB.EventSequences.Mutations.for_EventSequenceMutationRegistry;
 
-[Collection(MongoDBCollection.Name)]
-public class when_retrying_after_head_reuse(MongoDBFixture fixture) : ArchiveRetryConformance
+[Collection(ReplicaSetMongoDBCollection.Name)]
+public class when_archived_lineage_is_retried_after_head_reuse(ReplicaSetMongoDBFixture fixture) : ArchivedLineageConformance
 {
     readonly string _name = $"registry_retry_{Guid.NewGuid():N}";
     IMongoClient _client;

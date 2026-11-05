@@ -5,7 +5,7 @@ using Cratis.Chronicle.Storage.EventSequences.Mutations;
 
 namespace Cratis.Chronicle.Storage.InMemory.EventSequences.Mutations.for_EventSequenceMutationRegistry;
 
-public class when_retrying_after_head_reuse : ArchiveRetryConformance
+public class when_archived_lineage_is_retried_after_head_reuse : ArchivedLineageConformance
 {
     readonly EventSequenceMutationRegistryState _state = new();
 

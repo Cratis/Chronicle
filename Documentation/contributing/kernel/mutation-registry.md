@@ -60,12 +60,13 @@ An exact transition retry against the immediate successor returns `AlreadyApplie
 
 ## Archive recovery
 
-Persistent providers insert the terminal receipt before releasing the head. These are two durable writes, not a transaction spanning the entire mutation operation.
+The receipt insert and the head release are one provider transaction, so a crash leaves either the exact terminal head with no receipt, or the receipt with the head released. See [Receipts](#receipts). The transaction does not span the entire mutation operation.
 
 | Retry situation | Result |
 | --- | --- |
 | Receipt absent, exact eligible terminal head present | Insert the receipt, release the head, return `Archived`. |
-| Crash after receipt insertion but before head release | An exact archive retry verifies the receipt, releases only the matching terminal head, and returns `AlreadyArchived`. Repeating the original `Begin` also reconciles this release. |
+| Crash before the archive transaction commits | Nothing was written. The terminal head remains and an exact archive retry returns `Archived`. |
+| A concurrent exact archive wins the race | The duplicate receipt insert is detected, the transaction rolls back, and the retry returns the stored receipt as `AlreadyArchived`. |
 | Head already released | The exact archive token returns the same `AlreadyArchived` receipt. |
 | Head reused, including the same state version on another mutation | Return the original receipt without releasing or modifying the later mutation. |
 | Provider object recreated | Persistent providers recover from stored history, with the same retry semantics. |
@@ -73,7 +74,17 @@ Persistent providers insert the terminal receipt before releasing the head. Thes
 
 History does not retain the command payload. Retries validate stored receipt fields and the token's definition binding; they never depend on stale head payload columns. `Begin` can additionally recompute the definition digest from the caller's request and the original frozen range. In-memory archival also removes the payload-bearing registration.
 
-There is no background recovery worker in these foundations. After an interrupted archive, the owner must retry the original request or exact terminal archive token to finish releasing that head.
+There is no background recovery worker. After an interrupted archive, the owner retries the original request or the exact terminal archive token.
+
+## Receipts
+
+Archiving writes one payload-free receipt per mutation: mutation ID, ordinal, kind, target range, terminal phase, repair state, the terminal witness (definition digest, final state version, receipt digest and digest version), and the archive time in UTC milliseconds. It holds no command payload, reason, event content, origin or event-source ID.
+
+The receipt digest is a domain-separated SHA-256 computed behind one internal seam that also returns a digest version stored with the receipt. The digest construction is an open question in [decision 0025](../../../decisions/0025-mutation-operation-receipts.md).
+
+An exact retry returns the stored receipt as `AlreadyArchived`, including after the head is reused. A different definition digest is `DefinitionConflict` and a non-matching head is `StateConflict`. Receipts are kept for the life of the event sequence, with no expiry.
+
+The archive is atomic: a MongoDB session transaction (a **replica set is required**), an EF execution strategy with a database transaction for SQL, and one lock in memory. The append path never reads or writes receipts.
 
 ## Provider storage
 
@@ -87,10 +98,10 @@ SQL namespace migrations create the registry tables. Dynamic event-sequence tabl
 
 ## Provider verification
 
-Shared provider conformance exercises registration conflicts, scope/binding rejection, legal transitions, exact retries, stale tokens, concurrent begin, identity distinctions, and archive retries after recreation and head reuse. Controlled SQL and MongoDB interleavings exercise delayed claims and cross-mutation ABA without sleeps. Archive recovery specs cover receipt insertion before head release.
+Shared provider conformance exercises registration conflicts, scope/binding rejection, legal transitions, exact retries, stale tokens, concurrent begin, identity distinctions, and archive retries after recreation and head reuse. Controlled SQL and MongoDB interleavings exercise delayed claims and cross-mutation ABA without sleeps. Archive specs cover a crash before commit, a racing duplicate archive, and a head that changes before release. The seven archive-retry facts run on InMemory, MongoDB (replica set), SQLite, PostgreSQL and SQL Server; the last two run in CI only.
 
 The SQL conformance spec defaults to SQLite. To run it against a disposable PostgreSQL or SQL Server instance, set `CHRONICLE_REGISTRY_SQL_PROVIDER` to `PostgreSQL` or `SqlServer` and `CHRONICLE_REGISTRY_SQL_CONNECTION` to an administrative test connection string. It creates and removes uniquely named test databases and exercises the registry migration. SQL Server requires `-p:InvariantGlobalization=false` for SqlClient. Never point these specs at a production server.
 
-MongoDB specs use container fixtures. `CHRONICLE_SPECS_MONGODB_IMAGE` optionally selects a compatible local container image; the default remains `mongo`. Provider-specific infrastructure results must be reported separately: SQLite success alone does not verify PostgreSQL or SQL Server.
+MongoDB registry specs use a single-node replica set container fixture because archiving needs transactions. `CHRONICLE_SPECS_MONGODB_IMAGE` optionally selects a compatible local container image; the default remains `mongo`. Provider-specific infrastructure results must be reported separately: SQLite success alone does not verify PostgreSQL or SQL Server.
 
 See the [kernel contribution overview](index.md) for the surrounding kernel architecture.

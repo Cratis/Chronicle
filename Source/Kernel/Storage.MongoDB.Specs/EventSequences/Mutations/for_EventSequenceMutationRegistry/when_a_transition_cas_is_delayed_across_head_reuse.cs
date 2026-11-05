@@ -2,12 +2,11 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Storage.EventSequences.Mutations;
-using Cratis.Chronicle.Storage.MongoDB.Sinks;
 
 namespace Cratis.Chronicle.Storage.MongoDB.EventSequences.Mutations.for_EventSequenceMutationRegistry;
 
-[Collection(MongoDBCollection.Name)]
-public class when_a_transition_cas_is_delayed_across_head_reuse(MongoDBFixture fixture) : given.a_mutation_registry(fixture)
+[Collection(ReplicaSetMongoDBCollection.Name)]
+public class when_a_transition_cas_is_delayed_across_head_reuse(ReplicaSetMongoDBFixture fixture) : given.a_mutation_registry(fixture)
 {
     EventSequenceMutationRegistryTransitionResult _delayed;
     EventSequenceMutationBeginResult _next;

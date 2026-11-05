@@ -3,7 +3,6 @@
 
 using Cratis.Chronicle.Concepts.EventSequences.Mutations;
 using Cratis.Chronicle.Storage.EventSequences.Mutations;
-using Cratis.Chronicle.Storage.MongoDB.Sinks;
 
 namespace Cratis.Chronicle.Storage.MongoDB.EventSequences.Mutations.for_EventSequenceMutationRegistry.when_beginning_a_mutation;
 
@@ -12,9 +11,9 @@ namespace Cratis.Chronicle.Storage.MongoDB.EventSequences.Mutations.for_EventSeq
 /// resume the already-reserved mutation rather than reserving a new one - the head document already carries an
 /// active mutation whose id matches the incoming request.
 /// </summary>
-/// <param name="fixture">The <see cref="MongoDBFixture"/> providing the MongoDB server.</param>
-[Collection(MongoDBCollection.Name)]
-public class and_resuming_an_identical_request(MongoDBFixture fixture) : given.a_mutation_registry(fixture)
+/// <param name="fixture">The <see cref="ReplicaSetMongoDBFixture"/> providing the MongoDB server.</param>
+[Collection(ReplicaSetMongoDBCollection.Name)]
+public class and_resuming_an_identical_request(ReplicaSetMongoDBFixture fixture) : given.a_mutation_registry(fixture)
 {
     EventSequenceMutationBeginResult _first = default!;
     EventSequenceMutationBeginResult _resumed = default!;

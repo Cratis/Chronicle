@@ -3,7 +3,6 @@
 
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Storage.EventSequences.Mutations;
-using Cratis.Chronicle.Storage.MongoDB.Sinks;
 
 namespace Cratis.Chronicle.Storage.MongoDB.EventSequences.Mutations.for_EventSequenceMutationRegistry.when_archiving_a_mutation;
 
@@ -13,9 +12,9 @@ namespace Cratis.Chronicle.Storage.MongoDB.EventSequences.Mutations.for_EventSeq
 /// the original archive - inserting the identical terminal receipt first - is recognized as the same outcome
 /// rather than surfaced as a duplicate-key storage error, and recovery releases only the matching terminal head.
 /// </summary>
-/// <param name="fixture">The <see cref="MongoDBFixture"/> providing the MongoDB server.</param>
-[Collection(MongoDBCollection.Name)]
-public class and_the_mutation_is_terminal(MongoDBFixture fixture) : given.a_mutation_registry(fixture)
+/// <param name="fixture">The <see cref="ReplicaSetMongoDBFixture"/> providing the MongoDB server.</param>
+[Collection(ReplicaSetMongoDBCollection.Name)]
+public class and_the_mutation_is_terminal(ReplicaSetMongoDBFixture fixture) : given.a_mutation_registry(fixture)
 {
     EventSequenceMutationRegistryArchiveResult _archived = default!;
     EventSequenceMutationRegistryArchiveResult _raceRetry = default!;

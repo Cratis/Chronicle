@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Storage.EventSequences.Mutations;
-using Cratis.Chronicle.Storage.MongoDB.Sinks;
 
 namespace Cratis.Chronicle.Storage.MongoDB.EventSequences.Mutations.for_EventSequenceMutationRegistry.when_beginning_a_mutation;
 
@@ -10,9 +9,9 @@ namespace Cratis.Chronicle.Storage.MongoDB.EventSequences.Mutations.for_EventSeq
 /// A different mutation request targeting the same event sequence while one is already active must be rejected -
 /// only one mutation may be active per target sequence at a time.
 /// </summary>
-/// <param name="fixture">The <see cref="MongoDBFixture"/> providing the MongoDB server.</param>
-[Collection(MongoDBCollection.Name)]
-public class and_another_mutation_is_active(MongoDBFixture fixture) : given.a_mutation_registry(fixture)
+/// <param name="fixture">The <see cref="ReplicaSetMongoDBFixture"/> providing the MongoDB server.</param>
+[Collection(ReplicaSetMongoDBCollection.Name)]
+public class and_another_mutation_is_active(ReplicaSetMongoDBFixture fixture) : given.a_mutation_registry(fixture)
 {
     EventSequenceMutationBeginResult _first = default!;
     EventSequenceMutationBeginResult _second = default!;

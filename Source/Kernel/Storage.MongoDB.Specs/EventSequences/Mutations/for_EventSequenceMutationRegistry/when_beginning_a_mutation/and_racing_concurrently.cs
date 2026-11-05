@@ -3,7 +3,6 @@
 
 using Cratis.Chronicle.Concepts.EventSequences.Mutations;
 using Cratis.Chronicle.Storage.EventSequences.Mutations;
-using Cratis.Chronicle.Storage.MongoDB.Sinks;
 
 namespace Cratis.Chronicle.Storage.MongoDB.EventSequences.Mutations.for_EventSequenceMutationRegistry.when_beginning_a_mutation;
 
@@ -13,9 +12,9 @@ namespace Cratis.Chronicle.Storage.MongoDB.EventSequences.Mutations.for_EventSeq
 /// atomic upsert-if-absent-or-null compare-and-swap serializes concurrent reservations correctly, matching the
 /// in-memory registry's own concurrency proof.
 /// </summary>
-/// <param name="fixture">The <see cref="MongoDBFixture"/> providing the MongoDB server.</param>
-[Collection(MongoDBCollection.Name)]
-public class and_racing_concurrently(MongoDBFixture fixture) : given.a_mutation_registry(fixture)
+/// <param name="fixture">The <see cref="ReplicaSetMongoDBFixture"/> providing the MongoDB server.</param>
+[Collection(ReplicaSetMongoDBCollection.Name)]
+public class and_racing_concurrently(ReplicaSetMongoDBFixture fixture) : given.a_mutation_registry(fixture)
 {
     const int CallerCount = 16;
 
