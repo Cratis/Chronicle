@@ -9,7 +9,6 @@ public class when_translating_a_read_for_sqlite() : given.a_storage_that_capture
     string _bySourceType;
     string _byStream;
     string _inFlight;
-    string _unique;
 
     async Task Because()
     {
@@ -24,9 +23,6 @@ public class when_translating_a_read_for_sqlite() : given.a_storage_that_capture
         _captured.Clear();
         await RemoveFromInFlight(new("Alice", Chronicle.Properties.ArrayIndexers.NoIndexers));
         _inFlight = Only();
-        _captured.Clear();
-        await RemoveUniqueValue("Alice");
-        _unique = Only();
     }
 
     [Fact] void should_not_collate_the_event_source_id_comparison() => _bySource.ShouldNotContain("COLLATE");
@@ -37,6 +33,4 @@ public class when_translating_a_read_for_sqlite() : given.a_storage_that_capture
     [Fact] void should_not_measure_the_stream_length() => _byStream.ShouldNotContain("DATALENGTH");
     [Fact] void should_not_collate_the_partition_comparison() => _inFlight.ShouldNotContain("COLLATE");
     [Fact] void should_not_measure_the_partition_length() => _inFlight.ShouldNotContain("DATALENGTH");
-    [Fact] void should_not_collate_the_unique_constraint_owner_comparison() => _unique.ShouldNotContain("COLLATE");
-    [Fact] void should_not_measure_the_unique_constraint_owner_length() => _unique.ShouldNotContain("DATALENGTH");
 }

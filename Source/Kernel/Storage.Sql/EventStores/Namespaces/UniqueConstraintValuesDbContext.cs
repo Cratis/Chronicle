@@ -39,11 +39,6 @@ public class UniqueConstraintValuesDbContext(DbContextOptions<UniqueConstraintVa
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
-        if (Database.IsSqlServer())
-        {
-            ExactIdentifiers.RegisterByteLength(modelBuilder);
-        }
-
         modelBuilder.Entity<UniqueConstraintValueEntry>(entity =>
         {
             entity.ToTable(tableName);

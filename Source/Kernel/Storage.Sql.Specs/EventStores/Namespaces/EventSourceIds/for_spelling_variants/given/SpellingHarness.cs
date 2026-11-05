@@ -10,7 +10,6 @@ using Cratis.Chronicle.Concepts.Identities;
 using Cratis.Chronicle.Storage.Identities;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ClosedStreams;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences;
-using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.UniqueConstraints;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -40,7 +39,6 @@ public sealed class SpellingHarness(string provider, Func<Task<string>> createDa
 
     public EventSequenceStorage Events { get; private set; }
     public ClosedStreamsConstraintStorage ClosedStreams { get; private set; }
-    public UniqueConstraintsStorage UniqueConstraints { get; private set; }
 
     public async Task Initialize()
     {
@@ -72,29 +70,6 @@ public sealed class SpellingHarness(string provider, Func<Task<string>> createDa
             Substitute.For<Chronicle.Storage.EventTypes.IEventTypesStorage>(),
             new Json.ExpandoObjectConverter(new Schemas.TypeFormats()));
         ClosedStreams = new(_eventStore, _namespace, sequenceId, database, Warnings);
-        var constraintMigrator = new UniqueConstraintMigrator(
-            new TableMigrator<UniqueConstraintDbContext>(Substitute.For<ILogger<TableMigrator<UniqueConstraintDbContext>>>()),
-            new TableMigrator<UniqueConstraintValuesDbContext>(Substitute.For<ILogger<TableMigrator<UniqueConstraintValuesDbContext>>>()),
-            Substitute.For<ILogger<UniqueConstraintMigrator>>());
-        database.UniqueConstraintValuesTable(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<string>())
-            .Returns(async call =>
-            {
-                var builder = new DbContextOptionsBuilder<UniqueConstraintValuesDbContext>().AddConceptAsSupport().WithoutServiceProviderCaching();
-                Configure(builder);
-                var context = new UniqueConstraintValuesDbContext(builder.Options, call.ArgAt<string>(2), constraintMigrator);
-                await context.EnsureTableExists();
-                return new DbContextScope<UniqueConstraintValuesDbContext>(context, () => { });
-            });
-        database.UniqueConstraintTable(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<string>())
-            .Returns(async call =>
-            {
-                var builder = new DbContextOptionsBuilder<UniqueConstraintDbContext>().AddConceptAsSupport().WithoutServiceProviderCaching();
-                Configure(builder);
-                var context = new UniqueConstraintDbContext(builder.Options, call.ArgAt<string>(2), constraintMigrator);
-                await context.EnsureTableExists();
-                return new DbContextScope<UniqueConstraintDbContext>(context, () => { });
-            });
-        UniqueConstraints = new(_eventStore, _namespace, sequenceId, database);
     }
 
     public Task<ulong> Append(EventSourceId eventSourceId) => Append(eventSourceId, EventSourceType.Default);
