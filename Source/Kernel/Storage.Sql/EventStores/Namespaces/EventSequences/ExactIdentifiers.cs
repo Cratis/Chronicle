@@ -159,6 +159,44 @@ static class ExactIdentifiers
     }
 
     /// <summary>
+    /// Narrow a query to the claims of exactly one spelling of a subject.
+    /// </summary>
+    /// <param name="query">The query to narrow.</param>
+    /// <param name="context">The context the query runs on.</param>
+    /// <param name="subject">The subject to match.</param>
+    /// <returns>The narrowed query.</returns>
+    internal static IQueryable<UniqueConstraintValueEntry> WhereSubject(this IQueryable<UniqueConstraintValueEntry> query, DbContext context, string subject)
+    {
+        var narrowed = query.Where(e => e.Subject == subject);
+        if (!context.Database.IsSqlServer())
+        {
+            return narrowed;
+        }
+
+        var bytes = subject.Length * BytesPerCharacter;
+        return narrowed.Where(e => EF.Functions.Collate(e.Subject!, BinaryCollation) == subject && ByteLength(e.Subject!) == bytes);
+    }
+
+    /// <summary>
+    /// Narrow a query to the claims of exactly one spelling of a subject.
+    /// </summary>
+    /// <param name="query">The query to narrow.</param>
+    /// <param name="context">The context the query runs on.</param>
+    /// <param name="subject">The subject to match.</param>
+    /// <returns>The narrowed query.</returns>
+    internal static IQueryable<UniqueConstraintIndexEntry> WhereSubject(this IQueryable<UniqueConstraintIndexEntry> query, DbContext context, string subject)
+    {
+        var narrowed = query.Where(e => e.Subject == subject);
+        if (!context.Database.IsSqlServer())
+        {
+            return narrowed;
+        }
+
+        var bytes = subject.Length * BytesPerCharacter;
+        return narrowed.Where(e => EF.Functions.Collate(e.Subject!, BinaryCollation) == subject && ByteLength(e.Subject!) == bytes);
+    }
+
+    /// <summary>
     /// Server side length in bytes of a stored value. Only valid inside a query on SQL Server.
     /// </summary>
     /// <param name="value">The stored value.</param>

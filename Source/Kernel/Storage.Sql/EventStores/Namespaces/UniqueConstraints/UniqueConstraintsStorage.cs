@@ -254,13 +254,13 @@ public class UniqueConstraintsStorage(EventStoreName eventStore, EventStoreNames
         foreach (var table in tables.PerEventSource)
         {
             await using var scope = await database.UniqueConstraintTable(eventStore, @namespace, table);
-            await scope.DbContext.Entries.Where(_ => _.Subject == subject.Value).ExecuteDeleteAsync(cancellationToken);
+            await scope.DbContext.Entries.WhereSubject(scope.DbContext, subject.Value).ExecuteDeleteAsync(cancellationToken);
         }
 
         foreach (var table in tables.PerValue)
         {
             await using var scope = await database.UniqueConstraintValuesTable(eventStore, @namespace, table);
-            await scope.DbContext.Entries.Where(_ => _.Subject == subject.Value).ExecuteDeleteAsync(cancellationToken);
+            await scope.DbContext.Entries.WhereSubject(scope.DbContext, subject.Value).ExecuteDeleteAsync(cancellationToken);
         }
     }
 
