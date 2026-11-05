@@ -16,11 +16,6 @@ internal static class EncryptionKeyCommandRunner
     internal const int Clean = 0;
 
     /// <summary>
-    /// The exit code for an unexpected error.
-    /// </summary>
-    internal const int Failed = 1;
-
-    /// <summary>
     /// The exit code when keys stored under earlier names need the key upgrade.
     /// </summary>
     internal const int UpgradeNeeded = 2;
@@ -58,8 +53,10 @@ internal static class EncryptionKeyCommandRunner
         }
         catch (Exception exception)
         {
+            // An inspection that did not finish proves nothing about the layout, whatever stopped it - a timeout, a server
+            // error, a network failure, a cancellation or anything unexpected - so the server does not start on it.
             logger.EncryptionKeyInspectionFailed(exception);
-            return command.Verify ? Failed : null;
+            return LayoutUnusable;
         }
 
         if (status.LayoutUnusable)

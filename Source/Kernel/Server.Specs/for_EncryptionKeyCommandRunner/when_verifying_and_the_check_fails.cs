@@ -11,5 +11,5 @@ public class when_verifying_and_the_check_fails : given.a_check
 
     async Task Because() => _exit = await Run(true);
 
-    [Fact] void should_exit_with_the_failure_code() => _exit.ShouldEqual(1);
+    [Fact] void should_exit_with_the_layout_unusable_code() => _exit.ShouldEqual(4);
 }

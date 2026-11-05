@@ -50,6 +50,8 @@ public class VaultEncryptionKeyStorage : IEncryptionKeyStorage
     readonly IVaultClient _vaultClient;
     readonly string _mountPoint;
     readonly ILogger<VaultEncryptionKeyStorage> _logger;
+    readonly VaultKeyStoreUpgradeCheck _layoutCheck;
+    volatile bool _layoutProven;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="VaultEncryptionKeyStorage"/> class.
@@ -73,6 +75,7 @@ public class VaultEncryptionKeyStorage : IEncryptionKeyStorage
         _logger = logger ?? NullLogger<VaultEncryptionKeyStorage>.Instance;
         _vaultClient = vaultClient;
         _mountPoint = string.IsNullOrEmpty(mountPoint) ? DefaultMountPoint : mountPoint;
+        _layoutCheck = new VaultKeyStoreUpgradeCheck(vaultClient, mountPoint);
     }
 
     /// <inheritdoc/>
@@ -90,6 +93,7 @@ public class VaultEncryptionKeyStorage : IEncryptionKeyStorage
 
         (await GetErasureFor(locations)).EnsureCanSave(identifier, actualRevision, key);
 
+        await EnsureLayoutProven();
         await _vaultClient.V1.Secrets.KeyValue.V2.WriteSecretAsync(locations.Path(actualRevision), KeyData(key), mountPoint: _mountPoint);
     }
 
@@ -119,6 +123,7 @@ public class VaultEncryptionKeyStorage : IEncryptionKeyStorage
         }
 
         var revision = (await GetErasureFor(locations)).RevisionForNewKey(identifier, key);
+        await EnsureLayoutProven();
         try
         {
             await _vaultClient.V1.Secrets.KeyValue.V2.WriteSecretAsync(locations.Path(revision), KeyData(key), checkAndSet: 0, mountPoint: _mountPoint);
@@ -372,8 +377,32 @@ public class VaultEncryptionKeyStorage : IEncryptionKeyStorage
         }
     }
 
+    /// <summary>
+    /// Makes sure the layout of the key store is proven free for the paths under <see cref="VaultPathSegments.Root"/>
+    /// before anything is written there. Only a proven layout is remembered; every other outcome - a conflict, a refusal,
+    /// a timeout, a server error, a network failure - leaves the next write to prove it again.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> for continuation.</returns>
+    /// <exception cref="EncryptionKeyLayoutUnusable">The layout is in conflict or could not be verified.</exception>
+    async Task EnsureLayoutProven()
+    {
+        if (_layoutProven)
+        {
+            return;
+        }
+
+        var status = await _layoutCheck.EnsureLayout();
+        if (status.LayoutUnusable)
+        {
+            throw new EncryptionKeyLayoutUnusable();
+        }
+
+        _layoutProven = true;
+    }
+
     async Task WriteErasure(VaultKeyLocations locations, EncryptionKeyErasure erasure)
     {
+        await EnsureLayoutProven();
         var data = new Dictionary<string, object>
         {
             [ErasedThroughField] = erasure.ErasedThrough.Value.ToString(),

@@ -87,8 +87,10 @@ internal class VaultKeyStoreUpgradeCheck(IVaultClient vaultClient, string? mount
 
             return Layout(verified: await HasMarker(), conflict: false);
         }
-        catch (VaultApiException ex) when (ex.HttpStatusCode == HttpStatusCode.Forbidden)
+        catch (Exception)
         {
+            // Only a read that proves the layout, or a definite not found where that means empty, lets anything be written.
+            // A refusal, a timeout, a server error, a network failure or any other exception proves nothing.
             return Layout(verified: false, conflict: false);
         }
     }
