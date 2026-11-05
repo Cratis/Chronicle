@@ -51,7 +51,11 @@ public class UniqueConstraintMigrator(
                 return;
             }
 
-            await tableMigrator.EnsureTableMigrated(tableName, context, CreateTable, (ctx, name) => AddSubjectColumn(tableMigrator, ctx, name));
+            await tableMigrator.EnsureTableMigrated(tableName, context, CreateTable, async (ctx, name) =>
+            {
+                await AddSubjectColumn(tableMigrator, ctx, name);
+                await AddExactOwnerKey(ctx, name);
+            });
             await UniqueConstraintValueIndexMigration.EnsureValueIndexIsUnique(tableName, context, logger);
 
             // A duplicate fallback stays cached until the next process start (or an explicit reset).
@@ -65,7 +69,11 @@ public class UniqueConstraintMigrator(
 
     /// <inheritdoc/>
     public Task EnsureValuesTableMigrated(string tableName, UniqueConstraintValuesDbContext context) =>
-        valuesTableMigrator.EnsureTableMigrated(tableName, context, CreateValuesTable, (ctx, name) => AddSubjectColumn(valuesTableMigrator, ctx, name));
+        valuesTableMigrator.EnsureTableMigrated(tableName, context, CreateValuesTable, async (ctx, name) =>
+            {
+                await AddSubjectColumn(valuesTableMigrator, ctx, name);
+                await AddExactSpelling(ctx, name);
+            });
 
     /// <inheritdoc/>
     public void ClearMigrationCache(string connectionStringPrefix)
@@ -137,6 +145,56 @@ public class UniqueConstraintMigrator(
         }
     }
 
+    /// <summary>
+    /// Keeps every owner of a per-event-source table exactly, on SQL Server only.
+    /// </summary>
+    /// <remarks>
+    /// Rows the table already holds are kept as they are and marked as pending until the constraint index is rebuilt.
+    /// Another kernel can upgrade the table first, so a failure that leaves the key in place is success.
+    /// </remarks>
+    /// <param name="context">The context connected to the namespace database.</param>
+    /// <param name="tableName">The table to upgrade.</param>
+    /// <returns>Awaitable task.</returns>
+    async Task AddExactOwnerKey(UniqueConstraintDbContext context, string tableName)
+    {
+        if (!context.Database.IsSqlServer() || await tableMigrator.ColumnExists(context, tableName, UniqueConstraintSpellings.ExactKeyColumn)) return;
+
+        var migrationBuilder = new MigrationBuilder(context.Database.ProviderName);
+        migrationBuilder.Sql(UniqueConstraintSpellings.AddExactOwnerKey(tableName));
+        try
+        {
+            await tableMigrator.ExecuteMigrationOperations(context, migrationBuilder);
+        }
+        catch (Exception)
+        {
+            if (!await tableMigrator.ColumnExists(context, tableName, UniqueConstraintSpellings.ExactKeyColumn)) throw;
+            return;
+        }
+
+        var pending = await UniqueConstraintSpellings.CountPending(context, tableName);
+        if (pending > 0) logger.UpgradedOwnerKey(pending);
+    }
+
+    async Task AddExactSpelling(UniqueConstraintValuesDbContext context, string tableName)
+    {
+        if (!context.Database.IsSqlServer() || await valuesTableMigrator.ColumnExists(context, tableName, UniqueConstraintSpellings.ExactSpellingColumn)) return;
+
+        var migrationBuilder = new MigrationBuilder(context.Database.ProviderName);
+        migrationBuilder.Sql(UniqueConstraintSpellings.AddExactSpelling(tableName));
+        try
+        {
+            await valuesTableMigrator.ExecuteMigrationOperations(context, migrationBuilder);
+        }
+        catch (Exception)
+        {
+            if (!await valuesTableMigrator.ColumnExists(context, tableName, UniqueConstraintSpellings.ExactSpellingColumn)) throw;
+            return;
+        }
+
+        var pending = await UniqueConstraintSpellings.CountPending(context, tableName);
+        if (pending > 0) logger.UpgradedOwnerKey(pending);
+    }
+
     async Task CreateValuesTable(UniqueConstraintValuesDbContext context, string tableName)
     {
         var migrationBuilder = new MigrationBuilder(context.Database.ProviderName);
@@ -153,6 +211,7 @@ public class UniqueConstraintMigrator(
         migrationBuilder.CreateIndex(name: "IX_" + tableName + "_EventSourceId", table: tableName, column: "EventSourceId");
         migrationBuilder.CreateIndex(name: SubjectIndexName(tableName), table: tableName, column: SubjectColumn);
         await valuesTableMigrator.ExecuteMigrationOperations(context, migrationBuilder);
+        await AddExactSpelling(context, tableName);
     }
 
     async Task CreateTable(UniqueConstraintDbContext context, string tableName)
@@ -174,5 +233,6 @@ public class UniqueConstraintMigrator(
         migrationBuilder.CreateIndex(name: "IX_" + tableName + "_Value", table: tableName, column: "Value", unique: true);
         migrationBuilder.CreateIndex(name: SubjectIndexName(tableName), table: tableName, column: SubjectColumn);
         await tableMigrator.ExecuteMigrationOperations(context, migrationBuilder);
+        await AddExactOwnerKey(context, tableName);
     }
 }

@@ -1,15 +1,19 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Events.Constraints;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Storage.Events.Constraints;
+using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences;
 using Microsoft.Data.SqlClient;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Npgsql;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.UniqueConstraints;
@@ -25,8 +29,11 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.UniqueConstraints;
 /// <param name="namespace">The <see cref="EventStoreNamespaceName"/> the storage is for.</param>
 /// <param name="eventSequenceId">The <see cref="EventSequenceId"/> the storage is for.</param>
 /// <param name="database">The <see cref="IDatabase"/> to use for operations.</param>
-public class UniqueConstraintsStorage(EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId, IDatabase database) : IUniqueConstraintsStorage
+/// <param name="logger">Optional <see cref="ILogger{TCategoryName}"/> for the pending notice.</param>
+public class UniqueConstraintsStorage(EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId, IDatabase database, ILogger<UniqueConstraintsStorage>? logger = null) : IUniqueConstraintsStorage
 {
+    static readonly ConcurrentDictionary<(string Store, string Namespace, string Sequence), bool> _reported = new();
+    readonly ILogger<UniqueConstraintsStorage> _logger = logger ?? NullLogger<UniqueConstraintsStorage>.Instance;
     readonly SqlStorageTelemetry _telemetry = SqlStorageTelemetry.For(database);
 
     /// <inheritdoc/>
@@ -67,12 +74,12 @@ public class UniqueConstraintsStorage(EventStoreName eventStore, EventStoreNames
         if (definition.Mode == UniqueConstraintMode.PerValue)
         {
             await using var scope = await database.UniqueConstraintValuesTable(eventStore, @namespace, GetValuesTableName(definition.Name, scopeKey));
-            var values = await scope.DbContext.Entries.AsNoTracking().Where(row => row.EventSourceId == eventSourceId.Value).Select(row => row.Value).ToArrayAsync(cancellationToken);
+            var values = await scope.DbContext.Entries.AsNoTracking().WhereOwner(scope.DbContext, eventSourceId.Value).Select(row => row.Value).ToArrayAsync(cancellationToken);
             return values.Select(value => new UniqueConstraintValue(value)).ToArray();
         }
 
         await using var sourceScope = await database.UniqueConstraintTable(eventStore, @namespace, GetTableName(definition.Name, scopeKey));
-        var sourceValues = await sourceScope.DbContext.Entries.AsNoTracking().Where(row => row.EventSourceId == eventSourceId.Value).Select(row => row.Value).ToArrayAsync(cancellationToken);
+        var sourceValues = await sourceScope.DbContext.Entries.AsNoTracking().WhereOwner(sourceScope.DbContext, eventSourceId.Value).Select(row => row.Value).ToArrayAsync(cancellationToken);
         return sourceValues.Select(value => new UniqueConstraintValue(value)).ToArray();
     }
 
@@ -82,7 +89,7 @@ public class UniqueConstraintsStorage(EventStoreName eventStore, EventStoreNames
         if (definition.Mode == UniqueConstraintMode.PerValue)
         {
             await using var scope = await database.UniqueConstraintValuesTable(eventStore, @namespace, GetValuesTableName(definition.Name, scopeKey));
-            await foreach (var value in scope.DbContext.Entries.AsNoTracking().Where(row => row.EventSourceId == eventSourceId.Value).Select(row => row.Value).AsAsyncEnumerable().WithCancellation(cancellationToken))
+            await foreach (var value in scope.DbContext.Entries.AsNoTracking().WhereOwner(scope.DbContext, eventSourceId.Value).Select(row => row.Value).AsAsyncEnumerable().WithCancellation(cancellationToken))
             {
                 yield return new UniqueConstraintValue(value);
             }
@@ -90,7 +97,7 @@ public class UniqueConstraintsStorage(EventStoreName eventStore, EventStoreNames
         }
 
         await using var sourceScope = await database.UniqueConstraintTable(eventStore, @namespace, GetTableName(definition.Name, scopeKey));
-        await foreach (var value in sourceScope.DbContext.Entries.AsNoTracking().Where(row => row.EventSourceId == eventSourceId.Value).Select(row => row.Value).AsAsyncEnumerable().WithCancellation(cancellationToken))
+        await foreach (var value in sourceScope.DbContext.Entries.AsNoTracking().WhereOwner(sourceScope.DbContext, eventSourceId.Value).Select(row => row.Value).AsAsyncEnumerable().WithCancellation(cancellationToken))
         {
             yield return new UniqueConstraintValue(value);
         }
@@ -166,7 +173,8 @@ public class UniqueConstraintsStorage(EventStoreName eventStore, EventStoreNames
             {
                 var subjectValue = subject?.Value;
                 await scope.DbContext.Entries
-                    .Where(_ => _.Value == value.Value && _.EventSourceId == eventSourceId.Value)
+                    .Where(_ => _.Value == value.Value)
+                    .WhereOwner(scope.DbContext, eventSourceId.Value)
                     .ExecuteUpdateAsync(_ => _.SetProperty(row => row.Subject, subjectValue), cancellationToken);
             }
 
@@ -178,7 +186,8 @@ public class UniqueConstraintsStorage(EventStoreName eventStore, EventStoreNames
             Value = value.Value,
             EventSourceId = eventSourceId.Value,
             SequenceNumber = sequenceNumber.Value,
-            Subject = subject?.Value
+            Subject = subject?.Value,
+            ExactSpelling = true
         });
         try
         {
@@ -215,7 +224,7 @@ public class UniqueConstraintsStorage(EventStoreName eventStore, EventStoreNames
         }
 
         await using var scope = await database.UniqueConstraintValuesTable(eventStore, @namespace, GetValuesTableName(definition.Name, scopeKey));
-        await scope.DbContext.Entries.Where(_ => _.EventSourceId == eventSourceId.Value).ExecuteDeleteAsync(cancellationToken);
+        await scope.DbContext.Entries.WhereOwner(scope.DbContext, eventSourceId.Value).ExecuteDeleteAsync(cancellationToken);
     }
 
     /// <summary>
@@ -230,7 +239,7 @@ public class UniqueConstraintsStorage(EventStoreName eventStore, EventStoreNames
     public async Task RemoveValue(EventSourceId eventSourceId, UniqueConstraintDefinition definition, UniqueConstraintValue value, string scopeKey = "", CancellationToken cancellationToken = default)
     {
         await using var scope = await database.UniqueConstraintValuesTable(eventStore, @namespace, GetValuesTableName(definition.Name, scopeKey));
-        await scope.DbContext.Entries.Where(_ => _.Value == value.Value && _.EventSourceId == eventSourceId.Value).ExecuteDeleteAsync(cancellationToken);
+        await scope.DbContext.Entries.Where(_ => _.Value == value.Value).WhereOwner(scope.DbContext, eventSourceId.Value).ExecuteDeleteAsync(cancellationToken);
     }
 
     /// <inheritdoc/>
@@ -255,6 +264,25 @@ public class UniqueConstraintsStorage(EventStoreName eventStore, EventStoreNames
         }
     }
 
+    /// <inheritdoc/>
+    public async Task<int> CountPendingSpellings(CancellationToken cancellationToken = default)
+    {
+        await using var scope = await database.Namespace(eventStore, @namespace);
+        if (!scope.DbContext.Database.IsSqlServer())
+        {
+            return 0;
+        }
+
+        var tables = await UniqueConstraintTables.For(scope.DbContext, eventSequenceId, cancellationToken);
+        long pending = 0;
+        foreach (var table in tables.PerEventSource.Concat(tables.PerValue))
+        {
+            pending += await UniqueConstraintSpellings.CountPending(scope.DbContext, table, cancellationToken);
+        }
+
+        return (int)Math.Min(pending, int.MaxValue);
+    }
+
     static bool IsUniqueViolation(DbUpdateException error) => error.InnerException switch
     {
         PostgresException postgres => postgres.SqlState == PostgresErrorCodes.UniqueViolation,
@@ -269,8 +297,7 @@ public class UniqueConstraintsStorage(EventStoreName eventStore, EventStoreNames
         await using var scope = await database.UniqueConstraintTable(eventStore, @namespace, tableName);
 
         var eventSourceIdValue = eventSourceId.Value;
-        var entry = await scope.DbContext.Entries
-            .FirstOrDefaultAsync(u => u.EventSourceId == eventSourceIdValue, cancellationToken);
+        var entry = await FindOwn(scope.DbContext, eventSourceIdValue, cancellationToken);
 
         if (entry is not null)
         {
@@ -285,7 +312,8 @@ public class UniqueConstraintsStorage(EventStoreName eventStore, EventStoreNames
                 EventSourceId = eventSourceId.Value,
                 Value = value.Value,
                 SequenceNumber = sequenceNumber.Value,
-                Subject = subject
+                Subject = subject,
+                ExactSpelling = true
             });
         }
 
@@ -304,7 +332,7 @@ public class UniqueConstraintsStorage(EventStoreName eventStore, EventStoreNames
 
             // A concurrent insert of this source won the primary-key race. Retry as an update,
             // even if it claimed a different value; the unique value index still settles the move.
-            var winner = await scope.DbContext.Entries.FirstOrDefaultAsync(_ => _.EventSourceId == eventSourceIdValue, cancellationToken);
+            var winner = await FindOwn(scope.DbContext, eventSourceIdValue, cancellationToken);
             if (winner is null)
             {
                 throw;
@@ -339,14 +367,39 @@ public class UniqueConstraintsStorage(EventStoreName eventStore, EventStoreNames
         await using var scope = await database.UniqueConstraintTable(eventStore, @namespace, tableName);
 
         var eventSourceIdValue = eventSourceId.Value;
-        var entry = await scope.DbContext.Entries
-            .FirstOrDefaultAsync(u => u.EventSourceId == eventSourceIdValue, cancellationToken);
+        var entry = await FindOwn(scope.DbContext, eventSourceIdValue, cancellationToken);
 
         if (entry is not null)
         {
             scope.DbContext.Entries.Remove(entry);
             await scope.DbContext.SaveChangesAsync(cancellationToken);
         }
+    }
+
+    /// <summary>
+    /// Finds the row of exactly this spelling of the owner. The seek ignores spelling, so every candidate comes back and the exact one is picked and tracked here.
+    /// </summary>
+    /// <param name="context">The context of the claim table.</param>
+    /// <param name="owner">The owner.</param>
+    /// <param name="cancellationToken">Cancellation of the read.</param>
+    /// <returns>The tracked row, or null when this spelling holds nothing.</returns>
+    async Task<UniqueConstraintIndexEntry?> FindOwn(UniqueConstraintDbContext context, string owner, CancellationToken cancellationToken)
+    {
+        var candidates = await context.Entries.AsNoTracking().Where(u => u.EventSourceId == owner).ToListAsync(cancellationToken);
+        var own = candidates.FirstOrDefault(candidate => string.Equals(candidate.EventSourceId, owner, StringComparison.Ordinal));
+        var pending = candidates.Count(candidate => !candidate.ExactSpelling && !ReferenceEquals(candidate, own));
+        if (pending > 0 && _reported.TryAdd((eventStore.Value, @namespace.Value, eventSequenceId.Value), true))
+        {
+            _logger.ConstraintRowsPendingReview(pending, eventSequenceId.Value);
+        }
+
+        if (own is not null)
+        {
+            // Only the exact row is tracked. The tracker follows the case rules of the database, so tracking its look-alikes would refuse a different spelling.
+            context.Entries.Attach(own);
+        }
+
+        return own;
     }
 
     string GetValuesTableName(ConstraintName name, string scopeKey) => string.IsNullOrEmpty(scopeKey)

@@ -31,6 +31,9 @@ public static partial class SchemaProvisionerLogging
     [LoggerMessage(LogLevel.Warning, "Schema scope {Scope} in database {Database} is pending: {Pending}")]
     internal static partial void ScopePending(ILogger logger, string scope, string database, string pending);
 
+    [LoggerMessage(LogLevel.Warning, "Schema scope {Scope} holds {Pending} unique constraint rows that are pending until the constraint index is rebuilt")]
+    internal static partial void UniqueConstraintRowsPending(ILogger logger, string scope, long pending);
+
     [LoggerMessage(LogLevel.Information, "Database {Database} has migrations unknown to this context: {Unknown}")]
     internal static partial void NewerMigrationsPresent(ILogger logger, string database, string unknown);
 }

@@ -136,7 +136,7 @@ public class EventStoreNamespaceStorage(EventStoreName eventStore, EventStoreNam
             converter);
 
     /// <inheritdoc/>
-    public IUniqueConstraintsStorage GetUniqueConstraintsStorage(EventSequenceId eventSequenceId) => new UniqueConstraints.UniqueConstraintsStorage(eventStore, @namespace, eventSequenceId, database);
+    public IUniqueConstraintsStorage GetUniqueConstraintsStorage(EventSequenceId eventSequenceId) => new UniqueConstraints.UniqueConstraintsStorage(eventStore, @namespace, eventSequenceId, database, loggerFactory?.CreateLogger<UniqueConstraints.UniqueConstraintsStorage>());
 
     /// <inheritdoc/>
     public IUniqueEventTypesConstraintsStorage GetUniqueEventTypesConstraints(EventSequenceId eventSequenceId) => new UniqueEventTypesConstraints.UniqueEventTypesConstraintsStorage(eventStore, @namespace, eventSequenceId, database);

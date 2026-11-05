@@ -103,4 +103,11 @@ public interface IUniqueConstraintsStorage
     /// Returns <see cref="EventSequenceNumber.Unavailable"/> if it doesn't exist.
     /// </returns>
     Task<(bool IsAllowed, EventSequenceNumber SequenceNumber)> IsAllowed(EventSourceId eventSourceId, UniqueConstraintDefinition definition, UniqueConstraintValue value, string scopeKey = "", CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Counts the claims whose owner is not yet known exactly. Storage that always compares exactly has none.
+    /// </summary>
+    /// <param name="cancellationToken">Cancellation of the read.</param>
+    /// <returns>The number of pending claims.</returns>
+    Task<int> CountPendingSpellings(CancellationToken cancellationToken = default) => Task.FromResult(0);
 }

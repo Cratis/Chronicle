@@ -71,6 +71,21 @@ public class UniqueConstraintDbContext(DbContextOptions<UniqueConstraintDbContex
                 value.HasMaxLength(200);
             }
             entity.Property(e => e.SequenceNumber).IsRequired();
+            if (Database.IsSqlServer())
+            {
+                // The hash keeps spellings of an owner apart in the table. As a concurrency token it also makes updates and deletes address exactly one spelling.
+                entity.Property(e => e.ExactKey).HasComputedColumnSql(UniqueConstraintSpellings.ExactKeyExpression, stored: true).IsConcurrencyToken();
+                entity.Property(e => e.ExactSpelling).HasDefaultValue(false);
+            }
+            else
+            {
+                entity.Ignore(e => e.ExactKey).Ignore(e => e.ExactSpelling);
+            }
         });
+
+        if (Database.IsSqlServer())
+        {
+            ExactIdentifiers.RegisterByteLength(modelBuilder);
+        }
     }
 }

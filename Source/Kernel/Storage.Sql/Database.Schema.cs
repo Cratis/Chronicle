@@ -7,6 +7,7 @@ using Cratis.Choreography.Storage.Sql.Jobs;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Storage.Sql.Cluster;
+using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences;
 using Cratis.Chronicle.Storage.Sql.Schema;
 using Microsoft.EntityFrameworkCore;
@@ -126,6 +127,34 @@ public partial class Database
             await using var context = new EventSequenceDbContext(BuildOptions<EventSequenceDbContext>(target), name, eventSequenceMigrator);
             await EnsureTableMigrated(context, target);
             await eventSequenceMigrator.CheckSpelling(context, name);
+        }
+    }
+
+    /// <summary>
+    /// Upgrades the existing unique constraint tables to compare owners exactly. Only SQL Server has tables to upgrade.
+    /// </summary>
+    /// <param name="identity">The namespace identity.</param>
+    /// <param name="perEventSource">The per-event-source claim tables.</param>
+    /// <param name="perValue">The per-value claim tables.</param>
+    /// <returns>The preparation task.</returns>
+    internal async Task PrepareUniqueConstraints(DatabaseIdentity identity, IEnumerable<string> perEventSource, IEnumerable<string> perValue)
+    {
+        var target = await Target(identity, ConnectionPurpose.Schema);
+        if (target.ConnectionString.GetDatabaseType() != DatabaseType.SqlServer)
+        {
+            return;
+        }
+
+        foreach (var name in perEventSource)
+        {
+            await using var context = new UniqueConstraintDbContext(BuildOptions<UniqueConstraintDbContext>(target), name, uniqueConstraintMigrator);
+            await context.EnsureTableExists();
+        }
+
+        foreach (var name in perValue)
+        {
+            await using var context = new UniqueConstraintValuesDbContext(BuildOptions<UniqueConstraintValuesDbContext>(target), name, uniqueConstraintMigrator);
+            await context.EnsureTableExists();
         }
     }
 

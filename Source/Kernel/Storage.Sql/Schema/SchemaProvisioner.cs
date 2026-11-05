@@ -9,6 +9,7 @@ using Cratis.Chronicle.Storage.Sql.Cluster;
 using Cratis.Chronicle.Storage.Sql.EventStores;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences;
+using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.UniqueConstraints;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -28,6 +29,20 @@ public class SchemaProvisioner(Database database, ILogger<SchemaProvisioner> log
 
     /// <inheritdoc/>
     public Task<SchemaReport> Verify(SchemaScope scope) => Run(scope, true);
+
+    static (string[] PerEventSource, string[] PerValue) ClaimTables(IReadOnlyDictionary<string, string[]> tables, IEnumerable<string> sequenceNames)
+    {
+        var perEventSource = new List<string>();
+        var perValue = new List<string>();
+        foreach (var sequence in sequenceNames)
+        {
+            var classified = UniqueConstraintTables.Classify(tables.Keys, new(sequence), null);
+            perEventSource.AddRange(classified.PerEventSource);
+            perValue.AddRange(classified.PerValue);
+        }
+
+        return ([.. perEventSource.Distinct(StringComparer.Ordinal)], [.. perValue.Distinct(StringComparer.Ordinal)]);
+    }
 
     async Task<SchemaReport> Run(SchemaScope scope, bool verify)
     {
@@ -67,6 +82,25 @@ public class SchemaProvisioner(Database database, ILogger<SchemaProvisioner> log
             }
         });
 
+    async Task ReportPendingSpellings(DatabaseIdentity identity, NamespaceDbContext context, (string[] PerEventSource, string[] PerValue) claimTables)
+    {
+        if (!context.Database.IsSqlServer())
+        {
+            return;
+        }
+
+        long pending = 0;
+        foreach (var table in claimTables.PerEventSource.Concat(claimTables.PerValue))
+        {
+            pending += await UniqueConstraintSpellings.CountPending(context, table);
+        }
+
+        if (pending > 0)
+        {
+            SchemaProvisionerLogging.UniqueConstraintRowsPending(logger, identity.ToString(), pending);
+        }
+    }
+
     async Task PrepareNamespace(DatabaseIdentity identity, NamespaceDbContext context, bool verify, List<SchemaScopeResult> results)
     {
         var tables = await SchemaTables.Read(context);
@@ -81,8 +115,13 @@ public class SchemaProvisioner(Database database, ILogger<SchemaProvisioner> log
         }
         else
         {
-            await database.PrepareSequences(identity, _sequences.Concat(tables.Where(table => SchemaTables.IsSequence(table.Value)).Select(table => table.Key)).Distinct(StringComparer.Ordinal));
+            var sequenceNames = _sequences.Concat(tables.Where(table => SchemaTables.IsSequence(table.Value)).Select(table => table.Key)).Distinct(StringComparer.Ordinal).ToArray();
+            await database.PrepareSequences(identity, sequenceNames);
+            var claimTables = ClaimTables(tables, sequenceNames);
+            await database.PrepareUniqueConstraints(identity, claimTables.PerEventSource, claimTables.PerValue);
         }
+
+        await ReportPendingSpellings(identity, context, ClaimTables(tables, _sequences));
 
         try
         {

@@ -49,6 +49,18 @@ public class UniqueConstraintValuesDbContext(DbContextOptions<UniqueConstraintVa
             entity.HasIndex(_ => _.EventSourceId);
             entity.Property(_ => _.Subject).HasMaxLength(UniqueConstraintMigrator.SubjectMaxLength);
             entity.HasIndex(_ => _.Subject).HasDatabaseName(UniqueConstraintMigrator.SubjectIndexName(tableName));
+            if (Database.IsSqlServer())
+            {
+                entity.Property(_ => _.ExactSpelling).HasDefaultValue(false);
+            }
+            else
+            {
+                entity.Ignore(_ => _.ExactSpelling);
+            }
         });
+        if (Database.IsSqlServer())
+        {
+            ExactIdentifiers.RegisterByteLength(modelBuilder);
+        }
     }
 }
