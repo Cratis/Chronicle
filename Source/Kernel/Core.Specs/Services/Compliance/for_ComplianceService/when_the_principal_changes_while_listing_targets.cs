@@ -11,7 +11,7 @@ public class when_the_principal_changes_while_listing_targets : given.a_complian
 {
     void Establish() => _storage.GetEventStores().Returns(_ =>
     {
-        var identity = (ClaimsIdentity)_principal.Identity!;
+        var identity = (ClaimsIdentity)_principal.Identity;
         identity.RemoveClaim(identity.FindFirst("sub"));
         identity.AddClaim(new Claim("sub", "replacement-caller"));
         return Task.FromResult<IEnumerable<EventStoreName>>([EventStore]);
@@ -22,9 +22,9 @@ public class when_the_principal_changes_while_listing_targets : given.a_complian
     [Fact]
     void should_decide_for_the_detached_principal_captured_before_the_first_await() =>
         _decisions.Received(1).Decide(
-            Arg.Is<ClaimsPrincipal>(principal => principal.FindFirst("sub")!.Value == "compliance-caller"),
+            Arg.Is<ClaimsPrincipal>(principal => principal.FindFirst("sub").Value == "compliance-caller"),
             WellKnownCapabilities.ManageComplianceKeys,
             AuthorizationScope.ForNamespace(EventStore, EventStoreNamespace));
 
-    [Fact] void should_have_actually_changed_the_request_principal() => _principal.FindFirst("sub")!.Value.ShouldEqual("replacement-caller");
+    [Fact] void should_have_actually_changed_the_request_principal() => _principal.FindFirst("sub").Value.ShouldEqual("replacement-caller");
 }

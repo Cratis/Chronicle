@@ -28,7 +28,7 @@ public class when_using_legacy_key_rpcs : given.a_compliance_boundary
     [InlineData(true)]
     public async Task should_apply_the_requested_store_operation_before_reporting_a_listing_failure(bool allowNew)
     {
-        _storage.GetEventStores().Returns(Task.FromException<IEnumerable<Cratis.Chronicle.Concepts.EventStoreName>>(new InvalidOperationException("listing unavailable")));
+        _storage.GetEventStores().Returns(Task.FromException<IEnumerable<Concepts.EventStoreName>>(new InvalidOperationException("listing unavailable")));
         var exception = await Catch.Exception(() => Operate(allowNew));
         exception.ShouldBeOfExactType<RpcException>();
         ((RpcException)exception).StatusCode.ShouldEqual(StatusCode.Unavailable);

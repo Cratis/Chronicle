@@ -77,7 +77,7 @@ public class when_deciding_key_lifecycle_targets : given.a_compliance_boundary
         foreach (var store in new[] { EventStore, OtherEventStore, ThirdEventStore })
         {
             await _decisions.Received(1).Decide(
-                Arg.Is<ClaimsPrincipal>(principal => principal != _principal && principal.FindFirst("sub")!.Value == "compliance-caller"),
+                Arg.Is<ClaimsPrincipal>(principal => principal != _principal && principal.FindFirst("sub").Value == "compliance-caller"),
                 WellKnownCapabilities.ManageComplianceKeys,
                 AuthorizationScope.ForNamespace(store, EventStoreNamespace));
         }

@@ -17,7 +17,7 @@ using ProtoBuf.Grpc;
 
 namespace Cratis.Chronicle.Services.Compliance.for_ComplianceService.given;
 
-public class a_compliance_boundary : Cratis.Chronicle.Compliance.GDPR.for_PIIManager.given.a_pii_manager
+public class a_compliance_boundary : Chronicle.Compliance.GDPR.for_PIIManager.given.a_pii_manager
 {
     protected static readonly EventStoreName ThirdEventStore = "third-event-store";
     protected IAuthorizationDecisions _decisions;
@@ -68,7 +68,7 @@ public class a_compliance_boundary : Cratis.Chronicle.Compliance.GDPR.for_PIIMan
         _requestScope?.Dispose();
         _requestScope = _services.CreateScope();
         var httpContext = new DefaultHttpContext { User = principal, RequestServices = _requestScope.ServiceProvider };
-        _context = new CallContext(new object(), new Cratis.Chronicle.Services.for_QueryExecutor.FakeServerCallContext(httpContext));
+        _context = new CallContext(new object(), new for_QueryExecutor.FakeServerCallContext(httpContext));
     }
 
     protected void Deny(EventStoreName eventStore, bool throws = false) =>
