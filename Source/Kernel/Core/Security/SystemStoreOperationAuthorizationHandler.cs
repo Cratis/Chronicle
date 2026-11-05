@@ -39,9 +39,17 @@ public class SystemStoreOperationAuthorizationHandler(
         // A decision that could not be established is never audit-allowed: it fails closed.
         if (decision.Reason == AuthorizationReason.Failed) return;
         if (options.Value.Authentication.EnforceAdministratorPolicyForOperations) return;
+        if (options.Value.Authentication.EnforceDestructiveOperations && IsDestructive(operation))
+        {
+            logger.DestructiveOperationRefused(CallerKind(context.User), operation!.GetType().Name);
+            return;
+        }
+
         logger.AdministratorOperationWouldDeny(CallerKind(context.User), operation?.GetType().Name ?? "unknown");
         context.Succeed(requirement);
     }
+
+    static bool IsDestructive(object? operation) => operation?.GetType().IsDefined(typeof(DestructiveOperationAttribute), false) is true;
 
     static string CallerKind(ClaimsPrincipal user)
     {

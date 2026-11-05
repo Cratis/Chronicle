@@ -19,13 +19,14 @@ public class an_operation_policy : Specification
     protected RecordingLogger _logger;
     protected AuthorizationHandlerContext _context;
     protected bool _enforce;
+    protected bool _enforceDestructive;
     protected bool _authenticationEnabled = true;
     protected IAuthorizationDecisions? _decisions;
 
     protected async Task AuthorizeOperation()
     {
         _context = new AuthorizationHandlerContext([new SystemStoreOperationRequirement()], _principal, _operation);
-        var options = Options.Create(new ChronicleOptions { Authentication = new Authentication { Enabled = _authenticationEnabled, EnforceAdministratorPolicyForOperations = _enforce } });
+        var options = Options.Create(new ChronicleOptions { Authentication = new Authentication { Enabled = _authenticationEnabled, EnforceAdministratorPolicyForOperations = _enforce, EnforceDestructiveOperations = _enforceDestructive } });
         await new SystemStoreOperationAuthorizationHandler(_decisions ?? new AuthorizationDecisions(_authorization, options, NullLogger<AuthorizationDecisions>.Instance), options, _logger).HandleAsync(_context);
     }
 

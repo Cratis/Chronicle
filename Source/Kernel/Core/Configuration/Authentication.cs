@@ -14,6 +14,11 @@ public class Authentication
     public const bool DefaultEnforceAdministratorPolicyForOperations = false;
 
     /// <summary>
+    /// The default for <see cref="EnforceDestructiveOperations"/>.
+    /// </summary>
+    public const bool DefaultEnforceDestructiveOperations = false;
+
+    /// <summary>
     /// Gets the server-local, single-use administrator recovery request.
     /// </summary>
     public AdministratorRecoveryOptions AdministratorRecovery { get; init; } = new();
@@ -38,6 +43,15 @@ public class Authentication
     /// that is expected to be removed in a later major release.
     /// </summary>
     public bool EnforceAdministratorPolicyForOperations { get; init; } = DefaultEnforceAdministratorPolicyForOperations;
+
+    /// <summary>
+    /// Gets whether to refuse non-administrators the destructive operations: compliance key deletion and key re-allowance
+    /// that would reach event stores other than the requested one, and the destructive System-store operational
+    /// recovery operations. It is independent of <see cref="EnforceAdministratorPolicyForOperations"/> and
+    /// <see cref="EnforceComplianceCapabilities"/>; either of those being on still enforces its broader scope.
+    /// When this is off, such operations are logged and allowed as before.
+    /// </summary>
+    public bool EnforceDestructiveOperations { get; init; } = DefaultEnforceDestructiveOperations;
 
     /// <summary>
     /// Gets whether to enforce per-store compliance capabilities. Defaults to audit-only.

@@ -32,6 +32,12 @@ public class ComplianceAuthorization(
 {
     bool Enforced => options.Value.Authentication.EnforceComplianceCapabilities;
 
+    bool EnforcedAcrossStores => options.Value.Authentication.EnforceDestructiveOperations;
+
+    string Mode => Enforced ? "enforce" : AuditMode;
+
+    string AuditMode => EnforcedAcrossStores ? "enforce-other-stores" : "audit";
+
     /// <summary>
     /// Decide whether the current caller may release protected content.
     /// </summary>
@@ -70,8 +76,13 @@ public class ComplianceAuthorization(
         }
 
         Log(caller.Owner, operation, @namespace, results, listingFailed);
-        if (!Enforced) return new(targets, [], listingFailed);
-        var denied = results.Where(result => !result.IsAllowed).Select(result => result.Scope.EventStore!).ToArray();
+        if (!Enforced && !EnforcedAcrossStores) return new(targets, [], listingFailed);
+
+        // Enforcing destructive operations alone covers only the stores other than the requested one.
+        var denied = results
+            .Where(result => !result.IsAllowed && (Enforced || !result.Scope.EventStore!.Equals((EventStoreName)eventStore)))
+            .Select(result => result.Scope.EventStore!)
+            .ToArray();
 
         // A denied requested store makes this a denied call, not a command from a forbidden address.
         if (denied.Contains((EventStoreName)eventStore)) return new([], [], listingFailed, RequestedDenied: true);
@@ -130,6 +141,6 @@ public class ComplianceAuthorization(
             operation,
             @namespace,
             string.Join(", ", results.Select(result => $"{result.Scope.EventStore}: {result.Outcome}/{result.Reason}")),
-            Enforced ? "enforce" : "audit",
+            Mode,
             listingFailed);
 }

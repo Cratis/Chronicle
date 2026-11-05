@@ -15,6 +15,7 @@ namespace Cratis.Chronicle.Jobs;
 /// <param name="JobId">The unique identifier of the job to delete.</param>
 [Command]
 [Cratis.Arc.Authorization.Authorize(Policy = Security.WellKnownAuthorizationPolicies.AdministratorOperations)]
+[Security.DestructiveOperation]
 [BelongsTo(WellKnownServices.Jobs)]
 public record DeleteJob(EventStoreName EventStore, EventStoreNamespaceName Namespace, Cratis.Choreography.Jobs.JobId JobId)
 {
