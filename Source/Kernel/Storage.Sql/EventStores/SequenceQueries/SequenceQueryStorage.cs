@@ -29,7 +29,10 @@ public class SequenceQueryStorage(EventStoreName eventStore, IDatabase database)
             .OrderBy(_ => _.Name)
             .ToListAsync();
 
-        return definitions.Select(_ => _.ToKernel()).ToArray();
+        return definitions
+            .Where(_ => _.Scope == SequenceQueryScope.Everyone || string.Equals(_.Owner, ownerValue, StringComparison.Ordinal))
+            .Select(_ => _.ToKernel())
+            .ToArray();
     }
 
     /// <inheritdoc/>
@@ -73,7 +76,10 @@ public class SequenceQueryStorage(EventStoreName eventStore, IDatabase database)
             .OrderBy(_ => _.Path)
             .ToListAsync();
 
-        return folders.Select(_ => _.ToKernel()).ToArray();
+        return folders
+            .Where(_ => _.Scope == SequenceQueryScope.Everyone || string.Equals(_.Owner, ownerValue, StringComparison.Ordinal))
+            .Select(_ => _.ToKernel())
+            .ToArray();
     }
 
     /// <inheritdoc/>
