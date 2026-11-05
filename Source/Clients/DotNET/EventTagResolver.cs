@@ -18,7 +18,15 @@ namespace Cratis.Chronicle;
 public sealed class EventTagResolver(IEnumerable<IEventTagEnricher> enrichers)
 {
     static readonly ConcurrentDictionary<Type, bool> _requiresAudience = new();
-    readonly IEventTagEnricher[] _enrichers = [new AmbientEventTagEnricher(), new AudiencePropertyEventTagEnricher(), .. enrichers];
+    readonly IEventTagEnricher[] _enrichers =
+    [
+        new AmbientEventTagEnricher(),
+        new AudiencePropertyEventTagEnricher(),
+
+        // Discovery also finds the built-in enrichers (they are already listed above) and can yield null for a
+        // discovered type the service provider cannot create; neither belongs in the pipeline.
+        .. enrichers.Where(_ => _ is not null and not AmbientEventTagEnricher and not AudiencePropertyEventTagEnricher)
+    ];
 
     /// <summary>
     /// Gets a resolver with only the built-in enrichers.
