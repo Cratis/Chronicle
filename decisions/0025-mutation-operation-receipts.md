@@ -46,11 +46,12 @@ Every archived mutation leaves one payload-free, fixed-size receipt in a history
 | `FinalStateVersion` | int64 |
 | `RepairState` | enum |
 | `ReceiptDigestV1` | 32 bytes |
+| `DigestVersion` | byte: digest algorithm / key version (`1` = domain-separated SHA-256, unkeyed) |
 | `ArchivedAt` | Unix ms, int64 |
 
 "Through" is `EndExclusive − 1`. The key is (event store, namespace, event sequence, `MutationId`) with a unique (sequence, ordinal). Explicitly absent: payload, command hash, origin, reason, content, event-source id. Redaction targets exist only inside the definition digest.
 
-**Digest.** SHA-256 with domain separation over canonical length-prefixed frames. The definition-digest domain is unchanged. The receipt-digest domain is `…terminal-receipt.v2`; it drops origin and command hash and adds terminal phase and archived-at. The digest is computed behind one internal seam (the digest calculator) so a keyed construction can replace it without touching callers.
+**Digest.** SHA-256 with domain separation over canonical length-prefixed frames. The definition-digest domain is unchanged. The receipt-digest domain is `…terminal-receipt.v2`; it drops origin and command hash and adds terminal phase and archived-at. Digests are computed behind one internal seam that takes the event store and the canonical bytes and returns the digest plus a digest-version byte, which is stored in the receipt (`DigestVersion`). A keyed construction can replace the implementation, and receipts written under either stay readable, without touching callers. No key management is implemented by this decision.
 
 **Exact-retry rule.**
 
@@ -66,7 +67,16 @@ Every archived mutation leaves one payload-free, fixed-size receipt in a history
 
 **Append path.** Never reads or writes receipts; no per-event column.
 
-**Residual exposure.** Plain SHA-256 over the definition lets anyone who can read a receipt after shredding confirm an exact guess of the whole definition. This is acceptable only because a definition has high entropy. Open question Q1 (keyed digest) is with the coordinator; until answered, this is the construction.
+**Residual exposure.** Plain SHA-256 over the definition lets anyone who can read a receipt after shredding confirm an exact guess of the whole definition. This record does not claim compliance with crypto-shredding.
+
+**Open question Q1 (OPEN; with the coordinator/L0).** Two options, undecided:
+
+| Option | Effect |
+|---|---|
+| A. Plain domain-separated SHA-256 | An explicit exception to decision 0007 ruling 3. Acceptable only while definitions have high entropy; guess-confirmation remains possible for anyone who can read a receipt. This is what is implemented, as `DigestVersion` 1. |
+| B. HMAC-SHA256 keyed per event store | The key lives under a reserved, non-erasable key-store identifier so receipts survive shredding of data keys and cannot be confirmed without the key. Needs key management, rotation and a new `DigestVersion`; not implemented here. |
+
+The seam and the `DigestVersion` field exist so that B can be adopted later without a schema change.
 
 **Producer constraint for #3910.** Producers must not put low-entropy secrets as the sole variable in a mutation definition. `ActiveCommandPayload` is plaintext while a head is active (an abandoned head keeps it until archived) and is cleared inside the archive transaction.
 
@@ -80,7 +90,7 @@ Every archived mutation leaves one payload-free, fixed-size receipt in a history
 | Keep Origin and CommandHash on the receipt | Rejected: variable-length and caller-supplied; violates fixed-size, digest-only. Both stay bound through the id and the definition digest. |
 | Insert receipt then release head with crash recovery | Rejected: not provider-atomic, needs residue reasoning. |
 | `LastMutationOrdinal` on every event row | Rejected: on the append path and unused by the registry. |
-| Keyed digest (HMAC per event store) | Not taken: needs key management; see Default. |
+| Keyed digest (HMAC per event store) | Open (Q1, option B): needs key management; the seam and `DigestVersion` keep it possible. |
 
 ## Default if unanswered
 
