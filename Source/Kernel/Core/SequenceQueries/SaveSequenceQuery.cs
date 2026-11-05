@@ -5,7 +5,9 @@ using Cratis.Arc.Authorization;
 using Cratis.Arc.Commands.ModelBound;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.SequenceQueries;
+using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Storage;
+using Microsoft.Extensions.Options;
 
 namespace Cratis.Chronicle.SequenceQueries;
 
@@ -58,8 +60,9 @@ public record SaveSequenceQuery(
     /// </summary>
     /// <param name="currentPrincipalAccessor"><see cref="ICurrentPrincipalAccessor"/> for resolving the owner.</param>
     /// <param name="storage">The <see cref="IStorage"/> holding the saved queries.</param>
+    /// <param name="options">The server configuration.</param>
     /// <returns>Awaitable task.</returns>
-    public Task Handle(ICurrentPrincipalAccessor currentPrincipalAccessor, IStorage storage) =>
+    public Task Handle(ICurrentPrincipalAccessor currentPrincipalAccessor, IStorage storage, IOptions<ChronicleOptions> options) =>
         storage.GetEventStore(EventStore).SequenceQueries.Save(
             new SequenceQueryDefinition(
                 Id,
@@ -68,7 +71,7 @@ public record SaveSequenceQuery(
 
                 // Ownership follows the principal saving the query, never a value the client supplies,
                 // so a caller cannot plant a query into somebody else's private set.
-                SequenceQueryOwners.GetCurrent(currentPrincipalAccessor),
+                SequenceQueryOwners.GetCurrent(currentPrincipalAccessor, options.Value.Authentication),
                 Folder,
                 Namespace,
                 EventSequenceId,
