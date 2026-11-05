@@ -34,6 +34,14 @@ internal static class ProjectionPropertyPaths
         new(string.Join('.', path.Split('.').Select((segment, index) => ResolveRawSegment(segment, namingPolicy, role, index))));
 
     /// <summary>
+    /// Get the name of a CLR member as it is named in a projected target, such as a node or an edge in a graph.
+    /// </summary>
+    /// <param name="name">The CLR name of the member.</param>
+    /// <param name="namingPolicy">The <see cref="INamingPolicy"/> to name it with.</param>
+    /// <returns>The name.</returns>
+    public static string NameOf(string name, INamingPolicy namingPolicy) => (string)Resolve(name, namingPolicy, ProjectionPathRole.Target);
+
+    /// <summary>
     /// Applies the naming policy to a validated canonical context path without reparsing its function calls.
     /// </summary>
     /// <param name="path">The validated canonical context property path.</param>

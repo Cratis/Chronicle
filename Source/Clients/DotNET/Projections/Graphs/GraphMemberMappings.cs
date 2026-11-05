@@ -23,7 +23,7 @@ internal class GraphMemberMappings(INamingPolicy namingPolicy)
         var result = new Dictionary<Type, Dictionary<string, string>>();
         foreach (var member in members)
         {
-            var property = namingPolicy.GetPropertyName(member.Name);
+            var property = ProjectionPropertyPaths.NameOf(member.Name, namingPolicy);
             foreach (var attribute in member.Attributes.OfType<IEventBoundAttribute>())
             {
                 if (ExpressionFor(attribute, member.Name) is not { } expression) continue;

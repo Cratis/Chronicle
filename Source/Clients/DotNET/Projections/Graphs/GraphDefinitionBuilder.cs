@@ -150,7 +150,7 @@ internal class GraphDefinitionBuilder(INamingPolicy namingPolicy, IEventTypes ev
 
     string? EventPropertyNamed(Type eventType, string graphPropertyName)
     {
-        var property = eventType.GetProperties().FirstOrDefault(_ => namingPolicy.GetPropertyName(_.Name) == graphPropertyName);
+        var property = eventType.GetProperties().FirstOrDefault(_ => ProjectionPropertyPaths.NameOf(_.Name, namingPolicy) == graphPropertyName);
         return property is null || IsComplex(property.PropertyType) ? null : (string)ProjectionPropertyPaths.Resolve(property.Name, namingPolicy, ProjectionPathRole.Source);
     }
 }

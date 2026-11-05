@@ -7,7 +7,6 @@ using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Schemas;
 using Cratis.Serialization;
-using Cratis.Types;
 
 namespace Cratis.Chronicle.Projections.Graphs.for_GraphDefinitionBuilder.given;
 
@@ -19,7 +18,7 @@ public class a_graph_definition_builder : Specification
 
     internal static JsonNode Canonical(JsonNode? node) => node switch
     {
-        JsonObject obj => new JsonObject(obj.OrderBy(_ => _.Key, StringComparer.Ordinal).Select(_ => KeyValuePair.Create(_.Key, (JsonNode?)(_.Value is null ? null : Canonical(_.Value))))),
+        JsonObject obj => new JsonObject(obj.OrderBy(_ => _.Key, StringComparer.Ordinal).Select(_ => KeyValuePair.Create(_.Key, _.Value is null ? null : Canonical(_.Value)))),
         JsonArray array => new JsonArray(array.Select(_ => _ is null ? null : Canonical(_)).ToArray()),
         _ => node!.DeepClone()
     };

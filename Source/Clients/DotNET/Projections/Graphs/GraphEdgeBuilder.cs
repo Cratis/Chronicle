@@ -75,8 +75,8 @@ internal sealed class GraphEdgeBuilder<TEdge, TSource, TTarget>(INamingPolicy na
             type,
             typeof(TSource),
             typeof(TTarget),
-            _identifyingProperty ?? (keys.Length == 1 ? namingPolicy.GetPropertyName(keys[0].Name) : null),
-            [namingPolicy.GetPropertyName(source.Name), namingPolicy.GetPropertyName(target.Name)],
+            _identifyingProperty ?? (keys.Length == 1 ? ProjectionPropertyPaths.NameOf(keys[0].Name, namingPolicy) : null),
+            [ProjectionPropertyPaths.NameOf(source.Name, namingPolicy), ProjectionPropertyPaths.NameOf(target.Name, namingPolicy)],
             _from,
             _removedWith);
     }

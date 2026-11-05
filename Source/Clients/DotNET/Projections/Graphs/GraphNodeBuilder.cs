@@ -65,6 +65,6 @@ internal sealed class GraphNodeBuilder<TNode>(INamingPolicy namingPolicy) : IGra
     internal static string KeyOf(Type type, INamingPolicy namingPolicy, int required)
     {
         var keys = GraphMember.Of(type).Where(_ => _.Has<KeyAttribute>()).ToArray();
-        return keys.Length == required ? namingPolicy.GetPropertyName(keys[0].Name) : throw new NodeMustHaveExactlyOneKey(type, keys.Length);
+        return keys.Length == required ? ProjectionPropertyPaths.NameOf(keys[0].Name, namingPolicy) : throw new NodeMustHaveExactlyOneKey(type, keys.Length);
     }
 }

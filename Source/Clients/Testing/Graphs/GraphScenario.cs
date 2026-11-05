@@ -15,9 +15,6 @@ using Cratis.Chronicle.Testing.ReadModels;
 using Cratis.Json;
 using Cratis.Serialization;
 using KernelEvents = KernelConcepts::Cratis.Chronicle.Concepts.Events;
-using KernelProjections = KernelConcepts::Cratis.Chronicle.Concepts.Projections;
-using KernelReadModels = KernelConcepts::Cratis.Chronicle.Concepts.ReadModels;
-using KernelSinks = KernelConcepts::Cratis.Chronicle.Concepts.Sinks;
 
 namespace Cratis.Chronicle.Testing.Graphs;
 

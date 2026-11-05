@@ -51,7 +51,7 @@ internal class ModelBoundGraphReader(INamingPolicy namingPolicy)
             KeyOf(attribute),
             attribute is IDetachingRemovedWithAttribute { Detach: true })).ToArray();
 
-        return new(type, type.Name, namingPolicy.GetPropertyName(keys[0].Name), from, removedWith);
+        return new(type, type.Name, ProjectionPropertyPaths.NameOf(keys[0].Name, namingPolicy), from, removedWith);
     }
 
     /// <summary>
@@ -90,8 +90,8 @@ internal class ModelBoundGraphReader(INamingPolicy namingPolicy)
             attribute.Type,
             sources[0].Attributes.OfType<IGraphSourceAttribute>().First().NodeType,
             targets[0].Attributes.OfType<IGraphTargetAttribute>().First().NodeType,
-            keys.Length == 1 ? namingPolicy.GetPropertyName(keys[0].Name) : null,
-            [namingPolicy.GetPropertyName(sources[0].Name), namingPolicy.GetPropertyName(targets[0].Name)],
+            keys.Length == 1 ? ProjectionPropertyPaths.NameOf(keys[0].Name, namingPolicy) : null,
+            [ProjectionPropertyPaths.NameOf(sources[0].Name, namingPolicy), ProjectionPropertyPaths.NameOf(targets[0].Name, namingPolicy)],
             from,
             removedWith);
     }

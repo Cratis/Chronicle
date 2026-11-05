@@ -71,6 +71,7 @@ public record ProjectionDefinition(
     /// <remarks>
     /// Additive: a definition without graph mappings behaves exactly as before.
     /// </remarks>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public Graphs.GraphProjectionDefinition? Graph { get; init; }
 
     /// <summary>

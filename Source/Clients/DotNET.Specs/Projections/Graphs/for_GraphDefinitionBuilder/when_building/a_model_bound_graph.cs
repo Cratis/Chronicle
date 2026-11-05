@@ -23,7 +23,7 @@ public class a_model_bound_graph : given.a_graph_definition_builder
     [Fact] void should_use_the_given_sink_type() => _registration.ReadModel.Sink.TypeId.ShouldEqual("Neo4j");
     [Fact] void should_make_the_projection_observe_the_graph() => _registration.Projection.ReadModel.ShouldEqual("Organization");
     [Fact] void should_mark_the_schema_as_a_graph() => _schema["x-graph"]!.GetValue<bool>().ShouldBeTrue();
-    [Fact] void should_describe_the_nodes_and_edges() => _schema["properties"]!.AsObject().Select(_ => _.Key).OrderBy(_ => _).ShouldContainOnly("Group", "MEMBER_OF", "Person", "Place", "VISITED");
+    [Fact] void should_describe_the_nodes_and_edges() => _schema["properties"]!.AsObject().Select(_ => _.Key).Order().ShouldContainOnly("Group", "MEMBER_OF", "Person", "Place", "VISITED");
     [Fact] void should_describe_the_key_of_a_node() => _schema["properties"]!["Person"]!["x-graph-key"]!.GetValue<string>().ShouldEqual("personId");
     [Fact] void should_describe_the_end_nodes_of_an_edge() => _schema["properties"]!["MEMBER_OF"]!["x-graph-source"]!.GetValue<string>().ShouldEqual("Person");
     [Fact] void should_describe_the_identity_of_an_edge() => _schema["properties"]!["VISITED"]!["x-graph-identity"]!.GetValue<string>().ShouldEqual("visitId");

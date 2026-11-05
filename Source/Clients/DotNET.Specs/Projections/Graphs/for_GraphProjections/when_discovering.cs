@@ -5,7 +5,6 @@ using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Sinks;
 using Cratis.Serialization;
-using Cratis.Types;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 
