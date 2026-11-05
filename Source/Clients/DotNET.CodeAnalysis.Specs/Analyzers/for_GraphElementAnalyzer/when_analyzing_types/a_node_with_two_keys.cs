@@ -16,7 +16,7 @@ public class a_node_with_two_keys : given.a_graph_element_analyzer
 
     void Because() => _result = AnalyzerVerifier<CodeAnalysis.Analyzers.GraphElementAnalyzer>.VerifyAnalyzer(
         CreateSource(Usage),
-        new ExpectedDiagnostic(DiagnosticIds.GraphElementKeyMustBeDeclaredOnce, DiagnosticSeverity.Error, "node", "Person", 2, "but a node needs exactly one"));
+        new ExpectedDiagnostic(DiagnosticIds.GraphElementKeyMustBeDeclaredOnce, DiagnosticSeverity.Error, "node", "Person", "2", "but a node needs exactly one"));
 
     [Fact] Task should_report_the_extra_key() => _result;
 }

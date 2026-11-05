@@ -16,7 +16,7 @@ public class a_node_without_a_key : given.a_graph_element_analyzer
 
     void Because() => _result = AnalyzerVerifier<CodeAnalysis.Analyzers.GraphElementAnalyzer>.VerifyAnalyzer(
         CreateSource(Usage),
-        new ExpectedDiagnostic(DiagnosticIds.GraphElementKeyMustBeDeclaredOnce, DiagnosticSeverity.Error, "node", "Person", 0, "but a node needs exactly one"));
+        new ExpectedDiagnostic(DiagnosticIds.GraphElementKeyMustBeDeclaredOnce, DiagnosticSeverity.Error, "node", "Person", "0", "but a node needs exactly one"));
 
     [Fact] Task should_report_the_missing_key() => _result;
 }

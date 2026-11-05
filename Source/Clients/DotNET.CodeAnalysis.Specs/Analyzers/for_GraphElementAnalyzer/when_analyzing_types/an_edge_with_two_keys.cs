@@ -16,7 +16,7 @@ public class an_edge_with_two_keys : given.a_graph_element_analyzer
 
     void Because() => _result = AnalyzerVerifier<CodeAnalysis.Analyzers.GraphElementAnalyzer>.VerifyAnalyzer(
         CreateSource(Usage),
-        new ExpectedDiagnostic(DiagnosticIds.GraphElementKeyMustBeDeclaredOnce, DiagnosticSeverity.Error, "edge", "MemberOf", 2, "but an edge can have at most one"));
+        new ExpectedDiagnostic(DiagnosticIds.GraphElementKeyMustBeDeclaredOnce, DiagnosticSeverity.Error, "edge", "MemberOf", "2", "but an edge can have at most one"));
 
     [Fact] Task should_report_the_extra_key() => _result;
 }
