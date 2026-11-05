@@ -42,7 +42,7 @@ its version with the stored one by [semantic version](https://semver.org) preced
 - A projection whose stored version is **greater** than the registration's is left out. The stored definition
   is kept, a warning is logged, the registrant is not recorded, and the Workbench shows a recommendation —
   "Projection registration ignored: projection *X* was registered by an older client version" — once per projection and
-  version pair.
+  version pair. If you ignore that recommendation, the ignore is kept until a newer version of the projection is stored or the projection is removed.
 - A full set that is older than **any** stored projection of its owner is treated as a partial registration,
   so it retires nothing.
 - An **equal**, missing or unparseable version on either side behaves exactly as before: the registration

@@ -10,8 +10,11 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Occurrences;
 /// Stores trigger definitions in the event-store database with revision compare-and-set.
 /// </summary>
 /// <param name="open">Opens an event-store context for each operation.</param>
-public class TriggerDefinitionsStorage(Func<Task<DbContextScope<EventStoreDbContext>>> open) : ITriggerDefinitionsStorage
+/// <param name="database">The configured database for telemetry, if any.</param>
+public class TriggerDefinitionsStorage(Func<Task<DbContextScope<EventStoreDbContext>>> open, IDatabase? database = null) : ITriggerDefinitionsStorage
 {
+    readonly SqlStorageTelemetry _telemetry = SqlStorageTelemetry.For(database);
+
     /// <inheritdoc/>
     public async Task<TriggerDefinition?> Get(TriggerId id)
     {
@@ -48,7 +51,7 @@ public class TriggerDefinitionsStorage(Func<Task<DbContextScope<EventStoreDbCont
         }
         catch (Exception error) when (StorageWriteConflicts.IsUnique(error))
         {
-            SqlStorageTelemetry.RecoveredCollision("trigger-definition");
+            _telemetry.RecoveredCollision("trigger-definition");
             return false;
         }
     }

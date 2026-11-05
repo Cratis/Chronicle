@@ -96,6 +96,7 @@
 1 Integration/Clustering/for_Clustering/when_replaying_a_collapsing_projection.cs
 1 Integration/Clustering/for_ScaledOutClients/ReactorInvocationSignal.cs
 1 Integration/Clustering/for_ScaledOutClients/when_the_kernel_drops_a_client_instance.cs
+1 Integration/Kernel/EventStores/for_RegistrationLoad/when_registering/and_replicas_register_the_same_artifacts_concurrently_with_a_small_connection_pool.cs  # Task.Yield widens an interleaving window so replicas register concurrently
 1 Integration/Kernel/for_JobsManager/given/TheJobStep.cs  # knob
 1 Integration/Kernel/for_JobsManager/when_starting/job_with_single_step/and_job_step_fails.cs
 2 Integration/MongoDB/Generations/for_ReleasedKernelGenerationFloor/ReleasedFloorKernel.cs  # readiness: bounded poll of a released kernel container (populated store, container exit); a released binary exposes no completion signal

@@ -50,6 +50,7 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     readonly ITaskFactory _taskFactory;
     readonly IGrainFactory _grainFactory;
     readonly IMeter<AppendedEventsQueue> _meter;
+    readonly MetricNames _metricNames;
     readonly ILogger<AppendedEventsQueue> _logger;
     readonly IShutdownDrainBudget? _stopBudget;
     readonly Channel<IReadOnlyList<AppendedEvent>> _channel;
@@ -69,7 +70,7 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     bool _isDisposed;
     bool _isDraining;
     volatile bool _isResetting;
-    IMeterScope<AppendedEventsQueue>? _metrics;
+    AppendedEventsQueueMetrics? _metrics;
     EventSequenceKey _eventSequenceKey = EventSequenceKey.NotSet;
 
     /// <summary>
@@ -92,6 +93,7 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
         _taskFactory = taskFactory;
         _grainFactory = grainFactory;
         _meter = meter;
+        _metricNames = options.Value.Telemetry.MetricNames;
         _logger = logger;
         _stopBudget = stopBudget;
         _catchupCancellationToken = _catchupCancellation.Token;
@@ -128,7 +130,7 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     {
         var queueId = (int)this.GetPrimaryKeyLong(out var key);
         _eventSequenceKey = EventSequenceKey.Parse(key!);
-        _metrics = _meter.BeginScope(key!, queueId);
+        _metrics = _meter.BeginScope(key!, queueId, _metricNames);
         return base.OnActivateAsync(cancellationToken);
     }
 

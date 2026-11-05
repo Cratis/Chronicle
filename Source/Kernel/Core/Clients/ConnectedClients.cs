@@ -31,6 +31,7 @@ public partial class ConnectedClients(
     IStorage storage,
     IClientDepartureNotifier departureNotifier) : Grain, IConnectedClients
 {
+    readonly ConnectedClientsMetrics _metrics = new(meter, options.Value.Telemetry.MetricNames);
     readonly TimeSpan _reviseConnectedClientsPeriod = TimeSpan.FromSeconds(options.Value.ConnectedClients.ReviseIntervalSeconds);
     readonly TimeSpan _reservationTtl = TimeSpan.FromSeconds(options.Value.ConnectedClients.ReservationTtlSeconds);
     readonly int _staleThresholdSeconds = options.Value.ConnectedClients.StaleThresholdSeconds;
@@ -83,7 +84,7 @@ public partial class ConnectedClients(
             _reservations.RemoveAt(0);
         }
 
-        meter.ConnectedClients(_clients.Count);
+        _metrics.ConnectedClients(_clients.Count);
 
         return Task.CompletedTask;
     }
@@ -105,7 +106,7 @@ public partial class ConnectedClients(
 
         logger.ClientRestored(connectionId);
         _clients[connectionId] = CreateEntry(connectionId, version, isRunningWithDebugger, processId, processPath, machineName, clientType);
-        meter.ConnectedClients(_clients.Count);
+        _metrics.ConnectedClients(_clients.Count);
 
         return Task.CompletedTask;
     }
@@ -117,7 +118,7 @@ public partial class ConnectedClients(
 
         var observers = _clients.Remove(connectionId, out var removed) ? removed.Observers.ToArray() : [];
 
-        meter.ConnectedClients(_clients.Count);
+        _metrics.ConnectedClients(_clients.Count);
 
         // Expiry is best effort and must not hold up connection bookkeeping. Leases also expire
         // by kernel time, so a failed scope only delays redelivery until its lease deadline.

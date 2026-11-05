@@ -30,25 +30,18 @@ internal static class ExternalTokenEndpoints
     /// Ensures a <see cref="Uri"/> is an absolute https URI without user info.
     /// </summary>
     /// <param name="uri">The <see cref="Uri"/> to check.</param>
+    /// <param name="source">Where the endpoint came from, for the failure label.</param>
     /// <returns>The same <see cref="Uri"/>.</returns>
     /// <exception cref="InsecureTokenEndpoint">Thrown when the URI is not acceptable.</exception>
-    internal static Uri Require(Uri uri)
+    internal static Uri Require(Uri uri, TokenEndpointSource source)
     {
         if (!IsAcceptable(uri))
         {
-            throw new InsecureTokenEndpoint(Describe(uri));
+            throw new InsecureTokenEndpoint(source);
         }
 
         return uri;
     }
-
-    /// <summary>
-    /// Describes a <see cref="Uri"/> for messages and logs: scheme, host, port and path - never user info or query.
-    /// </summary>
-    /// <param name="uri">The <see cref="Uri"/> to describe.</param>
-    /// <returns>The description.</returns>
-    internal static string Describe(Uri uri) =>
-        uri.IsAbsoluteUri ? $"{uri.Scheme}://{uri.Authority.Substring(uri.Authority.IndexOf('@') + 1)}{uri.AbsolutePath}" : "(relative URI)";
 
     static bool IsAcceptable(Uri uri) =>
         uri.IsAbsoluteUri && uri.Scheme == Uri.UriSchemeHttps && string.IsNullOrEmpty(uri.UserInfo);

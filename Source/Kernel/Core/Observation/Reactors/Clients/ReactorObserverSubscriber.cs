@@ -5,8 +5,11 @@ using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Configuration;
+using Cratis.Chronicle.Diagnostics;
 using Cratis.Chronicle.Observation.Placement;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Cratis.Chronicle.Observation.Reactors.Clients;
 
@@ -22,12 +25,15 @@ namespace Cratis.Chronicle.Observation.Reactors.Clients;
 /// <param name="reactorMediator"><see cref="IReactorMediator"/> for notifying actual clients.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
 /// <param name="timeProvider">The delivery clock.</param>
+/// <param name="options">The telemetry configuration.</param>
 [ConnectedObserverPlacement]
 public class ReactorObserverSubscriber(
     IReactorMediator reactorMediator,
     ILogger<ReactorObserverSubscriber> logger,
-    TimeProvider? timeProvider = null) : Grain, IReactorObserverSubscriber
+    TimeProvider? timeProvider = null,
+    IOptions<ChronicleOptions>? options = null) : Grain, IReactorObserverSubscriber
 {
+    readonly ClientObserverSubscriberMetrics _metrics = new(options?.Value?.Telemetry.MetricNames ?? MetricNames.Legacy);
     readonly TimeProvider _clock = timeProvider ?? TimeProvider.System;
     ObserverKey _key = ObserverKey.NotSet;
 
@@ -44,7 +50,7 @@ public class ReactorObserverSubscriber(
     /// <inheritdoc/>
     public async Task<ObserverSubscriberResult> OnNext(Key partition, IEnumerable<AppendedEvent> events, ObserverSubscriberContext context)
     {
-        var deliveryWait = new ClientDeliveryWait(_clock, logger, _key, partition);
+        var deliveryWait = new ClientDeliveryWait(_clock, logger, _key, partition, _metrics);
         if (deliveryWait.Expired(context))
         {
             return ObserverSubscriberResult.Failed(EventSequenceNumber.Unavailable, "Delivery expired before dispatch");

@@ -36,13 +36,14 @@ public class with_server_error_response : given.a_webhook_mediator
     async Task Because() => _result = await _mediator.OnNext("orders", _target, new Key("test-partition", ArrayIndexers.NoIndexers), []);
 
     [Fact] void should_fail() => _result.IsSuccess.ShouldBeFalse();
-    [Fact] void should_report_the_status_and_webhook_target()
+    [Fact]
+    void should_report_the_status_and_webhook_target()
     {
         _result.TryGetException(out var exception).ShouldBeTrue();
         exception.ShouldBeOfExactType<WebhookDeliveryFailed>();
         var failure = (WebhookDeliveryFailed)exception;
         failure.StatusCode.ShouldEqual(HttpStatusCode.ServiceUnavailable);
-        failure.ReasonPhrase.ShouldEqual("Webhook is unavailable");
-        failure.TargetUrl.ShouldEqual(_target.Url);
+        failure.ReasonPhrase.ShouldBeNull();
+        failure.TargetUrl.ShouldEqual((WebhookTargetUrl)"https://example.com");
     }
 }

@@ -7,12 +7,12 @@ namespace Cratis.Chronicle.Connections;
 
 internal static partial class ExternalAuthorityTokenProviderLogMessages
 {
-    [LoggerMessage(LogLevel.Debug, "Discovering token endpoint from authority {Authority}")]
-    internal static partial void DiscoveringTokenEndpoint(this ILogger<ExternalAuthorityTokenProvider> logger, string authority);
+    [LoggerMessage(LogLevel.Debug, "Discovering the token endpoint from the configured authority")]
+    internal static partial void DiscoveringTokenEndpoint(this ILogger<ExternalAuthorityTokenProvider> logger);
 
-    [LoggerMessage(LogLevel.Debug, "Discovered token endpoint {Endpoint} from authority {Authority}")]
-    internal static partial void DiscoveredTokenEndpoint(this ILogger<ExternalAuthorityTokenProvider> logger, string authority, string endpoint);
+    [LoggerMessage(LogLevel.Debug, "Discovered the token endpoint from the configured authority")]
+    internal static partial void DiscoveredTokenEndpoint(this ILogger<ExternalAuthorityTokenProvider> logger);
 
-    [LoggerMessage(LogLevel.Warning, "Failed to discover the token endpoint from authority {Authority}")]
-    internal static partial void TokenEndpointDiscoveryFailed(this ILogger<ExternalAuthorityTokenProvider> logger, string authority, Exception ex);
+    [LoggerMessage(LogLevel.Warning, "Failed to discover the token endpoint from the configured authority (reason: {Reason})")]
+    internal static partial void TokenEndpointDiscoveryFailed(this ILogger<ExternalAuthorityTokenProvider> logger, string reason);
 }

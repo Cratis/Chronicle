@@ -74,15 +74,23 @@ internal static class DatabaseSchemaLock
     /// <exception cref="DatabaseSchemaLockNotAcquired">Another kernel held the lock for longer than <see cref="DefaultTimeout"/>.</exception>
     internal static Task Run(DbContext context, Func<Task> change) => Run(context, change, DefaultTimeout);
 
+    /// <summary>Runs a schema change with the database's preselected instruments.</summary>
+    /// <param name="context">The context whose database changes.</param>
+    /// <param name="change">The schema change.</param>
+    /// <param name="telemetry">The preselected instruments.</param>
+    /// <returns>Awaitable task.</returns>
+    internal static Task Run(DbContext context, Func<Task> change, SqlStorageTelemetry telemetry) => Run(context, change, DefaultTimeout, telemetry);
+
     /// <summary>
     /// Run a schema change while holding the schema lock of the database a context connects to.
     /// </summary>
     /// <param name="context">The <see cref="DbContext"/> whose database changes.</param>
     /// <param name="change">The schema change.</param>
     /// <param name="timeout">How long to wait for the lock.</param>
+    /// <param name="telemetry">The preselected instruments, or the legacy defaults.</param>
     /// <returns>Awaitable task.</returns>
     /// <exception cref="DatabaseSchemaLockNotAcquired">Another kernel held the lock for longer than the timeout.</exception>
-    internal static async Task Run(DbContext context, Func<Task> change, TimeSpan timeout)
+    internal static async Task Run(DbContext context, Func<Task> change, TimeSpan timeout, SqlStorageTelemetry? telemetry = null)
     {
         OnRun.Value?.Invoke();
         var contextConnection = context.Database.GetDbConnection();
@@ -97,7 +105,7 @@ internal static class DatabaseSchemaLock
 
         var resource = ResourceFor(contextConnection.Database);
         await using var connection = await OpenDedicatedConnection(context, contextConnection);
-        await SqlStorageTelemetry.WaitForSchemaLock(
+        await (telemetry ?? SqlStorageTelemetry.Legacy).WaitForSchemaLock(
             () => schemaLock.Acquire(connection, resource, timeout),
             context.Database.ProviderName ?? "unknown");
         _held.Value = held.Add(key);

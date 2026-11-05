@@ -38,19 +38,19 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores;
 /// <param name="loggerFactory">Optional <see cref="ILoggerFactory"/> used for logging inside the storages.</param>
 public class EventStoreStorage(EventStoreName eventStore, IDatabase database, IInstancesOf<ISinkFactory> sinkFactories, Cratis.Choreography.Storage.IJobsStorage jobsStorage, JsonSerializerOptions jsonSerializerOptions, Json.IExpandoObjectConverter converter, ILoggerFactory? loggerFactory = null) : IEventStoreStorage
 {
-    readonly Occurrences.OccurrencesStorage<EventStoreDbContext> _occurrences = new(() => database.EventStore(eventStore));
+    readonly Occurrences.OccurrencesStorage<EventStoreDbContext> _occurrences = new(() => database.EventStore(eventStore), database);
 
     /// <inheritdoc/>
     public Chronicle.Storage.Generations.IGenerationInitializationStorage GenerationInitialization { get; } = new Generations.GenerationInitializationStorage(() => database.EventStore(eventStore));
 
     /// <inheritdoc/>
-    public Chronicle.Storage.Occurrences.ITriggerDefinitionsStorage TriggerDefinitions { get; } = new Occurrences.TriggerDefinitionsStorage(() => database.EventStore(eventStore));
+    public Chronicle.Storage.Occurrences.ITriggerDefinitionsStorage TriggerDefinitions { get; } = new Occurrences.TriggerDefinitionsStorage(() => database.EventStore(eventStore), database);
 
     /// <inheritdoc/>
     public Chronicle.Storage.Occurrences.IOccurrencesStorage Occurrences => _occurrences;
 
     /// <inheritdoc/>
-    public Chronicle.Storage.Occurrences.ILifecycleFanOutStorage LifecycleFanOut { get; } = new Occurrences.LifecycleFanOutStorage(() => database.EventStore(eventStore));
+    public Chronicle.Storage.Occurrences.ILifecycleFanOutStorage LifecycleFanOut { get; } = new Occurrences.LifecycleFanOutStorage(() => database.EventStore(eventStore), database);
 
     /// <inheritdoc/>
     public Chronicle.Storage.Occurrences.IScheduleStorage Schedules => _occurrences;
@@ -90,6 +90,9 @@ public class EventStoreStorage(EventStoreName eventStore, IDatabase database, II
 
     /// <inheritdoc/>
     public IWebhookDefinitionsStorage Webhooks { get; } = new Webhooks.WebhookDefinitionsStorage(eventStore, database);
+
+    /// <inheritdoc/>
+    public IWebhookSigningKeysStorage WebhookSigningKeys { get; } = new Webhooks.WebhookSigningKeysStorage(eventStore, database);
 
     /// <inheritdoc/>
     public IExternalServiceDefinitionsStorage ExternalServices { get; } = new ExternalServices.ExternalServiceDefinitionsStorage(eventStore, database);

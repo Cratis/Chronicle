@@ -7,6 +7,9 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <InternalsVisibleTo Include="Cratis.Chronicle.Core" />
+        <InternalsVisibleTo Include="Cratis.Chronicle.Core.Specs" />
+        <InternalsVisibleTo Include="Cratis.Infrastructure.Specs" />
         <InternalsVisibleTo Include="Cratis.Chronicle.Storage.Sql" />
         <InternalsVisibleTo Include="Cratis.Chronicle.Storage.Sql.Specs" />
         <InternalsVisibleTo Include="Cratis.Chronicle.XUnit.Integration" />
