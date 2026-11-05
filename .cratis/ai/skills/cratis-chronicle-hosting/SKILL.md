@@ -1,6 +1,6 @@
 ---
 name: cratis-chronicle-hosting
-description: Run the Chronicle kernel with production storage, certificates, TLS or a private h2c proxy, health probes, clustering and observer recovery configuration. Use when deploying the kernel, moving from development images to production, configuring trusted proxies, or diagnosing kernel startup and topology. Do not use for wiring a .NET application client, implementing Orleans grains, or mutating a live store.
+description: Use when deploying the Chronicle kernel, preparing production topology or diagnosing kernel startup, certificates and clustering. Not for application client wiring, Orleans grain implementation or live-store mutation.
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/cratis-chronicle-hosting/SKILL.md -->
@@ -49,8 +49,9 @@ operator/kernel surface, not an application-profile layout rule.
   development database ports on loopback only; a host application needing MongoDB
   must be able to reach port 27017. Do not expose unauthenticated MongoDB.
 
-Read references/storage-resolution.md when choosing per-namespace destinations,
-separate schema/runtime identities, SQL schemas, or disabling automatic creation.
+Read [storage resolution](references/storage-resolution.md) when choosing
+per-namespace destinations, schema/runtime identities, Azure authentication,
+SQL schemas, or disabling automatic creation.
 
 ## Supply certificates before starting production
 
@@ -112,18 +113,29 @@ than increasing limits without accounting for memory.
 
 Set `health.port` for a dedicated HTTP/1.1 probe listener. `health.tls=false`
 removes TLS only there; `health.exclusive=true` restricts it to the configured
-health path (`/health` by default). Exclusive is **false by default**, so an
+health path (`/health` by default) and its `/live` and `/ready` subpaths. Exclusive is **false by default**, so an
 ordinary plaintext probe port also exposes other HTTP/1.1 endpoints. Keep it
 internal. `health.tls=true` needs the top-level TLS certificate even when main
 TLS is disabled. The production chiseled container has no shell/curl: use an
 orchestrator/external probe, not an in-container shell healthcheck.
 
+Requires Chronicle 19.109.0 for separate readiness/liveness routes.
+
+`/health` and `/health/ready` remain readiness (including startup
+and storage); use `/health/live` for liveness/startup so a replay backlog does
+not restart a healthy-but-unready silo. A custom base path moves all three
+routes. Verified in the tagged sources linked from [clustering and schema ownership](references/clustering-and-schema.md),
+`Documentation/hosting/configuration/health-endpoint.md`
+and `Source/Kernel/Server/KernelReadinessHealthCheck.cs`.
+
 ## Form one cluster, not several over shared data
 
-Every node must explicitly set `clustering.type=MongoDB` and share the cluster
-and service ids and MongoDB storage. Default `Localhost` forms isolated
-single-node clusters: sharing a database does not join them. Only MongoDB
-supports multi-node storage; PostgreSQL, SQL Server and SQLite are single-node.
+Every node must select shared membership and share cluster/service ids and the
+cluster database: `clustering.type=MongoDB` for MongoDB, or `Sql` for PostgreSQL
+and SQL Server. SQLite remains single-node. Default `Localhost` does not join
+nodes; persistent stores guard it with a single-writer lease. Read [clustering and schema ownership](references/clustering-and-schema.md)
+for lease failure behavior, SQL migration/Verify modes and the disabled-by-default
+projection-generation groundwork.
 `Clustering:ResponseTimeout` bounds Orleans transport waiting; increasing observer
 subscriber timeout cannot exceed that transport deadline.
 
@@ -133,12 +145,16 @@ and upgrading a cluster. See **cratis-chronicle-web-workbench** for browser
 exposure and **cratis-chronicle-cli-operations** for authorized live operations.
 Several services share one kernel with one event store each: see **cratis-multi-service-architecture**, and **cratis-multi-service-local-orchestration** for an AppHost or compose file.
 
+Read [webhook delivery policy](references/webhooks.md) for target validation,
+independent retries, managed identity and **real-delivery** quarantine probes.
+Ordinary observer quarantine guidance does not imply webhooks stay silent.
+
 ## Verify
 
 - The build/image and intended environment agree; no default development
   application remains in reused production storage.
-- Storage is reachable and MongoDB is a replica set; multiple nodes share MongoDB
-  membership, cluster id, service id and certificate ring.
+- Storage is reachable and MongoDB is a replica set; multiple nodes share valid
+  MongoDB/Sql membership, cluster id, service id and certificate ring.
 - Certificates load; clients validate production TLS (`skipTlsValidation=false`).
 - A probe observes health without publishing a plaintext Workbench/API port.
 - Proxy upstream protocol and trust are tested from the actual immediate peer.

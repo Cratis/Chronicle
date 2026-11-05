@@ -1,6 +1,6 @@
 ---
 name: cratis-chronicle-compliance
-description: Model personal data in Chronicle with [PII] and [Subject], and erase it through crypto-shredding with IPIIManager. Use when an event or read model carries data about a natural person, when a subject must be identified for erasure, when a right-to-erasure request must be executed, or when redacting a stored event. Do not use for authorization, authentication, secret handling, or generic data-protection policy.
+description: Use when Chronicle events or read models contain personal data, an erasure subject must be identified or stored events need redaction. Not for authentication, operational secrets or generic data-protection policy.
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/cratis-chronicle-compliance/SKILL.md -->
@@ -243,6 +243,12 @@ requirement is only to annotate the types.
 Key storage is per namespace and is a hosting decision, not an application one. Chronicle ships
 MongoDB (the default), SQL, in-memory, HashiCorp Vault, and Azure Key Vault key
 storage, configured under `Cratis:Chronicle:Compliance:Encryption`.
+From 19.99.1, Azure Key Vault erasure **purges every key revision**, not just
+soft-deletes it. The vault must grant purge permission and have purge protection
+disabled; a refused purge fails erasure rather than reporting success. Do not
+silently weaken the erasure contract to fit a protected vault. Verified at
+**v19.110.1**, `Source/Kernel/Storage.AzureKeyVault/AzureKeyVaultEncryptionKeyStorage.cs`
+and `Documentation/hosting/azure.md`.
 
 > **Operational trap.** Switching to a dedicated compliance key store without
 > setting `MigrateFromDefaultStorage` leaves every existing key unreachable.

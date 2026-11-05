@@ -1,6 +1,6 @@
 ---
 name: dump-collect
-description: 'Configures and collects crash dumps for modern .NET applications: enabling automatic crash dumps for CoreCLR or NativeAOT, capturing dumps from running processes, setting up collection in Docker or Kubernetes, and using dotnet-dump collect or createdump. Use when a crash dump must be enabled or captured. Not for analyzing or debugging dumps (lldb, windbg, dotnet-dump analyze), profiling or tracing (use dotnet-trace-collect), or .NET Framework processes.'
+description: Use when enabling or capturing crash dumps for CoreCLR or NativeAOT, including container deployments. Not for opening or analyzing dumps, performance tracing or .NET Framework processes.
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/dump-collect/SKILL.md -->

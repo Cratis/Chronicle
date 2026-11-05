@@ -1,6 +1,6 @@
 ---
 name: cratis-fundamentals-telemetry
-description: Instrument a .NET service with Cratis.Metrics.Roslyn generated counters, gauges, histograms and spans, and subscribe/export them through Cratis.OpenTelemetry. Use for partial instrumentation declarations, missing telemetry, host setup or metric-name upgrades. Do not use for operating a collector or for application audit records.
+description: Use when declaring generated Cratis .NET metrics and spans, diagnosing missing exports or upgrading instrumentation names. Not for operating a telemetry collector or recording business audit facts.
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/cratis-fundamentals-telemetry/SKILL.md -->

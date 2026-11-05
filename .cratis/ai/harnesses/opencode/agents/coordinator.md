@@ -137,7 +137,7 @@ When handing off to a specialist agent:
 For implementation, the applicable changed-lane gates must pass. Mark unrelated entries not applicable; this list is not a full-repository command mandate:
 
 - [ ] `dotnet build` — zero errors, zero warnings
-- [ ] `dotnet test` — all specs pass
+- [ ] Built C# spec executables — all specs pass; `dotnet test <project> --no-build` only for VSTest (see specs.csharp)
 - [ ] `yarn lint` — zero errors (if frontend present)
 - [ ] `npx tsc -b` — zero TypeScript errors (if frontend present)
 - [ ] Public-facing changes (clients, SDKs, public APIs) include associated documentation updates

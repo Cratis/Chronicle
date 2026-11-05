@@ -4,24 +4,40 @@
 
 # Language admission: batches, described bodies, text, reads, dates and composite keys
 
+## Contents
+
+- Version selection
+- Compiler and target minimums
+- Construct guidance
+- Stage admission and execution
+
+## Version selection
+
 Select the highest version required by constructs in the model. A newer version
 alone never opts into either application mode. Consumers must explicitly admit
 exact language/semantic pairs; binding, reference execution and rendering are separate.
 
 | ESM | Selecting construct | Binding/reference behavior | Stage boundary |
 | --- | --- | --- | --- |
-| v22 | Application-root `reaction batches atomic` | Direct productions per trigger occurrence and each selected refusal branch are separate atomic batches; commands remain independent | v22 admitted with a supporting bundle; atomic mode refused STAGE-ESM-043 |
-| v23 | Pending `handler implementation` beside unconditional `produces` | Payload-only body; PLAY0695 information; reaching body gives Unsupported ImplementationBody | v23 admitted, body refused STAGE-IMPL-002 in renderer/Host/executor, even Stub mode |
+| v22 | Application-root `reaction batches atomic` | Direct productions per trigger occurrence and each selected refusal branch are separate atomic batches; commands remain independent | Semantic execution supports atomic batches; bounded event-only rendering also works. Multiple same-event production triggers/routed productions retain STAGE-ESM-043 |
+| v23 | Pending `handler implementation` beside unconditional `produces` | Payload-only body; PLAY0695 information; reaching body gives Unsupported ImplementationBody | Renderer still refuses described handlers with STAGE-IMPL-002 even in Stub mode; semantic execution reports ImplementationBody only when reached after gates |
 | v24 | `contains`, `not contains`, `starts with`, `ends with` property/concept rules | Ordinal UTF-16, absent optional passes; not text-condition operators | v24 admitted; semantic Host/executor and generated ordinal comparisons preserve rules |
 | v25 | Application-root `command reads protected` | Admitted reads in requirements/mappings, absence Validation, matching decide/commit changes Conflict | v25 admitted; Cratis renderer renders protected reads in a new enough bundle (STAGE-ESM-044 before it, and for shapes it cannot preserve); semantic Host/executor execute reads, non-Error protected requirements refuse STAGE-ESM-045 |
 | v26 | Chronological command Date/DateTime comparisons | Same-primitive `==`, `!=`, `>`, `>=`, `<`, `<=`; DateTime UTC ticks and pre-rule offset validation | v26 admitted; Host/executor run it; renderer supports admitted shapes with remaining STAGE-ESM-046 refusals; legacy engines refuse -046 |
-| v27 | A read model with two or more `key` marks | Untyped projection `key` blocks, equality-filter lists, single-instance `by` blocks, per-part fixtures | v27 admitted; Host runs it, renderer refuses STAGE-ESM-048/-047, executor refuses specs over it |
-| v28 | `==`/`!=` between Uuid values in command `require` and `produces when` | Uuid properties, Uuid concepts and identities, canonical literals; protected read paths in `require` only | v28 refused STAGE-ESM-016 |
-| v29 | `decimals <= N`; `add`/`subtract` by `a * b`; a concept mapped to another concept over the same primitive (decision 0098) | Decimal-places rule on a Decimal concept or property; the exact decimal product; the conversion is admitted only when the target declares no rule or compliance the source does not, never for enums, composites or optional into required | v29 refused until Stage admits it |
-| v30 | A command `produces ... for <required scalar property>` (several event sources); a specification `given generated <Command>.<property> = <value>` (decision 0098) | Several sources in one accepted command; pinned generated values for reaction-invoked commands, taken in authored order | v30 refused until Stage admits it |
+| v27 | A read model with two or more `key` marks | Untyped projection `key` blocks, equality-filter lists, single-instance `by` blocks, per-part fixtures | Host supports composite keys and key-part lookups; specification execution still refuses multi-part keys; renderer admits bounded scoped parts-key projections, with STAGE-ESM-048 for unsupported shapes (including DateTime and decimal parts) and -047 for single-instance lookup |
+| v28 | `==`/`!=` between Uuid values in command `require` and `produces when` | Uuid properties, Uuid concepts and identities, canonical literals; protected read paths in `require` only | Stage admits v28; an admitting CLI passes it to Stage's matched-pair and construct gates |
+| v29 | `decimals <= N`; `add`/`subtract` by `a * b`; a concept mapped to another concept over the same primitive (decision 0098) | Decimal-places rule on a Decimal concept or property; the exact decimal product; the conversion is admitted only when the target declares no rule or compliance the source does not, never for enums, composites or optional into required | Stage admits v29; numeric projection arithmetic and admitted decimal/concept validation have target-specific paths |
+| v30 | A command `produces ... for <required scalar property>` (several event sources); a specification `given generated <Command>.<property> = <value>` (decision 0098) | Several sources in one accepted command; pinned generated values for reaction-invoked commands, taken in authored order | Stage admits v30; generated backends preserve per-production destinations. CLI render admits v30 with an admitting bundle |
 | v31 | A policy `require anonymous` for a public command or query | A deliberately public surface; the policy is the whole effective authorization | v31 refused until Stage admits it |
+| v32 | A `source events` capture whose key is a typed scalar (for example a concept over Uuid) | The appended event's event-source identity keeps the key's type instead of Text (see the compiler minimums); other models keep their version and bytes | Stage admits v32 through a direct caller of the reviewed baseline; see [Stage admission](#stage-admission-and-execution) |
+| v33 | `key <property> is event source` on a single-property `source events` capture (Screenplay 4.242.0; PLAY0809) | Serializes `keyIsEventSource` beside `sourceEvents`. Promises every incoming event is sourced by that key; explicit fixture `for` must equal it, while omission takes the key before projections/reactions. Checks also run on givens without an action. Unmarked captures keep earlier behavior/version/bytes | An admitting renderer may narrow history reads by event source id; binding alone does not prove target realization |
+| v34 | A specification `then invokes <Command>` (decision 0115; PLAY0815/PLAY0816) | Writes `thenInvocations` only when present. When one is stated, the slice's recorded invocations must match in count and order, comparing only stated values; a refused invocation counts | Stage spec runner compares it; the Cratis renderer refuses models after v33 with `STAGE-ESM-016` |
+| v35 | Reserved for handler result contract v2 (decision 0119); no construct selects it | | |
+| v36 | `statemachine` and `workflow` declarations (decision 0124; PLAY0834-PLAY0851) | Serializes `stateMachines` and `workflows`; specifications run them; earlier models keep their version and bytes | Stage refuses v36 models with `STAGE-ESM-016` |
 
-Constructs of decision 0098 with no executable-model content need no version: application-level toolbar buttons in the layout's `navigation topbar` region (`button <id> title "..." slice <Slice>` with an optional indented `authorize <Policy>`), a command specification that states the public event its outbound Translate slice publishes (no more false `PLAY0285`), and a capture over events that copies a list (`lines = $.lines`) or fans out with `children lines identified by sku`. Check `screenplay --version` against the release that admitted v29 and v30 before relying on them.
+Constructs of decision 0098 with no executable-model content need no version: application-level toolbar buttons in the layout's `navigation topbar` region (`button <id> title "..." slice <Slice>` with an optional indented `authorize <Policy>`), and a capture over events that copies a list (`lines = $.lines`) or fans out with `children lines identified by sku`. Check `screenplay --version` against the release that admitted v29 and v30 before relying on them. Decision 0115 withdrew 0098's command specification that states the public event its outbound Translate slice publishes: a specification runs only its own slice, so the Translate slice states the public event in its own `when append` specification.
+
+## Compiler and target minimums
 
 Requires Screenplay 4.181.0 or later (`screenplay --version`) for atomic batches; older compilers cannot admit the preamble.
 
@@ -31,17 +47,28 @@ Requires Screenplay 4.184.0 or later (`screenplay --version`) for literal text r
 
 Requires Screenplay 4.193.0 or later (`screenplay --version`) for protected reads; older binders retain PLAY0271/PLAY0268.
 
+Requires Screenplay 4.241.0 or later (`screenplay --version`) for v32 typed scalar `source events` keys; older compilers keep the key as Text on the appended event's identity.
+
 Requires Screenplay 4.199.0 (ESM v26; `screenplay --version`) for date comparisons; older binders report PLAY0268.
 
 Requires Screenplay 4.204.0 (ESM v27; `screenplay --version`) for composite read-model keys; older binders report PLAY0268.
 
 Requires Screenplay 4.205.0 (ESM v28; `screenplay --version`) for Uuid equality in command conditions; older binders report PLAY0268.
 
+Current renderer versus semantic-execution support is owned by
+[Stage target boundaries](../../cratis-stage-rendering-and-sandbox/references/current-boundaries.md),
+at the product inventory's reviewed baseline; the CLI still applies its independent version gate.
+
+Requires Cratis CLI 3.81.0 for v28 and 3.86.0 for v29–v30; older bundles refuse
+newer semantic versions with `CLI-RENDER-004` (or PLAY0268 if binding fails first).
+
 Requires Stage 4.124.0 for v24 text-rule admission (`cratis --version` identifies the CLI bundle); older renderers refuse v24 with STAGE-ESM-016. V23 admission alone does not implement described bodies.
 
 Requires Stage 4.127.0 for v25 version admission; older renderers refuse v25 with STAGE-ESM-016. Requires Stage 4.138.0 for the Cratis renderer to render protected reads as Arc read protection; earlier renderers, and reads it cannot preserve, refuse STAGE-ESM-044 and emit no artifacts. `cratis render` gets this from the first CLI that bundles Stage 4.138.0; CLI 3.75.0 bundles Stage 4.137.0.
 
 Requires Stage 4.129.0 for semantic Host/executor protected reads; older engines refuse STAGE-ESM-044. Absence rejects before requirements/generation; read properties feed requirements and productions. Non-Error protected requirements refuse STAGE-ESM-045, including reaction invocations. Legacy Host/structural runner retain -044. Requires Stage 4.142.0 for outside facts to participate in decide/commit, with unrelated appends absorbed; older Hosts fault on any outside append; see [sandbox boundaries](../../cratis-stage-rendering-and-sandbox/references/sandbox-and-specrunner.md#protected-command-reads).
+
+## Construct guidance
 
 Read [atomic batches and event-source invocation mappings](../../cratis-screenplay-captures-and-reactions/references/atomic-batches-and-source-mappings.md)
 for atomic boundaries and the source-identity mapping prerequisite. Start new models
@@ -80,11 +107,16 @@ the same condition without Uuid operands keeps its earlier version. To see the s
 the model with the `screenplay` MCP server and call `read-workspace` with `view` `executable-model`:
 `languageVersion` reads `28.0`.
 
-Stage's semantic engines admit exact v1–v27 pairs. V28 and mixed
-pairs refuse STAGE-ESM-016.
+## Stage admission and execution
+
+Stage's reviewed semantic engines admit matched 1.0–30.0 and 32.0 pairs, not
+31.0, mixed or unknown pairs (STAGE-ESM-016). CLI v3.100.0 render checks only the
+semantic version and admits through v30; bundled Stage 4.196.0 then applies
+matched-pair and construct gates. V32 needs a direct caller of the reviewed Stage
+baseline in [current target boundaries](../../cratis-stage-rendering-and-sandbox/references/current-boundaries.md#version-admission).
 Requires Stage 4.139.0 for v22; older Stage refuses -016.
-Admission is not admission of described bodies,
-atomic mode or composite-key rendering, and protected reads render only in a bundle that supports them. A CLI may bundle an older compiler/Stage pair: run no-write render
+Version admission is not body implementation or proof that a particular atomic
+or composite-key shape renders; protected reads need a bundle that supports them. A CLI may bundle an older compiler/Stage pair: run no-write render
 admission rather than transferring a standalone verdict. Pattern diagnostics arise
 in Screenplay before rendering; diagnostic arguments add no ESM version or new tool.
 

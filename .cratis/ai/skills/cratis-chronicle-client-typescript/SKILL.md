@@ -1,6 +1,6 @@
 ---
 name: cratis-chronicle-client-typescript
-description: Connect Node.js applications to Chronicle with @cratis/chronicle, including reflect-metadata, compiler settings, camelCase reactor dispatch, projections, reducers, variants and the lazy-connect lifecycle. Use when configuring @cratis/chronicle decorators, glob discovery or eventLog.append in a standalone Node.js process. Do not use for JVM connections (use cratis-chronicle-client-kotlin), OTP supervision (use cratis-chronicle-client-elixir), or React generated proxies (use cratis-arc-react-page).
+description: Use when connecting a standalone Node.js process to Chronicle or diagnosing its decorators, discovery or client lifecycle. Not for React generated proxies or another language's client.
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/cratis-chronicle-client-typescript/SKILL.md -->
@@ -186,6 +186,24 @@ conflicting scopes for one source throw `ConflictingConcurrencyScopesInUnitOfWor
 before enrollment.
 
 ## Observing
+
+Requires Chronicle.TypeScript 6.53.0 and kernel 19.70.0 for startAtTail; check `yarn why @cratis/chronicle` and the server version, or retain catch-up until both are upgraded.
+
+`@startAtTail()` skips history only on first registration; existing positions
+stay intact. `@onceOnly()` does not skip initial catch-up. Older servers ignore
+the new flag.
+
+Requires Chronicle.TypeScript 6.52.0 and kernel 19.56.0 for fastForward; check the client/server versions, or do not offer the operation.
+
+`observers.fastForward(observerId)` returns `FastForwardResult`; it deliberately
+skips to the tail, not a retry mechanism.
+
+Requires Chronicle.TypeScript 6.53.1, kernel 19.78.1 and Fundamentals 7.24.1 for the child/default-value behavior below; check installed packages and server version, or upgrade before relying on it.
+
+Child/nested `@fromAllEvents` and `@fromEvery` keep root-only mappings off new
+children. Replay affected projections to rebuild already-materialized child
+values. Unset read-model fields retain their class defaults; absent arrays stay
+empty.
 
 ### Handlers use camelCase names or `@handles(EventType)`
 
