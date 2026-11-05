@@ -383,7 +383,7 @@ public partial class Sink(
         {
             EvictBulkState(key);
             var error = exception.WriteError;
-            failures.Add(new FailedPartition(PartitionFor(key, changeset), eventSequenceNumber) { Reason = $"MongoDB write error {error.Code} ({error.Category}): {error.Message}" });
+            failures.Add(new FailedPartition(PartitionFor(key, changeset), eventSequenceNumber) { Reason = $"MongoDB write error {error.Code} ({error.Category}): {WriteErrorText.For(error.Category, error.Message)}" });
         }
 
         // Claim only on a returning path. Exceptional exits leave the drained outcomes
@@ -1897,9 +1897,9 @@ public partial class Sink(
         List<int> remainingIndexes)
     {
         var operationIndex = error.Index >= 0 && error.Index < remainingIndexes.Count ? remainingIndexes[error.Index] : -1;
-        logger.BulkWriteErrorOccurred(collection, readModel.Identifier, operationIndex, error.Code, error.Category, error.Message);
+        logger.BulkWriteErrorOccurred(collection, readModel.Identifier, operationIndex, error.Code, error.Category, WriteErrorText.For(error.Category, error.Message));
 
-        return (operationIndex, $"MongoDB write error {error.Code} ({error.Category}): {error.Message}");
+        return (operationIndex, $"MongoDB write error {error.Code} ({error.Category}): {WriteErrorText.For(error.Category, error.Message)}");
     }
 
     string? ReportWriteConcernError(string collection, MongoBulkWriteException exception, int remainingCount)
