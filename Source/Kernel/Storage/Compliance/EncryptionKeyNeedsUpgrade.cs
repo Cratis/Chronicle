@@ -8,6 +8,7 @@ namespace Cratis.Chronicle.Storage.Compliance;
 /// </summary>
 /// <remarks>
 /// The key is neither used nor replaced. Run the key upgrade to move it. The message deliberately holds no identifier.
+/// It is a refusal, so a composite never answers from another store or provisions a fresh key in its place.
 /// </remarks>
 public class EncryptionKeyNeedsUpgrade()
-    : Exception("An encryption key stored under an earlier name needs the key upgrade before it can be used.");
+    : EncryptionKeyIdentifierRefused("An encryption key stored under an earlier name needs the key upgrade before it can be used.");
