@@ -61,7 +61,7 @@ public abstract class a_sink_with_parents_holding_children<THarness> : Specifica
     protected async Task<IEnumerable<string>> ChildIdsOf(string parent)
     {
         var document = await _sink.FindOrDefault(new Key(parent, ArrayIndexers.NoIndexers));
-        return ChildrenOf((IDictionary<string, object?>)document!).Select(child => (string)child[ChildId]!).ToArray();
+        return ChildrenOf(document!).Select(child => (string)child[ChildId]!).ToArray();
     }
 
     protected IEnumerable<string> KeyValues() => _keys.Select(key => key.Value.ToString()!).Order().ToArray();
