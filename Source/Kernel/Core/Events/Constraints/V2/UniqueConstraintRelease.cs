@@ -5,6 +5,7 @@ using System.Text.Json;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Events.Constraints;
+using Cratis.Chronicle.EventTypes;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Json;
@@ -15,10 +16,12 @@ namespace Cratis.Chronicle.Events.Constraints.V2;
 /// Releases stored content before converting the selected v2 constraint components.
 /// </summary>
 /// <param name="eventTypeSchemas">The schemas for stored event generations.</param>
+/// <param name="schemaCache">The cache supplying the effective protection schema from the definition snapshot.</param>
 /// <param name="metadataManager">The status-aware protected-value release boundary.</param>
 /// <param name="componentsBuilder">The ordered, schema-aware component builder.</param>
 internal class UniqueConstraintRelease(
     IEventTypesStorage eventTypeSchemas,
+    IEventTypeSchemaCache schemaCache,
     IJsonSchemaMetadataManager metadataManager,
     UniqueConstraintComponentsBuilder componentsBuilder)
 {
@@ -40,7 +43,8 @@ internal class UniqueConstraintRelease(
         var schema = (await eventTypeSchemas.GetFor(@event.Context.EventType.Id, @event.Context.EventType.Generation)).Schema;
         var content = JsonSerializer.SerializeToNode(@event.Content, Globals.JsonSerializerOptions)!.AsObject();
         var identifier = @event.Context.Subject.IsSet ? @event.Context.Subject.Value : @event.Context.EventSourceId.Value;
-        var released = await metadataManager.ReleaseWithStatus(eventStore, @namespace, schema, identifier, content);
+        var protectionSchema = await schemaCache.GetProtectionSchemaFor(eventStore, @event.Context.EventType.Id, @event.Context.EventType.Generation, schema);
+        var released = await metadataManager.ReleaseWithStatus(eventStore, @namespace, protectionSchema, identifier, content);
         if (ErasedComponentPaths.Affects(definition, released.Statuses))
         {
             return new([], UniqueConstraintReleaseOutcome.NoClaimErased);

@@ -7,10 +7,12 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Events.Constraints;
 using Cratis.Chronicle.Concepts.EventTypes;
+using Cratis.Chronicle.EventTypes;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Json;
+using NSubstitute.Extensions;
 
 namespace Cratis.Chronicle.Events.Constraints.V2.for_UniqueConstraintRelease.when_releasing.given;
 
@@ -19,6 +21,7 @@ public class a_factory : Specification
     protected static readonly EventStoreName Store = "store";
     protected static readonly EventStoreNamespaceName Namespace = "tenant";
     protected IEventTypesStorage _schemas;
+    protected IEventTypeSchemaCache _schemaCache;
     protected IJsonSchemaMetadataManager _metadata;
     protected JsonSchema _schema;
     protected AppendedEvent _event;
@@ -44,6 +47,8 @@ public class a_factory : Specification
             """);
         _schemas = Substitute.For<IEventTypesStorage>();
         _schemas.GetFor("event", 2).Returns(new EventTypeSchema(new("event", 2), EventTypeOwner.Server, EventTypeSource.Code, _schema));
+        _schemaCache = Substitute.For<IEventTypeSchemaCache>();
+        _schemaCache.ReturnsForAll<ValueTask<JsonSchema>>(call => ValueTask.FromResult(call.ArgAt<JsonSchema>(3)));
         _metadata = Substitute.For<IJsonSchemaMetadataManager>();
         _statuses = [];
         _metadata.ReleaseWithStatus(Store, Namespace, _schema, Arg.Any<string>(), Arg.Any<JsonObject>()).Returns(call =>
@@ -52,7 +57,7 @@ public class a_factory : Specification
             _releaseInput = call.Arg<JsonObject>();
             return new StatusedRelease(_released ?? _releaseInput.DeepClone().AsObject(), _statuses);
         });
-        _factory = new(_schemas, _metadata, new UniqueConstraintComponentsBuilder(new ExpandoObjectConverter(new TypeFormats())));
+        _factory = new(_schemas, _schemaCache, _metadata, new UniqueConstraintComponentsBuilder(new ExpandoObjectConverter(new TypeFormats())));
         _definition = new("event", ["name"]);
         SetContent("""{"name":"ciphertext","number":"opaque integer","identifier":"opaque guid","day":"opaque date"}""");
     }
