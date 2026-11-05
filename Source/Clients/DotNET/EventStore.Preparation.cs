@@ -39,7 +39,6 @@ public partial class EventStore
         StopBackgroundRegistrationRetry();
         Connection.Lifecycle.OnConnected -= RegisterAfterConnect;
         Connection.Lifecycle.OnConnected -= RegisterReactorsAgainAfterReconnect;
-        Connection.Lifecycle.OnConnected -= RegisterReducersAgainAfterReconnect;
         Connection.Lifecycle.OnDisconnected -= MarkRegistrationAfterDisconnect;
         if (Occurrences is IDisposable disposable) disposable.Dispose();
     }

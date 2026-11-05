@@ -21,7 +21,7 @@ public interface IReducers
     Task Discover();
 
     /// <summary>
-    /// Register all reducers with Chronicle. Does nothing after the event store has been released.
+    /// Register all reducers with Chronicle.
     /// </summary>
     /// <returns>Awaitable task.</returns>
     Task Register();
@@ -32,7 +32,6 @@ public interface IReducers
     /// <typeparam name="TReducer">The reactor type.</typeparam>
     /// <typeparam name="TReadModel">The model type the reducer is for.</typeparam>
     /// <returns>Awaitable task.</returns>
-    /// <exception cref="ObjectDisposedException">The event store has been released.</exception>
     Task<IReducerHandler> Register<TReducer, TReadModel>()
         where TReducer : IReducerFor<TReadModel>
         where TReadModel : class;
@@ -43,7 +42,6 @@ public interface IReducers
     /// <param name="reducerType">The reducer CLR type.</param>
     /// <returns>The registered handler.</returns>
     /// <exception cref="TypeBasedArtifactRegistrationNotSupported">The custom registry does not support type-based registration.</exception>
-    /// <exception cref="ObjectDisposedException">The event store has been released.</exception>
     Task<IReducerHandler> Register(Type reducerType) => throw new TypeBasedArtifactRegistrationNotSupported(GetType());
 
     /// <summary>

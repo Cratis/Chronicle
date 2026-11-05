@@ -49,12 +49,6 @@ internal static partial class ReducersLogMessages
     [LoggerMessage(LogLevel.Warning, "Reducer observation stream for '{ReducerId}' completed without error — re-subscribing so the reducer keeps observing")]
     internal static partial void ReducerStreamCompleted(this ILogger<Reducers> logger, ReducerId reducerId);
 
-    [LoggerMessage(LogLevel.Information, "Registering Reducer '{ReducerId}' again after the client reconnected")]
-    internal static partial void RegisteringReducerAgainAfterReconnect(this ILogger<Reducers> logger, ReducerId reducerId);
-
-    [LoggerMessage(LogLevel.Error, "Reducer '{ReducerId}' could not register again after the client reconnected")]
-    internal static partial void RegisteringReducerAgainAfterReconnectFailed(this ILogger<Reducers> logger, ReducerId reducerId, Exception exception);
-
     [LoggerMessage(LogLevel.Error, "Reducer '{ReducerId}' could not re-register after its observation stream ended")]
     internal static partial void ReducerReconnectFailed(this ILogger<Reducers> logger, ReducerId reducerId, Exception exception);
 
