@@ -21,11 +21,6 @@ public static class WellKnownCollectionNames
     public const string Administrators = "administrators";
 
     /// <summary>
-    /// The collection holding the reserved event store and namespace names.
-    /// </summary>
-    public const string ResourceNameReservations = "resource-name-reservations";
-
-    /// <summary>
     /// The kernel single-writer lease.
     /// </summary>
     public const string SingleWriterLeases = "single-writer-leases";

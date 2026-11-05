@@ -33,7 +33,6 @@ using Cratis.Chronicle.Setup;
 using Cratis.Chronicle.Setup.Authentication;
 using Cratis.Chronicle.Setup.Execution;
 using Cratis.Chronicle.Storage;
-using Cratis.Chronicle.Storage.Naming;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Chronicle.Storage.Observation.Reactors;
 using Cratis.Chronicle.Storage.Observation.Reducers;
@@ -84,12 +83,9 @@ public class a_startup_task : Specification
 
     protected IReadOnlyList<TimeSpan> RequestedDelays => _timeProvider.Delays;
 
-    protected void UseResourceNames(IResourceNameSnapshot resourceNames) => _startupTask = CreateStartupTask(resourceNames);
-
-    void EstablishStartupTask() => _startupTask = CreateStartupTask(null);
-
-    ChronicleServerStartupTask CreateStartupTask(IResourceNameSnapshot? resourceNames) =>
-        new(
+    void EstablishStartupTask()
+    {
+        _startupTask = new(
             _storage,
             _eventTypes,
             _reactors,
@@ -103,9 +99,8 @@ public class a_startup_task : Specification
             _clusterReleases,
             _kernelProjectionRetries,
             new StartupLogger(_logMessages),
-            _timeProvider,
-            null,
-            resourceNames);
+            _timeProvider);
+    }
 
     void Establish()
     {

@@ -36,8 +36,7 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores;
 /// <param name="jsonSerializerOptions">The global <see cref="JsonSerializerOptions"/>.</param>
 /// <param name="converter">The schema-aware content converter.</param>
 /// <param name="loggerFactory">Optional <see cref="ILoggerFactory"/> used for logging inside the storages.</param>
-/// <param name="namespaceOpening">Optional <see cref="Chronicle.Storage.Naming.NamespaceOpeningGuard"/> checking names when a namespace is opened.</param>
-public class EventStoreStorage(EventStoreName eventStore, IDatabase database, IInstancesOf<ISinkFactory> sinkFactories, Cratis.Choreography.Storage.IJobsStorage jobsStorage, JsonSerializerOptions jsonSerializerOptions, Json.IExpandoObjectConverter converter, ILoggerFactory? loggerFactory = null, Chronicle.Storage.Naming.NamespaceOpeningGuard? namespaceOpening = null) : IEventStoreStorage
+public class EventStoreStorage(EventStoreName eventStore, IDatabase database, IInstancesOf<ISinkFactory> sinkFactories, Cratis.Choreography.Storage.IJobsStorage jobsStorage, JsonSerializerOptions jsonSerializerOptions, Json.IExpandoObjectConverter converter, ILoggerFactory? loggerFactory = null) : IEventStoreStorage
 {
     readonly Occurrences.OccurrencesStorage<EventStoreDbContext> _occurrences = new(() => database.EventStore(eventStore), database);
 
@@ -143,9 +142,5 @@ public class EventStoreStorage(EventStoreName eventStore, IDatabase database, II
 
     /// <inheritdoc/>
     public IEventStoreNamespaceStorage GetNamespace(EventStoreNamespaceName @namespace)
-    {
-        namespaceOpening?.EnsureCanOpen(eventStore, @namespace, Namespaces);
-        namespaceOpening?.EnsureCanCreateIfNew(eventStore, @namespace, Namespaces);
-        return new Namespaces.EventStoreNamespaceStorage(eventStore, @namespace, database, sinkFactories, jobsStorage, jsonSerializerOptions, EventTypes, converter);
-    }
+        => new Namespaces.EventStoreNamespaceStorage(eventStore, @namespace, database, sinkFactories, jobsStorage, jsonSerializerOptions, EventTypes, converter);
 }

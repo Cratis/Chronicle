@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Arc.Connections;
-using Cratis.Chronicle.Storage.Naming;
 
 namespace Cratis.Chronicle.Configuration;
 
@@ -90,18 +89,4 @@ public class Storage
     /// When nothing is configured, every connection is derived from <see cref="ConnectionDetails"/> as before.
     /// </remarks>
     public ConnectionResolutionOptions ConnectionResolution { get; init; } = new();
-
-    /// <summary>
-    /// Gets how the kernel reacts at startup to event stores and namespaces whose names overlap in storage.
-    /// </summary>
-    /// <remarks>
-    /// <see cref="NameCollisionHandling.Quarantine"/> makes every owner of an overlap unavailable and starts.
-    /// <see cref="NameCollisionHandling.Refuse"/> refuses to start.
-    /// </remarks>
-    public NameCollisionHandling NameCollisions { get; init; } = NameCollisionHandling.Quarantine;
-
-    /// <summary>
-    /// Gets the time budget for reading the names in use at startup. The kernel does not start when it runs out.
-    /// </summary>
-    public TimeSpan NameAuditTimeout { get; init; } = TimeSpan.FromMinutes(5);
 }

@@ -219,7 +219,6 @@ public partial class Database(IServiceProvider serviceProvider, IOptions<Chronic
     public DbContextOptions<Choreography.Storage.Sql.Jobs.JobsDbContext> GetJobsDbContextOptions(string eventStore, string @namespace)
     {
         var identity = new DatabaseIdentity(DatabaseKind.Namespace, eventStore, @namespace);
-        EnsureAvailable(identity);
 
         // Called synchronously by the jobs storage. The resolution is cached, so this only waits when it is not.
         var resolved = _resolution.Resolve(identity, ConnectionPurpose.Runtime).GetAwaiter().GetResult();

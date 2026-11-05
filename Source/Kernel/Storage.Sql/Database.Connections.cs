@@ -159,30 +159,12 @@ public partial class Database
             return ClusterTarget(purpose);
         }
 
-        EnsureAvailable(identity);
         var resolved = await _resolution.Resolve(identity, purpose);
         var connectionString = SqlConnectionStrings.OwnsPlacement(resolved)
             ? SqlConnectionStrings.WithPlacement(options.Value.Storage.ConnectionDetails, resolved)
             : await ResolveConnectionString(identity, readOnly);
 
         return TargetFor(identity, purpose, connectionString, resolved);
-    }
-
-    void EnsureAvailable(DatabaseIdentity identity)
-    {
-        var gate = serviceProvider.GetService<Chronicle.Storage.Naming.IResourceNameGate>();
-        if (gate is null)
-        {
-            return;
-        }
-
-        if (identity.Kind == DatabaseKind.EventStore)
-        {
-            gate.EnsureAvailable(identity.EventStore);
-            return;
-        }
-
-        gate.EnsureAvailable(identity.EventStore, identity.Namespace);
     }
 
     SqlTarget ClusterTarget(ConnectionPurpose purpose)

@@ -24,7 +24,7 @@ public class a_schema_lock_startup_step : for_DatabaseSchemaLock.given.a_command
         // No other startup collaborators are used by this step's retry path.
         var type = typeof(IEventTypes).Assembly.GetType("Orleans.Hosting.ChronicleServerStartupTask", throwOnError: true)!;
         var logger = typeof(NullLogger<>).MakeGenericType(type).GetField("Instance")!.GetValue(null);
-        _startup = Activator.CreateInstance(type, [null, null, null, null, null, null, null, null, new SqlStorageErrorClassifier(), null, null, null, logger, _time, null, null])!;
+        _startup = Activator.CreateInstance(type, [null, null, null, null, null, null, null, null, new SqlStorageErrorClassifier(), null, null, null, logger, _time, null])!;
         _runStep = type.GetMethod("RunStep", BindingFlags.Instance | BindingFlags.NonPublic)!;
         _command.ExecuteScalarAsync(Arg.Any<CancellationToken>()).Returns(async _ =>
         {

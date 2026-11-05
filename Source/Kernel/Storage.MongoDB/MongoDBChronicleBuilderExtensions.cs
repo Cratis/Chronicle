@@ -14,7 +14,6 @@ using Cratis.Chronicle.Storage.MongoDB;
 using Cratis.Chronicle.Storage.MongoDB.EventSequences;
 using Cratis.Chronicle.Storage.MongoDB.Schema;
 using Cratis.Chronicle.Storage.MongoDB.Sinks;
-using Cratis.Chronicle.Storage.Naming;
 using Cratis.Chronicle.Storage.SingleWriter;
 using Cratis.Compliance.MongoDB;
 using Microsoft.Extensions.DependencyInjection;
@@ -121,10 +120,6 @@ public static class MongoDBChronicleBuilderExtensions
             services.AddSingleton<EncryptionKeyStorage>();
             services.AddSingleton<IEncryptionKeyStorage>(sp => new CacheEncryptionKeyStorage(sp.GetRequiredService<EncryptionKeyStorage>()));
             services.AddSingleton<IClusterStorage, ClusterStorage>();
-            services.AddSingleton<IResourceNameReservations, MongoDBResourceNameReservations>();
-            services.AddSingleton<IResourcePhysicalNames, MongoDBResourcePhysicalNames>();
-            services.AddSingleton<IResourceInventory, MongoDBResourceInventory>();
-            services.AddResourceNameGate();
             services.AddSingleton<ISingleWriterLeaseStorage, MongoDBSingleWriterLeaseStorage>();
             services.AddSingleton<ISystemStorage, SystemStorage>();
             services.AddSingleton<ISystemEventStoreRelocation, SystemEventStoreRelocation>();
@@ -139,11 +134,7 @@ public static class MongoDBChronicleBuilderExtensions
                 sp.GetRequiredService<ICustomSerializers>(),
                 Options.Create(new MongoDBJobsStorageOptions
                 {
-                    DatabaseNameResolver = (scope, @namespace) =>
-                    {
-                        sp.GetService<IResourceNameGate>()?.EnsureAvailable(scope, @namespace);
-                        return Storage.MongoDB.DatabaseNames.ForEventStoreNamespace(scope, @namespace, databaseNamePrefix, systemDatabaseName);
-                    }
+                    DatabaseNameResolver = (scope, @namespace) => Storage.MongoDB.DatabaseNames.ForEventStoreNamespace(scope, @namespace, databaseNamePrefix, systemDatabaseName)
                 })));
             services.AddSingleton<ICustomSerializers, CustomSerializers>();
 

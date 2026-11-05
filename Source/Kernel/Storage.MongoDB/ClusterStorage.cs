@@ -22,15 +22,13 @@ namespace Cratis.Chronicle.Storage.MongoDB;
 /// <param name="jobsStorage">The <see cref="Cratis.Choreography.Storage.IJobsStorage"/> the job system resolves through.</param>
 /// <param name="options">The <see cref="IOptions{ChronicleOptions}"/> instance.</param>
 /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> instance.</param>
-/// <param name="gate">Optional <see cref="Naming.IResourceNameGate"/> checking names when a namespace is opened.</param>
 public class ClusterStorage(
     IDatabase database,
     Json.IExpandoObjectConverter expandoObjectConverter,
     JsonSerializerOptions jsonSerializerOptions,
     Cratis.Choreography.Storage.IJobsStorage jobsStorage,
     IOptions<ChronicleOptions> options,
-    ILoggerFactory loggerFactory,
-    Naming.IResourceNameGate? gate = null) : IClusterStorage
+    ILoggerFactory loggerFactory) : IClusterStorage
 {
     /// <inheritdoc/>
     public async Task<IReadOnlyDictionary<EventStoreName, Concepts.Projections.Generations.Enablement.GenerationFloor>> ReadGenerationFloors()
@@ -74,8 +72,7 @@ public class ClusterStorage(
         sinksFactory,
         jobsStorage,
         options,
-        loggerFactory,
-        gate is null ? null : new Naming.NamespaceOpeningGuard(gate, async () => (await GetEventStores()).Select(_ => _.Value)));
+        loggerFactory);
 
     /// <inheritdoc/>
     public async Task SaveEventStore(EventStoreName eventStore)

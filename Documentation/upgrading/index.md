@@ -89,10 +89,6 @@ Do not trust its forwarded `http` scheme while it fronts Chronicle's TLS listene
 make Workbench cookie mutations fail antiforgery validation. Its container source IP matters
 only if you later put an HTTPS endpoint in front of YARP.
 
-## Resource name checks
-
-Chronicle checks event store and namespace names for overlaps in storage. Existing names keep working; see [Resource name checks](resource-names.md) for the rollout.
-
 ## Upgrading across several majors
 
 Read every intervening major boundary in order, even if you plan to jump directly to your

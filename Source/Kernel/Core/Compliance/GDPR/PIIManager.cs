@@ -5,11 +5,9 @@ using System.Security.Cryptography;
 using System.Text;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.EventStores;
 using Cratis.Chronicle.ProtectedValues;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Compliance;
-using Cratis.Chronicle.Storage.Naming;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Compliance.GDPR;
@@ -32,13 +30,11 @@ namespace Cratis.Chronicle.Compliance.GDPR;
 /// <param name="cacheClient">The <see cref="IEncryptionKeyCacheClient"/> used to evict the key from every silo's cache.</param>
 /// <param name="storage">The <see cref="IStorage"/> used to enumerate the event stores an erasure has to reach.</param>
 /// <param name="logger">The <see cref="ILogger{TCategoryName}"/> the compliance acts are recorded to.</param>
-/// <param name="resourceNames">The optional <see cref="IResourceNameSnapshot"/> that tells which event stores are quarantined.</param>
 public class PIIManager(
     IEncryptionKeyStorage keyStore,
     IEncryptionKeyCacheClient cacheClient,
     IStorage storage,
-    ILogger<PIIManager> logger,
-    IResourceNameSnapshot? resourceNames = null) : Grain, IPIIManager
+    ILogger<PIIManager> logger) : Grain, IPIIManager
 {
     /// <inheritdoc/>
     public async Task DeleteEncryptionKeyFor(EncryptionKeyIdentifier identifier)
@@ -46,8 +42,7 @@ public class PIIManager(
         ThrowIfEncryptedValueIdentifier(identifier);
         var key = GetKey();
         List<Exception> failures = [];
-        var (eventStores, skipped) = await EventStoresToReach(key, failures);
-        ReportSkipped(skipped, identifier, key, failures);
+        var eventStores = await EventStoresToReach(key, failures);
 
         // Fencing every event store before destroying anything in any of them is what closes the window the
         // per-store erasure could not: between the first delete and the last, one store still held the key and
@@ -66,9 +61,6 @@ public class PIIManager(
         // has no time-to-live and nothing else to clear it. Evicting is idempotent and cheap, so it always runs.
         await ForEach(eventStores, failures, eventStore => cacheClient.Evict(eventStore, key.Namespace, identifier));
 
-        // A quarantined event store or namespace was not reached, so a key may still be held there. That is not an
-        // erasure, and it is reported as incomplete - never as a success - while the stores that could be reached are
-        // still erased above.
         if (failures.Count > 0)
         {
             logger.SubjectErasureIncomplete(BindingFor(identifier), key.Namespace, failures.Count, eventStores.Count, Names(eventStores));
@@ -84,8 +76,7 @@ public class PIIManager(
         ThrowIfEncryptedValueIdentifier(identifier);
         var key = GetKey();
         List<Exception> failures = [];
-        var (eventStores, skipped) = await EventStoresToReach(key, failures);
-        ReportSkipped(skipped, identifier, key, failures);
+        var eventStores = await EventStoresToReach(key, failures);
 
         await ForEach(eventStores, failures, eventStore => keyStore.AllowNewKeyFor(eventStore, key.Namespace, identifier));
 
@@ -146,42 +137,22 @@ public class PIIManager(
         }
     }
 
-    async Task<(IReadOnlyList<EventStoreName> Reached, SkippedResources Skipped)> EventStoresToReach(PIIManagerKey key, List<Exception> failures)
+    async Task<IReadOnlyList<EventStoreName>> EventStoresToReach(PIIManagerKey key, List<Exception> failures)
     {
         try
         {
             // The event store this manager is addressed at is always included, even when the cluster listing does
             // not have it yet - an erasure that skipped the store the caller named would be the most surprising
             // outcome of all, and the listing is registration state rather than a statement about which keys exist.
-            // A quarantined event store refuses to be opened, so it is left out and reported rather than allowed to
-            // fail every erasure for as long as it is quarantined. The named event store stays in: its failure is
-            // then reported for what it is, an erasure that did not reach the store the caller asked for.
-            // The same goes for a quarantined namespace: it is only this manager's namespace that is erased, so it is
-            // left out of the other event stores and reported. In the named event store it is reported too, while the
-            // event store stays in the attempt: reaching a quarantined namespace is not possible, and saying so is
-            // what keeps the outcome incomplete.
-            var usable = await UsableEventStores.From(storage, resourceNames, logger, key.Namespace);
-            var skipped = new SkippedResources(
-                [.. usable.SkippedResources.EventStores.Where(_ => _ != key.EventStore)],
-                [.. usable.SkippedResources.Namespaces]);
-            var namespaceSkippedIn = skipped.Namespaces.Select(_ => _.EventStore).ToHashSet();
-            return ([.. usable.Usable.Where(_ => !namespaceSkippedIn.Contains(_)).Append(key.EventStore).Distinct()], skipped);
+            var eventStores = await storage.GetEventStores();
+            return [.. eventStores.Append(key.EventStore).Distinct()];
         }
         catch (Exception error)
         {
             // Losing the listing must not lose the erasure. The event store the caller named is erased either way,
             // and the failure is reported so a partial reach is never mistaken for a complete one.
             failures.Add(error);
-            return ([key.EventStore], SkippedResources.None);
-        }
-    }
-
-    void ReportSkipped(SkippedResources skipped, EncryptionKeyIdentifier identifier, PIIManagerKey key, List<Exception> failures)
-    {
-        if (skipped.Any)
-        {
-            logger.QuarantinedEventStoresNotReached(BindingFor(identifier), key.Namespace, skipped.Count, skipped.Describe());
-            failures.Add(new QuarantinedResourcesNotReached(skipped.Describe()));
+            return [key.EventStore];
         }
     }
 

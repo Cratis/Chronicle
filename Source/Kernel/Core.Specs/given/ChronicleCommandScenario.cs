@@ -54,7 +54,6 @@ public static class ChronicleCommandScenario
         // server actually runs. The substitute answers "nothing registered", which is the right starting point;
         // a spec that needs stored state registers its own on its scenario.
         scenario.Services.AddSingleton(Substitute.For<IStorage>());
-        scenario.Services.AddSingleton(Substitute.For<IGrainFactory>());
         ConfigureAuthorization(scenario.Services, isAdministrator);
 
         return scenario;
