@@ -19,6 +19,7 @@ public partial class Observer
     public async Task HandlePage(IReadOnlyList<ObserverPartitionBatch> batches)
     {
         var merged = MergeByPartition(batches);
+        File.AppendAllText("/tmp/dbg.txt", "HANDLEPAGE merged=" + merged.Count + " delivers=" + _subscription.DeliversPartitionPages + "\n");
         if (merged.Count <= 1 || !_subscription.DeliversPartitionPages)
         {
             foreach (var batch in batches)
@@ -75,6 +76,7 @@ public partial class Observer
     async Task DeliverPage(IReadOnlyList<ObserverPartitionBatch> batches)
     {
         var candidates = FindPageCandidates(batches);
+        File.AppendAllText("/tmp/dbg.txt", "DEBUGPAGE candidates=" + candidates.Count + " floor=" + _pageFloor + "\n");
         if (candidates.Count < 2)
         {
             return;
@@ -123,6 +125,7 @@ public partial class Observer
             }
             catch (Exception ex)
             {
+                File.AppendAllText("/tmp/dbg.txt", "DEBUGPAGE " + ex + "\n");
                 foreach (var candidate in candidates)
                 {
                     _prefetchedPartitions[candidate.Partition] = new(null, ex, fence);
