@@ -20,7 +20,7 @@ public class a_stream_that_ends_normally : given.a_service_with_real_ownership
     async Task Because()
     {
         await _cancellation.CancelAsync();
-        await Eventually(() => !Owns("alice"));
+        await ClaimReleased();
         _ownedAfterTheStreamEnded = Owns("alice");
         _claimedAgain = _ownership.Claim(Id, AuthenticatedCalls.OwnerOf("alice"));
     }

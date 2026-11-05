@@ -9,7 +9,7 @@ public class when_an_instance_is_added : given.materialized_reactors_with_a_deli
     {
         _instances.OnNext([new Item("1", "original"), new Item("2", "added")]);
         await _invoked.Task.WaitAsync(TimeSpan.FromSeconds(5));
-        await Task.Delay(100);
+        await _left.Task.WaitAsync(TimeSpan.FromSeconds(5));
     }
 
     [Fact] void should_enter_the_delivery_scope_for_the_namespace_before_activating_the_reactor() => _log.Take(2).ShouldEqual(["enter:tenant-x", "activated:tenant-x"]);

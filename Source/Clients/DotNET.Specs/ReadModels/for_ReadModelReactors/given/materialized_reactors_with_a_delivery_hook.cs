@@ -17,6 +17,7 @@ public class materialized_reactors_with_a_delivery_hook : Specification
     protected readonly Subject<IEnumerable<Item>> _instances = new();
     protected readonly List<string> _log = [];
     protected readonly TaskCompletionSource _invoked = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    protected readonly TaskCompletionSource _left = new(TaskCreationOptions.RunContinuationsAsynchronously);
     ReadModelReactors _reactors;
     ServiceProvider _services;
 
@@ -44,7 +45,7 @@ public class materialized_reactors_with_a_delivery_hook : Specification
                 return Task.CompletedTask;
             });
         _services = new ServiceCollection()
-            .AddSingleton<IObserverDeliveryScope>(new a_recording_delivery_scope(_log))
+            .AddSingleton<IObserverDeliveryScope>(new a_recording_delivery_scope(_log, () => _left.TrySetResult()))
             .BuildServiceProvider();
         _reactors = new ReadModelReactors(eventStore, artifacts, activator, _services, invoker, new JsonSerializerOptions(), Substitute.For<ILogger<ReadModelReactors>>());
         _reactors.Start();

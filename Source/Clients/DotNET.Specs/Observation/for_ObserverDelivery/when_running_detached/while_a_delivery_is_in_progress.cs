@@ -11,10 +11,10 @@ public class while_a_delivery_is_in_progress : given.a_delivery_context
     async Task Because()
     {
         using var delivery = ObserverDelivery.Enter(ProviderOf(), _context);
-        await ObserverDelivery.RunDetached(async () =>
+        await ObserverDelivery.RunDetached(() =>
         {
-            await Task.Yield();
             _seenByWork = ObserverDeliveryContext.Current;
+            return Task.CompletedTask;
         });
         _seenByCaller = ObserverDeliveryContext.Current;
     }
