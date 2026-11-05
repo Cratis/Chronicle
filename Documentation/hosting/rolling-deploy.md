@@ -17,6 +17,8 @@ This guide shows an operator how to replace the nodes of a Chronicle kernel clus
 
 When upgrading from a version before 19.115.0, stop all nodes, or keep public client traffic off the cluster until every node runs 19.115.0.
 
+A SQL Server deployment that keeps encryption keys in SQL stops all nodes for the release that compares key identifiers exactly, or applies it with `--migrate-only` first. See [encryption key identifiers on SQL Server](configuration/compliance-storage.md#encryption-key-identifiers-on-sql-server).
+
 Rolling upgrades are supported from 19.111 onward. Upgrading from an older release needs a stop-all upgrade: stop every silo, then start the new release. Older releases lack the patch-manager handover or have changed grain interfaces that prevent the old and new silos from exchanging calls.
 
 ## Check that the two versions can share a cluster
