@@ -5,6 +5,7 @@ using System.Text.Json;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Storage.Captures;
 using Cratis.Chronicle.Storage.Events.Constraints;
+using Cratis.Chronicle.Storage.EventSequences.Mutations;
 using Cratis.Chronicle.Storage.EventSources;
 using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Chronicle.Storage.ExternalServices;
@@ -36,7 +37,16 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores;
 /// <param name="jsonSerializerOptions">The global <see cref="JsonSerializerOptions"/>.</param>
 /// <param name="converter">The schema-aware content converter.</param>
 /// <param name="loggerFactory">Optional <see cref="ILoggerFactory"/> used for logging inside the storages.</param>
-public class EventStoreStorage(EventStoreName eventStore, IDatabase database, IInstancesOf<ISinkFactory> sinkFactories, Cratis.Choreography.Storage.IJobsStorage jobsStorage, JsonSerializerOptions jsonSerializerOptions, Json.IExpandoObjectConverter converter, ILoggerFactory? loggerFactory = null) : IEventStoreStorage
+/// <param name="mutationDigestKeys">The source of mutation digest keys; without one, every mutation fails closed.</param>
+public class EventStoreStorage(
+    EventStoreName eventStore,
+    IDatabase database,
+    IInstancesOf<ISinkFactory> sinkFactories,
+    Cratis.Choreography.Storage.IJobsStorage jobsStorage,
+    JsonSerializerOptions jsonSerializerOptions,
+    Json.IExpandoObjectConverter converter,
+    ILoggerFactory? loggerFactory = null,
+    IEventSequenceMutationDigestKeys? mutationDigestKeys = null) : IEventStoreStorage
 {
     readonly Occurrences.OccurrencesStorage<EventStoreDbContext> _occurrences = new(() => database.EventStore(eventStore));
 
@@ -139,5 +149,5 @@ public class EventStoreStorage(EventStoreName eventStore, IDatabase database, II
 
     /// <inheritdoc/>
     public IEventStoreNamespaceStorage GetNamespace(EventStoreNamespaceName @namespace)
-        => new Namespaces.EventStoreNamespaceStorage(eventStore, @namespace, database, sinkFactories, jobsStorage, jsonSerializerOptions, EventTypes, converter);
+        => new Namespaces.EventStoreNamespaceStorage(eventStore, @namespace, database, sinkFactories, jobsStorage, jsonSerializerOptions, EventTypes, converter, mutationDigestKeys);
 }

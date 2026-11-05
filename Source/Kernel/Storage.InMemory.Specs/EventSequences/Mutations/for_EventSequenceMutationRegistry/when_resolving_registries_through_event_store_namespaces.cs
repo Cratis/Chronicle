@@ -18,7 +18,8 @@ public class when_resolving_registries_through_event_store_namespaces : given.a_
         var storage = new EventStoreStorage(
             "event-store",
             _ => Substitute.For<ISinks>(),
-            Substitute.For<Cratis.Choreography.Storage.IJobsStorage>());
+            Substitute.For<Cratis.Choreography.Storage.IJobsStorage>(),
+            Keys());
         var first = storage.GetNamespace("first");
         var other = storage.GetNamespace("other");
 

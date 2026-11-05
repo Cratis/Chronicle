@@ -8,7 +8,8 @@ namespace Cratis.Chronicle.Storage.EventSequences.Mutations;
 /// </summary>
 /// <remarks>
 /// The version is persisted with every receipt so that a later change of construction stays readable. Version
-/// <see cref="Sha256DomainSeparated"/> is the unkeyed construction accepted by decision 0025.
+/// <see cref="Sha256DomainSeparated"/> is the unkeyed construction first accepted by decision 0025 and is still read;
+/// <see cref="HmacSha256PerEventStore"/> is the keyed construction new digests are written with.
 /// </remarks>
 public enum EventSequenceMutationDigestVersion
 {
@@ -20,5 +21,11 @@ public enum EventSequenceMutationDigestVersion
     /// <summary>
     /// Domain-separated SHA-256 over canonical length-prefixed frames. Unkeyed.
     /// </summary>
-    Sha256DomainSeparated = 1
+    Sha256DomainSeparated = 1,
+
+    /// <summary>
+    /// HMAC-SHA256 over the same canonical frames, keyed per event store with a key derived by HKDF-SHA256 from the
+    /// event store's reserved mutation-receipt digest secret.
+    /// </summary>
+    HmacSha256PerEventStore = 2
 }

@@ -67,5 +67,5 @@ public class when_using_namespace_wrappers_and_cancellation : given.a_mutation_r
     [Fact] void should_not_write_during_canceled_archive() => _afterCanceledArchive.Outcome.ShouldEqual(EventSequenceMutationRegistryArchiveOutcome.Archived);
 
     static EventStoreNamespaceStorage Storage() =>
-        new("event-store", "namespace", Substitute.For<Cratis.Choreography.Storage.IJobsStorage>(), Substitute.For<ISinks>());
+        new("event-store", "namespace", Substitute.For<Cratis.Choreography.Storage.IJobsStorage>(), Substitute.For<ISinks>(), Keys());
 }

@@ -10,8 +10,13 @@ public class when_calculating_pinned_vectors : given.a_digest_calculation
     EventSequenceMutationDefinitionDigestV1 _calculatedDefinitionDigest;
     EventSequenceMutationReceiptDigestV1 _calculatedReceiptDigest;
 
+    /// <summary>
+    /// The vectors pin the canonical framing through the unkeyed version, which is still read. The keyed version is
+    /// HMAC over the same frames, pinned in for_EventSequenceMutationDigestKey.
+    /// </summary>
     void Because()
     {
+        using var unkeyed = EventSequenceMutationDigestSeam.SetCurrentForTest(EventSequenceMutationDigestVersion.Sha256DomainSeparated);
         _calculatedDefinitionDigest = CalculateDefinition();
         _calculatedReceiptDigest = CalculateReceipt(definitionDigest: _calculatedDefinitionDigest);
     }

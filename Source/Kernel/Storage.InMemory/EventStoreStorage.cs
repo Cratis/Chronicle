@@ -5,6 +5,7 @@ using System.Collections.Concurrent;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Storage.Captures;
 using Cratis.Chronicle.Storage.Events.Constraints;
+using Cratis.Chronicle.Storage.EventSequences.Mutations;
 using Cratis.Chronicle.Storage.EventSources;
 using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Chronicle.Storage.ExternalServices;
@@ -43,10 +44,12 @@ namespace Cratis.Chronicle.Storage.InMemory;
 /// <param name="eventStore">The <see cref="EventStoreName"/> the storage is for.</param>
 /// <param name="sinksFactory">Factory delegate that creates <see cref="ISinks"/> for a namespace.</param>
 /// <param name="jobsStorage">The <see cref="Cratis.Choreography.Storage.IJobsStorage"/> resolving jobs storage for a scope and namespace.</param>
+/// <param name="mutationDigestKeys">The source of mutation digest keys; without one, every mutation fails closed.</param>
 public sealed class EventStoreStorage(
     EventStoreName eventStore,
     SinksFactory sinksFactory,
-    Cratis.Choreography.Storage.IJobsStorage jobsStorage) : IEventStoreStorage
+    Cratis.Choreography.Storage.IJobsStorage jobsStorage,
+    IEventSequenceMutationDigestKeys? mutationDigestKeys = null) : IEventStoreStorage
 {
     readonly ConcurrentDictionary<EventStoreNamespaceName, IEventStoreNamespaceStorage> _namespaces = new();
     readonly Occurrences.OccurrencesStorage _occurrences = new();
@@ -167,7 +170,7 @@ public sealed class EventStoreStorage(
             return existing;
         }
 
-        var created = new EventStoreNamespaceStorage(EventStore, @namespace, jobsStorage, sinksFactory(@namespace));
+        var created = new EventStoreNamespaceStorage(EventStore, @namespace, jobsStorage, sinksFactory(@namespace), mutationDigestKeys);
         return _namespaces.GetOrAdd(@namespace, created);
     }
 }

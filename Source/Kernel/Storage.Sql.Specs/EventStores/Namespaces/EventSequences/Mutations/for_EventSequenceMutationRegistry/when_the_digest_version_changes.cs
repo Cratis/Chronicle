@@ -13,6 +13,7 @@ public class when_the_digest_version_changes : given.a_mutation_registry
 
     async Task Because() => await _trace.Run(_registry, () => new EventSequenceMutationRegistry(_eventStore, _namespace, _database));
 
+    [Fact] void should_write_with_the_keyed_version() => _trace.ShouldWriteWithTheKeyedVersion();
     [Fact] void should_resume_the_active_head() => _trace.ShouldResumeTheActiveHead();
     [Fact] void should_keep_the_active_head_version() => _trace.ShouldKeepTheActiveHeadVersion();
     [Fact] void should_archive_under_the_definition_version() => _trace.ShouldArchiveUnderTheDefinitionVersion();

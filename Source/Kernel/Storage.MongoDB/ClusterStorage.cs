@@ -5,6 +5,7 @@ using System.Reactive.Subjects;
 using System.Text.Json;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Configuration;
+using Cratis.Chronicle.Storage.EventSequences.Mutations;
 using Cratis.Reactive;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -22,13 +23,15 @@ namespace Cratis.Chronicle.Storage.MongoDB;
 /// <param name="jobsStorage">The <see cref="Cratis.Choreography.Storage.IJobsStorage"/> the job system resolves through.</param>
 /// <param name="options">The <see cref="IOptions{ChronicleOptions}"/> instance.</param>
 /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> instance.</param>
+/// <param name="mutationDigestKeys">The source of mutation digest keys; without one, every mutation fails closed.</param>
 public class ClusterStorage(
     IDatabase database,
     Json.IExpandoObjectConverter expandoObjectConverter,
     JsonSerializerOptions jsonSerializerOptions,
     Cratis.Choreography.Storage.IJobsStorage jobsStorage,
     IOptions<ChronicleOptions> options,
-    ILoggerFactory loggerFactory) : IClusterStorage
+    ILoggerFactory loggerFactory,
+    IEventSequenceMutationDigestKeys? mutationDigestKeys = null) : IClusterStorage
 {
     /// <inheritdoc/>
     public async Task<IReadOnlyDictionary<EventStoreName, Concepts.Projections.Generations.Enablement.GenerationFloor>> ReadGenerationFloors()
@@ -72,7 +75,8 @@ public class ClusterStorage(
         sinksFactory,
         jobsStorage,
         options,
-        loggerFactory);
+        loggerFactory,
+        mutationDigestKeys);
 
     /// <inheritdoc/>
     public async Task SaveEventStore(EventStoreName eventStore)

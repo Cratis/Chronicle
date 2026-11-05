@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.Storage.EventSequences.Mutations.for_EventSequenceMut
 
 public class when_dispatching_on_the_digest_version : given.a_digest_calculation
 {
-    const EventSequenceMutationDigestVersion SecondVersion = (EventSequenceMutationDigestVersion)2;
+    const EventSequenceMutationDigestVersion SecondVersion = (EventSequenceMutationDigestVersion)99;
 
     EventSequenceMutationDefinitionDigestV1 _first;
     EventSequenceMutationDefinitionDigestV1 _secondDigest;
@@ -20,7 +20,7 @@ public class when_dispatching_on_the_digest_version : given.a_digest_calculation
 
     void Because()
     {
-        var current = EventSequenceMutationDigestCalculator.CurrentDigestVersion;
+        const EventSequenceMutationDigestVersion current = EventSequenceMutationDigestVersion.Sha256DomainSeparated;
         _first = EventSequenceMutationDigestCalculator.CalculateDefinitionDigest(_scope, _mutation.Definition.Request, _mutation.Target, current);
         using (EventSequenceMutationDigestSeam.RegisterForTest(SecondVersion, (_, bytes) => SHA256.HashData([2, .. bytes]), makeCurrent: true))
         {

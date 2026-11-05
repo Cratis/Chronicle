@@ -33,6 +33,6 @@ public class when_preparing_terminal_archives : given.a_valid_mutation_state
         _.First.History.Target == _.Second.Target).ShouldBeTrue();
     [Fact] void should_record_the_source_committed_terminal_phase() => _results.All(_ => _.History!.TerminalPhase == EventSequenceMutationPhase.SourceCommitted).ShouldBeTrue();
     [Fact] void should_record_the_archive_time() => _results.All(_ => _.History!.ArchivedAt == ArchivedAt).ShouldBeTrue();
-    [Fact] void should_record_the_current_digest_version() => _results.All(_ => _.History!.TerminalWitness.DigestVersion == EventSequenceMutationDigestVersion.Sha256DomainSeparated).ShouldBeTrue();
+    [Fact] void should_record_the_current_digest_version() => _results.All(_ => _.History!.TerminalWitness.DigestVersion == EventSequenceMutationDigestCalculator.CurrentDigestVersion).ShouldBeTrue();
     [Fact] void should_not_mutate_the_active_states() => _terminal.Select(_ => _.StateVersion.Value).ShouldContainOnly([4L, 6L, 6L]);
 }

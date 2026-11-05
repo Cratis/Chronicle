@@ -46,12 +46,12 @@ Every archived mutation leaves one payload-free, fixed-size receipt in a history
 | `FinalStateVersion` | int64 |
 | `RepairState` | enum |
 | `ReceiptDigestV1` | 32 bytes |
-| `DigestVersion` | int: digest algorithm / key version (`1` = domain-separated SHA-256, unkeyed) |
+| `DigestVersion` | int: digest algorithm / key version (`1` = domain-separated SHA-256, unkeyed, read only; `2` = HMAC-SHA256 keyed per event store, written) |
 | `ArchivedAt` | Unix ms, int64 |
 
 "Through" is `EndExclusive − 1`. The key is (event store, namespace, event sequence, `MutationId`) with a unique (sequence, ordinal). Explicitly absent: payload, command hash, origin, reason, content, event-source id. Redaction targets exist only inside the definition digest.
 
-**Digest.** SHA-256 with domain separation over canonical length-prefixed frames. The definition-digest domain is unchanged. The receipt-digest domain is `…terminal-receipt.v2`; it drops origin and command hash and adds terminal phase and archived-at. Digests are computed behind one internal seam that takes the event store, a digest version and the canonical bytes. The seam separates the write version (the version new digests are written with) from the set of supported read versions. The version is persisted with the definition on the active head and with the receipt (`DigestVersion`), and every recomputation, whether archive, exact retry or begin retry, uses the stored version, so a stored digest is always checked with the algorithm that produced it. A version that is not supported fails closed as corrupt. A keyed construction is added as a new version and made the write version, and receipts written under either stay readable, without touching callers. No key management is implemented by this decision.
+**Digest.** SHA-256 with domain separation over canonical length-prefixed frames. The definition-digest domain is unchanged. The receipt-digest domain is `…terminal-receipt.v2`; it drops origin and command hash and adds terminal phase and archived-at. Digests are computed behind one internal seam that takes the event store, a digest version and the canonical bytes. The seam separates the write version (the version new digests are written with) from the set of supported read versions. The version is persisted with the definition on the active head and with the receipt (`DigestVersion`), and every recomputation, whether archive, exact retry or begin retry, uses the stored version, so a stored digest is always checked with the algorithm that produced it. A version that is not supported fails closed as corrupt. Version 2, the keyed construction below, is the write version. Receipts and heads written under version 1 stay readable and retry exactly.
 
 **Exact-retry rule.**
 
@@ -67,16 +67,21 @@ Every archived mutation leaves one payload-free, fixed-size receipt in a history
 
 **Append path.** Never reads or writes receipts; no per-event column.
 
-**Residual exposure.** Plain SHA-256 over the definition lets anyone who can read a receipt after shredding confirm an exact guess of the whole definition. This record does not claim compliance with crypto-shredding.
+**Keyed digest (`DigestVersion` 2).** HMAC-SHA256 over the same domain-separated canonical frames as version 1, so the definition-digest and receipt-digest domains are unchanged.
 
-**Open question Q1 (OPEN; with the coordinator/L0).** Two options, undecided:
+- **Key location.** One secret per event store, in the existing encryption key store, under the reserved identifier `$chronicle-mutation-receipt-digest$v2$` in the default namespace. The secret is per event store, not per namespace.
+- **Derivation.** The HMAC key is HKDF-SHA256 over the stored secret, with an empty salt and the fixed info label `cratis.chronicle.mutation-receipt-digest.v2`, 32 bytes. The stored material is never used directly.
+- **Creation and concurrency.** The secret is created on first use with the key store's atomic create-if-absent operation (`GetOrAddFor`). It returns the stored key when another silo won the race, so every silo adopts the same secret.
+- **Cache.** The derived key is cached in memory per event store, so a mutation does not read the key store. A failure is not cached.
+- **Reserved identifier.** The PII and compliance surface refuses any identifier with the reserved prefix. `DeleteEncryptionKeyFor` and `AllowNewEncryptionKeyFor` fail with `EncryptionKeyIsNotErasable` before any storage call, and PII cannot be provisioned under it. Shredding a subject never touches the secret.
+- **Fail closed.** The key is resolved before the registry touches any state. If it cannot be read or created, every registry operation returns `Corrupt`. Nothing is written, nothing is re-applied, and no digest falls back to version 1. The key material is never logged or put in an exception.
+- **Rotation.** Not implemented. A new secret needs a new identifier and a new `DigestVersion`. The old version stays readable for as long as its secret is kept.
 
-| Option | Effect |
-|---|---|
-| A. Plain domain-separated SHA-256 | An explicit exception to decision 0007 ruling 3. Acceptable only while definitions have high entropy; guess-confirmation remains possible for anyone who can read a receipt. This is what is implemented, as `DigestVersion` 1. |
-| B. HMAC-SHA256 keyed per event store | The key lives under a reserved, non-erasable key-store identifier so receipts survive shredding of data keys and cannot be confirmed without the key. Needs key management, rotation and a new `DigestVersion`; not implemented here. |
+**Residual exposure.** The keyed digest does not meet decision 0007 ruling 3, and this record does not claim compliance with crypto-shredding. The digest key is not erased with a subject's key, so it stays valid after shredding. Anyone who holds both the receipts and the key store (by default the same database) can still confirm an exact guess of a whole definition. An authorized caller who can retry a mutation can do the same online, because an exact retry answers `AlreadyArchived` or `DefinitionConflict`. The key removes offline confirmation by anyone who can read receipts but not the key store. Receipts written under version 1 before the switch keep the plain SHA-256 exposure.
 
-The seam and the `DigestVersion` field exist so that B can be adopted later without a schema change.
+**Relationship to decision 0007.** Decision 0007 ruling 3 refused plain SHA-256 for fingerprints that must not survive crypto-shredding. It also noted that an HMAC keyed per event store is weaker than that requirement, because shredding does not erase the key. Mutation receipts adopt that weaker construction as an explicit, documented exception to ruling 3. A receipt covers a whole mutation definition rather than single protected values, and it must stay comparable after the subject is shredded so that an exact retry is still recognized. 0007's per-protecting-key construction would make a shredded mutation impossible to retry exactly. Producers carry the remaining constraint below.
+
+**Q1 (RESOLVED, option B).** Q1 asked whether receipts use plain domain-separated SHA-256 (A, an explicit exception to 0007 ruling 3) or HMAC-SHA256 keyed per event store (B). B was taken on 2026-11-05 as the stated default after the coordinator did not answer by 06:00; an independent second opinion recommended it as well. A remains as the read-only `DigestVersion` 1.
 
 **Producer constraint for #3910.** Producers must not put low-entropy secrets as the sole variable in a mutation definition. `ActiveCommandPayload` is plaintext while a head is active (an abandoned head keeps it until archived) and is cleared inside the archive transaction.
 
@@ -90,21 +95,23 @@ The seam and the `DigestVersion` field exist so that B can be adopted later with
 | Keep Origin and CommandHash on the receipt | Rejected: variable-length and caller-supplied; violates fixed-size, digest-only. Both stay bound through the id and the definition digest. |
 | Insert receipt then release head with crash recovery | Rejected: not provider-atomic, needs residue reasoning. |
 | `LastMutationOrdinal` on every event row | Rejected: on the append path and unused by the registry. |
-| Keyed digest (HMAC per event store) | Open (Q1, option B): needs key management; the seam and `DigestVersion` keep it possible. |
+| Plain domain-separated SHA-256 as the write version (Q1, option A) | Rejected: anyone who can read a receipt could confirm a guess offline. Kept as the read-only `DigestVersion` 1. |
+| Keyed digest (HMAC per event store) | Taken (Q1, option B) as `DigestVersion` 2, with the key management above. |
+| Per-protecting-key fingerprints as in 0007 section 4 | Rejected: a shredded mutation could no longer be retried exactly. |
 
 ## Default if unanswered
 
-Plain domain-separated SHA-256 as ruled, with the residual exposure above documented. If a keyed digest is later required, the receipt-digest domain bumps and the seam is replaced; no caller changes.
+Not applicable: Q1 is resolved as option B (see above).
 
 ## Timeline and scope
 
-D1: the receipt-shaped registry, schema and migration `v19_127_0`. D2: provider-atomic archive and the 5-provider retry conformance. Out of scope: producers (#3910), key management, any append-path change, receipt expiry.
+D1: the receipt-shaped registry, schema and migration `v19_127_0`. D2: provider-atomic archive and the 5-provider retry conformance. D2b: the keyed `DigestVersion` 2 and its per-event-store key. Out of scope: producers (#3910), key rotation, any append-path change, receipt expiry.
 
 ## Verification
 
 Done when: the registry, the migration and the receipt shape exist in all providers; Release build with warnings as errors, the Concepts, Storage, InMemory, MongoDB, Core and SQLite spec projects pass; the seven retry-conformance facts pass on InMemory, MongoDB (replica set) and SQLite and are listed for PostgreSQL and SQL Server in CI.
 
-Verify by: the history persisted-structure spec; the append-path diff against origin/main is empty; no logger call in the Mutations folders includes payload or command hash.
+Verify by: the history persisted-structure spec; the digest-version conformance on every provider (version 1 receipts retry as `AlreadyArchived` after the switch, version 2 receipts round-trip); the key-convergence, fail-closed and PII-guard specs; the append-path diff against origin/main is empty; no logger call in the Mutations folders includes payload or command hash.
 
 ## Consequences
 

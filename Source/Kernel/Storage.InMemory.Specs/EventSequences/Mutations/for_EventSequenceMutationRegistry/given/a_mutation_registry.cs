@@ -2,7 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.EventSequences.Mutations;
+using Cratis.Chronicle.Storage.Compliance;
 using Cratis.Chronicle.Storage.EventSequences.Mutations;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Cratis.Chronicle.Storage.InMemory.EventSequences.Mutations.for_EventSequenceMutationRegistry.given;
 
@@ -25,6 +27,9 @@ public class a_mutation_registry : Specification
 
     private protected static IEventSequenceMutationRegistry Registry(EventSequenceMutationRegistryState? state = null) =>
         new EventSequenceMutationRegistry("event-store", "namespace", state ?? new());
+
+    protected static IEventSequenceMutationDigestKeys Keys() =>
+        new EventSequenceMutationDigestKeys(new InMemoryEncryptionKeyStorage(), NullLogger<EventSequenceMutationDigestKeys>.Instance);
 
     protected static EventSequenceMutationIdentity Identity(string display) =>
         EventSequenceMutationIdentity.TryCreate(display).Identity!;

@@ -80,7 +80,16 @@ There is no background recovery worker. After an interrupted archive, the owner 
 
 Archiving writes one payload-free receipt per mutation: mutation ID, ordinal, kind, target range, terminal phase, repair state, the terminal witness (definition digest, final state version, receipt digest and digest version), and the archive time in UTC milliseconds. It holds no command payload, reason, event content, origin or event-source ID.
 
-The receipt digest is a domain-separated SHA-256 computed behind one internal seam that also returns a digest version stored with the receipt. The digest construction is an open question in [decision 0025](../../../decisions/0025-mutation-operation-receipts.md).
+Digests are computed behind one internal seam, and the digest version is stored with the definition and the receipt. Every recomputation uses the stored version, so a digest is always checked with the algorithm that produced it. A version that is no longer supported fails closed as corrupt.
+
+| Version | Construction | Use |
+|---|---|---|
+| 1 | Domain-separated SHA-256 over the canonical frames | Read only, for receipts and heads written before version 2 |
+| 2 | HMAC-SHA256 over the same frames, keyed per event store | Written |
+
+The version 2 key is derived with HKDF-SHA256 (label `cratis.chronicle.mutation-receipt-digest.v2`) from one secret per event store. The secret is held in the encryption key store under a reserved identifier that the compliance surface can neither erase nor re-authorize, and it is created on first use with the key store's create-if-absent operation, so concurrent silos adopt the same secret. The derived key is cached in memory per event store. If the key cannot be read or created, every registry operation returns `Corrupt` before it touches any state; it never falls back to version 1.
+
+The keyed digest stops anyone who can read receipts, but not the key store, from confirming a guessed definition. It does not survive crypto-shredding: key holders and authorized retry callers can still confirm a guess. See [decision 0025](../../../decisions/0025-mutation-operation-receipts.md) for the construction, the residual exposure and the relationship to decision 0007.
 
 An exact retry returns the stored receipt as `AlreadyArchived`, including after the head is reused. A different definition digest is `DefinitionConflict` and a non-matching head is `StateConflict`. Receipts are kept for the life of the event sequence, with no expiry.
 

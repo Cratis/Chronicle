@@ -42,11 +42,13 @@ namespace Cratis.Chronicle.Storage.InMemory;
 /// <param name="namespace">The <see cref="EventStoreNamespaceName"/> the storage serves.</param>
 /// <param name="jobsStorage">The <see cref="IJobsStorage"/> resolving jobs storage for a scope and namespace.</param>
 /// <param name="sinks">The <see cref="ISinks"/> for the namespace.</param>
+/// <param name="mutationDigestKeys">The source of mutation digest keys; without one, every mutation fails closed.</param>
 public sealed class EventStoreNamespaceStorage(
     EventStoreName eventStore,
     EventStoreNamespaceName @namespace,
     IJobsStorage jobsStorage,
-    ISinks sinks) : IEventStoreNamespaceStorage
+    ISinks sinks,
+    IEventSequenceMutationDigestKeys? mutationDigestKeys = null) : IEventStoreNamespaceStorage
 {
     readonly Occurrences.OccurrencesStorage _occurrences = new();
     readonly Occurrences.EffectReceiptState _effectReceipts = new();
@@ -123,7 +125,10 @@ public sealed class EventStoreNamespaceStorage(
     public IProjectionFuturesStorage ProjectionFutures { get; } = new ProjectionFuturesStorage();
 
     /// <inheritdoc/>
-    public IEventSequenceMutationRegistry EventSequenceMutations => new EventSequenceMutationRegistry(eventStore, @namespace, _eventSequenceMutationState);
+    public IEventSequenceMutationRegistry EventSequenceMutations => new DigestKeyedEventSequenceMutationRegistry(
+        eventStore,
+        mutationDigestKeys ?? UnavailableEventSequenceMutationDigestKeys.Instance,
+        new EventSequenceMutationRegistry(eventStore, @namespace, _eventSequenceMutationState));
 
     /// <inheritdoc/>
     /// <remarks>
