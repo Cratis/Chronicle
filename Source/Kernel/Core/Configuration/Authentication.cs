@@ -9,6 +9,11 @@ namespace Cratis.Chronicle.Configuration;
 public class Authentication
 {
     /// <summary>
+    /// The default for <see cref="EnforceAdministratorPolicyForOperations"/>.
+    /// </summary>
+    public const bool DefaultEnforceAdministratorPolicyForOperations = false;
+
+    /// <summary>
     /// Gets the server-local, single-use administrator recovery request.
     /// </summary>
     public AdministratorRecoveryOptions AdministratorRecovery { get; init; } = new();
@@ -28,9 +33,11 @@ public class Authentication
 
     /// <summary>
     /// Gets whether to enforce administrator authorization for System-store operational recovery.
-    /// Defaults to audit-only; administrator management is always enforced.
+    /// Administrator management is always enforced. When this is off, an operation the administrator policy
+    /// would refuse is logged and allowed. Setting it to <see langword="false"/> is a temporary opt-out
+    /// that is expected to be removed in a later major release.
     /// </summary>
-    public bool EnforceAdministratorPolicyForOperations { get; init; }
+    public bool EnforceAdministratorPolicyForOperations { get; init; } = DefaultEnforceAdministratorPolicyForOperations;
 
     /// <summary>
     /// Gets the authentication authority URL. If not configured, uses the internal OAuth authority.
