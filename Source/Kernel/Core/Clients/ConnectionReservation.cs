@@ -19,6 +19,8 @@ public class ConnectionReservation(IClusterMembershipService clusterMembership) 
     static readonly TimeSpan _pruneInterval = TimeSpan.FromMinutes(1);
 
     readonly Dictionary<Guid, Lease> _leases = [];
+    readonly Dictionary<Guid, DateTimeOffset> _released = [];
+    TimeSpan _longestLease;
     ConnectionOwner? _owner;
     DateTimeOffset? _releasedAt;
 
@@ -52,9 +54,12 @@ public class ConnectionReservation(IClusterMembershipService clusterMembership) 
             _leases.Clear();
         }
 
+        if (_released.ContainsKey(token)) return Task.FromResult(false);
+
         _owner = owner;
         _releasedAt = null;
         _leases[token] = new(silo, now + lease);
+        if (lease > _longestLease) _longestLease = lease;
         Keep(TimeSpan.MaxValue);
         return Task.FromResult(true);
     }
@@ -62,9 +67,13 @@ public class ConnectionReservation(IClusterMembershipService clusterMembership) 
     /// <inheritdoc/>
     public Task Release(ConnectionOwner owner, Guid token)
     {
+        var now = Clock.GetUtcNow();
+
+        // A claim or renewal of this token that arrives after its release is refused until the longest lease it could have held is over.
+        _released[token] = now + (_longestLease > _pruneInterval ? _longestLease : _pruneInterval);
         if (_owner is { } current && current.Equals(owner) && _leases.Remove(token) && _leases.Count == 0)
         {
-            MarkReleased(Clock.GetUtcNow());
+            MarkReleased(now);
         }
 
         return Task.CompletedTask;
@@ -78,7 +87,9 @@ public class ConnectionReservation(IClusterMembershipService clusterMembership) 
 
     Task Prune(CancellationToken cancellationToken)
     {
-        DropEndedLeases(Clock.GetUtcNow(), null);
+        var now = Clock.GetUtcNow();
+        DropEndedLeases(now, null);
+        foreach (var expired in _released.Where(_ => _.Value <= now).Select(_ => _.Key).ToArray()) _released.Remove(expired);
         return Task.CompletedTask;
     }
 

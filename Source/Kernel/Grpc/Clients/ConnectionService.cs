@@ -228,6 +228,21 @@ internal sealed class ConnectionService(
             request.MachineName,
             request.ClientType);
 
+    static async Task EndRenewal(CancellationTokenSource renewals, Task<ReservationOutcome>? renewal)
+    {
+        await renewals.CancelAsync().ConfigureAwait(false);
+        if (renewal is null) return;
+
+        try
+        {
+            await renewal.ConfigureAwait(false);
+        }
+        catch
+        {
+            // The renewal reports its own failures; ending the stream must not depend on it.
+        }
+    }
+
     async Task Produce(
         ReplaySubject<ConnectionKeepAlive> subject,
         IConnectedClients connectedClients,
@@ -405,6 +420,7 @@ internal sealed class ConnectionService(
             openConnections.Opened(request, DateTimeOffset.UtcNow);
             var keepRegistered = Task.CompletedTask;
             Task<ReservationOutcome>? renewal = null;
+            using var renewals = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             var lastRenewal = RegistrationTimeProvider.GetTimestamp();
 
             try
@@ -453,7 +469,7 @@ internal sealed class ConnectionService(
                     if (renewal is null && RegistrationTimeProvider.GetElapsedTime(lastRenewal) >= RenewalPeriod)
                     {
                         lastRenewal = RegistrationTimeProvider.GetTimestamp();
-                        renewal = RenewReservation(request, owner, token, cancellationToken);
+                        renewal = RenewReservation(request, owner, token, renewals.Token);
                     }
 
                     subject.OnNext(new ConnectionKeepAlive
@@ -469,6 +485,11 @@ internal sealed class ConnectionService(
             catch (Exception ex)
             {
                 logger.FailureDuringKeepAlive(request.ConnectionId, ex);
+            }
+            finally
+            {
+                // A renewal still pending must be over before the reservation is released, or it could claim it again.
+                await EndRenewal(renewals, renewal).ConfigureAwait(false);
             }
 
             terminated = true;
