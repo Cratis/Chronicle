@@ -643,6 +643,7 @@ json Cratis.Chronicle.Concepts.Projections.Definitions.ChildrenDefinition
   fromEventProperty: Cratis.Chronicle.Concepts.Projections.Definitions.FromEventPropertyDefinition
   fromEvery: Cratis.Chronicle.Concepts.Projections.Definitions.FromEveryDefinition
   generationDelivery: Cratis.Chronicle.Concepts.Observation.EventGenerationDelivery
+  graph: Cratis.Chronicle.Concepts.Projections.Graphs.GraphProjectionDefinition
   hasLegacyStorageFields: bool
   identifiedBy: Cratis.Chronicle.Properties.PropertyPath
   identifier: Cratis.Chronicle.Concepts.Projections.ProjectionId
@@ -690,6 +691,7 @@ json Cratis.Chronicle.Concepts.Projections.Definitions.ProjectionDefinition
   fromEventProperty: Cratis.Chronicle.Concepts.Projections.Definitions.FromEventPropertyDefinition
   fromEvery: Cratis.Chronicle.Concepts.Projections.Definitions.FromEveryDefinition
   generationDelivery: Cratis.Chronicle.Concepts.Observation.EventGenerationDelivery
+  graph: Cratis.Chronicle.Concepts.Projections.Graphs.GraphProjectionDefinition
   hasLegacyStorageFields: bool
   identifier: Cratis.Chronicle.Concepts.Projections.ProjectionId
   initialModelState: System.Text.Json.Nodes.JsonObject
@@ -729,6 +731,32 @@ enum Cratis.Chronicle.Concepts.Projections.Generations.Enablement.GenerationInit
   MaterializationAdopted = 3
   None = 0
 concept Cratis.Chronicle.Concepts.Projections.Generations.Enablement.StoreIncarnation : System.Guid
+json Cratis.Chronicle.Concepts.Projections.Graphs.GraphEdgeFromDefinition
+  identity: Cratis.Chronicle.Concepts.Projections.PropertyExpression
+  properties: System.Collections.Generic.IDictionary<string,string>
+  sourceKey: Cratis.Chronicle.Concepts.Projections.PropertyExpression
+  targetKey: Cratis.Chronicle.Concepts.Projections.PropertyExpression
+json Cratis.Chronicle.Concepts.Projections.Graphs.GraphEdgeProjectionDefinition
+  from: System.Collections.Generic.IDictionary<string,Cratis.Chronicle.Concepts.Projections.Graphs.GraphEdgeFromDefinition>
+  removedWith: System.Collections.Generic.IDictionary<string,Cratis.Chronicle.Concepts.Projections.Graphs.GraphEdgeRemovedWithDefinition>
+json Cratis.Chronicle.Concepts.Projections.Graphs.GraphEdgeRemovedWithDefinition
+  identity: Cratis.Chronicle.Concepts.Projections.PropertyExpression
+  sourceKey: Cratis.Chronicle.Concepts.Projections.PropertyExpression
+  targetKey: Cratis.Chronicle.Concepts.Projections.PropertyExpression
+json Cratis.Chronicle.Concepts.Projections.Graphs.GraphNodeFromDefinition
+  key: Cratis.Chronicle.Concepts.Projections.PropertyExpression
+  properties: System.Collections.Generic.IDictionary<string,string>
+  updateOnly: bool
+json Cratis.Chronicle.Concepts.Projections.Graphs.GraphNodeProjectionDefinition
+  from: System.Collections.Generic.IDictionary<string,Cratis.Chronicle.Concepts.Projections.Graphs.GraphNodeFromDefinition>
+  removedWith: System.Collections.Generic.IDictionary<string,Cratis.Chronicle.Concepts.Projections.Graphs.GraphNodeRemovedWithDefinition>
+json Cratis.Chronicle.Concepts.Projections.Graphs.GraphNodeRemovedWithDefinition
+  detach: bool
+  key: Cratis.Chronicle.Concepts.Projections.PropertyExpression
+json Cratis.Chronicle.Concepts.Projections.Graphs.GraphProjectionDefinition
+  edges: System.Collections.Generic.IDictionary<string,Cratis.Chronicle.Concepts.Projections.Graphs.GraphEdgeProjectionDefinition>
+  isEmpty: bool
+  nodes: System.Collections.Generic.IDictionary<string,Cratis.Chronicle.Concepts.Projections.Graphs.GraphNodeProjectionDefinition>
 concept Cratis.Chronicle.Concepts.Projections.ProjectionDeclaration : string
 concept Cratis.Chronicle.Concepts.Projections.ProjectionFutureId : System.Guid
 concept Cratis.Chronicle.Concepts.Projections.ProjectionId : string

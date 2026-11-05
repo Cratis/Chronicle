@@ -116,3 +116,9 @@
   href: CHR0064.mdx
 - name: CHR0065 - Read model fold method will not be discovered
   href: CHR0065.mdx
+- name: CHR0066 - A node or an edge can only have primitive properties
+  href: CHR0066.mdx
+- name: CHR0067 - A node needs exactly one key
+  href: CHR0067.mdx
+- name: CHR0068 - A node or an edge cannot be a read model
+  href: CHR0068.mdx
