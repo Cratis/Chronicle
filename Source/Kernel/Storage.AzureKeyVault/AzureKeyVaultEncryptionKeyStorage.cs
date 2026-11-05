@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json;
-using System.Text.RegularExpressions;
 using Azure;
 using Azure.Security.KeyVault.Secrets;
 using Cratis.Chronicle.Compliance;
@@ -20,9 +19,14 @@ namespace Cratis.Chronicle.Storage.AzureKeyVault;
 /// identifier is stored as a distinct secret so that revisions can be retrieved or deleted independently.
 /// </para>
 /// <para>
-/// Secret names follow the pattern <c language="csharp">chronicle--{eventStore}--{namespace}--{identifier}--{revision}</c>
-/// where each component is sanitized to contain only lowercase alphanumeric characters and single hyphens.
-/// Double hyphens (<c language="csharp">--</c>) are used as separators and cannot appear within sanitized components.
+/// Secret names follow the pattern <c language="csharp">chronicle-k1--{hash}--{revision}</c> where the hash is the SHA-256 of the
+/// event store, the namespace and the identifier - see <see cref="SecretNames"/>. Every distinct address therefore has
+/// its own secrets, and the names carry no subject data.
+/// </para>
+/// <para>
+/// Keys that were stored under the earlier <c language="csharp">chronicle--{eventStore}--{namespace}--{identifier}--{revision}</c>
+/// names are still read, and removed together with the key, for the addresses whose components are made of lowercase letters, digits and
+/// single hyphens (plus the identifiers Chronicle builds for encrypted values). Earlier names are never written.
 /// </para>
 /// <para>
 /// Authentication is performed using the <see cref="Azure.Core.TokenCredential"/> provided to the
@@ -44,24 +48,13 @@ namespace Cratis.Chronicle.Storage.AzureKeyVault;
 /// fails the deletion loudly with <see cref="EncryptionKeyNotPurged"/>.
 /// </para>
 /// </remarks>
-public partial class AzureKeyVaultEncryptionKeyStorage : IEncryptionKeyStorage
+public class AzureKeyVaultEncryptionKeyStorage : IEncryptionKeyStorage
 {
-    const string SecretNamePrefix = "chronicle";
     const string PublicKeyField = "publicKey";
     const string PrivateKeyField = "privateKey";
     const string ErasedThroughField = "erasedThrough";
     const string ErasedKeyFingerprintsField = "erasedKeyFingerprints";
     const string NewKeyAllowedField = "newKeyAllowed";
-
-    /// <summary>
-    /// The suffix an erasure is stored under, beside the numbered revisions.
-    /// </summary>
-    /// <remarks>
-    /// Revisions are numbered, so a non-numeric suffix can never collide with one, and the revision enumeration
-    /// already skips anything that does not parse as a number - which is what keeps the fence out of it and lets
-    /// a deletion of every revision leave the fence standing.
-    /// </remarks>
-    const string ErasureSuffix = "erasure";
 
     readonly SecretClient _secretClient;
     readonly ProvisioningCandidateElection _election;
@@ -86,9 +79,6 @@ public partial class AzureKeyVaultEncryptionKeyStorage : IEncryptionKeyStorage
         _election = new(secretClient, timeProvider, Deserialize);
     }
 
-    [GeneratedRegex("[^a-z0-9]+", RegexOptions.None, matchTimeoutMilliseconds: 1000)]
-    private static partial Regex SanitizeRegex { get; }
-
     /// <inheritdoc/>
     public async Task SaveFor(
         EventStoreName eventStore,
@@ -97,14 +87,14 @@ public partial class AzureKeyVaultEncryptionKeyStorage : IEncryptionKeyStorage
         EncryptionKey key,
         EncryptionKeyRevision? revision = null)
     {
+        var locations = SecretLocations.For(eventStore, eventStoreNamespace, identifier);
         var actualRevision = IsLatest(revision)
-            ? await GetNextRevision(eventStore, eventStoreNamespace, identifier)
+            ? await GetNextRevision(locations)
             : revision!;
 
-        (await GetErasureFor(eventStore, eventStoreNamespace, identifier)).EnsureCanSave(identifier, actualRevision, key);
+        (await GetErasureFor(locations)).EnsureCanSave(identifier, actualRevision, key);
 
-        var name = BuildSecretName(eventStore, eventStoreNamespace, identifier, actualRevision);
-        await _secretClient.SetSecretAsync(name, Serialize(key));
+        await _secretClient.SetSecretAsync(locations.Name(actualRevision), Serialize(key));
     }
 
     /// <inheritdoc/>
@@ -116,28 +106,20 @@ public partial class AzureKeyVaultEncryptionKeyStorage : IEncryptionKeyStorage
         (await GetOrAddWithRevisionFor(eventStore, eventStoreNamespace, identifier, key)).Key;
 
     /// <inheritdoc/>
-    public async Task<EncryptionKeyAtRevision?> TryGetLatestFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier)
-    {
-        var revision = await GetHighestRevision(eventStore, eventStoreNamespace, identifier);
-        if (revision is null)
-        {
-            return null;
-        }
-
-        var key = await TryGetFor(eventStore, eventStoreNamespace, identifier, revision);
-        return key is null ? null : new(key, revision);
-    }
+    public async Task<EncryptionKeyAtRevision?> TryGetLatestFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier) =>
+        await TryGetLatest(SecretLocations.For(eventStore, eventStoreNamespace, identifier));
 
     /// <inheritdoc/>
     public async Task<EncryptionKeyAtRevision> GetOrAddWithRevisionFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKey key)
     {
-        if (await TryGetLatestFor(eventStore, eventStoreNamespace, identifier) is { } existing)
+        var locations = SecretLocations.For(eventStore, eventStoreNamespace, identifier);
+        if (await TryGetLatest(locations) is { } existing)
         {
             return existing;
         }
 
-        var revision = (await GetErasureFor(eventStore, eventStoreNamespace, identifier)).RevisionForNewKey(identifier, key);
-        var name = BuildSecretName(eventStore, eventStoreNamespace, identifier, revision);
+        var revision = (await GetErasureFor(locations)).RevisionForNewKey(identifier, key);
+        var name = locations.Name(revision);
         var candidate = new KeyVaultSecret(name, Serialize(key));
         ProvisioningCandidateElection.MarkAsCandidate(candidate);
         await _secretClient.SetSecretAsync(candidate);
@@ -155,12 +137,14 @@ public partial class AzureKeyVaultEncryptionKeyStorage : IEncryptionKeyStorage
         EncryptionKeyIdentifier identifier,
         EncryptionKeyRevision? revision = null)
     {
+        var locations = SecretLocations.For(eventStore, eventStoreNamespace, identifier);
         if (IsLatest(revision))
         {
-            return await GetHighestRevision(eventStore, eventStoreNamespace, identifier) is not null;
+            return await GetHighestRevision(locations) is not null;
         }
 
-        return await SecretExists(BuildSecretName(eventStore, eventStoreNamespace, identifier, revision!));
+        return await SecretExists(locations.Name(revision!)) ||
+            (locations.LegacyName(revision!) is { } legacyName && await SecretExists(legacyName));
     }
 
     /// <inheritdoc/>
@@ -170,16 +154,14 @@ public partial class AzureKeyVaultEncryptionKeyStorage : IEncryptionKeyStorage
         EncryptionKeyIdentifier identifier,
         EncryptionKeyRevision? revision = null)
     {
-        var targetRevision = IsLatest(revision)
-            ? await GetHighestRevision(eventStore, eventStoreNamespace, identifier)
-            : revision;
-
-        if (targetRevision is null)
+        var locations = SecretLocations.For(eventStore, eventStoreNamespace, identifier);
+        if (IsLatest(revision))
         {
-            return null;
+            return (await TryGetLatest(locations))?.Key;
         }
 
-        return await ReadKey(BuildSecretName(eventStore, eventStoreNamespace, identifier, targetRevision));
+        return await ReadKey(locations.Name(revision!)) ??
+            (locations.LegacyName(revision!) is { } legacyName ? await ReadKey(legacyName) : null);
     }
 
     /// <inheritdoc/>
@@ -198,21 +180,26 @@ public partial class AzureKeyVaultEncryptionKeyStorage : IEncryptionKeyStorage
         EncryptionKeyIdentifier identifier,
         EncryptionKeyRevision? revision = null)
     {
+        var locations = SecretLocations.For(eventStore, eventStoreNamespace, identifier);
         if (IsLatest(revision))
         {
             // Revisions a previous deletion soft-deleted but could not purge are no longer listed as secrets, so
             // they are gathered from the deleted secrets too - repeating an incomplete erasure completes it.
-            var revisions = (await ListRevisions(eventStore, eventStoreNamespace, identifier))
-                .Concat(await ListDeletedRevisions(eventStore, eventStoreNamespace, identifier))
-                .Distinct();
-            foreach (var rev in revisions)
+            var names = (await ListSecrets(locations)).Select(secret => secret.Name)
+                .Concat((await ListDeletedSecrets(locations)).Select(secret => secret.Name))
+                .Distinct(StringComparer.OrdinalIgnoreCase);
+            foreach (var name in names)
             {
-                await DeleteAndPurgeSecret(BuildSecretName(eventStore, eventStoreNamespace, identifier, rev));
+                await DeleteAndPurgeSecret(name);
             }
         }
         else
         {
-            await DeleteAndPurgeSecret(BuildSecretName(eventStore, eventStoreNamespace, identifier, revision!));
+            await DeleteAndPurgeSecret(locations.Name(revision!));
+            if (locations.LegacyName(revision!) is { } legacyName)
+            {
+                await DeleteAndPurgeSecret(legacyName);
+            }
         }
     }
 
@@ -220,30 +207,8 @@ public partial class AzureKeyVaultEncryptionKeyStorage : IEncryptionKeyStorage
     public async Task<EncryptionKeyErasure?> GetErasureFor(
         EventStoreName eventStore,
         EventStoreNamespaceName eventStoreNamespace,
-        EncryptionKeyIdentifier identifier)
-    {
-        try
-        {
-            var secret = await _secretClient.GetSecretAsync(BuildErasureSecretName(eventStore, eventStoreNamespace, identifier));
-            if (secret.Value.Properties.Enabled == false ||
-                JsonSerializer.Deserialize<Dictionary<string, string>>(secret.Value.Value) is not { } data ||
-                !data.TryGetValue(ErasedThroughField, out var erasedThrough))
-            {
-                return null;
-            }
-
-            var fingerprints = data.TryGetValue(ErasedKeyFingerprintsField, out var raw)
-                ? raw.Split(',', StringSplitOptions.RemoveEmptyEntries)
-                : [];
-            var newKeyAllowed = data.TryGetValue(NewKeyAllowedField, out var allowed) && bool.TryParse(allowed, out var parsed) && parsed;
-
-            return new EncryptionKeyErasure(uint.Parse(erasedThrough), fingerprints, newKeyAllowed);
-        }
-        catch (RequestFailedException ex) when (ex.Status == 404)
-        {
-            return null;
-        }
-    }
+        EncryptionKeyIdentifier identifier) =>
+        await GetErasureFor(SecretLocations.For(eventStore, eventStoreNamespace, identifier));
 
     /// <inheritdoc/>
     public async Task RecordErasureFor(
@@ -251,17 +216,18 @@ public partial class AzureKeyVaultEncryptionKeyStorage : IEncryptionKeyStorage
         EventStoreNamespaceName eventStoreNamespace,
         EncryptionKeyIdentifier identifier)
     {
+        var locations = SecretLocations.For(eventStore, eventStoreNamespace, identifier);
         var present = new List<(EncryptionKeyRevision Revision, EncryptionKey Key)>();
-        foreach (var revision in await ListRevisions(eventStore, eventStoreNamespace, identifier))
+        foreach (var (revision, name) in await ListRevisions(locations))
         {
-            if (await TryGetFor(eventStore, eventStoreNamespace, identifier, revision) is { } key)
+            if (await ReadKey(name) is { } key)
             {
                 present.Add((revision, key));
             }
         }
 
-        var erasure = EncryptionKeyErasure.Covering(await GetErasureFor(eventStore, eventStoreNamespace, identifier), present);
-        await WriteErasure(eventStore, eventStoreNamespace, identifier, erasure);
+        var erasure = EncryptionKeyErasure.Covering(await GetErasureFor(locations), present);
+        await WriteErasure(locations, erasure);
     }
 
     /// <inheritdoc/>
@@ -270,12 +236,13 @@ public partial class AzureKeyVaultEncryptionKeyStorage : IEncryptionKeyStorage
         EventStoreNamespaceName eventStoreNamespace,
         EncryptionKeyIdentifier identifier)
     {
-        if (await GetErasureFor(eventStore, eventStoreNamespace, identifier) is not { } erasure)
+        var locations = SecretLocations.For(eventStore, eventStoreNamespace, identifier);
+        if (await GetErasureFor(locations) is not { } erasure)
         {
             return;
         }
 
-        await WriteErasure(eventStore, eventStoreNamespace, identifier, erasure with { NewKeyAllowed = true });
+        await WriteErasure(locations, erasure with { NewKeyAllowed = true });
     }
 
     static bool IsLatest(EncryptionKeyRevision? revision) => revision is null || revision == EncryptionKeyRevision.Latest;
@@ -299,33 +266,77 @@ public partial class AzureKeyVaultEncryptionKeyStorage : IEncryptionKeyStorage
         return new EncryptionKey(Convert.FromBase64String(publicBase64), Convert.FromBase64String(privateBase64));
     }
 
-    static string Sanitize(string input) =>
-        SanitizeRegex.Replace(input.ToLowerInvariant(), "-").Trim('-');
+    /// <summary>
+    /// Matches a secret name against the current prefix and, when the address uses earlier names, the earlier prefix.
+    /// </summary>
+    /// <param name="name">The secret name.</param>
+    /// <param name="locations">The <see cref="SecretLocations"/> of the address.</param>
+    /// <param name="revision">The revision the name carries.</param>
+    /// <param name="isCurrent">Whether the name uses the current prefix.</param>
+    /// <returns>True when the name belongs to the address.</returns>
+    static bool TryParseRevision(string name, SecretLocations locations, out uint revision, out bool isCurrent)
+    {
+        isCurrent = name.StartsWith(locations.Prefix, StringComparison.OrdinalIgnoreCase);
+        var prefix = isCurrent ? locations.Prefix : locations.LegacyPrefix;
+        if (prefix is not null && name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+        {
+            return uint.TryParse(name[prefix.Length..], out revision);
+        }
 
-    string BuildSecretName(
-        EventStoreName eventStore,
-        EventStoreNamespaceName eventStoreNamespace,
-        EncryptionKeyIdentifier identifier,
-        EncryptionKeyRevision revision) =>
-        $"{SecretNamePrefix}--{Sanitize(eventStore.Value)}--{Sanitize(eventStoreNamespace.Value)}--{Sanitize(identifier.Value)}--{revision.Value}";
+        revision = 0;
+        return false;
+    }
 
-    string BuildSecretPrefix(
-        EventStoreName eventStore,
-        EventStoreNamespaceName eventStoreNamespace,
-        EncryptionKeyIdentifier identifier) =>
-        $"{SecretNamePrefix}--{Sanitize(eventStore.Value)}--{Sanitize(eventStoreNamespace.Value)}--{Sanitize(identifier.Value)}--";
+    async Task<EncryptionKeyAtRevision?> TryGetLatest(SecretLocations locations)
+    {
+        var revisions = await ListRevisions(locations);
+        if (revisions.Count == 0)
+        {
+            return null;
+        }
 
-    string BuildErasureSecretName(
-        EventStoreName eventStore,
-        EventStoreNamespaceName eventStoreNamespace,
-        EncryptionKeyIdentifier identifier) =>
-        $"{BuildSecretPrefix(eventStore, eventStoreNamespace, identifier)}{ErasureSuffix}";
+        var (revision, name) = revisions.MaxBy(pair => pair.Key.Value);
+        var key = await ReadKey(name);
+        return key is null ? null : new(key, revision);
+    }
 
-    async Task WriteErasure(
-        EventStoreName eventStore,
-        EventStoreNamespaceName eventStoreNamespace,
-        EncryptionKeyIdentifier identifier,
-        EncryptionKeyErasure erasure)
+    async Task<EncryptionKeyErasure?> GetErasureFor(SecretLocations locations)
+    {
+        var (found, erasure) = await ReadErasure(locations.ErasureName);
+        if (found || locations.LegacyErasureName is not { } legacyName)
+        {
+            return erasure;
+        }
+
+        return (await ReadErasure(legacyName)).Erasure;
+    }
+
+    async Task<(bool Found, EncryptionKeyErasure? Erasure)> ReadErasure(string name)
+    {
+        try
+        {
+            var secret = await _secretClient.GetSecretAsync(name);
+            if (secret.Value.Properties.Enabled == false ||
+                JsonSerializer.Deserialize<Dictionary<string, string>>(secret.Value.Value) is not { } data ||
+                !data.TryGetValue(ErasedThroughField, out var erasedThrough))
+            {
+                return (true, null);
+            }
+
+            var fingerprints = data.TryGetValue(ErasedKeyFingerprintsField, out var raw)
+                ? raw.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                : [];
+            var newKeyAllowed = data.TryGetValue(NewKeyAllowedField, out var allowed) && bool.TryParse(allowed, out var parsed) && parsed;
+
+            return (true, new EncryptionKeyErasure(uint.Parse(erasedThrough), fingerprints, newKeyAllowed));
+        }
+        catch (RequestFailedException ex) when (ex.Status == 404)
+        {
+            return (false, null);
+        }
+    }
+
+    async Task WriteErasure(SecretLocations locations, EncryptionKeyErasure erasure)
     {
         var value = JsonSerializer.Serialize(new Dictionary<string, string>
         {
@@ -334,75 +345,74 @@ public partial class AzureKeyVaultEncryptionKeyStorage : IEncryptionKeyStorage
             [NewKeyAllowedField] = erasure.NewKeyAllowed.ToString()
         });
 
-        await _secretClient.SetSecretAsync(BuildErasureSecretName(eventStore, eventStoreNamespace, identifier), value);
+        await _secretClient.SetSecretAsync(locations.ErasureName, value);
     }
 
-    async Task<EncryptionKeyRevision> GetNextRevision(
-        EventStoreName eventStore,
-        EventStoreNamespaceName eventStoreNamespace,
-        EncryptionKeyIdentifier identifier)
+    async Task<EncryptionKeyRevision> GetNextRevision(SecretLocations locations)
     {
-        var highest = await GetHighestRevision(eventStore, eventStoreNamespace, identifier);
+        var highest = await GetHighestRevision(locations);
         return highest is null ? (EncryptionKeyRevision)1u : highest.Value + 1u;
     }
 
-    async Task<EncryptionKeyRevision?> GetHighestRevision(
-        EventStoreName eventStore,
-        EventStoreNamespaceName eventStoreNamespace,
-        EncryptionKeyIdentifier identifier)
+    async Task<EncryptionKeyRevision?> GetHighestRevision(SecretLocations locations)
     {
-        var revisions = await ListRevisions(eventStore, eventStoreNamespace, identifier);
-        return revisions.Count == 0 ? null : revisions.Max();
+        var revisions = await ListRevisions(locations);
+        return revisions.Count == 0 ? null : revisions.Keys.Max();
     }
 
-    async Task<List<EncryptionKeyRevision>> ListRevisions(
-        EventStoreName eventStore,
-        EventStoreNamespaceName eventStoreNamespace,
-        EncryptionKeyIdentifier identifier)
+    /// <summary>
+    /// Lists the revisions present, mapped to the name each is read from: the current name when a revision exists
+    /// under both, otherwise the earlier one.
+    /// </summary>
+    /// <param name="locations">The <see cref="SecretLocations"/> of the address.</param>
+    /// <returns>The revisions and their names.</returns>
+    async Task<Dictionary<EncryptionKeyRevision, string>> ListRevisions(SecretLocations locations)
     {
-        var prefix = BuildSecretPrefix(eventStore, eventStoreNamespace, identifier);
-        var revisions = new List<EncryptionKeyRevision>();
+        var revisions = new Dictionary<EncryptionKeyRevision, string>();
+        foreach (var secret in await ListSecrets(locations))
+        {
+            if (secret.IsCurrent)
+            {
+                revisions[secret.Revision] = secret.Name;
+            }
+            else
+            {
+                revisions.TryAdd(secret.Revision, secret.Name);
+            }
+        }
+
+        return revisions;
+    }
+
+    async Task<List<ListedSecret>> ListSecrets(SecretLocations locations)
+    {
+        var secrets = new List<ListedSecret>();
 
         await foreach (var secretProperties in _secretClient.GetPropertiesOfSecretsAsync())
         {
-            if (secretProperties.Enabled != true)
+            if (secretProperties.Enabled == true &&
+                TryParseRevision(secretProperties.Name, locations, out var revision, out var isCurrent))
             {
-                continue;
-            }
-
-            if (!secretProperties.Name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
-            {
-                continue;
-            }
-
-            var suffix = secretProperties.Name[prefix.Length..];
-            if (uint.TryParse(suffix, out var revisionValue))
-            {
-                revisions.Add(revisionValue);
+                secrets.Add(new(revision, secretProperties.Name, isCurrent));
             }
         }
 
-        return revisions;
+        return secrets;
     }
 
-    async Task<List<EncryptionKeyRevision>> ListDeletedRevisions(
-        EventStoreName eventStore,
-        EventStoreNamespaceName eventStoreNamespace,
-        EncryptionKeyIdentifier identifier)
+    async Task<List<ListedSecret>> ListDeletedSecrets(SecretLocations locations)
     {
-        var prefix = BuildSecretPrefix(eventStore, eventStoreNamespace, identifier);
-        var revisions = new List<EncryptionKeyRevision>();
+        var secrets = new List<ListedSecret>();
 
         await foreach (var deleted in _secretClient.GetDeletedSecretsAsync())
         {
-            if (deleted.Name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) &&
-                uint.TryParse(deleted.Name[prefix.Length..], out var revisionValue))
+            if (TryParseRevision(deleted.Name, locations, out var revision, out var isCurrent))
             {
-                revisions.Add(revisionValue);
+                secrets.Add(new(revision, deleted.Name, isCurrent));
             }
         }
 
-        return revisions;
+        return secrets;
     }
 
     async Task<EncryptionKey?> ReadKey(string name)
@@ -458,4 +468,6 @@ public partial class AzureKeyVaultEncryptionKeyStorage : IEncryptionKeyStorage
             throw new EncryptionKeyNotPurged(name, ex);
         }
     }
+
+    readonly record struct ListedSecret(EncryptionKeyRevision Revision, string Name, bool IsCurrent);
 }
