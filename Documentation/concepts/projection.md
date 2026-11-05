@@ -24,7 +24,10 @@ allow you to count, add or subtract values. The identifier of the projected inst
 configured. By default it will use the [event source identifier](./event-source.md), but you can
 point it to any other property or create a composite of multiple properties.
 
-Projections support using the metadata properties of an event as well. This lets you create
-composite keys that could for instance leverage the `occurred` date/time value and effectively
-create group by scenarios. This would effectively give you an easy way to do simple histograms,
-with count, add and/or subtract of values in the histogram.
+Projections can also use event metadata in composite keys. For example, a key based on the
+`occurred` date groups events into time buckets for a histogram, with counts or totals per bucket.
+
+## Next steps
+
+- [Create your first projection](../tutorial/read-model.mdx) — build a queryable library catalog from events.
+- [Projection reference](../projections/index.md) — choose a projection style and look up mapping and consistency options.

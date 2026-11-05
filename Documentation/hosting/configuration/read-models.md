@@ -68,7 +68,7 @@ Chronicle makes no promise about how long a revert container exists. Do not rely
 
 ## Fenced sink writes
 
-With `Features.ProjectionGenerations` enabled (experimental), each MongoDB sink transaction covers at most `maxBatchSize` documents. A bulk flush larger than that is split into several transactions whose writes are idempotent, so a retry of a part is safe.
+With `Features.ProjectionGenerations` enabled, each MongoDB sink transaction covers at most `maxBatchSize` documents. A bulk flush larger than that is split into several transactions whose writes are idempotent, so a retry of a part is safe.
 
 A single changeset that touches more documents than `maxBatchSize` and contains a non-idempotent operation, for example a child addition (`$push`), cannot be split safely and is refused. Chronicle raises `OversizedChangesetCannotBeSplit`, logs an error naming the read model, key, partition, collection, the blocking operations and `maxBatchSize`, and the partition fails.
 

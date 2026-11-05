@@ -5,7 +5,7 @@ description: What a Chronicle event source is, how event source id, type, stream
 
 An event source is one entity or process in your domain: a person, an account, an order, a transfer. All the state changes of that entity are events, and the **event source id** (`EventSourceId`) is what binds them together. It is comparable to the primary key of a row in a database.
 
-For instance, take the notion of a person. What identifies the person uniquely is in many systems the social security number assigned by the government. All state changes relevant for an instance of a person are identified by that one value, which is the event source id.
+For a person, generate an opaque surrogate id, such as a random `Guid`, and use it for every event about that person. Keep sensitive values out of identifiers: store them in event content marked with `[PII]`, as described in [PII and event source identifiers](../compliance/index.md#event-source-identifiers-cannot-be-encrypted).
 
 The diagram shows two event sources, two people, each with its own ordered story of events, all sharing the same event source id throughout:
 

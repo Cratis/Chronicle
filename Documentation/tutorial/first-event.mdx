@@ -34,10 +34,27 @@ Now the moment itself. With a `ChronicleClient` connected to your event store, a
 
 <ChronicleClientTabs snippet="tutorial/first-event/append" />
 
-Run it. Nothing dramatic appears on screen — and that's exactly right. Behind that one line, Chronicle validated the event against its registered schema, assigned it the next sequence number, and committed it to the **event log** — permanently, and in order. The fact is now part of your system's history; nothing will ever quietly overwrite it.
+## Run and verify
+
+For the .NET console project, use the [console connection example](../get-started/console.mdx#connect-the-client) with the `BookId`, `BookAdded`, and `TutorialFirstEventAppend` definitions above:
+
+1. In `GetStartedConsoleClient.Run()`, immediately after obtaining `eventStore`, replace `_ = eventStore;` with `var bookId = await TutorialFirstEventAppend.AddBook(eventStore);`. Defining the helper alone does not append an event; this call runs it.
+2. In `Program.cs`, add `await GetStartedConsoleClient.Run();` after the `using` directives and before the class declaration. This is the console entry point that connects the client and calls the helper.
+3. To read the appended event back, add `using Cratis.Chronicle.Events;` and, after the append inside `Run()`, add `var events = await eventStore.EventLog.GetForEventSourceIdAndEventTypes(bookId, [typeof(BookAdded).GetEventType()]);`. This uses the [event-source read API](../events/getting-events.mdx#read-events-for-a-single-event-source) to select only this book's `BookAdded` events.
+4. Follow the read with `Console.WriteLine(((BookAdded)events[0].Content).Title);`.
+
+From the console project's directory, run:
+
+```bash
+dotnet run
+```
+
+The read-back prints `The Pragmatic Programmer`, the title in the append helper. Each run creates a new `BookId` and appends one event for it. You can also inspect the event and its sequence number and event source id in the [Workbench](../workbench/index.mdx).
+
+For another client, use its startup instructions to invoke the append operation shown in its snippet.
 
 :::note[Where did it go?]
-The event log is the source of truth — an append-only sequence of everything that has happened. You just wrote position `0`. Every projection, reducer, and reactor you build from here on is, in the end, just a different way of *reading* this log.
+The event log is the source of truth — an append-only sequence of everything that has happened. The appended event has its own sequence number. Every projection, reducer, and reactor you build from here on is, in the end, just a different way of *reading* this log.
 :::
 
 ## What you did
