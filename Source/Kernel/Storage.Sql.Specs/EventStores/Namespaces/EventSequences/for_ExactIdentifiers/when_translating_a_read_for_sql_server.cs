@@ -6,6 +6,8 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences.for
 public class when_translating_a_read_for_sql_server() : given.a_storage_that_captures_statements(true)
 {
     string _bySource;
+    string _bySourceType;
+    string _byDefaultSourceType;
     string _byStream;
     string _inFlight;
 
@@ -13,6 +15,12 @@ public class when_translating_a_read_for_sql_server() : given.a_storage_that_cap
     {
         await ReadBySource("Alice");
         _bySource = Only();
+        _captured.Clear();
+        await ReadBySourceType("Account");
+        _bySourceType = Only();
+        _captured.Clear();
+        await ReadBySourceType(Chronicle.Concepts.Events.EventSourceType.Default);
+        _byDefaultSourceType = Only();
         _captured.Clear();
         await ReadByStream("Stream", "Id");
         _byStream = Only();
@@ -24,6 +32,10 @@ public class when_translating_a_read_for_sql_server() : given.a_storage_that_cap
     [Fact] void should_seek_on_the_event_source_id_column() => _bySource.ShouldContain(SourceSeek);
     [Fact] void should_compare_the_event_source_id_in_binary_collation() => _bySource.ShouldContain("COLLATE Latin1_General_100_BIN2");
     [Fact] void should_compare_the_event_source_id_length_in_bytes() => _bySource.ShouldContain("DATALENGTH(");
+    [Fact] void should_seek_on_the_event_source_type_column() => _bySourceType.ShouldContain(SourceTypeSeek);
+    [Fact] void should_compare_the_event_source_type_in_binary_collation() => _bySourceType.ShouldContain("COLLATE Latin1_General_100_BIN2");
+    [Fact] void should_compare_the_event_source_type_length_in_bytes() => _bySourceType.ShouldContain("DATALENGTH(");
+    [Fact] void should_not_narrow_on_the_default_event_source_type() => _byDefaultSourceType.ShouldNotContain(SourceTypeSeek);
     [Fact] void should_seek_on_the_stream_type_and_stream_id_columns()
     {
         _byStream.ShouldContain(StreamTypeSeek);

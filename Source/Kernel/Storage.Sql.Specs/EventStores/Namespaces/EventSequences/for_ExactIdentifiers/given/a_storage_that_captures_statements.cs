@@ -22,6 +22,7 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences.for
 public abstract class a_storage_that_captures_statements(bool useSqlServer) : Specification
 {
     protected const string SourceSeek = "[EventSourceId] = @";
+    protected const string SourceTypeSeek = "[EventSourceType] = @";
     protected const string StreamTypeSeek = "[EventStreamType] = @";
     protected const string StreamIdSeek = "[EventStreamId] = @";
     protected const string PartitionSeek = "[Partition] = @";
@@ -56,6 +57,12 @@ public abstract class a_storage_that_captures_statements(bool useSqlServer) : Sp
     protected async Task ReadBySource(EventSourceId eventSourceId)
     {
         using var cursor = await _events.GetFromSequenceNumber(EventSequenceNumber.First, eventSourceId);
+        await cursor.MoveNext();
+    }
+
+    protected async Task ReadBySourceType(EventSourceType eventSourceType)
+    {
+        using var cursor = await _events.GetFromSequenceNumber(EventSequenceNumber.First, default, eventSourceType);
         await cursor.MoveNext();
     }
 

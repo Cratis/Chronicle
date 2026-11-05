@@ -92,7 +92,7 @@ public class UniqueEventTypesConstraintsStorage(EventStoreName eventStore, Event
         if (scope.EventSourceType is not null)
         {
             var eventSourceTypeValue = scope.EventSourceType.Value;
-            query = query.Where(e => e.EventSourceType == eventSourceTypeValue);
+            query = query.WhereSourceType(context, eventSourceTypeValue);
         }
 
         if (scope.EventStreamType is not null)

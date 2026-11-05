@@ -72,12 +72,14 @@ public sealed class SpellingHarness(string provider, Func<Task<string>> createDa
         ClosedStreams = new(_eventStore, _namespace, sequenceId, database, Warnings);
     }
 
-    public async Task<ulong> Append(EventSourceId eventSourceId)
+    public Task<ulong> Append(EventSourceId eventSourceId) => Append(eventSourceId, EventSourceType.Default);
+
+    public async Task<ulong> Append(EventSourceId eventSourceId, EventSourceType eventSourceType)
     {
         var sequenceNumber = _next++;
         await Events.Append(
             sequenceNumber,
-            EventSourceType.Default,
+            eventSourceType,
             eventSourceId,
             EventStreamType.All,
             EventStreamId.Default,
@@ -95,6 +97,17 @@ public sealed class SpellingHarness(string provider, Func<Task<string>> createDa
     public async Task<ulong[]> Read(EventSourceId eventSourceId)
     {
         using var cursor = await Events.GetFromSequenceNumber(EventSequenceNumber.First, eventSourceId);
+        var numbers = new List<ulong>();
+        while (await cursor.MoveNext())
+        {
+            numbers.AddRange(cursor.Current.Select(_ => _.Context.SequenceNumber.Value));
+        }
+        return [.. numbers.Order()];
+    }
+
+    public async Task<ulong[]> ReadBySourceType(EventSourceType eventSourceType)
+    {
+        using var cursor = await Events.GetFromSequenceNumber(EventSequenceNumber.First, default, eventSourceType);
         var numbers = new List<ulong>();
         while (await cursor.MoveNext())
         {
