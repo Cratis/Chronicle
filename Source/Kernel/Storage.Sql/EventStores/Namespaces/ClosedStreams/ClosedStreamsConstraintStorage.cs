@@ -235,7 +235,8 @@ public class ClosedStreamsConstraintStorage(EventStoreName eventStore, EventStor
             ((ClosedStreamDimensions)row.Dimensions).HasFlag(ClosedStreamDimensions.EventStreamId) ? new EventStreamId(row.StreamId) : null),
         row.Owner,
         new EventSequenceNumber((ulong)row.SequenceNumber),
-        row.ClosedAt);
+        row.ClosedAt,
+        PendingReview: !row.ExactSpelling);
 
     void ReportPending(IEnumerable<ClosedStreamEntry> rows, IReadOnlyCollection<ClosedStreamScope> scopes)
     {

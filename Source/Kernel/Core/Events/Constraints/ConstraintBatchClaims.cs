@@ -146,7 +146,7 @@ public sealed class ConstraintBatchClaims
     /// <param name="persisted">The persisted covering closures.</param>
     /// <returns>The covering closures after earlier valid batch events.</returns>
     internal IEnumerable<ClosedStream> GetBatchClosuresCovering(ClosedStreamScope scope, IEnumerable<ClosedStream> persisted) =>
-        persisted.Where(closure => !_closureChanges.ContainsKey((closure.Owner, closure.Scope.Normalized())))
+        persisted.Where(closure => closure.PendingReview || !_closureChanges.ContainsKey((closure.Owner, closure.Scope.Normalized())))
             .Concat(_closureChanges.Values.OfType<ClosedStream>().Where(closure => closure.Scope.Covers(scope)));
 
     record ClaimKey(ConstraintName ConstraintName, string ScopeKey, UniqueConstraintValue Value);

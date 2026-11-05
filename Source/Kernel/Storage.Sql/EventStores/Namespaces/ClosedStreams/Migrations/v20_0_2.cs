@@ -35,6 +35,18 @@ public class v20_0_2 : Migration
 
     protected override void Up(MigrationBuilder migrationBuilder)
     {
+        if (IsSqlServer)
+        {
+            migrationBuilder.Sql(
+                $"DECLARE @count bigint = (SELECT COUNT_BIG(*) FROM [{WellKnownTableNames.ClosedStreams}] "
+                + "WHERE DATALENGTH([EventSequenceId]) + DATALENGTH([StreamType]) + DATALENGTH([StreamId]) "
+                + "+ DATALENGTH([EventSourceId]) + DATALENGTH([EventSourceType]) + DATALENGTH([Owner]) "
+                + "+ DATALENGTH([Dimensions]) + 32 > 900); "
+                + "IF @count > 0 BEGIN "
+                + "DECLARE @message nvarchar(2048) = CONCAT(@count, N' closed stream entries have keys too long for the new primary key. Nothing changed. Shorten or remove those entries before upgrading.'); "
+                + "THROW 50000, @message, 1; END;");
+        }
+
         // Entries written before this migration, and by nodes that do not know the column, are not reviewed on SQL Server.
         migrationBuilder.AddColumn<bool>(
             name: "ExactSpelling",

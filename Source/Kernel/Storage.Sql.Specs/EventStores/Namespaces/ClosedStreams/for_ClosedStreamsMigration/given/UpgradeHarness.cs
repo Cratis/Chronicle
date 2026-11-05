@@ -54,6 +54,43 @@ public sealed class UpgradeHarness(string connectionString, bool sqlite = false)
         }
     }
 
+    public async Task Migrate()
+    {
+        await using var context = Context();
+        await context.Database.MigrateAsync();
+    }
+
+    public async Task PrepareWideKeys(int streamIdLength)
+    {
+        await PrepareEarlierLayout("source");
+        await Execute($"UPDATE ClosedStreams SET EventSourceId = REPLICATE(N'a', 255), StreamId = REPLICATE(N'p', {streamIdLength})");
+        await Execute("INSERT INTO ClosedStreams (EventSequenceId, StreamType, StreamId, EventSourceId, EventSourceType, Owner, Dimensions, SequenceNumber, ClosedAt) "
+            + "SELECT EventSequenceId, StreamType, StreamId, REPLICATE(N'b', 255), EventSourceType, Owner, Dimensions, SequenceNumber, ClosedAt FROM ClosedStreams");
+    }
+
+    public async Task<List<int>> Numbers(string sql)
+    {
+        await using var context = Context();
+        return await context.Database.SqlQueryRaw<int>(sql).ToListAsync();
+    }
+
+    public Task<List<int>> KeyBytes(bool upgraded = false) => Numbers(
+        "SELECT DATALENGTH(EventSequenceId) + DATALENGTH(StreamType) + DATALENGTH(StreamId) "
+        + "+ DATALENGTH(EventSourceId) + DATALENGTH(EventSourceType) + DATALENGTH(Owner) + DATALENGTH(Dimensions)"
+        + (upgraded ? " + DATALENGTH(ExactKey)" : "") + " AS Value FROM ClosedStreams");
+
+    public Task<List<string>> Rows() => Strings(
+        "SELECT CONCAT(EventSequenceId, '/', StreamType, '/', StreamId, '/', EventSourceId, '/', EventSourceType, "
+        + "'/', Owner, '/', Dimensions, '/', SequenceNumber, '/', ClosedAt) AS Value FROM ClosedStreams ORDER BY 1");
+
+    public Task<List<string>> History() => Strings("SELECT MigrationId AS Value FROM __EFMigrationsHistory ORDER BY MigrationId");
+
+    public Task<List<string>> PrimaryKeyColumns() => Strings(
+        "SELECT col.name AS Value FROM sys.indexes idx "
+        + "JOIN sys.index_columns ic ON ic.object_id = idx.object_id AND ic.index_id = idx.index_id "
+        + "JOIN sys.columns col ON col.object_id = ic.object_id AND col.column_id = ic.column_id "
+        + "WHERE idx.object_id = OBJECT_ID(N'ClosedStreams') AND idx.is_primary_key = 1 ORDER BY ic.key_ordinal");
+
     public async Task Execute(string sql)
     {
         await using var context = Context();

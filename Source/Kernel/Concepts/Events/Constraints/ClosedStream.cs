@@ -10,4 +10,5 @@ namespace Cratis.Chronicle.Concepts.Events.Constraints;
 /// <param name="Owner">The owner of the closure.</param>
 /// <param name="SequenceNumber">The sequence number at closure, or unavailable for legacy rows.</param>
 /// <param name="ClosedAt">The time of closure, or null for legacy rows.</param>
-public record ClosedStream(ClosedStreamScope Scope, ClosedStreamOwner Owner, EventSequenceNumber SequenceNumber, DateTimeOffset? ClosedAt);
+/// <param name="PendingReview">Whether the closure must remain closed until reviewed.</param>
+public record ClosedStream(ClosedStreamScope Scope, ClosedStreamOwner Owner, EventSequenceNumber SequenceNumber, DateTimeOffset? ClosedAt, bool PendingReview = false);
