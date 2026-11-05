@@ -222,7 +222,7 @@ interface [GrainInterfaceType("Cratis.Chronicle.Observation.EventStoreSubscripti
 interface [GrainInterfaceType("Cratis.Chronicle.Observation.IDrainableObserverSubscriber")] Cratis.Chronicle.Observation.IDrainableObserverSubscriber [Version(0)]
   99F6A550: Drain() -> Task
 
-interface [GrainInterfaceType("Cratis.Chronicle.Observation.IObserver")] Cratis.Chronicle.Observation.IObserver [Version(6)]
+interface [GrainInterfaceType("Cratis.Chronicle.Observation.IObserver")] Cratis.Chronicle.Observation.IObserver [Version(7)]
   FF1D5EC7: CanResumeFailedPartition(Cratis.Chronicle.Concepts.Keys.Key, Cratis.Chronicle.Concepts.Observation.FailedPartitionId?, System.Guid?) -> Task<bool>
   906EECAF: CatchUp() -> Task
   E95279C4: CaughtUp(Cratis.Choreography.Jobs.JobId, Cratis.Chronicle.Concepts.Events.EventSequenceNumber) -> Task
@@ -422,7 +422,7 @@ interface [GrainInterfaceType("Cratis.Chronicle.Observation.Webhooks.IWebhooks")
   5CDB4041: SetTargetUrl(Cratis.Chronicle.Concepts.Observation.Webhooks.WebhookId, Cratis.Chronicle.Concepts.Observation.Webhooks.WebhookTargetUrl) -> Task
   73A40E5D: Update(Cratis.Chronicle.Concepts.Observation.Webhooks.WebhookDefinition) -> Task
 
-interface [GrainInterfaceType("Cratis.Chronicle.Observation.Webhooks.Signing.IWebhookSigningKeyRing")] Cratis.Chronicle.Observation.Webhooks.Signing.IWebhookSigningKeyRing [Version(0)]
+interface [GrainInterfaceType("Cratis.Chronicle.Observation.Webhooks.Signing.IWebhookSigningKeyRing")] Cratis.Chronicle.Observation.Webhooks.Signing.IWebhookSigningKeyRing [Version(1)]
   E5E4DCAC: GetSigningKeys() -> Task<System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Observation.Webhooks.WebhookSigningKey>>
   56C200D0: GetWebhookSecrets(Cratis.Chronicle.Concepts.Observation.Webhooks.WebhookId) -> Task<System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Observation.Webhooks.WebhookSigningKey>>
   28FA256C: RetireWebhookSecrets(Cratis.Chronicle.Concepts.Observation.Webhooks.WebhookId) -> Task

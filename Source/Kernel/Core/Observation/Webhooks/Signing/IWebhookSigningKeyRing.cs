@@ -3,12 +3,14 @@
 
 using Cratis.Chronicle.Concepts.Observation.Webhooks;
 using Cratis.Chronicle.Security;
+using Orleans.CodeGeneration;
 
 namespace Cratis.Chronicle.Observation.Webhooks.Signing;
 
 /// <summary>
 /// Defines the per-event-store ring of webhook signing keys and per-webhook HMAC secrets. The grain key is the event store name.
 /// </summary>
+[Version(1)]
 public interface IWebhookSigningKeyRing : IGrainWithStringKey
 {
     /// <summary>
