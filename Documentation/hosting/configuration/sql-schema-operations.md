@@ -149,7 +149,7 @@ For each entry that you confirm applies to exactly one spelling, mark it as revi
 UPDATE [ClosedStreams] SET ExactSpelling = 1 WHERE ExactSpelling = 0 AND EventSourceId = N'<confirmed event source id>';
 ```
 
-Run the listing and the update in each namespace database that holds closed-stream entries.
+Run the listing and the update in each namespace database that holds closed-stream entries. Reopening an entry that has not been reviewed does nothing and reports that nothing was reopened; reopening it is possible after review.
 
 ### Mark a spelling review as done
 

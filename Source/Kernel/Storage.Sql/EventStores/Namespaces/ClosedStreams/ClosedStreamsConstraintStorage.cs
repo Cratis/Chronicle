@@ -99,7 +99,11 @@ public class ClosedStreamsConstraintStorage(EventStoreName eventStore, EventStor
         await using var context = await database.Namespace(eventStore, @namespace);
         var normalized = scope.Normalized();
         var found = await ForSequence(context.DbContext).Where(row => row.Owner == owner.Value).Where(ExactScope(normalized)).ToArrayAsync(cancellationToken);
-        var rows = found.Where(row => IsOrdinalMatch(row, normalized)).ToArray();
+        var matching = found.Where(row => IsOrdinalMatch(row, normalized)).ToArray();
+
+        // Entries written before identifier comparison became exact stay closed until they have been reviewed.
+        var rows = matching.Where(row => row.ExactSpelling).ToArray();
+        ReportPending(found.Where(row => !row.ExactSpelling), []);
         context.DbContext.ClosedStreams.RemoveRange(rows);
         await context.DbContext.SaveChangesAsync(cancellationToken);
 
