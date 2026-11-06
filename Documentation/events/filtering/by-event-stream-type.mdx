@@ -1,30 +1,31 @@
 ---
-description: Use [EventStreamType] so a Chronicle reducer or reactor handles only events appended to a matching event stream type.
+title: Filter Chronicle events by event stream type
+description: Apply EventStreamType to a Chronicle reducer or reactor to handle only events appended to a matching stream category, such as payments or shipping.
 ---
-# Filter reducers and reactors by event stream type
-
-Use `[EventStreamType]` on a reducer or reactor when it should only handle events appended to a specific stream type.
+An `[EventStreamType]` filter limits a Chronicle reducer or reactor to a stream category, such as payments or shipping. Use it when one event source produces distinct processing flows and an observer should handle only one of them.
 
 ## How the match works
 
-Chronicle compares the observer attribute to the `eventStreamType:` value used when appending the event. If the values do not match, the reducer or reactor is skipped.
+Set `eventStreamType:` when appending and put the matching attribute on the observer. The values must match exactly. The filter selects a stream type, not an individual `EventStreamId`.
 
 ## Filter a reactor by event stream type
 
 <ChronicleClientTabs snippet="events/filtering/by-event-stream-type/reactor" />
 
-The reactor only handles events appended to the `payments` stream type.
+The service appends to the `"payments"` stream type, which matches the reactor's attribute. An event with the same payload but a different stream type does not reach this reactor.
 
 ## Filter a reducer by event stream type
 
 <ChronicleClientTabs snippet="events/filtering/by-event-stream-type/reducer" />
 
-If the same event is appended with another stream type, such as `eventStreamType: "returns"`, this reducer does not receive it.
+Only events appended with `eventStreamType: "shipping"` contribute to these shipping totals. Appending the same event with `eventStreamType: "returns"` does not reach this reducer.
 
 ## When to choose stream type filtering
 
-Use stream type filtering when the same event source can produce distinct processing flows and you want a reducer or reactor to observe only one of those flows.
+Choose stream type filtering to separate flows within an event source. To narrow delivery further, combine it with a [tag filter](by-tag.mdx) or an [event source type filter](by-event-source-type.mdx). Every configured filter category must match.
 
 ## Filter by a declared stream
 
-To resolve the stream type from an [event source definition](../../event-sources/defining.mdx), use `[FromEventSource<TSource>("Stream")]`, which also sets the event source type. See [Filter observers by event source and stream](../../event-sources/filtering.mdx). The stream type is a dimension a concurrency scope can narrow to, which is how a decision can be guarded per stream. See [Event sources and the Dynamic Consistency Boundary](../../event-sources/dcb.mdx). A filter on an observer takes no part in that.
+Use `[FromEventSource<TSource>("Stream")]` when an [event source definition](../../event-sources/defining.mdx) already declares the stream. It sets both the stream type and the event source type. [Filter observers by event source and stream](../../event-sources/filtering.mdx) shows how to refer to that definition without repeating the type strings.
+
+The filter only selects events for the observer. To protect a write from concurrent changes, configure a concurrency scope separately. Stream type can narrow that scope so a decision is guarded per stream; see [Event sources and the Dynamic Consistency Boundary](../../event-sources/dcb.mdx).

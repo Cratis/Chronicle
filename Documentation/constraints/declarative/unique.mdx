@@ -1,25 +1,18 @@
 ---
-description: Use builder.Unique(...) in an IConstraint so Chronicle enforces that a property value is unique across one or more event types.
+title: Declare Chronicle unique property constraints
+description: Reserve property values across event sources with Chronicle unique constraints, combine event types in one rule, and release values when they can be reused.
 ---
-# Unique property constraint
+A unique property constraint reserves a value for an event source so another source cannot claim it. Use it for a project name or email address that must stay unique even when different event types introduce or change the value. The owning source can claim its own value again without a violation.
 
-Use `builder.Unique(...)` inside an `IConstraint` implementation to enforce that a property value is unique across one or more event types. The constraint fires if any tracked event would introduce a duplicate value.
-
-Chronicle discovers all `IConstraint` implementations automatically — no registration is needed.
-
-## Upgrading persisted claims
-
-Before upgrading to Chronicle 19.112.0 or later, back up every namespace database. The startup patch **permanently deletes** unique-constraint claim rows whose stored value is not exactly 64 lowercase hexadecimal characters (`^[0-9a-f]{64}$`). The comparison is case-sensitive, including on SQL Server databases with case-insensitive collations: uppercase values are deleted. Both current per-event-source claims and retained per-value claims are cleaned, across all event sequences and scopes. A legacy raw value that already has the exact hash shape is indistinguishable from a hash and remains unchanged.
-
-After cleanup, SQL value columns and indexes are repaired directly, even if a running silo cached an earlier skipped migration. Duplicate hash-shaped claims remain intact and retain the existing non-unique-index fallback with a warning. A cleanup or DDL failure stops the patch without recording completion; retrying is safe.
-
-Downgrading does not undo this deletion. To roll back, stop the kernels and restore the backup taken before upgrading. Reindexing rebuilds claims using current hashes; it does not restore the deleted legacy rows. MongoDB uses the same case-sensitive hash-shape rule. In-memory storage has no persisted legacy claims to clean.
+In .NET, call `builder.Unique(...)` inside an `IConstraint` implementation. The client's default artifact discovery finds these classes without separate registration. See [Declarative constraints](index.mdx) for client-specific API differences.
 
 ## Defining a constraint
 
-Implement `IConstraint` and call the builder in `Define`:
+The following rule reserves a project's name when it is created and releases it when the project is removed. Implement `IConstraint` and put the builder call in `Define`:
 
 <ChronicleClientTabs snippet="constraints/declarative/unique/basic" />
+
+A second project cannot claim the same name while it is reserved. The rule applies within one namespace and one event sequence, not across tenants or sequences.
 
 ## Re-claiming a value
 
@@ -29,7 +22,7 @@ Do not constrain a property containing the event source's own id to prevent a se
 
 ## Keeping every value
 
-When one event source accumulates many identifiers, call `.WithMode(UniqueConstraintMode.PerValue)` to keep all of them reserved. The default, `PerEventSource`, keeps only the source's current value. Per-value mode is available through the .NET client for now.
+When one event source accumulates many identifiers, call `.WithMode(UniqueConstraintMode.PerValue)` to keep all of them reserved. The default, `PerEventSource`, keeps only the source's current value. The .NET API uses the enum shown below; Elixir declares this mode with `mode: :per_value`.
 
 <ChronicleClientTabs snippet="constraints/declarative/unique/per-value" />
 
@@ -39,7 +32,7 @@ For a composite value, pass removal-property expressions in the same order as th
 
 ## Uniqueness across multiple event types
 
-Use multiple `.On` calls when several event types each contribute to the same logical uniqueness rule. The constraint fires if any of the tracked events would introduce a duplicate value:
+Use multiple `.On` calls when different events introduce or change the same logical value. Here, `Email` on registration and `NewEmail` on an address change share one rule, so changing an address cannot claim one held by another user:
 
 <ChronicleClientTabs snippet="constraints/declarative/unique/multiple-event-types" />
 
@@ -51,21 +44,23 @@ Use `.WithName(...)` to give the constraint an explicit name. When not provided,
 
 ## Releasing a constraint
 
-Call `.RemovedWith<T>()` to register the event type that releases the constraint. When that event is appended, the previously held value is freed and can be claimed again:
+Call `.RemovedWith<T>()` when a lifecycle event should release the value held by that event source. In the default `PerEventSource` mode, the source's current value then becomes available to another source:
 
 <ChronicleClientTabs snippet="constraints/declarative/unique/releasing" />
 
-A lifecycle often ends in more than one way — an invitation is over when it is accepted, revoked, or expires. Call `.RemovedWith<T>()` once for each of those events and every one of them releases the value on its own; declaring a second does not replace the first:
+An invitation may end by acceptance, revocation, or expiry. Call `.RemovedWith<T>()` once for each event that should release the value. Every declaration applies independently; adding a second does not replace the first:
 
 <ChronicleClientTabs snippet="constraints/declarative/unique/releasing-several-events" />
 
 ## Scoping to the event log
 
-By default a constraint applies to every event sequence its event types are appended to, and each sequence keeps its own index. When an event type is a domain fact that is also forwarded to the outbox, the forwarded copy claims the value in the outbox's index, and only a removal event appended to the outbox can release it. Call `.ForEventLog()` to apply the constraint to the event log alone, or `.ForEventSequences(...)` to name other sequences. The kernel neither validates nor indexes the constraint for a sequence it does not apply to:
+By default, a constraint applies to every event sequence its event types are appended to. Each sequence keeps a separate index of claims. If you forward a constrained event to the outbox, that copy claims the value in the outbox too; a removal event in the event log does not release the outbox claim.
+
+Call `.ForEventLog()` when only the event log should enforce the rule, or `.ForEventSequences(...)` to select other sequences. The kernel neither validates nor indexes the constraint for a sequence outside that selection:
 
 <ChronicleClientTabs snippet="constraints/declarative/unique/event-log-only" />
 
-The declaration covers every constraint defined on that builder, wherever in the chain it is called, and calling `.ForEventSequences(...)` again adds to the sequences already named. A builder without either call applies its constraints to every event sequence.
+In the .NET builder, this selection covers every constraint defined on that builder, wherever in the chain you make the call. Calling `.ForEventSequences(...)` again adds to the sequences already named. Without either call, the builder's constraints apply to every event sequence.
 
 Changing the sequences takes effect when the client next registers its constraints. The kernel then rebuilds, in every namespace, the index of each sequence the constraint now applies to but did not before, from the events already in that sequence. A sequence the constraint no longer applies to stops validating it, and its index is no longer read until the constraint applies there again, when it is rebuilt.
 
@@ -87,15 +82,29 @@ Use a callback to compose the message dynamically from violation context:
 
 ## How constraints are enforced
 
-When a constraint is registered, the Chronicle Kernel creates the indexes required to enforce it. Constraints are evaluated server-side during append, ensuring data integrity regardless of the client.
+The Chronicle Kernel uses an index of claimed values to check the registered rule during append, regardless of which client writes the event. Event storage and the claim update are not crash-atomic. If an update cannot complete, the kernel marks the affected index as pending and refuses governed appends while it catches up. See [Constraint or decision read](../index.md#constraint-or-decision-read) for the enforcement limits.
+
+## Upgrading persisted claims
+
+Before upgrading to Chronicle 19.112.0 or later, back up every namespace database. The startup patch permanently deletes unique-constraint claim rows whose stored value is not exactly 64 lowercase hexadecimal characters (`^[0-9a-f]{64}$`). The comparison is case-sensitive even on SQL Server databases with case-insensitive collations, so uppercase values are deleted.
+
+Cleanup covers current per-event-source claims and retained per-value claims across all event sequences and scopes. A legacy raw value already matching the exact hash shape is indistinguishable from a hash and remains unchanged. MongoDB uses the same case-sensitive rule; in-memory storage has no persisted legacy claims to clean.
+
+After cleanup, SQL value columns and indexes are repaired directly, even if a running kernel node cached an earlier skipped migration. Duplicate hash-shaped claims remain intact, with the existing non-unique-index fallback and a warning. A cleanup or schema-update failure stops the patch without recording completion; retrying is safe.
+
+Downgrading does not undo the deletion. To roll back, stop the kernels and restore the backup taken before upgrading. Reindexing rebuilds claims using current hashes; it does not restore the deleted legacy rows.
 
 ## Rebuilding an index
 
-When a constraint changes, Chronicle rebuilds its index from the event sequence in log order. It clears all claims in each scope before replaying that scope's first event, so stale claims do not block historical values.
+When a change to a property constraint requires reindexing, Chronicle rebuilds its index from the event sequence in log order. It clears all claims in each scope before replaying that scope's first event, so stale claims do not block historical values.
 
 While an index rebuild is running, Chronicle refuses appends governed by that index with `ConstraintIndexUnavailable` in the append result's errors. Nothing is stored, so retry the unchanged append after a delay. Appends not governed by a rebuilding index continue normally. Governed appends resume once the rebuild handover and any pending repair finish.
 
-If the rebuild step cannot hand over to the event sequence, Chronicle keeps refusing governed appends rather than risk accepting duplicates against an incomplete index. The Kernel logs a warning starting with `Constraint index rebuild terminal handoff failed` or `Constraint index rebuild cancellation handoff failed`. About every 30 seconds, Chronicle checks the constraint's reindex job step. Once that step has ended (failed, stopped, completed or removed), Chronicle releases the rebuild and catches the index up from the event sequence before it accepts governed appends again. While the rebuild is held, the Kernel logs `Constraint rebuild … is still holding …` every 5 minutes, and the gauge `chronicle-event-sequences-constraint-indexes-rebuilding` is non-zero. Restart the Kernel only when that message says the job step cannot be read (`unreadable`) or has no job (for example, a step started by an earlier Kernel version). Restarting is safe: Chronicle catches the index up from the event sequence before it accepts governed appends again.
+If the rebuild step cannot hand over to the event sequence, Chronicle keeps refusing governed appends rather than accept duplicates against an incomplete index. The Kernel logs a warning starting with `Constraint index rebuild terminal handoff failed` or `Constraint index rebuild cancellation handoff failed`.
+
+About every 30 seconds, Chronicle checks the constraint's reindex job step. Once the step has ended (failed, stopped, completed, or removed), Chronicle releases the rebuild and catches the index up from the event sequence before accepting governed appends again. While the rebuild is held, the Kernel logs `Constraint rebuild … is still holding …` every 5 minutes. The gauge `chronicle-event-sequences-constraint-indexes-rebuilding` remains non-zero.
+
+Restart the Kernel only when that message says the job step cannot be read (`unreadable`) or has no job, for example a step started by an earlier Kernel version. Restarting is safe: Chronicle catches the index up from the event sequence before accepting governed appends again.
 
 If the store rejects a duplicate claim during the rebuild, Chronicle logs a warning, skips that claim, and continues. The first historical claimant keeps the value until an event releases or replaces it. The step persists skipped-claim counts per constraint and reports them in its completion progress message, for example `Skipped 3 duplicate claims: UniqueEmail=2, UniqueName=1`. The report contains constraint names and counts only, not claimant identities, values, or hashes; collision-free rebuilds leave the progress message unchanged.
 

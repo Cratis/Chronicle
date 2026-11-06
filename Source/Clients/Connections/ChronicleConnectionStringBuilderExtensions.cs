@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Diagnostics.CodeAnalysis;
+
 namespace Cratis.Chronicle.Connections;
 
 /// <summary>
@@ -137,6 +139,21 @@ public static class ChronicleConnectionStringBuilderExtensions
     public static ChronicleConnectionStringBuilder WithKeepAliveSkipped(this ChronicleConnectionStringBuilder builder)
     {
         builder.SkipKeepAlive = true;
+        return builder;
+    }
+
+    /// <summary>
+    /// Turns on serverless mode in the .NET client for the connection string.
+    /// </summary>
+    /// <param name="builder">The <see cref="ChronicleConnectionStringBuilder"/> to configure.</param>
+    /// <returns>The <see cref="ChronicleConnectionStringBuilder"/> for fluent configuration.</returns>
+    /// <remarks>
+    /// Intended for functions and other scaled-to-zero hosts. Serverless mode also skips the keep-alive connection.
+    /// </remarks>
+    [Experimental("CHRX0001", UrlFormat = "https://www.cratis.io/docs/chronicle/clients/dotnet/serverless-mode")]
+    public static ChronicleConnectionStringBuilder WithServerless(this ChronicleConnectionStringBuilder builder)
+    {
+        builder.Serverless = true;
         return builder;
     }
 

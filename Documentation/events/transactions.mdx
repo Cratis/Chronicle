@@ -1,28 +1,26 @@
 ---
-description: A Chronicle unit of work groups event appends in the client and commits them as one append batch with a single commit point.
+title: Stage and commit Chronicle events with a unit of work
+description: A Chronicle unit of work stages events in the .NET client until commit. Use transactional appends to collect a workflow's events into an atomic batch.
 ---
-# Transactions and Unit of Work
+A Chronicle unit of work stages events in the .NET client and sends them as one append batch when you commit. Use it when a workflow produces events across several calls, but none should be sent until the workflow is ready. The staged events share a correlation id so you can trace the operation.
 
-A unit of work groups event appends in the client and commits them as one append batch. Use it when one logical operation must produce multiple events and the operation should have one commit point, one correlation id, and one success or failure outcome.
-
-The transaction is still an event append operation. Chronicle validates constraints and concurrency when the unit of work commits, then persists the accepted events atomically for each committed batch.
+Commit is still an event append operation. Chronicle checks constraints and concurrency at that point, then persists an accepted batch atomically. A unit of work does not make other work, such as an HTTP call or a write to another database, part of that event transaction.
 
 ## When to Use a Unit of Work
 
-Use a unit of work when:
+Choose a unit of work when different parts of one command need to contribute events to the same commit. If you already have the complete event list, [AppendMany](./appending-many) is the direct way to write it atomically.
 
-- One command or workflow emits more than one event.
-- The events should share the same correlation id.
-- The operation should not send partial appends before the workflow is ready.
-- The appends should be committed or rejected together.
-
-Do not use a unit of work to hide modeling problems. If two facts can happen independently, append them independently. If one fact depends on another, model that invariant with constraints, concurrency, or the command decision that creates the events.
+Grouping events does not enforce the rule behind the decision. If the operation depends on state you read, use [concurrency protection](./concurrency) or a [decision read](../read-models/decision-reads.mdx). Use [constraints](../constraints/) for rules the kernel must enforce for every writer. Facts that can happen independently do not need to share a commit.
 
 ## Commit Transactional Appends
 
-Create a unit of work, append through the transactional event sequence, and commit when every event has been staged.
+Begin a unit of work through the event store's `UnitOfWorkManager`. Append through `store.EventLog.Transactional` to stage events in that unit; a plain `store.EventLog.Append` writes immediately and does not join it. Commit only after every event has been staged.
+
+The example stages an order event and an inventory event under different event source ids. Neither transactional append sends an event on its own:
 
 <ChronicleClientTabs snippet="events/transactions/basic" />
+
+After `Commit`, inspect `IsSuccess` before reporting success. A constraint or concurrency rejection completes the unit without appending the batch; it is reported in the result rather than thrown. Roll back if the workflow fails before commit, and dispose the unit when you are finished. Rollback cannot undo events already sent to Chronicle. For a timeout or an uncertain storage outcome, follow [When the outcome is unknown](./appending#when-the-outcome-is-unknown) before retrying.
 
 ## Commit an ordered batch with exact concurrency
 
@@ -70,11 +68,11 @@ While a commit is in flight, disposing the unit does nothing in either mode: it 
 
 ## In ASP.NET Core
 
-`AddCratisChronicle` registers middleware that begins a unit of work for every request and commits it after the endpoint returns. Three things follow:
+`AddCratisChronicle` registers middleware that begins a unit of work for every request and, by default, commits it after the endpoint returns. Stage events with `Transactional.Append`. A plain `eventLog.Append` writes immediately, outside both the unit of work and any decision reads enrolled in it.
 
-- **Stage with `Transactional.Append`.** A plain `eventLog.Append` is written immediately and takes no part in the unit of work. It is not covered by decision reads enrolled in the unit.
-- **Commit early to report the outcome.** The middleware commits after the response is written, so a constraint or concurrency rejection cannot change that response, and nothing tells the caller. Call `IUnitOfWorkCompletionFeature.CommitAsync()` before you respond and check `IsSuccess` and `GetDecisionConflicts()`. The middleware does not commit a completed unit again, and a second `CommitAsync()` returns quietly without committing again.
-- **Check the result.** A failed commit does not throw.
+If the response has already been written, a commit rejection cannot change it. To report the outcome to the caller, call `IUnitOfWorkCompletionFeature.CommitAsync()` before responding, then check `IsSuccess` and `GetDecisionConflicts()`. Do not rely on an exception to signal a rejected batch. The middleware does not commit a completed unit again, and a second `CommitAsync()` returns without another commit.
+
+For automatic completion before an MVC result or a minimal API result is returned, use the [response adapters below](#report-a-failed-commit-before-the-response-starts).
 
 ### Claim completion of the request unit
 

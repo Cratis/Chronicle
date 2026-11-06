@@ -1,23 +1,20 @@
 ---
-description: Chronicle runs as a separate kernel process and your application is a gRPC client; this section explains how client configuration flows to it.
+title: Chronicle .NET client configuration
+description: Configure the Chronicle .NET client's connection, event store, and runtime options through appsettings.json, environment variables, or code.
 ---
-# Configuration
+<a id="configuration" />
 
-Chronicle always runs as a **separate process** — the kernel — and your application talks to it as a **client** over gRPC. There is no in-process or embedded kernel to host inside your app, so on this side you're configuring *how your application connects and behaves as a client*. (To configure the kernel itself — ports, storage backends, features — see [Hosting Configuration](../hosting/configuration/index.md).)
+Configure the Chronicle .NET client to choose which kernel and event store your application uses. Client settings control the connection and client behavior; they do not configure the kernel's ports, storage, or server-side limits. Those belong in [Hosting Configuration](../hosting/configuration/index.md).
 
-:::note[Client coverage]
-This whole `configuration/**` section (this page, [ChronicleOptions](./chronicle-options), [TLS](./tls), [gRPC message size](./grpc-message-size), [structural dependencies](./structural-dependencies), [camel-casing](./camel-casing)) is built around .NET's `appsettings.json`/`Cratis__Chronicle__` environment-variable binding and `AddCratisChronicle`/`IServiceCollection` DI registration — a hosting model specific to .NET. Kotlin, Elixir, and TypeScript each configure a connection through their own client constructor/options object instead (see each client's getting-started guide) rather than a layered configuration-provider system. The camel-casing page specifically addresses a PascalCase-C#-to-camelCase-JSON mismatch that doesn't arise the same way in Kotlin (already camelCase) or Elixir (Chronicle's own macros already convert snake_case to camelCase automatically, confirmed in the migration builder's `normalize_property_name`).
-:::
+This section covers .NET host configuration and direct `ChronicleClient` construction. The `appsettings.json` binding and `AddCratisChronicle` registration shown here are .NET APIs, not a shared configuration contract for every Chronicle client. See [Where the clients differ](../clients/where-the-clients-differ.md) for client-specific workflows.
 
 ## How client configuration flows
 
-Every client setting can be supplied three ways, and they layer in this order — later wins:
+With the standard .NET host defaults, put bindable settings under `Cratis:Chronicle` in `appsettings.json`. Environment variables override file values; for example, `Cratis__Chronicle__EventStore` maps to `Cratis:Chronicle:EventStore`. If you customize the host's configuration providers, their order determines precedence.
 
-1. **`appsettings.json`**, under the `Cratis:Chronicle` section — the usual home for the connection string and most settings.
-2. **Environment variables**, with the `Cratis__Chronicle__` prefix (.NET maps the `__` separator onto nested keys) — convenient for containers and CI.
-3. **Code**, via the `configureOptions` callback on `AddCratisChronicle` — it runs *after* binding, so it overrides configuration. Structural dependencies (custom resolvers and providers) can only be set here.
+The `configureOptions` callback on `AddCratisChronicle` runs after configuration binding, so values it sets override bound values. Custom providers and resolvers are different: supply those objects through the separate `configure` callback described in [Structural Dependencies](./structural-dependencies).
 
-A minimal `appsettings.json`:
+Start with the kernel endpoint and the event store your application will use:
 
 ```json
 {
@@ -30,38 +27,40 @@ A minimal `appsettings.json`:
 }
 ```
 
-The matching registration on the host — `AddCratisChronicle` reads the section above, and the callback overrides it:
+Register the client on the host with `AddCratisChronicle`. It reads the section above; the example's `configureOptions` callback then selects `my-store` explicitly:
 
 <ChronicleClientTabs snippet="configuration/index/register" />
 
-`AddCratisChronicle` is an extension on the host builder — `IHostApplicationBuilder` for worker and console hosts, `WebApplicationBuilder` for ASP.NET Core. See the [getting-started host guides](../get-started/toc.yml) for the full setup of each.
+Use `IHostApplicationBuilder` for worker and console hosts, or `WebApplicationBuilder` for ASP.NET Core. Once registered, application services can resolve `IEventStore` through dependency injection.
+
+The connection string above uses TLS, but the client skips server certificate validation by default. Before connecting beyond a trusted development environment, configure certificate trust and enable [TLS validation](./tls). See the [getting-started host guides](../get-started/toc.yml) for the surrounding application setup.
 
 ## Topics
 
-- [ChronicleOptions Reference](chronicle-options) - Complete reference for all `ChronicleOptions`, `ChronicleClientOptions`, and `ChronicleAspNetCoreOptions` settings, including `appsettings.json` binding.
-- [Connection Strings](../connection-strings/index.md) - The `chronicle://` connection string format, development defaults, and credentials.
-- [Namespaces](../namespaces/index.md) - Resolve the event store namespace per request — the basis of multi-tenancy.
-- [Camel Casing](camel-casing) - Configure camel case naming policy for projection definitions and read model persistence.
-- [gRPC Message Size](grpc-message-size) - Configure maximum gRPC message sizes for large event batches.
-- [Structural Dependencies](structural-dependencies) - Configure artifact discovery, identity, namespace resolution, and other build-time dependencies via `ChronicleClient` constructor parameters or `IChronicleBuilder`.
-- [TLS](tls) - Configure client-side TLS options and certificate handling.
+- [ChronicleOptions Reference](chronicle-options) lists the settings available to direct clients and hosted applications.
+- [Connection Strings](../connection-strings/index.md) explains endpoint selection and credentials.
+- [Namespaces](../namespaces/index.md) shows how to select an event store namespace per request for multi-tenancy.
+- [Camel Casing](camel-casing) configures serialized property names, projection mappings, and read model container names.
+- [gRPC Message Size](grpc-message-size) helps you fit large messages within both client and kernel limits.
+- [Structural Dependencies](structural-dependencies) supplies custom artifact discovery, identity providers, and namespace resolvers.
+- [TLS](tls) explains how to enable server certificate validation and configure certificate handling.
 
 ## Explicit artifacts
 
-Nominate artifacts in code when their assemblies cannot carry Chronicle markers or when you want composition-root registration. Existing markers remain supported; explicit declarations merge with them rather than overriding conflicting identities.
+Register event types and other artifacts in code when you want to declare them where the application is assembled, or when their assemblies cannot carry Chronicle markers. Explicit declarations merge with marker-based discovery; they do not override conflicting identities.
 
 <ChronicleClientTabs snippet="configuration/explicit-artifacts/composition" />
 
-Configure the options before creating stores. Each store captures an immutable snapshot; later options edits do not alter existing stores or their reconnect registrations. See the [.NET API reference](../clients/dotnet/explicit-artifacts) for event facets, conflict rules, plain observer shapes and custom-provider compatibility.
+Configure these declarations before creating stores. Each store captures an immutable snapshot; later option edits do not alter existing stores or their reconnect registrations. Continue to the [.NET API reference](../clients/dotnet/explicit-artifacts) for registration rules and custom-provider compatibility.
 
 ## Registry-resolved concurrency
 
-An explicit alias belongs to the store's registry, not the CLR type's attributes. Resolve the identity from that registry before constructing a concurrency scope:
+When a type is registered with an explicit alias, use the store's registry to obtain its event identity before constructing a concurrency scope. The alias belongs to that store's registration and may differ from the type's attributes:
 
 <ChronicleClientTabs snippet="events/concurrency/registry-identities" />
 
-The scope uses the registered id and generation, including aliases, through the existing builder APIs. Declaration-only Type/generic helpers retain their marker-based behavior.
+The scope uses the registered ID and generation, including the alias. Type-based and generic declaration helpers still use marker-based identities. See [Event concurrency](../events/concurrency.mdx) when applying an expected sequence number to an append.
 
 ## Configuring the server
 
-The kernel is configured separately from the client. See [Hosting Configuration](../hosting/configuration/index.md) for the `chronicle.json` file, environment variables, storage backends, and ports. To stand the kernel up locally, see [Run Chronicle locally](../get-started/choose-hosting-model#run-chronicle-locally).
+If your next task is to change storage, listeners, or kernel features, continue to [Hosting Configuration](../hosting/configuration/index.md). If you do not yet have a kernel to connect to, start with [Run Chronicle locally](../get-started/choose-hosting-model#run-chronicle-locally).

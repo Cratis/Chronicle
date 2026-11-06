@@ -1,11 +1,16 @@
 ---
-title: Register a read model explicitly
-description: Register a read model and its projection through the client instead of relying on discovery, before or after the client connects.
+title: Chronicle projections — register a read model explicitly
+description: Register a Chronicle read model and projection without assembly discovery. Choose a stable identifier and understand reconnects and ownership conflicts.
 ---
 
-Chronicle usually finds read models and projections for you: it discovers `IProjectionFor<T>` classes and read models carrying model-bound attributes in your assemblies. Some hosts cannot rely on that. A library may own its read models without being scanned, or a framework may generate a projection for a type it learns about at runtime. For those cases you can register the read model and its projection explicitly.
+Register a Chronicle read model and its projection explicitly when assembly discovery cannot find
+them, such as a library outside the scanned assemblies or a projection generated at runtime. In the
+.NET client, explicit registration uses the same projection builder and kernel registration path as
+discovered definitions.
 
-An explicitly registered read model is an ordinary read model. `GetInstanceById`, `GetInstances`, `Watch`, snapshots and passive projections all work the same way they do for a discovered one. The projection uses the same identifiers, registration path and reconnect handling. Only the way the client learns about it differs.
+Only the way the client learns about the definition changes. Reads still follow the model's
+materialized or passive behavior, and a materialized projection still catches up asynchronously.
+Registration does not make existing history appear in the sink before it returns.
 
 ## Register a projection defined in code
 
@@ -13,13 +18,25 @@ Define the projection with the same builder an `IProjectionFor<T>` class receive
 
 <ChronicleClientTabs snippet="projections/explicit-registration/declarative" />
 
-By default the projection is identified by the read model's full type name, the same identity a model-bound projection for that read model would have. Pass an identifier when the projection's identity has to survive renaming the read model. Keep it stable: Chronicle tracks the projection's position under that identifier.
+By default the projection is identified by the read model's full type name, the same identity a
+model-bound projection for that read model would have. Pass an identifier when the projection's
+identity has to survive renaming the read model. Keep it stable: Chronicle tracks the projection's
+position under that identifier.
+
+A stable projection ID does not preserve every storage identity. Renaming the model can still change
+its read-model identifier and default container. Plan that separately using
+[the read-model migration checklist](choosing-a-read-model-style.mdx#what-it-costs-to-switch-later).
 
 ## Register a passive projection
 
-A projection defined with `Passive()` is not materialized. Chronicle registers its read model without a sink, so each read computes the instance from its events on demand:
+A projection defined with `Passive()` is not materialized. Chronicle registers its read model without
+a sink, so each read computes the instance from its events on demand:
 
 <ChronicleClientTabs snippet="projections/explicit-registration/passive" />
+
+A passive by-ID read selects one event source. Keep a view with cross-source joins or custom
+aggregation keys materialized when that history is needed to reconstruct it. See
+[passive projections](declarative/passive.mdx) before changing an existing model's consistency behavior.
 
 ## Register a model-bound read model
 
@@ -43,6 +60,11 @@ Event types and the other artifact kinds can also be nominated without marker in
 
 ## Rules
 
-- A read model is maintained by one projection. Registering a second projection with a different identifier for the same read model is rejected. Registering the same identifier again replaces the definition.
+- A read model has one builder: a projection or a reducer. Registering a second projection with a different identifier for the same read model is rejected. Registering the same identifier again replaces the definition.
 - An explicit projection cannot claim a read model that a discovered projection already maintains.
 - [Variants](declarative/variants) are wired together with their siblings during discovery, so a variant read model cannot be registered on its own.
+
+After registering, inspect the [registration outcome](../clients/dotnet/registration-outcome.md) for
+failed definitions. If you replace a definition under the same ID, the
+[registration lifecycle](registration-lifecycle.md) determines whether historical data needs replay;
+re-registering alone is not a storage migration.

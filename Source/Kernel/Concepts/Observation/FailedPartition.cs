@@ -24,6 +24,11 @@ public class FailedPartition
     public Guid? WebhookRecoveryId { get; set; }
 
     /// <summary>
+    /// Gets or sets the replay operation that produced the failure, absent for live and catch-up failures.
+    /// </summary>
+    public ReplayEpoch? ReplayEpoch { get; set; }
+
+    /// <summary>
     /// Unique identifier of the failed partition.
     /// </summary>
     public FailedPartitionId Id { get; set; } = FailedPartitionId.New();

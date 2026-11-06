@@ -27,6 +27,12 @@ public record ObserverSubscriberContext(object? Metadata)
     public ObservationOrigin Origin { get; init; }
 
     /// <summary>
+    /// Gets the replay operation that scheduled the delivery, or null for live and catch-up deliveries.
+    /// It is an input of the deterministic webhook message id (see <c language="csharp">WebhookMessageIds</c>).
+    /// </summary>
+    public ReplayEpoch? ReplayEpoch { get; init; }
+
+    /// <summary>
     /// Gets how long is left before the caller stops accepting a result.
     /// </summary>
     /// <param name="clock">The clock.</param>

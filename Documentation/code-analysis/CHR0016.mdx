@@ -1,8 +1,7 @@
 ---
+title: "CHR0016: Projection Define() must not contain imperative code"
 description: Chronicle analyzer rule CHR0016 reports imperative statements such as if, loops or assignments inside a projection's Define() method.
 ---
-# CHR0016: Projection Define() must not contain imperative code
-
 ## Rule Description
 
 The `Define()` method of a class implementing `IProjectionFor<T>` must not contain imperative statements such as `if`/`else`, loops, variable declarations, or assignments. Projection definitions only declare the shape; they do not execute.

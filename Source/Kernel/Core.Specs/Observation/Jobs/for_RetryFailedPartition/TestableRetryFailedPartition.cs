@@ -37,6 +37,14 @@ public class TestableRetryFailedPartition(JsonSerializerOptions jsonSerializerOp
         base.PrepareSteps(request);
 
     /// <summary>
+    /// Records a step's result as the job does when the step completes or stops.
+    /// </summary>
+    /// <param name="stepId">The step that completed.</param>
+    /// <param name="result">Its result.</param>
+    /// <returns>Awaitable task.</returns>
+    public Task RecordStepForTesting(JobStepId stepId, JobStepResult result) => OnStepCompletedOrStopped(stepId, result);
+
+    /// <summary>
     /// Checks whether the persisted job can resume.
     /// </summary>
     /// <returns>Whether the observer permits resuming.</returns>

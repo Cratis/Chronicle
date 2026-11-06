@@ -1,21 +1,23 @@
 ---
-description: Point a Chronicle reducer at an event sequence other than the default event log with [EventSequence], [Reducer] or [EventLog], including inbox routing.
+title: Cratis Chronicle reducer event sequence selection
+description: Choose the event sequence a Cratis Chronicle reducer reads, override inferred inbox routing, or explicitly select the default event log.
 ---
-# Event Sequence
 
-By default, reducers observe the default event log. You can override this by specifying a different event sequence using either the `[EventSequence]` attribute or the `eventSequence` parameter on the `[Reducer]` attribute.
+<span id="event-sequence"></span>
 
-For a [self reducer](self-reducing-read-models), place sequence configuration on the model itself. It has the same sequence selection and external-store routing rules as a classic reducer; a sequence attribute alone does not make it a model-bound projection.
+A Cratis Chronicle reducer reads one event sequence: an ordered stream such as the event log or an inbox. Select a sequence explicitly when the reducer should read somewhere other than its default or inferred source.
+
+In .NET, reducers read the default event log unless event-store metadata points their handled events to another store's inbox. Use `[EventSequence]` or the `eventSequence` parameter on `[Reducer]` to override that selection.
+
+For a [self-reducing read model](self-reducing-read-models), place sequence configuration on the model itself. The .NET client applies the same selection and external-store routing rules as it does for a separate reducer. A sequence attribute chooses the input; it does not turn the model into a projection.
 
 ## Using the `[EventSequence]` Attribute
 
-Apply `[EventSequence]` directly to your reducer class to pin it to a specific event sequence:
+Apply `[EventSequence]` directly to the reducer class when the sequence is the only option you need to set:
 
 <ChronicleClientTabs snippet="reducers/event-sequence/event-sequence-attribute" />
 
-TypeScript selects the sequence through the `reducer()` decorator's parameter. Kotlin and Java can
-use either `@EventSequence` or the `eventSequence` parameter on `@Reducer`. Use the client tab's
-configuration shape; the parameter-based form is shown below.
+TypeScript uses the `eventSequenceId` parameter on `reducer()`. Kotlin and Java use either `@EventSequence` or the `eventSequence` parameter on `@Reducer`. Follow the configuration form in your client tab; the next example shows the parameter-based form.
 
 ## Using the `[Reducer]` Attribute
 
@@ -23,7 +25,7 @@ When you are already using the `[Reducer]` attribute to set a custom identifier 
 
 <ChronicleClientTabs snippet="reducers/event-sequence/reducer-attribute" />
 
-Both approaches produce the same result. Prefer `[Reducer(eventSequence: ...)]` when you are already customizing the reducer with other parameters on that attribute.
+Either form selects the sequence. If both are present in .NET, `[EventSequence]` takes precedence. Keep the selection in one place so a later change does not leave a conflicting value behind.
 
 ## Convenience: `[EventLog]`
 
@@ -31,16 +33,12 @@ Use `[EventLog]` when you want to be explicit that the reducer reads from the de
 
 <ChronicleClientTabs snippet="reducers/event-sequence/event-log-attribute" />
 
-`[EventLog]` explicitly selects the default log instead of inferring an inbox from event-store
-metadata. Use the event-log sequence name when configuring the same selection through a sequence parameter.
+`[EventLog]` explicitly selects the default log instead of inferring an inbox from event-store metadata on the events. Use the event-log sequence name when configuring this selection through a sequence parameter.
 
 ## External Event Store Inbox Routing
 
-For outbox-to-inbox subscriptions between event stores, including automatic inbox routing and observer-level `[EventStore]` usage, see [Subscribe Reducers to External Event Stores](external-event-store-subscriptions).
+If the events belong to another event store, follow [Subscribe Reducers to External Event Stores](external-event-store-subscriptions) to let Chronicle forward them from the source outbox to a local inbox. In .NET, `[EventStore]` on the reducer selects that inbox and cannot be combined with explicit sequence configuration, including `[EventLog]`.
 
 ## When to Use `[EventSequence]` Explicitly
 
-- When you need to read from a specific sequence other than the inferred one
-- To suppress automatic inbox routing for a reducer that handles foreign events
-- For reducers that target a specialized or partitioned event stream
-- When an explicit sequence name improves readability and makes intent clear
+Use an explicit sequence to read from a known sequence instead of the inferred one, or to keep a reducer on the local event log despite external-store metadata on its events. Sequence selection chooses where events come from; it does not narrow delivery by tag, event source type, or stream type. For those rules, continue with [reducer event filtering](filtering).

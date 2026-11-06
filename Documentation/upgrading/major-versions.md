@@ -1,6 +1,6 @@
 ---
 title: Every major version, and what it meant
-description: What each Chronicle major changed, so you can tell what a jump from one version to another actually costs you.
+description: Cratis Chronicle major-version boundaries identify API, wire-contract, configuration, and stored-state changes to plan before upgrading.
 ---
 
 One row per major boundary, oldest recorded first. Read the rows between where you are and
@@ -250,6 +250,5 @@ so its version does not follow the kernel's major. What is known about the pairi
   the kernel each time it connects. When the kernel reports an incompatibility, or has no such
   check, the client throws `IncompatibleChronicleServer`, does not retry, and rejects every later
   call. Deploy a compatible kernel and create a new client.
-- **Only one pairing is documented as exercised.** The TypeScript client's guides report running
-  their examples against `cratis/chronicle:19.4.8-development`. No compatibility matrix is
-  published, so treat any other pairing as unverified and test it before you rely on it.
+- **No compatibility matrix is published.** Test the TypeScript client against the kernel version
+  you run before relying on the pairing.

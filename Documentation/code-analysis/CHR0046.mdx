@@ -1,8 +1,7 @@
 ---
+title: "CHR0046: Passive read model redirects the document key away from the event's own stream"
 description: Chronicle analyzer rule CHR0046 reports passive read models whose projection redirects the root document key away from the event's own stream.
 ---
-# CHR0046: Passive read model redirects the document key away from the event's own stream
-
 ## Rule Description
 
 A read model is **passive** — declared with `[Passive]`, or with `.Passive()` on the projection builder — *and* its projection redirects the **root** document key with `UsingKey`, `UsingKeyFromContext`, `UsingCompositeKey`, `UsingConstantKey`, or model-bound `[FromEvent(key:)]`.

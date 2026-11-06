@@ -34,7 +34,7 @@ public sealed class OccurrenceApp : IAsyncDisposable
     public Contracts.Occurrences.IOccurrences Service => _connection.Services.Occurrences;
     public string ConnectionId => _connection.Lifecycle.ConnectionId.Value;
 
-    public static async Task<OccurrenceApp> Start(IServiceProvider kernel, OccurrenceSignals signals, string activation, ActivationScope scope = ActivationScope.Application, bool handlers = true, bool lifecycle = true, LifecycleScope lifecycleScope = LifecycleScope.Application)
+    public static async Task<OccurrenceApp> Start(IServiceProvider kernel, OccurrenceSignals signals, string activation, ActivationScope scope = ActivationScope.Application, bool handlers = true, bool lifecycle = true, LifecycleScope lifecycleScope = LifecycleScope.Application, bool automaticRegistration = true)
     {
         var options = new ChronicleClientOptions { EventStore = Constants.EventStore, ActivationId = new(activation), ActivationScope = scope, LifecycleScope = lifecycleScope };
         var services = new ServiceCollection();
@@ -69,6 +69,7 @@ public sealed class OccurrenceApp : IAsyncDisposable
             collection.AddSingleton<Connections.IChronicleConnection>(connection);
             collection.Configure<ChronicleAspNetCoreOptions>(configured =>
             {
+                if (!automaticRegistration) configured.AutoDiscoverAndRegister = false;
                 configured.EventStore = options.EventStore;
                 configured.ActivationId = options.ActivationId;
                 configured.ActivationScope = options.ActivationScope;
@@ -84,6 +85,11 @@ public sealed class OccurrenceApp : IAsyncDisposable
         {
             await host.StartAsync().WaitAsync(TimeSpan.FromSeconds(90));
             app.Store = await host.Services.GetRequiredService<IChronicleClient>().GetEventStore(Constants.EventStore).WaitAsync(TimeSpan.FromSeconds(90));
+            if (!automaticRegistration)
+            {
+                await app.Store.DiscoverAll();
+                await app.Store.RegisterAll();
+            }
             (await app.Store.WaitForRegistration().WaitAsync(TimeSpan.FromSeconds(90))).IsSuccess.ShouldBeTrue();
             return app;
         }
@@ -105,6 +111,12 @@ public sealed class OccurrenceApp : IAsyncDisposable
             ApplicationScope = application,
             Trigger = trigger
         }).Select(result => result.EnsureSuccess().ToArray()).FirstAsync(condition).ToTask(deadline.Token);
+    }
+
+    public async Task Reconnect()
+    {
+        await _connection.Lifecycle.Disconnected();
+        await _connection.Connect();
     }
 
     public async ValueTask DisposeAsync()

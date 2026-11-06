@@ -1,19 +1,19 @@
 ---
-title: Reacting to Read Model Changes
-description: React to a read model being added, modified or removed with a convention-based IReadModelReactor, instead of subscribing to the watch stream yourself.
+title: React to Chronicle Read Model Changes
+description: Use a Chronicle read model reactor to handle added, modified, or removed instances without managing watch subscriptions in your application code.
 ---
 
-[Watching a read model](./watching-read-models) hands you a raw stream of changes: you subscribe, filter, branch on whether the instance was removed, and dispose the subscription yourself. When all you want is *"when an account appears, send a welcome; when it changes, sync it downstream"*, that plumbing is noise.
+A Chronicle read model reactor runs application code when a read model instance is added, modified, or removed. Use one when a change to derived state should trigger a notification or downstream update, without managing a [watch subscription](./watching-read-models) yourself.
 
-A **read model reactor** removes it. You write a class, name a method after the change you care about — `Added`, `Modified` or `Removed` — and Chronicle dispatches to it. It is a convenience layer over the [Watch APIs](./watching-read-models): the same delivery underneath, none of the subscription bookkeeping.
+In .NET, name a handler `Added`, `Modified`, or `Removed` and Chronicle dispatches matching changes to it. This convenience uses the watch stream; it does not add transactional delivery. Choose your client tab for its handler and registration syntax.
 
 ## Write the reactor
 
-Implement the `IReadModelReactor` marker interface and add a method named `Added`, `Modified` or `Removed`. The method name selects the change it reacts to, and the first parameter selects which read model is watched.
+For .NET, implement the `IReadModelReactor` marker interface and add a method named `Added`, `Modified`, or `Removed`. The method name selects the change, and the first parameter selects the read model to watch:
 
 <ChronicleClientTabs snippet="read-models/reacting-to-changes/reactor" />
 
-There is nothing to register. Reactors are discovered and started automatically, and their subscriptions are tracked and cleaned up when the client is disposed. React to as many read models as you like — one method per change, per model.
+The .NET client discovers and starts these reactors automatically, then closes their subscriptions when the client is disposed. To handle another model or change type, add a matching method.
 
 :::note[Kotlin and Java]
 The JVM client does not discover read model reactors. Register each one with `ReadModelReactors`, as the Kotlin and Java tabs show, and stop them when your application shuts down.
@@ -21,19 +21,21 @@ The JVM client does not discover read model reactors. Register each one with `Re
 
 ## Handle a single instance or a collection
 
-A handler may be synchronous or asynchronous — return `void`, `Task`, or `Task<T>`. Its first parameter is either a single read model or a collection of them:
+A .NET handler can return `void`, `Task`, or `Task<T>`. Its first parameter accepts either a single read model or a collection. The collection form contains the changed instance, or is empty when a removal has no instance. It does not batch several changes:
 
 <ChronicleClientTabs snippet="read-models/reacting-to-changes/collection" />
 
 ## Take dependencies
 
-The first parameter is the read model; every parameter after it is resolved for you. Ask for the `EventContext` of the event that caused the change — that gives you its sequence number, occurrence time and correlation id — and ask for any service registered in the container. Inject through the constructor, the method signature, or both:
+In .NET, parameters after the read model are resolved from the service container, with `EventContext` supplied separately by the dispatcher. For a projection-backed watch, that context identifies the causing event's sequence number, occurrence time, and correlation ID. Reducer and materialized observations have less context, as described below.
+
+Use constructor injection, method parameters, or both for your services:
 
 <ChronicleClientTabs snippet="read-models/reacting-to-changes/dependencies" />
 
 ## Return side effects
 
-A handler can append events, exactly like a [reactor side effect](../reactors/side-effects). Return a single event, a collection, an `EventForEventSourceId`, or a mix, and Chronicle appends them. The `[EventStreamType]` and `[EventSourceType]` attributes on the reactor are honored when it does.
+A .NET handler can return events for Chronicle to append, using the same return shapes as a [reactor side effect](../reactors/side-effects): a single event, a collection, an `EventForEventSourceId`, or a mix. The dispatcher honors `[EventStreamType]` and `[EventSourceType]` on the reactor. These appends are best-effort, not part of a transaction with the read model change.
 
 <ChronicleClientTabs snippet="read-models/reacting-to-changes/side-effects" />
 
@@ -41,35 +43,36 @@ A handler can append events, exactly like a [reactor side effect](../reactors/si
 
 | Method | Reacts to |
 | --- | --- |
-| `Added` | The read model instance was created for the first time. |
+| `Added` | The watched instance was added, or first seen by an observation that infers changes locally. |
 | `Modified` | The read model instance changed. |
 | `Removed` | The read model instance was removed. |
 
-For **projection-backed** read models the change type and the causing event's context come straight from the server, so `Added` versus `Modified` is precise and `EventContext` is fully populated. Other backings infer more of this locally — see the limits below.
+For projection-backed read models watched through the change stream, the server supplies the change type and causing event context. This distinguishes an addition from a modification. Reducer-backed and materialized observations infer changes locally instead.
 
 ## Watch through the materialized read model
 
-Apply the `[Materialized]` attribute to observe the materialized read model API instead of the change stream. Chronicle then deduces the change type by comparing successive materialized windows.
+In .NET, apply `[Materialized]` to observe stored state instead of the projection change stream. Chronicle observes the complete materialized collection, without the API's default 50-instance page limit, and compares successive snapshots to infer changes.
 
 <ChronicleClientTabs snippet="read-models/reacting-to-changes/materialized" />
 
-Reach for this only when you specifically want the materialized view — most reactors do not need it, and it trades away some fidelity, described next.
+Use this when the reaction should follow what is stored in the sink. It cannot preserve every intermediate state: SQL polling and snapshot delivery can combine several writes into one observed change.
 
 ## When the fit is imperfect
 
-A read model reactor is convenient, not transactional. Design for that:
+The .NET dispatcher logs handler and append failures without pausing a partition or retrying the failed dispatch. Rapid changes can run handlers concurrently, so completion order is not guaranteed.
 
 :::caution
-**Side effects are best-effort.** Returned events are appended fire-and-forget — a failure is logged, but nothing pauses or retries, because a read model reactor has no partition to fail. Ordering across rapid changes is not guaranteed. Make every handler **idempotent**: it may run again after a reconnect.
+Make handlers idempotent: processing the same change again must not duplicate its effect. Reconnection can deliver a change again. A returned event and the read model update are not one transaction.
 :::
 
-- **Materialized fidelity is reduced.** The materialized API delivers full windows of already-deserialized instances, so the change type is inferred by comparing serialized values keyed by `id`, and the `EventContext` carries only the model key — no event sequence number. On SQL, several changes within one polling interval can collapse into one `[Materialized]` dispatch.
-- **Reducer-backed read models infer additions client-side.** Reducers compute changesets locally with no server-provided change type, so the first time a key is seen it is reported as `Added` and everything after as `Modified`. Only projection-backed read models carry the precise change type and causing event context.
+Materialized comparison uses serialized values keyed by `id`, `_id`, or `Id`. Its `EventContext` carries the model key but no causing event sequence number. Existing instances in the first snapshot are reported as `Added`; that does not mean they were just created.
 
-When you need transactional, ordered, replayable reactions, react to the **domain event** with a [reactor](../reactors/) rather than to the derived read model.
+For reducer-backed models, the .NET reactor tracks keys locally to infer additions. The first observed non-removal for a key is `Added`; later ones are `Modified`, and removals remain `Removed`. This does not supply the original event context.
+
+If ordered, replayable processing is a requirement, [react to the domain event](../reactors/) rather than the derived read model. That page explains event-reactor delivery and partition handling so you can choose the appropriate processing model.
 
 ## Related topics
 
 - [Watching Read Models](./watching-read-models) — the lower-level change stream this builds on
-- [Reactors](../reactors/) — react to events directly, with delivery guarantees
+- [Reactors](../reactors/) — event-based processing and partition handling
 - [Reactor Side Effects](../reactors/side-effects) — the append model reused here
