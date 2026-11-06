@@ -31,6 +31,7 @@ public class a_subscriber_with_events : Specification
     protected AppendedEvent[] _events = null!;
     protected Cratis.Chronicle.Namespaces.INamespaceCasing _namespaceCasing;
     protected string _inboxKey;
+    protected virtual EventStoreName SourceEventStore => "Admin";
     protected virtual EventStoreNamespaceName SourceNamespace => EventStoreNamespaceName.Default;
     protected Func<EventType, AppendResult> _appendResultFor = _ => AppendResult.Success(CorrelationId.New(), 1UL);
 
@@ -71,7 +72,7 @@ public class a_subscriber_with_events : Specification
 
         var subscriberKey = new ObserverSubscriberKey(
             new ObserverId("subscription->Lobby"),
-            new EventStoreName("Admin"),
+            SourceEventStore,
             SourceNamespace,
             EventSequenceId.Outbox,
             new EventSourceId("partition-1"),
