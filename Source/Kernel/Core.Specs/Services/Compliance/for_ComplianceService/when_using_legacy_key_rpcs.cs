@@ -10,14 +10,13 @@ public class when_using_legacy_key_rpcs : given.a_compliance_boundary
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public async Task should_not_return_success_for_partial_coverage(bool allowNew)
+    public async Task should_complete_authorized_work_for_partial_coverage(bool allowNew)
     {
         Deny(OtherEventStore);
         var exception = await Catch.Exception(() => allowNew
             ? _service.AllowNewEncryptionKey(new() { EventStore = EventStore, Namespace = EventStoreNamespace, Identifier = Identifier }, _context)
             : _service.DeleteEncryptionKey(new() { EventStore = EventStore, Namespace = EventStoreNamespace, Identifier = Identifier }, _context));
-        exception.ShouldBeOfExactType<RpcException>();
-        ((RpcException)exception).StatusCode.ShouldEqual(StatusCode.PermissionDenied);
+        exception.ShouldBeNull();
         ShouldNotHaveTouched(OtherEventStore);
         if (allowNew) await _keyStore.Received(1).AllowNewKeyFor(EventStore, EventStoreNamespace, Identifier);
         else await _keyStore.Received(1).DeleteFor(EventStore, EventStoreNamespace, Identifier);
@@ -70,12 +69,12 @@ public class when_using_legacy_key_rpcs : given.a_compliance_boundary
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public async Task should_list_the_other_stores_when_only_they_are_denied(bool allowNew)
+    public async Task should_not_return_denied_store_metadata_from_legacy_calls(bool allowNew)
     {
         Deny(OtherEventStore);
         var exception = await Catch.Exception(() => allowNew
             ? _service.AllowNewEncryptionKey(new() { EventStore = EventStore, Namespace = EventStoreNamespace, Identifier = Identifier }, _context)
             : _service.DeleteEncryptionKey(new() { EventStore = EventStore, Namespace = EventStoreNamespace, Identifier = Identifier }, _context));
-        ((RpcException)exception).Trailers.Any(entry => entry.Key == "not-covered-event-stores-bin").ShouldBeTrue();
+        exception.ShouldBeNull();
     }
 }

@@ -91,7 +91,8 @@ public class when_deciding_key_lifecycle_targets : given.a_compliance_boundary
     {
         Deny(ThirdEventStore, throws: true);
         await Operate(allowNew: false);
-        _audit.Entries.ShouldEqual(1);
+        _audit.InformationEntries.ShouldEqual(1);
+        _audit.WarningEntries.ShouldEqual(1);
         var values = string.Join(' ', _audit.Values);
         values.ShouldContain("delete-key");
         values.ShouldContain("enforce");

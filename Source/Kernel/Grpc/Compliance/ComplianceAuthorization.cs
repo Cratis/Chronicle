@@ -32,6 +32,8 @@ public class ComplianceAuthorization(
     IServiceScopeFactory scopes,
     ILogger<ComplianceAuthorization> logger)
 {
+    readonly Dictionary<(EventStoreName Store, EventStoreNamespaceName Namespace, ComplianceKeyOperation Operation), DateTimeOffset> _lastGap = [];
+
     bool Enforced => options.Value.Authentication.EnforceStoreEntitlements;
 
     bool EnforcedAcrossStores => options.Value.Authentication.EnforceDestructiveOperations;
@@ -91,22 +93,35 @@ public class ComplianceAuthorization(
         // A denied requested store makes this a denied call, not a command from a forbidden address.
         if (denied.Contains((EventStoreName)eventStore)) return new([], [], listingFailed, RequestedDenied: true);
 
-        // Only a store the operation would actually change is refused and reported; the others are left alone.
-        var affected = await Affected(denied, @namespace, identifier, kind);
-        return new(targets.Except(denied).ToArray(), affected, listingFailed);
+        // Identifier-specific state in denied stores is operator evidence only, never caller-visible coverage.
+        await AuditGaps(denied, @namespace, identifier, kind);
+        return new(targets.Except(denied).ToArray(), denied, listingFailed);
     }
 
     static bool IsSystem(EventStoreName eventStore) => eventStore.Value.Equals(EventStoreName.System.Value, StringComparison.OrdinalIgnoreCase);
 
-    async Task<EventStoreName[]> Affected(EventStoreName[] denied, EventStoreNamespaceName @namespace, EncryptionKeyIdentifier identifier, ComplianceKeyOperation kind)
+    async Task AuditGaps(EventStoreName[] denied, EventStoreNamespaceName @namespace, EncryptionKeyIdentifier identifier, ComplianceKeyOperation kind)
     {
-        List<EventStoreName> affected = [];
         foreach (var store in denied)
         {
-            if (await IsAffected(store, @namespace, identifier, kind)) affected.Add(store);
+            if (await IsAffected(store, @namespace, identifier, kind) && TakeGapSlot(store, @namespace, kind))
+            {
+                logger.ComplianceCoverageGap(store.Value, @namespace.Value, kind.ToString());
+            }
         }
+    }
 
-        return [.. affected];
+    bool TakeGapSlot(EventStoreName store, EventStoreNamespaceName @namespace, ComplianceKeyOperation kind)
+    {
+        var key = (store, @namespace, kind);
+        var now = DateTimeOffset.UtcNow;
+        lock (_lastGap)
+        {
+            if (_lastGap.TryGetValue(key, out var last) && now - last < TimeSpan.FromMinutes(10)) return false;
+            if (!_lastGap.ContainsKey(key) && _lastGap.Count >= 10_000) return false;
+            _lastGap[key] = now;
+            return true;
+        }
     }
 
     async Task<bool> IsAffected(EventStoreName store, EventStoreNamespaceName @namespace, EncryptionKeyIdentifier identifier, ComplianceKeyOperation kind)
@@ -121,8 +136,8 @@ public class ComplianceAuthorization(
         }
         catch
         {
-            // Fail closed: a check that cannot be answered counts as affected.
-            return true;
+            // Audit-only checks must never affect caller-visible coverage or status.
+            return false;
         }
     }
 

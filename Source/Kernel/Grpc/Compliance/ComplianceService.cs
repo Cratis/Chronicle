@@ -63,15 +63,13 @@ internal sealed class ComplianceService(IGrainFactory grainFactory, IJsonSchemaM
     /// <inheritdoc/>
     public async Task DeleteEncryptionKey(DeleteEncryptionKeyRequest request, CallContext context = default)
     {
-        var result = await DeleteEncryptionKeyWithCoverage(request, context);
-        EnsureCovered(result.NotCoveredEventStores);
+        await DeleteEncryptionKeyWithCoverage(request, context);
     }
 
     /// <inheritdoc/>
     public async Task AllowNewEncryptionKey(AllowNewEncryptionKeyRequest request, CallContext context = default)
     {
-        var result = await AllowNewEncryptionKeyWithCoverage(request, context);
-        EnsureCovered(result.NotCoveredEventStores);
+        await AllowNewEncryptionKeyWithCoverage(request, context);
     }
 
     /// <inheritdoc/>
@@ -117,16 +115,6 @@ internal sealed class ComplianceService(IGrainFactory grainFactory, IJsonSchemaM
         if (coverage.ListingFailed)
         {
             throw new RpcException(new Status(StatusCode.Unavailable, "Compliance event store coverage could not be established."));
-        }
-    }
-
-    static void EnsureCovered(ICollection<string> notCovered)
-    {
-        if (notCovered.Count > 0)
-        {
-            throw new RpcException(
-                new Status(StatusCode.PermissionDenied, "Compliance operation did not cover every event store."),
-                new Metadata { { "not-covered-event-stores-bin", JsonSerializer.SerializeToUtf8Bytes(notCovered) } });
         }
     }
 
