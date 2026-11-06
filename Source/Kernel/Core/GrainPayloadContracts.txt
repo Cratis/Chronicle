@@ -373,6 +373,7 @@ json Cratis.Chronicle.Concepts.Observation.EventStoreSubscriptions.EventStoreSub
   eventTypes: System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Events.EventType>
   generationDelivery: Cratis.Chronicle.Concepts.Observation.EventGenerationDelivery
   identifier: Cratis.Chronicle.Concepts.Observation.EventStoreSubscriptions.EventStoreSubscriptionId
+  namedTags: System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Events.NamedTag>
   sourceEventStore: Cratis.Chronicle.Concepts.EventStoreName
 concept Cratis.Chronicle.Concepts.Observation.EventStoreSubscriptions.EventStoreSubscriptionId : string
 json Cratis.Chronicle.Concepts.Observation.EventTypeWithKeyExpression

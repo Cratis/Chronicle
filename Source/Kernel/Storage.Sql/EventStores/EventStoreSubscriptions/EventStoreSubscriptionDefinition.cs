@@ -34,4 +34,9 @@ public class EventStoreSubscriptionDefinition
     /// Gets or sets the generation delivery policy.
     /// </summary>
     public EventGenerationDelivery GenerationDelivery { get; set; } = EventGenerationDelivery.Compatibility;
+
+    /// <summary>
+    /// Gets or sets the named-tag filter as JSON (name and value pairs). Null for subscriptions that predate the filter.
+    /// </summary>
+    public string? NamedTags { get; set; }
 }

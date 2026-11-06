@@ -16,12 +16,25 @@ public class EventStoreSubscriptionBuilder(IEventTypes eventTypes, EventStoreSub
 {
     readonly HashSet<EventTypeId> _eventTypes = new();
     readonly HashSet<EventType> _declaredEventTypes = new();
+    readonly List<NamedTag> _namedTags = [];
     EventGenerationDelivery _generationDelivery = EventGenerationDelivery.Compatibility;
 
     /// <inheritdoc/>
     public IEventStoreSubscriptionBuilder WithGenerationDelivery(EventGenerationDelivery generationDelivery)
     {
         _generationDelivery = generationDelivery;
+        return this;
+    }
+
+    /// <inheritdoc/>
+    public IEventStoreSubscriptionBuilder WithNamedTag(string name, string value)
+    {
+        var tag = new NamedTag(new TagName(name), value);
+        if (!_namedTags.Contains(tag))
+        {
+            _namedTags.Add(tag);
+        }
+
         return this;
     }
 
@@ -57,7 +70,8 @@ public class EventStoreSubscriptionBuilder(IEventTypes eventTypes, EventStoreSub
         return new(subscriptionId, sourceEventStore, _generationDelivery == EventGenerationDelivery.Pinned ? ids.ToArray() : ids)
         {
             GenerationDelivery = _generationDelivery,
-            EventTypePins = pins
+            EventTypePins = pins,
+            NamedTags = _namedTags.ToArray()
         };
     }
 
