@@ -21,6 +21,7 @@ namespace Cratis.Chronicle.Storage.MongoDB;
 /// </remarks>
 internal static class DatabaseNameCasing
 {
+    const int UnauthorizedCode = 13;
     static readonly ConditionalWeakTable<IMongoClient, ServerDatabaseNames> _servers = [];
 
     /// <summary>
@@ -69,9 +70,10 @@ internal static class DatabaseNameCasing
                         _names.TryAdd(databaseName, databaseName);
                     }
                 }
-                catch (Exception ex)
+                catch (MongoCommandException ex) when (ex.Code == UnauthorizedCode)
                 {
-                    // Without the right to list databases the requested name is used as it is, as before.
+                    // Without the right to list databases the requested name is used as it is, as before. Any other
+                    // failure is passed on without claiming the name, so the next attempt can find the existing casing.
                     logger?.CouldNotListDatabases(name, ex);
                 }
 

@@ -1,8 +1,13 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Net;
 using Microsoft.Extensions.Logging;
+using MongoDB.Bson;
 using MongoDB.Driver;
+using MongoDB.Driver.Core.Clusters;
+using MongoDB.Driver.Core.Connections;
+using MongoDB.Driver.Core.Servers;
 
 namespace Cratis.Chronicle.Storage.MongoDB.for_DatabaseNameCasing.when_resolving;
 
@@ -18,7 +23,11 @@ public class on_a_server_that_refuses_to_list_databases : Specification
     void Establish()
     {
         _client = Substitute.For<IMongoClient>();
-        _client.ListDatabaseNames(Arg.Any<CancellationToken>()).Returns(_ => throw new InvalidOperationException("not authorized on admin to execute command listDatabases"));
+        _client.ListDatabaseNames(Arg.Any<CancellationToken>()).Returns(_ => throw new MongoCommandException(
+            new ConnectionId(new ServerId(new ClusterId(), new DnsEndPoint("localhost", 27017))),
+            "not authorized on admin to execute command listDatabases",
+            new BsonDocument("listDatabases", 1),
+            new BsonDocument { { "ok", 0 }, { "code", 13 }, { "codeName", "Unauthorized" } }));
         _logger = Substitute.For<ILogger>();
         _logger.IsEnabled(Arg.Any<LogLevel>()).Returns(true);
     }
@@ -26,5 +35,5 @@ public class on_a_server_that_refuses_to_list_databases : Specification
     void Because() => _resolved = DatabaseNameCasing.Resolve(_client, "Studio+es+cratis", _logger);
 
     [Fact] void should_resolve_to_the_requested_name() => _resolved.ShouldEqual("Studio+es+cratis");
-    [Fact] void should_log_a_warning() => _logger.Received(1).Log(LogLevel.Warning, Arg.Any<EventId>(), Arg.Any<object>(), Arg.Any<InvalidOperationException>(), Arg.Any<Func<object, Exception?, string>>());
+    [Fact] void should_log_a_warning() => _logger.Received(1).Log(LogLevel.Warning, Arg.Any<EventId>(), Arg.Any<object>(), Arg.Any<MongoCommandException>(), Arg.Any<Func<object, Exception?, string>>());
 }
