@@ -8,7 +8,7 @@ on:
         value: ${{ jobs.discover.outputs.all-providers }}
     inputs:
       build-output-artifact:
-        description: "Name of the DEVELOPMENT-symbol build output artifact"
+        description: "Name of the DEVELOPMENT-symbol build output artifact. The Client, Kernel and Clustering lanes download <name>-client, <name>-kernel and <name>-clustering (see .github/actions/pack-integration-output); the SQL clustering lane downloads <name>."
         required: true
         type: string
       chronicle-image:
@@ -115,12 +115,12 @@ jobs:
       - name: Download build output
         uses: actions/download-artifact@v4
         with:
-          name: ${{ inputs.build-output-artifact }}
+          name: ${{ inputs.build-output-artifact }}-client
 
       - name: Extract build output
         env:
           BUILD_OUTPUT_ARTIFACT: ${{ inputs.build-output-artifact }}
-        run: tar -I zstd -xf "${BUILD_OUTPUT_ARTIFACT}.tar.zst"
+        run: tar -I zstd -xf "${BUILD_OUTPUT_ARTIFACT}-client.tar.zst"
 
       - name: Login to GitHub Docker Registry
         if: matrix.needs-docker == true
@@ -229,12 +229,12 @@ jobs:
       - name: Download build output
         uses: actions/download-artifact@v4
         with:
-          name: ${{ inputs.build-output-artifact }}
+          name: ${{ inputs.build-output-artifact }}-kernel
 
       - name: Extract build output
         env:
           BUILD_OUTPUT_ARTIFACT: ${{ inputs.build-output-artifact }}
-        run: tar -I zstd -xf "${BUILD_OUTPUT_ARTIFACT}.tar.zst"
+        run: tar -I zstd -xf "${BUILD_OUTPUT_ARTIFACT}-kernel.tar.zst"
 
       - name: Restore Kernel project
         run: dotnet restore Integration/Kernel/Kernel.csproj
@@ -302,12 +302,12 @@ jobs:
       - name: Download build output
         uses: actions/download-artifact@v4
         with:
-          name: ${{ inputs.build-output-artifact }}
+          name: ${{ inputs.build-output-artifact }}-clustering
 
       - name: Extract build output
         env:
           BUILD_OUTPUT_ARTIFACT: ${{ inputs.build-output-artifact }}
-        run: tar -I zstd -xf "${BUILD_OUTPUT_ARTIFACT}.tar.zst"
+        run: tar -I zstd -xf "${BUILD_OUTPUT_ARTIFACT}-clustering.tar.zst"
 
       - name: Restore Clustering project
         run: dotnet restore Integration/Clustering/Clustering.csproj

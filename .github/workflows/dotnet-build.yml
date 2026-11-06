@@ -421,6 +421,13 @@ jobs:
       - name: Build with DEVELOPMENT symbol
         run: dotnet build --configuration Release -p:EnableDevelopmentSymbol=true -p:DisableProxyGenerator=true -p:DisableDockerBuild=true
 
+      # Client, Kernel and Clustering shards download only their own project's output (a fraction of the full
+      # artifact below, which the SQL clustering shards still use).
+      - name: Pack per-project integration build output
+        uses: ./.github/actions/pack-integration-output
+        with:
+          prefix: build-output-development
+
       - name: Pack DEVELOPMENT build output
         run: |
           set -euo pipefail
@@ -484,6 +491,13 @@ jobs:
 
       - name: Build with DEVELOPMENT symbol
         run: dotnet build --configuration Release -p:EnableDevelopmentSymbol=true -p:DisableProxyGenerator=true -p:DisableDockerBuild=true
+
+      # Client, Kernel and Clustering shards download only their own project's output (a fraction of the full
+      # artifact below, which the SQL clustering shards still use).
+      - name: Pack per-project integration build output
+        uses: ./.github/actions/pack-integration-output
+        with:
+          prefix: build-output-development
 
       - name: Pack DEVELOPMENT build output
         run: |
