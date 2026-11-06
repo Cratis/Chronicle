@@ -29,7 +29,7 @@ function requestInit(method, token, body) {
 }
 
 async function send(fetchImpl, token, [method, endpoint, body]) {
-    requireEvidence(endpoint.startsWith('/repos/') && !endpoint.includes('://'));
+    requireEvidence((endpoint.startsWith('/repos/') || endpoint.startsWith('/repositories/')) && !endpoint.includes('://'));
     const operation = method === 'GET' ? 'read' : 'write';
     let response;
     try { response = await fetchImpl(`https://api.github.com${endpoint}`, requestInit(method, token, body)); }
@@ -73,23 +73,22 @@ function nextLink(link) {
     return next[0];
 }
 
-function nextPage(link, initial, page) {
+// GitHub's own Link header is as trusted as the response body it travels with; it is not
+// attacker-controlled input. The only thing worth enforcing here is that following it can never
+// leave api.github.com. Beyond that, GitHub is free to reshape the path (it now rewrites
+// `/repos/{owner}/{repo}/issues` to `/repositories/{id}/issues` and switches from `page` to an
+// opaque `after` cursor once a collection is large enough), so this must not assume either stays put.
+function nextPage(link) {
     const entry = nextLink(link);
     if (!entry) return undefined;
     const url = new URL(entry.slice(1, entry.indexOf('>')));
-    const expected = new URL(initial);
-    expected.searchParams.set('page', String(page + 1));
-    const comparable = new URL(url);
-    comparable.searchParams.sort();
-    expected.searchParams.sort();
-    requireEvidence(comparable.href === expected.href, 'pagination-link');
+    requireEvidence(url.origin === 'https://api.github.com', 'pagination-link');
     requireEvidence(!url.username && !url.password && !url.hash, 'pagination-link');
     return url;
 }
 
 async function paginate(transport, endpoint, field) {
-    const initial = new URL(`https://api.github.com${endpoint}`);
-    let current = initial;
+    let current = new URL(`https://api.github.com${endpoint}`);
     let total;
     const records = [];
     for (let page = 1; page <= 100; page++) {
@@ -97,7 +96,7 @@ async function paginate(transport, endpoint, field) {
         const batch = pageData(response.data, field, total);
         total = batch.total;
         records.push(...batch.items);
-        current = nextPage(response.link, initial, page);
+        current = nextPage(response.link);
         if (!current) {
             requireEvidence(total === undefined || records.length >= total, 'incomplete-history');
             return records;

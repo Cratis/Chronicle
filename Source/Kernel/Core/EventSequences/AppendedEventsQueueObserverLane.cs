@@ -34,6 +34,7 @@ internal sealed class AppendedEventsQueueObserverLane
     readonly Action<int> _settled;
     readonly Action<Exception> _failed;
     int _pendingBatches;
+    int _pendingEvents;
     volatile bool _isClosed;
 
     /// <summary>
@@ -89,6 +90,11 @@ internal sealed class AppendedEventsQueueObserverLane
     public int PendingBatches => Volatile.Read(ref _pendingBatches);
 
     /// <summary>
+    /// Gets the number of events routed to the lane and not yet delivered.
+    /// </summary>
+    public int PendingEvents => Volatile.Read(ref _pendingEvents);
+
+    /// <summary>
     /// Gets a value indicating whether the lane has been closed and discards what it still holds.
     /// </summary>
     public bool IsClosed => _isClosed;
@@ -107,12 +113,14 @@ internal sealed class AppendedEventsQueueObserverLane
         }
 
         Interlocked.Add(ref _pendingBatches, batches);
+        Interlocked.Add(ref _pendingEvents, events.Count);
         if (_channel.Writer.TryWrite(new(events, batches)))
         {
             return true;
         }
 
         Interlocked.Add(ref _pendingBatches, -batches);
+        Interlocked.Add(ref _pendingEvents, -events.Count);
         return false;
     }
 
@@ -171,6 +179,7 @@ internal sealed class AppendedEventsQueueObserverLane
             finally
             {
                 Interlocked.Add(ref _pendingBatches, -batches);
+                Interlocked.Add(ref _pendingEvents, -routedEvents.Count);
                 _settled(batches);
             }
         }

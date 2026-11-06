@@ -65,6 +65,7 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     readonly CancellationTokenSource _catchupCancellation = new();
     readonly CancellationToken _catchupCancellationToken;
     readonly int _laneCapacity;
+    readonly int _laneEventCapacity;
     readonly SuspectedSkipWarningLimiter _suspectedUndeliveredLimiter = new();
     int _pendingItems;
     Task _queueTask = Task.CompletedTask;
@@ -103,6 +104,7 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
         _queueDepletionWaitTimeoutMs = eventsConfig.QueueDepletionWaitTimeoutMilliseconds;
         var capacity = eventsConfig.QueueBoundedCapacity;
         _laneCapacity = capacity;
+        _laneEventCapacity = eventsConfig.QueueBoundedEvents;
         _channel = capacity > 0
             ? Channel.CreateBounded<IReadOnlyList<AppendedEvent>>(new BoundedChannelOptions(capacity)
             {
@@ -604,7 +606,8 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
             // A re-subscription keeps the lane and what it holds; it delivers on behalf of the current subscription.
             lane.Subscription = subscription;
 
-            if (_laneCapacity > 0 && lane.PendingBatches + batches > _laneCapacity)
+            if ((_laneCapacity > 0 && lane.PendingBatches + batches > _laneCapacity) ||
+                (_laneEventCapacity > 0 && lane.PendingEvents + events.Length > _laneEventCapacity))
             {
                 SpillLaggingSubscriptionToCatchup(subscription);
                 Observe(() => _metrics?.EventsSpilledToCatchup(events.Length));

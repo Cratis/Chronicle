@@ -89,8 +89,15 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
         return expandoObject;
     }
 
+    /// <summary>
+    /// Gets whether the schema marks its value as protected. Asked for every string value converted, so the
+    /// memoized recursive answer is consulted first: when it is no, there is nothing at this level either.
+    /// </summary>
+    /// <param name="schema">The <see cref="JsonSchema"/> of the value.</param>
+    /// <returns>True when the value is protected.</returns>
     static bool HasProtectedValueMetadata(JsonSchema schema) =>
-        schema.GetComplianceMetadata().Any() || schema.GetSecurityMetadata().Any();
+        (schema.HasComplianceMetadata() && schema.GetComplianceMetadata().Any()) ||
+        (schema.HasSecurityMetadata() && schema.GetSecurityMetadata().Any());
 
     BsonValue ConvertToBsonValue(object? value, JsonSchema schemaProperty)
     {

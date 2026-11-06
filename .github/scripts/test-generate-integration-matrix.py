@@ -321,5 +321,42 @@ class for_batched_namespaces(unittest.TestCase):
                 self.assertEqual(matrix._shards_for(name)[0][1], entries[0]["filter"])
 
 
+
+class for_a_namespace_selection(unittest.TestCase):
+    """A pull request that maps to some namespaces runs only those, with nothing else about them changed."""
+
+    def _failing(self, *arguments):
+        return subprocess.run([sys.executable, SCRIPT, *arguments], cwd=REPOSITORY_ROOT,
+                              capture_output=True, text=True, check=False)
+
+    def test_selected_namespaces_keep_the_same_shards_and_configurations_as_the_full_matrix(self):
+        wanted = {"Cratis.Chronicle.Integration.for_Reducers", "Cratis.Chronicle.Integration.Projections"}
+        selected = _run("--namespaces", "for_Reducers,Projections")
+        self.assertEqual(wanted, {entry["namespace"] for entry in selected})
+        for entry in _run():
+            if entry["namespace"] in wanted:
+                self.assertIn(entry, selected)
+
+    def test_a_selected_namespace_does_not_pull_in_the_namespaces_it_is_batched_with(self):
+        batched = matrix.BATCHES["client"][0]
+        alone = _run("--namespaces", batched[0])
+        self.assertEqual([matrix.NAMESPACE_PREFIX + batched[0]], sorted({entry["namespace"] for entry in alone}))
+        self.assertTrue(all(entry["members"] == "" for entry in alone))
+
+    def test_two_selected_batch_partners_still_share_their_job(self):
+        batched = matrix.BATCHES["client"][0]
+        together = _run("--namespaces", ",".join(batched[:2]))
+        self.assertTrue(together)
+        self.assertTrue(all(entry["members"] for entry in together))
+
+    def test_an_empty_selection_is_an_empty_matrix_not_the_whole_one(self):
+        self.assertEqual([], _run("--namespaces", ""))
+
+    def test_an_unknown_namespace_fails_the_run_instead_of_quietly_running_nothing(self):
+        completed = self._failing("--namespaces", "for_Reducers,for_Typo")
+        self.assertNotEqual(0, completed.returncode)
+        self.assertIn("for_Typo", completed.stderr)
+
+
 if __name__ == "__main__":
     unittest.main()

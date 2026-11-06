@@ -18,6 +18,9 @@ internal static partial class ReducersLogMessages
     [LoggerMessage(LogLevel.Warning, "Ignoring unknown or completed reducer delivery {DeliveryId} for partition {Partition}")]
     internal static partial void UnknownDeliveryResult(this ILogger<Reducers> logger, ulong deliveryId, string partition);
 
+    [LoggerMessage(LogLevel.Warning, "The result of reducer delivery {DeliveryId} for partition {Partition} could not be read, failing the delivery so it is retried")]
+    internal static partial void UnreadableDeliveryResult(this ILogger<Reducers> logger, ulong deliveryId, string partition, Exception exception);
+
     [LoggerMessage(LogLevel.Debug, "Reducer observe method invoked")]
     internal static partial void Observe(this ILogger<Reducers> logger);
 

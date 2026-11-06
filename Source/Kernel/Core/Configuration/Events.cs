@@ -32,6 +32,18 @@ public class Events
     public int QueueBoundedCapacity { get; init; } = 2000;
 
     /// <summary>
+    /// The most events an observer may have waiting in an appended-events queue before it is spilled to catch-up.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="QueueBoundedCapacity"/> counts batches, and a batch can hold any number of events, so on its own it
+    /// does not bound memory: an observer that is slower than the appends - a reducer folding every batch into a
+    /// growing state - lets the queue hold the whole burst in memory, every event with its content and context. An
+    /// observer that lags by more than this many events is spilled to its catch-up path instead, which re-reads
+    /// the range from storage a page at a time. A value of 0 means unbounded. Defaults to 5000 events.
+    /// </remarks>
+    public int QueueBoundedEvents { get; init; } = 5000;
+
+    /// <summary>
     /// Number of appends after which an event sequence persists its state as a warm-start snapshot.
     /// </summary>
     /// <remarks>

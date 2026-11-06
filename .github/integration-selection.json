@@ -1,0 +1,75 @@
+{
+  "description": "Decides how much of the requested integration matrix a pull request needs. .github/scripts/select-integration.py reads it. Every changed file is matched against these entries in order and the first match wins: `ignore` means the file cannot change what an integration run proves, `select` adds the listed lanes, and `full` forces the whole matrix. A file that matches no entry forces the whole matrix, so an unmapped path can only cost time, never coverage. The nightly run always covers everything, whatever this file says. A hot-core pull request (see hot-core-paths.txt) always runs the whole matrix. `{ns}` in a path captures one directory name and is substituted into `client`.",
+  "entries": [
+    {
+      "paths": ["Source/Kernel/Storage.Specs/**", "Integration/*", "Integration/Client/*", "Integration/Kernel/*", "Integration/Clustering/*", "Integration/SqlClustering/**", "Integration/Api/**", "Integration/MongoDB/**", "Integration/LocalKernelPublish.proj"],
+      "action": "full",
+      "reason": "Shared by every integration lane: contract specs inherited by integration wrappers, shared fixtures and project files, and lanes with no per-namespace mapping."
+    },
+    {
+      "paths": [
+        "Documentation/**",
+        "*.md",
+        "**/*.md",
+        "Source/Workbench/**",
+        "Source/Clients/Python/**",
+        "Source/Clients/Kotlin/**",
+        "Source/Clients/Elixir/**",
+        "Source/Clients/TypeScript/**",
+        "Source/Clients/Workbench/**",
+        "Source/*.Specs/**",
+        "Source/**/*.Specs/**",
+        "Benchmarks/**",
+        "Samples/**",
+        ".cratis/**",
+        ".claude/**",
+        ".pi/**",
+        ".agents/**",
+        ".github/ISSUE_TEMPLATE/**",
+        ".github/pull_request_template.md",
+        "decisions/**",
+        "LICENSE",
+        "CREDITS.md",
+        "RESOURCES.md"
+      ],
+      "action": "ignore",
+      "reason": "Documentation, the browser Workbench, other-language clients, specifications, benchmarks and samples never run inside an integration lane."
+    },
+    {
+      "paths": ["Integration/Client/{ns}/**"],
+      "action": "select",
+      "client": ["{ns}"],
+      "reason": "An integration spec change is proven by the namespace that holds it."
+    },
+    {
+      "paths": ["Source/Clients/DotNET/Reactors/**"],
+      "action": "select",
+      "client": ["for_Reactors", "for_ReadModelReactors"]
+    },
+    {
+      "paths": ["Source/Clients/DotNET/Reducers/**"],
+      "action": "select",
+      "client": ["for_Reducers", "for_ReadModels"]
+    },
+    {
+      "paths": ["Source/Clients/DotNET/Projections/**"],
+      "action": "select",
+      "client": ["Projections", "for_ReadModels"]
+    },
+    {
+      "paths": ["Source/Clients/DotNET/Webhooks/**"],
+      "action": "select",
+      "client": ["for_Webhooks"]
+    },
+    {
+      "paths": ["Source/Clients/DotNET/Transactions/**"],
+      "action": "select",
+      "client": ["for_UnitOfWork"]
+    },
+    {
+      "paths": ["Source/Clients/DotNET/Compliance/**"],
+      "action": "select",
+      "client": ["for_PIIManager", "for_DataProtection"]
+    }
+  ]
+}

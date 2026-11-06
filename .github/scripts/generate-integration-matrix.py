@@ -229,6 +229,11 @@ def _databases(value):
     return selected
 
 
+def _names(value):
+    """Parse a comma-separated namespace list; an explicitly empty list is a valid selection of nothing."""
+    return tuple(item.strip() for item in value.split(",") if item.strip())
+
+
 def selected_databases(args):
     """Resolve which storage backends the matrix covers, widest selection first."""
     if args.all_providers:
@@ -273,10 +278,28 @@ def _validated_batches(suite, units, batches):
     return seen
 
 
-def _suite_units(suite, batches):
+def _restrict(suite, units, batches, namespaces):
+    """Narrow the units, and the batches that group them, to the selected namespaces.
+
+    An unknown name is an error, never an empty matrix: a selection that silently ran nothing would read
+    as a pass. A batch keeps only its selected members, so a selected namespace never drags its batch
+    partners along; a batch left with one member simply runs that namespace on its own.
+    """
+    unknown = sorted(set(namespaces) - set(units))
+    if unknown:
+        raise ValueError(f"{suite}: unknown namespace(s) {', '.join(unknown)}. Known: {', '.join(units)}")
+    kept = {name: shards for name, shards in units.items() if name in namespaces}
+    narrowed = {suite: [members for members in ([m for m in batch if m in namespaces] for batch in batches.get(suite, []))
+                        if len(members) > 1]}
+    return kept, narrowed
+
+
+def _suite_units(suite, batches, namespaces=None):
     """Return (namespace_label, shard_label, test_filter, members, short_name) per job unit."""
     prefix = SUITES[suite]["prefix"]
     units = _solo_units(suite)
+    if namespaces is not None:
+        units, batches = _restrict(suite, units, batches, namespaces)
     batched = _validated_batches(suite, units, batches)
     result = []
     for name, shards in units.items():
@@ -291,11 +314,14 @@ def _suite_units(suite, batches):
     return result
 
 
-def build_include(suite, databases, batches):
-    """Build the matrix entries for a suite. A batch shares one job and keeps a per-member guard."""
+def build_include(suite, databases, batches, namespaces=None):
+    """Build the matrix entries for a suite, optionally restricted to the named namespaces.
+
+    A batch shares one job and keeps a per-member guard.
+    """
     configs = [config for config in INFRA_CONFIGS if config[1] in databases]
     include = []
-    for namespace, shard_label, test_filter, members, name in _suite_units(suite, batches):
+    for namespace, shard_label, test_filter, members, name in _suite_units(suite, batches, namespaces):
         entry = {"namespace": namespace, "shard": shard_label, "filter": test_filter, "members": members}
         if suite != "client":
             include.append(entry)
@@ -344,9 +370,18 @@ def main(argv=None):
         "Without it the backends in PULL_REQUEST_DATABASES are covered, which is "
         "what pull requests run.",
     )
+    parser.add_argument(
+        "--namespaces",
+        type=_names,
+        help="Comma-separated namespaces (directory names under the suite's root) to restrict the matrix to. "
+        "Without it every namespace runs. An unknown name is an error, and an empty list is an empty matrix.",
+    )
     args = parser.parse_args(argv)
 
-    include = build_include(args.suite, selected_databases(args), BATCHES)
+    try:
+        include = build_include(args.suite, selected_databases(args), BATCHES, args.namespaces)
+    except ValueError as error:
+        parser.error(str(error))
     print(json.dumps({"include": include}))
 
 
