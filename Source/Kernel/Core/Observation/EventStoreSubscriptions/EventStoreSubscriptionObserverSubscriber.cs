@@ -87,26 +87,50 @@ public class EventStoreSubscriptionObserverSubscriber(
             var copiedSubjects = new HashSet<Subject>();
             foreach (var incoming in events)
             {
+                if (definition is not null && !EventStoreSubscriptionTagFilter.Matches(definition.NamedTags, incoming.Context.NamedTags))
+                {
+                    // Filtered out before forwarding: never copied into the target inbox, but processed so the observer moves past it.
+                    lastSuccessfullyForwardedSequenceNumber = incoming.Context.SequenceNumber;
+                    continue;
+                }
+
                 var @event = await ReleaseForCurrentPin(incoming, pins, schemas, targetEventStore);
                 if (copiedSubjects.Add(@event.Context.Subject))
                 {
                     await CopyEncryptionKeyIfMissingForTargetStore(@event.Context.Subject, targetEventStore, targetNamespace);
                 }
                 var content = SerializeContent(@event.Content);
-                var appendResult = await inboxSequence.Append(
-                    @event.Context.EventSourceType,
-                    @event.Context.EventSourceId,
-                    @event.Context.EventStreamType,
-                    @event.Context.EventStreamId,
-                    @event.Context.EventType,
-                    content,
-                    @event.Context.CorrelationId,
-                    @event.Context.Causation,
-                    @event.Context.CausedBy,
-                    @event.Context.Tags,
-                    ConcurrencyScope.None,
-                    occurred: @event.Context.Occurred,
-                    subject: @event.Context.Subject);
+                var namedTags = @event.Context.NamedTags.ToArray();
+                var appendResult = namedTags.Length == 0
+                    ? await inboxSequence.Append(
+                        @event.Context.EventSourceType,
+                        @event.Context.EventSourceId,
+                        @event.Context.EventStreamType,
+                        @event.Context.EventStreamId,
+                        @event.Context.EventType,
+                        content,
+                        @event.Context.CorrelationId,
+                        @event.Context.Causation,
+                        @event.Context.CausedBy,
+                        @event.Context.Tags,
+                        ConcurrencyScope.None,
+                        occurred: @event.Context.Occurred,
+                        subject: @event.Context.Subject)
+                    : await inboxSequence.Append(
+                        @event.Context.EventSourceType,
+                        @event.Context.EventSourceId,
+                        @event.Context.EventStreamType,
+                        @event.Context.EventStreamId,
+                        @event.Context.EventType,
+                        content,
+                        @event.Context.CorrelationId,
+                        @event.Context.Causation,
+                        @event.Context.CausedBy,
+                        @event.Context.Tags,
+                        ConcurrencyScope.None,
+                        @event.Context.Occurred,
+                        @event.Context.Subject,
+                        namedTags);
 
                 if (!appendResult.IsSuccess)
                 {

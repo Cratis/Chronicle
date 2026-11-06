@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text.Json;
 using Cratis.Chronicle.Concepts.Observation.EventStoreSubscriptions;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.EventStoreSubscriptions;
@@ -22,7 +23,10 @@ public static class EventStoreSubscriptionDefinitionConverters
             Id = definition.Identifier.Value,
             SourceEventStore = definition.SourceEventStore.Value,
             EventTypes = definition.EventTypes.ToArray(),
-            GenerationDelivery = definition.GenerationDelivery
+            GenerationDelivery = definition.GenerationDelivery,
+            NamedTags = definition.NamedTags.Any()
+                ? JsonSerializer.Serialize(definition.NamedTags.Select(tag => new[] { tag.Name.Value, tag.Value }).ToArray())
+                : null
         };
 
     /// <summary>
@@ -37,6 +41,10 @@ public static class EventStoreSubscriptionDefinitionConverters
             new Concepts.EventStoreName(definition.SourceEventStore),
             definition.EventTypes)
         {
-            GenerationDelivery = definition.GenerationDelivery
+            GenerationDelivery = definition.GenerationDelivery,
+            NamedTags = string.IsNullOrEmpty(definition.NamedTags)
+                ? []
+                : JsonSerializer.Deserialize<string[][]>(definition.NamedTags)!
+                    .Select(pair => new Concepts.Events.NamedTag(new Concepts.Events.TagName(pair[0]), pair[1])).ToArray()
         };
 }

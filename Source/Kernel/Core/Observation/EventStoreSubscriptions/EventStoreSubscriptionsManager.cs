@@ -40,7 +40,7 @@ public class EventStoreSubscriptionsManager(
     {
         _targetEventStoreName = this.GetPrimaryKeyString();
         var namespaces = await GrainFactory.GetGrain<INamespaces>(_targetEventStoreName).GetAll();
-        var tasks = State.Subscriptions.Select(definition => EnsureSubscriptionOnActivation(definition, namespaces));
+        var tasks = State.Subscriptions.Select(definition => EnsureSubscriptionOnActivationWithoutFailing(definition, namespaces));
         await Task.WhenAll(tasks);
     }
 
@@ -253,6 +253,29 @@ public class EventStoreSubscriptionsManager(
     {
         await ScheduleSubscriptionReminder(definition.Identifier);
         await RefreshSubscription(definition, namespaces);
+    }
+
+    /// <summary>
+    /// Ensures a subscription on activation without letting a failure fail the activation.
+    /// </summary>
+    /// <param name="definition">The <see cref="EventStoreSubscriptionDefinition"/> to ensure.</param>
+    /// <param name="namespaces">The namespaces of the target event store.</param>
+    /// <returns>Awaitable task.</returns>
+    /// <remarks>
+    /// One subscription that cannot be refreshed - a namespace whose database name differs only by case from an
+    /// existing one is such a case - must not fail the activation of this grain, because that fails the startup of the
+    /// whole kernel for every other event store. The reminder scheduled first re-checks and refreshes it every minute.
+    /// </remarks>
+    async Task EnsureSubscriptionOnActivationWithoutFailing(EventStoreSubscriptionDefinition definition, IEnumerable<EventStoreNamespaceName> namespaces)
+    {
+        try
+        {
+            await EnsureSubscriptionOnActivation(definition, namespaces);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            logger.ActivationRefreshFailed(ex, definition.Identifier);
+        }
     }
 
     async Task RefreshSubscription(EventStoreSubscriptionDefinition definition, IEnumerable<EventStoreNamespaceName> namespaces)

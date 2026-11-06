@@ -6,6 +6,10 @@
   href: appending.mdx
 - name: Appending with tags
   href: appending-with-tags.mdx
+- name: Tag enrichers
+  href: event-tag-enrichers.mdx
+- name: Audiences
+  href: audiences.mdx
 - name: Filtering
   href: filtering/toc.yml
 - name: Appending many
